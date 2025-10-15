@@ -1,0 +1,472 @@
+package com.example.xcpro.gestures
+
+import android.util.Log
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.drag
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerInputChange
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.changedToDown
+import androidx.compose.ui.input.pointer.changedToUp
+import androidx.compose.ui.input.pointer.AwaitPointerEventScope
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.platform.LocalDensity
+import org.maplibre.android.camera.CameraUpdateFactory
+import org.maplibre.android.maps.MapLibreMap
+import com.example.xcpro.sensors.GPSData
+import com.example.xcpro.FlightMode
+import com.example.xcpro.tasks.aat.models.AATLatLng
+import com.example.xcpro.tasks.aat.map.AATMapCoordinateConverter
+import com.example.xcpro.tasks.aat.map.AATMapCoordinateConverterFactory
+import com.example.xcpro.tasks.TaskType
+import com.example.xcpro.tasks.TaskWaypoint
+import com.example.xcpro.tasks.WaypointRole
+import kotlin.math.abs
+import kotlin.math.sin
+import kotlin.math.cos
+import kotlin.math.atan2
+import kotlin.math.sqrt
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
+
+private const val TAG = "CustomMapGestures"
+
+/**
+ * Check if a screen coordinate hits any AAT waypoint area
+ * For AAT tasks: Only TURNPOINT role waypoints are editable (not START or FINISH)
+ * Uses closest-match logic to handle overlapping areas
+ */
+private fun checkAATWaypointHit(
+    offset: Offset,
+    waypoints: List<TaskWaypoint>,
+    converter: AATMapCoordinateConverter?
+): Int? {
+    Log.d(TAG, "🐛 HIT CHECK: converter=$converter, waypoints.size=${waypoints.size}")
+    if (converter == null) {
+        Log.d(TAG, "🐛 HIT CHECK: Converter is null!")
+        return null
+    }
+
+    val tapLatLng = converter.screenToMap(offset.x, offset.y)
+    Log.d(TAG, "🐛 HIT CHECK: Screen ${offset.x},${offset.y} -> Map $tapLatLng")
+    if (tapLatLng == null) {
+        Log.d(TAG, "🐛 HIT CHECK: Failed to convert screen to map coordinates")
+        return null
+    }
+
+    // Find the closest TURNPOINT waypoint (not START or FINISH)
+    var closestIndex = -1
+    var closestDistance = Double.MAX_VALUE
+
+    waypoints.forEachIndexed { index, waypoint ->
+        // ✅ AAT Rule: Only TURNPOINT role waypoints can be edited
+        // START and FINISH waypoints are fixed and cannot be moved
+        if (waypoint.role != WaypointRole.TURNPOINT) {
+            Log.d(TAG, "⛔ HIT CHECK: Skipping ${waypoint.title} - role ${waypoint.role} is not editable")
+            return@forEachIndexed
+        }
+
+        val distance = haversineDistance(
+            tapLatLng.latitude, tapLatLng.longitude,
+            waypoint.lat, waypoint.lon
+        )
+
+        // Get AAT area radius from waypoint custom parameters (defaults to 10km)
+        val areaRadiusKm = (waypoint.customParameters["aatAreaRadiusKm"] as? Double) ?: 10.0
+
+        Log.d(TAG, "🐛 HIT CHECK: Turnpoint $index (${waypoint.title}) - distance=${String.format("%.2f", distance)}km, radius=${String.format("%.2f", areaRadiusKm)}km")
+
+        // Check if within area and closer than previous matches
+        if (distance <= areaRadiusKm && distance < closestDistance) {
+            closestDistance = distance
+            closestIndex = index
+            Log.d(TAG, "🎯 AAT Hit: New closest turnpoint: ${waypoint.title} at index $index (${String.format("%.2f", distance)}km from center)")
+        }
+    }
+
+    if (closestIndex >= 0) {
+        Log.d(TAG, "✅ HIT CHECK: Selected turnpoint at index $closestIndex (${String.format("%.2f", closestDistance)}km away)")
+        return closestIndex
+    } else {
+        Log.d(TAG, "🐛 HIT CHECK: No editable turnpoint found at tap location")
+        return null
+    }
+}
+
+/**
+ * Calculate haversine distance between two points in kilometers
+ */
+private fun haversineDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+    val earthRadius = 6371.0 // km
+    val dLat = Math.toRadians(lat2 - lat1)
+    val dLon = Math.toRadians(lon2 - lon1)
+    val a = sin(dLat / 2) * sin(dLat / 2) +
+            cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) *
+            sin(dLon / 2) * sin(dLon / 2)
+    val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+    return earthRadius * c
+}
+
+@Composable
+fun CustomMapGestureHandler(
+    mapLibreMap: MapLibreMap?,
+    currentMode: FlightMode,
+    onModeChange: (FlightMode) -> Unit,
+    showReturnButton: Boolean,
+    onShowReturnButton: (Boolean) -> Unit,
+    currentLocation: GPSData?,
+    onSaveLocation: (GPSData?, Double, Double) -> Unit,
+    bottomSheetHeight: Float = 0f,
+    visibleModes: List<FlightMode> = FlightMode.values().toList(),
+    // ✅ AAT Long Press Support
+    taskType: TaskType? = null,
+    aatWaypoints: List<TaskWaypoint> = emptyList(),
+    isAATEditMode: Boolean = false, // ✅ NEW: External edit mode state
+    onAATLongPress: (Int) -> Unit = {},
+    onAATExitEditMode: () -> Unit = {},
+    onAATDrag: (Int, AATLatLng) -> Unit = { _, _ -> },
+    modifier: Modifier = Modifier
+) {
+    var totalDragX by remember { mutableStateOf(0f) }
+    var totalDragY by remember { mutableStateOf(0f) }
+    var hasSwitchedMode by remember { mutableStateOf(false) }
+    var gestureStartPosition by remember { mutableStateOf(Offset.Zero) }
+    var initialFingerCount by remember { mutableStateOf(1) } // ✅ FIX: Track initial finger count
+
+    // ✅ AAT Edit Mode State
+    var aatEditModeIndex by remember { mutableStateOf(-1) }
+    var isDraggingAAT by remember { mutableStateOf(false) }
+    val coordinateConverter = remember(mapLibreMap) {
+        mapLibreMap?.let { AATMapCoordinateConverterFactory.create(it) }
+    }
+
+    // ✅ AAT Double-Tap Detection State
+    var lastTapTime by remember { mutableStateOf(0L) }
+    var lastTapPosition by remember { mutableStateOf(Offset.Zero) }
+    var lastTapWaypointIndex by remember { mutableStateOf<Int?>(null) }
+
+    // ✅ CRITICAL FIX: Reset local state when external edit mode is disabled OR task type changes
+    LaunchedEffect(isAATEditMode, taskType) {
+        if (!isAATEditMode || taskType != TaskType.AAT) {
+            Log.d(TAG, "🔧 RESET: Clearing AAT gesture state (editMode=$isAATEditMode, taskType=$taskType)")
+            aatEditModeIndex = -1
+            isDraggingAAT = false
+        }
+    }
+
+    androidx.compose.foundation.layout.Box(
+        modifier = modifier
+            .fillMaxSize()
+            .pointerInput(currentMode) {
+                awaitEachGesture {
+                    // Wait for first finger down
+                    val firstDown = awaitFirstDown()
+                    gestureStartPosition = firstDown.position
+
+                    // Check if gesture is over flight data cards
+                    val screenHeight = size.height.toFloat()
+                    val isOverFlightDataCards = gestureStartPosition.y > (screenHeight - bottomSheetHeight)
+
+                    if (isOverFlightDataCards) {
+                        Log.d(TAG, "🚫 Gesture over flight data cards - ignoring (y=${gestureStartPosition.y}, cardHeight=$bottomSheetHeight)")
+                        return@awaitEachGesture
+                    }
+
+                    // Reset tracking for new gesture
+                    totalDragX = 0f
+                    totalDragY = 0f
+                    hasSwitchedMode = false
+
+                    Log.d(TAG, "🎯 First finger down at ${gestureStartPosition}")
+
+                    // ✅ AAT Waypoint Hit Detection: Check for AAT waypoint hit immediately
+                    var aatWaypointHit: Int? = null
+                    val gestureStartTime = System.currentTimeMillis()
+
+                    // 🐛 DEBUG: Log AAT state
+                    Log.d(TAG, "🐛 AAT DEBUG: taskType=$taskType, aatWaypoints.size=${aatWaypoints.size}, converter=$coordinateConverter")
+
+                    if (taskType == TaskType.AAT && aatWaypoints.isNotEmpty()) {
+                        Log.d(TAG, "🐛 AAT DEBUG: Checking hit on ${aatWaypoints.size} waypoints")
+                        aatWaypointHit = checkAATWaypointHit(gestureStartPosition, aatWaypoints, coordinateConverter)
+                        if (aatWaypointHit != null) {
+                            Log.d(TAG, "🎯 AAT: Potential waypoint hit detected at index $aatWaypointHit")
+                        } else {
+                            Log.d(TAG, "🐛 AAT DEBUG: No waypoint hit detected")
+                        }
+                    } else {
+                        Log.d(TAG, "🐛 AAT DEBUG: AAT conditions not met - taskType=$taskType, waypoints=${aatWaypoints.size}")
+                    }
+
+                    // Track pointer events to count fingers
+                    var fingerCount = 1
+                    var isFirstFrame = true
+
+                    do {
+                        val event = awaitPointerEvent()
+
+                        // Count active pointers (fingers on screen)
+                        val activePointers = event.changes.filter { !it.changedToUp() }
+                        fingerCount = activePointers.size
+
+                        if (isFirstFrame) {
+                            initialFingerCount = fingerCount // ✅ FIX: Capture initial finger count
+                            Log.d(TAG, "🖐️ Gesture started with $fingerCount finger(s)")
+                            isFirstFrame = false
+                        }
+
+                        // ✅ AAT Edit Mode Entry: Double-tap only (long press removed for better UX)
+
+                        // ✅ AAT Edit Mode: Handle ALL gestures to prevent drawer opening
+                        if (aatEditModeIndex != -1 && taskType == TaskType.AAT) {
+                            // In AAT edit mode, consume ALL gestures to prevent drawer from opening
+
+                            if (fingerCount == 1) {
+                                val currentPos = activePointers.firstOrNull()?.position ?: gestureStartPosition
+                                val dragDistance = (currentPos - gestureStartPosition).getDistance()
+
+                                // Start dragging if movement detected
+                                if (!isDraggingAAT && dragDistance > 10f) {
+                                    isDraggingAAT = true
+                                    Log.d(TAG, "🎯 AAT: Started dragging pin $aatEditModeIndex")
+                                }
+
+                                // Update pin position during drag
+                                if (isDraggingAAT) {
+                                    val newLatLng = coordinateConverter?.screenToMap(currentPos.x, currentPos.y)
+                                    if (newLatLng != null) {
+                                        val newPosition = AATLatLng(newLatLng.latitude, newLatLng.longitude)
+                                        onAATDrag(aatEditModeIndex, newPosition)
+                                        // Log less frequently to avoid spam
+                                        if (System.currentTimeMillis() % 500 < 50) {
+                                            Log.d(TAG, "🎯 AAT: Dragging pin $aatEditModeIndex")
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Consume all pointer events during AAT edit mode
+                            // This prevents drawer gestures and other interactions
+                            activePointers.forEach { it.consume() }
+
+                            // Skip normal gesture processing
+                            continue
+                        }
+
+                        // Route gesture based on finger count
+                        when (fingerCount) {
+                            1 -> {
+                                // ✅ FIX: Only allow mode switching if gesture STARTED with single finger
+                                // This prevents 2-finger pan from triggering mode switch if one finger lifts
+                                if (initialFingerCount != 1) {
+                                    Log.d(TAG, "🚫 Single finger detected but gesture started with $initialFingerCount fingers - ignoring mode switch logic")
+                                    // Don't process mode switching for gestures that started with multiple fingers
+                                    continue
+                                }
+
+                                // ✅ Single finger: Mode switching (horizontal) or zoom (vertical)
+                                val firstPointer = activePointers.firstOrNull()
+                                if (firstPointer != null) {
+                                    val dragAmount = firstPointer.position - gestureStartPosition
+                                    totalDragX = dragAmount.x
+                                    totalDragY = dragAmount.y
+
+                                    if (abs(totalDragX) > abs(totalDragY)) {
+                                        // ✅ Horizontal: Flight mode switching (DISCRETE) - RESPECTS VISIBILITY
+                                        if (abs(totalDragX) > 250f && !hasSwitchedMode) {
+                                            // ✅ FIX: Use only visible modes instead of all modes
+                                            val availableModes = if (visibleModes.isNotEmpty()) visibleModes else listOf(FlightMode.CRUISE)
+                                            val currentIndex = availableModes.indexOf(currentMode)
+
+                                            Log.d(TAG, "🔍 DEBUG: currentMode=${currentMode.displayName}, currentIndex=$currentIndex, availableModes=${availableModes.map { it.displayName }}")
+
+                                            val newMode = if (currentIndex != -1) {
+                                                // ✅ FIX: Always cycle sequentially - make direction consistent
+                                                val nextIndex = if (totalDragX > 0) {
+                                                    // RIGHT swipe: go to next mode in sequence [0→1→2→0...]
+                                                    (currentIndex + 1) % availableModes.size
+                                                } else {
+                                                    // LEFT swipe: go to previous mode in sequence [0←1←2←0...]
+                                                    (currentIndex - 1 + availableModes.size) % availableModes.size
+                                                }
+
+                                                val directionText = if (totalDragX > 0) "RIGHT→NEXT" else "LEFT→PREV"
+                                                Log.d(TAG, "🔄 CYCLE: ${currentMode.displayName}[$currentIndex] $directionText → ${availableModes[nextIndex].displayName}[$nextIndex]")
+                                                Log.d(TAG, "🔄 SEQUENCE: ${availableModes.mapIndexed { i, mode -> if (i == currentIndex) "[${mode.displayName}]" else mode.displayName }.joinToString(" → ")}")
+
+                                                availableModes[nextIndex]
+                                            } else {
+                                                // Current mode not in visible list - fallback to first visible mode
+                                                Log.d(TAG, "🔍 DEBUG: Current mode not in visible list - fallback to first")
+                                                availableModes.first()
+                                            }
+
+                                            Log.d(TAG, "📞 About to call onModeChange with: ${newMode.displayName}")
+                                            onModeChange(newMode)
+                                            Log.d(TAG, "✅ onModeChange callback completed")
+                                            hasSwitchedMode = true
+                                            Log.d(TAG, "🔄 Single finger horizontal: Flight mode changed to ${newMode.displayName} (visible modes: ${availableModes.map { it.displayName }})")
+                                        }
+                                    } else {
+                                        // ✅ Vertical: Zoom (single finger up/down)
+                                        val currentDrag = firstPointer.position - (firstPointer.previousPosition ?: firstPointer.position)
+                                        if (abs(currentDrag.y) > 2f) {
+                                            val zoomDelta = -currentDrag.y * 0.008
+                                            mapLibreMap?.let { map ->
+                                                map.moveCamera(CameraUpdateFactory.zoomBy(zoomDelta.toDouble()))
+                                                Log.d(TAG, "🔍 Single finger vertical: Custom zoom $zoomDelta")
+                                            }
+                                        }
+                                    }
+                                    // ❌ CRITICAL: NO PANNING WITH SINGLE FINGER
+                                    Log.d(TAG, "✅ Single finger gesture - no panning (complies with CLAUDE.md)")
+                                }
+                            }
+
+                            2 -> {
+                                // ✅ Two finger: Map panning (CLAUDE.md requirement)
+                                if (activePointers.size >= 2) {
+                                    val firstPointer = activePointers[0]
+                                    val secondPointer = activePointers[1]
+
+                                    // Calculate center point of two fingers
+                                    val centerPoint = Offset(
+                                        (firstPointer.position.x + secondPointer.position.x) / 2f,
+                                        (firstPointer.position.y + secondPointer.position.y) / 2f
+                                    )
+
+                                    val previousCenterPoint = Offset(
+                                        ((firstPointer.previousPosition?.x ?: firstPointer.position.x) +
+                                         (secondPointer.previousPosition?.x ?: secondPointer.position.x)) / 2f,
+                                        ((firstPointer.previousPosition?.y ?: firstPointer.position.y) +
+                                         (secondPointer.previousPosition?.y ?: secondPointer.position.y)) / 2f
+                                    )
+
+                                    val panDelta = centerPoint - previousCenterPoint
+
+                                    if (abs(panDelta.x) > 1f || abs(panDelta.y) > 1f) {
+                                        // ✅ Save position before first pan
+                                        if (!showReturnButton && currentLocation != null) {
+                                            onSaveLocation(currentLocation, mapLibreMap?.cameraPosition?.zoom ?: 10.0, mapLibreMap?.cameraPosition?.bearing ?: 0.0)
+                                            onShowReturnButton(true)
+                                            Log.d(TAG, "📍 Saved position for return button")
+                                        }
+
+                                        // Apply pan to map using screen coordinate pan
+                                        mapLibreMap?.let { map ->
+                                            val currentTarget = map.cameraPosition.target
+                                            if (currentTarget != null) {
+                                                val projection = map.projection
+
+                                                // Convert screen pan delta to map coordinate delta
+                                                val screenCenter = android.graphics.PointF(size.width / 2f, size.height / 2f)
+                                                val screenPanned = android.graphics.PointF(
+                                                    screenCenter.x - panDelta.x,
+                                                    screenCenter.y - panDelta.y
+                                                )
+
+                                                val centerLatLng = projection.fromScreenLocation(screenCenter)
+                                                val pannedLatLng = projection.fromScreenLocation(screenPanned)
+
+                                                if (centerLatLng != null && pannedLatLng != null) {
+                                                    val latDelta = pannedLatLng.latitude - centerLatLng.latitude
+                                                    val lngDelta = pannedLatLng.longitude - centerLatLng.longitude
+
+                                                    val newTarget = org.maplibre.android.geometry.LatLng(
+                                                        currentTarget.latitude + latDelta,
+                                                        currentTarget.longitude + lngDelta
+                                                    )
+
+                                                    map.moveCamera(CameraUpdateFactory.newLatLng(newTarget))
+                                                    Log.d(TAG, "🗺️ Two finger pan: delta=(${panDelta.x}, ${panDelta.y})")
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            else -> {
+                                // ✅ 3+ fingers: Ignore for now
+                                Log.d(TAG, "🖐️ ${fingerCount} fingers detected - ignoring complex gestures")
+                            }
+                        }
+
+                        // Mark changes as consumed
+                        activePointers.forEach { it.consume() }
+
+                    } while (activePointers.isNotEmpty())
+
+                    Log.d(TAG, "🏁 Gesture ended")
+
+                    // ✅ AAT Double-Tap Detection: Check for quick tap on AAT area
+                    val currentTime = System.currentTimeMillis()
+                    val gestureDuration = currentTime - gestureStartTime
+                    val isQuickTap = gestureDuration < 200L // Quick tap, not a drag
+
+                    if (taskType == TaskType.AAT && isQuickTap && !isDraggingAAT) {
+                        val timeSinceLastTap = currentTime - lastTapTime
+                        val distanceFromLastTap = (gestureStartPosition - lastTapPosition).getDistance()
+
+                        // Double-tap conditions: within 500ms and within 50px of previous tap
+                        if (timeSinceLastTap < 500L && distanceFromLastTap < 50f) {
+                            // This is a double-tap!
+                            if (aatEditModeIndex == -1) {
+                                // Not in edit mode: Check if double-tapped on AAT area
+                                if (aatWaypointHit != null && aatWaypointHit == lastTapWaypointIndex) {
+                                    // Double-tapped on same AAT area: Enter edit mode
+                                    Log.d(TAG, "🎯 AAT: Double-tap detected on waypoint $aatWaypointHit - entering edit mode")
+                                    aatEditModeIndex = aatWaypointHit
+                                    onAATLongPress(aatWaypointHit) // Reuse same callback
+                                }
+                            } else {
+                                // Already in edit mode: Double-tap exits edit mode
+                                Log.d(TAG, "🎯 AAT: Double-tap detected - exiting edit mode")
+                                aatEditModeIndex = -1
+                                isDraggingAAT = false
+                                onAATExitEditMode()
+                            }
+
+                            // Reset double-tap tracking after successful double-tap
+                            lastTapTime = 0L
+                            lastTapWaypointIndex = null
+                        } else {
+                            // First tap or too far apart: Record this tap for potential double-tap
+                            lastTapTime = currentTime
+                            lastTapPosition = gestureStartPosition
+                            lastTapWaypointIndex = aatWaypointHit
+                            Log.d(TAG, "🎯 AAT: First tap recorded (waypoint=$aatWaypointHit)")
+                        }
+                    }
+
+                    // ✅ AAT: Handle long-press to exit edit mode (ONLY long press, no quick tap)
+                    if (aatEditModeIndex != -1 && !isDraggingAAT && !isQuickTap) {
+                        val gestureDuration = currentTime - gestureStartTime
+
+                        // Exit condition: ONLY long press (>=350ms) anywhere on screen
+                        val isLongPress = gestureDuration >= 350L
+
+                        if (isLongPress) {
+                            // Long press while in edit mode: Exit edit mode (works anywhere on screen)
+                            Log.d(TAG, "🎯 AAT: Long press detected - exiting edit mode (held ${gestureDuration}ms)")
+                            aatEditModeIndex = -1
+                            isDraggingAAT = false
+                            onAATExitEditMode()
+                        }
+                    }
+
+                    // Reset AAT drag state at end of gesture
+                    if (aatEditModeIndex != -1 && isDraggingAAT) {
+                        isDraggingAAT = false
+                        Log.d(TAG, "🎯 AAT: Drag ended for waypoint $aatEditModeIndex")
+                    }
+                }
+            }
+    )
+}

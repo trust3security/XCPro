@@ -1,0 +1,48 @@
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# Android build outputs
+*.apk
+*.ap_
+*.aab
+*.dex
+*.class
+
+# Build directories
+/app/build/
+/dfcards-library/build/
+*/build/
+
+# Backup files
+*.zip
+*.tar
+*.tar.gz
+*.bak
+.git-backup/
+.git-old-corrupted/
+
+# Cleanup scripts
+clean-git-repo.bat
+clean-repo-with-bfg.bat
+cleanup-git-properly.bat
+fix-git-corruption.bat
+fix-git-objects-recursion.bat
+
+# BFG reports
+..bfg-report/
+
+# Temporary files
+nul

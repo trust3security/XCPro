@@ -1,0 +1,1 @@
+i want you to first analyze my code then optimize a prompt for me that will clearly be used for the purposes of generating a prd for building a tasks file save. here the user can save or remove etc new previous tasks. to learn about what tasks are and turn point types you will need to understand the code in tasks. it needs to be a practical and not over engineered solution.

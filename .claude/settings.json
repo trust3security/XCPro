@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -c \"(New-Object Media.SoundPlayer 'C:\\Users\\Asus\\AndroidStudioProjects\\xcpro\\bell.wav').PlaySync()\""
+          }
+        ]
+      }
+    ]
+  }
+}

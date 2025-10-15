@@ -1,0 +1,504 @@
+package com.example.baseui1.tasks
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.example.baseui1.SearchWaypoint
+import kotlin.math.*
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.platform.LocalContext
+import android.graphics.Bitmap
+import android.graphics.Color as AndroidColor
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.qrcode.QRCodeWriter
+import com.google.zxing.common.BitMatrix
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextAlign
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TaskBottomSheet(
+    task: RacingTask,
+    onClearTask: () -> Unit,
+    onSaveTask: () -> Unit,
+    onDismiss: () -> Unit,
+    taskType: TaskType,
+    taskManager: TaskManagerCoordinator,  // Required for optimal distance calculations
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 200.dp, max = 400.dp),
+        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            // Header with drag handle
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    modifier = Modifier
+                        .width(40.dp)
+                        .height(4.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                    ),
+                    shape = RoundedCornerShape(2.dp)
+                ) {}
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Task info header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+
+                Row {
+                    // Clear task button
+                    IconButton(
+                        onClick = onClearTask,
+                        enabled = task.waypoints.isNotEmpty()
+                    ) {
+                        Icon(
+                            Icons.Default.Clear,
+                            contentDescription = "Clear Task",
+                            tint = if (task.waypoints.isNotEmpty())
+                                MaterialTheme.colorScheme.error
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                        )
+                    }
+
+                    // Save task button
+                    IconButton(
+                        onClick = onSaveTask,
+                        enabled = task.waypoints.size >= 2
+                    ) {
+                        Icon(
+                            Icons.Default.Save,
+                            contentDescription = "Save Task",
+                            tint = if (task.waypoints.size >= 2)
+                                MaterialTheme.colorScheme.primary
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                        )
+                    }
+
+                    // Close button
+                    IconButton(onClick = onDismiss) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Close"
+                        )
+                    }
+                }
+            }
+
+            // Task statistics
+            if (task.waypoints.isNotEmpty()) {
+                TaskStatsSection(task = task, taskType = taskType, taskManager = taskManager)
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            // Waypoints list
+            if (task.waypoints.isNotEmpty()) {
+                Text(
+                    text = "Waypoints (${task.waypoints.size})",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    itemsIndexed(task.waypoints) { index, waypoint ->
+                        WaypointListItem(
+                            waypoint = waypoint.searchWaypoint,
+                            index = index,
+                            role = when {
+                                index == 0 -> "Start"
+                                index == task.waypoints.lastIndex && task.waypoints.size > 1 -> "Finish"
+                                else -> "Turn ${index}"
+                            }
+                        )
+                    }
+                }
+            } else {
+                // Empty state
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        Icons.Default.Route,
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "No waypoints selected",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "Tap the + button to add waypoints",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TaskStatsSection(task: RacingTask, taskType: TaskType, taskManager: TaskManagerCoordinator) {
+    val distance = taskManager.calculateTaskDistance(task.waypoints)
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        TaskStatItem(
+            label = "Distance",
+            value = "${String.format("%.1f", distance)} km",
+            icon = Icons.Default.Straighten
+        )
+
+        TaskQRCodeItem(
+            task = task
+        )
+
+        // Replace "Complete/Building" with a tick + the selected type (confirms what user chose)
+        TaskStatItem(
+            label = "Task",
+            value = when (taskType) {
+                TaskType.RACING -> "Racing"
+                TaskType.AAT    -> "AAT"
+                TaskType.DHT    -> "DHT"
+            },
+            icon = Icons.Default.CheckCircle   // Always show tick here as your confirmation marker
+        )
+    }
+}
+
+
+@Composable
+private fun TaskStatItem(
+    label: String,
+    value: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+fun WaypointListItem(
+    waypoint: SearchWaypoint,
+    index: Int,
+    role: String
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Role indicator
+            Surface(
+                modifier = Modifier.size(32.dp),
+                shape = RoundedCornerShape(16.dp),
+                color = when (role) {
+                    "Start" -> Color(0xFF4CAF50)
+                    "Finish" -> Color(0xFFF44336)
+                    else -> MaterialTheme.colorScheme.primary
+                }
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Text(
+                        text = (index + 1).toString(),
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = waypoint.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = role,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+// Old calculateTaskDistance function removed - now using TaskManager.calculateTaskDistance() with tangent algorithm
+
+private fun haversineDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+    val R = 6371.0 // Earth's radius in kilometers
+    val dLat = Math.toRadians(lat2 - lat1)
+    val dLon = Math.toRadians(lon2 - lon1)
+    val a = sin(dLat / 2) * sin(dLat / 2) +
+            cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) *
+            sin(dLon / 2) * sin(dLon / 2)
+    val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+    return R * c
+}
+
+@Composable
+private fun TaskQRCodeItem(
+    task: RacingTask
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var qrBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var showQRDialog by remember { mutableStateOf(false) }
+    
+    // Generate QR code when component loads
+    LaunchedEffect(task.waypoints.size) {
+        scope.launch {
+            try {
+                val taskData = generateTaskQRData(task)
+                qrBitmap = generateQRCode(taskData)
+            } catch (e: Exception) {
+                println("🎯 QR DEBUG: Error generating QR code: ${e.message}")
+            }
+        }
+    }
+    
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.clickable { showQRDialog = true }
+    ) {
+        Icon(
+            Icons.Default.QrCode,
+            contentDescription = "Share Task QR Code",
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = "Share",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = "QR Code",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+    
+    // QR Code Dialog
+    if (showQRDialog) {
+        QRCodeDialog(
+            task = task,
+            onDismiss = { showQRDialog = false }
+        )
+    }
+}
+
+@Composable
+private fun QRCodeDialog(
+    task: RacingTask,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var qrBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    
+    // Generate QR code when dialog opens
+    LaunchedEffect(Unit) {
+        scope.launch {
+            try {
+                val taskData = generateTaskQRData(task)
+                qrBitmap = generateQRCode(taskData)
+                isLoading = false
+            } catch (e: Exception) {
+                errorMessage = "Failed to generate QR code: ${e.message}"
+                isLoading = false
+            }
+        }
+    }
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { 
+            Text(
+                "Share Task via QR Code",
+                style = MaterialTheme.typography.titleLarge
+            ) 
+        },
+        text = {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                when {
+                    isLoading -> {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("Generating QR Code...")
+                    }
+                    errorMessage != null -> {
+                        Icon(
+                            imageVector = Icons.Default.Error,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = errorMessage!!,
+                            color = MaterialTheme.colorScheme.error,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                    qrBitmap != null -> {
+                        Card(
+                            modifier = Modifier.size(200.dp),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                        ) {
+                            Image(
+                                bitmap = qrBitmap!!.asImageBitmap(),
+                                contentDescription = "Task QR Code",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Fit
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Scan this QR code with another pilot's app to share the task",
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Task: ${task.waypoints.size} waypoints",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close")
+            }
+        }
+    )
+}
+
+// Generate QR-friendly task data
+private fun generateTaskQRData(task: RacingTask): String {
+    val waypoints = task.waypoints.map { wp ->
+        "${wp.searchWaypoint.title}:${wp.lat}:${wp.lon}:${wp.role.name}"
+    }.joinToString("|")
+    
+    val taskType = when (task) {
+        is RacingTask -> "RACING"
+        is AATTask -> "AAT"  
+        is DHTTask -> "DHT"
+        else -> "RACING"
+    }
+    
+    return "GLIDER_TASK:$taskType:$waypoints"
+}
+
+// Generate QR code bitmap
+private suspend fun generateQRCode(data: String): Bitmap = withContext(Dispatchers.Default) {
+    val writer = QRCodeWriter()
+    val bitMatrix: BitMatrix = writer.encode(data, BarcodeFormat.QR_CODE, 512, 512)
+    
+    val width = bitMatrix.width
+    val height = bitMatrix.height
+    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565)
+    
+    for (x in 0 until width) {
+        for (y in 0 until height) {
+            bitmap.setPixel(x, y, if (bitMatrix[x, y]) AndroidColor.BLACK else AndroidColor.WHITE)
+        }
+    }
+    
+    bitmap
+}

@@ -1,0 +1,35 @@
+# .cursorrules
+version: 1
+
+# Tell Cursor what files to index for Claude
+index:
+  include:
+    - "**/*.kt"       # Kotlin source files
+    - "**/*.kts"      # Gradle Kotlin DSL
+    - "libs.versions.toml"  # Version catalog
+    - "**/*.xml"      # (optional) AndroidManifest, resources
+    - "**/*.json"     # configs like airspace, tasks, etc.
+  exclude:
+    - "**/build/**"   # Gradle build outputs
+    - ".gradle/**"
+    - ".idea/**"
+    - ".git/**"
+    - "local.properties"
+    - "**/*.iml"
+    - "**/.DS_Store"
+    - "**/captures/**"
+    - "**/generated/**"
+
+# How AI should behave
+rules:
+  - match: "**/*.kt"
+    instruction: >
+      Always use Jetpack Compose + Kotlin DSL.
+      Follow Android Studio Meerkat (AGP 8.x, Kotlin 2.x).
+      Prefer code that integrates directly with existing project structure.
+  - match: "libs.versions.toml"
+    instruction: >
+      Update dependencies here instead of hardcoding in build.gradle.kts.
+  - match: "**/build.gradle.kts"
+    instruction: >
+      Use version catalog references (libs.xxx) — no hardcoded versions.
