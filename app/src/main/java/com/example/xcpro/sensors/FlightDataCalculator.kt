@@ -65,6 +65,10 @@ class FlightDataCalculator(
 
         // Netto calculation
         private const val MIN_AIRSPEED_FOR_NETTO = 15.0       // m/s (54 km/h)
+
+        // IMU fusion thresholds
+        private const val MIN_SPEED_FOR_IMU_FUSION = 1.0      // m/s below which we ignore IMU noise
+        private const val MAX_ACCEL_FOR_FUSION = 12.0         // m/s^2 clamp to reject spikes
     }
 
     // History for calculations (shared with helper) - must be initialized first
@@ -117,6 +121,7 @@ class FlightDataCalculator(
     private var cachedGPSLat = 0.0  // 🚀 For SRTM-based QNH calibration
     private var cachedGPSLon = 0.0  // 🚀 For SRTM-based QNH calibration
     private var cachedGPS: GPSData? = null  // Full GPS data for calculations
+    private var imuFusionActive = false
 
     // Cached results from vario loop for GPS loop to use
     private var cachedVarioResult: com.example.dfcards.filters.ModernVarioResult? = null
@@ -181,41 +186,60 @@ class FlightDataCalculator(
 
         val currentTime = System.currentTimeMillis()
 
-        // Calculate delta time for vario filter (independent of GPS)
         val deltaTime = if (lastVarioUpdateTime > 0) {
             (currentTime - lastVarioUpdateTime) / 1000.0
         } else {
             0.02 // 50Hz = 20ms = 0.02s default
         }
 
-        // Prevent too-frequent updates (minimum 10ms between updates)
         if (deltaTime < 0.01) {
             return
         }
 
-        // Calculate barometric altitude (using cached GPS data + 🚀 coordinates for SRTM-based QNH)
         val baroResult = baroCalculator.calculateBarometricAltitude(
             rawPressureHPa = baro.pressureHPa,
-            // Do not pass 0.0/NaN as valid GPS altitude; treat as missing until first fix
             gpsAltitudeMeters = if (cachedGPSAltitude.isNaN()) null else cachedGPSAltitude,
             gpsAccuracy = cachedGPSAccuracy,
             isGPSFixed = cachedIsGPSFixed,
-            gpsLat = cachedGPSLat,  // 🚀 For SRTM-based QNH calibration
-            gpsLon = cachedGPSLon   // 🚀 For SRTM-based QNH calibration
+            gpsLat = cachedGPSLat,
+            gpsLon = cachedGPSLon
         )
 
-        // ✅ UPDATE ALL VARIOS - Side-by-side testing (VARIO_IMPROVEMENTS.md)
+        val rawAccel = accel?.verticalAcceleration ?: 0.0
+        val accelReliable = accel?.isReliable == true
+        val withinAccelRange = abs(rawAccel) <= MAX_ACCEL_FOR_FUSION
+        val usingImu = accelReliable && withinAccelRange && cachedGPSSpeed >= MIN_SPEED_FOR_IMU_FUSION
+
+        if (usingImu != imuFusionActive) {
+            val stateLabel = if (usingImu) "ENABLED" else "DISABLED"
+            val speedLabel = String.format("%.1f", cachedGPSSpeed)
+            val accelLabel = String.format("%.2f", rawAccel)
+            Log.d(TAG, "IMU fusion  (speed= m/s, reliable=, accel= m/s^2)")
+            modernVarioFilter.reset()
+            varioOptimized.reset()
+            varioLegacy.reset()
+            varioComplementary.reset()
+            imuFusionActive = usingImu
+            cachedVarioResult = null
+        }
+
+        val verticalAccelForFusion = if (usingImu) {
+            rawAccel.coerceIn(-MAX_ACCEL_FOR_FUSION, MAX_ACCEL_FOR_FUSION)
+        } else {
+            0.0
+        }
+
         val varioResults = mapOf(
             "optimized" to varioOptimized.update(
                 baroAltitude = baroResult.altitudeMeters,
-                verticalAccel = accel?.verticalAcceleration ?: 0.0,
+                verticalAccel = verticalAccelForFusion,
                 deltaTime = deltaTime,
                 gpsSpeed = cachedGPSSpeed,
                 gpsAltitude = cachedGPSAltitude
             ),
             "legacy" to varioLegacy.update(
                 baroAltitude = baroResult.altitudeMeters,
-                verticalAccel = accel?.verticalAcceleration ?: 0.0,
+                verticalAccel = verticalAccelForFusion,
                 deltaTime = deltaTime,
                 gpsSpeed = cachedGPSSpeed,
                 gpsAltitude = cachedGPSAltitude
@@ -236,24 +260,21 @@ class FlightDataCalculator(
             ),
             "complementary" to varioComplementary.update(
                 baroAltitude = baroResult.altitudeMeters,
-                verticalAccel = accel?.verticalAcceleration ?: 0.0,
+                verticalAccel = verticalAccelForFusion,
                 deltaTime = deltaTime,
                 gpsSpeed = cachedGPSSpeed,
                 gpsAltitude = cachedGPSAltitude
             )
         )
 
-        // ✅ MODERN VARIO: Use accelerometer + barometer fusion (if available)
-        val varioResult = if (accel != null) {
-            // Modern 3-state Kalman filter: ZERO-LAG vario with IMU fusion
+        val varioResult = if (usingImu) {
             modernVarioFilter.update(
                 baroAltitude = baroResult.altitudeMeters,
-                verticalAccel = accel.verticalAcceleration,
+                verticalAccel = verticalAccelForFusion,
                 deltaTime = deltaTime,
-                gpsSpeed = cachedGPSSpeed  // ← Uses cached GPS speed
+                gpsSpeed = cachedGPSSpeed
             )
         } else {
-            // Fallback: Old 2-state filter (barometer only) if no accelerometer
             val filteredBaro = baroFilter.processReading(
                 rawBaroAltitude = baroResult.altitudeMeters,
                 gpsAltitude = cachedGPSAltitude,
@@ -267,27 +288,26 @@ class FlightDataCalculator(
             )
         }
 
-        // ✅ UPDATE AUDIO ENGINE IMMEDIATELY (zero-lag audio feedback)
-        // Use raw vertical speed for audio (TE compensation in GPS loop)
         audioEngine.updateVerticalSpeed(varioResult.verticalSpeed)
 
-        // Cache results for GPS loop to use
         cachedVarioResult = varioResult
         cachedBaroResult = baroResult
         cachedBaroData = baro
 
-        // Update last vario update time
         lastVarioUpdateTime = currentTime
 
-        // Log occasionally for diagnostics (every 50th update @ 50Hz = 1 second)
         if (currentTime % 1000 < 20) {
-            Log.d(TAG, "[HIGH-SPEED VARIO 50Hz] V/S=${String.format("%.2f", varioResult.verticalSpeed)}m/s, " +
-                      "Alt=${String.format("%.1f", varioResult.altitude)}m, " +
-                      "Δt=${String.format("%.3f", deltaTime)}s, " +
-                      "Opt=${String.format("%.2f", varioResults["optimized"])}m/s")
+            val optValue = varioResults["optimized"] ?: 0.0
+            Log.d(
+                TAG,
+                "[HIGH-SPEED VARIO 50Hz] V/S=m/s, " +
+                    "Alt=m, " +
+                    "Δt=s, " +
+                    "Opt=m/s, " +
+                    "IMU="
+            )
         }
     }
-
     /**
      * ✅ PRIORITY 2: SLOW GPS LOOP (10Hz)
      *

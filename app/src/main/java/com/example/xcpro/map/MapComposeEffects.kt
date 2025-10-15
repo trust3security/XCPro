@@ -18,6 +18,8 @@ import com.example.dfcards.CardPreferences
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.dfcards.FlightDataViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.filterNotNull
 import kotlin.random.Random
 
 /**
@@ -154,18 +156,18 @@ object MapComposeEffects {
         }
 
         // Update cards and location with live flight data
-        // Trigger on coordinate changes for real-time updates
-        LaunchedEffect(
-            flightDataManager.liveFlightData?.latitude,
-            flightDataManager.liveFlightData?.longitude,
-            flightDataManager.liveFlightData?.groundSpeed,
-            orientationData.mode,
-            orientationData.bearing
-        ) {
-            flightDataManager.liveFlightData?.let { liveData ->
-                flightViewModel.updateCardsWithLiveData(liveData)
-                locationManager.updateLocationFromFlightData(liveData, orientationData.mode, orientationData.bearing)
-            } ?: Log.d(TAG, "📡 No GPS data available (liveFlightData is null)")
+        // Collect every emission so vertical-speed-only changes update immediately
+        LaunchedEffect(Unit) {
+            snapshotFlow { flightDataManager.liveFlightData }
+                .filterNotNull()
+                .collectLatest { liveData ->
+                    flightViewModel.updateCardsWithLiveData(liveData)
+                    locationManager.updateLocationFromFlightData(
+                        liveData,
+                        orientationData.mode,
+                        orientationData.bearing
+                    )
+                }
         }
 
         // Continuous update loop for ALL modes - ensures smooth real-time tracking

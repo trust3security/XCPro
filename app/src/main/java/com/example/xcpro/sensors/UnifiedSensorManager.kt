@@ -1,4 +1,4 @@
-package com.example.xcpro.sensors
+﻿package com.example.xcpro.sensors
 
 import android.Manifest
 import android.content.Context
@@ -11,6 +11,7 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.util.Log
+import android.os.SystemClock
 import androidx.core.app.ActivityCompat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -63,6 +64,7 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener {
     private val pressureSensor: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE)
     private val magneticSensor: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
     private val linearAccelerometerSensor: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)
+    private val rotationVectorSensor: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
 
     // StateFlows - Single Source of Truth for each sensor
     private val _gpsFlow = MutableStateFlow<GPSData?>(null)
@@ -82,13 +84,20 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener {
     private var isBaroStarted = false
     private var isCompassStarted = false
     private var isAccelStarted = false
+    private var isRotationStarted = false
+
+    // Orientation tracking from rotation vector (device -> earth frame)
+    private val rotationMatrix = FloatArray(9)
+    private val tempRotationMatrix = FloatArray(9)
+    private var hasRotationMatrix = false
+    private var lastRotationUpdateMillis = 0L
 
     // GPS location listener
     private val gpsListener = object : LocationListener {
         override fun onLocationChanged(location: Location) {
             Log.d(TAG, "GPS update: lat=${location.latitude}, lon=${location.longitude}, " +
                     "alt=${location.altitude}m, speed=${location.speed}m/s, " +
-                    "bearing=${location.bearing}°, accuracy=${location.accuracy}m")
+                    "bearing=${location.bearing}Â°, accuracy=${location.accuracy}m")
 
             val gpsData = GPSData(
                 latLng = LatLng(location.latitude, location.longitude),
@@ -153,24 +162,42 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener {
 
                 // Only log occasionally (not every reading - would spam logs)
                 if (compassData.timestamp % 5000 < 50) { // Log every ~5 seconds
-                    Log.d(TAG, "Compass update: heading=${normalizedHeading.toInt()}°")
+                    Log.d(TAG, "Compass update: heading=${normalizedHeading.toInt()}Â°")
                 }
             }
 
+            Sensor.TYPE_ROTATION_VECTOR -> {
+                SensorManager.getRotationMatrixFromVector(tempRotationMatrix, event.values)
+                System.arraycopy(tempRotationMatrix, 0, rotationMatrix, 0, rotationMatrix.size)
+                hasRotationMatrix = true
+                lastRotationUpdateMillis = SystemClock.elapsedRealtime()
+            }
+
             Sensor.TYPE_LINEAR_ACCELERATION -> {
-                // Linear acceleration (gravity already removed by Android)
-                // Extract vertical component (earth-Z axis)
-                val verticalAccel = extractVerticalComponent(event.values)
+                val orientationFresh = hasRotationMatrix &&
+                        (SystemClock.elapsedRealtime() - lastRotationUpdateMillis) <= 500L
+
+                val ax = event.values[0].toDouble()
+                val ay = event.values[1].toDouble()
+                val az = event.values[2].toDouble()
+                val earthZ = if (orientationFresh) {
+                    rotationMatrix[6] * ax + rotationMatrix[7] * ay + rotationMatrix[8] * az
+                } else {
+                    az
+                }
 
                 val accelData = AccelData(
-                    verticalAcceleration = verticalAccel,
-                    timestamp = System.currentTimeMillis()
+                    verticalAcceleration = earthZ,
+                    timestamp = System.currentTimeMillis(),
+                    isReliable = orientationFresh
                 )
                 _accelFlow.value = accelData
 
-                // Only log occasionally (not every reading - would spam logs)
-                if (accelData.timestamp % 5000 < 50) { // Log every ~5 seconds
-                    Log.d(TAG, "Accelerometer update: verticalAccel=${String.format("%.2f", verticalAccel)}m/s²")
+                if (accelData.timestamp % 5000 < 50) {
+                    Log.d(
+                        TAG,
+                        "Accelerometer update: verticalAccel=${String.format("%.2f", earthZ)}m/sÂ², reliable=$orientationFresh"
+                    )
                 }
             }
         }
@@ -191,6 +218,7 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener {
         startGPS()
         startBarometer()
         startCompass()
+        startRotationVector()
         startAccelerometer()
         Log.d(TAG, "All sensors started successfully")
     }
@@ -204,6 +232,7 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener {
         stopGPS()
         stopBarometer()
         stopCompass()
+        stopRotationVector()
         stopAccelerometer()
         Log.d(TAG, "All sensors stopped")
     }
@@ -231,9 +260,9 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener {
                     GPS_MIN_DISTANCE_M,
                     gpsListener
                 )
-                Log.d(TAG, "✅ GPS started (1Hz)")
+                Log.d(TAG, "âœ… GPS started (1Hz)")
             } else {
-                Log.w(TAG, "⚠️ GPS provider not enabled")
+                Log.w(TAG, "âš ï¸ GPS provider not enabled")
             }
 
             // Also use Network provider for faster initial fix
@@ -244,21 +273,21 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener {
                     GPS_MIN_DISTANCE_M,
                     gpsListener
                 )
-                Log.d(TAG, "✅ Network provider started (for fast initial fix)")
+                Log.d(TAG, "âœ… Network provider started (for fast initial fix)")
             }
 
             // Get last known location for immediate display
             getLastKnownLocation()?.let { location ->
-                Log.d(TAG, "📍 Using last known location: ${location.latitude}, ${location.longitude}")
+                Log.d(TAG, "ðŸ“ Using last known location: ${location.latitude}, ${location.longitude}")
                 gpsListener.onLocationChanged(location)
             }
 
             isGpsStarted = true
 
         } catch (e: SecurityException) {
-            Log.e(TAG, "❌ Security exception starting GPS: ${e.message}")
+            Log.e(TAG, "âŒ Security exception starting GPS: ${e.message}")
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Error starting GPS: ${e.message}", e)
+            Log.e(TAG, "âŒ Error starting GPS: ${e.message}", e)
         }
     }
 
@@ -280,12 +309,12 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener {
 
             if (success) {
                 isBaroStarted = true
-                Log.d(TAG, "✅ Barometer started (~20Hz): ${sensor.name}")
+                Log.d(TAG, "âœ… Barometer started (~20Hz): ${sensor.name}")
             } else {
-                Log.e(TAG, "❌ Failed to register barometer listener")
+                Log.e(TAG, "âŒ Failed to register barometer listener")
             }
         } ?: run {
-            Log.w(TAG, "⚠️ No barometer sensor available on this device")
+            Log.w(TAG, "âš ï¸ No barometer sensor available on this device")
         }
     }
 
@@ -307,12 +336,12 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener {
 
             if (success) {
                 isCompassStarted = true
-                Log.d(TAG, "✅ Compass started (~60Hz): ${sensor.name}")
+                Log.d(TAG, "âœ… Compass started (~60Hz): ${sensor.name}")
             } else {
-                Log.e(TAG, "❌ Failed to register compass listener")
+                Log.e(TAG, "âŒ Failed to register compass listener")
             }
         } ?: run {
-            Log.w(TAG, "⚠️ No compass sensor available on this device")
+            Log.w(TAG, "âš ï¸ No compass sensor available on this device")
         }
     }
 
@@ -325,9 +354,9 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener {
         try {
             locationManager.removeUpdates(gpsListener)
             isGpsStarted = false
-            Log.d(TAG, "🛑 GPS stopped")
+            Log.d(TAG, "ðŸ›‘ GPS stopped")
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Error stopping GPS: ${e.message}")
+            Log.e(TAG, "âŒ Error stopping GPS: ${e.message}")
         }
     }
 
@@ -340,7 +369,7 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener {
         pressureSensor?.let {
             sensorManager.unregisterListener(this, it)
             isBaroStarted = false
-            Log.d(TAG, "🛑 Barometer stopped")
+            Log.d(TAG, "ðŸ›‘ Barometer stopped")
         }
     }
 
@@ -353,7 +382,34 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener {
         magneticSensor?.let {
             sensorManager.unregisterListener(this, it)
             isCompassStarted = false
-            Log.d(TAG, "🛑 Compass stopped")
+            Log.d(TAG, "ðŸ›‘ Compass stopped")
+        }
+    }
+
+    /**
+     * Start rotation vector sensor (provides device orientation)
+     */
+    private fun startRotationVector() {
+        if (isRotationStarted) {
+            Log.d(TAG, "Rotation vector already started")
+            return
+        }
+
+        rotationVectorSensor?.let { sensor ->
+            val success = sensorManager.registerListener(
+                this,
+                sensor,
+                SensorManager.SENSOR_DELAY_GAME
+            )
+
+            if (success) {
+                isRotationStarted = true
+                Log.d(TAG, "ï¿½o. Rotation vector started (~50Hz): ${sensor.name}")
+            } else {
+                Log.e(TAG, "ï¿½?O Failed to register rotation vector listener")
+            }
+        } ?: run {
+            Log.w(TAG, "ï¿½sï¿½ï¿½,? No rotation vector sensor available on this device")
         }
     }
 
@@ -375,13 +431,27 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener {
 
             if (success) {
                 isAccelStarted = true
-                Log.d(TAG, "✅ Accelerometer started (~200Hz): ${sensor.name}")
+                Log.d(TAG, "âœ… Accelerometer started (~200Hz): ${sensor.name}")
             } else {
-                Log.e(TAG, "❌ Failed to register accelerometer listener")
+                Log.e(TAG, "âŒ Failed to register accelerometer listener")
             }
         } ?: run {
-            Log.w(TAG, "⚠️ No linear accelerometer sensor available on this device")
+            Log.w(TAG, "âš ï¸ No linear accelerometer sensor available on this device")
         }
+    }
+
+    /**
+     * Stop rotation vector sensor
+     */
+    private fun stopRotationVector() {
+        if (!isRotationStarted) return
+
+        rotationVectorSensor?.let {
+            sensorManager.unregisterListener(this, it)
+        }
+        isRotationStarted = false
+        hasRotationMatrix = false
+        Log.d(TAG, "dY>` Rotation vector stopped")
     }
 
     /**
@@ -393,26 +463,8 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener {
         linearAccelerometerSensor?.let {
             sensorManager.unregisterListener(this, it)
             isAccelStarted = false
-            Log.d(TAG, "🛑 Accelerometer stopped")
+            Log.d(TAG, "ðŸ›‘ Accelerometer stopped")
         }
-    }
-
-    /**
-     * Extract vertical acceleration component from linear accelerometer
-     *
-     * For simplicity, assumes phone is held vertically (portrait mode).
-     * In device frame: Z-axis points up when phone is vertical.
-     * Android's TYPE_LINEAR_ACCELERATION already has gravity removed.
-     *
-     * Future enhancement: Use device orientation (rotation matrix) to get
-     * true earth-Z component regardless of phone orientation.
-     */
-    private fun extractVerticalComponent(linearAccel: FloatArray): Double {
-        // Simple approach: assume phone held vertically
-        // Device Z-axis ≈ Earth Z-axis (vertical)
-        // Positive = upward acceleration
-        // Negative = downward acceleration
-        return linearAccel[2].toDouble()
     }
 
     /**
@@ -435,7 +487,7 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener {
                 else -> null
             }
         } catch (e: SecurityException) {
-            Log.e(TAG, "❌ Security exception getting last known location: ${e.message}")
+            Log.e(TAG, "âŒ Security exception getting last known location: ${e.message}")
             null
         }
     }
@@ -474,6 +526,8 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener {
             compassStarted = isCompassStarted,
             accelAvailable = linearAccelerometerSensor != null,
             accelStarted = isAccelStarted,
+            rotationAvailable = rotationVectorSensor != null,
+            rotationStarted = isRotationStarted,
             hasLocationPermissions = hasLocationPermissions()
         )
     }
@@ -491,8 +545,13 @@ data class SensorStatus(
     val compassStarted: Boolean,
     val accelAvailable: Boolean,
     val accelStarted: Boolean,
+    val rotationAvailable: Boolean,
+    val rotationStarted: Boolean,
     val hasLocationPermissions: Boolean
 ) {
-    val allSensorsAvailable: Boolean get() = gpsAvailable && baroAvailable && compassAvailable && accelAvailable
-    val allSensorsStarted: Boolean get() = gpsStarted && baroStarted && compassStarted && accelStarted
+    val allSensorsAvailable: Boolean
+        get() = gpsAvailable && baroAvailable && compassAvailable && accelAvailable && rotationAvailable
+    val allSensorsStarted: Boolean
+        get() = gpsStarted && baroStarted && compassStarted && accelStarted && rotationStarted
 }
+

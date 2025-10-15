@@ -42,6 +42,7 @@ class Modern3StateKalmanFilter {
 
     private var isInitialized = false
     private var lastUpdateTime = 0L
+    private var consecutiveAltitudeClamps = 0
 
     // Diagnostics collector (Priority 7: VARIO_IMPROVEMENTS.md)
     val diagnosticsCollector = VarioFilterDiagnosticsCollector()
@@ -153,8 +154,25 @@ class Modern3StateKalmanFilter {
         val MAX_BARO_INNOVATION = 5.0  // meters (reasonable limit for 50Hz updates)
         if (abs(y1) > MAX_BARO_INNOVATION) {
             android.util.Log.w("KalmanFilter", "⚠️ BARO SPIKE DETECTED: Innovation=${String.format("%.2f", y1)}m - LIMITED to ±${MAX_BARO_INNOVATION}m")
-            // Limit the impact (don't completely reject, but heavily attenuate)
             y1 = if (y1 > 0) MAX_BARO_INNOVATION else -MAX_BARO_INNOVATION
+            consecutiveAltitudeClamps++
+            if (consecutiveAltitudeClamps >= 3) {
+                android.util.Log.w("KalmanFilter", "⚠️ Reinitializing Kalman filter after repeated baro spikes")
+                reset()
+                state[0] = baroAltitude
+                state[1] = 0.0
+                state[2] = verticalAccel
+                lastUpdateTime = currentTime
+                consecutiveAltitudeClamps = 0
+                return ModernVarioResult(
+                    altitude = baroAltitude,
+                    verticalSpeed = 0.0,
+                    acceleration = verticalAccel,
+                    confidence = 0.2
+                )
+            }
+        } else {
+            consecutiveAltitudeClamps = 0
         }
 
         // Innovation covariance S = H*P*H' + R
@@ -294,6 +312,7 @@ class Modern3StateKalmanFilter {
         P[0][0] = 10.0
         P[1][1] = 5.0
         P[2][2] = 2.0
+        consecutiveAltitudeClamps = 0
     }
 
     // Helper matrix operations

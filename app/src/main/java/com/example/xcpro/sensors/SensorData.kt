@@ -53,7 +53,8 @@ data class CompassData(
  */
 data class AccelData(
     val verticalAcceleration: Double,  // m/s² (earth-Z axis, positive = upward)
-    val timestamp: Long
+    val timestamp: Long,
+    val isReliable: Boolean = true     // Whether orientation projection is valid
 )
 
 /**
