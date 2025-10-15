@@ -10,9 +10,9 @@ import com.example.xcpro.FlightMode
 import com.example.xcpro.gestures.CustomMapGestureHandler
 import com.example.xcpro.sensors.GPSData
 import com.example.xcpro.tasks.TaskManagerCoordinator
-import com.example.xcpro.tasks.TaskType
-import com.example.xcpro.tasks.TaskWaypoint
-import com.example.xcpro.tasks.WaypointRole
+import com.example.xcpro.tasks.core.TaskType
+import com.example.xcpro.tasks.core.TaskWaypoint
+import com.example.xcpro.tasks.core.WaypointRole
 import com.example.xcpro.tasks.aat.models.AATLatLng
 
 /**
@@ -147,3 +147,5 @@ object MapGestureSetup {
         }
     }
 }
+
+

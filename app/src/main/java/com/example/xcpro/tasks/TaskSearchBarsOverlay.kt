@@ -245,3 +245,5 @@ private fun loadRecentWaypoints(context: Context): List<SearchWaypoint> {
         emptyList()
     }
 }
+
+

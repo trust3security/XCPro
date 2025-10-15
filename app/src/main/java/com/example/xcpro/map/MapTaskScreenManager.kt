@@ -11,7 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.example.xcpro.tasks.TaskManagerCoordinator
-// import com.example.xcpro.tasks.TaskSearchBarsOverlay // REMOVED - searchbar feature disabled
+// import com.example.xcpro.tasks.core.TaskSearchBarsOverlay // REMOVED - searchbar feature disabled
 import com.example.xcpro.tasks.SwipeableTaskBottomSheet
 import com.example.xcpro.tasks.TaskMinimizedIndicator
 import org.maplibre.android.maps.MapLibreMap
@@ -320,3 +320,4 @@ object MapTaskScreenUI {
         )
     }
 }
+

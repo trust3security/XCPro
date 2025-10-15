@@ -1,5 +1,6 @@
 package com.example.xcpro.tasks.aat.ui
 
+import com.example.xcpro.tasks.core.TaskWaypoint
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions

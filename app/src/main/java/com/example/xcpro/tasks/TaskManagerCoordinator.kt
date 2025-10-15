@@ -5,80 +5,16 @@ import android.content.SharedPreferences
 import androidx.compose.runtime.*
 import com.example.xcpro.SearchWaypoint
 import com.google.gson.Gson
+import com.example.xcpro.tasks.core.Task
+import com.example.xcpro.tasks.core.TaskType
+import com.example.xcpro.tasks.core.TaskWaypoint
+import com.example.xcpro.tasks.core.WaypointRole
 import org.maplibre.android.maps.MapLibreMap
 import java.util.UUID
 
 // Coordinator imports - NO task-specific imports to avoid circular dependencies
 import com.example.xcpro.tasks.racing.RacingTaskManager
-import com.example.xcpro.tasks.racing.SimpleRacingTask
 import com.example.xcpro.tasks.aat.AATTaskManager
-
-/**
- * Generic Task model for coordinator interface
- */
-data class Task(
-    val id: String,
-    val waypoints: List<TaskWaypoint> = emptyList()
-)
-
-/**
- * Generic waypoint role - shared across all task types without contamination
- */
-enum class WaypointRole {
-    START,
-    TURNPOINT,
-    OPTIONAL,
-    FINISH
-}
-
-/**
- * Enhanced TaskWaypoint model for preserving user customizations across task type switches
- * Maintains separation - carries generic customization data without task-specific logic
- */
-data class TaskWaypoint(
-    // Basic waypoint data
-    val id: String,
-    val title: String,
-    val subtitle: String,
-    val lat: Double,
-    val lon: Double,
-
-    // Preservation fields for user customizations
-    val role: WaypointRole,
-    val customRadius: Double? = null, // User's custom radius/gate width (km) - null means use default
-    val customPointType: String? = null, // User's preferred point type (e.g., "START_LINE", "CYLINDER")
-    val customParameters: Map<String, Any> = emptyMap() // Additional task-specific custom settings
-) {
-    /**
-     * Get effective radius with standardized defaults per user requirements:
-     * - Start: 10km default
-     * - Finish: 3km default
-     * - Turnpoint: Task-specific default (will be provided by caller)
-     */
-    fun getEffectiveRadius(taskSpecificTurnpointDefault: Double): Double {
-        return customRadius ?: when (role) {
-            WaypointRole.START -> 10.0 // 10km start lines across all task types
-            WaypointRole.FINISH -> 3.0 // 3km finish cylinders across all task types
-            WaypointRole.TURNPOINT -> taskSpecificTurnpointDefault // Task-appropriate default
-            WaypointRole.OPTIONAL -> taskSpecificTurnpointDefault // Optional uses same as turnpoints
-        }
-    }
-
-    /**
-     * Check if this waypoint has user customizations that should be preserved
-     */
-    val hasCustomizations: Boolean get() = customRadius != null ||
-                                          customPointType != null ||
-                                          customParameters.isNotEmpty()
-}
-
-/**
- * Task type enumeration
- */
-enum class TaskType {
-    RACING,
-    AAT
-}
 
 /**
  * Task Manager Coordinator - Routes to appropriate task-specific managers
@@ -105,60 +41,8 @@ class TaskManagerCoordinator(val context: Context? = null) {
      * Current task - routes to appropriate manager and extracts full customization data
      */
     val currentTask: Task get() = when (_taskType) {
-        TaskType.RACING -> Task(
-            id = racingTaskManager.currentRacingTask.id,
-            waypoints = racingTaskManager.currentRacingTask.waypoints.map { rw ->
-                TaskWaypoint(
-                    id = rw.id,
-                    title = rw.title,
-                    subtitle = rw.subtitle,
-                    lat = rw.lat,
-                    lon = rw.lon,
-                    role = when (rw.role) {
-                        com.example.xcpro.tasks.racing.models.RacingWaypointRole.START -> WaypointRole.START
-                        com.example.xcpro.tasks.racing.models.RacingWaypointRole.TURNPOINT -> WaypointRole.TURNPOINT
-                        com.example.xcpro.tasks.racing.models.RacingWaypointRole.FINISH -> WaypointRole.FINISH
-                    },
-                    customRadius = rw.gateWidth, // Extract user's gate width setting
-                    customPointType = when (rw.role) {
-                        com.example.xcpro.tasks.racing.models.RacingWaypointRole.START -> rw.startPointType.name
-                        com.example.xcpro.tasks.racing.models.RacingWaypointRole.FINISH -> rw.finishPointType.name
-                        else -> rw.turnPointType.name
-                    },
-                    customParameters = mapOf(
-                        "keyholeInnerRadius" to rw.keyholeInnerRadius,
-                        "keyholeAngle" to rw.keyholeAngle,
-                        "faiQuadrantOuterRadius" to rw.faiQuadrantOuterRadius
-                    )
-                )
-            }
-        )
-        TaskType.AAT -> Task(
-            id = aatTaskManager.currentAATTask.id,
-            waypoints = aatTaskManager.currentAATTask.waypoints.map { aw ->
-                TaskWaypoint(
-                    id = aw.id,
-                    title = aw.title,
-                    subtitle = aw.subtitle,
-                    lat = aw.lat,
-                    lon = aw.lon,
-                    role = when (aw.role) {
-                        com.example.xcpro.tasks.aat.models.AATWaypointRole.START -> WaypointRole.START
-                        com.example.xcpro.tasks.aat.models.AATWaypointRole.TURNPOINT -> WaypointRole.TURNPOINT
-                        com.example.xcpro.tasks.aat.models.AATWaypointRole.FINISH -> WaypointRole.FINISH
-                    },
-                    customRadius = aw.assignedArea.radiusMeters / 1000.0, // Convert meters to km
-                    customPointType = aw.assignedArea.shape.name,
-                    customParameters = mapOf(
-                        "innerRadiusMeters" to aw.assignedArea.innerRadiusMeters,
-                        "outerRadiusMeters" to aw.assignedArea.outerRadiusMeters,
-                        "startAngleDegrees" to aw.assignedArea.startAngleDegrees,
-                        "endAngleDegrees" to aw.assignedArea.endAngleDegrees,
-                        "lineWidthMeters" to aw.assignedArea.lineWidthMeters
-                    )
-                )
-            }
-        )
+        TaskType.RACING -> racingTaskManager.getCoreTask()
+        TaskType.AAT -> aatTaskManager.getCoreTask()
     }
 
     /**
@@ -361,44 +245,8 @@ class TaskManagerCoordinator(val context: Context? = null) {
      * Get current leg waypoint - routes to appropriate manager
      */
     fun getCurrentLegWaypoint(): TaskWaypoint? {
-        return when (_taskType) {
-            TaskType.RACING -> {
-                val racingWaypoints = racingTaskManager.currentRacingTask.waypoints
-                if (currentLeg < racingWaypoints.size) {
-                    val rw = racingWaypoints[currentLeg]
-                    TaskWaypoint(
-                        id = rw.id,
-                        title = rw.title,
-                        subtitle = rw.subtitle,
-                        lat = rw.lat,
-                        lon = rw.lon,
-                        role = when (rw.role) {
-                            com.example.xcpro.tasks.racing.models.RacingWaypointRole.START -> WaypointRole.START
-                            com.example.xcpro.tasks.racing.models.RacingWaypointRole.TURNPOINT -> WaypointRole.TURNPOINT
-                            com.example.xcpro.tasks.racing.models.RacingWaypointRole.FINISH -> WaypointRole.FINISH
-                        }
-                    )
-                } else null
-            }
-            TaskType.AAT -> {
-                val aatWaypoints = aatTaskManager.currentAATTask.waypoints
-                if (currentLeg < aatWaypoints.size) {
-                    val aw = aatWaypoints[currentLeg]
-                    TaskWaypoint(
-                        id = aw.id,
-                        title = aw.title,
-                        subtitle = aw.subtitle,
-                        lat = aw.lat,
-                        lon = aw.lon,
-                        role = when (aw.role) {
-                            com.example.xcpro.tasks.aat.models.AATWaypointRole.START -> WaypointRole.START
-                            com.example.xcpro.tasks.aat.models.AATWaypointRole.TURNPOINT -> WaypointRole.TURNPOINT
-                            com.example.xcpro.tasks.aat.models.AATWaypointRole.FINISH -> WaypointRole.FINISH
-                        }
-                    )
-                } else null
-            }
-        }
+        val waypoints = currentTask.waypoints
+        return if (currentLeg in waypoints.indices) waypoints[currentLeg] else null
     }
 
     /**
@@ -425,24 +273,25 @@ class TaskManagerCoordinator(val context: Context? = null) {
         faiQuadrantOuterRadius: Double?
     ) {
         when (_taskType) {
-            TaskType.RACING -> racingTaskManager.updateRacingWaypointType(
-                index,
-                startType as? com.example.xcpro.tasks.racing.models.RacingStartPointType,
-                finishType as? com.example.xcpro.tasks.racing.models.RacingFinishPointType,
-                turnType as? com.example.xcpro.tasks.racing.models.RacingTurnPointType,
-                gateWidth,
-                keyholeInnerRadius,
-                keyholeAngle
+            TaskType.RACING -> racingTaskManager.updateWaypointPointTypeBridge(
+                index = index,
+                startType = startType,
+                finishType = finishType,
+                turnType = turnType,
+                gateWidth = gateWidth,
+                keyholeInnerRadius = keyholeInnerRadius,
+                keyholeAngle = keyholeAngle,
+                faiQuadrantOuterRadius = faiQuadrantOuterRadius
             )
-            TaskType.AAT -> aatTaskManager.updateAATWaypointPointType(
-                index,
-                startType as? com.example.xcpro.tasks.aat.models.AATStartPointType,
-                finishType as? com.example.xcpro.tasks.aat.models.AATFinishPointType,
-                turnType as? com.example.xcpro.tasks.aat.models.AATTurnPointType,
-                gateWidth,
-                keyholeInnerRadius,
-                keyholeAngle,
-                faiQuadrantOuterRadius // ✅ Use faiQuadrantOuterRadius (parameter name) for AAT sector outer radius
+            TaskType.AAT -> aatTaskManager.updateWaypointPointTypeBridge(
+                index = index,
+                startType = startType,
+                finishType = finishType,
+                turnType = turnType,
+                gateWidth = gateWidth,
+                keyholeInnerRadius = keyholeInnerRadius,
+                keyholeAngle = keyholeAngle,
+                sectorOuterRadius = faiQuadrantOuterRadius
             )
         }
     }
@@ -472,13 +321,6 @@ class TaskManagerCoordinator(val context: Context? = null) {
             }
         }
     }
-
-    /**
-     * Get current racing task - for compatibility
-     */
-    val currentRacingTask: com.example.xcpro.tasks.racing.SimpleRacingTask
-        get() = racingTaskManager.currentRacingTask
-
     /**
      * Load saved tasks from all managers
      */
@@ -649,71 +491,67 @@ class TaskManagerCoordinator(val context: Context? = null) {
      */
     fun updateAATWaypointPointType(
         index: Int,
-        startType: com.example.xcpro.tasks.aat.models.AATStartPointType?,
-        finishType: com.example.xcpro.tasks.aat.models.AATFinishPointType?,
-        turnType: com.example.xcpro.tasks.aat.models.AATTurnPointType?,
+        startType: Any?,
+        finishType: Any?,
+        turnType: Any?,
         gateWidth: Double?,
         keyholeInnerRadius: Double?,
         keyholeAngle: Double?,
         sectorOuterRadius: Double?
     ) {
-        if (_taskType == TaskType.AAT) {
-            println("🎯 COORDINATOR: AAT waypoint point type update - Index: $index")
-            startType?.let { println("  Start type: ${it.displayName}") }
-            finishType?.let { println("  Finish type: ${it.displayName}") }
-            turnType?.let { println("  Turn type: ${it.displayName}") }
-            gateWidth?.let { println("  Gate width: ${it}km") }
-            keyholeInnerRadius?.let { println("  Keyhole inner radius: ${it}km") }
-            keyholeAngle?.let { println("  Keyhole angle: ${it}°") }
-            sectorOuterRadius?.let { println("  Sector outer radius: ${it}km") }
-
-            // ✅ FIXED: Pass all parameters to AAT manager
-            aatTaskManager.updateAATWaypointPointType(
-                index = index,
-                startType = startType,
-                finishType = finishType,
-                turnType = turnType,
-                gateWidth = gateWidth,
-                keyholeInnerRadius = keyholeInnerRadius,
-                keyholeAngle = keyholeAngle,
-                sectorOuterRadius = sectorOuterRadius
-            )
-
-            // CRITICAL: Re-plot the task on map to show updated geometry
-            val mapInstance = getMapInstance()
-            if (mapInstance != null) {
-                println("🗺️ COORDINATOR: Re-plotting AAT task with updated point type")
-                aatTaskManager.plotAATOnMap(mapInstance)
-            } else {
-                println("❌ COORDINATOR: Cannot re-plot AAT task - map instance is null")
-            }
-        } else {
-            println("🎯 COORDINATOR: Cannot update AAT point type - current task type is $_taskType")
+        if (_taskType != TaskType.AAT) {
+            println("COORDINATOR: Cannot update AAT point type - current task type is $_taskType")
+            return
         }
+
+        println("COORDINATOR: AAT waypoint point type update - Index: $index")
+        listOf(
+            "start" to startType,
+            "finish" to finishType,
+            "turn" to turnType,
+            "gateWidthKm" to gateWidth,
+            "keyholeInnerRadiusKm" to keyholeInnerRadius,
+            "keyholeAngle" to keyholeAngle,
+            "sectorOuterRadiusKm" to sectorOuterRadius
+        ).forEach { (label, value) ->
+            if (value != null) {
+                println("  $label: $value")
+            }
+        }
+
+        aatTaskManager.updateWaypointPointTypeBridge(
+            index = index,
+            startType = startType,
+            finishType = finishType,
+            turnType = turnType,
+            gateWidth = gateWidth,
+            keyholeInnerRadius = keyholeInnerRadius,
+            keyholeAngle = keyholeAngle,
+            sectorOuterRadius = sectorOuterRadius
+        )
+
+        getMapInstance()?.let {
+            println("COORDINATOR: Re-plotting AAT task after point type update")
+            aatTaskManager.plotAATOnMap(it)
+        } ?: println("COORDINATOR: Cannot re-plot AAT task - map instance is null")
     }
 
     /**
-     * Update AAT target point position within assigned area
-     * Enables strategic flight planning with movable target points
+     * Update AAT target point position within assigned area.
      */
     fun updateAATTargetPoint(index: Int, lat: Double, lon: Double) {
-        if (_taskType == TaskType.AAT) {
-            println("🎯 COORDINATOR: AAT target point update - Index: $index, Lat: $lat, Lon: $lon")
-
-            // Update the target point in AAT manager
-            aatTaskManager.updateTargetPoint(index, lat, lon)
-
-            // Trigger map re-plot to show new position
-            val mapInstance = getMapInstance()
-            if (mapInstance != null) {
-                println("🗺️ COORDINATOR: Re-plotting AAT task with updated target point")
-                aatTaskManager.plotAATOnMap(mapInstance)
-            } else {
-                println("❌ COORDINATOR: Cannot re-plot AAT task - map instance is null")
-            }
-        } else {
-            println("🎯 COORDINATOR: Cannot update AAT target point - current task type is $_taskType")
+        if (_taskType != TaskType.AAT) {
+            println("COORDINATOR: Cannot update AAT target point - current task type is $_taskType")
+            return
         }
+
+        println("COORDINATOR: AAT target point update - index=$index, lat=$lat, lon=$lon")
+        aatTaskManager.updateTargetPoint(index, lat, lon)
+
+        getMapInstance()?.let {
+            println("COORDINATOR: Re-plotting AAT task after target point update")
+            aatTaskManager.plotAATOnMap(it)
+        } ?: println("COORDINATOR: Cannot re-plot AAT task - map instance is null")
     }
 
     /**

@@ -14,7 +14,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import android.util.Log
 import com.example.xcpro.tasks.TaskManagerCoordinator
-import com.example.xcpro.tasks.TaskType
+import com.example.xcpro.tasks.core.TaskType
 
 /**
  * MapTaskIntegration - Task-type specific UI components for MapScreen
@@ -98,3 +98,5 @@ object MapTaskIntegration {
         }
     }
 }
+
+

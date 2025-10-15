@@ -3,6 +3,9 @@ package com.example.xcpro.tasks.racing
 import android.content.Context
 import androidx.compose.runtime.*
 import com.example.xcpro.SearchWaypoint
+import com.example.xcpro.tasks.core.Task
+import com.example.xcpro.tasks.core.TaskWaypoint
+import com.example.xcpro.tasks.core.WaypointRole
 import org.maplibre.android.maps.MapLibreMap
 import kotlin.math.*
 import java.util.UUID
@@ -70,6 +73,41 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
     val currentLeg: Int get() = _currentLeg
 
     /**
+     * Convert current racing task to core task representation for coordinator consumption.
+     * Keeps conversion logic owned by Racing module to avoid leaking Racing types.
+     */
+    fun getCoreTask(): Task {
+        return Task(
+            id = _currentRacingTask.id,
+            waypoints = _currentRacingTask.waypoints.map { waypoint ->
+                TaskWaypoint(
+                    id = waypoint.id,
+                    title = waypoint.title,
+                    subtitle = waypoint.subtitle,
+                    lat = waypoint.lat,
+                    lon = waypoint.lon,
+                    role = when (waypoint.role) {
+                        RacingWaypointRole.START -> WaypointRole.START
+                        RacingWaypointRole.TURNPOINT -> WaypointRole.TURNPOINT
+                        RacingWaypointRole.FINISH -> WaypointRole.FINISH
+                    },
+                    customRadius = waypoint.gateWidth,
+                    customPointType = when (waypoint.role) {
+                        RacingWaypointRole.START -> waypoint.startPointType.name
+                        RacingWaypointRole.FINISH -> waypoint.finishPointType.name
+                        else -> waypoint.turnPointType.name
+                    },
+                    customParameters = mapOf(
+                        "keyholeInnerRadius" to waypoint.keyholeInnerRadius,
+                        "keyholeAngle" to waypoint.keyholeAngle,
+                        "faiQuadrantOuterRadius" to waypoint.faiQuadrantOuterRadius
+                    )
+                )
+            }
+        )
+    }
+
+    /**
      * Initialize Racing task with waypoints
      */
     fun initializeRacingTask(waypoints: List<SearchWaypoint>) {
@@ -82,7 +120,7 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
      * Initialize Racing task from generic waypoints with smart conversion and value preservation
      * Preserves user customizations while applying standardized defaults (10km start, 3km finish)
      */
-    fun initializeFromGenericWaypoints(genericWaypoints: List<com.example.xcpro.tasks.TaskWaypoint>) {
+    fun initializeFromGenericWaypoints(genericWaypoints: List<com.example.xcpro.tasks.core.TaskWaypoint>) {
         _currentRacingTask = racingTaskInitializer.initializeFromGenericWaypoints(genericWaypoints)
         _currentLeg = 0
     }
@@ -167,6 +205,36 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
         )
         saveRacingTask()
         println("🏁 RACING TASK: New distance: ${calculateRacingDistance()} km")
+    }
+
+    /**
+     * Bridge for coordinator updates that receive generic point type values.
+     * Casting stays inside the racing module to keep coordinator feature-agnostic.
+     */
+    fun updateWaypointPointTypeBridge(
+        index: Int,
+        startType: Any?,
+        finishType: Any?,
+        turnType: Any?,
+        gateWidth: Double?,
+        keyholeInnerRadius: Double?,
+        keyholeAngle: Double?,
+        faiQuadrantOuterRadius: Double?
+    ) {
+        updateRacingWaypointType(
+            index = index,
+            startType = startType as? RacingStartPointType,
+            finishType = finishType as? RacingFinishPointType,
+            turnType = turnType as? RacingTurnPointType,
+            gateWidth = gateWidth,
+            keyholeInnerRadius = keyholeInnerRadius,
+            keyholeAngle = keyholeAngle
+        )
+
+        // faiQuadrantOuterRadius is handled within waypoint manager when turn type changes.
+        faiQuadrantOuterRadius?.let {
+            println("🏁 RACING TASK: Received FAI quadrant radius=$it (handled by waypoint manager)")
+        }
     }
 
     /**

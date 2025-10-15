@@ -1,5 +1,6 @@
 package com.example.xcpro.tasks.aat.ui
 
+import com.example.xcpro.tasks.core.TaskWaypoint
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -8,7 +9,6 @@ import android.util.Log
 import com.example.xcpro.tasks.aat.models.AATStartPointType
 import com.example.xcpro.tasks.aat.models.AATFinishPointType
 import com.example.xcpro.tasks.aat.models.AATTurnPointType
-import com.example.xcpro.tasks.TaskWaypoint
 import com.example.xcpro.tasks.TaskManagerCoordinator
 
 private const val TAG = "AATTaskPointTypeSelector"
@@ -101,3 +101,5 @@ fun AATTaskPointTypeSelector(
         }
     }
 }
+
+

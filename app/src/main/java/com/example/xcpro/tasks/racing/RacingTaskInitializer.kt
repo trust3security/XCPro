@@ -1,6 +1,8 @@
 package com.example.xcpro.tasks.racing
 
 import com.example.xcpro.SearchWaypoint
+import com.example.xcpro.tasks.core.TaskWaypoint
+import com.example.xcpro.tasks.core.WaypointRole
 import com.example.xcpro.tasks.racing.models.RacingWaypoint
 import com.example.xcpro.tasks.racing.models.RacingWaypointRole
 import com.example.xcpro.tasks.racing.models.RacingStartPointType
@@ -53,14 +55,14 @@ class RacingTaskInitializer {
      * Initialize Racing task from generic waypoints with smart conversion and value preservation
      * Preserves user customizations while applying standardized defaults (10km start, 3km finish)
      */
-    fun initializeFromGenericWaypoints(genericWaypoints: List<com.example.xcpro.tasks.TaskWaypoint>): SimpleRacingTask {
+    fun initializeFromGenericWaypoints(genericWaypoints: List<TaskWaypoint>): SimpleRacingTask {
         val racingWaypoints = genericWaypoints.map { genericWaypoint ->
             // Convert generic role to Racing role
             val racingRole = when (genericWaypoint.role) {
-                com.example.xcpro.tasks.WaypointRole.START -> RacingWaypointRole.START
-                com.example.xcpro.tasks.WaypointRole.TURNPOINT -> RacingWaypointRole.TURNPOINT
-                com.example.xcpro.tasks.WaypointRole.OPTIONAL -> RacingWaypointRole.TURNPOINT // Racing treats optional as turnpoints
-                com.example.xcpro.tasks.WaypointRole.FINISH -> RacingWaypointRole.FINISH
+                WaypointRole.START -> RacingWaypointRole.START
+                WaypointRole.TURNPOINT -> RacingWaypointRole.TURNPOINT
+                WaypointRole.OPTIONAL -> RacingWaypointRole.TURNPOINT
+                WaypointRole.FINISH -> RacingWaypointRole.FINISH
             }
 
             // Convert point types intelligently

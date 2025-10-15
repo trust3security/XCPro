@@ -3,7 +3,7 @@ package com.example.xcpro
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.tasks.rememberTaskManagerCoordinator
 import com.example.xcpro.tasks.TaskMapOverlay
-import com.example.xcpro.tasks.TaskType
+import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.skysight.SkysightMapOverlay
 import com.example.xcpro.skysight.SkysightClient
 import com.example.xcpro.skysight.addSkysightLayerToMap
@@ -679,3 +679,5 @@ fun MapScreen(
         }
     )
 }
+
+

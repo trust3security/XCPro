@@ -1,5 +1,6 @@
 package com.example.xcpro.tasks.aat.ui
 
+import com.example.xcpro.tasks.core.TaskWaypoint
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -13,7 +14,6 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.unit.dp
 import com.example.xcpro.tasks.aat.models.AATTurnPointType
-import com.example.xcpro.tasks.TaskWaypoint
 import com.example.xcpro.tasks.TaskManagerCoordinator
 
 /**
@@ -240,3 +240,5 @@ internal fun AATTurnPointSelector(
         }
     }
 }
+
+

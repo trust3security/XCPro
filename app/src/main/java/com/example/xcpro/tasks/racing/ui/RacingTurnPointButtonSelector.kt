@@ -1,5 +1,6 @@
 package com.example.xcpro.tasks.racing.ui
 
+import com.example.xcpro.tasks.core.TaskWaypoint
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -13,7 +14,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.xcpro.tasks.racing.models.RacingTurnPointType
-import com.example.xcpro.tasks.TaskWaypoint
 
 /**
  * Button-based turnpoint type selector for racing tasks.

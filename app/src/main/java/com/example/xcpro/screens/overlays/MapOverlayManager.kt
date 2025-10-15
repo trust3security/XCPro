@@ -143,3 +143,4 @@ fun ConditionalMapOverlayManager(
         // ❌ REMOVED: Duplicate compass widget (MapScreen.kt has the active compass implementation)
     }
 }
+

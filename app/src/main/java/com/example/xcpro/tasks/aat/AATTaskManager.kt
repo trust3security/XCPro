@@ -6,6 +6,9 @@ import androidx.compose.runtime.*
 import com.example.xcpro.SearchWaypoint
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.example.xcpro.tasks.core.Task
+import com.example.xcpro.tasks.core.TaskWaypoint
+import com.example.xcpro.tasks.core.WaypointRole
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.Style
 import org.maplibre.android.geometry.LatLng
@@ -90,6 +93,39 @@ class AATTaskManager(val context: Context? = null) {
     val currentAATTask: SimpleAATTask get() = _currentAATTask
     val currentLeg: Int get() = _currentLeg
 
+    /**
+     * Convert current AAT task to core task representation.
+     * Conversion lives inside AAT module to keep coordinator feature-agnostic.
+     */
+    fun getCoreTask(): Task {
+        return Task(
+            id = _currentAATTask.id,
+            waypoints = _currentAATTask.waypoints.map { waypoint ->
+                TaskWaypoint(
+                    id = waypoint.id,
+                    title = waypoint.title,
+                    subtitle = waypoint.subtitle,
+                    lat = waypoint.lat,
+                    lon = waypoint.lon,
+                    role = when (waypoint.role) {
+                        com.example.xcpro.tasks.aat.models.AATWaypointRole.START -> WaypointRole.START
+                        com.example.xcpro.tasks.aat.models.AATWaypointRole.TURNPOINT -> WaypointRole.TURNPOINT
+                        com.example.xcpro.tasks.aat.models.AATWaypointRole.FINISH -> WaypointRole.FINISH
+                    },
+                    customRadius = waypoint.assignedArea.radiusMeters / 1000.0,
+                    customPointType = waypoint.assignedArea.shape.name,
+                    customParameters = mapOf(
+                        "innerRadiusMeters" to waypoint.assignedArea.innerRadiusMeters,
+                        "outerRadiusMeters" to waypoint.assignedArea.outerRadiusMeters,
+                        "startAngleDegrees" to waypoint.assignedArea.startAngleDegrees,
+                        "endAngleDegrees" to waypoint.assignedArea.endAngleDegrees,
+                        "lineWidthMeters" to waypoint.assignedArea.lineWidthMeters
+                    )
+                )
+            }
+        )
+    }
+
     /** Navigate to previous leg - STAGE 7: Delegate to NavigationManager */
     fun goToPreviousLeg() {
         navigationManager.goToPreviousLeg(_currentAATTask)
@@ -109,7 +145,7 @@ class AATTaskManager(val context: Context? = null) {
     }
 
     /** Initialize from generic waypoints - STAGE 8: Delegate to AATWaypointManager */
-    fun initializeFromGenericWaypoints(genericWaypoints: List<com.example.xcpro.tasks.TaskWaypoint>) {
+    fun initializeFromGenericWaypoints(genericWaypoints: List<com.example.xcpro.tasks.core.TaskWaypoint>) {
         _currentAATTask = waypointManager.initializeFromGenericWaypoints(genericWaypoints)
         _currentLeg = 0
         saveAATTask()
@@ -196,8 +232,34 @@ class AATTaskManager(val context: Context? = null) {
             _currentAATTask = _currentAATTask.copy(waypoints = currentWaypoints)
             saveAATTask()
         } else {
-            println("❌ AAT: Invalid waypoint index $index for point type update (valid range: 0-${currentWaypoints.size-1})")
+            println("AAT: Invalid waypoint index $index for point type update (valid range: 0-${currentWaypoints.size - 1})")
         }
+    }
+
+    /**
+     * Bridge for coordinator updates that receive generic point type values.
+     * Casting stays inside the AAT module so the coordinator remains feature-agnostic.
+     */
+    fun updateWaypointPointTypeBridge(
+        index: Int,
+        startType: Any?,
+        finishType: Any?,
+        turnType: Any?,
+        gateWidth: Double?,
+        keyholeInnerRadius: Double?,
+        keyholeAngle: Double?,
+        sectorOuterRadius: Double?
+    ) {
+        updateAATWaypointPointType(
+            index = index,
+            startType = startType as? com.example.xcpro.tasks.aat.models.AATStartPointType,
+            finishType = finishType as? com.example.xcpro.tasks.aat.models.AATFinishPointType,
+            turnType = turnType as? com.example.xcpro.tasks.aat.models.AATTurnPointType,
+            gateWidth = gateWidth,
+            keyholeInnerRadius = keyholeInnerRadius,
+            keyholeAngle = keyholeAngle,
+            sectorOuterRadius = sectorOuterRadius
+        )
     }
 
     /** Plot AAT on map - STAGE 7: Delegate to AATTaskRenderer */

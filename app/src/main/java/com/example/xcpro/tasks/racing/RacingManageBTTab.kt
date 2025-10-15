@@ -1,5 +1,9 @@
 package com.example.xcpro.tasks.racing
 
+import com.example.xcpro.tasks.core.Task
+import com.example.xcpro.tasks.core.TaskType
+import com.example.xcpro.tasks.core.TaskWaypoint
+
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -36,8 +40,6 @@ import com.example.xcpro.tasks.racing.models.RacingTurnPointType
 
 // Common task imports (separation compliant)
 import com.example.xcpro.tasks.TaskManagerCoordinator
-import com.example.xcpro.tasks.Task
-import com.example.xcpro.tasks.TaskWaypoint
 import com.example.xcpro.tasks.racing.ui.RacingTaskPointTypeSelector
 import com.example.xcpro.tasks.SearchableWaypointField
 import com.example.xcpro.tasks.QRCodeDialog
@@ -91,7 +93,7 @@ private fun RacingFullyExpandedContent(
         // Task statistics with 3 icons (Distance, QR, Task Type)
         TaskStatsSection(
             task = task,
-            taskType = com.example.xcpro.tasks.TaskType.RACING,
+            taskType = com.example.xcpro.tasks.core.TaskType.RACING,
             taskManager = taskManager,
             onQRCodeClick = { showQRDialog = true }
         )
@@ -477,3 +479,5 @@ fun RacingReorderableWaypointItem(
         }
     }
 }
+
+

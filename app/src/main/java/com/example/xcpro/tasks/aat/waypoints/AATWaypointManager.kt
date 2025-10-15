@@ -6,6 +6,8 @@ import com.example.xcpro.tasks.aat.models.AATWaypoint
 import com.example.xcpro.tasks.aat.models.AATWaypointRole
 import com.example.xcpro.tasks.aat.models.AATAssignedArea
 import com.example.xcpro.tasks.aat.models.AATAreaShape
+import com.example.xcpro.tasks.core.TaskWaypoint
+import com.example.xcpro.tasks.core.WaypointRole
 import java.time.Duration
 import java.util.UUID
 
@@ -81,14 +83,14 @@ class AATWaypointManager {
      * @param genericWaypoints List of generic TaskWaypoint objects
      * @return New SimpleAATTask with converted waypoints
      */
-    fun initializeFromGenericWaypoints(genericWaypoints: List<com.example.xcpro.tasks.TaskWaypoint>): SimpleAATTask {
+    fun initializeFromGenericWaypoints(genericWaypoints: List<com.example.xcpro.tasks.core.TaskWaypoint>): SimpleAATTask {
         val aatWaypoints = genericWaypoints.map { genericWaypoint ->
             // Convert generic role to AAT role
             val aatRole = when (genericWaypoint.role) {
-                com.example.xcpro.tasks.WaypointRole.START -> AATWaypointRole.START
-                com.example.xcpro.tasks.WaypointRole.TURNPOINT -> AATWaypointRole.TURNPOINT
-                com.example.xcpro.tasks.WaypointRole.OPTIONAL -> AATWaypointRole.TURNPOINT // AAT treats optional as turnpoints
-                com.example.xcpro.tasks.WaypointRole.FINISH -> AATWaypointRole.FINISH
+                com.example.xcpro.tasks.core.WaypointRole.START -> AATWaypointRole.START
+                com.example.xcpro.tasks.core.WaypointRole.TURNPOINT -> AATWaypointRole.TURNPOINT
+                com.example.xcpro.tasks.core.WaypointRole.OPTIONAL -> AATWaypointRole.TURNPOINT // AAT treats optional as turnpoints
+                com.example.xcpro.tasks.core.WaypointRole.FINISH -> AATWaypointRole.FINISH
             }
 
             // ✅ COMPETITION-CRITICAL: Use AATRadiusAuthority (ignore Racing-specific customizations)

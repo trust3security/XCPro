@@ -24,9 +24,9 @@ import com.example.xcpro.FlightMode
 import com.example.xcpro.tasks.aat.models.AATLatLng
 import com.example.xcpro.tasks.aat.map.AATMapCoordinateConverter
 import com.example.xcpro.tasks.aat.map.AATMapCoordinateConverterFactory
-import com.example.xcpro.tasks.TaskType
-import com.example.xcpro.tasks.TaskWaypoint
-import com.example.xcpro.tasks.WaypointRole
+import com.example.xcpro.tasks.core.TaskType
+import com.example.xcpro.tasks.core.TaskWaypoint
+import com.example.xcpro.tasks.core.WaypointRole
 import kotlin.math.abs
 import kotlin.math.sin
 import kotlin.math.cos

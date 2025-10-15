@@ -1,5 +1,9 @@
 package com.example.xcpro.tasks.aat
 
+import com.example.xcpro.tasks.core.Task
+import com.example.xcpro.tasks.core.TaskType
+import com.example.xcpro.tasks.core.TaskWaypoint
+
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -39,8 +43,6 @@ import com.example.xcpro.tasks.aat.ui.AATTaskPointTypeSelector
 
 // Common task imports (separation compliant)
 import com.example.xcpro.tasks.TaskManagerCoordinator
-import com.example.xcpro.tasks.Task
-import com.example.xcpro.tasks.TaskWaypoint
 import com.example.xcpro.tasks.SearchableWaypointField
 import com.example.xcpro.tasks.QRCodeDialog
 import com.example.xcpro.tasks.TaskStatsSection
@@ -93,7 +95,7 @@ private fun AATFullyExpandedContent(
         // Task statistics with 3 icons (Distance, QR, Task Type)
         TaskStatsSection(
             task = task,
-            taskType = com.example.xcpro.tasks.TaskType.AAT,
+            taskType = com.example.xcpro.tasks.core.TaskType.AAT,
             taskManager = taskManager,
             onQRCodeClick = { showQRDialog = true }
         )

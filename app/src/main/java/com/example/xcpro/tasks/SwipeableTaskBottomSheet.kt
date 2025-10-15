@@ -1,5 +1,6 @@
 package com.example.xcpro.tasks
 
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -465,3 +466,4 @@ private suspend fun generateQRCode(data: String): Bitmap = withContext(Dispatche
 
     return@withContext bitmap
 }
+

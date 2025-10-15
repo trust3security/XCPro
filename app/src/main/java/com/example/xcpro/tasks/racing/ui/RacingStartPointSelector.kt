@@ -1,5 +1,6 @@
 package com.example.xcpro.tasks.racing.ui
 
+import com.example.xcpro.tasks.core.TaskWaypoint
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -16,7 +17,6 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.unit.dp
 import android.util.Log
 import com.example.xcpro.tasks.racing.models.RacingStartPointType
-import com.example.xcpro.tasks.TaskWaypoint
 import com.example.xcpro.tasks.TaskManagerCoordinator
 
 private const val TAG = "RacingStartPointSelector"
@@ -203,3 +203,5 @@ internal fun RacingStartPointSelector(
         }
     }
 }
+
+
