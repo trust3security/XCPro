@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import java.time.Duration
+import java.util.Locale
 import com.example.xcpro.tasks.TaskType
 import com.example.xcpro.tasks.TaskManagerCoordinator
 
@@ -330,10 +331,11 @@ private fun RacingTaskParameters() {
 
 @Composable
 private fun AATTaskParameters(taskManager: TaskManagerCoordinator?) {
-    // Initialize from current task if it's AAT
-    val currentTask = taskManager?.currentTask
-    val initialMinTime = if (currentTask is AATTask) currentTask.minimumTime.toHours().toFloat() else 3.0f
-    val initialMaxTime = if (currentTask is AATTask) currentTask.maximumTime?.toHours()?.toFloat() ?: 4.0f else 4.0f
+    // Initialize from AAT manager only when current task type is AAT
+    val isAAT = taskManager?.taskType == TaskType.AAT
+    val aatManager = if (isAAT) taskManager?.getAATTaskManager() else null
+    val initialMinTime = aatManager?.currentAATTask?.minimumTime?.toHours()?.toFloat() ?: 3.0f
+    val initialMaxTime = aatManager?.currentAATTask?.maximumTime?.toHours()?.toFloat() ?: 4.0f
     
     var minTime by remember { mutableStateOf(initialMinTime) }
     var maxTime by remember { mutableStateOf(initialMaxTime) }
@@ -346,7 +348,7 @@ private fun AATTaskParameters(taskManager: TaskManagerCoordinator?) {
         // Minimum time slider
         Column {
             Text(
-                text = "Minimum Time: ${"%.1f".format(minTime)} hours",
+                text = "Minimum Time: ${String.format(Locale.US, "%.1f", minTime)} hours",
                 style = MaterialTheme.typography.labelMedium
             )
             Slider(
@@ -368,7 +370,7 @@ private fun AATTaskParameters(taskManager: TaskManagerCoordinator?) {
         // Maximum time slider
         Column {
             Text(
-                text = "Maximum Time: ${"%.1f".format(maxTime)} hours",
+                text = "Maximum Time: ${String.format(Locale.US, "%.1f", maxTime)} hours",
                 style = MaterialTheme.typography.labelMedium
             )
             Slider(

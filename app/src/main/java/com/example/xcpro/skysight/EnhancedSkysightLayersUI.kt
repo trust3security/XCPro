@@ -10,6 +10,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.ViewList
+import androidx.compose.material.icons.automirrored.filled.CompareArrows
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -110,12 +112,12 @@ fun EnhancedSkysightLayersPanel(
 
     val categories = remember {
         listOf(
-            WeatherLayerCategory("all", "All", Icons.Default.ViewList, Color.Gray, "Show all available layers"),
+            WeatherLayerCategory("all", "All", Icons.AutoMirrored.Filled.ViewList, Color.Gray, "Show all available layers"),
             WeatherLayerCategory("wind", "Wind", Icons.Default.Air, Color.Blue, "Wind speed and direction"),
             WeatherLayerCategory("thermal", "Thermals", Icons.Default.Thermostat, Color.Red, "Thermal strength and lift"),
             WeatherLayerCategory("precipitation", "Precipitation", Icons.Default.Cloud, Color.Blue, "Rain and precipitation"),
             WeatherLayerCategory("satellite", "Satellite", Icons.Default.Satellite, Color.Green, "Satellite imagery"),
-            WeatherLayerCategory("convergence", "Convergence", Icons.Default.CompareArrows, Color.Magenta, "Convergence lines"),
+            WeatherLayerCategory("convergence", "Convergence", Icons.AutoMirrored.Filled.CompareArrows, Color.Magenta, "Convergence lines"),
             WeatherLayerCategory("wave", "Mountain Wave", Icons.Default.Waves, Color.Cyan, "Mountain wave activity")
         )
     }
@@ -708,7 +710,7 @@ private fun getCategoryIcon(category: String): ImageVector {
         "thermal" -> Icons.Default.Thermostat
         "precipitation" -> Icons.Default.Cloud
         "satellite" -> Icons.Default.Satellite
-        "convergence" -> Icons.Default.CompareArrows
+        "convergence" -> Icons.AutoMirrored.Filled.CompareArrows
         "wave" -> Icons.Default.Waves
         else -> Icons.Default.Layers
     }

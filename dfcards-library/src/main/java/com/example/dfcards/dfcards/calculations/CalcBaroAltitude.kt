@@ -31,7 +31,6 @@ class BarometricAltitudeCalculator(
 
     // Aviation constants
     private val STANDARD_PRESSURE = 1013.25 // hPa
-    private val ISA_TEMPERATURE = 15.0 // °C at sea level
     private val TEMPERATURE_SEA_LEVEL = 288.15 // K
     private val LAPSE_RATE = 0.0065 // K/m
     private val GAS_CONSTANT = 287.04 // J/(kg·K)
@@ -53,7 +52,6 @@ class BarometricAltitudeCalculator(
     private var qnh = STANDARD_PRESSURE
     private var isQNHCalibrated = false
     private var lastCalibrationTime = 0L
-    private var temperatureCelsius = ISA_TEMPERATURE
 
     /**
      * Calibration sample for QNH averaging during startup
@@ -79,8 +77,8 @@ class BarometricAltitudeCalculator(
         gpsLon: Double? = null
     ): BarometricAltitudeData {
 
-        // Apply temperature compensation
-        val compensatedPressure = applyTemperatureCompensation(rawPressureHPa, temperatureCelsius)
+        // Temperature compensation removed: use raw pressure directly
+        val compensatedPressure = rawPressureHPa
 
         // 🐛 DEBUG: Log calibration check parameters (every 10th call to avoid spam)
         if (System.currentTimeMillis() % 1000 < 100) {
@@ -141,7 +139,7 @@ class BarometricAltitudeCalculator(
             qnh = qnh,
             isCalibrated = isQNHCalibrated,
             pressureHPa = compensatedPressure,
-            temperatureCompensated = true,
+            temperatureCompensated = false,
             confidenceLevel = confidence,
             lastCalibrationTime = lastCalibrationTime
         )
@@ -155,15 +153,6 @@ class BarometricAltitudeCalculator(
         val exponent = (GAS_CONSTANT * LAPSE_RATE) / GRAVITY
 
         return (TEMPERATURE_SEA_LEVEL / LAPSE_RATE) * (1.0 - pressureRatio.pow(exponent))
-    }
-
-    /**
-     * Temperature compensation for increased accuracy
-     */
-    private fun applyTemperatureCompensation(pressure: Double, temperatureCelsius: Double): Double {
-        // KISS: Disable temperature compensation on phones (ambient temp unreliable)
-        // If re-enabled in future, use: return pressure / tempRatio
-        return pressure
     }
 
     /**
@@ -353,13 +342,6 @@ class BarometricAltitudeCalculator(
             isCalibrated || isGPSFixed -> ConfidenceLevel.MEDIUM
             else -> ConfidenceLevel.LOW
         }
-    }
-
-    /**
-     * Update temperature for compensation calculations
-     */
-    fun updateTemperature(temperatureCelsius: Double) {
-        this.temperatureCelsius = temperatureCelsius
     }
 
     /**
