@@ -103,7 +103,9 @@ import com.example.xcpro.tasks.BottomSheetState
 // ✅ REMOVED DataQuality - no longer used
 import com.example.ui1.UIVariometer
 import com.example.xcpro.navdrawer.NavigationDrawer
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import java.io.File
@@ -205,18 +207,22 @@ fun MapScreen(
     val taskManager = rememberTaskManagerCoordinator(context)  // ✅ Using coordinator for task management
 
     // 🔄 Load waypoints once
-    val (waypointFiles, _) = loadWaypointFiles(context)
-    val allWaypoints: List<WaypointData> = waypointFiles.flatMap { file ->
-        try {
-            WaypointParser.parseWaypointFile(context, file)
-        } catch (e: Exception) {
-            Log.e("MapScreen", "Error parsing waypoint file: ${e.message}")
-            emptyList()
+    val waypointData by produceState(initialValue = emptyList<WaypointData>(), key1 = context) {
+        value = withContext(Dispatchers.IO) {
+            val (waypointFiles, _) = loadWaypointFiles(context)
+            waypointFiles.flatMap { file ->
+                try {
+                    WaypointParser.parseWaypointFile(context, file)
+                } catch (e: Exception) {
+                    Log.e("MapScreen", "Error parsing waypoint file: ${e.message}")
+                    emptyList()
+                }
+            }
         }
     }
 
 // ✅ keep repo if you still need it
-    val waypointRepo = remember { FileWaypointRepo(allWaypoints) }
+    val waypointRepo = remember(waypointData) { FileWaypointRepo(waypointData) }
 
     // ✅ SIMPLIFIED: Remove permission dialog variables, always enable everything
     var safeContainerSize by remember { mutableStateOf(IntSize.Zero) }
@@ -437,16 +443,13 @@ fun MapScreen(
                                         getMapAsync { map: MapLibreMap ->
                                             coroutineScope.launch {
                                                 try {
-                                                    // ✅ Use MapInitializer for complete map setup
                                                     mapInitializer.initializeMap(map)
-                                                    Log.d(TAG, "? Map initialization completed via MapInitializer")
+                                                    Log.d(TAG, "Map initialization completed via MapInitializer")
 
                                                     // Overlays are now managed through LocationManager via mapState
-                                                    Log.d(TAG, "? Map overlays initialized through LocationManager")
-
-                                                }
+                                                    Log.d(TAG, "Map overlays initialized through LocationManager")
                                                 } catch (e: Exception) {
-                                                    Log.e(TAG, "❌ Error during MapInitializer setup: ${e.message}", e)
+                                                    Log.e(TAG, "Error during MapInitializer setup: ${e.message}", e)
                                                 }
                                             }
                                         }
@@ -661,7 +664,7 @@ fun MapScreen(
                 // ✅ Task Screen UI Components - Centralized management
                 MapTaskScreenUI.AllTaskScreenComponents(
                     taskScreenManager = taskScreenManager,
-                    allWaypoints = allWaypoints,
+                    allWaypoints = waypointData,
                     currentQNH = "1013 hPa",
                     onWaypointGoto = { wp ->
                         cameraManager.moveToWaypoint(wp.latitude, wp.longitude)
@@ -783,5 +786,4 @@ fun MapScreen(
         }
     )
 }
-
 
