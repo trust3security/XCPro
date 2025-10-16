@@ -35,39 +35,23 @@ class MapInitializer(
         private const val INITIAL_ZOOM = 8.0
     }
 
-    suspend fun initializeMap(mapView: MapView): MapLibreMap? {
+    suspend fun initializeMap(map: MapLibreMap): MapLibreMap {
         return try {
-            Log.d(TAG, "🚀 Starting map initialization")
-
-            var mapLibreMap: MapLibreMap? = null
-
-            mapView.getMapAsync { map: MapLibreMap ->
-                try {
-                    mapLibreMap = map
-                    setupMapStyle(map)
-                    setupInitialPosition(map)
-                    // setupOverlays(map) - moved to style loaded callback
-                    setupGestures(map)
-                    setupListeners(map)
-                    setupSkysightAutoLoad(map)
-
-                    mapState.mapLibreMap = map
-
-                    // CRITICAL FIX: Set map instance in TaskManagerCoordinator for cleanup operations
-                    taskManager.setMapInstance(map)
-                    Log.d(TAG, "🎯 Set map instance in TaskManagerCoordinator for task switching cleanup")
-
-                    Log.d(TAG, "✅ Map initialization completed successfully")
-
-                } catch (e: Exception) {
-                    Log.e(TAG, "❌ Error during map initialization: ${e.message}", e)
-                }
-            }
-
-            mapLibreMap
+            Log.d(TAG, "?? Starting map initialization")
+            mapState.mapLibreMap = map
+            setupMapStyle(map)
+            setupInitialPosition(map)
+            setupGestures(map)
+            setupListeners(map)
+            setupSkysightAutoLoad(map)
+            // CRITICAL FIX: Set map instance in TaskManagerCoordinator for cleanup operations
+            taskManager.setMapInstance(map)
+            Log.d(TAG, "?? Set map instance in TaskManagerCoordinator for task switching cleanup")
+            Log.d(TAG, "? Map initialization completed successfully")
+            map
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Fatal error in map initialization: ${e.message}", e)
-            null
+            Log.e(TAG, "? Fatal error in map initialization: ${e.message}", e)
+            map
         }
     }
 

@@ -438,16 +438,13 @@ fun MapScreen(
                                             coroutineScope.launch {
                                                 try {
                                                     // ✅ Use MapInitializer for complete map setup
-                                                    val initializedMap = mapInitializer.initializeMap(this@apply)
-                                                    if (initializedMap != null) {
-                                                        Log.d(TAG, "✅ Map initialization completed via MapInitializer")
+                                                    mapInitializer.initializeMap(map)
+                                                    Log.d(TAG, "? Map initialization completed via MapInitializer")
 
-                                                        // Overlays are now managed through LocationManager via mapState
-                                                        Log.d(TAG, "✅ Map overlays initialized through LocationManager")
+                                                    // Overlays are now managed through LocationManager via mapState
+                                                    Log.d(TAG, "? Map overlays initialized through LocationManager")
 
-                                                    } else {
-                                                        Log.e(TAG, "❌ Map initialization failed")
-                                                    }
+                                                }
                                                 } catch (e: Exception) {
                                                     Log.e(TAG, "❌ Error during MapInitializer setup: ${e.message}", e)
                                                 }
