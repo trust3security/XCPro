@@ -1,463 +1,120 @@
-# Variometer Calculation - Analysis & Improvement Plan
+# Variometer System Analysis
 
-**Date:** 2025-10-11
-**Status:** 🚧 Analysis Complete - Improvements Pending
-**Priority:** 🔴 HIGH - Critical for gliding safety and competition accuracy
-
----
-
-## 📋 Table of Contents
-
-1. [Current Implementation Analysis](#current-implementation-analysis)
-2. [Aviation Standards & Best Practices](#aviation-standards--best-practices)
-3. [Problems Identified](#problems-identified)
-4. [Proposed Improvements](#proposed-improvements)
-5. [Implementation Plan](#implementation-plan)
-6. [Testing & Validation](#testing--validation)
+Date: 2025-10-12  
+Status: Updated after 50 Hz refactor  
+Priority: High – safety critical flight instrument
 
 ---
 
-## 🔍 Current Implementation Analysis
+## Table of Contents
 
-### Architecture
-
-```
-Barometer Sensor (20Hz)
-    ↓
-BarometricAltitudeCalculator (converts pressure → altitude)
-    ↓
-AdvancedBarometricFilter (3-stage filtering)
-    ├─ Stage 1: OutlierFilter (remove spikes)
-    ├─ Stage 2: KalmanFilter (altitude + vertical speed estimation)
-    └─ Stage 3: ExponentialSmoothing (display smoothing)
-    ↓
-Vertical Speed Output
-```
-
-### Current Kalman Filter Implementation
-
-**File:** `KalmanFilter.kt` (lines 10-173)
-
-**State Vector:**
-- `stateVector[0]` = altitude (m)
-- `stateVector[1]` = vertical velocity (m/s)
-
-**Tuning Parameters:**
-- Process noise: 0.04-0.12 (adaptive)
-- Measurement noise: 1.0-2.5 (adaptive)
-- Deadband: 0.05 m/s (10 fpm)
-
-**Adaptive Behavior:**
-- Thermal flying (|v| > 1.0 m/s): More responsive
-- Cruising (|v| < 0.5 m/s): More stable
-- Normal: Balanced
-
-###Current Flow
-
-```kotlin
-// FlightDataCalculator.kt:150-151
-val baroAltitude = filteredBaro?.displayAltitude ?: gps.altitude
-val verticalSpeed = filteredBaro?.verticalSpeed ?: 0.0
-```
+1. [Architecture Snapshot](#architecture-snapshot)  
+2. [Implementation Details](#implementation-details)  
+3. [Energy Compensation & Derived Varios](#energy-compensation--derived-varios)  
+4. [Diagnostics & Telemetry](#diagnostics--telemetry)  
+5. [Findings & Open Risks](#findings--open-risks)  
+6. [Recommended Next Steps](#recommended-next-steps)  
+7. [Validation Checklist](#validation-checklist)  
+8. [References](#references)
 
 ---
 
-## ✈️ Aviation Standards & Best Practices
+## Architecture Snapshot
 
-### Variometer Types (FAI Standards)
-
-#### 1. **Simple Variometer** (What we currently have)
-- Measures altitude change via barometer
-- **Problem**: Shows "stick thermals" (false lift from pilot control inputs)
-- **Use**: Beginners only
-
-#### 2. **Total Energy (TE) Variometer** ⭐ REQUIRED
-- Compensates for airspeed changes
-- Formula: `TE_reading = Δh + Δ(v²/2g) / Δt`
-- **Benefit**: No more stick thermals
-- **Use**: All competition flying
-
-#### 3. **Netto Variometer** ⭐⭐ COMPETITION STANDARD
-- TE variometer + glider polar compensation
-- Shows ONLY air mass movement (zero in still air)
-- Formula: `Netto = TE - polar_sink_rate(speed)`
-- **Benefit**: Critical for final glide calculations
-- **Use**: Competition required, cross-country
-
-#### 4. **Super Netto / Relative Netto**
-- Netto + MacCready compensation
-- **Use**: Advanced competition tactics
-
-### Key Research Findings
-
-#### From AOPA & ILEC Research:
-> "A poor compensation cannot be improved by additional damping. The faster the vario, the clearer the errors of compensation will show."
-
-#### From Aviation Stack Exchange:
-> "Total energy systems solve the stick thermal problem by compensating for the speed of the aircraft."
-
-#### From Signal Processing Research:
-> "With only an altitude sensor, the filter must have significant lag to process noisy data."
-
-#### From Sensor Fusion Studies:
-> "Kalman filters can estimate altitude and climbrate by fusing altitude and vertical acceleration data for lag-and-overshoot-free output."
+- **Split sensor loops**: `app/src/main/java/com/example/xcpro/sensors/FlightDataCalculator.kt:135` runs a 50 Hz baro+IMU loop for instantaneous vertical speed, while GPS/compass stay on a slower 10 Hz track loop.
+- **Stateful filters**: The high-speed loop feeds five `IVarioCalculator` implementations (`app/src/main/java/com/example/xcpro/vario`) plus the shared `Modern3StateKalmanFilter`.
+- **Total Energy (TE) pipeline**: TE compensation is applied in the slow loop before publishing `CompleteFlightData` and driving audio (`FlightDataCalculator.kt:359`).
+- **Audio integration**: TE vertical speed is streamed into `VarioAudioEngine` for zero‑lag beeps (`app/src/main/java/com/example/xcpro/audio/VarioAudioEngine.kt:101`).
+- **Cached GPS**: The vario loop reuses last-known GPS metrics so accelerometer fusion can run between GNSS updates.
 
 ---
 
-## ❌ Problems Identified
+## Implementation Details
 
-### 🔴 CRITICAL: Missing Total Energy Compensation
+### High-speed vario loop
 
-**Problem:**
-```kotlin
-// Current: Only barometric altitude used
-val verticalSpeed = filteredBaro?.verticalSpeed
-```
+- `updateVarioFilter` (`FlightDataCalculator.kt:188`) differentiates baro altitude every ~20 ms and, when the IMU is trustworthy (`speed ≥ 1 m/s`, acceleration within ±12 m/s²), fuses accelerometer data.
+- When fusion toggles on/off, all filters reset to avoid stale bias (`FlightDataCalculator.kt:214`).
+- If IMU cannot be trusted, the code falls back to `AdvancedBarometricFilter` (legacy 2‑state smoother) and keeps the loop alive.
 
-**Impact:**
-- False "lift" when pilot pulls back (converting kinetic → potential energy)
-- False "sink" when pilot pushes forward (converting potential → kinetic energy)
-- **Result**: Unusable for competition flying, misleading for pilots
+### Modern 3-state Kalman filter
 
-**Example Scenario:**
-1. Pilot flying at 80 km/h (22 m/s)
-2. Pilot pulls back, slows to 60 km/h (17 m/s)
-3. Glider gains 10m altitude but loses speed
-4. **Current vario**: Shows +2 m/s climb (WRONG!)
-5. **TE vario**: Shows 0 m/s (CORRECT - no lift, just energy conversion)
+- `Modern3StateKalmanFilter` (`dfcards-library/src/main/java/com/example/dfcards/filters/Modern3StateKalmanFilter.kt:26`) maintains altitude, velocity, and acceleration states.
+- Measurement noise has been tightened to `R_altitude = 0.5 m`, `R_accel = 0.3 m/s²`, scaled by motion state (`Modern3StateKalmanFilter.kt:92`).
+- Process noise adapts to detected maneuver intensity, yielding faster reaction in thermals while damping cruise noise (`Modern3StateKalmanFilter.kt:241`).
+- Innovation clamping prevents pressure spikes from blowing up the estimate and forces a soft reset if three spikes arrive consecutively (`Modern3StateKalmanFilter.kt:146`).
+- Deadband is now 0.02 m/s (4 fpm) to retain weak-lift sensitivity (`Modern3StateKalmanFilter.kt:198`).
 
-### 🟠 HIGH PRIORITY: No Netto Compensation
+### Supporting vario calculators
 
-**Problem:** Vario doesn't account for glider's natural sink rate
+- `OptimizedKalmanVario` (`app/src/main/java/com/example/xcpro/vario/OptimizedKalmanVario.kt:22`) is a thin wrapper around the modern filter so the UI can compare “optimized” vs “legacy”.
+- `LegacyKalmanVario` (`app/src/main/java/com/example/xcpro/vario/LegacyKalmanVario.kt:20`) preserves the old `R_altitude = 2 m` behavior for regression checks.
+- `RawBaroVario`, `GPSVario`, and `ComplementaryVario` (`app/src/main/java/com/example/xcpro/vario`) provide baseline, slow reference, and fast complementary alternatives respectively. The complementary filter is tuned with 0.92/0.08 blending and high-pass bias removal (`dfcards-library/src/main/java/com/example/dfcards/filters/ComplementaryVarioFilter.kt:29`).
 
-**Impact:**
-- Can't determine if air mass is rising or sinking
-- Final glide calculations impossible
-- Competition scoring inaccurate
+### Audio path
 
-**Example:**
-- Glider sinking at 0.8 m/s at cruising speed
-- Air mass rising at 0.5 m/s
-- **Current vario**: Shows -0.8 m/s (pilot thinks it's sink!)
-- **Netto vario**: Shows +0.5 m/s (pilot knows it's weak lift)
-
-### 🟡 MEDIUM: Lag in Response
-
-**Problem:** Only using barometric altitude (no accelerometer fusion)
-
-**Impact:**
-- ~1-2 second delay before vario responds
-- Pilot misses thermal core centering opportunities
-- Competitive disadvantage
-
-**Research finding:**
-> "A barometric vario based on pressure alone will be delayed, always, since altitude changes must occur before they can be detected."
-
-### 🟡 MEDIUM: Deadband Too Conservative
-
-**Current:** 0.05 m/s (10 fpm) deadband
-
-**Problem:**
-- Pilots can't detect weak lift (0.2-0.5 m/s)
-- Misses thermals in weak conditions
-
-**Recommended:** 0.02-0.03 m/s (4-6 fpm) for gliding
-
-### 🟢 GOOD: Kalman Filter Implementation
-
-**What's working:**
-- ✅ Proper 2-state Kalman filter (altitude + velocity)
-- ✅ Adaptive parameters based on flight conditions
-- ✅ 3-stage filtering (outlier → Kalman → smoothing)
-- ✅ Confidence calculation
-- ✅ Innovation-based quality assessment
+- `VarioAudioEngine` consumes the TE vertical speed to drive professional tone mapping (XCTracer profile and hysteresis) and runs continuously once `initialize()` succeeds.
+- Audio updates run inside the 50 Hz loop, so any regression in vario latency is immediately audible.
 
 ---
 
-## 🎯 Proposed Improvements
+## Energy Compensation & Derived Varios
 
-### Priority 1: Add Total Energy Compensation
-
-**Algorithm:**
-
-```kotlin
-fun calculateTotalEnergy(
-    baroVerticalSpeed: Double,    // m/s from Kalman filter
-    currentAirspeed: Double,       // m/s (IAS or TAS)
-    previousAirspeed: Double,      // m/s
-    deltaTime: Double              // seconds
-): Double {
-    // Constants
-    val g = 9.81  // m/s² (gravity)
-
-    // Calculate kinetic energy change
-    val deltaKineticEnergy = (currentAirspeed * currentAirspeed -
-                              previousAirspeed * previousAirspeed) / (2 * g)
-
-    // TE vertical speed = baro V/S + change in kinetic energy per unit time
-    val teVerticalSpeed = baroVerticalSpeed + (deltaKineticEnergy / deltaTime)
-
-    return teVerticalSpeed
-}
-```
-
-**Implementation Notes:**
-- Use GPS speed as approximation for airspeed (phones don't have pitot tubes)
-- GPS speed ≈ TAS (True Airspeed) at gliding altitudes
-- Accuracy: ±0.5 m/s (acceptable for recreational flying)
-
-### Priority 2: Add Netto Compensation
-
-**Algorithm:**
-
-```kotlin
-fun calculateNetto(
-    teVerticalSpeed: Double,      // m/s from TE calculation
-    currentAirspeed: Double,      // m/s (GPS speed)
-    polarCurve: GliderPolar       // Glider performance data
-): Double {
-    // Get glider's natural sink rate at current speed
-    val glidersinkRate = polarCurve.getSinkRate(currentAirspeed)
-
-    // Netto = TE minus glider sink
-    val nettoVerticalSpeed = teVerticalSpeed - gliderSinkRate
-
-    return nettoVerticalSpeed
-}
-```
-
-**Glider Polar Curve:**
-```kotlin
-data class GliderPolar(
-    val speeds: List<Double>,      // km/h
-    val sinkRates: List<Double>    // m/s (negative for sink)
-) {
-    fun getSinkRate(speedKmh: Double): Double {
-        // Linear interpolation between points
-        // ... implementation
-    }
-}
-
-// Example: Standard Club Class glider
-val clubClassPolar = GliderPolar(
-    speeds = listOf(60.0, 80.0, 100.0, 120.0, 140.0),
-    sinkRates = listOf(-1.0, -0.8, -0.9, -1.2, -1.8)
-)
-```
-
-### Priority 3: Reduce Deadband
-
-```kotlin
-// Current (line 88 in KalmanFilter.kt)
-if (abs(filteredVelocity) < 0.05) {  // 0.05 m/s = 10 fpm
-    filteredVelocity = 0.0
-}
-
-// ✅ IMPROVED
-if (abs(filteredVelocity) < 0.02) {  // 0.02 m/s = 4 fpm (gliding standard)
-    filteredVelocity = 0.0
-}
-```
-
-**Rationale:** Glider pilots need to detect weak lift (0.2-0.5 m/s) to stay airborne
-
-### Priority 4: Accelerometer Fusion (FUTURE)
-
-**Benefits:**
-- Reduce lag from ~1-2 seconds to ~0.3-0.5 seconds
-- Earlier thermal detection
-- Smoother response
-
-**Implementation:**
-```kotlin
-// 3-state Kalman filter: [altitude, velocity, acceleration]
-// Fuse barometer (altitude) + accelerometer (vertical acceleration)
-```
-
-**Complexity:** High (requires careful tuning)
-**Recommendation:** Phase 2 improvement after TE/Netto working
-
-### Priority 5: Configurable Damping Modes
-
-Allow pilots to choose vario response:
-
-```kotlin
-enum class VarioMode {
-    FAST,      // 0.5s damping (thermal centering)
-    NORMAL,    // 1.0s damping (default)
-    SLOW       // 2.0s damping (cruising, less jumpy)
-}
-```
-
-**Implementation:**
-- Adjust Kalman filter's `processNoise` and `measurementNoise`
-- Store user preference in settings
+- **Total Energy (TE)**: `FlightCalculationHelpers.calculateTotalEnergy` (`app/src/main/java/com/example/xcpro/sensors/FlightCalculationHelpers.kt:249`) adds the kinetic energy term `(v²_current - v²_previous) / (2g Δt)` to raw vertical speed. This output replaces `verticalSpeed` in published flight data (`FlightDataCalculator.kt:359`).
+- **Netto**: `calculateNetto` (`FlightCalculationHelpers.kt:292`) adds the polar sink-rate lookup based on ground speed; results flow into `CompleteFlightData.netto` (`FlightDataCalculator.kt:396`).
+- **Thermal averaging / L/D**: Helpers maintain sliding windows for thermal strength, wind, and glide ratio, reusing TE outputs to avoid stick thermals in statistics (`FlightCalculationHelpers.kt` overall).
+- **Side-by-side metrics**: The slow loop exposes optimized, legacy, raw, GPS, and complementary vertical speeds for UI diagnostics (`FlightDataCalculator.kt:401`).
 
 ---
 
-## 📐 Implementation Plan
+## Diagnostics & Telemetry
 
-### Phase 1: Total Energy Compensation (CRITICAL)
-
-**Files to Modify:**
-1. `FlightDataCalculator.kt`
-   - Add `calculateTotalEnergy()` method
-   - Track previous GPS speed
-   - Replace simple V/S with TE V/S
-
-2. `SensorData.kt`
-   - Add `teVerticalSpeed` field to `CompleteFlightData`
-
-3. `CardDefinitions.kt`
-   - Update vario card to display TE V/S
-   - Add "TE" indicator
-
-**Estimated Time:** 2-3 hours
-**Testing:** Compare with external vario (if available)
-
-### Phase 2: Netto Compensation (HIGH PRIORITY)
-
-**Files to Modify:**
-1. Create `GliderPolar.kt`
-   - Define polar curve data structure
-   - Interpolation algorithm
-   - Pre-defined polars for common gliders
-
-2. `FlightDataCalculator.kt`
-   - Add `calculateNetto()` method
-   - Load user's glider polar from settings
-
-3. `CardDefinitions.kt`
-   - Add Netto vario card type
-   - Update existing vario card to show mode
-
-**Estimated Time:** 3-4 hours
-**Testing:** Netto should read ~0 in still air during flight
-
-### Phase 3: Deadband & Damping (MEDIUM)
-
-**Files to Modify:**
-1. `KalmanFilter.kt`
-   - Reduce deadband from 0.05 to 0.02 m/s
-   - Add configurable damping modes
-
-2. Add settings UI for vario mode selection
-
-**Estimated Time:** 1-2 hours
-**Testing:** Verify weak lift detection (0.2-0.5 m/s)
-
-### Phase 4: Accelerometer Fusion (FUTURE)
-
-**Complexity:** High
-**Benefit:** Reduced lag
-**Recommendation:** Defer until Phase 1-3 validated
+- `VarioFilterDiagnosticsCollector` tracks innovation variance, sample rate, and sensor health (`dfcards-library/src/main/java/com/example/dfcards/filters/VarioFilterDiagnostics.kt:55`). Stats are available via `Modern3StateKalmanFilter.getDiagnosticStats()` but are not yet surfaced in UI or logs.
+- High-speed loop has periodic debug output placeholders intended to log TE vs optimized values (`FlightDataCalculator.kt:304`), though string interpolation is currently missing (see risks below).
+- Audio engine keeps counters and mode state in `StateFlow`s for potential UI bindings (`VarioAudioEngine.kt:52`).
 
 ---
 
-## 🧪 Testing & Validation
+## Findings & Open Risks
 
-### Test Scenarios
-
-#### Test 1: Stick Thermal Detection (TE Validation)
-**Setup:**
-1. Level flight at constant altitude (no actual lift)
-2. Pilot pulls back sharply (convert speed → altitude)
-
-**Expected Results:**
-- ❌ **Current vario**: Shows false lift
-- ✅ **TE vario**: Shows zero (no air mass movement)
-
-#### Test 2: Netto in Still Air
-**Setup:**
-1. Fly straight at cruising speed (e.g., 90 km/h)
-2. No thermals (still air)
-
-**Expected Results:**
-- ❌ **Simple vario**: Shows -0.8 m/s (glider sink)
-- ✅ **Netto vario**: Shows 0 m/s (air mass not moving)
-
-#### Test 3: Weak Thermal Detection
-**Setup:**
-1. Fly through weak thermal (0.3 m/s lift)
-
-**Expected Results:**
-- ❌ **Current deadband (0.05)**: Might miss thermal
-- ✅ **Improved deadband (0.02)**: Detects thermal
-
-#### Test 4: Response Time (Future with Accel)
-**Setup:**
-1. Enter strong thermal (2 m/s lift)
-2. Measure time to detect
-
-**Expected Results:**
-- ❌ **Baro only**: 1-2 second delay
-- ✅ **Baro + Accel**: 0.3-0.5 second delay
-
-### Validation Metrics
-
-| Metric | Current | Target | Method |
-|--------|---------|--------|--------|
-| **Stick thermal error** | High | Zero | Pitch maneuver test |
-| **Netto accuracy** | N/A | ±0.1 m/s | Still air cruise test |
-| **Weak lift detection** | >0.05 m/s | >0.02 m/s | Threshold test |
-| **Response lag** | 1-2s | 1-2s (Phase 1-3), 0.5s (Phase 4) | Step input test |
-| **Noise level** | <0.02 m/s | <0.02 m/s | Stationary ground test |
+1. **Ground speed proxy for TE / Netto** – Both TE and Netto use GPS ground speed; in strong winds this diverges from true airspeed, so TE may under- or over-compensate (`FlightCalculationHelpers.kt:249`, `:292`). Consider integrating a TAS estimate.
+2. **First-sample TE spike** – `previousGPSSpeed` starts at 0.0, so the first TE update after takeoff can produce a spurious climb/descent until one GPS cycle completes. A guard that seeds `previousGPSSpeed` with the current reading would remove the transient.
+3. **Logging placeholders** – Diagnostic logs in `updateVarioFilter` and the 50 Hz status message omit variable values (`FlightDataCalculator.kt:218`, `:304`). This makes field debugging harder; string interpolation needs to be wired back in.
+4. **Complementary filter tuning** – Coefficients are fixed (0.92/0.08, bias time constant 5 s). We lack runtime calibration or dynamic weighting, so noise behavior in turbulence is unknown.
+5. **Diagnostics not exposed** – We now collect rich Kalman stats but nothing consumes them. Surfacing them in `CompleteFlightData` or a dev overlay would help validate noise assumptions and the spike clamp resets.
+6. **IMU trust gate** – Fusion toggles purely on ground speed and accelerometer magnitude (`FlightDataCalculator.kt:206`). If the IMU delivers stale reliability flags we could thrash between modes; adding hysteresis or minimum dwell time would stabilize mode switching.
+7. **Audio error handling** – Audio engine initialization happens on launch, but failures only log a warning. We should expose status upstream so pilots know if tones are muted.
 
 ---
 
-## 📚 References
+## Recommended Next Steps
 
-### Aviation Standards
-- FAI Sporting Code Section 3 (Gliding)
-- OSTIV Variometer Specifications
-- AOPA: "How it works: Total energy variometer"
-- ILEC GmbH: "Total Energy Compensation in Practice" (Brozel, 2002)
-
-### Technical Resources
-- Wikipedia: Variometer
-- Aviation Stack Exchange: Energy Variometer discussions
-- Signal Processing Stack Exchange: Kalman filter for barometric vario
-- GitHub: har-in-air/Kalmanfilter_altimeter_vario
-
-### Research Papers
-- "Measurement data fusion with cascaded Kalman and complementary filter in the flight parameter indicator for hang-glider and paraglider" (ScienceDirect, 2018)
-- Niklas Löfgren: "Optimal Variometer" (niklaslofgren.net/gliding)
+1. Seed `previousGPSSpeed` on first GPS update and add optional exponential smoothing to the kinetic energy term to curb GPS jitter.
+2. Feed `diagnosticsCollector.getStats()` into telemetry logs and surface key metrics (sample rate, innovation RMS) on the developer HUD.
+3. Restore formatted values in `Log.d` calls for IMU fusion transitions and 50 Hz snapshots.
+4. Experiment with dynamic complementary weights (e.g., blend ratio driven by innovation variance) and compare against Kalman output in recorded flights.
+5. Evaluate TAS estimation options (GPS + wind estimate, or IMU integration) so TE and Netto stay accurate in headwinds/tailwinds.
+6. Add automated tests around `calculateTotalEnergy` and `calculateNetto` to guard against regressions in the energy math.
 
 ---
 
-## ✅ Success Criteria
+## Validation Checklist
 
-### Phase 1 (TE) Complete When:
-- [ ] TE calculation implemented
-- [ ] Stick thermal test passes (no false lift)
-- [ ] Display shows "TE" mode indicator
-- [ ] Code reviewed and documented
-
-### Phase 2 (Netto) Complete When:
-- [ ] Netto calculation implemented
-- [ ] Glider polar database created
-- [ ] Still air test passes (netto ≈ 0)
-- [ ] User can select glider type in settings
-
-### Phase 3 (Damping) Complete When:
-- [ ] Deadband reduced to 0.02 m/s
-- [ ] Weak lift detection verified (0.2-0.5 m/s)
-- [ ] Damping modes selectable
-- [ ] Settings persist across app restarts
+- [ ] Stationary ground test: noise < 0.02 m/s for optimized Kalman, no audio beeps.  
+- [ ] Stick-thermal maneuver: TE vertical speed near zero while raw vario spikes.  
+- [ ] Weak lift (0.2 m/s) detection within 0.5 s by optimized Kalman and complementary filters.  
+- [ ] Strong sink alarm: audio engine triggers sink profile below −2 m/s.  
+- [ ] GPS dropout simulation: high-speed loop continues smoothly with cached data, TE output recovers without spikes.  
+- [ ] Crosswind flight: compare TE vs external vario to quantify wind-induced error.
 
 ---
 
-## 🚀 Quick Start (For Next Session)
+## References
 
-1. **Read this document** completely
-2. **Implement Phase 1** (Total Energy)
-3. **Test** with stick thermal scenario
-4. **Deploy** and validate with real flight (if possible)
-5. **Iterate** based on pilot feedback
+- `app/src/main/java/com/example/xcpro/sensors/FlightDataCalculator.kt` – sensor fusion orchestrator.  
+- `app/src/main/java/com/example/xcpro/sensors/FlightCalculationHelpers.kt` – TE, Netto, wind, L/D helpers.  
+- `dfcards-library/src/main/java/com/example/dfcards/filters/Modern3StateKalmanFilter.kt` – primary Kalman implementation.  
+- `dfcards-library/src/main/java/com/example/dfcards/filters/ComplementaryVarioFilter.kt` – zero‑lag complementary filter.  
+- `app/src/main/java/com/example/xcpro/audio/VarioAudioEngine.kt` – audio feedback path.  
+- `app/src/main/java/com/example/xcpro/vario` – comparison vario calculators (raw, legacy, GPS, complementary).
 
----
-
-**Status:** Ready for implementation
-**Next Action:** Implement Phase 1 (Total Energy Compensation)
-**Owner:** Development team
-**Priority:** 🔴 Critical for competition accuracy

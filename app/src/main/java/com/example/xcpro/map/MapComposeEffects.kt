@@ -221,23 +221,13 @@ object MapComposeEffects {
      */
     @Composable
     fun TestAndDebugEffects(
-        orientationData: OrientationData,
-        variometerValue: MutableState<Float>
+        orientationData: OrientationData
     ) {
-        // Debug compass visibility and orientation data
         LaunchedEffect(orientationData.mode, orientationData.isValid) {
-            Log.d(TAG, "🧭 Compass rendering: mode=${orientationData.mode}, " +
+            Log.d(TAG, "Compass rendering: mode=${orientationData.mode}, " +
                       "bearing=${orientationData.bearing.toInt()}°, " +
                       "valid=${orientationData.isValid}, " +
                       "timestamp=${orientationData.timestamp}")
-        }
-
-        // Test variometer animation with random values
-        LaunchedEffect(Unit) {
-            while (true) {
-                delay(2000)
-                variometerValue.value = Random.nextFloat() * 10f - 5f
-            }
         }
     }
 
@@ -260,8 +250,7 @@ object MapComposeEffects {
         flightViewModel: FlightDataViewModel,
         cardPreferences: CardPreferences,
         initialMapStyle: String,
-        onMapStyleSelected: (String) -> Unit,
-        variometerValue: MutableState<Float>
+        onMapStyleSelected: (String) -> Unit
     ) {
         val density = LocalDensity.current
 
@@ -299,9 +288,7 @@ object MapComposeEffects {
             onMapStyleSelected = onMapStyleSelected
         )
 
-        TestAndDebugEffects(
-            orientationData = orientationData,
-            variometerValue = variometerValue
-        )
+        TestAndDebugEffects(orientationData = orientationData)
     }
 }
+

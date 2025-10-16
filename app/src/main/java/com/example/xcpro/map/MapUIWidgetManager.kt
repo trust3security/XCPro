@@ -135,7 +135,8 @@ object MapUIWidgets {
      */
     @Composable
     fun DraggableVariometer(
-        variometerValue: Float,
+        variometerNeedleValue: Float,
+        variometerDisplayValue: Float,
         variometerOffset: Offset,
         variometerSizePx: Float,
         screenWidthPx: Float,
@@ -171,31 +172,36 @@ object MapUIWidgets {
                 .offset { IntOffset(displayOffset.value.x.roundToInt(), displayOffset.value.y.roundToInt()) }
                 .size(with(density) { displaySize.value.toDp() })
                 .background(Color.Transparent, RoundedCornerShape(12.dp))
-                .pointerInput(widgetManager.mapState.isUIEditMode) {
+                .then(
                     if (widgetManager.mapState.isUIEditMode) {
-                        detectDragGestures(
-                            onDragStart = {
-                                Log.d("MapUIWidgetManager", "🎯 Variometer drag STARTED from ${displayOffset.value}")
-                            },
-                            onDrag = { change, dragAmount ->
-                                displayOffset.value = Offset(
-                                    x = (displayOffset.value.x + dragAmount.x).coerceIn(0f, screenWidthPx),
-                                    y = (displayOffset.value.y + dragAmount.y).coerceIn(0f, screenHeightPx)
-                                )
-                                change.consume()
-                            },
-                            onDragEnd = {
-                                Log.d("MapUIWidgetManager", "🏁 Variometer drag ENDED at: ${displayOffset.value}")
-                                widgetManager.saveWidgetPosition("variometer", displayOffset.value)
-                                onOffsetChange(displayOffset.value) // Update parent state once at end
-                            }
-                        )
+                        Modifier.pointerInput(screenWidthPx, screenHeightPx) {
+                            detectDragGestures(
+                                onDragStart = {
+                                    Log.d("MapUIWidgetManager", "dYZ_ Variometer drag STARTED from ${displayOffset.value}")
+                                },
+                                onDrag = { change, dragAmount ->
+                                    displayOffset.value = Offset(
+                                        x = (displayOffset.value.x + dragAmount.x).coerceIn(0f, screenWidthPx),
+                                        y = (displayOffset.value.y + dragAmount.y).coerceIn(0f, screenHeightPx)
+                                    )
+                                    change.consume()
+                                },
+                                onDragEnd = {
+                                    Log.d("MapUIWidgetManager", "dY?? Variometer drag ENDED at: ${displayOffset.value}")
+                                    widgetManager.saveWidgetPosition("variometer", displayOffset.value)
+                                    onOffsetChange(displayOffset.value) // Update parent state once at end
+                                }
+                            )
+                        }
+                    } else {
+                        Modifier
                     }
-                }
+                )
                 .then(widgetManager.getEditModeBorder())
         ) {
             UIVariometer(
-                value = variometerValue,
+                needleValue = variometerNeedleValue,
+                displayValue = variometerDisplayValue,
                 modifier = Modifier.fillMaxSize()
             )
 

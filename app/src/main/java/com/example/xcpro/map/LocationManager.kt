@@ -275,6 +275,7 @@ class LocationManager(
 
     fun showReturnButton() {
         showReturnButton = true
+        mapState.showReturnButton = true
         lastUserPanTime = System.currentTimeMillis()
         Log.d(TAG, "✅ Return button shown due to user interaction")
     }
@@ -289,10 +290,14 @@ class LocationManager(
                     .tilt(map.cameraPosition.tilt)
                     .build()
 
+                val screenHeight = context.resources.displayMetrics.heightPixels
+                val topPadding = (screenHeight * LOCATION_TOP_PADDING_RATIO).toInt()
+                map.setPadding(0, topPadding, 0, 0)
                 map.animateCamera(CameraUpdateFactory.newCameraPosition(returnCameraPosition), 1000)
 
                 // Hide return button and re-enable location tracking
                 showReturnButton = false
+                mapState.showReturnButton = false
                 isTrackingLocation = true
                 showRecenterButton = false
                 Log.d(TAG, "🔄 Returned to saved position: lat=${location.latitude}, zoom=$savedZoom")

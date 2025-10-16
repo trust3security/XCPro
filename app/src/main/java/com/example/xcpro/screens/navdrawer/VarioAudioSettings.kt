@@ -10,9 +10,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.dfcards.CardPreferences
 import com.example.xcpro.audio.VarioAudioProfile
 import com.example.xcpro.audio.VarioAudioSettings
 import com.example.xcpro.sensors.FlightDataCalculator
+import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
 /**
@@ -63,6 +65,17 @@ fun VarioAudioSettingsContent(
     var liftThreshold by remember { mutableStateOf(currentSettings.liftThreshold.toFloat()) }
     var sinkThreshold by remember { mutableStateOf(currentSettings.sinkSilenceThreshold.toFloat()) }
     var deadband by remember { mutableStateOf(currentSettings.deadbandRange.toFloat()) }
+    val cardPreferences = remember { CardPreferences(context) }
+    val smoothingAlpha by cardPreferences.getVarioSmoothingAlpha().collectAsState(initial = 0.25f)
+    var smoothingSliderValue by remember { mutableStateOf(smoothingAlpha) }
+    var isSmoothingSliderActive by remember { mutableStateOf(false) }
+
+    LaunchedEffect(smoothingAlpha) {
+        if (!isSmoothingSliderActive) {
+            smoothingSliderValue = smoothingAlpha
+        }
+    }
+
 
     // Update local state when settings change
     LaunchedEffect(currentSettings) {
@@ -455,6 +468,67 @@ fun VarioAudioSettingsContent(
             }
         }
 
+        // === VARIOMETER DISPLAY ===
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = "Variometer Display",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                Text(
+                    text = "Adjust how quickly the numeric vario responds. The needle and audio remain real-time.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+                val smoothingDescription = when {
+                    smoothingSliderValue <= 0.15f -> "Fast response"
+                    smoothingSliderValue <= 0.25f -> "Balanced"
+                    smoothingSliderValue <= 0.35f -> "Calm"
+                    else -> "Very calm"
+                }
+                Slider(
+                    value = smoothingSliderValue,
+                    onValueChange = {
+                        isSmoothingSliderActive = true
+                        smoothingSliderValue = it
+                    },
+                    valueRange = 0.1f..0.5f,
+                    steps = 8,
+                    onValueChangeFinished = {
+                        isSmoothingSliderActive = false
+                        coroutineScope.launch {
+                            cardPreferences.saveVarioSmoothingAlpha(smoothingSliderValue)
+                        }
+                    }
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = String.format("%.2f", smoothingSliderValue),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = smoothingDescription,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+        }
+
         // === INFORMATION ===
         Card(
             modifier = Modifier
@@ -500,3 +574,7 @@ fun VarioAudioSettingsContent(
         Spacer(modifier = Modifier.height(32.dp))
     }
 }
+
+
+
+
