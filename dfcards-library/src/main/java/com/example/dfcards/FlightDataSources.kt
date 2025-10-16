@@ -1,6 +1,7 @@
 package com.example.dfcards
 
 import androidx.compose.runtime.*
+import com.example.dfcards.calculations.ConfidenceLevel
 
 /**
  * ✅ PHASE 3: FlightDataProvider - simplified interface (fallback removed)
@@ -31,6 +32,10 @@ data class RealTimeFlightData(
     val baroAltitude: Double = 0.0,
     val agl: Double = 0.0,
     val verticalSpeed: Double = 0.0,  // Default vario (currently optimized)
+    val pressureAltitude: Double = 0.0,
+    val baroGpsDelta: Double? = null,
+    val baroConfidence: ConfidenceLevel = ConfidenceLevel.LOW,
+    val qnhCalibrationAgeSeconds: Long = -1,
     val groundSpeed: Double = 0.0,
     val track: Double = 0.0,
     val accuracy: Double = 0.0,

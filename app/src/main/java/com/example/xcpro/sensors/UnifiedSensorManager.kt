@@ -11,7 +11,6 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.util.Log
-import android.os.SystemClock
 import androidx.core.app.ActivityCompat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -86,11 +85,7 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener {
     private var isAccelStarted = false
     private var isRotationStarted = false
 
-    // Orientation tracking from rotation vector (device -> earth frame)
-    private val rotationMatrix = FloatArray(9)
-    private val tempRotationMatrix = FloatArray(9)
-    private var hasRotationMatrix = false
-    private var lastRotationUpdateMillis = 0L
+    private val orientationProcessor = OrientationProcessor()
 
     // GPS location listener
     private val gpsListener = object : LocationListener {
@@ -137,21 +132,18 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener {
                 )
                 _baroFlow.value = baroData
 
-                // Only log occasionally (not every reading - would spam logs)
-                if (baroData.timestamp % 5000 < 50) { // Log every ~5 seconds
-                    Log.d(TAG, "Barometer update: pressure=${pressureHPa}hPa")
+                if (baroData.timestamp % 5000 < 50) {
+                    Log.d(TAG, "Barometer update: pressure= hPa")
                 }
             }
 
             Sensor.TYPE_MAGNETIC_FIELD -> {
-                // Calculate heading from magnetic field vector
                 val x = event.values[0]
                 val y = event.values[1]
                 val z = event.values[2]
 
-                // Calculate azimuth (heading) from magnetic field
                 val heading = Math.toDegrees(Math.atan2(y.toDouble(), x.toDouble()))
-                val normalizedHeading = (heading + 360) % 360  // Normalize to 0-360
+                val normalizedHeading = (heading + 360) % 360
 
                 val compassData = CompassData(
                     heading = normalizedHeading,
@@ -160,49 +152,33 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener {
                 )
                 _compassFlow.value = compassData
 
-                // Only log occasionally (not every reading - would spam logs)
-                if (compassData.timestamp % 5000 < 50) { // Log every ~5 seconds
-                    Log.d(TAG, "Compass update: heading=${normalizedHeading.toInt()}Â°")
+                if (compassData.timestamp % 5000 < 50) {
+                    Log.d(TAG, "Compass update: heading=°")
                 }
             }
 
             Sensor.TYPE_ROTATION_VECTOR -> {
-                SensorManager.getRotationMatrixFromVector(tempRotationMatrix, event.values)
-                System.arraycopy(tempRotationMatrix, 0, rotationMatrix, 0, rotationMatrix.size)
-                hasRotationMatrix = true
-                lastRotationUpdateMillis = SystemClock.elapsedRealtime()
+                orientationProcessor.updateRotationVector(event.values)
             }
 
             Sensor.TYPE_LINEAR_ACCELERATION -> {
-                val orientationFresh = hasRotationMatrix &&
-                        (SystemClock.elapsedRealtime() - lastRotationUpdateMillis) <= 500L
-
-                val ax = event.values[0].toDouble()
-                val ay = event.values[1].toDouble()
-                val az = event.values[2].toDouble()
-                val earthZ = if (orientationFresh) {
-                    rotationMatrix[6] * ax + rotationMatrix[7] * ay + rotationMatrix[8] * az
-                } else {
-                    az
-                }
-
+                val sample = orientationProcessor.projectVerticalAcceleration(event.values)
                 val accelData = AccelData(
-                    verticalAcceleration = earthZ,
+                    verticalAcceleration = sample.verticalAcceleration,
                     timestamp = System.currentTimeMillis(),
-                    isReliable = orientationFresh
+                    isReliable = sample.isReliable
                 )
                 _accelFlow.value = accelData
 
                 if (accelData.timestamp % 5000 < 50) {
                     Log.d(
                         TAG,
-                        "Accelerometer update: verticalAccel=${String.format("%.2f", earthZ)}m/sÂ², reliable=$orientationFresh"
+                        "Accelerometer update: verticalAccel= m/s^2, reliable="
                     )
                 }
             }
         }
     }
-
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
         sensor?.let {
             Log.d(TAG, "Sensor accuracy changed: ${it.name}, accuracy=$accuracy")
@@ -404,12 +380,13 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener {
 
             if (success) {
                 isRotationStarted = true
-                Log.d(TAG, "ï¿½o. Rotation vector started (~50Hz): ${sensor.name}")
+                orientationProcessor.reset()
+                Log.d(TAG, "Rotation vector started (~50Hz): ")
             } else {
-                Log.e(TAG, "ï¿½?O Failed to register rotation vector listener")
+                Log.e(TAG, "Failed to register rotation vector listener")
             }
         } ?: run {
-            Log.w(TAG, "ï¿½sï¿½ï¿½,? No rotation vector sensor available on this device")
+            Log.w(TAG, "No rotation vector sensor available on this device")
         }
     }
 
@@ -450,8 +427,8 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener {
             sensorManager.unregisterListener(this, it)
         }
         isRotationStarted = false
-        hasRotationMatrix = false
-        Log.d(TAG, "dY>` Rotation vector stopped")
+        orientationProcessor.reset()
+        Log.d(TAG, "Rotation vector stopped")
     }
 
     /**
@@ -531,27 +508,5 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener {
             hasLocationPermissions = hasLocationPermissions()
         )
     }
-}
-
-/**
- * Sensor availability and status information
- */
-data class SensorStatus(
-    val gpsAvailable: Boolean,
-    val gpsStarted: Boolean,
-    val baroAvailable: Boolean,
-    val baroStarted: Boolean,
-    val compassAvailable: Boolean,
-    val compassStarted: Boolean,
-    val accelAvailable: Boolean,
-    val accelStarted: Boolean,
-    val rotationAvailable: Boolean,
-    val rotationStarted: Boolean,
-    val hasLocationPermissions: Boolean
-) {
-    val allSensorsAvailable: Boolean
-        get() = gpsAvailable && baroAvailable && compassAvailable && accelAvailable && rotationAvailable
-    val allSensorsStarted: Boolean
-        get() = gpsStarted && baroStarted && compassStarted && accelStarted && rotationStarted
 }
 

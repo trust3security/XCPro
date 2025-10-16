@@ -112,6 +112,14 @@ class LocationManager(
         flightDataCalculator.stop()
     }
 
+    fun setManualQnh(qnh: Double) {
+        flightDataCalculator.setManualQnh(qnh)
+    }
+
+    fun resetQnhToStandard() {
+        flightDataCalculator.resetQnhToStandard()
+    }
+
     fun updateLocationFromGPS(
         location: GPSData,
         orientationMode: MapOrientationMode = MapOrientationMode.NORTH_UP,

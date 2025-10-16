@@ -423,28 +423,17 @@ object CardLibrary {
             }
 
             "agl" -> {
-                // ✅ IMPROVED: Use speed for accurate ground detection
-                when {
-                    liveData.agl > 5.0 -> {
-                        // Above ground - show actual AGL
-                        val aglFt = (liveData.agl * 3.28084).roundToInt()
-                        Pair("${aglFt} ft", "AGL")
-                    }
-                    liveData.agl >= 0.0 -> {
-                        // Very low altitude - check speed to distinguish ground vs flying low
-                        if (liveData.groundSpeed < 2.0) {
-                            // Low altitude AND slow = on ground (landed/taxiing)
-                            Pair("0 ft", "GROUND")
-                        } else {
-                            // Low altitude BUT moving = DANGER! Flying very low
-                            val aglFt = (liveData.agl * 3.28084).roundToInt()
-                            Pair("${aglFt} ft", "LOW!")
-                        }
-                    }
-                    else -> {
-                        // No GPS or no data (negative AGL or null)
-                        Pair("-- ft", "NO DATA")
-                    }
+                val secondary = if (liveData.isQNHCalibrated) {
+                    "QNH ${liveData.qnh.roundToInt()}"
+                } else {
+                    "NO QNH"
+                }
+
+                if (liveData.agl.isNaN()) {
+                    Pair("-- ft", secondary)
+                } else {
+                    val aglFt = (liveData.agl * 3.28084).roundToInt()
+                    Pair("${aglFt} ft", secondary)
                 }
             }
             // VARIO VARIANTS - Side-by-side testing

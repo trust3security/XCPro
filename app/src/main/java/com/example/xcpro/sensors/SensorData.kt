@@ -1,5 +1,6 @@
 package com.example.xcpro.sensors
 
+import com.example.dfcards.calculations.ConfidenceLevel
 import org.maplibre.android.geometry.LatLng
 
 /**
@@ -82,6 +83,10 @@ data class CompleteFlightData(
     val qnh: Double,            // QNH pressure setting in hPa (sea level pressure)
     val isQNHCalibrated: Boolean, // Whether QNH was calibrated by GPS (vs standard 1013.25)
     val verticalSpeed: Double,  // m/s (from barometric altitude changes)
+    val pressureAltitude: Double, // meters (QNH 1013.25 reference)
+    val baroGpsDelta: Double?,  // meters difference between baro altitude and GPS altitude
+    val baroConfidence: ConfidenceLevel, // Confidence supplied by baro calculator
+    val qnhCalibrationAgeSeconds: Long,  // Seconds since last calibration (-1 if unknown)
 
     // AGL (Above Ground Level) - from network service
     val agl: Double,            // meters above ground (GPS altitude - terrain elevation)

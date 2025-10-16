@@ -56,9 +56,11 @@ class BarometricKalmanFilter {
         
         // Update state transition uncertainty
         val processMatrix = Array(2) { Array(2) { 0.0 } }
-        processMatrix[0][0] = processNoise * deltaTime * deltaTime / 4.0
-        processMatrix[0][1] = processNoise * deltaTime * deltaTime / 2.0
-        processMatrix[1][0] = processNoise * deltaTime * deltaTime / 2.0  
+        val dt2 = deltaTime * deltaTime
+        val dt3 = dt2 * deltaTime
+        processMatrix[0][0] = processNoise * dt3 / 3.0
+        processMatrix[0][1] = processNoise * dt2 / 2.0
+        processMatrix[1][0] = processMatrix[0][1]
         processMatrix[1][1] = processNoise * deltaTime
         
         // Update error covariance (prediction)
