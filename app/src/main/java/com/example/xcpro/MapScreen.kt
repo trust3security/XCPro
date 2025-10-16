@@ -67,6 +67,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.KeyboardReturn
@@ -88,6 +89,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -105,6 +107,7 @@ import kotlinx.coroutines.launch
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import java.io.File
+import java.util.Locale
 import kotlin.math.roundToInt
 
 private const val TAG = "MapScreen"
@@ -147,6 +150,10 @@ private fun convertToRealTimeFlightData(completeData: com.example.xcpro.sensors.
         // Calculated values
         verticalSpeed = completeData.verticalSpeed,
         agl = completeData.agl,
+        pressureAltitude = completeData.pressureAltitude,
+        baroGpsDelta = completeData.baroGpsDelta,
+        baroConfidence = completeData.baroConfidence,
+        qnhCalibrationAgeSeconds = completeData.qnhCalibrationAgeSeconds,
 
         // Performance data
         windSpeed = completeData.windSpeed,
@@ -229,6 +236,10 @@ fun MapScreen(
     val flightDataManager = remember {
         FlightDataManager(context, cardPreferences, coroutineScope)
     }
+    var showQnhDialog by remember { mutableStateOf(false) }
+    var qnhInput by remember { mutableStateOf("") }
+    var qnhError by remember { mutableStateOf<String?>(null) }
+    var showQnhFab by remember { mutableStateOf(true) }
     mapState.flightDataManager = flightDataManager
 
     // ✅ NEW: Register template change callback for communication with FlightDataMgmt
@@ -673,8 +684,104 @@ fun MapScreen(
                     onReturn = {
                         locationManager.returnToSavedLocation()
                     },
+                    onShowQnhDialog = {
+                        val currentQnh = flightDataManager.liveFlightData?.qnh ?: 1013.25
+                        qnhInput = String.format(Locale.US, "%.1f", currentQnh)
+                        qnhError = null
+                        showQnhDialog = true
+                    },
+                    showQnhFab = showQnhFab,
+                    onDismissQnhFab = { showQnhFab = false },
                     modifier = Modifier.fillMaxSize()
                 )
+                if (showQnhDialog) {
+                    val liveData = flightDataManager.liveFlightData
+                    AlertDialog(
+                        onDismissRequest = {
+                            showQnhDialog = false
+                            qnhError = null
+                        },
+                        title = { Text("Manual QNH") },
+                        text = {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text("Enter the local QNH in hPa.")
+                                OutlinedTextField(
+                                    value = qnhInput,
+                                    onValueChange = {
+                                        qnhInput = it
+                                        qnhError = null
+                                    },
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    label = { Text("QNH (hPa)") },
+                                    isError = qnhError != null
+                                )
+                                qnhError?.let {
+                                    Text(
+                                        text = it,
+                                        color = MaterialTheme.colorScheme.error,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                                liveData?.let { data ->
+                                    val status = if (data.isQNHCalibrated) "Calibrated" else "Standard"
+                                    Text("Current: ${data.qnh.roundToInt()} hPa ($status)")
+                                    data.baroGpsDelta?.let { delta ->
+                                        val deltaFt = (delta * 3.28084).roundToInt()
+                                        val sign = if (deltaFt >= 0) "+" else ""
+                                        Text("Baro vs GPS: $sign${deltaFt} ft")
+                                    }
+                                    val ageSeconds = data.qnhCalibrationAgeSeconds
+                                    if (ageSeconds >= 0) {
+                                        val ageLabel = when {
+                                            ageSeconds >= 3600 -> "${ageSeconds / 3600}h"
+                                            ageSeconds >= 60 -> "${ageSeconds / 60}m"
+                                            else -> "${ageSeconds}s"
+                                        }
+                                        Text("Last calibration: $ageLabel ago")
+                                    }
+                                }
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    val parsed = qnhInput.trim().toDoubleOrNull()
+                                    if (parsed != null) {
+                                        locationManager.setManualQnh(parsed)
+                                        showQnhDialog = false
+                                        qnhError = null
+                                    } else {
+                                        qnhError = "Enter a numeric value"
+                                    }
+                                }
+                            ) {
+                                Text("Set QNH")
+                            }
+                        },
+                        dismissButton = {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                TextButton(
+                                    onClick = {
+                                        locationManager.resetQnhToStandard()
+                                        showQnhDialog = false
+                                        qnhError = null
+                                    }
+                                ) {
+                                    Text("Auto Cal")
+                                }
+                                TextButton(
+                                    onClick = {
+                                        showQnhDialog = false
+                                        qnhError = null
+                                    }
+                                ) {
+                                    Text("Cancel")
+                                }
+                            }
+                        }
+                    )
+                }
             }
         }
     )

@@ -4,8 +4,9 @@ import android.content.Context
 import android.location.Location
 import android.util.Log
 import com.example.dfcards.calculations.BarometricAltitudeCalculator
-import com.example.dfcards.dfcards.calculations.SimpleAglCalculator
+import com.example.dfcards.calculations.ConfidenceLevel
 import com.example.dfcards.filters.AdvancedBarometricFilter
+import com.example.dfcards.dfcards.calculations.SimpleAglCalculator
 import com.example.dfcards.filters.Modern3StateKalmanFilter
 import com.example.xcpro.audio.VarioAudioEngine
 import com.example.xcpro.vario.*  // NEW: Vario implementations for side-by-side testing
@@ -371,6 +372,15 @@ class FlightDataCalculator(
         val qnh = baroResult?.qnh ?: 1013.25
         val isQNHCalibrated = baroResult?.isCalibrated ?: false
 
+        val pressureAltitude = baroResult?.pressureAltitudeMeters ?: baroAltitude
+        val baroGpsDelta = baroResult?.gpsDeltaMeters
+            ?: if (!gps.altitude.isNaN()) baroAltitude - gps.altitude else null
+        val baroConfidence = baroResult?.confidenceLevel ?: ConfidenceLevel.LOW
+        val qnhCalibrationAgeSeconds = baroResult?.lastCalibrationTime?.takeIf { it > 0L }?.let {
+            val delta = (currentTime - it) / 1000L
+            if (delta < 0) 0L else delta
+        } ?: -1L
+
         // Update AGL (async network call) - uses baro altitude and speed for ground detection
         flightHelpers.updateAGL(baroAltitude, gps, gps.speed)
 
@@ -415,6 +425,10 @@ class FlightDataCalculator(
             qnh = qnh,
             isQNHCalibrated = isQNHCalibrated,
             verticalSpeed = verticalSpeed,
+            pressureAltitude = pressureAltitude,
+            baroGpsDelta = baroGpsDelta,
+            baroConfidence = baroConfidence,
+            qnhCalibrationAgeSeconds = qnhCalibrationAgeSeconds,
             agl = flightHelpers.currentAGL,
             windSpeed = windData.speed,
             windDirection = windData.direction,
@@ -455,5 +469,25 @@ class FlightDataCalculator(
         audioEngine.stop()
         audioEngine.release()
         Log.d(TAG, "FlightDataCalculator stopped")
+    }
+
+    /**
+     * Manually set QNH based on pilot input.
+     */
+    fun setManualQnh(qnhHPa: Double) {
+        baroCalculator.setQNH(qnhHPa)
+        cachedBaroResult = null
+        cachedVarioResult = null
+        Log.i(TAG, "Manual QNH applied: ${qnhHPa}")
+    }
+
+    /**
+     * Reset to standard atmosphere and allow auto calibration.
+     */
+    fun resetQnhToStandard() {
+        baroCalculator.resetToStandardAtmosphere()
+        cachedBaroResult = null
+        cachedVarioResult = null
+        Log.i(TAG, "QNH reset to standard atmosphere (auto calibration enabled)")
     }
 }

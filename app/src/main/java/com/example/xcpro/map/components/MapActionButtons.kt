@@ -3,8 +3,12 @@ package com.example.xcpro.map.components
 import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -30,19 +34,20 @@ fun MapActionButtons(
     currentLocation: GPSData?,
     onToggleDistanceCircles: () -> Unit,
     onReturn: () -> Unit,
+    onShowQnhDialog: () -> Unit,
+    showQnhFab: Boolean,
+    onDismissQnhFab: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val qnhTopPadding = 130.dp
+    val fabSpacing = 64.dp
+    val distanceTopPadding = if (showQnhFab) qnhTopPadding + fabSpacing else qnhTopPadding
 
     Box(
         modifier = modifier
             .fillMaxSize()
-            .padding(
-                top = 24.dp,
-                start = 24.dp,
-                end = 24.dp,
-                bottom = 80.dp
-            )
+            .padding(top = 24.dp, bottom = 80.dp)
             // ❌ REMOVED: .zIndex(50f) was blocking hamburger menu at zIndex(4f)
             // Individual buttons have their own z-index values as needed
     ) {
@@ -70,8 +75,20 @@ fun MapActionButtons(
             mapState = mapState,
             onToggle = onToggleDistanceCircles,
             isBottomSheetVisible = taskScreenManager.showTaskBottomSheet || taskScreenManager.showTaskScreen,
-            modifier = Modifier.align(Alignment.BottomEnd)
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = distanceTopPadding, end = 16.dp)
         )
+
+        if (showQnhFab) {
+            QnhButton(
+                onClick = onShowQnhDialog,
+                onDismiss = onDismissQnhFab,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = qnhTopPadding, end = 16.dp)
+            )
+        }
     }
 }
 
@@ -165,9 +182,8 @@ private fun DistanceCirclesButton(
 ) {
     Box(
         modifier = modifier
-            .padding(bottom = 80.dp, end = 8.dp) // ✅ Moved up and closer to right edge
             .size(48.dp)
-            .zIndex(if (isBottomSheetVisible) 10f else 50f) // Lower z-index when bottom sheet is visible
+            .zIndex(if (isBottomSheetVisible) 10f else 50f)
     ) {
         FloatingActionButton(
             onClick = {
@@ -187,6 +203,59 @@ private fun DistanceCirclesButton(
                 color = Color.White,
                 modifier = Modifier.size(24.dp)
             )
+        }
+    }
+}
+
+@Composable
+private fun QnhButton(
+    onClick: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .size(48.dp)
+            .zIndex(50f)
+    ) {
+            FloatingActionButton(
+                onClick = onClick,
+                modifier = Modifier.fillMaxSize(),
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = Color.White,
+            elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Speed,
+                contentDescription = "Set QNH",
+                modifier = Modifier.size(24.dp)
+            )
+        }
+
+        Surface(
+            color = Color(0xFFD32F2F),
+            shape = CircleShape,
+            tonalElevation = 0.dp,
+            shadowElevation = 2.dp,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .offset(x = 5.dp, y = (-5).dp)
+                .size(18.dp)
+                .zIndex(60f)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable(onClick = onDismiss),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = "Dismiss QNH control",
+                    tint = Color.White,
+                    modifier = Modifier.size(10.dp)
+                )
+            }
         }
     }
 }

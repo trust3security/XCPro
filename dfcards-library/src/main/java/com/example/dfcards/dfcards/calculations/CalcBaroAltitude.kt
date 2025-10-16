@@ -12,6 +12,8 @@ data class BarometricAltitudeData(
     val pressureHPa: Double,
     val temperatureCompensated: Boolean,
     val confidenceLevel: ConfidenceLevel,
+    val pressureAltitudeMeters: Double,
+    val gpsDeltaMeters: Double?,
     val lastCalibrationTime: Long
 )
 
@@ -122,6 +124,7 @@ class BarometricAltitudeCalculator(
 
         // Calculate altitude using ICAO Standard Atmosphere formula
         val baroAltitude = calculateICAOBaroAltitude(compensatedPressure, referencePressure)
+        val pressureAltitudeStd = calculateICAOBaroAltitude(compensatedPressure, STANDARD_PRESSURE)
 
         // Apply sensor fusion if GPS is available and reliable
         val finalAltitude = if (isQNHCalibrated && gpsAltitudeMeters != null && isGPSFixed) {
@@ -134,6 +137,12 @@ class BarometricAltitudeCalculator(
         // Determine confidence level
         val confidence = determineConfidenceLevel(isGPSFixed, isQNHCalibrated, gpsAccuracy)
 
+        val gpsDelta = if (gpsAltitudeMeters != null && !gpsAltitudeMeters.isNaN()) {
+            finalAltitude - gpsAltitudeMeters
+        } else {
+            null
+        }
+
         return BarometricAltitudeData(
             altitudeMeters = finalAltitude,
             qnh = qnh,
@@ -141,6 +150,8 @@ class BarometricAltitudeCalculator(
             pressureHPa = compensatedPressure,
             temperatureCompensated = false,
             confidenceLevel = confidence,
+            pressureAltitudeMeters = pressureAltitudeStd,
+            gpsDeltaMeters = gpsDelta,
             lastCalibrationTime = lastCalibrationTime
         )
     }

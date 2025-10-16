@@ -97,19 +97,13 @@ class SimpleAglCalculator(context: Context) {
         // Calculate AGL
         val agl = altitude - groundElevation
 
-        // ✅ IMPROVED: Handle negative AGL properly
         if (agl < -50.0) {
-            // Large negative AGL indicates barometric altitude error (wrong QNH)
-            Log.w(TAG, "⚠️ AGL very negative (${agl.toInt()}m) - possible QNH calibration issue")
-            return null  // Return null to show "NO DATA" instead of confusing value
+            Log.w(TAG, "⚠️ AGL very negative (${agl.toInt()}m) - check QNH calibration")
         }
 
-        // Small negative values OK (rounding/GPS error) - coerce to 0
-        val finalAgl = agl.coerceAtLeast(0.0)
+        Log.d(TAG, "✅ AGL raw: ${agl.toInt()}m (Alt: ${altitude.toInt()}m, Ground: ${groundElevation.toInt()}m, Speed: ${speed?.toInt() ?: "?"}m/s)")
 
-        Log.d(TAG, "✅ AGL: ${finalAgl.toInt()}m (Alt: ${altitude.toInt()}m, Ground: ${groundElevation.toInt()}m, Speed: ${speed?.toInt() ?: "?"}m/s)")
-
-        return finalAgl
+        return agl
     }
 
     /**
