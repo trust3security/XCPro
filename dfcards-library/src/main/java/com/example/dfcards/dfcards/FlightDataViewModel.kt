@@ -412,7 +412,7 @@ class FlightDataViewModel : ViewModel() {
     // ✅ SSOT COMPLIANT: Update ALL cards in memory (visible or hidden)
     // This ensures zero data loss when switching modes
     private var lastUpdateTime = 0L
-    private val UPDATE_THROTTLE_MS = 1000L // ✅ 1 second for most cards
+    private val UPDATE_THROTTLE_MS = 200L // ✅ faster refresh for responsive metrics
 
     // ✅ INDEPENDENT CLOCK TIMER: Updates time card separately from GPS
     private var clockTimerJob: kotlinx.coroutines.Job? = null

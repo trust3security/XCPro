@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.zIndex
 import com.example.xcpro.FlightMode
@@ -46,8 +47,10 @@ object MapGestureSetup {
         modifier: Modifier = Modifier
     ) {
         // ✅ CRITICAL FIX: Remember AAT waypoints and recompute when task type or waypoints change
-        val aatWaypoints = androidx.compose.runtime.remember(taskManager.taskType) {
-            getAATWaypointsForGestures(taskManager)
+        val aatWaypoints by androidx.compose.runtime.remember(taskManager.taskType) {
+            androidx.compose.runtime.derivedStateOf {
+                getAATWaypointsForGestures(taskManager)
+            }
         }
 
         Box(

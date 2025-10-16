@@ -1,7 +1,5 @@
 package com.example.xcpro
 
-import com.example.xcpro.tasks.TaskManagerCoordinator
-import com.example.xcpro.tasks.rememberTaskManagerCoordinator
 import com.example.xcpro.tasks.TaskMapOverlay
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.skysight.SkysightMapOverlay
@@ -13,31 +11,22 @@ import com.example.xcpro.screens.overlays.getMapStyleUrl
 import com.example.xcpro.profiles.ProfileIndicator
 import com.example.xcpro.profiles.FlightModeIndicator
 import com.example.xcpro.CompassWidget
-import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.MapOrientationMode
 import com.example.xcpro.map.BlueLocationOverlay
 import com.example.xcpro.map.DistanceCirclesOverlay
-import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.DistanceCirclesCanvas
-import com.example.xcpro.map.MapInitializer
-import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.map.TemplateChangeNotifier
 import com.example.xcpro.map.components.MapActionButtons
-import com.example.xcpro.map.LocationManager
 import com.example.xcpro.map.MapComposeEffects
-import com.example.xcpro.map.MapOverlayManager
 import com.example.xcpro.map.MapUIWidgetManager
 import com.example.xcpro.map.MapUIWidgets
-import com.example.xcpro.map.MapTaskScreenManager
 import com.example.xcpro.map.MapTaskScreenUI
-import com.example.xcpro.map.MapCameraManager
 import com.example.xcpro.map.MapCameraEffects
-import com.example.xcpro.map.MapLifecycleManager
 import com.example.xcpro.map.MapLifecycleEffects
-import com.example.xcpro.map.MapModalManager
 import com.example.xcpro.map.MapModalUI
 import com.example.xcpro.map.MapGestureSetup
 import com.example.xcpro.map.MapTaskIntegration
+import com.example.xcpro.map.MapScreenViewModel
 import com.example.xcpro.WaypointData
 import com.example.dfcards.CardDefinition
 import com.example.ui1.icons.Task
@@ -49,11 +38,11 @@ import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.dfcards.FlightTemplate
 import com.example.dfcards.RealTimeFlightData
 import com.example.dfcards.CardLibraryModal
-import com.example.dfcards.CardPreferences
 import com.example.dfcards.FlightDataProvider
 import com.example.dfcards.FlightModeSelection
 import androidx.lifecycle.viewmodel.compose.viewModel
 import android.annotation.SuppressLint
+import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
@@ -103,7 +92,9 @@ import com.example.xcpro.tasks.BottomSheetState
 // ✅ REMOVED DataQuality - no longer used
 import com.example.ui1.UIVariometer
 import com.example.xcpro.navdrawer.NavigationDrawer
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import java.io.File
@@ -192,31 +183,38 @@ fun MapScreen(
     showTaskScreen: MutableState<Boolean>
 ) {
     val context = LocalContext.current
+    val application = context.applicationContext as Application
+    val mapViewModel: MapScreenViewModel = viewModel(
+        factory = MapScreenViewModel.provideFactory(application, initialMapStyle)
+    )
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
 
-    // ✅ Centralized state management
-    val mapState = remember { MapScreenState(context, initialMapStyle) }
+    // ?o. Centralized state management via ViewModel
+    val mapState = mapViewModel.mapState
     val modes = FlightMode.values()
 
-    // ✅ Map Orientation Manager
-    val orientationManager = remember { MapOrientationManager(context, coroutineScope) }
+    // ?o. Map Orientation Manager
+    val orientationManager = mapViewModel.orientationManager
     val orientationData by orientationManager.orientationFlow.collectAsState()
-    val taskManager = rememberTaskManagerCoordinator(context)  // ✅ Using coordinator for task management
-
+    val taskManager = mapViewModel.taskManager  // ?o. Using coordinator for task management
     // 🔄 Load waypoints once
-    val (waypointFiles, _) = loadWaypointFiles(context)
-    val allWaypoints: List<WaypointData> = waypointFiles.flatMap { file ->
-        try {
-            WaypointParser.parseWaypointFile(context, file)
-        } catch (e: Exception) {
-            Log.e("MapScreen", "Error parsing waypoint file: ${e.message}")
-            emptyList()
+    val waypointData by produceState(initialValue = emptyList<WaypointData>(), key1 = context) {
+        value = withContext(Dispatchers.IO) {
+            val (waypointFiles, _) = loadWaypointFiles(context)
+            waypointFiles.flatMap { file ->
+                try {
+                    WaypointParser.parseWaypointFile(context, file)
+                } catch (e: Exception) {
+                    Log.e("MapScreen", "Error parsing waypoint file: ${e.message}")
+                    emptyList()
+                }
+            }
         }
     }
 
 // ✅ keep repo if you still need it
-    val waypointRepo = remember { FileWaypointRepo(allWaypoints) }
+    val waypointRepo = remember(waypointData) { FileWaypointRepo(waypointData) }
 
     // ✅ SIMPLIFIED: Remove permission dialog variables, always enable everything
     var safeContainerSize by remember { mutableStateOf(IntSize.Zero) }
@@ -230,18 +228,14 @@ fun MapScreen(
     val flightViewModel: FlightDataViewModel = viewModel()
     // ✅ REFACTORED: No longer collect cardStates here - CardContainer handles it directly
     val selectedCardIds by flightViewModel.selectedCardIds.collectAsState()
-    val cardPreferences = remember { CardPreferences(context) }
+    val cardPreferences = mapViewModel.cardPreferences
 
     // ✅ Initialize FlightDataManager
-    val flightDataManager = remember {
-        FlightDataManager(context, cardPreferences, coroutineScope)
-    }
+    val flightDataManager = mapViewModel.flightDataManager
     var showQnhDialog by remember { mutableStateOf(false) }
     var qnhInput by remember { mutableStateOf("") }
     var qnhError by remember { mutableStateOf<String?>(null) }
     var showQnhFab by remember { mutableStateOf(true) }
-    mapState.flightDataManager = flightDataManager
-
     // ✅ NEW: Register template change callback for communication with FlightDataMgmt
     DisposableEffect(Unit) {
         TemplateChangeNotifier.registerCallback {
@@ -252,10 +246,8 @@ fun MapScreen(
         }
     }
 
-    // ✅ Map Overlay Manager - centralized overlay management
-    val overlayManager = remember {
-        MapOverlayManager(context, mapState, taskManager)
-    }
+    // Map Overlay Manager - centralized overlay management
+    val overlayManager = mapViewModel.overlayManager
 
     // ✅ UI Widget Manager - centralized widget management
     val widgetManager = remember {
@@ -266,26 +258,26 @@ fun MapScreen(
     val profileViewModel: com.example.xcpro.profiles.ProfileViewModel = viewModel()
     val uiState by profileViewModel.uiState.collectAsState()
     // ✅ TaskScreenManager - Centralized task screen handling
-    val taskScreenManager = remember { MapTaskScreenManager(mapState, taskManager) }
+    val taskScreenManager = mapViewModel.taskScreenManager
 
     // ✅ CameraManager - Centralized camera handling
-    val cameraManager = remember { MapCameraManager(mapState) }
+    val cameraManager = mapViewModel.cameraManager
 
     // ✅ LocationManager - Centralized location handling
-    val locationManager = remember { LocationManager(context, mapState, coroutineScope) }
+    val locationManager = mapViewModel.locationManager
 
     // ✅ LifecycleManager - Centralized lifecycle handling
-    val lifecycleManager = remember { MapLifecycleManager(mapState, orientationManager, locationManager) }
+    val lifecycleManager = mapViewModel.lifecycleManager
 
     // ✅ ModalManager - Centralized modal handling
-    val modalManager = remember { MapModalManager(mapState) }
+    val modalManager = mapViewModel.modalManager
 
     // ✅ Backward compatibility variables (using locationManager)
     val currentUserLocation by remember { derivedStateOf { locationManager.currentUserLocation } }
     val unifiedSensorManager = locationManager.unifiedSensorManager
 
-    // ✅ Map Initializer
-    val mapInitializer = remember { MapInitializer(context, mapState, orientationManager, taskManager, locationManager.unifiedSensorManager) }
+    // Map Initializer
+    val mapInitializer = mapViewModel.mapInitializer
     val currentLocation by unifiedSensorManager.gpsFlow.collectAsState()
     val isGpsActive = unifiedSensorManager.isGpsEnabled()
 
@@ -296,13 +288,13 @@ fun MapScreen(
     val showReturnButton by remember { derivedStateOf { locationManager.showReturnButton } }
 
     // ✅ AAT Edit Mode State - Track when AAT pin editing is active
-    var isAATEditMode by remember { mutableStateOf(false) }
+    val isAATEditMode by mapViewModel.isAATEditMode.collectAsState()
     
     // ✅ CRITICAL FIX: Reset AAT edit mode when task type changes
-    LaunchedEffect(taskManager.taskType) {
+    LaunchedEffect(taskManager.taskType, isAATEditMode) {
         if (taskManager.taskType != TaskType.AAT && isAATEditMode) {
             Log.d(TAG, "🔧 Task type changed to ${taskManager.taskType} - resetting AAT edit mode")
-            isAATEditMode = false
+            mapViewModel.exitAATEditMode()
         }
     }
 
@@ -336,8 +328,6 @@ fun MapScreen(
     val currentFlightModeSelection by remember { derivedStateOf { flightDataManager.currentFlightMode } }
 
     // ✅ Variometer test state for debug effects
-    var variometerValue by remember { mutableStateOf(2.4f) }
-
     // ✅ CENTRALIZED EFFECTS - Replace all individual LaunchedEffect blocks
     // ✅ REFACTORED: Removed cardStates parameter - no longer needed
     MapComposeEffects.AllMapEffects(
@@ -353,8 +343,7 @@ fun MapScreen(
         flightViewModel = flightViewModel,
         cardPreferences = cardPreferences,
         initialMapStyle = initialMapStyle,
-        onMapStyleSelected = onMapStyleSelected,
-        variometerValue = remember { mutableStateOf(variometerValue) }
+        onMapStyleSelected = onMapStyleSelected
     )
 
     // ✅ CENTRALIZED LIFECYCLE EFFECTS - Replace individual DisposableEffect blocks
@@ -437,16 +426,13 @@ fun MapScreen(
                                         getMapAsync { map: MapLibreMap ->
                                             coroutineScope.launch {
                                                 try {
-                                                    // ✅ Use MapInitializer for complete map setup
                                                     mapInitializer.initializeMap(map)
-                                                    Log.d(TAG, "? Map initialization completed via MapInitializer")
+                                                    Log.d(TAG, "Map initialization completed via MapInitializer")
 
                                                     // Overlays are now managed through LocationManager via mapState
-                                                    Log.d(TAG, "? Map overlays initialized through LocationManager")
-
-                                                }
+                                                    Log.d(TAG, "Map overlays initialized through LocationManager")
                                                 } catch (e: Exception) {
-                                                    Log.e(TAG, "❌ Error during MapInitializer setup: ${e.message}", e)
+                                                    Log.e(TAG, "Error during MapInitializer setup: ${e.message}", e)
                                                 }
                                             }
                                         }
@@ -529,7 +515,7 @@ fun MapScreen(
                                 currentLocation = currentLocation,
                                 showReturnButton = showReturnButton,
                                 isAATEditMode = isAATEditMode,
-                                onAATEditModeChange = { newValue -> isAATEditMode = newValue }
+                                onAATEditModeChange = mapViewModel::setAATEditMode
                             )
 
                             // ✅ Modern Flight Mode Indicator (Top Left - Unified UI)
@@ -581,11 +567,13 @@ fun MapScreen(
 
                             // ✅ Other UI (variometer) - animation managed by centralized effects
                             // Note: sharedPrefs is accessed via mapState.sharedPrefs
+                            val targetVario = (flightDataManager.rawVerticalSpeed ?: flightDataManager.liveFlightData?.verticalSpeed)?.toFloat() ?: 0f
+                            val displayNumericVario = (flightDataManager.smoothedVerticalSpeed ?: flightDataManager.liveFlightData?.verticalSpeed)?.toFloat() ?: 0f
                             val animatedVario by animateFloatAsState(
-                                targetValue = variometerValue,
-                                animationSpec = androidx.compose.animation.core.tween(
-                                    1000,
-                                    easing = androidx.compose.animation.core.EaseInOutCubic
+                                targetValue = targetVario,
+                                animationSpec = androidx.compose.animation.core.spring(
+                                    dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+                                    stiffness = androidx.compose.animation.core.Spring.StiffnessMedium
                                 ),
                                 label = "vario"
                             )
@@ -595,7 +583,8 @@ fun MapScreen(
                             val maxSizePx = with(density) { 200.dp.toPx() }
 
                             MapUIWidgets.DraggableVariometer(
-                                variometerValue = animatedVario,
+                                variometerNeedleValue = animatedVario,
+                                variometerDisplayValue = displayNumericVario,
                                 variometerOffset = variometerOffset,
                                 variometerSizePx = variometerSizePx,
                                 screenWidthPx = screenWidthPx,
@@ -606,7 +595,7 @@ fun MapScreen(
                                 density = density,
                                 onOffsetChange = { variometerOffset = it },
                                 onSizeChange = { variometerSizePx = it },
-                                modifier = Modifier.zIndex(3f)
+                                modifier = Modifier.zIndex(if (mapState.isUIEditMode) 4f else 1f)
                             )
 
                             // Aircraft icon is now drawn on the map at actual GPS position
@@ -631,7 +620,7 @@ fun MapScreen(
                                     isAATEditMode = isAATEditMode,
                                     taskManager = taskManager,
                                     cameraManager = cameraManager,
-                                    onExitEditMode = { isAATEditMode = false }
+                                    onExitEditMode = mapViewModel::exitAATEditMode
                                 )
                             }
 
@@ -661,7 +650,7 @@ fun MapScreen(
                 // ✅ Task Screen UI Components - Centralized management
                 MapTaskScreenUI.AllTaskScreenComponents(
                     taskScreenManager = taskScreenManager,
-                    allWaypoints = allWaypoints,
+                    allWaypoints = waypointData,
                     currentQNH = "1013 hPa",
                     onWaypointGoto = { wp ->
                         cameraManager.moveToWaypoint(wp.latitude, wp.longitude)
@@ -674,6 +663,7 @@ fun MapScreen(
                     taskManager = taskManager,
                     taskScreenManager = taskScreenManager,
                     currentLocation = currentLocation,
+                    showReturnButton = showReturnButton,
                     onToggleDistanceCircles = {
                         // ✅ Use MapOverlayManager for centralized distance circles management
                         overlayManager.toggleDistanceCircles()
@@ -783,5 +773,8 @@ fun MapScreen(
         }
     )
 }
+
+
+
 
 

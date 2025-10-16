@@ -32,6 +32,7 @@ fun MapActionButtons(
     taskManager: TaskManagerCoordinator,
     taskScreenManager: MapTaskScreenManager,
     currentLocation: GPSData?,
+    showReturnButton: Boolean,
     onToggleDistanceCircles: () -> Unit,
     onReturn: () -> Unit,
     onShowQnhDialog: () -> Unit,
@@ -40,6 +41,9 @@ fun MapActionButtons(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val topInset = 24.dp
+    val bottomInset = 80.dp
+    val centerOffset = (bottomInset - topInset) * 0.5f
     val qnhTopPadding = 130.dp
     val fabSpacing = 64.dp
     val distanceTopPadding = if (showQnhFab) qnhTopPadding + fabSpacing else qnhTopPadding
@@ -47,7 +51,7 @@ fun MapActionButtons(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .padding(top = 24.dp, bottom = 80.dp)
+            .padding(top = topInset, bottom = bottomInset)
             // ❌ REMOVED: .zIndex(50f) was blocking hamburger menu at zIndex(4f)
             // Individual buttons have their own z-index values as needed
     ) {
@@ -62,11 +66,13 @@ fun MapActionButtons(
         }
 
         // Return Button
-        if (mapState.showReturnButton) {
+        if (showReturnButton) {
             ReturnButton(
-                mapState = mapState,
                 onReturn = onReturn,
-                modifier = Modifier.align(Alignment.TopEnd)
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 16.dp)
+                    .offset(y = centerOffset)
             )
         }
 
@@ -144,20 +150,17 @@ private fun RecenterButton(
 
 @Composable
 private fun ReturnButton(
-    mapState: MapScreenState,
     onReturn: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
         modifier = modifier
-            .padding(top = 16.dp, end = 16.dp)
             .size(48.dp)
     ) {
         FloatingActionButton(
             onClick = {
                 Log.d("MapActionButtons", "🔄 Return button clicked")
                 onReturn()
-                mapState.showReturnButton = false
             },
             modifier = Modifier.matchParentSize(),
             containerColor = MaterialTheme.colorScheme.tertiary,

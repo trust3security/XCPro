@@ -30,6 +30,7 @@ class FlightDataManager(
 ) {
     companion object {
         private const val TAG = "FlightDataManager"
+        private const val DEFAULT_SMOOTHING_ALPHA = 0.25f
     }
 
     // Flight Data State
@@ -38,6 +39,12 @@ class FlightDataManager(
 
     var liveFlightData by mutableStateOf<RealTimeFlightData?>(null)
         private set
+    var smoothedVerticalSpeed by mutableStateOf<Double?>(null)
+        private set
+    var rawVerticalSpeed by mutableStateOf<Double?>(null)
+        private set
+
+    private var smoothingAlpha: Double = DEFAULT_SMOOTHING_ALPHA.toDouble()
 
     var currentFlightMode by mutableStateOf(FlightModeSelection.CRUISE)
         private set
@@ -51,6 +58,15 @@ class FlightDataManager(
     // ✅ NEW: Template version tracking for reactive updates
     var templateVersion by mutableStateOf(0)
         private set
+
+    init {
+        coroutineScope.launch {
+            cardPreferences.getVarioSmoothingAlpha().collect { alpha ->
+                smoothingAlpha = alpha.toDouble().coerceIn(0.05, 0.95)
+                smoothedVerticalSpeed = null
+            }
+        }
+    }
 
     /**
      * Get default template for flight mode
@@ -351,12 +367,23 @@ class FlightDataManager(
      * Update live flight data
      */
     fun updateLiveFlightData(newData: RealTimeFlightData?) {
-        liveFlightData = newData
-        if (newData != null) {
-            Log.d(TAG, "📡 Live flight data updated: GPS fixed=${newData}")
-        } else {
-            Log.d(TAG, "📡 No GPS data available (liveFlightData is null)")
+        if (newData == null) {
+            liveFlightData = null
+            smoothedVerticalSpeed = null
+            rawVerticalSpeed = null
+            return
         }
+
+        val rawVs = newData.verticalSpeed
+        rawVerticalSpeed = rawVs
+
+        val previous = smoothedVerticalSpeed ?: rawVs
+        val alpha = smoothingAlpha
+        val smoothed = previous + alpha * (rawVs - previous)
+        smoothedVerticalSpeed = smoothed
+
+        liveFlightData = newData.copy(verticalSpeed = smoothed)
+        Log.d(TAG, "Live flight data updated: GPS fixed=${newData}")
     }
 
     /**
@@ -389,3 +416,4 @@ class FlightDataManager(
         return FlightMode.CRUISE // Always fallback to Cruise
     }
 }
+

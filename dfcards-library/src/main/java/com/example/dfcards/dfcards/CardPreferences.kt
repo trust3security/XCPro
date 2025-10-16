@@ -18,6 +18,11 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 
 class CardPreferences(private val context: Context) {
 
+    companion object {
+        private const val DEFAULT_SMOOTHING_ALPHA = 0.25f
+        private val VARIO_SMOOTHING_KEY = floatPreferencesKey("vario_smoothing_alpha")
+    }
+
     // EXISTING: Save individual card state (keep for backward compatibility)
     suspend fun saveCardState(cardState: CardState) {
         context.dataStore.edit { preferences ->
@@ -378,5 +383,18 @@ class CardPreferences(private val context: Context) {
     }
 
     data class CardPosition(val x: Float, val y: Float, val width: Float, val height: Float)
-}
 
+    // Variometer smoothing preference ---------------------------------------------------
+    suspend fun saveVarioSmoothingAlpha(alpha: Float) {
+        val clamped = alpha.coerceIn(0.05f, 0.95f)
+        context.dataStore.edit { preferences ->
+            preferences[VARIO_SMOOTHING_KEY] = clamped
+        }
+    }
+
+    fun getVarioSmoothingAlpha(): Flow<Float> {
+        return context.dataStore.data.map { preferences ->
+            preferences[VARIO_SMOOTHING_KEY] ?: DEFAULT_SMOOTHING_ALPHA
+        }
+    }
+}
