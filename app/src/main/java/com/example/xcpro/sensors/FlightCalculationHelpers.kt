@@ -325,7 +325,7 @@ internal class FlightCalculationHelpers(
      * Ported from FlightDataManager.kt lines 526-535
      */
     private fun calculateSinkRate(groundSpeed: Float): Float {
-        val speedKmh = groundSpeed * 1.852f
+        val speedKmh = groundSpeed * 3.6f
 
         return when {
             speedKmh < 60f -> 0.8f

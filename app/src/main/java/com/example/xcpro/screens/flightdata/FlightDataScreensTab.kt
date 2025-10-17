@@ -11,6 +11,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.dfcards.*
+import com.example.xcpro.common.units.UnitsPreferences
+import com.example.xcpro.common.units.UnitsRepository
 import com.example.xcpro.profiles.UserProfile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
@@ -37,6 +39,10 @@ fun FlightDataScreensTab(
     liveFlightData: RealTimeFlightData? = null
 ) {
     val context = LocalContext.current
+    val unitsRepository = remember(context.applicationContext) {
+        UnitsRepository(context.applicationContext)
+    }
+    val unitsPreferences by unitsRepository.unitsFlow.collectAsState(initial = UnitsPreferences())
     
     // ✅ NEW: Flight mode visibility state management
     var flightModeVisibilities by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
@@ -274,7 +280,8 @@ fun FlightDataScreensTab(
             CardsGridSection(
                 selectedCategory = selectedCategory,
                 selectedTemplate = selectedTemplate,
-                liveFlightData = liveFlightData,  // ✅ NEW: Pass live data for previews
+                liveFlightData = liveFlightData,
+                units = unitsPreferences,
                 onCardToggle = { cardId, isSelected ->
                     Log.d(TAG, "🃏 Card toggle triggered:")
                     Log.d(TAG, "  📋 Card ID: $cardId")

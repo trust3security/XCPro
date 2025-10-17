@@ -38,6 +38,13 @@ import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.dfcards.FlightTemplate
 import com.example.dfcards.RealTimeFlightData
 import com.example.dfcards.CardLibraryModal
+import com.example.xcpro.common.units.AltitudeM
+import com.example.xcpro.common.units.AltitudeUnit
+import com.example.xcpro.common.units.PressureHpa
+import com.example.xcpro.common.units.PressureUnit
+import com.example.xcpro.common.units.UnitsFormatter
+import com.example.xcpro.common.units.UnitsPreferences
+import com.example.xcpro.common.units.UnitsRepository
 import com.example.dfcards.FlightDataProvider
 import com.example.dfcards.FlightModeSelection
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -127,7 +134,7 @@ private fun convertToRealTimeFlightData(completeData: com.example.xcpro.sensors.
         latitude = gps?.latLng?.latitude ?: 0.0,
         longitude = gps?.latLng?.longitude ?: 0.0,
         gpsAltitude = gps?.altitude ?: 0.0,
-        groundSpeed = (gps?.speed ?: 0.0) * 1.94384, // m/s to knots
+        groundSpeed = gps?.speed ?: 0.0,
         track = gps?.bearing ?: 0.0,
         accuracy = gps?.accuracy?.toDouble() ?: 0.0,
         satelliteCount = 0, // Not available from new system (phones don't expose this)
@@ -187,6 +194,10 @@ fun MapScreen(
     val mapViewModel: MapScreenViewModel = viewModel(
         factory = MapScreenViewModel.provideFactory(application, initialMapStyle)
     )
+    val unitsRepository = remember(context.applicationContext) {
+        UnitsRepository(context.applicationContext)
+    }
+    val unitsPreferences by unitsRepository.unitsFlow.collectAsState(initial = UnitsPreferences())
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
 
@@ -232,6 +243,9 @@ fun MapScreen(
 
     // ✅ Initialize FlightDataManager
     val flightDataManager = mapViewModel.flightDataManager
+    LaunchedEffect(unitsPreferences) {
+        flightDataManager.updateUnitsPreferences(unitsPreferences)
+    }
     var showQnhDialog by remember { mutableStateOf(false) }
     var qnhInput by remember { mutableStateOf("") }
     var qnhError by remember { mutableStateOf<String?>(null) }
@@ -673,7 +687,7 @@ fun MapScreen(
                     },
                     onShowQnhDialog = {
                         val currentQnh = flightDataManager.liveFlightData?.qnh ?: 1013.25
-                        qnhInput = String.format(Locale.US, "%.1f", currentQnh)
+                        qnhInput = seedQnhInputValue(currentQnh, unitsPreferences)
                         qnhError = null
                         showQnhDialog = true
                     },
@@ -683,6 +697,8 @@ fun MapScreen(
                 )
                 if (showQnhDialog) {
                     val liveData = flightDataManager.liveFlightData
+                    val pressureLabel = unitsPreferences.pressure.abbreviation
+                    val pressureDecimals = pressurePrecision(unitsPreferences)
                     AlertDialog(
                         onDismissRequest = {
                             showQnhDialog = false
@@ -691,7 +707,7 @@ fun MapScreen(
                         title = { Text("Manual QNH") },
                         text = {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text("Enter the local QNH in hPa.")
+                                Text("Enter the local QNH in $pressureLabel.")
                                 OutlinedTextField(
                                     value = qnhInput,
                                     onValueChange = {
@@ -700,7 +716,7 @@ fun MapScreen(
                                     },
                                     singleLine = true,
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                    label = { Text("QNH (hPa)") },
+                                    label = { Text("QNH ($pressureLabel)") },
                                     isError = qnhError != null
                                 )
                                 qnhError?.let {
@@ -712,11 +728,9 @@ fun MapScreen(
                                 }
                                 liveData?.let { data ->
                                     val status = if (data.isQNHCalibrated) "Calibrated" else "Standard"
-                                    Text("Current: ${data.qnh.roundToInt()} hPa ($status)")
+                                    Text("Current: ${formatQnhDisplay(data.qnh, unitsPreferences, pressureDecimals)} ($status)")
                                     data.baroGpsDelta?.let { delta ->
-                                        val deltaFt = (delta * 3.28084).roundToInt()
-                                        val sign = if (deltaFt >= 0) "+" else ""
-                                        Text("Baro vs GPS: $sign${deltaFt} ft")
+                                        Text("Baro vs GPS: ${formatBaroGpsDelta(delta, unitsPreferences)}")
                                     }
                                     val ageSeconds = data.qnhCalibrationAgeSeconds
                                     if (ageSeconds >= 0) {
@@ -735,7 +749,8 @@ fun MapScreen(
                                 onClick = {
                                     val parsed = qnhInput.trim().toDoubleOrNull()
                                     if (parsed != null) {
-                                        locationManager.setManualQnh(parsed)
+                                        val qnhHpa = convertQnhInputToHpa(parsed, unitsPreferences)
+                                        locationManager.setManualQnh(qnhHpa)
                                         showQnhDialog = false
                                         qnhError = null
                                     } else {
@@ -777,4 +792,40 @@ fun MapScreen(
 
 
 
+
+
+internal fun pressurePrecision(preferences: UnitsPreferences): Int =
+    if (preferences.pressure == PressureUnit.INHG) 2 else 1
+
+internal fun seedQnhInputValue(qnhHpa: Double, preferences: UnitsPreferences): String {
+    val decimals = pressurePrecision(preferences)
+    val displayValue = preferences.pressure.fromSi(PressureHpa(qnhHpa))
+    return "%.${decimals}f".format(Locale.US, displayValue)
+}
+
+internal fun formatQnhDisplay(
+    qnhHpa: Double,
+    preferences: UnitsPreferences,
+    decimals: Int = pressurePrecision(preferences)
+): String {
+    return UnitsFormatter.pressure(PressureHpa(qnhHpa), preferences, decimals).text
+}
+
+internal fun convertQnhInputToHpa(
+    inputValue: Double,
+    preferences: UnitsPreferences
+): Double {
+    return preferences.pressure.toSi(inputValue).value
+}
+
+internal fun formatBaroGpsDelta(
+    deltaMeters: Double,
+    preferences: UnitsPreferences
+): String {
+    val unit = preferences.altitude
+    val converted = unit.fromSi(AltitudeM(deltaMeters))
+    val rounded = converted.roundToInt()
+    val sign = if (rounded >= 0) "+" else ""
+    return "$sign$rounded ${unit.abbreviation}"
+}
 

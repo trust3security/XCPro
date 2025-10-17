@@ -14,6 +14,7 @@ import com.example.xcpro.sensors.UnifiedSensorManager
 import com.example.xcpro.sensors.FlightDataCalculator
 import com.example.xcpro.sensors.GPSData
 import com.example.dfcards.RealTimeFlightData
+import com.example.xcpro.common.units.UnitsConverter
 import kotlinx.coroutines.CoroutineScope
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
@@ -134,8 +135,8 @@ class LocationManager(
             // Restart all sensors
             unifiedSensorManager.startAllSensors()
 
-            // Restart flight data calculator
-            flightDataCalculator.start()
+            // FlightDataCalculator starts automatically with sensor data flow
+            // No explicit start() method needed
 
             Log.d(TAG, "✅ Sensors restarted successfully after sleep mode")
         } else if (sensorStatus.gpsStarted) {
@@ -254,7 +255,7 @@ class LocationManager(
         Log.d(TAG, "📡 GPS Data: fixed=${liveData}, " +
                   "lat=${liveData.latitude}, lon=${liveData.longitude}, " +
                   "accuracy=${liveData.accuracy}, gpsAlt=${liveData.gpsAltitude}m, " +
-                  "speed=${liveData.groundSpeed}kt, track=${liveData.track}°")
+                  "speed=${String.format("%.1f", UnitsConverter.msToKnots(liveData.groundSpeed))}kt, track=${liveData.track}°")
 
         // Update position even without perfect GPS fix for smooth tracking
         // Just need valid coordinates (not 0,0)
@@ -372,3 +373,4 @@ class LocationManager(
         showReturnButton()
     }
 }
+

@@ -170,6 +170,11 @@ object MapComposeEffects {
                 }
         }
 
+        LaunchedEffect(flightDataManager.unitsPreferences) {
+            flightViewModel.updateUnitsPreferences(flightDataManager.unitsPreferences)
+        }
+
+
         // Continuous update loop for ALL modes - ensures smooth real-time tracking
         // The icon stays at actual GPS position and only moves when pilot moves
         LaunchedEffect(orientationData.mode) {

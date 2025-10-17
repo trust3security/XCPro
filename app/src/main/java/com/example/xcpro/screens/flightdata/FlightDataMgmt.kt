@@ -254,8 +254,9 @@ fun FlightMgmt(
                 AnimatedContent(
                     targetState = activeTab,
                     transitionSpec = {
-                        fadeIn(animationSpec = tween(300, easing = FastOutSlowInEasing)) with
-                                fadeOut(animationSpec = tween(300, easing = FastOutSlowInEasing))
+                        fadeIn(animationSpec = tween(300, easing = FastOutSlowInEasing)).togetherWith(
+                            fadeOut(animationSpec = tween(300, easing = FastOutSlowInEasing))
+                        )
                     },
                     modifier = Modifier.fillMaxWidth().weight(1f)
                 ) { tab ->

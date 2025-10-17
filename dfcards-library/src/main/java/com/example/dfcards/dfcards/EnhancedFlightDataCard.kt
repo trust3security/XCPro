@@ -109,9 +109,9 @@ fun EnhancedFlightDataCard(
                     append(" ")
                     // Smaller unit part (ft, kt, m/s, etc.)
                     withStyle(style = SpanStyle(
-                        fontSize = (stableFontSizes.primarySize * 0.7f).sp,
+                        fontSize = (stableFontSizes.primarySize * 0.55f).sp,
                         fontWeight = FontWeight.Medium,
-                        color = Color.Black.copy(alpha = 0.7f)
+                        color = Color.Black.copy(alpha = 0.6f)
                     )) {
                         append(parts.drop(1).joinToString(" "))  // ✅ "ft" in smaller font
                     }

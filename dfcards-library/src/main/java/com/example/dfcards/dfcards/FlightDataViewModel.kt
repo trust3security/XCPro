@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.dfcards.*
 import kotlinx.coroutines.flow.*
+import com.example.xcpro.common.units.UnitsPreferences
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
@@ -47,6 +48,8 @@ class FlightDataViewModel : ViewModel() {
 
     // ✅ FIX: Track manually positioned cards to prevent template overrides
     private val manuallyPositionedCards = mutableSetOf<String>()
+    private var unitsPreferences: UnitsPreferences = UnitsPreferences()
+    private var lastRealTimeData: RealTimeFlightData? = null
 
     // Initialize with card preferences
     fun initializeCardPreferences(preferences: CardPreferences) {
@@ -418,6 +421,7 @@ class FlightDataViewModel : ViewModel() {
     private var clockTimerJob: kotlinx.coroutines.Job? = null
 
     fun updateCardsWithLiveData(liveData: RealTimeFlightData) {
+        lastRealTimeData = liveData
         // ✅ SKIP updates during manual positioning
         if (isManuallyPositioning) {
             return
@@ -518,7 +522,8 @@ class FlightDataViewModel : ViewModel() {
         // ✅ Use centralized mapping from CardLibrary (handles all card types)
         val (primaryValue, secondaryValue) = CardLibrary.mapLiveDataToCard(
             cardId = currentFlightData.id,
-            liveData = realData
+            liveData = realData,
+            units = unitsPreferences
         )
 
         return currentFlightData.copy(
@@ -587,6 +592,25 @@ class FlightDataViewModel : ViewModel() {
         return _cardStateFlows.size
     }
 
+    fun updateUnitsPreferences(preferences: UnitsPreferences) {
+        if (unitsPreferences == preferences) {
+            return
+        }
+        unitsPreferences = preferences
+        val liveData = lastRealTimeData ?: return
+
+        _cardStateFlows.forEach { (cardId, stateFlow) ->
+            if (cardId == "local_time") return@forEach
+            val currentState = stateFlow.value
+            val remappedFlightData = mapRealDataToCard(currentState.flightData, liveData)
+            if (remappedFlightData != currentState.flightData) {
+                stateFlow.value = currentState.copy(flightData = remappedFlightData)
+            }
+        }
+    }
+
+
+
     override fun onCleared() {
         super.onCleared()
         manualPositioningTimeout?.cancel()
@@ -594,3 +618,5 @@ class FlightDataViewModel : ViewModel() {
         println("DEBUG: FlightDataViewModel - Cleared")
     }
 }
+
+

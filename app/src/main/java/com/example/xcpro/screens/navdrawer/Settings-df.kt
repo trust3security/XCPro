@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Straighten
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.outlined.Style
 import androidx.compose.material3.*
@@ -143,6 +144,15 @@ fun SettingsScreen(
                             icon = Icons.Outlined.Style,
                             onClick = {
                                 navController.navigate("look_and_feel")
+                            }
+                        )
+                    }
+                    item {
+                        CategoryItem(
+                            title = "Units",
+                            icon = Icons.Default.Straighten,
+                            onClick = {
+                                navController.navigate("units_settings")
                             }
                         )
                     }

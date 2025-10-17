@@ -15,6 +15,7 @@ import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.dfcards.FlightDataViewModel
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
+import com.example.xcpro.common.units.UnitsPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -57,6 +58,9 @@ class FlightDataManager(
 
     // ✅ NEW: Template version tracking for reactive updates
     var templateVersion by mutableStateOf(0)
+        private set
+
+    var unitsPreferences by mutableStateOf(UnitsPreferences())
         private set
 
     init {
@@ -352,6 +356,11 @@ class FlightDataManager(
         val updatedTemplates = allTemplates + newTemplate
         updateAllTemplates(updatedTemplates)
         Log.d(TAG, "Created new template: $name with ${cardIds.size} cards")
+    }
+
+    fun updateUnitsPreferences(preferences: UnitsPreferences) {
+        unitsPreferences = preferences
+        Log.d(TAG, "FlightDataManager: units updated to $preferences")
     }
 
     /**

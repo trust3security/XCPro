@@ -35,6 +35,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
+import com.example.xcpro.common.units.UnitsPreferences
 
 /**
  * Shared component for selecting flight modes (Cruise, Thermal, Final Glide)
@@ -486,7 +487,8 @@ fun CardsGridSection(
     selectedTemplate: FlightTemplate?,
     onCardToggle: (String, Boolean) -> Unit,
     modifier: Modifier = Modifier,
-    liveFlightData: RealTimeFlightData? = null  // ✅ NEW: Live data for previews
+    liveFlightData: RealTimeFlightData? = null,
+    units: UnitsPreferences = UnitsPreferences()
 ) {
     val configuration = LocalConfiguration.current
     val screenWidth = configuration.screenWidthDp.dp
@@ -525,6 +527,7 @@ fun CardsGridSection(
                         card = card,
                         isSelected = selectedTemplate?.cardIds?.contains(card.id) ?: false,
                         liveFlightData = liveFlightData,  // ✅ NEW: Pass live data
+                        units = units,
                         onToggle = {
                             val isCurrentlySelected = selectedTemplate?.cardIds?.contains(card.id) ?: false
                             onCardToggle(card.id, !isCurrentlySelected)
@@ -545,12 +548,13 @@ private fun CardGridItem(
     card: CardDefinition,
     isSelected: Boolean,
     onToggle: () -> Unit,
-    liveFlightData: RealTimeFlightData? = null  // ✅ NEW: Live data for preview
+    liveFlightData: RealTimeFlightData? = null,
+    units: UnitsPreferences = UnitsPreferences()
 ) {
     // ✅ FIXED: Remove remember() dependency on liveFlightData to prevent flickering
     // Compose will automatically skip recomposition if primaryValue/secondaryValue haven't changed
     val (primaryValue, secondaryValue) = if (liveFlightData != null) {
-        CardLibrary.mapLiveDataToCard(card.id, liveFlightData)
+        CardLibrary.mapLiveDataToCard(card.id, liveFlightData, units)
     } else {
         Pair("--", card.unit.ifEmpty { card.description.take(10) })
     }
