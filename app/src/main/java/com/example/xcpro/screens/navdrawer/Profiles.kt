@@ -80,9 +80,12 @@ fun ProfilesScreen(
         topBar = {
             CenterAlignedTopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
                 ),
-                title = { Text(text = "Profiles") },
+                title = { Text(text = "Profiles", style = MaterialTheme.typography.headlineSmall) },
                 navigationIcon = {
                     Row {
                         IconButton(onClick = {
@@ -102,7 +105,7 @@ fun ProfilesScreen(
                             Icon(
                                 imageVector = Reply_all,
                                 contentDescription = null,
-                                tint = Color.Black,
+                                tint = MaterialTheme.colorScheme.onPrimary,
                                 modifier = Modifier.size(24.dp)
                             )
                         }
@@ -151,9 +154,9 @@ fun ProfilesScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .padding(horizontal = 16.dp)
+                    .padding(horizontal = 8.dp)
                     .padding(bottom = if (hasNavBar) navBarInsets.calculateBottomPadding() else 0.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 item {
                     Text(
@@ -169,7 +172,8 @@ fun ProfilesScreen(
                         Card(
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.primaryContainer
-                            )
+                            ),
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
                         ) {
                             Row(
                                 modifier = Modifier
@@ -231,7 +235,16 @@ fun ProfilesScreen(
                 items(uiState.profiles.size) { index ->
                     val profile = uiState.profiles[index]
                     Card(
-                        onClick = { navController.navigate("profile_settings/${profile.id}") }
+                        onClick = { navController.navigate("profile_settings/${profile.id}") },
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        ),
+                        border = androidx.compose.foundation.BorderStroke(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                        )
                     ) {
                         Row(
                             modifier = Modifier
@@ -270,7 +283,17 @@ fun ProfilesScreen(
                 // Legacy Config Section (if needed)
                 if (configContent != null || errorMessage != null) {
                     item {
-                        Card {
+                        Card(
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                contentColor = MaterialTheme.colorScheme.onSurface
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(
+                                width = 1.dp,
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                            )
+                        ) {
                             Column(
                                 modifier = Modifier.padding(16.dp)
                             ) {

@@ -110,81 +110,107 @@ fun SettingsScreen(
                     .padding(padding)
                     .wrapContentHeight()
             ) {
+                // Align spacing/padding with Flight Data (8dp horizontal, spaced items)
                 LazyColumn(
                     modifier = Modifier
-                        .widthIn(max = 600.dp)
                         .fillMaxWidth()
-                        .heightIn(max = 800.dp),
+                        .padding(horizontal = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                     state = listState
                 ) {
+                    // Keep SkySight at full width
+                    item { SkysightSettingsSection() }
+
+                    // Row 1: Files | Profiles
                     item {
-                        SkysightSettingsSection()
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            CategoryItem(
+                                title = "Files",
+                                icon = Icons.Default.Folder,
+                                onClick = { navController.navigate("Files") },
+                                modifier = Modifier.weight(1f)
+                            )
+                            CategoryItem(
+                                title = "Profiles",
+                                icon = Icons.Default.Map,
+                                onClick = { navController.navigate("Profiles") },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
+
+                    // Row 2: Look & Feel | Units
                     item {
-                        CategoryItem(
-                            title = "Files",
-                            icon = Icons.Default.Folder,
-                            onClick = {
-                                navController.navigate("Files")
-                            }
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            CategoryItem(
+                                title = "Look & Feel",
+                                icon = Icons.Outlined.Style,
+                                onClick = { navController.navigate("look_and_feel") },
+                                modifier = Modifier.weight(1f)
+                            )
+                            CategoryItem(
+                                title = "Units",
+                                icon = Icons.Default.Straighten,
+                                onClick = { navController.navigate("units_settings") },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
+
+                    // Row 3: Layouts | Airspace
                     item {
-                        CategoryItem(
-                            title = "Profiles",
-                            icon = Icons.Default.Map,
-                            onClick = {
-                                navController.navigate("Profiles")
-                            }
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            CategoryItem(
+                                title = "Layouts",
+                                icon = Icons.Default.GridView,
+                                onClick = { navController.navigate("layouts") },
+                                modifier = Modifier.weight(1f)
+                            )
+                            CategoryItem(
+                                title = "Airspace",
+                                icon = Icons.Default.Cloud,
+                                onClick = {
+                                    scope.launch {
+                                        navController.popBackStack("map", inclusive = false)
+                                        onShowAirspaceOverlay()
+                                    }
+                                },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
+
+                    // Row 4: Navboxes | (spacer)
                     item {
-                        CategoryItem(
-                            title = "Look & Feel",
-                            icon = Icons.Outlined.Style,
-                            onClick = {
-                                navController.navigate("look_and_feel")
-                            }
-                        )
-                    }
-                    item {
-                        CategoryItem(
-                            title = "Units",
-                            icon = Icons.Default.Straighten,
-                            onClick = {
-                                navController.navigate("units_settings")
-                            }
-                        )
-                    }
-                    item {
-                        CategoryItem(
-                            title = "Layouts",
-                            icon = Icons.Default.GridView,
-                            onClick = {
-                                navController.navigate("layouts")
-                            }
-                        )
-                    }
-                    item {
-                        CategoryItem(
-                            title = "Airspace",
-                            icon = Icons.Default.Cloud,
-                            onClick = {
-                                scope.launch {
-                                    navController.popBackStack("map", inclusive = false)
-                                    onShowAirspaceOverlay()
-                                }
-                            }
-                        )
-                    }
-                    item {
-                        CategoryItem(
-                            title = "Navboxes",
-                            icon = Icons.Default.Dashboard,
-                            onClick = {
-                                navController.navigate("dfnavboxes")
-                            }
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            CategoryItem(
+                                title = "Navboxes",
+                                icon = Icons.Default.Dashboard,
+                                onClick = { navController.navigate("dfnavboxes") },
+                                modifier = Modifier.weight(1f)
+                            )
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
                     }
                 }
             }
@@ -193,13 +219,11 @@ fun SettingsScreen(
 }
 
 @Composable
-fun CategoryItem(title: String, icon: ImageVector, onClick: () -> Unit) {
-    // Match Flight Data card styling
+fun CategoryItem(title: String, icon: ImageVector, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    // Match Flight Data card styling; parent controls grid spacing
     Surface(
         onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
+        modifier = modifier
             .clip(RoundedCornerShape(12.dp)),
         color = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(12.dp),
@@ -247,14 +271,17 @@ fun SkysightSettingsSection() {
         mutableStateOf(!isAuthenticated) // Auto-collapse when logged in
     }
     
+    // Match Flight Data card style: themed surface, subtle border, rounded corners
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 8.dp, vertical = 4.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFE5E5E5)
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
         ),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -279,7 +306,8 @@ fun SkysightSettingsSection() {
                     )
                     Text(
                         text = "SkySight Weather",
-                        style = MaterialTheme.typography.bodyLarge
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Box(
                         modifier = Modifier

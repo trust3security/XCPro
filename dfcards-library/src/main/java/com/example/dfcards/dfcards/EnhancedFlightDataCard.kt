@@ -167,13 +167,16 @@ private fun calculateStableFontSizes(
     cardWidth: Float,
     cardHeight: Float
 ): StableFontSizes {
+    // Compute a scale factor from current size vs. a base size.
+    // Keep a reasonable lower bound so tiny cards remain readable,
+    // but remove the restrictive upper clamp so text can grow with the card.
     val heightRatio = cardHeight / 80f
     val widthRatio = cardWidth / 120f
-    val scale = min(heightRatio, widthRatio).coerceIn(0.4f, 2.5f)
+    val scale = min(heightRatio, widthRatio).coerceAtLeast(0.4f)
 
     return StableFontSizes(
-        labelSize = (5f * scale).coerceIn(3f, 12f),
-        primarySize = (10f * scale).coerceIn(6f, 25f),
-        secondarySize = (6f * scale).coerceIn(4f, 15f)
+        labelSize = (5f * scale).coerceAtLeast(3f),
+        primarySize = (10f * scale).coerceAtLeast(6f),
+        secondarySize = (6f * scale).coerceAtLeast(4f)
     )
 }
