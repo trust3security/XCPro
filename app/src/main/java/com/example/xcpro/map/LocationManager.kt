@@ -112,6 +112,39 @@ class LocationManager(
         flightDataCalculator.stop()
     }
 
+    /**
+     * Restart sensors after returning from sleep mode
+     * This ensures GPS and other sensors resume properly when screen turns back on
+     */
+    fun restartSensorsIfNeeded() {
+        Log.d(TAG, "🔄 Checking if sensors need restart after sleep mode...")
+
+        val sensorStatus = unifiedSensorManager.getSensorStatus()
+
+        // If GPS was started but is no longer receiving updates, restart all sensors
+        if (!sensorStatus.gpsStarted && sensorStatus.hasLocationPermissions) {
+            Log.d(TAG, "📱 Sensors appear to be stopped (likely due to sleep mode), restarting...")
+
+            // Stop everything first to clean up any stale listeners
+            unifiedSensorManager.stopAllSensors()
+
+            // Short delay to ensure clean shutdown
+            Thread.sleep(100)
+
+            // Restart all sensors
+            unifiedSensorManager.startAllSensors()
+
+            // Restart flight data calculator
+            flightDataCalculator.start()
+
+            Log.d(TAG, "✅ Sensors restarted successfully after sleep mode")
+        } else if (sensorStatus.gpsStarted) {
+            Log.d(TAG, "✅ Sensors already running, no restart needed")
+        } else {
+            Log.d(TAG, "⚠️ No location permissions, cannot restart sensors")
+        }
+    }
+
     fun setManualQnh(qnh: Double) {
         flightDataCalculator.setManualQnh(qnh)
     }

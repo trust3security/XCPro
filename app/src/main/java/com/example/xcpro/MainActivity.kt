@@ -52,6 +52,7 @@ import com.example.ui1.screens.FlightMgmt
 import com.example.ui1.screens.LookAndFeelScreen
 import com.example.ui1.screens.StatusBarStyle
 import com.example.xcpro.screens.navdrawer.ColorsScreen
+import com.example.xcpro.screens.navdrawer.UnitsSettingsScreen
 import com.example.xcpro.screens.navdrawer.VarioAudioSettingsScreen
 import com.example.xcpro.profiles.ProfileSelectionScreen
 import com.example.xcpro.profiles.ProfileViewModel
@@ -73,14 +74,17 @@ class MainActivity : ComponentActivity() {
 
         // ✅ Only set basic window flags that are safe to set early
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        
-        // ✅ Acquire wake lock for variometer operation
+
+        // ✅ Acquire PARTIAL wake lock for continuous sensor operation
+        // PARTIAL_WAKE_LOCK keeps CPU running even when screen is off
+        // This prevents GPS/sensor freezing during sleep mode
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         wakeLock = powerManager.newWakeLock(
-            PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
-            "BaseUI::VarioWakeLock"
+            PowerManager.PARTIAL_WAKE_LOCK,
+            "XCPro::SensorWakeLock"
         )
-        wakeLock?.acquire(10*60*1000L /*10 minutes*/)
+        // Acquire indefinitely - will be released in onDestroy()
+        wakeLock?.acquire()
 
         MapLibre.getInstance(this, "nYDScLfnBm52GAc3jXEZ", WellKnownTileServer.MapTiler)
         
@@ -141,6 +145,12 @@ class MainActivity : ComponentActivity() {
         // Reapply status bar style when activity resumes
         Log.d("MainActivity", "📱 onResume: Reapplying status bar style for profile: $currentProfileId")
         applyUserStatusBarStyle(currentProfileId)
+
+        // ✅ Restart sensors if they were suspended during sleep mode
+        // This ensures GPS and other sensors resume after screen-off
+        Log.d("MainActivity", "📱 onResume: Triggering sensor restart after possible sleep mode")
+        // Note: The actual sensor restart is handled in MapScreen via LocationManager
+        // This log helps track when the app returns from background/sleep
     }
     
     override fun onDestroy() {
@@ -446,6 +456,11 @@ fun MainActivityScreen(
                     LookAndFeelScreen(
                         navController = navController,
                         drawerState = drawerState
+                    )
+                }
+                composable("units_settings") {
+                    UnitsSettingsScreen(
+                        navController = navController
                     )
                 }
                 composable("skysight_settings") {

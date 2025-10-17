@@ -36,7 +36,12 @@ class MapLifecycleManager(
             }
             Lifecycle.Event.ON_RESUME -> {
                 mapState.mapView?.onResume()
-                Log.d(TAG, "Map view onResume")
+
+                // ✅ Restart sensors if needed after sleep mode
+                // This ensures GPS and other sensors resume after screen-off
+                locationManager.restartSensorsIfNeeded()
+
+                Log.d(TAG, "Map view onResume - sensors checked for restart")
             }
             Lifecycle.Event.ON_PAUSE -> {
                 mapState.mapView?.onPause()
