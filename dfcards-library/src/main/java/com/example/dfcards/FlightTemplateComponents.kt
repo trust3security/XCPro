@@ -65,12 +65,17 @@ fun FlightModeSelectionSection(
             horizontalArrangement = Arrangement.spacedBy(6.dp) // ✅ Match top tabs spacing
         ) {
             FlightModeSelection.values().forEach { mode ->
+                val isVisible = flightModeVisibilities[mode] ?: true
                 FlightModeCard(
                     mode = mode,
                     isSelected = selectedFlightMode == mode,
-                    onSelect = { onFlightModeSelected(mode) },
+                    onSelect = {
+                        if (mode == FlightModeSelection.CRUISE || isVisible) {
+                            onFlightModeSelected(mode)
+                        }
+                    },
                     modifier = Modifier.weight(1f), // ✅ Use weight for equal distribution
-                    isVisible = flightModeVisibilities[mode] ?: true, // ✅ Default to visible
+                    isVisible = isVisible, // ✅ Default to visible
                     onVisibilityToggle = { onFlightModeVisibilityToggle(mode) },
                     onOptionsClick = { onFlightModeOptionsClick(mode) }
                 )
@@ -98,6 +103,7 @@ private fun FlightModeCard(
         modifier = modifier // ✅ Use the passed modifier
             .height(80.dp)
             .clip(RoundedCornerShape(12.dp)),
+        enabled = isVisible || mode == FlightModeSelection.CRUISE,
         color = if (!isVisible && mode != FlightModeSelection.CRUISE) {
             MaterialTheme.colorScheme.surface.copy(alpha = 0.7f) // Slightly dimmed for disabled modes
         } else {

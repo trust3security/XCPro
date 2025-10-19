@@ -232,6 +232,12 @@ class OutlierFilter(private val windowSize: Int = 5) {
             newValue
         }
     }
+
+    fun reset() {
+        buffer.clear()
+        runningMean = 0.0
+        runningStdDev = 0.0
+    }
 }
 
 /**
@@ -298,6 +304,13 @@ class AdvancedBarometricFilter {
         } else {
             0.7 // Default confidence without GPS reference
         }
+    }
+
+    fun reset() {
+        outlierFilter.reset()
+        kalmanFilter.reset()
+        displayFilter.reset()
+        lastUpdateTime = 0L
     }
 }
 

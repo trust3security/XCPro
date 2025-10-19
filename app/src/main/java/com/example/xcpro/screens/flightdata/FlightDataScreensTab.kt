@@ -103,6 +103,7 @@ fun FlightDataScreensTab(
                             FlightModeSelection.CRUISE -> allTemplates.find { it.id == "id01" }
                             FlightModeSelection.THERMAL -> allTemplates.find { it.id == "id02" }
                             FlightModeSelection.FINAL_GLIDE -> allTemplates.find { it.id == "id03" }
+                            FlightModeSelection.HAWK -> allTemplates.find { it.id == "hawk" }
                         }
                         Log.d(TAG, "⚠️ No saved template for ${selectedFlightMode.name}, using fallback: ${fallbackTemplate?.name ?: "NO FALLBACK"} (${fallbackTemplate?.cardIds?.size} cards)")
                         fallbackTemplate
@@ -164,23 +165,44 @@ fun FlightDataScreensTab(
             Log.d(TAG, "👁️ SCruise is always visible - ignoring toggle request")
             return
         }
-        
+
         activeProfile?.let { profile ->
+            val currentVisibility = flightModeVisibilities[mode.name] ?: true
+            val newVisibility = !currentVisibility
+
+            val updatedVisibilities = flightModeVisibilities.toMutableMap().apply {
+                put(mode.name, newVisibility)
+            }
+            flightModeVisibilities = updatedVisibilities
+
             scope.launch {
-                val currentVisibility = flightModeVisibilities[mode.name] ?: true
-                val newVisibility = !currentVisibility
-                
                 cardPreferences.saveProfileFlightModeVisibility(
                     profileId = profile.id,
                     flightMode = mode.name,
                     isVisible = newVisibility
                 )
-                
-                flightModeVisibilities = flightModeVisibilities.toMutableMap().apply {
-                    put(mode.name, newVisibility)
+            }
+
+            Log.d(TAG, "👁️ Flight mode visibility toggled: ${mode.displayName} → $newVisibility")
+
+            if (!newVisibility && selectedFlightMode == mode) {
+                val fallbackMode = listOf(
+                    FlightModeSelection.CRUISE,
+                    FlightModeSelection.THERMAL,
+                    FlightModeSelection.FINAL_GLIDE,
+                    FlightModeSelection.HAWK
+                ).firstOrNull { candidate ->
+                    when (candidate) {
+                        FlightModeSelection.CRUISE -> true
+                        mode -> false
+                        else -> updatedVisibilities[candidate.name] ?: true
+                    }
+                } ?: FlightModeSelection.CRUISE
+
+                if (fallbackMode != selectedFlightMode) {
+                    Log.d(TAG, "👁️ Active mode hidden; falling back to ${fallbackMode.displayName}")
+                    onFlightModeSelected(fallbackMode)
                 }
-                
-                Log.d(TAG, "👁️ Flight mode visibility toggled: ${mode.displayName} → $newVisibility")
             }
         }
     }
@@ -192,6 +214,7 @@ fun FlightDataScreensTab(
                 "CRUISE" -> FlightModeSelection.CRUISE
                 "THERMAL" -> FlightModeSelection.THERMAL
                 "FINAL_GLIDE" -> FlightModeSelection.FINAL_GLIDE
+                "HAWK" -> FlightModeSelection.HAWK
                 else -> FlightModeSelection.CRUISE
             }
         }

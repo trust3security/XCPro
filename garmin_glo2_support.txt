@@ -1,0 +1,15 @@
+Title: Support Center | Garmin
+
+URL Source: https://support.garmin.com/en-US/?productID=702779&tab=manuals
+
+Warning: Target URL returned error 404: Not Found
+
+Markdown Content:
+You seem to be lost.
+--------------------
+
+Taking you to Support Center in 5 seconds…
+
+You can go there immediately by clicking the button below.
+
+[Support Center](https://support.garmin.com/)

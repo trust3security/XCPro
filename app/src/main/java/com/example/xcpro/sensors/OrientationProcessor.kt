@@ -12,6 +12,7 @@ class OrientationProcessor(
 
     private val rotationMatrix = FloatArray(9)
     private val tempRotationMatrix = FloatArray(9)
+    private val eulerAngles = FloatArray(3)
     private var hasRotationMatrix = false
     private var lastRotationUpdateMillis = 0L
 
@@ -42,6 +43,22 @@ class OrientationProcessor(
         )
     }
 
+    fun attitude(): AttitudeSample? {
+        if (!hasRotationMatrix) return null
+        SensorManager.getOrientation(rotationMatrix, eulerAngles)
+        val azimuthDeg = Math.toDegrees(eulerAngles[0].toDouble())
+        val pitchDeg = Math.toDegrees(eulerAngles[1].toDouble())
+        val rollDeg = Math.toDegrees(eulerAngles[2].toDouble())
+        val freshness = SystemClock.elapsedRealtime() - lastRotationUpdateMillis
+        val reliable = freshness <= freshnessWindowMillis
+        return AttitudeSample(
+            headingDeg = (azimuthDeg + 360.0) % 360.0,
+            pitchDeg = pitchDeg,
+            rollDeg = rollDeg,
+            isReliable = reliable
+        )
+    }
+
     fun reset() {
         hasRotationMatrix = false
         lastRotationUpdateMillis = 0L
@@ -49,6 +66,13 @@ class OrientationProcessor(
 
     data class AccelSample(
         val verticalAcceleration: Double,
+        val isReliable: Boolean
+    )
+
+    data class AttitudeSample(
+        val headingDeg: Double,
+        val pitchDeg: Double,
+        val rollDeg: Double,
         val isReliable: Boolean
     )
 

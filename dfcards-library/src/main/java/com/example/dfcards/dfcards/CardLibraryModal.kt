@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Flight
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.Terrain
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -53,7 +54,8 @@ enum class FlightModeSelection(
 ) {
     CRUISE("SCruise", Icons.Filled.Flight, androidx.compose.ui.graphics.Color(0xFF2196F3)),
     THERMAL("SThermal", Icons.Filled.TrendingUp, androidx.compose.ui.graphics.Color(0xFF9C27B0)),
-    FINAL_GLIDE("SFinal Glide", Icons.Filled.Terrain, androidx.compose.ui.graphics.Color(0xFFF44336))
+    FINAL_GLIDE("SFinal Glide", Icons.Filled.Terrain, androidx.compose.ui.graphics.Color(0xFFF44336)),
+    HAWK("SXCPro V1", Icons.Filled.Speed, androidx.compose.ui.graphics.Color(0xFF00BCD4))
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

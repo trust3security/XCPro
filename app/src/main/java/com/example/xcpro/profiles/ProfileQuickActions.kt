@@ -26,6 +26,7 @@ fun getFlightModeColor(mode: FlightMode): Color {
         FlightMode.CRUISE -> Color(0xFF2196F3)      // Blue
         FlightMode.THERMAL -> Color(0xFF9C27B0)     // Purple  
         FlightMode.FINAL_GLIDE -> Color(0xFFF44336) // Red
+        FlightMode.HAWK -> Color(0xFF00BCD4) // Teal
     }
 }
 
@@ -216,13 +217,16 @@ fun FlightModeIndicator(
                 filteredModes.add(FlightMode.CRUISE)
                 
                 // Add others only if they're visible
-                if (visibilities["THERMAL"] == true) {
+                if (visibilities["THERMAL"] != false) {
                     filteredModes.add(FlightMode.THERMAL)
                 }
-                if (visibilities["FINAL_GLIDE"] == true) {
+                if (visibilities["FINAL_GLIDE"] != false) {
                     filteredModes.add(FlightMode.FINAL_GLIDE)
                 }
-                
+                if (visibilities["HAWK"] != false) {
+                    filteredModes.add(FlightMode.HAWK)
+                }
+
                 visibleModes = filteredModes
                 android.util.Log.d("FlightModeIndicator", "✅ Updated available modes for profile '${activeProfile.name}': ${filteredModes.map { it.displayName }}")
                 

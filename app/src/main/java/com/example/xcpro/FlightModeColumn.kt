@@ -12,7 +12,8 @@ import androidx.compose.ui.unit.dp
 enum class FlightMode(val number: Int, val displayName: String) {
     CRUISE(1, "Cruise"),
     THERMAL(2, "Thermal"),
-    FINAL_GLIDE(3, "Final Glide")
+    FINAL_GLIDE(3, "Final Glide"),
+    HAWK(4, "XCPro V1")
 }
 
 @Composable
@@ -21,7 +22,7 @@ fun FlightModeColumn(mode: FlightMode, modifier: Modifier = Modifier) {
         FlightMode.CRUISE -> 1
         FlightMode.THERMAL -> 2
         FlightMode.FINAL_GLIDE -> 3
-        else -> 1
+        FlightMode.HAWK -> 1
     }
 
     Column(

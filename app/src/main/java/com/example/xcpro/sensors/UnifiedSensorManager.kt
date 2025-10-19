@@ -78,6 +78,9 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener {
     private val _accelFlow = MutableStateFlow<AccelData?>(null)
     val accelFlow: StateFlow<AccelData?> = _accelFlow.asStateFlow()
 
+    private val _attitudeFlow = MutableStateFlow<AttitudeData?>(null)
+    val attitudeFlow: StateFlow<AttitudeData?> = _attitudeFlow.asStateFlow()
+
     // Service state
     private var isGpsStarted = false
     private var isBaroStarted = false
@@ -159,6 +162,15 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener {
 
             Sensor.TYPE_ROTATION_VECTOR -> {
                 orientationProcessor.updateRotationVector(event.values)
+                orientationProcessor.attitude()?.let { attitude ->
+                    _attitudeFlow.value = AttitudeData(
+                        headingDeg = attitude.headingDeg,
+                        pitchDeg = attitude.pitchDeg,
+                        rollDeg = attitude.rollDeg,
+                        timestamp = System.currentTimeMillis(),
+                        isReliable = attitude.isReliable
+                    )
+                }
             }
 
             Sensor.TYPE_LINEAR_ACCELERATION -> {

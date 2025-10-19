@@ -206,7 +206,7 @@ class VarioBeepController(
      * Play silence (deadband)
      */
     private suspend fun playSilence() {
-        // Just wait, no audio output
+        toneGenerator.playSilence(UPDATE_RATE_MS)
         delay(UPDATE_RATE_MS)
     }
 

@@ -1,0 +1,79 @@
+﻿diff --git a/dfcards-library/src/main/java/com/example/dfcards/dfcards/calculations/CalcBaroAltitude.kt b/dfcards-library/src/main/java/com/example/dfcards/dfcards/calculations/CalcBaroAltitude.kt
+index 0b6d41e..0000000 100644
+--- a/dfcards-library/src/main/java/com/example/dfcards/dfcards/calculations/CalcBaroAltitude.kt
++++ b/dfcards-library/src/main/java/com/example/dfcards/dfcards/calculations/CalcBaroAltitude.kt
+@@
+-    private val GPS_ACCURACY_THRESHOLD = 100.0 // meters (very relaxed for SRTM-based calibration - only need horizontal position)
++    private val GPS_ACCURACY_THRESHOLD = 35.0 // meters - require confirmed horizontal fix before terrain calibration
+@@
+-    /**
+-     * Determine if we should collect this sample for calibration
+-     * Only during startup, with reasonable GPS horizontal accuracy
+-     *
+-     * NOTE: isGPSFixed NOT required for SRTM-based calibration
+-     * We only need GPS coordinates (horizontal position) to fetch terrain elevation
+-     */
+-    private fun shouldCollectCalibrationSample(
+-        gpsAltitude: Double?,
+-        gpsAccuracy: Double?,
+-        isGPSFixed: Boolean
+-    ): Boolean {
+-        // Validate GPS altitude: allow sea level and common negative elevations; reject NaN and absurd values
+-        if (gpsAltitude == null || gpsAltitude.isNaN() || gpsAltitude < -500.0) {
+-            Log.d(TAG, "🐛 Skip sample: invalid gpsAltitude ($gpsAltitude)")
+-            return false
+-        }
+-        if (gpsAccuracy == null) {
+-            Log.d(TAG, "🐛 Skip sample: gpsAccuracy is null")
+-            return false
+-        }
+-        if (gpsAccuracy >= GPS_ACCURACY_THRESHOLD) {
+-            Log.d(TAG, "🐛 Skip sample: gpsAccuracy $gpsAccuracy >= threshold $GPS_ACCURACY_THRESHOLD")
+-            return false
+-        }
+-        // ✅ REMOVED: isGPSFixed check - not needed for SRTM-based calibration
+-        // We only need GPS coordinates to fetch terrain elevation, not high-quality vertical accuracy
+-
+-        Log.i(TAG, "✅ Sample ACCEPTED! (alt=$gpsAltitude, acc=$gpsAccuracy, fixed=$isGPSFixed)")
+-        return true
+-    }
++    /**
++     * Determine if we should collect this sample for calibration.
++     * Requires a confirmed GPS fix so SRTM-based auto-QNH stays idle when the handset has no satellites.
++     */
++    private fun shouldCollectCalibrationSample(
++        gpsAltitude: Double?,
++        gpsAccuracy: Double?,
++        isGPSFixed: Boolean
++    ): Boolean {
++        if (gpsAltitude == null || gpsAltitude.isNaN() || gpsAltitude < -500.0) {
++            Log.d(TAG, "Skip sample: invalid gpsAltitude ($gpsAltitude)")
++            return false
++        }
++        if (gpsAccuracy == null) {
++            Log.d(TAG, "Skip sample: gpsAccuracy is null")
++            return false
++        }
++        if (gpsAccuracy >= GPS_ACCURACY_THRESHOLD) {
++            Log.d(TAG, "Skip sample: gpsAccuracy $gpsAccuracy >= threshold $GPS_ACCURACY_THRESHOLD")
++            return false
++        }
++        if (!isGPSFixed) {
++            Log.d(TAG, "Skip sample: GPS fix not confirmed (isGPSFixed=$isGPSFixed)")
++            return false
++        }
++
++        Log.i(TAG, "Sample accepted for QNH calibration (alt=$gpsAltitude, acc=$gpsAccuracy, fixed=$isGPSFixed)")
++        return true
++    }
+@@
+-        Log.i(TAG, "✅ Sample ACCEPTED! (alt=$gpsAltitude, acc=$gpsAccuracy, fixed=$isGPSFixed)")
+-        return true
+-    }
+-
+-    /**
++        Log.i(TAG, "Sample accepted for QNH calibration (alt=$gpsAltitude, acc=$gpsAccuracy, fixed=$isGPSFixed)")
++        return true
++    }
++
++    /**

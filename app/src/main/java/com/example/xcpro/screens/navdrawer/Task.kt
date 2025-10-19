@@ -197,308 +197,21 @@ fun Task(
         sheetPeekHeight = if (selectedNavItem == "Files") 0.dp else 0.dp,
         sheetContent = {
             if (selectedNavItem == "Files") {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(300.dp)
-                        .background(Color(0xFFF5F5F5)) // Very light grey, similar to system bottom bar
-                        .padding(bottom = 54.dp)
-                ) {
-                    // Add drag handle
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(4.dp)
-                            .padding(top = 8.dp)
-                            .background(Color.Gray, shape = androidx.compose.foundation.shape.RoundedCornerShape(2.dp))
-                            .align(Alignment.CenterHorizontally)
-                            .width(36.dp)
-                    )
-                    when (selectedItem) {
-                        "Airspace" -> {
-                            Button(
-                                onClick = { airspaceFilePickerLauncher.launch("text/plain") },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                            ) {
-                                Text("Select Airspace Files")
-                            }
-                            if (errorMessage != null) {
-                                Text(
-                                    text = errorMessage!!,
-                                    style = MaterialTheme.typography.body2,
-                                    color = MaterialTheme.colors.error,
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 8.dp)
-                                )
-                            }
-                            val listState = rememberLazyListState()
-                            val isScrollable = listState.canScrollForward || listState.canScrollBackward
-                            LazyColumn(
-                                state = listState,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .weight(1f)
-                                    .padding(horizontal = 16.dp)
-                                    .drawWithContent {
-                                        drawContent()
-                                        if (isScrollable) {
-                                            val firstVisibleItemIndex = listState.firstVisibleItemIndex
-                                            val visibleItemCount = listState.layoutInfo.visibleItemsInfo.size
-                                            val totalItemCount = listState.layoutInfo.totalItemsCount
-                                            val scrollFraction = if (totalItemCount > 0) {
-                                                firstVisibleItemIndex.toFloat() / (totalItemCount - visibleItemCount).coerceAtLeast(1)
-                                            } else 0f
-                                            val scrollbarHeight = size.height / totalItemCount.coerceAtLeast(1) * visibleItemCount
-                                            val scrollbarOffsetY = scrollFraction * (size.height - scrollbarHeight)
-                                            drawRect(
-                                                color = Color.Gray.copy(alpha = 0.5f),
-                                                topLeft = Offset(size.width - 8.dp.toPx(), scrollbarOffsetY),
-                                                size = Size(8.dp.toPx(), scrollbarHeight.coerceAtLeast(8.dp.toPx()))
-                                            )
-                                        }
-                                    }
-                            ) {
-                                items(selectedAirspaceFiles, key = { it.toString() }) { fileUri ->
-                                    val fileName = fileUri.lastPathSegment?.substringAfterLast("/") ?: "Unknown file"
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 4.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Checkbox(
-                                            checked = airspaceCheckedStates.value[fileName] ?: false,
-                                            onCheckedChange = {
-                                                airspaceCheckedStates.value = airspaceCheckedStates.value.toMutableMap().apply {
-                                                    put(fileName, it)
-                                                }
-                                                saveAirspaceFiles(context, selectedAirspaceFiles, airspaceCheckedStates.value)
-                                                val newClasses = parseAirspaceClasses(context, selectedAirspaceFiles)
-                                                selectedClasses.value = selectedClasses.value.toMutableMap().apply {
-                                                    keys.retainAll(newClasses)
-                                                }
-                                                saveSelectedClasses(context, selectedClasses.value)
-                                                loadAndApplyAirspace(context, mapLibreMap)
-                                            },
-                                            modifier = Modifier.padding(end = 8.dp)
-                                        )
-                                        Text(
-                                            text = fileName.take(20).let {
-                                                if (it.length >= 20) "$it..." else it
-                                            },
-                                            modifier = Modifier.weight(1f),
-                                            color = Color.Black
-                                        )
-                                        IconButton(onClick = {
-                                            selectedAirspaceFiles.remove(fileUri)
-                                            airspaceCheckedStates.value = airspaceCheckedStates.value.toMutableMap().apply {
-                                                remove(fileName)
-                                            }
-                                            saveAirspaceFiles(context, selectedAirspaceFiles, airspaceCheckedStates.value)
-                                            val newClasses = parseAirspaceClasses(context, selectedAirspaceFiles)
-                                            selectedClasses.value = selectedClasses.value.toMutableMap().apply {
-                                                keys.retainAll(newClasses)
-                                            }
-                                            saveSelectedClasses(context, selectedClasses.value)
-                                            loadAndApplyAirspace(context, mapLibreMap)
-                                        }) {
-                                            Icon(
-                                                imageVector = Icons.Default.Close,
-                                                contentDescription = "Remove file",
-                                                tint = Color.Black
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        "Waypoints" -> {
-                            Button(
-                                onClick = { waypointFilePickerLauncher.launch("application/octet-stream") },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                            ) {
-                                Text("Select Waypoint Files")
-                            }
-                            if (errorMessage != null) {
-                                Text(
-                                    text = errorMessage!!,
-                                    style = MaterialTheme.typography.body2,
-                                    color = MaterialTheme.colors.error,
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 8.dp)
-                                )
-                            }
-                            val listState = rememberLazyListState()
-                            val isScrollable = listState.canScrollForward || listState.canScrollBackward
-                            LazyColumn(
-                                state = listState,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .weight(1f)
-                                    .padding(horizontal = 16.dp)
-                                    .drawWithContent {
-                                        drawContent()
-                                        if (isScrollable) {
-                                            val firstVisibleItemIndex = listState.firstVisibleItemIndex
-                                            val visibleItemCount = listState.layoutInfo.visibleItemsInfo.size
-                                            val totalItemCount = listState.layoutInfo.totalItemsCount
-                                            val scrollFraction = if (totalItemCount > 0) {
-                                                firstVisibleItemIndex.toFloat() / (totalItemCount - visibleItemCount).coerceAtLeast(1)
-                                            } else 0f
-                                            val scrollbarHeight = size.height / totalItemCount.coerceAtLeast(1) * visibleItemCount
-                                            val scrollbarOffsetY = scrollFraction * (size.height - scrollbarHeight)
-                                            drawRect(
-                                                color = Color.Gray.copy(alpha = 0.5f),
-                                                topLeft = Offset(size.width - 8.dp.toPx(), scrollbarOffsetY),
-                                                size = Size(8.dp.toPx(), scrollbarHeight.coerceAtLeast(8.dp.toPx()))
-                                            )
-                                        }
-                                    }
-                            ) {
-                                items(selectedWaypointFiles, key = { it.toString() }) { fileUri ->
-                                    val fileName = fileUri.lastPathSegment?.substringAfterLast("/") ?: "Unknown file"
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 4.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Checkbox(
-                                            checked = waypointCheckedStates.value[fileName] ?: false,
-                                            onCheckedChange = {
-                                                waypointCheckedStates.value = waypointCheckedStates.value.toMutableMap().apply {
-                                                    put(fileName, it)
-                                                }
-                                                saveWaypointFiles(context, selectedWaypointFiles, waypointCheckedStates.value)
-                                                loadAndApplyWaypoints(context, mapLibreMap, selectedWaypointFiles, waypointCheckedStates.value)
-                                            },
-                                            modifier = Modifier.padding(end = 8.dp)
-                                        )
-                                        Text(
-                                            text = fileName.take(20).let {
-                                                if (it.length >= 20) "$it..." else it
-                                            },
-                                            modifier = Modifier.weight(1f),
-                                            color = Color.Black
-                                        )
-                                        IconButton(onClick = {
-                                            selectedWaypointFiles.remove(fileUri)
-                                            waypointCheckedStates.value = waypointCheckedStates.value.toMutableMap().apply {
-                                                remove(fileName)
-                                            }
-                                            saveWaypointFiles(context, selectedWaypointFiles, waypointCheckedStates.value)
-                                            loadAndApplyWaypoints(context, mapLibreMap, selectedWaypointFiles, waypointCheckedStates.value)
-                                        }) {
-                                            Icon(
-                                                imageVector = Icons.Default.Close,
-                                                contentDescription = "Remove file",
-                                                tint = Color.Black
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        "Classes" -> {
-                            val classes = parseAirspaceClasses(context, selectedAirspaceFiles)
-                            if (classes.isEmpty()) {
-                                Text(
-                                    text = "No airspace classes available. Please add airspace files.",
-                                    style = MaterialTheme.typography.body2,
-                                    textAlign = TextAlign.Center,
-                                    color = Color.Black,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 16.dp)
-                                )
-                            } else {
-                                // Convert to AirspaceClassItem format
-                                val airspaceClassItems = classes.map { className ->
-                                    AirspaceClassItem(
-                                        className = className,
-                                        enabled = selectedClasses.value[className] ?: false,
-                                        color = when (className) {
-                                            "A" -> "#FF0000"
-                                            "C" -> "#FF6600"
-                                            "D" -> "#0066FF"
-                                            "R" -> "#FF0000"
-                                            "G" -> "#00AA00"
-                                            "CTR" -> "#9900FF"
-                                            "TMZ" -> "#FFFF00"
-                                            else -> "#888888"
-                                        },
-                                        description = when (className) {
-                                            "A" -> "Controlled - IFR only"
-                                            "C" -> "Controlled - Radio req"
-                                            "D" -> "Controlled - Radio req"
-                                            "R" -> "Restricted"
-                                            "G" -> "General - Uncontrolled"
-                                            "CTR" -> "Control Zone"
-                                            "TMZ" -> "Transponder Mandatory"
-                                            else -> "Unknown class"
-                                        }
-                                    )
-                                }
-
-                                val listState = rememberLazyListState()
-                                val isScrollable = listState.canScrollForward || listState.canScrollBackward
-                                LazyColumn(
-                                    state = listState,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .weight(1f)
-                                        .padding(horizontal = 16.dp)
-                                        .drawWithContent {
-                                            drawContent()
-                                            if (isScrollable) {
-                                                val firstVisibleItemIndex = listState.firstVisibleItemIndex
-                                                val visibleItemCount = listState.layoutInfo.visibleItemsInfo.size
-                                                val totalItemCount = listState.layoutInfo.totalItemsCount
-                                                val scrollFraction = if (totalItemCount > 0) {
-                                                    firstVisibleItemIndex.toFloat() / (totalItemCount - visibleItemCount).coerceAtLeast(1)
-                                                } else 0f
-                                                val scrollbarHeight = size.height / totalItemCount.coerceAtLeast(1) * visibleItemCount
-                                                val scrollbarOffsetY = scrollFraction * (size.height - scrollbarHeight)
-                                                drawRect(
-                                                    color = Color.Gray.copy(alpha = 0.5f),
-                                                    topLeft = Offset(size.width - 8.dp.toPx(), scrollbarOffsetY),
-                                                    size = Size(8.dp.toPx(), scrollbarHeight.coerceAtLeast(8.dp.toPx()))
-                                                )
-                                            }
-                                        }
-                                ) {
-                                    items(airspaceClassItems, key = { it.className }) { airspaceClass ->
-                                        TaskAirspaceClassCard(
-                                            airspaceClass = airspaceClass,
-                                            onToggle = { className ->
-                                                selectedClasses.value = selectedClasses.value.toMutableMap().apply {
-                                                    put(className, !(get(className) ?: false))
-                                                }
-                                                saveSelectedClasses(context, selectedClasses.value)
-                                                loadAndApplyAirspace(context, mapLibreMap)
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                        else -> {
-                            Text(
-                                text = selectedItem ?: "No Item Selected",
-                                modifier = Modifier.align(Alignment.CenterHorizontally),
-                                color = Color.Black
-                            )
-                        }
-                    }
-                }
+                TaskFilesBottomSheetContent(
+                    selectedItem = selectedItem,
+                    onSelectItem = { selectedItem = it },
+                    context = context,
+                    mapLibreMap = mapLibreMap,
+                    airspaceFilePickerLauncher = airspaceFilePickerLauncher,
+                    waypointFilePickerLauncher = waypointFilePickerLauncher,
+                    errorMessage = errorMessage,
+                    onErrorMessage = { errorMessage = it },
+                    selectedAirspaceFiles = selectedAirspaceFiles,
+                    airspaceCheckedStates = airspaceCheckedStates,
+                    selectedWaypointFiles = selectedWaypointFiles,
+                    waypointCheckedStates = waypointCheckedStates,
+                    selectedClasses = selectedClasses
+                )
             } else {
                 Box {}
             }
@@ -613,46 +326,16 @@ fun Task(
                     }
             )
             if (selectedNavItem == "Files") {
-                BottomAppBar(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .height(54.dp),
-                    elevation = 8.dp, // Add elevation to show it's above the sheet
-                    contentPadding = PaddingValues(0.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.Bottom
-                    ) {
-                        listOf("Airspace", "Waypoints", "Classes").forEach { itemName ->
-                            Column(
-                                modifier = Modifier
-                                    .padding(bottom = 4.dp)
-                                    .clickable {
-                                        selectedItem = itemName
-                                        scope.launch {
-                                            scaffoldState.bottomSheetState.expand()
-                                            onShowBottomSheet()
-                                        }
-                                    },
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Icon(
-                                    Icons.Default.Map,
-                                    contentDescription = itemName,
-                                    modifier = Modifier.size(20.dp),
-                                    tint = Color.White
-                                )
-                                Text(
-                                    text = itemName,
-                                    style = MaterialTheme.typography.caption,
-                                    color = Color.White
-                                )
-                            }
+                TaskFilesBottomBar(
+                    selectedItem = selectedItem,
+                    onItemClick = { itemName ->
+                        selectedItem = itemName
+                        scope.launch {
+                            scaffoldState.bottomSheetState.expand()
+                            onShowBottomSheet()
                         }
                     }
-                }
+                )
             }
         }
     }
@@ -660,6 +343,18 @@ fun Task(
 
 @Composable
 private fun TaskAirspaceClassCard(
+    airspaceClass: AirspaceClassItem,
+    onToggle: (String) -> Unit
+) {
+    // moved to TaskSections.kt; keep thin wrapper to preserve signature
+    TaskAirspaceClassCardView(
+        airspaceClass = airspaceClass,
+        onToggle = onToggle
+    )
+}
+
+@Composable
+private fun LegacyTaskAirspaceClassCard(
     airspaceClass: AirspaceClassItem,
     onToggle: (String) -> Unit
 ) {
@@ -711,20 +406,11 @@ private fun TaskAirspaceClassCard(
                 )
             }
 
-            // Toggle button
-            IconButton(
-                onClick = { onToggle(airspaceClass.className) },
-                colors = IconButtonDefaults.iconButtonColors(
-                    containerColor = if (airspaceClass.enabled) Color(0xFF059669) else Color(0xFF9CA3AF),
-                    contentColor = Color.White
-                )
-            ) {
-                Icon(
-                    imageVector = if (airspaceClass.enabled) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                    contentDescription = if (airspaceClass.enabled) "Hide" else "Show",
-                    modifier = Modifier.size(20.dp)
-                )
-            }
+            // Checkbox toggle
+            Checkbox(
+                checked = airspaceClass.enabled,
+                onCheckedChange = { onToggle(airspaceClass.className) }
+            )
         }
     }
 }

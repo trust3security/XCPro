@@ -1,4 +1,4 @@
-package com.example.ui1.screens
+﻿package com.example.ui1.screens
 
 import android.content.Context
 import androidx.compose.foundation.BorderStroke
@@ -28,91 +28,12 @@ import com.example.xcpro.profiles.ProfileViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.xcpro.MainActivity
 
-// ✅ Look & Feel Menu Item
-data class LookAndFeelOption(
-    val id: String,
-    val title: String,
-    val subtitle: String,
-    val icon: ImageVector,
-    val route: String? = null
-)
-
-// ✅ Status Bar Styles
-enum class StatusBarStyle(
-    val id: String,
-    val title: String,
-    val description: String,
-    val detailedDescription: String,
-    val icon: ImageVector,
-    val example: String
-) {
-    TRANSPARENT(
-        id = "transparent",
-        title = "Transparent",
-        description = "Map shows through the status bar",
-        detailedDescription = "The status bar becomes completely transparent, allowing the map to be visible behind it. This creates a seamless, immersive experience where your flight data overlays directly on the map.",
-        icon = Icons.Default.VisibilityOff,
-        example = "🗺️ Full map visibility"
-    ),
-    THEMED(
-        id = "themed",
-        title = "Themed",
-        description = "Status bar matches your app theme",
-        detailedDescription = "The status bar color adapts to your current app theme, creating a cohesive look. It changes between light and dark modes automatically, maintaining visual consistency throughout the app.",
-        icon = Icons.Default.Palette,
-        example = "🎨 Adaptive colors"
-    ),
-    EDGE_TO_EDGE(
-        id = "edge_to_edge",
-        title = "Edge to Edge",
-        description = "Content extends under the status bar",
-        detailedDescription = "Your content extends edge-to-edge on the screen with a subtle scrim on the status bar. This modern approach maximizes screen real estate while keeping system icons visible.",
-        icon = Icons.Default.Fullscreen,
-        example = "📱 Modern full-screen"
-    ),
-    OVERLAY(
-        id = "overlay",
-        title = "Overlay",
-        description = "Semi-transparent overlay on map",
-        detailedDescription = "A semi-transparent overlay provides the perfect balance between map visibility and status bar readability. System icons remain clearly visible while the map shows through subtly.",
-        icon = Icons.Default.Layers,
-        example = "🔍 Balanced visibility"
-    )
-}
-
-// ✅ Card Styles
-enum class CardStyle(
-    val id: String,
-    val title: String,
-    val description: String,
-    val icon: ImageVector
-) {
-    COMPACT(
-        id = "compact",
-        title = "Compact",
-        description = "Small cards with essential info",
-        icon = Icons.Outlined.ViewCompact
-    ),
-    STANDARD(
-        id = "standard", 
-        title = "Standard",
-        description = "Medium cards with balanced layout",
-        icon = Icons.Outlined.ViewModule
-    ),
-    LARGE(
-        id = "large",
-        title = "Large", 
-        description = "Big cards with detailed information",
-        icon = Icons.Outlined.ViewAgenda
-    ),
-    MINIMAL(
-        id = "minimal",
-        title = "Minimal",
-        description = "Ultra-clean with only key data",
-        icon = Icons.Outlined.RemoveRedEye
-    )
-}
-
+// âœ… Look & Feel Menu Item
+// moved to LookAndFeelModels.kt
+// âœ… Status Bar Styles
+// moved to LookAndFeelModels.kt
+// âœ… Card Styles
+// moved to LookAndFeelModels.kt
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LookAndFeelScreen(
@@ -190,7 +111,7 @@ fun LookAndFeelScreen(
 
     Scaffold(
         topBar = {
-            // ✅ Match Flight Data header style exactly
+            // âœ… Match Flight Data header style exactly
             CenterAlignedTopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -254,7 +175,7 @@ fun LookAndFeelScreen(
         }
     }
 
-    // ✅ Status Bar Style Bottom Sheet
+    // âœ… Status Bar Style Bottom Sheet
     if (showStatusBarOptions) {
         val sheetState = rememberModalBottomSheetState(
             skipPartiallyExpanded = true // Force full expansion, no half-state
@@ -303,7 +224,7 @@ fun LookAndFeelScreen(
         }
     }
 
-    // ✅ Card Style Bottom Sheet
+    // âœ… Card Style Bottom Sheet
     if (showCardStyleOptions) {
         val sheetState = rememberModalBottomSheetState(
             skipPartiallyExpanded = true // Force full expansion, no half-state
@@ -350,7 +271,7 @@ fun LookAndFeelScreen(
         }
     }
     
-    // ✅ Colors Bottom Sheet
+    // âœ… Colors Bottom Sheet
     if (showColorsOptions) {
         val sheetState = rememberModalBottomSheetState(
             skipPartiallyExpanded = true // Force full expansion, no half-state
@@ -417,7 +338,7 @@ fun LookAndFeelScreen(
                                     // Update local state immediately for UI feedback
                                     currentTheme = theme
                                     
-                                    android.util.Log.d("LookAndFeel", "🎨 Color theme changed to: ${theme.displayName}")
+                                    android.util.Log.d("LookAndFeel", "ðŸŽ¨ Color theme changed to: ${theme.displayName}")
                                     showColorsOptions = false 
                                 },
                             colors = CardDefaults.cardColors(
@@ -506,206 +427,12 @@ fun LookAndFeelScreen(
     }
 }
 
-@Composable
-private fun LookAndFeelMenuItem(
-    option: LookAndFeelOption,
-    onClick: () -> Unit
-) {
-    Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = option.icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(24.dp)
-            )
-            
-            Spacer(modifier = Modifier.width(16.dp))
-            
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = option.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Medium
-                )
-                Text(
-                    text = option.subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = "Select",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-    }
-}
+/* moved to LookAndFeelSections.kt */
+// moved to LookAndFeelSections.kt
 
-@Composable
-private fun StatusBarStyleOption(
-    style: StatusBarStyle,
-    isSelected: Boolean,
-    onSelect: () -> Unit
-) {
-    Card(
-        onClick = onSelect,
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        border = if (isSelected) {
-            BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-        } else null,
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected)
-                MaterialTheme.colorScheme.primaryContainer
-            else
-                MaterialTheme.colorScheme.surface
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.Top
-        ) {
-            Icon(
-                imageVector = style.icon,
-                contentDescription = null,
-                tint = if (isSelected) 
-                    MaterialTheme.colorScheme.primary 
-                else 
-                    MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(24.dp)
-            )
-            
-            Spacer(modifier = Modifier.width(16.dp))
-            
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = style.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isSelected) 
-                            MaterialTheme.colorScheme.primary 
-                        else 
-                            MaterialTheme.colorScheme.onSurface
-                    )
-                    
-                    if (isSelected) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = "Selected",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(4.dp))
-                
-                Text(
-                    text = style.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                
-                Spacer(modifier = Modifier.height(4.dp))
-                
-                Text(
-                    text = style.example,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                )
-            }
-        }
-    }
-}
+/* moved to LookAndFeelSections.kt */
+// moved to LookAndFeelSections.kt
 
-@Composable
-private fun CardStyleOption(
-    style: CardStyle,
-    isSelected: Boolean,
-    onSelect: () -> Unit
-) {
-    Card(
-        onClick = onSelect,
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        border = if (isSelected) {
-            BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-        } else null,
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected)
-                MaterialTheme.colorScheme.primaryContainer
-            else
-                MaterialTheme.colorScheme.surface
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = style.icon,
-                contentDescription = null,
-                tint = if (isSelected) 
-                    MaterialTheme.colorScheme.primary 
-                else 
-                    MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(24.dp)
-            )
-            
-            Spacer(modifier = Modifier.width(16.dp))
-            
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = style.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                    color = if (isSelected) 
-                        MaterialTheme.colorScheme.primary 
-                    else 
-                        MaterialTheme.colorScheme.onSurface
-                )
-                
-                Text(
-                    text = style.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            
-            if (isSelected) {
-                Icon(
-                    imageVector = Icons.Default.CheckCircle,
-                    contentDescription = "Selected",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-        }
-    }
-}
+/* moved to LookAndFeelSections.kt */
+// moved to LookAndFeelSections.kt
+

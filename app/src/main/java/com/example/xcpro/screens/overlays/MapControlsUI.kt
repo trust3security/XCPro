@@ -10,11 +10,14 @@ import com.example.dfcards.FlightTemplate
 fun getDefaultTemplateForMode(mode: FlightModeSelection, templates: List<FlightTemplate>): FlightTemplate? {
     return when (mode) {
         FlightModeSelection.CRUISE -> templates.find { it.id == "id01" }
-            ?: templates.find { it.id == "essential" }        // Fallback to old ID
+            ?: templates.find { it.id == "essential" }
         FlightModeSelection.THERMAL -> templates.find { it.id == "id02" }
-            ?: templates.find { it.id == "thermal" }          // Fallback to old ID
+            ?: templates.find { it.id == "thermal" }
         FlightModeSelection.FINAL_GLIDE -> templates.find { it.id == "id03" }
-            ?: templates.find { it.id == "final_glide" }      // Fallback to old ID
+            ?: templates.find { it.id == "final_glide" }
+        FlightModeSelection.HAWK -> templates.find { it.id == "hawk" }
+            ?: templates.find { it.id == "vario" }
+            ?: templates.find { it.id == "id01" }
     }
 }
 

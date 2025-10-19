@@ -78,12 +78,15 @@ class FlightDataManager(
     fun getDefaultTemplateForMode(mode: FlightModeSelection, templates: List<FlightTemplate>): FlightTemplate? {
         return when (mode) {
             FlightModeSelection.CRUISE -> templates.find { it.id == "id01" }
-                ?: templates.find { it.id == "essential" }        // Fallback to old ID
+                ?: templates.find { it.id == "essential" }
             FlightModeSelection.THERMAL -> templates.find { it.id == "id02" }
-                ?: templates.find { it.id == "thermal" }          // Fallback to old ID
+                ?: templates.find { it.id == "thermal" }
             FlightModeSelection.FINAL_GLIDE -> templates.find { it.id == "id03" }
-                ?: templates.find { it.id == "cross_country" }    // Fallback to old ID
-        } ?: templates.find { it.id == "id01" } ?: templates.find { it.id == "essential" } // Ultimate fallback
+                ?: templates.find { it.id == "cross_country" }
+            FlightModeSelection.HAWK -> templates.find { it.id == "hawk" }
+                ?: templates.find { it.id == "vario" }
+                ?: templates.find { it.id == "id01" }
+        } ?: templates.find { it.id == "id01" } ?: templates.find { it.id == "essential" }
     }
 
     /**
@@ -94,6 +97,7 @@ class FlightDataManager(
             FlightMode.CRUISE -> FlightModeSelection.CRUISE
             FlightMode.THERMAL -> FlightModeSelection.THERMAL
             FlightMode.FINAL_GLIDE -> FlightModeSelection.FINAL_GLIDE
+            FlightMode.HAWK -> FlightModeSelection.HAWK
         }
     }
 
@@ -105,6 +109,7 @@ class FlightDataManager(
             FlightModeSelection.CRUISE -> FlightMode.CRUISE
             FlightModeSelection.THERMAL -> FlightMode.THERMAL
             FlightModeSelection.FINAL_GLIDE -> FlightMode.FINAL_GLIDE
+            FlightModeSelection.HAWK -> FlightMode.HAWK
         }
     }
 
@@ -141,18 +146,25 @@ class FlightDataManager(
                 Log.d(TAG, "🔍 ADDED CRUISE (always included)")
 
                 // Add others only if they're visible
-                if (visibilities["THERMAL"] == true) {
+                if (visibilities["THERMAL"] != false) {
                     filteredModes.add(FlightMode.THERMAL)
-                    Log.d(TAG, "🔍 ADDED THERMAL (visible=true)")
+                    Log.d(TAG, "🔍 ADDED THERMAL (visible!=false)")
                 } else {
                     Log.d(TAG, "🔍 SKIPPED THERMAL (visible=${visibilities["THERMAL"]})")
                 }
 
-                if (visibilities["FINAL_GLIDE"] == true) {
+                if (visibilities["FINAL_GLIDE"] != false) {
                     filteredModes.add(FlightMode.FINAL_GLIDE)
-                    Log.d(TAG, "🔍 ADDED FINAL_GLIDE (visible=true)")
+                    Log.d(TAG, "🔍 ADDED FINAL_GLIDE (visible!=false)")
                 } else {
                     Log.d(TAG, "🔍 SKIPPED FINAL_GLIDE (visible=${visibilities["FINAL_GLIDE"]})")
+                }
+
+                if (visibilities["HAWK"] != false) {
+                    filteredModes.add(FlightMode.HAWK)
+                    Log.d(TAG, "🔍 ADDED HAWK (visible!=false)")
+                } else {
+                    Log.d(TAG, "🔍 SKIPPED HAWK (visible=${visibilities["HAWK"]})")
                 }
 
                 visibleModes = filteredModes

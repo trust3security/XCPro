@@ -19,6 +19,7 @@ import com.example.xcpro.map.TemplateChangeNotifier
 import com.example.xcpro.map.components.MapActionButtons
 import com.example.xcpro.map.MapComposeEffects
 import com.example.xcpro.map.MapUIWidgetManager
+import com.example.xcpro.ServiceLocator
 import com.example.xcpro.map.MapUIWidgets
 import com.example.xcpro.map.MapTaskScreenUI
 import com.example.xcpro.map.MapCameraEffects
@@ -118,63 +119,6 @@ const val INITIAL_LATITUDE = -30.87
  * This adapter function maintains backward compatibility with existing card system
  * while migrating to the new unified sensor architecture.
  */
-private fun convertToRealTimeFlightData(completeData: com.example.xcpro.sensors.CompleteFlightData): RealTimeFlightData {
-    val gps = completeData.gps
-    val baro = completeData.baro
-
-    // Calculate flight time (simple implementation - starts from app launch)
-    val flightTimeMs = System.currentTimeMillis() - completeData.timestamp
-    val flightTimeMinutes = flightTimeMs / 60000
-    val hours = flightTimeMinutes / 60
-    val minutes = flightTimeMinutes % 60
-    val formattedFlightTime = "${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}"
-
-    return RealTimeFlightData(
-        // GPS data
-        latitude = gps?.latLng?.latitude ?: 0.0,
-        longitude = gps?.latLng?.longitude ?: 0.0,
-        gpsAltitude = gps?.altitude ?: 0.0,
-        groundSpeed = gps?.speed ?: 0.0,
-        track = gps?.bearing ?: 0.0,
-        accuracy = gps?.accuracy?.toDouble() ?: 0.0,
-        satelliteCount = 0, // Not available from new system (phones don't expose this)
-
-        // Barometric data
-        baroAltitude = completeData.baroAltitude,
-        currentPressureHPa = baro?.pressureHPa ?: 1013.25,
-        qnh = completeData.qnh,
-        isQNHCalibrated = completeData.isQNHCalibrated,
-
-        // Calculated values
-        verticalSpeed = completeData.verticalSpeed,
-        agl = completeData.agl,
-        pressureAltitude = completeData.pressureAltitude,
-        baroGpsDelta = completeData.baroGpsDelta,
-        baroConfidence = completeData.baroConfidence,
-        qnhCalibrationAgeSeconds = completeData.qnhCalibrationAgeSeconds,
-
-        // Performance data
-        windSpeed = completeData.windSpeed,
-        windDirection = completeData.windDirection,
-        thermalAverage = completeData.thermalAverage,
-        currentLD = completeData.currentLD,
-        netto = completeData.netto,
-
-        // NEW: Vario variants for side-by-side testing (VARIO_IMPROVEMENTS.md)
-        varioOptimized = completeData.varioOptimized,
-        varioLegacy = completeData.varioLegacy,
-        varioRaw = completeData.varioRaw,
-        varioGPS = completeData.varioGPS,
-        varioComplementary = completeData.varioComplementary,
-
-        // Metadata
-        flightTime = formattedFlightTime,
-        timestamp = completeData.timestamp,
-        lastUpdateTime = System.currentTimeMillis(),
-        calculationSource = completeData.dataQuality
-    )
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 @SuppressLint("UnusedBoxWithConstraintsScope")
@@ -228,7 +172,8 @@ fun MapScreen(
     val waypointRepo = remember(waypointData) { FileWaypointRepo(waypointData) }
 
     // ✅ SIMPLIFIED: Remove permission dialog variables, always enable everything
-    var safeContainerSize by remember { mutableStateOf(IntSize.Zero) }
+    val safeContainerSizeState = remember { mutableStateOf(IntSize.Zero) }
+    var safeContainerSize by safeContainerSizeState
 
     // ✅ DEBUG: Track container size changes
     LaunchedEffect(safeContainerSize) {
@@ -246,10 +191,14 @@ fun MapScreen(
     LaunchedEffect(unitsPreferences) {
         flightDataManager.updateUnitsPreferences(unitsPreferences)
     }
-    var showQnhDialog by remember { mutableStateOf(false) }
-    var qnhInput by remember { mutableStateOf("") }
-    var qnhError by remember { mutableStateOf<String?>(null) }
-    var showQnhFab by remember { mutableStateOf(true) }
+    val showQnhDialogState = remember { mutableStateOf(false) }
+    var showQnhDialog by showQnhDialogState
+    val qnhInputState = remember { mutableStateOf("") }
+    var qnhInput by qnhInputState
+    val qnhErrorState = remember { mutableStateOf<String?>(null) }
+    var qnhError by qnhErrorState
+    val showQnhFabState = remember { mutableStateOf(true) }
+    var showQnhFab by showQnhFabState
     // ✅ NEW: Register template change callback for communication with FlightDataMgmt
     DisposableEffect(Unit) {
         TemplateChangeNotifier.registerCallback {
@@ -279,6 +228,7 @@ fun MapScreen(
 
     // ✅ LocationManager - Centralized location handling
     val locationManager = mapViewModel.locationManager
+    ServiceLocator.locationManager = locationManager
 
     // ✅ LifecycleManager - Centralized lifecycle handling
     val lifecycleManager = mapViewModel.lifecycleManager
@@ -377,9 +327,12 @@ fun MapScreen(
         widgetManager.loadWidgetPositions(screenWidthPx, screenHeightPx, density)
     }
 
-    var variometerOffset by remember { mutableStateOf(widgetPositions.variometerOffset) }
-    var variometerSizePx by remember { mutableStateOf(widgetPositions.variometerSizePx) }
-    var hamburgerOffset by remember { mutableStateOf(widgetPositions.hamburgerOffset) }
+    val variometerOffsetState = remember { mutableStateOf(widgetPositions.variometerOffset) }
+    var variometerOffset by variometerOffsetState
+    val variometerSizePxState = remember { mutableStateOf(widgetPositions.variometerSizePx) }
+    var variometerSizePx by variometerSizePxState
+    val hamburgerOffsetState = remember { mutableStateOf(widgetPositions.hamburgerOffset) }
+    var hamburgerOffset by hamburgerOffsetState
 
     // ✅ CENTRALIZED CAMERA EFFECTS - Replace camera animation and orientation effects
     MapCameraEffects.AllCameraEffects(
@@ -411,421 +364,43 @@ fun MapScreen(
             onMapStyleSelected(style)
         },
         content = {
-
-            // ---------- WRAP CONTENT IN A ROOT BOX SO WE CAN OVERLAY A MANUAL FAB ----------
-            Box(Modifier.fillMaxSize()) {
-
-                // --- Your existing Scaffold (no floatingActionButton here) ---
-                Scaffold(
-                    modifier = Modifier
-                        .border(2.dp, Color.Yellow)
-                ) { padding ->
-                    BoxWithConstraints(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(padding)
-                    ) {
-                        val maxWidthPx = with(density) { maxWidth.toPx() }
-                        val maxHeightPx = with(density) { maxHeight.toPx() }
-
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .size(maxWidth, maxHeight)
-                        ) {
-                            AndroidView(
-                                factory = { ctx ->
-                                    MapView(ctx).apply {
-                                        mapState.mapView = this
-                                        getMapAsync { map: MapLibreMap ->
-                                            coroutineScope.launch {
-                                                try {
-                                                    mapInitializer.initializeMap(map)
-                                                    Log.d(TAG, "Map initialization completed via MapInitializer")
-
-                                                    // Overlays are now managed through LocationManager via mapState
-                                                    Log.d(TAG, "Map overlays initialized through LocationManager")
-                                                } catch (e: Exception) {
-                                                    Log.e(TAG, "Error during MapInitializer setup: ${e.message}", e)
-                                                }
-                                            }
-                                        }
-                                    }
-                                },
-                                modifier = Modifier.fillMaxSize()
-                            )
-                            // ✅ PHASE 2: Flight data provider using new FlightDataCalculator
-                            FlightDataProvider(
-                                dataProvider = { onDataReceived ->
-                                    locationManager.flightDataCalculator.flightDataFlow.collect { completeData ->
-                                        if (completeData != null) {
-                                            // Convert CompleteFlightData to RealTimeFlightData
-                                            val realTimeData = convertToRealTimeFlightData(completeData)
-                                            onDataReceived(realTimeData)
-                                        }
-                                    }
-                                }
-                            ) { liveData ->
-                                flightDataManager.updateLiveFlightData(liveData)
-                                println(
-                                    "DEBUG: MapScreen received live data - Baro: ${liveData.baroAltitude}m, GPS: ${liveData.gpsAltitude}m, Pressure: ${liveData.currentPressureHPa}hPa"
-                                )
-                            }
-
-                            // ✅ REFACTORED: Cards - now use independent StateFlows per card
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .zIndex(2f)
-                            ) {
-                                CardContainer(
-                                    onContainerSizeChanged = { size -> safeContainerSize = size },
-                                    statusBarOffset = 0f,
-                                    onFlightTemplateClick = { flightDataManager.showCardLibrary() },
-                                    viewModel = flightViewModel,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
-
-                            // ✅ Task Map Overlay (SEPARATE Box - ABOVE cards so turnpoints show)
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .zIndex(3f)
-                            ) {
-                                TaskMapOverlay(
-                                    taskManager = taskManager,
-                                    mapLibreMap = mapState.mapLibreMap,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-
-                                // ✅ AAT Long Press functionality now integrated into CustomMapGestureHandler
-                            }
-
-                            // TODO: AAT Interactive Turnpoint Overlay - will be re-implemented incrementally
-
-                            // Skysight Weather Overlay (above task overlay)
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .zIndex(3.5f)
-                            ) {
-                                SkysightMapOverlay(
-                                    onOpenSettings = {
-                                        navController.navigate("skysight_settings")
-                                    },
-                                    mapLibreMap = mapState.mapLibreMap,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
-
-                            // ✅ Custom Gesture Handling - Extracted to MapGestureSetup module
-                            MapGestureSetup.GestureHandlerOverlay(
-                                mapState = mapState,
-                                taskManager = taskManager,
-                                flightDataManager = flightDataManager,
-                                locationManager = locationManager,
-                                cameraManager = cameraManager,
-                                currentLocation = currentLocation,
-                                showReturnButton = showReturnButton,
-                                isAATEditMode = isAATEditMode,
-                                onAATEditModeChange = mapViewModel::setAATEditMode
-                            )
-
-                            // ✅ Modern Flight Mode Indicator (Top Left - Unified UI)
-                            FlightModeIndicator(
-                                currentMode = mapState.currentMode, // Display current mode (controlled by gesture handler)
-                                onModeChange = { newMode ->
-                                    mapState.updateFlightMode(newMode)
-                                },
-                                modifier = Modifier
-                                    .align(Alignment.TopStart) // Move to top-left
-                                    .padding(top = mapState.iconSize.dp + 8.dp, start = 16.dp) // Position below hamburger menu
-                                    .zIndex(5f)
-                            )
-
-                            // ✅ Compass Widget (Top Right) - Always visible for mode switching
-                            androidx.compose.animation.AnimatedVisibility(
-                                visible = true, // Always show so user can switch orientation modes
-                                enter = androidx.compose.animation.fadeIn(
-                                    animationSpec = androidx.compose.animation.core.tween(300)
-                                ) + androidx.compose.animation.scaleIn(
-                                    animationSpec = androidx.compose.animation.core.tween(300)
-                                ),
-                                exit = androidx.compose.animation.fadeOut(
-                                    animationSpec = androidx.compose.animation.core.tween(300)
-                                ) + androidx.compose.animation.scaleOut(
-                                    animationSpec = androidx.compose.animation.core.tween(300)
-                                ),
-                                modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .padding(top = 80.dp, end = 16.dp)
-                                    .zIndex(5f)
-                            ) {
-                                CompassWidget(
-                                    orientation = orientationData,
-                                    onModeToggle = {
-                                        // Cycle through orientation modes: North Up → Track Up → Heading Up → North Up
-                                        val nextMode = when (orientationManager.getCurrentMode()) {
-                                            MapOrientationMode.NORTH_UP -> MapOrientationMode.TRACK_UP
-                                            MapOrientationMode.TRACK_UP -> MapOrientationMode.HEADING_UP
-                                            MapOrientationMode.HEADING_UP -> MapOrientationMode.NORTH_UP
-                                        }
-                                        orientationManager.setOrientationMode(nextMode)
-                                    }
-                                )
-                            }
-
-                            // ✅ CardLibraryModal - TODO: Restore after fixing dependencies
-                            // Temporarily removed to fix compilation issues
-
-                            // ✅ Other UI (variometer) - animation managed by centralized effects
-                            // Note: sharedPrefs is accessed via mapState.sharedPrefs
-                            val targetVario = (flightDataManager.rawVerticalSpeed ?: flightDataManager.liveFlightData?.verticalSpeed)?.toFloat() ?: 0f
-                            val displayNumericVario = (flightDataManager.smoothedVerticalSpeed ?: flightDataManager.liveFlightData?.verticalSpeed)?.toFloat() ?: 0f
-                            val animatedVario by animateFloatAsState(
-                                targetValue = targetVario,
-                                animationSpec = androidx.compose.animation.core.spring(
-                                    dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
-                                    stiffness = androidx.compose.animation.core.Spring.StiffnessMedium
-                                ),
-                                label = "vario"
-                            )
-
-                            // Draggable Variometer using centralized widget manager
-                            val minSizePx = with(density) { 60.dp.toPx() }
-                            val maxSizePx = with(density) { 200.dp.toPx() }
-
-                            MapUIWidgets.DraggableVariometer(
-                                variometerNeedleValue = animatedVario,
-                                variometerDisplayValue = displayNumericVario,
-                                variometerOffset = variometerOffset,
-                                variometerSizePx = variometerSizePx,
-                                screenWidthPx = screenWidthPx,
-                                screenHeightPx = screenHeightPx,
-                                minSizePx = minSizePx,
-                                maxSizePx = maxSizePx,
-                                widgetManager = widgetManager,
-                                density = density,
-                                onOffsetChange = { variometerOffset = it },
-                                onSizeChange = { variometerSizePx = it },
-                                modifier = Modifier.zIndex(if (mapState.isUIEditMode) 4f else 1f)
-                            )
-
-                            // Aircraft icon is now drawn on the map at actual GPS position
-                            // via BlueLocationOverlay to prevent the icon from moving with camera pan
-
-                            // ✅ Fixed Distance Circles Overlay - Non-moving implementation
-                            // Circles centered on fixed aircraft icon, only size changes with zoom
-                            DistanceCirclesCanvas(
-                                mapZoom = mapState.mapLibreMap?.cameraPosition?.zoom?.toFloat() ?: 10f,
-                                mapLatitude = flightDataManager.liveFlightData?.latitude ?: 0.0,
-                                isVisible = mapState.showDistanceCircles,
-                                modifier = Modifier.zIndex(3.7f)  // Just below aircraft icon
-                            )
-
-                            // ✅ Task-Specific UI - Extracted to MapTaskIntegration module
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.BottomEnd)
-                                    .zIndex(11f) // Fix: Higher than gesture handler to receive clicks
-                            ) {
-                                MapTaskIntegration.AATEditModeFAB(
-                                    isAATEditMode = isAATEditMode,
-                                    taskManager = taskManager,
-                                    cameraManager = cameraManager,
-                                    onExitEditMode = mapViewModel::exitAATEditMode
-                                )
-                            }
-
-                            // Draggable Hamburger Menu using centralized widget manager
-                            MapUIWidgets.DraggableHamburgerMenu(
-                                hamburgerOffset = hamburgerOffset,
-                                iconSize = mapState.iconSize,
-                                screenWidthPx = screenWidthPx,
-                                screenHeightPx = screenHeightPx,
-                                widgetManager = widgetManager,
-                                density = density,
-                                drawerState = drawerState,
-                                coroutineScope = coroutineScope,
-                                onOffsetChange = { hamburgerOffset = it },
-                                onSizeChange = { size -> mapState.iconSize = size },
-                                modifier = Modifier.zIndex(4f)
-                            )
-
-                            // ✅ Airspace Settings Modal - Centralized through MapModalUI
-                            MapModalUI.AirspaceSettingsModalOverlay(
-                                modalManager = modalManager
-                            )
-                        }
-                    }
-                }
-
-                // ✅ Task Screen UI Components - Centralized management
-                MapTaskScreenUI.AllTaskScreenComponents(
-                    taskScreenManager = taskScreenManager,
-                    allWaypoints = waypointData,
-                    currentQNH = "1013 hPa",
-                    onWaypointGoto = { wp ->
-                        cameraManager.moveToWaypoint(wp.latitude, wp.longitude)
-                    }
-                )
-
-                // ✅ Use extracted MapActionButtons component
-                MapActionButtons(
-                    mapState = mapState,
-                    taskManager = taskManager,
-                    taskScreenManager = taskScreenManager,
-                    currentLocation = currentLocation,
-                    showReturnButton = showReturnButton,
-                    onToggleDistanceCircles = {
-                        // ✅ Use MapOverlayManager for centralized distance circles management
-                        overlayManager.toggleDistanceCircles()
-                    },
-                    onReturn = {
-                        locationManager.returnToSavedLocation()
-                    },
-                    onShowQnhDialog = {
-                        val currentQnh = flightDataManager.liveFlightData?.qnh ?: 1013.25
-                        qnhInput = seedQnhInputValue(currentQnh, unitsPreferences)
-                        qnhError = null
-                        showQnhDialog = true
-                    },
-                    showQnhFab = showQnhFab,
-                    onDismissQnhFab = { showQnhFab = false },
-                    modifier = Modifier.fillMaxSize()
-                )
-                if (showQnhDialog) {
-                    val liveData = flightDataManager.liveFlightData
-                    val pressureLabel = unitsPreferences.pressure.abbreviation
-                    val pressureDecimals = pressurePrecision(unitsPreferences)
-                    AlertDialog(
-                        onDismissRequest = {
-                            showQnhDialog = false
-                            qnhError = null
-                        },
-                        title = { Text("Manual QNH") },
-                        text = {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text("Enter the local QNH in $pressureLabel.")
-                                OutlinedTextField(
-                                    value = qnhInput,
-                                    onValueChange = {
-                                        qnhInput = it
-                                        qnhError = null
-                                    },
-                                    singleLine = true,
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                    label = { Text("QNH ($pressureLabel)") },
-                                    isError = qnhError != null
-                                )
-                                qnhError?.let {
-                                    Text(
-                                        text = it,
-                                        color = MaterialTheme.colorScheme.error,
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                }
-                                liveData?.let { data ->
-                                    val status = if (data.isQNHCalibrated) "Calibrated" else "Standard"
-                                    Text("Current: ${formatQnhDisplay(data.qnh, unitsPreferences, pressureDecimals)} ($status)")
-                                    data.baroGpsDelta?.let { delta ->
-                                        Text("Baro vs GPS: ${formatBaroGpsDelta(delta, unitsPreferences)}")
-                                    }
-                                    val ageSeconds = data.qnhCalibrationAgeSeconds
-                                    if (ageSeconds >= 0) {
-                                        val ageLabel = when {
-                                            ageSeconds >= 3600 -> "${ageSeconds / 3600}h"
-                                            ageSeconds >= 60 -> "${ageSeconds / 60}m"
-                                            else -> "${ageSeconds}s"
-                                        }
-                                        Text("Last calibration: $ageLabel ago")
-                                    }
-                                }
-                            }
-                        },
-                        confirmButton = {
-                            TextButton(
-                                onClick = {
-                                    val parsed = qnhInput.trim().toDoubleOrNull()
-                                    if (parsed != null) {
-                                        val qnhHpa = convertQnhInputToHpa(parsed, unitsPreferences)
-                                        locationManager.setManualQnh(qnhHpa)
-                                        showQnhDialog = false
-                                        qnhError = null
-                                    } else {
-                                        qnhError = "Enter a numeric value"
-                                    }
-                                }
-                            ) {
-                                Text("Set QNH")
-                            }
-                        },
-                        dismissButton = {
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                TextButton(
-                                    onClick = {
-                                        locationManager.resetQnhToStandard()
-                                        showQnhDialog = false
-                                        qnhError = null
-                                    }
-                                ) {
-                                    Text("Auto Cal")
-                                }
-                                TextButton(
-                                    onClick = {
-                                        showQnhDialog = false
-                                        qnhError = null
-                                    }
-                                ) {
-                                    Text("Cancel")
-                                }
-                            }
-                        }
-                    )
-                }
-            }
+            MapScreenContent(
+                navController = navController,
+                drawerState = drawerState,
+                coroutineScope = coroutineScope,
+                density = density,
+                mapState = mapState,
+                mapInitializer = mapInitializer,
+                locationManager = locationManager,
+                flightDataManager = flightDataManager,
+                currentFlightModeSelection = currentFlightModeSelection,
+                flightViewModel = flightViewModel,
+                taskManager = taskManager,
+                orientationManager = orientationManager,
+                orientationData = orientationData,
+                cameraManager = cameraManager,
+                currentLocation = currentLocation,
+                showReturnButton = showReturnButton,
+                isAATEditMode = isAATEditMode,
+                onSetAATEditMode = mapViewModel::setAATEditMode,
+                onExitAATEditMode = mapViewModel::exitAATEditMode,
+                safeContainerSize = safeContainerSizeState,
+                overlayManager = overlayManager,
+                modalManager = modalManager,
+                widgetManager = widgetManager,
+                screenWidthPx = screenWidthPx,
+                screenHeightPx = screenHeightPx,
+                variometerOffset = variometerOffsetState,
+                variometerSizePx = variometerSizePxState,
+                hamburgerOffset = hamburgerOffsetState,
+                showQnhDialog = showQnhDialogState,
+                qnhInput = qnhInputState,
+                qnhError = qnhErrorState,
+                showQnhFab = showQnhFabState,
+                taskScreenManager = taskScreenManager,
+                waypointData = waypointData,
+                unitsPreferences = unitsPreferences
+            )
         }
     )
 }
-
-
-
-
-
-
-internal fun pressurePrecision(preferences: UnitsPreferences): Int =
-    if (preferences.pressure == PressureUnit.INHG) 2 else 1
-
-internal fun seedQnhInputValue(qnhHpa: Double, preferences: UnitsPreferences): String {
-    val decimals = pressurePrecision(preferences)
-    val displayValue = preferences.pressure.fromSi(PressureHpa(qnhHpa))
-    return "%.${decimals}f".format(Locale.US, displayValue)
-}
-
-internal fun formatQnhDisplay(
-    qnhHpa: Double,
-    preferences: UnitsPreferences,
-    decimals: Int = pressurePrecision(preferences)
-): String {
-    return UnitsFormatter.pressure(PressureHpa(qnhHpa), preferences, decimals).text
-}
-
-internal fun convertQnhInputToHpa(
-    inputValue: Double,
-    preferences: UnitsPreferences
-): Double {
-    return preferences.pressure.toSi(inputValue).value
-}
-
-internal fun formatBaroGpsDelta(
-    deltaMeters: Double,
-    preferences: UnitsPreferences
-): String {
-    val unit = preferences.altitude
-    val converted = unit.fromSi(AltitudeM(deltaMeters))
-    val rounded = converted.roundToInt()
-    val sign = if (rounded >= 0) "+" else ""
-    return "$sign$rounded ${unit.abbreviation}"
-}
-

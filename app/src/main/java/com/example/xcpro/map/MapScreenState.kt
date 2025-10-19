@@ -83,6 +83,7 @@ class MapScreenState(
             com.example.xcpro.FlightMode.CRUISE -> FlightModeSelection.CRUISE
             com.example.xcpro.FlightMode.THERMAL -> FlightModeSelection.THERMAL
             com.example.xcpro.FlightMode.FINAL_GLIDE -> FlightModeSelection.FINAL_GLIDE
+            com.example.xcpro.FlightMode.HAWK -> FlightModeSelection.HAWK
         }
         android.util.Log.d("MapScreenState", "✅ mapState.currentMode updated to: ${currentMode.displayName}")
         // Update FlightDataManager if initialized

@@ -1,0 +1,142 @@
+﻿                            AndroidView(
+                                factory = { ctx ->
+                                    MapView(ctx).apply {
+                                        mapState.mapView = this
+                                        getMapAsync { map: MapLibreMap ->
+                                            coroutineScope.launch {
+                                                try {
+                                                    mapInitializer.initializeMap(map)
+                                                    Log.d(TAG, "Map initialization completed via MapInitializer")
+
+                                                    // Overlays are now managed through LocationManager via mapState
+                                                    Log.d(TAG, "Map overlays initialized through LocationManager")
+                                                } catch (e: Exception) {
+                                                    Log.e(TAG, "Error during MapInitializer setup: ${e.message}", e)
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.fillMaxSize()
+                            )
+                            // âœ… PHASE 2: Flight data provider using new FlightDataCalculator
+                            FlightDataProvider(
+                                dataProvider = { onDataReceived ->
+                                    locationManager.flightDataCalculator.flightDataFlow.collect { completeData ->
+                                        if (completeData != null) {
+                                            // Convert CompleteFlightData to RealTimeFlightData
+                                            val realTimeData = convertToRealTimeFlightData(completeData)
+                                            onDataReceived(realTimeData)
+                                        }
+                                    }
+                                }
+                            ) { liveData ->
+                                flightDataManager.updateLiveFlightData(liveData)
+                                println(
+                                    "DEBUG: MapScreen received live data - Baro: ${liveData.baroAltitude}m, GPS: ${liveData.gpsAltitude}m, Pressure: ${liveData.currentPressureHPa}hPa"
+                                )
+                            }
+
+                            // âœ… REFACTORED: Cards - now use independent StateFlows per card
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .zIndex(2f)
+                            ) {
+                                CardContainer(
+                                    onContainerSizeChanged = { size -> safeContainerSize = size },
+                                    statusBarOffset = 0f,
+                                    onFlightTemplateClick = { flightDataManager.showCardLibrary() },
+                                    viewModel = flightViewModel,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+
+                            // âœ… Task Map Overlay (SEPARATE Box - ABOVE cards so turnpoints show)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .zIndex(3f)
+                            ) {
+                                TaskMapOverlay(
+                                    taskManager = taskManager,
+                                    mapLibreMap = mapState.mapLibreMap,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+
+                                // âœ… AAT Long Press functionality now integrated into CustomMapGestureHandler
+                            }
+
+                            // TODO: AAT Interactive Turnpoint Overlay - will be re-implemented incrementally
+
+                            // Skysight Weather Overlay (above task overlay)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .zIndex(3.5f)
+                            ) {
+                                SkysightMapOverlay(
+                                    onOpenSettings = {
+                                        navController.navigate("skysight_settings")
+                                    },
+                                    mapLibreMap = mapState.mapLibreMap,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+
+                            // âœ… Custom Gesture Handling - Extracted to MapGestureSetup module
+                            MapGestureSetup.GestureHandlerOverlay(
+                                mapState = mapState,
+                                taskManager = taskManager,
+                                flightDataManager = flightDataManager,
+                                locationManager = locationManager,
+                                cameraManager = cameraManager,
+                                currentLocation = currentLocation,
+                                showReturnButton = showReturnButton,
+                                isAATEditMode = isAATEditMode,
+                                onAATEditModeChange = mapViewModel::setAATEditMode
+                            )
+
+                            // âœ… Modern Flight Mode Indicator (Top Left - Unified UI)
+                            FlightModeIndicator(
+                                currentMode = mapState.currentMode, // Display current mode (controlled by gesture handler)
+                                onModeChange = { newMode ->
+                                    mapState.updateFlightMode(newMode)
+                                },
+                                modifier = Modifier
+                                    .align(Alignment.TopStart) // Move to top-left
+                                    .padding(top = mapState.iconSize.dp + 8.dp, start = 16.dp) // Position below hamburger menu
+                                    .zIndex(5f)
+                            )
+
+                            // âœ… Compass Widget (Top Right) - Always visible for mode switching
+                            androidx.compose.animation.AnimatedVisibility(
+                                visible = true, // Always show so user can switch orientation modes
+                                enter = androidx.compose.animation.fadeIn(
+                                    animationSpec = androidx.compose.animation.core.tween(300)
+                                ) + androidx.compose.animation.scaleIn(
+                                    animationSpec = androidx.compose.animation.core.tween(300)
+                                ),
+                                exit = androidx.compose.animation.fadeOut(
+                                    animationSpec = androidx.compose.animation.core.tween(300)
+                                ) + androidx.compose.animation.scaleOut(
+                                    animationSpec = androidx.compose.animation.core.tween(300)
+                                ),
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(top = 80.dp, end = 16.dp)
+                                    .zIndex(5f)
+                            ) {
+                                CompassWidget(
+                                    orientation = orientationData,
+                                    onModeToggle = {
+                                        // Cycle through orientation modes: North Up â†’ Track Up â†’ Heading Up â†’ North Up
+                                        val nextMode = when (orientationManager.getCurrentMode()) {
+                                            MapOrientationMode.NORTH_UP -> MapOrientationMode.TRACK_UP
+                                            MapOrientationMode.TRACK_UP -> MapOrientationMode.HEADING_UP
+                                            MapOrientationMode.HEADING_UP -> MapOrientationMode.NORTH_UP
+                                        }
+                                        orientationManager.setOrientationMode(nextMode)
+                                    }
+                                )
+                            }

@@ -59,6 +59,17 @@ data class AccelData(
 )
 
 /**
+ * Device attitude derived from rotation vector.
+ */
+data class AttitudeData(
+    val headingDeg: Double,  // degrees, 0 = North
+    val pitchDeg: Double,    // degrees, positive = nose up
+    val rollDeg: Double,     // degrees, positive = right wing down
+    val timestamp: Long,
+    val isReliable: Boolean
+)
+
+/**
  * Complete flight data combining all sensors + calculations
  * Single Source of Truth for calculated flight parameters
  *

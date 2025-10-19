@@ -1,4 +1,4 @@
-package com.example.ui1.screens
+﻿package com.example.ui1.screens
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateDpAsState
@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Flight
 import androidx.compose.material.icons.filled.Straighten
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.outlined.Style
@@ -61,7 +62,7 @@ fun SettingsScreen(
         containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
         topBar = {
-            // ✅ Match Look & Feel header style exactly
+            // âœ… Match Look & Feel header style exactly
             CenterAlignedTopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -119,7 +120,7 @@ fun SettingsScreen(
                     state = listState
                 ) {
                     // Keep SkySight at full width
-                    item { SkysightSettingsSection() }
+                    item { SkysightSettingsPanel() }
 
                     // Row 1: Files | Profiles
                     item {
@@ -164,6 +165,24 @@ fun SettingsScreen(
                                 onClick = { navController.navigate("units_settings") },
                                 modifier = Modifier.weight(1f)
                             )
+                        }
+                    }
+
+                    // Row 2b: Polar | (spacer)
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            CategoryItem(
+                                title = "Polar",
+                                icon = Icons.Default.Flight,
+                                onClick = { navController.navigate("polar_settings") },
+                                modifier = Modifier.weight(1f)
+                            )
+                            Spacer(modifier = Modifier.weight(1f))
                         }
                     }
 
@@ -253,7 +272,7 @@ fun CategoryItem(title: String, icon: ImageVector, onClick: () -> Unit, modifier
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SkysightSettingsSection() {
+fun SkysightSettingsPanelLegacy() {
     val context = LocalContext.current
     val skysightClient = remember { SkysightClient.getInstance(context) }
     val scope = rememberCoroutineScope()

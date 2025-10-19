@@ -306,154 +306,13 @@ fun EnhancedSkysightLayersPanel(
     }
 }
 
-@Composable
-fun WeatherLayersHeader(
-    isAuthenticated: Boolean,
-    selectedRegion: String?,
-    onDismiss: () -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column {
-            Text(
-                text = "Weather Layers",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold
-            )
-            if (isAuthenticated && selectedRegion != null) {
-                Text(
-                    text = "Region: $selectedRegion",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-        }
+// moved to EnhancedSkysightSections.kt: WeatherLayersHeader
 
-        Row {
-            if (isAuthenticated) {
-                Icon(
-                    imageVector = Icons.Default.CloudDone,
-                    contentDescription = "Connected",
-                    tint = Color.Green,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-            }
-            IconButton(onClick = onDismiss) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Close"
-                )
-            }
-        }
-    }
-}
+// moved to EnhancedSkysightSections.kt: CategorySelectionTabs
 
-@Composable
-fun CategorySelectionTabs(
-    categories: List<WeatherLayerCategory>,
-    selectedCategory: String,
-    onCategorySelect: (String) -> Unit
-) {
-    // Compact 2x3 grid layout to save vertical space
-    Column(
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        // Row 1: All, Wind
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            categories.take(2).forEach { category ->
-                CategoryButton(
-                    category = category,
-                    isSelected = selectedCategory == category.id,
-                    onCategorySelect = onCategorySelect,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
+// moved to EnhancedSkysightSections.kt: CategoryButton
 
-        // Row 2: Thermal, Precipitation
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            categories.drop(2).take(2).forEach { category ->
-                CategoryButton(
-                    category = category,
-                    isSelected = selectedCategory == category.id,
-                    onCategorySelect = onCategorySelect,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
-
-        // Row 3: Satellite, Wave (if available)
-        if (categories.size > 4) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                categories.drop(4).take(2).forEach { category ->
-                    CategoryButton(
-                        category = category,
-                        isSelected = selectedCategory == category.id,
-                        onCategorySelect = onCategorySelect,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-                // Fill remaining space if only one button in this row
-                if (categories.size == 5) {
-                    Spacer(modifier = Modifier.weight(1f))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun CategoryButton(
-    category: WeatherLayerCategory,
-    isSelected: Boolean,
-    onCategorySelect: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    OutlinedButton(
-        onClick = { onCategorySelect(category.id) },
-        modifier = modifier.height(40.dp),
-        colors = ButtonDefaults.outlinedButtonColors(
-            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-            contentColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-        ),
-        border = BorderStroke(
-            width = if (isSelected) 2.dp else 1.dp,
-            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
-        )
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                imageVector = category.icon,
-                contentDescription = null,
-                modifier = Modifier.size(14.dp),
-                tint = if (isSelected) MaterialTheme.colorScheme.primary else category.color
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = category.name,
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
-            )
-        }
-    }
-}
-
+/* moved to EnhancedSkysightSections.kt
 @Composable
 fun EnhancedLayerItem(
     layer: EnhancedWeatherLayer,
@@ -600,6 +459,8 @@ fun EnhancedLayerItem(
     }
 }
 
+*/
+/* moved to EnhancedSkysightSections.kt
 @Composable
 fun WeatherLegendPreview(legend: Legend) {
     Column {
@@ -651,7 +512,9 @@ fun WeatherLegendPreview(legend: Legend) {
         }
     }
 }
+*/
 
+/* moved to EnhancedSkysightSections.kt
 @Composable
 fun AuthenticationRequiredCard() {
     Card(
@@ -687,6 +550,7 @@ fun AuthenticationRequiredCard() {
         }
     }
 }
+*/
 
 // Helper functions
 private fun categorizeLayer(layerId: String, layerName: String): String {

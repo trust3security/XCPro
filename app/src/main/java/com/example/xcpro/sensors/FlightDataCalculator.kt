@@ -15,6 +15,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlin.math.*
+import java.util.Locale
 
 /**
  * Flight Data Calculator - Combines sensors and performs calculations
@@ -70,6 +71,11 @@ class FlightDataCalculator(
         // IMU fusion thresholds
         private const val MIN_SPEED_FOR_IMU_FUSION = 1.0      // m/s below which we ignore IMU noise
         private const val MAX_ACCEL_FOR_FUSION = 12.0         // m/s^2 clamp to reject spikes
+
+        // QNH jump suppression
+        private const val QNH_JUMP_THRESHOLD_HPA = 0.8
+        private const val QNH_ALTITUDE_JUMP_THRESHOLD_METERS = 5.0
+        private const val QNH_CALIBRATION_ACCURACY_THRESHOLD = 8.0
     }
 
     // History for calculations (shared with helper) - must be initialized first
@@ -197,14 +203,40 @@ class FlightDataCalculator(
             return
         }
 
+        val previousBaroResult = cachedBaroResult
+        val hasCalibrationFix = cachedIsGPSFixed &&
+            !cachedGPSAltitude.isNaN() &&
+            cachedGPSAccuracy <= QNH_CALIBRATION_ACCURACY_THRESHOLD
+
         val baroResult = baroCalculator.calculateBarometricAltitude(
             rawPressureHPa = baro.pressureHPa,
-            gpsAltitudeMeters = if (cachedGPSAltitude.isNaN()) null else cachedGPSAltitude,
-            gpsAccuracy = cachedGPSAccuracy,
-            isGPSFixed = cachedIsGPSFixed,
-            gpsLat = cachedGPSLat,
-            gpsLon = cachedGPSLon
+            gpsAltitudeMeters = if (hasCalibrationFix) cachedGPSAltitude else null,
+            gpsAccuracy = if (hasCalibrationFix) cachedGPSAccuracy else null,
+            isGPSFixed = hasCalibrationFix,
+            gpsLat = cachedGPSLat.takeIf { hasCalibrationFix },
+            gpsLon = cachedGPSLon.takeIf { hasCalibrationFix }
         )
+
+        if (previousBaroResult != null) {
+            val qnhDelta = abs(baroResult.qnh - previousBaroResult.qnh)
+            val altitudeDelta = abs(baroResult.altitudeMeters - previousBaroResult.altitudeMeters)
+            if (qnhDelta > QNH_JUMP_THRESHOLD_HPA || altitudeDelta > QNH_ALTITUDE_JUMP_THRESHOLD_METERS) {
+                val qnhLabel = String.format(Locale.US, "%.2f", qnhDelta)
+                val altitudeLabel = String.format(Locale.US, "%.1f", altitudeDelta)
+                Log.w(
+                    TAG,
+                    "QNH jump detected Δ${qnhLabel} hPa / Δ${altitudeLabel} m – resetting vario filters"
+                )
+                modernVarioFilter.reset()
+                varioOptimized.reset()
+                varioLegacy.reset()
+                varioRaw.reset()
+                varioGPS.reset()
+                varioComplementary.reset()
+                baroFilter.reset()
+                cachedVarioResult = null
+            }
+        }
 
         val rawAccel = accel?.verticalAcceleration ?: 0.0
         val accelReliable = accel?.isReliable == true
@@ -297,17 +329,6 @@ class FlightDataCalculator(
 
         lastVarioUpdateTime = currentTime
 
-        if (currentTime % 1000 < 20) {
-            val optValue = varioResults["optimized"] ?: 0.0
-            Log.d(
-                TAG,
-                "[HIGH-SPEED VARIO 50Hz] V/S=m/s, " +
-                    "Alt=m, " +
-                    "Δt=s, " +
-                    "Opt=m/s, " +
-                    "IMU="
-            )
-        }
     }
     /**
      * ✅ PRIORITY 2: SLOW GPS LOOP (10Hz)

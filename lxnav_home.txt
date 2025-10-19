@@ -1,0 +1,251 @@
+Title: LXNAV Gliding
+
+URL Source: https://gliding.lxnav.com/
+
+Markdown Content:
+LXNAV Gliding
+
+===============
+
+[](https://www.facebook.com/lxnav)
+
+[](https://www.instagram.com/lxnav/)
+
+[info@lxnav.com](mailto:info@lxnav.com)
+
+*   [![Image 7](https://gliding.lxnav.com/wp-content/uploads/2017/12/anchor.svg)Marine](https://marine.lxnav.com/)
+*   [![Image 8](https://gliding.lxnav.com/wp-content/uploads/2017/12/airplane.svg)Ultralight](https://ul.lxnav.com/)
+*   [![Image 9](https://gliding.lxnav.com/wp-content/uploads/2017/12/glidericon.svg)Gliding](https://gliding.lxnav.com/)
+*   [![Image 10](https://gliding.lxnav.com/wp-content/uploads/2024/04/connect-1.svg)Connect](https://connect.lxnav.com/)
+
+[![Image 11](https://gliding.lxnav.com/wp-content/uploads/2018/11/lxnav_logo_color_300px.png)](https://gliding.lxnav.com/)
+
+[](https://gliding.lxnav.com/#)
+*   [News](https://gliding.lxnav.com/news/)
+    *   [Generations](https://gliding.lxnav.com/news/generations/)
+    *   [Profile Collection](https://gliding.lxnav.com/news/general/profile-collection/)
+    *   [Version 9](https://gliding.lxnav.com/news/new-firmware-version-9/)
+    *   [Version 8 – navigation](https://gliding.lxnav.com/news/new-firmware-version-8/)
+    *   [Version 7 – variometers](https://gliding.lxnav.com/news/firmware/new-firmware-s8x-s10x-version-7-00/)
+    *   [Get Sponsored](https://gliding.lxnav.com/get-sponsored/)
+    *   [Sponsored pilots](https://gliding.lxnav.com/news-sponsored/)
+    *   [Press](https://gliding.lxnav.com/news/press/)
+
+*   [Products](https://gliding.lxnav.com/products/#navigation)
+    *   [All](https://gliding.lxnav.com/products/#navigation)
+    *   [Navigation](https://gliding.lxnav.com/products/lx9070/)
+    *   [Variometers](https://gliding.lxnav.com/products/s100)
+    *   [Basic](https://gliding.lxnav.com/products/g-meter/)
+    *   [Flight Recorders](https://gliding.lxnav.com/products/nano4/)
+    *   [Engine Control](https://gliding.lxnav.com/products/fes-control-unit/)
+    *   [FLARM](https://gliding.lxnav.com/products/powermouse-plus-lite/)
+    *   [Accessories](https://gliding.lxnav.com/accessories/)
+
+*   [Software](https://gliding.lxnav.com/lxnav-software/)
+    *   [LX Sim](https://gliding.lxnav.com/software/lx-sim/)
+    *   [LX Styler](https://gliding.lxnav.com/software/lx-styler/)
+    *   [LX ASAPT Editor](https://gliding.lxnav.com/software/lx-asapt-editor/)
+    *   [NanoConfig](https://gliding.lxnav.com/software/nanoconfig/)
+    *   [ICAO Map Installer](https://gliding.lxnav.com/software/icao-map-installer/)
+    *   [PowerFLARMConfig](https://gliding.lxnav.com/software/powerflarmconfig/)
+    *   [FLARM Range](https://gliding.lxnav.com/flarm-range/)
+
+*   [Downloads](https://gliding.lxnav.com/lxdownloads/)
+    *   [Firmware](https://gliding.lxnav.com/lxdownloads/firmware/)
+    *   [Airspaces and Airports](https://gliding.lxnav.com/lxdownloads/databases/)
+    *   [Software](https://gliding.lxnav.com/lxdownloads/software/)
+    *   [Manuals](https://gliding.lxnav.com/lxdownloads/manuals/)
+    *   [Cutouts](https://gliding.lxnav.com/lxdownloads/cutouts/)
+    *   [Maps](https://gliding.lxnav.com/lxdownloads/maps/)
+    *   [Profile Collection](https://gliding.lxnav.com/lxdownloads/profile-collection/)
+    *   [Logo](https://gliding.lxnav.com/lxdownloads/logo/)
+
+*   [Dealers](https://gliding.lxnav.com/dealers/)
+*   [About us](https://gliding.lxnav.com/about-us/)
+    *   [Jobs](https://gliding.lxnav.com/jobs/)
+    *   [ISO Certified](https://gliding.lxnav.com/iso-certified/)
+    *   [Contact](https://gliding.lxnav.com/contact/)
+
+[](https://gliding.lxnav.com/#)
+
+[![Image 12](https://gliding.lxnav.com/wp-content/uploads/2019/10/connect.png)](https://connect.lxnav.com/)
+
+[](https://www.facebook.com/lxnav)
+
+[](https://www.instagram.com/lxnav/)
+
+[](mailto:info@lxnav.com)
+
+Live wind. AHRS. IGC Flight recorder. LEARN MORE First standalone HAWK vario. 
+SxHAWK
+------
+
+LEARN MORE Live wind. AHRS. IGC Flight recorder. First standalone HAWK vario. 
+SxHAWK
+------
+
+![Image 13](https://gliding.lxnav.com/wp-content/uploads/2024/12/Sxhawk-vario.png)Standalone or integrated with the LXxxxx. LEARN MORE Know your Batteries. 
+Battery Monitor
+---------------
+
+LEARN MORE Standalone or integrated with the LXxxxx Know your Batteries. 
+Battery Monitor
+---------------
+
+![Image 14](https://gliding.lxnav.com/wp-content/plugins/revslider/sr6/assets/assets/dummy.png)Transform any old Flarm device into a modern device. LEARN MORE Plug-and-play solution 
+FlarmLink
+---------
+
+LEARN MORE Transform any old Flarm device into a modern device. Plug-and-play solution 
+FlarmLink
+---------
+
+![Image 15](https://gliding.lxnav.com/wp-content/plugins/revslider/sr6/assets/assets/dummy.png)Powermouse successor with BT and Wi-Fi LEARN MORE PowerFLARM technology 
+PowerMouse+ LITE
+----------------
+
+LEARN MORE Powermouse successor with BT and Wi-Fi PowerFLARM technology 
+PowerMouse+ LITE
+----------------
+
+![Image 16](https://gliding.lxnav.com/wp-content/plugins/revslider/sr6/assets/assets/dummy.png)For LX80XX/90XX and variometer series. LEARN MORE Know your oxygen saturation
+
+and heart rate 
+Remote OXY
+----------
+
+LEARN MORE For LX80XX/90XX and variometer series. Know your oxygen saturation
+
+and heart rate 
+Remote OXY
+----------
+
+![Image 17](https://gliding.lxnav.com/wp-content/plugins/revslider/sr6/assets/assets/dummy.png)Wi-fi. ADS-B. RFB. IGC. ENL LEARN MORE Portable All-in-one 
+FlarmBat+
+---------
+
+LEARN MORE Wi-fi. ADS-B. RFB. IGC. ENL Portable All-in-one 
+FlarmBat+
+---------
+
+![Image 18](https://gliding.lxnav.com/wp-content/plugins/revslider/sr6/assets/assets/dummy.png)
+
+RENT
+
+[VENTUS 3M](https://rent.lxnav.com/ventus-3m/)
+
+[](https://rent.lxnav.com/ventus-3m/)
+
+What’s new
+----------
+
+*   [Updated manual – PowerMouse](https://gliding.lxnav.com/news/updated-manual-powermouse-42/)
+*   [Updated manual – Sxxx](https://gliding.lxnav.com/news/updated-manual-sxxx-rev-71/)
+*   [Updated manual – FlarmView](https://gliding.lxnav.com/news/updated-manual-flarmview-english-256/)
+*   [Incorrect GPS date on GEN1, GEN2, GEN3 units](https://gliding.lxnav.com/news/incorrect-gps-date-on-gen1-3-units/)
+*   [Updated manual – TrafficView](https://gliding.lxnav.com/news/updated-manual-trafficview-english-rev19/)
+
+### LXNAV TUTORIALS!
+
+[OPEN](https://www.youtube.com/playlist?list=PLgXOBK4KogSW3dVcElc2J9PeXE7-_3j8r)
+
+### REQUEST FIRMWARE
+
+[FIRMWARE](https://gliding.lxnav.com/firmware-request/)[HAWK](https://gliding.lxnav.com/hawk-demo-request/ "HAWK Demo request")
+
+[![Image 19](https://gliding.lxnav.com/wp-content/uploads/2019/09/sklad_ministrstvo.png)](https://gliding.lxnav.com/javni-razpis/ "Javni razpis")
+
+[![Image 20](https://gliding.lxnav.com/wp-content/uploads/2019/09/sklad_spirit.png)](https://gliding.lxnav.com/javni-razpis/ "Javni razpis")
+
+[![Image 21](https://gliding.lxnav.com/wp-content/uploads/2020/12/i-feel-slovenia-logo-121x60.png)](https://gliding.lxnav.com/javni-razpis/ "Javni razpis")
+
+[![Image 22](https://gliding.lxnav.com/wp-content/uploads/2019/09/sklad_podjetniski.png)](https://gliding.lxnav.com/javni-razpis/ "Javni razpis")
+
+[![Image 23](https://gliding.lxnav.com/wp-content/uploads/2019/09/sklad_eu.png)](https://gliding.lxnav.com/javni-razpis/ "Javni razpis")
+
+[![Image 24](https://gliding.lxnav.com/wp-content/uploads/2019/09/lxnav_bw_white_base-250x81.png)](https://gliding.lxnav.com/)
+
+Please enter a valid email address.
+
+Subscribe
+
+[Home](https://gliding.lxnav.com/)
+----------------------------------
+
+*   [News](https://gliding.lxnav.com/news/)
+*   [Products](https://gliding.lxnav.com/products/#navigation)
+*   [Software](https://gliding.lxnav.com/lxnav-software/)
+*   [Downloads](https://gliding.lxnav.com/lxdownloads/)
+*   [Dealers](https://gliding.lxnav.com/dealers/)
+*   [About us](https://gliding.lxnav.com/about-us/)
+
+[Navigation](https://gliding.lxnav.com/products/lx9070/)
+--------------------------------------------------------
+
+*   [LX8030](https://gliding.lxnav.com/products/lx8030/)
+*   [LX8040](https://gliding.lxnav.com/products/lx8040/)
+*   [LX9070](https://gliding.lxnav.com/products/lx9070/)
+*   [LX9050](https://gliding.lxnav.com/products/lx9050/)
+*   [LX9000](https://gliding.lxnav.com/products/lx9000/)
+*   [LX8000](https://gliding.lxnav.com/products/lx8000/)
+*   [LX8080](https://gliding.lxnav.com/products/lx8080/)
+
+[Variometers](https://gliding.lxnav.com/products/s100/)
+-------------------------------------------------------
+
+*   [SxHAWK](https://gliding.lxnav.com/products/sxhawk/)
+*   [S100](https://gliding.lxnav.com/products/s100/)
+*   [S10](https://gliding.lxnav.com/products/s10/)
+*   [S80](https://gliding.lxnav.com/products/s80/)
+*   [S8](https://gliding.lxnav.com/products/s8/)
+*   [S7](https://gliding.lxnav.com/products/s7/)
+*   [S3](https://gliding.lxnav.com/products/s3/)
+*   [V9](https://gliding.lxnav.com/products/v9/)
+*   [V80](https://gliding.lxnav.com/products/v80/)
+*   [V8](https://gliding.lxnav.com/products/v8/)
+*   [V5](https://gliding.lxnav.com/products/v5/)
+
+[Flight Recorders](https://gliding.lxnav.com/products/nano4/)
+-------------------------------------------------------------
+
+*   [Nano⁴](https://gliding.lxnav.com/products/nano4/)
+*   [Nano³](https://gliding.lxnav.com/products/nano3/)
+*   [Nano](https://gliding.lxnav.com/products/nano/)
+
+[Engine Control](https://gliding.lxnav.com/products/edt-control-unit/)
+----------------------------------------------------------------------
+
+*   [Custom solutions](https://gliding.lxnav.com/products/edt-control-unit/)
+*   [Jet Control Unit](https://gliding.lxnav.com/products/jet-control-unit/)
+*   [FES Control Unit](https://gliding.lxnav.com/products/fes-control-unit/)
+
+[Flarm](https://gliding.lxnav.com/products/powermouse/)
+-------------------------------------------------------
+
+*   [PowerMouse+LITE](https://gliding.lxnav.com/products/powermouse-plus-lite/)
+*   [FlarmLink](https://gliding.lxnav.com/products/flarmlink/)
+*   [PowerMouse+](https://gliding.lxnav.com/products/powermouse-plus/)
+*   [FlarmBat+](https://gliding.lxnav.com/products/flarmbat-plus/)
+*   [ADS-B Receiver](https://gliding.lxnav.com/products/ads-b-receiver/)
+*   [TrafficView](https://gliding.lxnav.com/products/trafficview/)
+*   [TrafficView80](https://gliding.lxnav.com/products/trafficview80/)
+*   [FlarmLED+](https://gliding.lxnav.com/products/flarmled-plus/)
+*   [FlarmSpeaker](https://gliding.lxnav.com/products/flarmspeaker/)
+*   [PowerMouse](https://gliding.lxnav.com/products/powermouse/)
+*   [Flarm Antenna](https://gliding.lxnav.com/products/flarm-antenna/)
+*   [FlarmACL](https://gliding.lxnav.com/products/flarmacl/)
+*   [FlarmLED](https://gliding.lxnav.com/products/flarmled/)
+*   [FlarmView](https://gliding.lxnav.com/products/flarmview/)
+*   [FlarmView57](https://gliding.lxnav.com/products/flarmview57/)
+*   [FlarmView2](https://gliding.lxnav.com/products/flarmview2/)
+*   [FlarmMouse](https://gliding.lxnav.com/products/flarmmouse/)
+
+Copyright © 2020 LXNAV
+
+*   [Contact](https://gliding.lxnav.com/contact/)
+*   [Terms Of Service](https://gliding.lxnav.com/terms-of-service/)
+*   [Privacy Policy](https://gliding.lxnav.com/privacy-policy/)
+*   [Returns](https://gliding.lxnav.com/returns/)
+*   [Warranty](https://gliding.lxnav.com/warranty/)
+
+[](https://gliding.lxnav.com/# "Back to top")Menu

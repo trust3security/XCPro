@@ -138,7 +138,8 @@
       "Bash(git config:*)",
       "Bash(timeout:*)",
       "Bash(git remote add:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(tee:*)"
     ],
     "deny": [],
     "ask": [],

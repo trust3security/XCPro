@@ -288,24 +288,24 @@ fun SettingsSection(
             }
         )
         ModernNavItem(
-            title = "Look & Feel",
-            icon = Icons.Outlined.Palette,
-            indentLevel = 1,
-            onClick = {
-                scope.launch {
-                    drawerState.close()
-                    navController.navigate("look_and_feel")
-                }
-            }
-        )
-        ModernNavItem(
             title = "Vario Audio",
             icon = Icons.Outlined.VolumeUp,
-            indentLevel = 1,
+            indentLevel = 2,
             onClick = {
                 scope.launch {
                     drawerState.close()
                     navController.navigate("vario_audio_settings")
+                }
+            }
+        )
+        ModernNavItem(
+            title = "XCPro HAWK",
+            icon = Icons.Outlined.Speed,
+            indentLevel = 2,
+            onClick = {
+                scope.launch {
+                    drawerState.close()
+                    navController.navigate("hawk_dashboard")
                 }
             }
         )

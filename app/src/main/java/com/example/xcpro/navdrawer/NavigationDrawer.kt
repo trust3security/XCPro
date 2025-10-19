@@ -14,6 +14,8 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.xcpro.profiles.ProfileViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Speed
 import kotlinx.coroutines.launch
 
 private const val TAG = "NavigationDrawer"
@@ -69,6 +71,7 @@ fun NavigationDrawer(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
+                    // XCPro V1 quick entry
                     // Profile Section
                     ProfileSection(
                         profileViewModel = profileViewModel,

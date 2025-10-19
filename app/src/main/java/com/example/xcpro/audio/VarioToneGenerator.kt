@@ -5,6 +5,7 @@ import android.media.AudioFormat
 import android.media.AudioTrack
 import android.util.Log
 import kotlin.math.PI
+import kotlin.math.min
 import kotlin.math.sin
 
 /**
@@ -34,6 +35,7 @@ class VarioToneGenerator {
     // Pre-calculated wave table for efficiency (1 second at max frequency)
     private val waveTableSize = SAMPLE_RATE
     private val sineWaveTable = FloatArray(waveTableSize)
+    private val silenceBuffer = ShortArray(SAMPLE_RATE)
 
     init {
         // Pre-calculate sine wave for efficiency
@@ -135,6 +137,10 @@ class VarioToneGenerator {
                 samples[i] = (sampleValue * Short.MAX_VALUE * volume).toInt().toShort()
             }
 
+            if (track.playState != AudioTrack.PLAYSTATE_PLAYING) {
+                track.play()
+            }
+
             // Write samples to audio track
             val written = track.write(samples, 0, numSamples)
 
@@ -157,9 +163,28 @@ class VarioToneGenerator {
         val track = audioTrack ?: return
 
         try {
-            val numSamples = (durationMs * SAMPLE_RATE / 1000).toInt()
-            val silence = ShortArray(numSamples) { 0 }
-            track.write(silence, 0, numSamples)
+            val totalSamples = (durationMs * SAMPLE_RATE / 1000).toInt()
+            if (totalSamples <= 0) {
+                return
+            }
+
+            if (track.playState != AudioTrack.PLAYSTATE_PLAYING) {
+                track.play()
+            }
+
+            var remaining = totalSamples
+            while (remaining > 0) {
+                val chunk = min(remaining, silenceBuffer.size)
+                val written = track.write(silenceBuffer, 0, chunk)
+                if (written < 0) {
+                    Log.e(TAG, "Error writing silence samples: $written")
+                    break
+                }
+                if (written == 0) {
+                    break
+                }
+                remaining -= written
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Error playing silence", e)
         }

@@ -1,6 +1,7 @@
 package com.example.xcpro.map
 
 import android.Manifest
+import android.bluetooth.BluetoothAdapter
 import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.*
@@ -15,6 +16,9 @@ import com.example.xcpro.sensors.FlightDataCalculator
 import com.example.xcpro.sensors.GPSData
 import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.common.units.UnitsConverter
+import com.example.xcpro.ServiceLocator
+import com.example.xcpro.xcprov1.bluetooth.GarminGloConnectionManager
+import com.example.xcpro.xcprov1.service.XcproV1Controller
 import kotlinx.coroutines.CoroutineScope
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
@@ -36,6 +40,14 @@ class LocationManager(
 
     // ✅ PHASE 2: Flight data calculator (combines all sensor data + calculations)
     val flightDataCalculator = FlightDataCalculator(context, unifiedSensorManager, coroutineScope)
+    val xcproV1Controller = XcproV1Controller(context, unifiedSensorManager, coroutineScope)
+    val garminGloConnectionManager = GarminGloConnectionManager(context, coroutineScope)
+    val garminStatusFlow = garminGloConnectionManager.status
+    val garminFixFlow = garminGloConnectionManager.fixFlow
+
+    init {
+        xcproV1Controller.attachExternalGpsFlow(garminGloConnectionManager.fixFlow)
+    }
 
     // Location state
     var currentUserLocation by mutableStateOf<LatLng?>(null)
@@ -111,6 +123,9 @@ class LocationManager(
         Log.d(TAG, "🛑 Stopping unified sensor manager and flight data calculator...")
         unifiedSensorManager.stopAllSensors()
         flightDataCalculator.stop()
+        garminGloConnectionManager.stop()
+        xcproV1Controller.release()
+        ServiceLocator.locationManager = null
     }
 
     /**
@@ -121,6 +136,32 @@ class LocationManager(
         Log.d(TAG, "🔄 Checking if sensors need restart after sleep mode...")
 
         val sensorStatus = unifiedSensorManager.getSensorStatus()
+
+        // Restart if any critical sensor is not running (common after doze/background)
+        val needsRestart = (
+            (!sensorStatus.gpsStarted && sensorStatus.hasLocationPermissions) ||
+            (!sensorStatus.baroStarted && sensorStatus.baroAvailable) ||
+            (!sensorStatus.accelStarted && sensorStatus.accelAvailable)
+        )
+        if (needsRestart) {
+            Log.d(
+                TAG,
+                "One or more sensors stopped (gpsStarted=${sensorStatus.gpsStarted}, baroStarted=${sensorStatus.baroStarted}, accelStarted=${sensorStatus.accelStarted}) - restarting all sensors"
+            )
+
+            // Stop everything first to clean up any stale listeners
+            unifiedSensorManager.stopAllSensors()
+
+            // Short delay to ensure clean shutdown
+            Thread.sleep(100)
+
+            // Restart all sensors
+            unifiedSensorManager.startAllSensors()
+
+            // FlightDataCalculator starts automatically with sensor data flow (no explicit start)
+            Log.d(TAG, "Sensors restarted successfully after sleep/doze")
+            return
+        }
 
         // If GPS was started but is no longer receiving updates, restart all sensors
         if (!sensorStatus.gpsStarted && sensorStatus.hasLocationPermissions) {
@@ -144,6 +185,22 @@ class LocationManager(
         } else {
             Log.d(TAG, "⚠️ No location permissions, cannot restart sensors")
         }
+    }
+
+    fun connectGarminGlo(address: String = "") {
+        val preferredAddress = address.takeIf { it.isNotBlank() }
+            ?: findPairedGarminAddress()
+        if (preferredAddress != null) {
+            Log.d(TAG, "🔗 Connecting to Garmin GLO 2 at $preferredAddress")
+            garminGloConnectionManager.connectToAddress(preferredAddress)
+        } else {
+            Log.w(TAG, "⚠️ No paired Garmin GLO 2 found. Pair device in Android Bluetooth settings first.")
+        }
+    }
+
+    fun disconnectGarminGlo() {
+        Log.d(TAG, "🔻 Disconnecting Garmin GLO 2")
+        garminGloConnectionManager.stop()
     }
 
     fun setManualQnh(qnh: Double) {
@@ -371,6 +428,14 @@ class LocationManager(
             saveLocationFromGPS(currentLocation, currentZoom, currentBearing)
         }
         showReturnButton()
+    }
+
+    private fun findPairedGarminAddress(): String? {
+        val adapter = BluetoothAdapter.getDefaultAdapter() ?: return null
+        return adapter.bondedDevices.firstOrNull { device ->
+            val name = device.name?.lowercase() ?: ""
+            name.contains("glo") || name.contains("garmin")
+        }?.address
     }
 }
 

@@ -1,4 +1,4 @@
-package com.example.xcpro.tasks
+﻿package com.example.xcpro.tasks
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -58,20 +58,20 @@ class TaskManagerCoordinator(val context: Context? = null) {
      */
     fun switchToTaskType(newTaskType: TaskType) {
         if (newTaskType == _taskType) {
-            println("🎯 COORDINATOR: Already using ${newTaskType.name} task type")
+            println("ðŸŽ¯ COORDINATOR: Already using ${newTaskType.name} task type")
             return
         }
 
-        println("🎯 COORDINATOR: Switching from ${_taskType.name} to ${newTaskType.name}")
+        println("ðŸŽ¯ COORDINATOR: Switching from ${_taskType.name} to ${newTaskType.name}")
 
         // Preserve current waypoints as generic TaskWaypoints (if any exist)
         val currentWaypoints = currentTask.waypoints
         val hasWaypoints = currentWaypoints.isNotEmpty()
 
         if (hasWaypoints) {
-            println("🔄 COORDINATOR: Preserving ${currentWaypoints.size} waypoints during task type switch")
+            println("ðŸ”„ COORDINATOR: Preserving ${currentWaypoints.size} waypoints during task type switch")
         } else {
-            println("🔄 COORDINATOR: No waypoints to preserve - creating empty task")
+            println("ðŸ”„ COORDINATOR: No waypoints to preserve - creating empty task")
         }
 
         // Clear current task type (maintain separation)
@@ -82,9 +82,9 @@ class TaskManagerCoordinator(val context: Context? = null) {
                 // Clear Racing visuals from map first (prevents old task overlap)
                 if (mapInstance != null) {
                     racingTaskManager.clearRacingFromMap(mapInstance)
-                    println("🏁 COORDINATOR: Cleared Racing visuals from map")
+                    println("ðŸ COORDINATOR: Cleared Racing visuals from map")
                 } else {
-                    println("❌ COORDINATOR: Cannot clear Racing visuals - map instance is null")
+                    println("âŒ COORDINATOR: Cannot clear Racing visuals - map instance is null")
                 }
                 // Then clear Racing data
                 racingTaskManager.clearRacingTask()
@@ -93,9 +93,9 @@ class TaskManagerCoordinator(val context: Context? = null) {
                 // Clear AAT visuals from map first (prevents old task overlap)
                 if (mapInstance != null) {
                     aatTaskManager.clearAATFromMap(mapInstance)
-                    println("🟢 COORDINATOR: Cleared AAT visuals from map")
+                    println("ðŸŸ¢ COORDINATOR: Cleared AAT visuals from map")
                 } else {
-                    println("❌ COORDINATOR: Cannot clear AAT visuals - map instance is null")
+                    println("âŒ COORDINATOR: Cannot clear AAT visuals - map instance is null")
                 }
                 // Then clear AAT data
                 aatTaskManager.clearAATTask()
@@ -107,13 +107,13 @@ class TaskManagerCoordinator(val context: Context? = null) {
 
         when (newTaskType) {
             TaskType.RACING -> {
-                println("🎯 COORDINATOR: Switched to Racing task management")
+                println("ðŸŽ¯ COORDINATOR: Switched to Racing task management")
                 if (hasWaypoints) {
                     racingTaskManager.initializeFromGenericWaypoints(currentWaypoints)
                 }
             }
             TaskType.AAT -> {
-                println("🎯 COORDINATOR: Switched to AAT task management")
+                println("ðŸŽ¯ COORDINATOR: Switched to AAT task management")
                 if (hasWaypoints) {
                     aatTaskManager.initializeFromGenericWaypoints(currentWaypoints)
                 }
@@ -123,7 +123,7 @@ class TaskManagerCoordinator(val context: Context? = null) {
         saveTaskType()
 
         if (hasWaypoints) {
-            println("✅ COORDINATOR: Successfully preserved ${currentWaypoints.size} waypoints in ${newTaskType.name} task")
+            println("âœ… COORDINATOR: Successfully preserved ${currentWaypoints.size} waypoints in ${newTaskType.name} task")
         }
     }
 
@@ -205,7 +205,7 @@ class TaskManagerCoordinator(val context: Context? = null) {
             val editor = preferences.edit()
             editor.putString("current_task_type", _taskType.name)
             editor.apply()
-            println("🎯 COORDINATOR: Saved task type: ${_taskType.name}")
+            println("ðŸŽ¯ COORDINATOR: Saved task type: ${_taskType.name}")
         }
     }
 
@@ -220,7 +220,7 @@ class TaskManagerCoordinator(val context: Context? = null) {
             } catch (e: Exception) {
                 TaskType.RACING
             }
-            println("🎯 COORDINATOR: Loaded task type: ${_taskType.name}")
+            println("ðŸŽ¯ COORDINATOR: Loaded task type: ${_taskType.name}")
         }
     }
 
@@ -325,19 +325,19 @@ class TaskManagerCoordinator(val context: Context? = null) {
      * Load saved tasks from all managers
      */
     fun loadSavedTasks() {
-        println("🎯 COORDINATOR: Loading saved tasks...")
-        println("🎯 COORDINATOR: DEBUG - About to call loadTaskType()")
+        println("ðŸŽ¯ COORDINATOR: Loading saved tasks...")
+        println("ðŸŽ¯ COORDINATOR: DEBUG - About to call loadTaskType()")
         loadTaskType()
-        println("🎯 COORDINATOR: DEBUG - Finished loadTaskType()")
-        println("🎯 COORDINATOR: Loading racing task...")
-        println("🎯 COORDINATOR: Racing manager available: ${racingTaskManager != null}")
+        println("ðŸŽ¯ COORDINATOR: DEBUG - Finished loadTaskType()")
+        println("ðŸŽ¯ COORDINATOR: Loading racing task...")
+        println("ðŸŽ¯ COORDINATOR: Racing manager available: ${racingTaskManager != null}")
         val racingResult = racingTaskManager.loadRacingTask()
-        println("🎯 COORDINATOR: Racing task load result: $racingResult")
-        println("🎯 COORDINATOR: Loading AAT task...")
-        println("🎯 COORDINATOR: AAT manager available: ${aatTaskManager != null}")
+        println("ðŸŽ¯ COORDINATOR: Racing task load result: $racingResult")
+        println("ðŸŽ¯ COORDINATOR: Loading AAT task...")
+        println("ðŸŽ¯ COORDINATOR: AAT manager available: ${aatTaskManager != null}")
         val aatResult = aatTaskManager.loadAATTask()
-        println("🎯 COORDINATOR: AAT task load result: $aatResult")
-        println("🎯 COORDINATOR: Finished loading saved tasks")
+        println("ðŸŽ¯ COORDINATOR: AAT task load result: $aatResult")
+        println("ðŸŽ¯ COORDINATOR: Finished loading saved tasks")
     }
 
     /**
@@ -560,9 +560,9 @@ class TaskManagerCoordinator(val context: Context? = null) {
     fun updateAATParameters(minimumTime: java.time.Duration, maximumTime: java.time.Duration) {
         if (_taskType == TaskType.AAT) {
             aatTaskManager.updateAATTimes(minimumTime, maximumTime)
-            println("🎯 COORDINATOR: Updated AAT parameters - min: ${minimumTime.toHours()}h, max: ${maximumTime.toHours()}h")
+            println("ðŸŽ¯ COORDINATOR: Updated AAT parameters - min: ${minimumTime.toHours()}h, max: ${maximumTime.toHours()}h")
         } else {
-            println("🎯 COORDINATOR: Cannot update AAT parameters - current task type is $_taskType")
+            println("ðŸŽ¯ COORDINATOR: Cannot update AAT parameters - current task type is $_taskType")
         }
     }
 
@@ -577,12 +577,12 @@ class TaskManagerCoordinator(val context: Context? = null) {
             if (waypoint != null) {
                 val newArea = waypoint.assignedArea.copy(radiusMeters = radiusMeters)
                 aatTaskManager.updateAATArea(index, newArea)
-                println("🎯 COORDINATOR: Updated AAT area radius at index $index to ${radiusMeters/1000.0}km")
-                // ✅ REMOVED: Map re-plotting - caller controls when to re-plot
+                println("ðŸŽ¯ COORDINATOR: Updated AAT area radius at index $index to ${radiusMeters/1000.0}km")
+                // âœ… REMOVED: Map re-plotting - caller controls when to re-plot
                 // This prevents double plotting when UI already calls plotOnMap()
             }
         } else {
-            println("🎯 COORDINATOR: Cannot update AAT area - current task type is $_taskType")
+            println("ðŸŽ¯ COORDINATOR: Cannot update AAT area - current task type is $_taskType")
         }
     }
 
@@ -617,7 +617,7 @@ class TaskManagerCoordinator(val context: Context? = null) {
      */
     fun enterAATEditMode(waypointIndex: Int) {
         if (_taskType == TaskType.AAT) {
-            println("🎯 COORDINATOR: Entering AAT edit mode for waypoint $waypointIndex")
+            println("ðŸŽ¯ COORDINATOR: Entering AAT edit mode for waypoint $waypointIndex")
             aatTaskManager.setEditMode(waypointIndex, true)
 
             // Update map to show edit state
@@ -635,7 +635,7 @@ class TaskManagerCoordinator(val context: Context? = null) {
      */
     fun exitAATEditMode() {
         if (_taskType == TaskType.AAT) {
-            println("🎯 COORDINATOR: Exiting AAT edit mode")
+            println("ðŸŽ¯ COORDINATOR: Exiting AAT edit mode")
             aatTaskManager.setEditMode(-1, false)
 
             // Update map to remove edit overlays
@@ -682,7 +682,7 @@ class TaskManagerCoordinator(val context: Context? = null) {
         return if (mapInstance != null) {
             aatTaskManager.checkTargetPointHit(mapInstance, screenX, screenY)
         } else {
-            println("❌ COORDINATOR: Cannot check target point hit - map instance is null")
+            println("âŒ COORDINATOR: Cannot check target point hit - map instance is null")
             null
         }
     }
@@ -690,55 +690,4 @@ class TaskManagerCoordinator(val context: Context? = null) {
 
 // TaskType enum is already defined in TaskManager.kt - removed duplicate
 
-/**
- * Global coordinator instance for app-wide access
- */
-private var globalTaskManagerCoordinator: TaskManagerCoordinator? = null
-
-/**
- * Get global task manager coordinator
- */
-fun getGlobalTaskManagerCoordinator(context: Context? = null): TaskManagerCoordinator? {
-    if (globalTaskManagerCoordinator == null && context != null) {
-        globalTaskManagerCoordinator = TaskManagerCoordinator(context)
-    }
-    return globalTaskManagerCoordinator
-}
-
-/**
- * Composable function to remember task manager coordinator
- * Note: Use rememberTaskManager() for compatibility, this is for direct coordinator access
- */
-@Composable
-fun rememberTaskManagerCoordinator(context: Context? = null): TaskManagerCoordinator {
-    return remember {
-        if (globalTaskManagerCoordinator == null) {
-            globalTaskManagerCoordinator = TaskManagerCoordinator(context)
-            globalTaskManagerCoordinator?.loadSavedTasks()
-        }
-        globalTaskManagerCoordinator!!
-    }
-}
-
-// ==================== COMPATIBILITY LAYER ====================
-// These functions provide backward compatibility for code using old TaskManager
-
-/**
- * TaskManager is now an alias for TaskManagerCoordinator
- */
-typealias TaskManager = TaskManagerCoordinator
-
-/**
- * Get global task manager - for backward compatibility
- */
-fun getGlobalTaskManager(context: Context? = null): TaskManagerCoordinator? {
-    return getGlobalTaskManagerCoordinator(context)
-}
-
-/**
- * Composable function to remember task manager - for backward compatibility
- */
-@Composable
-fun rememberTaskManager(context: Context? = null): TaskManagerCoordinator {
-    return rememberTaskManagerCoordinator(context)
-}
+// Compatibility helpers moved to TaskManagerCompat.kt
