@@ -34,6 +34,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import com.example.xcpro.skysight.SkysightClient
+import com.example.xcpro.ServiceLocator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -186,7 +187,10 @@ fun SettingsScreen(
                             CategoryItem(
                                 title = "Vario",
                                 icon = Icons.Default.Speed,
-                                onClick = { navController.navigate("hawk_dashboard") },
+                                onClick = {
+                                    ServiceLocator.prepareHawkDashboardClient()
+                                    navController.navigate("hawk_dashboard")
+                                },
                                 modifier = Modifier.weight(1f)
                             )
                         }

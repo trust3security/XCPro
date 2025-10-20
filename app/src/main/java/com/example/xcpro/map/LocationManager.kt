@@ -117,7 +117,9 @@ class LocationManager(
                 )
             )
         }
-    }    fun stopLocationTracking(force: Boolean = false) {
+    }
+
+    fun stopLocationTracking(force: Boolean = false) {
         if (!force && ServiceLocator.hasHawkDashboardClient()) {
             Log.d(TAG, "HAWK dashboard active, skipping sensor shutdown")
             return
@@ -443,5 +445,7 @@ class LocationManager(
         }?.address
     }
 }
+
+
 
 

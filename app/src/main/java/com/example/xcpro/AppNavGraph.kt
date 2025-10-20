@@ -1,6 +1,8 @@
 package com.example.xcpro
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.MaterialTheme
@@ -11,6 +13,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -80,18 +84,28 @@ fun AppNavGraph(
         composable("hawk_dashboard") {
             val locationManager = ServiceLocator.locationManager
             if (locationManager == null) {
+                ServiceLocator.cancelHawkDashboardPreparation()
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "HAWK dashboard requires active flight sensors. Launch the Map first.",
-                        style = MaterialTheme.typography.bodyMedium
+                        text = "The Vario (HAWK) dashboard needs live flight sensors.\n\nOpen the Map once to initialise sensors, then return here with the map button above.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp)
                     )
                 }
             } else {
-                DisposableEffect(Unit) {
+                val manager = locationManager
+                val registeredFromPending = ServiceLocator.finalizeHawkDashboardClient()
+                if (!registeredFromPending) {
                     ServiceLocator.registerHawkDashboardClient()
+                }
+                DisposableEffect(manager) {
+                    manager.restartSensorsIfNeeded()
                     onDispose {
                         ServiceLocator.unregisterHawkDashboardClient()
                     }
