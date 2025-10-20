@@ -1,6 +1,7 @@
 package com.example.xcpro.xcprov1.service
 
 import android.content.Context
+import android.os.SystemClock
 import android.util.Log
 import com.example.xcpro.sensors.AccelData
 import com.example.xcpro.sensors.AttitudeData
@@ -12,13 +13,16 @@ import com.example.xcpro.xcprov1.audio.XcproV1AudioEngine
 import com.example.xcpro.xcprov1.bluetooth.GloGpsFix
 import com.example.xcpro.xcprov1.filters.Js1cAeroModel
 import com.example.xcpro.xcprov1.filters.XcproV1KalmanFilter
+import com.example.xcpro.xcprov1.model.DiagnosticsSnapshot
 import com.example.xcpro.xcprov1.model.FlightDataV1Snapshot
 import com.example.xcpro.xcprov1.model.XcproV1State
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -77,6 +81,7 @@ class XcproV1Controller(
         windY = 0.0
     )
     private var lastBaroSample: BaroData? = null
+    private var lastSensorUpdateElapsedMs: Long = SystemClock.elapsedRealtime()
 
     init {
         audioEngine.initialize()
@@ -114,6 +119,17 @@ class XcproV1Controller(
                 )
             }.collect { inputs ->
                 processSensorInputs(inputs)
+            }
+        }
+        scope.launch(Dispatchers.Default) {
+            while (isActive) {
+                delay(5_000)
+                val elapsed = SystemClock.elapsedRealtime() - lastSensorUpdateElapsedMs
+                if (elapsed > 5_000) {
+                    Log.w(TAG, "No sensor updates for ${elapsed}ms – resetting HAWK filter")
+                    resetFilterState()
+                    lastSensorUpdateElapsedMs = SystemClock.elapsedRealtime()
+                }
             }
         }
     }
@@ -205,6 +221,7 @@ class XcproV1Controller(
 
         _snapshotFlow.value = result.snapshot
         audioEngine.updateFromSnapshot(result.snapshot)
+        lastSensorUpdateElapsedMs = SystemClock.elapsedRealtime()
     }
 
     fun reset() {
@@ -384,6 +401,47 @@ class XcproV1Controller(
         val attitude: AttitudeData?,
         val externalGps: GloGpsFix?
     )
+
+    private fun resetFilterState() {
+        filter.reset()
+        lastState = XcproV1State(
+            altitude = 0.0,
+            climbRate = 0.0,
+            accelBias = 0.0,
+            verticalWind = 0.0,
+            windX = 0.0,
+            windY = 0.0
+        )
+        lastBaroSample = null
+        lastHandsetAltitude = Double.NaN
+        lastExternalAltitude = Double.NaN
+        lastHandsetTimestamp = 0L
+        lastExternalTimestamp = 0L
+        val resetSnapshot = FlightDataV1Snapshot(
+            timestampMillis = System.currentTimeMillis(),
+            actualClimb = 0.0,
+            potentialClimb = 0.0,
+            netto = 0.0,
+            verticalWind = 0.0,
+            windX = 0.0,
+            windY = 0.0,
+            confidence = 0.0,
+            climbTrend = 0.0,
+            aoaDeg = null,
+            sideslipDeg = null,
+            sourceLabel = "reset",
+            diagnostics = DiagnosticsSnapshot(
+                covarianceTrace = 0.0,
+                baroInnovation = 0.0,
+                accelInnovation = 0.0,
+                gpsInnovation = 0.0,
+                residualRms = 0.0
+            )
+        )
+        _snapshotFlow.value = resetSnapshot
+        audioEngine.updateFromSnapshot(resetSnapshot)
+        lastSensorUpdateElapsedMs = SystemClock.elapsedRealtime()
+    }
 
     private data class GpsFrame(
         val latitude: Double,
