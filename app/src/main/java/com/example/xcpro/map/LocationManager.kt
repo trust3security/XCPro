@@ -129,9 +129,11 @@ class LocationManager(
         unifiedSensorManager.stopAllSensors()
         flightDataCalculator.stop()
         garminGloConnectionManager.stop()
-        xcproV1Controller.release()
-        if (ServiceLocator.locationManager === this) {
-            ServiceLocator.locationManager = null
+        if (force) {
+            xcproV1Controller.release()
+            if (ServiceLocator.locationManager === this) {
+                ServiceLocator.locationManager = null
+            }
         }
     }
 
