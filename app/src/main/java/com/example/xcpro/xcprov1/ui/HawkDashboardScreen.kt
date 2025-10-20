@@ -16,12 +16,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -29,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import kotlinx.coroutines.delay
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -126,6 +130,26 @@ fun HawkDashboardScreen(
     viewModel: HawkDashboardViewModel
 ) {
     val snapshot by viewModel.snapshotFlow.collectAsState()
+    var lastSnapshotTime by remember { mutableStateOf<Long?>(null) }
+    var showTimeoutWarning by remember { mutableStateOf(false) }
+
+    LaunchedEffect(snapshot?.timestampMillis) {
+        snapshot?.timestampMillis?.let {
+            lastSnapshotTime = it
+            showTimeoutWarning = false
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(1_000)
+            val last = lastSnapshotTime
+            if (last != null && System.currentTimeMillis() - last > 5_000) {
+                showTimeoutWarning = true
+            }
+        }
+    }
+
     val garminStatus by viewModel.garminStatus.collectAsState()
     val audioEnabled by viewModel.audioEnabled.collectAsState(initial = false)
     val audioStats by viewModel.audioTelemetry.collectAsState()
@@ -154,6 +178,9 @@ fun HawkDashboardScreen(
             onDisconnect = viewModel::disconnectGarmin
         )
         DiagnosticsCard(snapshot, diagnosticsExpanded) { diagnosticsExpanded = !diagnosticsExpanded }
+        if (showTimeoutWarning) {
+            TimeoutWarningBanner()
+        }
     }
 }
 
@@ -732,4 +759,39 @@ private fun Double?.signedFormat(): String =
     this?.let { String.format(Locale.US, "%+.1f", it) } ?: "--"
 
 
+
+@Composable
+private fun TimeoutWarningBanner() {
+    Surface(
+        color = MaterialTheme.colorScheme.errorContainer,
+        shape = RoundedCornerShape(20.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Warning,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = "Sensor feed paused",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.error
+                )
+                Text(
+                    text = "No HAWK updates in the last 5 seconds. Check sensor connections.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
+            }
+        }
+    }
+}
 
