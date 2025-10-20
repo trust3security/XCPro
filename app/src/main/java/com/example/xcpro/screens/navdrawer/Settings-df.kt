@@ -184,7 +184,7 @@ fun SettingsScreen(
                                 modifier = Modifier.weight(1f)
                             )
                             CategoryItem(
-                                title = "XCPro HAWK",
+                                title = "Vario",
                                 icon = Icons.Default.Speed,
                                 onClick = { navController.navigate("hawk_dashboard") },
                                 modifier = Modifier.weight(1f)
