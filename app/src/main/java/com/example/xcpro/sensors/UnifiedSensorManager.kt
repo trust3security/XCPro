@@ -136,7 +136,7 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener {
                 _baroFlow.value = baroData
 
                 if (baroData.timestamp % 5000 < 50) {
-                    Log.d(TAG, "Barometer update: pressure= hPa")
+                    Log.d(TAG, "Barometer update: pressure=${"%.1f".format(pressureHPa)} hPa")
                 }
             }
 
@@ -156,7 +156,7 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener {
                 _compassFlow.value = compassData
 
                 if (compassData.timestamp % 5000 < 50) {
-                    Log.d(TAG, "Compass update: heading=°")
+                    Log.d(TAG, "Compass update: heading=${"%.1f".format(normalizedHeading)}°")
                 }
             }
 
@@ -185,7 +185,7 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener {
                 if (accelData.timestamp % 5000 < 50) {
                     Log.d(
                         TAG,
-                        "Accelerometer update: verticalAccel= m/s^2, reliable="
+                        "Accelerometer update: verticalAccel=${"%.3f".format(accelData.verticalAcceleration)} m/s^2, reliable=${accelData.isReliable}"
                     )
                 }
             }

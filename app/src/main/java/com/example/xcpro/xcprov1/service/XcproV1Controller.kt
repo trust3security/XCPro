@@ -3,6 +3,8 @@ package com.example.xcpro.xcprov1.service
 import android.content.Context
 import android.util.Log
 import com.example.xcpro.sensors.AccelData
+import com.example.xcpro.sensors.AttitudeData
+import com.example.xcpro.sensors.BaroData
 import com.example.xcpro.sensors.GPSData
 import com.example.xcpro.sensors.SensorStatus
 import com.example.xcpro.sensors.UnifiedSensorManager
@@ -16,7 +18,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -74,6 +76,7 @@ class XcproV1Controller(
         windX = 0.0,
         windY = 0.0
     )
+    private var lastBaroSample: BaroData? = null
 
     init {
         audioEngine.initialize()
@@ -95,75 +98,87 @@ class XcproV1Controller(
 
     private fun start() {
         scope.launch(Dispatchers.Default) {
-            sensorManager.baroFlow.filterNotNull().collect { baro ->
-                val accel = sensorManager.accelFlow.value
-                val handsetGps = sensorManager.gpsFlow.value
-                val externalGps = externalGpsFixFlow.value
-                val attitude = sensorManager.attitudeFlow.value
-
-                if (accel == null) {
-                    return@collect
-                }
-
-                val fusedGps = selectGpsFrame(handsetGps, externalGps) ?: return@collect
-
-                var calibrationAltitudeStep: Double? = null
-                if (shouldCalibrateQnh(fusedGps, baro.pressureHPa)) {
-                    calibrationAltitudeStep = calibrateQnh(baro.pressureHPa, fusedGps)
-                }
-
-                val baroAltitude = pressureToAltitude(baro.pressureHPa)
-
-                if (calibrationAltitudeStep != null && abs(calibrationAltitudeStep) >= LARGE_QNH_ALTITUDE_STEP_METERS) {
-                    handleLargeQnhJump(calibrationAltitudeStep, baroAltitude)
-                }
-
-                val verticalAccel = if (accel.isReliable) accel.verticalAcceleration else 0.0
-                val gpsVertical = computeGpsVertical(fusedGps)
-                val trackRad = fusedGps.trackDegrees?.let { Math.toRadians(it) }
-
-                val reliableAttitude = attitude.takeIf { it?.isReliable == true }
-                val pitchDeg = reliableAttitude?.pitchDeg
-                val rollDeg = reliableAttitude?.rollDeg
-
-                val bankDeg = rollDeg ?: computeBank(trackRad, fusedGps.timestamp, fusedGps.speed)
-
-                val windX = lastState.windX
-                val windY = lastState.windY
-                val groundVector = trackRad?.let { vectorFromPolar(fusedGps.speed, it) } ?: Pair(0.0, 0.0)
-                val airVector = Pair(groundVector.first - windX, groundVector.second - windY)
-                val airVectorMagnitude = airVector.magnitude()
-                val tas = maxOf(airVectorMagnitude, MIN_TRUE_AIRSPEED_MS)
-                val airBearing = when {
-                    airVectorMagnitude > 0.1 -> atan2(airVector.second, airVector.first)
-                    reliableAttitude != null -> Math.toRadians(reliableAttitude.headingDeg)
-                    else -> trackRad
-                }
-
-                val headingDeg = reliableAttitude?.headingDeg
-                    ?: airBearing?.let { Math.toDegrees(it) }
-
-                val result = filter.update(
-                    timestamp = baro.timestamp,
-                    baroAltitude = baroAltitude,
-                    verticalAccel = verticalAccel,
-                    gpsVerticalSpeed = gpsVertical,
-                    gpsGroundSpeed = fusedGps.speed,
-                    gpsTrackRad = trackRad,
-                    trueAirspeed = tas,
-                    airBearingRad = airBearing,
-                    headingDeg = headingDeg,
-                    wingLoading = Js1cAeroModel.defaultWingLoading(),
-                    bankDeg = bankDeg ?: 0.0,
-                    attitudePitchDeg = pitchDeg,
-                    attitudeRollDeg = rollDeg ?: bankDeg
+            combine(
+                sensorManager.baroFlow,
+                sensorManager.accelFlow,
+                sensorManager.gpsFlow,
+                sensorManager.attitudeFlow,
+                externalGpsFixFlow
+            ) { baro, accel, gps, attitude, external ->
+                SensorInputs(
+                    baro = baro,
+                    accel = accel,
+                    handsetGps = gps,
+                    attitude = attitude,
+                    externalGps = external
                 )
-
-                lastState = result.state
-                _snapshotFlow.value = result.snapshot
-                audioEngine.updateFromSnapshot(result.snapshot)
+            }.collect { inputs ->
+                processSensorInputs(inputs)
             }
         }
+    }
+
+    private fun processSensorInputs(inputs: SensorInputs) {
+        val accel = inputs.accel ?: return
+        val fusedGps = selectGpsFrame(inputs.handsetGps, inputs.externalGps) ?: return
+
+        inputs.baro?.let { lastBaroSample = it }
+        val baroSample = lastBaroSample ?: return
+
+        var calibrationAltitudeStep: Double? = null
+        if (inputs.baro != null && shouldCalibrateQnh(fusedGps, baroSample.pressureHPa)) {
+            calibrationAltitudeStep = calibrateQnh(baroSample.pressureHPa, fusedGps)
+        }
+
+        val baroAltitude = pressureToAltitude(baroSample.pressureHPa)
+
+        if (calibrationAltitudeStep != null && abs(calibrationAltitudeStep) >= LARGE_QNH_ALTITUDE_STEP_METERS) {
+            handleLargeQnhJump(calibrationAltitudeStep, baroAltitude)
+        }
+
+        val verticalAccel = if (accel.isReliable) accel.verticalAcceleration else 0.0
+        val gpsVertical = computeGpsVertical(fusedGps)
+        val trackRad = fusedGps.trackDegrees?.let { Math.toRadians(it) }
+
+        val reliableAttitude = inputs.attitude?.takeIf { it.isReliable }
+        val pitchDeg = reliableAttitude?.pitchDeg
+        val rollDeg = reliableAttitude?.rollDeg
+
+        val bankDeg = rollDeg ?: computeBank(trackRad, fusedGps.timestamp, fusedGps.speed)
+
+        val windX = lastState.windX
+        val windY = lastState.windY
+        val groundVector = trackRad?.let { vectorFromPolar(fusedGps.speed, it) } ?: Pair(0.0, 0.0)
+        val airVector = Pair(groundVector.first - windX, groundVector.second - windY)
+        val airVectorMagnitude = airVector.magnitude()
+        val tas = maxOf(airVectorMagnitude, MIN_TRUE_AIRSPEED_MS)
+        val airBearing = when {
+            airVectorMagnitude > 0.1 -> atan2(airVector.second, airVector.first)
+            reliableAttitude != null -> Math.toRadians(reliableAttitude.headingDeg)
+            else -> trackRad
+        }
+
+        val headingDeg = reliableAttitude?.headingDeg ?: airBearing?.let { Math.toDegrees(it) }
+
+        val result = filter.update(
+            timestamp = maxOf(baroSample.timestamp, fusedGps.timestamp),
+            baroAltitude = baroAltitude,
+            verticalAccel = verticalAccel,
+            gpsVerticalSpeed = gpsVertical,
+            gpsGroundSpeed = fusedGps.speed,
+            gpsTrackRad = trackRad,
+            trueAirspeed = tas,
+            airBearingRad = airBearing,
+            headingDeg = headingDeg,
+            wingLoading = Js1cAeroModel.defaultWingLoading(),
+            bankDeg = bankDeg ?: 0.0,
+            attitudePitchDeg = pitchDeg,
+            attitudeRollDeg = rollDeg ?: bankDeg
+        )
+
+        lastState = result.state
+        _snapshotFlow.value = result.snapshot
+        audioEngine.updateFromSnapshot(result.snapshot)
     }
 
     fun reset() {
@@ -335,6 +350,14 @@ class XcproV1Controller(
             else -> null
         }
     }
+
+    private data class SensorInputs(
+        val baro: BaroData?,
+        val accel: AccelData?,
+        val handsetGps: GPSData?,
+        val attitude: AttitudeData?,
+        val externalGps: GloGpsFix?
+    )
 
     private data class GpsFrame(
         val latitude: Double,
