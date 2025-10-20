@@ -240,7 +240,7 @@ private fun PrimaryInstrumentRow(
         ) {
             KeyStatCard(
                 label = "Actual climb",
-                value = snapshot?.actualClimb,
+                value = snapshot?.takeIf { it.confidence >= 0.3 }?.actualClimb,
                 unit = "m/s",
                 accent = when (phase) {
                     FlightPhase.Thermal -> MaterialTheme.colorScheme.primary
@@ -255,12 +255,12 @@ private fun PrimaryInstrumentRow(
                 MiniStatCard(
                     modifier = Modifier.weight(1f),
                     label = "Potential",
-                    value = snapshot?.potentialClimb
+                    value = snapshot?.takeIf { it.confidence >= 0.3 }?.potentialClimb
                 )
                 MiniStatCard(
                     modifier = Modifier.weight(1f),
                     label = "Netto",
-                    value = snapshot?.netto
+                    value = snapshot?.takeIf { it.confidence >= 0.3 }?.netto
                 )
             }
             ConfidenceMeter(snapshot?.confidence ?: 0.0)
@@ -730,3 +730,6 @@ private fun rememberClimbHistory(snapshot: FlightDataV1Snapshot?): List<Double> 
 
 private fun Double?.signedFormat(): String =
     this?.let { String.format(Locale.US, "%+.1f", it) } ?: "--"
+
+
+
