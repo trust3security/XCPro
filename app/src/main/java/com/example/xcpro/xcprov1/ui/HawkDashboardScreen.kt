@@ -127,7 +127,7 @@ fun HawkDashboardScreen(
 ) {
     val snapshot by viewModel.snapshotFlow.collectAsState()
     val garminStatus by viewModel.garminStatus.collectAsState()
-    val audioEnabled by viewModel.audioEnabled.collectAsState(initial = true)
+    val audioEnabled by viewModel.audioEnabled.collectAsState(initial = false)
     val audioStats by viewModel.audioTelemetry.collectAsState()
 
     val phase = remember(snapshot) { determinePhase(snapshot) }
@@ -419,6 +419,8 @@ private fun Sparkline(history: List<Double>) {
 
 @Composable
 private fun PhaseAdviceCard(phase: FlightPhase, snapshot: FlightDataV1Snapshot?) {
+    if (phase == FlightPhase.Thermal) return
+
     val advice = phase.advice(snapshot)
     Surface(
         modifier = Modifier.fillMaxWidth(),

@@ -51,7 +51,7 @@ class XcproV1Controller(
     private val _snapshotFlow = MutableStateFlow<FlightDataV1Snapshot?>(null)
     val snapshotFlow: StateFlow<FlightDataV1Snapshot?> = _snapshotFlow
 
-    private val _audioEnabled = MutableStateFlow(true)
+    private val _audioEnabled = MutableStateFlow(false)
     val audioEnabled: StateFlow<Boolean> = _audioEnabled
 
     val audioTelemetry: StateFlow<XcproV1AudioEngine.AudioTelemetry> = audioEngine.audioStats
