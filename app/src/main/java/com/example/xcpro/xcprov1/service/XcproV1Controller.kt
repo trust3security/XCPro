@@ -160,6 +160,18 @@ class XcproV1Controller(
 
         val headingDeg = reliableAttitude?.headingDeg ?: airBearing?.let { Math.toDegrees(it) }
 
+        Log.v(
+            TAG,
+            String.format(
+                Locale.US,
+                "HAWK inputs: baro=%.1f hPa, accel=%.3f m/s^2, gpsAlt=%.1f m, extAlt=%.1f m",
+                baroSample.pressureHPa,
+                verticalAccel,
+                fusedGps.altitude,
+                inputs.externalGps?.altitudeMeters ?: Double.NaN
+            )
+        )
+
         val result = filter.update(
             timestamp = maxOf(baroSample.timestamp, fusedGps.timestamp),
             baroAltitude = baroAltitude,
@@ -177,6 +189,20 @@ class XcproV1Controller(
         )
 
         lastState = result.state
+
+        result.snapshot?.let { snapshot ->
+            Log.v(
+                TAG,
+                String.format(
+                    Locale.US,
+                    "HAWK snapshot: climb=%.2f, netto=%.2f, confidence=%.2f",
+                    snapshot.actualClimb,
+                    snapshot.netto,
+                    snapshot.confidence
+                )
+            )
+        }
+
         _snapshotFlow.value = result.snapshot
         audioEngine.updateFromSnapshot(result.snapshot)
     }
