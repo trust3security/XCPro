@@ -237,6 +237,8 @@ private fun PrimaryInstrumentRow(
     phase: FlightPhase,
     history: List<Double>
 ) {
+    val sensorReady = snapshot?.confidence ?: 0.0 >= 0.3
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -250,14 +252,22 @@ private fun PrimaryInstrumentRow(
             shape = RoundedCornerShape(24.dp)
         ) {
             Box(contentAlignment = Alignment.Center) {
-                HawkGauge(
-                    actualClimb = snapshot?.actualClimb,
-                    potentialClimb = snapshot?.potentialClimb,
-                    confidence = snapshot?.confidence ?: 0.0,
-                    aoaDeg = snapshot?.aoaDeg,
-                    sideslipDeg = snapshot?.sideslipDeg,
-                    gaugeSize = 300.dp
-                )
+                if (sensorReady) {
+                    HawkGauge(
+                        actualClimb = snapshot?.actualClimb,
+                        potentialClimb = snapshot?.potentialClimb,
+                        confidence = snapshot?.confidence ?: 0.0,
+                        aoaDeg = snapshot?.aoaDeg,
+                        sideslipDeg = snapshot?.sideslipDeg,
+                        gaugeSize = 300.dp
+                    )
+                } else {
+                    Text(
+                        text = "Waiting for sensor data…",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
 
@@ -267,7 +277,7 @@ private fun PrimaryInstrumentRow(
         ) {
             KeyStatCard(
                 label = "Actual climb",
-                value = snapshot?.takeIf { it.confidence >= 0.3 }?.actualClimb,
+                value = snapshot?.takeIf { sensorReady }?.actualClimb,
                 unit = "m/s",
                 accent = when (phase) {
                     FlightPhase.Thermal -> MaterialTheme.colorScheme.primary
@@ -282,12 +292,12 @@ private fun PrimaryInstrumentRow(
                 MiniStatCard(
                     modifier = Modifier.weight(1f),
                     label = "Potential",
-                    value = snapshot?.takeIf { it.confidence >= 0.3 }?.potentialClimb
+                    value = snapshot?.takeIf { sensorReady }?.potentialClimb
                 )
                 MiniStatCard(
                     modifier = Modifier.weight(1f),
                     label = "Netto",
-                    value = snapshot?.takeIf { it.confidence >= 0.3 }?.netto
+                    value = snapshot?.takeIf { sensorReady }?.netto
                 )
             }
             ConfidenceMeter(snapshot?.confidence ?: 0.0)
