@@ -117,15 +117,20 @@ class LocationManager(
                 )
             )
         }
-    }
+    }    fun stopLocationTracking(force: Boolean = false) {
+        if (!force && ServiceLocator.hasHawkDashboardClient()) {
+            Log.d(TAG, "HAWK dashboard active, skipping sensor shutdown")
+            return
+        }
 
-    fun stopLocationTracking() {
-        Log.d(TAG, "🛑 Stopping unified sensor manager and flight data calculator...")
+        Log.d(TAG, "Stopping unified sensor manager and flight data calculator (force=$force)...")
         unifiedSensorManager.stopAllSensors()
         flightDataCalculator.stop()
         garminGloConnectionManager.stop()
         xcproV1Controller.release()
-        ServiceLocator.locationManager = null
+        if (ServiceLocator.locationManager === this) {
+            ServiceLocator.locationManager = null
+        }
     }
 
     /**
@@ -438,4 +443,5 @@ class LocationManager(
         }?.address
     }
 }
+
 

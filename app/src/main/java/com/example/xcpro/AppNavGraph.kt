@@ -6,6 +6,7 @@ import androidx.compose.material3.DrawerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -89,6 +90,12 @@ fun AppNavGraph(
                     )
                 }
             } else {
+                DisposableEffect(Unit) {
+                    ServiceLocator.registerHawkDashboardClient()
+                    onDispose {
+                        ServiceLocator.unregisterHawkDashboardClient()
+                    }
+                }
                 val viewModel: HawkDashboardViewModel = viewModel(
                     factory = object : ViewModelProvider.Factory {
                         override fun <T : ViewModel> create(modelClass: Class<T>): T {
