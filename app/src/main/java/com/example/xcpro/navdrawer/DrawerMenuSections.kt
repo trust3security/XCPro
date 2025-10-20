@@ -298,17 +298,6 @@ fun SettingsSection(
                 }
             }
         )
-        ModernNavItem(
-            title = "XCPro HAWK",
-            icon = Icons.Outlined.Speed,
-            indentLevel = 2,
-            onClick = {
-                scope.launch {
-                    drawerState.close()
-                    navController.navigate("hawk_dashboard")
-                }
-            }
-        )
     }
 }
 

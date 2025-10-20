@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Flight
 import androidx.compose.material.icons.filled.Straighten
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.outlined.Style
 import androidx.compose.material3.*
@@ -168,7 +169,7 @@ fun SettingsScreen(
                         }
                     }
 
-                    // Row 2b: Polar | (spacer)
+                    // Row 2b: Polar | XCPro HAWK
                     item {
                         Row(
                             modifier = Modifier
@@ -182,7 +183,12 @@ fun SettingsScreen(
                                 onClick = { navController.navigate("polar_settings") },
                                 modifier = Modifier.weight(1f)
                             )
-                            Spacer(modifier = Modifier.weight(1f))
+                            CategoryItem(
+                                title = "XCPro HAWK",
+                                icon = Icons.Default.Speed,
+                                onClick = { navController.navigate("hawk_dashboard") },
+                                modifier = Modifier.weight(1f)
+                            )
                         }
                     }
 
