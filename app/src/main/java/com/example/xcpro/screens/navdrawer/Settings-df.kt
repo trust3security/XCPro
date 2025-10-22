@@ -1,5 +1,6 @@
 ﻿package com.example.ui1.screens
 
+import android.app.Application
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
@@ -34,7 +35,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import com.example.xcpro.skysight.SkysightClient
-import com.example.xcpro.ServiceLocator
+import com.example.xcpro.di.HawkSensorRegistryEntryPoint
+import dagger.hilt.android.EntryPointAccessors
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,6 +58,13 @@ fun SettingsScreen(
     onShowAirspaceOverlay: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val hawkRegistry = remember {
+        EntryPointAccessors.fromApplication(
+            context.applicationContext as Application,
+            HawkSensorRegistryEntryPoint::class.java
+        ).hawkSensorRegistry()
+    }
     val listState = rememberLazyListState()
     val hasScrolled = remember { derivedStateOf { listState.firstVisibleItemScrollOffset > 0 } }
     val appBarElevation by animateDpAsState(targetValue = if (hasScrolled.value) 4.dp else 0.dp)
@@ -65,42 +74,19 @@ fun SettingsScreen(
         contentColor = MaterialTheme.colorScheme.onSurface,
         topBar = {
             // âœ… Match Look & Feel header style exactly
-            CenterAlignedTopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
-                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
-                ),
-                title = {
-                    Text(
-                        text = "General",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = { 
-                        scope.launch {
-                            navController.popBackStack()
-                            drawerState.open()
-                        }
-                    }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Open Navigation Drawer"
-                        )
+            SettingsTopAppBar(
+                title = "General",
+                onNavigateUp = {
+                    scope.launch {
+                        navController.popBackStack()
+                        drawerState.open()
                     }
                 },
-                actions = {
-                    IconButton(onClick = {
-                        scope.launch { drawerState.close() }
+                onOpenDrawer = null,
+                onNavigateToMap = {
+                    scope.launch {
+                        drawerState.close()
                         navController.popBackStack("map", inclusive = false)
-                    }) {
-                        Icon(
-                            imageVector = Icons.Default.Map,
-                            contentDescription = "Go to Map"
-                        )
                     }
                 }
             )
@@ -188,7 +174,7 @@ fun SettingsScreen(
                                 title = "Vario",
                                 icon = Icons.Default.Speed,
                                 onClick = {
-                                    ServiceLocator.prepareHawkDashboardClient()
+                                    hawkRegistry.prepareClient()
                                     navController.navigate("hawk_dashboard")
                                 },
                                 modifier = Modifier.weight(1f)
