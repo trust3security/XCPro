@@ -1,4 +1,4 @@
-﻿package com.example.ui1.screens
+package com.example.ui1.screens
 
 import android.content.Context
 import androidx.compose.foundation.BorderStroke
@@ -10,7 +10,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -27,12 +26,13 @@ import kotlinx.coroutines.launch
 import com.example.xcpro.profiles.ProfileViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.xcpro.MainActivity
+import com.example.xcpro.screens.navdrawer.SettingsTopAppBar
 
-// âœ… Look & Feel Menu Item
+// ✅ Look & Feel Menu Item
 // moved to LookAndFeelModels.kt
-// âœ… Status Bar Styles
+// ✅ Status Bar Styles
 // moved to LookAndFeelModels.kt
-// âœ… Card Styles
+// ✅ Card Styles
 // moved to LookAndFeelModels.kt
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -111,42 +111,20 @@ fun LookAndFeelScreen(
 
     Scaffold(
         topBar = {
-            // âœ… Match Flight Data header style exactly
-            CenterAlignedTopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
-                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
-                ),
-                title = {
-                    Text(
-                        text = "Look & Feel",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = { 
-                        scope.launch {
-                            navController.popBackStack()
-                            drawerState.open()
-                        }
-                    }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
+            // ✅ Match Flight Data header style exactly
+            SettingsTopAppBar(
+                title = "Look & Feel",
+                onNavigateUp = { navController.popBackStack() },
+                onOpenDrawer = {
+                    scope.launch {
+                        navController.popBackStack("map", inclusive = false)
+                        drawerState.open()
                     }
                 },
-                actions = {
-                    IconButton(onClick = {
+                onNavigateToMap = {
+                    scope.launch {
+                        drawerState.close()
                         navController.popBackStack("map", inclusive = false)
-                    }) {
-                        Icon(
-                            imageVector = Icons.Default.Map,
-                            contentDescription = "Go to Map"
-                        )
                     }
                 }
             )
@@ -175,7 +153,7 @@ fun LookAndFeelScreen(
         }
     }
 
-    // âœ… Status Bar Style Bottom Sheet
+    // ✅ Status Bar Style Bottom Sheet
     if (showStatusBarOptions) {
         val sheetState = rememberModalBottomSheetState(
             skipPartiallyExpanded = true // Force full expansion, no half-state
@@ -224,7 +202,7 @@ fun LookAndFeelScreen(
         }
     }
 
-    // âœ… Card Style Bottom Sheet
+    // ✅ Card Style Bottom Sheet
     if (showCardStyleOptions) {
         val sheetState = rememberModalBottomSheetState(
             skipPartiallyExpanded = true // Force full expansion, no half-state
@@ -271,7 +249,7 @@ fun LookAndFeelScreen(
         }
     }
     
-    // âœ… Colors Bottom Sheet
+    // ✅ Colors Bottom Sheet
     if (showColorsOptions) {
         val sheetState = rememberModalBottomSheetState(
             skipPartiallyExpanded = true // Force full expansion, no half-state
@@ -338,7 +316,7 @@ fun LookAndFeelScreen(
                                     // Update local state immediately for UI feedback
                                     currentTheme = theme
                                     
-                                    android.util.Log.d("LookAndFeel", "ðŸŽ¨ Color theme changed to: ${theme.displayName}")
+                                    android.util.Log.d("LookAndFeel", "🎨 Color theme changed to: ${theme.displayName}")
                                     showColorsOptions = false 
                                 },
                             colors = CardDefaults.cardColors(
@@ -435,4 +413,5 @@ fun LookAndFeelScreen(
 
 /* moved to LookAndFeelSections.kt */
 // moved to LookAndFeelSections.kt
+
 

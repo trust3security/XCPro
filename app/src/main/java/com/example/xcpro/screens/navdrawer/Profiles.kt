@@ -2,9 +2,6 @@ package com.example.ui1.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Map
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -22,13 +19,13 @@ import androidx.navigation.NavHostController
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.IOException
-import com.example.ui1.icons.Reply_all
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.asPaddingValues
 import com.example.xcpro.profiles.ProfileViewModel
 import com.example.xcpro.profiles.ProfileExportDialog
 import com.example.xcpro.profiles.ProfileImportDialog
+import com.example.xcpro.screens.navdrawer.SettingsTopAppBar
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.collectAsState
 
@@ -78,44 +75,19 @@ fun ProfilesScreen(
         containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
         topBar = {
-            CenterAlignedTopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
-                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
-                ),
-                title = { Text(text = "Profiles", style = MaterialTheme.typography.headlineSmall) },
-                navigationIcon = {
-                    Row {
-                        IconButton(onClick = {
-                            scope.launch {
-                                navController.popBackStack("map", inclusive = false)
-                                drawerState.open()
-                            }
-                        }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back to Navigation")
-                        }
-                        IconButton(onClick = {
-                            scope.launch {
-                                navController.popBackStack("map", inclusive = false)
-                                drawerState.open()
-                            }
-                        }) {
-                            Icon(
-                                imageVector = Reply_all,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
+            SettingsTopAppBar(
+                title = "Profiles",
+                onNavigateUp = { navController.popBackStack() },
+                onOpenDrawer = {
+                    scope.launch {
+                        navController.popBackStack("map", inclusive = false)
+                        drawerState.open()
                     }
                 },
-                actions = {
-                    IconButton(onClick = {
+                onNavigateToMap = {
+                    scope.launch {
+                        drawerState.close()
                         navController.popBackStack("map", inclusive = false)
-                    }) {
-                        Icon(Icons.Default.Map, contentDescription = "Home")
                     }
                 }
             )

@@ -1,21 +1,29 @@
 package com.example.ui1.screens
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.*
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.layout.*
-import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DrawerState
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.example.xcpro.screens.navdrawer.SettingsTopAppBar
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,24 +33,23 @@ fun FilesScreen(
     onLoadConfig: () -> Unit = {},
     onSaveConfig: () -> Unit = {}
 ) {
+    val scope = rememberCoroutineScope()
+
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
-                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
-                ),
-                title = {
-                    Text(
-                        text = "Files",
-                        style = MaterialTheme.typography.headlineSmall
-                    )
+            SettingsTopAppBar(
+                title = "Files",
+                onNavigateUp = { navController.popBackStack() },
+                onOpenDrawer = {
+                    scope.launch {
+                        navController.popBackStack("map", inclusive = false)
+                        drawerState.open()
+                    }
                 },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                onNavigateToMap = {
+                    scope.launch {
+                        drawerState.close()
+                        navController.popBackStack("map", inclusive = false)
                     }
                 }
             )
@@ -54,7 +61,6 @@ fun FilesScreen(
                 .padding(padding),
             contentAlignment = Alignment.TopCenter
         ) {
-            // Placeholder content styled like Flight Data cards
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -66,11 +72,11 @@ fun FilesScreen(
                 ),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
             ) {
-                androidx.compose.foundation.layout.Column(
+                Column(
                     modifier = Modifier.padding(16.dp)
                 ) {
                     Text("Files", style = MaterialTheme.typography.titleMedium)
-                    androidx.compose.foundation.layout.Spacer(modifier = androidx.compose.ui.Modifier.padding(4.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         "Manage configuration and data files.",
                         style = MaterialTheme.typography.bodyMedium,

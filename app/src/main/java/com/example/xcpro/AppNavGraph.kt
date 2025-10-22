@@ -1,5 +1,6 @@
 package com.example.xcpro
 
+import android.app.Application
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -11,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -20,8 +22,6 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ui1.screens.*
 import com.example.xcpro.profiles.ProfileUiState
@@ -30,9 +30,9 @@ import com.example.xcpro.screens.navdrawer.PolarSettingsScreen
 import com.example.xcpro.screens.navdrawer.VarioAudioSettingsScreen
 import com.example.xcpro.screens.navdrawer.ColorsScreen
 import com.example.xcpro.profiles.ProfileSelectionScreen
-import com.example.xcpro.ServiceLocator
-import com.example.xcpro.xcprov1.ui.HawkDashboardScreen
-import com.example.xcpro.xcprov1.viewmodel.HawkDashboardViewModel
+import com.example.xcpro.xcprov1.ui.HawkDashboardRoute
+import com.example.xcpro.di.HawkSensorRegistryEntryPoint
+import dagger.hilt.android.EntryPointAccessors
 
 @Composable
 fun AppNavGraph(
@@ -71,7 +71,7 @@ fun AppNavGraph(
         }
         composable("look_and_feel") { LookAndFeelScreen(navController = navController, drawerState = drawerState) }
         composable("units_settings") { UnitsSettingsScreen(navController = navController) }
-        composable("polar_settings") { PolarSettingsScreen(navController = navController) }
+        composable("polar_settings") { PolarSettingsScreen(navController = navController, drawerState = drawerState) }
         composable("skysight_settings") {
             com.example.xcpro.skysight.SkysightSettingsScreen(
                 drawerState = drawerState,
@@ -82,9 +82,16 @@ fun AppNavGraph(
         composable("vario_audio_settings") { VarioAudioSettingsScreen(navController = navController, drawerState = drawerState) }
         composable("colors") { ColorsScreen(navController = navController) }
         composable("hawk_dashboard") {
-            val locationManager = ServiceLocator.locationManager
+            val context = LocalContext.current
+            val registry = remember {
+                EntryPointAccessors.fromApplication(
+                    context.applicationContext as Application,
+                    HawkSensorRegistryEntryPoint::class.java
+                ).hawkSensorRegistry()
+            }
+            val locationManager = registry.currentLocationManager()
             if (locationManager == null) {
-                ServiceLocator.cancelHawkDashboardPreparation()
+                registry.cancelPreparedClient()
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -100,33 +107,17 @@ fun AppNavGraph(
                 }
             } else {
                 val manager = locationManager
-                val registeredFromPending = ServiceLocator.finalizeHawkDashboardClient()
+                val registeredFromPending = registry.finalizePreparedClient()
                 if (!registeredFromPending) {
-                    ServiceLocator.registerHawkDashboardClient()
+                    registry.registerClient()
                 }
                 DisposableEffect(manager) {
                     manager.restartSensorsIfNeeded()
                     onDispose {
-                        ServiceLocator.unregisterHawkDashboardClient()
+                        registry.unregisterClient()
                     }
                 }
-                val viewModel: HawkDashboardViewModel = viewModel(
-                    factory = object : ViewModelProvider.Factory {
-                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                            if (modelClass.isAssignableFrom(HawkDashboardViewModel::class.java)) {
-                                @Suppress("UNCHECKED_CAST")
-                                return HawkDashboardViewModel(
-                                    controller = locationManager.xcproV1Controller,
-                                    garminStatusFlow = locationManager.garminStatusFlow,
-                                    autoConnectGarmin = { locationManager.connectGarminGlo() },
-                                    disconnectGarmin = { locationManager.disconnectGarminGlo() }
-                                ) as T
-                            }
-                            throw IllegalArgumentException("Unknown ViewModel class: " + modelClass.name)
-                        }
-                    }
-                )
-                HawkDashboardScreen(viewModel = viewModel)
+                HawkDashboardRoute()
                 setSelectedNavItem("hawk_dashboard")
             }
         }

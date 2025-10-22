@@ -162,7 +162,8 @@ fun MainActivityScreen(
                 }
                 composable("polar_settings") {
                     PolarSettingsScreen(
-                        navController = navController
+                        navController = navController,
+                        drawerState = drawerState
                     )
                 }
                 composable("skysight_settings") {

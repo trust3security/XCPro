@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.ExpandLess
@@ -23,19 +22,20 @@ import androidx.compose.material.icons.filled.Flight
 import androidx.compose.material.icons.filled.Straighten
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.outlined.Style
-import androidx.compose.material3.*
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.outlined.Style
+import androidx.compose.material3.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import com.example.xcpro.skysight.SkysightClient
 import com.example.xcpro.di.HawkSensorRegistryEntryPoint
+import com.example.xcpro.screens.navdrawer.SettingsTopAppBar
 import dagger.hilt.android.EntryPointAccessors
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -76,13 +76,13 @@ fun SettingsScreen(
             // âœ… Match Look & Feel header style exactly
             SettingsTopAppBar(
                 title = "General",
-                onNavigateUp = {
+                onNavigateUp = { navController.popBackStack() },
+                onOpenDrawer = {
                     scope.launch {
-                        navController.popBackStack()
+                        navController.popBackStack("map", inclusive = false)
                         drawerState.open()
                     }
                 },
-                onOpenDrawer = null,
                 onNavigateToMap = {
                     scope.launch {
                         drawerState.close()
