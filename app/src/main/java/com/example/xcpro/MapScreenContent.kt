@@ -18,6 +18,7 @@ import androidx.compose.material3.DrawerState
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,6 +48,9 @@ import com.example.xcpro.map.MapInitializer
 import com.example.xcpro.map.QnhDialog
 import com.example.xcpro.map.MapMainLayers
 import com.example.xcpro.map.LocationManager
+import com.example.xcpro.map.ballast.BallastCommand
+import com.example.xcpro.map.ballast.BallastPill
+import com.example.xcpro.map.ballast.BallastUiState
 import com.example.xcpro.profiles.FlightModeIndicator
 import com.example.xcpro.skysight.SkysightMapOverlay
 import com.example.xcpro.tasks.TaskManagerCoordinator
@@ -57,6 +61,7 @@ import com.example.xcpro.OrientationData
 import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.sensors.GPSData
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.StateFlow
 
 @Composable
 internal fun MapScreenContent(
@@ -94,7 +99,9 @@ internal fun MapScreenContent(
     showQnhFab: MutableState<Boolean>,
     taskScreenManager: MapTaskScreenManager,
     waypointData: List<WaypointData>,
-    unitsPreferences: UnitsPreferences
+    unitsPreferences: UnitsPreferences,
+    ballastUiState: StateFlow<BallastUiState>,
+    onBallastCommand: (BallastCommand) -> Unit
 ) {
     Box(Modifier.fillMaxSize()) {
         Scaffold(
@@ -186,6 +193,26 @@ internal fun MapScreenContent(
                                 }
                                 orientationManager.setOrientationMode(nextMode)
                             }
+                        )
+                    }
+
+                    val ballastState by ballastUiState.collectAsState()
+                    val showBallastPill = ballastState.snapshot.hasBallast ||
+                        ballastState.isAnimating ||
+                        ballastState.snapshot.currentKg > 0.0
+
+                    AnimatedVisibility(
+                        visible = showBallastPill,
+                        enter = fadeIn() + scaleIn(),
+                        exit = fadeOut() + scaleOut(),
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .padding(top = 140.dp, end = 16.dp)
+                            .zIndex(5f)
+                    ) {
+                        BallastPill(
+                            state = ballastState,
+                            onCommand = onBallastCommand
                         )
                     }
 

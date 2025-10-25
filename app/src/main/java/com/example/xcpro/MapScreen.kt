@@ -15,11 +15,9 @@ import com.example.xcpro.MapOrientationMode
 import com.example.xcpro.map.BlueLocationOverlay
 import com.example.xcpro.map.DistanceCirclesOverlay
 import com.example.xcpro.map.DistanceCirclesCanvas
-import com.example.xcpro.map.TemplateChangeNotifier
 import com.example.xcpro.map.components.MapActionButtons
 import com.example.xcpro.map.MapComposeEffects
 import com.example.xcpro.map.MapUIWidgetManager
-import com.example.xcpro.ServiceLocator
 import com.example.xcpro.map.MapUIWidgets
 import com.example.xcpro.map.MapTaskScreenUI
 import com.example.xcpro.map.MapCameraEffects
@@ -131,13 +129,10 @@ fun MapScreen(
     initialMapStyle: String,
     onMapStyleSelected: (String) -> Unit = {},
     onSaveConfig: () -> Unit = {},
-    showTaskScreen: MutableState<Boolean>
+    showTaskScreen: MutableState<Boolean>,
+    mapViewModel: MapScreenViewModel
 ) {
     val context = LocalContext.current
-    val application = context.applicationContext as Application
-    val mapViewModel: MapScreenViewModel = viewModel(
-        factory = MapScreenViewModel.provideFactory(application, initialMapStyle)
-    )
     val unitsRepository = remember(context.applicationContext) {
         UnitsRepository(context.applicationContext)
     }
@@ -184,6 +179,9 @@ fun MapScreen(
     val flightViewModel: FlightDataViewModel = viewModel()
     // ✅ REFACTORED: No longer collect cardStates here - CardContainer handles it directly
     val selectedCardIds by flightViewModel.selectedCardIds.collectAsState()
+    val profileModeCards by flightViewModel.profileModeCards.collectAsState()
+    val profileModeTemplates by flightViewModel.profileModeTemplates.collectAsState()
+    val activeTemplateId by flightViewModel.activeTemplateId.collectAsState()
     val cardPreferences = mapViewModel.cardPreferences
 
     // ✅ Initialize FlightDataManager
@@ -199,15 +197,6 @@ fun MapScreen(
     var qnhError by qnhErrorState
     val showQnhFabState = remember { mutableStateOf(true) }
     var showQnhFab by showQnhFabState
-    // ✅ NEW: Register template change callback for communication with FlightDataMgmt
-    DisposableEffect(Unit) {
-        TemplateChangeNotifier.registerCallback {
-            flightDataManager.incrementTemplateVersion()
-        }
-        onDispose {
-            TemplateChangeNotifier.unregisterCallback()
-        }
-    }
 
     // Map Overlay Manager - centralized overlay management
     val overlayManager = mapViewModel.overlayManager
@@ -228,7 +217,6 @@ fun MapScreen(
 
     // ✅ LocationManager - Centralized location handling
     val locationManager = mapViewModel.locationManager
-    ServiceLocator.locationManager = locationManager
 
     // ✅ LifecycleManager - Centralized lifecycle handling
     val lifecycleManager = mapViewModel.lifecycleManager
@@ -237,7 +225,7 @@ fun MapScreen(
     val modalManager = mapViewModel.modalManager
 
     // ✅ Backward compatibility variables (using locationManager)
-    val currentUserLocation by remember { derivedStateOf { locationManager.currentUserLocation } }
+    val currentUserLocation by remember { derivedStateOf { mapState.currentUserLocation } }
     val unifiedSensorManager = locationManager.unifiedSensorManager
 
     // Map Initializer
@@ -246,10 +234,10 @@ fun MapScreen(
     val isGpsActive = unifiedSensorManager.isGpsEnabled()
 
     // ✅ Location state through LocationManager
-    val showRecenterButton by remember { derivedStateOf { locationManager.showRecenterButton } }
-    val isTrackingLocation by remember { derivedStateOf { locationManager.isTrackingLocation } }
-    val lastUserPanTime by remember { derivedStateOf { locationManager.lastUserPanTime } }
-    val showReturnButton by remember { derivedStateOf { locationManager.showReturnButton } }
+    val showRecenterButton by remember { derivedStateOf { mapState.showRecenterButton } }
+    val isTrackingLocation by remember { derivedStateOf { mapState.isTrackingLocation } }
+    val lastUserPanTime by remember { derivedStateOf { mapState.lastUserPanTime } }
+    val showReturnButton by remember { derivedStateOf { mapState.showReturnButton } }
 
     // ✅ AAT Edit Mode State - Track when AAT pin editing is active
     val isAATEditMode by mapViewModel.isAATEditMode.collectAsState()
@@ -280,10 +268,10 @@ fun MapScreen(
             Log.d(TAG, "✅ Drawer gestures enabled")
         }
     }
-    val savedLocation by remember { derivedStateOf { locationManager.savedLocation } }
-    val savedZoom by remember { derivedStateOf { locationManager.savedZoom } }
-    val savedBearing by remember { derivedStateOf { locationManager.savedBearing } }
-    val hasInitiallyCentered by remember { derivedStateOf { locationManager.hasInitiallyCentered } }
+    val savedLocation by remember { derivedStateOf { mapState.savedLocation } }
+    val savedZoom by remember { derivedStateOf { mapState.savedZoom } }
+    val savedBearing by remember { derivedStateOf { mapState.savedBearing } }
+    val hasInitiallyCentered by remember { derivedStateOf { mapState.hasInitiallyCentered } }
 
     // ✅ Location Permission Launcher through LocationManager
     val locationPermissionLauncher = locationManager.LocationPermissionHandler()
@@ -306,6 +294,9 @@ fun MapScreen(
         safeContainerSize = safeContainerSize,
         flightViewModel = flightViewModel,
         cardPreferences = cardPreferences,
+        profileModeCards = profileModeCards,
+        profileModeTemplates = profileModeTemplates,
+        activeTemplateId = activeTemplateId,
         initialMapStyle = initialMapStyle,
         onMapStyleSelected = onMapStyleSelected
     )
@@ -399,7 +390,9 @@ fun MapScreen(
                 showQnhFab = showQnhFabState,
                 taskScreenManager = taskScreenManager,
                 waypointData = waypointData,
-                unitsPreferences = unitsPreferences
+                unitsPreferences = unitsPreferences,
+                ballastUiState = mapViewModel.ballastUiState,
+                onBallastCommand = mapViewModel::submitBallastCommand
             )
         }
     )
