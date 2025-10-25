@@ -1,5 +1,6 @@
 package com.example.xcpro
 
+import android.app.Application
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -39,6 +40,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.xcpro.map.MapScreenViewModel
 import com.example.xcpro.profiles.ProfileSelectionScreen
 import com.example.xcpro.profiles.ProfileViewModel
 import kotlinx.coroutines.launch
@@ -131,7 +133,12 @@ fun MainActivityScreen(
                     .weight(1f)
                     .fillMaxWidth()
             ) {
-                composable("map") {
+                composable("map") { backStackEntry ->
+                    val context = LocalContext.current
+                    val mapViewModel: MapScreenViewModel = viewModel(
+                        backStackEntry,
+                        factory = MapScreenViewModel.provideFactory(context.applicationContext as Application, initialMapStyle)
+                    )
                     MapScreen(
                         navController = navController,
                         drawerState = drawerState,
@@ -139,14 +146,23 @@ fun MainActivityScreen(
                         mapStyleExpanded = remember { mutableStateOf(config?.optJSONObject("navDrawer")?.optBoolean("mapStyleExpanded", false) ?: false) },
                         settingsExpanded = remember { mutableStateOf(config?.optJSONObject("navDrawer")?.optBoolean("settingsExpanded", true) ?: true) },
                         initialMapStyle = initialMapStyle,
-                        showTaskScreen = remember { mutableStateOf(false) }
+                        showTaskScreen = remember { mutableStateOf(false) },
+                        mapViewModel = mapViewModel
                     )
                 }
-                composable("settings") {
+                composable("settings") { backStackEntry ->
+                    val context = LocalContext.current
+                    val mapEntry = remember(backStackEntry) { navController.getBackStackEntry("map") }
+                    val mapViewModel: MapScreenViewModel = viewModel(
+                        mapEntry,
+                        factory = MapScreenViewModel.provideFactory(context.applicationContext as Application, initialMapStyle)
+                    )
                     SettingsScreen(
                         navController = navController,
                         drawerState = drawerState,
-                        onShowAirspaceOverlay = { }
+                        onShowAirspaceOverlay = { },
+                        onPrepareHawkDashboard = { mapViewModel.prepareHawkDashboardClient() },
+                        onCancelHawkDashboard = { mapViewModel.cancelHawkDashboardPreparation() }
                     )
                 }
                 composable("look_and_feel") {

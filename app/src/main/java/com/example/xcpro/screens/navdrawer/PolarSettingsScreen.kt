@@ -57,6 +57,11 @@ fun PolarSettingsScreen(
                 .padding(horizontal = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            Text(
+                text = "Set up your aircraft profile and polar so netto, speed-to-fly, and glide calculations stay accurate.",
+                style = MaterialTheme.typography.bodyMedium
+            )
+
             PreviewCard()
 
             ConfigCard()

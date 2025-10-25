@@ -1,5 +1,6 @@
 package com.example.xcpro.xcprov1.bluetooth
 
+import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothSocket
@@ -57,6 +58,7 @@ class GarminGloConnectionManager(
         connectToDevice(device)
     }
 
+    @SuppressLint("MissingPermission")
     fun connectToDevice(device: BluetoothDevice) {
         connectJob?.cancel()
         connectJob = scope.launch(Dispatchers.IO) {

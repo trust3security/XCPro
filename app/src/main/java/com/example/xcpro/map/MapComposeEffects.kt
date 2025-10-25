@@ -1,38 +1,30 @@
 package com.example.xcpro.map
 
-import android.content.Context
 import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
-import com.example.xcpro.sensors.GPSData
-import com.example.xcpro.OrientationData
-import com.example.xcpro.MapOrientationMode
-import com.example.xcpro.profiles.ProfileUiState
-import kotlinx.coroutines.isActive
-import com.example.xcpro.screens.overlays.getMapStyleUrl
-import com.example.xcpro.loadConfig
 import com.example.dfcards.CardPreferences
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.dfcards.FlightDataViewModel
+import com.example.xcpro.OrientationData
+import com.example.xcpro.loadConfig
+import com.example.xcpro.profiles.ProfileUiState
+import com.example.xcpro.sensors.GPSData
+import com.example.xcpro.screens.overlays.getMapStyleUrl
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.filterNotNull
-import kotlin.random.Random
+import kotlinx.coroutines.isActive
+import androidx.compose.runtime.snapshotFlow
 
-/**
- * Centralized Compose side effects for MapScreen
- * Handles complex LaunchedEffect blocks to improve testability and maintainability
- */
 object MapComposeEffects {
 
     private const val TAG = "MapComposeEffects"
 
-    /**
-     * Location permission and GPS update effects
-     */
     @Composable
     fun LocationAndPermissionEffects(
         locationManager: LocationManager,
@@ -40,24 +32,21 @@ object MapComposeEffects {
         currentLocation: GPSData?,
         orientationData: OrientationData
     ) {
-        // Initialize location permissions on first load
         LaunchedEffect(Unit) {
             locationManager.checkAndRequestLocationPermissions(locationPermissionLauncher)
         }
 
-        // Update location overlay when GPS location changes
         LaunchedEffect(currentLocation, orientationData.mode, orientationData.bearing) {
             currentLocation?.let { location ->
-                // Pass magnetic heading from orientation data for drift angle calculation
-                // Update even without GPS fix for continuous tracking
-                locationManager.updateLocationFromGPS(location, orientationData.mode, orientationData.bearing)
+                locationManager.updateLocationFromGPS(
+                    location,
+                    orientationData.mode,
+                    orientationData.bearing
+                )
             }
         }
     }
 
-    /**
-     * Profile changes and flight mode visibility effects
-     */
     @Composable
     fun ProfileAndConfigurationEffects(
         uiState: ProfileUiState,
@@ -66,67 +55,54 @@ object MapComposeEffects {
         currentFlightModeSelection: FlightModeSelection,
         safeContainerSize: IntSize,
         flightViewModel: FlightDataViewModel,
-        density: androidx.compose.ui.unit.Density
+        density: androidx.compose.ui.unit.Density,
+        profileModeCards: Map<String, Map<FlightModeSelection, List<String>>>,
+        profileModeTemplates: Map<String, Map<FlightModeSelection, String>>,
+        activeTemplateId: String?
     ) {
-        // Load visible flight modes when profile changes
         LaunchedEffect(uiState.activeProfile?.id) {
             flightDataManager.loadVisibleModes(uiState.activeProfile?.id, uiState.activeProfile?.name)
 
-            // Switch to fallback mode if current mode is not visible
             val currentMode = mapState.currentMode
-            val isVisible = flightDataManager.isCurrentModeVisible(currentMode)
-            val visibleModes = flightDataManager.visibleModes
-            val fallbackMode = flightDataManager.getFallbackMode()
-
-            Log.d(TAG, "🔍 VISIBILITY CHECK: currentMode=$currentMode, isVisible=$isVisible")
-            Log.d(TAG, "🔍 VISIBLE MODES: $visibleModes")
-            Log.d(TAG, "🔍 FALLBACK MODE: $fallbackMode")
-
-            if (!isVisible) {
-                mapState.currentMode = fallbackMode
-                Log.d(TAG, "🔄 Current mode $currentMode not visible, switched to fallback mode $fallbackMode")
-                Log.d(TAG, "🔄 NEW MODE STATE: ${mapState.currentMode}")
-            } else {
-                Log.d(TAG, "✅ Current mode $currentMode is visible - no change needed")
+            if (!flightDataManager.isCurrentModeVisible(currentMode)) {
+                val fallback = flightDataManager.getFallbackMode()
+                mapState.currentMode = fallback
+                Log.d(TAG, "Switching map mode to fallback $fallback because $currentMode is hidden")
             }
         }
 
-        // Load template for current profile and flight mode
-        // ✅ NEW: Added templateVersion dependency to reload when cards are toggled in Flight Data screen
         LaunchedEffect(
             currentFlightModeSelection,
-            flightDataManager.allTemplates,
-            uiState.activeProfile,
+            uiState.activeProfile?.id,
             safeContainerSize,
-            flightDataManager.templateVersion // ✅ NEW: Reactive template version tracking
+            profileModeCards,
+            profileModeTemplates,
+            activeTemplateId
         ) {
-            Log.d(TAG, "🔄 Template loading LaunchedEffect triggered:")
-            Log.d(TAG, "  - Flight mode: ${currentFlightModeSelection.displayName}")
-            Log.d(TAG, "  - Container size: $safeContainerSize")
-            Log.d(TAG, "  - Profile: ${uiState.activeProfile?.name}")
-            Log.d(TAG, "  - Templates: ${flightDataManager.allTemplates.size}")
-            Log.d(TAG, "  - Template version: ${flightDataManager.templateVersion}") // ✅ NEW: Log version
+            if (safeContainerSize == IntSize.Zero) {
+                Log.d(TAG, "Safe container size zero; deferring template apply")
+                return@LaunchedEffect
+            }
+
+            if (flightDataManager.allTemplates.isEmpty()) {
+                flightDataManager.loadAllTemplates()
+            }
 
             flightDataManager.loadTemplateForProfile(
-                currentFlightModeSelection,
-                uiState.activeProfile?.id,
-                uiState.activeProfile?.name,
-                safeContainerSize,
-                flightViewModel,
-                density
+                currentFlightModeSelection = currentFlightModeSelection,
+                profileId = uiState.activeProfile?.id,
+                profileName = uiState.activeProfile?.name,
+                safeContainerSize = safeContainerSize,
+                flightViewModel = flightViewModel,
+                density = density
             )
         }
 
-        // Synchronize FlightDataViewModel with current flight mode
         LaunchedEffect(flightDataManager.currentFlightMode) {
             flightViewModel.updateFlightMode(flightDataManager.currentFlightMode)
         }
     }
 
-    /**
-     * Flight data cards initialization and live data updates
-     * ✅ REFACTORED: No longer needs cardStates parameter - ViewModel tracks internally
-     */
     @Composable
     fun FlightDataAndCardEffects(
         flightViewModel: FlightDataViewModel,
@@ -137,26 +113,15 @@ object MapComposeEffects {
         locationManager: LocationManager,
         orientationData: OrientationData
     ) {
-        // Initialize card preferences and start independent clock timer
         LaunchedEffect(Unit) {
             flightViewModel.initializeCardPreferences(cardPreferences)
             flightViewModel.startIndependentClockTimer()
-            Log.d(TAG, "⏰ Started independent clock timer for time card")
         }
 
-        // ✅ REMOVED: Redundant initializeCards() fallback
-        // Template loading in ProfileAndConfigurationEffects already handles this correctly
-        // - If user selects 0 cards → displays 0 cards
-        // - If user selects X cards → displays X cards
-        // - First launch → loadTemplateForProfile() provides fallback
-
-        // Load all flight data templates
         LaunchedEffect(Unit) {
             flightDataManager.loadAllTemplates()
         }
 
-        // Update cards and location with live flight data
-        // Collect every emission so vertical-speed-only changes update immediately
         LaunchedEffect(Unit) {
             snapshotFlow { flightDataManager.liveFlightData }
                 .filterNotNull()
@@ -174,32 +139,22 @@ object MapComposeEffects {
             flightViewModel.updateUnitsPreferences(flightDataManager.unitsPreferences)
         }
 
-
-        // Continuous update loop for ALL modes - ensures smooth real-time tracking
-        // The icon stays at actual GPS position and only moves when pilot moves
         LaunchedEffect(orientationData.mode) {
-            Log.d(TAG, "🔄 Starting continuous ${orientationData.mode} update loop")
             while (isActive) {
-                    flightDataManager.liveFlightData?.let { liveData ->
-                        // Update position even without perfect GPS fix for smooth tracking
-                        // Just need valid coordinates (not 0,0)
-                        if (liveData.latitude != 0.0 && liveData.longitude != 0.0) {
-                            locationManager.updateLocationFromFlightData(
-                                liveData,
-                                orientationData.mode,
-                                orientationData.bearing
-                            )
-                        }
+                flightDataManager.liveFlightData?.let { liveData ->
+                    if (liveData.latitude != 0.0 && liveData.longitude != 0.0) {
+                        locationManager.updateLocationFromFlightData(
+                            liveData,
+                            orientationData.mode,
+                            orientationData.bearing
+                        )
                     }
-                delay(100) // 10Hz update rate for butter-smooth tracking
+                }
+                delay(100)
             }
-            Log.d(TAG, "⏹ Stopped ${orientationData.mode} update loop")
         }
     }
 
-    /**
-     * Map style loading and configuration effects
-     */
     @Composable
     fun MapStyleAndConfigurationEffects(
         initialMapStyle: String,
@@ -207,40 +162,34 @@ object MapComposeEffects {
         onMapStyleSelected: (String) -> Unit
     ) {
         val context = LocalContext.current
-
         LaunchedEffect(Unit) {
-            try {
-                val config = loadConfig(context)
-                val savedStyle = config?.optJSONObject("app")?.optString("mapStyle") ?: initialMapStyle
-                mapState.mapStyleUrl = getMapStyleUrl(savedStyle)
-                onMapStyleSelected(savedStyle)
-                Log.d(TAG, "🎨 Map style loaded: $savedStyle")
-            } catch (e: Exception) {
-                Log.e(TAG, "❌ Error loading map style configuration: ${e.message}")
-            }
+            runCatching { loadConfig(context) }
+                .mapCatching { config ->
+                    config?.optJSONObject("app")?.optString("mapStyle")
+                }
+                .onSuccess { stored ->
+                    val style = stored ?: initialMapStyle
+                    mapState.mapStyleUrl = getMapStyleUrl(style)
+                    onMapStyleSelected(style)
+                }
+                .onFailure { error ->
+                    Log.e(TAG, "Failed to load map style", error)
+                }
         }
     }
 
-    /**
-     * Debug and test effects (compass logging, variometer animation)
-     */
     @Composable
     fun TestAndDebugEffects(
         orientationData: OrientationData
     ) {
         LaunchedEffect(orientationData.mode, orientationData.isValid) {
-            Log.d(TAG, "Compass rendering: mode=${orientationData.mode}, " +
-                      "bearing=${orientationData.bearing.toInt()}°, " +
-                      "valid=${orientationData.isValid}, " +
-                      "timestamp=${orientationData.timestamp}")
+            Log.d(
+                TAG,
+                "Compass state -> mode=${orientationData.mode}, bearing=${orientationData.bearing}, valid=${orientationData.isValid}"
+            )
         }
     }
 
-    /**
-     * Combined effects function for easy integration
-     * Calls all individual effect groups with proper dependencies
-     */
-    // ✅ REFACTORED: Removed cardStates parameter - no longer needed
     @Composable
     fun AllMapEffects(
         locationManager: LocationManager,
@@ -254,6 +203,9 @@ object MapComposeEffects {
         safeContainerSize: IntSize,
         flightViewModel: FlightDataViewModel,
         cardPreferences: CardPreferences,
+        profileModeCards: Map<String, Map<FlightModeSelection, List<String>>>,
+        profileModeTemplates: Map<String, Map<FlightModeSelection, String>>,
+        activeTemplateId: String?,
         initialMapStyle: String,
         onMapStyleSelected: (String) -> Unit
     ) {
@@ -273,10 +225,12 @@ object MapComposeEffects {
             currentFlightModeSelection = currentFlightModeSelection,
             safeContainerSize = safeContainerSize,
             flightViewModel = flightViewModel,
-            density = density
+            density = density,
+            profileModeCards = profileModeCards,
+            profileModeTemplates = profileModeTemplates,
+            activeTemplateId = activeTemplateId
         )
 
-        // ✅ REFACTORED: No longer pass cardStates
         FlightDataAndCardEffects(
             flightViewModel = flightViewModel,
             cardPreferences = cardPreferences,
@@ -296,4 +250,3 @@ object MapComposeEffects {
         TestAndDebugEffects(orientationData = orientationData)
     }
 }
-

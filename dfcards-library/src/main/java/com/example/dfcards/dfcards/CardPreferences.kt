@@ -256,6 +256,44 @@ class CardPreferences(private val context: Context) {
         }
     }
 
+    fun getAllProfileTemplateCards(): Flow<Map<String, Map<String, List<String>>>> {
+        return context.dataStore.data.map { preferences ->
+            val result = mutableMapOf<String, MutableMap<String, List<String>>>()
+            preferences.asMap().forEach { (key, value) ->
+                val name = key.name
+                if (name.startsWith("profile_") && name.contains("_template_") && name.endsWith("_cards")) {
+                    val profilePart = name.substringAfter("profile_").substringBefore("_template_")
+                    val templatePart = name.substringAfter("_template_").substringBefore("_cards")
+                    val cardsString = value as? String
+                    val cards = cardsString
+                        ?.split(",")
+                        ?.mapNotNull { it.trim().takeIf(String::isNotEmpty) }
+                        .orEmpty()
+                    val templateMap = result.getOrPut(profilePart) { mutableMapOf() }
+                    templateMap[templatePart] = cards
+                }
+            }
+            result.mapValues { it.value.toMap() }
+        }
+    }
+
+    fun getAllProfileFlightModeTemplates(): Flow<Map<String, Map<String, String>>> {
+        return context.dataStore.data.map { preferences ->
+            val result = mutableMapOf<String, MutableMap<String, String>>()
+            preferences.asMap().forEach { (key, value) ->
+                val name = key.name
+                if (name.startsWith("profile_") && name.contains("_flight_mode_") && name.endsWith("_template")) {
+                    val profilePart = name.substringAfter("profile_").substringBefore("_flight_mode_")
+                    val modePart = name.substringAfter("_flight_mode_").substringBefore("_template")
+                    val templateId = value as? String ?: return@forEach
+                    val templateMap = result.getOrPut(profilePart) { mutableMapOf() }
+                    templateMap[modePart] = templateId
+                }
+            }
+            result.mapValues { it.value.toMap() }
+        }
+    }
+
 
     // ✅ NEW: Get all flight mode template mappings
     fun getAllFlightModeTemplates(): Flow<Map<String, String>> {
@@ -395,6 +433,15 @@ class CardPreferences(private val context: Context) {
     fun getVarioSmoothingAlpha(): Flow<Float> {
         return context.dataStore.data.map { preferences ->
             preferences[VARIO_SMOOTHING_KEY] ?: DEFAULT_SMOOTHING_ALPHA
+        }
+    }
+
+    suspend fun clearProfile(profileId: String) {
+        context.dataStore.edit { preferences ->
+            val keysToRemove = preferences.asMap().keys.filter { key ->
+                key.name.startsWith("profile_${profileId}_")
+            }
+            keysToRemove.forEach { preferences.remove(it) }
         }
     }
 }

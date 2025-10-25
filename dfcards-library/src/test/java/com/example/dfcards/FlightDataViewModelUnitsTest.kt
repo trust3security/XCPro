@@ -77,4 +77,73 @@ class FlightDataViewModelUnitsTest {
         val updated = viewModel.getCardState("vario")?.flightData?.primaryValue
         assertEquals("+2.9 kt", updated)
     }
+
+    @Test
+    fun setProfileCards_updatesActiveSelection() {
+        val viewModel = FlightDataViewModel()
+        val profileId = "profile-1"
+
+        viewModel.setActiveProfile(profileId)
+        viewModel.setFlightMode(FlightModeSelection.THERMAL)
+        viewModel.setProfileCards(profileId, FlightModeSelection.THERMAL, listOf("vario", "netto"))
+
+        assertEquals(
+            listOf("vario", "netto"),
+            viewModel.profileModeCards.value[profileId]?.get(FlightModeSelection.THERMAL)
+        )
+    }
+
+    @Test
+    fun switchingProfiles_updatesActiveCardIds() {
+        val viewModel = FlightDataViewModel()
+        val profileA = "pilot-a"
+        val profileB = "pilot-b"
+
+        viewModel.setProfileCards(profileA, FlightModeSelection.CRUISE, listOf("track"))
+        viewModel.setProfileCards(profileB, FlightModeSelection.CRUISE, listOf("ground_speed", "agl"))
+
+        viewModel.setActiveProfile(profileA)
+        viewModel.setFlightMode(FlightModeSelection.CRUISE)
+        assertEquals(
+            listOf("track"),
+            viewModel.profileModeCards.value[profileA]?.get(FlightModeSelection.CRUISE)
+        )
+
+        viewModel.setActiveProfile(profileB)
+        assertEquals(
+            listOf("ground_speed", "agl"),
+            viewModel.profileModeCards.value[profileB]?.get(FlightModeSelection.CRUISE)
+        )
+    }
+
+    @Test
+    fun setProfileTemplate_persistsMapping() {
+        val viewModel = FlightDataViewModel()
+        val profileId = "profile-template"
+
+        viewModel.setProfileTemplate(profileId, FlightModeSelection.HAWK, "hawk-template")
+
+        assertEquals(
+            "hawk-template",
+            viewModel.getProfileTemplateId(profileId, FlightModeSelection.HAWK)
+        )
+    }
+
+    @Test
+    fun clearProfile_resetsMappings() {
+        val viewModel = FlightDataViewModel()
+        val profileId = "clear-me"
+
+        viewModel.setActiveProfile(profileId)
+        viewModel.setFlightMode(FlightModeSelection.FINAL_GLIDE)
+        viewModel.setProfileCards(profileId, FlightModeSelection.FINAL_GLIDE, listOf("final_glide"))
+        viewModel.setProfileTemplate(profileId, FlightModeSelection.FINAL_GLIDE, "id03")
+
+        viewModel.clearProfile(profileId)
+
+        assertEquals(null, viewModel.activeProfileId.value)
+        assertEquals(emptyList<String>(), viewModel.activeCardIds.value)
+        assertEquals(emptyList<String>(), viewModel.getProfileCards(profileId, FlightModeSelection.FINAL_GLIDE))
+        assertEquals(null, viewModel.getProfileTemplateId(profileId, FlightModeSelection.FINAL_GLIDE))
+    }
 }

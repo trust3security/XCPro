@@ -1,11 +1,11 @@
 package com.example.xcpro.map
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.content.Context
 import android.util.Log
-import androidx.compose.runtime.*
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.Composable
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -16,7 +16,6 @@ import com.example.xcpro.sensors.FlightDataCalculator
 import com.example.xcpro.sensors.GPSData
 import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.common.units.UnitsConverter
-import com.example.xcpro.ServiceLocator
 import com.example.xcpro.xcprov1.bluetooth.GarminGloConnectionManager
 import com.example.xcpro.xcprov1.service.XcproV1Controller
 import kotlinx.coroutines.CoroutineScope
@@ -27,7 +26,8 @@ import org.maplibre.android.maps.MapLibreMap
 class LocationManager(
     private val context: Context,
     private val mapState: MapScreenState,
-    private val coroutineScope: CoroutineScope
+    private val coroutineScope: CoroutineScope,
+    private val hawkDashboardActive: () -> Boolean
 ) {
     companion object {
         private const val TAG = "LocationManager"
@@ -49,34 +49,60 @@ class LocationManager(
         xcproV1Controller.attachExternalGpsFlow(garminGloConnectionManager.fixFlow)
     }
 
-    // Location state
-    var currentUserLocation by mutableStateOf<LatLng?>(null)
-        private set
+    // Map UI state proxies (MapScreenState is the single owner)
+    private var currentUserLocation: LatLng?
+        get() = mapState.currentUserLocation
+        set(value) {
+            mapState.currentUserLocation = value
+        }
 
-    var hasInitiallyCentered by mutableStateOf(false)
-        private set
+    private var hasInitiallyCentered: Boolean
+        get() = mapState.hasInitiallyCentered
+        set(value) {
+            mapState.hasInitiallyCentered = value
+        }
 
-    var isTrackingLocation by mutableStateOf(true)
-        private set
+    private var isTrackingLocation: Boolean
+        get() = mapState.isTrackingLocation
+        set(value) {
+            mapState.isTrackingLocation = value
+        }
 
-    var showRecenterButton by mutableStateOf(false)
-        private set
+    private var showRecenterButton: Boolean
+        get() = mapState.showRecenterButton
+        set(value) {
+            mapState.showRecenterButton = value
+        }
 
-    var lastUserPanTime by mutableStateOf(0L)
-        private set
+    private var lastUserPanTime: Long
+        get() = mapState.lastUserPanTime
+        set(value) {
+            mapState.lastUserPanTime = value
+        }
 
-    // Pan-and-return state
-    var showReturnButton by mutableStateOf(false)
-        private set
+    private var showReturnButton: Boolean
+        get() = mapState.showReturnButton
+        set(value) {
+            mapState.showReturnButton = value
+        }
 
-    var savedLocation by mutableStateOf<LatLng?>(null)
-        private set
+    private var savedLocation: LatLng?
+        get() = mapState.savedLocation
+        set(value) {
+            mapState.savedLocation = value
+        }
 
-    var savedZoom by mutableStateOf<Double?>(null)
-        private set
+    private var savedZoom: Double?
+        get() = mapState.savedZoom
+        set(value) {
+            mapState.savedZoom = value
+        }
 
-    var savedBearing by mutableStateOf<Double?>(null)
-        private set
+    private var savedBearing: Double?
+        get() = mapState.savedBearing
+        set(value) {
+            mapState.savedBearing = value
+        }
 
     @Composable
     fun LocationPermissionHandler(): ActivityResultLauncher<Array<String>> {
@@ -120,7 +146,7 @@ class LocationManager(
     }
 
     fun stopLocationTracking(force: Boolean = false) {
-        if (!force && ServiceLocator.hasHawkDashboardClient()) {
+        if (!force && hawkDashboardActive()) {
             Log.d(TAG, "HAWK dashboard active, skipping sensor shutdown")
             return
         }
@@ -131,9 +157,6 @@ class LocationManager(
         garminGloConnectionManager.stop()
         if (force) {
             xcproV1Controller.release()
-            if (ServiceLocator.locationManager === this) {
-                ServiceLocator.locationManager = null
-            }
         }
     }
 
@@ -439,6 +462,7 @@ class LocationManager(
         showReturnButton()
     }
 
+    @SuppressLint("MissingPermission")
     private fun findPairedGarminAddress(): String? {
         val adapter = BluetoothAdapter.getDefaultAdapter() ?: return null
         return adapter.bondedDevices.firstOrNull { device ->

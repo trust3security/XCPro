@@ -1,6 +1,5 @@
-﻿package com.example.ui1.screens
+package com.example.ui1.screens
 
-import android.app.Application
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
@@ -34,9 +33,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import com.example.xcpro.skysight.SkysightClient
-import com.example.xcpro.di.HawkSensorRegistryEntryPoint
 import com.example.xcpro.screens.navdrawer.SettingsTopAppBar
-import dagger.hilt.android.EntryPointAccessors
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,16 +52,12 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(
     navController: NavHostController,
     drawerState: DrawerState,
-    onShowAirspaceOverlay: () -> Unit
+    onShowAirspaceOverlay: () -> Unit,
+    onPrepareHawkDashboard: () -> Unit,
+    onCancelHawkDashboard: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    val hawkRegistry = remember {
-        EntryPointAccessors.fromApplication(
-            context.applicationContext as Application,
-            HawkSensorRegistryEntryPoint::class.java
-        ).hawkSensorRegistry()
-    }
     val listState = rememberLazyListState()
     val hasScrolled = remember { derivedStateOf { listState.firstVisibleItemScrollOffset > 0 } }
     val appBarElevation by animateDpAsState(targetValue = if (hasScrolled.value) 4.dp else 0.dp)
@@ -73,7 +66,7 @@ fun SettingsScreen(
         containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
         topBar = {
-            // âœ… Match Look & Feel header style exactly
+            // ✅ Match Look & Feel header style exactly
             SettingsTopAppBar(
                 title = "General",
                 onNavigateUp = { navController.popBackStack() },
@@ -81,12 +74,14 @@ fun SettingsScreen(
                     scope.launch {
                         navController.popBackStack("map", inclusive = false)
                         drawerState.open()
+                        onCancelHawkDashboard()
                     }
                 },
                 onNavigateToMap = {
                     scope.launch {
                         drawerState.close()
                         navController.popBackStack("map", inclusive = false)
+                        onCancelHawkDashboard()
                     }
                 }
             )
@@ -174,7 +169,7 @@ fun SettingsScreen(
                                 title = "Vario",
                                 icon = Icons.Default.Speed,
                                 onClick = {
-                                    hawkRegistry.prepareClient()
+                                    onPrepareHawkDashboard()
                                     navController.navigate("hawk_dashboard")
                                 },
                                 modifier = Modifier.weight(1f)

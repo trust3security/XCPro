@@ -2,9 +2,9 @@ package com.example.xcpro
 
 import android.app.Application
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -12,27 +12,26 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ui1.screens.*
-import com.example.xcpro.profiles.ProfileUiState
-import com.example.xcpro.screens.navdrawer.UnitsSettingsScreen
-import com.example.xcpro.screens.navdrawer.PolarSettingsScreen
-import com.example.xcpro.screens.navdrawer.VarioAudioSettingsScreen
-import com.example.xcpro.screens.navdrawer.ColorsScreen
+import com.example.xcpro.map.MapScreenViewModel
 import com.example.xcpro.profiles.ProfileSelectionScreen
+import com.example.xcpro.profiles.ProfileUiState
+import com.example.xcpro.screens.navdrawer.ColorsScreen
+import com.example.xcpro.screens.navdrawer.PolarSettingsScreen
+import com.example.xcpro.screens.navdrawer.UnitsSettingsScreen
+import com.example.xcpro.screens.navdrawer.VarioAudioSettingsScreen
 import com.example.xcpro.xcprov1.ui.HawkDashboardRoute
-import com.example.xcpro.di.HawkSensorRegistryEntryPoint
-import dagger.hilt.android.EntryPointAccessors
 
 @Composable
 fun AppNavGraph(
@@ -51,7 +50,12 @@ fun AppNavGraph(
         startDestination = "map",
         modifier = modifier
     ) {
-        composable("map") {
+        composable("map") { backStackEntry ->
+            val context = LocalContext.current
+            val mapViewModel: MapScreenViewModel = viewModel(
+                backStackEntry,
+                factory = MapScreenViewModel.provideFactory(context.applicationContext as Application, initialMapStyle)
+            )
             MapScreen(
                 navController = navController,
                 drawerState = drawerState,
@@ -59,14 +63,23 @@ fun AppNavGraph(
                 mapStyleExpanded = remember { mutableStateOf(config?.optJSONObject("navDrawer")?.optBoolean("mapStyleExpanded", false) ?: false) },
                 settingsExpanded = remember { mutableStateOf(config?.optJSONObject("navDrawer")?.optBoolean("settingsExpanded", true) ?: true) },
                 initialMapStyle = initialMapStyle,
-                showTaskScreen = remember { mutableStateOf(false) }
+                showTaskScreen = remember { mutableStateOf(false) },
+                mapViewModel = mapViewModel
             )
         }
-        composable("settings") {
+        composable("settings") { backStackEntry ->
+            val context = LocalContext.current
+            val mapEntry = remember(backStackEntry) { navController.getBackStackEntry("map") }
+            val mapViewModel: MapScreenViewModel = viewModel(
+                mapEntry,
+                factory = MapScreenViewModel.provideFactory(context.applicationContext as Application, initialMapStyle)
+            )
             SettingsScreen(
                 navController = navController,
                 drawerState = drawerState,
-                onShowAirspaceOverlay = { }
+                onShowAirspaceOverlay = { },
+                onPrepareHawkDashboard = { mapViewModel.prepareHawkDashboardClient() },
+                onCancelHawkDashboard = { mapViewModel.cancelHawkDashboardPreparation() }
             )
         }
         composable("look_and_feel") { LookAndFeelScreen(navController = navController, drawerState = drawerState) }
@@ -81,45 +94,26 @@ fun AppNavGraph(
         }
         composable("vario_audio_settings") { VarioAudioSettingsScreen(navController = navController, drawerState = drawerState) }
         composable("colors") { ColorsScreen(navController = navController) }
-        composable("hawk_dashboard") {
+        composable("hawk_dashboard") { backStackEntry ->
             val context = LocalContext.current
-            val registry = remember {
-                EntryPointAccessors.fromApplication(
-                    context.applicationContext as Application,
-                    HawkSensorRegistryEntryPoint::class.java
-                ).hawkSensorRegistry()
+            val mapEntry = remember(backStackEntry) { navController.getBackStackEntry("map") }
+            val mapViewModel: MapScreenViewModel = viewModel(
+                mapEntry,
+                factory = MapScreenViewModel.provideFactory(context.applicationContext as Application, initialMapStyle)
+            )
+            val manager = mapViewModel.locationManager
+            val registeredFromPending = mapViewModel.finalizeHawkDashboardClient()
+            if (!registeredFromPending) {
+                mapViewModel.registerHawkDashboardClient()
             }
-            val locationManager = registry.currentLocationManager()
-            if (locationManager == null) {
-                registry.cancelPreparedClient()
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "The Vario (HAWK) dashboard needs live flight sensors.\n\nOpen the Map once to initialise sensors, then return here with the map button above.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 24.dp)
-                    )
+            DisposableEffect(manager) {
+                manager.restartSensorsIfNeeded()
+                onDispose {
+                    mapViewModel.unregisterHawkDashboardClient()
                 }
-            } else {
-                val manager = locationManager
-                val registeredFromPending = registry.finalizePreparedClient()
-                if (!registeredFromPending) {
-                    registry.registerClient()
-                }
-                DisposableEffect(manager) {
-                    manager.restartSensorsIfNeeded()
-                    onDispose {
-                        registry.unregisterClient()
-                    }
-                }
-                HawkDashboardRoute()
-                setSelectedNavItem("hawk_dashboard")
             }
+            HawkDashboardRoute(manager)
+            setSelectedNavItem("hawk_dashboard")
         }
         composable("task") {
             Task(

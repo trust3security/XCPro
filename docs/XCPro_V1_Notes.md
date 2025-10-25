@@ -11,7 +11,7 @@
 
 ## Sensor & Controller Integration
 - `LocationManager` instantiates `XcproV1Controller`, Garmin GLO manager, and attaches the external GPS flow.
-- `ServiceLocator.locationManager` exposes the live instance outside the map.
+- `MapScreenViewModel` owns the shared `LocationManager` instance and tracks active HAWK dashboard clients, so other destinations pull the same sensors via the view model instead of a global locator.
 - Controller fuses handset and optional Garmin GPS frames, publishes `FlightDataV1Snapshot`, and drives the XCPro V1 audio engine (toggle via controller).
 
 ## UI Entry Points
@@ -25,4 +25,3 @@
 
 ## Outstanding UX Work
 - Existing `HawkDashboardScreen` currently mirrors a simplified dual-needle UI; further polish will refine the layout to match the real LXNAV HAWK instrument (colors, scale, peripheral data blocks). 
-

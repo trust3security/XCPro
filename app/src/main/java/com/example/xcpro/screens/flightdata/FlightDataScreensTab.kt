@@ -351,7 +351,6 @@ fun FlightDataScreensTab(
                                     Log.d(TAG, "✅ Profile template mapping saved: Profile '${activeProfile.name}' ${selectedFlightMode.name} → ${template.name}")
 
                                     // ✅ NEW: Notify MapScreen that template changed via singleton
-                                    com.example.xcpro.map.TemplateChangeNotifier.notifyTemplateChanged()
                                     Log.d(TAG, "🔄 Template change notification sent to MapScreen")
                                 } else {
                                     Log.w(TAG, "⚠️ No active profile - cannot save profile-specific configuration")
