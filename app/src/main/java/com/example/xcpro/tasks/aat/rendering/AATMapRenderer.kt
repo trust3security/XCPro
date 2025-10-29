@@ -1,6 +1,6 @@
 package com.example.xcpro.tasks.aat.rendering
 
-import android.graphics.Color
+import androidx.core.graphics.toColorInt
 import com.example.xcpro.tasks.aat.models.AATWaypoint
 import com.example.xcpro.tasks.aat.geometry.AATGeometryGenerator
 import org.maplibre.android.maps.Style
@@ -134,8 +134,8 @@ internal class AATMapRenderer {
                     // Create role-based color expression: green for start/turnpoint, red for finish
                     val colorExpression = Expression.switchCase(
                         Expression.eq(Expression.get("role"), Expression.literal("FINISH")),
-                        Expression.color(Color.parseColor("#F44336")), // Red for finish
-                        Expression.color(Color.parseColor("#388E3C"))  // Green for start/turnpoint
+                        Expression.color("#F44336".toColorInt()), // Red for finish
+                        Expression.color("#388E3C".toColorInt())  // Green for start/turnpoint
                     )
 
                     style.addLayer(
@@ -186,8 +186,8 @@ internal class AATMapRenderer {
                 if (style.getLayer("aat-areas-layer") == null) {
                     val fillColorExpression = Expression.switchCase(
                         Expression.eq(Expression.get("role"), Expression.literal("FINISH")),
-                        Expression.color(Color.parseColor("#F44336")),
-                        Expression.color(Color.parseColor("#388E3C"))
+                        Expression.color("#F44336".toColorInt()),
+                        Expression.color("#388E3C".toColorInt())
                     )
 
                     style.addLayer(
@@ -202,8 +202,8 @@ internal class AATMapRenderer {
                     if (style.getLayer("aat-borders-layer") == null) {
                         val borderColorExpression = Expression.switchCase(
                             Expression.eq(Expression.get("role"), Expression.literal("FINISH")),
-                            Expression.color(Color.parseColor("#F44336")),
-                            Expression.color(Color.parseColor("#388E3C"))
+                            Expression.color("#F44336".toColorInt()),
+                            Expression.color("#388E3C".toColorInt())
                         )
 
                         style.addLayer(
@@ -250,8 +250,8 @@ internal class AATMapRenderer {
                 if (style.getLayer("aat-lines-layer") == null) {
                     val lineColorExpression = Expression.switchCase(
                         Expression.eq(Expression.get("role"), Expression.literal("FINISH")),
-                        Expression.color(Color.parseColor("#F44336")),
-                        Expression.color(Color.parseColor("#388E3C"))
+                        Expression.color("#F44336".toColorInt()),
+                        Expression.color("#388E3C".toColorInt())
                     )
 
                     style.addLayer(
@@ -377,15 +377,15 @@ internal class AATMapRenderer {
             val colorExpression = Expression.switchCase(
                 // FIRST: Check if START - always show GREEN
                 Expression.eq(Expression.get("role"), Expression.literal("START")),
-                Expression.color(Color.parseColor("#388E3C")), // GREEN for start
+                Expression.color("#388E3C".toColorInt()), // GREEN for start
                 // SECOND: Check if in edit mode - show RED
                 Expression.eq(Expression.get("editMode"), Expression.literal(true)),
-                Expression.color(Color.parseColor("#FF0000")), // RED for edit mode
+                Expression.color("#FF0000".toColorInt()), // RED for edit mode
                 // THIRD: Check role for finish - show red
                 Expression.eq(Expression.get("role"), Expression.literal("FINISH")),
-                Expression.color(Color.parseColor("#F44336")), // Red for finish
+                Expression.color("#F44336".toColorInt()), // Red for finish
                 // DEFAULT: BLUE for turnpoint
-                Expression.color(Color.parseColor("#2196F3"))  // Blue for turnpoint
+                Expression.color("#2196F3".toColorInt())  // Blue for turnpoint
             )
 
             // Size logic: 4f in edit mode for easier dragging, 2f otherwise

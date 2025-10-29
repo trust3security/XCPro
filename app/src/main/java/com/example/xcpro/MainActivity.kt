@@ -2,7 +2,6 @@ package com.example.xcpro
 
 import android.content.Context
 import android.os.Build
-import android.os.PowerManager
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -11,16 +10,18 @@ import android.view.WindowInsetsController
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import dagger.hilt.android.AndroidEntryPoint
+import androidx.core.graphics.toColorInt
 import com.example.xcpro.ui.theme.Baseui1Theme
-import com.example.ui1.screens.StatusBarStyle
+import com.example.xcpro.screens.navdrawer.lookandfeel.StatusBarStyle
 import org.maplibre.android.MapLibre
 import org.maplibre.android.WellKnownTileServer
 
 private const val TAG = "MainActivity"
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private var currentProfileId: String? = null
-    private var wakeLock: PowerManager.WakeLock? = null
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -28,17 +29,7 @@ class MainActivity : ComponentActivity() {
         // ✅ Only set basic window flags that are safe to set early
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
-        // ✅ Acquire PARTIAL wake lock for continuous sensor operation
-        // PARTIAL_WAKE_LOCK keeps CPU running even when screen is off
-        // This prevents GPS/sensor freezing during sleep mode
-        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
-        wakeLock = powerManager.newWakeLock(
-            PowerManager.PARTIAL_WAKE_LOCK,
-            "XCPro::SensorWakeLock"
-        )
-        // Acquire indefinitely - will be released in onDestroy()
-        wakeLock?.acquire()
-
+        // Background sensor work stays tied to the foreground lifecycle; avoiding partial wake locks reduces battery drain.
         MapLibre.getInstance(this, "nYDScLfnBm52GAc3jXEZ", WellKnownTileServer.MapTiler)
         
         // ✅ First-time setup - Clear cache and set defaults
@@ -106,16 +97,6 @@ class MainActivity : ComponentActivity() {
         // This log helps track when the app returns from background/sleep
     }
     
-    override fun onDestroy() {
-        super.onDestroy()
-        // ✅ Release wake lock to prevent battery drain
-        wakeLock?.let { wl ->
-            if (wl.isHeld) {
-                wl.release()
-            }
-        }
-    }
-
     // ✅ Apply user's selected status bar style with navigation bar handling
     fun applyUserStatusBarStyle(profileId: String?) {
         currentProfileId = profileId // Store for reapplication
@@ -195,7 +176,7 @@ class MainActivity : ComponentActivity() {
                         window.setDecorFitsSystemWindows(true)
                         
                         // DEBUG: Set to RED to test if colors are applying
-                        val themedColor = android.graphics.Color.parseColor("#FF0000") // RED for debugging
+                        val themedColor = "#FF0000".toColorInt() // RED for debugging
                         window.statusBarColor = themedColor
                         window.navigationBarColor = themedColor
                         
@@ -223,8 +204,8 @@ class MainActivity : ComponentActivity() {
                         Log.d("MainActivity", "🎨 THEMED - Navigation bar: ${String.format("#%08X", window.navigationBarColor)}")
                     } else {
                         @Suppress("DEPRECATION")
-                        window.statusBarColor = android.graphics.Color.parseColor("#FFFFFF")
-                        window.navigationBarColor = android.graphics.Color.parseColor("#FFFFFF")
+                        window.statusBarColor = "#FFFFFF".toColorInt()
+                        window.navigationBarColor = "#FFFFFF".toColorInt()
                         @Suppress("DEPRECATION")
                         window.decorView.systemUiVisibility = (
                             View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or
@@ -270,9 +251,9 @@ class MainActivity : ComponentActivity() {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                         window.setDecorFitsSystemWindows(false)
                         
-                        val overlayColor = android.graphics.Color.parseColor("#80000000") // Semi-transparent black
+                        val overlayColor = "#80000000".toColorInt() // Semi-transparent black
                         window.statusBarColor = overlayColor
-                        window.navigationBarColor = android.graphics.Color.parseColor("#80000000")
+                        window.navigationBarColor = "#80000000".toColorInt()
                         
                         // Apply immediately without delay
                         window.insetsController?.let { controller ->

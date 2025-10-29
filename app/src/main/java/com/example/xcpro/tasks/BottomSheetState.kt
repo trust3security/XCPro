@@ -35,9 +35,9 @@ enum class BottomSheetState {
 fun TaskMinimizedIndicator(
     task: Task,
     taskManager: TaskManagerCoordinator,
-    currentGPSLocation: Pair<Double, Double>? = null,  // Real-time GPS position for live distance updates
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    currentGPSLocation: Pair<Double, Double>? = null // Real-time GPS position for live distance updates
 ) {
     if (task.waypoints.isNotEmpty()) {
         println("🎯 CURRENT TASK DEBUG: TaskMinimizedIndicator - waypoints: ${task.waypoints.size}")

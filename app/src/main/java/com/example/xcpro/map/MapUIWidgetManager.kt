@@ -94,26 +94,6 @@ class MapUIWidgetManager(
         Log.d(TAG, "Edit mode toggled: ${mapState.isUIEditMode}")
     }
 
-    /**
-     * Get edit mode border modifier
-     */
-    fun getEditModeBorder(): Modifier {
-        return Modifier.border(
-            width = if (mapState.isUIEditMode) 2.dp else 0.dp,
-            color = if (mapState.isUIEditMode) Color.Red else Color.Transparent
-        )
-    }
-
-    /**
-     * Get edit mode border modifier with custom shape
-     */
-    fun getEditModeBorder(shape: androidx.compose.ui.graphics.Shape): Modifier {
-        return Modifier.border(
-            width = if (mapState.isUIEditMode) 2.dp else 0.dp,
-            color = if (mapState.isUIEditMode) Color.Red else Color.Transparent,
-            shape = shape
-        )
-    }
 }
 
 /**
@@ -124,6 +104,21 @@ data class WidgetPositions(
     val variometerSizePx: Float,
     val hamburgerOffset: Offset
 )
+
+private fun Modifier.editModeBorder(
+    isEditMode: Boolean,
+    shape: androidx.compose.ui.graphics.Shape = RectangleShape
+): Modifier {
+    return if (isEditMode) {
+        border(
+            width = 2.dp,
+            color = Color.Red,
+            shape = shape
+        )
+    } else {
+        this
+    }
+}
 
 /**
  * Compose components for UI widgets
@@ -197,7 +192,7 @@ object MapUIWidgets {
                         Modifier
                     }
                 )
-                .then(widgetManager.getEditModeBorder())
+                .editModeBorder(widgetManager.mapState.isUIEditMode)
         ) {
             UIVariometer(
                 needleValue = variometerNeedleValue,
@@ -261,7 +256,7 @@ object MapUIWidgets {
             modifier = modifier
                 .offset { IntOffset(displayOffset.value.x.roundToInt(), displayOffset.value.y.roundToInt()) }
                 .size(displaySize.value.dp)
-                .then(widgetManager.getEditModeBorder(RectangleShape))
+                .editModeBorder(widgetManager.mapState.isUIEditMode, RectangleShape)
                 // Long-press detection (works in both modes)
                 .pointerInput(Unit) {
                     detectTapGestures(

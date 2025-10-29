@@ -1,6 +1,5 @@
 package com.example.xcpro
 
-import android.app.Application
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,16 +13,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.ui1.screens.*
+import com.example.xcpro.screens.navdrawer.lookandfeel.LookAndFeelScreen
 import com.example.xcpro.map.MapScreenViewModel
 import com.example.xcpro.profiles.ProfileSelectionScreen
 import com.example.xcpro.profiles.ProfileUiState
@@ -51,11 +50,7 @@ fun AppNavGraph(
         modifier = modifier
     ) {
         composable("map") { backStackEntry ->
-            val context = LocalContext.current
-            val mapViewModel: MapScreenViewModel = viewModel(
-                backStackEntry,
-                factory = MapScreenViewModel.provideFactory(context.applicationContext as Application, initialMapStyle)
-            )
+            val mapViewModel: MapScreenViewModel = hiltViewModel(backStackEntry)
             MapScreen(
                 navController = navController,
                 drawerState = drawerState,
@@ -68,12 +63,8 @@ fun AppNavGraph(
             )
         }
         composable("settings") { backStackEntry ->
-            val context = LocalContext.current
             val mapEntry = remember(backStackEntry) { navController.getBackStackEntry("map") }
-            val mapViewModel: MapScreenViewModel = viewModel(
-                mapEntry,
-                factory = MapScreenViewModel.provideFactory(context.applicationContext as Application, initialMapStyle)
-            )
+            val mapViewModel: MapScreenViewModel = hiltViewModel(mapEntry)
             SettingsScreen(
                 navController = navController,
                 drawerState = drawerState,
@@ -95,12 +86,8 @@ fun AppNavGraph(
         composable("vario_audio_settings") { VarioAudioSettingsScreen(navController = navController, drawerState = drawerState) }
         composable("colors") { ColorsScreen(navController = navController) }
         composable("hawk_dashboard") { backStackEntry ->
-            val context = LocalContext.current
             val mapEntry = remember(backStackEntry) { navController.getBackStackEntry("map") }
-            val mapViewModel: MapScreenViewModel = viewModel(
-                mapEntry,
-                factory = MapScreenViewModel.provideFactory(context.applicationContext as Application, initialMapStyle)
-            )
+            val mapViewModel: MapScreenViewModel = hiltViewModel(mapEntry)
             val manager = mapViewModel.locationManager
             val registeredFromPending = mapViewModel.finalizeHawkDashboardClient()
             if (!registeredFromPending) {

@@ -14,7 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.example.xcpro.profiles.ProfileViewModel
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -42,7 +42,7 @@ fun Baseui1Theme(
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
-    val profileViewModel: ProfileViewModel = viewModel()
+    val profileViewModel: ProfileViewModel = hiltViewModel()
     val profileUiState = profileViewModel.uiState.collectAsState()
     val profileId = profileUiState.value.activeProfile?.id ?: "default"
     

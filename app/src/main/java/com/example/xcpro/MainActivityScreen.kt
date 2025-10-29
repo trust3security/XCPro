@@ -1,6 +1,5 @@
 package com.example.xcpro
 
-import android.app.Application
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -36,11 +35,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.example.xcpro.map.MapScreenViewModel
 import com.example.xcpro.profiles.ProfileSelectionScreen
 import com.example.xcpro.profiles.ProfileViewModel
 import kotlinx.coroutines.launch
@@ -56,7 +54,7 @@ fun MainActivityScreen(
     drawerState: DrawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 ) {
     val context = LocalContext.current
-    val profileViewModel: ProfileViewModel = viewModel()
+    val profileViewModel: ProfileViewModel = hiltViewModel()
     
     // ✅ Status bar is automatically transparent (#00000000) on this device
     // ✅ This allows map to show behind status bar as requested by user
@@ -125,148 +123,6 @@ fun MainActivityScreen(
                     .weight(1f)
                     .fillMaxWidth()
             )
-            /*
-            NavHost(
-                navController = navController,
-                startDestination = "map",
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-            ) {
-                composable("map") { backStackEntry ->
-                    val context = LocalContext.current
-                    val mapViewModel: MapScreenViewModel = viewModel(
-                        backStackEntry,
-                        factory = MapScreenViewModel.provideFactory(context.applicationContext as Application, initialMapStyle)
-                    )
-                    MapScreen(
-                        navController = navController,
-                        drawerState = drawerState,
-                        profileExpanded = remember { mutableStateOf(config?.optJSONObject("navDrawer")?.optBoolean("profileExpanded", true) ?: true) },
-                        mapStyleExpanded = remember { mutableStateOf(config?.optJSONObject("navDrawer")?.optBoolean("mapStyleExpanded", false) ?: false) },
-                        settingsExpanded = remember { mutableStateOf(config?.optJSONObject("navDrawer")?.optBoolean("settingsExpanded", true) ?: true) },
-                        initialMapStyle = initialMapStyle,
-                        showTaskScreen = remember { mutableStateOf(false) },
-                        mapViewModel = mapViewModel
-                    )
-                }
-                composable("settings") { backStackEntry ->
-                    val context = LocalContext.current
-                    val mapEntry = remember(backStackEntry) { navController.getBackStackEntry("map") }
-                    val mapViewModel: MapScreenViewModel = viewModel(
-                        mapEntry,
-                        factory = MapScreenViewModel.provideFactory(context.applicationContext as Application, initialMapStyle)
-                    )
-                    SettingsScreen(
-                        navController = navController,
-                        drawerState = drawerState,
-                        onShowAirspaceOverlay = { },
-                        onPrepareHawkDashboard = { mapViewModel.prepareHawkDashboardClient() },
-                        onCancelHawkDashboard = { mapViewModel.cancelHawkDashboardPreparation() }
-                    )
-                }
-                composable("look_and_feel") {
-                    LookAndFeelScreen(
-                        navController = navController,
-                        drawerState = drawerState
-                    )
-                }
-                composable("units_settings") {
-                    UnitsSettingsScreen(
-                        navController = navController
-                    )
-                }
-                composable("polar_settings") {
-                    PolarSettingsScreen(
-                        navController = navController,
-                        drawerState = drawerState
-                    )
-                }
-                composable("skysight_settings") {
-                    com.example.xcpro.skysight.SkysightSettingsScreen(
-                        drawerState = drawerState,
-                        onNavigateBack = { navController.popBackStack() },
-                        onNavigateToMap = { navController.popBackStack("map", inclusive = false) }
-                    )
-                }
-                composable("vario_audio_settings") {
-                    VarioAudioSettingsScreen(
-                        navController = navController,
-                        drawerState = drawerState
-                    )
-                }
-                composable("colors") {
-                    ColorsScreen(
-                        navController = navController
-                    )
-                }
-                composable("task") {
-                    Task(
-                        navController = navController,
-                        drawerState = drawerState,
-                        selectedNavItem = selectedNavItem,
-                        onShowBottomSheet = { isBottomSheetVisible = true },
-                        onHideBottomSheet = { isBottomSheetVisible = false }
-                    )
-                    LaunchedEffect(Unit) {
-                        selectedNavItem = "Task"
-                    }
-                }
-                composable("task_creation") {
-                    TaskCreation(
-                        navController = navController,
-                        drawerState = drawerState
-                    )
-                }
-                composable(
-                    route = "flight_data/waypoints?autoFocusHome={autoFocusHome}",
-                    arguments = listOf(navArgument("autoFocusHome") { 
-                        type = NavType.BoolType
-                        defaultValue = false 
-                    })
-                ) { backStackEntry ->
-                    val autoFocusHome = backStackEntry.arguments?.getBoolean("autoFocusHome") ?: false
-                    FlightMgmt(
-                        navController = navController,
-                        drawerState = drawerState,
-                        initialTab = "waypoints", // This will open directly to waypoints tab
-                        autoFocusHome = autoFocusHome,
-                        activeProfile = profileUiState.activeProfile // ✅ ADD: Pass active profile
-                    )
-                }
-                composable("flight_data") { FlightMgmt( navController = navController, drawerState = drawerState, activeProfile = profileUiState.activeProfile) }
-                composable("files") { FilesScreen(navController, drawerState) }
-                composable("profiles") { ProfilesScreen (navController, drawerState) }
-                composable("profile_selection") { 
-                    ProfileSelectionScreen(
-                        onProfileSelected = { navController.popBackStack() }
-                    ) 
-                }
-                composable("profile_settings/{profileId}") { backStackEntry ->
-                    val profileId = backStackEntry.arguments?.getString("profileId") ?: ""
-                    com.example.xcpro.profiles.ProfileSettingsScreen(
-                        profileId = profileId,
-                        navController = navController
-                    )
-                }
-                composable("sailplanes") { Sailplanes(navController, drawerState) }
-                composable("paragliders") { Paragliders(navController, drawerState) }
-                composable("hanggliders") { Hangglider(navController, drawerState) }
-                composable("manage_account") { ManageAccount(navController, drawerState) }
-                composable("logbook") { Logbook(navController, drawerState) }
-                composable("layouts") { LayoutScreen(navController, drawerState) }
-                composable("dfnavboxes") { DFNavboxes(navController, drawerState) }
-                composable("support") {
-                    MySupport(
-                        navController = navController,
-                        drawerState = drawerState,
-                        onShowBottomSheet = { isBottomSheetVisible = true },
-                        onHideBottomSheet = { isBottomSheetVisible = false }
-                    )
-                }
-                composable("about") { MyAbout(navController, drawerState) }
-            }
-            */
         }
 
         if (currentRoute?.destination?.route in listOf("about", "support", "task")) {

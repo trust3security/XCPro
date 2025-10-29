@@ -16,7 +16,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.dfcards.FlightModeSelection
 import com.example.xcpro.FlightMode
@@ -35,7 +35,7 @@ fun ProfileIndicator(
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {
-    val profileViewModel: ProfileViewModel = viewModel()
+    val profileViewModel: ProfileViewModel = hiltViewModel()
     val uiState by profileViewModel.uiState.collectAsState()
     val activeProfile = uiState.activeProfile
     
@@ -86,7 +86,7 @@ fun ProfileQuickSwitcher(
     modifier: Modifier = Modifier,
     navController: NavController
 ) {
-    val profileViewModel: ProfileViewModel = viewModel()
+    val profileViewModel: ProfileViewModel = hiltViewModel()
     val uiState by profileViewModel.uiState.collectAsState()
     var expanded by remember { mutableStateOf(false) }
     
@@ -196,7 +196,7 @@ fun FlightModeIndicator(
     modifier: Modifier = Modifier
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val profileViewModel: ProfileViewModel = viewModel()
+    val profileViewModel: ProfileViewModel = hiltViewModel()
     val uiState by profileViewModel.uiState.collectAsState()
     val activeProfile = uiState.activeProfile
     

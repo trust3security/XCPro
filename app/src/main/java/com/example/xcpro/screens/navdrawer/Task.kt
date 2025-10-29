@@ -42,6 +42,9 @@ import com.example.xcpro.parseAirspaceClasses
 import com.example.xcpro.saveAirspaceFiles
 import com.example.xcpro.saveSelectedClasses
 import com.example.xcpro.saveWaypointFiles
+import com.example.xcpro.screens.navdrawer.tasks.TaskAirspaceClassCard
+import com.example.xcpro.screens.navdrawer.tasks.TaskFilesBottomBar
+import com.example.xcpro.screens.navdrawer.tasks.TaskFilesBottomSheetContent
 import com.example.ui1.icons.Reply_all
 import kotlinx.coroutines.launch
 import org.maplibre.android.camera.CameraPosition
@@ -337,80 +340,6 @@ fun Task(
                     }
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun TaskAirspaceClassCard(
-    airspaceClass: AirspaceClassItem,
-    onToggle: (String) -> Unit
-) {
-    // moved to TaskSections.kt; keep thin wrapper to preserve signature
-    TaskAirspaceClassCardView(
-        airspaceClass = airspaceClass,
-        onToggle = onToggle
-    )
-}
-
-@Composable
-private fun LegacyTaskAirspaceClassCard(
-    airspaceClass: AirspaceClassItem,
-    onToggle: (String) -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFE5E5E5) // Light grey instead of dark grey
-        ),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Color indicator
-            Box(
-                modifier = Modifier
-                    .size(24.dp)
-                    .background(
-                        color = Color(android.graphics.Color.parseColor(airspaceClass.color))
-                            .copy(alpha = 0.7f), // Slightly more opaque for better visibility on light background
-                        shape = RoundedCornerShape(4.dp)
-                    )
-                    .border(
-                        2.dp,
-                        Color.Black.copy(alpha = 0.2f), // Dark border for light background
-                        RoundedCornerShape(4.dp)
-                    )
-            )
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // Class info
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Class ${airspaceClass.className}",
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Black, // Black text for light background
-                    fontSize = 16.sp
-                )
-                Text(
-                    text = airspaceClass.description,
-                    color = Color(0xFF666666), // Dark grey text for light background
-                    fontSize = 12.sp
-                )
-            }
-
-            // Checkbox toggle
-            Checkbox(
-                checked = airspaceClass.enabled,
-                onCheckedChange = { onToggle(airspaceClass.className) }
-            )
         }
     }
 }

@@ -14,8 +14,9 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
+import androidx.core.graphics.toColorInt
 import com.example.ui1.icons.Sailplane
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
@@ -339,19 +340,19 @@ class BlueLocationOverlay(
 
         // Paints - 3-tone blue shading like navigation apps
         val leftPaint = Paint().apply {
-            color = android.graphics.Color.parseColor("#5DADE2")  // Light cyan/blue
+            color = "#5DADE2".toColorInt()  // Light cyan/blue
             isAntiAlias = true
             style = Paint.Style.FILL
         }
 
         val centerPaint = Paint().apply {
-            color = android.graphics.Color.parseColor("#3498DB")  // Medium blue
+            color = "#3498DB".toColorInt()  // Medium blue
             isAntiAlias = true
             style = Paint.Style.FILL
         }
 
         val rightPaint = Paint().apply {
-            color = android.graphics.Color.parseColor("#2874A6")  // Dark blue
+            color = "#2874A6".toColorInt()  // Dark blue
             isAntiAlias = true
             style = Paint.Style.FILL
         }

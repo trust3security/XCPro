@@ -7,6 +7,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.core.graphics.toColorInt
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 
@@ -73,7 +74,7 @@ internal fun HexInput(
             hexValue = newHex
             if (newHex.matches(Regex("^#[0-9A-Fa-f]{6}$"))) {
                 try {
-                    val colorInt = android.graphics.Color.parseColor(newHex)
+                    val colorInt = newHex.toColorInt()
                     onColorChanged(Color(colorInt))
                 } catch (e: Exception) { /* Invalid color */ }
             }
@@ -225,7 +226,7 @@ internal fun CompactHexInput(
             hexValue = newHex
             if (newHex.matches(Regex("^#[0-9A-Fa-f]{6}$"))) {
                 try {
-                    val colorInt = android.graphics.Color.parseColor(newHex)
+                    val colorInt = newHex.toColorInt()
                     onColorChanged(Color(colorInt))
                 } catch (e: Exception) { /* Invalid color */ }
             }

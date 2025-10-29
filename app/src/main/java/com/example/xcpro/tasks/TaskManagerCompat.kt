@@ -35,3 +35,7 @@ fun rememberTaskManager(context: Context? = null): TaskManagerCoordinator {
     return rememberTaskManagerCoordinator(context)
 }
 
+fun setGlobalTaskManagerCoordinator(coordinator: TaskManagerCoordinator) {
+    globalTaskManagerCoordinator = coordinator
+}
+
