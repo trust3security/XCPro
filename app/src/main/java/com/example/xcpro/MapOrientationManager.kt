@@ -2,9 +2,17 @@ package com.example.xcpro
 
 import android.content.Context
 import android.util.Log
-import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.*
-import kotlin.math.*
+import com.example.dfcards.RealTimeFlightData
+import com.example.xcpro.sensors.UnifiedSensorManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.sample
+import kotlinx.coroutines.launch
 
 enum class MapOrientationMode {
     NORTH_UP,
@@ -21,10 +29,11 @@ data class OrientationData(
 
 class MapOrientationManager(
     private val context: Context,
-    private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main + SupervisorJob()),
+    private val unifiedSensorManager: UnifiedSensorManager
 ) {
     private val preferences = MapOrientationPreferences(context)
-    private val orientationDataSource = OrientationDataSource(context)
+    private val orientationDataSource = OrientationDataSource(unifiedSensorManager, scope)
 
     private val _orientationFlow = MutableStateFlow(OrientationData())
     val orientationFlow: StateFlow<OrientationData> = _orientationFlow.asStateFlow()
@@ -34,12 +43,12 @@ class MapOrientationManager(
     private var lastUserInteractionTime = 0L
     private var lastValidBearing = 0.0
     private var updatesJob: Job? = null
+    private var minSpeedForTrackKt: Double = 0.0
 
     companion object {
         private const val TAG = "MapOrientationManager"
         private const val USER_OVERRIDE_TIMEOUT_MS = 10000L // 10 seconds
         private const val BEARING_UPDATE_THROTTLE_MS = 66L // ~15Hz
-        private const val MIN_SPEED_FOR_TRACK_KT = 2.0  // Reduced from 5.0 to 2.0 knots (3.7 km/h)
         private const val BEARING_CHANGE_THRESHOLD = 5.0 // degrees
     }
 
@@ -48,6 +57,7 @@ class MapOrientationManager(
 
         // Load saved orientation mode
         currentMode = preferences.getOrientationMode()
+        minSpeedForTrackKt = preferences.getMinSpeedThreshold()
         Log.d(TAG, "📱 Loaded orientation mode: $currentMode")
 
         // Start orientation data collection
@@ -112,7 +122,7 @@ class MapOrientationManager(
             MapOrientationMode.NORTH_UP -> 0.0
 
             MapOrientationMode.TRACK_UP -> {
-                if (sensorData.groundSpeed >= MIN_SPEED_FOR_TRACK_KT) {
+                if (sensorData.groundSpeed >= minSpeedForTrackKt) {
                     // Use GPS track when moving fast enough
                     sensorData.track
                 } else {
@@ -125,7 +135,7 @@ class MapOrientationManager(
                 // Use magnetometer heading, fall back to GPS track if unavailable
                 if (sensorData.hasValidHeading) {
                     sensorData.magneticHeading
-                } else if (sensorData.groundSpeed >= MIN_SPEED_FOR_TRACK_KT) {
+                } else if (sensorData.groundSpeed >= minSpeedForTrackKt) {
                     sensorData.track
                 } else {
                     lastValidBearing
@@ -139,12 +149,11 @@ class MapOrientationManager(
             MapOrientationMode.NORTH_UP -> true // Always valid
 
             MapOrientationMode.TRACK_UP -> {
-                sensorData.isGPSValid && sensorData.groundSpeed >= MIN_SPEED_FOR_TRACK_KT
+                sensorData.groundSpeed >= minSpeedForTrackKt
             }
 
             MapOrientationMode.HEADING_UP -> {
-                sensorData.hasValidHeading ||
-                (sensorData.isGPSValid && sensorData.groundSpeed >= MIN_SPEED_FOR_TRACK_KT)
+                sensorData.hasValidHeading || sensorData.groundSpeed >= minSpeedForTrackKt
             }
         }
     }
@@ -152,6 +161,7 @@ class MapOrientationManager(
     fun setOrientationMode(mode: MapOrientationMode) {
         if (currentMode != mode) {
             Log.d(TAG, "🔄 Changing orientation mode: $currentMode → $mode")
+            minSpeedForTrackKt = preferences.getMinSpeedThreshold()
             currentMode = mode
             preferences.setOrientationMode(mode)
 
@@ -192,6 +202,10 @@ class MapOrientationManager(
         updatesJob = null
         Log.d(TAG, "✅ MapOrientationManager stopped")
     }
+
+    fun updateFromFlightData(flightData: RealTimeFlightData) {
+        orientationDataSource.updateFromFlightData(flightData)
+    }
 }
 
 data class OrientationSensorData(
@@ -202,3 +216,7 @@ data class OrientationSensorData(
     val hasValidHeading: Boolean = false,
     val timestamp: Long = System.currentTimeMillis()
 )
+
+
+
+

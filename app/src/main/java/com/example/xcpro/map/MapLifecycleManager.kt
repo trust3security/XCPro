@@ -131,7 +131,6 @@ object MapLifecycleEffects {
 
             onDispose {
                 lifecycle.removeObserver(observer)
-                lifecycleManager.cleanup()
             }
         }
     }
@@ -175,8 +174,6 @@ object MapLifecycleEffects {
         onStyleLoaded: () -> Unit = {}
     ) {
         LifecycleObserverEffect(lifecycleManager)
-
-        LocationCleanupEffect(lifecycleManager.locationManager)
 
         MapStyleEffect(
             lifecycleManager = lifecycleManager,

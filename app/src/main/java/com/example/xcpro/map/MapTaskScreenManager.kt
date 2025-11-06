@@ -2,10 +2,10 @@ package com.example.xcpro.map
 
 import android.util.Log
 import androidx.compose.foundation.layout.*
+import androidx.compose.runtime.*
 import com.example.xcpro.tasks.BottomSheetState
 import com.example.xcpro.WaypointData
 import com.example.xcpro.SearchWaypoint
-import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -270,9 +270,10 @@ object MapTaskScreenUI {
 
             Box(
                 modifier = modifier
-                    .fillMaxSize()
-                    .padding(8.dp)
-                    .zIndex(20f)
+                    .wrapContentWidth(Alignment.CenterHorizontally, unbounded = false)
+                    .wrapContentHeight(Alignment.Top, unbounded = false)
+                    .padding(horizontal = 8.dp, vertical = 8.dp)
+                    .zIndex(3.8f)
             ) {
                 TaskMinimizedIndicator(
                     task = taskScreenManager.taskManager.currentTask,
@@ -282,7 +283,6 @@ object MapTaskScreenUI {
                         taskScreenManager.handleMinimizedIndicatorClick()
                     },
                     modifier = Modifier
-                        .align(Alignment.TopCenter)
                         .padding(top = 8.dp) // Position just under system status bar
                 )
             }

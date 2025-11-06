@@ -10,7 +10,9 @@ data class FlightData(
     val secondaryValue: String? = null,
     val labelFontSize: Int = 8,
     val primaryFontSize: Int = 11,
-    val secondaryFontSize: Int = 3
+    val secondaryFontSize: Int = 3,
+    val primaryValueNumber: String? = null,
+    val primaryValueUnit: String? = null
 )
 
 @Stable

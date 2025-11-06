@@ -54,6 +54,7 @@ fun NavigationDrawer(
     Log.d(TAG, "🚪 DismissibleNavigationDrawer rendering with state: ${drawerState.currentValue}")
     DismissibleNavigationDrawer(
         drawerState = drawerState,
+        gesturesEnabled = false,
         drawerContent = {
             DismissibleDrawerSheet(
                 modifier = Modifier.width(210.dp),

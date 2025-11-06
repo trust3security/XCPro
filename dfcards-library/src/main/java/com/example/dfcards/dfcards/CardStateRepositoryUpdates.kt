@@ -8,39 +8,64 @@ import com.example.xcpro.common.units.UnitsPreferences
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-internal fun CardStateRepository.updateCardsWithLiveData(liveData: RealTimeFlightData) {
+private enum class UpdateTier {
+    FAST,
+    PRIMARY,
+    BACKGROUND
+}
+
+internal fun CardStateRepository.updateCardsWithLiveData(
+    liveData: RealTimeFlightData,
+    forceVisible: Boolean = false
+) {
     lastRealTimeData = liveData
 
-    if (isManuallyPositioning) {
+    if (cardStateFlowsMap.isEmpty()) {
+    }
+
+    if (isManuallyPositioning && !forceVisible) {
         return
     }
 
     val currentTime = System.currentTimeMillis()
-    if (currentTime - lastUpdateTime < updateThrottleMs) {
+    val fastDue = currentTime - lastFastUpdateTime >= fastUpdateIntervalMs
+    val primaryDue = currentTime - lastPrimaryUpdateTime >= primaryUpdateIntervalMs
+    val backgroundDue = currentTime - lastBackgroundUpdateTime >= backgroundUpdateIntervalMs
+
+    val visibleIds = selectedCardIds.value
+    val effectivePrimaryDue = primaryDue || forceVisible
+    val effectiveFastDue = fastDue || forceVisible
+
+    if (!effectiveFastDue && !effectivePrimaryDue && !backgroundDue) {
         return
     }
-    lastUpdateTime = currentTime
+
+    if (fastDue || forceVisible) lastFastUpdateTime = currentTime
+    if (primaryDue || forceVisible) lastPrimaryUpdateTime = currentTime
+    if (backgroundDue) lastBackgroundUpdateTime = currentTime
 
     cardStateFlowsMap.forEach { (cardId, stateFlow) ->
         if (cardId == "local_time") return@forEach
+
+        val tier = when {
+            cardId in FAST_UPDATE_CARD_IDS -> UpdateTier.FAST
+            cardId in visibleIds -> UpdateTier.PRIMARY
+            else -> UpdateTier.BACKGROUND
+        }
+
+        val shouldUpdate = when (tier) {
+            UpdateTier.FAST -> effectiveFastDue
+            UpdateTier.PRIMARY -> effectivePrimaryDue && cardId in visibleIds
+            UpdateTier.BACKGROUND -> backgroundDue
+        }
+
+        if (!shouldUpdate) return@forEach
 
         val currentState = stateFlow.value
         val updatedFlightData = mapRealDataToCard(currentState.flightData, liveData)
 
         if (updatedFlightData != currentState.flightData) {
-            val oldPosition = Pair(currentState.x, currentState.y)
-            val newState = currentState.copy(flightData = updatedFlightData)
-
-            if (newState.x != oldPosition.first || newState.y != oldPosition.second) {
-                println("ERROR: Live data update changed position for card $cardId; skipping update")
-                return@forEach
-            }
-
-            stateFlow.value = newState
-
-            if (cardId in selectedCardIds.value) {
-                println("DATA: Updated card $cardId value: ${updatedFlightData.primaryValue}")
-            }
+            stateFlow.value = currentState.copy(flightData = updatedFlightData)
         }
     }
 }
@@ -72,14 +97,11 @@ internal fun CardStateRepository.startIndependentClockTimer() {
             delay(1000L)
         }
     }
-
-    println("DEBUG: Independent clock timer started (1Hz updates)")
 }
 
 internal fun CardStateRepository.stopIndependentClockTimer() {
     clockTimerJob?.cancel()
     clockTimerJob = null
-    println("DEBUG: Independent clock timer stopped")
 }
 
 private fun CardStateRepository.mapRealDataToCard(
@@ -91,10 +113,13 @@ private fun CardStateRepository.mapRealDataToCard(
         liveData = realData,
         units = unitsPreferences
     )
+    val (primaryNumber, primaryUnit) = splitPrimaryValue(primaryValue)
 
     return currentFlightData.copy(
         primaryValue = primaryValue,
-        secondaryValue = secondaryValue
+        secondaryValue = secondaryValue,
+        primaryValueNumber = primaryNumber,
+        primaryValueUnit = primaryUnit
     )
 }
 
@@ -118,5 +143,20 @@ internal fun CardStateRepository.updateUnitsPreferences(preferences: UnitsPrefer
 internal fun CardStateRepository.onCleared() {
     manualPositioningTimeout?.cancel()
     stopIndependentClockTimer()
-    println("DEBUG: CardStateRepository - Cleared")
+}
+
+private fun splitPrimaryValue(primaryValue: String): Pair<String?, String?> {
+    val trimmed = primaryValue.trim()
+    if (trimmed.isEmpty()) {
+        return null to null
+    }
+
+    val firstSpace = trimmed.indexOf(' ')
+    return if (firstSpace > 0) {
+        val numberPart = trimmed.substring(0, firstSpace)
+        val unitPart = trimmed.substring(firstSpace + 1).trim().takeIf { it.isNotEmpty() }
+        numberPart to unitPart
+    } else {
+        trimmed to null
+    }
 }

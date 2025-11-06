@@ -10,6 +10,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -37,9 +39,8 @@ private const val TAG = "FlightWaypointsTab"
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FlightDataWaypointsTab(
-    selectedWaypointFiles: MutableList<Uri>,
-    waypointCheckedStates: MutableMap<String, Boolean>,
-    onWaypointStateChanged: (MutableMap<String, Boolean>) -> Unit,
+    selectedWaypointFiles: SnapshotStateList<Uri>,
+    waypointCheckedStates: SnapshotStateMap<String, Boolean>,
     onShowDeleteDialog: (String) -> Unit,
     onErrorMessage: (String) -> Unit,
     scope: CoroutineScope,
@@ -94,11 +95,12 @@ fun FlightDataWaypointsTab(
                             file.lastPathSegment?.substringAfterLast("/") == fileName
                         }) {
                         selectedWaypointFiles.add(Uri.fromFile(File(context.filesDir, fileName)))
-                        val newStates = waypointCheckedStates.toMutableMap().apply {
-                            put(fileName, true)
-                        }
-                        onWaypointStateChanged(newStates)
-                        saveWaypointFiles(context, selectedWaypointFiles, newStates)
+                        waypointCheckedStates[fileName] = true
+                        saveWaypointFiles(
+                            context,
+                            selectedWaypointFiles,
+                            waypointCheckedStates.toMap()
+                        )
                         Log.d(TAG, "✅ Added waypoint file: $fileName")
                     }
                 } catch (e: Exception) {
@@ -163,16 +165,19 @@ fun FlightDataWaypointsTab(
                         file,
                         "waypoints",
                         { fileName ->
-                            Log.d(TAG, "🔄 Toggling waypoint file: $fileName")
-                            val newStates = waypointCheckedStates.toMutableMap().apply {
-                                put(fileName, !(get(fileName) ?: false))
-                            }
-                            onWaypointStateChanged(newStates)
-                            saveWaypointFiles(context, selectedWaypointFiles, newStates)
-                            Log.d(TAG, "✅ Waypoint file $fileName is now ${if (newStates[fileName] == true) "enabled" else "disabled"}")
+                            Log.d(TAG, "Toggling waypoint file: $fileName")
+                            val newValue = !(waypointCheckedStates[fileName] ?: false)
+                            waypointCheckedStates[fileName] = newValue
+                            saveWaypointFiles(
+                                context,
+                                selectedWaypointFiles,
+                                waypointCheckedStates.toMap()
+                            )
+                            val statusLabel = if (newValue) "enabled" else "disabled"
+                            Log.d(TAG, "Waypoint file $fileName is now ${statusLabel}")
                         },
                         { fileName ->
-                            Log.d(TAG, "🗑️ Delete requested for waypoint file: $fileName")
+                            Log.d(TAG, "Delete requested for waypoint file: $fileName")
                             onShowDeleteDialog(fileName)
                         }
                     )
@@ -192,18 +197,18 @@ fun FlightDataWaypointsTab(
                         file,
                         "waypoints",
                         { fileName ->
-                            Log.d(TAG, "🔄 Toggling waypoint file: $fileName")
-                            val newStates = waypointCheckedStates.toMutableMap().apply {
-                                put(fileName, !(get(fileName) ?: false))
-                            }
-                            onWaypointStateChanged(newStates)
-                            saveWaypointFiles(context, selectedWaypointFiles, newStates)
+                            Log.d(TAG, "Toggling waypoint file: $fileName")
+                            val newValue = !(waypointCheckedStates[fileName] ?: false)
+                            waypointCheckedStates[fileName] = newValue
+                            saveWaypointFiles(
+                                context,
+                                selectedWaypointFiles,
+                                waypointCheckedStates.toMap()
+                            )
                         },
                         { fileName -> onShowDeleteDialog(fileName) }
                     )
                 }
-
-                // HOME WAYPOINT SELECTOR
                 if (allWaypoints.isNotEmpty()) {
                     item {
                         LaunchedEffect(Unit) {
@@ -258,3 +263,5 @@ fun FlightDataWaypointsTab(
         }
     }
 }
+
+

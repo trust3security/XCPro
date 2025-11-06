@@ -11,6 +11,21 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
+internal val FAST_UPDATE_CARD_IDS = setOf(
+    "vario",
+    "vario_optimized",
+    "vario_legacy",
+    "vario_raw",
+    "vario_gps",
+    "vario_complementary",
+    "ground_speed",
+    "ias"
+)
+
+private const val FAST_UPDATE_INTERVAL_MS = 80L
+private const val PRIMARY_UPDATE_INTERVAL_MS = 250L
+private const val BACKGROUND_UPDATE_INTERVAL_MS = 1_000L
+
 internal class CardStateRepository(
     internal val scope: CoroutineScope
 ) {
@@ -34,8 +49,12 @@ internal class CardStateRepository(
     internal val manuallyPositionedCards = mutableSetOf<String>()
     internal var unitsPreferences: UnitsPreferences = UnitsPreferences()
     internal var lastRealTimeData: RealTimeFlightData? = null
-    internal var lastUpdateTime = 0L
-    internal val updateThrottleMs = 200L
+    internal var lastFastUpdateTime = 0L
+    internal var lastPrimaryUpdateTime = 0L
+    internal var lastBackgroundUpdateTime = 0L
+    internal val fastUpdateIntervalMs = FAST_UPDATE_INTERVAL_MS
+    internal val primaryUpdateIntervalMs = PRIMARY_UPDATE_INTERVAL_MS
+    internal val backgroundUpdateIntervalMs = BACKGROUND_UPDATE_INTERVAL_MS
     internal var clockTimerJob: Job? = null
 
     internal val essentialCardIds = listOf("gps_alt", "baro_alt", "agl", "vario", "ias", "ground_speed")
@@ -62,11 +81,20 @@ internal class CardStateRepository(
     }
 
     fun setSelectedCardIds(ids: Set<String>) {
+        val changed = _selectedCardIds.value != ids
         _selectedCardIds.value = ids
+        if (changed) {
+            refreshVisibleCards()
+        }
     }
 
     fun resumeLiveUpdates() {
         isManuallyPositioning = false
         manualPositioningTimeout?.cancel()
+    }
+
+    fun refreshVisibleCards() {
+        val liveData = lastRealTimeData ?: return
+        updateCardsWithLiveData(liveData, forceVisible = true)
     }
 }

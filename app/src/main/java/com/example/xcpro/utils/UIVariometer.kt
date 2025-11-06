@@ -26,6 +26,7 @@ import kotlin.math.sin
 fun UIVariometer(
     needleValue: Float,
     displayValue: Float,
+    averageNeedleValue: Float? = null,
     modifier: Modifier = Modifier
 ) {
     var isFlashing by remember { mutableStateOf(false) }
@@ -176,6 +177,19 @@ fun UIVariometer(
                 strokeWidth = 6.dp.toPx(),
                 cap = StrokeCap.Round
             )
+        }
+
+        averageNeedleValue?.let { average ->
+            val averageAngle = (average.coerceIn(-9f, 9f) * (300f / 18f) - 90f)
+            rotate(averageAngle, center) {
+                drawLine(
+                    color = Color(0xFF7C3AED),
+                    start = center,
+                    end = Offset(center.x + needleLength, center.y),
+                    strokeWidth = 4.dp.toPx(),
+                    cap = StrokeCap.Round
+                )
+            }
         }
 
         val microLabelPaint = android.graphics.Paint().apply {

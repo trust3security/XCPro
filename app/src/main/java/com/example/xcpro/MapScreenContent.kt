@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.DrawerState
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
@@ -41,14 +40,11 @@ import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.OrientationData
 import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.sensors.GPSData
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
 
 @Composable
 internal fun MapScreenContent(
     navController: NavHostController,
-    drawerState: DrawerState,
-    coroutineScope: CoroutineScope,
     density: Density,
     mapState: MapScreenState,
     mapInitializer: MapInitializer,
@@ -74,6 +70,7 @@ internal fun MapScreenContent(
     variometerOffset: MutableState<Offset>,
     variometerSizePx: MutableState<Float>,
     hamburgerOffset: MutableState<Offset>,
+    flightModeOffset: MutableState<Offset>,
     showQnhDialog: MutableState<Boolean>,
     qnhInput: MutableState<String>,
     qnhError: MutableState<String?>,
@@ -82,7 +79,9 @@ internal fun MapScreenContent(
     waypointData: List<WaypointData>,
     unitsPreferences: UnitsPreferences,
     ballastUiState: StateFlow<BallastUiState>,
-    onBallastCommand: (BallastCommand) -> Unit
+    onBallastCommand: (BallastCommand) -> Unit,
+    onHamburgerTap: () -> Unit,
+    onHamburgerLongPress: () -> Unit
 ) {
     Box(Modifier.fillMaxSize()) {
         Scaffold(
@@ -122,16 +121,16 @@ internal fun MapScreenContent(
                         variometerOffset = variometerOffset,
                         variometerSizePx = variometerSizePx,
                         hamburgerOffset = hamburgerOffset,
+                        flightModeOffset = flightModeOffset,
                         widgetManager = widgetManager,
                         screenWidthPx = screenWidthPx,
                         screenHeightPx = screenHeightPx,
                         density = density,
-                        drawerState = drawerState,
-                        coroutineScope = coroutineScope,
-                        
                         modalManager = modalManager,
                         ballastUiState = ballastUiState,
-                        onBallastCommand = onBallastCommand
+                        onBallastCommand = onBallastCommand,
+                        onHamburgerTap = onHamburgerTap,
+                        onHamburgerLongPress = onHamburgerLongPress
                     )
                 }
             }

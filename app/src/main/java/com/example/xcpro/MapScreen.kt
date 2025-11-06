@@ -26,6 +26,7 @@ import com.example.xcpro.map.MapGestureSetup
 import com.example.xcpro.map.MapTaskIntegration
 import com.example.xcpro.map.MapScreenViewModel
 import com.example.xcpro.map.MapUiEffect
+import com.example.xcpro.map.MapUiEvent
 import com.example.dfcards.CardDefinition
 import com.example.ui1.icons.Task
 import com.example.ui1.icons.LocationSailplane
@@ -140,8 +141,14 @@ fun MapScreen(
                 is MapUiEffect.ShowToast -> {
                     Toast.makeText(context, effect.message, Toast.LENGTH_LONG).show()
                 }
+                MapUiEffect.OpenDrawer -> drawerState.open()
+                MapUiEffect.CloseDrawer -> drawerState.close()
             }
         }
+    }
+
+    LaunchedEffect(drawerState.isOpen) {
+        mapViewModel.onEvent(MapUiEvent.SetDrawerOpen(drawerState.isOpen))
     }
 
     // ?o. Centralized state management via ViewModel
@@ -273,6 +280,7 @@ fun MapScreen(
         locationPermissionLauncher = locationPermissionLauncher,
         currentLocation = currentLocation,
         orientationData = orientationData,
+        orientationManager = orientationManager,
         uiState = profileUiState,
         flightDataManager = flightDataManager,
         mapState = mapState,
@@ -308,8 +316,20 @@ fun MapScreen(
     var variometerOffset by variometerOffsetState
     val variometerSizePxState = remember { mutableStateOf(widgetPositions.variometerSizePx) }
     var variometerSizePx by variometerSizePxState
-    val hamburgerOffsetState = remember { mutableStateOf(widgetPositions.hamburgerOffset) }
-    var hamburgerOffset by hamburgerOffsetState
+    val hamburgerOffsetState = remember { mutableStateOf(widgetPositions.sideHamburgerOffset) }
+    val flightModeOffsetState = remember { mutableStateOf(widgetPositions.flightModeOffset) }
+
+    LaunchedEffect(Unit) {
+        val maxX = (screenWidthPx - variometerSizePx).coerceAtLeast(0f)
+        val maxY = (screenHeightPx - variometerSizePx).coerceAtLeast(0f)
+        val centeredOffset = Offset(
+            x = ((screenWidthPx - variometerSizePx) / 2f).coerceIn(0f, maxX),
+            y = ((screenHeightPx - variometerSizePx) / 2f).coerceIn(0f, maxY)
+        )
+        variometerOffset = centeredOffset
+        widgetManager.saveWidgetPosition("uilevo", centeredOffset)
+        Log.d(TAG, "UILevo initial centered offset applied: $centeredOffset (size=$variometerSizePx)")
+    }
 
     // ✅ CENTRALIZED CAMERA EFFECTS - Replace camera animation and orientation effects
     MapCameraEffects.AllCameraEffects(
@@ -344,8 +364,6 @@ fun MapScreen(
             Box(modifier = Modifier.fillMaxSize()) {
                 MapScreenContent(
                     navController = navController,
-                    drawerState = drawerState,
-                    coroutineScope = coroutineScope,
                     density = density,
                     mapState = mapState,
                 mapInitializer = mapInitializer,
@@ -371,6 +389,7 @@ fun MapScreen(
                 variometerOffset = variometerOffsetState,
                 variometerSizePx = variometerSizePxState,
                 hamburgerOffset = hamburgerOffsetState,
+                flightModeOffset = flightModeOffsetState,
                 showQnhDialog = showQnhDialogState,
                 qnhInput = qnhInputState,
                 qnhError = qnhErrorState,
@@ -379,7 +398,9 @@ fun MapScreen(
                 waypointData = mapUiState.waypoints,
                 unitsPreferences = mapUiState.unitsPreferences,
                 ballastUiState = mapViewModel.ballastUiState,
-                onBallastCommand = mapViewModel::submitBallastCommand
+                onBallastCommand = mapViewModel::submitBallastCommand,
+                onHamburgerTap = { mapViewModel.onEvent(MapUiEvent.ToggleDrawer) },
+                onHamburgerLongPress = { mapViewModel.onEvent(MapUiEvent.ToggleUiEditMode) }
                 )
                 if (mapUiState.isLoadingWaypoints) {
                     Box(

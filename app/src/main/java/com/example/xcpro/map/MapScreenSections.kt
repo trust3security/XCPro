@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
 import androidx.navigation.NavHostController
+import android.util.Log
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.FlightTemplate
 import com.example.dfcards.RealTimeFlightData
@@ -58,6 +59,7 @@ fun MapMainLayers(
     isAATEditMode: Boolean,
     onSetAATEditMode: (Boolean) -> Unit,
     onContainerSizeChanged: (androidx.compose.ui.unit.IntSize) -> Unit,
+    cardSafeTopOffsetPx: Float = 0f,
     modifier: Modifier = Modifier,
     convertToRealTime: (CompleteFlightData) -> RealTimeFlightData
 ) {
@@ -82,17 +84,14 @@ fun MapMainLayers(
             modifier = Modifier.fillMaxSize()
         )
 
-        com.example.dfcards.FlightDataProvider(
-            dataProvider = { onDataReceived ->
-                locationManager.flightDataCalculator.flightDataFlow.collect { completeData ->
-                    if (completeData != null) {
-                        val realTimeData = convertToRealTime(completeData)
-                        onDataReceived(realTimeData)
-                    }
+        LaunchedEffect(Unit) {
+            locationManager.flightDataCalculator.flightDataFlow.collect { completeData ->
+                if (completeData != null) {
+                    val realTimeData = convertToRealTime(completeData)
+                    Log.d("MapMainLayers", "Sample received: lat=${realTimeData.latitude}, lon=${realTimeData.longitude}, vs=${realTimeData.verticalSpeed}, agl=${realTimeData.agl}")
+                    flightDataManager.updateLiveFlightData(realTimeData)
                 }
             }
-        ) { liveData ->
-            flightDataManager.updateLiveFlightData(liveData)
         }
 
         if (currentFlightModeSelection == FlightModeSelection.HAWK) {
@@ -131,7 +130,7 @@ fun MapMainLayers(
         ) {
             CardContainer(
                 onContainerSizeChanged = onContainerSizeChanged,
-                statusBarOffset = 0f,
+                statusBarOffset = cardSafeTopOffsetPx,
                 onFlightTemplateClick = { flightDataManager.showCardLibrary() },
                 viewModel = flightViewModel,
                 modifier = Modifier.fillMaxSize()
@@ -161,27 +160,6 @@ fun MapMainLayers(
                 modifier = Modifier.fillMaxSize()
             )
         }
-
-        MapGestureSetup.GestureHandlerOverlay(
-            mapState = mapState,
-            taskManager = taskManager,
-            flightDataManager = flightDataManager,
-            locationManager = locationManager,
-            cameraManager = cameraManager,
-            currentLocation = currentLocation,
-            showReturnButton = showReturnButton,
-            isAATEditMode = isAATEditMode,
-            onAATEditModeChange = onSetAATEditMode
-        )
-
-        com.example.xcpro.profiles.FlightModeIndicator(
-            currentMode = mapState.currentMode,
-            onModeChange = { newMode -> mapState.updateFlightMode(newMode) },
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(top = mapState.iconSize.dp + 8.dp, start = 16.dp)
-                .zIndex(5f)
-        )
 
         AnimatedVisibility(
             visible = true,

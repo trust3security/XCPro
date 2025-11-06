@@ -1,6 +1,6 @@
 package com.example.xcpro.tasks
 
-
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -40,12 +40,8 @@ fun TaskMinimizedIndicator(
     currentGPSLocation: Pair<Double, Double>? = null // Real-time GPS position for live distance updates
 ) {
     if (task.waypoints.isNotEmpty()) {
-        println("🎯 CURRENT TASK DEBUG: TaskMinimizedIndicator - waypoints: ${task.waypoints.size}")
-        println("🎯 CURRENT TASK DEBUG: TaskManager currentLeg: ${taskManager.currentLeg}")
-
         // Get current waypoint name and truncate if too long
         val currentWaypoint = taskManager.getCurrentLegWaypoint()
-        println("🎯 CURRENT TASK DEBUG: getCurrentLegWaypoint() returned: ${currentWaypoint?.title ?: "NULL"}")
         val waypointName = currentWaypoint?.title ?: "Unknown"
         val displayName = if (waypointName.length > 18) {
             "${waypointName.take(15)}..."

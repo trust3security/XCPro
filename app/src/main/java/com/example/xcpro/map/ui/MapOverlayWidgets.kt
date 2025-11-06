@@ -23,7 +23,6 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import androidx.compose.material3.DrawerState
 import androidx.navigation.NavHostController
 import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.xcpro.CompassWidget
@@ -47,11 +46,9 @@ import com.example.xcpro.map.MapUIWidgets
 import com.example.xcpro.map.ballast.BallastCommand
 import com.example.xcpro.map.ballast.BallastPill
 import com.example.xcpro.map.ballast.BallastUiState
-import com.example.xcpro.profiles.FlightModeIndicator
 import com.example.xcpro.sensors.GPSData
 import com.example.xcpro.skysight.SkysightMapOverlay
 import com.example.xcpro.tasks.TaskManagerCoordinator
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
 
 @Composable
@@ -77,16 +74,19 @@ internal fun MapOverlayStack(
     variometerOffset: MutableState<Offset>,
     variometerSizePx: MutableState<Float>,
     hamburgerOffset: MutableState<Offset>,
+    flightModeOffset: MutableState<Offset>,
     widgetManager: MapUIWidgetManager,
     screenWidthPx: Float,
     screenHeightPx: Float,
     density: Density,
-    drawerState: DrawerState,
-    coroutineScope: CoroutineScope,
     modalManager: MapModalManager,
     ballastUiState: StateFlow<BallastUiState>,
-    onBallastCommand: (BallastCommand) -> Unit
+    onBallastCommand: (BallastCommand) -> Unit,
+    onHamburgerTap: () -> Unit,
+    onHamburgerLongPress: () -> Unit
 ) {
+    val gestureRegions by widgetManager.gestureRegions.collectAsState()
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -131,16 +131,22 @@ internal fun MapOverlayStack(
             showReturnButton = showReturnButton,
             isAATEditMode = isAATEditMode,
             onAATEditModeChange = onSetAATEditMode,
+            gestureRegions = gestureRegions,
             modifier = Modifier.zIndex(3.6f)
         )
 
-        FlightModeIndicator(
+        MapUIWidgets.FlightModeMenu(
+            widgetManager = widgetManager,
             currentMode = mapState.currentMode,
+            visibleModes = flightDataManager.visibleModes,
             onModeChange = { newMode -> mapState.updateFlightMode(newMode) },
+            flightModeOffset = flightModeOffset.value,
+            screenWidthPx = screenWidthPx,
+            screenHeightPx = screenHeightPx,
+            onOffsetChange = { offset -> flightModeOffset.value = offset },
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .padding(top = mapState.iconSize.dp + 8.dp, start = 16.dp)
-                .zIndex(5f)
+                .zIndex(12f)
         )
 
         AnimatedVisibility(
@@ -200,7 +206,7 @@ internal fun MapOverlayStack(
         val minSizePx = with(density) { 60.dp.toPx() }
         val maxSizePx = with(density) { 200.dp.toPx() }
 
-        MapUIWidgets.DraggableVariometer(
+        MapUIWidgets.UILevo(
             variometerNeedleValue = animatedVario,
             variometerDisplayValue = displayNumericVario,
             variometerOffset = variometerOffset.value,
@@ -233,18 +239,17 @@ internal fun MapOverlayStack(
                 .zIndex(11f)
         )
 
-        MapUIWidgets.DraggableHamburgerMenu(
+        MapUIWidgets.SideHamburgerMenu(
+            widgetManager = widgetManager,
             hamburgerOffset = hamburgerOffset.value,
-            iconSize = mapState.iconSize,
             screenWidthPx = screenWidthPx,
             screenHeightPx = screenHeightPx,
-            widgetManager = widgetManager,
-            density = density,
-            drawerState = drawerState,
-            coroutineScope = coroutineScope,
+            onHamburgerTap = onHamburgerTap,
+            onHamburgerLongPress = onHamburgerLongPress,
             onOffsetChange = { offset -> hamburgerOffset.value = offset },
-            onSizeChange = { size -> mapState.iconSize = size },
-            modifier = Modifier.zIndex(4f)
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .zIndex(12f)
         )
 
         MapModalUI.AirspaceSettingsModalOverlay(modalManager = modalManager)

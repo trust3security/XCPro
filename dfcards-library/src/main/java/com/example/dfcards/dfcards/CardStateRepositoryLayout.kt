@@ -17,8 +17,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 internal fun CardStateRepository.initializeCards(containerSize: IntSize, density: Density) {
-    println("DEBUG: CardStateRepository - initializeCards called (no-op)")
-    println("DEBUG: Current card count: ${cardStateFlowsMap.size}")
 }
 
 internal suspend fun CardStateRepository.loadEssentialCardsOnStartup(
@@ -36,10 +34,8 @@ internal suspend fun CardStateRepository.loadEssentialCardsOnStartup(
     val template = FlightTemplates.getDefaultTemplates().find { it.id == templateId }
 
     if (template != null) {
-        println("DEBUG: Auto-loading ${template.name} template for ${currentFlightMode?.displayName ?: "default"} mode with ${template.cardIds.size} cards")
         applyTemplateInternal(template, containerSize, density, isAutoLoad = true)
     } else {
-        println("DEBUG: Template $templateId not found for ${currentFlightMode?.displayName}, creating manual essential cards")
         createEssentialCardsManually(containerSize, density)
     }
 }
@@ -83,14 +79,12 @@ private fun CardStateRepository.createEssentialCardsManually(
             )
 
             cardStateFlowsMap[cardState.id] = MutableStateFlow(cardState)
-        } else {
-            println("DEBUG: Card definition not found for: $cardId")
         }
     }
 
     setSelectedCardIds(essentialCardIds.toSet())
     markLegacyStateDirty()
-    println("DEBUG: Created ${cardStateFlowsMap.size} essential cards manually in map")
+    lastRealTimeData?.let { updateCardsWithLiveData(it, forceVisible = true) }
 }
 
 internal fun CardStateRepository.updateCardState(cardState: CardState) {
@@ -101,17 +95,13 @@ internal fun CardStateRepository.updateCardState(cardState: CardState) {
     val oldPosition = cardStateFlowsMap[cardState.id]?.value
     cardStateFlowsMap[cardState.id]?.value = cardState
 
-    println("? CARD MOVED: ${cardState.id} from (${oldPosition?.x?.toInt()}, ${oldPosition?.y?.toInt()}) -> (${cardState.x.toInt()}, ${cardState.y.toInt()})")
-
     scope.launch {
         cardPreferences?.saveCardPosition(cardState)
-        println("? SAVED: Card ${cardState.id} position saved to storage")
     }
 
     manualPositioningTimeout = scope.launch {
         delay(2000)
         isManuallyPositioning = false
-        println("? RESUMED: Live data updates resumed (cards can receive data)")
     }
 }
 
@@ -159,12 +149,10 @@ private fun CardStateRepository.addCard(
     )
 
     cardStateFlowsMap[newCard.id] = MutableStateFlow(newCard)
-    println("DEBUG: CardStateRepository - Added card to map: ${cardDefinition.id}")
 }
 
 private fun CardStateRepository.removeCard(cardId: String) {
     cardStateFlowsMap.remove(cardId)
-    println("DEBUG: CardStateRepository - Removed card from memory: $cardId")
 }
 
 internal fun CardStateRepository.applyTemplate(
@@ -181,40 +169,24 @@ private fun CardStateRepository.applyTemplateInternal(
     density: Density,
     isAutoLoad: Boolean
 ) {
-    println("? TEMPLATE: Applying template '${template.name}' (auto: $isAutoLoad)")
-
     val currentCardIds = cardStateFlowsMap.keys.toSet()
     val templateCardIds = template.cardIds.toSet()
-
-    println("? TEMPLATE: Cards in memory: ${currentCardIds.size}, Template wants: ${templateCardIds.size}")
-    println("? TEMPLATE: Manually positioned cards: ${manuallyPositionedCards.joinToString(", ")}")
 
     val cardsToCreate = templateCardIds - currentCardIds
 
     if (cardsToCreate.isNotEmpty()) {
-        println("? TEMPLATE: Creating ${cardsToCreate.size} new cards: ${cardsToCreate.joinToString(", ")}")
-
         val newCards = runBlocking {
             createCardsFromTemplate(template, containerSize, density)
         }
 
         newCards.filter { it.id in cardsToCreate }.forEach { cardState ->
             cardStateFlowsMap[cardState.id] = MutableStateFlow(cardState)
-            println("? TEMPLATE: Created card ${cardState.id} at (${cardState.x.toInt()}, ${cardState.y.toInt()})")
         }
-    } else {
-        println("? TEMPLATE: No new cards to create (all already exist)")
     }
-
-    println("? TEMPLATE: Existing cards KEEP their current positions (no repositioning)")
 
     setSelectedCardIds(template.cardIds.toSet())
     markLegacyStateDirty()
-
-    println("? TEMPLATE: Applied successfully")
-    println("? TEMPLATE:   - Total cards in memory: ${cardStateFlowsMap.size}")
-    println("? TEMPLATE:   - Visible cards: ${selectedCardIds.value.size}")
-    println("? TEMPLATE:   - Manually positioned (protected): ${manuallyPositionedCards.size}")
+    lastRealTimeData?.let { updateCardsWithLiveData(it, forceVisible = true) }
 }
 
 private suspend fun CardStateRepository.createCardsFromTemplate(
@@ -258,7 +230,6 @@ private suspend fun CardStateRepository.createCardsFromTemplate(
 
             loadSavedCardPosition(defaultCardState)
         } else {
-            println("DEBUG: Card definition not found for: $cardId")
             null
         }
     }
@@ -266,12 +237,10 @@ private suspend fun CardStateRepository.createCardsFromTemplate(
 
 private suspend fun CardStateRepository.loadSavedCardPosition(cardState: CardState): CardState {
     if (manuallyPositionedCards.contains(cardState.id)) {
-        println("BLOCKED: Not loading saved position for manually positioned card ${cardState.id}")
         return cardState
     }
 
     return cardPreferences?.getCardPosition(cardState.id)?.firstOrNull()?.let { savedPosition ->
-        println("LOADED: Restored saved position for card ${cardState.id}: (${savedPosition.x.toInt()}, ${savedPosition.y.toInt()})")
         cardState.copy(
             x = savedPosition.x,
             y = savedPosition.y,

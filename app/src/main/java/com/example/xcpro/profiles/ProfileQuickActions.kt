@@ -193,86 +193,98 @@ fun ProfileQuickSwitcher(
 fun FlightModeIndicator(
     currentMode: com.example.xcpro.FlightMode,
     onModeChange: (com.example.xcpro.FlightMode) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    availableModes: List<com.example.xcpro.FlightMode>? = null,
+    expandedOverride: Boolean? = null,
+    onExpandedChange: ((Boolean) -> Unit)? = null
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val profileViewModel: ProfileViewModel = hiltViewModel()
     val uiState by profileViewModel.uiState.collectAsState()
     val activeProfile = uiState.activeProfile
-    
-    // ✅ NEW: Filter available modes based on visibility preferences
-    var visibleModes by remember { mutableStateOf(listOf(FlightMode.CRUISE)) }
-    var expanded by remember { mutableStateOf(false) }
-    
-    // Load visible modes from preferences
-    LaunchedEffect(activeProfile?.id) {
-        if (activeProfile != null) {
-            try {
-                val cardPreferences = com.example.dfcards.CardPreferences(context)
-                val visibilities = cardPreferences.getProfileAllFlightModeVisibilities(activeProfile.id).first()
-                
-                val filteredModes = mutableListOf<FlightMode>()
-                
-                // CRUISE is always included
-                filteredModes.add(FlightMode.CRUISE)
-                
-                // Add others only if they're visible
-                if (visibilities["THERMAL"] != false) {
-                    filteredModes.add(FlightMode.THERMAL)
-                }
-                if (visibilities["FINAL_GLIDE"] != false) {
-                    filteredModes.add(FlightMode.FINAL_GLIDE)
-                }
-                if (visibilities["HAWK"] != false) {
-                    filteredModes.add(FlightMode.HAWK)
-                }
 
-                visibleModes = filteredModes
-                android.util.Log.d("FlightModeIndicator", "✅ Updated available modes for profile '${activeProfile.name}': ${filteredModes.map { it.displayName }}")
-                
-                // If current mode is not visible, switch to Cruise
-                if (currentMode !in filteredModes) {
-                    onModeChange(FlightMode.CRUISE)
+    var visibleModes by remember { mutableStateOf(availableModes ?: com.example.xcpro.FlightMode.values().toList()) }
+    var internalExpanded by remember { mutableStateOf(false) }
+    val expanded = expandedOverride ?: internalExpanded
+    val setExpanded: (Boolean) -> Unit = onExpandedChange ?: { internalExpanded = it }
+
+    LaunchedEffect(activeProfile?.id, availableModes) {
+        when {
+            availableModes != null -> {
+                visibleModes = availableModes
+            }
+            activeProfile != null -> {
+                try {
+                    val cardPreferences = com.example.dfcards.CardPreferences(context)
+                    val visibilities = cardPreferences.getProfileAllFlightModeVisibilities(activeProfile.id).first()
+
+                    val filteredModes = mutableListOf<com.example.xcpro.FlightMode>().apply {
+                        add(com.example.xcpro.FlightMode.CRUISE)
+                        if (visibilities["THERMAL"] != false) add(com.example.xcpro.FlightMode.THERMAL)
+                        if (visibilities["FINAL_GLIDE"] != false) add(com.example.xcpro.FlightMode.FINAL_GLIDE)
+                        if (visibilities["HAWK"] != false) add(com.example.xcpro.FlightMode.HAWK)
+                    }
+
+                    visibleModes = filteredModes
+
+                    if (currentMode !in filteredModes) {
+                        onModeChange(com.example.xcpro.FlightMode.CRUISE)
+                    }
+                } catch (_: Exception) {
+                    visibleModes = com.example.xcpro.FlightMode.values().toList()
                 }
-            } catch (e: Exception) {
-                android.util.Log.e("FlightModeIndicator", "❌ Error loading flight mode visibilities: ${e.message}")
-                visibleModes = listOf(FlightMode.CRUISE) // Fallback to Cruise only
+            }
+            else -> {
+                visibleModes = com.example.xcpro.FlightMode.values().toList()
             }
         }
     }
-    
-    // Always show the indicator (removed the return condition)
-    
-    Card(
-        modifier = modifier,
-        onClick = { expanded = true },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.White.copy(alpha = 0.6f)
-        )
+
+    Box(
+        modifier = modifier
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        Card(
+            onClick = {
+                android.util.Log.d(
+                    "FlightModeIndicator",
+                    "Card tapped; expanded=$expanded -> true"
+                )
+                setExpanded(true)
+            },
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color.White.copy(alpha = 0.6f)
+            )
         ) {
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(getFlightModeColor(currentMode))
-            )
-            
-            Text(
-                text = currentMode.displayName,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Medium
-            )
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(getFlightModeColor(currentMode))
+                )
+
+                Text(
+                    text = currentMode.displayName,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Medium
+                )
+            }
         }
-        
+
         DropdownMenu(
             expanded = expanded,
-            onDismissRequest = { expanded = false },
+            onDismissRequest = {
+                android.util.Log.d(
+                    "FlightModeIndicator",
+                    "Dropdown dismissed; expanded=$expanded -> false"
+                )
+                setExpanded(false)
+            },
             modifier = Modifier
                 .clip(RoundedCornerShape(12.dp))
                 .background(
@@ -284,7 +296,11 @@ fun FlightModeIndicator(
                 DropdownMenuItem(
                     onClick = {
                         onModeChange(mode)
-                        expanded = false
+                        android.util.Log.d(
+                            "FlightModeIndicator",
+                            "Mode selected (${mode.displayName}); collapsing dropdown"
+                        )
+                        setExpanded(false)
                     },
                     text = {
                         Row(
