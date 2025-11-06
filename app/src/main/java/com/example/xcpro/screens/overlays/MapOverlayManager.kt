@@ -18,7 +18,6 @@ fun MapOverlayManager(
     taskManager: TaskManagerCoordinator,
     currentMode: com.example.xcpro.FlightMode,
     onModeChange: (com.example.xcpro.FlightMode) -> Unit,
-    iconSize: Float,
     modifier: Modifier = Modifier
 ) {
     Box(modifier = modifier.fillMaxSize()) {
@@ -53,7 +52,7 @@ fun MapOverlayManager(
             onModeChange = onModeChange,
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .padding(top = iconSize.dp + 8.dp, start = 16.dp)
+                .padding(top = 16.dp, start = 16.dp)
                 .zIndex(5f)
         )
 
@@ -94,7 +93,6 @@ fun ConditionalMapOverlayManager(
     taskManager: TaskManagerCoordinator,
     currentMode: com.example.xcpro.FlightMode,
     onModeChange: (com.example.xcpro.FlightMode) -> Unit,
-    iconSize: Float,
     visibility: OverlayVisibility = OverlayVisibility(),
     modifier: Modifier = Modifier
 ) {
@@ -135,7 +133,7 @@ fun ConditionalMapOverlayManager(
                 onModeChange = onModeChange,
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .padding(top = iconSize.dp + 8.dp, start = 16.dp)
+                    .padding(top = 16.dp, start = 16.dp)
                     .zIndex(5f)
             )
         }

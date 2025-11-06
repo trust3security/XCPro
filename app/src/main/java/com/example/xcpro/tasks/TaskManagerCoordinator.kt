@@ -1,10 +1,10 @@
-﻿package com.example.xcpro.tasks
+package com.example.xcpro.tasks
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.annotation.VisibleForTesting
 import androidx.compose.runtime.*
 import com.example.xcpro.SearchWaypoint
-import com.google.gson.Gson
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.TaskWaypoint
@@ -27,16 +27,61 @@ import com.example.xcpro.tasks.aat.AATTaskManager
 class TaskManagerCoordinator(val context: Context? = null) {
 
     private val prefs: SharedPreferences? = context?.getSharedPreferences("task_coordinator_prefs", Context.MODE_PRIVATE)
-    private val gson = Gson()
 
     // Task-specific managers - completely independent
     private val racingTaskManager = RacingTaskManager(context)
     private val aatTaskManager = AATTaskManager(context)
+    private val persistenceStore = TaskCoordinatorPersistence(
+        prefs,
+        loadRacingTask = { racingTaskManager.loadRacingTask() != null },
+        loadAATTask = { aatTaskManager.loadAATTask() != null },
+        log = ::log
+    )
+    private var mapInstance: MapLibreMap? = null
+    private var racingDelegate = createRacingDelegate()
+    private var aatDelegate = createAATDelegate()
 
     // Current task type state
     internal var _taskType by mutableStateOf(TaskType.RACING)
     val taskType: TaskType get() = _taskType
 
+    private inline fun <T> withCurrentManager(
+        racingBlock: RacingTaskManager.() -> T,
+        aatBlock: AATTaskManager.() -> T
+    ): T = when (_taskType) {
+        TaskType.RACING -> racingTaskManager.racingBlock()
+        TaskType.AAT -> aatTaskManager.aatBlock()
+    }
+
+    private inline fun <T> withManager(
+        type: TaskType,
+        racingBlock: RacingTaskManager.() -> T,
+        aatBlock: AATTaskManager.() -> T
+    ): T = when (type) {
+        TaskType.RACING -> racingTaskManager.racingBlock()
+        TaskType.AAT -> aatTaskManager.aatBlock()
+    }
+
+    private fun log(message: String) {
+        println("TaskManagerCoordinator: $message")
+    }
+
+    private fun currentDelegate(): TaskTypeCoordinatorDelegate = when (_taskType) {
+        TaskType.RACING -> racingDelegate
+        TaskType.AAT -> aatDelegate
+    }
+
+    private fun createRacingDelegate(): RacingCoordinatorDelegate = RacingCoordinatorDelegate(
+        taskManager = racingTaskManager,
+        mapProvider = { mapInstance },
+        log = ::log
+    )
+
+    private fun createAATDelegate(): AATCoordinatorDelegate = AATCoordinatorDelegate(
+        taskManager = aatTaskManager,
+        mapProvider = { mapInstance },
+        log = ::log
+    )
     /**
      * Current task - routes to appropriate manager and extracts full customization data
      */
@@ -57,171 +102,102 @@ class TaskManagerCoordinator(val context: Context? = null) {
      * Switch task type - preserves waypoints while maintaining task type separation
      */
     fun switchToTaskType(newTaskType: TaskType) {
-        if (newTaskType == _taskType) {
-            println("ðŸŽ¯ COORDINATOR: Already using ${newTaskType.name} task type")
-            return
-        }
-
-        println("ðŸŽ¯ COORDINATOR: Switching from ${_taskType.name} to ${newTaskType.name}")
-
-        // Preserve current waypoints as generic TaskWaypoints (if any exist)
-        val currentWaypoints = currentTask.waypoints
-        val hasWaypoints = currentWaypoints.isNotEmpty()
-
-        if (hasWaypoints) {
-            println("ðŸ”„ COORDINATOR: Preserving ${currentWaypoints.size} waypoints during task type switch")
-        } else {
-            println("ðŸ”„ COORDINATOR: No waypoints to preserve - creating empty task")
-        }
-
-        // Clear current task type (maintain separation)
-        // CRITICAL FIX: Clear map visuals AND data when switching task types
-        val mapInstance = getMapInstance()
-        when (_taskType) {
-            TaskType.RACING -> {
-                // Clear Racing visuals from map first (prevents old task overlap)
-                if (mapInstance != null) {
-                    racingTaskManager.clearRacingFromMap(mapInstance)
-                    println("ðŸ COORDINATOR: Cleared Racing visuals from map")
-                } else {
-                    println("âŒ COORDINATOR: Cannot clear Racing visuals - map instance is null")
-                }
-                // Then clear Racing data
-                racingTaskManager.clearRacingTask()
-            }
-            TaskType.AAT -> {
-                // Clear AAT visuals from map first (prevents old task overlap)
-                if (mapInstance != null) {
-                    aatTaskManager.clearAATFromMap(mapInstance)
-                    println("ðŸŸ¢ COORDINATOR: Cleared AAT visuals from map")
-                } else {
-                    println("âŒ COORDINATOR: Cannot clear AAT visuals - map instance is null")
-                }
-                // Then clear AAT data
-                aatTaskManager.clearAATTask()
-            }
-        }
-
-        // Switch to the new task type
-        _taskType = newTaskType
-
-        when (newTaskType) {
-            TaskType.RACING -> {
-                println("ðŸŽ¯ COORDINATOR: Switched to Racing task management")
-                if (hasWaypoints) {
-                    racingTaskManager.initializeFromGenericWaypoints(currentWaypoints)
-                }
-            }
-            TaskType.AAT -> {
-                println("ðŸŽ¯ COORDINATOR: Switched to AAT task management")
-                if (hasWaypoints) {
-                    aatTaskManager.initializeFromGenericWaypoints(currentWaypoints)
-                }
-            }
-        }
-
-        saveTaskType()
-
-        if (hasWaypoints) {
-            println("âœ… COORDINATOR: Successfully preserved ${currentWaypoints.size} waypoints in ${newTaskType.name} task")
-        }
+    if (newTaskType == _taskType) {
+        log("Already using ${newTaskType.name} task type")
+        return
     }
+
+    val currentWaypoints = currentTask.waypoints
+    val hasWaypoints = currentWaypoints.isNotEmpty()
+    log("Switching from ${_taskType.name} to ${newTaskType.name} (preserveWaypoints=$hasWaypoints)")
+
+    clearCurrentTask(mapInstance)
+
+    _taskType = newTaskType
+
+    if (hasWaypoints) {
+        withManager(
+            newTaskType,
+            racingBlock = { initializeFromGenericWaypoints(currentWaypoints) },
+            aatBlock = { initializeFromGenericWaypoints(currentWaypoints) }
+        )
+        log("Preserved ${currentWaypoints.size} waypoints for ${newTaskType.name} task")
+    } else {
+        log("No waypoints to preserve during task switch")
+    }
+
+    persistenceStore.saveTaskType(newTaskType)
+}
+
 
     /**
      * Initialize task with waypoints - routes to appropriate manager
      */
     fun initializeTask(waypoints: List<SearchWaypoint>) {
-        when (_taskType) {
-            TaskType.RACING -> racingTaskManager.initializeRacingTask(waypoints)
-            TaskType.AAT -> aatTaskManager.initializeAATTask(waypoints)
-        }
+        withCurrentManager(
+            racingBlock = { initializeRacingTask(waypoints) },
+            aatBlock = { initializeAATTask(waypoints) }
+        )
     }
 
     /**
      * Add waypoint - routes to appropriate manager
      */
     fun addWaypoint(searchWaypoint: SearchWaypoint) {
-        when (_taskType) {
-            TaskType.RACING -> racingTaskManager.addRacingWaypoint(searchWaypoint)
-            TaskType.AAT -> aatTaskManager.addAATWaypoint(searchWaypoint)
-        }
+        withCurrentManager(
+            racingBlock = { addRacingWaypoint(searchWaypoint) },
+            aatBlock = { addAATWaypoint(searchWaypoint) }
+        )
     }
 
     /**
      * Remove waypoint - routes to appropriate manager
      */
     fun removeWaypoint(index: Int) {
-        when (_taskType) {
-            TaskType.RACING -> racingTaskManager.removeRacingWaypoint(index)
-            TaskType.AAT -> aatTaskManager.removeAATWaypoint(index)
-        }
+        withCurrentManager(
+            racingBlock = { removeRacingWaypoint(index) },
+            aatBlock = { removeAATWaypoint(index) }
+        )
     }
 
     /**
      * Plot task on map - routes to appropriate manager
      */
     fun plotOnMap(map: MapLibreMap?) {
-        when (_taskType) {
-            TaskType.RACING -> racingTaskManager.plotRacingOnMap(map)
-            TaskType.AAT -> aatTaskManager.plotAATOnMap(map)
-        }
+        currentDelegate().plotOnMap(map)
     }
 
     /**
      * Clear current task - routes to appropriate manager
      */
     fun clearTask() {
-        when (_taskType) {
-            TaskType.RACING -> racingTaskManager.clearRacingTask()
-            TaskType.AAT -> aatTaskManager.clearAATTask()
-        }
+        withCurrentManager(
+            racingBlock = { clearRacingTask() },
+            aatBlock = { clearAATTask() }
+        )
     }
 
     /**
      * Get task summary - routes to appropriate manager
      */
-    fun getTaskSummary(): String {
-        return when (_taskType) {
-            TaskType.RACING -> racingTaskManager.getRacingTaskSummary()
-            TaskType.AAT -> aatTaskManager.getAATTaskSummary()
-        }
-    }
+    fun getTaskSummary(): String = withCurrentManager(
+        racingBlock = { getRacingTaskSummary() },
+        aatBlock = { getAATTaskSummary() }
+    )
 
     /**
      * Check if current task is valid - routes to appropriate manager
      */
-    fun isTaskValid(): Boolean {
-        return when (_taskType) {
-            TaskType.RACING -> racingTaskManager.isRacingTaskValid()
-            TaskType.AAT -> aatTaskManager.isAATTaskValid()
-        }
-    }
+    fun isTaskValid(): Boolean = withCurrentManager(
+        racingBlock = { isRacingTaskValid() },
+        aatBlock = { isAATTaskValid() }
+    )
 
     /**
-     * Save current task type to preferences
-     */
-    private fun saveTaskType() {
-        prefs?.let { preferences ->
-            val editor = preferences.edit()
-            editor.putString("current_task_type", _taskType.name)
-            editor.apply()
-            println("ðŸŽ¯ COORDINATOR: Saved task type: ${_taskType.name}")
-        }
-    }
-
-    /**
-     * Load task type from preferences
+     * Load persisted task type if available.
      */
     fun loadTaskType() {
-        prefs?.let { preferences ->
-            val taskTypeName = preferences.getString("current_task_type", TaskType.RACING.name)
-            _taskType = try {
-                TaskType.valueOf(taskTypeName ?: TaskType.RACING.name)
-            } catch (e: Exception) {
-                TaskType.RACING
-            }
-            println("ðŸŽ¯ COORDINATOR: Loaded task type: ${_taskType.name}")
-        }
+        _taskType = persistenceStore.loadTaskType(_taskType)
     }
 
     /**
@@ -229,17 +205,6 @@ class TaskManagerCoordinator(val context: Context? = null) {
      */
     fun getRacingTaskManager(): RacingTaskManager = racingTaskManager
     fun getAATTaskManager(): AATTaskManager = aatTaskManager
-
-    /**
-     * Plot task on map - routes to appropriate manager
-     * Note: Using plotTaskOnMap to avoid ambiguity with specific manager methods
-     */
-    fun plotTaskOnMap(map: MapLibreMap?) {
-        when (_taskType) {
-            TaskType.RACING -> racingTaskManager.plotRacingOnMap(map)
-            TaskType.AAT -> aatTaskManager.plotAATOnMap(map)
-        }
-    }
 
     /**
      * Get current leg waypoint - routes to appropriate manager
@@ -253,10 +218,10 @@ class TaskManagerCoordinator(val context: Context? = null) {
      * Reorder waypoints - routes to appropriate manager
      */
     fun reorderWaypoints(fromIndex: Int, toIndex: Int) {
-        when (_taskType) {
-            TaskType.RACING -> racingTaskManager.reorderRacingWaypoints(fromIndex, toIndex)
-            TaskType.AAT -> aatTaskManager.reorderAATWaypoints(fromIndex, toIndex)
-        }
+        withCurrentManager(
+            racingBlock = { reorderRacingWaypoints(fromIndex, toIndex) },
+            aatBlock = { reorderAATWaypoints(fromIndex, toIndex) }
+        )
     }
 
     /**
@@ -300,10 +265,10 @@ class TaskManagerCoordinator(val context: Context? = null) {
      * Replace waypoint - routes to appropriate manager
      */
     fun replaceWaypoint(index: Int, newWaypoint: SearchWaypoint) {
-        when (_taskType) {
-            TaskType.RACING -> racingTaskManager.replaceRacingWaypoint(index, newWaypoint)
-            TaskType.AAT -> aatTaskManager.replaceAATWaypoint(index, newWaypoint)
-        }
+        withCurrentManager(
+            racingBlock = { replaceRacingWaypoint(index, newWaypoint) },
+            aatBlock = { replaceAATWaypoint(index, newWaypoint) }
+        )
     }
 
     /**
@@ -325,52 +290,34 @@ class TaskManagerCoordinator(val context: Context? = null) {
      * Load saved tasks from all managers
      */
     fun loadSavedTasks() {
-        println("ðŸŽ¯ COORDINATOR: Loading saved tasks...")
-        println("ðŸŽ¯ COORDINATOR: DEBUG - About to call loadTaskType()")
         loadTaskType()
-        println("ðŸŽ¯ COORDINATOR: DEBUG - Finished loadTaskType()")
-        println("ðŸŽ¯ COORDINATOR: Loading racing task...")
-        println("ðŸŽ¯ COORDINATOR: Racing manager available: ${racingTaskManager != null}")
-        val racingResult = racingTaskManager.loadRacingTask()
-        println("ðŸŽ¯ COORDINATOR: Racing task load result: $racingResult")
-        println("ðŸŽ¯ COORDINATOR: Loading AAT task...")
-        println("ðŸŽ¯ COORDINATOR: AAT manager available: ${aatTaskManager != null}")
-        val aatResult = aatTaskManager.loadAATTask()
-        println("ðŸŽ¯ COORDINATOR: AAT task load result: $aatResult")
-        println("ðŸŽ¯ COORDINATOR: Finished loading saved tasks")
+        val result = persistenceStore.loadSavedTasks()
+        log("Finished loading saved tasks (racing=${result.racingLoaded}, aat=${result.aatLoaded})")
     }
+
 
     /**
      * Navigation methods - routes to appropriate manager
      */
     fun advanceToNextLeg() {
-        when (_taskType) {
-            TaskType.RACING -> racingTaskManager.advanceToNextLeg()
-            TaskType.AAT -> aatTaskManager.advanceToNextLeg()
-        }
+        withCurrentManager(
+            racingBlock = { advanceToNextLeg() },
+            aatBlock = { advanceToNextLeg() }
+        )
     }
 
     fun goToPreviousLeg() {
-        when (_taskType) {
-            TaskType.RACING -> racingTaskManager.goToPreviousLeg()
-            TaskType.AAT -> aatTaskManager.goToPreviousLeg()
-        }
+        withCurrentManager(
+            racingBlock = { goToPreviousLeg() },
+            aatBlock = { goToPreviousLeg() }
+        )
     }
 
     /**
      * Distance calculation methods - routes to appropriate manager
      */
     fun calculateTaskDistanceForTask(task: Task): Double {
-        return when (_taskType) {
-            TaskType.RACING -> {
-                // Convert generic task back to racing task for calculation
-                racingTaskManager.calculateRacingTaskDistance()
-            }
-            TaskType.AAT -> {
-                // Convert generic task back to AAT task for calculation
-                aatTaskManager.calculateAATTaskDistance()
-            }
-        }
+        return currentDelegate().calculateDistance()
     }
 
     /**
@@ -378,10 +325,7 @@ class TaskManagerCoordinator(val context: Context? = null) {
      * NO calculation logic here - pure routing only
      */
     fun calculateSimpleSegmentDistance(from: TaskWaypoint, to: TaskWaypoint): Double {
-        return when (_taskType) {
-            TaskType.RACING -> racingTaskManager.calculateSegmentDistance(from.lat, from.lon, to.lat, to.lon)
-            TaskType.AAT -> aatTaskManager.calculateSegmentDistance(from.lat, from.lon, to.lat, to.lon)
-        }
+        return currentDelegate().calculateSegmentDistance(from, to)
     }
 
     /**
@@ -500,26 +444,10 @@ class TaskManagerCoordinator(val context: Context? = null) {
         sectorOuterRadius: Double?
     ) {
         if (_taskType != TaskType.AAT) {
-            println("COORDINATOR: Cannot update AAT point type - current task type is $_taskType")
+            log("Cannot update AAT point type - current task type is $_taskType")
             return
         }
-
-        println("COORDINATOR: AAT waypoint point type update - Index: $index")
-        listOf(
-            "start" to startType,
-            "finish" to finishType,
-            "turn" to turnType,
-            "gateWidthKm" to gateWidth,
-            "keyholeInnerRadiusKm" to keyholeInnerRadius,
-            "keyholeAngle" to keyholeAngle,
-            "sectorOuterRadiusKm" to sectorOuterRadius
-        ).forEach { (label, value) ->
-            if (value != null) {
-                println("  $label: $value")
-            }
-        }
-
-        aatTaskManager.updateWaypointPointTypeBridge(
+        aatDelegate.updateWaypointPointType(
             index = index,
             startType = startType,
             finishType = finishType,
@@ -529,11 +457,6 @@ class TaskManagerCoordinator(val context: Context? = null) {
             keyholeAngle = keyholeAngle,
             sectorOuterRadius = sectorOuterRadius
         )
-
-        getMapInstance()?.let {
-            println("COORDINATOR: Re-plotting AAT task after point type update")
-            aatTaskManager.plotAATOnMap(it)
-        } ?: println("COORDINATOR: Cannot re-plot AAT task - map instance is null")
     }
 
     /**
@@ -541,29 +464,21 @@ class TaskManagerCoordinator(val context: Context? = null) {
      */
     fun updateAATTargetPoint(index: Int, lat: Double, lon: Double) {
         if (_taskType != TaskType.AAT) {
-            println("COORDINATOR: Cannot update AAT target point - current task type is $_taskType")
+            log("Cannot update AAT target point - current task type is $_taskType")
             return
         }
-
-        println("COORDINATOR: AAT target point update - index=$index, lat=$lat, lon=$lon")
-        aatTaskManager.updateTargetPoint(index, lat, lon)
-
-        getMapInstance()?.let {
-            println("COORDINATOR: Re-plotting AAT task after target point update")
-            aatTaskManager.plotAATOnMap(it)
-        } ?: println("COORDINATOR: Cannot re-plot AAT task - map instance is null")
+        aatDelegate.updateTargetPoint(index, lat, lon)
     }
 
     /**
      * Update AAT task parameters
      */
     fun updateAATParameters(minimumTime: java.time.Duration, maximumTime: java.time.Duration) {
-        if (_taskType == TaskType.AAT) {
-            aatTaskManager.updateAATTimes(minimumTime, maximumTime)
-            println("ðŸŽ¯ COORDINATOR: Updated AAT parameters - min: ${minimumTime.toHours()}h, max: ${maximumTime.toHours()}h")
-        } else {
-            println("ðŸŽ¯ COORDINATOR: Cannot update AAT parameters - current task type is $_taskType")
+        if (_taskType != TaskType.AAT) {
+            log("Cannot update AAT parameters - current task type is $_taskType")
+            return
         }
+        aatDelegate.updateParameters(minimumTime, maximumTime)
     }
 
     /**
@@ -571,30 +486,33 @@ class TaskManagerCoordinator(val context: Context? = null) {
      * NOTE: Caller is responsible for re-plotting map if needed
      */
     fun updateAATArea(index: Int, radiusMeters: Double) {
-        if (_taskType == TaskType.AAT) {
-            // Get current waypoint and update its assigned area
-            val waypoint = aatTaskManager.currentAATTask.waypoints.getOrNull(index)
-            if (waypoint != null) {
-                val newArea = waypoint.assignedArea.copy(radiusMeters = radiusMeters)
-                aatTaskManager.updateAATArea(index, newArea)
-                println("ðŸŽ¯ COORDINATOR: Updated AAT area radius at index $index to ${radiusMeters/1000.0}km")
-                // âœ… REMOVED: Map re-plotting - caller controls when to re-plot
-                // This prevents double plotting when UI already calls plotOnMap()
-            }
-        } else {
-            println("ðŸŽ¯ COORDINATOR: Cannot update AAT area - current task type is $_taskType")
+        if (_taskType != TaskType.AAT) {
+            log("Cannot update AAT area - current task type is $_taskType")
+            return
         }
+        aatDelegate.updateArea(index, radiusMeters)
     }
 
-    // Helper to get map instance for re-plotting
-    private var mapInstance: org.maplibre.android.maps.MapLibreMap? = null
 
-    fun setMapInstance(map: org.maplibre.android.maps.MapLibreMap?) {
+    private fun clearCurrentTask(map: MapLibreMap?) {
+        currentDelegate().clearFromMap(map)
+        currentDelegate().clearTask()
+    }
+
+    fun setMapInstance(map: MapLibreMap?) {
         mapInstance = map
     }
 
-    fun getMapInstance(): org.maplibre.android.maps.MapLibreMap? {
-        return mapInstance
+    fun getMapInstance(): MapLibreMap? = mapInstance
+
+    @VisibleForTesting
+    internal fun replaceAATDelegateForTesting(delegate: AATCoordinatorDelegate) {
+        aatDelegate = delegate
+    }
+
+    @VisibleForTesting
+    internal fun replaceRacingDelegateForTesting(delegate: RacingCoordinatorDelegate) {
+        racingDelegate = delegate
     }
 
     // ==================== AAT INTERACTIVE FEATURES ====================
@@ -608,7 +526,7 @@ class TaskManagerCoordinator(val context: Context? = null) {
             return null
         }
 
-        return aatTaskManager.checkAreaTap(lat, lon)
+        return aatDelegate.checkAreaTap(lat, lon)
     }
 
     /**
@@ -617,16 +535,7 @@ class TaskManagerCoordinator(val context: Context? = null) {
      */
     fun enterAATEditMode(waypointIndex: Int) {
         if (_taskType == TaskType.AAT) {
-            println("ðŸŽ¯ COORDINATOR: Entering AAT edit mode for waypoint $waypointIndex")
-            aatTaskManager.setEditMode(waypointIndex, true)
-
-            // Update map to show edit state
-            val mapInstance = getMapInstance()
-            if (mapInstance != null) {
-                aatTaskManager.plotAATEditOverlay(mapInstance, waypointIndex)
-                // Re-plot task to update target point color to RED and increase size
-                aatTaskManager.plotAATOnMap(mapInstance)
-            }
+            aatDelegate.enterEditMode(waypointIndex)
         }
     }
 
@@ -635,40 +544,21 @@ class TaskManagerCoordinator(val context: Context? = null) {
      */
     fun exitAATEditMode() {
         if (_taskType == TaskType.AAT) {
-            println("ðŸŽ¯ COORDINATOR: Exiting AAT edit mode")
-            aatTaskManager.setEditMode(-1, false)
-
-            // Update map to remove edit overlays
-            val mapInstance = getMapInstance()
-            if (mapInstance != null) {
-                aatTaskManager.clearAATEditOverlay(mapInstance)
-                // Re-plot task to update target point color back to GREEN and reduce size
-                aatTaskManager.plotAATOnMap(mapInstance)
-            }
+            aatDelegate.exitEditMode()
         }
     }
 
     /**
      * Check if currently in AAT edit mode
      */
-    fun isInAATEditMode(): Boolean {
-        return if (_taskType == TaskType.AAT) {
-            aatTaskManager.isInEditMode()
-        } else {
-            false
-        }
-    }
+    fun isInAATEditMode(): Boolean =
+        _taskType == TaskType.AAT && aatDelegate.isInEditMode()
 
     /**
      * Get current AAT edit waypoint index
      */
-    fun getAATEditWaypointIndex(): Int? {
-        return if (_taskType == TaskType.AAT) {
-            aatTaskManager.getEditWaypointIndex()
-        } else {
-            null
-        }
-    }
+    fun getAATEditWaypointIndex(): Int? =
+        if (_taskType == TaskType.AAT) aatDelegate.editWaypointIndex() else null
 
     /**
      * Check if a map click hit an AAT target point pin for drag handling
@@ -678,16 +568,18 @@ class TaskManagerCoordinator(val context: Context? = null) {
             return null
         }
 
-        val mapInstance = getMapInstance()
-        return if (mapInstance != null) {
-            aatTaskManager.checkTargetPointHit(mapInstance, screenX, screenY)
-        } else {
-            println("âŒ COORDINATOR: Cannot check target point hit - map instance is null")
-            null
-        }
+        return aatDelegate.checkTargetPointHit(screenX, screenY)
     }
 }
 
 // TaskType enum is already defined in TaskManager.kt - removed duplicate
 
 // Compatibility helpers moved to TaskManagerCompat.kt
+
+
+
+
+
+
+
+

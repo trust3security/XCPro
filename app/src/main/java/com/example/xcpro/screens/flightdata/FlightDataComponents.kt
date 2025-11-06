@@ -4,7 +4,6 @@ import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -24,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.toColorInt
 import com.example.dfcards.*
 
 data class FileItem(
@@ -393,7 +393,7 @@ fun AirspaceClassCard(
                 modifier = Modifier
                     .size(16.dp)
                     .background(
-                        color = Color(android.graphics.Color.parseColor(airspaceClass.color))
+                        color = Color(airspaceClass.color.toColorInt())
                             .copy(alpha = 0.6f),
                         shape = RoundedCornerShape(4.dp)
                     )

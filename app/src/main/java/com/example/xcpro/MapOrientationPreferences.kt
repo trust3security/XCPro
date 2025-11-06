@@ -19,10 +19,10 @@ class MapOrientationPreferences(context: Context) {
         private const val KEY_BEARING_SMOOTHING = "bearing_smoothing_enabled"
 
         // Default values
-        private const val DEFAULT_ORIENTATION_MODE = "NORTH_UP"
+        private const val DEFAULT_ORIENTATION_MODE = "TRACK_UP"
         private const val DEFAULT_AUTO_RESET_ENABLED = true
         private const val DEFAULT_AUTO_RESET_TIMEOUT = 10 // seconds
-        private const val DEFAULT_MIN_SPEED_THRESHOLD = 5.0 // knots
+        private const val DEFAULT_MIN_SPEED_THRESHOLD = 0.0 // knots
         private const val DEFAULT_BEARING_SMOOTHING = true
     }
 
@@ -68,7 +68,7 @@ class MapOrientationPreferences(context: Context) {
     }
 
     fun setMinSpeedThreshold(speedKnots: Double) {
-        val clampedSpeed = speedKnots.coerceIn(1.0, 20.0) // Between 1 and 20 knots
+        val clampedSpeed = speedKnots.coerceIn(0.0, 20.0) // Between 0 and 20 knots
         preferences.edit()
             .putFloat(KEY_MIN_SPEED_THRESHOLD, clampedSpeed.toFloat())
             .apply()

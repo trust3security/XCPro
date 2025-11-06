@@ -42,7 +42,6 @@ class MapScreenState(
     var lastCameraBearing by mutableStateOf(0.0)
 
     // UI State
-    var iconSize by mutableStateOf(sharedPrefs.getFloat("hamburger_icon_size", 117.6f))
     var isUIEditMode by mutableStateOf(false)
     var showCardLibrary by mutableStateOf(false)
     var safeContainerSize by mutableStateOf(IntSize.Zero)

@@ -1,12 +1,20 @@
 package com.example.dfcards.dfcards
 
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -14,7 +22,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -24,7 +31,6 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.min
-import kotlin.math.roundToInt
 
 @Composable
 fun EnhancedFlightDataCard(
@@ -79,7 +85,6 @@ fun EnhancedFlightDataCard(
                 shape = RectangleShape
             )
     ) {
-        // Top label
         Text(
             text = flightData.label,
             fontSize = stableFontSizes.labelSize.sp,
@@ -94,33 +99,38 @@ fun EnhancedFlightDataCard(
                 .align(Alignment.TopCenter)
         )
 
-        // ✅ ENHANCED: Centered primary value with formatted text for number + unit
         Text(
             text = buildAnnotatedString {
-                val parts = flightData.primaryValue.split(" ")
-                if (parts.size >= 2) {
-                    // Large number part (1250, 85, +2.4, etc.)
-                    withStyle(style = SpanStyle(
-                        fontSize = stableFontSizes.primarySize.sp,
-                        fontWeight = FontWeight.Bold
-                    )) {
-                        append(parts[0])  // ✅ "1250" in large font
+                val primaryNumber = flightData.primaryValueNumber
+                val primaryUnit = flightData.primaryValueUnit
+                if (primaryNumber != null) {
+                    withStyle(
+                        style = SpanStyle(
+                            fontSize = stableFontSizes.primarySize.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    ) {
+                        append(primaryNumber)
                     }
-                    append(" ")
-                    // Smaller unit part (ft, kt, m/s, etc.)
-                    withStyle(style = SpanStyle(
-                        fontSize = (stableFontSizes.primarySize * 0.55f).sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Color.Black.copy(alpha = 0.6f)
-                    )) {
-                        append(parts.drop(1).joinToString(" "))  // ✅ "ft" in smaller font
+                    primaryUnit?.let { unit ->
+                        append(" ")
+                        withStyle(
+                            style = SpanStyle(
+                                fontSize = (stableFontSizes.primarySize * 0.55f).sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color.Black.copy(alpha = 0.6f)
+                            )
+                        ) {
+                            append(unit)
+                        }
                     }
                 } else {
-                    // No space found, show as-is (for values like "25:1", "14:23", etc.)
-                    withStyle(style = SpanStyle(
-                        fontSize = stableFontSizes.primarySize.sp,
-                        fontWeight = FontWeight.Bold
-                    )) {
+                    withStyle(
+                        style = SpanStyle(
+                            fontSize = stableFontSizes.primarySize.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    ) {
                         append(flightData.primaryValue)
                     }
                 }
@@ -138,7 +148,6 @@ fun EnhancedFlightDataCard(
                 }
         )
 
-        // Bottom secondary value (GPS, QNH, m/s, etc.)
         flightData.secondaryValue?.let {
             Text(
                 text = it,
@@ -167,9 +176,6 @@ private fun calculateStableFontSizes(
     cardWidth: Float,
     cardHeight: Float
 ): StableFontSizes {
-    // Compute a scale factor from current size vs. a base size.
-    // Keep a reasonable lower bound so tiny cards remain readable,
-    // but remove the restrictive upper clamp so text can grow with the card.
     val heightRatio = cardHeight / 80f
     val widthRatio = cardWidth / 120f
     val scale = min(heightRatio, widthRatio).coerceAtLeast(0.4f)

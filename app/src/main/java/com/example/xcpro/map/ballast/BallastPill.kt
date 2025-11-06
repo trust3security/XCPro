@@ -7,19 +7,15 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -78,18 +74,8 @@ fun BallastPill(
 
     Column(
         modifier = modifier.semantics { this.contentDescription = contentDescription },
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        FilledTonalButton(
-            onClick = { onCommand(BallastCommand.StartFill) },
-            enabled = state.isFillEnabled,
-            modifier = Modifier.width(64.dp),
-            colors = ButtonDefaults.filledTonalButtonColors()
-        ) {
-            Text("Fill")
-        }
-
         Box(
             modifier = Modifier
                 .width(40.dp)
@@ -138,18 +124,6 @@ fun BallastPill(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
-        }
-
-        FilledTonalButton(
-            onClick = { onCommand(BallastCommand.StartDrain) },
-            enabled = state.isDrainEnabled,
-            modifier = Modifier.width(64.dp),
-            colors = ButtonDefaults.filledTonalButtonColors(
-                disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-            )
-        ) {
-            Text("Drain")
         }
 
         Spacer(modifier = Modifier.height(4.dp))

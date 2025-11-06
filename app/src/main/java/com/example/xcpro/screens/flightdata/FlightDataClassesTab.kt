@@ -1,27 +1,43 @@
 package com.example.ui1.screens.flightmgmt
 
 import android.util.Log
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshots.SnapshotStateMap
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.example.xcpro.saveSelectedClasses
 import com.example.ui1.screens.AirspaceClassItem
 import com.example.xcpro.MapOrientationMode
 import com.example.xcpro.MapOrientationPreferences
+import com.example.xcpro.saveSelectedClasses
 
 private const val TAG = "FlightClassesTab"
 
 @Composable
 fun FlightDataClassesTab(
     airspaceClassItems: List<AirspaceClassItem>,
-    selectedClasses: MutableMap<String, Boolean>,
-    onSelectedClassesChanged: (MutableMap<String, Boolean>) -> Unit,
-    // ✅ Pass shared components as parameters
+    selectedClasses: SnapshotStateMap<String, Boolean>,
+    onSelectedClassesChanged: (SnapshotStateMap<String, Boolean>) -> Unit,
     sectionHeader: @Composable (String, String) -> Unit,
     airspaceClassCard: @Composable (AirspaceClassItem, (String) -> Unit) -> Unit
 ) {
@@ -35,26 +51,18 @@ fun FlightDataClassesTab(
             .padding(horizontal = 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Map Orientation Section
         item {
-            sectionHeader(
-                "Map Orientation",
-                "Current: ${currentOrientationMode.name.replace("_", " ")}"
-            )
+            sectionHeader("Map Orientation", "Current: ${currentOrientationMode.name.replace("_", " ")}")
         }
 
         item {
-            MapOrientationCard(
-                currentMode = currentOrientationMode,
-                onModeChanged = { newMode ->
-                    currentOrientationMode = newMode
-                    orientationPreferences.setOrientationMode(newMode)
-                    Log.d(TAG, "🧭 Map orientation changed to: $newMode")
-                }
-            )
+            MapOrientationCard(currentOrientationMode) { newMode ->
+                currentOrientationMode = newMode
+                orientationPreferences.setOrientationMode(newMode)
+                Log.d(TAG, "Map orientation changed to $newMode")
+            }
         }
 
-        // Section Header
         item {
             sectionHeader(
                 "Airspace Classes",
@@ -62,20 +70,16 @@ fun FlightDataClassesTab(
             )
         }
 
-        // Airspace Classes List
         items(airspaceClassItems) { airspaceClass ->
             airspaceClassCard(airspaceClass) { className ->
-                Log.d(TAG, "🏷️ Toggling airspace class: $className")
-                val newClasses = selectedClasses.toMutableMap().apply {
-                    put(className, !(get(className) ?: false))
-                }
-                onSelectedClassesChanged(newClasses)
-                saveSelectedClasses(context, newClasses)
-                Log.d(TAG, "✅ Airspace class $className is now ${if (newClasses[className] == true) "enabled" else "disabled"}")
+                val newValue = !(selectedClasses[className] ?: true)
+                selectedClasses[className] = newValue
+                saveSelectedClasses(context, selectedClasses.toMap())
+                onSelectedClassesChanged(selectedClasses)
+                Log.d(TAG, "Airspace class $className is now ${if (newValue) "enabled" else "disabled"}")
             }
         }
 
-        // Show message if no classes available
         if (airspaceClassItems.isEmpty()) {
             item {
                 Card(
@@ -126,83 +130,59 @@ fun MapOrientationCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // North Up Option
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-            ) {
-                RadioButton(
-                    selected = currentMode == MapOrientationMode.NORTH_UP,
-                    onClick = { onModeChanged(MapOrientationMode.NORTH_UP) }
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Column {
-                    Text(
-                        text = "North Up",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "Map always shows north at the top",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                    )
-                }
-            }
+            OrientationOption(
+                title = "North Up",
+                description = "Map always shows north at the top",
+                selected = currentMode == MapOrientationMode.NORTH_UP,
+                onSelect = { onModeChanged(MapOrientationMode.NORTH_UP) }
+            )
 
-            // Track Up Option
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-            ) {
-                RadioButton(
-                    selected = currentMode == MapOrientationMode.TRACK_UP,
-                    onClick = { onModeChanged(MapOrientationMode.TRACK_UP) }
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Column {
-                    Text(
-                        text = "Track Up",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "Map rotates based on GPS track (course over ground)",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                    )
-                }
-            }
+            OrientationOption(
+                title = "Track Up",
+                description = "Map rotates based on GPS track (course over ground)",
+                selected = currentMode == MapOrientationMode.TRACK_UP,
+                onSelect = { onModeChanged(MapOrientationMode.TRACK_UP) }
+            )
 
-            // Heading Up Option
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-            ) {
-                RadioButton(
-                    selected = currentMode == MapOrientationMode.HEADING_UP,
-                    onClick = { onModeChanged(MapOrientationMode.HEADING_UP) }
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Column {
-                    Text(
-                        text = "Heading Up",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "Map rotates based on magnetic compass heading",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                    )
-                }
-            }
+            OrientationOption(
+                title = "Heading Up",
+                description = "Map rotates based on magnetic compass heading",
+                selected = currentMode == MapOrientationMode.HEADING_UP,
+                onSelect = { onModeChanged(MapOrientationMode.HEADING_UP) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun OrientationOption(
+    title: String,
+    description: String,
+    selected: Boolean,
+    onSelect: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RadioButton(
+            selected = selected,
+            onClick = onSelect
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Column {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            )
         }
     }
 }

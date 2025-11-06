@@ -27,6 +27,7 @@ import com.example.xcpro.tasks.aat.map.AATMapCoordinateConverterFactory
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.TaskWaypoint
 import com.example.xcpro.tasks.core.WaypointRole
+import com.example.xcpro.map.MapGestureRegion
 import kotlin.math.abs
 import kotlin.math.sin
 import kotlin.math.cos
@@ -131,6 +132,7 @@ fun CustomMapGestureHandler(
     onAATLongPress: (Int) -> Unit = {},
     onAATExitEditMode: () -> Unit = {},
     onAATDrag: (Int, AATLatLng) -> Unit = { _, _ -> },
+    gestureRegions: List<MapGestureRegion> = emptyList(),
     modifier: Modifier = Modifier
 ) {
     var totalDragX by remember { mutableStateOf(0f) }
@@ -165,8 +167,38 @@ fun CustomMapGestureHandler(
             .fillMaxSize()
             .pointerInput(currentMode) {
                 awaitEachGesture {
+                    // Pre-scan for down inside overlay regions before map consumes it
+                    while (true) {
+                        val preDownEvent = awaitPointerEvent(pass = PointerEventPass.Initial)
+                        val preDownChange = preDownEvent.changes.firstOrNull { it.changedToDown() }
+                        if (preDownChange != null) {
+                            gestureStartPosition = preDownChange.position
+                            val overlayRegion = gestureRegions.firstOrNull { region ->
+                                region.bounds.contains(gestureStartPosition)
+                            }
+                            if (overlayRegion != null) {
+                                Log.d(TAG, "Pointer down inside overlay region ${overlayRegion.target} (consume=${overlayRegion.consumeGestures})")
+                                if (overlayRegion.consumeGestures) {
+                                    return@awaitEachGesture
+                                } else {
+                                    // Let event fall through to map gesture handling
+                                    break
+                                }
+                            } else {
+                                break
+                            }
+                        }
+                    }
+
                     // Wait for first finger down
-                    val firstDown = awaitFirstDown()
+                    val firstDown = awaitFirstDown(
+                        requireUnconsumed = false,
+                        pass = PointerEventPass.Final
+                    )
+                    if (firstDown.isConsumed) {
+                        Log.d(TAG, "Pointer down already consumed by overlay; skipping map gesture")
+                        return@awaitEachGesture
+                    }
                     gestureStartPosition = firstDown.position
 
                     // Check if gesture is over flight data cards
@@ -209,7 +241,7 @@ fun CustomMapGestureHandler(
                     var isFirstFrame = true
 
                     do {
-                        val event = awaitPointerEvent()
+                        val event = awaitPointerEvent(pass = PointerEventPass.Final)
 
                         // Count active pointers (fingers on screen)
                         val activePointers = event.changes.filter { !it.changedToUp() }

@@ -34,6 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.graphics.toColorInt
 import androidx.navigation.NavHostController
 import com.example.xcpro.copyFileToInternalStorage
 import com.example.xcpro.loadAirspaceFiles
@@ -460,7 +461,7 @@ private fun AirspaceClassCard(
                 modifier = Modifier
                     .size(16.dp)
                     .background(
-                        color = Color(android.graphics.Color.parseColor(airspaceClass.color))
+                        color = Color(airspaceClass.color.toColorInt())
                             .copy(alpha = 0.6f),
                         shape = RoundedCornerShape(4.dp)
                     )

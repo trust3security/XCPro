@@ -42,8 +42,6 @@ data class UIPosition(
 )
 
 data class UILayout(
-    val hamburgerPosition: UIPosition = UIPosition(10f, 10f), // Default top-left
-    val hamburgerSize: Float = 48f, // Default size in dp
     val variometerPosition: UIPosition = UIPosition(50f, 50f), // Default position
     val variometerSize: Float = 150f // Default size in pixels
 )

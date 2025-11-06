@@ -11,6 +11,7 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.LifecycleOwner
 import com.example.xcpro.MapOrientationMode
+import com.example.xcpro.map.QnhPreferencesRepository
 import com.example.xcpro.sensors.UnifiedSensorManager
 import com.example.xcpro.sensors.FlightDataCalculator
 import com.example.xcpro.sensors.GPSData
@@ -19,6 +20,7 @@ import com.example.xcpro.common.units.UnitsConverter
 import com.example.xcpro.xcprov1.bluetooth.GarminGloConnectionManager
 import com.example.xcpro.xcprov1.service.XcproV1Controller
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
@@ -27,6 +29,7 @@ class LocationManager(
     private val context: Context,
     private val mapState: MapScreenState,
     private val coroutineScope: CoroutineScope,
+    private val qnhPreferencesRepository: QnhPreferencesRepository,
     private val hawkDashboardActive: () -> Boolean
 ) {
     companion object {
@@ -47,6 +50,11 @@ class LocationManager(
 
     init {
         xcproV1Controller.attachExternalGpsFlow(garminGloConnectionManager.fixFlow)
+        coroutineScope.launch {
+            qnhPreferencesRepository.qnhHpaFlow.collect { storedQnh ->
+                storedQnh?.let { flightDataCalculator.setManualQnh(it) }
+            }
+        }
     }
 
     // Map UI state proxies (MapScreenState is the single owner)
@@ -237,10 +245,16 @@ class LocationManager(
 
     fun setManualQnh(qnh: Double) {
         flightDataCalculator.setManualQnh(qnh)
+        coroutineScope.launch {
+            qnhPreferencesRepository.setManualQnh(qnh)
+        }
     }
 
     fun resetQnhToStandard() {
         flightDataCalculator.resetQnhToStandard()
+        coroutineScope.launch {
+            qnhPreferencesRepository.clearManualQnh()
+        }
     }
 
     fun updateLocationFromGPS(

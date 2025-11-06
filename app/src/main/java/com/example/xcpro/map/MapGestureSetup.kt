@@ -44,9 +44,10 @@ object MapGestureSetup {
         showReturnButton: Boolean,
         isAATEditMode: Boolean,
         onAATEditModeChange: (Boolean) -> Unit,
+        gestureRegions: List<MapGestureRegion> = emptyList(),
         modifier: Modifier = Modifier
     ) {
-        // ✅ CRITICAL FIX: Remember AAT waypoints and recompute when task type or waypoints change
+        //  CRITICAL FIX: Remember AAT waypoints and recompute when task type or waypoints change
         val aatWaypoints by androidx.compose.runtime.remember(taskManager.taskType) {
             androidx.compose.runtime.derivedStateOf {
                 getAATWaypointsForGestures(taskManager)
@@ -62,10 +63,10 @@ object MapGestureSetup {
                 mapLibreMap = mapState.mapLibreMap,
                 currentMode = mapState.currentMode,
                 onModeChange = { newMode ->
-                    Log.d(TAG, "🔄 onModeChange callback called with: ${newMode.displayName}")
+                    Log.d(TAG, " onModeChange callback called with: ${newMode.displayName}")
                     mapState.updateFlightMode(newMode)
                     flightDataManager.updateFlightModeFromEnum(newMode)
-                    Log.d(TAG, "✅ mapState.currentMode should now be: ${mapState.currentMode.displayName}")
+                    Log.d(TAG, " mapState.currentMode should now be: ${mapState.currentMode.displayName}")
                 },
                 showReturnButton = showReturnButton,
                 onShowReturnButton = { show ->
@@ -76,7 +77,7 @@ object MapGestureSetup {
                     locationManager.handleUserInteraction(location, zoom, bearing)
                 },
                 visibleModes = flightDataManager.visibleModes,
-                // ✅ AAT-specific gesture support (delegated to separate function)
+                //  AAT-specific gesture support (delegated to separate function)
                 taskType = taskManager.taskType,
                 aatWaypoints = aatWaypoints,
                 isAATEditMode = isAATEditMode,
@@ -91,25 +92,26 @@ object MapGestureSetup {
 
                         // Zoom to turnpoint with calculated zoom level based on area size
                         cameraManager.zoomToAATAreaForEdit(waypoint.lat, waypoint.lon, areaRadiusKm)
-                        Log.d(TAG, "🎯 AAT: Zoomed to turnpoint ${waypoint.title} (radius=${areaRadiusKm}km) for edit mode")
+                        Log.d(TAG, " AAT: Zoomed to turnpoint ${waypoint.title} (radius=${areaRadiusKm}km) for edit mode")
                     }
 
                     taskManager.enterAATEditMode(waypointIndex)
-                    Log.d(TAG, "🎯 Entered AAT edit mode for waypoint $waypointIndex")
+                    Log.d(TAG, " Entered AAT edit mode for waypoint $waypointIndex")
                 },
                 onAATExitEditMode = {
                     onAATEditModeChange(false)
 
                     // Restore camera position to where user was before edit mode
                     cameraManager.restoreAATCameraPosition()
-                    Log.d(TAG, "🎯 AAT: Restored camera position after exiting edit mode")
+                    Log.d(TAG, " AAT: Restored camera position after exiting edit mode")
 
                     taskManager.exitAATEditMode()
-                    Log.d(TAG, "🎯 Exited AAT edit mode")
+                    Log.d(TAG, " Exited AAT edit mode")
                 },
                 onAATDrag = { waypointIndex, newPosition ->
                     taskManager.updateAATTargetPoint(waypointIndex, newPosition.latitude, newPosition.longitude)
                 },
+                gestureRegions = gestureRegions,
                 modifier = Modifier.fillMaxSize()
             )
         }

@@ -381,7 +381,7 @@ fun updateAATTargetPoint(index: Int, lat: Double, lon: Double) {
     if (_taskType == TaskType.AAT) {
         aatTaskManager.updateTargetPoint(index, lat, lon)
         // Trigger map re-plot to show new position
-        plotTaskOnMap(mapLibreMap)
+        plotOnMap(mapLibreMap)
     }
 }
 ```

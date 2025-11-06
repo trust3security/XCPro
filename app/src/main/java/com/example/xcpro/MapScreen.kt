@@ -18,7 +18,6 @@ import com.example.xcpro.map.DistanceCirclesCanvas
 import com.example.xcpro.map.components.MapActionButtons
 import com.example.xcpro.map.MapComposeEffects
 import com.example.xcpro.map.MapUIWidgetManager
-import com.example.xcpro.map.MapUIWidgets
 import com.example.xcpro.map.MapTaskScreenUI
 import com.example.xcpro.map.MapCameraEffects
 import com.example.xcpro.map.MapLifecycleEffects
@@ -26,7 +25,8 @@ import com.example.xcpro.map.MapModalUI
 import com.example.xcpro.map.MapGestureSetup
 import com.example.xcpro.map.MapTaskIntegration
 import com.example.xcpro.map.MapScreenViewModel
-import com.example.xcpro.WaypointData
+import com.example.xcpro.map.MapUiEffect
+import com.example.xcpro.map.MapUiEvent
 import com.example.dfcards.CardDefinition
 import com.example.ui1.icons.Task
 import com.example.ui1.icons.LocationSailplane
@@ -42,16 +42,16 @@ import com.example.xcpro.common.units.AltitudeUnit
 import com.example.xcpro.common.units.PressureHpa
 import com.example.xcpro.common.units.PressureUnit
 import com.example.xcpro.common.units.UnitsFormatter
-import com.example.xcpro.common.units.UnitsPreferences
-import com.example.xcpro.common.units.UnitsRepository
 import com.example.dfcards.FlightDataProvider
 import com.example.dfcards.FlightModeSelection
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -94,13 +94,12 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavHostController
+import kotlinx.coroutines.flow.collect
 import com.example.xcpro.tasks.BottomSheetState
 // ✅ REMOVED DataQuality - no longer used
 import com.example.ui1.UIVariometer
 import com.example.xcpro.navdrawer.NavigationDrawer
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import java.io.File
@@ -133,12 +132,24 @@ fun MapScreen(
     mapViewModel: MapScreenViewModel
 ) {
     val context = LocalContext.current
-    val unitsRepository = remember(context.applicationContext) {
-        UnitsRepository(context.applicationContext)
-    }
-    val unitsPreferences by unitsRepository.unitsFlow.collectAsState(initial = UnitsPreferences())
+    val mapUiState by mapViewModel.uiState.collectAsState()
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
+    LaunchedEffect(mapViewModel, context) {
+        mapViewModel.uiEffects.collect { effect ->
+            when (effect) {
+                is MapUiEffect.ShowToast -> {
+                    Toast.makeText(context, effect.message, Toast.LENGTH_LONG).show()
+                }
+                MapUiEffect.OpenDrawer -> drawerState.open()
+                MapUiEffect.CloseDrawer -> drawerState.close()
+            }
+        }
+    }
+
+    LaunchedEffect(drawerState.isOpen) {
+        mapViewModel.onEvent(MapUiEvent.SetDrawerOpen(drawerState.isOpen))
+    }
 
     // ?o. Centralized state management via ViewModel
     val mapState = mapViewModel.mapState
@@ -148,23 +159,7 @@ fun MapScreen(
     val orientationManager = mapViewModel.orientationManager
     val orientationData by orientationManager.orientationFlow.collectAsState()
     val taskManager = mapViewModel.taskManager  // ?o. Using coordinator for task management
-    // 🔄 Load waypoints once
-    val waypointData by produceState(initialValue = emptyList<WaypointData>(), key1 = context) {
-        value = withContext(Dispatchers.IO) {
-            val (waypointFiles, _) = loadWaypointFiles(context)
-            waypointFiles.flatMap { file ->
-                try {
-                    WaypointParser.parseWaypointFile(context, file)
-                } catch (e: Exception) {
-                    Log.e("MapScreen", "Error parsing waypoint file: ${e.message}")
-                    emptyList()
-                }
-            }
-        }
-    }
-
-// ✅ keep repo if you still need it
-    val waypointRepo = remember(waypointData) { FileWaypointRepo(waypointData) }
+    val waypointRepo = remember(mapUiState.waypoints) { FileWaypointRepo(mapUiState.waypoints) }
 
     // ✅ SIMPLIFIED: Remove permission dialog variables, always enable everything
     val safeContainerSizeState = remember { mutableStateOf(IntSize.Zero) }
@@ -186,9 +181,7 @@ fun MapScreen(
 
     // ✅ Initialize FlightDataManager
     val flightDataManager = mapViewModel.flightDataManager
-    LaunchedEffect(unitsPreferences) {
-        flightDataManager.updateUnitsPreferences(unitsPreferences)
-    }
+
     val showQnhDialogState = remember { mutableStateOf(false) }
     var showQnhDialog by showQnhDialogState
     val qnhInputState = remember { mutableStateOf("") }
@@ -207,8 +200,8 @@ fun MapScreen(
     }
 
     // ✅ Profile ViewModel
-    val profileViewModel: com.example.xcpro.profiles.ProfileViewModel = viewModel()
-    val uiState by profileViewModel.uiState.collectAsState()
+    val profileViewModel: com.example.xcpro.profiles.ProfileViewModel = hiltViewModel()
+    val profileUiState by profileViewModel.uiState.collectAsState()
     // ✅ TaskScreenManager - Centralized task screen handling
     val taskScreenManager = mapViewModel.taskScreenManager
 
@@ -287,7 +280,8 @@ fun MapScreen(
         locationPermissionLauncher = locationPermissionLauncher,
         currentLocation = currentLocation,
         orientationData = orientationData,
-        uiState = uiState,
+        orientationManager = orientationManager,
+        uiState = profileUiState,
         flightDataManager = flightDataManager,
         mapState = mapState,
         currentFlightModeSelection = currentFlightModeSelection,
@@ -322,8 +316,20 @@ fun MapScreen(
     var variometerOffset by variometerOffsetState
     val variometerSizePxState = remember { mutableStateOf(widgetPositions.variometerSizePx) }
     var variometerSizePx by variometerSizePxState
-    val hamburgerOffsetState = remember { mutableStateOf(widgetPositions.hamburgerOffset) }
-    var hamburgerOffset by hamburgerOffsetState
+    val hamburgerOffsetState = remember { mutableStateOf(widgetPositions.sideHamburgerOffset) }
+    val flightModeOffsetState = remember { mutableStateOf(widgetPositions.flightModeOffset) }
+
+    LaunchedEffect(Unit) {
+        val maxX = (screenWidthPx - variometerSizePx).coerceAtLeast(0f)
+        val maxY = (screenHeightPx - variometerSizePx).coerceAtLeast(0f)
+        val centeredOffset = Offset(
+            x = ((screenWidthPx - variometerSizePx) / 2f).coerceIn(0f, maxX),
+            y = ((screenHeightPx - variometerSizePx) / 2f).coerceIn(0f, maxY)
+        )
+        variometerOffset = centeredOffset
+        widgetManager.saveWidgetPosition("uilevo", centeredOffset)
+        Log.d(TAG, "UILevo initial centered offset applied: $centeredOffset (size=$variometerSizePx)")
+    }
 
     // ✅ CENTRALIZED CAMERA EFFECTS - Replace camera animation and orientation effects
     MapCameraEffects.AllCameraEffects(
@@ -355,12 +361,11 @@ fun MapScreen(
             onMapStyleSelected(style)
         },
         content = {
-            MapScreenContent(
-                navController = navController,
-                drawerState = drawerState,
-                coroutineScope = coroutineScope,
-                density = density,
-                mapState = mapState,
+            Box(modifier = Modifier.fillMaxSize()) {
+                MapScreenContent(
+                    navController = navController,
+                    density = density,
+                    mapState = mapState,
                 mapInitializer = mapInitializer,
                 locationManager = locationManager,
                 flightDataManager = flightDataManager,
@@ -384,16 +389,36 @@ fun MapScreen(
                 variometerOffset = variometerOffsetState,
                 variometerSizePx = variometerSizePxState,
                 hamburgerOffset = hamburgerOffsetState,
+                flightModeOffset = flightModeOffsetState,
                 showQnhDialog = showQnhDialogState,
                 qnhInput = qnhInputState,
                 qnhError = qnhErrorState,
                 showQnhFab = showQnhFabState,
                 taskScreenManager = taskScreenManager,
-                waypointData = waypointData,
-                unitsPreferences = unitsPreferences,
+                waypointData = mapUiState.waypoints,
+                unitsPreferences = mapUiState.unitsPreferences,
                 ballastUiState = mapViewModel.ballastUiState,
-                onBallastCommand = mapViewModel::submitBallastCommand
-            )
+                onBallastCommand = mapViewModel::submitBallastCommand,
+                onHamburgerTap = { mapViewModel.onEvent(MapUiEvent.ToggleDrawer) },
+                onHamburgerLongPress = { mapViewModel.onEvent(MapUiEvent.ToggleUiEditMode) }
+                )
+                if (mapUiState.isLoadingWaypoints) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.2f))
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                        )
+                    }
+                }
+            }
         }
     )
 }
+
+
+
+

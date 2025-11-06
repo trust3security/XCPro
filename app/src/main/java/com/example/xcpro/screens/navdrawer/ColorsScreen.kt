@@ -19,7 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.xcpro.profiles.ProfileViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.example.xcpro.ui.theme.AppColorTheme
 import com.example.xcpro.ui.theme.CustomColorScheme
 import org.json.JSONObject
@@ -39,7 +39,7 @@ fun ColorsScreen(
     navController: NavHostController
 ) {
     val context = LocalContext.current
-    val profileViewModel: ProfileViewModel = viewModel()
+    val profileViewModel: ProfileViewModel = hiltViewModel()
     val profileUiState by profileViewModel.uiState.collectAsState()
     val profileId = profileUiState.activeProfile?.id ?: "default"
 

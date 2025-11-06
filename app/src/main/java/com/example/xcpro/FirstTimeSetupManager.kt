@@ -47,19 +47,16 @@ class FirstTimeSetupManager private constructor(private val context: Context) {
             // 1. Clear any existing cache/config that might interfere
             clearPreviousCache()
             
-            // 2. Set default hamburger menu configuration
-            setupDefaultHamburgerMenu()
-            
-            // 3. Set default card positions and sizes
+            // 2. Set default card positions and sizes
             setupDefaultCardLayout()
             
-            // 4. Set default navigation drawer state
+            // 3. Set default navigation drawer state
             setupDefaultNavigationDrawer()
             
-            // 5. Initialize default map settings
+            // 4. Initialize default map settings
             setupDefaultMapSettings()
             
-            // 6. Mark setup as complete
+            // 5. Mark setup as complete
             markSetupComplete()
             
             Log.i(TAG, "✅ First-time setup completed successfully")
@@ -74,8 +71,7 @@ class FirstTimeSetupManager private constructor(private val context: Context) {
         
         // Clear potentially conflicting preferences
         val prefsToClean = listOf(
-            "hamburger_menu_prefs",
-            "card_layout_prefs", 
+            "card_layout_prefs",
             "drawer_config_prefs"
         )
         
@@ -90,33 +86,6 @@ class FirstTimeSetupManager private constructor(private val context: Context) {
                 Log.w(TAG, "Could not clear $prefName", e)
             }
         }
-    }
-    
-    private fun setupDefaultHamburgerMenu() {
-        Log.d(TAG, "🍔 Setting up default hamburger menu...")
-        
-        val hamburgerPrefs = context.getSharedPreferences("hamburger_menu_prefs", Context.MODE_PRIVATE)
-        hamburgerPrefs.edit().apply {
-            // Default position: Top-left with standard padding
-            putFloat("position_x", 16f) // 16dp from left
-            putFloat("position_y", 60f) // Below status bar
-            
-            // Default size: Standard hamburger icon
-            putFloat("icon_size", 24f) // 24dp icon
-            putFloat("touch_area_size", 48f) // 48dp touch area (Material Design)
-            
-            // Default colors
-            putString("icon_color", "#FFFFFF") // White icon
-            putString("background_color", "transparent")
-            
-            // Default behavior
-            putBoolean("auto_hide", false)
-            putInt("animation_duration", 300)
-            
-            apply()
-        }
-        
-        Log.d(TAG, "✅ Hamburger menu defaults set")
     }
     
     private fun setupDefaultCardLayout() {

@@ -13,7 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.xcpro.profiles.ProfileViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Speed
 import kotlinx.coroutines.launch
@@ -39,7 +39,7 @@ fun NavigationDrawer(
     content: @Composable () -> Unit
 ) {
     Log.d(TAG, "🚪 NavigationDrawer composable started")
-    val profileViewModel: ProfileViewModel = viewModel()
+    val profileViewModel: ProfileViewModel = hiltViewModel()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
@@ -54,6 +54,7 @@ fun NavigationDrawer(
     Log.d(TAG, "🚪 DismissibleNavigationDrawer rendering with state: ${drawerState.currentValue}")
     DismissibleNavigationDrawer(
         drawerState = drawerState,
+        gesturesEnabled = false,
         drawerContent = {
             DismissibleDrawerSheet(
                 modifier = Modifier.width(210.dp),

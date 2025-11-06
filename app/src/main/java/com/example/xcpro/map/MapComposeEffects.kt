@@ -1,6 +1,5 @@
 package com.example.xcpro.map
 
-import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -11,6 +10,7 @@ import com.example.dfcards.CardPreferences
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.xcpro.OrientationData
+import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.loadConfig
 import com.example.xcpro.profiles.ProfileUiState
 import com.example.xcpro.sensors.GPSData
@@ -22,8 +22,6 @@ import kotlinx.coroutines.isActive
 import androidx.compose.runtime.snapshotFlow
 
 object MapComposeEffects {
-
-    private const val TAG = "MapComposeEffects"
 
     @Composable
     fun LocationAndPermissionEffects(
@@ -67,7 +65,6 @@ object MapComposeEffects {
             if (!flightDataManager.isCurrentModeVisible(currentMode)) {
                 val fallback = flightDataManager.getFallbackMode()
                 mapState.currentMode = fallback
-                Log.d(TAG, "Switching map mode to fallback $fallback because $currentMode is hidden")
             }
         }
 
@@ -76,30 +73,19 @@ object MapComposeEffects {
             uiState.activeProfile?.id,
             safeContainerSize,
             profileModeCards,
-            profileModeTemplates,
-            activeTemplateId
+            profileModeTemplates
         ) {
             if (safeContainerSize == IntSize.Zero) {
-                Log.d(TAG, "Safe container size zero; deferring template apply")
                 return@LaunchedEffect
             }
 
-            if (flightDataManager.allTemplates.isEmpty()) {
-                flightDataManager.loadAllTemplates()
-            }
-
-            flightDataManager.loadTemplateForProfile(
-                currentFlightModeSelection = currentFlightModeSelection,
+            flightDataManager.updateFlightMode(currentFlightModeSelection)
+            flightViewModel.prepareCardsForProfile(
                 profileId = uiState.activeProfile?.id,
-                profileName = uiState.activeProfile?.name,
-                safeContainerSize = safeContainerSize,
-                flightViewModel = flightViewModel,
+                flightMode = currentFlightModeSelection,
+                containerSize = safeContainerSize,
                 density = density
             )
-        }
-
-        LaunchedEffect(flightDataManager.currentFlightMode) {
-            flightViewModel.updateFlightMode(flightDataManager.currentFlightMode)
         }
     }
 
@@ -111,7 +97,8 @@ object MapComposeEffects {
         density: androidx.compose.ui.unit.Density,
         flightDataManager: FlightDataManager,
         locationManager: LocationManager,
-        orientationData: OrientationData
+        orientationData: OrientationData,
+        orientationManager: MapOrientationManager
     ) {
         LaunchedEffect(Unit) {
             flightViewModel.initializeCardPreferences(cardPreferences)
@@ -119,14 +106,11 @@ object MapComposeEffects {
         }
 
         LaunchedEffect(Unit) {
-            flightDataManager.loadAllTemplates()
-        }
-
-        LaunchedEffect(Unit) {
             snapshotFlow { flightDataManager.liveFlightData }
                 .filterNotNull()
                 .collectLatest { liveData ->
                     flightViewModel.updateCardsWithLiveData(liveData)
+                    orientationManager.updateFromFlightData(liveData)
                     locationManager.updateLocationFromFlightData(
                         liveData,
                         orientationData.mode,
@@ -172,9 +156,7 @@ object MapComposeEffects {
                     mapState.mapStyleUrl = getMapStyleUrl(style)
                     onMapStyleSelected(style)
                 }
-                .onFailure { error ->
-                    Log.e(TAG, "Failed to load map style", error)
-                }
+                .onFailure { _ -> }
         }
     }
 
@@ -182,12 +164,7 @@ object MapComposeEffects {
     fun TestAndDebugEffects(
         orientationData: OrientationData
     ) {
-        LaunchedEffect(orientationData.mode, orientationData.isValid) {
-            Log.d(
-                TAG,
-                "Compass state -> mode=${orientationData.mode}, bearing=${orientationData.bearing}, valid=${orientationData.isValid}"
-            )
-        }
+        LaunchedEffect(orientationData.mode, orientationData.isValid) { }
     }
 
     @Composable
@@ -196,6 +173,7 @@ object MapComposeEffects {
         locationPermissionLauncher: ActivityResultLauncher<Array<String>>,
         currentLocation: GPSData?,
         orientationData: OrientationData,
+        orientationManager: MapOrientationManager,
         uiState: ProfileUiState,
         flightDataManager: FlightDataManager,
         mapState: MapScreenState,
@@ -238,7 +216,8 @@ object MapComposeEffects {
             density = density,
             flightDataManager = flightDataManager,
             locationManager = locationManager,
-            orientationData = orientationData
+            orientationData = orientationData,
+            orientationManager = orientationManager
         )
 
         MapStyleAndConfigurationEffects(

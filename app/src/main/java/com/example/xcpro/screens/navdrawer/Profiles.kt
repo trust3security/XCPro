@@ -26,7 +26,7 @@ import com.example.xcpro.profiles.ProfileViewModel
 import com.example.xcpro.profiles.ProfileExportDialog
 import com.example.xcpro.profiles.ProfileImportDialog
 import com.example.xcpro.screens.navdrawer.SettingsTopAppBar
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.compose.runtime.collectAsState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -39,7 +39,7 @@ fun ProfilesScreen(
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    val profileViewModel: ProfileViewModel = viewModel()
+    val profileViewModel: ProfileViewModel = hiltViewModel()
     val uiState by profileViewModel.uiState.collectAsState()
     
     var configContent by remember { mutableStateOf<String?>(null) }

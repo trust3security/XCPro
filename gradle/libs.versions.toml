@@ -23,6 +23,8 @@ firebaseAuth = "23.0.0" # check latest
 firebaseFirestore = "25.1.0"
 datastoreCoreAndroid = "1.1.7"
 datastorePreferencesCoreAndroid = "1.1.7" # latest as of Aug 2025
+hilt = "2.56.1"
+hiltAndroidx = "1.3.0"
 
 
 [libraries]
@@ -42,6 +44,7 @@ compose-material-icons-extended = { group = "androidx.compose.material", name = 
 json = { module = "org.json:json", version.ref = "json" }
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version = "1.7.3" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version = "1.6.3" }
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version = "1.7.3" }
 maplibre-android = { group = "org.maplibre.gl", name = "android-sdk", version.ref = "maplibre" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -61,11 +64,19 @@ androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version
 material = { group = "com.google.android.material", name = "material", version.ref = "materialVersion" }
 androidx-datastore-core-android = { group = "androidx.datastore", name = "datastore-core-android", version.ref = "datastoreCoreAndroid" }
 androidx-datastore-preferences-core-android = { group = "androidx.datastore", name = "datastore-preferences-core-android", version.ref = "datastorePreferencesCoreAndroid" }
+hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
+hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
+androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltAndroidx" }
+androidx-hilt-work = { group = "androidx.hilt", name = "hilt-work", version.ref = "hiltAndroidx" }
+androidx-hilt-compiler = { group = "androidx.hilt", name = "hilt-compiler", version.ref = "hiltAndroidx" }
+androidx-test-core = { group = "androidx.test", name = "core-ktx", version = "1.6.0" }
+robolectric = { group = "org.robolectric", name = "robolectric", version = "4.12.1" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 android-library = { id = "com.android.library", version.ref = "agp" }  # Add this line
+dagger-hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 
 

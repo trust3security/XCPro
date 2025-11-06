@@ -181,7 +181,6 @@ XCPro/
 | AGL calculation, terrain, or altitude | [AGL.md](./AGL.md) |
 | QNH calibration, barometric sensors | [AGL.md](./AGL.md) |
 | Phone GPS, sensors, accuracy | [AGL.md](./AGL.md) |
-| Code refactoring, file structure | [REFACTORING_ROADMAP.md](./REFACTORING_ROADMAP.md) |
 | General development guidelines | [CLAUDE.md](./CLAUDE.md) (this file) |
 
 **Example workflow:**
@@ -492,3 +491,4 @@ fun updateRadius(taskType: TaskType, radius: Double) {
 - Shared base calculation classes
 
 **REMEMBER: One contaminated function breaks the entire separation architecture!**
+

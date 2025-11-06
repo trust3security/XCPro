@@ -1,7 +1,7 @@
 # Flight Data Cards - SSOT Refactoring Plan
 
 **Created**: 2025-10-10
-**Status**: ðŸ“‹ Planning - Not Yet Implemented
+**Status**: Superseded – see `docs/2025-11-01-flight-data-cards-ssot-remediation-plan.md`
 **Priority**: HIGH - Critical for long-term stability
 **Estimated Time**: 2-3 hours
 
