@@ -15,6 +15,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.example.xcpro.screens.navdrawer.lookandfeel.StatusBarStyle
+import com.example.xcpro.screens.navdrawer.lookandfeel.StatusBarStyleApplier
 import com.example.xcpro.ui.theme.Baseui1Theme
 import dagger.hilt.android.AndroidEntryPoint
 import org.maplibre.android.MapLibre
@@ -23,7 +24,7 @@ import org.maplibre.android.WellKnownTileServer
 private const val TAG = "MainActivity"
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : ComponentActivity(), StatusBarStyleApplier {
 
     private var currentProfileId: String? = null
 
@@ -63,7 +64,7 @@ class MainActivity : ComponentActivity() {
         Log.d(TAG, "onResume: notifying sensor pipeline about potential resume")
     }
 
-    fun applyUserStatusBarStyle(profileId: String?) {
+    override fun applyUserStatusBarStyle(profileId: String?) {
         currentProfileId = profileId
         Log.d(TAG, "applyUserStatusBarStyle: profile=$profileId")
 

@@ -1,0 +1,12 @@
+package com.example.xcpro.common.glider
+
+import kotlinx.coroutines.flow.StateFlow
+
+interface GliderConfigRepository {
+    val selectedModel: StateFlow<GliderModel?>
+    val config: StateFlow<GliderConfig>
+
+    fun listModels(): List<GliderModel>
+    fun selectModelById(id: String)
+    fun updateConfig(update: (GliderConfig) -> GliderConfig)
+}

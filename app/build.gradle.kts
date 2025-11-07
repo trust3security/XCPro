@@ -52,6 +52,10 @@ android {
 
 dependencies {
     implementation(project(":dfcards-library"))  // Make sure this line exists
+    implementation(project(":core:common"))
+    implementation(project(":core:ui"))
+    implementation(project(":feature:profile"))
+    implementation(project(":feature:map"))
   //  implementation(libs.json)
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)

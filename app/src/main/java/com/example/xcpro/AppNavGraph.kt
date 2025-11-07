@@ -24,6 +24,7 @@ import androidx.navigation.navArgument
 import com.example.ui1.screens.*
 import com.example.xcpro.screens.navdrawer.lookandfeel.LookAndFeelScreen
 import com.example.xcpro.map.MapScreenViewModel
+import com.example.xcpro.map.ui.MapScreen
 import com.example.xcpro.profiles.ProfileSelectionScreen
 import com.example.xcpro.profiles.ProfileUiState
 import com.example.xcpro.screens.navdrawer.ColorsScreen
@@ -58,7 +59,6 @@ fun AppNavGraph(
                 mapStyleExpanded = remember { mutableStateOf(config?.optJSONObject("navDrawer")?.optBoolean("mapStyleExpanded", false) ?: false) },
                 settingsExpanded = remember { mutableStateOf(config?.optJSONObject("navDrawer")?.optBoolean("settingsExpanded", true) ?: true) },
                 initialMapStyle = initialMapStyle,
-                showTaskScreen = remember { mutableStateOf(false) },
                 mapViewModel = mapViewModel
             )
         }

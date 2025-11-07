@@ -1,6 +1,6 @@
 package com.example.xcpro.profiles
 
-import com.example.xcpro.FlightMode
+import com.example.xcpro.common.flight.FlightMode
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -65,3 +65,4 @@ class ProfileRepositoryTest {
         assertEquals(orphan.id, active?.id)
     }
 }
+
