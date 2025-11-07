@@ -25,6 +25,12 @@ local.properties
 /app/build/
 /dfcards-library/build/
 */build/
+**/build/
+
+# Local build/test transcripts
+build-*.txt
+run.log
+test-run.log
 
 # Backup files
 *.zip

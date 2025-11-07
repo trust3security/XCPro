@@ -21,5 +21,8 @@ dependencyResolutionManagement {
 
 rootProject.name = "XCPro"
 include(":app")
-//include(":dfcards-library")
 include(":dfcards-library")
+include(":core:common")
+include(":core:ui")
+include(":feature:map")
+include(":feature:profile")

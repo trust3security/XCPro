@@ -136,11 +136,20 @@ Example:
 ---
 
 ## 7) Compose Rules
-- Composables are **pure** render functions; no I/O, no long‑running work.
+- Composables are **pure** render functions; no I/O, no long-running work.
 - Use `remember`/`rememberSaveable` intentionally; prefer `derivedStateOf` for computed values.
 - Provide `@Preview` for each screen and complex component.
 - Hoist state; pass events as lambdas.
-- Keep files under **550 lines**; split when larger.
+- Keep files under **500 lines** (prefer <= 350). Split when larger.
+
+### Recommended Split Targets (for XC Pro)
+| Type | Ideal Size | Hard Limit | Split Trigger |
+|------|------------|------------|---------------|
+| Composables / UI | <= 300 LOC | 500 LOC | Multiple @Preview blocks or branching paths |
+| ViewModels | <= 250 LOC | 400 LOC | Handling more than 3 UiEvents |
+| UseCases | <= 150 LOC | 200 LOC | Doing orchestration or complex coordination |
+| Repository / Data Source | <= 300 LOC | 450 LOC | Owning more than one sensor/data adapter |
+| Utility / Extension file | <= 200 LOC | 300 LOC | Mixing unrelated helpers |
 
 ---
 

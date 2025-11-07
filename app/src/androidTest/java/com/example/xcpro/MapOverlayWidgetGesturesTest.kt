@@ -13,8 +13,8 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.example.xcpro.map.MapScreenState
-import com.example.xcpro.map.MapUIWidgetManager
-import com.example.xcpro.map.MapUIWidgets
+import com.example.xcpro.map.ui.widgets.MapUIWidgetManager
+import com.example.xcpro.map.ui.widgets.MapUIWidgets
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
