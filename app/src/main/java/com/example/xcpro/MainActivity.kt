@@ -17,6 +17,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import com.example.xcpro.screens.navdrawer.lookandfeel.StatusBarStyle
 import com.example.xcpro.screens.navdrawer.lookandfeel.StatusBarStyleApplier
 import com.example.xcpro.ui.theme.Baseui1Theme
+import com.example.xcpro.service.VarioForegroundService
 import dagger.hilt.android.AndroidEntryPoint
 import org.maplibre.android.MapLibre
 import org.maplibre.android.WellKnownTileServer
@@ -51,6 +52,8 @@ class MainActivity : ComponentActivity(), StatusBarStyleApplier {
                 MainActivityScreen()
             }
         }
+
+        VarioForegroundService.start(this)
 
         Log.d(TAG, "onCreate: applying initial status bar style")
         applyUserStatusBarStyle(null)

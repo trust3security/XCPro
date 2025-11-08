@@ -1,4 +1,4 @@
-﻿package com.example.xcpro.map
+package com.example.xcpro.map
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -19,6 +19,7 @@ import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.common.units.UnitsConverter
 import com.example.xcpro.xcprov1.bluetooth.GarminGloConnectionManager
 import com.example.xcpro.xcprov1.service.XcproV1Controller
+import com.example.xcpro.vario.VarioServiceManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -30,7 +31,8 @@ class LocationManager(
     private val mapState: MapScreenState,
     private val coroutineScope: CoroutineScope,
     private val qnhPreferencesRepository: QnhPreferencesRepository,
-    private val hawkDashboardActive: () -> Boolean
+    private val hawkDashboardActive: () -> Boolean,
+    private val varioServiceManager: VarioServiceManager
 ) {
     companion object {
         private const val TAG = "LocationManager"
@@ -38,11 +40,26 @@ class LocationManager(
         private const val LOCATION_TOP_PADDING_RATIO = 0.35f
     }
 
-    // âœ… PHASE 2: Unified sensor management
-    val unifiedSensorManager = UnifiedSensorManager(context)
+    private var sensorsStarted = false
 
-    // âœ… PHASE 2: Flight data calculator (combines all sensor data + calculations)
-    val flightDataCalculator = FlightDataCalculator(context, unifiedSensorManager, coroutineScope)
+    private fun ensureSensorsRunning() {
+        if (!sensorsStarted) {
+            varioServiceManager.start()
+            sensorsStarted = true
+        }
+    }
+
+    private fun stopSensors() {
+        if (!sensorsStarted) return
+        varioServiceManager.stop()
+        sensorsStarted = false
+    }
+
+    // ✅ PHASE 2: Unified sensor management
+    val unifiedSensorManager: UnifiedSensorManager = varioServiceManager.unifiedSensorManager
+
+    // ✅ PHASE 2: Flight data calculator (combines all sensor data + calculations)
+    val flightDataCalculator: FlightDataCalculator = varioServiceManager.flightDataCalculator
     val xcproV1Controller = XcproV1Controller(context, unifiedSensorManager, coroutineScope)
     val garminGloConnectionManager = GarminGloConnectionManager(context, coroutineScope)
     val garminStatusFlow = garminGloConnectionManager.status
@@ -121,10 +138,10 @@ class LocationManager(
             val coarseLocationGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
 
             if (fineLocationGranted || coarseLocationGranted) {
-                Log.d(TAG, "âœ… Location permissions granted, starting unified sensors")
-                unifiedSensorManager.startAllSensors()
+                Log.d(TAG, "✅ Location permissions granted, starting background sensors")
+                ensureSensorsRunning()
             } else {
-                Log.e(TAG, "âŒ Location permissions denied")
+                Log.e(TAG, "❌ Location permissions denied")
             }
         }
     }
@@ -132,7 +149,7 @@ class LocationManager(
     fun checkAndRequestLocationPermissions(
         locationPermissionLauncher: ActivityResultLauncher<Array<String>>
     ) {
-        Log.d(TAG, "ðŸš€ Checking location permissions...")
+        Log.d(TAG, "🚀 Checking location permissions...")
 
         val fineLocationGranted = context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) ==
             android.content.pm.PackageManager.PERMISSION_GRANTED
@@ -140,10 +157,10 @@ class LocationManager(
             android.content.pm.PackageManager.PERMISSION_GRANTED
 
         if (fineLocationGranted || coarseLocationGranted) {
-            Log.d(TAG, "âœ… Location permissions already granted, starting unified sensors")
-            unifiedSensorManager.startAllSensors()
+            Log.d(TAG, "✅ Location permissions already granted, starting background sensors")
+            ensureSensorsRunning()
         } else {
-            Log.d(TAG, "ðŸ“‹ Requesting location permissions...")
+            Log.d(TAG, "📋 Requesting location permissions...")
             locationPermissionLauncher.launch(
                 arrayOf(
                     Manifest.permission.ACCESS_FINE_LOCATION,
@@ -158,14 +175,14 @@ class LocationManager(
             Log.d(TAG, "HAWK dashboard active, skipping sensor shutdown")
             return
         }
-
-        Log.d(TAG, "Stopping unified sensor manager and flight data calculator (force=$force)...")
-        unifiedSensorManager.stopAllSensors()
-        flightDataCalculator.stop()
-        garminGloConnectionManager.stop()
-        if (force) {
-            xcproV1Controller.release()
+        if (!force) {
+            Log.d(TAG, "Background service keeps sensors alive (force=false)")
+            return
         }
+        Log.d(TAG, "Force stopping background sensors")
+        stopSensors()
+        garminGloConnectionManager.stop()
+        xcproV1Controller.release()
     }
 
     /**
@@ -173,7 +190,7 @@ class LocationManager(
      * This ensures GPS and other sensors resume properly when screen turns back on
      */
     fun restartSensorsIfNeeded() {
-        Log.d(TAG, "ðŸ”„ Checking if sensors need restart after sleep mode...")
+        Log.d(TAG, "🔄 Checking if sensors need restart after sleep mode...")
 
         val sensorStatus = unifiedSensorManager.getSensorStatus()
 
@@ -190,13 +207,13 @@ class LocationManager(
             )
 
             // Stop everything first to clean up any stale listeners
-            unifiedSensorManager.stopAllSensors()
+            stopSensors()
 
             // Short delay to ensure clean shutdown
             Thread.sleep(100)
 
             // Restart all sensors
-            unifiedSensorManager.startAllSensors()
+            ensureSensorsRunning()
 
             // FlightDataCalculator starts automatically with sensor data flow (no explicit start)
             Log.d(TAG, "Sensors restarted successfully after sleep/doze")
@@ -205,25 +222,25 @@ class LocationManager(
 
         // If GPS was started but is no longer receiving updates, restart all sensors
         if (!sensorStatus.gpsStarted && sensorStatus.hasLocationPermissions) {
-            Log.d(TAG, "ðŸ“± Sensors appear to be stopped (likely due to sleep mode), restarting...")
+            Log.d(TAG, "📱 Sensors appear to be stopped (likely due to sleep mode), restarting...")
 
             // Stop everything first to clean up any stale listeners
-            unifiedSensorManager.stopAllSensors()
+            stopSensors()
 
             // Short delay to ensure clean shutdown
             Thread.sleep(100)
 
             // Restart all sensors
-            unifiedSensorManager.startAllSensors()
+            ensureSensorsRunning()
 
             // FlightDataCalculator starts automatically with sensor data flow
             // No explicit start() method needed
 
-            Log.d(TAG, "âœ… Sensors restarted successfully after sleep mode")
+            Log.d(TAG, "✅ Sensors restarted successfully after sleep mode")
         } else if (sensorStatus.gpsStarted) {
-            Log.d(TAG, "âœ… Sensors already running, no restart needed")
+            Log.d(TAG, "✅ Sensors already running, no restart needed")
         } else {
-            Log.d(TAG, "âš ï¸ No location permissions, cannot restart sensors")
+            Log.d(TAG, "⚠️ No location permissions, cannot restart sensors")
         }
     }
 
@@ -231,15 +248,15 @@ class LocationManager(
         val preferredAddress = address.takeIf { it.isNotBlank() }
             ?: findPairedGarminAddress()
         if (preferredAddress != null) {
-            Log.d(TAG, "ðŸ”— Connecting to Garmin GLO 2 at $preferredAddress")
+            Log.d(TAG, "🔗 Connecting to Garmin GLO 2 at $preferredAddress")
             garminGloConnectionManager.connectToAddress(preferredAddress)
         } else {
-            Log.w(TAG, "âš ï¸ No paired Garmin GLO 2 found. Pair device in Android Bluetooth settings first.")
+            Log.w(TAG, "⚠️ No paired Garmin GLO 2 found. Pair device in Android Bluetooth settings first.")
         }
     }
 
     fun disconnectGarminGlo() {
-        Log.d(TAG, "ðŸ”» Disconnecting Garmin GLO 2")
+        Log.d(TAG, "🔻 Disconnecting Garmin GLO 2")
         garminGloConnectionManager.stop()
     }
 
@@ -262,8 +279,8 @@ class LocationManager(
         orientationMode: MapOrientationMode = MapOrientationMode.NORTH_UP,
         magneticHeading: Double = 0.0
     ) {
-        Log.d(TAG, "ðŸ“ Updating location overlay: ${location.latLng.latitude}, ${location.latLng.longitude}, " +
-                  "bearing=${location.bearing}Â°, magHeading=${magneticHeading}Â°, mode=$orientationMode")
+        Log.d(TAG, "📍 Updating location overlay: ${location.latLng.latitude}, ${location.latLng.longitude}, " +
+                  "bearing=${location.bearing}°, magHeading=${magneticHeading}°, mode=$orientationMode")
 
         // Update the current user location
         currentUserLocation = location.latLng
@@ -315,13 +332,13 @@ class LocationManager(
                 // Save initial position for return button
                 saveLocation(location, INITIAL_ZOOM_LEVEL, 0.0)
 
-                Log.d(TAG, "ðŸŽ¯ INITIAL CENTERING: Centered map on first GPS location: ${location.latitude}, ${location.longitude}")
+                Log.d(TAG, "🎯 INITIAL CENTERING: Centered map on first GPS location: ${location.latitude}, ${location.longitude}")
             }
         }
     }
 
     private fun handleAutomaticCameraTracking(location: LatLng, orientationMode: MapOrientationMode) {
-        // âœ… Enable camera tracking for ALL modes when user hasn't panned
+        // ✅ Enable camera tracking for ALL modes when user hasn't panned
         // The camera follows the GPS position to keep the aircraft icon in view
         // The icon stays at actual GPS coordinates on the map
         if (isTrackingLocation && !showReturnButton) {
@@ -343,10 +360,10 @@ class LocationManager(
                 map.moveCamera(CameraUpdateFactory.newCameraPosition(newCameraPosition))
                 map.setPadding(padding[0], padding[1], padding[2], padding[3])
 
-                Log.d(TAG, "ðŸ“ $orientationMode: Camera following location at ${location.latitude}, ${location.longitude}")
+                Log.d(TAG, "📍 $orientationMode: Camera following location at ${location.latitude}, ${location.longitude}")
             }
         } else {
-            Log.d(TAG, "ðŸ“ Camera tracking: mode=$orientationMode, tracking=$isTrackingLocation, returnButton=$showReturnButton")
+            Log.d(TAG, "📍 Camera tracking: mode=$orientationMode, tracking=$isTrackingLocation, returnButton=$showReturnButton")
         }
     }
 
@@ -355,21 +372,21 @@ class LocationManager(
         orientationMode: MapOrientationMode,
         magneticHeading: Double
     ) {
-        Log.d(TAG, "ðŸ“¡ GPS Data: fixed=${liveData}, " +
+        Log.d(TAG, "📡 GPS Data: fixed=${liveData}, " +
                   "lat=${liveData.latitude}, lon=${liveData.longitude}, " +
                   "accuracy=${liveData.accuracy}, gpsAlt=${liveData.gpsAltitude}m, " +
-                  "speed=${String.format("%.1f", UnitsConverter.msToKnots(liveData.groundSpeed))}kt, track=${liveData.track}Â°")
+                  "speed=${String.format("%.1f", UnitsConverter.msToKnots(liveData.groundSpeed))}kt, track=${liveData.track}°")
 
         // Update position even without perfect GPS fix for smooth tracking
         // Just need valid coordinates (not 0,0)
         if (liveData.latitude != 0.0 && liveData.longitude != 0.0) {
             val newLocation = LatLng(liveData.latitude, liveData.longitude)
             currentUserLocation = newLocation
-            Log.d(TAG, "ðŸŒ User location updated: ${liveData.latitude}, ${liveData.longitude}")
+            Log.d(TAG, "🌍 User location updated: ${liveData.latitude}, ${liveData.longitude}")
 
             mapState.mapLibreMap?.let { map ->
                 try {
-                    Log.d(TAG, "ðŸ—ºï¸ Map available for sailplane overlay update, style=${map.style != null}")
+                    Log.d(TAG, "🗺️ Map available for sailplane overlay update, style=${map.style != null}")
 
                     // Update glider icon with GPS track and magnetic heading for proper rotation per mode
                     mapState.blueLocationOverlay?.updateLocation(
@@ -385,13 +402,13 @@ class LocationManager(
                     // Handle automatic camera tracking for smooth movement
                     handleAutomaticCameraTracking(newLocation, orientationMode)
 
-                    Log.d(TAG, "âœ… Custom sailplane overlay updated successfully (track=${liveData.track}Â°)")
+                    Log.d(TAG, "✅ Custom sailplane overlay updated successfully (track=${liveData.track}°)")
                 } catch (e: Exception) {
-                    Log.e(TAG, "âŒ Error updating sailplane overlay: ${e.message}", e)
+                    Log.e(TAG, "❌ Error updating sailplane overlay: ${e.message}", e)
                 }
-            } ?: Log.w(TAG, "âš ï¸ MapLibreMap is null, cannot update location")
+            } ?: Log.w(TAG, "⚠️ MapLibreMap is null, cannot update location")
         } else {
-            Log.d(TAG, "âš ï¸ GPS not fixed or invalid coordinates: " +
+            Log.d(TAG, "⚠️ GPS not fixed or invalid coordinates: " +
                       "fixed=${liveData}, " +
                       "lat=${liveData.latitude}, lon=${liveData.longitude}")
         }
@@ -401,7 +418,7 @@ class LocationManager(
         savedLocation = location
         savedZoom = zoom
         savedBearing = bearing
-        Log.d(TAG, "ðŸ“ Saved position for return: lat=${location.latitude}, zoom=$zoom, bearing=$bearing")
+        Log.d(TAG, "📍 Saved position for return: lat=${location.latitude}, zoom=$zoom, bearing=$bearing")
     }
 
     fun saveLocationFromGPS(location: GPSData?, zoom: Double, bearing: Double) {
@@ -414,7 +431,7 @@ class LocationManager(
         showReturnButton = true
         mapState.showReturnButton = true
         lastUserPanTime = System.currentTimeMillis()
-        Log.d(TAG, "âœ… Return button shown due to user interaction")
+        Log.d(TAG, "✅ Return button shown due to user interaction")
     }
 
     fun returnToSavedLocation(): Boolean {
@@ -437,7 +454,7 @@ class LocationManager(
                 mapState.showReturnButton = false
                 isTrackingLocation = true
                 showRecenterButton = false
-                Log.d(TAG, "ðŸ”„ Returned to saved position: lat=${location.latitude}, zoom=$savedZoom")
+                Log.d(TAG, "🔄 Returned to saved position: lat=${location.latitude}, zoom=$savedZoom")
                 true
             } ?: false
         } ?: false
@@ -463,7 +480,7 @@ class LocationManager(
                 map.setPadding(padding[0], padding[1], padding[2], padding[3])
 
                 showRecenterButton = false
-                Log.d(TAG, "âœ… Recentered to current location")
+                Log.d(TAG, "✅ Recentered to current location")
             }
         }
     }
@@ -485,6 +502,11 @@ class LocationManager(
         }?.address
     }
 }
+
+
+
+
+
 
 
 

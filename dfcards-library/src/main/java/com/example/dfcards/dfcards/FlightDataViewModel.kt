@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.collect
 import java.util.UUID
 
 private typealias ProfileId = String
+private const val DEFAULT_PROFILE_ID = "__default_profile__"
 
 /**
  * Single-source-of-truth owner for flight data card configuration. Persisted values are read/written
@@ -81,11 +82,7 @@ class FlightDataViewModel(
 
     val activeCardIds: StateFlow<List<String>> =
         combine(_profileModeCards, _activeProfileId, _currentFlightMode) { cardsMap, profileId, mode ->
-            if (profileId == null) {
-                emptyList()
-            } else {
-                cardsMap[profileId]?.get(mode).orEmpty()
-            }
+            cardsMap[normalizeProfileId(profileId)]?.get(mode).orEmpty()
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
@@ -108,7 +105,7 @@ class FlightDataViewModel(
 
     val activeTemplateId: StateFlow<String?> =
         combine(_profileModeTemplates, _activeProfileId, _currentFlightMode) { templateMap, profileId, mode ->
-            profileId?.let { templateMap[it]?.get(mode) }
+            templateMap[normalizeProfileId(profileId)]?.get(mode)
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
@@ -218,7 +215,7 @@ class FlightDataViewModel(
     fun setActiveProfile(profileId: ProfileId?) {
         if (_activeProfileId.value == profileId) return
         _activeProfileId.value = profileId
-        profileId?.let { ensureVisibilityEntry(it) }
+        ensureVisibilityEntry(normalizeProfileId(profileId))
         syncSelectedIdsWithRepository()
     }
 
@@ -230,64 +227,69 @@ class FlightDataViewModel(
     }
 
     fun setProfileCards(
-        profileId: ProfileId,
+        profileId: ProfileId?,
         flightMode: FlightModeSelection,
         cardIds: List<String>
     ) {
+        val targetProfileId = normalizeProfileId(profileId)
         val sanitized = cardIds.distinct()
         _profileModeCards.value = _profileModeCards.value.toMutableMap().apply {
-            val existing = this[profileId]?.toMutableMap() ?: mutableMapOf()
+            val existing = this[targetProfileId]?.toMutableMap() ?: mutableMapOf()
             existing[flightMode] = sanitized
-            this[profileId] = existing
+            this[targetProfileId] = existing
         }
-        if (_activeProfileId.value == profileId && _currentFlightMode.value == flightMode) {
+        if (normalizeProfileId(_activeProfileId.value) == targetProfileId && _currentFlightMode.value == flightMode) {
             repository.setSelectedCardIds(sanitized.toSet())
         }
-        persistProfileCards(profileId, flightMode, sanitized)
+        ensureVisibilityEntry(targetProfileId)
+        persistProfileCards(targetProfileId, flightMode, sanitized)
     }
 
     fun setProfileTemplate(
-        profileId: ProfileId,
+        profileId: ProfileId?,
         flightMode: FlightModeSelection,
         templateId: String
     ) {
+        val targetProfileId = normalizeProfileId(profileId)
         _profileModeTemplates.value = _profileModeTemplates.value.toMutableMap().apply {
-            val existing = this[profileId]?.toMutableMap() ?: mutableMapOf()
+            val existing = this[targetProfileId]?.toMutableMap() ?: mutableMapOf()
             existing[flightMode] = templateId
-            this[profileId] = existing
+            this[targetProfileId] = existing
         }
-        persistProfileTemplate(profileId, flightMode, templateId)
+        ensureVisibilityEntry(targetProfileId)
+        persistProfileTemplate(targetProfileId, flightMode, templateId)
     }
 
     fun setProfileFlightModeVisibility(
-        profileId: ProfileId,
+        profileId: ProfileId?,
         flightMode: FlightModeSelection,
         isVisible: Boolean
     ) {
         if (flightMode == FlightModeSelection.CRUISE) return
+        val targetProfileId = normalizeProfileId(profileId)
         val updated = _profileModeVisibilities.value.toMutableMap()
-        val profileEntries = (updated[profileId]?.toMutableMap() ?: defaultVisibilityMap()).apply {
+        val profileEntries = (updated[targetProfileId]?.toMutableMap() ?: defaultVisibilityMap()).apply {
             this[flightMode] = isVisible
             this[FlightModeSelection.CRUISE] = true
         }
-        updated[profileId] = profileEntries.toMap()
+        updated[targetProfileId] = profileEntries.toMap()
         _profileModeVisibilities.value = updated.toMap()
         val preferences = _cardPreferences.value ?: return
         viewModelScope.launch(ioDispatcher) {
-            preferences.saveProfileFlightModeVisibility(profileId, flightMode.name, isVisible)
+            preferences.saveProfileFlightModeVisibility(targetProfileId, flightMode.name, isVisible)
         }
     }
 
-    fun toggleProfileFlightModeVisibility(profileId: ProfileId, flightMode: FlightModeSelection) {
+    fun toggleProfileFlightModeVisibility(profileId: ProfileId?, flightMode: FlightModeSelection) {
         if (flightMode == FlightModeSelection.CRUISE) return
-        val current = _profileModeVisibilities.value[profileId]?.get(flightMode) ?: true
+        val targetProfileId = normalizeProfileId(profileId)
+        val current = _profileModeVisibilities.value[targetProfileId]?.get(flightMode) ?: true
         setProfileFlightModeVisibility(profileId, flightMode, !current)
     }
 
     fun flightModeVisibilitiesFor(profileId: ProfileId?): Map<FlightModeSelection, Boolean> {
-        if (profileId == null) return defaultVisibilityMap().toMap()
         val defaults = defaultVisibilityMap()
-        _profileModeVisibilities.value[profileId]?.forEach { (mode, visible) ->
+        _profileModeVisibilities.value[normalizeProfileId(profileId)]?.forEach { (mode, visible) ->
             if (mode != FlightModeSelection.CRUISE) {
                 defaults[mode] = visible
             }
@@ -295,11 +297,11 @@ class FlightDataViewModel(
         return defaults.toMap()
     }
 
-    fun getProfileCards(profileId: ProfileId, flightMode: FlightModeSelection): List<String> =
-        _profileModeCards.value[profileId]?.get(flightMode).orEmpty()
+    fun getProfileCards(profileId: ProfileId?, flightMode: FlightModeSelection): List<String> =
+        _profileModeCards.value[normalizeProfileId(profileId)]?.get(flightMode).orEmpty()
 
-    fun getProfileTemplateId(profileId: ProfileId, flightMode: FlightModeSelection): String? =
-        _profileModeTemplates.value[profileId]?.get(flightMode)
+    fun getProfileTemplateId(profileId: ProfileId?, flightMode: FlightModeSelection): String? =
+        _profileModeTemplates.value[normalizeProfileId(profileId)]?.get(flightMode)
 
     fun clearProfile(profileId: ProfileId) {
         _profileModeCards.value = _profileModeCards.value.toMutableMap().apply {
@@ -337,7 +339,7 @@ class FlightDataViewModel(
         val template = buildActiveTemplate(profileId, flightMode)
         if (template != null) {
             applyTemplate(template, containerSize, density)
-            profileId?.let { setProfileCards(it, flightMode, template.cardIds) }
+            setProfileCards(profileId, flightMode, template.cardIds)
         } else {
             repository.loadEssentialCardsOnStartup(containerSize, density, flightMode)
         }
@@ -376,8 +378,22 @@ class FlightDataViewModel(
     fun currentTemplateFor(profileId: ProfileId?, flightMode: FlightModeSelection): FlightTemplate? =
         buildActiveTemplate(profileId, flightMode)
 
+    fun templateCardCounts(profileId: ProfileId?): Map<String, Int> {
+        val normalized = normalizeProfileId(profileId)
+        val cardsByMode = _profileModeCards.value[normalized].orEmpty()
+        val templateMappings = _profileModeTemplates.value[normalized].orEmpty()
+        val counts = mutableMapOf<String, Int>()
+        templateMappings.forEach { (mode, templateId) ->
+            val cardCount = cardsByMode[mode]?.size
+            if (cardCount != null) {
+                counts[templateId] = cardCount
+            }
+        }
+        return counts
+    }
+
     private fun syncSelectedIdsWithRepository() {
-        val profileId = _activeProfileId.value ?: return
+        val profileId = normalizeProfileId(_activeProfileId.value)
         val mode = _currentFlightMode.value
         val desiredIds = _profileModeCards.value[profileId]?.get(mode)
         if (desiredIds != null) {
@@ -392,14 +408,14 @@ class FlightDataViewModel(
     }
 
     private fun persistActiveCards() {
-        val profileId = _activeProfileId.value ?: return
+        val profileId = normalizeProfileId(_activeProfileId.value)
         val mode = _currentFlightMode.value
         val ids = repository.selectedCardIds.value.toList()
         setProfileCards(profileId, mode, ids)
     }
 
     private fun persistTemplateSelection(templateId: String) {
-        val profileId = _activeProfileId.value ?: return
+        val profileId = normalizeProfileId(_activeProfileId.value)
         val mode = _currentFlightMode.value
         setProfileTemplate(profileId, mode, templateId)
     }
@@ -441,9 +457,7 @@ class FlightDataViewModel(
                 val mode = modeName.toFlightModeOrNull() ?: return@forEach
                 templateDest[mode] = templateId
                 val cards = templateCardsRaw[profileId]?.get(templateId).orEmpty()
-                if (cards.isNotEmpty()) {
-                    cardDest[mode] = cards
-                }
+                cardDest[mode] = cards
             }
         }
 
@@ -509,8 +523,9 @@ class FlightDataViewModel(
         flightMode: FlightModeSelection
     ): FlightTemplate? {
         val templates = _availableTemplates.value
-        val profileTemplateId = profileId?.let { _profileModeTemplates.value[it]?.get(flightMode) }
-        val profileCards = profileId?.let { _profileModeCards.value[it]?.get(flightMode) }
+        val profileKey = normalizeProfileId(profileId)
+        val profileTemplateId = _profileModeTemplates.value[profileKey]?.get(flightMode)
+        val profileCards = _profileModeCards.value[profileKey]?.get(flightMode)
 
         val baseTemplate = when {
             profileTemplateId != null ->
@@ -519,7 +534,7 @@ class FlightDataViewModel(
         } ?: fallbackTemplateForMode(flightMode, templates)
 
         return when {
-            !profileCards.isNullOrEmpty() -> {
+            profileCards != null -> {
                 val source = baseTemplate
                 FlightTemplate(
                     id = source?.id ?: profileTemplateId ?: fallbackTemplateIdFor(flightMode),
@@ -545,6 +560,9 @@ class FlightDataViewModel(
 
     private fun fallbackTemplateIdFor(flightMode: FlightModeSelection): String =
         DEFAULT_TEMPLATE_IDS[flightMode] ?: DEFAULT_TEMPLATE_IDS[FlightModeSelection.CRUISE]!!
+
+    private fun normalizeProfileId(profileId: ProfileId?): ProfileId =
+        profileId ?: DEFAULT_PROFILE_ID
 
     companion object {
         private val DEFAULT_TEMPLATE_IDS = mapOf(

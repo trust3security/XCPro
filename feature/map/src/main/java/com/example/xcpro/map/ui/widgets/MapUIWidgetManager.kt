@@ -47,13 +47,6 @@ class MapUIWidgetManager(
     }
 
     /**
-     * Save widget size to SharedPreferences
-     */
-    fun saveWidgetSize(key: String, size: Float) {
-        layoutStore.saveSize(key, size)
-    }
-
-    /**
      * Register or update a gesture region so the map can short-circuit pointer handling.
      *
      * AI-NOTE: Gesture pass-through relies on screen-space bounds; we update them whenever the

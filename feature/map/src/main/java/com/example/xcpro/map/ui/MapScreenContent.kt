@@ -38,11 +38,13 @@ import com.example.xcpro.map.ballast.BallastUiState
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.common.waypoint.WaypointData
+import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.sensors.GPSData
 import kotlinx.coroutines.flow.StateFlow
 import com.example.xcpro.seedQnhInputValue
 import com.example.xcpro.convertQnhInputToHpa
+import com.example.xcpro.variometer.layout.VariometerUiState
 
 @Composable
 internal fun MapScreenContent(
@@ -52,6 +54,7 @@ internal fun MapScreenContent(
     mapInitializer: MapInitializer,
     locationManager: LocationManager,
     flightDataManager: FlightDataManager,
+    flightDataRepository: FlightDataRepository,
     flightViewModel: FlightDataViewModel,
     taskManager: TaskManagerCoordinator,
     orientationManager: MapOrientationManager,
@@ -62,6 +65,8 @@ internal fun MapScreenContent(
     showRecenterButton: Boolean,
     showReturnButton: Boolean,
     showDistanceCircles: Boolean,
+    isUiEditMode: Boolean,
+    onEditModeChange: (Boolean) -> Unit,
     isAATEditMode: Boolean,
     onSetAATEditMode: (Boolean) -> Unit,
     onExitAATEditMode: () -> Unit,
@@ -71,8 +76,13 @@ internal fun MapScreenContent(
     widgetManager: MapUIWidgetManager,
     screenWidthPx: Float,
     screenHeightPx: Float,
-    variometerOffset: MutableState<Offset>,
-    variometerSizePx: MutableState<Float>,
+    variometerUiState: VariometerUiState,
+    minVariometerSizePx: Float,
+    maxVariometerSizePx: Float,
+    onVariometerOffsetChange: (Offset) -> Unit,
+    onVariometerSizeChange: (Float) -> Unit,
+    onVariometerLongPress: () -> Unit,
+    onVariometerEditFinished: () -> Unit,
     hamburgerOffset: MutableState<Offset>,
     flightModeOffset: MutableState<Offset>,
     showQnhDialog: MutableState<Boolean>,
@@ -109,7 +119,8 @@ internal fun MapScreenContent(
                         mapState = mapState,
                         mapInitializer = mapInitializer,
                         locationManager = locationManager,
-                        flightDataManager = flightDataManager,
+                    flightDataManager = flightDataManager,
+                    flightDataRepository = flightDataRepository,
                         flightViewModel = flightViewModel,
                         currentFlightModeSelection = currentFlightModeSelection,
                         taskManager = taskManager,
@@ -119,11 +130,18 @@ internal fun MapScreenContent(
                         currentLocation = currentLocation,
                         showReturnButton = showReturnButton,
                         isAATEditMode = isAATEditMode,
+                        isUiEditMode = isUiEditMode,
+                        onEditModeChange = onEditModeChange,
                         onSetAATEditMode = onSetAATEditMode,
                         onExitAATEditMode = onExitAATEditMode,
                         safeContainerSize = safeContainerSize,
-                        variometerOffset = variometerOffset,
-                        variometerSizePx = variometerSizePx,
+                        variometerUiState = variometerUiState,
+                        minVariometerSizePx = minVariometerSizePx,
+                        maxVariometerSizePx = maxVariometerSizePx,
+                        onVariometerOffsetChange = onVariometerOffsetChange,
+                        onVariometerSizeChange = onVariometerSizeChange,
+                        onVariometerLongPress = onVariometerLongPress,
+                        onVariometerEditFinished = onVariometerEditFinished,
                         hamburgerOffset = hamburgerOffset,
                         flightModeOffset = flightModeOffset,
                         widgetManager = widgetManager,

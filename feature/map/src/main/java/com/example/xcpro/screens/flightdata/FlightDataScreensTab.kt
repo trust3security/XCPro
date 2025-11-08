@@ -63,6 +63,12 @@ fun FlightDataScreensTab(
     ) {
         flightViewModel.currentTemplateFor(profileId, selectedFlightMode)
     }
+    val currentCardIds = remember(profileId, selectedFlightMode, profileModeCards) {
+        flightViewModel.getProfileCards(profileId, selectedFlightMode)
+    }
+    val templateCardCounts = remember(profileId, profileModeTemplates, profileModeCards) {
+        flightViewModel.templateCardCounts(profileId)
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -76,9 +82,7 @@ fun FlightDataScreensTab(
                 onFlightModeSelected = onFlightModeSelected,
                 flightModeVisibilities = modeVisibilities,
                 onFlightModeVisibilityToggle = { mode ->
-                    if (profileId != null) {
-                        flightViewModel.toggleProfileFlightModeVisibility(profileId, mode)
-                    }
+                    flightViewModel.toggleProfileFlightModeVisibility(profileId, mode)
                 }
             )
         }
@@ -88,11 +92,10 @@ fun FlightDataScreensTab(
                 selectedFlightMode = selectedFlightMode,
                 allTemplates = availableTemplates,
                 selectedTemplate = resolvedTemplate,
+                templateCardCounts = templateCardCounts,
                 onTemplateSelected = { template ->
-                    if (profileId != null) {
-                        flightViewModel.setProfileTemplate(profileId, selectedFlightMode, template.id)
-                        flightViewModel.setProfileCards(profileId, selectedFlightMode, template.cardIds)
-                    }
+                    flightViewModel.setProfileTemplate(profileId, selectedFlightMode, template.id)
+                    flightViewModel.setProfileCards(profileId, selectedFlightMode, template.cardIds)
                 },
                 onEditTemplate = onEditTemplate,
                 onDeleteTemplate = { template ->
@@ -118,18 +121,16 @@ fun FlightDataScreensTab(
                 selectedTemplate = resolvedTemplate,
                 liveFlightData = liveFlightData,
                 units = unitsPreferences,
+                selectedCardIds = currentCardIds,
                 onCardToggle = { cardId, isSelected ->
-                    if (profileId != null) {
-                        val currentIds = resolvedTemplate?.cardIds.orEmpty()
-                        val updated = if (isSelected) {
-                            if (cardId in currentIds) currentIds else currentIds + cardId
-                        } else {
-                            currentIds.filterNot { it == cardId }
-                        }
-                        flightViewModel.setProfileCards(profileId, selectedFlightMode, updated)
-                        resolvedTemplate?.let { template ->
-                            flightViewModel.setProfileTemplate(profileId, selectedFlightMode, template.id)
-                        }
+                    val updated = if (isSelected) {
+                        if (cardId in currentCardIds) currentCardIds else currentCardIds + cardId
+                    } else {
+                        currentCardIds.filterNot { it == cardId }
+                    }
+                    flightViewModel.setProfileCards(profileId, selectedFlightMode, updated)
+                    resolvedTemplate?.let { template ->
+                        flightViewModel.setProfileTemplate(profileId, selectedFlightMode, template.id)
                     }
                 }
             )

@@ -9,6 +9,7 @@ import com.example.dfcards.filters.AdvancedBarometricFilter
 import com.example.dfcards.dfcards.calculations.SimpleAglCalculator
 import com.example.dfcards.filters.Modern3StateKalmanFilter
 import com.example.xcpro.audio.VarioAudioEngine
+import com.example.xcpro.glider.StillAirSinkProvider
 import com.example.xcpro.vario.*  // NEW: Vario implementations for side-by-side testing
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -45,7 +46,8 @@ import java.util.Locale
 class FlightDataCalculator(
     private val context: Context,
     private val sensorManager: UnifiedSensorManager,
-    private val scope: CoroutineScope
+    private val scope: CoroutineScope,
+    private val sinkProvider: StillAirSinkProvider
 ) {
 
     companion object {
@@ -93,7 +95,8 @@ class FlightDataCalculator(
         scope = scope,
         aglCalculator = aglCalculator,
         locationHistory = locationHistory,
-        verticalSpeedHistory = verticalSpeedHistory
+        verticalSpeedHistory = verticalSpeedHistory,
+        sinkProvider = sinkProvider
     )
 
     // ✅ VARIO IMPLEMENTATIONS - Side-by-side testing (VARIO_IMPROVEMENTS.md)

@@ -44,7 +44,8 @@ class MapOverlayWidgetGesturesTest {
                     screenHeightPx = 1920f,
                     onHamburgerTap = { tapTriggered.value = true },
                     onHamburgerLongPress = { longPressTriggered.value = true },
-                    onOffsetChange = {}
+                    onOffsetChange = {},
+                    isEditMode = false
                 )
             }
         }
