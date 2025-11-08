@@ -378,18 +378,29 @@ class FlightDataViewModel(
     fun currentTemplateFor(profileId: ProfileId?, flightMode: FlightModeSelection): FlightTemplate? =
         buildActiveTemplate(profileId, flightMode)
 
-    fun templateCardCounts(profileId: ProfileId?): Map<String, Int> {
+    fun allTemplateCardCounts(profileId: ProfileId?): Map<String, Int> {
         val normalized = normalizeProfileId(profileId)
         val cardsByMode = _profileModeCards.value[normalized].orEmpty()
-        val templateMappings = _profileModeTemplates.value[normalized].orEmpty()
+        val templatesByMode = _profileModeTemplates.value[normalized].orEmpty()
+        if (cardsByMode.isEmpty() || templatesByMode.isEmpty()) return emptyMap()
+
         val counts = mutableMapOf<String, Int>()
-        templateMappings.forEach { (mode, templateId) ->
-            val cardCount = cardsByMode[mode]?.size
-            if (cardCount != null) {
-                counts[templateId] = cardCount
-            }
+        cardsByMode.forEach { (mode, cards) ->
+            val templateId = templatesByMode[mode] ?: return@forEach
+            counts[templateId] = cards.size
         }
         return counts
+    }
+
+    fun templateCardCounts(profileId: ProfileId?, flightMode: FlightModeSelection): Map<String, Int> {
+        val normalized = normalizeProfileId(profileId)
+        val templateId = _profileModeTemplates.value[normalized]?.get(flightMode)
+        val allCounts = allTemplateCardCounts(profileId)
+        return if (templateId != null && allCounts.containsKey(templateId)) {
+            mapOf(templateId to allCounts.getValue(templateId))
+        } else {
+            emptyMap()
+        }
     }
 
     private fun syncSelectedIdsWithRepository() {
@@ -456,8 +467,10 @@ class FlightDataViewModel(
             modeMap.forEach { (modeName, templateId) ->
                 val mode = modeName.toFlightModeOrNull() ?: return@forEach
                 templateDest[mode] = templateId
-                val cards = templateCardsRaw[profileId]?.get(templateId).orEmpty()
-                cardDest[mode] = cards
+                val cards = templateCardsRaw[profileId]?.get(templateId)
+                if (cards != null) {
+                    cardDest[mode] = cards
+                }
             }
         }
 

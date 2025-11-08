@@ -7,6 +7,8 @@ import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.common.waypoint.WaypointLoader
 import com.example.xcpro.common.units.UnitsRepository
 import com.example.xcpro.glider.GliderRepository
+import com.example.xcpro.vario.VarioServiceManager
+import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -23,6 +25,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.mockito.Mockito
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
@@ -38,6 +41,8 @@ class MapScreenViewModelTest {
     private val mapStyleRepository = MapStyleRepository(context)
     private val unitsRepository = UnitsRepository(context)
     private val qnhPreferencesRepository = QnhPreferencesRepository(context)
+    private val varioServiceManager = Mockito.mock(VarioServiceManager::class.java)
+    private val flightDataRepository = FlightDataRepository()
 
     @After
     fun tearDown() {
@@ -79,6 +84,8 @@ class MapScreenViewModelTest {
             qnhPreferencesRepository = qnhPreferencesRepository,
             waypointLoader = loader,
             gliderRepository = GliderRepository.getInstance(context),
+            varioServiceManager = varioServiceManager,
+            flightDataRepository = flightDataRepository,
             defaultDispatcher = mainDispatcherRule.dispatcher
         )
 
@@ -104,6 +111,8 @@ class MapScreenViewModelTest {
             qnhPreferencesRepository = qnhPreferencesRepository,
             waypointLoader = loader,
             gliderRepository = GliderRepository.getInstance(context),
+            varioServiceManager = varioServiceManager,
+            flightDataRepository = flightDataRepository,
             defaultDispatcher = mainDispatcherRule.dispatcher
         )
 

@@ -123,24 +123,5 @@ class ProfileViewModel @Inject constructor(
 
     fun needsProfileSelection(): Boolean =
         _uiState.value.profiles.isNotEmpty() && _uiState.value.activeProfile == null
-
-    fun saveProfileCardConfiguration(
-        profileId: String,
-        flightMode: com.example.xcpro.common.flight.FlightMode,
-        templateId: String
-    ) {
-        viewModelScope.launch {
-            repository.saveProfileCardConfiguration(profileId, flightMode, templateId)
-                .onFailure { error ->
-                    _uiState.value = _uiState.value.copy(
-                        error = "Failed to save card configuration: ${error.message}"
-                    )
-                }
-        }
-    }
-
-    fun getCurrentProfileCardConfiguration(
-        flightMode: com.example.xcpro.common.flight.FlightMode
-    ): List<String> = repository.getCurrentProfileCardConfiguration(flightMode)
 }
 

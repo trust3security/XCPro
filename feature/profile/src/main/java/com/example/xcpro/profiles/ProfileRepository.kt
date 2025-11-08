@@ -1,7 +1,5 @@
 package com.example.xcpro.profiles
 
-import androidx.compose.runtime.mutableStateOf
-import com.example.dfcards.FlightTemplates
 import com.google.gson.ExclusionStrategy
 import com.google.gson.FieldAttributes
 import com.google.gson.GsonBuilder
@@ -86,9 +84,7 @@ class ProfileRepository @Inject constructor(
                 name = request.name,
                 aircraftType = request.aircraftType,
                 aircraftModel = request.aircraftModel,
-                description = request.description,
-                flightTemplateIds = getDefaultTemplateIdsForAircraft(request.aircraftType),
-                cardConfigurations = getDefaultCardConfigurations(request.aircraftType)
+                description = request.description
             )
 
             val updatedProfiles = _profiles.value + newProfile
@@ -151,43 +147,5 @@ class ProfileRepository @Inject constructor(
     fun hasProfiles(): Boolean = _profiles.value.isNotEmpty()
 
     fun hasActiveProfile(): Boolean = _activeProfile.value != null
-
-    fun getCurrentProfileCardConfiguration(flightMode: com.example.xcpro.common.flight.FlightMode): List<String> {
-        val active = _activeProfile.value
-        return active?.cardConfigurations?.get(flightMode)
-            ?: ProfileAwareTemplates.getCardConfigurationForMode(
-                active?.aircraftType ?: AircraftType.GLIDER,
-                flightMode
-            )
-    }
-
-    fun getDefaultTemplateIdsForAircraft(type: AircraftType): List<String> {
-        return when (type) {
-            AircraftType.GLIDER -> listOf("essential", "thermal")
-            AircraftType.PARAGLIDER -> listOf("paraglider_essential")
-            AircraftType.HANG_GLIDER -> listOf("hangglider_essential")
-            AircraftType.SAILPLANE -> listOf("sailplane_essential")
-        }
-    }
-
-    fun getDefaultCardConfigurations(type: AircraftType): Map<com.example.xcpro.common.flight.FlightMode, List<String>> {
-        return com.example.xcpro.common.flight.FlightMode.entries.associateWith { mode ->
-            ProfileAwareTemplates.getCardConfigurationForMode(type, mode)
-        }
-    }
-
-    suspend fun saveProfileCardConfiguration(
-        profileId: String,
-        flightMode: com.example.xcpro.common.flight.FlightMode,
-        templateId: String
-    ): Result<Unit> {
-        return runCatching {
-            val existingProfile = _profiles.value.find { it.id == profileId } ?: error("Profile not found")
-            val updatedConfigurations = existingProfile.cardConfigurations.toMutableMap()
-            updatedConfigurations[flightMode] = listOf(templateId)
-            val updatedProfile = existingProfile.copy(cardConfigurations = updatedConfigurations)
-            updateProfile(updatedProfile).getOrThrow()
-        }
-    }
 }
 

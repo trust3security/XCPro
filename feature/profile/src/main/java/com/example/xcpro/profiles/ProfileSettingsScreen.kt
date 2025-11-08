@@ -83,13 +83,6 @@ fun ProfileSettingsScreen(
             }
             
             item {
-                ProfileCardSettings(
-                    profile = editedProfile,
-                    onProfileChanged = { editedProfile = it }
-                )
-            }
-            
-            item {
                 ProfileActionButtons(
                     profile = profile,
                     onExport = { showExportDialog = true },
@@ -303,63 +296,6 @@ fun ProfilePreferencesSettings(
                         )
                     }
                 )
-            }
-        }
-    }
-}
-
-@Composable
-fun ProfileCardSettings(
-    profile: UserProfile,
-    onProfileChanged: (UserProfile) -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = "Flight Mode Cards",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-            
-            profile.getAvailableModes().forEach { mode ->
-                val cardIds = profile.cardConfigurations[mode] 
-                    ?: ProfileAwareTemplates.getCardConfigurationForMode(profile.aircraftType, mode)
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = mode.displayName,
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Text(
-                            text = "${cardIds.size} cards configured",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    
-                    TextButton(
-                        onClick = {
-                            // TODO: Navigate to card configuration screen
-                        }
-                    ) {
-                        Text("Configure")
-                    }
-                }
-                
-                if (mode != profile.getAvailableModes().last()) {
-                    HorizontalDivider()
-                }
             }
         }
     }

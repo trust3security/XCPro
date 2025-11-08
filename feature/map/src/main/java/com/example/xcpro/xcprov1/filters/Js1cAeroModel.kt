@@ -77,17 +77,6 @@ object Js1cAeroModel {
     }
 
     /**
-     * Estimate sideslip based on difference between track and heading.
-     */
-    fun sideslipDeg(groundTrackDeg: Double?, headingDeg: Double?): Double? {
-        if (groundTrackDeg == null || headingDeg == null) return null
-        var delta = groundTrackDeg - headingDeg
-        while (delta > 180) delta -= 360
-        while (delta < -180) delta += 360
-        return delta
-    }
-
-    /**
      * Approximate wing loading for default configuration in kg/m^2.
      */
     fun defaultWingLoading(): Double = MASS_HEAVY_KG / WING_AREA_M2

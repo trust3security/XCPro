@@ -61,11 +61,8 @@ class XcproV1KalmanFilter(
         gpsTrackRad: Double?,
         trueAirspeed: Double,
         airBearingRad: Double?,
-        headingDeg: Double?,
         wingLoading: Double = Js1cAeroModel.defaultWingLoading(),
-        bankDeg: Double = 0.0,
-        attitudePitchDeg: Double? = null,
-        attitudeRollDeg: Double? = null
+        bankDeg: Double = 0.0
     ): UpdateResult {
         val dt = computeDeltaTime(timestamp)
         predict(dt, verticalAccel)
@@ -109,11 +106,6 @@ class XcproV1KalmanFilter(
             windY = windVector.windY,
             confidence = confidence,
             climbTrend = trendTracker.update(actualClimb, dt),
-            aoaDeg = attitudePitchDeg,
-            sideslipDeg = Js1cAeroModel.sideslipDeg(
-                groundTrackDeg = gpsTrackRad?.let { Math.toDegrees(it) },
-                headingDeg = headingDeg ?: airBearingRad?.let { Math.toDegrees(it) }
-            ),
             sourceLabel = if (gpsVerticalSpeed != null) "XCProV1 (IMU+GPS)" else "XCProV1 (IMU only)",
             diagnostics = diagnostics
         )
