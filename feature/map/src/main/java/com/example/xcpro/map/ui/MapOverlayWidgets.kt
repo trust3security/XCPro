@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -24,6 +26,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import android.util.Log
 import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.xcpro.CompassWidget
 import com.example.xcpro.MapOrientationManager
@@ -51,7 +54,6 @@ import com.example.xcpro.sensors.GPSData
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import kotlinx.coroutines.flow.StateFlow
 import com.example.xcpro.variometer.layout.VariometerUiState
-import com.example.xcpro.variometer.ui.VariometerOverlay
 
 @Composable
 @Suppress("LongParameterList")
@@ -98,6 +100,18 @@ internal fun MapOverlayStack(
     val showDistanceCircles by mapState.showDistanceCirclesFlow.collectAsState()
     val gestureRegions by widgetManager.gestureRegions.collectAsState()
 
+    LaunchedEffect(gestureRegions) {
+        Log.d("GESTURE_REGIONS", gestureRegions.joinToString(prefix = "[", postfix = "]") { region ->
+            "${region.target}:${region.bounds}"
+        })
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            widgetManager.clearGestureRegion(MapOverlayGestureTarget.CARD_GRID)
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -123,7 +137,18 @@ internal fun MapOverlayStack(
             onSetAATEditMode = onSetAATEditMode,
             onContainerSizeChanged = { size -> safeContainerSize.value = size },
             modifier = Modifier.fillMaxSize(),
-            convertToRealTime = ::convertToRealTimeFlightData
+            convertToRealTime = ::convertToRealTimeFlightData,
+            onCardLayerPositioned = { bounds ->
+                if (!isUiEditMode || bounds == Rect.Zero) {
+                    widgetManager.clearGestureRegion(MapOverlayGestureTarget.CARD_GRID)
+                } else {
+                    widgetManager.updateGestureRegion(
+                        target = MapOverlayGestureTarget.CARD_GRID,
+                        bounds = bounds,
+                        consumeGestures = true
+                    )
+                }
+            }
         )
 
         MapGestureSetup.GestureHandlerOverlay(
@@ -209,36 +234,22 @@ internal fun MapOverlayStack(
             label = "vario"
         )
 
-        if (variometerUiState.isInitialized) {
-            VariometerOverlay(
-                needleValue = animatedVario,
-                displayValue = displayNumericVario,
-                offset = variometerUiState.offset,
-                sizePx = variometerUiState.sizePx,
-                screenWidthPx = screenWidthPx,
-                screenHeightPx = screenHeightPx,
-                minSizePx = minVariometerSizePx,
-                maxSizePx = maxVariometerSizePx,
-                isEditMode = isUiEditMode,
-                onOffsetChange = onVariometerOffsetChange,
-                onSizeChange = onVariometerSizeChange,
-                onLongPress = onVariometerLongPress,
-                onEditFinished = onVariometerEditFinished,
-                onBoundsChanged = { bounds ->
-                    if (bounds == Rect.Zero) {
-                        widgetManager.clearGestureRegion(MapOverlayGestureTarget.VARIOMETER)
-                    } else {
-                        widgetManager.updateGestureRegion(
-                            target = MapOverlayGestureTarget.VARIOMETER,
-                            bounds = bounds,
-                            consumeGestures = true
-                        )
-                    }
-                },
-                modifier = Modifier
-                    .zIndex(if (isUiEditMode) 4f else 1f)
-            )
-        }
+        MapUIWidgets.VariometerWidget(
+            widgetManager = widgetManager,
+            variometerState = variometerUiState,
+            needleValue = animatedVario,
+            displayValue = displayNumericVario,
+            screenWidthPx = screenWidthPx,
+            screenHeightPx = screenHeightPx,
+            minSizePx = minVariometerSizePx,
+            maxSizePx = maxVariometerSizePx,
+            isEditMode = isUiEditMode,
+            onOffsetChange = onVariometerOffsetChange,
+            onSizeChange = onVariometerSizeChange,
+            onLongPress = onVariometerLongPress,
+            onEditFinished = onVariometerEditFinished,
+            modifier = Modifier.zIndex(if (isUiEditMode) 4f else 1f)
+        )
 
         DistanceCirclesCanvas(
             mapZoom = mapState.mapLibreMap?.cameraPosition?.zoom?.toFloat() ?: 10f,
@@ -274,3 +285,6 @@ internal fun MapOverlayStack(
         MapModalUI.AirspaceSettingsModalOverlay(modalManager = modalManager)
     }
 }
+
+
+

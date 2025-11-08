@@ -95,8 +95,10 @@ fun VariometerOverlay(
     overlayModifier = overlayModifier.then(
         if (isEditMode) {
             Modifier.pointerInput(screenWidthPx, screenHeightPx, displaySize.value) {
+                Log.d("VARIO_GESTURE", "pointerInput active (isEditMode=$isEditMode, size=${displaySize.value})")
                 detectDragGestures(
                     onDragStart = {
+                        Log.d("VARIO_GESTURE", "Drag start offset=${displayOffset.value}")
                         Log.d("VariometerOverlay", "Drag start offset=${displayOffset.value}")
                     },
                     onDrag = { change, dragAmount ->

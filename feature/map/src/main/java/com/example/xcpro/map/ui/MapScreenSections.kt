@@ -11,15 +11,19 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
 import android.util.Log
+import android.view.MotionEvent
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.FlightTemplate
 import com.example.dfcards.RealTimeFlightData
@@ -68,7 +72,8 @@ fun MapMainLayers(
     onContainerSizeChanged: (androidx.compose.ui.unit.IntSize) -> Unit,
     cardSafeTopOffsetPx: Float = 0f,
     modifier: Modifier = Modifier,
-    convertToRealTime: (CompleteFlightData) -> RealTimeFlightData
+    convertToRealTime: (CompleteFlightData) -> RealTimeFlightData,
+    onCardLayerPositioned: (Rect) -> Unit = {}
 ) {
     val scope = rememberCoroutineScope()
 
@@ -132,9 +137,39 @@ fun MapMainLayers(
             modifier = Modifier
                 .fillMaxSize()
                 .zIndex(2f)
+                .pointerInteropFilter { motionEvent ->
+                    val action = when (motionEvent.actionMasked) {
+                        MotionEvent.ACTION_DOWN -> "DOWN"
+                        MotionEvent.ACTION_POINTER_DOWN -> "POINTER_DOWN"
+                        MotionEvent.ACTION_MOVE -> "MOVE"
+                        MotionEvent.ACTION_POINTER_UP -> "POINTER_UP"
+                        MotionEvent.ACTION_UP -> "UP"
+                        MotionEvent.ACTION_CANCEL -> "CANCEL"
+                        else -> motionEvent.actionMasked.toString()
+                    }
+                    val pointerSummary = buildString {
+                        for (i in 0 until motionEvent.pointerCount) {
+                            if (i > 0) append("; ")
+                            append("#")
+                            append(motionEvent.getPointerId(i))
+                            append("@")
+                            append(String.format("%.1f,%.1f", motionEvent.getX(i), motionEvent.getY(i)))
+                        }
+                    }
+                    Log.d(
+                        "GESTURE_CARD_BOX",
+                        "action=$action edit=$isUiEditMode pointers=[$pointerSummary] consumed=${motionEvent.actionMasked == MotionEvent.ACTION_CANCEL}"
+                    )
+                    false
+                }
         ) {
+            DisposableEffect(Unit) {
+                onDispose { onCardLayerPositioned(Rect.Zero) }
+            }
+
             CardContainer(
                 onContainerSizeChanged = onContainerSizeChanged,
+                onCardBoundsChanged = onCardLayerPositioned,
                 statusBarOffset = cardSafeTopOffsetPx,
                 onFlightTemplateClick = { flightDataManager.showCardLibrary() },
                 isEditMode = isUiEditMode,
@@ -263,3 +298,5 @@ fun QnhDialog(
         }
     )
 }
+
+
