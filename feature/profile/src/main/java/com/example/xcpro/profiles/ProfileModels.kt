@@ -6,7 +6,6 @@ import com.example.ui1.icons.Paraglider
 import com.example.ui1.icons.Sailplane
 import com.example.ui1.icons.Hangglider
 import com.example.xcpro.common.flight.FlightMode
-import com.example.dfcards.FlightTemplate
 import java.util.UUID
 
 enum class AircraftType(
@@ -66,8 +65,6 @@ data class UserProfile(
     val aircraftType: AircraftType,
     val aircraftModel: String? = null,
     val description: String? = null,
-    val flightTemplateIds: List<String> = emptyList(), // Store only IDs, not full templates
-    val cardConfigurations: Map<FlightMode, List<String>> = emptyMap(),
     val preferences: ProfilePreferences = ProfilePreferences(),
     val isActive: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
@@ -79,16 +76,6 @@ data class UserProfile(
         } else {
             "$name - ${aircraftType.displayName}"
         }
-    }
-    
-    fun getAvailableModes(): List<FlightMode> {
-        return aircraftType.defaultModes
-    }
-    
-    fun getFlightTemplates(): List<FlightTemplate> {
-        return ProfileAwareTemplates.getTemplatesForAircraft(aircraftType)
-            .filter { template -> flightTemplateIds.contains(template.id) }
-            .ifEmpty { ProfileAwareTemplates.getTemplatesForAircraft(aircraftType) }
     }
 }
 

@@ -1,6 +1,5 @@
 package com.example.xcpro.profiles
 
-import com.example.xcpro.common.flight.FlightMode
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -38,16 +37,12 @@ class ProfileRepositoryTest {
 
         val created = repository.createProfile(request).getOrThrow()
         assertEquals("Test Pilot", created.name)
-        assertTrue(created.flightTemplateIds.isNotEmpty())
 
         repository.setActiveProfile(created).getOrThrow()
 
         val active = repository.activeProfile.first()
         assertNotNull(active)
         assertEquals(created.id, active?.id)
-
-        val configuration = repository.getCurrentProfileCardConfiguration(FlightMode.CRUISE)
-        assertTrue(configuration.isNotEmpty())
     }
 
     @Test

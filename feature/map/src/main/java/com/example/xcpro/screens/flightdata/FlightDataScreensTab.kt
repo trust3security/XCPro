@@ -66,8 +66,8 @@ fun FlightDataScreensTab(
     val currentCardIds = remember(profileId, selectedFlightMode, profileModeCards) {
         flightViewModel.getProfileCards(profileId, selectedFlightMode)
     }
-    val templateCardCounts = remember(profileId, profileModeTemplates, profileModeCards) {
-        flightViewModel.templateCardCounts(profileId)
+    val templateCardCounts = remember(profileId, selectedFlightMode, profileModeTemplates, profileModeCards) {
+        flightViewModel.allTemplateCardCounts(profileId)
     }
 
     LazyColumn(
