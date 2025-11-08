@@ -2,6 +2,7 @@ package com.example.xcpro.map
 
 import android.content.Context
 import android.util.Log
+import androidx.compose.ui.geometry.Offset
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.dfcards.CardPreferences
@@ -11,7 +12,9 @@ import com.example.xcpro.common.flow.inVm
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.units.UnitsRepository
 import com.example.xcpro.common.waypoint.WaypointLoader
+import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.glider.GliderRepository
+import com.example.xcpro.vario.VarioServiceManager
 import com.example.xcpro.map.ballast.BallastCommand
 import com.example.xcpro.map.ballast.BallastController
 import com.example.xcpro.map.ballast.BallastUiState
@@ -19,6 +22,8 @@ import com.example.xcpro.map.config.MapFeatureFlags
 import com.example.xcpro.map.domain.MapWaypointError
 import com.example.xcpro.map.domain.toUserMessage
 import com.example.xcpro.tasks.TaskManagerCoordinator
+import com.example.xcpro.variometer.layout.VariometerUiState
+import com.example.xcpro.variometer.layout.VariometerWidgetRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -49,6 +54,8 @@ class MapScreenViewModel @Inject constructor(
     private val qnhPreferencesRepository: QnhPreferencesRepository,
     private val waypointLoader: WaypointLoader,
     private val gliderRepository: GliderRepository,
+    private val varioServiceManager: VarioServiceManager,
+    private val flightDataRepository: FlightDataRepository,
     @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
@@ -68,8 +75,10 @@ class MapScreenViewModel @Inject constructor(
         context = appContext,
         mapState = mapState,
         coroutineScope = viewModelScope,
-        qnhPreferencesRepository = qnhPreferencesRepository
-    ) { hasHawkDashboardClient() }
+        qnhPreferencesRepository = qnhPreferencesRepository,
+        hawkDashboardActive = { hasHawkDashboardClient() },
+        varioServiceManager = varioServiceManager
+    )
     val orientationManager: MapOrientationManager =
         MapOrientationManager(appContext, viewModelScope, locationManager.unifiedSensorManager)
     val lifecycleManager: MapLifecycleManager =
@@ -87,6 +96,11 @@ class MapScreenViewModel @Inject constructor(
     val overlayManager = MapOverlayManager(appContext, mapState, taskManager)
     val taskScreenManager = MapTaskScreenManager(mapState, taskManager)
     val ballastUiState: StateFlow<BallastUiState> = ballastController.state
+    val sharedFlightDataRepository: FlightDataRepository = flightDataRepository
+
+    private val variometerRepository = VariometerWidgetRepository(mapState.sharedPrefs)
+    private val _variometerUiState = MutableStateFlow(VariometerUiState())
+    val variometerUiState: StateFlow<VariometerUiState> = _variometerUiState.asStateFlow()
 
     private val _uiState = MutableStateFlow(MapUiState())
     val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
@@ -183,6 +197,67 @@ class MapScreenViewModel @Inject constructor(
         }
     }
 
+    fun ensureVariometerLayout(
+        screenWidthPx: Float,
+        screenHeightPx: Float,
+        defaultSizePx: Float,
+        minSizePx: Float,
+        maxSizePx: Float
+    ) {
+        if (_variometerUiState.value.isInitialized) {
+            return
+        }
+        val centeredOffset = Offset(
+            x = ((screenWidthPx - defaultSizePx) / 2f).coerceAtLeast(0f),
+            y = ((screenHeightPx - defaultSizePx) / 2f).coerceAtLeast(0f)
+        )
+        val persistedLayout = variometerRepository.load(centeredOffset, defaultSizePx)
+        val sanitizedSize = persistedLayout.sizePx.coerceIn(minSizePx, maxSizePx)
+        val targetOffset = if (persistedLayout.hasPersistedOffset) {
+            persistedLayout.offset
+        } else {
+            centeredOffset
+        }
+        val boundedOffset = clampOffset(targetOffset, sanitizedSize, screenWidthPx, screenHeightPx)
+        _variometerUiState.value = VariometerUiState(
+            offset = boundedOffset,
+            sizePx = sanitizedSize,
+            isInitialized = true
+        )
+        if (!persistedLayout.hasPersistedOffset) {
+            variometerRepository.saveOffset(boundedOffset)
+        }
+        if (!persistedLayout.hasPersistedSize) {
+            variometerRepository.saveSize(sanitizedSize)
+        }
+    }
+
+    fun onVariometerOffsetCommitted(
+        offset: Offset,
+        screenWidthPx: Float,
+        screenHeightPx: Float
+    ) {
+        if (!_variometerUiState.value.isInitialized) return
+        val clamped = clampOffset(offset, _variometerUiState.value.sizePx, screenWidthPx, screenHeightPx)
+        _variometerUiState.update { it.copy(offset = clamped) }
+        variometerRepository.saveOffset(clamped)
+    }
+
+    fun onVariometerSizeCommitted(
+        sizePx: Float,
+        screenWidthPx: Float,
+        screenHeightPx: Float,
+        minSizePx: Float,
+        maxSizePx: Float
+    ) {
+        if (!_variometerUiState.value.isInitialized) return
+        val clampedSize = sizePx.coerceIn(minSizePx, maxSizePx)
+        val clampedOffset = clampOffset(_variometerUiState.value.offset, clampedSize, screenWidthPx, screenHeightPx)
+        _variometerUiState.update { it.copy(sizePx = clampedSize, offset = clampedOffset) }
+        variometerRepository.saveSize(clampedSize)
+        variometerRepository.saveOffset(clampedOffset)
+    }
+
     fun prepareHawkDashboardClient() {
         _hawkDashboardPending.value = true
     }
@@ -220,6 +295,20 @@ class MapScreenViewModel @Inject constructor(
 
     private fun incrementHawkClients() {
         _hawkDashboardClients.update { it + 1 }
+    }
+
+    private fun clampOffset(
+        offset: Offset,
+        sizePx: Float,
+        screenWidthPx: Float,
+        screenHeightPx: Float
+    ): Offset {
+        val maxX = (screenWidthPx - sizePx).coerceAtLeast(0f)
+        val maxY = (screenHeightPx - sizePx).coerceAtLeast(0f)
+        return Offset(
+            x = offset.x.coerceIn(0f, maxX),
+            y = offset.y.coerceIn(0f, maxY)
+        )
     }
 
     fun setAATEditMode(enabled: Boolean) {

@@ -23,10 +23,6 @@ class MapWidgetLayoutStore(
         screenHeightPx: Float,
         density: Density
     ): WidgetPositions {
-        val variometerDefaults = legacyVariometerDefaults(screenHeightPx, density)
-        val levoOffset = readOffset("uilevo", variometerDefaults.offset)
-        val levoSize = prefs.getFloat("uilevo_size", variometerDefaults.size)
-
         val hamburgerOffset = Offset(
             prefs.getFloat("side_hamburger_x", HAMBURGER_DEFAULT_X),
             prefs.getFloat("side_hamburger_y", hamburgerDefaultY(screenHeightPx, density)).coerceAtLeast(0f)
@@ -37,8 +33,6 @@ class MapWidgetLayoutStore(
         )
 
         return WidgetPositions(
-            variometerOffset = levoOffset,
-            variometerSizePx = levoSize,
             sideHamburgerOffset = hamburgerOffset,
             flightModeOffset = flightModeOffset
         )
@@ -53,37 +47,10 @@ class MapWidgetLayoutStore(
         logger("$key position saved: x=${offset.x}, y=${offset.y}")
     }
 
-    fun saveSize(key: String, size: Float) {
-        with(prefs.edit()) {
-            putFloat("${key}_size", size)
-            apply()
-        }
-        logger("$key size saved: $size")
-    }
-
-    private fun readOffset(key: String, fallback: Offset): Offset = Offset(
-        prefs.getFloat("${key}_x", fallback.x),
-        prefs.getFloat("${key}_y", fallback.y)
-    )
-
-    private fun legacyVariometerDefaults(screenHeightPx: Float, density: Density): LegacyVariometerDefaults {
-        val offset = Offset(
-            prefs.getFloat("variometer_x", 20f),
-            prefs.getFloat("variometer_y", screenHeightPx - 400f)
-        )
-        val size = prefs.getFloat(
-            "variometer_size",
-            density.run { 150.dp.toPx() }
-        )
-        return LegacyVariometerDefaults(offset, size)
-    }
-
     private fun hamburgerDefaultY(screenHeightPx: Float, density: Density): Float =
         max(0f, screenHeightPx / 2f - density.run { 32.dp.toPx() })
 
     private fun flightModeDefaultY(density: Density): Float = density.run { 80.dp.toPx() }
-
-    private data class LegacyVariometerDefaults(val offset: Offset, val size: Float)
 
     companion object {
         private const val TAG = "MapWidgetLayoutStore"
@@ -122,8 +89,6 @@ class MapGestureRegistry {
 
 /** Aggregated widget offsets and sizes used by the manager + UI layer. */
 data class WidgetPositions(
-    val variometerOffset: Offset,
-    val variometerSizePx: Float,
     val sideHamburgerOffset: Offset,
     val flightModeOffset: Offset
 )

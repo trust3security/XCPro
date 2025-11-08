@@ -81,6 +81,11 @@ fun PreviewCard() {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            Text(
+                text = "Netto/audio use this polar instantly (with bugs + ballast).",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+            )
         }
     }
 }

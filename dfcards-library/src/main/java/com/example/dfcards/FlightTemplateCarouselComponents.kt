@@ -57,6 +57,7 @@ fun TemplatesForModeSection(
     onTemplateSelected: (FlightTemplate) -> Unit,
     onEditTemplate: (FlightTemplate) -> Unit,
     onDeleteTemplate: (FlightTemplate) -> Unit,
+    templateCardCounts: Map<String, Int> = emptyMap(),
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberLazyListState()
@@ -110,6 +111,7 @@ fun TemplatesForModeSection(
                     TemplateCard(
                         template = template,
                         isSelected = selectedTemplate?.id == template.id,
+                        selectedCardCountOverride = templateCardCounts[template.id],
                         onSelect = { onTemplateSelected(template) },
                         onEdit = { onEditTemplate(template) },
                         onDelete = { onDeleteTemplate(template) }
@@ -127,6 +129,7 @@ fun TemplatesForModeSection(
 private fun TemplateCard(
     template: FlightTemplate,
     isSelected: Boolean,
+    selectedCardCountOverride: Int? = null,
     onSelect: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
@@ -188,8 +191,9 @@ private fun TemplateCard(
                     overflow = TextOverflow.Ellipsis
                 )
 
+                val displayCardCount = selectedCardCountOverride ?: template.cardIds.size
                 Text(
-                    text = "${template.cardIds.size} cards",
+                    text = "$displayCardCount cards",
                     style = MaterialTheme.typography.bodyMedium.copy(fontSize = 10.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center

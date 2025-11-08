@@ -2,6 +2,7 @@ package com.example.xcpro.sensors
 
 import android.location.Location
 import com.example.dfcards.dfcards.calculations.SimpleAglCalculator
+import com.example.xcpro.glider.StillAirSinkProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -26,7 +27,8 @@ internal class FlightCalculationHelpers(
     private val scope: CoroutineScope,
     private val aglCalculator: SimpleAglCalculator,
     private val locationHistory: MutableList<LocationWithTime>,
-    private val verticalSpeedHistory: MutableList<VerticalSpeedPoint>
+    private val verticalSpeedHistory: MutableList<VerticalSpeedPoint>,
+    private val sinkProvider: StillAirSinkProvider
 ) {
 
     companion object {
@@ -286,7 +288,14 @@ internal class FlightCalculationHelpers(
             return 0f
         }
 
-        val estimatedSinkRate = calculateSinkRate(currentGroundSpeed)
+        val sinkFromPolar = sinkProvider.sinkAtSpeed(currentGroundSpeed.toDouble())
+        val estimatedSinkRate = if (sinkFromPolar != null) {
+            sinkFromPolar.toFloat()
+        } else {
+            calculateLegacySinkRate(currentGroundSpeed).also {
+                // AI-NOTE: fallback when no polar/config is available.
+            }
+        }
         return currentVerticalSpeed + estimatedSinkRate
     }
 
@@ -324,7 +333,7 @@ internal class FlightCalculationHelpers(
      * Calculate sink rate based on ground speed
      * Ported from FlightDataManager.kt lines 526-535
      */
-    private fun calculateSinkRate(groundSpeed: Float): Float {
+    private fun calculateLegacySinkRate(groundSpeed: Float): Float {
         val speedKmh = groundSpeed * 3.6f
 
         return when {

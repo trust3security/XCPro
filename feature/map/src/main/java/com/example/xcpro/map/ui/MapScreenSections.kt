@@ -36,6 +36,7 @@ import com.example.xcpro.sensors.CompleteFlightData
 import com.example.xcpro.sensors.GPSData
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.tasks.TaskManagerCoordinator
+import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.xcprov1.ui.HawkGauge
 import com.example.xcpro.xcprov1.ui.WindRibbon
 import com.example.xcpro.map.MapScreenState
@@ -54,6 +55,7 @@ fun MapMainLayers(
     mapInitializer: MapInitializer,
     locationManager: LocationManager,
     flightDataManager: FlightDataManager,
+    flightDataRepository: FlightDataRepository,
     flightViewModel: FlightDataViewModel,
     taskManager: TaskManagerCoordinator,
     orientationManager: MapOrientationManager,
@@ -63,6 +65,8 @@ fun MapMainLayers(
     currentLocation: GPSData?,
     showReturnButton: Boolean,
     isAATEditMode: Boolean,
+    isUiEditMode: Boolean,
+    onEditModeChange: (Boolean) -> Unit,
     onSetAATEditMode: (Boolean) -> Unit,
     onContainerSizeChanged: (androidx.compose.ui.unit.IntSize) -> Unit,
     cardSafeTopOffsetPx: Float = 0f,
@@ -91,7 +95,7 @@ fun MapMainLayers(
         )
 
         LaunchedEffect(Unit) {
-            locationManager.flightDataCalculator.flightDataFlow.collect { completeData ->
+            flightDataRepository.flightData.collect { completeData ->
                 if (completeData != null) {
                     val realTimeData = convertToRealTime(completeData)
                     Log.d("MapMainLayers", "Sample received: lat=${realTimeData.latitude}, lon=${realTimeData.longitude}, vs=${realTimeData.verticalSpeed}, agl=${realTimeData.agl}")
@@ -138,6 +142,8 @@ fun MapMainLayers(
                 onContainerSizeChanged = onContainerSizeChanged,
                 statusBarOffset = cardSafeTopOffsetPx,
                 onFlightTemplateClick = { flightDataManager.showCardLibrary() },
+                isEditMode = isUiEditMode,
+                onEditModeChanged = onEditModeChange,
                 viewModel = flightViewModel,
                 modifier = Modifier.fillMaxSize()
             )

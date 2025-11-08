@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
@@ -49,118 +48,9 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.map.MapOverlayGestureTarget
-import com.example.ui1.UIVariometer
 import kotlin.math.roundToInt
 
 object MapUIWidgets {
-
-    /**
-     * UILevo: variometer widget that mirrors the hamburger's gesture handling.
-     */
-    @OptIn(ExperimentalFoundationApi::class)
-    @Composable
-    fun UILevo(
-        variometerNeedleValue: Float,
-        variometerDisplayValue: Float,
-        variometerOffset: Offset,
-        variometerSizePx: Float,
-        screenWidthPx: Float,
-        screenHeightPx: Float,
-        minSizePx: Float,
-        maxSizePx: Float,
-        widgetManager: MapUIWidgetManager,
-        density: androidx.compose.ui.unit.Density,
-        onOffsetChange: (Offset) -> Unit,
-        onSizeChange: (Float) -> Unit,
-        modifier: Modifier = Modifier
-    ) {
-        DisposableEffect(Unit) {
-            onDispose { widgetManager.clearGestureRegion(MapOverlayGestureTarget.VARIOMETER) }
-        }
-
-        val isEditMode = widgetManager.mapState.isUIEditMode
-        val displayOffset = remember(isEditMode) { mutableStateOf(variometerOffset) }
-        val displaySize = remember(isEditMode) { mutableStateOf(variometerSizePx) }
-
-        LaunchedEffect(variometerOffset, variometerSizePx, isEditMode) {
-            if (!isEditMode) {
-                displayOffset.value = variometerOffset
-                displaySize.value = variometerSizePx
-                Log.d("MapUIWidgetManager", "UILevo sync from persisted offset=$variometerOffset size=$variometerSizePx")
-            }
-        }
-
-        Box(
-            modifier = modifier
-                .offset { IntOffset(displayOffset.value.x.roundToInt(), displayOffset.value.y.roundToInt()) }
-                .size(with(density) { displaySize.value.toDp() })
-                .background(Color.Transparent, RoundedCornerShape(12.dp))
-                .onGloballyPositioned { coordinates ->
-                    widgetManager.updateGestureRegion(
-                        target = MapOverlayGestureTarget.VARIOMETER,
-                        bounds = coordinates.boundsInRoot(),
-                        consumeGestures = true
-                    )
-                }
-                .then(
-                    if (isEditMode) {
-                        Modifier.pointerInput(screenWidthPx, screenHeightPx, displaySize.value) {
-                            detectDragGestures(
-                                onDragStart = {
-                                    Log.d("MapUIWidgetManager", "UILevo drag start offset=${displayOffset.value}")
-                                },
-                                onDrag = { change, dragAmount ->
-                                    val maxX = (screenWidthPx - displaySize.value).coerceAtLeast(0f)
-                                    val maxY = (screenHeightPx - displaySize.value).coerceAtLeast(0f)
-                                    val newOffset = Offset(
-                                        x = (displayOffset.value.x + dragAmount.x).coerceIn(0f, maxX),
-                                        y = (displayOffset.value.y + dragAmount.y).coerceIn(0f, maxY)
-                                    )
-                                    if (newOffset != displayOffset.value) {
-                                        displayOffset.value = newOffset
-                                        Log.d("MapUIWidgetManager", "UILevo dragging -> $newOffset")
-                                    }
-                                    change.consumePositionChange()
-                                },
-                                onDragEnd = {
-                                    Log.d("MapUIWidgetManager", "UILevo drag end offset=${displayOffset.value}")
-                                    widgetManager.saveWidgetPosition("uilevo", displayOffset.value)
-                                    onOffsetChange(displayOffset.value)
-                                },
-                                onDragCancel = {
-                                    Log.d("MapUIWidgetManager", "UILevo drag cancelled; restoring ${variometerOffset}")
-                                    displayOffset.value = variometerOffset
-                                }
-                            )
-                        }
-                    } else {
-                        Modifier
-                    }
-                )
-                .editModeBorder(isEditMode, RoundedCornerShape(12.dp))
-        ) {
-            UIVariometer(
-                needleValue = variometerNeedleValue,
-                displayValue = variometerDisplayValue,
-                modifier = Modifier.fillMaxSize()
-            )
-
-            if (isEditMode) {
-                ResizeHandle(
-                    onResize = { dragAmount ->
-                        displaySize.value = (displaySize.value + (dragAmount.x + dragAmount.y) / 2f)
-                            .coerceIn(minSizePx, maxSizePx)
-                        Log.d("MapUIWidgetManager", "UILevo resizing live size=${displaySize.value} px")
-                    },
-                    onResizeEnd = {
-                        widgetManager.saveWidgetSize("uilevo", displaySize.value)
-                        onSizeChange(displaySize.value)
-                        Log.d("MapUIWidgetManager", "UILevo resize committed size=${displaySize.value} px")
-                    }
-                )
-            }
-        }
-    }
 
     /**
      * Draggable hamburger button docked along the left edge.
@@ -176,10 +66,10 @@ object MapUIWidgets {
         onHamburgerTap: () -> Unit,
         onHamburgerLongPress: () -> Unit,
         onOffsetChange: (Offset) -> Unit,
+        isEditMode: Boolean,
         modifier: Modifier = Modifier,
         sizeDp: Float = 90f
     ) {
-        val isEditMode = widgetManager.mapState.isUIEditMode
         val density = LocalDensity.current
         val sizePx = with(density) { sizeDp.dp.toPx() }
         val iconSizeDp = sizeDp * 0.6f
@@ -278,12 +168,12 @@ object MapUIWidgets {
         screenWidthPx: Float,
         screenHeightPx: Float,
         onOffsetChange: (Offset) -> Unit,
+        isEditMode: Boolean,
         modifier: Modifier = Modifier,
         widthDp: Float = 150f,
         heightDp: Float = 56f
     ) {
         val tag = "FlightModeMenu"
-        val isEditMode = widgetManager.mapState.isUIEditMode
         val density = LocalDensity.current
         val widthPx = with(density) { widthDp.dp.toPx() }
         val heightPx = with(density) { heightDp.dp.toPx() }
@@ -445,39 +335,6 @@ object MapUIWidgets {
         }
     }
 
-    /**
-     * Resize handle for widgets in edit mode
-     */
-    @Composable
-    private fun ResizeHandle(
-        onResize: (dragAmount: Offset) -> Unit,
-        onResizeEnd: () -> Unit = {}
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .wrapContentSize(Alignment.BottomEnd)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(24.dp) // Reasonable size
-                    .background(Color.Red.copy(alpha = 0.7f), CircleShape) // Red and semi-transparent
-                    .pointerInput(Unit) {
-                        detectDragGestures(
-                            onDragStart = { Log.d("MapUIWidgetManager", "Resize started") },
-                            onDrag = { change, dragAmount ->
-                                onResize(dragAmount)
-                                change.consumePositionChange()
-                            },
-                            onDragEnd = {
-                                Log.d("MapUIWidgetManager", "Resize ended")
-                                onResizeEnd()
-                            }
-                        )
-                    }
-            )
-        }
-    }
 }
 
 private fun Modifier.editModeBorder(

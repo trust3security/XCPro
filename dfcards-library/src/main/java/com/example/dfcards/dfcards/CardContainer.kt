@@ -29,13 +29,14 @@ fun CardContainer(
     onContainerSizeChanged: (IntSize) -> Unit = {},
     statusBarOffset: Float = 0f,
     onFlightTemplateClick: () -> Unit = {},
+    isEditMode: Boolean = false,
+    onEditModeChanged: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: com.example.dfcards.dfcards.FlightDataViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
     var containerSize by remember { mutableStateOf(IntSize.Zero) }
-    var isEditMode by remember { mutableStateOf(false) }
     var autoResizeEnabled by remember { mutableStateOf(false) }
     var showEditOptions by remember { mutableStateOf(false) }
 
@@ -118,7 +119,7 @@ fun CardContainer(
                                 viewModel.updateCardState(boundedState)
                             },
                             onCardSelected = { },
-                            onLongPress = { isEditMode = !isEditMode },
+                            onLongPress = { onEditModeChanged(!isEditMode) },
                             onDoubleClick = {},
                             enableSnapToGrid = true
                         ) { currentWidth, currentHeight ->

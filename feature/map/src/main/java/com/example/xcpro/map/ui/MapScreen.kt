@@ -317,23 +317,22 @@ fun MapScreen(
         widgetManager.loadWidgetPositions(screenWidthPx, screenHeightPx, density)
     }
 
-    val variometerOffsetState = remember { mutableStateOf(widgetPositions.variometerOffset) }
-    var variometerOffset by variometerOffsetState
-    val variometerSizePxState = remember { mutableStateOf(widgetPositions.variometerSizePx) }
-    var variometerSizePx by variometerSizePxState
     val hamburgerOffsetState = remember { mutableStateOf(widgetPositions.sideHamburgerOffset) }
     val flightModeOffsetState = remember { mutableStateOf(widgetPositions.flightModeOffset) }
 
-    LaunchedEffect(Unit) {
-        val maxX = (screenWidthPx - variometerSizePx).coerceAtLeast(0f)
-        val maxY = (screenHeightPx - variometerSizePx).coerceAtLeast(0f)
-        val centeredOffset = Offset(
-            x = ((screenWidthPx - variometerSizePx) / 2f).coerceIn(0f, maxX),
-            y = ((screenHeightPx - variometerSizePx) / 2f).coerceIn(0f, maxY)
+    val variometerUiState by mapViewModel.variometerUiState.collectAsState()
+    val minVariometerSizePx = with(density) { 60.dp.toPx() }
+    val maxVariometerSizePx = with(density) { 200.dp.toPx() }
+    val defaultVariometerSizePx = with(density) { 150.dp.toPx() }
+
+    LaunchedEffect(screenWidthPx, screenHeightPx) {
+        mapViewModel.ensureVariometerLayout(
+            screenWidthPx = screenWidthPx,
+            screenHeightPx = screenHeightPx,
+            defaultSizePx = defaultVariometerSizePx,
+            minSizePx = minVariometerSizePx,
+            maxSizePx = maxVariometerSizePx
         )
-        variometerOffset = centeredOffset
-        widgetManager.saveWidgetPosition("uilevo", centeredOffset)
-        Log.d(TAG, "UILevo initial centered offset applied: $centeredOffset (size=$variometerSizePx)")
     }
 
     // ✅ CENTRALIZED CAMERA EFFECTS - Replace camera animation and orientation effects
@@ -374,6 +373,7 @@ fun MapScreen(
                     mapInitializer = mapInitializer,
                     locationManager = locationManager,
                     flightDataManager = flightDataManager,
+                    flightDataRepository = mapViewModel.sharedFlightDataRepository,
                     flightViewModel = flightViewModel,
                     taskManager = taskManager,
                     orientationManager = orientationManager,
@@ -384,6 +384,8 @@ fun MapScreen(
                     showRecenterButton = showRecenterButton,
                     showReturnButton = showReturnButton,
                     showDistanceCircles = showDistanceCircles,
+                    isUiEditMode = mapUiState.isUiEditMode,
+                    onEditModeChange = { enabled -> mapViewModel.onEvent(MapUiEvent.SetUiEditMode(enabled)) },
                     isAATEditMode = isAATEditMode,
                     onSetAATEditMode = mapViewModel::setAATEditMode,
                     onExitAATEditMode = mapViewModel::exitAATEditMode,
@@ -393,8 +395,31 @@ fun MapScreen(
                     widgetManager = widgetManager,
                     screenWidthPx = screenWidthPx,
                     screenHeightPx = screenHeightPx,
-                    variometerOffset = variometerOffsetState,
-                    variometerSizePx = variometerSizePxState,
+                    variometerUiState = variometerUiState,
+                    minVariometerSizePx = minVariometerSizePx,
+                    maxVariometerSizePx = maxVariometerSizePx,
+                    onVariometerOffsetChange = { offset ->
+                        mapViewModel.onVariometerOffsetCommitted(
+                            offset = offset,
+                            screenWidthPx = screenWidthPx,
+                            screenHeightPx = screenHeightPx
+                        )
+                    },
+                    onVariometerSizeChange = { newSize ->
+                        mapViewModel.onVariometerSizeCommitted(
+                            sizePx = newSize,
+                            screenWidthPx = screenWidthPx,
+                            screenHeightPx = screenHeightPx,
+                            minSizePx = minVariometerSizePx,
+                            maxSizePx = maxVariometerSizePx
+                        )
+                    },
+                    onVariometerLongPress = {
+                        mapViewModel.onEvent(MapUiEvent.SetUiEditMode(true))
+                    },
+                    onVariometerEditFinished = {
+                        mapViewModel.onEvent(MapUiEvent.SetUiEditMode(false))
+                    },
                     hamburgerOffset = hamburgerOffsetState,
                     flightModeOffset = flightModeOffsetState,
                     showQnhDialog = showQnhDialogState,

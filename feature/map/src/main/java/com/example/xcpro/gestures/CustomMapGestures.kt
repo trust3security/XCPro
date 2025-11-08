@@ -165,7 +165,7 @@ fun CustomMapGestureHandler(
     androidx.compose.foundation.layout.Box(
         modifier = modifier
             .fillMaxSize()
-            .pointerInput(currentMode) {
+            .pointerInput(currentMode, gestureRegions) {
                 awaitEachGesture {
                     // Pre-scan for down inside overlay regions before map consumes it
                     while (true) {

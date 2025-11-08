@@ -113,7 +113,8 @@ fun CardsGridSection(
     onCardToggle: (String, Boolean) -> Unit,
     modifier: Modifier = Modifier,
     liveFlightData: RealTimeFlightData? = null,
-    units: UnitsPreferences = UnitsPreferences()
+    units: UnitsPreferences = UnitsPreferences(),
+    selectedCardIds: List<String>? = null
 ) {
     val categoryCards = remember(selectedCategory) {
         CardLibrary.getCardsByCategory(selectedCategory)
@@ -141,14 +142,15 @@ fun CardsGridSection(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.height(300.dp)
             ) {
+                val activeCardIds = selectedCardIds ?: selectedTemplate?.cardIds.orEmpty()
                 items(categoryCards) { card ->
                     CardGridItem(
                         card = card,
-                        isSelected = selectedTemplate?.cardIds?.contains(card.id) ?: false,
+                        isSelected = activeCardIds.contains(card.id),
                         liveFlightData = liveFlightData,
                         units = units,
                         onToggle = {
-                            val isCurrentlySelected = selectedTemplate?.cardIds?.contains(card.id) ?: false
+                            val isCurrentlySelected = activeCardIds.contains(card.id)
                             onCardToggle(card.id, !isCurrentlySelected)
                         }
                     )

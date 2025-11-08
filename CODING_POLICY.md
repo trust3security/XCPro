@@ -88,6 +88,17 @@ ViewModel helper (preferred): see Appendix “Snippets – Flow.inVm”.
 - **Samsung S22 Ultra specifics:** Use high‑rate sensor modes where supported; guard with capability checks; expose settings.
 - **Simulation mode:** IGC parser feeds the same repository streams. No special‑case logic in UI; mode swap is a DI/config switch.
 
+### Background Variometer Service (new requirement)
+- The TE/Netto chain **must continue running when the UI is backgrounded** so audio, telemetry, and overlays stay continuous. Own `UnifiedSensorManager`, `FlightDataCalculator`, and `VarioAudioEngine` inside a dedicated **foreground service (or equivalent process-wide component)** instead of a composable/ViewModel scope.
+- That service publishes the SSOT flows (e.g., `StateFlow<CompleteFlightData>`). Activities/fragments/composables only observe and issue commands through repository APIs or a bound-service adapter; lifecycle events from UI layers **must not directly start/stop sensors**.
+- Justification: Android routinely pauses or kills activities; only a foreground service grants stable sensor + audio access and complies with OS rules. Pilots expect no gaps when they lock the screen, switch apps, or glance at notifications.
+
+### Aircraft Polar Awareness (new requirement)
+- Netto, speed-to-fly, and related cues **must use the user-selected glider polar** (`GliderRepository` + `PolarCalculator`) instead of hard-coded sink buckets. Inject a pure-domain "still-air sink provider" into TE helpers so compensation reflects aircraft model, ballast, and bug settings.
+- Provide a logged fallback only when no polar/config exists, and annotate the fallback path with `// AI-NOTE: no polar configured`.
+- Justification: Netto is air-mass climb (raw vertical speed minus aircraft sink). Using a generic curve introduces +/-0.5 m/s error and breaks trust; we already capture polar data, so the fusion layer is required to honor it.
+
+
 ---
 
 ## 5) State, Errors, and Resilience

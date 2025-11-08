@@ -19,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -30,6 +31,7 @@ import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.common.orientation.MapOrientationMode
 import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.convertToRealTimeFlightData
+import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.map.DistanceCirclesCanvas
 import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.map.LocationManager
@@ -38,6 +40,7 @@ import com.example.xcpro.map.MapGestureSetup
 import com.example.xcpro.map.MapInitializer
 import com.example.xcpro.map.MapModalManager
 import com.example.xcpro.map.MapModalUI
+import com.example.xcpro.map.MapOverlayGestureTarget
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapTaskIntegration
 import com.example.xcpro.map.ui.widgets.MapUIWidgetManager
@@ -49,6 +52,8 @@ import com.example.xcpro.sensors.GPSData
 import com.example.xcpro.skysight.SkysightMapOverlay
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import kotlinx.coroutines.flow.StateFlow
+import com.example.xcpro.variometer.layout.VariometerUiState
+import com.example.xcpro.variometer.ui.VariometerOverlay
 
 @Composable
 @Suppress("LongParameterList")
@@ -58,6 +63,7 @@ internal fun MapOverlayStack(
     mapInitializer: MapInitializer,
     locationManager: LocationManager,
     flightDataManager: FlightDataManager,
+    flightDataRepository: FlightDataRepository,
     flightViewModel: FlightDataViewModel,
     currentFlightModeSelection: com.example.dfcards.FlightModeSelection,
     taskManager: TaskManagerCoordinator,
@@ -67,11 +73,18 @@ internal fun MapOverlayStack(
     currentLocation: GPSData?,
     showReturnButton: Boolean,
     isAATEditMode: Boolean,
+    isUiEditMode: Boolean,
+    onEditModeChange: (Boolean) -> Unit,
     onSetAATEditMode: (Boolean) -> Unit,
     onExitAATEditMode: () -> Unit,
     safeContainerSize: MutableState<IntSize>,
-    variometerOffset: MutableState<Offset>,
-    variometerSizePx: MutableState<Float>,
+    variometerUiState: VariometerUiState,
+    minVariometerSizePx: Float,
+    maxVariometerSizePx: Float,
+    onVariometerOffsetChange: (Offset) -> Unit,
+    onVariometerSizeChange: (Float) -> Unit,
+    onVariometerLongPress: () -> Unit,
+    onVariometerEditFinished: () -> Unit,
     hamburgerOffset: MutableState<Offset>,
     flightModeOffset: MutableState<Offset>,
     widgetManager: MapUIWidgetManager,
@@ -85,7 +98,6 @@ internal fun MapOverlayStack(
     onHamburgerLongPress: () -> Unit
 ) {
     val currentMode by mapState.currentModeFlow.collectAsState()
-    val isUiEditMode by mapState.isUiEditModeFlow.collectAsState()
     val showDistanceCircles by mapState.showDistanceCirclesFlow.collectAsState()
     val gestureRegions by widgetManager.gestureRegions.collectAsState()
 
@@ -100,6 +112,7 @@ internal fun MapOverlayStack(
             mapInitializer = mapInitializer,
             locationManager = locationManager,
             flightDataManager = flightDataManager,
+            flightDataRepository = flightDataRepository,
             flightViewModel = flightViewModel,
             currentFlightModeSelection = currentFlightModeSelection,
             taskManager = taskManager,
@@ -109,6 +122,8 @@ internal fun MapOverlayStack(
             currentLocation = currentLocation,
             showReturnButton = showReturnButton,
             isAATEditMode = isAATEditMode,
+            isUiEditMode = isUiEditMode,
+            onEditModeChange = onEditModeChange,
             onSetAATEditMode = onSetAATEditMode,
             onContainerSizeChanged = { size -> safeContainerSize.value = size },
             modifier = Modifier.fillMaxSize(),
@@ -146,6 +161,7 @@ internal fun MapOverlayStack(
             screenWidthPx = screenWidthPx,
             screenHeightPx = screenHeightPx,
             onOffsetChange = { offset -> flightModeOffset.value = offset },
+            isEditMode = isUiEditMode,
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .zIndex(12f)
@@ -205,24 +221,36 @@ internal fun MapOverlayStack(
             label = "vario"
         )
 
-        val minSizePx = with(density) { 60.dp.toPx() }
-        val maxSizePx = with(density) { 200.dp.toPx() }
-
-        MapUIWidgets.UILevo(
-            variometerNeedleValue = animatedVario,
-            variometerDisplayValue = displayNumericVario,
-            variometerOffset = variometerOffset.value,
-            variometerSizePx = variometerSizePx.value,
-            screenWidthPx = screenWidthPx,
-            screenHeightPx = screenHeightPx,
-            minSizePx = minSizePx,
-            maxSizePx = maxSizePx,
-            widgetManager = widgetManager,
-            density = density,
-            onOffsetChange = { offset -> variometerOffset.value = offset },
-            onSizeChange = { size -> variometerSizePx.value = size },
-            modifier = Modifier.zIndex(if (isUiEditMode) 4f else 1f)
-        )
+        if (variometerUiState.isInitialized) {
+            VariometerOverlay(
+                needleValue = animatedVario,
+                displayValue = displayNumericVario,
+                offset = variometerUiState.offset,
+                sizePx = variometerUiState.sizePx,
+                screenWidthPx = screenWidthPx,
+                screenHeightPx = screenHeightPx,
+                minSizePx = minVariometerSizePx,
+                maxSizePx = maxVariometerSizePx,
+                isEditMode = isUiEditMode,
+                onOffsetChange = onVariometerOffsetChange,
+                onSizeChange = onVariometerSizeChange,
+                onLongPress = onVariometerLongPress,
+                onEditFinished = onVariometerEditFinished,
+                onBoundsChanged = { bounds ->
+                    if (bounds == Rect.Zero) {
+                        widgetManager.clearGestureRegion(MapOverlayGestureTarget.VARIOMETER)
+                    } else {
+                        widgetManager.updateGestureRegion(
+                            target = MapOverlayGestureTarget.VARIOMETER,
+                            bounds = bounds,
+                            consumeGestures = true
+                        )
+                    }
+                },
+                modifier = Modifier
+                    .zIndex(if (isUiEditMode) 4f else 1f)
+            )
+        }
 
         DistanceCirclesCanvas(
             mapZoom = mapState.mapLibreMap?.cameraPosition?.zoom?.toFloat() ?: 10f,
@@ -249,6 +277,7 @@ internal fun MapOverlayStack(
             onHamburgerTap = onHamburgerTap,
             onHamburgerLongPress = onHamburgerLongPress,
             onOffsetChange = { offset -> hamburgerOffset.value = offset },
+            isEditMode = isUiEditMode,
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .zIndex(12f)
