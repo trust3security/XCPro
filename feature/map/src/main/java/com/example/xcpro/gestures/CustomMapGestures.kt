@@ -37,6 +37,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
 
 private const val TAG = "CustomMapGestures"
+private const val MAP_GESTURE_TAG = "MAP_GESTURE"
 
 /**
  * Check if a screen coordinate hits any AAT waypoint area
@@ -167,6 +168,7 @@ fun CustomMapGestureHandler(
             .fillMaxSize()
             .pointerInput(currentMode, gestureRegions) {
                 awaitEachGesture {
+                    Log.d(MAP_GESTURE_TAG, "awaitEachGesture start (taskType=$taskType, isAATEditMode=$isAATEditMode)")
                     // Pre-scan for down inside overlay regions before map consumes it
                     while (true) {
                         val preDownEvent = awaitPointerEvent(pass = PointerEventPass.Initial)
@@ -176,6 +178,7 @@ fun CustomMapGestureHandler(
                             val overlayRegion = gestureRegions.firstOrNull { region ->
                                 region.bounds.contains(gestureStartPosition)
                             }
+                            Log.d(MAP_GESTURE_TAG, "pre-scan pointer=${preDownChange.position}, region=${(overlayRegion?.target)}, consume=${(overlayRegion?.consumeGestures)}")
                             if (overlayRegion != null) {
                                 Log.d(TAG, "Pointer down inside overlay region ${overlayRegion.target} (consume=${overlayRegion.consumeGestures})")
                                 if (overlayRegion.consumeGestures) {
@@ -502,4 +505,6 @@ fun CustomMapGestureHandler(
             }
     )
 }
+
+
 

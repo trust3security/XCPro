@@ -10,7 +10,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -27,6 +30,7 @@ import androidx.compose.ui.zIndex
 @Composable
 fun CardContainer(
     onContainerSizeChanged: (IntSize) -> Unit = {},
+    onCardBoundsChanged: (Rect) -> Unit = {},
     statusBarOffset: Float = 0f,
     onFlightTemplateClick: () -> Unit = {},
     isEditMode: Boolean = false,
@@ -89,6 +93,9 @@ fun CardContainer(
                 .fillMaxWidth()
                 .height(with(density) { safeContainerSize.height.toDp() })
                 .clipToBounds()
+                .onGloballyPositioned { coordinates ->
+                    onCardBoundsChanged(coordinates.boundsInRoot())
+                }
         ) {
             // ✅ SSOT: Only display cards that are in selectedCardIds
             // All cards exist in memory and receive live data, but only selected ones render
@@ -136,6 +143,10 @@ fun CardContainer(
                 }
                 // ✅ RESULT: When vario updates, ONLY vario card recomposes. GPS card stays stable!
             }
+        }
+
+        DisposableEffect(Unit) {
+            onDispose { onCardBoundsChanged(Rect.Zero) }
         }
 
         // Edit Mode Options Menu - Lower z-index when cards are in edit mode

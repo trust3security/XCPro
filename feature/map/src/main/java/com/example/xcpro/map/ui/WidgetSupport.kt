@@ -82,8 +82,10 @@ class MapGestureRegistry {
     }
 
     private fun priority(target: MapOverlayGestureTarget): Int = when (target) {
-        MapOverlayGestureTarget.FLIGHT_MODE -> 0
-        MapOverlayGestureTarget.SIDE_HAMBURGER, MapOverlayGestureTarget.VARIOMETER -> 1
+        MapOverlayGestureTarget.CARD_GRID -> 0
+        MapOverlayGestureTarget.FLIGHT_MODE -> 1
+        MapOverlayGestureTarget.SIDE_HAMBURGER,
+        MapOverlayGestureTarget.VARIOMETER -> 2
     }
 }
 

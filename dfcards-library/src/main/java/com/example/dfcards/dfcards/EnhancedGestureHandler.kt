@@ -1,5 +1,7 @@
 package com.example.dfcards.dfcards
 
+import android.util.Log
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -58,6 +60,10 @@ fun EnhancedGestureCard(
     var localWidth by remember(cardState.id) { mutableStateOf(cardState.width) }
     var localHeight by remember(cardState.id) { mutableStateOf(cardState.height) }
 
+    LaunchedEffect(cardState.id, isEditMode) {
+        android.util.Log.d("CARD_GESTURE", "render ${cardState.id} editMode=$isEditMode")
+    }
+
     LaunchedEffect(cardState) {
         if (resizeCorner == ResizeCorner.NONE) {
             localX = cardState.x
@@ -97,8 +103,10 @@ fun EnhancedGestureCard(
             .let { modifier ->
                 if (isEditMode) {
                     modifier.pointerInput("drag_${cardState.id}") {
+                        Log.d("CARD_GESTURE", "pointerInput active for ${cardState.id} (isEditMode=$isEditMode, container=${containerSize.width}x${containerSize.height})")
                         detectDragGestures(
                             onDragStart = { offset ->
+                                Log.d("CARD_GESTURE", "Drag start for ${cardState.id} at $offset (cardSize=${cardSize.width}x${cardSize.height}, container=${containerSize.width}x${containerSize.height})")
                                 onDragStart()
                                 val cornerSize = 80f
                                 val edgeSize = 60f
@@ -242,3 +250,4 @@ fun EnhancedGestureCard(
         }
     }
 }
+

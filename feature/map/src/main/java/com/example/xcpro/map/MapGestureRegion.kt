@@ -19,6 +19,7 @@ data class MapGestureRegion(
  * Enumerates overlay widgets that participate in gesture pass-through routing.
  */
 enum class MapOverlayGestureTarget {
+    CARD_GRID,
     SIDE_HAMBURGER,
     FLIGHT_MODE,
     VARIOMETER

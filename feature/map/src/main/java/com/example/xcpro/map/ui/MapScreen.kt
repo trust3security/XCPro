@@ -2,10 +2,6 @@ package com.example.xcpro.map.ui
 
 import com.example.xcpro.tasks.TaskMapOverlay
 import com.example.xcpro.tasks.core.TaskType
-import com.example.xcpro.skysight.SkysightMapOverlay
-import com.example.xcpro.skysight.SkysightClient
-import com.example.xcpro.skysight.addSkysightLayerToMap
-import com.example.xcpro.skysight.removeSkysightLayerFromMap
 import com.example.xcpro.components.AirspaceSettingsContent
 import com.example.xcpro.screens.overlays.getMapStyleUrl
 import com.example.xcpro.profiles.FlightModeIndicator
@@ -367,7 +363,6 @@ fun MapScreen(
         content = {
             Box(modifier = Modifier.fillMaxSize()) {
                 MapScreenContent(
-                    navController = navController,
                     density = density,
                     mapState = mapState,
                     mapInitializer = mapInitializer,

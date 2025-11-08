@@ -18,7 +18,6 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import androidx.navigation.NavHostController
 import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.map.components.MapActionButtons
@@ -48,7 +47,6 @@ import com.example.xcpro.variometer.layout.VariometerUiState
 
 @Composable
 internal fun MapScreenContent(
-    navController: NavHostController,
     density: Density,
     mapState: MapScreenState,
     mapInitializer: MapInitializer,
@@ -115,7 +113,6 @@ internal fun MapScreenContent(
                         .size(maxWidth, maxHeight)
                 ) {
                     MapOverlayStack(
-                        navController = navController,
                         mapState = mapState,
                         mapInitializer = mapInitializer,
                         locationManager = locationManager,
