@@ -76,13 +76,6 @@ fun AppNavGraph(
         composable("look_and_feel") { LookAndFeelScreen(navController = navController, drawerState = drawerState) }
         composable("units_settings") { UnitsSettingsScreen(navController = navController) }
         composable("polar_settings") { PolarSettingsScreen(navController = navController, drawerState = drawerState) }
-        composable("skysight_settings") {
-            com.example.xcpro.skysight.SkysightSettingsScreen(
-                drawerState = drawerState,
-                onNavigateBack = { navController.popBackStack() },
-                onNavigateToMap = { navController.popBackStack("map", inclusive = false) }
-            )
-        }
         composable("vario_audio_settings") { VarioAudioSettingsScreen(navController = navController, drawerState = drawerState) }
         composable("colors") { ColorsScreen(navController = navController) }
         composable("hawk_dashboard") { backStackEntry ->

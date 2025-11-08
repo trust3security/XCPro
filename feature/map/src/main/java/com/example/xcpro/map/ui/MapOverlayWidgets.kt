@@ -24,7 +24,6 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import androidx.navigation.NavHostController
 import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.xcpro.CompassWidget
 import com.example.xcpro.MapOrientationManager
@@ -49,7 +48,6 @@ import com.example.xcpro.map.ballast.BallastCommand
 import com.example.xcpro.map.ballast.BallastPill
 import com.example.xcpro.map.ballast.BallastUiState
 import com.example.xcpro.sensors.GPSData
-import com.example.xcpro.skysight.SkysightMapOverlay
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import kotlinx.coroutines.flow.StateFlow
 import com.example.xcpro.variometer.layout.VariometerUiState
@@ -58,7 +56,6 @@ import com.example.xcpro.variometer.ui.VariometerOverlay
 @Composable
 @Suppress("LongParameterList")
 internal fun MapOverlayStack(
-    navController: NavHostController,
     mapState: MapScreenState,
     mapInitializer: MapInitializer,
     locationManager: LocationManager,
@@ -107,7 +104,6 @@ internal fun MapOverlayStack(
             .zIndex(3f)
     ) {
         MapMainLayers(
-            navController = navController,
             mapState = mapState,
             mapInitializer = mapInitializer,
             locationManager = locationManager,
@@ -128,14 +124,6 @@ internal fun MapOverlayStack(
             onContainerSizeChanged = { size -> safeContainerSize.value = size },
             modifier = Modifier.fillMaxSize(),
             convertToRealTime = ::convertToRealTimeFlightData
-        )
-
-        SkysightMapOverlay(
-            onOpenSettings = { navController.navigate("skysight_settings") },
-            mapLibreMap = mapState.mapLibreMap,
-            modifier = Modifier
-                .fillMaxSize()
-                .zIndex(3.5f)
         )
 
         MapGestureSetup.GestureHandlerOverlay(

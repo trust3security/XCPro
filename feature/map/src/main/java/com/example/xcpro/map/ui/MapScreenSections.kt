@@ -19,7 +19,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
-import androidx.navigation.NavHostController
 import android.util.Log
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.FlightTemplate
@@ -30,7 +29,6 @@ import com.example.xcpro.CompassWidget
 import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.common.orientation.MapOrientationMode
 import com.example.xcpro.screens.overlays.getMapStyleUrl
-import com.example.xcpro.skysight.SkysightMapOverlay
 import com.example.xcpro.tasks.TaskMapOverlay
 import com.example.xcpro.sensors.CompleteFlightData
 import com.example.xcpro.sensors.GPSData
@@ -50,7 +48,6 @@ import org.maplibre.android.maps.MapView
 
 @Composable
 fun MapMainLayers(
-    navController: NavHostController,
     mapState: MapScreenState,
     mapInitializer: MapInitializer,
     locationManager: LocationManager,
@@ -154,18 +151,6 @@ fun MapMainLayers(
         ) {
             TaskMapOverlay(
                 taskManager = taskManager,
-                mapLibreMap = mapState.mapLibreMap,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .zIndex(3.5f)
-        ) {
-            SkysightMapOverlay(
-                onOpenSettings = { navController.navigate("skysight_settings") },
                 mapLibreMap = mapState.mapLibreMap,
                 modifier = Modifier.fillMaxSize()
             )

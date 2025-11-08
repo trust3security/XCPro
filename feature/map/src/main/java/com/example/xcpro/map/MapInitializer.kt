@@ -6,13 +6,7 @@ import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.sensors.UnifiedSensorManager
 import com.example.xcpro.map.BlueLocationOverlay
 import com.example.xcpro.map.DistanceCirclesOverlay
-import com.example.xcpro.skysight.SkysightClient
-import com.example.xcpro.skysight.addSkysightLayerToMap
 import com.example.xcpro.tasks.TaskManagerCoordinator
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.gestures.MoveGestureDetector
 import org.maplibre.android.maps.MapLibreMap
@@ -43,7 +37,6 @@ class MapInitializer(
             setupInitialPosition(map)
             setupGestures(map)
             setupListeners(map)
-            setupSkysightAutoLoad(map)
             // CRITICAL FIX: Set map instance in TaskManagerCoordinator for cleanup operations
             taskManager.setMapInstance(map)
             Log.d(TAG, "?? Set map instance in TaskManagerCoordinator for task switching cleanup")
@@ -217,72 +210,6 @@ class MapInitializer(
         }
     }
 
-    private fun setupSkysightAutoLoad(map: MapLibreMap) {
-        Log.d(TAG, "🚀 Starting automatic SkySight layer loading")
-
-        try {
-            val skysightClient = SkysightClient.getInstance(context)
-
-            CoroutineScope(Dispatchers.Main).launch {
-                // Wait for authentication
-                var attempts = 0
-                while (!skysightClient.isAuthenticated.value && attempts < 10) {
-                    Log.d(TAG, "⏳ Waiting for SkySight authentication... attempt ${attempts + 1}")
-                    delay(1000)
-                    attempts++
-                }
-
-                if (!skysightClient.isAuthenticated.value) {
-                    Log.e(TAG, "❌ SkySight authentication timeout")
-                    return@launch
-                }
-
-                Log.d(TAG, "✅ SkySight authenticated, loading layers")
-                loadSkysightLayers(map, skysightClient)
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ Error in SkySight auto-loading: ${e.message}", e)
-        }
-    }
-
-    private suspend fun loadSkysightLayers(map: MapLibreMap, skysightClient: SkysightClient) {
-        try {
-            val authToken = skysightClient.getAuthToken()
-            val selectedRegion = skysightClient.selectedRegion.value
-
-            if (authToken != null && selectedRegion != null) {
-                // Add satellite layer
-                Log.d(TAG, "🛰️ Adding SATELLITE layer")
-                addSkysightLayerToMap(
-                    mapLibreMap = map,
-                    layerId = "satellite-auto",
-                    layerType = "satellite",
-                    regionId = selectedRegion,
-                    apiKey = authToken,
-                    skysightClient = skysightClient
-                )
-
-                delay(2000) // Wait between layers
-
-                // Add rain layer
-                Log.d(TAG, "🌧️ Adding RAIN layer")
-                addSkysightLayerToMap(
-                    mapLibreMap = map,
-                    layerId = "rain-auto",
-                    layerType = "rain",
-                    regionId = selectedRegion,
-                    apiKey = authToken,
-                    skysightClient = skysightClient
-                )
-
-                Log.d(TAG, "✅ SkySight layers loaded successfully")
-            } else {
-                Log.e(TAG, "❌ Missing auth token or region for SkySight layers")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ Error loading SkySight layers: ${e.message}", e)
-        }
-    }
 }
 
 

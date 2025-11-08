@@ -43,8 +43,6 @@ class MainActivity : ComponentActivity(), StatusBarStyleApplier {
         }
         Log.d(TAG, "Setup info: ${setupManager.getSetupInfo()}")
 
-        com.example.xcpro.skysight.SkysightAutoTest.runNetworkTests(this)
-
         // runKeyholeVerificationTest() // TODO: Re-enable after keyhole implementation is completed
 
         setContent {

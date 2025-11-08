@@ -107,16 +107,6 @@ class MapScreenState(
         }
     val safeContainerSizeFlow: StateFlow<IntSize> = _safeContainerSize.asStateFlow()
 
-    // SkySight State
-    private val _selectedSkysightLayers = MutableStateFlow(setOf<String>())
-    var selectedSkysightLayers: Set<String>
-        get() = _selectedSkysightLayers.value
-        set(value) {
-            if (_selectedSkysightLayers.value != value) _selectedSkysightLayers.value = value
-        }
-    val selectedSkysightLayersFlow: StateFlow<Set<String>> =
-        _selectedSkysightLayers.asStateFlow()
-
     // Flight Data Manager - centralized flight data handling
     lateinit var flightDataManager: FlightDataManager
 

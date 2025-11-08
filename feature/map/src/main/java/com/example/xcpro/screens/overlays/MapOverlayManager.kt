@@ -7,7 +7,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.example.xcpro.profiles.FlightModeIndicator
-import com.example.xcpro.skysight.SkysightMapOverlay
 import com.example.xcpro.tasks.TaskMapOverlay
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import org.maplibre.android.maps.MapLibreMap
@@ -31,21 +30,6 @@ fun MapOverlayManager(
                 .zIndex(1.5f)
         )
 
-        // SkySight Weather Overlay (handles weather layers)
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .zIndex(1.6f)
-        ) {
-            SkysightMapOverlay(
-                onOpenSettings = {
-                    // This will be handled by the parent screen navigation
-                },
-                mapLibreMap = mapLibreMap,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
-
         // Flight Mode Indicator (Top Left)
         FlightModeIndicator(
             currentMode = currentMode,
@@ -63,15 +47,13 @@ fun MapOverlayManager(
 @Composable
 fun OverlayVisibilityController(
     showTaskOverlay: Boolean = true,
-    showSkysightOverlay: Boolean = true,
     showCompass: Boolean = true,
     showFlightModeIndicator: Boolean = true,
     content: @Composable (OverlayVisibility) -> Unit
 ) {
-    val visibility = remember(showTaskOverlay, showSkysightOverlay, showCompass, showFlightModeIndicator) {
+    val visibility = remember(showTaskOverlay, showCompass, showFlightModeIndicator) {
         OverlayVisibility(
             taskOverlay = showTaskOverlay,
-            skysightOverlay = showSkysightOverlay,
             compass = showCompass,
             flightModeIndicator = showFlightModeIndicator
         )
@@ -82,7 +64,6 @@ fun OverlayVisibilityController(
 
 data class OverlayVisibility(
     val taskOverlay: Boolean = true,
-    val skysightOverlay: Boolean = true,
     val compass: Boolean = true,
     val flightModeIndicator: Boolean = true
 )
@@ -107,23 +88,6 @@ fun ConditionalMapOverlayManager(
                     .fillMaxSize()
                     .zIndex(1.5f)
             )
-        }
-
-        // SkySight Weather Overlay - conditionally shown
-        if (visibility.skysightOverlay) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .zIndex(1.6f)
-            ) {
-                SkysightMapOverlay(
-                    onOpenSettings = {
-                        // This will be handled by the parent screen navigation
-                    },
-                    mapLibreMap = mapLibreMap,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
         }
 
         // Flight Mode Indicator - conditionally shown

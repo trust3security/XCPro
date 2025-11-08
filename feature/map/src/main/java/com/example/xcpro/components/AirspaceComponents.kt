@@ -22,10 +22,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import android.util.Log
-import com.example.xcpro.skysight.SkysightClient
-import com.example.xcpro.skysight.addSkysightLayerToMap
-import com.example.xcpro.skysight.removeSkysightLayerFromMap
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.maplibre.android.maps.MapLibreMap
 import java.io.File
@@ -280,75 +276,6 @@ fun AirspaceSettingsContent(
             TextButton(onClick = onDismiss) {
                 Text("Done")
             }
-        }
-    }
-}
-
-@Composable
-fun LayerToggleCard(
-    title: String,
-    description: String,
-    isSelected: Boolean,
-    onToggle: (Boolean) -> Unit,
-    layerId: String,
-    mapLibreMap: MapLibreMap?,
-    skysightClient: SkysightClient
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        elevation = CardDefaults.cardElevation(4.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Medium
-                )
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Switch(
-                checked = isSelected,
-                onCheckedChange = { enabled ->
-                    onToggle(enabled)
-
-                    // Handle actual demo layer toggle
-                    mapLibreMap?.let { map ->
-                        val selectedRegion = kotlinx.coroutines.runBlocking {
-                            skysightClient.selectedRegion.first()
-                        }
-                        val apiToken = skysightClient.getAuthToken()
-
-                        if (enabled && selectedRegion != null && apiToken != null) {
-                            // Map demo layer names to actual SkySight layer types
-                            val layerType = when (layerId) {
-                                "Precipitation", "Rain" -> "rain"
-                                "Satellite" -> "satellite"
-                                else -> "satellite" // Default to satellite for demo layers
-                            }
-
-                            // DISABLED: Old approach - use SkySight FAB controls
-                            android.util.Log.d("LayerToggle", "⚠️ Demo layer toggle disabled - use SkySight FAB")
-                        } else {
-                            removeSkysightLayerFromMap(map, layerId)
-                        }
-                    }
-                }
-            )
         }
     }
 }
