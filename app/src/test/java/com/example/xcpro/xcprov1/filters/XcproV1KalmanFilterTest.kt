@@ -58,7 +58,6 @@ class XcproV1KalmanFilterTest {
                 gpsTrackRad = 0.0,
                 trueAirspeed = 30.0,
                 airBearingRad = 0.0,
-                headingDeg = 0.0,
                 bankDeg = 0.0
             )
             lastState = result.state

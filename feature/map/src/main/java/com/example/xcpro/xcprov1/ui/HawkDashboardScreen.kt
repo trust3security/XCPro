@@ -257,8 +257,6 @@ private fun PrimaryInstrumentRow(
                         actualClimb = snapshot?.actualClimb,
                         potentialClimb = snapshot?.potentialClimb,
                         confidence = snapshot?.confidence ?: 0.0,
-                        aoaDeg = snapshot?.aoaDeg,
-                        sideslipDeg = snapshot?.sideslipDeg,
                         gaugeSize = 300.dp
                     )
                 } else {

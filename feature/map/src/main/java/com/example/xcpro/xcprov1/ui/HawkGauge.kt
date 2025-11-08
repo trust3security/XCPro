@@ -25,7 +25,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -48,7 +47,7 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-internal object HawkGaugePalette {
+object HawkGaugePalette {
     val SinkSevere = Color(0xFFB71C1C)
     val SinkModerate = Color(0xFFFF8F00)
     val Neutral = Color(0xFF6D7075)
@@ -58,11 +57,9 @@ internal object HawkGaugePalette {
     val ActualNeedle = Color(0xFFFFC94D)
     val PotentialNeedle = Color(0xFF66E5FF)
     val Confidence = Color(0xFF64FFDA)
-    val AoA = Color(0xFF00BCD4)
-    val Slip = Color(0xFFFF7043)
 }
 
-internal val HawkGaugeDefaultSize = 260.dp
+val HawkGaugeDefaultSize = 260.dp
 
 /**
  * Recreates the LXNAV HAWK dual-needle variometer with confidence ring,
@@ -73,8 +70,6 @@ fun HawkGauge(
     actualClimb: Double?,
     potentialClimb: Double?,
     confidence: Double,
-    aoaDeg: Double?,
-    sideslipDeg: Double?,
     modifier: Modifier = Modifier,
     gaugeSize: Dp = HawkGaugeDefaultSize
 ) {
@@ -247,19 +242,6 @@ fun HawkGauge(
                 center = center
             )
 
-            // AoA tapered wedge on left.
-            drawAoAIndicator(
-                value = aoaDeg,
-                center = center,
-                gaugeRadius = scaleRadius
-            )
-
-            // Sideslip wedge on right.
-            drawSideslipIndicator(
-                value = sideslipDeg,
-                center = center,
-                gaugeRadius = scaleRadius
-            )
         }
 
         Column(
@@ -309,184 +291,7 @@ fun HawkGauge(
             }
         }
 
-        // Edge indicators to mimic the real HAWK light bars.
-        AoAEdgeBar(
-            value = aoaDeg,
-            modifier = Modifier
-                .align(Alignment.CenterStart)
-                .height(gaugeSize * 0.7f)
-                .width(32.dp)
-        )
-
-        SlipEdgeBar(
-            value = sideslipDeg,
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .height(gaugeSize * 0.7f)
-                .width(32.dp)
-        )
     }
-}
-
-@Composable
-private fun AoAEdgeBar(
-    value: Double?,
-    modifier: Modifier = Modifier
-) {
-    val background = MaterialTheme.colorScheme.surfaceVariant
-    val activeColor = HawkGaugePalette.AoA
-    val cautionColor = Color(0xFFFFC947)
-    val stallColor = Color(0xFFD50000)
-
-    Surface(
-        modifier = modifier,
-        color = Color.Transparent
-    ) {
-        val aoa = value ?: 0.0
-        val range = GaugeRangeLinear(-8.0, 18.0)
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val barWidth = size.width
-            val barHeight = size.height
-            val radius = barWidth / 2f
-
-            drawRoundRect(
-                color = background,
-                topLeft = Offset.Zero,
-                size = Size(barWidth, barHeight),
-                cornerRadius = androidx.compose.ui.geometry.CornerRadius(radius, radius)
-            )
-
-            val normalized = range.normalize(aoa).toFloat()
-            val levelHeight = barHeight * normalized
-            val pathTop = barHeight - levelHeight
-            val activeBrush = Brush.verticalGradient(
-                colors = listOf(activeColor, cautionColor, stallColor),
-                startY = 0f,
-                endY = barHeight
-            )
-            drawRoundRect(
-                brush = activeBrush,
-                topLeft = Offset(0f, pathTop),
-                size = Size(barWidth, levelHeight),
-                cornerRadius = androidx.compose.ui.geometry.CornerRadius(radius, radius)
-            )
-
-            drawLine(
-                color = Color.Black.copy(alpha = 0.2f),
-                start = Offset(barWidth / 2f, 0f),
-                end = Offset(barWidth / 2f, barHeight),
-                strokeWidth = barWidth * 0.08f
-            )
-        }
-    }
-}
-
-@Composable
-private fun SlipEdgeBar(
-    value: Double?,
-    modifier: Modifier = Modifier
-) {
-    val background = MaterialTheme.colorScheme.surfaceVariant
-    val neutralColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-    val slipColor = HawkGaugePalette.Slip
-
-    Surface(
-        modifier = modifier,
-        color = Color.Transparent
-    ) {
-        val slip = value ?: 0.0
-        val range = GaugeRangeLinear(-12.0, 12.0)
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val barWidth = size.width
-            val barHeight = size.height
-            val corner = barWidth / 2f
-
-            drawRoundRect(
-                color = background,
-                topLeft = Offset.Zero,
-                size = Size(barWidth, barHeight),
-                cornerRadius = androidx.compose.ui.geometry.CornerRadius(corner, corner)
-            )
-
-            // Center neutral marker.
-            drawRoundRect(
-                color = neutralColor,
-                topLeft = Offset(0f, barHeight / 2f - barWidth / 2f),
-                size = Size(barWidth, barWidth),
-                cornerRadius = androidx.compose.ui.geometry.CornerRadius(barWidth / 2f, barWidth / 2f)
-            )
-
-            val normalized = range.normalize(slip).toFloat()
-            val centerY = barHeight / 2f
-            val displacement = (barHeight / 2f - barWidth) * normalized
-
-            drawRoundRect(
-                color = slipColor,
-                topLeft = Offset(0f, centerY - barWidth / 2f - displacement),
-                size = Size(barWidth, barWidth),
-                cornerRadius = androidx.compose.ui.geometry.CornerRadius(barWidth / 2f, barWidth / 2f)
-            )
-        }
-    }
-}
-
-private fun DrawScope.drawAoAIndicator(
-    value: Double?,
-    center: Offset,
-    gaugeRadius: Float
-) {
-    val aoa = value ?: 0.0
-    val clamped = aoa.coerceIn(-8.0, 18.0)
-    val normalized = ((clamped + 8.0) / (18.0 + 8.0)).toFloat()
-    val baseAngle = 180f
-    val spread = 55f
-    val startAngle = baseAngle + spread * 0.5f * (1f - normalized)
-    val sweepAngle = spread * normalized
-
-    drawArc(
-        color = HawkGaugePalette.AoA.copy(alpha = 0.32f),
-        startAngle = startAngle,
-        sweepAngle = sweepAngle,
-        useCenter = false,
-        style = Stroke(width = gaugeRadius * 0.08f, cap = StrokeCap.Round),
-        topLeft = Offset(center.x - gaugeRadius * 0.85f, center.y - gaugeRadius * 0.85f),
-        size = Size(gaugeRadius * 1.7f, gaugeRadius * 1.7f)
-    )
-}
-
-private fun DrawScope.drawSideslipIndicator(
-    value: Double?,
-    center: Offset,
-    gaugeRadius: Float
-) {
-    val slip = value ?: 0.0
-    val clamped = slip.coerceIn(-12.0, 12.0)
-    val normalized = (clamped / 12.0).toFloat()
-    val baseAngle = 0f
-    val spread = 55f
-    val startAngle = baseAngle - spread * 0.5f
-    val sweepAngle = spread
-
-    drawArc(
-        color = HawkGaugePalette.Slip.copy(alpha = 0.32f),
-        startAngle = startAngle,
-        sweepAngle = sweepAngle,
-        useCenter = false,
-        style = Stroke(width = gaugeRadius * 0.08f, cap = StrokeCap.Round),
-        topLeft = Offset(center.x - gaugeRadius * 0.85f, center.y - gaugeRadius * 0.85f),
-        size = Size(gaugeRadius * 1.7f, gaugeRadius * 1.7f)
-    )
-
-    val slipAngle = baseAngle + spread * normalized
-    val slipStart = polarToCartesian(center, gaugeRadius * 0.6f, slipAngle)
-    val slipEnd = polarToCartesian(center, gaugeRadius * 0.85f, slipAngle)
-    drawLine(
-        color = HawkGaugePalette.Slip,
-        start = slipStart,
-        end = slipEnd,
-        strokeWidth = gaugeRadius * 0.045f,
-        cap = StrokeCap.Round
-    )
 }
 
 @Composable
@@ -649,16 +454,6 @@ private class GaugeRange(
         val clamped = value.coerceIn(min, max)
         val ratio = ((clamped - min) / (max - min)).toFloat()
         return startAngle + (endAngle - startAngle) * ratio
-    }
-}
-
-private class GaugeRangeLinear(
-    private val min: Double,
-    private val max: Double
-) {
-    fun normalize(value: Double): Double {
-        val clamped = value.coerceIn(min, max)
-        return (clamped - min) / (max - min)
     }
 }
 

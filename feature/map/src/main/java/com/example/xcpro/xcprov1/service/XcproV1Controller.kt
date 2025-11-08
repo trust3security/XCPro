@@ -41,7 +41,7 @@ class XcproV1Controller(
 
     companion object {
         private const val TAG = "XcproV1Controller"
-        private const val MIN_GPS_VERTICAL_INTERVAL_MS = 250L
+        private const val MIN_GPS_VERTICAL_INTERVAL_MS = 150L
         private const val G = 9.80665
         private const val EXTERNAL_FIX_TIMEOUT_MS = 1500L
         private const val MIN_TRUE_AIRSPEED_MS = 15.0
@@ -49,9 +49,14 @@ class XcproV1Controller(
         private const val MAX_QNH_ALTITUDE_ERROR_METERS = 60.0
         private const val LARGE_QNH_ALTITUDE_STEP_METERS = 3.0
         private const val MAX_QNH_GPS_ACCURACY_METERS = 5.5
+        private const val BARO_STABILITY_THRESHOLD_METERS = 0.15
+        private const val BARO_STABILITY_REQUIRED_SAMPLES = 40
+        private const val QUIET_ACCEL_THRESHOLD = 0.05
+        private const val MAX_GPS_VERTICAL_SPEED_MS = 15.0
     }
 
     private val filter = XcproV1KalmanFilter()
+    private val baseGpsVerticalNoise = filter.gpsVerticalNoise
     private val audioEngine = XcproV1AudioEngine(context, scope)
 
     private val _snapshotFlow = MutableStateFlow<FlightDataV1Snapshot?>(null)
@@ -82,6 +87,8 @@ class XcproV1Controller(
     )
     private var lastBaroSample: BaroData? = null
     private var lastSensorUpdateElapsedMs: Long = SystemClock.elapsedRealtime()
+    private var baroStabilitySampleCount = 0
+    private var lastBaroAltitudeForStability = Double.NaN
 
     init {
         audioEngine.initialize()
@@ -147,6 +154,7 @@ class XcproV1Controller(
         }
 
         val baroAltitude = pressureToAltitude(baroSample.pressureHPa)
+        val baroIsSteady = updateBaroStability(baroAltitude)
 
         if (calibrationAltitudeStep != null && abs(calibrationAltitudeStep) >= LARGE_QNH_ALTITUDE_STEP_METERS) {
             handleLargeQnhJump(calibrationAltitudeStep, baroAltitude)
@@ -154,27 +162,24 @@ class XcproV1Controller(
 
         val verticalAccel = if (accel.isReliable) accel.verticalAcceleration else 0.0
         val gpsVertical = computeGpsVertical(fusedGps)
+            ?: steadyVerticalFallback(baroIsSteady, verticalAccel)
         val trackRad = fusedGps.trackDegrees?.let { Math.toRadians(it) }
 
         val reliableAttitude = inputs.attitude?.takeIf { it.isReliable }
-        val pitchDeg = reliableAttitude?.pitchDeg
-        val rollDeg = reliableAttitude?.rollDeg
-
-        val bankDeg = rollDeg ?: computeBank(trackRad, fusedGps.timestamp, fusedGps.speed)
+        val bankDeg = reliableAttitude?.rollDeg ?: computeBank(trackRad, fusedGps.timestamp, fusedGps.speed)
 
         val windX = lastState.windX
         val windY = lastState.windY
         val groundVector = trackRad?.let { vectorFromPolar(fusedGps.speed, it) } ?: Pair(0.0, 0.0)
         val airVector = Pair(groundVector.first - windX, groundVector.second - windY)
         val airVectorMagnitude = airVector.magnitude()
-        val tas = maxOf(airVectorMagnitude, MIN_TRUE_AIRSPEED_MS)
+        val tasFloor = if (fusedGps.isMoving) MIN_TRUE_AIRSPEED_MS else 0.0
+        val tas = maxOf(airVectorMagnitude, tasFloor)
         val airBearing = when {
             airVectorMagnitude > 0.1 -> atan2(airVector.second, airVector.first)
             reliableAttitude != null -> Math.toRadians(reliableAttitude.headingDeg)
             else -> trackRad
         }
-
-        val headingDeg = reliableAttitude?.headingDeg ?: airBearing?.let { Math.toDegrees(it) }
 
         Log.v(
             TAG,
@@ -188,6 +193,8 @@ class XcproV1Controller(
             )
         )
 
+        filter.gpsVerticalNoise = if (fusedGps.isMoving) baseGpsVerticalNoise else baseGpsVerticalNoise * 4.0
+
         val result = filter.update(
             timestamp = maxOf(baroSample.timestamp, fusedGps.timestamp),
             baroAltitude = baroAltitude,
@@ -197,11 +204,8 @@ class XcproV1Controller(
             gpsTrackRad = trackRad,
             trueAirspeed = tas,
             airBearingRad = airBearing,
-            headingDeg = headingDeg,
             wingLoading = Js1cAeroModel.defaultWingLoading(),
-            bankDeg = bankDeg ?: 0.0,
-            attitudePitchDeg = pitchDeg,
-            attitudeRollDeg = rollDeg ?: bankDeg
+            bankDeg = bankDeg ?: 0.0
         )
 
         lastState = result.state
@@ -300,19 +304,47 @@ class XcproV1Controller(
     }
 
     private fun computeGpsVertical(frame: GpsFrame): Double? {
-        if (!frame.isMoving) return null
         val (lastAlt, lastTs) = when (frame.source) {
             GpsFrame.Source.HANDSET -> lastHandsetAltitude to lastHandsetTimestamp
             GpsFrame.Source.GARMIN -> lastExternalAltitude to lastExternalTimestamp
         }
         val deltaT = frame.timestamp - lastTs
-        if (lastTs == 0L || deltaT < MIN_GPS_VERTICAL_INTERVAL_MS) {
+        if (lastTs == 0L) {
             updateAltitudeState(frame.altitude, frame.timestamp, frame.source)
+            return null
+        }
+        if (deltaT < MIN_GPS_VERTICAL_INTERVAL_MS) {
             return null
         }
         val deltaAlt = frame.altitude - lastAlt
         updateAltitudeState(frame.altitude, frame.timestamp, frame.source)
-        return deltaAlt / (deltaT / 1000.0)
+        val vertical = deltaAlt / (deltaT / 1000.0)
+        return vertical.coerceIn(-MAX_GPS_VERTICAL_SPEED_MS, MAX_GPS_VERTICAL_SPEED_MS)
+    }
+
+    private fun steadyVerticalFallback(baroIsSteady: Boolean, verticalAccel: Double): Double? {
+        if (!baroIsSteady) return null
+        if (abs(verticalAccel) > QUIET_ACCEL_THRESHOLD) return null
+        return 0.0
+    }
+
+    private fun updateBaroStability(currentAltitude: Double): Boolean {
+        if (currentAltitude.isNaN()) return false
+        if (lastBaroAltitudeForStability.isNaN()) {
+            lastBaroAltitudeForStability = currentAltitude
+            baroStabilitySampleCount = 1
+            return false
+        }
+        val delta = abs(currentAltitude - lastBaroAltitudeForStability)
+        if (delta < BARO_STABILITY_THRESHOLD_METERS) {
+            if (baroStabilitySampleCount < BARO_STABILITY_REQUIRED_SAMPLES) {
+                baroStabilitySampleCount++
+            }
+        } else {
+            baroStabilitySampleCount = 0
+        }
+        lastBaroAltitudeForStability = currentAltitude
+        return baroStabilitySampleCount >= BARO_STABILITY_REQUIRED_SAMPLES
     }
 
     private fun computeBank(trackRad: Double?, timestamp: Long, groundSpeed: Double): Double? {
@@ -417,6 +449,8 @@ class XcproV1Controller(
         lastExternalAltitude = Double.NaN
         lastHandsetTimestamp = 0L
         lastExternalTimestamp = 0L
+        baroStabilitySampleCount = 0
+        lastBaroAltitudeForStability = Double.NaN
         val resetSnapshot = FlightDataV1Snapshot(
             timestampMillis = System.currentTimeMillis(),
             actualClimb = 0.0,
@@ -427,8 +461,6 @@ class XcproV1Controller(
             windY = 0.0,
             confidence = 0.0,
             climbTrend = 0.0,
-            aoaDeg = null,
-            sideslipDeg = null,
             sourceLabel = "reset",
             diagnostics = DiagnosticsSnapshot(
                 covarianceTrace = 0.0,

@@ -37,8 +37,7 @@ class HawkGaugeAppearanceTest {
             HawkGaugePalette.PotentialNeedle,
             HawkGaugePalette.Confidence,
             HawkGaugePalette.Climb,
-            HawkGaugePalette.ClimbStrong,
-            HawkGaugePalette.Slip
+            HawkGaugePalette.ClimbStrong
         )
         accents.forEach { accent ->
             val ratio = contrastRatio(surface, accent)

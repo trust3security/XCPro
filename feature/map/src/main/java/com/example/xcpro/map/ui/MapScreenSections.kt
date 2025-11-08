@@ -119,8 +119,6 @@ fun MapMainLayers(
                         actualClimb = data.actualClimb,
                         potentialClimb = data.potentialClimb,
                         confidence = data.confidence,
-                        aoaDeg = data.aoaDeg,
-                        sideslipDeg = data.sideslipDeg,
                         gaugeSize = 220.dp
                     )
                     Spacer(modifier = Modifier.height(12.dp))

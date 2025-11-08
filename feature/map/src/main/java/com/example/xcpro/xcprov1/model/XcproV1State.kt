@@ -37,8 +37,6 @@ data class FlightDataV1Snapshot(
     val windY: Double,
     val confidence: Double,
     val climbTrend: Double,
-    val aoaDeg: Double?,
-    val sideslipDeg: Double?,
     val sourceLabel: String,
     val diagnostics: DiagnosticsSnapshot
 )
