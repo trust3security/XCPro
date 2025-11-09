@@ -5,6 +5,9 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -134,10 +137,14 @@ object MapUIWidgets {
             .editModeBorder(isEditMode, RoundedCornerShape(12.dp))
 
         val tapModifier = Modifier.pointerInput(isEditMode) {
-            detectTapGestures(onLongPress = {
-                Log.d("VARIO_GESTURE", "longPress detected -> toggling edit mode")
-                onLongPress()
-            })
+            awaitEachGesture {
+                val down = awaitFirstDown(requireUnconsumed = false)
+                val longPress = awaitLongPressOrCancellation(down.id)
+                if (longPress != null) {
+                    Log.d("VARIO_GESTURE", "longPress detected -> toggling edit mode")
+                    onLongPress()
+                }
+            }
         }
 
         val dragModifier = if (isEditMode) {

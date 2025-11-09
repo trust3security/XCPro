@@ -145,7 +145,7 @@ internal fun MapOverlayStack(
                     widgetManager.updateGestureRegion(
                         target = MapOverlayGestureTarget.CARD_GRID,
                         bounds = bounds,
-                        consumeGestures = true
+                        consumeGestures = isUiEditMode
                     )
                 }
             }
