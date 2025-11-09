@@ -139,7 +139,7 @@ internal fun MapOverlayStack(
             modifier = Modifier.fillMaxSize(),
             convertToRealTime = ::convertToRealTimeFlightData,
             onCardLayerPositioned = { bounds ->
-                if (!isUiEditMode || bounds == Rect.Zero) {
+                if (bounds == Rect.Zero) {
                     widgetManager.clearGestureRegion(MapOverlayGestureTarget.CARD_GRID)
                 } else {
                     widgetManager.updateGestureRegion(
@@ -151,19 +151,21 @@ internal fun MapOverlayStack(
             }
         )
 
-        MapGestureSetup.GestureHandlerOverlay(
-            mapState = mapState,
-            taskManager = taskManager,
-            flightDataManager = flightDataManager,
-            locationManager = locationManager,
-            cameraManager = cameraManager,
-            currentLocation = currentLocation,
-            showReturnButton = showReturnButton,
-            isAATEditMode = isAATEditMode,
-            onAATEditModeChange = onSetAATEditMode,
-            gestureRegions = gestureRegions,
-            modifier = Modifier.zIndex(3.6f)
-        )
+        if (!isUiEditMode) {
+            MapGestureSetup.GestureHandlerOverlay(
+                mapState = mapState,
+                taskManager = taskManager,
+                flightDataManager = flightDataManager,
+                locationManager = locationManager,
+                cameraManager = cameraManager,
+                currentLocation = currentLocation,
+                showReturnButton = showReturnButton,
+                isAATEditMode = isAATEditMode,
+                onAATEditModeChange = onSetAATEditMode,
+                gestureRegions = gestureRegions,
+                modifier = Modifier.zIndex(3.6f)
+            )
+        }
 
         MapUIWidgets.FlightModeMenu(
             widgetManager = widgetManager,
@@ -248,7 +250,7 @@ internal fun MapOverlayStack(
             onSizeChange = onVariometerSizeChange,
             onLongPress = onVariometerLongPress,
             onEditFinished = onVariometerEditFinished,
-            modifier = Modifier.zIndex(if (isUiEditMode) 4f else 1f)
+            modifier = Modifier.zIndex(if (isUiEditMode) 12f else 6f)
         )
 
         DistanceCirclesCanvas(

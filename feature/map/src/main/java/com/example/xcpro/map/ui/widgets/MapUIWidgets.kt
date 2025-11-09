@@ -34,6 +34,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -88,14 +89,34 @@ object MapUIWidgets {
         }
 
         val density = LocalDensity.current
-        val displayOffset = remember(isEditMode) { mutableStateOf(variometerState.offset) }
-        val displaySize = remember(isEditMode) { mutableStateOf(variometerState.sizePx) }
+        val displayOffset = remember { mutableStateOf(variometerState.offset) }
+        val displaySize = remember { mutableStateOf(variometerState.sizePx) }
+        var isUserInteracting by remember { mutableStateOf(false) }
 
-        LaunchedEffect(variometerState.offset, variometerState.sizePx, isEditMode) {
-            if (!isEditMode) {
+        LaunchedEffect(variometerState.offset, variometerState.sizePx, isUserInteracting) {
+            if (!isUserInteracting) {
                 displayOffset.value = variometerState.offset
                 displaySize.value = variometerState.sizePx
-                Log.d("VARIO_GESTURE", "sync from state offset=${variometerState.offset} size=${variometerState.sizePx}")
+                Log.d(
+                    "VARIO_GESTURE",
+                    "sync from state offset=${variometerState.offset} size=${variometerState.sizePx}"
+                )
+            }
+        }
+
+        val latestVariometerState = rememberUpdatedState(variometerState)
+
+        fun applyDragDelta(dragAmount: Offset) {
+            val sizePx = displaySize.value
+            val maxX = (screenWidthPx - sizePx).coerceAtLeast(0f)
+            val maxY = (screenHeightPx - sizePx).coerceAtLeast(0f)
+            val newOffset = Offset(
+                x = (displayOffset.value.x + dragAmount.x).coerceIn(0f, maxX),
+                y = (displayOffset.value.y + dragAmount.y).coerceIn(0f, maxY)
+            )
+            if (newOffset != displayOffset.value) {
+                displayOffset.value = newOffset
+                Log.d("VARIO_GESTURE", "dragging -> $newOffset (bounds=[0,$maxX]x[0,$maxY])")
             }
         }
 
@@ -112,45 +133,34 @@ object MapUIWidgets {
             }
             .editModeBorder(isEditMode, RoundedCornerShape(12.dp))
 
-        val tapModifier = if (!isEditMode) {
-            Modifier.pointerInput(Unit) {
-                detectTapGestures(onLongPress = {
-                    Log.d("VARIO_GESTURE", "longPress detected -> requesting edit mode")
-                    onLongPress()
-                })
-            }
-        } else {
-            Modifier
+        val tapModifier = Modifier.pointerInput(isEditMode) {
+            detectTapGestures(onLongPress = {
+                Log.d("VARIO_GESTURE", "longPress detected -> toggling edit mode")
+                onLongPress()
+            })
         }
 
         val dragModifier = if (isEditMode) {
             Modifier.pointerInput(screenWidthPx, screenHeightPx, displaySize.value) {
-                Log.d("VARIO_GESTURE", "pointerInput active (size=${displaySize.value})")
                 detectDragGestures(
                     onDragStart = {
+                        isUserInteracting = true
                         Log.d("VARIO_GESTURE", "dragStart offset=${displayOffset.value}")
                     },
                     onDrag = { change, dragAmount ->
-                        val maxX = (screenWidthPx - displaySize.value).coerceAtLeast(0f)
-                        val maxY = (screenHeightPx - displaySize.value).coerceAtLeast(0f)
-                        val newOffset = Offset(
-                            x = (displayOffset.value.x + dragAmount.x).coerceIn(0f, maxX),
-                            y = (displayOffset.value.y + dragAmount.y).coerceIn(0f, maxY)
-                        )
-                        if (newOffset != displayOffset.value) {
-                            displayOffset.value = newOffset
-                            Log.d("VARIO_GESTURE", "dragging -> $newOffset (bounds=[0,$maxX]x[0,$maxY])")
-                        }
+                        applyDragDelta(dragAmount)
                         change.consumePositionChange()
                     },
                     onDragEnd = {
+                        isUserInteracting = false
                         Log.d("VARIO_GESTURE", "dragEnd offset=${displayOffset.value}")
                         onOffsetChange(displayOffset.value)
                         onEditFinished()
                     },
                     onDragCancel = {
-                        Log.d("VARIO_GESTURE", "dragCancel restoring ${variometerState.offset}")
-                        displayOffset.value = variometerState.offset
+                        isUserInteracting = false
+                        Log.d("VARIO_GESTURE", "dragCancel restoring ${latestVariometerState.value.offset}")
+                        displayOffset.value = latestVariometerState.value.offset
                         onEditFinished()
                     }
                 )
@@ -172,6 +182,7 @@ object MapUIWidgets {
 
             if (isEditMode) {
                 VariometerResizeHandle(
+                    onResizeStart = { isUserInteracting = true },
                     onResize = { dragAmount ->
                         val newSize = (displaySize.value + (dragAmount.x + dragAmount.y) / 2f)
                             .coerceIn(minSizePx, maxSizePx)
@@ -181,6 +192,7 @@ object MapUIWidgets {
                         }
                     },
                     onResizeEnd = {
+                        isUserInteracting = false
                         Log.d("VARIO_GESTURE", "resizeEnd size=${displaySize.value}")
                         onSizeChange(displaySize.value)
                         onEditFinished()
@@ -466,6 +478,7 @@ object MapUIWidgets {
 
     @Composable
     private fun VariometerResizeHandle(
+        onResizeStart: () -> Unit,
         onResize: (dragAmount: Offset) -> Unit,
         onResizeEnd: () -> Unit
     ) {
@@ -480,7 +493,10 @@ object MapUIWidgets {
                     .background(Color(0xB3FF1744), RoundedCornerShape(12.dp))
                     .pointerInput(Unit) {
                         detectDragGestures(
-                            onDragStart = { Log.d("VARIO_GESTURE", "resize start") },
+                            onDragStart = {
+                                Log.d("VARIO_GESTURE", "resize start")
+                                onResizeStart()
+                            },
                             onDrag = { change, dragAmount ->
                                 onResize(dragAmount)
                                 change.consumePositionChange()

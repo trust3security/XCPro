@@ -48,12 +48,14 @@ fun EnhancedGestureCard(
     onLongPress: () -> Unit,
     onDoubleClick: () -> Unit,
     onDragStart: () -> Unit = {},
+    onDragFinished: () -> Unit = {},
     enableSnapToGrid: Boolean = true,
     content: @Composable BoxScope.(Float, Float) -> Unit
 ) {
     val density = LocalDensity.current
     var cardSize by remember { mutableStateOf(IntSize.Zero) }
     var resizeCorner by remember { mutableStateOf(ResizeCorner.NONE) }
+    var isUserInteracting by remember { mutableStateOf(false) }
 
     var localX by remember(cardState.id) { mutableStateOf(cardState.x) }
     var localY by remember(cardState.id) { mutableStateOf(cardState.y) }
@@ -64,8 +66,8 @@ fun EnhancedGestureCard(
         android.util.Log.d("CARD_GESTURE", "render ${cardState.id} editMode=$isEditMode")
     }
 
-    LaunchedEffect(cardState) {
-        if (resizeCorner == ResizeCorner.NONE) {
+    LaunchedEffect(cardState, isUserInteracting) {
+        if (!isUserInteracting) {
             localX = cardState.x
             localY = cardState.y
             localWidth = cardState.width
@@ -102,11 +104,18 @@ fun EnhancedGestureCard(
             }
             .let { modifier ->
                 if (isEditMode) {
-                    modifier.pointerInput("drag_${cardState.id}") {
-                        Log.d("CARD_GESTURE", "pointerInput active for ${cardState.id} (isEditMode=$isEditMode, container=${containerSize.width}x${containerSize.height})")
+                    modifier.pointerInput("drag_${cardState.id}", containerSize) {
+                        Log.d(
+                            "CARD_GESTURE",
+                            "pointerInput active for ${cardState.id} (container=${containerSize.width}x${containerSize.height})"
+                        )
                         detectDragGestures(
                             onDragStart = { offset ->
-                                Log.d("CARD_GESTURE", "Drag start for ${cardState.id} at $offset (cardSize=${cardSize.width}x${cardSize.height}, container=${containerSize.width}x${containerSize.height})")
+                                isUserInteracting = true
+                                Log.d(
+                                    "CARD_GESTURE",
+                                    "Drag start for ${cardState.id} at $offset (cardSize=${cardSize.width}x${cardSize.height}, container=${containerSize.width}x${containerSize.height})"
+                                )
                                 onDragStart()
                                 val cornerSize = 80f
                                 val edgeSize = 60f
@@ -166,6 +175,7 @@ fun EnhancedGestureCard(
                                 }
                             },
                             onDragEnd = {
+                                isUserInteracting = false
                                 val boundedX = localX.coerceIn(0f, (containerSize.width - localWidth).coerceAtLeast(0f))
                                 val boundedY = localY.coerceIn(0f, (containerSize.height - localHeight).coerceAtLeast(0f))
                                 val finalState = cardState.copy(
@@ -176,6 +186,17 @@ fun EnhancedGestureCard(
                                 )
                                 onCardUpdated(finalState)
                                 resizeCorner = ResizeCorner.NONE
+                                onDragFinished()
+                            },
+                            onDragCancel = {
+                                isUserInteracting = false
+                                val resetState = cardState
+                                localX = resetState.x
+                                localY = resetState.y
+                                localWidth = resetState.width
+                                localHeight = resetState.height
+                                resizeCorner = ResizeCorner.NONE
+                                onDragFinished()
                             }
                         )
                     }
