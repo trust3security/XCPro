@@ -1,6 +1,9 @@
 package com.example.xcpro.map.ui.widgets
 
 import android.util.Log
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -14,17 +17,21 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -34,17 +41,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.consumePositionChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
@@ -60,6 +68,9 @@ import com.example.xcpro.map.ballast.BallastPill
 import com.example.xcpro.map.ballast.BallastUiState
 import com.example.xcpro.variometer.layout.VariometerUiState
 import kotlin.math.roundToInt
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 object MapUIWidgets {
 
@@ -216,80 +227,366 @@ object MapUIWidgets {
     @OptIn(ExperimentalFoundationApi::class)
     @Composable
     fun BallastWidget(
+
         widgetManager: MapUIWidgetManager,
+
         ballastState: BallastUiState,
+
         onCommand: (BallastCommand) -> Unit,
+
         ballastOffset: Offset,
+
         screenWidthPx: Float,
+
         screenHeightPx: Float,
+
         onOffsetChange: (Offset) -> Unit,
+
         isEditMode: Boolean,
+
         modifier: Modifier = Modifier,
+
         widthDp: Float = 40f,
+
         heightDp: Float = 120f
+
     ) {
+
         val density = LocalDensity.current
+
         val widthPx = with(density) { widthDp.dp.toPx() }
+
         val heightPx = with(density) { heightDp.dp.toPx() }
+
         val displayOffset = remember(isEditMode) { mutableStateOf(ballastOffset) }
 
-        LaunchedEffect(ballastOffset, isEditMode) {
-            if (!isEditMode) {
-                displayOffset.value = ballastOffset
-            }
+        var areControlsVisible by remember { mutableStateOf(false) }
+
+        var autoHideJob by remember { mutableStateOf<Job?>(null) }
+
+        val autoHideScope = rememberCoroutineScope()
+
+
+
+        fun hideControls() {
+
+            areControlsVisible = false
+
+            autoHideJob?.cancel()
+
+            autoHideJob = null
+
         }
+
+
+
+        fun showControlsTemporarily() {
+
+            areControlsVisible = true
+
+            autoHideJob?.cancel()
+
+            autoHideJob = autoHideScope.launch {
+
+                delay(4_000)
+
+                hideControls()
+
+            }
+
+        }
+
+
+
+        LaunchedEffect(ballastOffset, isEditMode) {
+
+            if (!isEditMode) {
+
+                displayOffset.value = ballastOffset
+
+            }
+
+        }
+
+
+
+        LaunchedEffect(
+
+            ballastState.snapshot.hasBallast,
+
+            ballastState.snapshot.ratio,
+
+            areControlsVisible
+
+        ) {
+
+            val ratio = ballastState.snapshot.ratio
+
+            if (!ballastState.snapshot.hasBallast) {
+
+                hideControls()
+
+            } else if (areControlsVisible && (ratio <= 0f || ratio >= 1f)) {
+
+                hideControls()
+
+            }
+
+        }
+
+
+
+        LaunchedEffect(isEditMode) {
+
+            if (isEditMode) {
+
+                hideControls()
+
+            }
+
+        }
+
+
 
         DisposableEffect(Unit) {
-            onDispose { widgetManager.clearGestureRegion(MapOverlayGestureTarget.BALLAST) }
+
+            onDispose {
+
+                widgetManager.clearGestureRegion(MapOverlayGestureTarget.BALLAST)
+
+                autoHideJob?.cancel()
+
+            }
+
         }
 
+
+
         Box(
+
             modifier = modifier
+
                 .offset { IntOffset(displayOffset.value.x.roundToInt(), displayOffset.value.y.roundToInt()) }
+
                 .width(widthDp.dp)
+
                 .height(heightDp.dp)
+
                 .editModeBorder(isEditMode, RoundedCornerShape(18.dp))
+
                 .onGloballyPositioned { coordinates ->
+
                     widgetManager.updateGestureRegion(
+
                         target = MapOverlayGestureTarget.BALLAST,
+
                         bounds = coordinates.boundsInRoot()
+
                     )
+
                 }
+
                 .then(
+
                     if (isEditMode) {
+
                         Modifier.pointerInput(screenWidthPx, screenHeightPx) {
+
                             detectDragGestures(
+
                                 onDrag = { change, dragAmount ->
+
                                     displayOffset.value = Offset(
+
                                         x = (displayOffset.value.x + dragAmount.x).coerceIn(
+
                                             0f,
+
                                             (screenWidthPx - widthPx).coerceAtLeast(0f)
+
                                         ),
+
                                         y = (displayOffset.value.y + dragAmount.y).coerceIn(
+
                                             0f,
+
                                             (screenHeightPx - heightPx).coerceAtLeast(0f)
+
                                         )
+
                                     )
+
                                     change.consumePositionChange()
+
                                 },
+
                                 onDragEnd = {
+
                                     widgetManager.saveWidgetPosition("ballast_pill", displayOffset.value)
+
                                     onOffsetChange(displayOffset.value)
+
                                 }
+
                             )
+
                         }
+
                     } else {
+
                         Modifier
+
                     }
+
                 )
+
+                .pointerInput(isEditMode) {
+
+                    if (!isEditMode) {
+
+                        detectTapGestures(onTap = {
+
+                            if (areControlsVisible) {
+
+                                hideControls()
+
+                            } else {
+
+                                showControlsTemporarily()
+
+                            }
+
+                        })
+
+                    }
+
+                }
+
         ) {
+
             BallastPill(
+
                 state = ballastState,
+
                 onCommand = onCommand,
+
                 modifier = Modifier.fillMaxSize()
+
             )
+
+
+
+            AnimatedVisibility(
+
+                visible = areControlsVisible && ballastState.snapshot.hasBallast,
+
+                enter = fadeIn(),
+
+                exit = fadeOut()
+
+            ) {
+
+                Box(modifier = Modifier.fillMaxSize()) {
+
+                    BallastControlButton(
+
+                        text = "Fill",
+
+                        enabled = ballastState.isFillEnabled,
+
+                        onClick = {
+
+                            onCommand(BallastCommand.StartFill)
+
+                            showControlsTemporarily()
+
+                        },
+
+                        modifier = Modifier
+
+                            .align(Alignment.TopCenter)
+
+                            .padding(top = 8.dp)
+
+                    )
+
+
+
+                    BallastControlButton(
+
+                        text = "Drain",
+
+                        enabled = ballastState.isDrainEnabled,
+
+                        onClick = {
+
+                            onCommand(BallastCommand.StartDrain)
+
+                            showControlsTemporarily()
+
+                        },
+
+                        modifier = Modifier
+
+                            .align(Alignment.BottomCenter)
+
+                            .padding(bottom = 8.dp)
+
+                    )
+
+                }
+
+            }
+
         }
+
     }
+
+
+
+    @Composable
+
+    private fun BallastControlButton(
+
+        text: String,
+
+        enabled: Boolean,
+
+        onClick: () -> Unit,
+
+        modifier: Modifier = Modifier
+
+    ) {
+
+        Button(
+
+            onClick = onClick,
+
+            enabled = enabled,
+
+            shape = RoundedCornerShape(24.dp),
+
+            colors = ButtonDefaults.buttonColors(
+
+                containerColor = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+
+                contentColor = if (enabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+
+            ),
+
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+
+            modifier = modifier.defaultMinSize(minHeight = 32.dp)
+
+        ) {
+
+            Text(text = text, style = MaterialTheme.typography.labelMedium)
+
+        }
+
+    }
+
+
 
     /**
      * Draggable hamburger button docked along the left edge.
@@ -535,7 +832,8 @@ object MapUIWidgets {
                 onDismissRequest = {
                     isExpanded = false
                     Log.d(tag, "Dropdown dismissed")
-                }
+                },
+                shape = RoundedCornerShape(20.dp)
             ) {
                 visibleModes.forEach { mode ->
                     DropdownMenuItem(
@@ -643,4 +941,9 @@ private fun Modifier.editModeBorder(
         this
     }
 }
+
+
+
+
+
 

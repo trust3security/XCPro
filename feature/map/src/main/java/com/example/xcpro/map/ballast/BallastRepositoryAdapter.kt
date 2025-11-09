@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlin.math.max
 
-private const val DEFAULT_MAX_WATER_KG = 200.0
+private const val DEFAULT_MAX_WATER_KG = 192.0
 
 class BallastRepositoryAdapter(
     private val repository: GliderRepository
@@ -40,3 +40,4 @@ class BallastRepositoryAdapter(
         return max(baseline, config.waterBallastKg)
     }
 }
+

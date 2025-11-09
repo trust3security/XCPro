@@ -140,7 +140,7 @@ private fun RecenterButton(
             },
             modifier = Modifier.matchParentSize(),
             containerColor = MaterialTheme.colorScheme.secondary,
-            contentColor = Color.White,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
             elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp)
         ) {
             Icon(
@@ -167,8 +167,8 @@ private fun ReturnButton(
                 onReturn()
             },
             modifier = Modifier.matchParentSize(),
-            containerColor = MaterialTheme.colorScheme.tertiary,
-            contentColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
             elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp)
         ) {
             Icon(
@@ -199,15 +199,15 @@ private fun DistanceCirclesButton(
             },
             modifier = Modifier.matchParentSize(),
             containerColor = if (isEnabled) {
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.7f) // ✅ 30% more transparent when enabled
+                MaterialTheme.colorScheme.primary
             } else {
-                MaterialTheme.colorScheme.outline.copy(alpha = 0.5f) // ✅ 50% more transparent when disabled
+                MaterialTheme.colorScheme.surfaceVariant
             },
-            contentColor = Color.White,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
             elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp)
         ) {
             ThreeCirclesIcon(
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onPrimary,
                 modifier = Modifier.size(24.dp)
             )
         }
@@ -229,7 +229,7 @@ private fun QnhButton(
                 onClick = onClick,
                 modifier = Modifier.fillMaxSize(),
             containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = Color.White,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
             elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp)
         ) {
             Icon(
@@ -305,6 +305,9 @@ private fun ThreeCirclesIcon(
         )
     }
 }
+
+
+
 
 
 
