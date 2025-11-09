@@ -136,7 +136,7 @@ fun MapMainLayers(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .zIndex(2f)
+                .zIndex(11f)
                 .pointerInteropFilter { motionEvent ->
                     val action = when (motionEvent.actionMasked) {
                         MotionEvent.ACTION_DOWN -> "DOWN"

@@ -410,11 +410,9 @@ fun MapScreen(
                         )
                     },
                     onVariometerLongPress = {
-                        mapViewModel.onEvent(MapUiEvent.SetUiEditMode(true))
+                        mapViewModel.onEvent(MapUiEvent.ToggleUiEditMode)
                     },
-                    onVariometerEditFinished = {
-                        mapViewModel.onEvent(MapUiEvent.SetUiEditMode(false))
-                    },
+                    onVariometerEditFinished = {},
                     hamburgerOffset = hamburgerOffsetState,
                     flightModeOffset = flightModeOffsetState,
                     showQnhDialog = showQnhDialogState,
