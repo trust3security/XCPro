@@ -60,10 +60,11 @@ internal object CardDataFormatter {
             }
 
             "agl" -> {
-                val secondary = if (liveData.isQNHCalibrated) {
-                    "QNH ${liveData.qnh.roundToInt()}"
-                } else {
-                    "NO QNH"
+                val hasManualQnh = liveData.qnh in 900.0..1100.0 && !liveData.qnh.isNaN()
+                val secondary = when {
+                    liveData.isQNHCalibrated -> "QNH ${liveData.qnh.roundToInt()}"
+                    hasManualQnh -> "QNH ${liveData.qnh.roundToInt()}"
+                    else -> "STD"
                 }
 
                 if (liveData.agl.isNaN()) {
@@ -104,7 +105,26 @@ internal object CardDataFormatter {
                 "COMP"
             )
 
-            "ias" -> Pair(placeholderFor(cardId), "NO SENSOR")
+            "ias" -> {
+                val groundSpeedMs = liveData.groundSpeed
+                if (!groundSpeedMs.isFinite()) {
+                    return Pair(placeholderFor(cardId), "NO DATA")
+                }
+
+                val altitudeMeters = when {
+                    liveData.baroAltitude.isFinite() && liveData.baroAltitude != 0.0 -> liveData.baroAltitude
+                    liveData.gpsAltitude.isFinite() && liveData.gpsAltitude != 0.0 -> liveData.gpsAltitude
+                    else -> 0.0
+                }
+                val altitudeFeet = UnitsConverter.metersToFeet(altitudeMeters)
+                val approxIasKt = AirspeedCalculator.calculateApproximateIAS(
+                    groundSpeedKt = UnitsConverter.msToKnots(groundSpeedMs.coerceAtLeast(0.0)),
+                    altitudeFt = altitudeFeet
+                )
+                val approxIasMs = UnitsConverter.knotsToMs(approxIasKt).coerceAtLeast(0.0)
+                val formatted = UnitsFormatter.speed(SpeedMs(approxIasMs), units)
+                Pair(formatted.text, "EST")
+            }
 
             "ground_speed" -> Pair(
                 UnitsFormatter.speed(SpeedMs(liveData.groundSpeed), units).text,

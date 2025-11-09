@@ -17,6 +17,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 internal fun CardStateRepository.initializeCards(containerSize: IntSize, density: Density) {
+    if (hasInitialized || isInitializing) return
+    hasInitialized = true
+    restorePersistedPositions()
 }
 
 internal suspend fun CardStateRepository.loadEssentialCardsOnStartup(
@@ -78,8 +81,9 @@ private fun CardStateRepository.createEssentialCardsManually(
                 flightData = flightData
             )
 
-            cardStateFlowsMap[cardState.id] = MutableStateFlow(cardState)
-        }
+    cardStateFlowsMap[cardState.id] = MutableStateFlow(cardState)
+    restorePersistedPositions(setOf(cardState.id))
+}
     }
 
     setSelectedCardIds(essentialCardIds.toSet())
@@ -153,6 +157,25 @@ private fun CardStateRepository.addCard(
 
 private fun CardStateRepository.removeCard(cardId: String) {
     cardStateFlowsMap.remove(cardId)
+}
+
+internal fun CardStateRepository.restorePersistedPositions(cardIds: Set<String>? = null) {
+    val preferences = cardPreferences ?: return
+    val targetIds = cardIds ?: cardStateFlowsMap.keys.toSet()
+    if (targetIds.isEmpty()) return
+    scope.launch {
+        targetIds.forEach { cardId ->
+            val saved = preferences.getCardPosition(cardId).firstOrNull() ?: return@forEach
+            cardStateFlowsMap[cardId]?.let { stateFlow ->
+                stateFlow.value = stateFlow.value.copy(
+                    x = saved.x,
+                    y = saved.y,
+                    width = saved.width,
+                    height = saved.height
+                )
+            }
+        }
+    }
 }
 
 internal fun CardStateRepository.applyTemplate(

@@ -315,6 +315,7 @@ fun MapScreen(
 
     val hamburgerOffsetState = remember { mutableStateOf(widgetPositions.sideHamburgerOffset) }
     val flightModeOffsetState = remember { mutableStateOf(widgetPositions.flightModeOffset) }
+    val ballastOffsetState = remember { mutableStateOf(widgetPositions.ballastOffset) }
 
     val variometerUiState by mapViewModel.variometerUiState.collectAsState()
     val minVariometerSizePx = with(density) { 60.dp.toPx() }
@@ -368,7 +369,6 @@ fun MapScreen(
                     mapInitializer = mapInitializer,
                     locationManager = locationManager,
                     flightDataManager = flightDataManager,
-                    flightDataRepository = mapViewModel.sharedFlightDataRepository,
                     flightViewModel = flightViewModel,
                     taskManager = taskManager,
                     orientationManager = orientationManager,
@@ -409,12 +409,11 @@ fun MapScreen(
                             maxSizePx = maxVariometerSizePx
                         )
                     },
-                    onVariometerLongPress = {
-                        mapViewModel.onEvent(MapUiEvent.ToggleUiEditMode)
-                    },
+                    onVariometerLongPress = {},
                     onVariometerEditFinished = {},
                     hamburgerOffset = hamburgerOffsetState,
                     flightModeOffset = flightModeOffsetState,
+                    ballastOffset = ballastOffsetState,
                     showQnhDialog = showQnhDialogState,
                     qnhInput = qnhInputState,
                     qnhError = qnhErrorState,

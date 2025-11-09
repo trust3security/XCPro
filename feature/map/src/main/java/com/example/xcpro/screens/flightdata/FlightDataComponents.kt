@@ -22,9 +22,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.graphics.toColorInt
 import com.example.dfcards.*
+import kotlin.math.max
 
 data class FileItem(
     val name: String,
@@ -438,6 +441,14 @@ fun CompactCardItem(
     onToggle: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val titleStyle = MaterialTheme.typography.bodyMedium
+    val titleFontSize = titleStyle.fontSize.takeIf { it != TextUnit.Unspecified } ?: 16.sp
+    val secondaryFontSize = max(titleFontSize.value - 2f, 8f).sp
+    val secondaryStyle = MaterialTheme.typography.bodySmall.copy(
+        fontSize = secondaryFontSize,
+        fontWeight = FontWeight.Medium
+    )
+
     Surface(
         onClick = onToggle,
         modifier = modifier
@@ -464,7 +475,7 @@ fun CompactCardItem(
             ) {
                 Text(
                     text = card.title,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = titleStyle,
                     fontWeight = FontWeight.Medium,
                     color = Color.Black,
                     textAlign = TextAlign.Center,
@@ -483,8 +494,7 @@ fun CompactCardItem(
 
                 Text(
                     text = " ",
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Medium,
+                    style = secondaryStyle,
                     color = Color.Black,
                     textAlign = TextAlign.Center,
                     maxLines = 1,

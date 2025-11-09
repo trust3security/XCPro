@@ -37,7 +37,6 @@ import com.example.xcpro.map.ballast.BallastUiState
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.common.waypoint.WaypointData
-import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.sensors.GPSData
 import kotlinx.coroutines.flow.StateFlow
@@ -52,7 +51,6 @@ internal fun MapScreenContent(
     mapInitializer: MapInitializer,
     locationManager: LocationManager,
     flightDataManager: FlightDataManager,
-    flightDataRepository: FlightDataRepository,
     flightViewModel: FlightDataViewModel,
     taskManager: TaskManagerCoordinator,
     orientationManager: MapOrientationManager,
@@ -83,6 +81,7 @@ internal fun MapScreenContent(
     onVariometerEditFinished: () -> Unit,
     hamburgerOffset: MutableState<Offset>,
     flightModeOffset: MutableState<Offset>,
+    ballastOffset: MutableState<Offset>,
     showQnhDialog: MutableState<Boolean>,
     qnhInput: MutableState<String>,
     qnhError: MutableState<String?>,
@@ -116,8 +115,7 @@ internal fun MapScreenContent(
                         mapState = mapState,
                         mapInitializer = mapInitializer,
                         locationManager = locationManager,
-                    flightDataManager = flightDataManager,
-                    flightDataRepository = flightDataRepository,
+                        flightDataManager = flightDataManager,
                         flightViewModel = flightViewModel,
                         currentFlightModeSelection = currentFlightModeSelection,
                         taskManager = taskManager,
@@ -136,11 +134,12 @@ internal fun MapScreenContent(
                         minVariometerSizePx = minVariometerSizePx,
                         maxVariometerSizePx = maxVariometerSizePx,
                         onVariometerOffsetChange = onVariometerOffsetChange,
-                        onVariometerSizeChange = onVariometerSizeChange,
-                        onVariometerLongPress = onVariometerLongPress,
-                        onVariometerEditFinished = onVariometerEditFinished,
-                        hamburgerOffset = hamburgerOffset,
-                        flightModeOffset = flightModeOffset,
+                    onVariometerSizeChange = onVariometerSizeChange,
+                    onVariometerLongPress = onVariometerLongPress,
+                    onVariometerEditFinished = onVariometerEditFinished,
+                    hamburgerOffset = hamburgerOffset,
+                    flightModeOffset = flightModeOffset,
+                    ballastOffset = ballastOffset,
                         widgetManager = widgetManager,
                         screenWidthPx = screenWidthPx,
                         screenHeightPx = screenHeightPx,

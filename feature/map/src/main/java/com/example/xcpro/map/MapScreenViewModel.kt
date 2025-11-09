@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.dfcards.CardPreferences
 import com.example.xcpro.MapOrientationManager
+import com.example.xcpro.convertToRealTimeFlightData
 import com.example.xcpro.common.di.DefaultDispatcher
 import com.example.xcpro.common.flow.inVm
 import com.example.xcpro.common.units.UnitsPreferences
@@ -106,6 +107,23 @@ class MapScreenViewModel @Inject constructor(
     val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
     private val _uiEffects = MutableSharedFlow<MapUiEffect>(extraBufferCapacity = 1)
     val uiEffects: SharedFlow<MapUiEffect> = _uiEffects.asSharedFlow()
+
+    init {
+        observeFlightDataRepository()
+    }
+
+    private fun observeFlightDataRepository() {
+        flightDataRepository.flightData
+            .onEach { data ->
+                if (data != null) {
+                    val liveData = convertToRealTimeFlightData(data)
+                    flightDataManager.updateLiveFlightData(liveData)
+                } else {
+                    flightDataManager.updateLiveFlightData(null)
+                }
+            }
+            .launchIn(viewModelScope)
+    }
 
     private val _isAATEditMode = MutableStateFlow(false)
     val isAATEditMode: StateFlow<Boolean> = _isAATEditMode.asStateFlow()

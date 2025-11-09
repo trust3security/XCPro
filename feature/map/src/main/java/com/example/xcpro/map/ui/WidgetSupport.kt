@@ -31,10 +31,15 @@ class MapWidgetLayoutStore(
             prefs.getFloat("flight_mode_menu_x", FLIGHT_MODE_DEFAULT_X),
             prefs.getFloat("flight_mode_menu_y", flightModeDefaultY(density))
         )
+        val ballastOffset = Offset(
+            prefs.getFloat("ballast_pill_x", ballastDefaultX(screenWidthPx, density)),
+            prefs.getFloat("ballast_pill_y", ballastDefaultY(density))
+        )
 
         return WidgetPositions(
             sideHamburgerOffset = hamburgerOffset,
-            flightModeOffset = flightModeOffset
+            flightModeOffset = flightModeOffset,
+            ballastOffset = ballastOffset
         )
     }
 
@@ -52,10 +57,22 @@ class MapWidgetLayoutStore(
 
     private fun flightModeDefaultY(density: Density): Float = density.run { 80.dp.toPx() }
 
+    private fun ballastDefaultX(screenWidthPx: Float, density: Density): Float {
+        val pillWidthPx = density.run { BALLAST_WIDTH_DP.dp.toPx() }
+        val paddingPx = density.run { BALLAST_PADDING_END_DP.dp.toPx() }
+        return (screenWidthPx - paddingPx - pillWidthPx).coerceAtLeast(0f)
+    }
+
+    private fun ballastDefaultY(density: Density): Float =
+        density.run { BALLAST_PADDING_TOP_DP.dp.toPx() }
+
     companion object {
         private const val TAG = "MapWidgetLayoutStore"
         private const val HAMBURGER_DEFAULT_X = 16f
         private const val FLIGHT_MODE_DEFAULT_X = 16f
+        private const val BALLAST_WIDTH_DP = 40f
+        private const val BALLAST_PADDING_END_DP = 16f
+        private const val BALLAST_PADDING_TOP_DP = 140f
     }
 }
 
@@ -85,12 +102,14 @@ class MapGestureRegistry {
         MapOverlayGestureTarget.CARD_GRID -> 0
         MapOverlayGestureTarget.FLIGHT_MODE -> 1
         MapOverlayGestureTarget.SIDE_HAMBURGER,
-        MapOverlayGestureTarget.VARIOMETER -> 2
+        MapOverlayGestureTarget.VARIOMETER,
+        MapOverlayGestureTarget.BALLAST -> 2
     }
 }
 
 /** Aggregated widget offsets and sizes used by the manager + UI layer. */
 data class WidgetPositions(
     val sideHamburgerOffset: Offset,
-    val flightModeOffset: Offset
+    val flightModeOffset: Offset,
+    val ballastOffset: Offset
 )

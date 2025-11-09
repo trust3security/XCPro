@@ -32,8 +32,6 @@ import com.example.xcpro.CompassWidget
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.common.orientation.MapOrientationMode
 import com.example.xcpro.common.orientation.OrientationData
-import com.example.xcpro.convertToRealTimeFlightData
-import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.map.DistanceCirclesCanvas
 import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.map.LocationManager
@@ -48,7 +46,6 @@ import com.example.xcpro.map.MapTaskIntegration
 import com.example.xcpro.map.ui.widgets.MapUIWidgetManager
 import com.example.xcpro.map.ui.widgets.MapUIWidgets
 import com.example.xcpro.map.ballast.BallastCommand
-import com.example.xcpro.map.ballast.BallastPill
 import com.example.xcpro.map.ballast.BallastUiState
 import com.example.xcpro.sensors.GPSData
 import com.example.xcpro.tasks.TaskManagerCoordinator
@@ -62,7 +59,6 @@ internal fun MapOverlayStack(
     mapInitializer: MapInitializer,
     locationManager: LocationManager,
     flightDataManager: FlightDataManager,
-    flightDataRepository: FlightDataRepository,
     flightViewModel: FlightDataViewModel,
     currentFlightModeSelection: com.example.dfcards.FlightModeSelection,
     taskManager: TaskManagerCoordinator,
@@ -86,6 +82,7 @@ internal fun MapOverlayStack(
     onVariometerEditFinished: () -> Unit,
     hamburgerOffset: MutableState<Offset>,
     flightModeOffset: MutableState<Offset>,
+    ballastOffset: MutableState<Offset>,
     widgetManager: MapUIWidgetManager,
     screenWidthPx: Float,
     screenHeightPx: Float,
@@ -122,7 +119,6 @@ internal fun MapOverlayStack(
             mapInitializer = mapInitializer,
             locationManager = locationManager,
             flightDataManager = flightDataManager,
-            flightDataRepository = flightDataRepository,
             flightViewModel = flightViewModel,
             currentFlightModeSelection = currentFlightModeSelection,
             taskManager = taskManager,
@@ -137,7 +133,6 @@ internal fun MapOverlayStack(
             onSetAATEditMode = onSetAATEditMode,
             onContainerSizeChanged = { size -> safeContainerSize.value = size },
             modifier = Modifier.fillMaxSize(),
-            convertToRealTime = ::convertToRealTimeFlightData,
             onCardLayerPositioned = { bounds ->
                 if (bounds == Rect.Zero) {
                     widgetManager.clearGestureRegion(MapOverlayGestureTarget.CARD_GRID)
@@ -213,13 +208,18 @@ internal fun MapOverlayStack(
             enter = fadeIn() + scaleIn(),
             exit = fadeOut() + scaleOut(),
             modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .padding(top = 140.dp, end = 16.dp)
+                .align(Alignment.TopStart)
                 .zIndex(5f)
         ) {
-            BallastPill(
-                state = ballastState,
-                onCommand = onBallastCommand
+            MapUIWidgets.BallastWidget(
+                widgetManager = widgetManager,
+                ballastState = ballastState,
+                onCommand = onBallastCommand,
+                ballastOffset = ballastOffset.value,
+                screenWidthPx = screenWidthPx,
+                screenHeightPx = screenHeightPx,
+                onOffsetChange = { offset -> ballastOffset.value = offset },
+                isEditMode = isUiEditMode
             )
         }
 
@@ -250,7 +250,7 @@ internal fun MapOverlayStack(
             onSizeChange = onVariometerSizeChange,
             onLongPress = onVariometerLongPress,
             onEditFinished = onVariometerEditFinished,
-            modifier = Modifier.zIndex(if (isUiEditMode) 12f else 6f)
+            modifier = Modifier.zIndex(if (isUiEditMode) 12f else 3f)
         )
 
         DistanceCirclesCanvas(

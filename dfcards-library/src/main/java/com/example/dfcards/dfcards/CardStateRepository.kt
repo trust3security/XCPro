@@ -61,6 +61,7 @@ internal class CardStateRepository(
 
     fun setCardPreferences(preferences: CardPreferences) {
         cardPreferences = preferences
+        restorePersistedPositions()
     }
 
     fun updateFlightMode(mode: FlightModeSelection) {

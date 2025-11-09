@@ -183,6 +183,6 @@ private fun calculateStableFontSizes(
     return StableFontSizes(
         labelSize = (5f * scale).coerceAtLeast(3f),
         primarySize = (10f * scale).coerceAtLeast(6f),
-        secondarySize = (6f * scale).coerceAtLeast(4f)
+        secondarySize = ((5f * scale) - 2f).coerceAtLeast(2.5f)
     )
 }

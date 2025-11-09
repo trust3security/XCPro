@@ -37,9 +37,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.xcpro.common.units.UnitsPreferences
+import kotlin.math.max
 
 /**
  * Category tabs section (Essential, Navigation, Performance, etc.).
@@ -172,6 +174,13 @@ private fun CardGridItem(
     liveFlightData: RealTimeFlightData? = null,
     units: UnitsPreferences = UnitsPreferences()
 ) {
+    val titleStyle = MaterialTheme.typography.bodyMedium
+    val titleFontSize = titleStyle.fontSize.takeIf { it != TextUnit.Unspecified } ?: 16.sp
+    val secondaryFontSize = max(titleFontSize.value - 2f, 8f).sp
+    val secondaryStyle = MaterialTheme.typography.bodySmall.copy(
+        fontSize = secondaryFontSize
+    )
+
     val (primaryValue, secondaryValue) = if (liveFlightData != null) {
         CardLibrary.mapLiveDataToCard(card.id, liveFlightData, units)
     } else {
@@ -207,7 +216,7 @@ private fun CardGridItem(
             ) {
                 Text(
                     text = card.title,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = titleStyle,
                     fontWeight = FontWeight.Medium,
                     color = textColor,
                     textAlign = TextAlign.Center,
@@ -243,7 +252,7 @@ private fun CardGridItem(
                 ) { value ->
                     Text(
                         text = value,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = secondaryStyle,
                         color = textColor.copy(alpha = 0.6f),
                         textAlign = TextAlign.Center,
                         maxLines = 1,

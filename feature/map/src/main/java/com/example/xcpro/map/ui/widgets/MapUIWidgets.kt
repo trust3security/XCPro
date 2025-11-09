@@ -12,6 +12,7 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
@@ -54,6 +55,9 @@ import androidx.compose.ui.unit.dp
 import com.example.ui1.UIVariometer
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.map.MapOverlayGestureTarget
+import com.example.xcpro.map.ballast.BallastCommand
+import com.example.xcpro.map.ballast.BallastPill
+import com.example.xcpro.map.ballast.BallastUiState
 import com.example.xcpro.variometer.layout.VariometerUiState
 import kotlin.math.roundToInt
 
@@ -209,6 +213,84 @@ object MapUIWidgets {
         }
     }
 
+    @OptIn(ExperimentalFoundationApi::class)
+    @Composable
+    fun BallastWidget(
+        widgetManager: MapUIWidgetManager,
+        ballastState: BallastUiState,
+        onCommand: (BallastCommand) -> Unit,
+        ballastOffset: Offset,
+        screenWidthPx: Float,
+        screenHeightPx: Float,
+        onOffsetChange: (Offset) -> Unit,
+        isEditMode: Boolean,
+        modifier: Modifier = Modifier,
+        widthDp: Float = 40f,
+        heightDp: Float = 120f
+    ) {
+        val density = LocalDensity.current
+        val widthPx = with(density) { widthDp.dp.toPx() }
+        val heightPx = with(density) { heightDp.dp.toPx() }
+        val displayOffset = remember(isEditMode) { mutableStateOf(ballastOffset) }
+
+        LaunchedEffect(ballastOffset, isEditMode) {
+            if (!isEditMode) {
+                displayOffset.value = ballastOffset
+            }
+        }
+
+        DisposableEffect(Unit) {
+            onDispose { widgetManager.clearGestureRegion(MapOverlayGestureTarget.BALLAST) }
+        }
+
+        Box(
+            modifier = modifier
+                .offset { IntOffset(displayOffset.value.x.roundToInt(), displayOffset.value.y.roundToInt()) }
+                .width(widthDp.dp)
+                .height(heightDp.dp)
+                .editModeBorder(isEditMode, RoundedCornerShape(18.dp))
+                .onGloballyPositioned { coordinates ->
+                    widgetManager.updateGestureRegion(
+                        target = MapOverlayGestureTarget.BALLAST,
+                        bounds = coordinates.boundsInRoot()
+                    )
+                }
+                .then(
+                    if (isEditMode) {
+                        Modifier.pointerInput(screenWidthPx, screenHeightPx) {
+                            detectDragGestures(
+                                onDrag = { change, dragAmount ->
+                                    displayOffset.value = Offset(
+                                        x = (displayOffset.value.x + dragAmount.x).coerceIn(
+                                            0f,
+                                            (screenWidthPx - widthPx).coerceAtLeast(0f)
+                                        ),
+                                        y = (displayOffset.value.y + dragAmount.y).coerceIn(
+                                            0f,
+                                            (screenHeightPx - heightPx).coerceAtLeast(0f)
+                                        )
+                                    )
+                                    change.consumePositionChange()
+                                },
+                                onDragEnd = {
+                                    widgetManager.saveWidgetPosition("ballast_pill", displayOffset.value)
+                                    onOffsetChange(displayOffset.value)
+                                }
+                            )
+                        }
+                    } else {
+                        Modifier
+                    }
+                )
+        ) {
+            BallastPill(
+                state = ballastState,
+                onCommand = onCommand,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+    }
+
     /**
      * Draggable hamburger button docked along the left edge.
      * Users can reposition it while edit mode is active.
@@ -228,8 +310,9 @@ object MapUIWidgets {
         sizeDp: Float = 90f
     ) {
         val density = LocalDensity.current
-        val sizePx = with(density) { sizeDp.dp.toPx() }
         val iconSizeDp = sizeDp * 0.6f
+        val containerSizeDp = if (isEditMode) sizeDp * 0.8f else sizeDp
+        val sizePx = with(density) { containerSizeDp.dp.toPx() }
 
         DisposableEffect(Unit) {
             onDispose { widgetManager.clearGestureRegion(MapOverlayGestureTarget.SIDE_HAMBURGER) }
@@ -248,7 +331,7 @@ object MapUIWidgets {
         Surface(
             modifier = modifier
                 .offset { IntOffset(displayOffset.value.x.roundToInt(), displayOffset.value.y.roundToInt()) }
-                .size(sizeDp.dp)
+                .size(containerSizeDp.dp)
                 .editModeBorder(isEditMode, RectangleShape)
                 .onGloballyPositioned { coordinates ->
                     widgetManager.updateGestureRegion(
@@ -301,12 +384,25 @@ object MapUIWidgets {
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.Menu,
-                    contentDescription = "Open navigation drawer",
-                    modifier = Modifier.size(iconSizeDp.dp),
-                    tint = Color(0xFF7A7A7A)
-                )
+                val lineWidth = (iconSizeDp * 0.72f).dp
+                val lineHeight = (iconSizeDp * 0.08f).dp
+                val columnHeight = iconSizeDp.dp + lineHeight * 2
+                val lineShape = RoundedCornerShape(percent = 50)
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(lineHeight, Alignment.CenterVertically),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.height(columnHeight)
+                ) {
+                    repeat(3) {
+                        Box(
+                            modifier = Modifier
+                                .width(lineWidth)
+                                .height(lineHeight)
+                                .clip(lineShape)
+                                .background(Color.Black)
+                        )
+                    }
+                }
             }
         }
     }
@@ -327,8 +423,8 @@ object MapUIWidgets {
         onOffsetChange: (Offset) -> Unit,
         isEditMode: Boolean,
         modifier: Modifier = Modifier,
-        widthDp: Float = 150f,
-        heightDp: Float = 56f
+        widthDp: Float = 96f,
+        heightDp: Float = 36f
     ) {
         val tag = "FlightModeMenu"
         val density = LocalDensity.current
@@ -358,7 +454,7 @@ object MapUIWidgets {
                 .offset { IntOffset(displayOffset.value.x.roundToInt(), displayOffset.value.y.roundToInt()) }
                 .width(widthDp.dp)
                 .height(heightDp.dp)
-                .editModeBorder(isEditMode, RoundedCornerShape(16.dp))
+                .editModeBorder(isEditMode, RoundedCornerShape(18.dp))
                 .onGloballyPositioned { coordinates ->
                     widgetManager.updateGestureRegion(
                         target = MapOverlayGestureTarget.FLIGHT_MODE,
@@ -408,8 +504,8 @@ object MapUIWidgets {
                 }
         ) {
             Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                shape = RoundedCornerShape(18.dp),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.68f),
                 tonalElevation = 0.dp,
                 shadowElevation = 0.dp,
                 modifier = Modifier.fillMaxSize()
