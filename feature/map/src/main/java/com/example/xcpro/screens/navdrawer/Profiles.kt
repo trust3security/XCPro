@@ -77,13 +77,8 @@ fun ProfilesScreen(
         topBar = {
             SettingsTopAppBar(
                 title = "Profiles",
-                onNavigateUp = { navController.popBackStack() },
-                onOpenDrawer = {
-                    scope.launch {
-                        navController.popBackStack("map", inclusive = false)
-                        drawerState.open()
-                    }
-                },
+                onNavigateUp = { navController.navigateUp() },
+                onSecondaryNavigate = { navController.popBackStack() },
                 onNavigateToMap = {
                     scope.launch {
                         drawerState.close()
@@ -369,3 +364,4 @@ fun ProfilesScreen(
         }
     }
 }
+

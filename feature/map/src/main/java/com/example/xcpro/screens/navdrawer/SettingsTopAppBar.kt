@@ -23,7 +23,7 @@ import com.example.ui1.icons.Reply_all
 fun SettingsTopAppBar(
     title: String,
     onNavigateUp: (() -> Unit)?,
-    onOpenDrawer: (() -> Unit)?,
+    onSecondaryNavigate: (() -> Unit)?,
     onNavigateToMap: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -46,11 +46,11 @@ fun SettingsTopAppBar(
                         )
                     }
                 }
-                if (onOpenDrawer != null) {
-                    IconButton(onClick = onOpenDrawer) {
+                if (onSecondaryNavigate != null) {
+                    IconButton(onClick = onSecondaryNavigate) {
                         Icon(
                             imageVector = Reply_all,
-                            contentDescription = "Open navigation drawer",
+                            contentDescription = "Secondary back",
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -73,3 +73,5 @@ fun SettingsTopAppBar(
         )
     )
 }
+
+

@@ -83,6 +83,12 @@ enum class CardStyle(
         title = "Large",
         description = "Bigger typography and padding",
         icon = Icons.Filled.FormatSize
+    ),
+    TRANSPARENT(
+        id = "transparent",
+        title = "Transparent",
+        description = "No border or fill, map shows through",
+        icon = Icons.Filled.VisibilityOff
     );
 
     companion object {
