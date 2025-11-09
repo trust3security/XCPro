@@ -22,5 +22,6 @@ enum class MapOverlayGestureTarget {
     CARD_GRID,
     SIDE_HAMBURGER,
     FLIGHT_MODE,
-    VARIOMETER
+    VARIOMETER,
+    BALLAST
 }

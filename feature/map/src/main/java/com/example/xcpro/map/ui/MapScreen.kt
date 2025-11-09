@@ -98,11 +98,14 @@ import com.example.xcpro.saveConfig
 // ✅ REMOVED DataQuality - no longer used
 import com.example.ui1.UIVariometer
 import com.example.xcpro.navdrawer.NavigationDrawer
+import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
+import com.example.xcpro.screens.navdrawer.lookandfeel.LookAndFeelPreferences
 import kotlinx.coroutines.launch
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import java.io.File
 import java.util.Locale
+import kotlin.math.min
 import kotlin.math.roundToInt
 
 private const val TAG = "MapScreen"
@@ -200,6 +203,14 @@ fun MapScreen(
     // ✅ Profile ViewModel
     val profileViewModel: com.example.xcpro.profiles.ProfileViewModel = hiltViewModel()
     val profileUiState by profileViewModel.uiState.collectAsState()
+    val activeProfileId = profileUiState.activeProfile?.id ?: "default"
+    val lookAndFeelPreferences = remember(context) { LookAndFeelPreferences(context) }
+    val cardStyleFlow = remember(activeProfileId) {
+        lookAndFeelPreferences.observeCardStyle(activeProfileId)
+    }
+    val cardStyle by cardStyleFlow.collectAsState(
+        initial = lookAndFeelPreferences.getCardStyle(activeProfileId)
+    )
     // ✅ TaskScreenManager - Centralized task screen handling
     val taskScreenManager = mapViewModel.taskScreenManager
 
@@ -315,10 +326,11 @@ fun MapScreen(
 
     val hamburgerOffsetState = remember { mutableStateOf(widgetPositions.sideHamburgerOffset) }
     val flightModeOffsetState = remember { mutableStateOf(widgetPositions.flightModeOffset) }
+    val ballastOffsetState = remember { mutableStateOf(widgetPositions.ballastOffset) }
 
     val variometerUiState by mapViewModel.variometerUiState.collectAsState()
     val minVariometerSizePx = with(density) { 60.dp.toPx() }
-    val maxVariometerSizePx = with(density) { 200.dp.toPx() }
+    val maxVariometerSizePx = min(screenWidthPx, screenHeightPx)
     val defaultVariometerSizePx = with(density) { 150.dp.toPx() }
 
     LaunchedEffect(screenWidthPx, screenHeightPx) {
@@ -368,7 +380,6 @@ fun MapScreen(
                     mapInitializer = mapInitializer,
                     locationManager = locationManager,
                     flightDataManager = flightDataManager,
-                    flightDataRepository = mapViewModel.sharedFlightDataRepository,
                     flightViewModel = flightViewModel,
                     taskManager = taskManager,
                     orientationManager = orientationManager,
@@ -409,12 +420,11 @@ fun MapScreen(
                             maxSizePx = maxVariometerSizePx
                         )
                     },
-                    onVariometerLongPress = {
-                        mapViewModel.onEvent(MapUiEvent.ToggleUiEditMode)
-                    },
+                    onVariometerLongPress = {},
                     onVariometerEditFinished = {},
                     hamburgerOffset = hamburgerOffsetState,
                     flightModeOffset = flightModeOffsetState,
+                    ballastOffset = ballastOffsetState,
                     showQnhDialog = showQnhDialogState,
                     qnhInput = qnhInputState,
                     qnhError = qnhErrorState,
@@ -425,7 +435,8 @@ fun MapScreen(
                     ballastUiState = mapViewModel.ballastUiState,
                     onBallastCommand = mapViewModel::submitBallastCommand,
                     onHamburgerTap = { mapViewModel.onEvent(MapUiEvent.ToggleDrawer) },
-                    onHamburgerLongPress = { mapViewModel.onEvent(MapUiEvent.ToggleUiEditMode) }
+                    onHamburgerLongPress = { mapViewModel.onEvent(MapUiEvent.ToggleUiEditMode) },
+                    cardStyle = cardStyle
                 )
                 if (mapUiState.isLoadingWaypoints) {
                     Box(

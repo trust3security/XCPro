@@ -34,8 +34,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.max
 import kotlin.math.roundToInt
 
 internal data class ModalDisplayData(
@@ -83,6 +85,14 @@ internal fun CompactCardItem(
     onToggle: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val titleStyle = MaterialTheme.typography.bodyMedium
+    val titleFontSize = titleStyle.fontSize.takeIf { it != TextUnit.Unspecified } ?: 16.sp
+    val secondaryFontSize = max(titleFontSize.value - 2f, 8f).sp
+    val secondaryStyle = MaterialTheme.typography.bodySmall.copy(
+        fontSize = secondaryFontSize,
+        fontWeight = FontWeight.Medium
+    )
+
     val displayData = if (liveFlightData != null) {
         mapCardToModalDisplay(card, liveFlightData)
     } else {
@@ -119,7 +129,7 @@ internal fun CompactCardItem(
             ) {
                 Text(
                     text = card.title,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = titleStyle,
                     fontWeight = FontWeight.Medium,
                     color = Color.Black,
                     textAlign = TextAlign.Center,
@@ -139,8 +149,7 @@ internal fun CompactCardItem(
                 // ✅ NEW: Always show secondary line (even if empty) for consistent sizing
                 Text(
                     text = displayData.secondaryValue ?: " ", // ✅ Use space if no secondary value
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Medium,
+                    style = secondaryStyle,
                     color = Color.Black,
                     textAlign = TextAlign.Center,
                     maxLines = 1,

@@ -39,7 +39,8 @@ fun EnhancedFlightDataCard(
     cardHeight: Float,
     isEditMode: Boolean = false,
     isLiveData: Boolean = false,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    visualStyle: CardVisualStyle
 ) {
     val stableFontSizes = remember(cardWidth, cardHeight) {
         calculateStableFontSizes(cardWidth, cardHeight)
@@ -60,36 +61,43 @@ fun EnhancedFlightDataCard(
         label = "primary_scale"
     )
 
+    val backgroundBrush = if (isEditMode) {
+        Brush.verticalGradient(
+            colors = listOf(
+                MaterialTheme.colorScheme.surface,
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f)
+            )
+        )
+    } else {
+        visualStyle.backgroundBrush
+    }
+
+    val borderWidth = if (isEditMode) 1.dp else visualStyle.borderWidth
+    val borderColor = if (isEditMode) Color.Red else visualStyle.borderColor
+
+    val baseModifier = modifier
+        .fillMaxSize()
+        .clip(RectangleShape)
+        .background(brush = backgroundBrush)
+
+    val borderedModifier = if (borderWidth > 0.dp) {
+        baseModifier.border(
+            width = borderWidth,
+            color = borderColor,
+            shape = RectangleShape
+        )
+    } else {
+        baseModifier
+    }
+
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .clip(RectangleShape)
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = if (isEditMode) {
-                        listOf(
-                            MaterialTheme.colorScheme.surface,
-                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f)
-                        )
-                    } else {
-                        listOf(
-                            MaterialTheme.colorScheme.surface,
-                            MaterialTheme.colorScheme.surface
-                        )
-                    }
-                )
-            )
-            .border(
-                width = 1.dp,
-                color = if (isEditMode) Color.Red else Color.Black,
-                shape = RectangleShape
-            )
+        modifier = borderedModifier
     ) {
         Text(
             text = flightData.label,
             fontSize = stableFontSizes.labelSize.sp,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f * editModeAlpha),
+            color = visualStyle.labelColor.copy(alpha = 0.7f * editModeAlpha),
             textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -107,7 +115,8 @@ fun EnhancedFlightDataCard(
                     withStyle(
                         style = SpanStyle(
                             fontSize = stableFontSizes.primarySize.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            color = visualStyle.primaryColor
                         )
                     ) {
                         append(primaryNumber)
@@ -118,7 +127,7 @@ fun EnhancedFlightDataCard(
                             style = SpanStyle(
                                 fontSize = (stableFontSizes.primarySize * 0.55f).sp,
                                 fontWeight = FontWeight.Medium,
-                                color = Color.Black.copy(alpha = 0.6f)
+                                color = visualStyle.unitColor
                             )
                         ) {
                             append(unit)
@@ -128,14 +137,14 @@ fun EnhancedFlightDataCard(
                     withStyle(
                         style = SpanStyle(
                             fontSize = stableFontSizes.primarySize.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            color = visualStyle.primaryColor
                         )
                     ) {
                         append(flightData.primaryValue)
                     }
                 }
             },
-            color = Color.Black,
             textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -153,7 +162,7 @@ fun EnhancedFlightDataCard(
                 text = it,
                 fontSize = stableFontSizes.secondarySize.sp,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f * editModeAlpha),
+                color = visualStyle.secondaryColor.copy(alpha = 0.6f * editModeAlpha),
                 textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -183,6 +192,6 @@ private fun calculateStableFontSizes(
     return StableFontSizes(
         labelSize = (5f * scale).coerceAtLeast(3f),
         primarySize = (10f * scale).coerceAtLeast(6f),
-        secondarySize = (6f * scale).coerceAtLeast(4f)
+        secondarySize = ((5f * scale) - 2f).coerceAtLeast(2.5f)
     )
 }

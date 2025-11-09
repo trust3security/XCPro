@@ -117,6 +117,7 @@ class FlightDataViewModel(
     fun initializeCardPreferences(preferences: CardPreferences) {
         if (_cardPreferences.value === preferences) return
         _cardPreferences.value = preferences
+        repository.setCardPreferences(preferences)
         templatesJob?.cancel()
         templatesJob = viewModelScope.launch(ioDispatcher) {
             preferences.getAllTemplates().collect { templates ->

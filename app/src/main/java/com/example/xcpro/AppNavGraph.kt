@@ -111,15 +111,27 @@ fun AppNavGraph(
             arguments = listOf(navArgument("autoFocusHome") { type = NavType.BoolType; defaultValue = false })
         ) { backStackEntry ->
             val autoFocusHome = backStackEntry.arguments?.getBoolean("autoFocusHome") ?: false
+            val mapEntry = remember(backStackEntry) { navController.getBackStackEntry("map") }
+            val mapViewModel: MapScreenViewModel = hiltViewModel(mapEntry)
             FlightMgmt(
                 navController = navController,
                 drawerState = drawerState,
                 initialTab = "waypoints",
                 autoFocusHome = autoFocusHome,
-                activeProfile = profileUiState.activeProfile
+                activeProfile = profileUiState.activeProfile,
+                flightDataManager = mapViewModel.flightDataManager
             )
         }
-        composable("flight_data") { FlightMgmt(navController = navController, drawerState = drawerState, activeProfile = profileUiState.activeProfile) }
+        composable("flight_data") { backStackEntry ->
+            val mapEntry = remember(backStackEntry) { navController.getBackStackEntry("map") }
+            val mapViewModel: MapScreenViewModel = hiltViewModel(mapEntry)
+            FlightMgmt(
+                navController = navController,
+                drawerState = drawerState,
+                activeProfile = profileUiState.activeProfile,
+                flightDataManager = mapViewModel.flightDataManager
+            )
+        }
         composable("files") { FilesScreen(navController, drawerState) }
         composable("profiles") { ProfilesScreen(navController, drawerState) }
         composable("profile_selection") { ProfileSelectionScreen(onProfileSelected = { navController.popBackStack() }) }

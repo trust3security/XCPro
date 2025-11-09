@@ -34,11 +34,9 @@ import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.common.orientation.MapOrientationMode
 import com.example.xcpro.screens.overlays.getMapStyleUrl
 import com.example.xcpro.tasks.TaskMapOverlay
-import com.example.xcpro.sensors.CompleteFlightData
 import com.example.xcpro.sensors.GPSData
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.tasks.TaskManagerCoordinator
-import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.xcprov1.ui.HawkGauge
 import com.example.xcpro.xcprov1.ui.WindRibbon
 import com.example.xcpro.map.MapScreenState
@@ -49,6 +47,8 @@ import com.example.xcpro.map.MapCameraManager
 import kotlinx.coroutines.launch
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
+import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
+import com.example.dfcards.dfcards.CardVisualStyles
 
 @Composable
 fun MapMainLayers(
@@ -56,7 +56,6 @@ fun MapMainLayers(
     mapInitializer: MapInitializer,
     locationManager: LocationManager,
     flightDataManager: FlightDataManager,
-    flightDataRepository: FlightDataRepository,
     flightViewModel: FlightDataViewModel,
     taskManager: TaskManagerCoordinator,
     orientationManager: MapOrientationManager,
@@ -72,8 +71,8 @@ fun MapMainLayers(
     onContainerSizeChanged: (androidx.compose.ui.unit.IntSize) -> Unit,
     cardSafeTopOffsetPx: Float = 0f,
     modifier: Modifier = Modifier,
-    convertToRealTime: (CompleteFlightData) -> RealTimeFlightData,
-    onCardLayerPositioned: (Rect) -> Unit = {}
+    onCardLayerPositioned: (Rect) -> Unit = {},
+    cardStyle: CardStyle
 ) {
     val scope = rememberCoroutineScope()
 
@@ -95,16 +94,6 @@ fun MapMainLayers(
             },
             modifier = Modifier.fillMaxSize()
         )
-
-        LaunchedEffect(Unit) {
-            flightDataRepository.flightData.collect { completeData ->
-                if (completeData != null) {
-                    val realTimeData = convertToRealTime(completeData)
-                    Log.d("MapMainLayers", "Sample received: lat=${realTimeData.latitude}, lon=${realTimeData.longitude}, vs=${realTimeData.verticalSpeed}, agl=${realTimeData.agl}")
-                    flightDataManager.updateLiveFlightData(realTimeData)
-                }
-            }
-        }
 
         if (currentFlightModeSelection == FlightModeSelection.HAWK) {
             hawkSnapshot?.let { data ->
@@ -136,7 +125,7 @@ fun MapMainLayers(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .zIndex(11f)
+                .zIndex(if (isUiEditMode) 11f else 2f)
                 .pointerInteropFilter { motionEvent ->
                     val action = when (motionEvent.actionMasked) {
                         MotionEvent.ACTION_DOWN -> "DOWN"
@@ -167,6 +156,13 @@ fun MapMainLayers(
                 onDispose { onCardLayerPositioned(Rect.Zero) }
             }
 
+            val cardVisualStyle = when (cardStyle) {
+                CardStyle.TRANSPARENT -> CardVisualStyles.transparent()
+                CardStyle.STANDARD,
+                CardStyle.COMPACT,
+                CardStyle.LARGE -> CardVisualStyles.standard()
+            }
+
             CardContainer(
                 onContainerSizeChanged = onContainerSizeChanged,
                 onCardBoundsChanged = onCardLayerPositioned,
@@ -175,7 +171,8 @@ fun MapMainLayers(
                 isEditMode = isUiEditMode,
                 onEditModeChanged = onEditModeChange,
                 viewModel = flightViewModel,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
+                cardVisualStyle = cardVisualStyle
             )
         }
 

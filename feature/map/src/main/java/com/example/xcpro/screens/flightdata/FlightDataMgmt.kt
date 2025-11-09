@@ -31,6 +31,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -40,7 +41,6 @@ import com.example.dfcards.CardCategory
 import com.example.dfcards.CardPreferences
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.FlightTemplate
-import com.example.dfcards.RealTimeFlightData
 import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.ui1.screens.flightmgmt.FlightDataAirspaceTab
 import com.example.ui1.screens.flightmgmt.FlightDataClassesTab
@@ -52,12 +52,15 @@ import com.example.xcpro.loadSelectedClasses
 import com.example.xcpro.loadWaypointFiles
 import com.example.xcpro.saveAirspaceFiles
 import com.example.xcpro.saveWaypointFiles
+import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.profiles.UserProfile
 import com.example.xcpro.screens.flightdata.FlightDataWaypointsTab
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.filterNotNull
 
 private const val TAG = "FlightMgmt"
 
@@ -68,7 +71,8 @@ fun FlightMgmt(
     drawerState: DrawerState,
     initialTab: String = "screens",
     autoFocusHome: Boolean = false,
-    activeProfile: UserProfile? = null
+    activeProfile: UserProfile? = null,
+    flightDataManager: FlightDataManager
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -77,6 +81,14 @@ fun FlightMgmt(
 
     LaunchedEffect(cardPreferences) {
         flightViewModel.initializeCardPreferences(cardPreferences)
+    }
+
+    LaunchedEffect(flightDataManager) {
+        snapshotFlow { flightDataManager.liveFlightData }
+            .filterNotNull()
+            .collectLatest { liveData ->
+                flightViewModel.updateCardsWithLiveData(liveData)
+            }
     }
 
     val sharedPrefs = remember {
@@ -89,7 +101,7 @@ fun FlightMgmt(
     var editingTemplate by remember { mutableStateOf<FlightTemplate?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var showDeleteDialog by remember { mutableStateOf<Pair<String, String>?>(null) }
-    var liveFlightData by remember { mutableStateOf<RealTimeFlightData?>(null) }
+    val liveFlightData = flightDataManager.liveFlightData
 
     val selectedWaypointFiles = remember { mutableStateListOf<Uri>() }
     val waypointCheckedStates = remember { mutableStateMapOf<String, Boolean>() }
