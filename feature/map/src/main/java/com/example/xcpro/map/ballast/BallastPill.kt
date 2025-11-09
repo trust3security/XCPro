@@ -23,7 +23,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -63,14 +62,8 @@ fun BallastPill(
         "Water ballast $percent percent, $statusText"
 
     val pillShape = RoundedCornerShape(18.dp)
-    val fillBrush = Brush.verticalGradient(
-        colors = listOf(
-            MaterialTheme.colorScheme.secondary.copy(alpha = 0.05f),
-            MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f),
-            MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f)
-        )
-    )
-    val backgroundColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
+    val fillColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.95f)
+    val backgroundColor = MaterialTheme.colorScheme.surface
 
     Column(
         modifier = modifier.semantics { this.contentDescription = contentDescription },
@@ -90,7 +83,7 @@ fun BallastPill(
                     modifier = Modifier
                         .fillMaxWidth()
                         .fillMaxHeight(fillFraction)
-                        .background(fillBrush)
+                        .background(fillColor)
                 )
             }
 

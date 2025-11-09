@@ -68,13 +68,13 @@ fun SettingsScreen(
             // ✅ Match Look & Feel header style exactly
             SettingsTopAppBar(
                 title = "General",
-                onNavigateUp = { navController.popBackStack() },
-                onOpenDrawer = {
-                    scope.launch {
-                        navController.popBackStack("map", inclusive = false)
-                        drawerState.open()
-                        onCancelHawkDashboard()
-                    }
+                onNavigateUp = {
+                    onCancelHawkDashboard()
+                    navController.navigateUp()
+                },
+                onSecondaryNavigate = {
+                    onCancelHawkDashboard()
+                    navController.popBackStack()
                 },
                 onNavigateToMap = {
                     scope.launch {
@@ -256,4 +256,5 @@ fun CategoryItem(title: String, icon: ImageVector, onClick: () -> Unit, modifier
         }
     }
 }
+
 

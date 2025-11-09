@@ -21,15 +21,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import com.example.xcpro.glider.GliderRepository
 import com.example.xcpro.glider.PolarCalculator
 import com.example.xcpro.common.glider.SpeedLimits
 import com.example.xcpro.common.glider.ThreePointPolar
+import kotlin.math.roundToInt
 
 @Composable
 fun PreviewCard() {
@@ -96,6 +100,13 @@ fun ConfigCard() {
     val repo = remember(context) { GliderRepository.getInstance(context) }
     val cfg by repo.config.collectAsState()
 
+    var pilotInput by remember(cfg.pilotAndGearKg) {
+        mutableStateOf(cfg.pilotAndGearKg.roundToInt().toString())
+    }
+    var ballastInput by remember(cfg.waterBallastKg) {
+        mutableStateOf(cfg.waterBallastKg.roundToInt().toString())
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -118,27 +129,39 @@ fun ConfigCard() {
             )
             Row(modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(
-                    value = cfg.pilotAndGearKg.toString(),
+                    value = pilotInput,
                     onValueChange = { text ->
-                        text.toDoubleOrNull()?.let { value ->
-                            repo.updateConfig { it.copy(pilotAndGearKg = value.coerceAtLeast(0.0)) }
+                        val sanitized = text.filter { it.isDigit() }
+                        pilotInput = sanitized
+                        when {
+                            sanitized.isBlank() -> repo.updateConfig { it.copy(pilotAndGearKg = 0.0) }
+                            else -> sanitized.toIntOrNull()?.let { value ->
+                                repo.updateConfig { it.copy(pilotAndGearKg = value.toDouble().coerceAtLeast(0.0)) }
+                            }
                         }
                     },
                     label = { Text("Pilot + Gear (kg)") },
                     modifier = Modifier.weight(1f),
-                    singleLine = true
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 OutlinedTextField(
-                    value = cfg.waterBallastKg.toString(),
+                    value = ballastInput,
                     onValueChange = { text ->
-                        text.toDoubleOrNull()?.let { value ->
-                            repo.updateConfig { it.copy(waterBallastKg = value.coerceAtLeast(0.0)) }
+                        val sanitized = text.filter { it.isDigit() }
+                        ballastInput = sanitized
+                        when {
+                            sanitized.isBlank() -> repo.updateConfig { it.copy(waterBallastKg = 0.0) }
+                            else -> sanitized.toIntOrNull()?.let { value ->
+                                repo.updateConfig { it.copy(waterBallastKg = value.toDouble().coerceAtLeast(0.0)) }
+                            }
                         }
                     },
                     label = { Text("Water Ballast (kg)") },
                     modifier = Modifier.weight(1f),
-                    singleLine = true
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number)
                 )
             }
             OutlinedTextField(
@@ -407,3 +430,4 @@ private fun PolarPlaceholderCard(
         }
     }
 }
+
