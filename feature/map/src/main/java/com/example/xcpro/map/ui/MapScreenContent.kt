@@ -43,6 +43,7 @@ import kotlinx.coroutines.flow.StateFlow
 import com.example.xcpro.seedQnhInputValue
 import com.example.xcpro.convertQnhInputToHpa
 import com.example.xcpro.variometer.layout.VariometerUiState
+import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
 
 @Composable
 internal fun MapScreenContent(
@@ -92,7 +93,8 @@ internal fun MapScreenContent(
     ballastUiState: StateFlow<BallastUiState>,
     onBallastCommand: (BallastCommand) -> Unit,
     onHamburgerTap: () -> Unit,
-    onHamburgerLongPress: () -> Unit
+    onHamburgerLongPress: () -> Unit,
+    cardStyle: CardStyle
 ) {
     Box(Modifier.fillMaxSize()) {
         Scaffold(
@@ -148,7 +150,8 @@ internal fun MapScreenContent(
                         ballastUiState = ballastUiState,
                         onBallastCommand = onBallastCommand,
                         onHamburgerTap = onHamburgerTap,
-                        onHamburgerLongPress = onHamburgerLongPress
+                        onHamburgerLongPress = onHamburgerLongPress,
+                        cardStyle = cardStyle
                     )
                 }
             }

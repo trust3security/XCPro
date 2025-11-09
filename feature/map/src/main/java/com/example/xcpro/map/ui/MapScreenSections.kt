@@ -47,6 +47,8 @@ import com.example.xcpro.map.MapCameraManager
 import kotlinx.coroutines.launch
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
+import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
+import com.example.dfcards.dfcards.CardVisualStyles
 
 @Composable
 fun MapMainLayers(
@@ -69,7 +71,8 @@ fun MapMainLayers(
     onContainerSizeChanged: (androidx.compose.ui.unit.IntSize) -> Unit,
     cardSafeTopOffsetPx: Float = 0f,
     modifier: Modifier = Modifier,
-    onCardLayerPositioned: (Rect) -> Unit = {}
+    onCardLayerPositioned: (Rect) -> Unit = {},
+    cardStyle: CardStyle
 ) {
     val scope = rememberCoroutineScope()
 
@@ -153,6 +156,13 @@ fun MapMainLayers(
                 onDispose { onCardLayerPositioned(Rect.Zero) }
             }
 
+            val cardVisualStyle = when (cardStyle) {
+                CardStyle.TRANSPARENT -> CardVisualStyles.transparent()
+                CardStyle.STANDARD,
+                CardStyle.COMPACT,
+                CardStyle.LARGE -> CardVisualStyles.standard()
+            }
+
             CardContainer(
                 onContainerSizeChanged = onContainerSizeChanged,
                 onCardBoundsChanged = onCardLayerPositioned,
@@ -161,7 +171,8 @@ fun MapMainLayers(
                 isEditMode = isUiEditMode,
                 onEditModeChanged = onEditModeChange,
                 viewModel = flightViewModel,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
+                cardVisualStyle = cardVisualStyle
             )
         }
 

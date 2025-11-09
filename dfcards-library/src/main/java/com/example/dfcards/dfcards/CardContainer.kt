@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.ui.zIndex
+import com.example.dfcards.dfcards.CardVisualStyle
 
 // ✅ REFACTORED: Removed flightDataList parameter - data comes from viewModel now
 @Composable
@@ -36,6 +37,7 @@ fun CardContainer(
     isEditMode: Boolean = false,
     onEditModeChanged: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
+    cardVisualStyle: CardVisualStyle,
     viewModel: com.example.dfcards.dfcards.FlightDataViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -136,7 +138,8 @@ fun CardContainer(
                                 cardHeight = currentHeight,
                                 isEditMode = isEditMode,
                                 isLiveData = true,
-                                modifier = Modifier.fillMaxSize()
+                                modifier = Modifier.fillMaxSize(),
+                                visualStyle = cardVisualStyle
                             )
                         }
                     }

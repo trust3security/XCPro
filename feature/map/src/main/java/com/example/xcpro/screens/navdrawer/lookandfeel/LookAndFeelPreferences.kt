@@ -1,7 +1,12 @@
 package com.example.xcpro.screens.navdrawer.lookandfeel
 
 import android.content.Context
+import android.content.SharedPreferences
 import com.example.xcpro.ui.theme.AppColorTheme
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 private const val LOOK_AND_FEEL_PREFS = "LookAndFeelPrefs"
 private const val COLOR_THEME_PREFS = "ColorThemePrefs"
@@ -37,7 +42,7 @@ class LookAndFeelPreferences(
 
     fun getCardStyle(profileId: String): CardStyle {
         val stored = lookAndFeelPrefs.getString(
-            "profile_${profileId}_card_style",
+            cardStyleKey(profileId),
             CardStyle.STANDARD.id
         )
         return CardStyle.values().find { it.id == stored } ?: CardStyle.STANDARD
@@ -45,9 +50,20 @@ class LookAndFeelPreferences(
 
     fun setCardStyle(profileId: String, style: CardStyle) {
         lookAndFeelPrefs.edit()
-            .putString("profile_${profileId}_card_style", style.id)
+            .putString(cardStyleKey(profileId), style.id)
             .apply()
     }
+
+    fun observeCardStyle(profileId: String): Flow<CardStyle> = callbackFlow {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == cardStyleKey(profileId)) {
+                trySend(getCardStyle(profileId))
+            }
+        }
+        trySend(getCardStyle(profileId))
+        lookAndFeelPrefs.registerOnSharedPreferenceChangeListener(listener)
+        awaitClose { lookAndFeelPrefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }.distinctUntilChanged()
 
     fun getColorTheme(profileId: String): AppColorTheme {
         val stored = colorPrefs.getString(
@@ -62,4 +78,6 @@ class LookAndFeelPreferences(
             .putString("profile_${profileId}_color_theme", theme.id)
             .apply()
     }
+
+    private fun cardStyleKey(profileId: String): String = "profile_${profileId}_card_style"
 }

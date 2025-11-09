@@ -51,6 +51,7 @@ import com.example.xcpro.sensors.GPSData
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import kotlinx.coroutines.flow.StateFlow
 import com.example.xcpro.variometer.layout.VariometerUiState
+import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
 
 @Composable
 @Suppress("LongParameterList")
@@ -91,7 +92,8 @@ internal fun MapOverlayStack(
     ballastUiState: StateFlow<BallastUiState>,
     onBallastCommand: (BallastCommand) -> Unit,
     onHamburgerTap: () -> Unit,
-    onHamburgerLongPress: () -> Unit
+    onHamburgerLongPress: () -> Unit,
+    cardStyle: CardStyle
 ) {
     val currentMode by mapState.currentModeFlow.collectAsState()
     val showDistanceCircles by mapState.showDistanceCirclesFlow.collectAsState()
@@ -143,7 +145,8 @@ internal fun MapOverlayStack(
                         consumeGestures = isUiEditMode
                     )
                 }
-            }
+            },
+            cardStyle = cardStyle
         )
 
         if (!isUiEditMode) {
