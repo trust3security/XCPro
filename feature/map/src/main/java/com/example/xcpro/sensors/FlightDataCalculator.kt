@@ -71,13 +71,22 @@ class FlightDataCalculator(
         private const val MIN_AIRSPEED_FOR_NETTO = 15.0       // m/s (54 km/h)
 
         // IMU fusion thresholds
-        private const val MIN_SPEED_FOR_IMU_FUSION = 1.0      // m/s below which we ignore IMU noise
+        private const val MIN_SPEED_FOR_IMU_FUSION = 15.0      // m/s; below this we skip IMU fusion
         private const val MAX_ACCEL_FOR_FUSION = 12.0         // m/s^2 clamp to reject spikes
 
         // QNH jump suppression
         private const val QNH_JUMP_THRESHOLD_HPA = 0.8
         private const val QNH_ALTITUDE_JUMP_THRESHOLD_METERS = 5.0
         private const val QNH_CALIBRATION_ACCURACY_THRESHOLD = 8.0
+        private const val SEA_LEVEL_TEMP_CELSIUS = 15.0
+        private const val TEMP_LAPSE_RATE_C_PER_M = -0.0065
+        private const val GAS_CONSTANT = 287.05
+        private const val GRAVITY = 9.80665
+        private const val MIN_SINK_FOR_IAS_MS = 0.15
+        private const val IAS_SCAN_MIN_MS = 8.0
+        private const val IAS_SCAN_MAX_MS = 80.0
+        private const val IAS_SCAN_STEP_MS = 0.5
+        private const val SEA_LEVEL_PRESSURE_HPA = 1013.25
     }
 
     // History for calculations (shared with helper) - must be initialized first
@@ -138,6 +147,7 @@ class FlightDataCalculator(
     private var cachedBaroResult: com.example.dfcards.calculations.BarometricAltitudeData? = null
     private var cachedBaroData: BaroData? = null
     private var cachedCompassData: CompassData? = null
+    @Volatile private var imuAssistEnabled: Boolean = true
 
     init {
         // ✅ PRIORITY 2: DECOUPLED SAMPLE RATES
@@ -244,7 +254,10 @@ class FlightDataCalculator(
         val rawAccel = accel?.verticalAcceleration ?: 0.0
         val accelReliable = accel?.isReliable == true
         val withinAccelRange = abs(rawAccel) <= MAX_ACCEL_FOR_FUSION
-        val usingImu = accelReliable && withinAccelRange && cachedGPSSpeed >= MIN_SPEED_FOR_IMU_FUSION
+        val usingImu = imuAssistEnabled &&
+            accelReliable &&
+            withinAccelRange &&
+            cachedGPSSpeed >= MIN_SPEED_FOR_IMU_FUSION
 
         if (usingImu != imuFusionActive) {
             val stateLabel = if (usingImu) "ENABLED" else "DISABLED"
@@ -419,6 +432,20 @@ class FlightDataCalculator(
 
         // Calculate netto variometer (uses TE-compensated vertical speed)
         val netto = flightHelpers.calculateNetto(verticalSpeed.toFloat(), gps.speed.toFloat())
+        val altitudeForAirspeed = when {
+            baroAltitude.isFinite() && baroAltitude != 0.0 -> baroAltitude
+            gps.altitude.isFinite() -> gps.altitude
+            else -> 0.0
+        }
+        val airspeedEstimate = estimateAirspeeds(
+            netto = netto,
+            verticalSpeed = verticalSpeed,
+            altitudeMeters = altitudeForAirspeed,
+            qnhHpa = qnh
+        )
+        val indicatedAirspeedMs = airspeedEstimate?.indicatedMs ?: 0.0
+        val trueAirspeedMs = airspeedEstimate?.trueMs
+            ?: if (gps.speed.isFinite()) gps.speed.toDouble() else indicatedAirspeedMs
 
         // Get all vario results from cached updates
         val varioResults = mapOf(
@@ -459,6 +486,8 @@ class FlightDataCalculator(
             thermalAverage = thermalAvg,
             currentLD = calculatedLD,
             netto = netto,
+            trueAirspeed = trueAirspeedMs,
+            indicatedAirspeed = indicatedAirspeedMs,
             varioOptimized = varioResults["optimized"] ?: 0.0,
             varioLegacy = varioResults["legacy"] ?: 0.0,
             varioRaw = varioResults["raw"] ?: 0.0,
@@ -493,6 +522,61 @@ class FlightDataCalculator(
         audioEngine.stop()
         audioEngine.release()
         Log.d(TAG, "FlightDataCalculator stopped")
+    }
+
+    private data class AirspeedEstimate(val indicatedMs: Double, val trueMs: Double)
+
+    /**
+     * Estimate IAS/TAS by matching the observed still-air sink to the selected glider's polar.
+     * The polar lookup yields TAS; IAS is derived by applying the local air-density correction.
+     */
+    private fun estimateAirspeeds(
+        netto: Float,
+        verticalSpeed: Double,
+        altitudeMeters: Double,
+        qnhHpa: Double
+    ): AirspeedEstimate? {
+        val sinkEstimate = kotlin.math.abs(netto.toDouble() - verticalSpeed)
+        if (!sinkEstimate.isFinite() || sinkEstimate < MIN_SINK_FOR_IAS_MS) {
+            return null
+        }
+        val tasMs = findSpeedForSink(sinkEstimate) ?: return null
+        val densityRatio = computeDensityRatio(altitudeMeters, qnhHpa)
+        val indicatedMs = if (densityRatio > 0.0) tasMs * sqrt(densityRatio) else tasMs
+        return AirspeedEstimate(indicatedMs = indicatedMs, trueMs = tasMs)
+    }
+
+    private fun findSpeedForSink(targetSinkMs: Double): Double? {
+        var speed = IAS_SCAN_MIN_MS
+        var bestSpeed: Double? = null
+        var bestError = Double.POSITIVE_INFINITY
+        while (speed <= IAS_SCAN_MAX_MS) {
+            val sink = sinkProvider.sinkAtSpeed(speed) ?: break
+            val error = abs(sink - targetSinkMs)
+            if (error < bestError) {
+                bestError = error
+                bestSpeed = speed
+            }
+            speed += IAS_SCAN_STEP_MS
+        }
+        return bestSpeed
+    }
+
+    private fun computeDensityRatio(altitudeMeters: Double, qnhHpa: Double): Double {
+        val tempSeaLevelK = SEA_LEVEL_TEMP_CELSIUS + 273.15
+        val tempAtAltitude = tempSeaLevelK + (TEMP_LAPSE_RATE_C_PER_M * altitudeMeters)
+        val base = 1.0 + (TEMP_LAPSE_RATE_C_PER_M * altitudeMeters) / tempSeaLevelK
+        val exponent = (-GRAVITY * 0.0289644) / (GAS_CONSTANT * TEMP_LAPSE_RATE_C_PER_M)
+        val pressureRatio = base.pow(exponent)
+        val pressureAtAltPa = (qnhHpa * 100.0) * pressureRatio
+        val densityAtAlt = pressureAtAltPa / (GAS_CONSTANT * tempAtAltitude)
+        val seaLevelDensity = (SEA_LEVEL_PRESSURE_HPA * 100.0) / (GAS_CONSTANT * tempSeaLevelK)
+        return densityAtAlt / seaLevelDensity
+    }
+
+    fun setImuAssistEnabled(enabled: Boolean) {
+        imuAssistEnabled = enabled
+        Log.d(TAG, "IMU assist toggled -> $enabled")
     }
 
     /**

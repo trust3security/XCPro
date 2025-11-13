@@ -201,14 +201,18 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener {
      * Start all sensors
      * MUST be called after location permissions are granted
      */
-    fun startAllSensors() {
+    fun startAllSensors(): Boolean {
         Log.d(TAG, "Starting all sensors...")
-        startGPS()
-        startBarometer()
-        startCompass()
-        startRotationVector()
-        startAccelerometer()
-        Log.d(TAG, "All sensors started successfully")
+        val gpsStarted = startGPS()
+        val baroStarted = startBarometer()
+        val compassStarted = startCompass()
+        val rotationStarted = startRotationVector()
+        val accelStarted = startAccelerometer()
+        Log.d(
+            TAG,
+            "Sensor start status -> gps=$gpsStarted, baro=$baroStarted, compass=$compassStarted, rotation=$rotationStarted, accel=$accelStarted"
+        )
+        return gpsStarted
     }
 
     /**
@@ -228,32 +232,32 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener {
     /**
      * Start GPS tracking (1Hz - industry standard)
      */
-    private fun startGPS() {
+        private fun startGPS(): Boolean {
         if (isGpsStarted) {
             Log.d(TAG, "GPS already started")
-            return
+            return true
         }
 
         if (!hasLocationPermissions()) {
             Log.e(TAG, "No location permissions - cannot start GPS")
-            return
+            return false
         }
 
+        var gpsProviderStarted = false
         try {
-            // Start GPS provider (high accuracy)
             if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
                 locationManager.requestLocationUpdates(
                     LocationManager.GPS_PROVIDER,
-                    GPS_UPDATE_INTERVAL_MS,  // 1Hz (NOT 10Hz!)
+                    GPS_UPDATE_INTERVAL_MS,
                     GPS_MIN_DISTANCE_M,
                     gpsListener
                 )
-                Log.d(TAG, "âœ… GPS started (1Hz)")
+                gpsProviderStarted = true
+                Log.d(TAG, "GPS provider started (1Hz)")
             } else {
-                Log.w(TAG, "âš ï¸ GPS provider not enabled")
+                Log.w(TAG, "GPS provider not enabled")
             }
 
-            // Also use Network provider for faster initial fix
             if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
                 locationManager.requestLocationUpdates(
                     LocationManager.NETWORK_PROVIDER,
@@ -261,78 +265,83 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener {
                     GPS_MIN_DISTANCE_M,
                     gpsListener
                 )
-                Log.d(TAG, "âœ… Network provider started (for fast initial fix)")
+                Log.d(TAG, "Network provider started for fast initial fix")
             }
 
-            // Get last known location for immediate display
-            getLastKnownLocation()?.let { location ->
-                Log.d(TAG, "ðŸ“ Using last known location: ${location.latitude}, ${location.longitude}")
-                gpsListener.onLocationChanged(location)
+            if (gpsProviderStarted) {
+                getLastKnownLocation()?.let { location ->
+                    Log.d(TAG, "Using last known location: ${location.latitude}, ${location.longitude}")
+                    gpsListener.onLocationChanged(location)
+                }
+                isGpsStarted = true
+            } else {
+                Log.w(TAG, "Unable to register GPS listener - will retry later")
             }
-
-            isGpsStarted = true
-
         } catch (e: SecurityException) {
-            Log.e(TAG, "âŒ Security exception starting GPS: ${e.message}")
+            Log.e(TAG, "Security exception starting GPS: ${e.message}")
+            gpsProviderStarted = false
         } catch (e: Exception) {
-            Log.e(TAG, "âŒ Error starting GPS: ${e.message}", e)
+            Log.e(TAG, "Error starting GPS: ${e.message}", e)
+            gpsProviderStarted = false
         }
+
+        return gpsProviderStarted
     }
 
     /**
      * Start barometer sensor (~20Hz for smooth variometer)
      */
-    private fun startBarometer() {
+    private fun startBarometer(): Boolean {
         if (isBaroStarted) {
             Log.d(TAG, "Barometer already started")
-            return
+            return true
         }
 
-        pressureSensor?.let { sensor ->
-            val success = sensorManager.registerListener(
-                this,
-                sensor,
-                BARO_SENSOR_DELAY  // ~20Hz (SENSOR_DELAY_GAME)
-            )
-
-            if (success) {
-                isBaroStarted = true
-                Log.d(TAG, "âœ… Barometer started (~20Hz): ${sensor.name}")
-            } else {
-                Log.e(TAG, "âŒ Failed to register barometer listener")
-            }
-        } ?: run {
-            Log.w(TAG, "âš ï¸ No barometer sensor available on this device")
+        val sensor = pressureSensor ?: run {
+            Log.w(TAG, "No barometer sensor available on this device")
+            return false
         }
+
+        val success = sensorManager.registerListener(this, sensor, BARO_SENSOR_DELAY)
+        if (success) {
+            isBaroStarted = true
+            Log.d(TAG, "Barometer started (~20Hz): ${sensor.name}")
+        } else {
+            Log.e(TAG, "Failed to register barometer listener")
+        }
+        return success
     }
 
     /**
      * Start compass sensor (~60Hz for display)
      */
-    private fun startCompass() {
+    /**
+     * Start compass sensor (~60Hz for display)
+     */
+        private fun startCompass(): Boolean {
         if (isCompassStarted) {
             Log.d(TAG, "Compass already started")
-            return
+            return true
         }
 
-        magneticSensor?.let { sensor ->
-            val success = sensorManager.registerListener(
-                this,
-                sensor,
-                COMPASS_SENSOR_DELAY  // ~60Hz (SENSOR_DELAY_UI)
-            )
-
-            if (success) {
-                isCompassStarted = true
-                Log.d(TAG, "âœ… Compass started (~60Hz): ${sensor.name}")
-            } else {
-                Log.e(TAG, "âŒ Failed to register compass listener")
-            }
-        } ?: run {
-            Log.w(TAG, "âš ï¸ No compass sensor available on this device")
+        val sensor = magneticSensor ?: run {
+            Log.w(TAG, "No compass sensor available on this device")
+            return false
         }
+
+        val success = sensorManager.registerListener(this, sensor, COMPASS_SENSOR_DELAY)
+        if (success) {
+            isCompassStarted = true
+            Log.d(TAG, "Compass started (~60Hz): ${sensor.name}")
+        } else {
+            Log.e(TAG, "Failed to register compass listener")
+        }
+        return success
     }
 
+    /**
+     * Start rotation vector sensor
+     */
     /**
      * Stop GPS tracking
      */
@@ -377,58 +386,57 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener {
     /**
      * Start rotation vector sensor (provides device orientation)
      */
-    private fun startRotationVector() {
+        private fun startRotationVector(): Boolean {
         if (isRotationStarted) {
             Log.d(TAG, "Rotation vector already started")
-            return
+            return true
         }
 
-        rotationVectorSensor?.let { sensor ->
-            val success = sensorManager.registerListener(
-                this,
-                sensor,
-                SensorManager.SENSOR_DELAY_GAME
-            )
-
-            if (success) {
-                isRotationStarted = true
-                orientationProcessor.reset()
-                Log.d(TAG, "Rotation vector started (~50Hz): ")
-            } else {
-                Log.e(TAG, "Failed to register rotation vector listener")
-            }
-        } ?: run {
+        val sensor = rotationVectorSensor ?: run {
             Log.w(TAG, "No rotation vector sensor available on this device")
+            return false
         }
+
+        val success = sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_GAME)
+        if (success) {
+            isRotationStarted = true
+            Log.d(TAG, "Rotation vector started: ${sensor.name}")
+        } else {
+            Log.e(TAG, "Failed to register rotation vector listener")
+        }
+        return success
     }
 
     /**
      * Start accelerometer sensor (~200Hz for variometer fusion)
      */
-    private fun startAccelerometer() {
+    /**
+     * Start accelerometer sensor (~200Hz for variometer fusion)
+     */
+        private fun startAccelerometer(): Boolean {
         if (isAccelStarted) {
             Log.d(TAG, "Accelerometer already started")
-            return
+            return true
         }
 
-        linearAccelerometerSensor?.let { sensor ->
-            val success = sensorManager.registerListener(
-                this,
-                sensor,
-                ACCEL_SENSOR_DELAY  // ~200Hz (SENSOR_DELAY_GAME)
-            )
-
-            if (success) {
-                isAccelStarted = true
-                Log.d(TAG, "âœ… Accelerometer started (~200Hz): ${sensor.name}")
-            } else {
-                Log.e(TAG, "âŒ Failed to register accelerometer listener")
-            }
-        } ?: run {
-            Log.w(TAG, "âš ï¸ No linear accelerometer sensor available on this device")
+        val sensor = linearAccelerometerSensor ?: run {
+            Log.w(TAG, "No linear accelerometer sensor available on this device")
+            return false
         }
+
+        val success = sensorManager.registerListener(this, sensor, ACCEL_SENSOR_DELAY)
+        if (success) {
+            isAccelStarted = true
+            Log.d(TAG, "Accelerometer started (~200Hz): ${sensor.name}")
+        } else {
+            Log.e(TAG, "Failed to register accelerometer listener")
+        }
+        return success
     }
 
+    /**
+     * Stop rotation vector sensor
+     */
     /**
      * Stop rotation vector sensor
      */

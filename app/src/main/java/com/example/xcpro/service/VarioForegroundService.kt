@@ -9,6 +9,7 @@ import android.content.Intent
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.example.xcpro.R
 import com.example.xcpro.vario.VarioServiceManager
@@ -21,6 +22,7 @@ class VarioForegroundService : Service() {
     companion object {
         private const val CHANNEL_ID = "vario_foreground_channel"
         private const val NOTIFICATION_ID = 42
+        private const val TAG = "VarioForegroundService"
 
         fun start(context: Context) {
             val intent = Intent(context, VarioForegroundService::class.java)
@@ -44,7 +46,10 @@ class VarioForegroundService : Service() {
         super.onCreate()
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, createNotification())
-        manager.start()
+        val sensorsStarted = manager.start()
+        if (!sensorsStarted) {
+            Log.w(TAG, "Foreground service active but waiting for GPS permission before publishing data")
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -52,9 +57,15 @@ class VarioForegroundService : Service() {
         return START_STICKY
     }
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        stopSelf()
+    }
+
     override fun onBind(intent: Intent?): IBinder = binder
 
     override fun onDestroy() {
+        stopForeground(true)
         manager.stop()
         super.onDestroy()
     }

@@ -88,6 +88,8 @@ internal fun convertToRealTimeFlightData(completeData: CompleteFlightData): Real
         thermalAverage = completeData.thermalAverage,
         currentLD = completeData.currentLD,
         netto = completeData.netto,
+        trueAirspeed = completeData.trueAirspeed,
+        indicatedAirspeed = completeData.indicatedAirspeed,
 
         // NEW: Vario variants for side-by-side testing (VARIO_IMPROVEMENTS.md)
         varioOptimized = completeData.varioOptimized,

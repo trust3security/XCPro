@@ -9,6 +9,7 @@ import com.example.xcpro.tasks.getGlobalTaskManagerCoordinator
 import com.example.xcpro.tasks.setGlobalTaskManagerCoordinator
 import com.example.xcpro.profiles.ProfileStorage
 import com.example.xcpro.profiles.DataStoreProfileStorage
+import com.example.xcpro.vario.LevoVarioPreferencesRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -51,6 +52,12 @@ object AppModule {
     fun provideQnhPreferencesRepository(
         @ApplicationContext context: Context
     ): QnhPreferencesRepository = QnhPreferencesRepository(context)
+
+    @Provides
+    @Singleton
+    fun provideLevoVarioPreferencesRepository(
+        @ApplicationContext context: Context
+    ): LevoVarioPreferencesRepository = LevoVarioPreferencesRepository(context)
 
     @Provides
     @Singleton

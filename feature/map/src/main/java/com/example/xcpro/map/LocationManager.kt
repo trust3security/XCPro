@@ -43,14 +43,26 @@ class LocationManager(
     private var sensorsStarted = false
 
     private fun ensureSensorsRunning() {
-        if (!sensorsStarted) {
-            varioServiceManager.start()
+        val status = unifiedSensorManager.getSensorStatus()
+        if (sensorsStarted && status.gpsStarted) {
+            return
+        }
+        if (!sensorsStarted && status.gpsStarted) {
             sensorsStarted = true
+            return
+        }
+
+        val started = varioServiceManager.start()
+        val statusAfterStart = unifiedSensorManager.getSensorStatus()
+        sensorsStarted = started || statusAfterStart.gpsStarted
+        if (!sensorsStarted) {
+            Log.w(TAG, "Sensor start deferred (likely waiting on location permission)")
         }
     }
 
     private fun stopSensors() {
-        if (!sensorsStarted) return
+        val status = unifiedSensorManager.getSensorStatus()
+        if (!sensorsStarted && !status.gpsStarted) return
         varioServiceManager.stop()
         sensorsStarted = false
     }

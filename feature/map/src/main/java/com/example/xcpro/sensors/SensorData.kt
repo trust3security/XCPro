@@ -114,6 +114,8 @@ data class CompleteFlightData(
 
     // Calculated netto variometer
     val netto: Float,           // m/s (variometer + sink rate compensation)
+    val trueAirspeed: Double = 0.0,    // m/s
+    val indicatedAirspeed: Double = 0.0, // m/s
 
     // NEW: Multiple vario implementations for testing (VARIO_IMPROVEMENTS.md)
     val varioOptimized: Double = 0.0,      // Optimized Kalman (R=0.5m) - Priority 1

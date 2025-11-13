@@ -52,6 +52,8 @@ data class RealTimeFlightData(
     val thermalAverage: Float = 0f,
     val currentLD: Float = 0f,
     val netto: Float = 0f,
+    val trueAirspeed: Double = 0.0,
+    val indicatedAirspeed: Double = 0.0,
 
     // NEW: Multiple vario implementations for testing (VARIO_IMPROVEMENTS.md)
     val varioOptimized: Double = 0.0,      // Optimized Kalman (R=0.5m)

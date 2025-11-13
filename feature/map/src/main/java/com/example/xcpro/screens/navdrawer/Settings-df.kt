@@ -173,6 +173,24 @@ fun SettingsScreen(
                         }
                     }
 
+                    // Row 2c: Levo Vario toggle screen
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            CategoryItem(
+                                title = "Levo Vario",
+                                icon = Icons.Default.Speed,
+                                onClick = { navController.navigate("levo_vario_settings") },
+                                modifier = Modifier.weight(1f)
+                            )
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+
                     // Row 3: Layouts | Airspace
                     item {
                         Row(

@@ -212,7 +212,7 @@ internal fun MapOverlayStack(
             exit = fadeOut() + scaleOut(),
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .zIndex(5f)
+                .zIndex(12f)
         ) {
             MapUIWidgets.BallastWidget(
                 widgetManager = widgetManager,

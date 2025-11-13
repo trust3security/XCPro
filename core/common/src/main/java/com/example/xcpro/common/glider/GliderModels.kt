@@ -92,6 +92,10 @@ fun defaultGliderModels(): List<GliderModel> = listOf(
             PolarPoint(160.0, 1.59),
             PolarPoint(170.0, 1.85),
             PolarPoint(180.0, 2.14)
+        ),
+        water = WaterBallastCapacity(
+            mainWingLiters = 192,
+            totalLiters = 192
         )
     ),
     GliderModel(

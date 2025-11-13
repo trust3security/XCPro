@@ -106,6 +106,12 @@ internal object CardDataFormatter {
             )
 
             "ias" -> {
+                val indicatedMs = liveData.indicatedAirspeed.takeIf { it.isFinite() && it > 0.1 }
+                if (indicatedMs != null) {
+                    val formatted = UnitsFormatter.speed(SpeedMs(indicatedMs), units)
+                    return Pair(formatted.text, "LIVE")
+                }
+
                 val groundSpeedMs = liveData.groundSpeed
                 if (!groundSpeedMs.isFinite()) {
                     return Pair(placeholderFor(cardId), "NO DATA")
