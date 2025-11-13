@@ -90,6 +90,11 @@ internal fun convertToRealTimeFlightData(completeData: CompleteFlightData): Real
         netto = completeData.netto,
         trueAirspeed = completeData.trueAirspeed,
         indicatedAirspeed = completeData.indicatedAirspeed,
+        windQuality = completeData.windQuality,
+        windSource = completeData.windSource.name,
+        windHeadwind = completeData.windHeadwind,
+        windCrosswind = completeData.windCrosswind,
+        airspeedSource = completeData.airspeedSource,
 
         // NEW: Vario variants for side-by-side testing (VARIO_IMPROVEMENTS.md)
         varioOptimized = completeData.varioOptimized,

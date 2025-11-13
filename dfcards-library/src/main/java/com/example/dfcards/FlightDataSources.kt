@@ -54,7 +54,10 @@ data class RealTimeFlightData(
     val netto: Float = 0f,
     val trueAirspeed: Double = 0.0,
     val indicatedAirspeed: Double = 0.0,
-
+    val windQuality: Int = 0,
+    val windSource: String = "",
+    val windHeadwind: Double = 0.0,
+    val windCrosswind: Double = 0.0,
     // NEW: Multiple vario implementations for testing (VARIO_IMPROVEMENTS.md)
     val varioOptimized: Double = 0.0,      // Optimized Kalman (R=0.5m)
     val varioLegacy: Double = 0.0,         // Legacy Kalman (R=2.0m)
@@ -63,7 +66,8 @@ data class RealTimeFlightData(
     val varioComplementary: Double = 0.0,  // Complementary filter (future)
 
     val lastUpdateTime: Long = System.currentTimeMillis(),
-    val calculationSource: String = "GPS+BARO+AGL"
+    val calculationSource: String = "GPS+BARO+AGL",
+    val airspeedSource: String = "UNKNOWN"
 )
 
 // ✅ PHASE 3: All old calculation classes removed (FlightDataManager, WindData)

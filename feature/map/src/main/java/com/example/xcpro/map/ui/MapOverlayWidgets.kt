@@ -8,8 +8,12 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
@@ -52,6 +56,18 @@ import com.example.xcpro.tasks.TaskManagerCoordinator
 import kotlinx.coroutines.flow.StateFlow
 import com.example.xcpro.variometer.layout.VariometerUiState
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
+import com.example.xcpro.replay.IgcReplayController
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Text
 
 @Composable
 @Suppress("LongParameterList")
@@ -93,7 +109,12 @@ internal fun MapOverlayStack(
     onBallastCommand: (BallastCommand) -> Unit,
     onHamburgerTap: () -> Unit,
     onHamburgerLongPress: () -> Unit,
-    cardStyle: CardStyle
+    cardStyle: CardStyle,
+    replayState: StateFlow<IgcReplayController.SessionState>,
+    onReplayPlayPause: () -> Unit,
+    onReplayStop: () -> Unit,
+    onReplaySpeedChange: (Double) -> Unit,
+    onReplaySeek: (Float) -> Unit
 ) {
     val currentMode by mapState.currentModeFlow.collectAsState()
     val showDistanceCircles by mapState.showDistanceCirclesFlow.collectAsState()
@@ -164,6 +185,19 @@ internal fun MapOverlayStack(
                 modifier = Modifier.zIndex(3.6f)
             )
         }
+
+        val replaySession by replayState.collectAsState()
+        ReplayHud(
+            state = replaySession,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(horizontal = 16.dp, vertical = 24.dp)
+                .zIndex(20f),
+            onPlayPause = onReplayPlayPause,
+            onStop = onReplayStop,
+            onSpeedChanged = onReplaySpeedChange,
+            onSeek = onReplaySeek
+        )
 
         MapUIWidgets.FlightModeMenu(
             widgetManager = widgetManager,
@@ -288,6 +322,91 @@ internal fun MapOverlayStack(
         )
 
         MapModalUI.AirspaceSettingsModalOverlay(modalManager = modalManager)
+    }
+}
+
+@Composable
+private fun ReplayHud(
+    state: IgcReplayController.SessionState,
+    modifier: Modifier = Modifier,
+    onPlayPause: () -> Unit,
+    onStop: () -> Unit,
+    onSpeedChanged: (Double) -> Unit,
+    onSeek: (Float) -> Unit
+) {
+    if (!state.hasSelection) return
+    val isPlaying = state.status == IgcReplayController.SessionStatus.PLAYING
+    val title = state.selection?.displayName ?: "IGC Replay"
+    val elapsed = state.elapsedMillis
+    val duration = state.durationMillis
+    val progress = state.progressFraction
+    val speed = state.speedMultiplier
+
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(text = title, style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = "${formatDuration(elapsed)} / ${formatDuration(duration)} • ${"%.1f".format(speed)}x",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Text(text = "Timeline", style = MaterialTheme.typography.bodySmall)
+            Slider(
+                value = progress,
+                onValueChange = onSeek,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Text(text = "Speed", style = MaterialTheme.typography.bodySmall)
+            Slider(
+                value = speed.toFloat(),
+                onValueChange = { onSpeedChanged(it.toDouble()) },
+                valueRange = 0.5f..10f,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                IconButton(onClick = onPlayPause) {
+                    if (isPlaying) {
+                        Icon(
+                            imageVector = Icons.Default.Pause,
+                            contentDescription = "Pause replay"
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = "Play replay"
+                        )
+                    }
+                }
+                IconButton(onClick = onStop) {
+                    Icon(
+                        imageVector = Icons.Default.Stop,
+                        contentDescription = "Stop replay"
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun formatDuration(millis: Long): String {
+    if (millis <= 0L) return "00:00"
+    val totalSeconds = millis / 1000
+    val seconds = (totalSeconds % 60).toInt()
+    val minutes = ((totalSeconds / 60) % 60).toInt()
+    val hours = (totalSeconds / 3600).toInt()
+    return if (hours > 0) {
+        "%d:%02d:%02d".format(hours, minutes, seconds)
+    } else {
+        "%02d:%02d".format(minutes, seconds)
     }
 }
 

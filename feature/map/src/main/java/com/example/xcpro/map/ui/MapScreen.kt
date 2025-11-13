@@ -436,7 +436,12 @@ fun MapScreen(
                     onBallastCommand = mapViewModel::submitBallastCommand,
                     onHamburgerTap = { mapViewModel.onEvent(MapUiEvent.ToggleDrawer) },
                     onHamburgerLongPress = { mapViewModel.onEvent(MapUiEvent.ToggleUiEditMode) },
-                    cardStyle = cardStyle
+                    cardStyle = cardStyle,
+                    replayState = mapViewModel.replaySessionState,
+                    onReplayPlayPause = mapViewModel::onReplayPlayPause,
+                    onReplayStop = mapViewModel::onReplayStop,
+                    onReplaySpeedChange = mapViewModel::onReplaySpeedChanged,
+                    onReplaySeek = mapViewModel::onReplaySeek
                 )
                 if (mapUiState.isLoadingWaypoints) {
                     Box(

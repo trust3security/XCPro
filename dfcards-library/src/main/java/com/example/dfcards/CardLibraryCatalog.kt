@@ -257,6 +257,16 @@ private val timeWeatherCards = listOf(
         unitFontSize = 8
     ),
     CardDefinition(
+        id = "wind_arrow",
+        title = "WIND ARROW",
+        description = "Arrow showing wind direction plus head/crosswind",
+        category = CardCategory.TIME_WEATHER,
+        icon = Icons.Filled.Radar,
+        unit = "",
+        primaryFontSize = 18,
+        unitFontSize = 8
+    ),
+    CardDefinition(
         id = "local_time",
         title = "Time",
         description = "Current local time",

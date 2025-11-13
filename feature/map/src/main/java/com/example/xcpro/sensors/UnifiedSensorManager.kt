@@ -36,7 +36,7 @@ import org.maplibre.android.geometry.LatLng
  * - Barometer: ~20Hz (SENSOR_DELAY_GAME) - for smooth variometer
  * - Magnetometer: ~60Hz (SENSOR_DELAY_UI) - for compass display
  */
-class UnifiedSensorManager(private val context: Context) : SensorEventListener {
+class UnifiedSensorManager(private val context: Context) : SensorEventListener, SensorDataSource {
 
     companion object {
         private const val TAG = "UnifiedSensorManager"
@@ -67,19 +67,19 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener {
 
     // StateFlows - Single Source of Truth for each sensor
     private val _gpsFlow = MutableStateFlow<GPSData?>(null)
-    val gpsFlow: StateFlow<GPSData?> = _gpsFlow.asStateFlow()
+    override val gpsFlow: StateFlow<GPSData?> = _gpsFlow.asStateFlow()
 
     private val _baroFlow = MutableStateFlow<BaroData?>(null)
-    val baroFlow: StateFlow<BaroData?> = _baroFlow.asStateFlow()
+    override val baroFlow: StateFlow<BaroData?> = _baroFlow.asStateFlow()
 
     private val _compassFlow = MutableStateFlow<CompassData?>(null)
-    val compassFlow: StateFlow<CompassData?> = _compassFlow.asStateFlow()
+    override val compassFlow: StateFlow<CompassData?> = _compassFlow.asStateFlow()
 
     private val _accelFlow = MutableStateFlow<AccelData?>(null)
-    val accelFlow: StateFlow<AccelData?> = _accelFlow.asStateFlow()
+    override val accelFlow: StateFlow<AccelData?> = _accelFlow.asStateFlow()
 
     private val _attitudeFlow = MutableStateFlow<AttitudeData?>(null)
-    val attitudeFlow: StateFlow<AttitudeData?> = _attitudeFlow.asStateFlow()
+    override val attitudeFlow: StateFlow<AttitudeData?> = _attitudeFlow.asStateFlow()
 
     // Service state
     private var isGpsStarted = false

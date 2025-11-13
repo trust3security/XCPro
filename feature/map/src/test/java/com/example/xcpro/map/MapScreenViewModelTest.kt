@@ -8,6 +8,7 @@ import com.example.xcpro.common.waypoint.WaypointLoader
 import com.example.xcpro.common.units.UnitsRepository
 import com.example.xcpro.glider.GliderRepository
 import com.example.xcpro.vario.VarioServiceManager
+import com.example.xcpro.weather.wind.data.WindRepository
 import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -15,6 +16,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import com.example.xcpro.map.domain.MapWaypointError
 import com.example.xcpro.map.config.MapFeatureFlags
+import com.example.xcpro.replay.IgcReplayController
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -26,6 +28,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.mockito.Mockito
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
@@ -43,6 +47,10 @@ class MapScreenViewModelTest {
     private val qnhPreferencesRepository = QnhPreferencesRepository(context)
     private val varioServiceManager = Mockito.mock(VarioServiceManager::class.java)
     private val flightDataRepository = FlightDataRepository()
+    private val windRepository = Mockito.mock(WindRepository::class.java)
+    private val replayController = Mockito.mock(IgcReplayController::class.java)
+    private val replaySessionFlow = MutableStateFlow(IgcReplayController.SessionState())
+    private val replayEventsFlow = MutableSharedFlow<IgcReplayController.ReplayEvent>()
 
     @After
     fun tearDown() {
@@ -53,6 +61,8 @@ class MapScreenViewModelTest {
 
     init {
         MapFeatureFlags.loadSavedTasksOnInit = false
+        Mockito.`when`(replayController.session).thenReturn(replaySessionFlow)
+        Mockito.`when`(replayController.events).thenReturn(replayEventsFlow)
     }
 
     @Ignore("GliderRepository + TaskManager persistence hangs under Robolectric until injected abstractions are provided")
@@ -86,6 +96,8 @@ class MapScreenViewModelTest {
             gliderRepository = GliderRepository.getInstance(context),
             varioServiceManager = varioServiceManager,
             flightDataRepository = flightDataRepository,
+            windRepository = windRepository,
+            igcReplayController = replayController,
             defaultDispatcher = mainDispatcherRule.dispatcher
         )
 
@@ -113,6 +125,8 @@ class MapScreenViewModelTest {
             gliderRepository = GliderRepository.getInstance(context),
             varioServiceManager = varioServiceManager,
             flightDataRepository = flightDataRepository,
+            windRepository = windRepository,
+            igcReplayController = replayController,
             defaultDispatcher = mainDispatcherRule.dispatcher
         )
 

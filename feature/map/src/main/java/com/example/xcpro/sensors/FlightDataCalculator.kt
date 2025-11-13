@@ -11,6 +11,9 @@ import com.example.dfcards.filters.Modern3StateKalmanFilter
 import com.example.xcpro.audio.VarioAudioEngine
 import com.example.xcpro.glider.StillAirSinkProvider
 import com.example.xcpro.vario.*  // NEW: Vario implementations for side-by-side testing
+import com.example.xcpro.weather.wind.data.WindState
+import com.example.xcpro.weather.wind.model.WindSource
+import com.example.xcpro.weather.wind.model.WindVector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -45,9 +48,11 @@ import java.util.Locale
  */
 class FlightDataCalculator(
     private val context: Context,
-    private val sensorManager: UnifiedSensorManager,
+    private val sensorDataSource: SensorDataSource,
     private val scope: CoroutineScope,
-    private val sinkProvider: StillAirSinkProvider
+    private val sinkProvider: StillAirSinkProvider,
+    private val windStateFlow: StateFlow<WindState>,
+    private val enableAudio: Boolean = true
 ) {
 
     companion object {
@@ -58,7 +63,6 @@ class FlightDataCalculator(
         private const val MAX_VSPEED_HISTORY = 10
 
         // Wind calculation
-        private const val WIND_CALCULATION_MIN_POINTS = 8
 
         // Thermal detection
         private const val THERMAL_DETECTION_THRESHOLD = 0.5f  // m/s
@@ -108,6 +112,14 @@ class FlightDataCalculator(
         sinkProvider = sinkProvider
     )
 
+    private var latestWindState: WindState? = null
+
+    init {
+        scope.launch {
+            windStateFlow.collect { latestWindState = it }
+        }
+    }
+
     // ✅ VARIO IMPLEMENTATIONS - Side-by-side testing (VARIO_IMPROVEMENTS.md)
     private val varioOptimized = OptimizedKalmanVario()     // Priority 1: R=0.5m
     private val varioLegacy = LegacyKalmanVario()           // Baseline: R=2.0m
@@ -156,8 +168,8 @@ class FlightDataCalculator(
         // HIGH-SPEED VARIO LOOP: Barometer + IMU (50Hz - unleashed!)
         scope.launch {
             combine(
-                sensorManager.baroFlow,
-                sensorManager.accelFlow
+                sensorDataSource.baroFlow,
+                sensorDataSource.accelFlow
             ) { baro, accel ->
                 Pair(baro, accel)
             }.collect { (baro, accel) ->
@@ -168,8 +180,8 @@ class FlightDataCalculator(
         // SLOW GPS LOOP: GPS + Compass (10Hz - navigation data)
         scope.launch {
             combine(
-                sensorManager.gpsFlow,
-                sensorManager.compassFlow
+                sensorDataSource.gpsFlow,
+                sensorDataSource.compassFlow
             ) { gps, compass ->
                 Pair(gps, compass)
             }.collect { (gps, compass) ->
@@ -178,13 +190,15 @@ class FlightDataCalculator(
         }
 
         // Initialize audio engine for professional vario audio
-        scope.launch {
-            val audioInitialized = audioEngine.initialize()
-            if (audioInitialized) {
-                audioEngine.start()
-                Log.i(TAG, "Vario audio engine initialized and started (PRIORITY 2: High-speed mode)")
-            } else {
-                Log.w(TAG, "Failed to initialize vario audio engine")
+        if (enableAudio) {
+            scope.launch {
+                val audioInitialized = audioEngine.initialize()
+                if (audioInitialized) {
+                    audioEngine.start()
+                    Log.i(TAG, "Vario audio engine initialized and started (PRIORITY 2: High-speed mode)")
+                } else {
+                    Log.w(TAG, "Failed to initialize vario audio engine")
+                }
             }
         }
 
@@ -421,8 +435,8 @@ class FlightDataCalculator(
         // Update AGL (async network call) - uses baro altitude and speed for ground detection
         flightHelpers.updateAGL(baroAltitude, gps, gps.speed)
 
-        // Calculate wind speed and direction
-        val windData = flightHelpers.calculateWindSpeed(gps)
+        // Maintain history for L/D and replay analytics
+        flightHelpers.recordLocationSample(gps)
 
         // Calculate thermal average
         val thermalAvg = flightHelpers.calculateThermalAverage(verticalSpeed.toFloat(), baroAltitude)
@@ -438,14 +452,27 @@ class FlightDataCalculator(
             else -> 0.0
         }
         val airspeedEstimate = estimateAirspeeds(
+            gpsSpeed = gps.speed.toDouble(),
+            gpsBearingDeg = gps.bearing,
             netto = netto,
             verticalSpeed = verticalSpeed,
             altitudeMeters = altitudeForAirspeed,
-            qnhHpa = qnh
+            qnhHpa = qnh,
+            windVector = latestWindState?.vector
         )
         val indicatedAirspeedMs = airspeedEstimate?.indicatedMs ?: 0.0
         val trueAirspeedMs = airspeedEstimate?.trueMs
             ?: if (gps.speed.isFinite()) gps.speed.toDouble() else indicatedAirspeedMs
+        val airspeedSourceLabel = (airspeedEstimate?.source ?: AirspeedSource.GPS_GROUND).label
+
+        val windState = latestWindState
+        val windVector = windState?.vector
+        val windSpeedValue = windVector?.speed?.toFloat() ?: 0f
+        val windDirectionFrom = windVector?.directionFromDeg?.toFloat() ?: 0f
+        val windHeadwind = windState?.headwind ?: 0.0
+        val windCrosswind = windState?.crosswind ?: 0.0
+        val windQuality = windState?.quality ?: 0
+        val windSource = windState?.source ?: WindSource.NONE
 
         // Get all vario results from cached updates
         val varioResults = mapOf(
@@ -481,13 +508,18 @@ class FlightDataCalculator(
             baroConfidence = baroConfidence,
             qnhCalibrationAgeSeconds = qnhCalibrationAgeSeconds,
             agl = flightHelpers.currentAGL,
-            windSpeed = windData.speed,
-            windDirection = windData.direction,
+            windSpeed = windSpeedValue,
+            windDirection = windDirectionFrom,
+            windHeadwind = windHeadwind,
+            windCrosswind = windCrosswind,
+            windQuality = windQuality,
+            windSource = windSource,
             thermalAverage = thermalAvg,
             currentLD = calculatedLD,
             netto = netto,
             trueAirspeed = trueAirspeedMs,
             indicatedAirspeed = indicatedAirspeedMs,
+            airspeedSource = airspeedSourceLabel,
             varioOptimized = varioResults["optimized"] ?: 0.0,
             varioLegacy = varioResults["legacy"] ?: 0.0,
             varioRaw = varioResults["raw"] ?: 0.0,
@@ -524,13 +556,71 @@ class FlightDataCalculator(
         Log.d(TAG, "FlightDataCalculator stopped")
     }
 
-    private data class AirspeedEstimate(val indicatedMs: Double, val trueMs: Double)
+    private data class AirspeedEstimate(
+        val indicatedMs: Double,
+        val trueMs: Double,
+        val source: AirspeedSource
+    )
+
+    private enum class AirspeedSource(val label: String) {
+        WIND_VECTOR("WIND"),
+        POLAR_SINK("POLAR"),
+        GPS_GROUND("GPS")
+    }
 
     /**
-     * Estimate IAS/TAS by matching the observed still-air sink to the selected glider's polar.
-     * The polar lookup yields TAS; IAS is derived by applying the local air-density correction.
+     * Estimate IAS/TAS. Prefer GPS+wind vector fusion (XCSoar-style proxy); fall back to polar sink matching.
      */
     private fun estimateAirspeeds(
+        gpsSpeed: Double,
+        gpsBearingDeg: Double,
+        netto: Float,
+        verticalSpeed: Double,
+        altitudeMeters: Double,
+        qnhHpa: Double,
+        windVector: WindVector?
+    ): AirspeedEstimate? {
+        estimateFromWind(
+            gpsSpeed = gpsSpeed,
+            gpsBearingDeg = gpsBearingDeg,
+            altitudeMeters = altitudeMeters,
+            qnhHpa = qnhHpa,
+            windVector = windVector
+        )?.let { return it }
+
+        return estimateFromPolarSink(
+            netto = netto,
+            verticalSpeed = verticalSpeed,
+            altitudeMeters = altitudeMeters,
+            qnhHpa = qnhHpa
+        )
+    }
+
+    private fun estimateFromWind(
+        gpsSpeed: Double,
+        gpsBearingDeg: Double,
+        altitudeMeters: Double,
+        qnhHpa: Double,
+        windVector: WindVector?
+    ): AirspeedEstimate? {
+        if (windVector == null || !gpsSpeed.isFinite() || gpsSpeed <= 0.1) return null
+        if (!gpsBearingDeg.isFinite()) return null
+        val bearingRad = Math.toRadians(gpsBearingDeg)
+        val groundEast = gpsSpeed * sin(bearingRad)
+        val groundNorth = gpsSpeed * cos(bearingRad)
+        val tasEast = groundEast + windVector.east
+        val tasNorth = groundNorth + windVector.north
+        val tas = hypot(tasEast, tasNorth)
+        if (!tas.isFinite() || tas <= 0.1) return null
+        val densityRatio = computeDensityRatio(altitudeMeters, qnhHpa)
+        val indicated = if (densityRatio > 0.0) tas * sqrt(densityRatio) else tas
+        return AirspeedEstimate(indicatedMs = indicated, trueMs = tas, source = AirspeedSource.WIND_VECTOR)
+    }
+
+    /**
+     * Legacy fallback: match netto vs polar sink to infer TAS, then derive IAS via density ratio.
+     */
+    private fun estimateFromPolarSink(
         netto: Float,
         verticalSpeed: Double,
         altitudeMeters: Double,
@@ -543,7 +633,7 @@ class FlightDataCalculator(
         val tasMs = findSpeedForSink(sinkEstimate) ?: return null
         val densityRatio = computeDensityRatio(altitudeMeters, qnhHpa)
         val indicatedMs = if (densityRatio > 0.0) tasMs * sqrt(densityRatio) else tasMs
-        return AirspeedEstimate(indicatedMs = indicatedMs, trueMs = tasMs)
+        return AirspeedEstimate(indicatedMs = indicatedMs, trueMs = tasMs, source = AirspeedSource.POLAR_SINK)
     }
 
     private fun findSpeedForSink(targetSinkMs: Double): Double? {

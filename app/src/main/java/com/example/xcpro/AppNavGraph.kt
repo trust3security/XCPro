@@ -33,6 +33,7 @@ import com.example.xcpro.screens.navdrawer.PolarSettingsScreen
 import com.example.xcpro.screens.navdrawer.UnitsSettingsScreen
 import com.example.xcpro.screens.navdrawer.VarioAudioSettingsScreen
 import com.example.xcpro.xcprov1.ui.HawkDashboardRoute
+import com.example.xcpro.screens.replay.IgcReplayScreen
 
 @Composable
 fun AppNavGraph(
@@ -148,6 +149,7 @@ fun AppNavGraph(
         composable("logbook") { Logbook(navController, drawerState) }
         composable("layouts") { LayoutScreen(navController, drawerState) }
         composable("dfnavboxes") { DFNavboxes(navController, drawerState) }
+        composable("igcReplay") { IgcReplayScreen(navController = navController) }
         composable("support") { MySupport(navController = navController, drawerState = drawerState, onShowBottomSheet = { setBottomSheetVisible(true) }, onHideBottomSheet = { setBottomSheetVisible(false) }) }
         composable("about") { MyAbout(navController, drawerState) }
     }

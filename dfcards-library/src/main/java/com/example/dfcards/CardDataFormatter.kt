@@ -24,7 +24,7 @@ internal object CardDataFormatter {
             "vario", "vario_optimized", "vario_legacy", "vario_raw", "vario_gps",
             "vario_complementary", "thermal_avg", "netto" ->
                 "-- ${UnitsFormatter.verticalSpeed(VerticalSpeedMs(0.0), units).unitLabel}"
-            "ground_speed", "wind_spd", "task_spd", "ias" ->
+            "ground_speed", "wind_spd", "wind_arrow", "task_spd", "ias" ->
                 "-- ${UnitsFormatter.speed(SpeedMs(0.0), units).unitLabel}"
             "wpt_dist", "task_dist" ->
                 "-- ${UnitsFormatter.distance(DistanceM(0.0), units).unitLabel}"
@@ -189,25 +189,11 @@ internal object CardDataFormatter {
 
             "flight_time" -> Pair(liveData.flightTime, "FLIGHT")
 
-            "wind_spd" -> {
-                if (liveData.windSpeed > 0.5f) {
-                    val formatted = UnitsFormatter.speed(SpeedMs(liveData.windSpeed.toDouble()), units)
-                    val gsKnots = UnitsConverter.msToKnots(liveData.groundSpeed)
-                    val confidence = if (gsKnots > 20) "CALC" else "EST"
-                    Pair(formatted.text, confidence)
-                } else {
-                    Pair(placeholderFor(cardId), "NO WIND")
-                }
-            }
+            "wind_spd" -> formatWindSpeed(liveData, units, placeholderFor(cardId))
 
-            "wind_dir" -> {
-                if (liveData.windSpeed > 1.0f) {
-                    val windDir = liveData.windDirection.roundToInt()
-                    Pair("${windDir}?", "FROM")
-                } else {
-                    Pair("--?", "NO WIND")
-                }
-            }
+            "wind_dir" -> formatWindDirection(liveData, units, placeholderFor(cardId))
+
+            "wind_arrow" -> formatWindArrow(liveData, units, placeholderFor(cardId))
 
             "local_time" -> {
                 val currentTime = System.currentTimeMillis()
@@ -266,5 +252,82 @@ internal object CardDataFormatter {
 
             else -> Pair("--", "UNKNOWN")
         }
+    }
+
+    private fun formatWindSpeed(
+        liveData: RealTimeFlightData,
+        units: UnitsPreferences,
+        placeholder: String
+    ): Pair<String, String?> {
+        val hasWind = liveData.windQuality > 0 && liveData.windSpeed > 0.5f
+        if (!hasWind) {
+            return Pair(placeholder, "NO WIND")
+        }
+        val formatted = UnitsFormatter.speed(SpeedMs(liveData.windSpeed.toDouble()), units)
+        val badge = windBadge(liveData)
+        return Pair(formatted.text, badge)
+    }
+
+    private fun formatWindDirection(
+        liveData: RealTimeFlightData,
+        units: UnitsPreferences,
+        placeholder: String
+    ): Pair<String, String?> {
+        val hasWind = liveData.windQuality > 0 && liveData.windSpeed > 0.5f
+        if (!hasWind) {
+            return Pair(placeholder.replace("?", "°"), "NO WIND")
+        }
+        val windDir = ((liveData.windDirection.roundToInt() % 360) + 360) % 360
+        val headCross = headCrossSummary(liveData, units)
+        return Pair("${windDir}°", headCross)
+    }
+
+    private fun formatWindArrow(
+        liveData: RealTimeFlightData,
+        units: UnitsPreferences,
+        placeholder: String
+    ): Pair<String, String?> {
+        val hasWind = liveData.windQuality > 0 && liveData.windSpeed > 0.5f
+        if (!hasWind) {
+            return Pair(placeholder, "NO WIND")
+        }
+        val arrow = arrowSymbol(liveData.windDirection.toDouble())
+        val formatted = UnitsFormatter.speed(SpeedMs(liveData.windSpeed.toDouble()), units)
+        val badge = headCrossSummary(liveData, units)
+        return Pair("$arrow  ${formatted.text}", badge)
+    }
+
+    private fun windBadge(liveData: RealTimeFlightData): String {
+        val sourceLabel = when (liveData.windSource.uppercase()) {
+            "CIRCLING" -> "AUTO CIRC"
+            "EKF" -> "AUTO ZIGZAG"
+            "EXTERNAL" -> "EXTERNAL"
+            "MANUAL" -> "MANUAL"
+            else -> "EST"
+        }
+        return if (liveData.windQuality > 0) {
+            "$sourceLabel Q${liveData.windQuality}"
+        } else {
+            sourceLabel
+        }
+    }
+
+    private fun headCrossSummary(
+        liveData: RealTimeFlightData,
+        units: UnitsPreferences
+    ): String {
+        val head = UnitsFormatter.speed(SpeedMs(abs(liveData.windHeadwind)), units).text
+        val headSign = if (liveData.windHeadwind >= 0) "+" else "-"
+        val cross = UnitsFormatter.speed(SpeedMs(abs(liveData.windCrosswind)), units).text
+        val crossSide = if (liveData.windCrosswind >= 0) "R" else "L"
+        val badge = windBadge(liveData)
+        return "Hd $headSign$head / X $crossSide $cross · $badge"
+    }
+
+    private fun arrowSymbol(directionFromDeg: Double): String {
+        val arrows = listOf("↑", "↗", "→", "↘", "↓", "↙", "←", "↖")
+        val normalized = ((directionFromDeg % 360.0) + 360.0) % 360.0
+        val index = ((normalized + 22.5) / 45.0).toInt() % arrows.size
+        return arrows[index]
     }
 }

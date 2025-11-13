@@ -8,6 +8,7 @@ import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.glider.StillAirSinkProvider
 import com.example.xcpro.sensors.FlightDataCalculator
 import com.example.xcpro.sensors.UnifiedSensorManager
+import com.example.xcpro.weather.wind.data.WindRepository
 import java.util.concurrent.CountDownLatch
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -28,7 +29,8 @@ open class VarioServiceManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val sinkProvider: StillAirSinkProvider,
     private val flightDataRepository: FlightDataRepository,
-    private val levoVarioPreferencesRepository: LevoVarioPreferencesRepository
+    private val levoVarioPreferencesRepository: LevoVarioPreferencesRepository,
+    private val windRepository: WindRepository
 ) {
 
     companion object {
@@ -41,7 +43,13 @@ open class VarioServiceManager @Inject constructor(
 
     val unifiedSensorManager: UnifiedSensorManager = UnifiedSensorManager(context)
     val flightDataCalculator: FlightDataCalculator =
-        FlightDataCalculator(context, unifiedSensorManager, serviceScope, sinkProvider)
+        FlightDataCalculator(
+            context = context,
+            sensorDataSource = unifiedSensorManager,
+            scope = serviceScope,
+            sinkProvider = sinkProvider,
+            windStateFlow = windRepository.windState
+        )
 
     private var running = false
     private var collectionJob: Job? = null

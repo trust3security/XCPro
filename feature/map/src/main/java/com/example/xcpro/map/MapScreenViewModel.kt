@@ -6,6 +6,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.dfcards.CardPreferences
+import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.convertToRealTimeFlightData
 import com.example.xcpro.common.di.DefaultDispatcher
@@ -16,6 +17,9 @@ import com.example.xcpro.common.waypoint.WaypointLoader
 import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.glider.GliderRepository
 import com.example.xcpro.vario.VarioServiceManager
+import com.example.xcpro.weather.wind.data.WindRepository
+import com.example.xcpro.weather.wind.data.WindState
+import com.example.xcpro.replay.IgcReplayController
 import com.example.xcpro.map.ballast.BallastCommand
 import com.example.xcpro.map.ballast.BallastController
 import com.example.xcpro.map.ballast.BallastUiState
@@ -35,6 +39,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
@@ -57,6 +62,8 @@ class MapScreenViewModel @Inject constructor(
     private val gliderRepository: GliderRepository,
     private val varioServiceManager: VarioServiceManager,
     private val flightDataRepository: FlightDataRepository,
+    private val windRepository: WindRepository,
+    private val igcReplayController: IgcReplayController,
     @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
@@ -98,6 +105,8 @@ class MapScreenViewModel @Inject constructor(
     val taskScreenManager = MapTaskScreenManager(mapState, taskManager)
     val ballastUiState: StateFlow<BallastUiState> = ballastController.state
     val sharedFlightDataRepository: FlightDataRepository = flightDataRepository
+    val windState: StateFlow<WindState> = windRepository.windState
+    val replaySessionState: StateFlow<IgcReplayController.SessionState> = igcReplayController.session
 
     private val variometerRepository = VariometerWidgetRepository(mapState.sharedPrefs)
     private val _variometerUiState = MutableStateFlow(VariometerUiState())
@@ -113,16 +122,38 @@ class MapScreenViewModel @Inject constructor(
     }
 
     private fun observeFlightDataRepository() {
-        flightDataRepository.flightData
-            .onEach { data ->
+        combine(
+            flightDataRepository.flightData,
+            windRepository.windState
+        ) { data, wind -> data to wind }
+            .onEach { (data, wind) ->
                 if (data != null) {
                     val liveData = convertToRealTimeFlightData(data)
+                        .applyWindState(wind)
                     flightDataManager.updateLiveFlightData(liveData)
                 } else {
                     flightDataManager.updateLiveFlightData(null)
                 }
             }
             .launchIn(viewModelScope)
+    }
+
+    private fun RealTimeFlightData.applyWindState(windState: WindState): RealTimeFlightData {
+        if (!windState.isAvailable) {
+            return this
+        }
+
+        val vector = windState.vector ?: return this
+        val directionFrom = ((vector.directionFromDeg % 360.0) + 360.0) % 360.0
+
+        return copy(
+            windSpeed = vector.speed.toFloat(),
+            windDirection = directionFrom.toFloat(),
+            windQuality = windState.quality,
+            windSource = windState.source.name,
+            windHeadwind = windState.headwind,
+            windCrosswind = windState.crosswind
+        )
     }
 
     private val _isAATEditMode = MutableStateFlow(false)
@@ -150,6 +181,30 @@ class MapScreenViewModel @Inject constructor(
             MapUiEvent.ToggleDrawer -> toggleDrawer()
             is MapUiEvent.SetDrawerOpen -> setDrawerOpen(event.isOpen)
         }
+    }
+
+    fun onReplayPlayPause() {
+        when (replaySessionState.value.status) {
+            IgcReplayController.SessionStatus.PLAYING -> igcReplayController.pause()
+            IgcReplayController.SessionStatus.PAUSED -> igcReplayController.play()
+            IgcReplayController.SessionStatus.IDLE -> {
+                if (replaySessionState.value.selection != null) {
+                    igcReplayController.play()
+                }
+            }
+        }
+    }
+
+    fun onReplayStop() {
+        igcReplayController.stop()
+    }
+
+    fun onReplaySpeedChanged(multiplier: Double) {
+        igcReplayController.setSpeed(multiplier)
+    }
+
+    fun onReplaySeek(progress: Float) {
+        igcReplayController.seekTo(progress)
     }
 
     private fun setUiEditMode(enabled: Boolean) {

@@ -44,6 +44,7 @@ import com.example.xcpro.seedQnhInputValue
 import com.example.xcpro.convertQnhInputToHpa
 import com.example.xcpro.variometer.layout.VariometerUiState
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
+import com.example.xcpro.replay.IgcReplayController
 
 @Composable
 internal fun MapScreenContent(
@@ -94,7 +95,12 @@ internal fun MapScreenContent(
     onBallastCommand: (BallastCommand) -> Unit,
     onHamburgerTap: () -> Unit,
     onHamburgerLongPress: () -> Unit,
-    cardStyle: CardStyle
+    cardStyle: CardStyle,
+    replayState: StateFlow<IgcReplayController.SessionState>,
+    onReplayPlayPause: () -> Unit,
+    onReplayStop: () -> Unit,
+    onReplaySpeedChange: (Double) -> Unit,
+    onReplaySeek: (Float) -> Unit
 ) {
     Box(Modifier.fillMaxSize()) {
         Scaffold(
@@ -151,7 +157,12 @@ internal fun MapScreenContent(
                         onBallastCommand = onBallastCommand,
                         onHamburgerTap = onHamburgerTap,
                         onHamburgerLongPress = onHamburgerLongPress,
-                        cardStyle = cardStyle
+                        cardStyle = cardStyle,
+                        replayState = replayState,
+                        onReplayPlayPause = onReplayPlayPause,
+                        onReplayStop = onReplayStop,
+                        onReplaySpeedChange = onReplaySpeedChange,
+                        onReplaySeek = onReplaySeek
                     )
                 }
             }

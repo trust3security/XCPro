@@ -15,15 +15,6 @@ import android.location.Location
  */
 
 /**
- * Wind data result
- */
-data class WindData(
-    val speed: Float,       // m/s
-    val direction: Float,   // 0-360° (direction wind is coming FROM)
-    val confidence: Float   // 0-1 (confidence in calculation)
-)
-
-/**
  * Location history point with timestamp and motion data
  * Used for wind and L/D calculations
  */

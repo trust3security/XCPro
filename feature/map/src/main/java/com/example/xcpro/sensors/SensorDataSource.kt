@@ -1,0 +1,11 @@
+package com.example.xcpro.sensors
+
+import kotlinx.coroutines.flow.StateFlow
+
+interface SensorDataSource {
+    val gpsFlow: StateFlow<GPSData?>
+    val baroFlow: StateFlow<BaroData?>
+    val compassFlow: StateFlow<CompassData?>
+    val accelFlow: StateFlow<AccelData?>
+    val attitudeFlow: StateFlow<AttitudeData?>
+}

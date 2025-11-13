@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Flight
 import androidx.compose.material.icons.filled.Straighten
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
@@ -233,7 +234,12 @@ fun SettingsScreen(
                                 onClick = { navController.navigate("dfnavboxes") },
                                 modifier = Modifier.weight(1f)
                             )
-                            Spacer(modifier = Modifier.weight(1f))
+                            CategoryItem(
+                                title = "IGC Replay",
+                                icon = Icons.Filled.PlayArrow,
+                                onClick = { navController.navigate("igcReplay") },
+                                modifier = Modifier.weight(1f)
+                            )
                         }
                     }
                 }

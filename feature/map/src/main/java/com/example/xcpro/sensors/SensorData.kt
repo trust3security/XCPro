@@ -2,6 +2,7 @@ package com.example.xcpro.sensors
 
 import com.example.dfcards.calculations.ConfidenceLevel
 import org.maplibre.android.geometry.LatLng
+import com.example.xcpro.weather.wind.model.WindSource
 
 /**
  * Raw GPS data from LocationManager
@@ -105,6 +106,10 @@ data class CompleteFlightData(
     // Calculated wind
     val windSpeed: Float,       // m/s (wind speed magnitude)
     val windDirection: Float,   // 0-360° (direction wind is coming FROM)
+    val windHeadwind: Double = 0.0,
+    val windCrosswind: Double = 0.0,
+    val windQuality: Int = 0,
+    val windSource: WindSource = WindSource.NONE,
 
     // Calculated thermal average
     val thermalAverage: Float,  // m/s (average climb rate in thermal)
@@ -116,6 +121,7 @@ data class CompleteFlightData(
     val netto: Float,           // m/s (variometer + sink rate compensation)
     val trueAirspeed: Double = 0.0,    // m/s
     val indicatedAirspeed: Double = 0.0, // m/s
+    val airspeedSource: String = "UNKNOWN",
 
     // NEW: Multiple vario implementations for testing (VARIO_IMPROVEMENTS.md)
     val varioOptimized: Double = 0.0,      // Optimized Kalman (R=0.5m) - Priority 1

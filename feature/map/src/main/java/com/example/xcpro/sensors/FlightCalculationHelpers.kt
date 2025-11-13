@@ -36,9 +36,6 @@ internal class FlightCalculationHelpers(
         private const val MAX_LOCATION_HISTORY = 20
         private const val MAX_VSPEED_HISTORY = 10
 
-        // Wind calculation
-        private const val WIND_CALCULATION_MIN_POINTS = 8
-
         // Thermal detection
         private const val THERMAL_DETECTION_THRESHOLD = 0.5f  // m/s
         private const val THERMAL_MIN_DURATION = 15L          // seconds
@@ -95,51 +92,12 @@ internal class FlightCalculationHelpers(
      * Calculate wind speed and direction from GPS track history
      * Ported from FlightDataManager.kt lines 375-415
      */
-    fun calculateWindSpeed(gps: GPSData): WindData {
-        // Add current location to history
+    fun recordLocationSample(gps: GPSData) {
         val location = Location("").apply {
             latitude = gps.latLng.latitude
             longitude = gps.latLng.longitude
         }
         addLocationToHistory(location, gps.speed.toFloat(), gps.bearing.toFloat())
-
-        if (locationHistory.size < WIND_CALCULATION_MIN_POINTS) {
-            return WindData(0f, 0f, 0f)
-        }
-
-        val recentPoints = locationHistory.takeLast(WIND_CALCULATION_MIN_POINTS)
-        val speedVariations = recentPoints.map { it.groundSpeed }
-        val maxSpeed = speedVariations.maxOrNull() ?: 0f
-        val minSpeed = speedVariations.minOrNull() ?: 0f
-        val avgSpeed = speedVariations.average().toFloat()
-
-        val windSpeed = if (maxSpeed > 5f && (maxSpeed - minSpeed) > 2f) {
-            ((maxSpeed - minSpeed) / 2f).coerceIn(0f, 50f)
-        } else {
-            val speedDeviation = speedVariations.map { abs(it - avgSpeed) }.average().toFloat()
-            speedDeviation.coerceIn(0f, 25f)
-        }
-
-        val trackChanges = recentPoints.zipWithNext { a, b ->
-            val diff = abs(b.track - a.track)
-            if (diff > 180f) 360f - diff else diff
-        }
-
-        val avgTrackChange = trackChanges.average().toFloat()
-        val windDirection = if (windSpeed > 1f) {
-            val fastestPoint = recentPoints.maxByOrNull { it.groundSpeed }
-            ((fastestPoint?.track ?: 0f) + 180f) % 360f
-        } else {
-            0f
-        }
-
-        val confidence = calculateWindConfidence(avgTrackChange, recentPoints.size)
-
-        return WindData(
-            speed = windSpeed,
-            direction = windDirection,
-            confidence = confidence
-        )
     }
 
     /**
@@ -313,13 +271,6 @@ internal class FlightCalculationHelpers(
     /**
      * Calculate wind confidence
      */
-    private fun calculateWindConfidence(trackVariation: Float, dataPoints: Int): Float {
-        val dataConfidence = (dataPoints.toFloat() / WIND_CALCULATION_MIN_POINTS).coerceAtMost(1f)
-        val variationConfidence = if (trackVariation > 5f && trackVariation < 45f) 0.8f else 0.3f
-
-        return (dataConfidence * variationConfidence).coerceIn(0f, 1f)
-    }
-
     /**
      * Reset thermal tracking
      */
