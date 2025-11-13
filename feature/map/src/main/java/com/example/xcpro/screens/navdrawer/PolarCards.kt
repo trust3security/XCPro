@@ -106,6 +106,15 @@ fun ConfigCard() {
     var ballastInput by remember(cfg.waterBallastKg) {
         mutableStateOf(cfg.waterBallastKg.roundToInt().toString())
     }
+    var drainMinutesInput by remember(cfg.ballastDrainMinutes) {
+        mutableStateOf(
+            if (cfg.ballastDrainMinutes == 0.0) ""
+            else cfg.ballastDrainMinutes.toString().trimEnd('0').trimEnd('.')
+        )
+    }
+    var refWeightInput by remember(cfg.referenceWeightKg) {
+        mutableStateOf(cfg.referenceWeightKg?.toInt()?.toString() ?: "")
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -164,27 +173,61 @@ fun ConfigCard() {
                     keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number)
                 )
             }
+            Row(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = cfg.bugsPercent.toString(),
+                    onValueChange = { text ->
+                        text.toIntOrNull()?.let { value ->
+                            repo.updateConfig { it.copy(bugsPercent = value.coerceIn(0, 50)) }
+                        }
+                    },
+                    label = { Text("Bugs (%)") },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                OutlinedTextField(
+                    value = refWeightInput,
+                    onValueChange = { text ->
+                        val sanitized = text.filter { it.isDigit() }
+                        refWeightInput = sanitized
+                        when {
+                            sanitized.isBlank() -> repo.setReferenceWeightKg(null)
+                            else -> sanitized.toIntOrNull()?.let { value ->
+                                repo.setReferenceWeightKg(value.toDouble())
+                            }
+                        }
+                    },
+                    label = { Text("Reference Weight (kg)") },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number)
+                )
+            }
             OutlinedTextField(
-                value = cfg.bugsPercent.toString(),
+                value = drainMinutesInput,
                 onValueChange = { text ->
-                    text.toIntOrNull()?.let { value ->
-                        repo.updateConfig { it.copy(bugsPercent = value.coerceIn(0, 50)) }
+                    val sanitized = text.filter { it.isDigit() || it == '.' }
+                    drainMinutesInput = sanitized
+                    when {
+                        sanitized.isBlank() -> repo.updateConfig { it.copy(ballastDrainMinutes = 0.0) }
+                        else -> sanitized.toDoubleOrNull()?.let { value ->
+                            repo.updateConfig {
+                                it.copy(
+                                    ballastDrainMinutes = value.coerceIn(0.5, 60.0)
+                                )
+                            }
+                        }
                     }
                 },
-                label = { Text("Bugs (%)") },
+                label = { Text("Drain Time (min)") },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                singleLine = true,
+                keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Decimal)
             )
-            OutlinedTextField(
-                value = cfg.referenceWeightKg?.toString() ?: "",
-                onValueChange = { text ->
-                    val value = text.toDoubleOrNull()
-                    repo.setReferenceWeightKg(value)
-                },
-                label = { Text("Reference Weight (kg)") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
+
+            
         }
     }
 }

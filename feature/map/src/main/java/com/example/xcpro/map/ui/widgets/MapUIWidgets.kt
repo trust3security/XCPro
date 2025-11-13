@@ -13,12 +13,11 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -30,8 +29,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -43,8 +40,8 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -68,7 +65,6 @@ import com.example.xcpro.map.ballast.BallastPill
 import com.example.xcpro.map.ballast.BallastUiState
 import com.example.xcpro.variometer.layout.VariometerUiState
 import kotlin.math.roundToInt
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -258,45 +254,11 @@ object MapUIWidgets {
 
         val heightPx = with(density) { heightDp.dp.toPx() }
 
+        val swipeThresholdPx = with(density) { 32.dp.toPx() }
+
         val displayOffset = remember(isEditMode) { mutableStateOf(ballastOffset) }
-
-        var areControlsVisible by remember { mutableStateOf(false) }
-
-        var autoHideJob by remember { mutableStateOf<Job?>(null) }
-
-        val autoHideScope = rememberCoroutineScope()
-
-
-
-        fun hideControls() {
-
-            areControlsVisible = false
-
-            autoHideJob?.cancel()
-
-            autoHideJob = null
-
-        }
-
-
-
-        fun showControlsTemporarily() {
-
-            areControlsVisible = true
-
-            autoHideJob?.cancel()
-
-            autoHideJob = autoHideScope.launch {
-
-                delay(4_000)
-
-                hideControls()
-
-            }
-
-        }
-
-
+        var showSwipeHint by rememberSaveable { mutableStateOf(true) }
+        var dragAccumulation by remember { mutableStateOf(0f) }
 
         LaunchedEffect(ballastOffset, isEditMode) {
 
@@ -308,59 +270,15 @@ object MapUIWidgets {
 
         }
 
-
-
-        LaunchedEffect(
-
-            ballastState.snapshot.hasBallast,
-
-            ballastState.snapshot.ratio,
-
-            areControlsVisible
-
-        ) {
-
-            val ratio = ballastState.snapshot.ratio
-
-            if (!ballastState.snapshot.hasBallast) {
-
-                hideControls()
-
-            } else if (areControlsVisible && (ratio <= 0f || ratio >= 1f)) {
-
-                hideControls()
-
-            }
-
-        }
-
-
-
-        LaunchedEffect(isEditMode) {
-
-            if (isEditMode) {
-
-                hideControls()
-
-            }
-
-        }
-
-
-
         DisposableEffect(Unit) {
 
             onDispose {
 
                 widgetManager.clearGestureRegion(MapOverlayGestureTarget.BALLAST)
 
-                autoHideJob?.cancel()
-
             }
 
         }
-
-
 
         Box(
 
@@ -446,17 +364,65 @@ object MapUIWidgets {
 
                         detectTapGestures(onTap = {
 
-                            if (areControlsVisible) {
+                            if (ballastState.isAnimating) {
 
-                                hideControls()
+                                onCommand(BallastCommand.Cancel)
 
                             } else {
 
-                                showControlsTemporarily()
+                                showSwipeHint = false
 
                             }
 
                         })
+
+                    }
+
+                }
+
+                .pointerInput(isEditMode) {
+
+                    if (!isEditMode) {
+
+                        detectVerticalDragGestures(
+
+                            onDragStart = {
+
+                                dragAccumulation = 0f
+
+                                showSwipeHint = false
+
+                            },
+
+                            onVerticalDrag = { change, dragAmount ->
+
+                                dragAccumulation += dragAmount
+
+                                change.consumePositionChange()
+
+                            },
+
+                            onDragEnd = {
+
+                                when {
+
+                                    dragAccumulation <= -swipeThresholdPx -> onCommand(BallastCommand.StartFill)
+
+                                    dragAccumulation >= swipeThresholdPx -> onCommand(BallastCommand.StartDrain)
+
+                                }
+
+                                dragAccumulation = 0f
+
+                            },
+
+                            onDragCancel = {
+
+                                dragAccumulation = 0f
+
+                            }
+
+                        )
 
                     }
 
@@ -470,7 +436,13 @@ object MapUIWidgets {
 
                 onCommand = onCommand,
 
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+
+                    .align(Alignment.Center)
+
+                    .width(widthDp.dp)
+
+                    .height(heightDp.dp)
 
             )
 
@@ -478,7 +450,7 @@ object MapUIWidgets {
 
             AnimatedVisibility(
 
-                visible = areControlsVisible && ballastState.snapshot.hasBallast,
+                visible = showSwipeHint && !isEditMode,
 
                 enter = fadeIn(),
 
@@ -486,51 +458,59 @@ object MapUIWidgets {
 
             ) {
 
-                Box(modifier = Modifier.fillMaxSize()) {
+                Column(
 
-                    BallastControlButton(
+                    modifier = Modifier
 
-                        text = "Fill",
+                        .align(Alignment.CenterEnd)
 
-                        enabled = ballastState.isFillEnabled,
+                        .padding(end = 6.dp),
 
-                        onClick = {
+                    horizontalAlignment = Alignment.CenterHorizontally,
 
-                            onCommand(BallastCommand.StartFill)
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
 
-                            showControlsTemporarily()
+                ) {
 
-                        },
+                    Text(
 
-                        modifier = Modifier
+                        text = "Swipe ?",
 
-                            .align(Alignment.TopCenter)
+                        style = MaterialTheme.typography.labelSmall,
 
-                            .padding(top = 8.dp)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
 
                     )
 
+                    Text(
 
+                        text = "Fill",
 
-                    BallastControlButton(
+                        style = MaterialTheme.typography.labelSmall,
+
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+
+                    )
+
+                    Text(
+
+                        text = "Swipe ?",
+
+                        style = MaterialTheme.typography.labelSmall,
+
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+
+                        modifier = Modifier.padding(top = 8.dp)
+
+                    )
+
+                    Text(
 
                         text = "Drain",
 
-                        enabled = ballastState.isDrainEnabled,
+                        style = MaterialTheme.typography.labelSmall,
 
-                        onClick = {
-
-                            onCommand(BallastCommand.StartDrain)
-
-                            showControlsTemporarily()
-
-                        },
-
-                        modifier = Modifier
-
-                            .align(Alignment.BottomCenter)
-
-                            .padding(bottom = 8.dp)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
 
                     )
 
@@ -541,51 +521,6 @@ object MapUIWidgets {
         }
 
     }
-
-
-
-    @Composable
-
-    private fun BallastControlButton(
-
-        text: String,
-
-        enabled: Boolean,
-
-        onClick: () -> Unit,
-
-        modifier: Modifier = Modifier
-
-    ) {
-
-        Button(
-
-            onClick = onClick,
-
-            enabled = enabled,
-
-            shape = RoundedCornerShape(24.dp),
-
-            colors = ButtonDefaults.buttonColors(
-
-                containerColor = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-
-                contentColor = if (enabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-
-            ),
-
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-
-            modifier = modifier.defaultMinSize(minHeight = 32.dp)
-
-        ) {
-
-            Text(text = text, style = MaterialTheme.typography.labelMedium)
-
-        }
-
-    }
-
 
 
     /**
@@ -941,6 +876,9 @@ private fun Modifier.editModeBorder(
         this
     }
 }
+
+
+
 
 
 

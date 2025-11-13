@@ -39,9 +39,9 @@ fun BallastPill(
     modifier: Modifier = Modifier
 ) {
     val borderColor = when (state.mode) {
-        BallastMode.Filling -> Color(0xFF2E7D32).copy(alpha = 0.9f)
-        BallastMode.Draining -> Color(0xFFC62828).copy(alpha = 0.9f)
-        BallastMode.Idle -> Color(0xFF0A84FF).copy(alpha = 0.85f)
+        BallastMode.Filling -> Color(0xFF2E7D32).copy(alpha = 0.8f)
+        BallastMode.Draining -> Color(0xFFC62828).copy(alpha = 0.8f)
+        BallastMode.Idle -> Color(0xFF0A84FF).copy(alpha = 0.75f)
     }
     val fillFraction by animateFloatAsState(
         targetValue = state.snapshot.ratio.coerceIn(0f, 1f),
@@ -62,8 +62,8 @@ fun BallastPill(
         "Water ballast $percent percent, $statusText"
 
     val pillShape = RoundedCornerShape(18.dp)
-    val fillColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
-    val backgroundColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
+    val fillColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+    val backgroundColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
 
     Column(
         modifier = modifier.semantics { this.contentDescription = contentDescription },
