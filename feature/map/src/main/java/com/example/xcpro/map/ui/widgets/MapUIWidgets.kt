@@ -1,6 +1,9 @@
 package com.example.xcpro.map.ui.widgets
 
 import android.util.Log
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -10,15 +13,16 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
@@ -34,17 +38,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.consumePositionChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
@@ -60,6 +65,8 @@ import com.example.xcpro.map.ballast.BallastPill
 import com.example.xcpro.map.ballast.BallastUiState
 import com.example.xcpro.variometer.layout.VariometerUiState
 import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 object MapUIWidgets {
 
@@ -216,80 +223,305 @@ object MapUIWidgets {
     @OptIn(ExperimentalFoundationApi::class)
     @Composable
     fun BallastWidget(
+
         widgetManager: MapUIWidgetManager,
+
         ballastState: BallastUiState,
+
         onCommand: (BallastCommand) -> Unit,
+
         ballastOffset: Offset,
+
         screenWidthPx: Float,
+
         screenHeightPx: Float,
+
         onOffsetChange: (Offset) -> Unit,
+
         isEditMode: Boolean,
+
         modifier: Modifier = Modifier,
+
         widthDp: Float = 40f,
+
         heightDp: Float = 120f
+
     ) {
+
         val density = LocalDensity.current
+
         val widthPx = with(density) { widthDp.dp.toPx() }
+
         val heightPx = with(density) { heightDp.dp.toPx() }
+
+        val swipeThresholdPx = with(density) { 32.dp.toPx() }
+
         val displayOffset = remember(isEditMode) { mutableStateOf(ballastOffset) }
+        var showSwipeHint by rememberSaveable { mutableStateOf(true) }
+        var dragAccumulation by remember { mutableStateOf(0f) }
 
         LaunchedEffect(ballastOffset, isEditMode) {
+
             if (!isEditMode) {
+
                 displayOffset.value = ballastOffset
+
             }
+
         }
 
         DisposableEffect(Unit) {
-            onDispose { widgetManager.clearGestureRegion(MapOverlayGestureTarget.BALLAST) }
+
+            onDispose {
+
+                widgetManager.clearGestureRegion(MapOverlayGestureTarget.BALLAST)
+
+            }
+
         }
 
         Box(
+
             modifier = modifier
+
                 .offset { IntOffset(displayOffset.value.x.roundToInt(), displayOffset.value.y.roundToInt()) }
+
                 .width(widthDp.dp)
+
                 .height(heightDp.dp)
+
                 .editModeBorder(isEditMode, RoundedCornerShape(18.dp))
+
                 .onGloballyPositioned { coordinates ->
+
                     widgetManager.updateGestureRegion(
+
                         target = MapOverlayGestureTarget.BALLAST,
+
                         bounds = coordinates.boundsInRoot()
+
                     )
+
                 }
+
                 .then(
+
                     if (isEditMode) {
+
                         Modifier.pointerInput(screenWidthPx, screenHeightPx) {
+
                             detectDragGestures(
+
                                 onDrag = { change, dragAmount ->
+
                                     displayOffset.value = Offset(
+
                                         x = (displayOffset.value.x + dragAmount.x).coerceIn(
+
                                             0f,
+
                                             (screenWidthPx - widthPx).coerceAtLeast(0f)
+
                                         ),
+
                                         y = (displayOffset.value.y + dragAmount.y).coerceIn(
+
                                             0f,
+
                                             (screenHeightPx - heightPx).coerceAtLeast(0f)
+
                                         )
+
                                     )
+
                                     change.consumePositionChange()
+
                                 },
+
                                 onDragEnd = {
+
                                     widgetManager.saveWidgetPosition("ballast_pill", displayOffset.value)
+
                                     onOffsetChange(displayOffset.value)
+
                                 }
+
                             )
+
                         }
+
                     } else {
+
                         Modifier
+
                     }
+
                 )
+
+                .pointerInput(isEditMode) {
+
+                    if (!isEditMode) {
+
+                        detectTapGestures(onTap = {
+
+                            if (ballastState.isAnimating) {
+
+                                onCommand(BallastCommand.Cancel)
+
+                            } else {
+
+                                showSwipeHint = false
+
+                            }
+
+                        })
+
+                    }
+
+                }
+
+                .pointerInput(isEditMode) {
+
+                    if (!isEditMode) {
+
+                        detectVerticalDragGestures(
+
+                            onDragStart = {
+
+                                dragAccumulation = 0f
+
+                                showSwipeHint = false
+
+                            },
+
+                            onVerticalDrag = { change, dragAmount ->
+
+                                dragAccumulation += dragAmount
+
+                                change.consumePositionChange()
+
+                            },
+
+                            onDragEnd = {
+
+                                when {
+
+                                    dragAccumulation <= -swipeThresholdPx -> onCommand(BallastCommand.StartFill)
+
+                                    dragAccumulation >= swipeThresholdPx -> onCommand(BallastCommand.StartDrain)
+
+                                }
+
+                                dragAccumulation = 0f
+
+                            },
+
+                            onDragCancel = {
+
+                                dragAccumulation = 0f
+
+                            }
+
+                        )
+
+                    }
+
+                }
+
         ) {
+
             BallastPill(
+
                 state = ballastState,
+
                 onCommand = onCommand,
-                modifier = Modifier.fillMaxSize()
+
+                modifier = Modifier
+
+                    .align(Alignment.Center)
+
+                    .width(widthDp.dp)
+
+                    .height(heightDp.dp)
+
             )
+
+
+
+            AnimatedVisibility(
+
+                visible = showSwipeHint && !isEditMode,
+
+                enter = fadeIn(),
+
+                exit = fadeOut()
+
+            ) {
+
+                Column(
+
+                    modifier = Modifier
+
+                        .align(Alignment.CenterEnd)
+
+                        .padding(end = 6.dp),
+
+                    horizontalAlignment = Alignment.CenterHorizontally,
+
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+
+                ) {
+
+                    Text(
+
+                        text = "Swipe ?",
+
+                        style = MaterialTheme.typography.labelSmall,
+
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+
+                    )
+
+                    Text(
+
+                        text = "Fill",
+
+                        style = MaterialTheme.typography.labelSmall,
+
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+
+                    )
+
+                    Text(
+
+                        text = "Swipe ?",
+
+                        style = MaterialTheme.typography.labelSmall,
+
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+
+                        modifier = Modifier.padding(top = 8.dp)
+
+                    )
+
+                    Text(
+
+                        text = "Drain",
+
+                        style = MaterialTheme.typography.labelSmall,
+
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+
+                    )
+
+                }
+
+            }
+
         }
+
     }
+
 
     /**
      * Draggable hamburger button docked along the left edge.
@@ -535,7 +767,8 @@ object MapUIWidgets {
                 onDismissRequest = {
                     isExpanded = false
                     Log.d(tag, "Dropdown dismissed")
-                }
+                },
+                shape = RoundedCornerShape(20.dp)
             ) {
                 visibleModes.forEach { mode ->
                     DropdownMenuItem(
@@ -643,4 +876,12 @@ private fun Modifier.editModeBorder(
         this
     }
 }
+
+
+
+
+
+
+
+
 

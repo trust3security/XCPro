@@ -21,5 +21,6 @@ data class GliderConfig(
     val bugsPercent: Int = 0,
     val referenceWeightKg: Double? = null,
     val threePointPolar: ThreePointPolar? = null,
-    val userCoefficients: UserPolarCoefficients? = null
+    val userCoefficients: UserPolarCoefficients? = null,
+    val ballastDrainMinutes: Double = 5.0
 )
