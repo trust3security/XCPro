@@ -114,6 +114,7 @@ class IgcReplayController @Inject constructor(
             val start = points.first().timestampMillis
             val duration = (points.last().timestampMillis - start).coerceAtLeast(1L)
             val selection = Selection(uri, displayName)
+            replayCalculator.setManualQnh(qnh)
             _session.value = SessionState(
                 selection = selection,
                 status = SessionStatus.PAUSED,
@@ -174,6 +175,7 @@ class IgcReplayController @Inject constructor(
             cancelReplayJob()
             replaySensorSource.reset()
             flightDataRepository.update(null)
+            replayCalculator.resetQnhToStandard()
             resumeSensors()
             points = emptyList()
             currentIndex = 0
