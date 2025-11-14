@@ -149,7 +149,7 @@ class IgcReplayController @Inject constructor(
                     }
                     val nextPoint = points[nextIndex]
                     val delta = (nextPoint.timestampMillis - point.timestampMillis).coerceAtLeast(MIN_FRAME_INTERVAL_MS)
-                    val speed = _session.value.speedMultiplier.coerceAtLeast(0.1)
+                    val speed = _session.value.speedMultiplier
                     val delayMillis = (delta / speed).toLong().coerceAtLeast(1L)
                     currentIndex = nextIndex
                     try {
@@ -185,7 +185,7 @@ class IgcReplayController @Inject constructor(
     }
 
     fun setSpeed(multiplier: Double) {
-        val clamped = multiplier.coerceIn(0.5, 20.0)
+        val clamped = multiplier.coerceIn(1.0, 20.0)
         _session.update { it.copy(speedMultiplier = clamped) }
     }
 
