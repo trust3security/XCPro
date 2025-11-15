@@ -161,8 +161,7 @@ private fun SpeedSelector(
             Slider(
                 value = uiState.speedMultiplier.toFloat(),
                 onValueChange = { onSpeedChanged(it.toDouble()) },
-                valueRange = 0.5f..10f,
-                steps = 19
+                valueRange = 1f..10f
             )
         }
     }

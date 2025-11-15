@@ -46,6 +46,7 @@ class WindRepository @Inject constructor(
 
     private var circlingAccumulatorMs = 0.0
     private var isCircling = false
+    private var lastCirclingTimestamp = Long.MIN_VALUE
 
     init {
         scope.launch {
@@ -80,47 +81,59 @@ class WindRepository @Inject constructor(
             gps.speed >= MIN_GROUND_SPEED
         val sustainedCircling = updateCirclingState(instantCircling, gps.timestamp)
 
+        val estimatorCircling = sustainedCircling || instantCircling
         val result = circlingWind.addSample(
             CirclingWindSample(
                 timestampMillis = gps.timestamp,
                 trackRad = trackRad,
                 groundSpeed = gps.speed,
-                isCircling = sustainedCircling
+                isCircling = estimatorCircling
             )
         )
 
         if (result != null) {
+            lastCirclingTimestamp = result.timestampMillis
             windStore.slotMeasurement(
                 timestampMillis = result.timestampMillis,
                 altitudeMeters = altitudeFromSample(data),
                 vector = result.windVector,
                 quality = result.quality,
-                source = WindSource.CIRCLING
+                source = WindSource.CIRCLING,
+                clearExisting = true
             )
+            publishWindState(
+                vector = result.windVector,
+                source = WindSource.CIRCLING,
+                quality = result.quality,
+                headingDeg = data.effectiveHeading,
+                timestamp = result.timestampMillis
+            )
+            return
         }
 
-        val ekfResult = windEkf.update(data, sustainedCircling, turnRate)
-        if (ekfResult != null) {
+        val ekfResult = windEkf.update(data, estimatorCircling, turnRate)
+        val canUseEkf = lastCirclingTimestamp == Long.MIN_VALUE ||
+            ekfResult?.timestampMillis?.minus(lastCirclingTimestamp) ?: Long.MAX_VALUE > CIRCLING_SUPPRESSION_MS
+
+        if (ekfResult != null && canUseEkf) {
+            val boostedQuality = (ekfResult.quality + EKF_QUALITY_BONUS).coerceAtMost(MAX_MEASUREMENT_QUALITY)
             windStore.slotMeasurement(
                 timestampMillis = ekfResult.timestampMillis,
                 altitudeMeters = altitudeFromSample(data),
                 vector = ekfResult.windVector,
-                quality = ekfResult.quality,
+                quality = boostedQuality,
                 source = WindSource.EKF
             )
         }
 
         val evaluated = windStore.evaluate(data.timestamp, data.baroAltitude)
         if (evaluated != null) {
-            val headingDeg = data.effectiveHeading
-            val (head, cross) = computeHeadAndCross(evaluated.vector, headingDeg)
-            _windState.value = WindState(
+            publishWindState(
                 vector = evaluated.vector,
                 source = evaluated.source,
                 quality = evaluated.quality,
-                headwind = head,
-                crosswind = cross,
-                lastUpdatedMillis = evaluated.timestampMillis
+                headingDeg = data.effectiveHeading,
+                timestamp = evaluated.timestampMillis
             )
         }
     }
@@ -180,11 +193,32 @@ class WindRepository @Inject constructor(
         return headwind to crosswind
     }
 
+    private fun publishWindState(
+        vector: WindVector,
+        source: WindSource,
+        quality: Int,
+        headingDeg: Double,
+        timestamp: Long
+    ) {
+        val (head, cross) = computeHeadAndCross(vector, headingDeg)
+        _windState.value = WindState(
+            vector = vector,
+            source = source,
+            quality = quality,
+            headwind = head,
+            crosswind = cross,
+            lastUpdatedMillis = timestamp
+        )
+    }
+
     companion object {
         private const val MIN_GROUND_SPEED = 8.0  // m/s
         private const val MIN_TURN_RATE = 0.15    // rad/s (~8.6 deg/s)
         private const val ENTER_THRESHOLD_MS = 3_500.0
         private const val EXIT_THRESHOLD_MS = 1_500.0
         private const val MAX_ACCUM_MS = 8_000.0
+        private const val EKF_QUALITY_BONUS = 1
+        private const val MAX_MEASUREMENT_QUALITY = 5
+        private const val CIRCLING_SUPPRESSION_MS = 5_000L
     }
 }

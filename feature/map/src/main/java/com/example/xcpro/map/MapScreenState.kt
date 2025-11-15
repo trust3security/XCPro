@@ -15,6 +15,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 
+// AI-NOTE: MapScreenState intentionally exposes mutable setters that the UI calls directly.
+// The card grid + widget gestures were extremely flaky when routed through MapUiEvents, so we
+// keep the hot-path state local here until we can build a safer SSOT without regressing the
+// drag handles (hamburger, card grid, ballast). See CODING_POLICY §1-3 for the desired target.
 class MapScreenState(
     private val context: Context,
     initialMapStyle: String
@@ -103,6 +107,9 @@ class MapScreenState(
     var safeContainerSize: IntSize
         get() = _safeContainerSize.value
         set(value) {
+            if (value == IntSize.Zero) {
+                return
+            }
             if (_safeContainerSize.value != value) _safeContainerSize.value = value
         }
     val safeContainerSizeFlow: StateFlow<IntSize> = _safeContainerSize.asStateFlow()

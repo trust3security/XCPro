@@ -169,6 +169,9 @@ fun MapScreen(
     // ✅ DEBUG: Track container size changes
     LaunchedEffect(safeContainerSize) {
         Log.d("MapScreen", "🔍 CONTAINER SIZE CHANGED: $safeContainerSize")
+        if (safeContainerSize.width > 0 && safeContainerSize.height > 0) {
+            mapState.safeContainerSize = safeContainerSize
+        }
     }
 
     // ✅ Flight Cards ViewModel
@@ -275,6 +278,7 @@ fun MapScreen(
     val savedBearing by mapState.savedBearingFlow.collectAsState()
     val hasInitiallyCentered by mapState.hasInitiallyCenteredFlow.collectAsState()
     val showDistanceCircles by mapState.showDistanceCirclesFlow.collectAsState()
+    val cardHydrationReady by mapViewModel.cardHydrationReady.collectAsState()
 
     // ✅ Location Permission Launcher through LocationManager
     val locationPermissionLauncher = locationManager.LocationPermissionHandler()
@@ -302,7 +306,8 @@ fun MapScreen(
         profileModeTemplates = profileModeTemplates,
         activeTemplateId = activeTemplateId,
         initialMapStyle = initialMapStyle,
-        onMapStyleSelected = onMapStyleSelected
+        onMapStyleSelected = onMapStyleSelected,
+        cardsReady = cardHydrationReady
     )
 
     // ✅ CENTRALIZED LIFECYCLE EFFECTS - Replace individual DisposableEffect blocks
@@ -441,7 +446,9 @@ fun MapScreen(
                     onReplayPlayPause = mapViewModel::onReplayPlayPause,
                     onReplayStop = mapViewModel::onReplayStop,
                     onReplaySpeedChange = mapViewModel::onReplaySpeedChanged,
-                    onReplaySeek = mapViewModel::onReplaySeek
+                    onReplaySeek = mapViewModel::onReplaySeek,
+                    showReplayDevFab = mapViewModel.showReplayDebugFab,
+                    onReplayDevFabClick = mapViewModel::onReplayDevAutoplay
                 )
                 if (mapUiState.isLoadingWaypoints) {
                     Box(

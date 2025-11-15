@@ -43,6 +43,7 @@ class CirclingWind(
     private var currentCircle = 0.0
     private var lastTrackRad: Double? = null
     private var lastTimestamp: Long = 0L
+    private var lastActiveTimestamp: Long = Long.MIN_VALUE
 
     fun reset() {
         active = false
@@ -50,14 +51,19 @@ class CirclingWind(
         currentCircle = 0.0
         lastTrackRad = null
         lastTimestamp = 0L
+        lastActiveTimestamp = Long.MIN_VALUE
         samples.clear()
     }
 
     fun addSample(sample: CirclingWindSample): CirclingWindResult? {
         if (!sample.isCircling) {
-            reset()
+            val sinceActive = if (lastActiveTimestamp == Long.MIN_VALUE) Long.MAX_VALUE else sample.timestampMillis - lastActiveTimestamp
+            if (sinceActive > INACTIVE_RESET_MS) {
+                reset()
+            }
             return null
         }
+        lastActiveTimestamp = sample.timestampMillis
 
         if (!active) {
             active = true
@@ -199,5 +205,6 @@ class CirclingWind(
     companion object {
         private const val MIN_SAMPLES = 12
         private const val TIME_WARP_MS = 30_000L
+        private const val INACTIVE_RESET_MS = 2_000L
     }
 }

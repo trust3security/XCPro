@@ -30,6 +30,7 @@ internal class FlightCalculationHelpers(
     private val verticalSpeedHistory: MutableList<VerticalSpeedPoint>,
     private val sinkProvider: StillAirSinkProvider
 ) {
+    data class NettoComputation(val value: Double, val valid: Boolean)
 
     companion object {
         // History sizes
@@ -43,14 +44,20 @@ internal class FlightCalculationHelpers(
         // L/D calculation
         private const val LD_CALCULATION_INTERVAL = 5000L     // ms
 
-        // Netto calculation
-        private const val MIN_AIRSPEED_FOR_NETTO = 15.0       // m/s (54 km/h)
+        private const val THERMAL_TOTAL_WINDOW_MS = 180_000L
+        private const val THERMAL_CIRCLE_WINDOW_MS = 10_000L
     }
 
     // Thermal tracking state
     private var thermalStartTime: Long = 0L
     private var thermalStartAltitude: Double = 0.0
-    private var thermalClimbRates = mutableListOf<Float>()
+    private val thermalSamples = mutableListOf<ThermalSample>()
+    var thermalAverageTotal: Float = 0f
+        private set
+    var thermalAverageCurrent: Float = 0f
+        private set
+    var thermalGainCurrent: Double = 0.0
+        private set
 
     // L/D tracking state
     private var lastLDCalculationTime = 0L
@@ -118,30 +125,31 @@ internal class FlightCalculationHelpers(
         if (isCurrentlyClimbing && thermalStartTime == 0L) {
             thermalStartTime = currentTime
             thermalStartAltitude = currentAltitude
-            thermalClimbRates.clear()
+            thermalSamples.clear()
+            thermalAverageTotal = 0f
+            thermalAverageCurrent = 0f
+            thermalGainCurrent = 0.0
         } else if (!isCurrentlyClimbing && thermalStartTime > 0L) {
             val thermalDuration = (currentTime - thermalStartTime) / 1000L
-            if (thermalDuration < THERMAL_MIN_DURATION) {
-                resetThermalTracking()
-                return 0f
-            } else {
-                resetThermalTracking()
-            }
+            resetThermalTracking()
+            return if (thermalDuration < THERMAL_MIN_DURATION) 0f else 0f
         }
 
         if (thermalStartTime > 0L && isCurrentlyClimbing) {
-            thermalClimbRates.add(currentVerticalSpeed)
+            thermalSamples.add(ThermalSample(currentTime, currentVerticalSpeed))
+            trimThermalSamples(currentTime)
+            val totalAvg = thermalSamples.map { it.verticalSpeed }.average()
+            val circleAvg = thermalSamples
+                .filter { it.timestamp >= currentTime - THERMAL_CIRCLE_WINDOW_MS }
+                .map { it.verticalSpeed }
+                .takeIf { it.isNotEmpty() }
+                ?.average()
+                ?: currentVerticalSpeed.toDouble()
 
-            val cutoffTime = currentTime - 30000L
-            thermalClimbRates.removeAll {
-                verticalSpeedHistory.find { vsp -> vsp.verticalSpeed == it }?.timestamp ?: 0L < cutoffTime
-            }
-
-            return if (thermalClimbRates.isNotEmpty()) {
-                thermalClimbRates.average().toFloat()
-            } else {
-                currentVerticalSpeed
-            }
+            thermalAverageTotal = totalAvg.toFloat()
+            thermalAverageCurrent = circleAvg.toFloat()
+            thermalGainCurrent = currentAltitude - thermalStartAltitude
+            return thermalAverageTotal
         }
 
         return 0f
@@ -241,20 +249,21 @@ internal class FlightCalculationHelpers(
      * Calculate netto variometer (compensated for sink rate)
      * Ported from FlightDataManager.kt lines 496-503
      */
-    fun calculateNetto(currentVerticalSpeed: Float, currentGroundSpeed: Float): Float {
-        if (currentGroundSpeed < MIN_AIRSPEED_FOR_NETTO) {
-            return 0f
-        }
+    fun calculateNetto(
+        currentVerticalSpeed: Double,
+        trueAirspeed: Double?,
+        fallbackGroundSpeed: Double
+    ): NettoComputation {
+        val tasCandidate = trueAirspeed?.takeIf { it.isFinite() && it > 0.1 }
+        val speed = tasCandidate
+            ?: fallbackGroundSpeed.takeIf { it.isFinite() && it > 0.1 }
+            ?: return NettoComputation(currentVerticalSpeed, false)
 
-        val sinkFromPolar = sinkProvider.sinkAtSpeed(currentGroundSpeed.toDouble())
-        val estimatedSinkRate = if (sinkFromPolar != null) {
-            sinkFromPolar.toFloat()
-        } else {
-            calculateLegacySinkRate(currentGroundSpeed).also {
-                // AI-NOTE: fallback when no polar/config is available.
-            }
-        }
-        return currentVerticalSpeed + estimatedSinkRate
+        val sinkRate = sinkProvider.sinkAtSpeed(speed)
+            ?: return NettoComputation(currentVerticalSpeed, false)
+
+        val nettoValue = currentVerticalSpeed + sinkRate
+        return NettoComputation(nettoValue, true)
     }
 
     /**
@@ -277,21 +286,22 @@ internal class FlightCalculationHelpers(
     private fun resetThermalTracking() {
         thermalStartTime = 0L
         thermalStartAltitude = 0.0
-        thermalClimbRates.clear()
+        thermalSamples.clear()
+        thermalAverageTotal = 0f
+        thermalAverageCurrent = 0f
+        thermalGainCurrent = 0.0
     }
 
-    /**
-     * Calculate sink rate based on ground speed
-     * Ported from FlightDataManager.kt lines 526-535
-     */
-    private fun calculateLegacySinkRate(groundSpeed: Float): Float {
-        val speedKmh = groundSpeed * 3.6f
-
-        return when {
-            speedKmh < 60f -> 0.8f
-            speedKmh < 90f -> 0.6f
-            speedKmh < 120f -> 0.9f
-            else -> 1.5f
+    private fun trimThermalSamples(currentTime: Long) {
+        val cutoffTotal = currentTime - THERMAL_TOTAL_WINDOW_MS
+        while (thermalSamples.isNotEmpty() && thermalSamples.first().timestamp < cutoffTotal) {
+            thermalSamples.removeAt(0)
         }
     }
+
+    private data class ThermalSample(
+        val timestamp: Long,
+        val verticalSpeed: Float
+    )
+
 }

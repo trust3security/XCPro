@@ -38,7 +38,14 @@ object FlightTemplates {
                 id = "id02",
                 name = "Thermal",
                 description = "Single track card for thermal mode",
-                cardIds = listOf("track"),
+                cardIds = listOf(
+                    "thermal_tc_avg",
+                    "thermal_t_avg",
+                    "thermal_tc_gain",
+                    "vario_avg30",
+                    "netto_avg30",
+                    "thermal_avg"
+                ),
                 icon = Icons.Filled.Refresh,
                 isPreset = true
             ),
@@ -54,7 +61,18 @@ object FlightTemplates {
                 id = "id04",
                 name = "Cross Country",
                 description = "Navigation and performance",
-                cardIds = listOf("gps_alt", "track", "wpt_dist", "wpt_brg", "final_gld", "ground_speed", "thermal_avg", "ld_curr"),
+                cardIds = listOf(
+                    "gps_alt",
+                    "track",
+                    "wpt_dist",
+                    "wpt_brg",
+                    "final_gld",
+                    "ground_speed",
+                    "thermal_t_avg",
+                    "thermal_tc_avg",
+                    "vario_avg30",
+                    "ld_curr"
+                ),
                 icon = Icons.Filled.LocationOn,
                 isPreset = true
             ),

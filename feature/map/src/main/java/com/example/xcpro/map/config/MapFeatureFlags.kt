@@ -1,5 +1,7 @@
 package com.example.xcpro.map.config
 
+import com.example.xcpro.map.BuildConfig
+
 /**
  * Centralized switches for map feature behavior that needs to differ between
  * production and tests. Keep mutable flags here (rather than spread across
@@ -14,4 +16,11 @@ object MapFeatureFlags {
      */
     @Volatile
     var loadSavedTasksOnInit: Boolean = true
+
+    /**
+     * Shows the developer-only replay FAB on the map screen when true.
+     * Defaults to DEBUG builds but can be overridden by tests.
+     */
+    @Volatile
+    var showReplayDebugFab: Boolean = BuildConfig.DEBUG
 }

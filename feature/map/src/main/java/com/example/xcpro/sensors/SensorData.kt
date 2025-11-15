@@ -94,7 +94,13 @@ data class CompleteFlightData(
     val baroAltitude: Double,   // Barometric altitude in meters (from pressure)
     val qnh: Double,            // QNH pressure setting in hPa (sea level pressure)
     val isQNHCalibrated: Boolean, // Whether QNH was calibrated by GPS (vs standard 1013.25)
-    val verticalSpeed: Double,  // m/s (from barometric altitude changes)
+    val verticalSpeed: Double,  // m/s (selected brutto vario)
+    val displayVario: Double = 0.0,
+    val bruttoVario: Double = 0.0, // m/s (TE if available else GPS)
+    val bruttoAverage30s: Double = 0.0,
+    val nettoAverage30s: Double = 0.0,
+    val varioSource: String = "UNKNOWN",
+    val varioValid: Boolean = false,
     val pressureAltitude: Double, // meters (QNH 1013.25 reference)
     val baroGpsDelta: Double?,  // meters difference between baro altitude and GPS altitude
     val baroConfidence: ConfidenceLevel, // Confidence supplied by baro calculator
@@ -113,12 +119,17 @@ data class CompleteFlightData(
 
     // Calculated thermal average
     val thermalAverage: Float,  // m/s (average climb rate in thermal)
+    val thermalAverageCircle: Float = 0f,
+    val thermalAverageTotal: Float = 0f,
+    val thermalGain: Double = 0.0,
 
     // Calculated L/D ratio
     val currentLD: Float,       // Distance traveled / altitude lost (glide ratio)
 
     // Calculated netto variometer
     val netto: Float,           // m/s (variometer + sink rate compensation)
+    val displayNetto: Double = 0.0,
+    val nettoValid: Boolean = false,
     val trueAirspeed: Double = 0.0,    // m/s
     val indicatedAirspeed: Double = 0.0, // m/s
     val airspeedSource: String = "UNKNOWN",

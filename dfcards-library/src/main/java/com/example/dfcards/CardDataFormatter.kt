@@ -22,8 +22,11 @@ internal object CardDataFormatter {
             "gps_alt", "baro_alt", "agl", "start_alt" ->
                 "-- ${UnitsFormatter.altitude(AltitudeM(0.0), units).unitLabel}"
             "vario", "vario_optimized", "vario_legacy", "vario_raw", "vario_gps",
-            "vario_complementary", "thermal_avg", "netto" ->
+            "vario_complementary", "thermal_avg", "thermal_tc_avg", "thermal_t_avg",
+            "vario_avg30", "netto_avg30", "netto" ->
                 "-- ${UnitsFormatter.verticalSpeed(VerticalSpeedMs(0.0), units).unitLabel}"
+            "thermal_tc_gain" ->
+                "-- ${UnitsFormatter.altitude(AltitudeM(0.0), units).unitLabel}"
             "ground_speed", "wind_spd", "wind_arrow", "task_spd", "ias" ->
                 "-- ${UnitsFormatter.speed(SpeedMs(0.0), units).unitLabel}"
             "wpt_dist", "task_dist" ->
@@ -76,8 +79,8 @@ internal object CardDataFormatter {
             }
 
             "vario" -> Pair(
-                UnitsFormatter.verticalSpeed(VerticalSpeedMs(liveData.verticalSpeed), units).text,
-                "OPT"
+                UnitsFormatter.verticalSpeed(VerticalSpeedMs(liveData.displayVario), units).text,
+                if (liveData.varioValid) liveData.varioSource.ifBlank { "TE" } else "STALE"
             )
 
             "vario_optimized" -> Pair(
@@ -172,17 +175,70 @@ internal object CardDataFormatter {
                 }
             }
 
-            "netto" -> {
-                val minSpeedMs = UnitsConverter.knotsToMs(15.0)
-                if (liveData.groundSpeed > minSpeedMs) {
+            "thermal_tc_avg" -> {
+                if (abs(liveData.thermalAverageCircle) > 0.1f) {
                     val formatted = UnitsFormatter.verticalSpeed(
-                        VerticalSpeedMs(liveData.netto.toDouble()),
+                        VerticalSpeedMs(liveData.thermalAverageCircle.toDouble()),
                         units
                     )
-                    Pair(formatted.text, "NETTO")
+                    Pair(formatted.text, "TC AVG")
                 } else {
-                    Pair(placeholderFor(cardId), "TOO SLOW")
+                    Pair(placeholderFor(cardId), "NO DATA")
                 }
+            }
+
+            "thermal_t_avg" -> {
+                if (abs(liveData.thermalAverageTotal) > 0.1f) {
+                    val formatted = UnitsFormatter.verticalSpeed(
+                        VerticalSpeedMs(liveData.thermalAverageTotal.toDouble()),
+                        units
+                    )
+                    Pair(formatted.text, "T AVG")
+                } else {
+                    Pair(placeholderFor(cardId), "NO DATA")
+                }
+            }
+
+            "thermal_tc_gain" -> {
+                if (abs(liveData.thermalGain) > 1.0) {
+                    val formatted = UnitsFormatter.altitude(
+                        AltitudeM(liveData.thermalGain),
+                        units
+                    )
+                    Pair(formatted.text, "GAIN")
+                } else {
+                    Pair(placeholderFor(cardId), "NO DATA")
+                }
+            }
+
+            "netto" -> {
+                val formatted = UnitsFormatter.verticalSpeed(
+                    VerticalSpeedMs(liveData.displayNetto),
+                    units
+                )
+                val label = if (liveData.nettoValid) "NETTO" else "NO POLAR"
+                Pair(formatted.text, label)
+            }
+
+            "vario_avg30" -> {
+                val formatted = UnitsFormatter.verticalSpeed(
+                    VerticalSpeedMs(liveData.bruttoAverage30s),
+                    units
+                )
+                val secondary = if (liveData.varioValid) {
+                    liveData.varioSource.ifBlank { "TE" }
+                } else {
+                    "STALE"
+                }
+                Pair(formatted.text, secondary)
+            }
+
+            "netto_avg30" -> {
+                val formatted = UnitsFormatter.verticalSpeed(
+                    VerticalSpeedMs(liveData.nettoAverage30s),
+                    units
+                )
+                Pair(formatted.text, "NETTO")
             }
 
             "mc_speed" -> Pair(placeholderFor(cardId), "NO MC")

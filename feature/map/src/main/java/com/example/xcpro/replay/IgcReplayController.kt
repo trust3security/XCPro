@@ -82,7 +82,7 @@ class IgcReplayController @Inject constructor(
         scope = scope,
         sinkProvider = sinkProvider,
         windStateFlow = windRepository.windState,
-        enableAudio = false
+        enableAudio = true
     )
 
     private val _session = MutableStateFlow(SessionState())
@@ -103,28 +103,23 @@ class IgcReplayController @Inject constructor(
 
     suspend fun loadFile(uri: Uri, displayName: String?) {
         withContext(scope.coroutineContext) {
-            cancelReplayJob()
             val log = loadLog(uri)
-            if (log.points.isEmpty()) throw IllegalArgumentException("IGC file has no B records")
-            points = log.points
-            currentIndex = 0
-            suspendSensors()
-            replaySensorSource.reset()
-            val qnh = log.metadata.qnhHpa ?: DEFAULT_QNH_HPA
-            val start = points.first().timestampMillis
-            val duration = (points.last().timestampMillis - start).coerceAtLeast(1L)
-            val selection = Selection(uri, displayName)
-            replayCalculator.setManualQnh(qnh)
-            _session.value = SessionState(
-                selection = selection,
-                status = SessionStatus.PAUSED,
-                speedMultiplier = _session.value.speedMultiplier,
-                startTimestampMillis = start,
-                currentTimestampMillis = start,
-                durationMillis = duration,
-                qnhHpa = qnh
+            prepareSession(
+                log = log,
+                selection = Selection(uri, displayName)
             )
-            emitSample(points.first(), null, qnh)
+        }
+    }
+
+    suspend fun loadAsset(assetPath: String, displayName: String? = null) {
+        withContext(scope.coroutineContext) {
+            val log = loadAssetLog(assetPath)
+            val name = displayName ?: assetPath.substringAfterLast('/')
+            val uri = Uri.parse("$ASSET_URI_PREFIX$assetPath")
+            prepareSession(
+                log = log,
+                selection = Selection(uri, name)
+            )
         }
     }
 
@@ -313,17 +308,94 @@ class IgcReplayController @Inject constructor(
     companion object {
         private const val EARTH_RADIUS_M = 6_371_000.0
         private const val MIN_FRAME_INTERVAL_MS = 200L
+        private const val INTERPOLATION_STEP_MS = 1_000L
         private const val DEFAULT_SPEED = 4.0
         private const val DEFAULT_QNH_HPA = 1013.3
         private const val SEA_LEVEL_TEMP_K = 288.15
         private const val LAPSE_RATE_K_PER_M = 0.0065
         private const val EXPONENT = 5.255
+        private const val ASSET_URI_PREFIX = "asset:///"
+    }
+
+    private fun prepareSession(log: IgcLog, selection: Selection) {
+        cancelReplayJob()
+        val densified = densifyPoints(log.points)
+        if (densified.isEmpty()) throw IllegalArgumentException("IGC file has no B records")
+        points = densified
+        currentIndex = 0
+        suspendSensors()
+        replaySensorSource.reset()
+        val qnh = log.metadata.qnhHpa ?: DEFAULT_QNH_HPA
+        val start = points.first().timestampMillis
+        val duration = (points.last().timestampMillis - start).coerceAtLeast(1L)
+        replayCalculator.setManualQnh(qnh)
+        _session.value = SessionState(
+            selection = selection,
+            status = SessionStatus.PAUSED,
+            speedMultiplier = _session.value.speedMultiplier,
+            startTimestampMillis = start,
+            currentTimestampMillis = start,
+            durationMillis = duration,
+            qnhHpa = qnh
+        )
+        emitSample(points.first(), null, qnh)
     }
 
     private fun loadLog(fileUri: Uri): IgcLog =
         appContext.contentResolver.openInputStream(fileUri)?.use { stream ->
             IgcParser.parse(stream)
         } ?: throw IllegalArgumentException("Unable to open IGC file")
+
+    private fun loadAssetLog(assetPath: String): IgcLog =
+        appContext.assets.open(assetPath).use { stream ->
+            IgcParser.parse(stream)
+        }
+
+    private fun densifyPoints(original: List<IgcPoint>): List<IgcPoint> {
+        if (original.size < 2) return original
+        val result = ArrayList<IgcPoint>(original.size)
+        for (i in 0 until original.lastIndex) {
+            val current = original[i]
+            val next = original[i + 1]
+            result += current
+            val gap = next.timestampMillis - current.timestampMillis
+            if (gap > INTERPOLATION_STEP_MS) {
+                var timestamp = current.timestampMillis + INTERPOLATION_STEP_MS
+                while (timestamp < next.timestampMillis) {
+                    val fraction = ((timestamp - current.timestampMillis).toDouble() / gap.toDouble()).coerceIn(0.0, 1.0)
+                    result += interpolatePoint(current, next, timestamp, fraction)
+                    timestamp += INTERPOLATION_STEP_MS
+                }
+            }
+        }
+        result += original.last()
+        return result
+    }
+
+    private fun interpolatePoint(
+        start: IgcPoint,
+        end: IgcPoint,
+        timestamp: Long,
+        fraction: Double
+    ): IgcPoint {
+        fun lerp(a: Double, b: Double): Double = a + (b - a) * fraction
+
+        val pressureAltitude = when {
+            start.pressureAltitude != null && end.pressureAltitude != null ->
+                lerp(start.pressureAltitude, end.pressureAltitude)
+            start.pressureAltitude != null -> start.pressureAltitude
+            end.pressureAltitude != null -> end.pressureAltitude
+            else -> null
+        }
+
+        return IgcPoint(
+            timestampMillis = timestamp,
+            latitude = lerp(start.latitude, end.latitude),
+            longitude = lerp(start.longitude, end.longitude),
+            gpsAltitude = lerp(start.gpsAltitude, end.gpsAltitude),
+            pressureAltitude = pressureAltitude
+        )
+    }
 
     private fun altitudeToPressure(altitudeMeters: Double, qnhHpa: Double): Double {
         val ratio = 1 - (LAPSE_RATE_K_PER_M * altitudeMeters) / SEA_LEVEL_TEMP_K

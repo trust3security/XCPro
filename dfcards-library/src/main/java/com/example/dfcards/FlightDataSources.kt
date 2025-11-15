@@ -32,6 +32,7 @@ data class RealTimeFlightData(
     val baroAltitude: Double = 0.0,
     val agl: Double = 0.0,
     val verticalSpeed: Double = 0.0,  // Default vario (currently optimized)
+    val displayVario: Double = 0.0,
     val pressureAltitude: Double = 0.0,
     val baroGpsDelta: Double? = null,
     val baroConfidence: ConfidenceLevel = ConfidenceLevel.LOW,
@@ -50,8 +51,13 @@ data class RealTimeFlightData(
     val windSpeed: Float = 0f,
     val windDirection: Float = 0f,
     val thermalAverage: Float = 0f,
+    val thermalAverageCircle: Float = 0f,
+    val thermalAverageTotal: Float = 0f,
+    val thermalGain: Double = 0.0,
     val currentLD: Float = 0f,
     val netto: Float = 0f,
+    val displayNetto: Double = 0.0,
+    val nettoValid: Boolean = false,
     val trueAirspeed: Double = 0.0,
     val indicatedAirspeed: Double = 0.0,
     val windQuality: Int = 0,
@@ -64,6 +70,10 @@ data class RealTimeFlightData(
     val varioRaw: Double = 0.0,            // Raw barometer differentiation
     val varioGPS: Double = 0.0,            // GPS vertical speed
     val varioComplementary: Double = 0.0,  // Complementary filter (future)
+    val bruttoAverage30s: Double = 0.0,
+    val nettoAverage30s: Double = 0.0,
+    val varioSource: String = "UNKNOWN",
+    val varioValid: Boolean = false,
 
     val lastUpdateTime: Long = System.currentTimeMillis(),
     val calculationSource: String = "GPS+BARO+AGL",

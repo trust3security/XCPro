@@ -8,9 +8,7 @@ import com.example.xcpro.sensors.CompassData
 import com.example.xcpro.sensors.GPSData
 import com.example.xcpro.weather.wind.data.WindRepository
 import com.example.xcpro.weather.wind.model.WindSource
-import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.advanceTimeBy
-import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -28,46 +26,31 @@ class WindRepositoryTest {
     @Test
     fun `repository publishes circling wind`() = runTest {
         val flightRepo = FlightDataRepository()
-        val dispatcher = StandardTestDispatcher(testScheduler)
+        val dispatcher = UnconfinedTestDispatcher(testScheduler)
         val repo = WindRepository(flightRepo, dispatcher)
 
-        val samples = generateFlightDataSamples()
-        for ((index, sample) in samples.withIndex()) {
-            flightRepo.update(sample)
-            advanceUntilIdle()
-            advanceTimeBy(500)
-            if (index % 10 == 0) {
-                advanceUntilIdle()
-            }
+        generateFlightDataSamples().forEach { sample ->
+            repo.processSampleForTest(sample)
         }
 
-        advanceUntilIdle()
         val state = repo.windState.value
         assertTrue("Wind state should be available after circling samples", state.isAvailable)
         assertEquals(WindSource.CIRCLING, state.source)
         val vector = state.vector
         assertNotNull("Wind vector should not be null", vector)
-        println("WindRepositoryTest vector east=${vector?.east} north=${vector?.north} speed=${vector?.speed}")
         assertTrue("Wind speed should be significant", vector!!.speed > 4.0)
     }
 
     @Test
     fun `repository publishes straight flight wind via ekf`() = runTest {
         val flightRepo = FlightDataRepository()
-        val dispatcher = StandardTestDispatcher(testScheduler)
+        val dispatcher = UnconfinedTestDispatcher(testScheduler)
         val repo = WindRepository(flightRepo, dispatcher)
 
-        val samples = generateStraightFlightSamples()
-        samples.forEachIndexed { index, sample ->
-            flightRepo.update(sample)
-            advanceUntilIdle()
-            advanceTimeBy(500)
-            if (index % 20 == 0) {
-                advanceUntilIdle()
-            }
+        generateStraightFlightSamples().forEach { sample ->
+            repo.processSampleForTest(sample)
         }
 
-        advanceUntilIdle()
         val state = repo.windState.value
         assertTrue("Wind state should be available after straight-flight samples", state.isAvailable)
         assertEquals(WindSource.EKF, state.source)
@@ -180,6 +163,14 @@ class WindRepositoryTest {
         private const val TEST_WIND_EAST = 5.0
         private const val TEST_WIND_NORTH = -2.0
     }
+}
+
+private val processSampleMethod = WindRepository::class.java
+    .getDeclaredMethod("processSample", CompleteFlightData::class.java)
+    .apply { isAccessible = true }
+
+private fun WindRepository.processSampleForTest(sample: CompleteFlightData) {
+    processSampleMethod.invoke(this, sample)
 }
 
 

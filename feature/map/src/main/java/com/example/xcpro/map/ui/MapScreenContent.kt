@@ -100,7 +100,9 @@ internal fun MapScreenContent(
     onReplayPlayPause: () -> Unit,
     onReplayStop: () -> Unit,
     onReplaySpeedChange: (Double) -> Unit,
-    onReplaySeek: (Float) -> Unit
+    onReplaySeek: (Float) -> Unit,
+    showReplayDevFab: Boolean,
+    onReplayDevFabClick: () -> Unit
 ) {
     Box(Modifier.fillMaxSize()) {
         Scaffold(
@@ -157,15 +159,17 @@ internal fun MapScreenContent(
                         onBallastCommand = onBallastCommand,
                         onHamburgerTap = onHamburgerTap,
                         onHamburgerLongPress = onHamburgerLongPress,
-                        cardStyle = cardStyle,
-                        replayState = replayState,
-                        onReplayPlayPause = onReplayPlayPause,
-                        onReplayStop = onReplayStop,
-                        onReplaySpeedChange = onReplaySpeedChange,
-                        onReplaySeek = onReplaySeek
-                    )
-                }
+                    cardStyle = cardStyle,
+                    replayState = replayState,
+                    onReplayPlayPause = onReplayPlayPause,
+                    onReplayStop = onReplayStop,
+                    onReplaySpeedChange = onReplaySpeedChange,
+                    onReplaySeek = onReplaySeek,
+                    showReplayDevFab = showReplayDevFab,
+                    onReplayDevFabClick = onReplayDevFabClick
+                )
             }
+        }
         }
 
         MapTaskScreenUi.AllTaskScreenComponents(

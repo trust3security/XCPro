@@ -32,8 +32,14 @@ class WindStore(
         altitudeMeters: Double,
         vector: WindVector,
         quality: Int,
-        source: WindSource
+        source: WindSource,
+        clearExisting: Boolean = false
     ) {
+        if (clearExisting) {
+            measurementList.reset()
+            updated = false
+            lastUpdateClock = 0L
+        }
         measurementList.addMeasurement(timestampMillis, vector, altitudeMeters, quality, source)
         lastUpdateClock = timestampMillis
         updated = true

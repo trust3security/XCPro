@@ -44,6 +44,9 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
+import androidx.compose.ui.unit.IntSize
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 
@@ -107,6 +110,7 @@ class MapScreenViewModel @Inject constructor(
     val sharedFlightDataRepository: FlightDataRepository = flightDataRepository
     val windState: StateFlow<WindState> = windRepository.windState
     val replaySessionState: StateFlow<IgcReplayController.SessionState> = igcReplayController.session
+    val showReplayDebugFab: Boolean = MapFeatureFlags.showReplayDebugFab
 
     private val variometerRepository = VariometerWidgetRepository(mapState.sharedPrefs)
     private val _variometerUiState = MutableStateFlow(VariometerUiState())
@@ -116,9 +120,15 @@ class MapScreenViewModel @Inject constructor(
     val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
     private val _uiEffects = MutableSharedFlow<MapUiEffect>(extraBufferCapacity = 1)
     val uiEffects: SharedFlow<MapUiEffect> = _uiEffects.asSharedFlow()
+    private val _containerReady = MutableStateFlow(false)
+    private val _liveDataReady = MutableStateFlow(false)
+    val cardHydrationReady: StateFlow<Boolean> =
+        combine(_containerReady, _liveDataReady) { container, data -> container && data }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     init {
         observeFlightDataRepository()
+        observeSafeContainerSize()
     }
 
     private fun observeFlightDataRepository() {
@@ -128,11 +138,24 @@ class MapScreenViewModel @Inject constructor(
         ) { data, wind -> data to wind }
             .onEach { (data, wind) ->
                 if (data != null) {
+                    if (!_liveDataReady.value) {
+                        _liveDataReady.value = true
+                    }
                     val liveData = convertToRealTimeFlightData(data)
                         .applyWindState(wind)
                     flightDataManager.updateLiveFlightData(liveData)
                 } else {
                     flightDataManager.updateLiveFlightData(null)
+                }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    private fun observeSafeContainerSize() {
+        mapState.safeContainerSizeFlow
+            .onEach { size: IntSize ->
+                if (!_containerReady.value && size.width > 0 && size.height > 0) {
+                    _containerReady.value = true
                 }
             }
             .launchIn(viewModelScope)
@@ -205,6 +228,18 @@ class MapScreenViewModel @Inject constructor(
 
     fun onReplaySeek(progress: Float) {
         igcReplayController.seekTo(progress)
+    }
+
+    fun onReplayDevAutoplay() {
+        if (!showReplayDebugFab) return
+        viewModelScope.launch {
+            try {
+                igcReplayController.loadAsset(DEV_REPLAY_ASSET_PATH)
+                igcReplayController.play()
+            } catch (t: Throwable) {
+                Log.e("MapScreenViewModel", "Failed to start dev replay", t)
+            }
+        }
     }
 
     private fun setUiEditMode(enabled: Boolean) {
@@ -410,5 +445,8 @@ class MapScreenViewModel @Inject constructor(
         lifecycleManager.cleanup()
         ballastController.dispose()
         super.onCleared()
+    }
+    companion object {
+        private const val DEV_REPLAY_ASSET_PATH = "replay/2025-11-11.igc"
     }
 }

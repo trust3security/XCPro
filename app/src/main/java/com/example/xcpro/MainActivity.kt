@@ -1,19 +1,24 @@
 package com.example.xcpro
 
+import android.Manifest
 import android.content.Context
 import android.graphics.Color
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
 import android.util.TypedValue
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.AttrRes
 import androidx.annotation.ColorInt
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.core.content.ContextCompat
+import android.widget.Toast
 import com.example.xcpro.screens.navdrawer.lookandfeel.StatusBarStyle
 import com.example.xcpro.screens.navdrawer.lookandfeel.StatusBarStyleApplier
 import com.example.xcpro.ui.theme.Baseui1Theme
@@ -28,6 +33,28 @@ private const val TAG = "MainActivity"
 class MainActivity : ComponentActivity(), StatusBarStyleApplier {
 
     private var currentProfileId: String? = null
+    private var hasStartedVarioService = false
+
+    private val locationPermissions = arrayOf(
+        Manifest.permission.ACCESS_FINE_LOCATION,
+        Manifest.permission.ACCESS_COARSE_LOCATION
+    )
+
+    private val locationPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
+            val granted = locationPermissions.any { perm -> result[perm] == true }
+            if (granted) {
+                Log.i(TAG, "Location permission granted. Starting vario service.")
+                startVarioServiceIfNeeded()
+            } else {
+                Log.w(TAG, "Location permission denied. Vario service not started.")
+                Toast.makeText(
+                    this,
+                    getString(R.string.location_permission_required_message),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,7 +78,7 @@ class MainActivity : ComponentActivity(), StatusBarStyleApplier {
             }
         }
 
-        VarioForegroundService.start(this)
+        ensureLocationPermissionThenStartService()
 
         Log.d(TAG, "onCreate: applying initial status bar style")
         applyUserStatusBarStyle(null)
@@ -169,5 +196,22 @@ class MainActivity : ComponentActivity(), StatusBarStyleApplier {
         } else {
             Color.BLACK
         }
+    }
+
+    private fun ensureLocationPermissionThenStartService() {
+        val alreadyGranted = locationPermissions.any { perm ->
+            ContextCompat.checkSelfPermission(this, perm) == PackageManager.PERMISSION_GRANTED
+        }
+        if (alreadyGranted) {
+            startVarioServiceIfNeeded()
+        } else {
+            locationPermissionLauncher.launch(locationPermissions)
+        }
+    }
+
+    private fun startVarioServiceIfNeeded() {
+        if (hasStartedVarioService) return
+        VarioForegroundService.start(this)
+        hasStartedVarioService = true
     }
 }

@@ -181,6 +181,28 @@ class VarioAudioEngine(
     }
 
     /**
+     * Force the audio engine into silence (used when no fresh vario data).
+     */
+    fun setSilence() {
+        if (!isInitialized || !isStarted) {
+            return
+        }
+        try {
+            val silenceParams = AudioParams(
+                frequencyHz = 0.0,
+                cycleTimeMs = 1000.0,
+                dutyCycle = 0.0,
+                mode = AudioMode.SILENCE
+            )
+            beepController.updateAudioParams(silenceParams)
+            _currentMode.value = AudioMode.SILENCE
+            _currentFrequency.value = 0.0
+        } catch (e: Exception) {
+            Log.e(TAG, "Error setting silence", e)
+        }
+    }
+
+    /**
      * Update settings
      * Recreates frequency mapper with new settings
      */

@@ -21,9 +21,9 @@ import com.example.xcpro.map.MapTaskScreenManager
 import com.example.xcpro.screens.overlays.getMapStyleUrl
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.isActive
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.rememberUpdatedState
 
 object MapComposeEffects {
 
@@ -102,24 +102,38 @@ object MapComposeEffects {
         flightDataManager: FlightDataManager,
         locationManager: LocationManager,
         orientationData: OrientationData,
-        orientationManager: MapOrientationManager
+        orientationManager: MapOrientationManager,
+        cardsReady: Boolean
     ) {
+        val cardsReadyState = rememberUpdatedState(cardsReady)
+
         LaunchedEffect(Unit) {
             flightViewModel.initializeCardPreferences(cardPreferences)
             flightViewModel.startIndependentClockTimer()
         }
 
+        LaunchedEffect(cardsReady) {
+            if (cardsReady) {
+                flightDataManager.consumeBufferedCardSample()?.let { buffered ->
+                    flightViewModel.updateCardsWithLiveData(buffered)
+                }
+            }
+        }
+
         LaunchedEffect(Unit) {
             snapshotFlow { flightDataManager.liveFlightData }
-                .filterNotNull()
                 .collectLatest { liveData ->
-                    flightViewModel.updateCardsWithLiveData(liveData)
-                    orientationManager.updateFromFlightData(liveData)
-                    locationManager.updateLocationFromFlightData(
-                        liveData,
-                        orientationData.mode,
-                        orientationData.bearing
-                    )
+                    if (liveData != null) {
+                        if (cardsReadyState.value) {
+                            flightViewModel.updateCardsWithLiveData(liveData)
+                        }
+                        orientationManager.updateFromFlightData(liveData)
+                        locationManager.updateLocationFromFlightData(
+                            liveData,
+                            orientationData.mode,
+                            orientationData.bearing
+                        )
+                    }
                 }
         }
 
@@ -189,7 +203,8 @@ object MapComposeEffects {
         profileModeTemplates: Map<String, Map<FlightModeSelection, String>>,
         activeTemplateId: String?,
         initialMapStyle: String,
-        onMapStyleSelected: (String) -> Unit
+        onMapStyleSelected: (String) -> Unit,
+        cardsReady: Boolean
     ) {
         val density = LocalDensity.current
 
@@ -221,7 +236,8 @@ object MapComposeEffects {
             flightDataManager = flightDataManager,
             locationManager = locationManager,
             orientationData = orientationData,
-            orientationManager = orientationManager
+            orientationManager = orientationManager,
+            cardsReady = cardsReady
         )
 
         MapStyleAndConfigurationEffects(

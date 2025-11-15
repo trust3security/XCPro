@@ -76,6 +76,7 @@ internal fun convertToRealTimeFlightData(completeData: CompleteFlightData): Real
 
         // Calculated values
         verticalSpeed = completeData.verticalSpeed,
+        displayVario = completeData.displayVario,
         agl = completeData.agl,
         pressureAltitude = completeData.pressureAltitude,
         baroGpsDelta = completeData.baroGpsDelta,
@@ -86,8 +87,13 @@ internal fun convertToRealTimeFlightData(completeData: CompleteFlightData): Real
         windSpeed = completeData.windSpeed,
         windDirection = completeData.windDirection,
         thermalAverage = completeData.thermalAverage,
+        thermalAverageCircle = completeData.thermalAverageCircle,
+        thermalAverageTotal = completeData.thermalAverageTotal,
+        thermalGain = completeData.thermalGain,
         currentLD = completeData.currentLD,
         netto = completeData.netto,
+        displayNetto = completeData.displayNetto,
+        nettoValid = completeData.nettoValid,
         trueAirspeed = completeData.trueAirspeed,
         indicatedAirspeed = completeData.indicatedAirspeed,
         windQuality = completeData.windQuality,
@@ -102,6 +108,10 @@ internal fun convertToRealTimeFlightData(completeData: CompleteFlightData): Real
         varioRaw = completeData.varioRaw,
         varioGPS = completeData.varioGPS,
         varioComplementary = completeData.varioComplementary,
+        bruttoAverage30s = completeData.bruttoAverage30s,
+        nettoAverage30s = completeData.nettoAverage30s,
+        varioSource = completeData.varioSource,
+        varioValid = completeData.varioValid,
 
         // Metadata
         flightTime = formattedFlightTime,
