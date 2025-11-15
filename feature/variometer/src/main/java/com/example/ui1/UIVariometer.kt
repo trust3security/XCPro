@@ -26,6 +26,7 @@ import kotlin.math.sin
 fun UIVariometer(
     needleValue: Float,
     displayValue: Float,
+    valueLabel: String = String.format("%+.1f", displayValue),
     averageNeedleValue: Float? = null,
     modifier: Modifier = Modifier
 ) {
@@ -199,9 +200,8 @@ fun UIVariometer(
             isAntiAlias = true
             isFakeBoldText = true
         }
-        val microLabel = String.format("%+.1f", displayValue)
         drawContext.canvas.nativeCanvas.drawText(
-            microLabel,
+            valueLabel,
             center.x,
             center.y + 30.dp.toPx(),
             microLabelPaint

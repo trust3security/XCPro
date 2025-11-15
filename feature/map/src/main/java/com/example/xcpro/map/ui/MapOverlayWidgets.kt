@@ -59,6 +59,8 @@ import com.example.xcpro.map.ui.widgets.MapUIWidgetManager
 import com.example.xcpro.map.ui.widgets.MapUIWidgets
 import com.example.xcpro.map.ballast.BallastCommand
 import com.example.xcpro.map.ballast.BallastUiState
+import com.example.xcpro.common.units.UnitsFormatter
+import com.example.xcpro.common.units.VerticalSpeedMs
 import com.example.xcpro.sensors.GPSData
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import kotlinx.coroutines.flow.StateFlow
@@ -72,6 +74,7 @@ import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -129,7 +132,9 @@ internal fun MapOverlayStack(
     onReplayPlayPause: () -> Unit,
     onReplayStop: () -> Unit,
     onReplaySpeedChange: (Double) -> Unit,
-    onReplaySeek: (Float) -> Unit
+    onReplaySeek: (Float) -> Unit,
+    showReplayDevFab: Boolean,
+    onReplayDevFabClick: () -> Unit
 ) {
     val currentMode by mapState.currentModeFlow.collectAsState()
     val showDistanceCircles by mapState.showDistanceCirclesFlow.collectAsState()
@@ -169,7 +174,11 @@ internal fun MapOverlayStack(
             isUiEditMode = isUiEditMode,
             onEditModeChange = onEditModeChange,
             onSetAATEditMode = onSetAATEditMode,
-            onContainerSizeChanged = { size -> safeContainerSize.value = size },
+            onContainerSizeChanged = { size ->
+                if (size.width > 0 && size.height > 0) {
+                    safeContainerSize.value = size
+                }
+            },
             modifier = Modifier.fillMaxSize(),
             onCardLayerPositioned = { bounds ->
                 if (bounds == Rect.Zero) {
@@ -274,12 +283,9 @@ internal fun MapOverlayStack(
             )
         }
 
-        val targetVario = (flightDataManager.rawVerticalSpeed
-            ?: flightDataManager.liveFlightData?.verticalSpeed)?.toFloat() ?: 0f
-        val displayNumericVario = (flightDataManager.smoothedVerticalSpeed
-            ?: flightDataManager.liveFlightData?.verticalSpeed)?.toFloat() ?: 0f
+        val displayNumericVario = flightDataManager.liveFlightData?.displayVario?.toFloat() ?: 0f
         val animatedVario by animateFloatAsState(
-            targetValue = targetVario,
+            targetValue = displayNumericVario,
             animationSpec = spring(
                 dampingRatio = Spring.DampingRatioMediumBouncy,
                 stiffness = Spring.StiffnessMedium
@@ -287,11 +293,16 @@ internal fun MapOverlayStack(
             label = "vario"
         )
 
+        val varioFormatted = UnitsFormatter.verticalSpeed(
+            VerticalSpeedMs(displayNumericVario.toDouble()),
+            flightDataManager.unitsPreferences
+        )
         MapUIWidgets.VariometerWidget(
             widgetManager = widgetManager,
             variometerState = variometerUiState,
             needleValue = animatedVario,
             displayValue = displayNumericVario,
+            displayLabel = varioFormatted.text,
             screenWidthPx = screenWidthPx,
             screenHeightPx = screenHeightPx,
             minSizePx = minVariometerSizePx,
@@ -320,6 +331,21 @@ internal fun MapOverlayStack(
                 .align(Alignment.BottomEnd)
                 .zIndex(11f)
         )
+
+        if (showReplayDevFab) {
+            FloatingActionButton(
+                onClick = onReplayDevFabClick,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(bottom = 96.dp, end = 16.dp)
+                    .zIndex(15f)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = "Start sample replay"
+                )
+            }
+        }
 
         MapUIWidgets.SideHamburgerMenu(
             widgetManager = widgetManager,
@@ -423,6 +449,7 @@ private fun BoxScope.ReplayControlsSheet(
                 .padding(bottom = 24.dp)
         )
     }
+
 }
 
 @Composable

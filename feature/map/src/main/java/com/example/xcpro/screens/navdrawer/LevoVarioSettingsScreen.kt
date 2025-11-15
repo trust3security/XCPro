@@ -3,8 +3,10 @@ package com.example.xcpro.screens.navdrawer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -37,6 +39,7 @@ fun LevoVarioSettingsScreen(
     val scroll = rememberScrollState()
     val scope = rememberCoroutineScope()
     val uiState by viewModel.uiState.collectAsState()
+    val audioSettings = uiState.audioSettings
 
     Scaffold(
         topBar = {
@@ -121,6 +124,47 @@ fun LevoVarioSettingsScreen(
                     BulletText("You can toggle this mid-flight if your mount starts vibrating or drifting.")
                 }
             }
+
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Audio alerts",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            VarioAudioEnableCard(
+                enabled = audioSettings.enabled,
+                onEnabledChange = viewModel::setAudioEnabled
+            )
+
+            VarioAudioVolumeCard(
+                volume = audioSettings.volume,
+                onVolumeChange = viewModel::setAudioVolume,
+                onVolumeChangeFinished = {}
+            )
+
+            VarioAudioProfileCard(
+                selectedProfile = audioSettings.profile,
+                onProfileSelected = viewModel::setAudioProfile
+            )
+
+            VarioAudioThresholdCard(
+                liftThreshold = audioSettings.liftThreshold.toFloat(),
+                onLiftChange = viewModel::setLiftThreshold,
+                onLiftChangeFinished = {},
+                deadband = audioSettings.deadbandRange.toFloat(),
+                onDeadbandChange = viewModel::setDeadband,
+                onDeadbandChangeFinished = {},
+                sinkThreshold = audioSettings.sinkSilenceThreshold.toFloat(),
+                onSinkChange = viewModel::setSinkThreshold,
+                onSinkChangeFinished = {}
+            )
+
+            VarioAudioTestCard(
+                onPlayTone = viewModel::playTestTone,
+                onPlayPattern = viewModel::playTestPattern
+            )
+
+            VarioAudioInfoCard()
         }
     }
 }

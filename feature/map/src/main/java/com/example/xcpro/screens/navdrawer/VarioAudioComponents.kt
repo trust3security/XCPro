@@ -311,60 +311,6 @@ internal fun VarioAudioTestCard(
 }
 
 @Composable
-internal fun VarioAudioDisplayCard(
-    smoothingValue: Float,
-    onValueChange: (Float) -> Unit,
-    onValueChangeFinished: () -> Unit,
-    smoothingDescription: String
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Text(
-                text = "Variometer Display",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-            Text(
-                text = "Adjust how quickly the numeric vario responds. The needle and audio remain real-time.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
-            Slider(
-                value = smoothingValue,
-                onValueChange = onValueChange,
-                valueRange = 0.1f..0.5f,
-                steps = 8,
-                onValueChangeFinished = onValueChangeFinished
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = String.format("%.2f", smoothingValue),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Text(
-                    text = smoothingDescription,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-        }
-    }
-}
-
-@Composable
 internal fun VarioAudioInfoCard() {
     Card(
         modifier = Modifier

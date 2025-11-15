@@ -81,6 +81,7 @@ object MapUIWidgets {
         variometerState: VariometerUiState,
         needleValue: Float,
         displayValue: Float,
+        displayLabel: String = String.format("%+.1f", displayValue),
         screenWidthPx: Float,
         screenHeightPx: Float,
         minSizePx: Float,
@@ -195,6 +196,7 @@ object MapUIWidgets {
             UIVariometer(
                 needleValue = needleValue,
                 displayValue = displayValue,
+                valueLabel = displayLabel,
                 modifier = Modifier.fillMaxSize()
             )
 

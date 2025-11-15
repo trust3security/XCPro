@@ -14,8 +14,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
-import kotlin.collections.ArrayDeque
-
 /**
  * Bridge between the map-layer UI and the flight-card SSOT ViewModel. It keeps UI-facing,
  * short-lived state (live vario data, smoothing, visibility) while delegating template/card
@@ -26,12 +24,8 @@ class FlightDataManager(
   	private val cardPreferences: CardPreferences,
   	private val coroutineScope: CoroutineScope
 ) {
-    private data class VarioSample(val timestamp: Long, val value: Double)
-
     companion object {
         private const val TAG = "FlightDataManager"
-        private const val DEFAULT_SMOOTHING_ALPHA = 0.25f
-        private const val AVERAGE_WINDOW_MS = 5_000L
     }
 
     /**
@@ -47,15 +41,6 @@ class FlightDataManager(
      */
     var rawFlightData by mutableStateOf<RealTimeFlightData?>(null)
         private set
-    var smoothedVerticalSpeed by mutableStateOf<Double?>(null)
-        private set
-    var rawVerticalSpeed by mutableStateOf<Double?>(null)
-        private set
-    var averagedVerticalSpeed by mutableStateOf<Double?>(null)
-        private set
-
-    private var smoothingAlpha: Double = DEFAULT_SMOOTHING_ALPHA.toDouble()
-
     var currentFlightMode by mutableStateOf(FlightModeSelection.CRUISE)
         private set
 
@@ -68,17 +53,7 @@ class FlightDataManager(
     var unitsPreferences by mutableStateOf(UnitsPreferences())
         private set
 
-    private val recentVarioSamples = ArrayDeque<VarioSample>()
-    private var recentVarioSum = 0.0
-
-    init {
-        coroutineScope.launch {
-            cardPreferences.getVarioSmoothingAlpha().collect { alpha ->
-                smoothingAlpha = alpha.toDouble().coerceIn(0.05, 0.95)
-                smoothedVerticalSpeed = null
-            }
-        }
-    }
+    private var bufferedCardSample: RealTimeFlightData? = null
 
     fun mapToFlightModeSelection(mode: FlightMode): FlightModeSelection =
         when (mode) {
@@ -131,24 +106,17 @@ class FlightDataManager(
         if (newData == null) {
             liveFlightData = null
             rawFlightData = null
-            smoothedVerticalSpeed = null
-            rawVerticalSpeed = null
-            averagedVerticalSpeed = null
-            recentVarioSamples.clear()
-            recentVarioSum = 0.0
+            bufferedCardSample = null
             return
         }
 
         rawFlightData = newData
-        val rawVs = newData.verticalSpeed
-        rawVerticalSpeed = rawVs
-        val previous = smoothedVerticalSpeed ?: rawVs
-        val smoothed = previous + smoothingAlpha * (rawVs - previous)
-        smoothedVerticalSpeed = smoothed
-        liveFlightData = newData.copy(verticalSpeed = smoothed)
-
-        updateAveragedVerticalSpeed(rawVs)
+        liveFlightData = newData
+        bufferedCardSample = liveFlightData
     }
+
+    fun consumeBufferedCardSample(): RealTimeFlightData? =
+        bufferedCardSample?.also { bufferedCardSample = null }
 
     fun showCardLibrary() {
         showCardLibrary = true
@@ -162,23 +130,6 @@ class FlightDataManager(
         currentMode in visibleModes
 
     fun getFallbackMode(): FlightMode = FlightMode.CRUISE
-
-    private fun updateAveragedVerticalSpeed(rawVs: Double) {
-        val now = System.currentTimeMillis()
-        recentVarioSamples.addLast(VarioSample(now, rawVs))
-        recentVarioSum += rawVs
-
-        while (recentVarioSamples.isNotEmpty() && now - recentVarioSamples.first().timestamp > AVERAGE_WINDOW_MS) {
-            val removed = recentVarioSamples.removeFirst()
-            recentVarioSum -= removed.value
-        }
-
-        averagedVerticalSpeed = if (recentVarioSamples.isNotEmpty()) {
-            recentVarioSum / recentVarioSamples.size
-        } else {
-            null
-        }
-    }
 
 }
 
