@@ -118,6 +118,17 @@ adb logcat -s "SkysightClient" "SkysightApi" -v time
 adb shell dumpsys package com.example.xcpro.debug | grep -A 20 "permissions:"
 ```
 
+### Brand Assets Refresh
+```bash
+# 1. Update XCPROICON.png with the new artwork (1024x1024 square).
+# 2. Regenerate every launcher + splash asset in one go.
+python scripts/update_brand_assets.py
+
+# Outputs: XCPROLOGO.png, XCProWhite.png, drawable/xcpro_logo*.png,
+# and all mipmap ic_launcher*.png densities. The script applies the
+# current zoom factor (12%) so splash + launcher art stay consistent.
+```
+
 ### Git Workflow
 ```bash
 # Check task separation (should return ZERO)
