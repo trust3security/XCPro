@@ -1,9 +1,9 @@
 package com.example.xcpro
 
 import android.Manifest
+import android.content.pm.PackageManager
 import android.content.Context
 import android.graphics.Color
-import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
 import android.util.TypedValue
@@ -13,27 +13,33 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.AttrRes
 import androidx.annotation.ColorInt
+import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import android.widget.Toast
 import com.example.xcpro.screens.navdrawer.lookandfeel.StatusBarStyle
 import com.example.xcpro.screens.navdrawer.lookandfeel.StatusBarStyleApplier
 import com.example.xcpro.ui.theme.Baseui1Theme
 import com.example.xcpro.service.VarioForegroundService
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
 import org.maplibre.android.WellKnownTileServer
 
 private const val TAG = "MainActivity"
+private const val SPLASH_HOLD_DURATION_MS = 2_000L
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity(), StatusBarStyleApplier {
 
     private var currentProfileId: String? = null
     private var hasStartedVarioService = false
+    private var keepSplashVisible = true
 
     private val locationPermissions = arrayOf(
         Manifest.permission.ACCESS_FINE_LOCATION,
@@ -57,7 +63,15 @@ class MainActivity : ComponentActivity(), StatusBarStyleApplier {
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val splashScreen = installSplashScreen()
+        splashScreen.setKeepOnScreenCondition { keepSplashVisible }
+
         super.onCreate(savedInstanceState)
+
+        lifecycleScope.launch {
+            delay(SPLASH_HOLD_DURATION_MS)
+            keepSplashVisible = false
+        }
 
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 

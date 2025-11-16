@@ -261,6 +261,7 @@ object MapUIWidgets {
         val displayOffset = remember(isEditMode) { mutableStateOf(ballastOffset) }
         var showSwipeHint by rememberSaveable { mutableStateOf(true) }
         var dragAccumulation by remember { mutableStateOf(0f) }
+        val latestBallastState by rememberUpdatedState(ballastState)
 
         LaunchedEffect(ballastOffset, isEditMode) {
 
@@ -366,7 +367,7 @@ object MapUIWidgets {
 
                         detectTapGestures(onTap = {
 
-                            if (ballastState.isAnimating) {
+                            if (latestBallastState.isAnimating) {
 
                                 onCommand(BallastCommand.Cancel)
 

@@ -63,6 +63,7 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    implementation("androidx.core:core-splashscreen:1.0.1")
     
     // QR Code generation
     implementation("com.google.zxing:core:3.5.3")
