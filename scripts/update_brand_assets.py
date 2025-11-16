@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Regenerate XCPro launcher and splash assets from the canonical XCPROICON.png.
+Regenerate XCPro launcher and splash assets from the canonical XCPRO.png.
 
 Usage:
     python scripts/update_brand_assets.py
@@ -14,7 +14,7 @@ from typing import Tuple
 from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / "XCPROICON.png"
+SOURCE = ROOT / "XCPRO.png"
 ICON_ZOOM_FACTOR = 1.12  # 12% zoom-in per request
 
 # Output targets: destination path -> pixel size (square)
