@@ -23,11 +23,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -81,6 +83,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import kotlinx.coroutines.launch
+import com.example.xcpro.map.BuildConfig
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.rememberSwipeableState
@@ -137,12 +140,12 @@ internal fun MapOverlayStack(
     showReplayDevFab: Boolean,
     onReplayDevFabClick: () -> Unit
 ) {
-    val currentMode by mapState.currentModeFlow.collectAsState()
-    val showDistanceCircles by mapState.showDistanceCirclesFlow.collectAsState()
-    val gestureRegions by widgetManager.gestureRegions.collectAsState()
+    val currentMode by mapState.currentModeFlow.collectAsStateWithLifecycle()
+    val showDistanceCircles by mapState.showDistanceCirclesFlow.collectAsStateWithLifecycle()
+    val gestureRegions by widgetManager.gestureRegions.collectAsStateWithLifecycle()
 
     LaunchedEffect(gestureRegions) {
-        Log.d("GESTURE_REGIONS", gestureRegions.joinToString(prefix = "[", postfix = "]") { region ->
+        if (BuildConfig.DEBUG) Log.d("GESTURE_REGIONS", gestureRegions.joinToString(prefix = "[", postfix = "]") { region ->
             "${region.target}:${region.bounds}"
         })
     }
@@ -164,7 +167,7 @@ internal fun MapOverlayStack(
             locationManager = locationManager,
             flightDataManager = flightDataManager,
             flightViewModel = flightViewModel,
-            currentFlightModeSelection = currentFlightModeSelection,
+
             taskManager = taskManager,
             orientationManager = orientationManager,
             orientationData = orientationData,
@@ -211,7 +214,7 @@ internal fun MapOverlayStack(
             )
         }
 
-        val replaySession by replayState.collectAsState()
+        val replaySession by replayState.collectAsStateWithLifecycle()
         ReplayControlsSheet(
             session = replaySession,
             modifier = Modifier
@@ -238,136 +241,266 @@ internal fun MapOverlayStack(
                 .zIndex(12f)
         )
 
-        AnimatedVisibility(
-            visible = true,
-            enter = fadeIn() + scaleIn(),
-            exit = fadeOut() + scaleOut(),
+        CompassPanel(
+            orientationData = orientationData,
+            orientationManager = orientationManager,
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(top = 80.dp, end = 16.dp)
                 .zIndex(5f)
-        ) {
-            CompassWidget(
-                orientation = orientationData,
-                onModeToggle = {
-                    val nextMode = when (orientationManager.getCurrentMode()) {
-                        MapOrientationMode.NORTH_UP -> MapOrientationMode.TRACK_UP
-                        MapOrientationMode.TRACK_UP -> MapOrientationMode.HEADING_UP
-                        MapOrientationMode.HEADING_UP -> MapOrientationMode.NORTH_UP
-                    }
-                    orientationManager.setOrientationMode(nextMode)
-                }
-            )
-        }
+        )
 
-        val ballastState by ballastUiState.collectAsState()
-        val showBallastPill =
-            !hideBallastPill && (
-                ballastState.isAnimating ||
-                    ballastState.snapshot.hasBallast ||
-                    ballastState.snapshot.currentKg > 0.0
-            )
-
-        AnimatedVisibility(
-            visible = showBallastPill,
-            enter = fadeIn() + scaleIn(),
-            exit = fadeOut() + scaleOut(),
+        BallastPanel(
+            ballastUiState = ballastUiState,
+            hideBallastPill = hideBallastPill,
+            widgetManager = widgetManager,
+            ballastOffset = ballastOffset,
+            screenWidthPx = screenWidthPx,
+            screenHeightPx = screenHeightPx,
+            onBallastCommand = onBallastCommand,
+            isUiEditMode = isUiEditMode,
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .zIndex(12f)
-        ) {
-            MapUIWidgets.BallastWidget(
-                widgetManager = widgetManager,
-                ballastState = ballastState,
-                onCommand = onBallastCommand,
-                ballastOffset = ballastOffset.value,
-                screenWidthPx = screenWidthPx,
-                screenHeightPx = screenHeightPx,
-                onOffsetChange = { offset -> ballastOffset.value = offset },
-                isEditMode = isUiEditMode
-            )
-        }
-
-        val displayNumericVario = flightDataManager.liveFlightData?.displayVario?.toFloat() ?: 0f
-        val animatedVario by animateFloatAsState(
-            targetValue = displayNumericVario,
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioMediumBouncy,
-                stiffness = Spring.StiffnessMedium
-            ),
-            label = "vario"
         )
 
-        val varioFormatted = UnitsFormatter.verticalSpeed(
-            VerticalSpeedMs(displayNumericVario.toDouble()),
-            flightDataManager.unitsPreferences
-        )
-        MapUIWidgets.VariometerWidget(
+        VariometerPanel(
+            flightDataManager = flightDataManager,
             widgetManager = widgetManager,
-            variometerState = variometerUiState,
-            needleValue = animatedVario,
-            displayValue = displayNumericVario,
-            displayLabel = varioFormatted.text,
+            variometerUiState = variometerUiState,
+            minVariometerSizePx = minVariometerSizePx,
+            maxVariometerSizePx = maxVariometerSizePx,
+            onVariometerOffsetChange = onVariometerOffsetChange,
+            onVariometerSizeChange = onVariometerSizeChange,
+            onVariometerLongPress = onVariometerLongPress,
+            onVariometerEditFinished = onVariometerEditFinished,
             screenWidthPx = screenWidthPx,
             screenHeightPx = screenHeightPx,
-            minSizePx = minVariometerSizePx,
-            maxSizePx = maxVariometerSizePx,
-            isEditMode = isUiEditMode,
-            onOffsetChange = onVariometerOffsetChange,
-            onSizeChange = onVariometerSizeChange,
-            onLongPress = onVariometerLongPress,
-            onEditFinished = onVariometerEditFinished,
-            modifier = Modifier.zIndex(if (isUiEditMode) 12f else 3f)
+            isUiEditMode = isUiEditMode
         )
 
-        DistanceCirclesCanvas(
-            mapZoom = mapState.mapLibreMap?.cameraPosition?.zoom?.toFloat() ?: 10f,
-            mapLatitude = flightDataManager.liveFlightData?.latitude ?: 0.0,
-            isVisible = showDistanceCircles,
-            modifier = Modifier.zIndex(3.7f)
+        DistanceCirclesLayer(
+            mapState = mapState,
+            flightDataManager = flightDataManager,
+            showDistanceCircles = showDistanceCircles
         )
 
-        MapTaskIntegration.AATEditModeFAB(
+        AatEditFab(
             isAATEditMode = isAATEditMode,
             taskManager = taskManager,
             cameraManager = cameraManager,
-            onExitEditMode = onExitAATEditMode,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .zIndex(11f)
+            onExitAATEditMode = onExitAATEditMode
         )
 
         if (showReplayDevFab) {
-            FloatingActionButton(
-                onClick = onReplayDevFabClick,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(bottom = 96.dp, end = 16.dp)
-                    .zIndex(15f)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.PlayArrow,
-                    contentDescription = "Start sample replay"
-                )
-            }
+            ReplayDevFab(onReplayDevFabClick = onReplayDevFabClick)
         }
 
-        MapUIWidgets.SideHamburgerMenu(
+        HamburgerMenu(
             widgetManager = widgetManager,
-            hamburgerOffset = hamburgerOffset.value,
+            hamburgerOffset = hamburgerOffset,
             screenWidthPx = screenWidthPx,
             screenHeightPx = screenHeightPx,
             onHamburgerTap = onHamburgerTap,
             onHamburgerLongPress = onHamburgerLongPress,
-            onOffsetChange = { offset -> hamburgerOffset.value = offset },
-            isEditMode = isUiEditMode,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .zIndex(12f)
+            isUiEditMode = isUiEditMode
         )
 
         MapModalUI.AirspaceSettingsModalOverlay(modalManager = modalManager)
     }
+}
+
+@Composable
+private fun CompassPanel(
+    orientationData: OrientationData,
+    orientationManager: MapOrientationManager,
+    modifier: Modifier = Modifier
+) {
+    AnimatedVisibility(
+        visible = true,
+        enter = fadeIn() + scaleIn(),
+        exit = fadeOut() + scaleOut(),
+        modifier = modifier
+    ) {
+        CompassWidget(
+            orientation = orientationData,
+            onModeToggle = {
+                val nextMode = when (orientationManager.getCurrentMode()) {
+                    MapOrientationMode.NORTH_UP -> MapOrientationMode.TRACK_UP
+                    MapOrientationMode.TRACK_UP -> MapOrientationMode.HEADING_UP
+                    MapOrientationMode.HEADING_UP -> MapOrientationMode.NORTH_UP
+                }
+                orientationManager.setOrientationMode(nextMode)
+            }
+        )
+    }
+}
+
+@Composable
+private fun BallastPanel(
+    ballastUiState: StateFlow<BallastUiState>,
+    hideBallastPill: Boolean,
+    widgetManager: MapUIWidgetManager,
+    ballastOffset: MutableState<Offset>,
+    screenWidthPx: Float,
+    screenHeightPx: Float,
+    onBallastCommand: (BallastCommand) -> Unit,
+    isUiEditMode: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val ballastState by ballastUiState.collectAsStateWithLifecycle()
+    val showBallastPill =
+        !hideBallastPill && (
+            ballastState.isAnimating ||
+                ballastState.snapshot.hasBallast ||
+                ballastState.snapshot.currentKg > 0.0
+            )
+
+    AnimatedVisibility(
+        visible = showBallastPill,
+        enter = fadeIn() + scaleIn(),
+        exit = fadeOut() + scaleOut(),
+        modifier = modifier
+    ) {
+        MapUIWidgets.BallastWidget(
+            widgetManager = widgetManager,
+            ballastState = ballastState,
+            onCommand = onBallastCommand,
+            ballastOffset = ballastOffset.value,
+            screenWidthPx = screenWidthPx,
+            screenHeightPx = screenHeightPx,
+            onOffsetChange = { offset -> ballastOffset.value = offset },
+            isEditMode = isUiEditMode
+        )
+    }
+}
+
+@Composable
+private fun VariometerPanel(
+    flightDataManager: FlightDataManager,
+    widgetManager: MapUIWidgetManager,
+    variometerUiState: VariometerUiState,
+    minVariometerSizePx: Float,
+    maxVariometerSizePx: Float,
+    onVariometerOffsetChange: (Offset) -> Unit,
+    onVariometerSizeChange: (Float) -> Unit,
+    onVariometerLongPress: () -> Unit,
+    onVariometerEditFinished: () -> Unit,
+    screenWidthPx: Float,
+    screenHeightPx: Float,
+    isUiEditMode: Boolean
+) {
+    val displayNumericVario by flightDataManager.displayVarioFlow.collectAsStateWithLifecycle()
+    val animatedVario by animateFloatAsState(
+        targetValue = displayNumericVario,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "vario"
+    )
+    val unitsPreferences = flightDataManager.unitsPreferences
+    val varioFormatted by remember(displayNumericVario, unitsPreferences) {
+        derivedStateOf {
+            UnitsFormatter.verticalSpeed(
+                VerticalSpeedMs(displayNumericVario.toDouble()),
+                unitsPreferences
+            )
+        }
+    }
+    MapUIWidgets.VariometerWidget(
+        widgetManager = widgetManager,
+        variometerState = variometerUiState,
+        needleValue = animatedVario,
+        displayValue = displayNumericVario,
+        displayLabel = varioFormatted.text,
+        screenWidthPx = screenWidthPx,
+        screenHeightPx = screenHeightPx,
+        minSizePx = minVariometerSizePx,
+        maxSizePx = maxVariometerSizePx,
+        isEditMode = isUiEditMode,
+        onOffsetChange = onVariometerOffsetChange,
+        onSizeChange = onVariometerSizeChange,
+        onLongPress = onVariometerLongPress,
+        onEditFinished = onVariometerEditFinished,
+        modifier = Modifier.zIndex(if (isUiEditMode) 12f else 3f)
+    )
+}
+
+@Composable
+private fun DistanceCirclesLayer(
+    mapState: MapScreenState,
+    flightDataManager: FlightDataManager,
+    showDistanceCircles: Boolean
+) {
+    val mapLatitude by flightDataManager.latitudeFlow.collectAsStateWithLifecycle()
+    DistanceCirclesCanvas(
+        mapZoom = mapState.mapLibreMap?.cameraPosition?.zoom?.toFloat() ?: 10f,
+        mapLatitude = mapLatitude,
+        isVisible = showDistanceCircles,
+        modifier = Modifier.zIndex(3.7f)
+    )
+}
+
+@Composable
+private fun BoxScope.AatEditFab(
+    isAATEditMode: Boolean,
+    taskManager: TaskManagerCoordinator,
+    cameraManager: MapCameraManager,
+    onExitAATEditMode: () -> Unit
+) {
+    MapTaskIntegration.AATEditModeFAB(
+        isAATEditMode = isAATEditMode,
+        taskManager = taskManager,
+        cameraManager = cameraManager,
+        onExitEditMode = onExitAATEditMode,
+        modifier = Modifier
+            .align(Alignment.BottomEnd)
+            .zIndex(11f)
+    )
+}
+
+@Composable
+private fun BoxScope.ReplayDevFab(
+    onReplayDevFabClick: () -> Unit
+) {
+    FloatingActionButton(
+        onClick = onReplayDevFabClick,
+        modifier = Modifier
+            .align(Alignment.BottomEnd)
+            .padding(bottom = 96.dp, end = 16.dp)
+            .zIndex(15f)
+    ) {
+        Icon(
+            imageVector = Icons.Default.PlayArrow,
+            contentDescription = "Start sample replay"
+        )
+    }
+}
+
+@Composable
+private fun BoxScope.HamburgerMenu(
+    widgetManager: MapUIWidgetManager,
+    hamburgerOffset: MutableState<Offset>,
+    screenWidthPx: Float,
+    screenHeightPx: Float,
+    onHamburgerTap: () -> Unit,
+    onHamburgerLongPress: () -> Unit,
+    isUiEditMode: Boolean
+) {
+    MapUIWidgets.SideHamburgerMenu(
+        widgetManager = widgetManager,
+        hamburgerOffset = hamburgerOffset.value,
+        screenWidthPx = screenWidthPx,
+        screenHeightPx = screenHeightPx,
+        onHamburgerTap = onHamburgerTap,
+        onHamburgerLongPress = onHamburgerLongPress,
+        onOffsetChange = { offset -> hamburgerOffset.value = offset },
+        isEditMode = isUiEditMode,
+        modifier = Modifier
+            .align(Alignment.TopStart)
+            .zIndex(12f)
+    )
 }
 
 @OptIn(ExperimentalMaterialApi::class)

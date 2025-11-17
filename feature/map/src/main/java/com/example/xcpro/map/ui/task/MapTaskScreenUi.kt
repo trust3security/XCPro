@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,9 +49,9 @@ object MapTaskScreenUi {
         modifier: Modifier = Modifier,
         bottomSheetContent: (@Composable BoxScope.() -> Unit)? = null
     ) {
-        val showBottomSheet by taskScreenManager.showTaskBottomSheet.collectAsState()
-        val isSearchActive by taskScreenManager.showTaskScreen.collectAsState()
-        val initialHeight by taskScreenManager.taskBottomSheetInitialHeight.collectAsState()
+        val showBottomSheet by taskScreenManager.showTaskBottomSheet.collectAsStateWithLifecycle()
+        val isSearchActive by taskScreenManager.showTaskScreen.collectAsStateWithLifecycle()
+        val initialHeight by taskScreenManager.taskBottomSheetInitialHeight.collectAsStateWithLifecycle()
 
         if (showBottomSheet) {
             Box(
@@ -88,7 +88,7 @@ object MapTaskScreenUi {
         showBottomSheetOverride: Boolean? = null,
         currentTaskOverride: com.example.xcpro.tasks.core.Task? = null
     ) {
-        val showBottomSheet by taskScreenManager.showTaskBottomSheet.collectAsState()
+        val showBottomSheet by taskScreenManager.showTaskBottomSheet.collectAsStateWithLifecycle()
         val currentTask = currentTaskOverride ?: taskScreenManager.taskManager.currentTask
         val isBottomSheetVisible = showBottomSheetOverride ?: showBottomSheet
         if (!isBottomSheetVisible && currentTask.waypoints.isNotEmpty()) {

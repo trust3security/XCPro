@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.flow.first
@@ -35,7 +36,7 @@ fun ProfileIndicator(
     onClick: () -> Unit = {}
 ) {
     val profileViewModel: ProfileViewModel = hiltViewModel()
-    val uiState by profileViewModel.uiState.collectAsState()
+    val uiState by profileViewModel.uiState.collectAsStateWithLifecycle()
     val activeProfile = uiState.activeProfile
     
     Card(
@@ -86,7 +87,7 @@ fun ProfileQuickSwitcher(
     navController: NavController
 ) {
     val profileViewModel: ProfileViewModel = hiltViewModel()
-    val uiState by profileViewModel.uiState.collectAsState()
+    val uiState by profileViewModel.uiState.collectAsStateWithLifecycle()
     var expanded by remember { mutableStateOf(false) }
     
     if (uiState.profiles.size <= 1) return // Don't show if only one or no profiles
@@ -199,7 +200,7 @@ fun FlightModeIndicator(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val profileViewModel: ProfileViewModel = hiltViewModel()
-    val uiState by profileViewModel.uiState.collectAsState()
+    val uiState by profileViewModel.uiState.collectAsStateWithLifecycle()
     val activeProfile = uiState.activeProfile
 
     var visibleModes by remember { mutableStateOf(availableModes ?: com.example.xcpro.common.flight.FlightMode.values().toList()) }

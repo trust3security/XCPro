@@ -153,6 +153,17 @@ Example:
 - Hoist state; pass events as lambdas.
 - Keep files under **500 lines** (prefer <= 350). Split when larger.
 
+### Live Telemetry & Recomposition Discipline
+- **Collect lifecycle-aware**: UI layers must use `collectAsStateWithLifecycle()` (or `stateIn(viewModelScope, SharingStarted.WhileSubscribed)` inside the ViewModel) for every sensor/telemetry flow. No raw `collectAsState()` on `gpsFlow`, `orientationFlow`, etc.—it keeps emitting while backgrounded, wastes battery, and re-triggers full-screen recompositions.
+- **Push fast values to leaves**: High-frequency data (climb rate, airspeed, wind, audio state) must be read only by the composable that renders it. Do **not** plumb entire `FlightDataManager` or `RealTimeFlightData` through `MapScreen`; instead expose precise `StateFlow`s/`State` for each fast datum and pass them directly to the leaf widget. Large parents (Map screens, Card containers, MapView holders) should never recompose at telemetry rates.
+- **Use `rememberUpdatedState` for tick loops**: Any `LaunchedEffect`/`Canvas`/animation loop that runs faster than 5 Hz (vario tones, needles, spark lines) must capture the latest value with `rememberUpdatedState` and read inside the loop. This keeps the effect scoped to lifecycle changes instead of every sensor tick.
+- **Wrap derived formatting**: Whenever you format numbers (`UnitsFormatter`, string interpolation, smoothing, delta math) for display, wrap it in `remember(value) { derivedStateOf { … } }`. Only the text composable should recompose; heavy parents must remain stable.
+- **Split heavyweight composables**: Files like `MapScreen`, `MapOverlayWidgets`, `MapUIWidgets`, etc., must be decomposed so that pointer gestures, MapView hosting, and card containers sit in their own composables. A change in the compass, slider, or single HUD number should *not* notify `AndroidView(MapView)` or the entire overlay tree.
+- **Stabilize models**: Mark UI data classes that cross Compose boundaries (`RealTimeFlightData`, HUD models, widget state) as `@Immutable` (or expose individual primitives) so Compose skips recompositions when unrelated fields change.
+- **Throttle debug logging**: Never leave per-pointer/per-tick logging in production composables (e.g., gesture logs inside `pointerInteropFilter`). Guard logs behind `BuildConfig.DEBUG` or remove them—logging inside hot loops causes GC churn and frame drops.
+- **Prefer Canvas/animation clocks for gauges**: Needles, tapes, or sparklines should render inside a small composable that owns its draw scope. Drive them with `rememberInfiniteTransition`, `Animatable`, or a tight `LaunchedEffect`, keeping the outer layout stable.
+- **Verification**: Use Layout Inspector’s recomposition counters after each feature. The acceptance bar is “only the leaf composable re-renders when telemetry ticks.”
+
 ### Recommended Split Targets (for XC Pro)
 | Type | Ideal Size | Hard Limit | Split Trigger |
 |------|------------|------------|---------------|

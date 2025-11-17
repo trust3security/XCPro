@@ -21,7 +21,7 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -70,7 +70,7 @@ fun MainActivityScreen(
     var showProfileSelection by remember { mutableStateOf(false) }
 
     // Check if we need to show profile selection based on state
-    val profileUiState by profileViewModel.uiState.collectAsState()
+    val profileUiState by profileViewModel.uiState.collectAsStateWithLifecycle()
     
     LaunchedEffect(profileUiState) {
         if (profileUiState.profiles.isEmpty()) {

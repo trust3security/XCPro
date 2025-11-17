@@ -11,7 +11,10 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -51,8 +54,8 @@ fun MapActionButtons(
     val qnhTopPadding = 130.dp
     val fabSpacing = 64.dp
     val distanceTopPadding = if (showQnhFab) qnhTopPadding + fabSpacing else qnhTopPadding
-    val isTaskSearchVisible by taskScreenManager.showTaskScreen.collectAsState()
-    val isTaskSheetVisible by taskScreenManager.showTaskBottomSheet.collectAsState()
+    val isTaskSearchVisible by taskScreenManager.showTaskScreen.collectAsStateWithLifecycle()
+    val isTaskSheetVisible by taskScreenManager.showTaskBottomSheet.collectAsStateWithLifecycle()
 
     Box(
         modifier = modifier
@@ -122,7 +125,7 @@ private fun RecenterButton(
     ) {
         FloatingActionButton(
             onClick = {
-                Log.d("MapActionButtons", "Recenter button clicked")
+                if (com.example.xcpro.map.BuildConfig.DEBUG) Log.d("MapActionButtons", "Recenter button clicked")
                 mapState.mapLibreMap?.let { map ->
                     val currentPosition = map.cameraPosition
                     val newCameraPosition = org.maplibre.android.camera.CameraPosition.Builder()
@@ -136,7 +139,7 @@ private fun RecenterButton(
                     gliderPaddingHelper.applyPadding(map)
 
                     mapState.showRecenterButton = false
-                    Log.d("MapActionButtons", "Recentered to current location")
+                    if (com.example.xcpro.map.BuildConfig.DEBUG) Log.d("MapActionButtons", "Recentered to current location")
                 }
             },
             modifier = Modifier.matchParentSize(),
@@ -164,7 +167,7 @@ private fun ReturnButton(
     ) {
         FloatingActionButton(
             onClick = {
-                Log.d("MapActionButtons", "Return button clicked")
+                if (com.example.xcpro.map.BuildConfig.DEBUG) Log.d("MapActionButtons", "Return button clicked")
                 onReturn()
             },
             modifier = Modifier.matchParentSize(),
@@ -195,7 +198,7 @@ private fun DistanceCirclesButton(
     ) {
         FloatingActionButton(
             onClick = {
-                Log.d("MapActionButtons", "Distance circles button clicked")
+                if (com.example.xcpro.map.BuildConfig.DEBUG) Log.d("MapActionButtons", "Distance circles button clicked")
                 onToggle()
             },
             modifier = Modifier.matchParentSize(),

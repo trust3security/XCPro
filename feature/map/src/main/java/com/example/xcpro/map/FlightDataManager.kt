@@ -11,8 +11,13 @@ import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.units.UnitsPreferences
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 /**
  * Bridge between the map-layer UI and the flight-card SSOT ViewModel. It keeps UI-facing,
@@ -28,18 +33,40 @@ class FlightDataManager(
         private const val TAG = "FlightDataManager"
     }
 
+    private val _liveFlightData = MutableStateFlow<RealTimeFlightData?>(null)
+    val liveFlightDataFlow: StateFlow<RealTimeFlightData?> = _liveFlightData.asStateFlow()
+    val displayVarioFlow: StateFlow<Float> =
+        liveFlightDataFlow
+            .map { it?.displayVario?.toFloat() ?: 0f }
+            .stateIn(
+                scope = coroutineScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = 0f
+            )
+    val latitudeFlow: StateFlow<Double> =
+        liveFlightDataFlow
+            .map { it?.latitude ?: 0.0 }
+            .stateIn(
+                scope = coroutineScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = 0.0
+            )
+
     /**
      * Latest flight data sample after UI smoothing; this is what downstream collectors should consume
      * when they want values that match on-screen overlays.
      */
-    var liveFlightData by mutableStateOf<RealTimeFlightData?>(null)
-        private set
+    var liveFlightData: RealTimeFlightData?
+        get() = _liveFlightData.value
+        private set(value) {
+            _liveFlightData.value = value
+        }
     /**
      * Raw sample emitted by the calculation pipeline before any additional smoothing. Exposed so
      * analytics or diagnostics can compare against the UI-filtered stream without re-wiring the
      * calculator.
      */
-    var rawFlightData by mutableStateOf<RealTimeFlightData?>(null)
+    var rawFlightData: RealTimeFlightData? = null
         private set
     var currentFlightMode by mutableStateOf(FlightModeSelection.CRUISE)
         private set

@@ -1,6 +1,8 @@
 package com.example.dfcards
 
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import com.example.dfcards.calculations.ConfidenceLevel
 
 /**
@@ -25,6 +27,7 @@ fun FlightDataProvider(
 
 
 // Data classes stay the same
+@Immutable
 data class RealTimeFlightData(
     val latitude: Double = 0.0,
     val longitude: Double = 0.0,

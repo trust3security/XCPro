@@ -22,7 +22,6 @@ import com.example.xcpro.screens.overlays.getMapStyleUrl
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.rememberUpdatedState
 
 object MapComposeEffects {
@@ -124,20 +123,19 @@ object MapComposeEffects {
         }
 
         LaunchedEffect(Unit) {
-            snapshotFlow { flightDataManager.liveFlightData }
-                .collectLatest { liveData ->
-                    if (liveData != null) {
-                        if (cardsReadyState.value) {
-                            flightViewModel.updateCardsWithLiveData(liveData)
-                        }
-                        orientationManager.updateFromFlightData(liveData)
-                        locationManager.updateLocationFromFlightData(
-                            liveData,
-                            orientationData.mode,
-                            orientationData.bearing
-                        )
+            flightDataManager.liveFlightDataFlow.collectLatest { liveData ->
+                if (liveData != null) {
+                    if (cardsReadyState.value) {
+                        flightViewModel.updateCardsWithLiveData(liveData)
                     }
+                    orientationManager.updateFromFlightData(liveData)
+                    locationManager.updateLocationFromFlightData(
+                        liveData,
+                        orientationData.mode,
+                        orientationData.bearing
+                    )
                 }
+            }
         }
 
         LaunchedEffect(flightDataManager.unitsPreferences) {
