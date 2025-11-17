@@ -58,6 +58,8 @@ internal class FlightCalculationHelpers(
         private set
     var thermalGainCurrent: Double = 0.0
         private set
+    val isThermalActive: Boolean
+        get() = thermalStartTime > 0L
 
     // L/D tracking state
     private var lastLDCalculationTime = 0L
