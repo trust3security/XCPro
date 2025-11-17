@@ -93,7 +93,7 @@ class FlightDataCalculator(
         private const val IAS_SCAN_STEP_MS = 0.5
         private const val SEA_LEVEL_PRESSURE_HPA = 1013.25
         private const val VARIO_VALIDITY_MS = 500L
-        private const val AVERAGE_WINDOW_MS = 30_000L
+        private const val AVERAGE_WINDOW_SECONDS = 30
         private const val DISPLAY_VAR_CLAMP = 7.0
         private const val DISPLAY_SMOOTH_TIME_S = 0.6
         private const val DISPLAY_DECAY_FACTOR = 0.9
@@ -169,11 +169,15 @@ class FlightDataCalculator(
     private var cachedBaroData: BaroData? = null
     private var cachedCompassData: CompassData? = null
     @Volatile private var imuAssistEnabled: Boolean = true
-    private val bruttoAverageWindow = TimedAverageWindow(AVERAGE_WINDOW_MS)
-    private val nettoAverageWindow = TimedAverageWindow(AVERAGE_WINDOW_MS)
+    private val bruttoAverageWindow = FixedSampleAverageWindow(AVERAGE_WINDOW_SECONDS)
+    private val nettoAverageWindow = FixedSampleAverageWindow(AVERAGE_WINDOW_SECONDS)
     private val nettoDisplayWindow = TimedAverageWindow(NETTO_DISPLAY_WINDOW_MS)
     private var displayVarioState = 0.0
     private var displayNettoState = 0.0
+    private var lastBruttoSampleTime = 0L
+    private var lastNettoSampleTime = 0L
+    private var lastNettoValue = Double.NaN
+    private var lastThermalState = false
 
     init {
         // ✅ PRIORITY 2: DECOUPLED SAMPLE RATES
@@ -500,9 +504,16 @@ class FlightDataCalculator(
         )
         val netto = nettoResult.value.toFloat()
         val nettoValid = nettoResult.valid
-        bruttoAverageWindow.addSample(currentTime, bruttoVario)
+        val thermalActive = flightHelpers.isThermalActive
+        val nettoSampleValue = resolveNettoSampleValue(nettoResult.value, nettoValid)
+        updateAverageWindows(
+            currentTime = currentTime,
+            bruttoSample = bruttoVario,
+            nettoSample = nettoSampleValue,
+            thermalActive = thermalActive
+        )
         if (nettoValid) {
-            nettoAverageWindow.addSample(currentTime, nettoResult.value)
+            lastNettoValue = nettoResult.value
             nettoDisplayWindow.addSample(currentTime, nettoResult.value)
         } else {
             nettoDisplayWindow.clear()
@@ -633,7 +644,13 @@ class FlightDataCalculator(
         varioValidUntil = 0L
         bruttoAverageWindow.clear()
         nettoAverageWindow.clear()
+        nettoDisplayWindow.clear()
         displayVarioState = 0.0
+        displayNettoState = 0.0
+        lastBruttoSampleTime = 0L
+        lastNettoSampleTime = 0L
+        lastNettoValue = Double.NaN
+        lastThermalState = false
         Log.d(TAG, "FlightDataCalculator stopped")
     }
 
@@ -739,6 +756,78 @@ class FlightDataCalculator(
         val densityAtAlt = pressureAtAltPa / (GAS_CONSTANT * tempAtAltitude)
         val seaLevelDensity = (SEA_LEVEL_PRESSURE_HPA * 100.0) / (GAS_CONSTANT * tempSeaLevelK)
         return densityAtAlt / seaLevelDensity
+    }
+
+    private fun updateAverageWindows(
+        currentTime: Long,
+        bruttoSample: Double,
+        nettoSample: Double,
+        thermalActive: Boolean
+    ) {
+        val timeWentBack = currentTime < lastBruttoSampleTime || currentTime < lastNettoSampleTime
+        val thermalToggled = thermalActive != lastThermalState
+        if (timeWentBack || thermalToggled) {
+            resetAverageWindows(bruttoSample, nettoSample, currentTime)
+        } else {
+            lastBruttoSampleTime = addSamplesForElapsedSeconds(
+                window = bruttoAverageWindow,
+                lastTimestamp = lastBruttoSampleTime,
+                currentTime = currentTime,
+                sampleValue = bruttoSample
+            )
+            lastNettoSampleTime = addSamplesForElapsedSeconds(
+                window = nettoAverageWindow,
+                lastTimestamp = lastNettoSampleTime,
+                currentTime = currentTime,
+                sampleValue = nettoSample
+            )
+        }
+        lastThermalState = thermalActive
+    }
+
+    private fun addSamplesForElapsedSeconds(
+        window: FixedSampleAverageWindow,
+        lastTimestamp: Long,
+        currentTime: Long,
+        sampleValue: Double
+    ): Long {
+        if (lastTimestamp == 0L) {
+            window.seed(sampleValue)
+            return currentTime
+        }
+
+        if (currentTime < lastTimestamp) {
+            window.seed(sampleValue)
+            return currentTime
+        }
+
+        if (currentTime == lastTimestamp) {
+            return lastTimestamp
+        }
+
+        var nextTimestamp = lastTimestamp + 1000L
+        var latestTimestamp = lastTimestamp
+        while (nextTimestamp <= currentTime) {
+            window.addSample(sampleValue)
+            latestTimestamp = nextTimestamp
+            nextTimestamp += 1000L
+        }
+        return latestTimestamp
+    }
+
+    private fun resetAverageWindows(bruttoSample: Double, nettoSample: Double, timestamp: Long) {
+        bruttoAverageWindow.seed(bruttoSample)
+        nettoAverageWindow.seed(nettoSample)
+        lastBruttoSampleTime = timestamp
+        lastNettoSampleTime = timestamp
+    }
+
+    private fun resolveNettoSampleValue(rawNetto: Double, nettoValid: Boolean): Double {
+        if (nettoValid) {
+            return rawNetto
+        }
+        val fallback = lastNettoValue
+        return if (!fallback.isNaN()) fallback else rawNetto
     }
 
     fun setImuAssistEnabled(enabled: Boolean) {
