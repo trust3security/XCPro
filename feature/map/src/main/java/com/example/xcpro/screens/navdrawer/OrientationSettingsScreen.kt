@@ -8,21 +8,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Map
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,14 +24,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.MapOrientationPreferences
 import com.example.xcpro.common.orientation.MapOrientationMode
-import com.example.ui1.icons.Reply_all
+import com.example.xcpro.screens.navdrawer.SettingsTopAppBar
 import kotlinx.coroutines.launch
 
 /**
@@ -65,27 +57,19 @@ fun OrientationSettingsScreen(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
-            CenterAlignedTopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                title = { Text(text = "Orientation") },
-                navigationIcon = {
-                    RowWithDrawerIcons(
-                        onBack = { navController.popBackStack() },
-                        onDrawer = {
-                            scope.launch {
-                                navController.popBackStack("map", inclusive = false)
-                                drawerState.open()
-                            }
-                        }
-                    )
-                },
-                actions = {
-                    IconButton(onClick = {
+            SettingsTopAppBar(
+                title = "Orientation",
+                onNavigateUp = { navController.navigateUp() },
+                onSecondaryNavigate = {
+                    scope.launch {
                         navController.popBackStack("map", inclusive = false)
-                    }) {
-                        Icon(Icons.Default.Map, contentDescription = "Map")
+                        drawerState.open()
+                    }
+                },
+                onNavigateToMap = {
+                    scope.launch {
+                        drawerState.close()
+                        navController.popBackStack("map", inclusive = false)
                     }
                 }
             )
@@ -121,26 +105,6 @@ fun OrientationSettingsScreen(
                     }
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun RowWithDrawerIcons(
-    onBack: () -> Unit,
-    onDrawer: () -> Unit
-) {
-    androidx.compose.foundation.layout.Row {
-        IconButton(onClick = onBack) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-        }
-        IconButton(onClick = onDrawer) {
-            Icon(
-                imageVector = Reply_all,
-                contentDescription = "Open drawer",
-                tint = Color.Black,
-                modifier = Modifier.padding(horizontal = 4.dp)
-            )
         }
     }
 }

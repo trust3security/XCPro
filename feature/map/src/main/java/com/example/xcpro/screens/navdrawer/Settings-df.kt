@@ -71,13 +71,13 @@ fun SettingsScreen(
             SettingsTopAppBar(
                 title = "General",
                 onNavigateUp = {
-                    onCancelHawkDashboard()
-                    navController.navigateUp()
+                    scope.launch {
+                        onCancelHawkDashboard()
+                        navController.popBackStack()
+                        drawerState.open()
+                    }
                 },
-                onSecondaryNavigate = {
-                    onCancelHawkDashboard()
-                    navController.popBackStack()
-                },
+                onSecondaryNavigate = null,
                 onNavigateToMap = {
                     scope.launch {
                         drawerState.close()
