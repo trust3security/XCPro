@@ -70,9 +70,6 @@ class MapScreenViewModel @Inject constructor(
     @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
-    private val _hawkDashboardPending = MutableStateFlow(false)
-    private val _hawkDashboardClients = MutableStateFlow(0)
-
     private val ballastController = BallastController(
         repository = gliderRepository,
         scope = viewModelScope,
@@ -87,7 +84,6 @@ class MapScreenViewModel @Inject constructor(
         mapState = mapState,
         coroutineScope = viewModelScope,
         qnhPreferencesRepository = qnhPreferencesRepository,
-        hawkDashboardActive = { hasHawkDashboardClient() },
         varioServiceManager = varioServiceManager
     )
     val orientationManager: MapOrientationManager =
@@ -373,45 +369,6 @@ class MapScreenViewModel @Inject constructor(
         _variometerUiState.update { it.copy(sizePx = clampedSize, offset = clampedOffset) }
         variometerRepository.saveSize(clampedSize)
         variometerRepository.saveOffset(clampedOffset)
-    }
-
-    fun prepareHawkDashboardClient() {
-        _hawkDashboardPending.value = true
-    }
-
-    fun finalizeHawkDashboardClient(): Boolean {
-        val pending = _hawkDashboardPending.value
-        _hawkDashboardPending.value = false
-        if (pending) {
-            incrementHawkClients()
-            return true
-        }
-        return false
-    }
-
-    fun cancelHawkDashboardPreparation() {
-        _hawkDashboardPending.value = false
-    }
-
-    fun registerHawkDashboardClient() {
-        incrementHawkClients()
-    }
-
-    fun unregisterHawkDashboardClient() {
-        _hawkDashboardClients.update { current ->
-            val next = (current - 1).coerceAtLeast(0)
-            if (next == 0) {
-                locationManager.stopLocationTracking(force = true)
-            }
-            next
-        }
-    }
-
-    fun hasHawkDashboardClient(): Boolean =
-        _hawkDashboardPending.value || _hawkDashboardClients.value > 0
-
-    private fun incrementHawkClients() {
-        _hawkDashboardClients.update { it + 1 }
     }
 
     private fun clampOffset(

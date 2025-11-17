@@ -121,11 +121,11 @@ class FlightDataViewModelUnitsTest {
         val viewModel = FlightDataViewModel()
         val profileId = "profile-template"
 
-        viewModel.setProfileTemplate(profileId, FlightModeSelection.HAWK, "hawk-template")
+        viewModel.setProfileTemplate(profileId, FlightModeSelection.THERMAL, "thermal-template")
 
         assertEquals(
-            "hawk-template",
-            viewModel.getProfileTemplateId(profileId, FlightModeSelection.HAWK)
+            "thermal-template",
+            viewModel.getProfileTemplateId(profileId, FlightModeSelection.THERMAL)
         )
     }
 

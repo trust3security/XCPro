@@ -1,8 +1,6 @@
 package com.example.xcpro.map
 
 import android.Manifest
-import android.annotation.SuppressLint
-import android.bluetooth.BluetoothAdapter
 import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.Composable
@@ -17,8 +15,6 @@ import com.example.xcpro.sensors.FlightDataCalculator
 import com.example.xcpro.sensors.GPSData
 import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.common.units.UnitsConverter
-import com.example.xcpro.xcprov1.bluetooth.GarminGloConnectionManager
-import com.example.xcpro.xcprov1.service.XcproV1Controller
 import com.example.xcpro.vario.VarioServiceManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -31,7 +27,6 @@ class LocationManager(
     private val mapState: MapScreenState,
     private val coroutineScope: CoroutineScope,
     private val qnhPreferencesRepository: QnhPreferencesRepository,
-    private val hawkDashboardActive: () -> Boolean,
     private val varioServiceManager: VarioServiceManager
 ) {
     companion object {
@@ -72,13 +67,8 @@ class LocationManager(
 
     // ✅ PHASE 2: Flight data calculator (combines all sensor data + calculations)
     val flightDataCalculator: FlightDataCalculator = varioServiceManager.flightDataCalculator
-    val xcproV1Controller = XcproV1Controller(context, unifiedSensorManager, coroutineScope)
-    val garminGloConnectionManager = GarminGloConnectionManager(context, coroutineScope)
-    val garminStatusFlow = garminGloConnectionManager.status
-    val garminFixFlow = garminGloConnectionManager.fixFlow
 
     init {
-        xcproV1Controller.attachExternalGpsFlow(garminGloConnectionManager.fixFlow)
         coroutineScope.launch {
             qnhPreferencesRepository.qnhHpaFlow.collect { storedQnh ->
                 storedQnh?.let { flightDataCalculator.setManualQnh(it) }
@@ -183,18 +173,12 @@ class LocationManager(
     }
 
     fun stopLocationTracking(force: Boolean = false) {
-        if (!force && hawkDashboardActive()) {
-            Log.d(TAG, "HAWK dashboard active, skipping sensor shutdown")
-            return
-        }
         if (!force) {
             Log.d(TAG, "Background service keeps sensors alive (force=false)")
             return
         }
         Log.d(TAG, "Force stopping background sensors")
         stopSensors()
-        garminGloConnectionManager.stop()
-        xcproV1Controller.release()
     }
 
     /**
@@ -254,22 +238,6 @@ class LocationManager(
         } else {
             Log.d(TAG, "⚠️ No location permissions, cannot restart sensors")
         }
-    }
-
-    fun connectGarminGlo(address: String = "") {
-        val preferredAddress = address.takeIf { it.isNotBlank() }
-            ?: findPairedGarminAddress()
-        if (preferredAddress != null) {
-            Log.d(TAG, "🔗 Connecting to Garmin GLO 2 at $preferredAddress")
-            garminGloConnectionManager.connectToAddress(preferredAddress)
-        } else {
-            Log.w(TAG, "⚠️ No paired Garmin GLO 2 found. Pair device in Android Bluetooth settings first.")
-        }
-    }
-
-    fun disconnectGarminGlo() {
-        Log.d(TAG, "🔻 Disconnecting Garmin GLO 2")
-        garminGloConnectionManager.stop()
     }
 
     fun setManualQnh(qnh: Double) {
@@ -505,14 +473,6 @@ class LocationManager(
         showReturnButton()
     }
 
-    @SuppressLint("MissingPermission")
-    private fun findPairedGarminAddress(): String? {
-        val adapter = BluetoothAdapter.getDefaultAdapter() ?: return null
-        return adapter.bondedDevices.firstOrNull { device ->
-            val name = device.name?.lowercase() ?: ""
-            name.contains("glo") || name.contains("garmin")
-        }?.address
-    }
 }
 
 

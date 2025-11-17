@@ -7,6 +7,5 @@ package com.example.xcpro.common.flight
 enum class FlightMode(val number: Int, val displayName: String) {
     CRUISE(number = 1, displayName = "Cruise"),
     THERMAL(number = 2, displayName = "Thermal"),
-    FINAL_GLIDE(number = 3, displayName = "Final Glide"),
-    HAWK(number = 4, displayName = "XCPro V1")
+    FINAL_GLIDE(number = 3, displayName = "Final Glide")
 }

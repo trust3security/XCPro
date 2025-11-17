@@ -37,8 +37,6 @@ import com.example.xcpro.tasks.TaskMapOverlay
 import com.example.xcpro.sensors.GPSData
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.tasks.TaskManagerCoordinator
-import com.example.xcpro.xcprov1.ui.HawkGauge
-import com.example.xcpro.xcprov1.ui.WindRibbon
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapInitializer
 import com.example.xcpro.map.LocationManager
@@ -76,8 +74,6 @@ fun MapMainLayers(
 ) {
     val scope = rememberCoroutineScope()
 
-    val hawkSnapshot = locationManager.xcproV1Controller.snapshotFlow.collectAsState(null).value
-
     Box(modifier = modifier.fillMaxSize()) {
         AndroidView(
             factory = { ctx ->
@@ -94,33 +90,6 @@ fun MapMainLayers(
             },
             modifier = Modifier.fillMaxSize()
         )
-
-        if (currentFlightModeSelection == FlightModeSelection.HAWK) {
-            hawkSnapshot?.let { data ->
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = 110.dp)
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.92f), RoundedCornerShape(16.dp))
-                        .padding(16.dp)
-                        .zIndex(4f),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    HawkGauge(
-                        actualClimb = data.actualClimb,
-                        potentialClimb = data.potentialClimb,
-                        confidence = data.confidence,
-                        gaugeSize = 220.dp
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    WindRibbon(
-                        windX = data.windX,
-                        windY = data.windY,
-                        modifier = Modifier.fillMaxWidth(0.8f)
-                    )
-                }
-            }
-        }
 
         Box(
             modifier = Modifier

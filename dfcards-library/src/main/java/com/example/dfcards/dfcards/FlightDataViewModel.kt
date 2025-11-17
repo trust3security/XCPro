@@ -582,8 +582,7 @@ class FlightDataViewModel(
         private val DEFAULT_TEMPLATE_IDS = mapOf(
             FlightModeSelection.CRUISE to "id01",
             FlightModeSelection.THERMAL to "id02",
-            FlightModeSelection.FINAL_GLIDE to "id03",
-            FlightModeSelection.HAWK to "id04"
+            FlightModeSelection.FINAL_GLIDE to "id03"
         )
     }
 }

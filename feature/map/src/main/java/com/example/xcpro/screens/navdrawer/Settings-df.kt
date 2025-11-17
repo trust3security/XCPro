@@ -53,9 +53,7 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(
     navController: NavHostController,
     drawerState: DrawerState,
-    onShowAirspaceOverlay: () -> Unit,
-    onPrepareHawkDashboard: () -> Unit,
-    onCancelHawkDashboard: () -> Unit
+    onShowAirspaceOverlay: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -72,7 +70,6 @@ fun SettingsScreen(
                 title = "General",
                 onNavigateUp = {
                     scope.launch {
-                        onCancelHawkDashboard()
                         navController.popBackStack()
                         drawerState.open()
                     }
@@ -82,7 +79,6 @@ fun SettingsScreen(
                     scope.launch {
                         drawerState.close()
                         navController.popBackStack("map", inclusive = false)
-                        onCancelHawkDashboard()
                     }
                 }
             )
@@ -149,7 +145,7 @@ fun SettingsScreen(
                         }
                     }
 
-                    // Row 2b: Polar | XCPro HAWK
+                    // Row 2b: Polar
                     item {
                         Row(
                             modifier = Modifier
@@ -163,15 +159,7 @@ fun SettingsScreen(
                                 onClick = { navController.navigate("polar_settings") },
                                 modifier = Modifier.weight(1f)
                             )
-                            CategoryItem(
-                                title = "Vario",
-                                icon = Icons.Default.Speed,
-                                onClick = {
-                                    onPrepareHawkDashboard()
-                                    navController.navigate("hawk_dashboard")
-                                },
-                                modifier = Modifier.weight(1f)
-                            )
+                            Spacer(modifier = Modifier.weight(1f))
                         }
                     }
 

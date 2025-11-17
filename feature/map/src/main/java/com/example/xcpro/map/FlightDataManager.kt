@@ -60,7 +60,6 @@ class FlightDataManager(
             FlightMode.CRUISE -> FlightModeSelection.CRUISE
             FlightMode.THERMAL -> FlightModeSelection.THERMAL
             FlightMode.FINAL_GLIDE -> FlightModeSelection.FINAL_GLIDE
-            FlightMode.HAWK -> FlightModeSelection.HAWK
         }
 
     fun mapToFlightMode(modeSelection: FlightModeSelection): FlightMode =
@@ -68,7 +67,6 @@ class FlightDataManager(
             FlightModeSelection.CRUISE -> FlightMode.CRUISE
             FlightModeSelection.THERMAL -> FlightMode.THERMAL
             FlightModeSelection.FINAL_GLIDE -> FlightMode.FINAL_GLIDE
-            FlightModeSelection.HAWK -> FlightMode.HAWK
         }
 
     fun updateFlightMode(newMode: FlightModeSelection) {
@@ -92,7 +90,6 @@ class FlightDataManager(
         filtered.add(FlightMode.CRUISE)
         if (visibilities["THERMAL"] != false) filtered.add(FlightMode.THERMAL)
         if (visibilities["FINAL_GLIDE"] != false) filtered.add(FlightMode.FINAL_GLIDE)
-        if (visibilities["HAWK"] != false) filtered.add(FlightMode.HAWK)
         visibleModes = filtered
         Log.d(TAG, "Visible modes for profile '$profileName': ${filtered.map { it.name }}")
     }

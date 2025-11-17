@@ -15,9 +15,6 @@ fun getDefaultTemplateForMode(mode: FlightModeSelection, templates: List<FlightT
             ?: templates.find { it.id == "thermal" }
         FlightModeSelection.FINAL_GLIDE -> templates.find { it.id == "id03" }
             ?: templates.find { it.id == "final_glide" }
-        FlightModeSelection.HAWK -> templates.find { it.id == "hawk" }
-            ?: templates.find { it.id == "vario" }
-            ?: templates.find { it.id == "id01" }
     }
 }
 

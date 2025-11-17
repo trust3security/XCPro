@@ -860,7 +860,6 @@ object MapUIWidgets {
             FlightMode.CRUISE -> Color(0xFF2196F3)
             FlightMode.THERMAL -> Color(0xFF9C27B0)
             FlightMode.FINAL_GLIDE -> Color(0xFFF44336)
-            FlightMode.HAWK -> Color(0xFF00BCD4)
         }
     }
 

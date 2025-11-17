@@ -8,7 +8,6 @@ import androidx.compose.material3.DrawerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -33,7 +32,6 @@ import com.example.xcpro.screens.navdrawer.PolarSettingsScreen
 import com.example.xcpro.screens.navdrawer.UnitsSettingsScreen
 import com.example.xcpro.screens.navdrawer.VarioAudioSettingsScreen
 import com.example.xcpro.screens.navdrawer.OrientationSettingsScreen
-import com.example.xcpro.xcprov1.ui.HawkDashboardRoute
 import com.example.xcpro.screens.replay.IgcReplayScreen
 
 @Composable
@@ -71,9 +69,7 @@ fun AppNavGraph(
             SettingsScreen(
                 navController = navController,
                 drawerState = drawerState,
-                onShowAirspaceOverlay = { },
-                onPrepareHawkDashboard = { mapViewModel.prepareHawkDashboardClient() },
-                onCancelHawkDashboard = { mapViewModel.cancelHawkDashboardPreparation() }
+                onShowAirspaceOverlay = { }
             )
         }
         composable("look_and_feel") { LookAndFeelScreen(navController = navController, drawerState = drawerState) }
@@ -82,23 +78,6 @@ fun AppNavGraph(
         composable("levo_vario_settings") { LevoVarioSettingsScreen(navController = navController, drawerState = drawerState) }
         composable("vario_audio_settings") { VarioAudioSettingsScreen(navController = navController, drawerState = drawerState) }
         composable("colors") { ColorsScreen(navController = navController) }
-        composable("hawk_dashboard") { backStackEntry ->
-            val mapEntry = remember(backStackEntry) { navController.getBackStackEntry("map") }
-            val mapViewModel: MapScreenViewModel = hiltViewModel(mapEntry)
-            val manager = mapViewModel.locationManager
-            val registeredFromPending = mapViewModel.finalizeHawkDashboardClient()
-            if (!registeredFromPending) {
-                mapViewModel.registerHawkDashboardClient()
-            }
-            DisposableEffect(manager) {
-                manager.restartSensorsIfNeeded()
-                onDispose {
-                    mapViewModel.unregisterHawkDashboardClient()
-                }
-            }
-            HawkDashboardRoute(manager)
-            setSelectedNavItem("hawk_dashboard")
-        }
         composable("task") {
             Task(
                 navController = navController,

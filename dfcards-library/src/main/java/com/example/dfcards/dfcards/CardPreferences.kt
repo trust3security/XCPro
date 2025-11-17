@@ -403,7 +403,7 @@ class CardPreferences(private val context: Context) {
     fun getProfileAllFlightModeVisibilities(profileId: String): Flow<Map<String, Boolean>> {
         return context.dataStore.data.map { preferences ->
             val visibilities = mutableMapOf<String, Boolean>()
-            val flightModes = listOf("CRUISE", "THERMAL", "FINAL_GLIDE", "HAWK")
+            val flightModes = listOf("CRUISE", "THERMAL", "FINAL_GLIDE")
             
             flightModes.forEach { flightMode ->
                 val key = "profile_${profileId}_${flightMode}_visible"

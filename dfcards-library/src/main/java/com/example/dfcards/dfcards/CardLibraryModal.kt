@@ -44,8 +44,7 @@ enum class FlightModeSelection(
 ) {
     CRUISE("SCruise", Icons.Filled.Flight, androidx.compose.ui.graphics.Color(0xFF2196F3)),
     THERMAL("SThermal", Icons.Filled.TrendingUp, androidx.compose.ui.graphics.Color(0xFF9C27B0)),
-    FINAL_GLIDE("SFinal Glide", Icons.Filled.Terrain, androidx.compose.ui.graphics.Color(0xFFF44336)),
-    HAWK("SXCPro V1", Icons.Filled.Speed, androidx.compose.ui.graphics.Color(0xFF00BCD4))
+    FINAL_GLIDE("SFinal Glide", Icons.Filled.Terrain, androidx.compose.ui.graphics.Color(0xFFF44336))
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

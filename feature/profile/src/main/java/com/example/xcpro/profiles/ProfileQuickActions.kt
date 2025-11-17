@@ -26,7 +26,6 @@ fun getFlightModeColor(mode: FlightMode): Color {
         FlightMode.CRUISE -> Color(0xFF2196F3)      // Blue
         FlightMode.THERMAL -> Color(0xFF9C27B0)     // Purple  
         FlightMode.FINAL_GLIDE -> Color(0xFFF44336) // Red
-        FlightMode.HAWK -> Color(0xFF00BCD4) // Teal
     }
 }
 
@@ -222,7 +221,6 @@ fun FlightModeIndicator(
                         add(com.example.xcpro.common.flight.FlightMode.CRUISE)
                         if (visibilities["THERMAL"] != false) add(com.example.xcpro.common.flight.FlightMode.THERMAL)
                         if (visibilities["FINAL_GLIDE"] != false) add(com.example.xcpro.common.flight.FlightMode.FINAL_GLIDE)
-                        if (visibilities["HAWK"] != false) add(com.example.xcpro.common.flight.FlightMode.HAWK)
                     }
 
                     visibleModes = filteredModes
