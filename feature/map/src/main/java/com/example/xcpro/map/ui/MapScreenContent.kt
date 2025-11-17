@@ -10,6 +10,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -18,6 +21,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.example.dfcards.RealTimeFlightData
 import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.map.components.MapActionButtons
@@ -84,10 +88,6 @@ internal fun MapScreenContent(
     hamburgerOffset: MutableState<Offset>,
     flightModeOffset: MutableState<Offset>,
     ballastOffset: MutableState<Offset>,
-    showQnhDialog: MutableState<Boolean>,
-    qnhInput: MutableState<String>,
-    qnhError: MutableState<String?>,
-    showQnhFab: MutableState<Boolean>,
     taskScreenManager: MapTaskScreenManager,
     waypointData: List<WaypointData>,
     unitsPreferences: UnitsPreferences,
@@ -105,6 +105,11 @@ internal fun MapScreenContent(
     showReplayDevFab: Boolean,
     onReplayDevFabClick: () -> Unit
 ) {
+    var showQnhDialog by remember { mutableStateOf(false) }
+    var qnhInput by remember { mutableStateOf("") }
+    var qnhError by remember { mutableStateOf<String?>(null) }
+    var showQnhFab by remember { mutableStateOf(true) }
+
     Box(Modifier.fillMaxSize()) {
         Scaffold(
             modifier = Modifier.border(2.dp, Color.Yellow)
@@ -174,16 +179,15 @@ internal fun MapScreenContent(
         }
         }
 
-        MapTaskScreenUi.AllTaskScreenComponents(
+        MapTaskManagerLayer(
             taskScreenManager = taskScreenManager,
-            allWaypoints = waypointData,
-            currentQNH = "1013 hPa",
+            waypointData = waypointData,
             onWaypointGoto = { waypoint ->
                 cameraManager.moveToWaypoint(waypoint.latitude, waypoint.longitude)
             }
         )
 
-        MapActionButtons(
+        MapActionButtonsLayer(
             mapState = mapState,
             taskManager = taskManager,
             taskScreenManager = taskScreenManager,
@@ -191,47 +195,120 @@ internal fun MapScreenContent(
             showRecenterButton = showRecenterButton,
             showReturnButton = showReturnButton,
             showDistanceCircles = showDistanceCircles,
+            showQnhFab = showQnhFab,
             onToggleDistanceCircles = { overlayManager.toggleDistanceCircles() },
             onReturn = { locationManager.returnToSavedLocation() },
             onShowQnhDialog = {
                 val currentQnh = flightDataManager.liveFlightData?.qnh ?: 1013.25
-                qnhInput.value = seedQnhInputValue(currentQnh, unitsPreferences)
-                qnhError.value = null
-                showQnhDialog.value = true
+                qnhInput = seedQnhInputValue(currentQnh, unitsPreferences)
+                qnhError = null
+                showQnhDialog = true
             },
-            showQnhFab = showQnhFab.value,
-            onDismissQnhFab = { showQnhFab.value = false },
-            modifier = Modifier.fillMaxSize()
+            onDismissQnhFab = { showQnhFab = false }
         )
 
-        QnhDialog(
-            visible = showQnhDialog.value,
-            qnhInput = qnhInput.value,
-            qnhError = qnhError.value,
+        QnhDialogHost(
+            visible = showQnhDialog,
+            qnhInput = qnhInput,
+            qnhError = qnhError,
             unitsPreferences = unitsPreferences,
             liveData = flightDataManager.liveFlightData,
             onQnhInputChange = {
-                qnhInput.value = it
-                qnhError.value = null
+                qnhInput = it
+                qnhError = null
             },
             onConfirm = { parsed ->
                 val qnhHpa = convertQnhInputToHpa(parsed, unitsPreferences)
                 locationManager.setManualQnh(qnhHpa)
-                showQnhDialog.value = false
-                qnhError.value = null
+                showQnhDialog = false
+                qnhError = null
             },
             onInvalidInput = { error ->
-                qnhError.value = error
+                qnhError = error
             },
             onResetToStandard = {
                 locationManager.resetQnhToStandard()
-                showQnhDialog.value = false
-                qnhError.value = null
+                showQnhDialog = false
+                qnhError = null
             },
             onDismiss = {
-                showQnhDialog.value = false
-                qnhError.value = null
+                showQnhDialog = false
+                qnhError = null
             }
         )
     }
+}
+
+@Composable
+private fun MapTaskManagerLayer(
+    taskScreenManager: MapTaskScreenManager,
+    waypointData: List<WaypointData>,
+    onWaypointGoto: (WaypointData) -> Unit
+) {
+    MapTaskScreenUi.AllTaskScreenComponents(
+        taskScreenManager = taskScreenManager,
+        allWaypoints = waypointData,
+        currentQNH = "1013 hPa",
+        onWaypointGoto = onWaypointGoto
+    )
+}
+
+@Composable
+private fun MapActionButtonsLayer(
+    mapState: MapScreenState,
+    taskManager: TaskManagerCoordinator,
+    taskScreenManager: MapTaskScreenManager,
+    currentLocation: GPSData?,
+    showRecenterButton: Boolean,
+    showReturnButton: Boolean,
+    showDistanceCircles: Boolean,
+    showQnhFab: Boolean,
+    onToggleDistanceCircles: () -> Unit,
+    onReturn: () -> Unit,
+    onShowQnhDialog: () -> Unit,
+    onDismissQnhFab: () -> Unit,
+    modifier: Modifier = Modifier.fillMaxSize()
+) {
+    MapActionButtons(
+        mapState = mapState,
+        taskManager = taskManager,
+        taskScreenManager = taskScreenManager,
+        currentLocation = currentLocation,
+        showRecenterButton = showRecenterButton,
+        showReturnButton = showReturnButton,
+        showDistanceCircles = showDistanceCircles,
+        onToggleDistanceCircles = onToggleDistanceCircles,
+        onReturn = onReturn,
+        onShowQnhDialog = onShowQnhDialog,
+        showQnhFab = showQnhFab,
+        onDismissQnhFab = onDismissQnhFab,
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun QnhDialogHost(
+    visible: Boolean,
+    qnhInput: String,
+    qnhError: String?,
+    unitsPreferences: UnitsPreferences,
+    liveData: RealTimeFlightData?,
+    onQnhInputChange: (String) -> Unit,
+    onConfirm: (Double) -> Unit,
+    onInvalidInput: (String) -> Unit,
+    onResetToStandard: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    QnhDialog(
+        visible = visible,
+        qnhInput = qnhInput,
+        qnhError = qnhError,
+        unitsPreferences = unitsPreferences,
+        liveData = liveData,
+        onQnhInputChange = onQnhInputChange,
+        onConfirm = onConfirm,
+        onInvalidInput = onInvalidInput,
+        onResetToStandard = onResetToStandard,
+        onDismiss = onDismiss
+    )
 }

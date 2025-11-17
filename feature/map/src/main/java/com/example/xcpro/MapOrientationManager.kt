@@ -52,26 +52,32 @@ class MapOrientationManager(
         private const val BEARING_CHANGE_THRESHOLD = 5.0 // degrees
     }
 
+    private inline fun debugLog(message: () -> String) {
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, message())
+        }
+    }
+
     init {
-        Log.d(TAG, "🧭 MapOrientationManager initializing...")
+        debugLog { "MapOrientationManager initializing..." }
 
         // Load saved orientation mode
         minSpeedForTrackMs = preferences.getMinSpeedThreshold()
-        Log.d(TAG, "Loaded orientation mode: $currentMode")
+        debugLog { "Loaded orientation mode: $currentMode" }
 
         // Start orientation data collection
         startOrientationUpdates()
         lastValidBearing = normalizeBearing(_orientationFlow.value.bearing)
-        Log.d(TAG, "✅ MapOrientationManager initialized successfully")
+        debugLog { "MapOrientationManager initialized successfully" }
     }
 
     private fun startOrientationUpdates() {
         if (updatesJob?.isActive == true) {
-            Log.d(TAG, "🚀 Orientation updates already running")
+            debugLog { "Orientation updates already running" }
             return
         }
 
-        Log.d(TAG, "🚀 Starting orientation updates...")
+        debugLog { "Starting orientation updates..." }
         updatesJob = scope.launch {
             orientationDataSource.orientationFlow
                 .sample(BEARING_UPDATE_THROTTLE_MS) // Throttle updates to ~15Hz
@@ -144,7 +150,7 @@ class MapOrientationManager(
 
         if (System.currentTimeMillis() % 30 == 0L) {
 
-            Log.d(TAG, "dY- Orientation: mode=$currentMode, bearing=${finalBearing.toInt()}A?, valid=$isValid")
+            debugLog { "Orientation: mode=$currentMode, bearing=${finalBearing.toInt()}, valid=$isValid" }
 
         }
 
@@ -249,7 +255,7 @@ class MapOrientationManager(
         }
 
 
-        Log.d(TAG, "Map orientation changing: $currentMode -> $mode")
+        debugLog { "Map orientation changing: $currentMode -> $mode" }
         minSpeedForTrackMs = preferences.getMinSpeedThreshold()
 
         activeProfile.setMode(mode)
@@ -349,20 +355,20 @@ class MapOrientationManager(
     override fun isOrientationValid(): Boolean = _orientationFlow.value.isValid
 
     override fun start() {
-        Log.d(TAG, "▶️ Starting MapOrientationManager...")
+        debugLog { "Starting MapOrientationManager..." }
         orientationDataSource.start()
         startOrientationUpdates()
         lastValidBearing = normalizeBearing(_orientationFlow.value.bearing)
-        Log.d(TAG, "✅ MapOrientationManager started")
+        debugLog { "MapOrientationManager started" }
     }
 
     override fun stop() {
-        Log.d(TAG, "⏹️ Stopping MapOrientationManager...")
+        debugLog { "Stopping MapOrientationManager..." }
         orientationDataSource.stop()
         updatesJob?.cancel()
         updatesJob = null
         lastValidBearing = 0.0
-        Log.d(TAG, "✅ MapOrientationManager stopped")
+        debugLog { "MapOrientationManager stopped" }
     }
 
     override fun updateFromFlightData(flightData: RealTimeFlightData) {

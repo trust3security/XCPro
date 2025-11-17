@@ -28,6 +28,7 @@ import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.TaskWaypoint
 import com.example.xcpro.tasks.core.WaypointRole
 import com.example.xcpro.map.MapGestureRegion
+import com.example.xcpro.map.BuildConfig
 import kotlin.math.abs
 import kotlin.math.sin
 import kotlin.math.cos
@@ -49,16 +50,16 @@ private fun checkAATWaypointHit(
     waypoints: List<TaskWaypoint>,
     converter: AATMapCoordinateConverter?
 ): Int? {
-    Log.d(TAG, "🐛 HIT CHECK: converter=$converter, waypoints.size=${waypoints.size}")
+    if (BuildConfig.DEBUG) Log.d(TAG, "🐛 HIT CHECK: converter=$converter, waypoints.size=${waypoints.size}")
     if (converter == null) {
-        Log.d(TAG, "🐛 HIT CHECK: Converter is null!")
+        if (BuildConfig.DEBUG) Log.d(TAG, "🐛 HIT CHECK: Converter is null!")
         return null
     }
 
     val tapLatLng = converter.screenToMap(offset.x, offset.y)
-    Log.d(TAG, "🐛 HIT CHECK: Screen ${offset.x},${offset.y} -> Map $tapLatLng")
+    if (BuildConfig.DEBUG) Log.d(TAG, "🐛 HIT CHECK: Screen ${offset.x},${offset.y} -> Map $tapLatLng")
     if (tapLatLng == null) {
-        Log.d(TAG, "🐛 HIT CHECK: Failed to convert screen to map coordinates")
+        if (BuildConfig.DEBUG) Log.d(TAG, "🐛 HIT CHECK: Failed to convert screen to map coordinates")
         return null
     }
 
@@ -70,7 +71,7 @@ private fun checkAATWaypointHit(
         // ✅ AAT Rule: Only TURNPOINT role waypoints can be edited
         // START and FINISH waypoints are fixed and cannot be moved
         if (waypoint.role != WaypointRole.TURNPOINT) {
-            Log.d(TAG, "⛔ HIT CHECK: Skipping ${waypoint.title} - role ${waypoint.role} is not editable")
+            if (BuildConfig.DEBUG) Log.d(TAG, "⛔ HIT CHECK: Skipping ${waypoint.title} - role ${waypoint.role} is not editable")
             return@forEachIndexed
         }
 
@@ -82,21 +83,21 @@ private fun checkAATWaypointHit(
         // Get AAT area radius from waypoint custom parameters (defaults to 10km)
         val areaRadiusKm = (waypoint.customParameters["aatAreaRadiusKm"] as? Double) ?: 10.0
 
-        Log.d(TAG, "🐛 HIT CHECK: Turnpoint $index (${waypoint.title}) - distance=${String.format("%.2f", distance)}km, radius=${String.format("%.2f", areaRadiusKm)}km")
+        if (BuildConfig.DEBUG) Log.d(TAG, "🐛 HIT CHECK: Turnpoint $index (${waypoint.title}) - distance=${String.format("%.2f", distance)}km, radius=${String.format("%.2f", areaRadiusKm)}km")
 
         // Check if within area and closer than previous matches
         if (distance <= areaRadiusKm && distance < closestDistance) {
             closestDistance = distance
             closestIndex = index
-            Log.d(TAG, "🎯 AAT Hit: New closest turnpoint: ${waypoint.title} at index $index (${String.format("%.2f", distance)}km from center)")
+            if (BuildConfig.DEBUG) Log.d(TAG, "🎯 AAT Hit: New closest turnpoint: ${waypoint.title} at index $index (${String.format("%.2f", distance)}km from center)")
         }
     }
 
     if (closestIndex >= 0) {
-        Log.d(TAG, "✅ HIT CHECK: Selected turnpoint at index $closestIndex (${String.format("%.2f", closestDistance)}km away)")
+        if (BuildConfig.DEBUG) Log.d(TAG, "✅ HIT CHECK: Selected turnpoint at index $closestIndex (${String.format("%.2f", closestDistance)}km away)")
         return closestIndex
     } else {
-        Log.d(TAG, "🐛 HIT CHECK: No editable turnpoint found at tap location")
+        if (BuildConfig.DEBUG) Log.d(TAG, "🐛 HIT CHECK: No editable turnpoint found at tap location")
         return null
     }
 }
@@ -157,7 +158,7 @@ fun CustomMapGestureHandler(
     // ✅ CRITICAL FIX: Reset local state when external edit mode is disabled OR task type changes
     LaunchedEffect(isAATEditMode, taskType) {
         if (!isAATEditMode || taskType != TaskType.AAT) {
-            Log.d(TAG, "🔧 RESET: Clearing AAT gesture state (editMode=$isAATEditMode, taskType=$taskType)")
+            if (BuildConfig.DEBUG) Log.d(TAG, "🔧 RESET: Clearing AAT gesture state (editMode=$isAATEditMode, taskType=$taskType)")
             aatEditModeIndex = -1
             isDraggingAAT = false
         }
@@ -168,7 +169,7 @@ fun CustomMapGestureHandler(
             .fillMaxSize()
             .pointerInput(currentMode, gestureRegions) {
                 awaitEachGesture {
-                    Log.d(MAP_GESTURE_TAG, "awaitEachGesture start (taskType=$taskType, isAATEditMode=$isAATEditMode)")
+                    if (BuildConfig.DEBUG) Log.d(MAP_GESTURE_TAG, "awaitEachGesture start (taskType=$taskType, isAATEditMode=$isAATEditMode)")
                     // Pre-scan for down inside overlay regions before map consumes it
                     while (true) {
                         val preDownEvent = awaitPointerEvent(pass = PointerEventPass.Initial)
@@ -178,9 +179,9 @@ fun CustomMapGestureHandler(
                             val overlayRegion = gestureRegions.firstOrNull { region ->
                                 region.bounds.contains(gestureStartPosition)
                             }
-                            Log.d(MAP_GESTURE_TAG, "pre-scan pointer=${preDownChange.position}, region=${(overlayRegion?.target)}, consume=${(overlayRegion?.consumeGestures)}")
+                            if (BuildConfig.DEBUG) Log.d(MAP_GESTURE_TAG, "pre-scan pointer=${preDownChange.position}, region=${(overlayRegion?.target)}, consume=${(overlayRegion?.consumeGestures)}")
                             if (overlayRegion != null) {
-                                Log.d(TAG, "Pointer down inside overlay region ${overlayRegion.target} (consume=${overlayRegion.consumeGestures})")
+                                if (BuildConfig.DEBUG) Log.d(TAG, "Pointer down inside overlay region ${overlayRegion.target} (consume=${overlayRegion.consumeGestures})")
                                 if (overlayRegion.consumeGestures) {
                                     return@awaitEachGesture
                                 } else {
@@ -199,7 +200,7 @@ fun CustomMapGestureHandler(
                         pass = PointerEventPass.Final
                     )
                     if (firstDown.isConsumed) {
-                        Log.d(TAG, "Pointer down already consumed by overlay; skipping map gesture")
+                        if (BuildConfig.DEBUG) Log.d(TAG, "Pointer down already consumed by overlay; skipping map gesture")
                         return@awaitEachGesture
                     }
                     gestureStartPosition = firstDown.position
@@ -209,7 +210,7 @@ fun CustomMapGestureHandler(
                     val isOverFlightDataCards = gestureStartPosition.y > (screenHeight - bottomSheetHeight)
 
                     if (isOverFlightDataCards) {
-                        Log.d(TAG, "🚫 Gesture over flight data cards - ignoring (y=${gestureStartPosition.y}, cardHeight=$bottomSheetHeight)")
+                        if (BuildConfig.DEBUG) Log.d(TAG, "🚫 Gesture over flight data cards - ignoring (y=${gestureStartPosition.y}, cardHeight=$bottomSheetHeight)")
                         return@awaitEachGesture
                     }
 
@@ -218,25 +219,25 @@ fun CustomMapGestureHandler(
                     totalDragY = 0f
                     hasSwitchedMode = false
 
-                    Log.d(TAG, "🎯 First finger down at ${gestureStartPosition}")
+                    if (BuildConfig.DEBUG) Log.d(TAG, "🎯 First finger down at ${gestureStartPosition}")
 
                     // ✅ AAT Waypoint Hit Detection: Check for AAT waypoint hit immediately
                     var aatWaypointHit: Int? = null
                     val gestureStartTime = System.currentTimeMillis()
 
                     // 🐛 DEBUG: Log AAT state
-                    Log.d(TAG, "🐛 AAT DEBUG: taskType=$taskType, aatWaypoints.size=${aatWaypoints.size}, converter=$coordinateConverter")
+                    if (BuildConfig.DEBUG) Log.d(TAG, "🐛 AAT DEBUG: taskType=$taskType, aatWaypoints.size=${aatWaypoints.size}, converter=$coordinateConverter")
 
                     if (taskType == TaskType.AAT && aatWaypoints.isNotEmpty()) {
-                        Log.d(TAG, "🐛 AAT DEBUG: Checking hit on ${aatWaypoints.size} waypoints")
+                        if (BuildConfig.DEBUG) Log.d(TAG, "🐛 AAT DEBUG: Checking hit on ${aatWaypoints.size} waypoints")
                         aatWaypointHit = checkAATWaypointHit(gestureStartPosition, aatWaypoints, coordinateConverter)
                         if (aatWaypointHit != null) {
-                            Log.d(TAG, "🎯 AAT: Potential waypoint hit detected at index $aatWaypointHit")
+                            if (BuildConfig.DEBUG) Log.d(TAG, "🎯 AAT: Potential waypoint hit detected at index $aatWaypointHit")
                         } else {
-                            Log.d(TAG, "🐛 AAT DEBUG: No waypoint hit detected")
+                            if (BuildConfig.DEBUG) Log.d(TAG, "🐛 AAT DEBUG: No waypoint hit detected")
                         }
                     } else {
-                        Log.d(TAG, "🐛 AAT DEBUG: AAT conditions not met - taskType=$taskType, waypoints=${aatWaypoints.size}")
+                        if (BuildConfig.DEBUG) Log.d(TAG, "🐛 AAT DEBUG: AAT conditions not met - taskType=$taskType, waypoints=${aatWaypoints.size}")
                     }
 
                     // Track pointer events to count fingers
@@ -252,7 +253,7 @@ fun CustomMapGestureHandler(
 
                         if (isFirstFrame) {
                             initialFingerCount = fingerCount // ✅ FIX: Capture initial finger count
-                            Log.d(TAG, "🖐️ Gesture started with $fingerCount finger(s)")
+                            if (BuildConfig.DEBUG) Log.d(TAG, "🖐️ Gesture started with $fingerCount finger(s)")
                             isFirstFrame = false
                         }
 
@@ -269,7 +270,7 @@ fun CustomMapGestureHandler(
                                 // Start dragging if movement detected
                                 if (!isDraggingAAT && dragDistance > 10f) {
                                     isDraggingAAT = true
-                                    Log.d(TAG, "🎯 AAT: Started dragging pin $aatEditModeIndex")
+                                    if (BuildConfig.DEBUG) Log.d(TAG, "🎯 AAT: Started dragging pin $aatEditModeIndex")
                                 }
 
                                 // Update pin position during drag
@@ -280,7 +281,7 @@ fun CustomMapGestureHandler(
                                         onAATDrag(aatEditModeIndex, newPosition)
                                         // Log less frequently to avoid spam
                                         if (System.currentTimeMillis() % 500 < 50) {
-                                            Log.d(TAG, "🎯 AAT: Dragging pin $aatEditModeIndex")
+                                            if (BuildConfig.DEBUG) Log.d(TAG, "🎯 AAT: Dragging pin $aatEditModeIndex")
                                         }
                                     }
                                 }
@@ -300,7 +301,7 @@ fun CustomMapGestureHandler(
                                 // ✅ FIX: Only allow mode switching if gesture STARTED with single finger
                                 // This prevents 2-finger pan from triggering mode switch if one finger lifts
                                 if (initialFingerCount != 1) {
-                                    Log.d(TAG, "🚫 Single finger detected but gesture started with $initialFingerCount fingers - ignoring mode switch logic")
+                                    if (BuildConfig.DEBUG) Log.d(TAG, "🚫 Single finger detected but gesture started with $initialFingerCount fingers - ignoring mode switch logic")
                                     // Don't process mode switching for gestures that started with multiple fingers
                                     continue
                                 }
@@ -319,7 +320,7 @@ fun CustomMapGestureHandler(
                                             val availableModes = if (visibleModes.isNotEmpty()) visibleModes else listOf(FlightMode.CRUISE)
                                             val currentIndex = availableModes.indexOf(currentMode)
 
-                                            Log.d(TAG, "🔍 DEBUG: currentMode=${currentMode.displayName}, currentIndex=$currentIndex, availableModes=${availableModes.map { it.displayName }}")
+                                            if (BuildConfig.DEBUG) Log.d(TAG, "🔍 DEBUG: currentMode=${currentMode.displayName}, currentIndex=$currentIndex, availableModes=${availableModes.map { it.displayName }}")
 
                                             val newMode = if (currentIndex != -1) {
                                                 // ✅ FIX: Always cycle sequentially - make direction consistent
@@ -332,21 +333,21 @@ fun CustomMapGestureHandler(
                                                 }
 
                                                 val directionText = if (totalDragX > 0) "RIGHT→NEXT" else "LEFT→PREV"
-                                                Log.d(TAG, "🔄 CYCLE: ${currentMode.displayName}[$currentIndex] $directionText → ${availableModes[nextIndex].displayName}[$nextIndex]")
-                                                Log.d(TAG, "🔄 SEQUENCE: ${availableModes.mapIndexed { i, mode -> if (i == currentIndex) "[${mode.displayName}]" else mode.displayName }.joinToString(" → ")}")
+                                                if (BuildConfig.DEBUG) Log.d(TAG, "🔄 CYCLE: ${currentMode.displayName}[$currentIndex] $directionText → ${availableModes[nextIndex].displayName}[$nextIndex]")
+                                                if (BuildConfig.DEBUG) Log.d(TAG, "🔄 SEQUENCE: ${availableModes.mapIndexed { i, mode -> if (i == currentIndex) "[${mode.displayName}]" else mode.displayName }.joinToString(" → ")}")
 
                                                 availableModes[nextIndex]
                                             } else {
                                                 // Current mode not in visible list - fallback to first visible mode
-                                                Log.d(TAG, "🔍 DEBUG: Current mode not in visible list - fallback to first")
+                                                if (BuildConfig.DEBUG) Log.d(TAG, "🔍 DEBUG: Current mode not in visible list - fallback to first")
                                                 availableModes.first()
                                             }
 
-                                            Log.d(TAG, "📞 About to call onModeChange with: ${newMode.displayName}")
+                                            if (BuildConfig.DEBUG) Log.d(TAG, "📞 About to call onModeChange with: ${newMode.displayName}")
                                             onModeChange(newMode)
-                                            Log.d(TAG, "✅ onModeChange callback completed")
+                                            if (BuildConfig.DEBUG) Log.d(TAG, "✅ onModeChange callback completed")
                                             hasSwitchedMode = true
-                                            Log.d(TAG, "🔄 Single finger horizontal: Flight mode changed to ${newMode.displayName} (visible modes: ${availableModes.map { it.displayName }})")
+                                            if (BuildConfig.DEBUG) Log.d(TAG, "🔄 Single finger horizontal: Flight mode changed to ${newMode.displayName} (visible modes: ${availableModes.map { it.displayName }})")
                                         }
                                     } else {
                                         // ✅ Vertical: Zoom (single finger up/down)
@@ -355,12 +356,12 @@ fun CustomMapGestureHandler(
                                             val zoomDelta = -currentDrag.y * 0.008
                                             mapLibreMap?.let { map ->
                                                 map.moveCamera(CameraUpdateFactory.zoomBy(zoomDelta.toDouble()))
-                                                Log.d(TAG, "🔍 Single finger vertical: Custom zoom $zoomDelta")
+                                                if (BuildConfig.DEBUG) Log.d(TAG, "🔍 Single finger vertical: Custom zoom $zoomDelta")
                                             }
                                         }
                                     }
                                     // ❌ CRITICAL: NO PANNING WITH SINGLE FINGER
-                                    Log.d(TAG, "✅ Single finger gesture - no panning (complies with CLAUDE.md)")
+                                    if (BuildConfig.DEBUG) Log.d(TAG, "✅ Single finger gesture - no panning (complies with CLAUDE.md)")
                                 }
                             }
 
@@ -390,7 +391,7 @@ fun CustomMapGestureHandler(
                                         if (!showReturnButton && currentLocation != null) {
                                             onSaveLocation(currentLocation, mapLibreMap?.cameraPosition?.zoom ?: 10.0, mapLibreMap?.cameraPosition?.bearing ?: 0.0)
                                             onShowReturnButton(true)
-                                            Log.d(TAG, "📍 Saved position for return button")
+                                            if (BuildConfig.DEBUG) Log.d(TAG, "📍 Saved position for return button")
                                         }
 
                                         // Apply pan to map using screen coordinate pan
@@ -419,7 +420,7 @@ fun CustomMapGestureHandler(
                                                     )
 
                                                     map.moveCamera(CameraUpdateFactory.newLatLng(newTarget))
-                                                    Log.d(TAG, "🗺️ Two finger pan: delta=(${panDelta.x}, ${panDelta.y})")
+                                                    if (BuildConfig.DEBUG) Log.d(TAG, "🗺️ Two finger pan: delta=(${panDelta.x}, ${panDelta.y})")
                                                 }
                                             }
                                         }
@@ -429,7 +430,7 @@ fun CustomMapGestureHandler(
 
                             else -> {
                                 // ✅ 3+ fingers: Ignore for now
-                                Log.d(TAG, "🖐️ ${fingerCount} fingers detected - ignoring complex gestures")
+                                if (BuildConfig.DEBUG) Log.d(TAG, "🖐️ ${fingerCount} fingers detected - ignoring complex gestures")
                             }
                         }
 
@@ -438,7 +439,7 @@ fun CustomMapGestureHandler(
 
                     } while (activePointers.isNotEmpty())
 
-                    Log.d(TAG, "🏁 Gesture ended")
+                    if (BuildConfig.DEBUG) Log.d(TAG, "🏁 Gesture ended")
 
                     // ✅ AAT Double-Tap Detection: Check for quick tap on AAT area
                     val currentTime = System.currentTimeMillis()
@@ -456,13 +457,13 @@ fun CustomMapGestureHandler(
                                 // Not in edit mode: Check if double-tapped on AAT area
                                 if (aatWaypointHit != null && aatWaypointHit == lastTapWaypointIndex) {
                                     // Double-tapped on same AAT area: Enter edit mode
-                                    Log.d(TAG, "🎯 AAT: Double-tap detected on waypoint $aatWaypointHit - entering edit mode")
+                                    if (BuildConfig.DEBUG) Log.d(TAG, "🎯 AAT: Double-tap detected on waypoint $aatWaypointHit - entering edit mode")
                                     aatEditModeIndex = aatWaypointHit
                                     onAATLongPress(aatWaypointHit) // Reuse same callback
                                 }
                             } else {
                                 // Already in edit mode: Double-tap exits edit mode
-                                Log.d(TAG, "🎯 AAT: Double-tap detected - exiting edit mode")
+                                if (BuildConfig.DEBUG) Log.d(TAG, "🎯 AAT: Double-tap detected - exiting edit mode")
                                 aatEditModeIndex = -1
                                 isDraggingAAT = false
                                 onAATExitEditMode()
@@ -476,7 +477,7 @@ fun CustomMapGestureHandler(
                             lastTapTime = currentTime
                             lastTapPosition = gestureStartPosition
                             lastTapWaypointIndex = aatWaypointHit
-                            Log.d(TAG, "🎯 AAT: First tap recorded (waypoint=$aatWaypointHit)")
+                            if (BuildConfig.DEBUG) Log.d(TAG, "🎯 AAT: First tap recorded (waypoint=$aatWaypointHit)")
                         }
                     }
 
@@ -489,7 +490,7 @@ fun CustomMapGestureHandler(
 
                         if (isLongPress) {
                             // Long press while in edit mode: Exit edit mode (works anywhere on screen)
-                            Log.d(TAG, "🎯 AAT: Long press detected - exiting edit mode (held ${gestureDuration}ms)")
+                            if (BuildConfig.DEBUG) Log.d(TAG, "🎯 AAT: Long press detected - exiting edit mode (held ${gestureDuration}ms)")
                             aatEditModeIndex = -1
                             isDraggingAAT = false
                             onAATExitEditMode()
@@ -499,7 +500,7 @@ fun CustomMapGestureHandler(
                     // Reset AAT drag state at end of gesture
                     if (aatEditModeIndex != -1 && isDraggingAAT) {
                         isDraggingAAT = false
-                        Log.d(TAG, "🎯 AAT: Drag ended for waypoint $aatEditModeIndex")
+                        if (BuildConfig.DEBUG) Log.d(TAG, "🎯 AAT: Drag ended for waypoint $aatEditModeIndex")
                     }
                 }
             }

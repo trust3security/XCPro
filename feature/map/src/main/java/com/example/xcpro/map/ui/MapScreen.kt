@@ -66,8 +66,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -133,7 +132,7 @@ fun MapScreen(
     mapViewModel: MapScreenViewModel
 ) {
     val context = LocalContext.current
-    val mapUiState by mapViewModel.uiState.collectAsState()
+    val mapUiState by mapViewModel.uiState.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
     LaunchedEffect(mapViewModel, context) {
@@ -158,7 +157,7 @@ fun MapScreen(
 
     // ?o. Map Orientation Manager
     val orientationManager = mapViewModel.orientationManager
-    val orientationData by orientationManager.orientationFlow.collectAsState()
+    val orientationData by orientationManager.orientationFlow.collectAsStateWithLifecycle()
     val taskManager = mapViewModel.taskManager  // ?o. Using coordinator for task management
     val waypointRepo = remember(mapUiState.waypoints) { FileWaypointRepo(mapUiState.waypoints) }
 
@@ -177,23 +176,14 @@ fun MapScreen(
     // ✅ Flight Cards ViewModel
     val flightViewModel: FlightDataViewModel = viewModel()
     // ✅ REFACTORED: No longer collect cardStates here - CardContainer handles it directly
-    val selectedCardIds by flightViewModel.selectedCardIds.collectAsState()
-    val profileModeCards by flightViewModel.profileModeCards.collectAsState()
-    val profileModeTemplates by flightViewModel.profileModeTemplates.collectAsState()
-    val activeTemplateId by flightViewModel.activeTemplateId.collectAsState()
+    val selectedCardIds by flightViewModel.selectedCardIds.collectAsStateWithLifecycle()
+    val profileModeCards by flightViewModel.profileModeCards.collectAsStateWithLifecycle()
+    val profileModeTemplates by flightViewModel.profileModeTemplates.collectAsStateWithLifecycle()
+    val activeTemplateId by flightViewModel.activeTemplateId.collectAsStateWithLifecycle()
     val cardPreferences = mapViewModel.cardPreferences
 
     // ✅ Initialize FlightDataManager
     val flightDataManager = mapViewModel.flightDataManager
-
-    val showQnhDialogState = remember { mutableStateOf(false) }
-    var showQnhDialog by showQnhDialogState
-    val qnhInputState = remember { mutableStateOf("") }
-    var qnhInput by qnhInputState
-    val qnhErrorState = remember { mutableStateOf<String?>(null) }
-    var qnhError by qnhErrorState
-    val showQnhFabState = remember { mutableStateOf(true) }
-    var showQnhFab by showQnhFabState
 
     // Map Overlay Manager - centralized overlay management
     val overlayManager = mapViewModel.overlayManager
@@ -205,14 +195,14 @@ fun MapScreen(
 
     // ✅ Profile ViewModel
     val profileViewModel: com.example.xcpro.profiles.ProfileViewModel = hiltViewModel()
-    val profileUiState by profileViewModel.uiState.collectAsState()
+    val profileUiState by profileViewModel.uiState.collectAsStateWithLifecycle()
     val activeProfileId = profileUiState.activeProfile?.id ?: "default"
     val lookAndFeelPreferences = remember(context) { LookAndFeelPreferences(context) }
     val cardStyleFlow = remember(activeProfileId) {
         lookAndFeelPreferences.observeCardStyle(activeProfileId)
     }
-    val cardStyle by cardStyleFlow.collectAsState(
-        initial = lookAndFeelPreferences.getCardStyle(activeProfileId)
+    val cardStyle by cardStyleFlow.collectAsStateWithLifecycle(
+        initialValue = lookAndFeelPreferences.getCardStyle(activeProfileId)
     )
     // ✅ TaskScreenManager - Centralized task screen handling
     val taskScreenManager = mapViewModel.taskScreenManager
@@ -230,24 +220,24 @@ fun MapScreen(
     val modalManager = mapViewModel.modalManager
 
     // ✅ Backward compatibility variables (using locationManager)
-    val currentUserLocation by mapState.currentUserLocationFlow.collectAsState()
+    val currentUserLocation by mapState.currentUserLocationFlow.collectAsStateWithLifecycle()
     val unifiedSensorManager = locationManager.unifiedSensorManager
 
     // Map Initializer
     val mapInitializer = mapViewModel.mapInitializer
-    val currentGpsLocation by unifiedSensorManager.gpsFlow.collectAsState()
+    val currentGpsLocation by unifiedSensorManager.gpsFlow.collectAsStateWithLifecycle()
     val isGpsActive = unifiedSensorManager.isGpsEnabled()
 
     // ✅ Location state through LocationManager
-    val showRecenterButton by mapState.showRecenterButtonFlow.collectAsState()
-    val isTrackingLocation by mapState.isTrackingLocationFlow.collectAsState()
-    val lastUserPanTime by mapState.lastUserPanTimeFlow.collectAsState()
-    val showReturnButton by mapState.showReturnButtonFlow.collectAsState()
-    val replaySession by mapViewModel.replaySessionState.collectAsState()
+    val showRecenterButton by mapState.showRecenterButtonFlow.collectAsStateWithLifecycle()
+    val isTrackingLocation by mapState.isTrackingLocationFlow.collectAsStateWithLifecycle()
+    val lastUserPanTime by mapState.lastUserPanTimeFlow.collectAsStateWithLifecycle()
+    val showReturnButton by mapState.showReturnButtonFlow.collectAsStateWithLifecycle()
+    val replaySession by mapViewModel.replaySessionState.collectAsStateWithLifecycle()
     val suppressLiveGps = replaySession.selection != null
 
     // ✅ AAT Edit Mode State - Track when AAT pin editing is active
-    val isAATEditMode by mapViewModel.isAATEditMode.collectAsState()
+    val isAATEditMode by mapViewModel.isAATEditMode.collectAsStateWithLifecycle()
     
     // ✅ CRITICAL FIX: Reset AAT edit mode when task type changes
     LaunchedEffect(taskManager.taskType, isAATEditMode) {
@@ -275,18 +265,18 @@ fun MapScreen(
             Log.d(TAG, "✅ Drawer gestures enabled")
         }
     }
-    val savedLocation by mapState.savedLocationFlow.collectAsState()
-    val savedZoom by mapState.savedZoomFlow.collectAsState()
-    val savedBearing by mapState.savedBearingFlow.collectAsState()
-    val hasInitiallyCentered by mapState.hasInitiallyCenteredFlow.collectAsState()
-    val showDistanceCircles by mapState.showDistanceCirclesFlow.collectAsState()
-    val cardHydrationReady by mapViewModel.cardHydrationReady.collectAsState()
+    val savedLocation by mapState.savedLocationFlow.collectAsStateWithLifecycle()
+    val savedZoom by mapState.savedZoomFlow.collectAsStateWithLifecycle()
+    val savedBearing by mapState.savedBearingFlow.collectAsStateWithLifecycle()
+    val hasInitiallyCentered by mapState.hasInitiallyCenteredFlow.collectAsStateWithLifecycle()
+    val showDistanceCircles by mapState.showDistanceCirclesFlow.collectAsStateWithLifecycle()
+    val cardHydrationReady by mapViewModel.cardHydrationReady.collectAsStateWithLifecycle()
 
     // ✅ Location Permission Launcher through LocationManager
     val locationPermissionLauncher = locationManager.LocationPermissionHandler()
 
     // ✅ Map FlightMode to FlightModeSelection using FlightDataManager
-    val currentFlightModeSelection by remember { derivedStateOf { flightDataManager.currentFlightMode } }
+    val currentFlightModeSelection = flightDataManager.currentFlightMode
     LaunchedEffect(currentFlightModeSelection) {
         orientationManager.setFlightMode(currentFlightModeSelection)
     }
@@ -317,7 +307,7 @@ fun MapScreen(
     )
 
     // ✅ CENTRALIZED LIFECYCLE EFFECTS - Replace individual DisposableEffect blocks
-    val mapStyleUrl by mapState.mapStyleUrlFlow.collectAsState()
+    val mapStyleUrl by mapState.mapStyleUrlFlow.collectAsStateWithLifecycle()
 
     MapLifecycleEffects.AllLifecycleEffects(
         lifecycleManager = lifecycleManager,
@@ -339,7 +329,7 @@ fun MapScreen(
     val flightModeOffsetState = remember { mutableStateOf(widgetPositions.flightModeOffset) }
     val ballastOffsetState = remember { mutableStateOf(widgetPositions.ballastOffset) }
 
-    val variometerUiState by mapViewModel.variometerUiState.collectAsState()
+    val variometerUiState by mapViewModel.variometerUiState.collectAsStateWithLifecycle()
     val minVariometerSizePx = with(density) { 60.dp.toPx() }
     val maxVariometerSizePx = min(screenWidthPx, screenHeightPx)
     val defaultVariometerSizePx = with(density) { 150.dp.toPx() }
@@ -436,10 +426,6 @@ fun MapScreen(
                     hamburgerOffset = hamburgerOffsetState,
                     flightModeOffset = flightModeOffsetState,
                     ballastOffset = ballastOffsetState,
-                    showQnhDialog = showQnhDialogState,
-                    qnhInput = qnhInputState,
-                    qnhError = qnhErrorState,
-                    showQnhFab = showQnhFabState,
                     taskScreenManager = taskScreenManager,
                     waypointData = mapUiState.waypoints,
                     unitsPreferences = mapUiState.unitsPreferences,
