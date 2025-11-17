@@ -27,8 +27,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.ui1.screens.AirspaceClassItem
-import com.example.xcpro.common.orientation.MapOrientationMode
-import com.example.xcpro.MapOrientationPreferences
 import com.example.xcpro.saveSelectedClasses
 
 private const val TAG = "FlightClassesTab"
@@ -42,8 +40,6 @@ fun FlightDataClassesTab(
     airspaceClassCard: @Composable (AirspaceClassItem, (String) -> Unit) -> Unit
 ) {
     val context = LocalContext.current
-    val orientationPreferences = remember { MapOrientationPreferences(context) }
-    var currentOrientationMode by remember { mutableStateOf(orientationPreferences.getOrientationMode()) }
 
     LazyColumn(
         modifier = Modifier
@@ -51,18 +47,6 @@ fun FlightDataClassesTab(
             .padding(horizontal = 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        item {
-            sectionHeader("Map Orientation", "Current: ${currentOrientationMode.name.replace("_", " ")}")
-        }
-
-        item {
-            MapOrientationCard(currentOrientationMode) { newMode ->
-                currentOrientationMode = newMode
-                orientationPreferences.setOrientationMode(newMode)
-                Log.d(TAG, "Map orientation changed to $newMode")
-            }
-        }
-
         item {
             sectionHeader(
                 "Airspace Classes",
@@ -100,89 +84,3 @@ fun FlightDataClassesTab(
     }
 }
 
-@Composable
-fun MapOrientationCard(
-    currentMode: MapOrientationMode,
-    onModeChanged: (MapOrientationMode) -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text(
-                text = "Map Orientation Mode",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "Choose how the map rotates relative to your movement:",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            OrientationOption(
-                title = "North Up",
-                description = "Map always shows north at the top",
-                selected = currentMode == MapOrientationMode.NORTH_UP,
-                onSelect = { onModeChanged(MapOrientationMode.NORTH_UP) }
-            )
-
-            OrientationOption(
-                title = "Track Up",
-                description = "Map rotates based on GPS track (course over ground)",
-                selected = currentMode == MapOrientationMode.TRACK_UP,
-                onSelect = { onModeChanged(MapOrientationMode.TRACK_UP) }
-            )
-
-            OrientationOption(
-                title = "Heading Up",
-                description = "Map rotates based on magnetic compass heading",
-                selected = currentMode == MapOrientationMode.HEADING_UP,
-                onSelect = { onModeChanged(MapOrientationMode.HEADING_UP) }
-            )
-        }
-    }
-}
-
-@Composable
-private fun OrientationOption(
-    title: String,
-    description: String,
-    selected: Boolean,
-    onSelect: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        RadioButton(
-            selected = selected,
-            onClick = onSelect
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Column {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-            )
-        }
-    }
-}

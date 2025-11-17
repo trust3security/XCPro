@@ -1,5 +1,5 @@
 [versions]
-agp = "8.11.0"
+agp = "8.11.2"
 json = "20250517"
 kotlin = "2.0.21"
 coreKtx = "1.16.0"
