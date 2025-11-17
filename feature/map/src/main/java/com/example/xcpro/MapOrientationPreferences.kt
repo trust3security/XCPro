@@ -21,6 +21,7 @@ class MapOrientationPreferences(context: Context) {
         private const val KEY_AUTO_RESET_TIMEOUT = "auto_reset_timeout_seconds"
         private const val KEY_MIN_SPEED_THRESHOLD = "min_speed_threshold_kt"
         private const val KEY_MIN_SPEED_IS_MS = "min_speed_threshold_is_ms"
+        private const val KEY_GLIDER_SCREEN_PERCENT = "glider_screen_percent"
         private const val KEY_BEARING_SMOOTHING = "bearing_smoothing_enabled"
 
         // Default values
@@ -30,6 +31,7 @@ class MapOrientationPreferences(context: Context) {
         private const val DEFAULT_MIN_SPEED_THRESHOLD_KT = 2.0 // XCSoar parity
         private val DEFAULT_MIN_SPEED_THRESHOLD_MS =
             UnitsConverter.knotsToMs(DEFAULT_MIN_SPEED_THRESHOLD_KT)
+        private const val DEFAULT_GLIDER_SCREEN_PERCENT = 35 // Approx current 65% from top
         private const val DEFAULT_BEARING_SMOOTHING = true
     }
 
@@ -144,6 +146,7 @@ class MapOrientationPreferences(context: Context) {
             .putInt(KEY_AUTO_RESET_TIMEOUT, DEFAULT_AUTO_RESET_TIMEOUT)
             .putFloat(KEY_MIN_SPEED_THRESHOLD, DEFAULT_MIN_SPEED_THRESHOLD_MS.toFloat())
             .putBoolean(KEY_MIN_SPEED_IS_MS, true)
+            .putInt(KEY_GLIDER_SCREEN_PERCENT, DEFAULT_GLIDER_SCREEN_PERCENT)
             .putBoolean(KEY_BEARING_SMOOTHING, DEFAULT_BEARING_SMOOTHING)
             .apply()
     }
@@ -155,6 +158,7 @@ class MapOrientationPreferences(context: Context) {
             "autoResetEnabled" to isAutoResetEnabled(),
             "autoResetTimeoutSeconds" to getAutoResetTimeoutSeconds(),
             "minSpeedThreshold" to getMinSpeedThreshold(),
+            "gliderScreenPercent" to getGliderScreenPercent(),
             "bearingSmoothingEnabled" to isBearingSmoothingEnabled()
         )
     }
@@ -177,6 +181,18 @@ class MapOrientationPreferences(context: Context) {
         preferences.edit()
             .putFloat(KEY_MIN_SPEED_THRESHOLD, convertedMs)
             .putBoolean(KEY_MIN_SPEED_IS_MS, true)
+            .apply()
+    }
+
+    fun getGliderScreenPercent(): Int {
+        return preferences.getInt(KEY_GLIDER_SCREEN_PERCENT, DEFAULT_GLIDER_SCREEN_PERCENT)
+            .coerceIn(20, 80)
+    }
+
+    fun setGliderScreenPercent(percentFromBottom: Int) {
+        val clamped = percentFromBottom.coerceIn(20, 80)
+        preferences.edit()
+            .putInt(KEY_GLIDER_SCREEN_PERCENT, clamped)
             .apply()
     }
 }

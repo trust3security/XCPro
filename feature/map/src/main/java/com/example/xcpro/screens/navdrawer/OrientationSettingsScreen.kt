@@ -15,6 +15,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -32,6 +33,7 @@ import com.example.xcpro.MapOrientationPreferences
 import com.example.xcpro.common.orientation.MapOrientationMode
 import com.example.xcpro.screens.navdrawer.SettingsTopAppBar
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 /**
  * Dedicated Orientation settings screen accessed from General settings.
@@ -49,6 +51,7 @@ fun OrientationSettingsScreen(
     val preferences = remember { MapOrientationPreferences(context) }
     var cruiseMode by remember { mutableStateOf(preferences.getCruiseOrientationMode()) }
     var circlingMode by remember { mutableStateOf(preferences.getCirclingOrientationMode()) }
+    var gliderOffsetPercent by remember { mutableStateOf(preferences.getGliderScreenPercent()) }
 
     fun persistAndRefresh() {
         orientationManager.reloadFromPreferences()
@@ -105,6 +108,15 @@ fun OrientationSettingsScreen(
                     }
                 )
             }
+            item {
+                GliderPositionCard(
+                    percentFromBottom = gliderOffsetPercent,
+                    onPercentChanged = {
+                        gliderOffsetPercent = it
+                        preferences.setGliderScreenPercent(it)
+                    }
+                )
+            }
         }
     }
 }
@@ -157,6 +169,49 @@ private fun OrientationModeCard(
                         onSelect = { onModeSelected(mode) }
                     )
                 }
+        }
+    }
+}
+
+@Composable
+private fun GliderPositionCard(
+    percentFromBottom: Int,
+    onPercentChanged: (Int) -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Glider vertical position",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            val percentFromTop = 100 - percentFromBottom
+            Text(
+                text = "Offsets the aircraft icon while auto-centering. " +
+                    "$percentFromBottom% from bottom · $percentFromTop% from top.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+            )
+            Slider(
+                value = percentFromBottom.toFloat(),
+                onValueChange = {
+                    val snapped = it.roundToInt().coerceIn(20, 80)
+                    if (snapped != percentFromBottom) {
+                        onPercentChanged(snapped)
+                    }
+                },
+                valueRange = 20f..80f
+            )
         }
     }
 }

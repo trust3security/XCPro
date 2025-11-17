@@ -23,6 +23,8 @@ import com.example.xcpro.sensors.GPSData
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapTaskScreenManager
 import com.example.xcpro.tasks.TaskManagerCoordinator
+import com.example.xcpro.map.helpers.GliderPaddingHelper
+import com.example.xcpro.MapOrientationPreferences
 import com.example.ui1.icons.LocationSailplane
 import org.maplibre.android.camera.CameraUpdateFactory
 
@@ -109,6 +111,10 @@ private fun RecenterButton(
     context: Context,
     modifier: Modifier = Modifier
 ) {
+    val gliderPaddingHelper = remember {
+        GliderPaddingHelper(context.resources, MapOrientationPreferences(context))
+    }
+
     Box(
         modifier = modifier
             .padding(end = 16.dp)
@@ -126,13 +132,8 @@ private fun RecenterButton(
                         .tilt(currentPosition.tilt)
                         .build()
 
-                    // Position user at 65% from top
-                    val screenHeight = context.resources.displayMetrics.heightPixels
-                    val topPadding = (screenHeight * 0.35).toInt()
-                    val padding = intArrayOf(0, topPadding, 0, 0)
-
                     map.animateCamera(CameraUpdateFactory.newCameraPosition(newCameraPosition), 800)
-                    map.setPadding(padding[0], padding[1], padding[2], padding[3])
+                    gliderPaddingHelper.applyPadding(map)
 
                     mapState.showRecenterButton = false
                     Log.d("MapActionButtons", "Recentered to current location")

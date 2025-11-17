@@ -14,8 +14,10 @@ import com.example.xcpro.sensors.UnifiedSensorManager
 import com.example.xcpro.sensors.FlightDataCalculator
 import com.example.xcpro.sensors.GPSData
 import com.example.dfcards.RealTimeFlightData
+import com.example.xcpro.MapOrientationPreferences
 import com.example.xcpro.common.units.UnitsConverter
 import com.example.xcpro.vario.VarioServiceManager
+import com.example.xcpro.map.helpers.GliderPaddingHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -32,10 +34,11 @@ class LocationManager(
     companion object {
         private const val TAG = "LocationManager"
         private const val INITIAL_ZOOM_LEVEL = 10.0
-        private const val LOCATION_TOP_PADDING_RATIO = 0.35f
     }
 
     private var sensorsStarted = false
+    private val orientationPreferences = MapOrientationPreferences(context)
+    private val gliderPaddingHelper = GliderPaddingHelper(context.resources, orientationPreferences)
 
     private fun ensureSensorsRunning() {
         val status = unifiedSensorManager.getSensorStatus()
@@ -61,6 +64,7 @@ class LocationManager(
         varioServiceManager.stop()
         sensorsStarted = false
     }
+
 
     // ✅ PHASE 2: Unified sensor management
     val unifiedSensorManager: UnifiedSensorManager = varioServiceManager.unifiedSensorManager
@@ -298,10 +302,8 @@ class LocationManager(
                     .tilt(0.0)
                     .build()
 
-                // Position user at 65% from top for better visibility
-                val screenHeight = context.resources.displayMetrics.heightPixels
-                val topPadding = (screenHeight * LOCATION_TOP_PADDING_RATIO).toInt()
-                val padding = intArrayOf(0, topPadding, 0, 0)
+                // Honor user-selected glider offset
+                val padding = gliderPaddingHelper.paddingArray()
 
                 // Use moveCamera for initial centering too - no animation needed
                 map.moveCamera(CameraUpdateFactory.newCameraPosition(initialCameraPosition))
@@ -331,14 +333,10 @@ class LocationManager(
                     .tilt(currentPosition.tilt) // Preserve current tilt
                     .build()
 
-                val screenHeight = context.resources.displayMetrics.heightPixels
-                val topPadding = (screenHeight * LOCATION_TOP_PADDING_RATIO).toInt()
-                val padding = intArrayOf(0, topPadding, 0, 0)
-
                 // Instant camera movement for smooth real-time tracking
                 // Using moveCamera instead of animateCamera for butter-smooth following
                 map.moveCamera(CameraUpdateFactory.newCameraPosition(newCameraPosition))
-                map.setPadding(padding[0], padding[1], padding[2], padding[3])
+                gliderPaddingHelper.applyPadding(map)
 
                 Log.d(TAG, "📍 $orientationMode: Camera following location at ${location.latitude}, ${location.longitude}")
             }
@@ -424,17 +422,14 @@ class LocationManager(
                     .tilt(map.cameraPosition.tilt)
                     .build()
 
-                val screenHeight = context.resources.displayMetrics.heightPixels
-                val topPadding = (screenHeight * LOCATION_TOP_PADDING_RATIO).toInt()
-                map.setPadding(0, topPadding, 0, 0)
+                gliderPaddingHelper.applyPadding(map)
                 map.animateCamera(CameraUpdateFactory.newCameraPosition(returnCameraPosition), 1000)
 
-                // Hide return button and re-enable location tracking
                 showReturnButton = false
                 mapState.showReturnButton = false
                 isTrackingLocation = true
                 showRecenterButton = false
-                Log.d(TAG, "🔄 Returned to saved position: lat=${location.latitude}, zoom=$savedZoom")
+                Log.d(TAG, "Returned to saved position")
                 true
             } ?: false
         } ?: false
@@ -451,16 +446,11 @@ class LocationManager(
                     .tilt(currentPosition.tilt)
                     .build()
 
-                // Position user at 65% from top
-                val screenHeight = context.resources.displayMetrics.heightPixels
-                val topPadding = (screenHeight * LOCATION_TOP_PADDING_RATIO).toInt()
-                val padding = intArrayOf(0, topPadding, 0, 0)
-
                 map.animateCamera(CameraUpdateFactory.newCameraPosition(newCameraPosition), 800)
-                map.setPadding(padding[0], padding[1], padding[2], padding[3])
+                gliderPaddingHelper.applyPadding(map)
 
                 showRecenterButton = false
-                Log.d(TAG, "✅ Recentered to current location")
+                Log.d(TAG, "Recentered to current location")
             }
         }
     }
@@ -474,6 +464,10 @@ class LocationManager(
     }
 
 }
+
+
+
+
 
 
 

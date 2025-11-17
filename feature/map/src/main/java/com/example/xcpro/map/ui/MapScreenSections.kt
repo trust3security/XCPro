@@ -10,6 +10,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -157,27 +159,50 @@ fun MapMainLayers(
             )
         }
 
-        AnimatedVisibility(
-            visible = true,
-            enter = fadeIn(animationSpec = tween(300)) + scaleIn(animationSpec = tween(300)),
-            exit = fadeOut(animationSpec = tween(300)) + scaleOut(animationSpec = tween(300)),
+        val showCompass = orientationData.mode != MapOrientationMode.NORTH_UP
+        val toggleOrientation = {
+            val nextMode = when (orientationManager.getCurrentMode()) {
+                MapOrientationMode.NORTH_UP -> MapOrientationMode.TRACK_UP
+                MapOrientationMode.TRACK_UP -> MapOrientationMode.HEADING_UP
+                MapOrientationMode.HEADING_UP -> MapOrientationMode.NORTH_UP
+                else -> MapOrientationMode.NORTH_UP
+            }
+            orientationManager.setOrientationMode(nextMode)
+        }
+
+        Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(top = 80.dp, end = 16.dp)
                 .zIndex(5f)
         ) {
-            CompassWidget(
-                orientation = orientationData,
-                onModeToggle = {
-                    val nextMode = when (orientationManager.getCurrentMode()) {
-                        MapOrientationMode.NORTH_UP -> MapOrientationMode.TRACK_UP
-                        MapOrientationMode.TRACK_UP -> MapOrientationMode.HEADING_UP
-                        MapOrientationMode.HEADING_UP -> MapOrientationMode.NORTH_UP
-                        else -> MapOrientationMode.NORTH_UP
+            AnimatedVisibility(
+                visible = showCompass,
+                enter = fadeIn(animationSpec = tween(300)) + scaleIn(animationSpec = tween(300)),
+                exit = fadeOut(animationSpec = tween(300)) + scaleOut(animationSpec = tween(300))
+            ) {
+                CompassWidget(
+                    orientation = orientationData,
+                    onModeToggle = toggleOrientation
+                )
+            }
+
+            AnimatedVisibility(
+                visible = !showCompass,
+                enter = fadeIn(animationSpec = tween(200)),
+                exit = fadeOut(animationSpec = tween(200))
+            ) {
+                AssistChip(
+                    onClick = toggleOrientation,
+                    label = { Text("Change orientation") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Filled.Explore,
+                            contentDescription = "Change orientation"
+                        )
                     }
-                    orientationManager.setOrientationMode(nextMode)
-                }
-            )
+                )
+            }
         }
     }
 }
