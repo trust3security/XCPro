@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Flight
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Straighten
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.PlayArrow
@@ -70,13 +71,13 @@ fun SettingsScreen(
             SettingsTopAppBar(
                 title = "General",
                 onNavigateUp = {
-                    onCancelHawkDashboard()
-                    navController.navigateUp()
+                    scope.launch {
+                        onCancelHawkDashboard()
+                        navController.popBackStack()
+                        drawerState.open()
+                    }
                 },
-                onSecondaryNavigate = {
-                    onCancelHawkDashboard()
-                    navController.popBackStack()
-                },
+                onSecondaryNavigate = null,
                 onNavigateToMap = {
                     scope.launch {
                         drawerState.close()
@@ -220,7 +221,7 @@ fun SettingsScreen(
                         }
                     }
 
-                    // Row 4: Navboxes | (spacer)
+                    // Row 4: Navboxes | IGC Replay
                     item {
                         Row(
                             modifier = Modifier
@@ -240,6 +241,24 @@ fun SettingsScreen(
                                 onClick = { navController.navigate("igcReplay") },
                                 modifier = Modifier.weight(1f)
                             )
+                        }
+                    }
+
+                    // Row 5: Orientation | (spacer)
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            CategoryItem(
+                                title = "Orientation",
+                                icon = Icons.Default.Explore,
+                                onClick = { navController.navigate("orientation_settings") },
+                                modifier = Modifier.weight(1f)
+                            )
+                            Spacer(modifier = Modifier.weight(1f))
                         }
                     }
                 }

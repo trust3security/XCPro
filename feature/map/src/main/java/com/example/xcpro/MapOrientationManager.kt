@@ -2,6 +2,7 @@ package com.example.xcpro
 
 import android.content.Context
 import android.util.Log
+import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.common.orientation.MapOrientationMode
 import com.example.xcpro.common.orientation.OrientationController
@@ -30,10 +31,14 @@ class MapOrientationManager(
     private val _orientationFlow = MutableStateFlow(OrientationData())
     override val orientationFlow: StateFlow<OrientationData> = _orientationFlow.asStateFlow()
 
-    private var currentMode = MapOrientationMode.NORTH_UP
+    private enum class OrientationProfile { CRUISE, CIRCLING }
+
+    private var cruiseMode = preferences.getCruiseOrientationMode()
+    private var circlingMode = preferences.getCirclingOrientationMode()
+    private var activeProfile = OrientationProfile.CRUISE
+    private var currentMode = cruiseMode
     private var isUserOverrideActive = false
     private var lastUserInteractionTime = 0L
-    private var lastValidBearing = 0.0
     private var updatesJob: Job? = null
     private var minSpeedForTrackKt: Double = 0.0
 
@@ -48,9 +53,8 @@ class MapOrientationManager(
         Log.d(TAG, "🧭 MapOrientationManager initializing...")
 
         // Load saved orientation mode
-        currentMode = preferences.getOrientationMode()
         minSpeedForTrackKt = preferences.getMinSpeedThreshold()
-        Log.d(TAG, "📱 Loaded orientation mode: $currentMode")
+        Log.d(TAG, "Loaded orientation mode: $currentMode")
 
         // Start orientation data collection
         startOrientationUpdates()
@@ -74,96 +78,236 @@ class MapOrientationManager(
     }
 
     private fun updateOrientation(sensorData: OrientationSensorData) {
+
         // Check if user override is still active
+
         if (isUserOverrideActive) {
+
             val timeSinceInteraction = System.currentTimeMillis() - lastUserInteractionTime
+
             if (timeSinceInteraction > USER_OVERRIDE_TIMEOUT_MS) {
+
                 isUserOverrideActive = false
+
             } else {
+
                 // Keep current bearing during user override
+
                 return
+
             }
+
         }
 
-        val bearing = calculateBearing(sensorData)
-        val isValid = isBearingValid(sensorData, bearing)
 
-        if (isValid) {
-            lastValidBearing = bearing
-        }
 
-        val finalBearing = if (isValid) bearing else lastValidBearing
+        val (bearing, isValid) = calculateBearing(sensorData)
+
+
 
         val orientationData = OrientationData(
-            bearing = finalBearing,
+
+            bearing = bearing,
+
             mode = currentMode,
+
             isValid = isValid,
+
             timestamp = System.currentTimeMillis()
+
         )
 
+
+
         // Log bearing updates periodically (every 30 updates to avoid spam)
+
         if (System.currentTimeMillis() % 30 == 0L) {
-            Log.d(TAG, "🧭 Orientation: mode=$currentMode, bearing=${finalBearing.toInt()}°, valid=$isValid")
+
+            Log.d(TAG, "dY- Orientation: mode=$currentMode, bearing=${bearing.toInt()}A?, valid=$isValid")
+
         }
+
+
 
         _orientationFlow.value = orientationData
+
     }
 
-    private fun calculateBearing(sensorData: OrientationSensorData): Double {
+
+
+    private data class BearingResult(val bearing: Double, val isValid: Boolean)
+
+
+
+    private fun calculateBearing(sensorData: OrientationSensorData): BearingResult {
+
         return when (currentMode) {
-            MapOrientationMode.NORTH_UP -> 0.0
+
+            MapOrientationMode.NORTH_UP -> BearingResult(0.0, true)
+
+
 
             MapOrientationMode.TRACK_UP -> {
-                if (sensorData.groundSpeed >= minSpeedForTrackKt) {
-                    // Use GPS track when moving fast enough
-                    sensorData.track
-                } else {
-                    // Keep last valid bearing when moving slowly
-                    lastValidBearing
-                }
+
+                val valid = sensorData.isGPSValid && sensorData.groundSpeed >= minSpeedForTrackKt
+
+                val bearing = if (valid) sensorData.track else 0.0
+
+                BearingResult(bearing, valid)
+
             }
+
+
 
             MapOrientationMode.HEADING_UP -> {
-                // Use magnetometer heading, fall back to GPS track if unavailable
-                if (sensorData.hasValidHeading) {
-                    sensorData.magneticHeading
-                } else if (sensorData.groundSpeed >= minSpeedForTrackKt) {
-                    sensorData.track
-                } else {
-                    lastValidBearing
+
+                when {
+
+                    sensorData.hasValidHeading -> BearingResult(sensorData.magneticHeading, true)
+
+                    sensorData.isGPSValid && sensorData.groundSpeed >= minSpeedForTrackKt ->
+
+                        BearingResult(sensorData.track, true)
+
+                    else -> BearingResult(0.0, false)
+
                 }
+
             }
+
         }
+
     }
 
-    private fun isBearingValid(sensorData: OrientationSensorData, bearing: Double): Boolean {
-        return when (currentMode) {
-            MapOrientationMode.NORTH_UP -> true // Always valid
 
-            MapOrientationMode.TRACK_UP -> {
-                sensorData.groundSpeed >= minSpeedForTrackKt
-            }
 
-            MapOrientationMode.HEADING_UP -> {
-                sensorData.hasValidHeading || sensorData.groundSpeed >= minSpeedForTrackKt
-            }
-        }
+
+    private fun OrientationProfile.mode(): MapOrientationMode = when (this) {
+
+        OrientationProfile.CRUISE -> cruiseMode
+
+        OrientationProfile.CIRCLING -> circlingMode
+
     }
+
+
+
+    private fun OrientationProfile.setMode(mode: MapOrientationMode) {
+
+        when (this) {
+
+            OrientationProfile.CRUISE -> {
+
+                cruiseMode = mode
+
+                preferences.setCruiseOrientationMode(mode)
+
+            }
+
+            OrientationProfile.CIRCLING -> {
+
+                circlingMode = mode
+
+                preferences.setCirclingOrientationMode(mode)
+
+            }
+
+        }
+
+    }
+
+
+
 
     override fun setOrientationMode(mode: MapOrientationMode) {
-        if (currentMode != mode) {
-            Log.d(TAG, "🔄 Changing orientation mode: $currentMode → $mode")
-            minSpeedForTrackKt = preferences.getMinSpeedThreshold()
-            currentMode = mode
-            preferences.setOrientationMode(mode)
 
-            // Trigger immediate update with new mode
-            scope.launch {
-                val currentSensorData = orientationDataSource.getCurrentData()
-                updateOrientation(currentSensorData)
-            }
+        if (currentMode == mode) {
+
+            return
+
         }
+
+
+        Log.d(TAG, "Map orientation changing: $currentMode -> $mode")
+        minSpeedForTrackKt = preferences.getMinSpeedThreshold()
+
+        activeProfile.setMode(mode)
+
+        currentMode = mode
+
+
+
+        // Trigger immediate update with new mode
+
+        scope.launch {
+
+            val currentSensorData = orientationDataSource.getCurrentData()
+
+            updateOrientation(currentSensorData)
+
+        }
+
     }
+
+
+
+
+    fun setFlightMode(selection: FlightModeSelection) {
+
+        val newProfile = if (selection == FlightModeSelection.THERMAL) {
+
+            OrientationProfile.CIRCLING
+
+        } else {
+
+            OrientationProfile.CRUISE
+
+        }
+
+        if (newProfile == activeProfile) {
+
+            return
+
+        }
+
+        activeProfile = newProfile
+
+        currentMode = activeProfile.mode()
+
+        scope.launch {
+
+            val currentSensorData = orientationDataSource.getCurrentData()
+
+            updateOrientation(currentSensorData)
+
+        }
+
+    }
+
+
+
+    fun reloadFromPreferences() {
+
+        cruiseMode = preferences.getCruiseOrientationMode()
+
+        circlingMode = preferences.getCirclingOrientationMode()
+
+        minSpeedForTrackKt = preferences.getMinSpeedThreshold()
+
+        currentMode = activeProfile.mode()
+
+        scope.launch {
+
+            val currentSensorData = orientationDataSource.getCurrentData()
+
+            updateOrientation(currentSensorData)
+
+        }
+
+    }
+
+
+
 
     override fun onUserInteraction() {
         isUserOverrideActive = true
@@ -199,4 +343,3 @@ class MapOrientationManager(
         orientationDataSource.updateFromFlightData(flightData)
     }
 }
-

@@ -14,6 +14,8 @@ class MapOrientationPreferences(context: Context) {
     companion object {
         private const val PREFS_NAME = "map_orientation_prefs"
         private const val KEY_ORIENTATION_MODE = "orientation_mode"
+        private const val KEY_CRUISE_ORIENTATION = "orientation_mode_cruise"
+        private const val KEY_CIRCLING_ORIENTATION = "orientation_mode_circling"
         private const val KEY_AUTO_RESET_ENABLED = "auto_reset_enabled"
         private const val KEY_AUTO_RESET_TIMEOUT = "auto_reset_timeout_seconds"
         private const val KEY_MIN_SPEED_THRESHOLD = "min_speed_threshold_kt"
@@ -23,25 +25,64 @@ class MapOrientationPreferences(context: Context) {
         private const val DEFAULT_ORIENTATION_MODE = "TRACK_UP"
         private const val DEFAULT_AUTO_RESET_ENABLED = true
         private const val DEFAULT_AUTO_RESET_TIMEOUT = 10 // seconds
-        private const val DEFAULT_MIN_SPEED_THRESHOLD = 0.0 // knots
+        private const val DEFAULT_MIN_SPEED_THRESHOLD = 3.9 // knots (≈2 m/s XCSoar parity)
         private const val DEFAULT_BEARING_SMOOTHING = true
     }
 
-    fun getOrientationMode(): MapOrientationMode {
-        val modeString = preferences.getString(KEY_ORIENTATION_MODE, DEFAULT_ORIENTATION_MODE)
+    init {
+        migrateLegacyOrientationMode()
+    }
+
+    private fun migrateLegacyOrientationMode() {
+        val hasCruise = preferences.contains(KEY_CRUISE_ORIENTATION)
+        val hasCircling = preferences.contains(KEY_CIRCLING_ORIENTATION)
+        if (hasCruise && hasCircling) {
+            return
+        }
+
+        val legacyMode = preferences.getString(KEY_ORIENTATION_MODE, DEFAULT_ORIENTATION_MODE)
+        val resolved = try {
+            MapOrientationMode.valueOf(legacyMode ?: DEFAULT_ORIENTATION_MODE)
+        } catch (_: IllegalArgumentException) {
+            MapOrientationMode.TRACK_UP
+        }
+
+        preferences.edit()
+            .putString(KEY_CRUISE_ORIENTATION, resolved.name)
+            .putString(KEY_CIRCLING_ORIENTATION, resolved.name)
+            .remove(KEY_ORIENTATION_MODE)
+            .apply()
+    }
+
+    private fun readMode(key: String): MapOrientationMode {
+        val stored = preferences.getString(key, DEFAULT_ORIENTATION_MODE)
         return try {
-            MapOrientationMode.valueOf(modeString ?: DEFAULT_ORIENTATION_MODE)
-        } catch (e: IllegalArgumentException) {
-            // Fallback to default if invalid value stored
-            MapOrientationMode.NORTH_UP
+            MapOrientationMode.valueOf(stored ?: DEFAULT_ORIENTATION_MODE)
+        } catch (_: IllegalArgumentException) {
+            MapOrientationMode.TRACK_UP
         }
     }
 
-    fun setOrientationMode(mode: MapOrientationMode) {
+    private fun writeMode(key: String, mode: MapOrientationMode) {
         preferences.edit()
-            .putString(KEY_ORIENTATION_MODE, mode.name)
+            .putString(key, mode.name)
             .apply()
     }
+
+    fun getOrientationMode(): MapOrientationMode = getCruiseOrientationMode()
+
+    fun setOrientationMode(mode: MapOrientationMode) {
+        setCruiseOrientationMode(mode)
+        setCirclingOrientationMode(mode)
+    }
+
+    fun getCruiseOrientationMode(): MapOrientationMode = readMode(KEY_CRUISE_ORIENTATION)
+
+    fun setCruiseOrientationMode(mode: MapOrientationMode) = writeMode(KEY_CRUISE_ORIENTATION, mode)
+
+    fun getCirclingOrientationMode(): MapOrientationMode = readMode(KEY_CIRCLING_ORIENTATION)
+
+    fun setCirclingOrientationMode(mode: MapOrientationMode) = writeMode(KEY_CIRCLING_ORIENTATION, mode)
 
     fun isAutoResetEnabled(): Boolean {
         return preferences.getBoolean(KEY_AUTO_RESET_ENABLED, DEFAULT_AUTO_RESET_ENABLED)
@@ -87,7 +128,8 @@ class MapOrientationPreferences(context: Context) {
 
     fun resetToDefaults() {
         preferences.edit()
-            .putString(KEY_ORIENTATION_MODE, DEFAULT_ORIENTATION_MODE)
+            .putString(KEY_CRUISE_ORIENTATION, DEFAULT_ORIENTATION_MODE)
+            .putString(KEY_CIRCLING_ORIENTATION, DEFAULT_ORIENTATION_MODE)
             .putBoolean(KEY_AUTO_RESET_ENABLED, DEFAULT_AUTO_RESET_ENABLED)
             .putInt(KEY_AUTO_RESET_TIMEOUT, DEFAULT_AUTO_RESET_TIMEOUT)
             .putFloat(KEY_MIN_SPEED_THRESHOLD, DEFAULT_MIN_SPEED_THRESHOLD.toFloat())
@@ -97,7 +139,8 @@ class MapOrientationPreferences(context: Context) {
 
     fun getAllSettings(): Map<String, Any> {
         return mapOf(
-            "orientationMode" to getOrientationMode().name,
+            "cruiseOrientation" to getCruiseOrientationMode().name,
+            "circlingOrientation" to getCirclingOrientationMode().name,
             "autoResetEnabled" to isAutoResetEnabled(),
             "autoResetTimeoutSeconds" to getAutoResetTimeoutSeconds(),
             "minSpeedThreshold" to getMinSpeedThreshold(),

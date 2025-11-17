@@ -34,7 +34,12 @@ fun PolarSettingsScreen(
             SettingsTopAppBar(
                 title = "Polar",
                 onNavigateUp = { navController.navigateUp() },
-                onSecondaryNavigate = { navController.popBackStack() },
+                onSecondaryNavigate = {
+                    scope.launch {
+                        navController.popBackStack("map", inclusive = false)
+                        drawerState.open()
+                    }
+                },
                 onNavigateToMap = {
                     scope.launch {
                         drawerState.close()

@@ -120,7 +120,7 @@ adb shell dumpsys package com.example.xcpro.debug | grep -A 20 "permissions:"
 
 ### Brand Assets Refresh
 ```bash
-# 1. Update XCPROICON.png with the new artwork (1024x1024 square).
+# 1. Update XCPRO.png with the new artwork (1024x1024 square).
 # 2. Regenerate every launcher + splash asset in one go.
 python scripts/update_brand_assets.py
 

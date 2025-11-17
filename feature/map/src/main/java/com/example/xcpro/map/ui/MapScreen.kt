@@ -285,6 +285,9 @@ fun MapScreen(
 
     // ✅ Map FlightMode to FlightModeSelection using FlightDataManager
     val currentFlightModeSelection by remember { derivedStateOf { flightDataManager.currentFlightMode } }
+    LaunchedEffect(currentFlightModeSelection) {
+        orientationManager.setFlightMode(currentFlightModeSelection)
+    }
 
     // ✅ Variometer test state for debug effects
     // ✅ CENTRALIZED EFFECTS - Replace all individual LaunchedEffect blocks
