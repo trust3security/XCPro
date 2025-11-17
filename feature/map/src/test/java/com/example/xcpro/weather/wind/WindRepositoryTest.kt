@@ -6,6 +6,10 @@ import com.example.xcpro.sensors.BaroData
 import com.example.xcpro.sensors.CompleteFlightData
 import com.example.xcpro.sensors.CompassData
 import com.example.xcpro.sensors.GPSData
+import com.example.xcpro.common.units.AltitudeM
+import com.example.xcpro.common.units.PressureHpa
+import com.example.xcpro.common.units.SpeedMs
+import com.example.xcpro.common.units.VerticalSpeedMs
 import com.example.xcpro.weather.wind.data.WindRepository
 import com.example.xcpro.weather.wind.model.WindSource
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -110,13 +114,13 @@ class WindRepositoryTest {
     private fun sampleFlightData(timestamp: Long, trackDeg: Float, groundSpeed: Double): CompleteFlightData {
         val gps = GPSData(
             latLng = LatLng(0.0, 0.0),
-            altitude = 1000.0,
-            speed = groundSpeed,
+            altitude = AltitudeM(1000.0),
+            speed = SpeedMs(groundSpeed),
             bearing = trackDeg.toDouble(),
             accuracy = 5f,
             timestamp = timestamp
         )
-        val baro = BaroData(pressureHPa = 1013.25, timestamp = timestamp)
+        val baro = BaroData(pressureHPa = PressureHpa(1013.25), timestamp = timestamp)
         val compass = CompassData(
             heading = trackDeg.toDouble(),
             accuracy = 3,
@@ -126,32 +130,27 @@ class WindRepositoryTest {
             gps = gps,
             baro = baro,
             compass = compass,
-            baroAltitude = 1000.0,
-            qnh = 1013.25,
+            baroAltitude = AltitudeM(1000.0),
+            qnh = PressureHpa(1013.25),
             isQNHCalibrated = true,
-            verticalSpeed = 0.0,
-            pressureAltitude = 1000.0,
-            baroGpsDelta = 0.0,
+            verticalSpeed = VerticalSpeedMs(0.0),
+            pressureAltitude = AltitudeM(1000.0),
+            baroGpsDelta = AltitudeM(0.0),
             baroConfidence = ConfidenceLevel.MEDIUM,
             qnhCalibrationAgeSeconds = 0,
-            agl = 500.0,
-            windSpeed = 0f,
+            agl = AltitudeM(500.0),
+            windSpeed = SpeedMs(0.0),
             windDirection = 0f,
-            windHeadwind = 0.0,
-            windCrosswind = 0.0,
+            windHeadwind = SpeedMs(0.0),
+            windCrosswind = SpeedMs(0.0),
             windQuality = 0,
             windSource = WindSource.NONE,
-            thermalAverage = 0f,
+            thermalAverage = VerticalSpeedMs(0.0),
             currentLD = 0f,
-            netto = 0f,
-            trueAirspeed = TAS,
-            indicatedAirspeed = TAS,
+            netto = VerticalSpeedMs(0.0),
+            trueAirspeed = SpeedMs(TAS),
+            indicatedAirspeed = SpeedMs(TAS),
             airspeedSource = "TEST",
-            varioOptimized = 0.0,
-            varioLegacy = 0.0,
-            varioRaw = 0.0,
-            varioGPS = 0.0,
-            varioComplementary = 0.0,
             timestamp = timestamp,
             dataQuality = "TEST"
         )

@@ -38,13 +38,15 @@ class BlueLocationOverlay(
     companion object {
         private const val TAG = "SailplaneLocationOverlay"
         private const val SOURCE_ID = "aircraft-location-source"
-        private const val LAYER_ID = "aircraft-location-layer"
+        internal const val LAYER_ID = "aircraft-location-layer"
         private const val ICON_ID = "aircraft-location-icon"
         private const val ICON_SIZE = 144 // Bitmap size in pixels (3x larger = 300% increase)
     }
 
     private var currentLocation: LatLng? = null
     private var currentBearing: Double = 0.0
+    private var currentMagHeading: Double = 0.0
+    private var currentOrientationMode: MapOrientationMode = MapOrientationMode.NORTH_UP
     private var isLayerAdded = false
 
     /**
@@ -66,17 +68,7 @@ class BlueLocationOverlay(
             style.addSource(source)
 
             // Create symbol layer for location icon
-            val layer = SymbolLayer(LAYER_ID, SOURCE_ID)
-                .withProperties(
-                    iconImage(ICON_ID),
-                    iconSize(1.0f), // Use full size
-                    iconRotate(0f), // Will be updated with bearing
-                    iconAllowOverlap(true),
-                    iconIgnorePlacement(true),
-                    iconRotationAlignment("viewport"), // âœ… FIX: Rotate relative to screen, not map (prevents double rotation in TRACK_UP)
-                    iconAnchor("center"), // Explicit center anchor for rotation
-                    iconOffset(arrayOf(0f, -6f)) // Shift up 6px to align wing/cockpit with rotation center
-                )
+            val layer = createLocationLayer()
 
             style.addLayer(layer)
             isLayerAdded = true
@@ -87,6 +79,19 @@ class BlueLocationOverlay(
             Log.e(TAG, "Error initializing blue location overlay: ${e.message}", e)
         }
     }
+
+    private fun createLocationLayer(): SymbolLayer =
+        SymbolLayer(LAYER_ID, SOURCE_ID)
+            .withProperties(
+                iconImage(ICON_ID),
+                iconSize(1.0f),
+                iconRotate(0f),
+                iconAllowOverlap(true),
+                iconIgnorePlacement(true),
+                iconRotationAlignment("viewport"),
+                iconAnchor("center"),
+                iconOffset(arrayOf(0f, -6f))
+            )
 
     /**
      * Update location position and bearing
@@ -115,6 +120,8 @@ class BlueLocationOverlay(
 
             currentLocation = location
             currentBearing = gpsTrack
+            currentMagHeading = magneticHeading
+            currentOrientationMode = orientationMode
 
             val style = map.style ?: return
             val source = style.getSourceAs<GeoJsonSource>(SOURCE_ID) ?: return
@@ -219,6 +226,27 @@ class BlueLocationOverlay(
 
         } catch (e: Exception) {
             Log.e(TAG, "Error cleaning up location overlay: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Move location layer to the top of the style stack so it is never obscured.
+     */
+    fun bringToFront() {
+        if (!isLayerAdded) return
+        try {
+            val style = map.style ?: return
+            val topId = style.layers.lastOrNull()?.id
+            if (topId == LAYER_ID) return
+            style.removeLayer(LAYER_ID)
+            val layer = createLocationLayer()
+            style.addLayer(layer)
+            Log.d(TAG, "Re-added aircraft overlay to keep it on top")
+            currentLocation?.let {
+                updateLocation(it, currentBearing, currentMagHeading, currentOrientationMode)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error bringing aircraft overlay to front: ${e.message}", e)
         }
     }
 

@@ -1,14 +1,14 @@
-# CODING_POLICY.md — XC Pro (Android/Kotlin)
+﻿# CODING_POLICY.md â€” XC Pro (Android/Kotlin)
 
 A blunt, practical standard for writing and reviewing XC Pro code. This is the source of truth for Codex/Copilot and humans.
 
 ---
 
 ## 0) Purpose
-- Ship a **reliable, low‑latency digital variometer** using phone sensors.
+- Ship a **reliable, lowâ€‘latency digital variometer** using phone sensors.
 - Keep the codebase **predictable, testable, and explainable** to future humans and AI.
 
-**Non‑negotiables:** Kotlin + Jetpack Compose, MVVM + UDF, Hilt DI, Coroutines + Flow, Clean modules, SSOT, no deprecated APIs, no global mutable state.
+**Nonâ€‘negotiables:** Kotlin + Jetpack Compose, MVVM + UDF, Hilt DI, Coroutines + Flow, Clean modules, SSOT, no deprecated APIs, no global mutable state.
 
 ---
 
@@ -21,15 +21,15 @@ A blunt, practical standard for writing and reviewing XC Pro code. This is the s
 - **Data (data/)**: Repositories implement interfaces; sources: Sensors, GNSS, Baro, Accel, IGC Replay, Persistence.
 - **DI (di/)**: Hilt modules bind repos/use cases/sensor services.
 
-**SSOT:** All time‑varying data (sensors, simulation, settings) flow through a **single StateFlow per concern** owned by the repository layer and exposed to domain/presentation.
+**SSOT:** All timeâ€‘varying data (sensors, simulation, settings) flow through a **single StateFlow per concern** owned by the repository layer and exposed to domain/presentation.
 
 ---
 
 ## 2) Modules & Package Layout
-Use a multi‑module Gradle project:
+Use a multiâ€‘module Gradle project:
 ```
 app/                       // Android app; wires screens + navigation
-core/common/               // utils, result types, logging façade, time, units
+core/common/               // utils, result types, logging faÃ§ade, time, units
 core/ui/                   // design system, reusable Compose components
 feature/map/               // map screen + overlays + gestures
 feature/variometer/        // vario widgets, audio, UI
@@ -49,11 +49,11 @@ feature/settings/          // preferences, device caps, calibration
 ---
 
 ## 3) Data Flow (UDF)
-1. **Source** → Repository (`Flow<RawSample>`)
-2. Repository → UseCase (fusion/filtering) → `Flow<DomainModel>`
-3. ViewModel collects domain → maps to `UiState`
+1. **Source** â†’ Repository (`Flow<RawSample>`)
+2. Repository â†’ UseCase (fusion/filtering) â†’ `Flow<DomainModel>`
+3. ViewModel collects domain â†’ maps to `UiState`
 4. Composables render `UiState`, emit `UiEvent`
-5. ViewModel handles `UiEvent` → UseCases/Repos
+5. ViewModel handles `UiEvent` â†’ UseCases/Repos
 
 **Never** call Android sensors or I/O from composables.
 
@@ -75,18 +75,18 @@ private val _snapshot = MutableStateFlow(Snapshot())
 val snapshot: StateFlow<Snapshot> = _snapshot.asStateFlow()
 ```
 
-ViewModel helper (preferred): see Appendix “Snippets – Flow.inVm”.
+ViewModel helper (preferred): see Appendix â€œSnippets â€“ Flow.inVmâ€.
 
 ## 4) Sensors & TE Computation
 - **Fusion inputs:** Barometer (pressure altitude), Accelerometer (specific force), GNSS (vertical/ground speed). Optionally gyro for attitude assist if needed.
 - **Outputs:** TE vario (m/s), filtered vertical speed, confidence/quality metrics.
 - **Filters:** Prefer **discrete Kalman** (or complementary if latency budget is tight). Document tuning constants.
-- **Sampling:** Backpressure via `callbackFlow` + `conflate()`; aim ≤ **25–50 ms** end‑to‑end latency to audio.
+- **Sampling:** Backpressure via `callbackFlow` + `conflate()`; aim â‰¤ **25â€“50 ms** endâ€‘toâ€‘end latency to audio.
 - **Threading:** Collect and fuse sensor feeds on `Dispatchers.Default` (or a named executor tuned for sensors); never block the main thread, and ensure scopes cancel promptly when the owner stops listening.
-- **No ad‑hoc Main scopes:** Non‑UI types must not create `CoroutineScope(Dispatchers.Main + …)`. Inject dispatchers/scopes via DI (see DispatchersModule snippet) and collect sensors on `Default` or a named dispatcher.
-- **WhileSubscribed:** When using `SharingStarted.WhileSubscribed`, ensure essential producers aren’t unintentionally stopped when the UI unsubscribes (document the choice with an `AI-NOTE`).
-- **Samsung S22 Ultra specifics:** Use high‑rate sensor modes where supported; guard with capability checks; expose settings.
-- **Simulation mode:** IGC parser feeds the same repository streams. No special‑case logic in UI; mode swap is a DI/config switch.
+- **No adâ€‘hoc Main scopes:** Nonâ€‘UI types must not create `CoroutineScope(Dispatchers.Main + â€¦)`. Inject dispatchers/scopes via DI (see DispatchersModule snippet) and collect sensors on `Default` or a named dispatcher.
+- **WhileSubscribed:** When using `SharingStarted.WhileSubscribed`, ensure essential producers arenâ€™t unintentionally stopped when the UI unsubscribes (document the choice with an `AI-NOTE`).
+- **Samsung S22 Ultra specifics:** Use highâ€‘rate sensor modes where supported; guard with capability checks; expose settings.
+- **Simulation mode:** IGC parser feeds the same repository streams. No specialâ€‘case logic in UI; mode swap is a DI/config switch.
 
 ### Background Variometer Service (new requirement)
 - The TE/Netto chain **must continue running when the UI is backgrounded** so audio, telemetry, and overlays stay continuous. Own `UnifiedSensorManager`, `FlightDataCalculator`, and `VarioAudioEngine` inside a dedicated **foreground service (or equivalent process-wide component)** instead of a composable/ViewModel scope.
@@ -102,11 +102,11 @@ ViewModel helper (preferred): see Appendix “Snippets – Flow.inVm”.
 ---
 
 ## 5) State, Errors, and Resilience
-- Represent UI state with a single `data class UiState(...)` + sealed side‑effects (`OneShot` events).
-- Model domain errors with sealed classes; surface user‑visible errors through `UiState`.
+- Represent UI state with a single `data class UiState(...)` + sealed sideâ€‘effects (`OneShot` events).
+- Model domain errors with sealed classes; surface userâ€‘visible errors through `UiState`.
 - All external calls return `Result<T>` or throw domain exceptions only inside domain; catch at boundaries.
 - Map exceptions to sealed `Result<T>` types or explicit error sub-states at layer boundaries; ViewModels surface those errors through `UiState` rather than rethrowing.
-- Offline‑first: cache last‑known calibration/settings; degrade gracefully if a sensor drops.
+- Offlineâ€‘first: cache lastâ€‘known calibration/settings; degrade gracefully if a sensor drops.
 
 ---
 
@@ -131,12 +131,12 @@ data class UiState(
 Repositories should map exceptions to `DomainError`; UI converts `DomainError` to strings/messages at render time.
 
 ## 6) Comments & Documentation (for humans and AI)
-**Mandatory.** Every class, public function, and non‑obvious block must explain **why**, not just what.
+**Mandatory.** Every class, public function, and nonâ€‘obvious block must explain **why**, not just what.
 
 - **Header comment per file:** role in the architecture + invariants.
 - **Rationale notes:** when using specific filters, constants, or threading decisions.
 - **Event flow notes:** when pointer input/gesture consumption is involved.
-- **Prompt‑hint marker:** Add `// AI-NOTE:` before rationale that helps future AI agents keep intent intact.
+- **Promptâ€‘hint marker:** Add `// AI-NOTE:` before rationale that helps future AI agents keep intent intact.
 
 Example:
 ```kotlin
@@ -166,8 +166,8 @@ Example:
 
 ## 8) Testing Strategy
 - **Unit (domain):** TE math, filter correctness, unit conversions, edge cases (gusts, stick thermals).
-- **Integration (data→domain):** Sensor streams → fusion → expected outputs under synthetic profiles.
-- **UI tests:** State rendering, gesture paths (e.g., hamburger/variometer long‑press), regression for event routing.
+- **Integration (dataâ†’domain):** Sensor streams â†’ fusion â†’ expected outputs under synthetic profiles.
+- **UI tests:** State rendering, gesture paths (e.g., hamburger/variometer longâ€‘press), regression for event routing.
 - **Golden tests:** Snapshot crucial UI states.
 - **Flow mocking:** Default to mocking repository/use-case flows in unit tests; use Turbine or equivalent to assert emissions so each layer is verifiable in isolation.
 - **Determinism:** Simulation provides repeatable seeds; avoid `System.currentTimeMillis()` in domain.
@@ -175,16 +175,16 @@ Example:
 ---
 
 ## 9) Performance Budget
-- End‑to‑end TE update to audio: **≤ 50 ms** typical.
-- Avoid allocations in hot paths; prefer value classes and pre‑allocated buffers.
+- Endâ€‘toâ€‘end TE update to audio: **â‰¤ 50 ms** typical.
+- Avoid allocations in hot paths; prefer value classes and preâ€‘allocated buffers.
 - Use `Dispatchers.Default` for math, `Main.immediate` for UI.
 
 ---
 
 ## 10) Logging & Telemetry
-- Use a logging façade in `core/common` with levels: DEBUG (dev only), INFO, WARN, ERROR.
+- Use a logging faÃ§ade in `core/common` with levels: DEBUG (dev only), INFO, WARN, ERROR.
 - No PII; logs must not include GPS traces unless user enables debug.
-- Provide a toggleable on‑device diagnostics overlay in debug builds.
+- Provide a toggleable onâ€‘device diagnostics overlay in debug builds.
 
 ---
 
@@ -198,10 +198,10 @@ Example:
 Keep versions centralized in `gradle/libs.versions.toml`.
 
 Required (indicative):
-- Kotlin, Coroutines, Kotlinx‑Datetime
-- AndroidX: Core, Lifecycle, Navigation, Activity‑Compose
+- Kotlin, Coroutines, Kotlinxâ€‘Datetime
+- AndroidX: Core, Lifecycle, Navigation, Activityâ€‘Compose
 - Compose BOM (+ UI, Material3, Tooling)
-- Hilt (dagger/hilt-android, hilt‑compiler)
+- Hilt (dagger/hilt-android, hiltâ€‘compiler)
 - Accompanist (permissions if needed)
 - Testing: JUnit, Turbine, MockK, Robolectric/Compose UI Test
 - Detekt + ktlint; baseline checked in
@@ -209,8 +209,8 @@ Required (indicative):
 ---
 
 ## 13) Git & Branching
-- Short‑lived feature branches; PRs under 400 lines if possible.
-- Commit messages: `scope: concise change` with a one‑line reason in the body.
+- Shortâ€‘lived feature branches; PRs under 400 lines if possible.
+- Commit messages: `scope: concise change` with a oneâ€‘line reason in the body.
 - No WIP PRs without failing tests annotated.
 
 ---
@@ -228,16 +228,16 @@ Required (indicative):
 
 - [ ] No public `MutableStateFlow`/`MutableSharedFlow`; only `StateFlow`/`Flow` exposed.
 - [ ] ViewModel flows use `.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), initial)` or `Flow.inVm` helper.
-- [ ] UseCases are single‑verb, ≤150 LOC, no Android deps; `operator fun invoke(...)` entrypoint.
-- [ ] Long‑running/sensor collectors use `Dispatchers.Default` or a named dispatcher; none on Main.
-- [ ] Errors are typed (sealed) or `Result<T>`; no raw string errors in repository → ViewModel paths.
-- [ ] Flow tests use Turbine (repositories/use‑cases) and `runTest` + `MainDispatcherRule` (ViewModels).
-- [ ] No ad‑hoc `CoroutineScope(Dispatchers.Main + …)` in non‑UI types; dispatchers provided via DI.
+- [ ] UseCases are singleâ€‘verb, â‰¤150 LOC, no Android deps; `operator fun invoke(...)` entrypoint.
+- [ ] Longâ€‘running/sensor collectors use `Dispatchers.Default` or a named dispatcher; none on Main.
+- [ ] Errors are typed (sealed) or `Result<T>`; no raw string errors in repository â†’ ViewModel paths.
+- [ ] Flow tests use Turbine (repositories/useâ€‘cases) and `runTest` + `MainDispatcherRule` (ViewModels).
+- [ ] No adâ€‘hoc `CoroutineScope(Dispatchers.Main + â€¦)` in nonâ€‘UI types; dispatchers provided via DI.
 
-## Appendix – Enforcement & Snippets
+## Appendix â€“ Enforcement & Snippets
 
 **Enforcement**
-- Pre‑commit guard (temporary, before a detekt rule). Blocks public `Mutable(State|Shared)Flow` outside tests:
+- Preâ€‘commit guard (temporary, before a detekt rule). Blocks public `Mutable(State|Shared)Flow` outside tests:
   ```bash
   # .githooks/pre-commit
   #!/usr/bin/env bash
@@ -246,7 +246,7 @@ Required (indicative):
      app dfcards-library core feature && {
     echo 'Refuse public Mutable(State|Shared)Flow. Expose StateFlow/Flow.' >&2; exit 1; }
   ```
-- Detekt (long‑term): add a “forbidden types in public API” rule targeting
+- Detekt (longâ€‘term): add a â€œforbidden types in public APIâ€ rule targeting
   `kotlinx.coroutines.flow.MutableStateFlow` and `MutableSharedFlow`.
 
 **Snippets**
@@ -267,7 +267,7 @@ Required (indicative):
   ): StateFlow<T> = stateIn(scope, started, initial)
   ```
 
-- Dispatchers via DI (avoid ad‑hoc Main scopes):
+- Dispatchers via DI (avoid adâ€‘hoc Main scopes):
   ```kotlin
   // core/common/DispatchersModule.kt
   package com.example.common.di
@@ -291,7 +291,7 @@ Required (indicative):
   }
   ```
 
-- Turbine test template for repository/use‑case flows:
+- Turbine test template for repository/useâ€‘case flows:
   ```kotlin
   @Test fun repo_emits_updates() = runTest {
     val repo = createRepoUnderTest()
@@ -320,7 +320,7 @@ Include unit/integration/UI tests where relevant. Optimize for Samsung S22 Ultra
 
 ## 16) Examples to Emulate
 - Rationale comments near gesture consumption, filter tuning, latency choices.
-- Repository exposes `StateFlow<TeState>`; ViewModel maps to `UiState` with one‑shot events for snackbars/audio.
+- Repository exposes `StateFlow<TeState>`; ViewModel maps to `UiState` with oneâ€‘shot events for snackbars/audio.
 
 ---
 
@@ -338,4 +338,12 @@ A feature is done when:
 
 ---
 
-**This file is authoritative.** If a decision isn’t covered, pick the simplest option that preserves SSOT, testability, and low latency—then document the rationale with an `AI-NOTE`.
+
+
+## 19) Reference Code Locations
+- XCSoar reference code lives at `C:\Users\Asus\AndroidStudioProjects\XCSoar`; use that path whenever you need to inspect or cite XCSoar sources so instructions remain consistent across tasks.
+
+---
+
+**This file is authoritative.** If a decision isnâ€™t covered, pick the simplest option that preserves SSOT, testability, and low latencyâ€”then document the rationale with an `AI-NOTE`.
+

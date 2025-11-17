@@ -12,6 +12,9 @@ import android.location.LocationListener
 import android.location.LocationManager
 import android.util.Log
 import androidx.core.app.ActivityCompat
+import com.example.xcpro.common.units.AltitudeM
+import com.example.xcpro.common.units.PressureHpa
+import com.example.xcpro.common.units.SpeedMs
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -99,8 +102,8 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener, 
 
             val gpsData = GPSData(
                 latLng = LatLng(location.latitude, location.longitude),
-                altitude = if (location.hasAltitude()) location.altitude else 0.0,
-                speed = if (location.hasSpeed()) location.speed.toDouble() else 0.0,
+                altitude = AltitudeM(if (location.hasAltitude()) location.altitude else 0.0),
+                speed = SpeedMs(if (location.hasSpeed()) location.speed.toDouble() else 0.0),
                 bearing = if (location.hasBearing()) location.bearing.toDouble() else 0.0,
                 accuracy = location.accuracy,
                 timestamp = location.time
@@ -130,7 +133,7 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener, 
             Sensor.TYPE_PRESSURE -> {
                 val pressureHPa = event.values[0].toDouble()
                 val baroData = BaroData(
-                    pressureHPa = pressureHPa,
+                    pressureHPa = PressureHpa(pressureHPa),
                     timestamp = System.currentTimeMillis()
                 )
                 _baroFlow.value = baroData
