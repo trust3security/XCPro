@@ -124,6 +124,7 @@ internal fun MapOverlayStack(
     density: Density,
     modalManager: MapModalManager,
     ballastUiState: StateFlow<BallastUiState>,
+    hideBallastPill: Boolean,
     onBallastCommand: (BallastCommand) -> Unit,
     onHamburgerTap: () -> Unit,
     onHamburgerLongPress: () -> Unit,
@@ -261,7 +262,11 @@ internal fun MapOverlayStack(
 
         val ballastState by ballastUiState.collectAsState()
         val showBallastPill =
-            ballastState.isAnimating || ballastState.snapshot.hasBallast || ballastState.snapshot.currentKg > 0.0
+            !hideBallastPill && (
+                ballastState.isAnimating ||
+                    ballastState.snapshot.hasBallast ||
+                    ballastState.snapshot.currentKg > 0.0
+            )
 
         AnimatedVisibility(
             visible = showBallastPill,

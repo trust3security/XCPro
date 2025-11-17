@@ -38,7 +38,8 @@ class GliderRepository private constructor(private val context: Context) : Glide
     }
 
     override fun updateConfig(update: (GliderConfig) -> GliderConfig) {
-        _config.value = update(_config.value)
+        val next = sanitizeConfig(update(_config.value))
+        _config.value = next
         save()
     }
 
@@ -62,7 +63,7 @@ class GliderRepository private constructor(private val context: Context) : Glide
         }
         if (json != null) {
             try {
-                _config.value = gson.fromJson(json, GliderConfig::class.java)
+                _config.value = sanitizeConfig(gson.fromJson(json, GliderConfig::class.java))
             } catch (_: Exception) { /* keep defaults */ }
         }
     }
@@ -72,6 +73,13 @@ class GliderRepository private constructor(private val context: Context) : Glide
             .putString(KEY_SELECTED_ID, _selectedModel.value?.id)
             .putString(KEY_CONFIG_JSON, gson.toJson(_config.value))
             .apply()
+    }
+
+    private fun sanitizeConfig(config: GliderConfig): GliderConfig {
+        if (config.waterBallastKg > 0.0 && config.hideBallastPill) {
+            return config.copy(hideBallastPill = false)
+        }
+        return config
     }
 
     companion object {

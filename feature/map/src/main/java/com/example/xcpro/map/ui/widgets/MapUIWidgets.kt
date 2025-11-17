@@ -18,13 +18,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -289,9 +292,11 @@ object MapUIWidgets {
 
                 .offset { IntOffset(displayOffset.value.x.roundToInt(), displayOffset.value.y.roundToInt()) }
 
-                .width(widthDp.dp)
-
                 .height(heightDp.dp)
+
+                .wrapContentWidth(Alignment.Start)
+
+                .widthIn(min = widthDp.dp)
 
                 .editModeBorder(isEditMode, RoundedCornerShape(18.dp))
 
@@ -433,89 +438,85 @@ object MapUIWidgets {
 
         ) {
 
-            BallastPill(
-
-                state = ballastState,
-
-                onCommand = onCommand,
+            Row(
 
                 modifier = Modifier
 
-                    .align(Alignment.Center)
+                    .fillMaxHeight()
 
-                    .width(widthDp.dp)
+                    .padding(horizontal = 4.dp),
 
-                    .height(heightDp.dp)
+                verticalAlignment = Alignment.CenterVertically,
 
-            )
-
-
-
-            AnimatedVisibility(
-
-                visible = showSwipeHint && !isEditMode,
-
-                enter = fadeIn(),
-
-                exit = fadeOut()
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
 
             ) {
 
-                Column(
+                BallastPill(
+
+                    state = ballastState,
+
+                    onCommand = onCommand,
 
                     modifier = Modifier
 
-                        .align(Alignment.CenterEnd)
+                        .width(widthDp.dp)
 
-                        .padding(end = 6.dp),
+                        .height(heightDp.dp)
 
-                    horizontalAlignment = Alignment.CenterHorizontally,
+                )
 
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+
+
+                AnimatedVisibility(
+
+                    visible = showSwipeHint && !isEditMode,
+
+                    enter = fadeIn(),
+
+                    exit = fadeOut()
 
                 ) {
 
-                    Text(
+                    Column(
 
-                        text = "Swipe ?",
+                        modifier = Modifier.padding(end = 6.dp),
 
-                        style = MaterialTheme.typography.labelSmall,
+                        horizontalAlignment = Alignment.Start,
 
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
 
-                    )
+                    ) {
 
-                    Text(
+                        Text(
 
-                        text = "Fill",
+                            text = "Swipe Up Fill",
 
-                        style = MaterialTheme.typography.labelSmall,
+                            style = MaterialTheme.typography.labelSmall,
 
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.error,
 
-                    )
+                            maxLines = 1,
 
-                    Text(
+                            softWrap = false
 
-                        text = "Swipe ?",
+                        )
 
-                        style = MaterialTheme.typography.labelSmall,
+                        Text(
 
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            text = "Swipe Down Drain",
 
-                        modifier = Modifier.padding(top = 8.dp)
+                            style = MaterialTheme.typography.labelSmall,
 
-                    )
+                            color = MaterialTheme.colorScheme.error,
 
-                    Text(
+                            maxLines = 1,
 
-                        text = "Drain",
+                            softWrap = false
 
-                        style = MaterialTheme.typography.labelSmall,
+                        )
 
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-
-                    )
+                    }
 
                 }
 

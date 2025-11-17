@@ -10,7 +10,8 @@ data class MapUiState(
     val isLoadingWaypoints: Boolean = false,
     val waypointError: MapWaypointError? = null,
     val isUiEditMode: Boolean = false,
-    val isDrawerOpen: Boolean = false
+    val isDrawerOpen: Boolean = false,
+    val hideBallastPill: Boolean = false
 )
 
 sealed interface MapUiEvent {
