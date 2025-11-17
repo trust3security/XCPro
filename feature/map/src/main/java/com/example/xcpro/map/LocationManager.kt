@@ -20,6 +20,7 @@ import com.example.xcpro.common.units.UnitsConverter
 import com.example.xcpro.xcprov1.bluetooth.GarminGloConnectionManager
 import com.example.xcpro.xcprov1.service.XcproV1Controller
 import com.example.xcpro.vario.VarioServiceManager
+import com.example.xcpro.MapOrientationPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -37,10 +38,10 @@ class LocationManager(
     companion object {
         private const val TAG = "LocationManager"
         private const val INITIAL_ZOOM_LEVEL = 10.0
-        private const val LOCATION_TOP_PADDING_RATIO = 0.35f
     }
 
     private var sensorsStarted = false
+    private val orientationPreferences = MapOrientationPreferences(context)
 
     private fun ensureSensorsRunning() {
         val status = unifiedSensorManager.getSensorStatus()
@@ -65,6 +66,15 @@ class LocationManager(
         if (!sensorsStarted && !status.gpsStarted) return
         varioServiceManager.stop()
         sensorsStarted = false
+    }
+
+    private fun topPaddingRatio(): Float {
+        val percentFromBottom = orientationPreferences.getGliderScreenPercent()
+        return 1f - (percentFromBottom / 100f)
+    }
+
+    private fun calculateTopPadding(screenHeight: Int): Int {
+        return (screenHeight * topPaddingRatio()).toInt()
     }
 
     // ✅ PHASE 2: Unified sensor management
@@ -332,7 +342,7 @@ class LocationManager(
 
                 // Position user at 65% from top for better visibility
                 val screenHeight = context.resources.displayMetrics.heightPixels
-                val topPadding = (screenHeight * LOCATION_TOP_PADDING_RATIO).toInt()
+                val topPadding = calculateTopPadding(screenHeight)
                 val padding = intArrayOf(0, topPadding, 0, 0)
 
                 // Use moveCamera for initial centering too - no animation needed
@@ -364,7 +374,7 @@ class LocationManager(
                     .build()
 
                 val screenHeight = context.resources.displayMetrics.heightPixels
-                val topPadding = (screenHeight * LOCATION_TOP_PADDING_RATIO).toInt()
+                val topPadding = calculateTopPadding(screenHeight)
                 val padding = intArrayOf(0, topPadding, 0, 0)
 
                 // Instant camera movement for smooth real-time tracking
@@ -457,7 +467,7 @@ class LocationManager(
                     .build()
 
                 val screenHeight = context.resources.displayMetrics.heightPixels
-                val topPadding = (screenHeight * LOCATION_TOP_PADDING_RATIO).toInt()
+                val topPadding = calculateTopPadding(screenHeight)
                 map.setPadding(0, topPadding, 0, 0)
                 map.animateCamera(CameraUpdateFactory.newCameraPosition(returnCameraPosition), 1000)
 
@@ -485,7 +495,7 @@ class LocationManager(
 
                 // Position user at 65% from top
                 val screenHeight = context.resources.displayMetrics.heightPixels
-                val topPadding = (screenHeight * LOCATION_TOP_PADDING_RATIO).toInt()
+                val topPadding = calculateTopPadding(screenHeight)
                 val padding = intArrayOf(0, topPadding, 0, 0)
 
                 map.animateCamera(CameraUpdateFactory.newCameraPosition(newCameraPosition), 800)
