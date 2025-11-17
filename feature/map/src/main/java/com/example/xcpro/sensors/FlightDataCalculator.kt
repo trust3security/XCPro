@@ -14,6 +14,10 @@ import com.example.xcpro.vario.*  // NEW: Vario implementations for side-by-side
 import com.example.xcpro.weather.wind.data.WindState
 import com.example.xcpro.weather.wind.model.WindSource
 import com.example.xcpro.weather.wind.model.WindVector
+import com.example.xcpro.common.units.AltitudeM
+import com.example.xcpro.common.units.PressureHpa
+import com.example.xcpro.common.units.SpeedMs
+import com.example.xcpro.common.units.VerticalSpeedMs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -240,7 +244,7 @@ class FlightDataCalculator(
             return
         }
 
-        val smoothedPressure = pressureKalmanFilter.update(baro.pressureHPa, baro.timestamp)
+        val smoothedPressure = pressureKalmanFilter.update(baro.pressureHPa.value, baro.timestamp)
 
         val previousBaroResult = cachedBaroResult
         val hasCalibrationFix = cachedIsGPSFixed &&
@@ -393,8 +397,8 @@ class FlightDataCalculator(
         val currentTime = System.currentTimeMillis()
 
         // Update cached GPS data for high-speed vario loop
-        cachedGPSSpeed = gps.speed
-        cachedGPSAltitude = gps.altitude
+        cachedGPSSpeed = gps.speed.value
+        cachedGPSAltitude = gps.altitude.value
         cachedGPSAccuracy = gps.accuracy.toDouble()
         cachedIsGPSFixed = gps.isHighAccuracy
         cachedGPSLat = gps.latLng.latitude   // 🚀 For SRTM-based QNH calibration
@@ -411,7 +415,7 @@ class FlightDataCalculator(
 
         // Get vario result from high-speed loop (or fallback to GPS altitude)
         val varioResult = cachedVarioResult ?: com.example.dfcards.filters.ModernVarioResult(
-            altitude = gps.altitude,
+            altitude = gps.altitude.value,
             verticalSpeed = 0.0,
             acceleration = 0.0,
             confidence = 0.3
@@ -422,7 +426,7 @@ class FlightDataCalculator(
 
         // ✅ TOTAL ENERGY (TE) COMPENSATION: Remove false lift from pilot maneuvers
         val rawVerticalSpeed = varioResult.verticalSpeed
-        val currentSpeed = gps.speed
+        val currentSpeed = gps.speed.value
 
         val teVerticalSpeed = flightHelpers.calculateTotalEnergy(
             rawVario = rawVerticalSpeed,
@@ -452,7 +456,7 @@ class FlightDataCalculator(
 
         val pressureAltitude = baroResult?.pressureAltitudeMeters ?: baroAltitude
         val baroGpsDelta = baroResult?.gpsDeltaMeters
-            ?: if (!gps.altitude.isNaN()) baroAltitude - gps.altitude else null
+            ?: if (!gps.altitude.value.isNaN()) baroAltitude - gps.altitude.value else null
         val baroConfidence = baroResult?.confidenceLevel ?: ConfidenceLevel.LOW
         val qnhCalibrationAgeSeconds = baroResult?.lastCalibrationTime?.takeIf { it > 0L }?.let {
             val delta = (currentTime - it) / 1000L
@@ -460,14 +464,14 @@ class FlightDataCalculator(
         } ?: -1L
         val altitudeForAirspeed = when {
             baroAltitude.isFinite() && baroAltitude != 0.0 -> baroAltitude
-            gps.altitude.isFinite() -> gps.altitude
+            gps.altitude.value.isFinite() -> gps.altitude.value
             else -> 0.0
         }
         val windState = latestWindState
         val windVector = windState?.vector
 
         // Update AGL (async network call) - uses baro altitude and speed for ground detection
-        flightHelpers.updateAGL(baroAltitude, gps, gps.speed)
+        flightHelpers.updateAGL(baroAltitude, gps, gps.speed.value)
 
         // Maintain history for L/D and replay analytics
         flightHelpers.recordLocationSample(gps)
@@ -482,7 +486,7 @@ class FlightDataCalculator(
         val calculatedLD = flightHelpers.calculateCurrentLD(gps, baroAltitude)
 
         val airspeedFromWind = estimateFromWind(
-            gpsSpeed = gps.speed.toDouble(),
+            gpsSpeed = gps.speed.value,
             gpsBearingDeg = gps.bearing,
             altitudeMeters = altitudeForAirspeed,
             qnhHpa = qnh,
@@ -492,7 +496,7 @@ class FlightDataCalculator(
         val nettoResult = flightHelpers.calculateNetto(
             currentVerticalSpeed = verticalSpeed,
             trueAirspeed = airspeedFromWind?.trueMs,
-            fallbackGroundSpeed = gps.speed.toDouble()
+            fallbackGroundSpeed = gps.speed.value
         )
         val netto = nettoResult.value.toFloat()
         val nettoValid = nettoResult.valid
@@ -524,7 +528,7 @@ class FlightDataCalculator(
         }
         val indicatedAirspeedMs = airspeedEstimate?.indicatedMs ?: 0.0
         val trueAirspeedMs = airspeedEstimate?.trueMs
-            ?: if (gps.speed.isFinite()) gps.speed.toDouble() else indicatedAirspeedMs
+            ?: if (gps.speed.value.isFinite()) gps.speed.value else indicatedAirspeedMs
         val airspeedSourceLabel = (airspeedEstimate?.source ?: AirspeedSource.GPS_GROUND).label
 
         val windSpeedValue = windVector?.speed?.toFloat() ?: 0f
@@ -560,43 +564,43 @@ class FlightDataCalculator(
             gps = gps,
             baro = baro,
             compass = compass,
-            baroAltitude = baroAltitude,
-            qnh = qnh,
+            baroAltitude = AltitudeM(baroAltitude),
+            qnh = PressureHpa(qnh),
             isQNHCalibrated = isQNHCalibrated,
-            verticalSpeed = verticalSpeed,
-            bruttoVario = bruttoVario,
-            displayVario = displayVario,
-            bruttoAverage30s = bruttoAverage30s,
-            nettoAverage30s = nettoAverage30s,
+            verticalSpeed = VerticalSpeedMs(verticalSpeed),
+            bruttoVario = VerticalSpeedMs(bruttoVario),
+            displayVario = VerticalSpeedMs(displayVario),
+            bruttoAverage30s = VerticalSpeedMs(bruttoAverage30s),
+            nettoAverage30s = VerticalSpeedMs(nettoAverage30s),
             varioSource = varioSource,
             varioValid = varioValid,
-            pressureAltitude = pressureAltitude,
-            baroGpsDelta = baroGpsDelta,
+            pressureAltitude = AltitudeM(pressureAltitude),
+            baroGpsDelta = baroGpsDelta?.let { AltitudeM(it) },
             baroConfidence = baroConfidence,
             qnhCalibrationAgeSeconds = qnhCalibrationAgeSeconds,
-            agl = flightHelpers.currentAGL,
-            windSpeed = windSpeedValue,
+            agl = AltitudeM(flightHelpers.currentAGL),
+            windSpeed = SpeedMs(windSpeedValue.toDouble()),
             windDirection = windDirectionFrom,
-            windHeadwind = windHeadwind,
-            windCrosswind = windCrosswind,
+            windHeadwind = SpeedMs(windHeadwind),
+            windCrosswind = SpeedMs(windCrosswind),
             windQuality = windQuality,
             windSource = windSource,
-            thermalAverage = thermalAvg,
-            thermalAverageCircle = thermalAvgCircle,
-            thermalAverageTotal = thermalAvgTotal,
-            thermalGain = thermalGain,
+            thermalAverage = VerticalSpeedMs(thermalAvg.toDouble()),
+            thermalAverageCircle = VerticalSpeedMs(thermalAvgCircle.toDouble()),
+            thermalAverageTotal = VerticalSpeedMs(thermalAvgTotal.toDouble()),
+            thermalGain = AltitudeM(thermalGain),
             currentLD = calculatedLD,
-            netto = netto,
-            displayNetto = displayNetto,
+            netto = VerticalSpeedMs(netto.toDouble()),
+            displayNetto = VerticalSpeedMs(displayNetto),
             nettoValid = nettoValid,
-            trueAirspeed = trueAirspeedMs,
-            indicatedAirspeed = indicatedAirspeedMs,
+            trueAirspeed = SpeedMs(trueAirspeedMs),
+            indicatedAirspeed = SpeedMs(indicatedAirspeedMs),
             airspeedSource = airspeedSourceLabel,
-            varioOptimized = varioResults["optimized"] ?: 0.0,
-            varioLegacy = varioResults["legacy"] ?: 0.0,
-            varioRaw = varioResults["raw"] ?: 0.0,
-            varioGPS = varioResults["gps"] ?: 0.0,
-            varioComplementary = varioResults["complementary"] ?: 0.0,
+            varioOptimized = VerticalSpeedMs(varioResults["optimized"] ?: 0.0),
+            varioLegacy = VerticalSpeedMs(varioResults["legacy"] ?: 0.0),
+            varioRaw = VerticalSpeedMs(varioResults["raw"] ?: 0.0),
+            varioGPS = VerticalSpeedMs(varioResults["gps"] ?: 0.0),
+            varioComplementary = VerticalSpeedMs(varioResults["complementary"] ?: 0.0),
             timestamp = currentTime,
             dataQuality = dataQuality
         )
@@ -610,7 +614,7 @@ class FlightDataCalculator(
         if (currentTime % 1000 < 100) {
             val varioMode = if (cachedVarioResult != null) "PRIORITY2-50Hz(IMU+BARO)+TE" else "PRIORITY2-50Hz(BARO)+TE"
 
-            Log.d(TAG, "[SLOW GPS 10Hz] $varioMode: GPS alt=${gps.altitude.toInt()}m, " +
+            Log.d(TAG, "[SLOW GPS 10Hz] $varioMode: GPS alt=${gps.altitude.value.toInt()}m, " +
                       "Baro alt=${baroAltitude.toInt()}m, " +
                       "Raw V/S=${String.format("%.2f", rawVerticalSpeed)}m/s, " +
                       "TE V/S=${String.format("%.2f", verticalSpeed)}m/s, " +

@@ -78,7 +78,7 @@ class WindRepository @Inject constructor(
         val turnRate = computeTurnRate(trackRad, gps.timestamp)
         val instantCircling = turnRate != null &&
             abs(turnRate) >= MIN_TURN_RATE &&
-            gps.speed >= MIN_GROUND_SPEED
+            gps.speed.value >= MIN_GROUND_SPEED
         val sustainedCircling = updateCirclingState(instantCircling, gps.timestamp)
 
         val estimatorCircling = sustainedCircling || instantCircling
@@ -86,7 +86,7 @@ class WindRepository @Inject constructor(
             CirclingWindSample(
                 timestampMillis = gps.timestamp,
                 trackRad = trackRad,
-                groundSpeed = gps.speed,
+                groundSpeed = gps.speed.value,
                 isCircling = estimatorCircling
             )
         )
@@ -126,7 +126,7 @@ class WindRepository @Inject constructor(
             )
         }
 
-        val evaluated = windStore.evaluate(data.timestamp, data.baroAltitude)
+        val evaluated = windStore.evaluate(data.timestamp, data.baroAltitude.value)
         if (evaluated != null) {
             publishWindState(
                 vector = evaluated.vector,
@@ -139,10 +139,10 @@ class WindRepository @Inject constructor(
     }
 
     private fun altitudeFromSample(data: CompleteFlightData): Double {
-        return if (data.baroAltitude.isFinite() && data.baroAltitude != 0.0) {
-            data.baroAltitude
+        return if (data.baroAltitude.value.isFinite() && data.baroAltitude.value != 0.0) {
+            data.baroAltitude.value
         } else {
-            data.gps?.altitude ?: 0.0
+            data.gps?.altitude?.value ?: 0.0
         }
     }
 

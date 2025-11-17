@@ -149,11 +149,11 @@ class XcproV1Controller(
         val baroSample = lastBaroSample ?: return
 
         var calibrationAltitudeStep: Double? = null
-        if (inputs.baro != null && shouldCalibrateQnh(fusedGps, baroSample.pressureHPa)) {
-            calibrationAltitudeStep = calibrateQnh(baroSample.pressureHPa, fusedGps)
+        if (inputs.baro != null && shouldCalibrateQnh(fusedGps, baroSample.pressureHPa.value)) {
+            calibrationAltitudeStep = calibrateQnh(baroSample.pressureHPa.value, fusedGps)
         }
 
-        val baroAltitude = pressureToAltitude(baroSample.pressureHPa)
+        val baroAltitude = pressureToAltitude(baroSample.pressureHPa.value)
         val baroIsSteady = updateBaroStability(baroAltitude)
 
         if (calibrationAltitudeStep != null && abs(calibrationAltitudeStep) >= LARGE_QNH_ALTITUDE_STEP_METERS) {
@@ -186,7 +186,7 @@ class XcproV1Controller(
             String.format(
                 Locale.US,
                 "HAWK inputs: baro=%.1f hPa, accel=%.3f m/s^2, gpsAlt=%.1f m, extAlt=%.1f m",
-                baroSample.pressureHPa,
+                baroSample.pressureHPa.value,
                 verticalAccel,
                 fusedGps.altitude,
                 inputs.externalGps?.altitudeMeters ?: Double.NaN
@@ -389,8 +389,8 @@ class XcproV1Controller(
             externalFresh -> {
                 val ext = external!!
                 val fallbackTrack = handset?.bearing?.takeIf { handset.isMoving }
-                val fallbackSpeed = handset?.speed
-                val fallbackAltitude = handset?.altitude
+                val fallbackSpeed = handset?.speed?.value
+                val fallbackAltitude = handset?.altitude?.value
                 val altitude = ext.altitudeMeters ?: fallbackAltitude ?: 0.0
                 val speed = ext.groundSpeedMps ?: fallbackSpeed ?: 0.0
                 val track = ext.trackDegrees ?: fallbackTrack
@@ -412,8 +412,8 @@ class XcproV1Controller(
                 GpsFrame(
                     latitude = handset.latLng.latitude,
                     longitude = handset.latLng.longitude,
-                    altitude = handset.altitude,
-                    speed = handset.speed,
+                    altitude = handset.altitude.value,
+                    speed = handset.speed.value,
                     trackDegrees = handset.bearing.takeIf { handset.isMoving },
                     accuracy = handset.accuracy.toDouble(),
                     timestamp = handset.timestamp,

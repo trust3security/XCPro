@@ -6,6 +6,9 @@ import com.example.xcpro.sensors.BaroData
 import com.example.xcpro.sensors.CompassData
 import com.example.xcpro.sensors.GPSData
 import com.example.xcpro.sensors.SensorDataSource
+import com.example.xcpro.common.units.AltitudeM
+import com.example.xcpro.common.units.PressureHpa
+import com.example.xcpro.common.units.SpeedMs
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -38,8 +41,8 @@ class ReplaySensorSource : SensorDataSource {
     ) {
         _gpsFlow.value = GPSData(
             latLng = LatLng(latitude, longitude),
-            altitude = altitude,
-            speed = speed,
+            altitude = AltitudeM(altitude),
+            speed = SpeedMs(speed),
             bearing = bearing,
             accuracy = accuracy,
             timestamp = timestamp
@@ -47,7 +50,7 @@ class ReplaySensorSource : SensorDataSource {
     }
 
     fun emitBaro(pressureHPa: Double, timestamp: Long) {
-        _baroFlow.value = BaroData(pressureHPa = pressureHPa, timestamp = timestamp)
+        _baroFlow.value = BaroData(pressureHPa = PressureHpa(pressureHPa), timestamp = timestamp)
     }
 
     fun emitCompass(heading: Double, accuracy: Int, timestamp: Long) {

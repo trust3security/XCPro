@@ -80,6 +80,7 @@ class MapInitializer(
 
             // Plot saved task if available
             plotSavedTask(map)
+            mapState.blueLocationOverlay?.bringToFront()
 
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error loading map data: ${e.message}", e)

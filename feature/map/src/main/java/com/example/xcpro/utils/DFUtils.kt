@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.geometry.Offset
 import com.example.xcpro.common.flight.FlightMode
+import com.example.xcpro.map.BlueLocationOverlay
 import com.example.xcpro.map.MapCameraManager
 import org.json.JSONArray
 import org.json.JSONObject
@@ -157,21 +158,23 @@ fun loadAndApplyWaypoints(
                     PropertyFactory.textAllowOverlap(false), // Prevent overlap clutter
                     PropertyFactory.textIgnorePlacement(false)
                 )
-                // ✅ FIX: Add waypoint layer on top of all other layers so it's visible
-                try {
-                    // Try to add above road-label if it exists
-                    if (style.getLayer("road-label") != null) {
-                        style.addLayerAbove(layer, "road-label")
-                        Log.d(TAG, "✅ Waypoint text labels added above road-label (${features.length()} waypoints)")
-                    } else {
-                        // Fallback: just add the layer (will be on top by default if added last)
+                val aircraftLayerExists = style.getLayer(BlueLocationOverlay.LAYER_ID) != null
+                if (aircraftLayerExists) {
+                    style.addLayerBelow(layer, BlueLocationOverlay.LAYER_ID)
+                    Log.d(TAG, "✅ Waypoint text labels added below aircraft overlay (${features.length()} waypoints)")
+                } else {
+                    try {
+                        if (style.getLayer("road-label") != null) {
+                            style.addLayerAbove(layer, "road-label")
+                            Log.d(TAG, "✅ Waypoint text labels added above road-label (${features.length()} waypoints)")
+                        } else {
+                            style.addLayer(layer)
+                            Log.d(TAG, "✅ Waypoint text labels added to map (${features.length()} waypoints, road-label not found)")
+                        }
+                    } catch (e: Exception) {
                         style.addLayer(layer)
-                        Log.d(TAG, "✅ Waypoint text labels added to map (${features.length()} waypoints, road-label not found)")
+                        Log.e(TAG, "⚠️ Waypoint layer added with fallback method: ${e.message}")
                     }
-                } catch (e: Exception) {
-                    // Final fallback: try addLayer without position
-                    style.addLayer(layer)
-                    Log.e(TAG, "⚠️ Waypoint layer added with fallback method: ${e.message}")
                 }
             } ?: Log.e(TAG, "Map style not loaded")
         } catch (e: Exception) {

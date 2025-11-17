@@ -3,6 +3,10 @@ package com.example.xcpro.sensors
 import com.example.dfcards.calculations.ConfidenceLevel
 import org.maplibre.android.geometry.LatLng
 import com.example.xcpro.weather.wind.model.WindSource
+import com.example.xcpro.common.units.AltitudeM
+import com.example.xcpro.common.units.PressureHpa
+import com.example.xcpro.common.units.SpeedMs
+import com.example.xcpro.common.units.VerticalSpeedMs
 
 /**
  * Raw GPS data from LocationManager
@@ -10,8 +14,8 @@ import com.example.xcpro.weather.wind.model.WindSource
  */
 data class GPSData(
     val latLng: LatLng,
-    val altitude: Double,       // MSL in meters (Mean Sea Level)
-    val speed: Double,          // m/s (ground speed)
+    val altitude: AltitudeM,       // MSL in meters (Mean Sea Level)
+    val speed: SpeedMs,            // m/s (ground speed)
     val bearing: Double,        // 0-360° (accurate when moving > 2 m/s)
     val accuracy: Float,        // meters (horizontal accuracy)
     val timestamp: Long
@@ -24,7 +28,7 @@ data class GPSData(
     /**
      * Check if device is moving (bearing is only accurate when moving)
      */
-    val isMoving: Boolean get() = speed > 2.0  // > 2 m/s
+    val isMoving: Boolean get() = speed.value > 2.0  // > 2 m/s
 }
 
 /**
@@ -32,7 +36,7 @@ data class GPSData(
  * Single Source of Truth for barometric sensor readings
  */
 data class BaroData(
-    val pressureHPa: Double,    // Atmospheric pressure in hPa
+    val pressureHPa: PressureHpa,    // Atmospheric pressure in hPa
     val timestamp: Long
 )
 
@@ -91,55 +95,55 @@ data class CompleteFlightData(
     val compass: CompassData?,
 
     // Calculated barometric values
-    val baroAltitude: Double,   // Barometric altitude in meters (from pressure)
-    val qnh: Double,            // QNH pressure setting in hPa (sea level pressure)
+    val baroAltitude: AltitudeM,   // Barometric altitude in meters (from pressure)
+    val qnh: PressureHpa,            // QNH pressure setting in hPa (sea level pressure)
     val isQNHCalibrated: Boolean, // Whether QNH was calibrated by GPS (vs standard 1013.25)
-    val verticalSpeed: Double,  // m/s (selected brutto vario)
-    val displayVario: Double = 0.0,
-    val bruttoVario: Double = 0.0, // m/s (TE if available else GPS)
-    val bruttoAverage30s: Double = 0.0,
-    val nettoAverage30s: Double = 0.0,
+    val verticalSpeed: VerticalSpeedMs,  // m/s (selected brutto vario)
+    val displayVario: VerticalSpeedMs = VerticalSpeedMs(0.0),
+    val bruttoVario: VerticalSpeedMs = VerticalSpeedMs(0.0), // m/s (TE if available else GPS)
+    val bruttoAverage30s: VerticalSpeedMs = VerticalSpeedMs(0.0),
+    val nettoAverage30s: VerticalSpeedMs = VerticalSpeedMs(0.0),
     val varioSource: String = "UNKNOWN",
     val varioValid: Boolean = false,
-    val pressureAltitude: Double, // meters (QNH 1013.25 reference)
-    val baroGpsDelta: Double?,  // meters difference between baro altitude and GPS altitude
+    val pressureAltitude: AltitudeM, // meters (QNH 1013.25 reference)
+    val baroGpsDelta: AltitudeM?,  // meters difference between baro altitude and GPS altitude
     val baroConfidence: ConfidenceLevel, // Confidence supplied by baro calculator
     val qnhCalibrationAgeSeconds: Long,  // Seconds since last calibration (-1 if unknown)
 
     // AGL (Above Ground Level) - from network service
-    val agl: Double,            // meters above ground (GPS altitude - terrain elevation)
+    val agl: AltitudeM,            // meters above ground (GPS altitude - terrain elevation)
 
     // Calculated wind
-    val windSpeed: Float,       // m/s (wind speed magnitude)
+    val windSpeed: SpeedMs,       // m/s (wind speed magnitude)
     val windDirection: Float,   // 0-360° (direction wind is coming FROM)
-    val windHeadwind: Double = 0.0,
-    val windCrosswind: Double = 0.0,
+    val windHeadwind: SpeedMs = SpeedMs(0.0),
+    val windCrosswind: SpeedMs = SpeedMs(0.0),
     val windQuality: Int = 0,
     val windSource: WindSource = WindSource.NONE,
 
     // Calculated thermal average
-    val thermalAverage: Float,  // m/s (average climb rate in thermal)
-    val thermalAverageCircle: Float = 0f,
-    val thermalAverageTotal: Float = 0f,
-    val thermalGain: Double = 0.0,
+    val thermalAverage: VerticalSpeedMs,  // m/s (average climb rate in thermal)
+    val thermalAverageCircle: VerticalSpeedMs = VerticalSpeedMs(0.0),
+    val thermalAverageTotal: VerticalSpeedMs = VerticalSpeedMs(0.0),
+    val thermalGain: AltitudeM = AltitudeM(0.0),
 
     // Calculated L/D ratio
     val currentLD: Float,       // Distance traveled / altitude lost (glide ratio)
 
     // Calculated netto variometer
-    val netto: Float,           // m/s (variometer + sink rate compensation)
-    val displayNetto: Double = 0.0,
+    val netto: VerticalSpeedMs,           // m/s (variometer + sink rate compensation)
+    val displayNetto: VerticalSpeedMs = VerticalSpeedMs(0.0),
     val nettoValid: Boolean = false,
-    val trueAirspeed: Double = 0.0,    // m/s
-    val indicatedAirspeed: Double = 0.0, // m/s
+    val trueAirspeed: SpeedMs = SpeedMs(0.0),    // m/s
+    val indicatedAirspeed: SpeedMs = SpeedMs(0.0), // m/s
     val airspeedSource: String = "UNKNOWN",
 
     // NEW: Multiple vario implementations for testing (VARIO_IMPROVEMENTS.md)
-    val varioOptimized: Double = 0.0,      // Optimized Kalman (R=0.5m) - Priority 1
-    val varioLegacy: Double = 0.0,         // Legacy Kalman (R=2.0m) - Baseline
-    val varioRaw: Double = 0.0,            // Raw barometer differentiation
-    val varioGPS: Double = 0.0,            // GPS vertical speed
-    val varioComplementary: Double = 0.0,  // Complementary filter (future)
+    val varioOptimized: VerticalSpeedMs = VerticalSpeedMs(0.0),      // Optimized Kalman (R=0.5m) - Priority 1
+    val varioLegacy: VerticalSpeedMs = VerticalSpeedMs(0.0),         // Legacy Kalman (R=2.0m) - Baseline
+    val varioRaw: VerticalSpeedMs = VerticalSpeedMs(0.0),            // Raw barometer differentiation
+    val varioGPS: VerticalSpeedMs = VerticalSpeedMs(0.0),            // GPS vertical speed
+    val varioComplementary: VerticalSpeedMs = VerticalSpeedMs(0.0),  // Complementary filter (future)
 
     // Metadata
     val timestamp: Long,

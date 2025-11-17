@@ -69,7 +69,7 @@ class WindEkfGlue(
             return null
         }
         val timestamp = gps.timestamp
-        val tas = sample.trueAirspeed
+        val tas = sample.trueAirspeed.value
         if (!tas.isFinite() || tas < minTrueAirspeed) {
             logDrop(DropReason.NO_TAS, timestamp, "tas=$tas")
             resetBlackout()
@@ -105,8 +105,8 @@ class WindEkfGlue(
         }
 
         val trackRad = Math.toRadians(gps.bearing)
-        val groundEast = (gps.speed * sin(trackRad)).toFloat()
-        val groundNorth = (gps.speed * cos(trackRad)).toFloat()
+        val groundEast = (gps.speed.value * sin(trackRad)).toFloat()
+        val groundNorth = (gps.speed.value * cos(trackRad)).toFloat()
         val vector = ekf.update(tas.toFloat(), groundEast, groundNorth) ?: run {
             logDrop(DropReason.EKF_OUTPUT, timestamp, "ekf returned null")
             return null
