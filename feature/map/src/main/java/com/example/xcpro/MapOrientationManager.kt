@@ -9,6 +9,8 @@ import com.example.xcpro.common.orientation.OrientationController
 import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.common.orientation.OrientationSensorData
 import com.example.xcpro.sensors.UnifiedSensorManager
+import com.example.xcpro.map.BuildConfig
+import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -41,7 +43,7 @@ class MapOrientationManager(
     private var lastUserInteractionTime = 0L
     private var lastValidBearing = 0.0
     private var updatesJob: Job? = null
-    private var minSpeedForTrackKt: Double = 0.0
+    private var minSpeedForTrackMs: Double = 0.0
 
     companion object {
         private const val TAG = "MapOrientationManager"
@@ -54,7 +56,7 @@ class MapOrientationManager(
         Log.d(TAG, "🧭 MapOrientationManager initializing...")
 
         // Load saved orientation mode
-        minSpeedForTrackKt = preferences.getMinSpeedThreshold()
+        minSpeedForTrackMs = preferences.getMinSpeedThreshold()
         Log.d(TAG, "Loaded orientation mode: $currentMode")
 
         // Start orientation data collection
@@ -121,6 +123,23 @@ class MapOrientationManager(
 
         )
 
+        if (!isValid &&
+            sensorData.isGPSValid &&
+            sensorData.groundSpeed < minSpeedForTrackMs &&
+            BuildConfig.DEBUG &&
+            System.currentTimeMillis() % 2000L < 25
+        ) {
+            Log.v(
+                TAG,
+                String.format(
+                    Locale.US,
+                    "TRACK_UP gate: speed=%.2f m/s < threshold=%.2f m/s",
+                    sensorData.groundSpeed,
+                    minSpeedForTrackMs
+                )
+            )
+        }
+
         // Log bearing updates periodically (every 30 updates to avoid spam)
 
         if (System.currentTimeMillis() % 30 == 0L) {
@@ -151,7 +170,7 @@ class MapOrientationManager(
 
             MapOrientationMode.TRACK_UP -> {
 
-                val valid = sensorData.isGPSValid && sensorData.groundSpeed >= minSpeedForTrackKt
+                val valid = sensorData.isGPSValid && sensorData.groundSpeed >= minSpeedForTrackMs
 
                 val bearing = if (valid) sensorData.track else 0.0
 
@@ -167,7 +186,7 @@ class MapOrientationManager(
 
                     sensorData.hasValidHeading -> BearingResult(sensorData.magneticHeading, true)
 
-                    sensorData.isGPSValid && sensorData.groundSpeed >= minSpeedForTrackKt ->
+                    sensorData.isGPSValid && sensorData.groundSpeed >= minSpeedForTrackMs ->
 
                         BearingResult(sensorData.track, true)
 
@@ -231,7 +250,7 @@ class MapOrientationManager(
 
 
         Log.d(TAG, "Map orientation changing: $currentMode -> $mode")
-        minSpeedForTrackKt = preferences.getMinSpeedThreshold()
+        minSpeedForTrackMs = preferences.getMinSpeedThreshold()
 
         activeProfile.setMode(mode)
 
@@ -296,7 +315,7 @@ class MapOrientationManager(
 
         circlingMode = preferences.getCirclingOrientationMode()
 
-        minSpeedForTrackKt = preferences.getMinSpeedThreshold()
+        minSpeedForTrackMs = preferences.getMinSpeedThreshold()
 
         currentMode = activeProfile.mode()
         lastValidBearing = normalizeBearing(_orientationFlow.value.bearing)
