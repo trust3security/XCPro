@@ -32,19 +32,22 @@ object MapComposeEffects {
         locationManager: LocationManager,
         locationPermissionLauncher: ActivityResultLauncher<Array<String>>,
         currentLocation: GPSData?,
-        orientationData: OrientationData
+        orientationData: OrientationData,
+        suppressLiveGps: Boolean = false
     ) {
         LaunchedEffect(Unit) {
             locationManager.checkAndRequestLocationPermissions(locationPermissionLauncher)
         }
 
-        LaunchedEffect(currentLocation, orientationData.mode, orientationData.bearing) {
-            currentLocation?.let { location ->
-                locationManager.updateLocationFromGPS(
-                    location,
-                    orientationData.mode,
-                    orientationData.bearing
-                )
+        LaunchedEffect(currentLocation, suppressLiveGps, orientationData.mode, orientationData.bearing) {
+            if (!suppressLiveGps) {
+                currentLocation?.let { location ->
+                    locationManager.updateLocationFromGPS(
+                        location,
+                        orientationData.mode,
+                        orientationData.bearing
+                    )
+                }
             }
         }
     }
@@ -204,7 +207,8 @@ object MapComposeEffects {
         activeTemplateId: String?,
         initialMapStyle: String,
         onMapStyleSelected: (String) -> Unit,
-        cardsReady: Boolean
+        cardsReady: Boolean,
+        suppressLiveGps: Boolean = false
     ) {
         val density = LocalDensity.current
 
@@ -212,7 +216,8 @@ object MapComposeEffects {
             locationManager = locationManager,
             locationPermissionLauncher = locationPermissionLauncher,
             currentLocation = currentLocation,
-            orientationData = orientationData
+            orientationData = orientationData,
+            suppressLiveGps = suppressLiveGps
         )
 
         ProfileAndConfigurationEffects(

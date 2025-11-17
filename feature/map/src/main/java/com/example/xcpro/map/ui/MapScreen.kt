@@ -243,6 +243,8 @@ fun MapScreen(
     val isTrackingLocation by mapState.isTrackingLocationFlow.collectAsState()
     val lastUserPanTime by mapState.lastUserPanTimeFlow.collectAsState()
     val showReturnButton by mapState.showReturnButtonFlow.collectAsState()
+    val replaySession by mapViewModel.replaySessionState.collectAsState()
+    val suppressLiveGps = replaySession.selection != null
 
     // ✅ AAT Edit Mode State - Track when AAT pin editing is active
     val isAATEditMode by mapViewModel.isAATEditMode.collectAsState()
@@ -310,7 +312,8 @@ fun MapScreen(
         activeTemplateId = activeTemplateId,
         initialMapStyle = initialMapStyle,
         onMapStyleSelected = onMapStyleSelected,
-        cardsReady = cardHydrationReady
+        cardsReady = cardHydrationReady,
+        suppressLiveGps = suppressLiveGps
     )
 
     // ✅ CENTRALIZED LIFECYCLE EFFECTS - Replace individual DisposableEffect blocks
