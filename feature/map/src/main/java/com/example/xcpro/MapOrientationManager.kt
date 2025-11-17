@@ -39,6 +39,7 @@ class MapOrientationManager(
     private var currentMode = cruiseMode
     private var isUserOverrideActive = false
     private var lastUserInteractionTime = 0L
+    private var lastValidBearing = 0.0
     private var updatesJob: Job? = null
     private var minSpeedForTrackKt: Double = 0.0
 
@@ -58,6 +59,7 @@ class MapOrientationManager(
 
         // Start orientation data collection
         startOrientationUpdates()
+        lastValidBearing = normalizeBearing(_orientationFlow.value.bearing)
         Log.d(TAG, "✅ MapOrientationManager initialized successfully")
     }
 
@@ -99,15 +101,17 @@ class MapOrientationManager(
 
         }
 
-
-
         val (bearing, isValid) = calculateBearing(sensorData)
 
-
+        val normalizedBearing = normalizeBearing(bearing)
+        if (isValid) {
+            lastValidBearing = normalizedBearing
+        }
+        val finalBearing = if (isValid) normalizedBearing else lastValidBearing
 
         val orientationData = OrientationData(
 
-            bearing = bearing,
+            bearing = finalBearing,
 
             mode = currentMode,
 
@@ -117,13 +121,11 @@ class MapOrientationManager(
 
         )
 
-
-
         // Log bearing updates periodically (every 30 updates to avoid spam)
 
         if (System.currentTimeMillis() % 30 == 0L) {
 
-            Log.d(TAG, "dY- Orientation: mode=$currentMode, bearing=${bearing.toInt()}A?, valid=$isValid")
+            Log.d(TAG, "dY- Orientation: mode=$currentMode, bearing=${finalBearing.toInt()}A?, valid=$isValid")
 
         }
 
@@ -234,6 +236,7 @@ class MapOrientationManager(
         activeProfile.setMode(mode)
 
         currentMode = mode
+        lastValidBearing = normalizeBearing(_orientationFlow.value.bearing)
 
 
 
@@ -273,6 +276,7 @@ class MapOrientationManager(
         activeProfile = newProfile
 
         currentMode = activeProfile.mode()
+        lastValidBearing = normalizeBearing(_orientationFlow.value.bearing)
 
         scope.launch {
 
@@ -295,6 +299,7 @@ class MapOrientationManager(
         minSpeedForTrackKt = preferences.getMinSpeedThreshold()
 
         currentMode = activeProfile.mode()
+        lastValidBearing = normalizeBearing(_orientationFlow.value.bearing)
 
         scope.launch {
 
@@ -328,6 +333,7 @@ class MapOrientationManager(
         Log.d(TAG, "▶️ Starting MapOrientationManager...")
         orientationDataSource.start()
         startOrientationUpdates()
+        lastValidBearing = normalizeBearing(_orientationFlow.value.bearing)
         Log.d(TAG, "✅ MapOrientationManager started")
     }
 
@@ -336,10 +342,23 @@ class MapOrientationManager(
         orientationDataSource.stop()
         updatesJob?.cancel()
         updatesJob = null
+        lastValidBearing = 0.0
         Log.d(TAG, "✅ MapOrientationManager stopped")
     }
 
     override fun updateFromFlightData(flightData: RealTimeFlightData) {
         orientationDataSource.updateFromFlightData(flightData)
     }
+
+    private fun normalizeBearing(value: Double): Double {
+        if (!value.isFinite()) {
+            return 0.0
+        }
+        var result = value % 360.0
+        if (result < 0) {
+            result += 360.0
+        }
+        return result
+    }
 }
+
