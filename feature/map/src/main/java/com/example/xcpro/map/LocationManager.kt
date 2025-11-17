@@ -367,13 +367,18 @@ class LocationManager(
                     Log.d(TAG, "🗺️ Map available for sailplane overlay update, style=${map.style != null}")
 
                     // Update glider icon with GPS track and magnetic heading for proper rotation per mode
-                    mapState.blueLocationOverlay?.updateLocation(
-                        newLocation,
-                        liveData.track,  // GPS track (direction of movement)
-                        magneticHeading,  // Magnetic heading (direction nose is pointing)
-                        orientationMode   // Current orientation mode
-                    )
+                    mapState.blueLocationOverlay?.let { overlay ->
+                        overlay.updateLocation(
+                            newLocation,
+                            liveData.track,  // GPS track (direction of movement)
+                            magneticHeading,  // Magnetic heading (direction nose is pointing)
+                            orientationMode   // Current orientation mode
+                        )
+                        overlay.setVisible(true)
+                    }
 
+                    // Ensure replay sessions also snap the camera to the aircraft once at start
+                    handleInitialCentering(newLocation)
                     // DISABLED: Using Canvas overlay instead of map-based circles
                     // mapState.distanceCirclesOverlay?.updateLocation(newLocation)
 
