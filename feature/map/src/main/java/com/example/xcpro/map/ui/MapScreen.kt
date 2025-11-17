@@ -441,6 +441,7 @@ fun MapScreen(
                     waypointData = mapUiState.waypoints,
                     unitsPreferences = mapUiState.unitsPreferences,
                     ballastUiState = mapViewModel.ballastUiState,
+                    isBallastPillHidden = mapUiState.hideBallastPill,
                     onBallastCommand = mapViewModel::submitBallastCommand,
                     onHamburgerTap = { mapViewModel.onEvent(MapUiEvent.ToggleDrawer) },
                     onHamburgerLongPress = { mapViewModel.onEvent(MapUiEvent.ToggleUiEditMode) },

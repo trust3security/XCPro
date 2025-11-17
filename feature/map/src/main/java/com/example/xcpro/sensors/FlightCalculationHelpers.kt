@@ -104,7 +104,7 @@ internal class FlightCalculationHelpers(
             latitude = gps.latLng.latitude
             longitude = gps.latLng.longitude
         }
-        addLocationToHistory(location, gps.speed.toFloat(), gps.bearing.toFloat())
+        addLocationToHistory(location, gps.speed.value.toFloat(), gps.bearing.toFloat())
     }
 
     /**

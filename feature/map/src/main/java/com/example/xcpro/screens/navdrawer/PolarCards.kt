@@ -16,6 +16,7 @@ import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -24,6 +25,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -115,6 +117,7 @@ fun ConfigCard() {
     var refWeightInput by remember(cfg.referenceWeightKg) {
         mutableStateOf(cfg.referenceWeightKg?.toInt()?.toString() ?: "")
     }
+    val ballastActive = cfg.waterBallastKg > 0.0
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -188,46 +191,85 @@ fun ConfigCard() {
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 OutlinedTextField(
-                    value = refWeightInput,
+                    value = drainMinutesInput,
                     onValueChange = { text ->
-                        val sanitized = text.filter { it.isDigit() }
-                        refWeightInput = sanitized
+                        val sanitized = text.filter { it.isDigit() || it == '.' }
+                        drainMinutesInput = sanitized
                         when {
-                            sanitized.isBlank() -> repo.setReferenceWeightKg(null)
-                            else -> sanitized.toIntOrNull()?.let { value ->
-                                repo.setReferenceWeightKg(value.toDouble())
+                            sanitized.isBlank() -> repo.updateConfig { it.copy(ballastDrainMinutes = 0.0) }
+                            else -> sanitized.toDoubleOrNull()?.let { value ->
+                                repo.updateConfig {
+                                    it.copy(
+                                        ballastDrainMinutes = value.coerceIn(0.5, 60.0)
+                                    )
+                                }
                             }
                         }
                     },
-                    label = { Text("Reference Weight (kg)") },
+                    label = { Text("Drain Time (min)") },
                     modifier = Modifier.weight(1f),
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number)
+                    keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Decimal)
                 )
             }
             OutlinedTextField(
-                value = drainMinutesInput,
+                value = refWeightInput,
                 onValueChange = { text ->
-                    val sanitized = text.filter { it.isDigit() || it == '.' }
-                    drainMinutesInput = sanitized
+                    val sanitized = text.filter { it.isDigit() }
+                    refWeightInput = sanitized
                     when {
-                        sanitized.isBlank() -> repo.updateConfig { it.copy(ballastDrainMinutes = 0.0) }
-                        else -> sanitized.toDoubleOrNull()?.let { value ->
-                            repo.updateConfig {
-                                it.copy(
-                                    ballastDrainMinutes = value.coerceIn(0.5, 60.0)
-                                )
-                            }
+                        sanitized.isBlank() -> repo.setReferenceWeightKg(null)
+                        else -> sanitized.toIntOrNull()?.let { value ->
+                            repo.setReferenceWeightKg(value.toDouble())
                         }
                     }
                 },
-                label = { Text("Drain Time (min)") },
+                label = { Text("Reference Weight (kg)") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Decimal)
+                keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number)
             )
 
-            
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(
+                        text = "Hide Ballast Pill",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = if (ballastActive) {
+                            "Ballast pill forced on while water ballast > 0 kg."
+                        } else {
+                            "Removes the swipe-to-fill overlay on the map."
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (ballastActive) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+                    )
+                }
+                Switch(
+                    checked = cfg.hideBallastPill,
+                    onCheckedChange = { enabled ->
+                        repo.updateConfig { it.copy(hideBallastPill = enabled) }
+                    },
+                    enabled = !ballastActive
+                )
+            }
+
+
         }
     }
 }

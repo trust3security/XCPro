@@ -193,6 +193,7 @@ class MapScreenViewModel @Inject constructor(
         }
         _uiState.update { it.copy(isUiEditMode = mapState.isUIEditMode, isDrawerOpen = false) }
         observeUnits()
+        observeGliderConfig()
         onEvent(MapUiEvent.RefreshWaypoints)
     }
 
@@ -268,6 +269,14 @@ class MapScreenViewModel @Inject constructor(
             .onEach { preferences ->
                 _uiState.update { it.copy(unitsPreferences = preferences) }
                 flightDataManager.updateUnitsPreferences(preferences)
+            }
+            .launchIn(viewModelScope)
+    }
+
+    private fun observeGliderConfig() {
+        gliderRepository.config
+            .onEach { config ->
+                _uiState.update { it.copy(hideBallastPill = config.hideBallastPill) }
             }
             .launchIn(viewModelScope)
     }
