@@ -152,18 +152,25 @@ private fun OrientationModeCard(
             )
             Spacer(modifier = Modifier.height(12.dp))
             MapOrientationMode.values()
-                .filter { it == MapOrientationMode.NORTH_UP || it == MapOrientationMode.TRACK_UP || it == MapOrientationMode.HEADING_UP }
+                .filter {
+                    it == MapOrientationMode.NORTH_UP ||
+                        it == MapOrientationMode.TRACK_UP ||
+                        it == MapOrientationMode.HEADING_UP ||
+                        it == MapOrientationMode.WIND_UP
+                }
                 .forEach { mode ->
                     OrientationModeRow(
                         title = when (mode) {
                             MapOrientationMode.NORTH_UP -> "North Up"
                             MapOrientationMode.TRACK_UP -> "Track Up"
                             MapOrientationMode.HEADING_UP -> "Heading Up"
+                            MapOrientationMode.WIND_UP -> "Wind Up"
                         },
                         description = when (mode) {
                             MapOrientationMode.NORTH_UP -> "Never rotate the map."
                             MapOrientationMode.TRACK_UP -> "Rotate map to match GPS course."
                             MapOrientationMode.HEADING_UP -> "Rotate map to match sensor heading."
+                            MapOrientationMode.WIND_UP -> "Align map with the active wind vector."
                         },
                         selected = selectedMode == mode,
                         onSelect = { onModeSelected(mode) }

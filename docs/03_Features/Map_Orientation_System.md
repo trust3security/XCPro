@@ -124,6 +124,33 @@ The map orientation system controls how the map rotates relative to the aircraft
 
 ---
 
+### 4. WIND_UP (Wind-Aligned Map)
+
+**What It Does**:
+- Map rotates so the active wind vector points up (upwind = top of screen)
+- Aircraft icon still shows actual track, so you see drift relative to wind immediately
+
+**Data Source**:
+- Wind direction/speed solved by `WindRepository` (direction stored as "from")
+- Falls back to last-known value if wind confidence drops
+
+**When To Use**:
+- Final glides in strong drift
+- Planning AAT cylinder entries: quickly see crab angle vs. airflow
+- Training to read wind corrections without interpreting separate overlays
+
+**Compass Widget**:
+- Shows "W" badge when active
+- Source badge displays `W` or `LK` when falling back to last-known bearing
+
+**Rotation Value**: `-(windDirectionFrom + 180°)` (convert FROM -> TO vector, then counter-rotate)
+
+**Fallback Logic**:
+1. Use live wind vector when speed ≥ 0.5 m/s
+2. Else hold last valid wind bearing (compass badge switches to `LK`)
+
+---
+
 ## Data Sources and Requirements
 
 ### NORTH_UP Data Requirements

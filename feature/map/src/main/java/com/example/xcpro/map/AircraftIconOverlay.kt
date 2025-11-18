@@ -43,6 +43,7 @@ fun AircraftIconOverlay(
                     else -> drift
                 }
             }
+            MapOrientationMode.WIND_UP -> gpsTrack
         }
 
         // Size of the aircraft icon

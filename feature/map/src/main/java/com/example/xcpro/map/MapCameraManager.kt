@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.*
+import com.example.xcpro.common.orientation.BearingSource
 import com.example.xcpro.common.orientation.MapOrientationMode
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.camera.CameraPosition
@@ -79,7 +80,11 @@ class MapCameraManager(
     /**
      * Update camera bearing based on orientation
      */
-    fun updateBearing(newBearing: Double, orientationMode: MapOrientationMode) {
+    fun updateBearing(
+        newBearing: Double,
+        orientationMode: MapOrientationMode,
+        bearingSource: BearingSource
+    ) {
         mapState.mapLibreMap?.let { map ->
             try {
                 val bearingChanged = kotlin.math.abs(newBearing - lastCameraBearing) > 2.0
@@ -101,7 +106,10 @@ class MapCameraManager(
 
                     map.moveCamera(CameraUpdateFactory.newCameraPosition(newCameraPosition))
                     lastCameraBearing = newBearing
-                    Log.d(TAG, "Bearing updated: mode=$orientationMode, bearing=$targetBearing")
+                    Log.d(
+                        TAG,
+                        "Bearing updated: mode=$orientationMode, source=$bearingSource, bearing=$targetBearing"
+                    )
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error updating camera bearing: ${e.message}")
@@ -320,13 +328,14 @@ object MapCameraEffects {
         cameraManager: MapCameraManager,
         bearing: Double,
         orientationMode: MapOrientationMode,
-        isValid: Boolean
+        bearingSource: BearingSource
     ) {
-        DisposableEffect(bearing, orientationMode) {
-            if (isValid) {
-                cameraManager.updateBearing(bearing, orientationMode)
-                Log.d("MapCameraEffects", "Orientation updated: mode=$orientationMode, bearing=$bearing")
-            }
+        DisposableEffect(bearing, orientationMode, bearingSource) {
+            cameraManager.updateBearing(bearing, orientationMode, bearingSource)
+            Log.d(
+                "MapCameraEffects",
+                "Orientation updated: mode=$orientationMode, source=$bearingSource, bearing=$bearing"
+            )
             onDispose { }
         }
     }
@@ -339,7 +348,7 @@ object MapCameraEffects {
         cameraManager: MapCameraManager,
         bearing: Double,
         orientationMode: MapOrientationMode,
-        isOrientationValid: Boolean
+        bearingSource: BearingSource
     ) {
         AnimatedZoomEffect(
             cameraManager = cameraManager,
@@ -350,7 +359,7 @@ object MapCameraEffects {
             cameraManager = cameraManager,
             bearing = bearing,
             orientationMode = orientationMode,
-            isValid = isOrientationValid
+            bearingSource = bearingSource
         )
     }
 }

@@ -3,8 +3,10 @@ package com.example.xcpro
 import android.hardware.SensorManager
 import android.util.Log
 import com.example.dfcards.RealTimeFlightData
-import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.common.orientation.OrientationSensorData
+import com.example.xcpro.common.units.UnitsConverter
+import com.example.xcpro.orientation.HeadingResolver
+import com.example.xcpro.orientation.HeadingResolverInput
 import com.example.xcpro.sensors.AttitudeData
 import com.example.xcpro.sensors.CompassData
 import com.example.xcpro.sensors.UnifiedSensorManager
@@ -17,7 +19,8 @@ import kotlinx.coroutines.launch
 
 class OrientationDataSource(
     private val unifiedSensorManager: UnifiedSensorManager,
-    private val scope: CoroutineScope
+    private val scope: CoroutineScope,
+    private val headingResolver: HeadingResolver
 ) {
 
     private val _orientationFlow = MutableStateFlow(OrientationSensorData())
@@ -27,6 +30,7 @@ class OrientationDataSource(
 
     private var sensorJob: Job? = null
     private var isStarted = false
+    private var minSpeedThresholdMs: Double = UnitsConverter.knotsToMs(2.0)
 
     private var filteredMagneticHeading = 0.0
     private var hasComputedHeading = false
@@ -51,6 +55,10 @@ class OrientationDataSource(
     fun updateFromFlightData(flightData: RealTimeFlightData) {
         currentFlightData = flightData
         updateOrientationData()
+    }
+
+    fun updateMinSpeedThreshold(thresholdMs: Double) {
+        minSpeedThresholdMs = thresholdMs
     }
 
     fun start() {
@@ -128,12 +136,30 @@ class OrientationDataSource(
         val now = System.currentTimeMillis()
         val headingFresh = hasComputedHeading && (now - lastReliableHeadingTime) <= HEADING_STALE_THRESHOLD_MS
 
+        val headingSolution = headingResolver.resolve(
+            HeadingResolverInput(
+                compassHeadingDeg = if (hasComputedHeading) filteredMagneticHeading else null,
+                compassReliable = headingFresh,
+                gpsTrackDeg = currentFlightData.track.takeIf { it.isFinite() },
+                groundSpeedMs = currentFlightData.groundSpeed,
+                hasGpsFix = hasGpsFix(),
+                windFromDeg = currentFlightData.windDirection.toDouble()
+                    .takeIf { currentFlightData.windSpeed > 0f },
+                windSpeedMs = currentFlightData.windSpeed.toDouble(),
+                minTrackSpeedMs = minSpeedThresholdMs
+            )
+        )
+
         val orientationData = OrientationSensorData(
             track = currentFlightData.track,
             magneticHeading = filteredMagneticHeading,
             groundSpeed = currentFlightData.groundSpeed,
             isGPSValid = hasGpsFix(),
-            hasValidHeading = headingFresh,
+            hasValidHeading = headingSolution.isValid,
+            compassReliable = headingFresh,
+            windDirectionFrom = currentFlightData.windDirection.toDouble(),
+            windSpeed = currentFlightData.windSpeed.toDouble(),
+            headingSolution = headingSolution,
             timestamp = now
         )
 

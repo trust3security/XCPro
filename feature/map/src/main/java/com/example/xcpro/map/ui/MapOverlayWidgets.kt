@@ -328,7 +328,8 @@ private fun CompassPanel(
                 val nextMode = when (orientationManager.getCurrentMode()) {
                     MapOrientationMode.NORTH_UP -> MapOrientationMode.TRACK_UP
                     MapOrientationMode.TRACK_UP -> MapOrientationMode.HEADING_UP
-                    MapOrientationMode.HEADING_UP -> MapOrientationMode.NORTH_UP
+                    MapOrientationMode.HEADING_UP -> MapOrientationMode.WIND_UP
+                    MapOrientationMode.WIND_UP -> MapOrientationMode.NORTH_UP
                 }
                 orientationManager.setOrientationMode(nextMode)
             }

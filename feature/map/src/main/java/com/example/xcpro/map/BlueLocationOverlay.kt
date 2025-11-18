@@ -143,6 +143,7 @@ class BlueLocationOverlay(
                     val drift = normalizeAngle(gpsTrack - magneticHeading)
                     drift.toFloat()
                 }
+                MapOrientationMode.WIND_UP -> gpsTrack.toFloat()
             }
             layer.setProperties(iconRotate(iconRotation))
 

@@ -4,12 +4,14 @@ import android.content.Context
 import android.util.Log
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.RealTimeFlightData
+import com.example.xcpro.common.orientation.BearingSource
 import com.example.xcpro.common.orientation.MapOrientationMode
 import com.example.xcpro.common.orientation.OrientationController
 import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.common.orientation.OrientationSensorData
 import com.example.xcpro.sensors.UnifiedSensorManager
 import com.example.xcpro.map.BuildConfig
+import com.example.xcpro.orientation.HeadingResolver
 import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -28,7 +30,11 @@ class MapOrientationManager(
     private val unifiedSensorManager: UnifiedSensorManager
 ) : OrientationController {
     private val preferences = MapOrientationPreferences(context)
-    private val orientationDataSource = OrientationDataSource(unifiedSensorManager, scope)
+    private val orientationDataSource = OrientationDataSource(
+        unifiedSensorManager = unifiedSensorManager,
+        scope = scope,
+        headingResolver = HeadingResolver()
+    )
 
     private val _orientationFlow = MutableStateFlow(OrientationData())
     override val orientationFlow: StateFlow<OrientationData> = _orientationFlow.asStateFlow()
@@ -63,6 +69,7 @@ class MapOrientationManager(
 
         // Load saved orientation mode
         minSpeedForTrackMs = preferences.getMinSpeedThreshold()
+        orientationDataSource.updateMinSpeedThreshold(minSpeedForTrackMs)
         debugLog { "Loaded orientation mode: $currentMode" }
 
         // Start orientation data collection
@@ -109,13 +116,18 @@ class MapOrientationManager(
 
         }
 
-        val (bearing, isValid) = calculateBearing(sensorData)
+        val bearingResult = calculateBearing(sensorData)
 
-        val normalizedBearing = normalizeBearing(bearing)
-        if (isValid) {
+        val normalizedBearing = normalizeBearing(bearingResult.bearing)
+        if (bearingResult.isValid) {
             lastValidBearing = normalizedBearing
         }
-        val finalBearing = if (isValid) normalizedBearing else lastValidBearing
+        val finalBearing = if (bearingResult.isValid) normalizedBearing else lastValidBearing
+        val finalSource = if (bearingResult.isValid) {
+            bearingResult.source
+        } else {
+            BearingSource.LAST_KNOWN
+        }
 
         val orientationData = OrientationData(
 
@@ -123,13 +135,15 @@ class MapOrientationManager(
 
             mode = currentMode,
 
-            isValid = isValid,
+            isValid = bearingResult.isValid,
+
+            bearingSource = finalSource,
 
             timestamp = System.currentTimeMillis()
 
         )
 
-        if (!isValid &&
+        if (!bearingResult.isValid &&
             sensorData.isGPSValid &&
             sensorData.groundSpeed < minSpeedForTrackMs &&
             BuildConfig.DEBUG &&
@@ -150,7 +164,7 @@ class MapOrientationManager(
 
         if (System.currentTimeMillis() % 30 == 0L) {
 
-            debugLog { "Orientation: mode=$currentMode, bearing=${finalBearing.toInt()}, valid=$isValid" }
+            debugLog { "Orientation: mode=$currentMode, bearing=${finalBearing.toInt()}, source=$finalSource, valid=${bearingResult.isValid}" }
 
         }
 
@@ -162,7 +176,11 @@ class MapOrientationManager(
 
 
 
-    private data class BearingResult(val bearing: Double, val isValid: Boolean)
+    private data class BearingResult(
+        val bearing: Double,
+        val isValid: Boolean,
+        val source: BearingSource
+    )
 
 
 
@@ -170,17 +188,17 @@ class MapOrientationManager(
 
         return when (currentMode) {
 
-            MapOrientationMode.NORTH_UP -> BearingResult(0.0, true)
+            MapOrientationMode.NORTH_UP -> BearingResult(0.0, true, BearingSource.NONE)
 
 
 
             MapOrientationMode.TRACK_UP -> {
 
-                val valid = sensorData.isGPSValid && sensorData.groundSpeed >= minSpeedForTrackMs
+                val hasTrack = sensorData.isGPSValid && sensorData.track.isFinite()
+                val valid = hasTrack && sensorData.groundSpeed >= minSpeedForTrackMs
+                val bearing = if (hasTrack) sensorData.track else 0.0
 
-                val bearing = if (valid) sensorData.track else 0.0
-
-                BearingResult(bearing, valid)
+                BearingResult(bearing, valid, BearingSource.TRACK)
 
             }
 
@@ -188,17 +206,22 @@ class MapOrientationManager(
 
             MapOrientationMode.HEADING_UP -> {
 
-                when {
+                val solution = sensorData.headingSolution
+                BearingResult(solution.bearingDeg, solution.isValid, solution.source)
 
-                    sensorData.hasValidHeading -> BearingResult(sensorData.magneticHeading, true)
+            }
 
-                    sensorData.isGPSValid && sensorData.groundSpeed >= minSpeedForTrackMs ->
 
-                        BearingResult(sensorData.track, true)
 
-                    else -> BearingResult(0.0, false)
+            MapOrientationMode.WIND_UP -> {
 
+                val hasWind = sensorData.windSpeed > 0.5
+                val windBearing = if (hasWind) {
+                    normalizeBearing(sensorData.windDirectionFrom + 180.0)
+                } else {
+                    0.0
                 }
+                BearingResult(windBearing, hasWind, BearingSource.WIND)
 
             }
 
@@ -257,6 +280,7 @@ class MapOrientationManager(
 
         debugLog { "Map orientation changing: $currentMode -> $mode" }
         minSpeedForTrackMs = preferences.getMinSpeedThreshold()
+        orientationDataSource.updateMinSpeedThreshold(minSpeedForTrackMs)
 
         activeProfile.setMode(mode)
 
@@ -322,6 +346,7 @@ class MapOrientationManager(
         circlingMode = preferences.getCirclingOrientationMode()
 
         minSpeedForTrackMs = preferences.getMinSpeedThreshold()
+        orientationDataSource.updateMinSpeedThreshold(minSpeedForTrackMs)
 
         currentMode = activeProfile.mode()
         lastValidBearing = normalizeBearing(_orientationFlow.value.bearing)

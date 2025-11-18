@@ -33,9 +33,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.xcpro.map.BuildConfig
 import com.example.xcpro.common.orientation.MapOrientationMode
 import com.example.xcpro.common.orientation.OrientationData
+import com.example.xcpro.common.orientation.BearingSource
+import com.example.xcpro.map.BuildConfig
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
@@ -105,6 +106,7 @@ fun CompassWidget(
                     MapOrientationMode.NORTH_UP -> 0f
                     MapOrientationMode.TRACK_UP -> -animatedBearing
                     MapOrientationMode.HEADING_UP -> -animatedBearing
+                    MapOrientationMode.WIND_UP -> -animatedBearing
                 }
                 Log.d(
                     tag,
@@ -135,6 +137,7 @@ fun CompassWidget(
                 MapOrientationMode.NORTH_UP -> 0f
                 MapOrientationMode.TRACK_UP -> -animatedBearing
                 MapOrientationMode.HEADING_UP -> -animatedBearing
+                MapOrientationMode.WIND_UP -> -animatedBearing
             }
 
             rotate(degrees = rotation, pivot = center) {
@@ -203,13 +206,15 @@ fun CompassWidget(
             }
         }
 
-        if (orientation.mode != MapOrientationMode.NORTH_UP) {
+        val modeBadge = when (orientation.mode) {
+            MapOrientationMode.TRACK_UP -> "T"
+            MapOrientationMode.HEADING_UP -> "H"
+            MapOrientationMode.WIND_UP -> "W"
+            else -> ""
+        }
+        if (modeBadge.isNotEmpty()) {
             Text(
-                text = when (orientation.mode) {
-                    MapOrientationMode.TRACK_UP -> "T"
-                    MapOrientationMode.HEADING_UP -> "H"
-                    else -> ""
-                },
+                text = modeBadge,
                 style = TextStyle(
                     fontSize = 8.sp,
                     fontWeight = FontWeight.Bold,
@@ -218,6 +223,27 @@ fun CompassWidget(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .offset(y = (-2).dp)
+            )
+        }
+
+        val sourceLabel = when (orientation.bearingSource) {
+            BearingSource.COMPASS -> "C"
+            BearingSource.WIND -> "W"
+            BearingSource.TRACK -> "T"
+            BearingSource.LAST_KNOWN -> "LK"
+            BearingSource.NONE -> ""
+        }
+        if (sourceLabel.isNotEmpty()) {
+            Text(
+                text = sourceLabel,
+                style = TextStyle(
+                    fontSize = 7.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = if (orientation.isValid) MaterialTheme.colorScheme.secondary else Color.Gray
+                ),
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .offset(y = 2.dp)
             )
         }
     }

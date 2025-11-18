@@ -349,7 +349,7 @@ fun MapScreen(
         cameraManager = cameraManager,
         bearing = orientationData.bearing,
         orientationMode = orientationData.mode,
-        isOrientationValid = orientationData.isValid
+        bearingSource = orientationData.bearingSource
     )
 
 
