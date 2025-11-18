@@ -73,6 +73,7 @@ data class RealTimeFlightData(
     val varioRaw: Double = 0.0,            // Raw barometer differentiation
     val varioGPS: Double = 0.0,            // GPS vertical speed
     val varioComplementary: Double = 0.0,  // Complementary filter (future)
+    val realIgcVario: Double? = null,
     val bruttoAverage30s: Double = 0.0,
     val nettoAverage30s: Double = 0.0,
     val varioSource: String = "UNKNOWN",

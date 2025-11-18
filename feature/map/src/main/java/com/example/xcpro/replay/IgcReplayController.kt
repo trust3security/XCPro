@@ -82,8 +82,10 @@ class IgcReplayController @Inject constructor(
         scope = scope,
         sinkProvider = sinkProvider,
         windStateFlow = windRepository.windState,
-        enableAudio = true
+        enableAudio = true,
+        isReplayMode = true
     )
+    private var lastReplayHeadingDeg: Float? = null
 
     private val _session = MutableStateFlow(SessionState())
     val session: StateFlow<SessionState> = _session.asStateFlow()
@@ -174,6 +176,7 @@ class IgcReplayController @Inject constructor(
             resumeSensors()
             points = emptyList()
             currentIndex = 0
+            lastReplayHeadingDeg = null
             _session.value = SessionState(speedMultiplier = _session.value.speedMultiplier)
             _events.tryEmit(ReplayEvent.Cancelled)
         }
@@ -203,9 +206,9 @@ class IgcReplayController @Inject constructor(
     }
 
     private fun emitSample(current: IgcPoint, previous: IgcPoint?, qnhHpa: Double) {
-        val groundVector = groundVector(current, previous)
-        val groundSpeed = groundVector.magnitude
-        val trackDeg = groundVector.bearingDeg
+        val movement = groundVector(current, previous)
+        val groundSpeed = movement.speedMs
+        val trackDeg = resolveReplayHeading(movement)
         val gpsAltitude = current.gpsAltitude
         replaySensorSource.emitGps(
             latitude = current.latitude,
@@ -225,9 +228,27 @@ class IgcReplayController @Inject constructor(
             accuracy = 3,
             timestamp = current.timestampMillis
         )
+        val igcVario = verticalSpeed(current, previous)
+        replayCalculator.updateReplayRealVario(igcVario)
     }
 
-    private fun groundVector(current: IgcPoint, previous: IgcPoint?): Vector2D {
+    private fun resolveReplayHeading(movement: MovementSnapshot): Float {
+        val derivedHeading = movement.bearingDeg
+        val previousHeading = lastReplayHeadingDeg
+        val shouldReusePrevious = movement.distanceMeters < MIN_REPLAY_HEADING_DISTANCE_M ||
+            movement.speedMs < MIN_REPLAY_HEADING_SPEED_MS
+
+        val nextHeading = when {
+            previousHeading == null -> derivedHeading
+            shouldReusePrevious -> previousHeading
+            else -> lerpHeading(previousHeading, derivedHeading, REPLAY_HEADING_SMOOTHING_ALPHA)
+        }
+
+        lastReplayHeadingDeg = nextHeading
+        return nextHeading
+    }
+
+    private fun groundVector(current: IgcPoint, previous: IgcPoint?): MovementSnapshot {
         val prev = previous ?: current
         val distance = haversine(prev.latitude, prev.longitude, current.latitude, current.longitude)
         val dtSeconds = ((current.timestampMillis - prev.timestampMillis) / 1000.0).coerceAtLeast(1.0)
@@ -235,7 +256,12 @@ class IgcReplayController @Inject constructor(
         val bearing = bearing(prev.latitude, prev.longitude, current.latitude, current.longitude)
         val east = speed * sin(Math.toRadians(bearing))
         val north = speed * cos(Math.toRadians(bearing))
-        return Vector2D(east, north)
+        return MovementSnapshot(
+            speedMs = speed,
+            distanceMeters = distance,
+            east = east,
+            north = north
+        )
     }
 
     private fun verticalSpeed(current: IgcPoint, previous: IgcPoint?): Double {
@@ -296,13 +322,23 @@ class IgcReplayController @Inject constructor(
         }
     }
 
-    private data class Vector2D(val east: Double, val north: Double) {
-        val magnitude: Double = sqrt(east * east + north * north)
+    private data class MovementSnapshot(
+        val speedMs: Double,
+        val distanceMeters: Double,
+        val east: Double,
+        val north: Double
+    ) {
         val bearingDeg: Float
             get() {
                 val angle = (Math.toDegrees(atan2(east, north)) + 360.0) % 360.0
                 return angle.toFloat()
             }
+    }
+
+    private fun lerpHeading(from: Float, to: Float, alpha: Float): Float {
+        val diff = ((to - from + 540f) % 360f) - 180f
+        val blended = (from + diff * alpha + 360f) % 360f
+        return blended
     }
 
     companion object {
@@ -315,6 +351,9 @@ class IgcReplayController @Inject constructor(
         private const val LAPSE_RATE_K_PER_M = 0.0065
         private const val EXPONENT = 5.255
         private const val ASSET_URI_PREFIX = "asset:///"
+        private const val MIN_REPLAY_HEADING_SPEED_MS = 1.0
+        private const val MIN_REPLAY_HEADING_DISTANCE_M = 3.0
+        private const val REPLAY_HEADING_SMOOTHING_ALPHA = 0.2f
     }
 
     private fun prepareSession(log: IgcLog, selection: Selection) {
@@ -338,6 +377,7 @@ class IgcReplayController @Inject constructor(
             durationMillis = duration,
             qnhHpa = qnh
         )
+        lastReplayHeadingDeg = null
         emitSample(points.first(), null, qnh)
     }
 

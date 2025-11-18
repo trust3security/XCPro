@@ -108,6 +108,7 @@ internal fun convertToRealTimeFlightData(completeData: CompleteFlightData): Real
         varioRaw = completeData.varioRaw.value,
         varioGPS = completeData.varioGPS.value,
         varioComplementary = completeData.varioComplementary.value,
+        realIgcVario = completeData.realIgcVario?.value,
         bruttoAverage30s = completeData.bruttoAverage30s.value,
         nettoAverage30s = completeData.nettoAverage30s.value,
         varioSource = completeData.varioSource,

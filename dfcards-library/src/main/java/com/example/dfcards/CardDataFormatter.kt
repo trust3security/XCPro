@@ -22,7 +22,8 @@ internal object CardDataFormatter {
             "gps_alt", "baro_alt", "agl", "start_alt" ->
                 "-- ${UnitsFormatter.altitude(AltitudeM(0.0), units).unitLabel}"
             "vario", "vario_optimized", "vario_legacy", "vario_raw", "vario_gps",
-            "vario_complementary", "thermal_avg", "thermal_tc_avg", "thermal_t_avg",
+            "vario_complementary", "real_igc_vario",
+            "thermal_avg", "thermal_tc_avg", "thermal_t_avg",
             "vario_avg30", "netto_avg30", "netto" ->
                 "-- ${UnitsFormatter.verticalSpeed(VerticalSpeedMs(0.0), units).unitLabel}"
             "thermal_tc_gain" ->
@@ -107,6 +108,18 @@ internal object CardDataFormatter {
                 UnitsFormatter.verticalSpeed(VerticalSpeedMs(liveData.varioComplementary), units).text,
                 "COMP"
             )
+
+            "real_igc_vario" -> {
+                val sample = liveData.realIgcVario
+                if (sample != null) {
+                    Pair(
+                        UnitsFormatter.verticalSpeed(VerticalSpeedMs(sample), units).text,
+                        "REAL IGC"
+                    )
+                } else {
+                    Pair(placeholderFor(cardId), "NO IGC")
+                }
+            }
 
             "ias" -> {
                 val indicatedMs = liveData.indicatedAirspeed.takeIf { it.isFinite() && it > 0.1 }

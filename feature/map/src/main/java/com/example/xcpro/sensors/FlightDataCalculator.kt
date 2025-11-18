@@ -11,6 +11,7 @@ import com.example.dfcards.filters.Modern3StateKalmanFilter
 import com.example.xcpro.audio.VarioAudioEngine
 import com.example.xcpro.glider.StillAirSinkProvider
 import com.example.xcpro.vario.*  // NEW: Vario implementations for side-by-side testing
+import com.example.xcpro.sensors.VarioDiagnosticsSample
 import com.example.xcpro.weather.wind.data.WindState
 import com.example.xcpro.weather.wind.model.WindSource
 import com.example.xcpro.weather.wind.model.WindVector
@@ -56,7 +57,8 @@ class FlightDataCalculator(
     private val scope: CoroutineScope,
     private val sinkProvider: StillAirSinkProvider,
     private val windStateFlow: StateFlow<WindState>,
-    private val enableAudio: Boolean = true
+    private val enableAudio: Boolean = true,
+    private val isReplayMode: Boolean = false
 ) {
 
     companion object {
@@ -98,6 +100,7 @@ class FlightDataCalculator(
         private const val DISPLAY_SMOOTH_TIME_S = 0.6
         private const val DISPLAY_DECAY_FACTOR = 0.9
         private const val NETTO_DISPLAY_WINDOW_MS = 5_000L
+        private const val REPLAY_VARIO_MAX_AGE_MS = 5_000L
     }
 
     // History for calculations (shared with helper) - must be initialized first
@@ -142,6 +145,16 @@ class FlightDataCalculator(
     private val _flightDataFlow = MutableStateFlow<CompleteFlightData?>(null)
     val flightDataFlow: StateFlow<CompleteFlightData?> = _flightDataFlow.asStateFlow()
 
+    private val _diagnosticsFlow = MutableStateFlow<VarioDiagnosticsSample?>(null)
+    val diagnosticsFlow: StateFlow<VarioDiagnosticsSample?> = _diagnosticsFlow.asStateFlow()
+
+    @Volatile
+    private var replayRealVarioMs: Double? = null
+    @Volatile
+    private var replayRealVarioTimestamp: Long = 0L
+
+    private var lastReplayBaroTimestamp: Long = 0L
+
     // Tracking for delta time calculation
     private var lastUpdateTime = 0L
     private var lastVarioUpdateTime = 0L  // For high-speed vario loop
@@ -169,6 +182,7 @@ class FlightDataCalculator(
     private var cachedBaroData: BaroData? = null
     private var cachedCompassData: CompassData? = null
     @Volatile private var imuAssistEnabled: Boolean = true
+    @Volatile private var latestTeVario: Double? = null
     private val bruttoAverageWindow = FixedSampleAverageWindow(AVERAGE_WINDOW_SECONDS)
     private val nettoAverageWindow = FixedSampleAverageWindow(AVERAGE_WINDOW_SECONDS)
     private val nettoDisplayWindow = TimedAverageWindow(NETTO_DISPLAY_WINDOW_MS)
@@ -238,10 +252,19 @@ class FlightDataCalculator(
 
         val currentTime = System.currentTimeMillis()
 
-        val deltaTime = if (lastVarioUpdateTime > 0) {
-            (currentTime - lastVarioUpdateTime) / 1000.0
+        val replayDeltaTime = if (isReplayMode && lastReplayBaroTimestamp > 0L) {
+            val deltaMs = (baro.timestamp - lastReplayBaroTimestamp).coerceAtLeast(1L)
+            deltaMs / 1000.0
         } else {
-            0.02 // 50Hz = 20ms = 0.02s default
+            null
+        }
+        val deltaTime = when {
+            replayDeltaTime != null -> replayDeltaTime
+            lastVarioUpdateTime > 0 -> (currentTime - lastVarioUpdateTime) / 1000.0
+            else -> 0.02 // 50Hz = 20ms = 0.02s default
+        }
+        if (isReplayMode) {
+            lastReplayBaroTimestamp = baro.timestamp
         }
 
         if (deltaTime < 0.01) {
@@ -267,23 +290,32 @@ class FlightDataCalculator(
         if (previousBaroResult != null) {
             val qnhDelta = abs(baroResult.qnh - previousBaroResult.qnh)
             val altitudeDelta = abs(baroResult.altitudeMeters - previousBaroResult.altitudeMeters)
-            if (qnhDelta > QNH_JUMP_THRESHOLD_HPA || altitudeDelta > QNH_ALTITUDE_JUMP_THRESHOLD_METERS) {
+            val qnhJumpDetected = qnhDelta > QNH_JUMP_THRESHOLD_HPA ||
+                altitudeDelta > QNH_ALTITUDE_JUMP_THRESHOLD_METERS
+            if (qnhJumpDetected) {
                 val qnhLabel = String.format(Locale.US, "%.2f", qnhDelta)
                 val altitudeLabel = String.format(Locale.US, "%.1f", altitudeDelta)
-                Log.w(
-                    TAG,
-                    "QNH jump detected Δ${qnhLabel} hPa / Δ${altitudeLabel} m – resetting vario filters"
-                )
-                modernVarioFilter.reset()
-                varioOptimized.reset()
-                varioLegacy.reset()
-                varioRaw.reset()
-                varioGPS.reset()
-                varioComplementary.reset()
-                baroFilter.reset()
-                pressureKalmanFilter.reset(smoothedPressure, baro.timestamp)
-                cachedVarioResult = null
-                varioValidUntil = 0L
+                if (isReplayMode) {
+                    Log.w(
+                        TAG,
+                        "Replay QNH jump Δ${qnhLabel} hPa / Δ${altitudeLabel} m - ignoring reset to keep vario stable"
+                    )
+                } else {
+                    Log.w(
+                        TAG,
+                        "QNH jump detected Δ${qnhLabel} hPa / Δ${altitudeLabel} m - resetting vario filters"
+                    )
+                    modernVarioFilter.reset()
+                    varioOptimized.reset()
+                    varioLegacy.reset()
+                    varioRaw.reset()
+                    varioGPS.reset()
+                    varioComplementary.reset()
+                    baroFilter.reset()
+                    pressureKalmanFilter.reset(smoothedPressure, baro.timestamp)
+                    cachedVarioResult = null
+                    varioValidUntil = 0L
+                }
             }
         }
 
@@ -376,7 +408,7 @@ class FlightDataCalculator(
         }
 
         varioValidUntil = currentTime + VARIO_VALIDITY_MS
-        audioEngine.updateVerticalSpeed(varioResult.verticalSpeed)
+        updateAudioFeed(currentTime, varioResult.verticalSpeed)
 
         cachedVarioResult = varioResult
         cachedBaroResult = baroResult
@@ -444,9 +476,7 @@ class FlightDataCalculator(
 
         // Use TE-compensated vertical speed (removes stick thermals!)
         val teVario = if (currentTime <= varioValidUntil) teVerticalSpeed else null
-        if (enableAudio && teVario == null && currentTime > varioValidUntil) {
-            audioEngine.setSilence()
-        }
+        latestTeVario = teVario
 
         val gpsVarioValue = varioGPS.getVerticalSpeed().takeIf { it.isFinite() } ?: 0.0
         val bruttoVario = teVario ?: gpsVarioValue
@@ -570,6 +600,13 @@ class FlightDataCalculator(
             append("+50Hz")  // Priority 2: High-speed vario
         }
 
+        val replayIgcVario = if (isReplayMode && replayRealVarioTimestamp != 0L) {
+            val ageMs = currentTime - replayRealVarioTimestamp
+            if (ageMs in 0..REPLAY_VARIO_MAX_AGE_MS) replayRealVarioMs else null
+        } else {
+            null
+        }
+
         // Create complete flight data
         val flightData = CompleteFlightData(
             gps = gps,
@@ -612,6 +649,7 @@ class FlightDataCalculator(
             varioRaw = VerticalSpeedMs(varioResults["raw"] ?: 0.0),
             varioGPS = VerticalSpeedMs(varioResults["gps"] ?: 0.0),
             varioComplementary = VerticalSpeedMs(varioResults["complementary"] ?: 0.0),
+            realIgcVario = replayIgcVario?.let { VerticalSpeedMs(it) },
             timestamp = currentTime,
             dataQuality = dataQuality
         )
@@ -642,6 +680,9 @@ class FlightDataCalculator(
         audioEngine.release()
         pressureKalmanFilter.reset()
         varioValidUntil = 0L
+        replayRealVarioMs = null
+        replayRealVarioTimestamp = 0L
+        lastReplayBaroTimestamp = 0L
         bruttoAverageWindow.clear()
         nettoAverageWindow.clear()
         nettoDisplayWindow.clear()
@@ -845,6 +886,12 @@ class FlightDataCalculator(
         Log.i(TAG, "Manual QNH applied: ${qnhHPa}")
     }
 
+    fun updateReplayRealVario(realVarioMs: Double?) {
+        if (!isReplayMode) return
+        replayRealVarioMs = realVarioMs
+        replayRealVarioTimestamp = System.currentTimeMillis()
+    }
+
     /**
      * Reset to standard atmosphere and allow auto calibration.
      */
@@ -854,4 +901,18 @@ class FlightDataCalculator(
         cachedVarioResult = null
         Log.i(TAG, "QNH reset to standard atmosphere (auto calibration enabled)")
     }
+
+    private fun updateAudioFeed(currentTime: Long, rawVario: Double) {
+        if (!enableAudio) {
+            return
+        }
+
+        val teSample = latestTeVario
+        when {
+            teSample != null && currentTime <= varioValidUntil -> audioEngine.updateVerticalSpeed(teSample)
+            currentTime <= varioValidUntil -> audioEngine.updateVerticalSpeed(rawVario)
+            else -> audioEngine.setSilence()
+        }
+    }
 }
+
