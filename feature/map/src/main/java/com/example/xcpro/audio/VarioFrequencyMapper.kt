@@ -34,6 +34,12 @@ class VarioFrequencyMapper(
             VarioAudioProfile.PARAGLIDING -> mapParagliding(verticalSpeedMs)
             VarioAudioProfile.SILENT_SINK -> mapSilentSink(verticalSpeedMs)
             VarioAudioProfile.FULL_AUDIO -> mapFullAudio(verticalSpeedMs)
+            VarioAudioProfile.SMART_THERMAL -> AudioParams(
+                frequencyHz = 0.0,
+                cycleTimeMs = 0.0,
+                dutyCycle = 0.0,
+                mode = AudioMode.SMART
+            )
         }
     }
 
@@ -208,7 +214,8 @@ data class AudioParams(
 enum class AudioMode {
     BEEPING,      // Beep pattern (lift)
     CONTINUOUS,   // Continuous tone (strong sink)
-    SILENCE       // No audio
+    SILENCE,      // No audio
+    SMART         // Smart thermal profile (adaptive cues)
 }
 
 /**
@@ -243,8 +250,9 @@ data class VarioAudioSettings(
  * Variometer audio profile presets
  */
 enum class VarioAudioProfile {
-    COMPETITION,   // XCTracer-style, silence for sink
-    PARAGLIDING,   // Gentler, slower beeps
-    SILENT_SINK,   // No sink audio (most common)
-    FULL_AUDIO     // Both lift and sink audio
+    COMPETITION,    // XCTracer-style, silence for sink
+    PARAGLIDING,    // Gentler, slower beeps
+    SILENT_SINK,    // No sink audio (most common)
+    FULL_AUDIO,     // Both lift and sink audio
+    SMART_THERMAL   // Adaptive envelopes/harmonics tuned for thermalling
 }

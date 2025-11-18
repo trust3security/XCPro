@@ -144,6 +144,7 @@ data class CompleteFlightData(
     val varioRaw: VerticalSpeedMs = VerticalSpeedMs(0.0),            // Raw barometer differentiation
     val varioGPS: VerticalSpeedMs = VerticalSpeedMs(0.0),            // GPS vertical speed
     val varioComplementary: VerticalSpeedMs = VerticalSpeedMs(0.0),  // Complementary filter (future)
+    val realIgcVario: VerticalSpeedMs? = null,
 
     // Metadata
     val timestamp: Long,

@@ -39,6 +39,10 @@ data class VarioFilterDiagnostics(
     // Noise estimates (runtime)
     val estimatedBaroNoise: Double,    // m - Estimated from innovation variance
     val estimatedAccelNoise: Double,   // m/s² - Estimated from innovation variance
+    val adaptiveSigmaBaro: Double,     // (m/s)^2 variance driving adaptive R
+    val adaptiveMeasurementNoise: Double, // m - runtime R_altitude
+    val adaptiveProcessNoise: Double,  // process noise Q[2][2]
+    val adaptiveTauSeconds: Double,    // effective smoothing constant
 
     // Sensor health
     val baroHealthScore: Double,       // 0-1 - Is barometer behaving normally?
@@ -64,6 +68,10 @@ class VarioFilterDiagnosticsCollector {
     private var lastAccelInnovation = 0.0
     private var lastKalmanGainBaro = 0.0
     private var lastKalmanGainAccel = 0.0
+    private var lastAdaptiveSigma = 0.0
+    private var lastAdaptiveMeasurementNoise = 0.0
+    private var lastAdaptiveProcessNoise = 0.0
+    private var lastAdaptiveTau = 0.0
 
     private val MAX_HISTORY = 100
 
@@ -95,6 +103,18 @@ class VarioFilterDiagnosticsCollector {
             imuUpdateTimes.removeAt(0)
             accelInnovations.removeAt(0)
         }
+    }
+
+    fun recordAdaptiveStats(
+        sigmaBaro: Double,
+        measurementNoise: Double,
+        processNoise: Double,
+        tauSeconds: Double
+    ) {
+        lastAdaptiveSigma = sigmaBaro
+        lastAdaptiveMeasurementNoise = measurementNoise
+        lastAdaptiveProcessNoise = processNoise
+        lastAdaptiveTau = tauSeconds
     }
 
     /**
@@ -212,6 +232,10 @@ class VarioFilterDiagnosticsCollector {
             isConverged = isConverged,
             estimatedBaroNoise = estimatedBaroNoise,
             estimatedAccelNoise = estimatedAccelNoise,
+            adaptiveSigmaBaro = lastAdaptiveSigma,
+            adaptiveMeasurementNoise = lastAdaptiveMeasurementNoise,
+            adaptiveProcessNoise = lastAdaptiveProcessNoise,
+            adaptiveTauSeconds = lastAdaptiveTau,
             baroHealthScore = baroHealthScore,
             imuHealthScore = imuHealthScore,
             gpsHealthScore = gpsHealthScore,

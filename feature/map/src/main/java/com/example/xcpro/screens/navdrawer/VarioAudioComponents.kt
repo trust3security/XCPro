@@ -139,6 +139,7 @@ internal fun VarioAudioProfileCard(
                                 VarioAudioProfile.PARAGLIDING -> "Gentler, slower beeps"
                                 VarioAudioProfile.SILENT_SINK -> "No sink audio (most common)"
                                 VarioAudioProfile.FULL_AUDIO -> "Both lift and sink audio"
+                                VarioAudioProfile.SMART_THERMAL -> "Adaptive \"smart\" tones with harmonics"
                             },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant

@@ -1,6 +1,7 @@
 package com.example.dfcards.filters
 
 import kotlin.math.abs
+import kotlin.math.sqrt
 
 /**
  * Complementary Vario Filter - Zero-lag alternative to Kalman filter
@@ -26,11 +27,9 @@ import kotlin.math.abs
  *
  * Performance target: <50ms thermal detection lag
  */
-class ComplementaryVarioFilter {
-
-    // Filter coefficients (sum must equal 1.0)
-    private val ALPHA_BARO = 0.92   // Low-pass: Barometer (slow but accurate)
-    private val ALPHA_ACCEL = 0.08  // High-pass: Accelerometer (fast but drifts)
+class ComplementaryVarioFilter(
+    private val config: AdaptiveVarioConfig = AdaptiveVarioConfig()
+) {
 
     // State variables
     private var baroVerticalSpeed = 0.0       // m/s from barometer differentiation
@@ -44,6 +43,8 @@ class ComplementaryVarioFilter {
 
     // Smoothing for barometer vertical speed
     private var lastBaroVSpeed = 0.0
+    private val baroVarianceTracker = AdaptiveVarianceTracker(config.baroVarianceWindowSize)
+    private var lastFusedVerticalSpeed = 0.0
 
     /**
      * Update filter with new sensor readings
@@ -73,7 +74,7 @@ class ComplementaryVarioFilter {
         // Prevent invalid delta times
         if (deltaTime <= 0.001 || deltaTime > 1.0) {
             return ComplementaryVarioResult(
-                (ALPHA_BARO * baroVerticalSpeed + ALPHA_ACCEL * accelVerticalSpeed),
+                lastFusedVerticalSpeed,
                 baroVerticalSpeed,
                 accelVerticalSpeed
             )
@@ -92,6 +93,7 @@ class ComplementaryVarioFilter {
         val baroLPF = 0.7  // Low-pass coefficient
         baroVerticalSpeed = baroLPF * rawBaroVSpeed + (1.0 - baroLPF) * lastBaroVSpeed
         lastBaroVSpeed = baroVerticalSpeed
+        baroVarianceTracker.add(baroVerticalSpeed)
 
         // ═══════════════════════════════════════════════════
         // ACCELEROMETER PATH (High-pass filter)
@@ -116,16 +118,21 @@ class ComplementaryVarioFilter {
         // COMPLEMENTARY FUSION
         // ═══════════════════════════════════════════════════
 
+        val sigma2Baro = baroVarianceTracker.variance()
+        val tauEff = (config.tauBaseSeconds / (1.0 + sqrt(sigma2Baro)))
+            .coerceIn(config.tauMinSeconds, config.tauMaxSeconds)
+        val accelWeight = (deltaTime / (tauEff + deltaTime)).coerceIn(0.0, 1.0)
+        val baroWeight = 1.0 - accelWeight
+
         // Fuse barometer (accurate, slow) + accelerometer (fast, drifts)
-        // ALPHA_BARO dominates for long-term accuracy
-        // ALPHA_ACCEL adds instant response to rapid changes
-        val fusedVerticalSpeed = ALPHA_BARO * baroVerticalSpeed + ALPHA_ACCEL * accelVerticalSpeed
+        val fusedVerticalSpeed = baroWeight * baroVerticalSpeed + accelWeight * accelVerticalSpeed
 
         // Apply deadband (eliminate noise around zero)
         val deadband = 0.02  // m/s (4 fpm - same as Kalman filter)
         val finalVerticalSpeed = if (abs(fusedVerticalSpeed) < deadband) 0.0 else fusedVerticalSpeed
 
         lastUpdateTime = currentTime
+        lastFusedVerticalSpeed = finalVerticalSpeed
 
         return ComplementaryVarioResult(
             verticalSpeed = finalVerticalSpeed,
@@ -144,20 +151,22 @@ class ComplementaryVarioFilter {
         lastUpdateTime = 0L
         accelBias = 0.0
         lastBaroVSpeed = 0.0
+        lastFusedVerticalSpeed = 0.0
+        baroVarianceTracker.reset()
     }
 
     /**
      * Get current vertical speed without updating
      */
     fun getVerticalSpeed(): Double {
-        return ALPHA_BARO * baroVerticalSpeed + ALPHA_ACCEL * accelVerticalSpeed
+        return lastFusedVerticalSpeed
     }
 
     /**
      * Get diagnostic info
      */
     fun getDiagnostics(): String {
-        val vSpeed = ALPHA_BARO * baroVerticalSpeed + ALPHA_ACCEL * accelVerticalSpeed
+        val vSpeed = lastFusedVerticalSpeed
         return "Comp: V/S=${String.format("%.2f", vSpeed)}m/s, " +
                "Baro=${String.format("%.2f", baroVerticalSpeed)}m/s, " +
                "Accel=${String.format("%.2f", accelVerticalSpeed)}m/s, " +

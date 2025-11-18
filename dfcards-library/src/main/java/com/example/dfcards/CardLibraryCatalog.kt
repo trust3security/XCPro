@@ -137,6 +137,16 @@ private val varioCards = listOf(
         unit = "m/s",
         primaryFontSize = 15,
         unitFontSize = 9
+    ),
+    CardDefinition(
+        id = "real_igc_vario",
+        title = "REAL IGC",
+        description = "Raw lift/sink directly from the active IGC replay sample",
+        category = CardCategory.VARIO,
+        icon = Icons.Filled.Route,
+        unit = "m/s",
+        primaryFontSize = 15,
+        unitFontSize = 9
     )
 )
 
