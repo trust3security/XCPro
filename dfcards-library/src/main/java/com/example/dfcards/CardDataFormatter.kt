@@ -13,6 +13,8 @@ import kotlin.math.roundToInt
 
 internal object CardDataFormatter {
 
+    private const val VARIO_NOISE_FLOOR = 1e-3
+
     fun mapLiveDataToCard(
         cardId: String,
         liveData: RealTimeFlightData?,
@@ -78,10 +80,16 @@ internal object CardDataFormatter {
                 }
             }
 
-            "vario" -> Pair(
-                UnitsFormatter.verticalSpeed(VerticalSpeedMs(liveData.displayVario), units).text,
-                if (liveData.varioValid) liveData.varioSource.ifBlank { "TE" } else "STALE"
-            )
+            "vario" -> {
+                val varioValue = liveData.primaryVarioValue()
+                val formatted = UnitsFormatter.verticalSpeed(VerticalSpeedMs(varioValue), units)
+                val source = if (liveData.varioValid) {
+                    liveData.varioSource.ifBlank { "TE" }
+                } else {
+                    "STALE"
+                }
+                Pair(formatted.text, source)
+            }
 
             "vario_optimized" -> Pair(
                 UnitsFormatter.verticalSpeed(VerticalSpeedMs(liveData.varioOptimized), units).text,
@@ -385,5 +393,24 @@ internal object CardDataFormatter {
         val normalized = ((directionFromDeg % 360.0) + 360.0) % 360.0
         val index = ((normalized + 22.5) / 45.0).toInt() % arrows.size
         return arrows[index]
+    }
+
+    private fun RealTimeFlightData.primaryVarioValue(): Double {
+        val finiteDisplay = displayVario.takeIf { it.isFinite() }
+        if (varioValid && finiteDisplay != null) {
+            return finiteDisplay
+        }
+
+        val fallback = listOfNotNull(
+            finiteDisplay?.takeIf { abs(it) > VARIO_NOISE_FLOOR },
+            verticalSpeed.takeIf { it.isFinite() && abs(it) > VARIO_NOISE_FLOOR },
+            varioOptimized.takeIf { it.isFinite() && abs(it) > VARIO_NOISE_FLOOR },
+            varioLegacy.takeIf { it.isFinite() && abs(it) > VARIO_NOISE_FLOOR },
+            varioRaw.takeIf { it.isFinite() && abs(it) > VARIO_NOISE_FLOOR },
+            varioGPS.takeIf { it.isFinite() && abs(it) > VARIO_NOISE_FLOOR },
+            varioComplementary.takeIf { it.isFinite() && abs(it) > VARIO_NOISE_FLOOR }
+        ).firstOrNull()
+
+        return fallback ?: finiteDisplay ?: verticalSpeed.takeIf { it.isFinite() } ?: 0.0
     }
 }
