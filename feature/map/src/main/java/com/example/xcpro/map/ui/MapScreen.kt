@@ -60,6 +60,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.KeyboardReturn
 import androidx.compose.material.icons.filled.Menu
@@ -443,6 +444,19 @@ fun MapScreen(
                     showReplayDevFab = mapViewModel.showReplayDebugFab,
                     onReplayDevFabClick = mapViewModel::onReplayDevAutoplay
                 )
+                FloatingActionButton(
+                    onClick = {},
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(16.dp),
+                    containerColor = MaterialTheme.colorScheme.error
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Red action",
+                        tint = Color.White
+                    )
+                }
                 if (mapUiState.isLoadingWaypoints) {
                     Box(
                         modifier = Modifier
