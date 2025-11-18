@@ -1,6 +1,7 @@
 package com.example.dfcards.filters
 
 import kotlin.math.abs
+import kotlin.math.sqrt
 
 /**
  * Modern 3-State Kalman Filter for Variometer
@@ -23,7 +24,9 @@ import kotlin.math.abs
  * - XCTracer
  * - ESP32_IMU_BARO_GPS_VARIO
  */
-class Modern3StateKalmanFilter {
+class Modern3StateKalmanFilter(
+    private val config: AdaptiveVarioConfig = AdaptiveVarioConfig()
+) {
 
     // State vector: [altitude(m), velocity(m/s), acceleration(m/s²)]
     private val state = Array(3) { 0.0 }
@@ -39,6 +42,12 @@ class Modern3StateKalmanFilter {
     // Old value 2.0m was 10-25x too conservative, causing slow response
     private var R_altitude = 0.5      // Barometer noise (m) - optimized for BMP280
     private var R_accel = 0.3         // Accelerometer noise (m/s²) - more realistic
+
+    private val baroVarianceTracker = AdaptiveVarianceTracker(config.baroVarianceWindowSize)
+    private val accelHighPassFilter = HighPassFilter(config.accelHighPassTauSeconds)
+    private var lastBaroAltitudeForVariance: Double? = null
+    private var smoothedVelocity = 0.0
+    private var hasSmoothedVelocity = false
 
     private var isInitialized = false
     private var lastUpdateTime = 0L
@@ -85,17 +94,32 @@ class Modern3StateKalmanFilter {
             return ModernVarioResult(baroAltitude, 0.0, verticalAccel, 0.5)
         }
 
-        // Adaptive barometer noise based on motion state
-        // Scaled proportionally with new base (0.5 instead of 2.0 = 4x reduction)
-        R_altitude = when {
-            gpsSpeed < 0.5 -> 5.0    // Stationary: Heavy filtering (ignore HVAC/pressure noise)
-            gpsSpeed < 2.0 -> 2.5    // Slow movement: Moderate filtering
-            gpsSpeed < 5.0 -> 1.25   // Moderate speed: Light filtering
-            else -> 0.5              // Fast flight: Trust barometer (new optimized baseline)
-        }
+        val dtSeconds = deltaTime.coerceAtLeast(1e-3)
 
-        // Adaptive process noise based on flight conditions
-        adaptProcessNoise(state[1], abs(verticalAccel))
+        // Track short-term variance of the differentiated barometer signal
+        lastBaroAltitudeForVariance?.let { previousAltitude ->
+            val baroVerticalSpeed = (baroAltitude - previousAltitude) / dtSeconds
+            baroVarianceTracker.add(baroVerticalSpeed)
+        }
+        lastBaroAltitudeForVariance = baroAltitude
+
+        val sigma2Baro = baroVarianceTracker.variance()
+
+        // Adaptive barometer measurement noise derived from current variance
+        R_altitude = (config.baseBaroMeasurementNoise * (1.0 + config.baroVarianceScale * sigma2Baro))
+            .coerceIn(config.measurementNoiseMin, config.measurementNoiseMax)
+
+        // Adaptive process noise: allow faster state changes when the high-pass accel spikes
+        val accelHighPass = accelHighPassFilter.update(verticalAccel, dtSeconds)
+        val processNoise = if (abs(accelHighPass) > config.accelBoostThreshold) {
+            config.baseProcessNoise + config.processNoiseBoost
+        } else {
+            config.baseProcessNoise
+        }
+        Q[2][2] = processNoise
+
+        val tauEff = (config.tauBaseSeconds / (1.0 + sqrt(sigma2Baro)))
+            .coerceIn(config.tauMinSeconds, config.tauMaxSeconds)
 
         // ═══════════════════════════════════════════════════
         // PREDICTION STEP (Time Update)
@@ -217,37 +241,32 @@ class Modern3StateKalmanFilter {
         // Calculate confidence
         val confidence = calculateConfidence(abs(y1), abs(y2), K1[0], K2[2])
 
+        val smoothingAlpha = (dtSeconds / (tauEff + dtSeconds)).coerceIn(0.0, 1.0)
+        if (!hasSmoothedVelocity) {
+            smoothedVelocity = state[1]
+            hasSmoothedVelocity = true
+        } else {
+            smoothedVelocity += smoothingAlpha * (state[1] - smoothedVelocity)
+        }
+
         // Record diagnostics (Priority 7: VARIO_IMPROVEMENTS.md)
         diagnosticsCollector.recordBaroUpdate(y1, K1[0])
         diagnosticsCollector.recordIMUUpdate(y2, K2[2])
+        diagnosticsCollector.recordAdaptiveStats(
+            sigmaBaro = sigma2Baro,
+            measurementNoise = R_altitude,
+            processNoise = processNoise,
+            tauSeconds = tauEff
+        )
 
         lastUpdateTime = currentTime
 
         return ModernVarioResult(
             altitude = state[0],
-            verticalSpeed = state[1],  // This is the VARIO reading!
+            verticalSpeed = smoothedVelocity,  // This is the VARIO reading!
             acceleration = state[2],
             confidence = confidence
         )
-    }
-
-    /**
-     * Adapt process noise based on flight conditions
-     */
-    private fun adaptProcessNoise(velocity: Double, accelMagnitude: Double) {
-        // Base process noise for acceleration
-        val baseNoise = when {
-            // Thermal flying - high acceleration changes
-            accelMagnitude > 1.5 || abs(velocity) > 2.0 -> 0.8
-
-            // Moderate conditions
-            accelMagnitude > 0.5 || abs(velocity) > 0.5 -> 0.3
-
-            // Calm flying
-            else -> 0.1
-        }
-
-        Q[2][2] = baseNoise
     }
 
     /**

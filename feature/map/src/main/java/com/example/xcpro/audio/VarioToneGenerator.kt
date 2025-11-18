@@ -19,6 +19,16 @@ import kotlin.math.sin
  * - CPU usage: <5%
  * - Zero dropouts
  */
+data class ToneEnvelope(
+    val attackMs: Long = 0,
+    val releaseMs: Long = 0
+)
+
+data class ToneComponent(
+    val ratio: Double,
+    val gain: Double
+)
+
 class VarioToneGenerator {
 
     companion object {
@@ -32,18 +42,7 @@ class VarioToneGenerator {
     private var isInitialized = false
     private var currentVolume = 0.8f
 
-    // Pre-calculated wave table for efficiency (1 second at max frequency)
-    private val waveTableSize = SAMPLE_RATE
-    private val sineWaveTable = FloatArray(waveTableSize)
     private val silenceBuffer = ShortArray(SAMPLE_RATE)
-
-    init {
-        // Pre-calculate sine wave for efficiency
-        for (i in 0 until waveTableSize) {
-            val angle = 2.0 * PI * i / waveTableSize
-            sineWaveTable[i] = sin(angle).toFloat()
-        }
-    }
 
     /**
      * Initialize the AudioTrack
@@ -107,7 +106,13 @@ class VarioToneGenerator {
      * @param durationMs Duration in milliseconds
      * @param volume Volume 0.0 to 1.0
      */
-    fun playTone(frequencyHz: Double, durationMs: Long, volume: Float = currentVolume) {
+    fun playTone(
+        frequencyHz: Double,
+        durationMs: Long,
+        volume: Float = currentVolume,
+        envelope: ToneEnvelope = ToneEnvelope(),
+        components: List<ToneComponent> = emptyList()
+    ) {
         if (!isInitialized) {
             Log.w(TAG, "Not initialized, call initialize() first")
             return
@@ -122,19 +127,41 @@ class VarioToneGenerator {
 
         try {
             // Calculate number of samples for duration
-            val numSamples = (durationMs * SAMPLE_RATE / 1000).toInt()
+            val numSamples = maxOf(1, ((durationMs * SAMPLE_RATE) / 1000L).toInt())
             val samples = ShortArray(numSamples)
 
-            // Generate sine wave using pre-calculated table
-            val samplesPerCycle = SAMPLE_RATE / frequencyHz
+            val baseAngularStep = 2.0 * PI * frequencyHz / SAMPLE_RATE
+            val attackSamples = ((envelope.attackMs * SAMPLE_RATE) / 1000L)
+                .toInt()
+                .coerceAtMost(numSamples)
+            val releaseSamples = ((envelope.releaseMs * SAMPLE_RATE) / 1000L)
+                .toInt()
+                .coerceAtMost(numSamples - 1)
+            val releaseStart = if (releaseSamples == 0) numSamples else maxOf(numSamples - releaseSamples, 0)
+
+            var phase = 0.0
+            val componentSteps = components.map { 2.0 * PI * frequencyHz * it.ratio / SAMPLE_RATE }
+            val componentPhases = DoubleArray(components.size)
 
             for (i in 0 until numSamples) {
-                // Use wave table with interpolation for accurate frequency
-                val tableIndex = (i / samplesPerCycle * waveTableSize).toInt() % waveTableSize
-                val sampleValue = sineWaveTable[tableIndex]
+                var sampleValue = sin(phase)
+                components.forEachIndexed { idx, component ->
+                    sampleValue += component.gain * sin(componentPhases[idx])
+                    componentPhases[idx] += componentSteps[idx]
+                }
+                phase += baseAngularStep
 
-                // Apply volume and convert to 16-bit PCM
-                samples[i] = (sampleValue * Short.MAX_VALUE * volume).toInt().toShort()
+                val envelopeFactor = when {
+                    attackSamples > 0 && i < attackSamples -> (i + 1).toDouble() / attackSamples
+                    releaseSamples > 0 && i >= releaseStart -> {
+                        val remaining = (numSamples - i).toDouble()
+                        (remaining / releaseSamples).coerceIn(0.0, 1.0)
+                    }
+                    else -> 1.0
+                }
+
+                val clamped = (sampleValue * envelopeFactor).coerceIn(-1.0, 1.0)
+                samples[i] = (clamped * Short.MAX_VALUE * volume).toInt().toShort()
             }
 
             if (track.playState != AudioTrack.PLAYSTATE_PLAYING) {
@@ -163,7 +190,7 @@ class VarioToneGenerator {
         val track = audioTrack ?: return
 
         try {
-            val totalSamples = (durationMs * SAMPLE_RATE / 1000).toInt()
+            val totalSamples = ((durationMs * SAMPLE_RATE) / 1000L).toInt()
             if (totalSamples <= 0) {
                 return
             }
@@ -198,6 +225,8 @@ class VarioToneGenerator {
         currentVolume = volume.coerceIn(0f, 1f)
         audioTrack?.setVolume(currentVolume)
     }
+
+    fun getVolume(): Float = currentVolume
 
     /**
      * Stop playback and flush buffer

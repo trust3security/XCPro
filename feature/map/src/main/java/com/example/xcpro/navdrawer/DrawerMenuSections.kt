@@ -299,6 +299,17 @@ fun SettingsSection(
                 }
             }
         )
+        ModernNavItem(
+            title = "Vario Diagnostics",
+            icon = Icons.Outlined.Insights,
+            indentLevel = 2,
+            onClick = {
+                scope.launch {
+                    drawerState.close()
+                    navController.navigate("vario_diagnostics")
+                }
+            }
+        )
     }
 }
 
