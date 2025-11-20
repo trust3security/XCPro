@@ -14,6 +14,7 @@ A blunt, practical standard for writing and reviewing XC Pro code. This is the s
 
 ## XCSoar Reference
 - When you need to mirror XCSoar behavior, use the standalone checkout at `C:\Users\Asus\AndroidStudioProjects\XCSoar` (currently 7.44). Do not rely on any bundled `xcsoar-7.20` snapshot in this repo; that tree has been removed.
+- Any existing code that still contains the literal string "xcsoar" must be cleaned up; do not introduce new references to "xcsoar" anywhere in the codebase.
 
 ---
 
@@ -358,6 +359,7 @@ A feature is done when:
 
 ## 19) Reference Code Locations
 - XCSoar reference code lives at `C:\Users\Asus\AndroidStudioProjects\XCSoar`; use that path whenever you need to inspect or cite XCSoar sources so instructions remain consistent across tasks.
+- When syncing behavior, cite the external repo but scrub the literal string "xcsoar" from our source files; treat new occurrences as violations that must be deleted.
 
 ---
 
