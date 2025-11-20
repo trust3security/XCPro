@@ -45,11 +45,11 @@ internal object CardDataFormatter {
             "gps_alt" -> when {
                 liveData.isQNHCalibrated && liveData.currentPressureHPa > 0 -> {
                     val formatted = UnitsFormatter.altitude(AltitudeM(liveData.baroAltitude), units)
-                    Pair(formatted.text, "BARO")
+                    Pair(formatted.text, "QNH ${liveData.qnh.roundToInt()}")
                 }
                 liveData.gpsAltitude != 0.0 -> {
                     val formatted = UnitsFormatter.altitude(AltitudeM(liveData.gpsAltitude), units)
-                    Pair(formatted.text, "GPS")
+                    Pair(formatted.text, "QNH ${liveData.qnh.roundToInt()}")
                 }
                 else -> Pair(placeholderFor(cardId), "NO DATA")
             }
@@ -57,8 +57,7 @@ internal object CardDataFormatter {
             "baro_alt" -> {
                 if (liveData.baroAltitude > 0) {
                     val alt = UnitsFormatter.altitude(AltitudeM(liveData.baroAltitude), units)
-                    val qnh = liveData.qnh.roundToInt()
-                    val status = if (liveData.isQNHCalibrated) "QNH $qnh" else "STD"
+                    val status = "QNH ${liveData.qnh.roundToInt()}"
                     Pair(alt.text, status)
                 } else {
                     Pair(placeholderFor(cardId), "NO BARO")
@@ -66,12 +65,7 @@ internal object CardDataFormatter {
             }
 
             "agl" -> {
-                val hasManualQnh = liveData.qnh in 900.0..1100.0 && !liveData.qnh.isNaN()
-                val secondary = when {
-                    liveData.isQNHCalibrated -> "QNH ${liveData.qnh.roundToInt()}"
-                    hasManualQnh -> "QNH ${liveData.qnh.roundToInt()}"
-                    else -> "STD"
-                }
+                val secondary = "QNH ${liveData.qnh.roundToInt()}"
 
                 if (liveData.agl.isNaN()) {
                     Pair(placeholderFor(cardId), secondary)
@@ -172,7 +166,7 @@ internal object CardDataFormatter {
             }
 
             "wpt_dist" -> Pair(placeholderFor(cardId), "NO WPT")
-            "wpt_brg" -> Pair("--°", "NO WPT")
+            "wpt_brg" -> Pair("---¦", "NO WPT")
             "final_gld" -> Pair("--:1", "NO WPT")
             "wpt_eta" -> Pair("--:--", "NO WPT")
 
@@ -204,7 +198,11 @@ internal object CardDataFormatter {
                     )
                     Pair(formatted.text, "TC AVG")
                 } else {
-                    Pair(placeholderFor(cardId), "NO DATA")
+                    val formatted = UnitsFormatter.verticalSpeed(
+                        VerticalSpeedMs(liveData.thermalAverageCircle.toDouble()),
+                        units
+                    )
+                    Pair(formatted.text, "TC AVG")
                 }
             }
 
@@ -246,12 +244,11 @@ internal object CardDataFormatter {
                     VerticalSpeedMs(liveData.bruttoAverage30s),
                     units
                 )
-                val secondary = if (liveData.varioValid) {
-                    liveData.varioSource.ifBlank { "TE" }
-                } else {
-                    "STALE"
-                }
-                Pair(formatted.text, secondary)
+                val tcAvg = UnitsFormatter.verticalSpeed(
+                    VerticalSpeedMs(liveData.thermalAverageCircle.toDouble()),
+                    units
+                )
+                Pair(formatted.text, tcAvg.text)
             }
 
             "netto_avg30" -> {
@@ -352,11 +349,11 @@ internal object CardDataFormatter {
     ): Pair<String, String?> {
         val hasWind = liveData.windQuality > 0 && liveData.windSpeed > 0.5f
         if (!hasWind) {
-            return Pair(placeholder.replace("?", "°"), "NO WIND")
+            return Pair(placeholder.replace("?", "-¦"), "NO WIND")
         }
         val windDir = ((liveData.windDirection.roundToInt() % 360) + 360) % 360
         val headCross = headCrossSummary(liveData, units)
-        return Pair("${windDir}°", headCross)
+        return Pair("${windDir}-¦", headCross)
     }
 
     private fun formatWindArrow(
@@ -398,11 +395,11 @@ internal object CardDataFormatter {
         val cross = UnitsFormatter.speed(SpeedMs(abs(liveData.windCrosswind)), units).text
         val crossSide = if (liveData.windCrosswind >= 0) "R" else "L"
         val badge = windBadge(liveData)
-        return "Hd $headSign$head / X $crossSide $cross · $badge"
+        return "Hd $headSign$head / X $crossSide $cross -+ $badge"
     }
 
     private fun arrowSymbol(directionFromDeg: Double): String {
-        val arrows = listOf("↑", "↗", "→", "↘", "↓", "↙", "←", "↖")
+        val arrows = listOf("Gåæ", "Gåù", "GåÆ", "Gåÿ", "Gåô", "GåÖ", "GåÉ", "Gåû")
         val normalized = ((directionFromDeg % 360.0) + 360.0) % 360.0
         val index = ((normalized + 22.5) / 45.0).toInt() % arrows.size
         return arrows[index]

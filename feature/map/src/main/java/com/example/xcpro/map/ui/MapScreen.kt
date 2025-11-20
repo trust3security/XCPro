@@ -107,6 +107,7 @@ import java.io.File
 import java.util.Locale
 import kotlin.math.min
 import kotlin.math.roundToInt
+import kotlin.math.roundToInt
 
 private const val TAG = "MapScreen"
 private const val PREFS_NAME = "MapScreenPrefs"
@@ -326,6 +327,19 @@ fun MapScreen(
         widgetManager.loadWidgetPositions(screenWidthPx, screenHeightPx, density)
     }
 
+    // If the card layer hasn't reported its safe bounds yet, seed the size from the screen metrics
+    // so MapScreenViewModel can mark cardHydrationReady once flight data arrives. The card grid
+    // will overwrite this fallback as soon as its own onGloballyPositioned callback fires.
+    LaunchedEffect(screenWidthPx, screenHeightPx) {
+        if (safeContainerSize == IntSize.Zero) {
+            val fallbackWidth = screenWidthPx.roundToInt().coerceAtLeast(1)
+            val fallbackHeight = screenHeightPx.roundToInt().coerceAtLeast(1)
+            if (fallbackWidth > 0 && fallbackHeight > 0) {
+                safeContainerSizeState.value = IntSize(fallbackWidth, fallbackHeight)
+            }
+        }
+    }
+
     val hamburgerOffsetState = remember { mutableStateOf(widgetPositions.sideHamburgerOffset) }
     val flightModeOffsetState = remember { mutableStateOf(widgetPositions.flightModeOffset) }
     val ballastOffsetState = remember { mutableStateOf(widgetPositions.ballastOffset) }
@@ -444,19 +458,6 @@ fun MapScreen(
                     showReplayDevFab = mapViewModel.showReplayDebugFab,
                     onReplayDevFabClick = mapViewModel::onReplayDevAutoplay
                 )
-                FloatingActionButton(
-                    onClick = {},
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(16.dp),
-                    containerColor = MaterialTheme.colorScheme.error
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Red action",
-                        tint = Color.White
-                    )
-                }
                 if (mapUiState.isLoadingWaypoints) {
                     Box(
                         modifier = Modifier

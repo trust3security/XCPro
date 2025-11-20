@@ -1,5 +1,6 @@
 package com.example.dfcards.dfcards
 
+import androidx.compose.ui.graphics.Color
 import com.example.dfcards.CardLibrary
 import com.example.dfcards.RealTimeFlightData
 import com.example.dfcards.dfcards.CardState
@@ -13,6 +14,8 @@ private enum class UpdateTier {
     PRIMARY,
     BACKGROUND
 }
+
+private val NEGATIVE_VARIO_COLOR = Color(0xFFD32F2F)
 
 internal fun CardStateRepository.updateCardsWithLiveData(
     liveData: RealTimeFlightData,
@@ -114,12 +117,14 @@ private fun CardStateRepository.mapRealDataToCard(
         units = unitsPreferences
     )
     val (primaryNumber, primaryUnit) = splitPrimaryValue(primaryValue)
+    val primaryColor = highlightColorFor(currentFlightData.id, realData)
 
     return currentFlightData.copy(
         primaryValue = primaryValue,
         secondaryValue = secondaryValue,
         primaryValueNumber = primaryNumber,
-        primaryValueUnit = primaryUnit
+        primaryValueUnit = primaryUnit,
+        primaryColorOverride = primaryColor
     )
 }
 
@@ -159,4 +164,15 @@ private fun splitPrimaryValue(primaryValue: String): Pair<String?, String?> {
     } else {
         trimmed to null
     }
+}
+
+private fun highlightColorFor(cardId: String, realData: RealTimeFlightData): Color? {
+    val risk = realData.macCreadyRisk
+    if (risk <= 0.0) return null
+    val (value, factor) = when (cardId) {
+        "thermal_avg", "vario_avg30" -> realData.thermalAverage.toDouble() to 2.0
+        "thermal_tc_avg" -> realData.thermalAverageCircle.toDouble() to 1.5
+        else -> return null
+    }
+    return if (factor * value < risk) NEGATIVE_VARIO_COLOR else null
 }
