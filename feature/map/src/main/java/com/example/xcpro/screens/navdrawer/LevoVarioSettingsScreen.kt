@@ -16,7 +16,7 @@ import androidx.compose.material3.DrawerState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -69,46 +69,14 @@ fun LevoVarioSettingsScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = "Control how the Levo variometer blends phone IMU data with barometric altitude. " +
-                    "Turn off IMU assist if your mount vibrates or phone bumps create false lift.",
-                style = MaterialTheme.typography.bodyMedium
+            MacCreadyCard(
+                macCready = uiState.macCready,
+                onMacCreadyChange = viewModel::setMacCready
             )
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            text = "IMU Assist",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text(
-                            text = if (uiState.imuAssistEnabled) {
-                                "Enabled above 15 m/s so the variometer reacts instantly during real flight."
-                            } else {
-                                "Disabled. Levo relies on barometric smoothing only, reducing stick thermals."
-                            },
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                    Switch(
-                        checked = uiState.imuAssistEnabled,
-                        onCheckedChange = { viewModel.setImuAssistEnabled(it) }
-                    )
-                }
-            }
+            MacCreadyRiskCard(
+                macCreadyRisk = uiState.macCreadyRisk,
+                onMacCreadyRiskChange = viewModel::setMacCreadyRisk
+            )
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -121,12 +89,12 @@ fun LevoVarioSettingsScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "How it works",
+                        text = "Why MacCready matters",
                         style = MaterialTheme.typography.titleSmall
                     )
-                    BulletText("IMU assist is only applied when GPS speed exceeds 15 m/s to avoid ground bumps.")
-                    BulletText("When off, the Levo needle tracks filtered baro/TE data for maximum stability.")
-                    BulletText("You can toggle this mid-flight if your mount starts vibrating or drifting.")
+                    BulletText("XCSoar and Levo now share this setting; adjust it whenever you change tactics.")
+                    BulletText("TC Avg and T Avg cards turn red when their value falls below your risk MacCready.")
+                    BulletText("Set the same value here and in XCSoar to keep audio, colors, and polar math aligned.")
                 }
             }
 
@@ -147,29 +115,96 @@ fun LevoVarioSettingsScreen(
                 onVolumeChangeFinished = {}
             )
 
-            VarioAudioProfileCard(
-                selectedProfile = audioSettings.profile,
-                onProfileSelected = viewModel::setAudioProfile
-            )
-
             VarioAudioThresholdCard(
                 liftThreshold = audioSettings.liftThreshold.toFloat(),
                 onLiftChange = viewModel::setLiftThreshold,
                 onLiftChangeFinished = {},
-                deadband = audioSettings.deadbandRange.toFloat(),
-                onDeadbandChange = viewModel::setDeadband,
-                onDeadbandChangeFinished = {},
+                deadbandMin = audioSettings.deadbandMin.toFloat(),
+                onDeadbandMinChange = viewModel::setDeadbandMin,
+                onDeadbandMinChangeFinished = {},
+                deadbandMax = audioSettings.deadbandMax.toFloat(),
+                onDeadbandMaxChange = viewModel::setDeadbandMax,
+                onDeadbandMaxChangeFinished = {},
                 sinkThreshold = audioSettings.sinkSilenceThreshold.toFloat(),
                 onSinkChange = viewModel::setSinkThreshold,
                 onSinkChangeFinished = {}
             )
 
-            VarioAudioTestCard(
-                onPlayTone = viewModel::playTestTone,
-                onPlayPattern = viewModel::playTestPattern
-            )
-
             VarioAudioInfoCard()
+        }
+    }
+}
+
+@Composable
+private fun MacCreadyCard(
+    macCready: Double,
+    onMacCreadyChange: (Double) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "MacCready (m/s)",
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = String.format("%.1f m/s  (%.1f kt)", macCready, macCready * 1.94384),
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Slider(
+                value = macCready.toFloat().coerceIn(0f, 5f),
+                onValueChange = { value ->
+                    onMacCreadyChange(value.toDouble())
+                },
+                valueRange = 0f..5f,
+                steps = 20
+            )
+        }
+    }
+}
+
+@Composable
+private fun MacCreadyRiskCard(
+    macCreadyRisk: Double,
+    onMacCreadyRiskChange: (Double) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "MacCready Risk (m/s)",
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = String.format("%.1f m/s  (%.1f kt)", macCreadyRisk, macCreadyRisk * 1.94384),
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Slider(
+                value = macCreadyRisk.toFloat().coerceIn(0f, 5f),
+                onValueChange = { value ->
+                    onMacCreadyRiskChange(value.toDouble())
+                },
+                valueRange = 0f..5f,
+                steps = 20
+            )
+            Text(
+                text = "Controls when thermal cards turn red. Match XCSoar’s risk slider for identical colouring.",
+                style = MaterialTheme.typography.bodySmall
+            )
         }
     }
 }

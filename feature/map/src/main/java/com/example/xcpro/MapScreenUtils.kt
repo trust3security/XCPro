@@ -100,7 +100,6 @@ internal fun convertToRealTimeFlightData(completeData: CompleteFlightData): Real
         windSource = completeData.windSource.name,
         windHeadwind = completeData.windHeadwind.value,
         windCrosswind = completeData.windCrosswind.value,
-        airspeedSource = completeData.airspeedSource,
 
         // NEW: Vario variants for side-by-side testing (VARIO_IMPROVEMENTS.md)
         varioOptimized = completeData.varioOptimized.value,
@@ -118,6 +117,11 @@ internal fun convertToRealTimeFlightData(completeData: CompleteFlightData): Real
         flightTime = formattedFlightTime,
         timestamp = completeData.timestamp,
         lastUpdateTime = System.currentTimeMillis(),
-        calculationSource = completeData.dataQuality
+        calculationSource = completeData.dataQuality,
+        airspeedSource = completeData.airspeedSource,
+        tasValid = completeData.tasValid,
+        teAltitude = completeData.teAltitude.value,
+        macCready = completeData.macCready,
+        macCreadyRisk = completeData.macCreadyRisk
     )
 }

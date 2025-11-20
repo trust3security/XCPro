@@ -30,7 +30,6 @@ import com.example.xcpro.screens.navdrawer.ColorsScreen
 import com.example.xcpro.screens.navdrawer.LevoVarioSettingsScreen
 import com.example.xcpro.screens.navdrawer.PolarSettingsScreen
 import com.example.xcpro.screens.navdrawer.UnitsSettingsScreen
-import com.example.xcpro.screens.navdrawer.VarioAudioSettingsScreen
 import com.example.xcpro.screens.navdrawer.OrientationSettingsScreen
 import com.example.xcpro.screens.diagnostics.VarioDiagnosticsScreen
 import com.example.xcpro.screens.replay.IgcReplayScreen
@@ -77,7 +76,6 @@ fun AppNavGraph(
         composable("units_settings") { UnitsSettingsScreen(navController = navController) }
         composable("polar_settings") { PolarSettingsScreen(navController = navController, drawerState = drawerState) }
         composable("levo_vario_settings") { LevoVarioSettingsScreen(navController = navController, drawerState = drawerState) }
-        composable("vario_audio_settings") { VarioAudioSettingsScreen(navController = navController, drawerState = drawerState) }
         composable("vario_diagnostics") { VarioDiagnosticsScreen(navController = navController, drawerState = drawerState) }
         composable("colors") { ColorsScreen(navController = navController) }
         composable("task") {

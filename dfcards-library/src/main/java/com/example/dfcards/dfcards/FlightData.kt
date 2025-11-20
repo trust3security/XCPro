@@ -1,6 +1,7 @@
 package com.example.dfcards.dfcards
 
 import androidx.compose.runtime.Stable
+import androidx.compose.ui.graphics.Color
 
 @Stable
 data class FlightData(
@@ -12,7 +13,8 @@ data class FlightData(
     val primaryFontSize: Int = 11,
     val secondaryFontSize: Int = 3,
     val primaryValueNumber: String? = null,
-    val primaryValueUnit: String? = null
+    val primaryValueUnit: String? = null,
+    val primaryColorOverride: Color? = null
 )
 
 @Stable

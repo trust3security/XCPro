@@ -107,19 +107,21 @@ fun EnhancedFlightDataCard(
                 .align(Alignment.TopCenter)
         )
 
+        val primaryColor = flightData.primaryColorOverride ?: visualStyle.primaryColor
+
         Text(
             text = buildAnnotatedString {
                 val primaryNumber = flightData.primaryValueNumber
                 val primaryUnit = flightData.primaryValueUnit
                 if (primaryNumber != null) {
                     withStyle(
-                        style = SpanStyle(
-                            fontSize = stableFontSizes.primarySize.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = visualStyle.primaryColor
-                        )
-                    ) {
-                        append(primaryNumber)
+                            style = SpanStyle(
+                                fontSize = stableFontSizes.primarySize.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = primaryColor
+                            )
+                        ) {
+                            append(primaryNumber)
                     }
                     primaryUnit?.let { unit ->
                         append(" ")
@@ -138,7 +140,7 @@ fun EnhancedFlightDataCard(
                         style = SpanStyle(
                             fontSize = stableFontSizes.primarySize.sp,
                             fontWeight = FontWeight.Bold,
-                            color = visualStyle.primaryColor
+                            color = primaryColor
                         )
                     ) {
                         append(flightData.primaryValue)

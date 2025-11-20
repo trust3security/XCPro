@@ -105,7 +105,8 @@ open class VarioServiceManager @Inject constructor(
         if (configJob != null) return
         configJob = serviceScope.launch {
             levoVarioPreferencesRepository.config.collectLatest { config ->
-                flightDataCalculator.setImuAssistEnabled(config.imuAssistEnabled)
+                flightDataCalculator.setMacCreadySetting(config.macCready)
+                flightDataCalculator.setMacCreadyRisk(config.macCreadyRisk)
             }
         }
     }

@@ -110,7 +110,7 @@ class VarioBeepController(
                         when (target.mode) {
                             AudioMode.BEEPING -> playBeepCycle()
                             AudioMode.CONTINUOUS -> playContinuousTone()
-                            AudioMode.SILENCE, AudioMode.SMART -> playSilence()
+                            AudioMode.SILENCE -> playSilence()
                         }
                     } else {
                         // No params yet, wait

@@ -121,11 +121,11 @@ data class CompleteFlightData(
     val windQuality: Int = 0,
     val windSource: WindSource = WindSource.NONE,
 
-    // Calculated thermal average
-    val thermalAverage: VerticalSpeedMs,  // m/s (average climb rate in thermal)
-    val thermalAverageCircle: VerticalSpeedMs = VerticalSpeedMs(0.0),
-    val thermalAverageTotal: VerticalSpeedMs = VerticalSpeedMs(0.0),
-    val thermalGain: AltitudeM = AltitudeM(0.0),
+    // XCSoar-style thermal metrics for cards/infobox parity
+    val thermalAverage: VerticalSpeedMs,  // m/s (TC 30s average climb)
+    val thermalAverageCircle: VerticalSpeedMs = VerticalSpeedMs(0.0), // m/s (TC Avg / current thermal)
+    val thermalAverageTotal: VerticalSpeedMs = VerticalSpeedMs(0.0), // m/s (T Avg / fleet average)
+    val thermalGain: AltitudeM = AltitudeM(0.0), // meters gained in current/last thermal (TC Gain)
 
     // Calculated L/D ratio
     val currentLD: Float,       // Distance traveled / altitude lost (glide ratio)
@@ -137,6 +137,7 @@ data class CompleteFlightData(
     val trueAirspeed: SpeedMs = SpeedMs(0.0),    // m/s
     val indicatedAirspeed: SpeedMs = SpeedMs(0.0), // m/s
     val airspeedSource: String = "UNKNOWN",
+    val tasValid: Boolean = true,
 
     // NEW: Multiple vario implementations for testing (VARIO_IMPROVEMENTS.md)
     val varioOptimized: VerticalSpeedMs = VerticalSpeedMs(0.0),      // Optimized Kalman (R=0.5m) - Priority 1
@@ -145,6 +146,11 @@ data class CompleteFlightData(
     val varioGPS: VerticalSpeedMs = VerticalSpeedMs(0.0),            // GPS vertical speed
     val varioComplementary: VerticalSpeedMs = VerticalSpeedMs(0.0),  // Complementary filter (future)
     val realIgcVario: VerticalSpeedMs? = null,
+
+    // Energy / MacCready metadata
+    val teAltitude: AltitudeM = AltitudeM(0.0),
+    val macCready: Double = 0.0,
+    val macCreadyRisk: Double = 0.0,
 
     // Metadata
     val timestamp: Long,

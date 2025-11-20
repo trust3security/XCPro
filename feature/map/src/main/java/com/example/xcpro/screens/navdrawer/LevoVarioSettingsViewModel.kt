@@ -2,7 +2,6 @@ package com.example.xcpro.screens.navdrawer
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.xcpro.audio.VarioAudioProfile
 import com.example.xcpro.audio.VarioAudioSettings
 import com.example.xcpro.vario.LevoVarioPreferencesRepository
 import com.example.xcpro.vario.VarioServiceManager
@@ -16,7 +15,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 data class LevoVarioUiState(
-    val imuAssistEnabled: Boolean = true,
+    val macCready: Double = 0.0,
+    val macCreadyRisk: Double = 0.0,
     val audioSettings: VarioAudioSettings = VarioAudioSettings()
 )
 
@@ -26,13 +26,15 @@ class LevoVarioSettingsViewModel @Inject constructor(
     private val varioServiceManager: VarioServiceManager
 ) : ViewModel() {
 
-    private val imuFlow = preferencesRepository.config
-        .map { config -> config.imuAssistEnabled }
-
+    private val configFlow = preferencesRepository.config
     private val audioFlow = varioServiceManager.flightDataCalculator.audioEngine.settings
 
-    val uiState: StateFlow<LevoVarioUiState> = combine(imuFlow, audioFlow) { imu, audio ->
-        LevoVarioUiState(imuAssistEnabled = imu, audioSettings = audio)
+    val uiState: StateFlow<LevoVarioUiState> = combine(configFlow, audioFlow) { config, audio ->
+        LevoVarioUiState(
+            macCready = config.macCready,
+            macCreadyRisk = config.macCreadyRisk,
+            audioSettings = audio
+        )
     }
         .stateIn(
             scope = viewModelScope,
@@ -40,9 +42,15 @@ class LevoVarioSettingsViewModel @Inject constructor(
             initialValue = LevoVarioUiState()
         )
 
-    fun setImuAssistEnabled(enabled: Boolean) {
+    fun setMacCready(value: Double) {
         viewModelScope.launch {
-            preferencesRepository.setImuAssistEnabled(enabled)
+            preferencesRepository.setMacCready(value)
+        }
+    }
+
+    fun setMacCreadyRisk(value: Double) {
+        viewModelScope.launch {
+            preferencesRepository.setMacCreadyRisk(value)
         }
     }
 
@@ -57,27 +65,21 @@ class LevoVarioSettingsViewModel @Inject constructor(
     fun setAudioVolume(volume: Float) =
         updateAudioSettings { it.copy(volume = volume.coerceIn(0f, 1f)) }
 
-    fun setAudioProfile(profile: VarioAudioProfile) =
-        updateAudioSettings { it.copy(profile = profile) }
-
     fun setLiftThreshold(value: Float) =
         updateAudioSettings { it.copy(liftThreshold = value.toDouble()) }
 
-    fun setDeadband(value: Float) =
-        updateAudioSettings { it.copy(deadbandRange = value.toDouble()) }
+    fun setDeadbandMin(value: Float) =
+        updateAudioSettings {
+            val clamped = value.coerceAtMost((it.deadbandMax - 0.05).toFloat())
+            it.copy(deadbandMin = clamped.toDouble())
+        }
+
+    fun setDeadbandMax(value: Float) =
+        updateAudioSettings {
+            val clamped = value.coerceAtLeast((it.deadbandMin + 0.05).toFloat())
+            it.copy(deadbandMax = clamped.toDouble())
+        }
 
     fun setSinkThreshold(value: Float) =
         updateAudioSettings { it.copy(sinkSilenceThreshold = value.toDouble()) }
-
-    fun playTestTone(frequency: Double) {
-        viewModelScope.launch {
-            varioServiceManager.flightDataCalculator.audioEngine.playTestTone(frequency, 1000)
-        }
-    }
-
-    fun playTestPattern(value: Double) {
-        viewModelScope.launch {
-            varioServiceManager.flightDataCalculator.audioEngine.playTestPattern(value, 3000)
-        }
-    }
 }

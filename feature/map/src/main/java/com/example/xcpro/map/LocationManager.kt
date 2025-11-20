@@ -46,8 +46,15 @@ class LocationManager(
             return
         }
         if (!sensorsStarted && status.gpsStarted) {
-            sensorsStarted = true
-            return
+            // Sensors might still be producing data from a previous session, but
+            // the vario service (flight data collection, MacCready observers, etc.)
+            // is not running. Make sure we spin it up so cards receive data.
+            val startedNow = varioServiceManager.start()
+            val statusAfterStart = unifiedSensorManager.getSensorStatus()
+            sensorsStarted = startedNow || statusAfterStart.gpsStarted
+            if (sensorsStarted) {
+                return
+            }
         }
 
         val started = varioServiceManager.start()

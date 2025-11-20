@@ -1,6 +1,6 @@
 package com.example.xcpro.audio
 
-import kotlin.math.abs
+ 
 
 /**
  * Maps vertical speed to audio parameters (frequency, cycle time, duty cycle, mode)
@@ -16,156 +16,65 @@ class VarioFrequencyMapper(
 ) {
 
     companion object {
-        // Reference point from XCTracer
-        private const val XCTRACER_VS = 1.16  // m/s
-        private const val XCTRACER_FREQ = 579.0  // Hz
-        private const val XCTRACER_CYCLE = 527.0  // ms
+        private const val MIN_VARIO = -5.0  // m/s
+        private const val MAX_VARIO = 5.0   // m/s
+        private const val MIN_FREQ = 200.0  // Hz
+        private const val ZERO_FREQ = 500.0 // Hz
+        private const val MAX_FREQ = 1500.0 // Hz
+        private const val MIN_PERIOD_MS = 150.0
+        private const val MAX_PERIOD_MS = 600.0
     }
 
-    /**
-     * Map vertical speed to audio parameters
-     *
-     * @param verticalSpeedMs Vertical speed in m/s (TE-compensated)
-     * @return Audio parameters for this vertical speed
-     */
     fun mapVerticalSpeed(verticalSpeedMs: Double): AudioParams {
-        return when (settings.profile) {
-            VarioAudioProfile.COMPETITION -> mapCompetition(verticalSpeedMs)
-            VarioAudioProfile.PARAGLIDING -> mapParagliding(verticalSpeedMs)
-            VarioAudioProfile.SILENT_SINK -> mapSilentSink(verticalSpeedMs)
-            VarioAudioProfile.FULL_AUDIO -> mapFullAudio(verticalSpeedMs)
-            VarioAudioProfile.SMART_THERMAL -> AudioParams(
-                frequencyHz = 0.0,
-                cycleTimeMs = 0.0,
-                dutyCycle = 0.0,
-                mode = AudioMode.SMART
-            )
+        val clipped = verticalSpeedMs.coerceIn(MIN_VARIO, MAX_VARIO)
+        if (inDeadband(clipped)) {
+            return AudioParams(0.0, 0.0, 0.0, AudioMode.SILENCE)
+        }
+        return if (clipped > 0) {
+            mapLift(clipped)
+        } else {
+            mapSink(clipped)
         }
     }
 
-    /**
-     * Competition profile (XCTracer-style)
-     * - Silence for all sink
-     * - Beeping for lift (>0.2 m/s)
-     * - Fast response, precise frequency mapping
-     */
-    private fun mapCompetition(vs: Double): AudioParams {
-        return when {
-            // LIFT ZONE (beeping)
-            vs >= 5.0 -> AudioParams(1000.0, 200.0, settings.dutyCycle, AudioMode.BEEPING)
-            vs >= 3.0 -> interpolate(vs, 3.0, 5.0, 800.0, 1000.0, 300.0, 200.0)
-            vs >= 2.0 -> interpolate(vs, 2.0, 3.0, 700.0, 800.0, 400.0, 300.0)
-            vs >= XCTRACER_VS -> interpolate(vs, XCTRACER_VS, 2.0, XCTRACER_FREQ, 700.0, XCTRACER_CYCLE, 400.0)
-            vs >= 1.0 -> interpolate(vs, 1.0, XCTRACER_VS, 550.0, XCTRACER_FREQ, 600.0, XCTRACER_CYCLE)
-            vs >= 0.5 -> interpolate(vs, 0.5, 1.0, 500.0, 550.0, 800.0, 600.0)
-            vs >= settings.liftThreshold -> interpolate(vs, settings.liftThreshold, 0.5, 450.0, 500.0, 1000.0, 800.0)
+    private fun mapLift(vs: Double): AudioParams {
+        if (vs < maxOf(settings.liftThreshold, effectiveDeadbandMax())) {
+            return AudioParams(0.0, 0.0, 0.0, AudioMode.SILENCE)
+        }
+        val frequency = varioToFrequency(vs)
+        val period = liftPeriodFor(vs)
+        return AudioParams(frequency, period, settings.dutyCycle, AudioMode.BEEPING)
+    }
 
-            // DEADBAND (silence)
-            vs > -settings.deadbandRange -> AudioParams(0.0, 0.0, 0.0, AudioMode.SILENCE)
+    private fun mapSink(vs: Double): AudioParams {
+        if (vs > settings.sinkSilenceThreshold) {
+            return AudioParams(0.0, 0.0, 0.0, AudioMode.SILENCE)
+        }
+        val frequency = varioToFrequency(vs)
+        return AudioParams(frequency, 0.0, 1.0, AudioMode.CONTINUOUS)
+    }
 
-            // SINK ZONE (silence for competition)
-            else -> AudioParams(0.0, 0.0, 0.0, AudioMode.SILENCE)
+    private fun inDeadband(vs: Double): Boolean {
+        val min = minOf(settings.deadbandMin, settings.deadbandMax - 0.01)
+        val max = maxOf(settings.deadbandMin + 0.01, settings.deadbandMax)
+        return vs in min..max
+    }
+
+    private fun effectiveDeadbandMax(): Double =
+        maxOf(settings.deadbandMax, settings.deadbandMin)
+
+    private fun varioToFrequency(vario: Double): Double {
+        val clamped = vario.coerceIn(MIN_VARIO, MAX_VARIO)
+        return if (clamped >= 0) {
+            ZERO_FREQ + (clamped / MAX_VARIO) * (MAX_FREQ - ZERO_FREQ)
+        } else {
+            ZERO_FREQ - (clamped / MIN_VARIO) * (ZERO_FREQ - MIN_FREQ)
         }
     }
 
-    /**
-     * Paragliding profile (gentler, slower beeps)
-     * - Silence for sink
-     * - Slower beeping for lift
-     * - Less aggressive audio
-     */
-    private fun mapParagliding(vs: Double): AudioParams {
-        return when {
-            // LIFT ZONE (slower beeping)
-            vs >= 5.0 -> AudioParams(900.0, 300.0, settings.dutyCycle, AudioMode.BEEPING)
-            vs >= 3.0 -> interpolate(vs, 3.0, 5.0, 750.0, 900.0, 400.0, 300.0)
-            vs >= 2.0 -> interpolate(vs, 2.0, 3.0, 650.0, 750.0, 500.0, 400.0)
-            vs >= 1.0 -> interpolate(vs, 1.0, 2.0, 550.0, 650.0, 700.0, 500.0)
-            vs >= 0.5 -> interpolate(vs, 0.5, 1.0, 480.0, 550.0, 900.0, 700.0)
-            vs >= settings.liftThreshold -> interpolate(vs, settings.liftThreshold, 0.5, 420.0, 480.0, 1200.0, 900.0)
-
-            // DEADBAND
-            vs > -settings.deadbandRange -> AudioParams(0.0, 0.0, 0.0, AudioMode.SILENCE)
-
-            // SINK (silence)
-            else -> AudioParams(0.0, 0.0, 0.0, AudioMode.SILENCE)
-        }
-    }
-
-    /**
-     * Silent sink profile (most common)
-     * - Silence for all sink
-     * - Beeping for lift
-     * - Warning tone for strong sink (< -2.0 m/s)
-     */
-    private fun mapSilentSink(vs: Double): AudioParams {
-        return when {
-            // LIFT (same as competition)
-            vs >= settings.liftThreshold -> mapCompetition(vs)
-
-            // DEADBAND
-            vs > -settings.deadbandRange -> AudioParams(0.0, 0.0, 0.0, AudioMode.SILENCE)
-
-            // WEAK SINK (silence)
-            vs > settings.sinkSilenceThreshold -> AudioParams(0.0, 0.0, 0.0, AudioMode.SILENCE)
-
-            // STRONG SINK WARNING (continuous tone)
-            vs > settings.strongSinkThreshold -> AudioParams(250.0, 0.0, 1.0, AudioMode.CONTINUOUS)
-
-            // EXTREME SINK WARNING
-            else -> AudioParams(200.0, 0.0, 1.0, AudioMode.CONTINUOUS)
-        }
-    }
-
-    /**
-     * Full audio profile (both lift and sink tones)
-     * - Beeping for lift
-     * - Continuous low tone for sink
-     */
-    private fun mapFullAudio(vs: Double): AudioParams {
-        return when {
-            // LIFT
-            vs >= settings.liftThreshold -> mapCompetition(vs)
-
-            // DEADBAND
-            abs(vs) <= settings.deadbandRange -> AudioParams(0.0, 0.0, 0.0, AudioMode.SILENCE)
-
-            // WEAK SINK (low continuous tone)
-            vs > -1.0 -> AudioParams(300.0, 0.0, 1.0, AudioMode.CONTINUOUS)
-
-            // MODERATE SINK
-            vs > -2.0 -> AudioParams(250.0, 0.0, 1.0, AudioMode.CONTINUOUS)
-
-            // STRONG SINK
-            vs > -3.0 -> AudioParams(200.0, 0.0, 1.0, AudioMode.CONTINUOUS)
-
-            // EXTREME SINK
-            else -> AudioParams(150.0, 0.0, 1.0, AudioMode.CONTINUOUS)
-        }
-    }
-
-    /**
-     * Linear interpolation between two points
-     */
-    private fun interpolate(
-        vs: Double,
-        vs1: Double,
-        vs2: Double,
-        freq1: Double,
-        freq2: Double,
-        cycle1: Double,
-        cycle2: Double
-    ): AudioParams {
-        val ratio = (vs - vs1) / (vs2 - vs1)
-        val frequency = freq1 + ratio * (freq2 - freq1)
-        val cycleTime = cycle1 + ratio * (cycle2 - cycle1)
-
-        return AudioParams(
-            frequencyHz = frequency,
-            cycleTimeMs = cycleTime,
-            dutyCycle = settings.dutyCycle,
-            mode = AudioMode.BEEPING
-        )
+    private fun liftPeriodFor(vs: Double): Double {
+        val ratio = (MAX_VARIO - vs.coerceIn(0.0, MAX_VARIO)) / MAX_VARIO
+        return MIN_PERIOD_MS + ratio * (MAX_PERIOD_MS - MIN_PERIOD_MS)
     }
 }
 
@@ -214,45 +123,19 @@ data class AudioParams(
 enum class AudioMode {
     BEEPING,      // Beep pattern (lift)
     CONTINUOUS,   // Continuous tone (strong sink)
-    SILENCE,      // No audio
-    SMART         // Smart thermal profile (adaptive cues)
+    SILENCE       // No audio
 }
 
 /**
  * Variometer audio settings
  */
 data class VarioAudioSettings(
-    // General
     val enabled: Boolean = true,
     val volume: Float = 0.8f,  // 0.0 to 1.0
-
-    // Lift thresholds
-    val liftThreshold: Double = 0.2,  // m/s (start beeping)
-    val weakLiftThreshold: Double = 0.5,  // m/s
-
-    // Sink thresholds
-    val sinkSilenceThreshold: Double = -2.0,  // m/s (audio warning below this)
-    val strongSinkThreshold: Double = -3.0,  // m/s (louder warning)
-
-    // Audio characteristics
-    val minFrequency: Double = 400.0,  // Hz
-    val maxFrequency: Double = 1200.0,  // Hz
-    val dutyCycle: Double = 0.5,  // 0.0 to 1.0
-
-    // Deadband
-    val deadbandRange: Double = 0.2,  // m/s (±0.2 m/s)
-
-    // Profile
-    val profile: VarioAudioProfile = VarioAudioProfile.SILENT_SINK
+    val liftThreshold: Double = 0.1,  // m/s (XCSoar default)
+    val sinkSilenceThreshold: Double = 0.0,  // m/s (<=0 keeps sink audible)
+    val dutyCycle: Double = 2.0 / 3.0,  // matches XCSoar tone (66% beep)
+    val deadbandMin: Double = -0.3,   // m/s
+    val deadbandMax: Double = 0.1    // m/s
 )
 
-/**
- * Variometer audio profile presets
- */
-enum class VarioAudioProfile {
-    COMPETITION,    // XCTracer-style, silence for sink
-    PARAGLIDING,    // Gentler, slower beeps
-    SILENT_SINK,    // No sink audio (most common)
-    FULL_AUDIO,     // Both lift and sink audio
-    SMART_THERMAL   // Adaptive envelopes/harmonics tuned for thermalling
-}

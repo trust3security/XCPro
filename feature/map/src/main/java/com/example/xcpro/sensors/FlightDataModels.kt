@@ -10,7 +10,6 @@ import android.location.Location
  * Models:
  * - WindData: Wind speed/direction calculation result
  * - LocationWithTime: GPS history tracking point
- * - VerticalSpeedPoint: Vertical speed history point
  * - Quad: Helper for combining 4 sensor flows
  */
 
@@ -26,21 +25,38 @@ internal data class LocationWithTime(
 )
 
 /**
- * Vertical speed history point
- * Used for thermal average calculations
+ * Thermal climb information mirroring XCSoar's OneClimbInfo
  */
-internal data class VerticalSpeedPoint(
-    val verticalSpeed: Float,
-    val timestamp: Long,
-    val altitude: Double
-)
+internal data class ThermalClimbInfo(
+    var startTime: Long = 0L,
+    var endTime: Long = 0L,
+    var startTeAltitude: Double = Double.NaN,
+    var endTeAltitude: Double = Double.NaN,
+    var gain: Double = 0.0,
+    var liftRate: Double = 0.0
+) {
+    val durationSeconds: Double
+        get() = if (isDefined()) (endTime - startTime).coerceAtLeast(0L) / 1000.0 else 0.0
 
-/**
- * Helper data class for combining 4 sensor flows
- */
-internal data class Quad<out A, out B, out C, out D>(
-    val first: A,
-    val second: B,
-    val third: C,
-    val fourth: D
-)
+    fun isDefined(): Boolean =
+        startTime > 0L && endTime >= startTime &&
+            startTeAltitude.isFinite() && endTeAltitude.isFinite()
+
+    fun clear() {
+        startTime = 0L
+        endTime = 0L
+        startTeAltitude = Double.NaN
+        endTeAltitude = Double.NaN
+        gain = 0.0
+        liftRate = 0.0
+    }
+
+    fun copyFrom(other: ThermalClimbInfo) {
+        startTime = other.startTime
+        endTime = other.endTime
+        startTeAltitude = other.startTeAltitude
+        endTeAltitude = other.endTeAltitude
+        gain = other.gain
+        liftRate = other.liftRate
+    }
+}

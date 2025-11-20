@@ -81,7 +81,11 @@ data class RealTimeFlightData(
 
     val lastUpdateTime: Long = System.currentTimeMillis(),
     val calculationSource: String = "GPS+BARO+AGL",
-    val airspeedSource: String = "UNKNOWN"
+    val airspeedSource: String = "UNKNOWN",
+    val tasValid: Boolean = true,
+    val teAltitude: Double = 0.0,
+    val macCready: Double = 0.0,
+    val macCreadyRisk: Double = 0.0
 )
 
 // ✅ PHASE 3: All old calculation classes removed (FlightDataManager, WindData)

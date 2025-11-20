@@ -12,6 +12,11 @@ A blunt, practical standard for writing and reviewing XC Pro code. This is the s
 
 ---
 
+## XCSoar Reference
+- When you need to mirror XCSoar behavior, use the standalone checkout at `C:\Users\Asus\AndroidStudioProjects\XCSoar` (currently 7.44). Do not rely on any bundled `xcsoar-7.20` snapshot in this repo; that tree has been removed.
+
+---
+
 ## 1) Architecture
 **Pattern:** Clean Architecture with MVVM + Unidirectional Data Flow (UDF)
 

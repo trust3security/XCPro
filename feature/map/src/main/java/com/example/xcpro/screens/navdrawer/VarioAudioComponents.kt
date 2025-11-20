@@ -3,16 +3,11 @@ package com.example.xcpro.screens.navdrawer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -20,7 +15,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.xcpro.audio.VarioAudioProfile
 
 @Composable
 internal fun VarioAudioEnableCard(
@@ -97,68 +91,16 @@ internal fun VarioAudioVolumeCard(
 }
 
 @Composable
-internal fun VarioAudioProfileCard(
-    selectedProfile: VarioAudioProfile,
-    onProfileSelected: (VarioAudioProfile) -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Text(
-                text = "Profiles",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-            VarioAudioProfile.values().forEach { profile ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    RadioButton(
-                        selected = selectedProfile == profile,
-                        onClick = { onProfileSelected(profile) }
-                    )
-                    Column(modifier = Modifier.padding(start = 8.dp)) {
-                        Text(
-                            text = profile.name.replace('_', ' '),
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                        Text(
-                            text = when (profile) {
-                                VarioAudioProfile.COMPETITION -> "XCTracer-style, silence for sink"
-                                VarioAudioProfile.PARAGLIDING -> "Gentler, slower beeps"
-                                VarioAudioProfile.SILENT_SINK -> "No sink audio (most common)"
-                                VarioAudioProfile.FULL_AUDIO -> "Both lift and sink audio"
-                                VarioAudioProfile.SMART_THERMAL -> "Adaptive \"smart\" tones with harmonics"
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
 internal fun VarioAudioThresholdCard(
     liftThreshold: Float,
     onLiftChange: (Float) -> Unit,
     onLiftChangeFinished: () -> Unit,
-    deadband: Float,
-    onDeadbandChange: (Float) -> Unit,
-    onDeadbandChangeFinished: () -> Unit,
+    deadbandMin: Float,
+    onDeadbandMinChange: (Float) -> Unit,
+    onDeadbandMinChangeFinished: () -> Unit,
+    deadbandMax: Float,
+    onDeadbandMaxChange: (Float) -> Unit,
+    onDeadbandMaxChangeFinished: () -> Unit,
     sinkThreshold: Float,
     onSinkChange: (Float) -> Unit,
     onSinkChangeFinished: () -> Unit
@@ -200,113 +142,66 @@ internal fun VarioAudioThresholdCard(
             )
 
             Text(
-                text = "Deadband: ±${String.format("%.1f", deadband)} m/s",
+                text = "Deadband Min: ${String.format("%.1f", deadbandMin)} m/s",
                 style = MaterialTheme.typography.bodyMedium
             )
             Slider(
-                value = deadband,
-                onValueChange = onDeadbandChange,
-                onValueChangeFinished = onDeadbandChangeFinished,
-                valueRange = 0.1f..0.5f,
-                steps = 3,
+                value = deadbandMin,
+                onValueChange = {
+                    val newValue = it.coerceAtMost(deadbandMax - 0.05f)
+                    onDeadbandMinChange(newValue)
+                },
+                onValueChangeFinished = onDeadbandMinChangeFinished,
+                valueRange = -1.0f..0.0f,
+                steps = 9,
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
-                text = "Silence range around zero",
+                text = "Silence starts below this vario (matches XCSoar default -0.3 m/s).",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
             Text(
-                text = "Sink Warning: ${String.format("%.1f", sinkThreshold)} m/s",
+                text = "Deadband Max: ${String.format("%.1f", deadbandMax)} m/s",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Slider(
+                value = deadbandMax,
+                onValueChange = {
+                    val newValue = it.coerceAtLeast(deadbandMin + 0.05f)
+                    onDeadbandMaxChange(newValue)
+                },
+                onValueChangeFinished = onDeadbandMaxChangeFinished,
+                valueRange = 0.0f..0.5f,
+                steps = 9,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Text(
+                text = "Climb beeps begin once vario exceeds this value (XCSoar default +0.1 m/s).",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            Text(
+                text = "Sink Silence Threshold: ${String.format("%.1f", sinkThreshold)} m/s",
                 style = MaterialTheme.typography.bodyMedium
             )
             Slider(
                 value = sinkThreshold,
                 onValueChange = onSinkChange,
                 onValueChangeFinished = onSinkChangeFinished,
-                valueRange = -5.0f..-1.0f,
-                steps = 7,
+                valueRange = -5.0f..0.0f,
+                steps = 10,
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
-                text = "Strong sink warning threshold",
+                text = "Set to 0.0 m/s for XCSoar parity (tone for all sink). Lower values mute weak sink.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-        }
-    }
-}
-
-@Composable
-internal fun VarioAudioTestCard(
-    onPlayTone: (Double) -> Unit,
-    onPlayPattern: (Double) -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Text(
-                text = "Test Audio",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-
-            Text(
-                text = "Test Tone Frequencies",
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                listOf(450.0, 579.0, 1000.0).forEach { freq ->
-                    Button(
-                        onClick = { onPlayTone(freq) },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("${freq.toInt()}Hz")
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.size(16.dp))
-
-            Text(
-                text = "Test Vario Patterns (3 seconds)",
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                listOf(
-                    0.5 to "Test Weak Lift (+0.5 m/s)",
-                    2.0 to "Test Moderate Lift (+2.0 m/s)",
-                    5.0 to "Test Strong Lift (+5.0 m/s)",
-                    -3.0 to "Test Strong Sink (-3.0 m/s)"
-                ).forEach { (value, label) ->
-                    Button(
-                        onClick = { onPlayPattern(value) },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(label)
-                    }
-                }
-            }
         }
     }
 }
@@ -334,12 +229,12 @@ internal fun VarioAudioInfoCard() {
             )
             Text(
                 text = """
-                    • Zero-lag thermal detection (<100ms)
-                    • TE-compensated (no stick thermals)
-                    • XCTracer-compliant frequency mapping
-                    • Higher pitch = stronger lift
-                    • Faster beeping = stronger lift
-                    • Competition-ready performance
+                    - Zero-lag thermal detection (<100ms)
+                    - TE-compensated (no stick thermals)
+                    - XCTracer-compliant frequency mapping
+                    - Higher pitch = stronger lift
+                    - Faster beeping = stronger lift
+                    - Competition-ready performance
                 """.trimIndent(),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onPrimaryContainer

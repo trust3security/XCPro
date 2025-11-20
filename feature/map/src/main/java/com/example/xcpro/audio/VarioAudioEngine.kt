@@ -44,7 +44,6 @@ class VarioAudioEngine(
     private val toneGenerator = VarioToneGenerator()
     private lateinit var frequencyMapper: VarioFrequencyMapper
     private lateinit var beepController: VarioBeepController
-    private lateinit var smartToneController: SmartToneController
 
     // Settings
     private val _settings = MutableStateFlow(VarioAudioSettings())
@@ -87,15 +86,14 @@ class VarioAudioEngine(
             // Create frequency mapper with current settings
             frequencyMapper = VarioFrequencyMapper(_settings.value)
 
-            // Create controllers
+            // Create controller
             beepController = VarioBeepController(toneGenerator, scope)
-            smartToneController = SmartToneController(toneGenerator, scope)
 
             // Apply initial volume
             toneGenerator.setVolume(_settings.value.volume)
 
             isInitialized = true
-            Log.i(TAG, "Audio engine initialized (profile: ${_settings.value.profile})")
+            Log.i(TAG, "Audio engine initialized")
             return true
 
         } catch (e: Exception) {
@@ -126,7 +124,7 @@ class VarioAudioEngine(
 
         try {
             isStarted = true
-            activateControllerForProfile()
+            beepController.start()
             Log.i(TAG, "Audio engine started")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start audio engine", e)
@@ -144,26 +142,10 @@ class VarioAudioEngine(
 
         try {
             beepController.stop()
-            smartToneController.stop()
             isStarted = false
             Log.i(TAG, "Audio engine stopped")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to stop audio engine", e)
-        }
-    }
-
-    private fun isSmartProfile(settings: VarioAudioSettings = _settings.value): Boolean {
-        return settings.profile == VarioAudioProfile.SMART_THERMAL
-    }
-
-    private fun activateControllerForProfile() {
-        if (!isStarted) return
-        if (isSmartProfile()) {
-            beepController.stop()
-            smartToneController.start()
-        } else {
-            smartToneController.stop()
-            beepController.start()
         }
     }
 
@@ -179,19 +161,12 @@ class VarioAudioEngine(
         }
 
         try {
-            if (isSmartProfile()) {
-                smartToneController.updateVerticalSpeed(verticalSpeedMs)
-                _currentFrequency.value = smartToneController.getCurrentFrequency()
-                _currentMode.value = smartToneController.getCurrentMode()
-                audioUpdatesCount++
-            } else {
-                val audioParams = frequencyMapper.mapVerticalSpeed(verticalSpeedMs)
-                beepController.updateAudioParams(audioParams)
-                _currentFrequency.value = beepController.getCurrentFrequency()
-                _currentMode.value = audioParams.mode
-                audioUpdatesCount++
-                logStatistics(verticalSpeedMs, audioParams)
-            }
+            val audioParams = frequencyMapper.mapVerticalSpeed(verticalSpeedMs)
+            beepController.updateAudioParams(audioParams)
+            _currentFrequency.value = beepController.getCurrentFrequency()
+            _currentMode.value = audioParams.mode
+            audioUpdatesCount++
+            logStatistics(verticalSpeedMs, audioParams)
         } catch (e: Exception) {
             Log.e(TAG, "Error updating vertical speed", e)
         }
@@ -205,17 +180,13 @@ class VarioAudioEngine(
             return
         }
         try {
-            if (isSmartProfile()) {
-                smartToneController.setSilence()
-            } else {
-                val silenceParams = AudioParams(
-                    frequencyHz = 0.0,
-                    cycleTimeMs = 1000.0,
-                    dutyCycle = 0.0,
-                    mode = AudioMode.SILENCE
-                )
-                beepController.updateAudioParams(silenceParams)
-            }
+            val silenceParams = AudioParams(
+                frequencyHz = 0.0,
+                cycleTimeMs = 1000.0,
+                dutyCycle = 0.0,
+                mode = AudioMode.SILENCE
+            )
+            beepController.updateAudioParams(silenceParams)
             _currentMode.value = AudioMode.SILENCE
             _currentFrequency.value = 0.0
         } catch (e: Exception) {
@@ -244,11 +215,9 @@ class VarioAudioEngine(
             start()
         } else if (!newSettings.enabled && isStarted) {
             stop()
-        } else {
-            activateControllerForProfile()
         }
 
-        Log.i(TAG, "Settings updated (profile: ${newSettings.profile}, enabled: ${newSettings.enabled})")
+        Log.i(TAG, "Settings updated (enabled: ${newSettings.enabled})")
     }
 
     /**
@@ -261,14 +230,6 @@ class VarioAudioEngine(
     }
 
     /**
-     * Set audio profile
-     */
-    fun setProfile(profile: VarioAudioProfile) {
-        val newSettings = _settings.value.copy(profile = profile)
-        updateSettings(newSettings)
-    }
-
-    /**
      * Enable/disable audio
      */
     fun setEnabled(enabled: Boolean) {
@@ -277,76 +238,11 @@ class VarioAudioEngine(
     }
 
     /**
-     * Play test tone at specific frequency
-     * Useful for settings UI
-     */
-    fun playTestTone(frequencyHz: Double, durationMs: Long = 1000) {
-        if (!isInitialized) {
-            Log.w(TAG, "Not initialized")
-            return
-        }
-
-        scope.launch {
-            try {
-                toneGenerator.playTone(frequencyHz, durationMs)
-                delay(durationMs)
-            } catch (e: Exception) {
-                Log.e(TAG, "Error playing test tone", e)
-            }
-        }
-    }
-
-    /**
-     * Play test beep pattern for specific vertical speed
-     * Useful for settings UI
-     */
-    fun playTestPattern(verticalSpeedMs: Double, durationMs: Long = 3000) {
-        if (!isInitialized) {
-            Log.w(TAG, "Not initialized")
-            return
-        }
-
-        scope.launch {
-            try {
-                val wasStarted = isStarted
-
-                if (isSmartProfile()) {
-                    if (!wasStarted) {
-                        smartToneController.start()
-                    }
-                    smartToneController.updateVerticalSpeed(verticalSpeedMs)
-                    delay(durationMs)
-                    if (!wasStarted) {
-                        smartToneController.stop()
-                    }
-                } else {
-                    if (!wasStarted) {
-                        beepController.start()
-                    }
-                    val audioParams = frequencyMapper.mapVerticalSpeed(verticalSpeedMs)
-                    beepController.updateAudioParams(audioParams)
-                    delay(durationMs)
-                    if (!wasStarted) {
-                        beepController.stop()
-                    }
-                }
-
-            } catch (e: Exception) {
-                Log.e(TAG, "Error playing test pattern", e)
-            }
-        }
-    }
-
-    /**
      * Check if audio is currently active (making sound)
      */
     fun isAudioActive(): Boolean {
         if (!isStarted) return false
-        return if (isSmartProfile()) {
-            smartToneController.isAudioActive()
-        } else {
-            beepController.isAudioActive()
-        }
+        return beepController.isAudioActive()
     }
 
     /**
@@ -359,7 +255,6 @@ class VarioAudioEngine(
             enabled = _isEnabled.value,
             currentMode = _currentMode.value,
             currentFrequency = _currentFrequency.value,
-            profile = _settings.value.profile,
             volume = _settings.value.volume,
             audioActive = isAudioActive()
         )
@@ -373,7 +268,6 @@ class VarioAudioEngine(
         try {
             stop()
             beepController.release()
-            smartToneController.release()
             toneGenerator.release()
             scope.cancel()
             isInitialized = false
@@ -408,7 +302,6 @@ data class AudioEngineState(
     val enabled: Boolean,
     val currentMode: AudioMode,
     val currentFrequency: Double,
-    val profile: VarioAudioProfile,
     val volume: Float,
     val audioActive: Boolean
 )

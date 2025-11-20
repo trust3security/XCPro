@@ -5,8 +5,7 @@ import com.example.dfcards.dfcards.calculations.SimpleAglCalculator
 import com.example.xcpro.glider.StillAirSinkProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlin.math.*
+import kotlin.math.min
 
 /**
  * Flight Calculation Helpers
@@ -27,39 +26,28 @@ internal class FlightCalculationHelpers(
     private val scope: CoroutineScope,
     private val aglCalculator: SimpleAglCalculator,
     private val locationHistory: MutableList<LocationWithTime>,
-    private val verticalSpeedHistory: MutableList<VerticalSpeedPoint>,
     private val sinkProvider: StillAirSinkProvider
 ) {
     data class NettoComputation(val value: Double, val valid: Boolean)
 
     companion object {
-        // History sizes
         private const val MAX_LOCATION_HISTORY = 20
-        private const val MAX_VSPEED_HISTORY = 10
-
-        // Thermal detection
-        private const val THERMAL_DETECTION_THRESHOLD = 0.5f  // m/s
-        private const val THERMAL_MIN_DURATION = 15L          // seconds
-
-        // L/D calculation
         private const val LD_CALCULATION_INTERVAL = 5000L     // ms
-
-        private const val THERMAL_TOTAL_WINDOW_MS = 180_000L
-        private const val THERMAL_CIRCLE_WINDOW_MS = 10_000L
     }
 
-    // Thermal tracking state
-    private var thermalStartTime: Long = 0L
-    private var thermalStartAltitude: Double = 0.0
-    private val thermalSamples = mutableListOf<ThermalSample>()
+    private val currentThermalInfo = ThermalClimbInfo()
+    private val lastThermalInfo = ThermalClimbInfo()
+    private var lastThermalLiftRate = 0.0
+    private var lastThermalGain = 0.0
+    private var lastThermalTimestamp = 0L
+    private var totalCirclingSeconds = 0.0
+    private var totalHeightGain = 0.0
     var thermalAverageTotal: Float = 0f
         private set
     var thermalAverageCurrent: Float = 0f
         private set
     var thermalGainCurrent: Double = 0.0
         private set
-    val isThermalActive: Boolean
-        get() = thermalStartTime > 0L
 
     // L/D tracking state
     private var lastLDCalculationTime = 0L
@@ -109,52 +97,74 @@ internal class FlightCalculationHelpers(
         addLocationToHistory(location, gps.speed.value.toFloat(), gps.bearing.toFloat())
     }
 
-    /**
-     * Calculate thermal average from vertical speed history
-     * Ported from FlightDataManager.kt lines 417-458
-     */
-    fun calculateThermalAverage(currentVerticalSpeed: Float, currentAltitude: Double): Float {
-        val currentTime = System.currentTimeMillis()
-
-        verticalSpeedHistory.add(VerticalSpeedPoint(currentVerticalSpeed, currentTime, currentAltitude))
-
-        while (verticalSpeedHistory.size > MAX_VSPEED_HISTORY) {
-            verticalSpeedHistory.removeAt(0)
+    fun updateThermalState(
+        timestampMillis: Long,
+        teAltitudeMeters: Double,
+        verticalSpeedMs: Double,
+        isCircling: Boolean
+    ) {
+        if (!teAltitudeMeters.isFinite()) {
+            if (!isCircling) {
+                currentThermalInfo.clear()
+            }
+            return
         }
 
-        val isCurrentlyClimbing = currentVerticalSpeed > THERMAL_DETECTION_THRESHOLD
-
-        if (isCurrentlyClimbing && thermalStartTime == 0L) {
-            thermalStartTime = currentTime
-            thermalStartAltitude = currentAltitude
-            thermalSamples.clear()
-            thermalAverageTotal = 0f
-            thermalAverageCurrent = 0f
-            thermalGainCurrent = 0.0
-        } else if (!isCurrentlyClimbing && thermalStartTime > 0L) {
-            val thermalDuration = (currentTime - thermalStartTime) / 1000L
+        if (timestampMillis < lastThermalTimestamp) {
             resetThermalTracking()
-            return if (thermalDuration < THERMAL_MIN_DURATION) 0f else 0f
         }
 
-        if (thermalStartTime > 0L && isCurrentlyClimbing) {
-            thermalSamples.add(ThermalSample(currentTime, currentVerticalSpeed))
-            trimThermalSamples(currentTime)
-            val totalAvg = thermalSamples.map { it.verticalSpeed }.average()
-            val circleAvg = thermalSamples
-                .filter { it.timestamp >= currentTime - THERMAL_CIRCLE_WINDOW_MS }
-                .map { it.verticalSpeed }
-                .takeIf { it.isNotEmpty() }
-                ?.average()
-                ?: currentVerticalSpeed.toDouble()
+        val deltaSeconds = if (lastThermalTimestamp == 0L || timestampMillis <= lastThermalTimestamp) {
+            0.0
+        } else {
+            (timestampMillis - lastThermalTimestamp) / 1000.0
+        }
+        lastThermalTimestamp = timestampMillis
 
-            thermalAverageTotal = totalAvg.toFloat()
-            thermalAverageCurrent = circleAvg.toFloat()
-            thermalGainCurrent = currentAltitude - thermalStartAltitude
-            return thermalAverageTotal
+        if (isCircling) {
+            if (!currentThermalInfo.isDefined()) {
+                currentThermalInfo.startTime = timestampMillis
+                currentThermalInfo.startTeAltitude = teAltitudeMeters
+            }
+            currentThermalInfo.endTime = timestampMillis
+            currentThermalInfo.endTeAltitude = teAltitudeMeters
+            currentThermalInfo.gain =
+                currentThermalInfo.endTeAltitude - currentThermalInfo.startTeAltitude
+            val durationSeconds = currentThermalInfo.durationSeconds
+            val liftRate = when {
+                durationSeconds > 0.5 -> currentThermalInfo.gain / durationSeconds
+                verticalSpeedMs.isFinite() -> verticalSpeedMs
+                else -> 0.0
+            }
+            currentThermalInfo.liftRate = liftRate
+            thermalGainCurrent = currentThermalInfo.gain
+            thermalAverageCurrent = liftRate.toFloat()
+            lastThermalLiftRate = liftRate
+            lastThermalGain = currentThermalInfo.gain
+
+        } else {
+            if (currentThermalInfo.isDefined()) {
+                totalCirclingSeconds += currentThermalInfo.durationSeconds
+                totalHeightGain += currentThermalInfo.gain
+                lastThermalLiftRate = currentThermalInfo.liftRate
+                lastThermalGain = currentThermalInfo.gain
+                lastThermalInfo.copyFrom(currentThermalInfo)
+                currentThermalInfo.clear()
+            }
+            thermalGainCurrent = lastThermalGain
+            thermalAverageCurrent = lastThermalLiftRate.toFloat()
         }
 
-        return 0f
+        val cumulativeSeconds = totalCirclingSeconds +
+            if (currentThermalInfo.isDefined()) currentThermalInfo.durationSeconds else 0.0
+        val cumulativeGain = totalHeightGain +
+            if (currentThermalInfo.isDefined()) currentThermalInfo.gain else 0.0
+
+        thermalAverageTotal = if (cumulativeSeconds > 0.5) {
+            (cumulativeGain / cumulativeSeconds).toFloat()
+        } else {
+            0f
+        }
     }
 
     /**
@@ -282,28 +292,16 @@ internal class FlightCalculationHelpers(
     /**
      * Calculate wind confidence
      */
-    /**
-     * Reset thermal tracking
-     */
     private fun resetThermalTracking() {
-        thermalStartTime = 0L
-        thermalStartAltitude = 0.0
-        thermalSamples.clear()
+        currentThermalInfo.clear()
+        lastThermalInfo.clear()
+        lastThermalLiftRate = 0.0
+        lastThermalGain = 0.0
+        lastThermalTimestamp = 0L
+        totalCirclingSeconds = 0.0
+        totalHeightGain = 0.0
         thermalAverageTotal = 0f
         thermalAverageCurrent = 0f
         thermalGainCurrent = 0.0
     }
-
-    private fun trimThermalSamples(currentTime: Long) {
-        val cutoffTotal = currentTime - THERMAL_TOTAL_WINDOW_MS
-        while (thermalSamples.isNotEmpty() && thermalSamples.first().timestamp < cutoffTotal) {
-            thermalSamples.removeAt(0)
-        }
-    }
-
-    private data class ThermalSample(
-        val timestamp: Long,
-        val verticalSpeed: Float
-    )
-
 }
