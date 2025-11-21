@@ -70,6 +70,15 @@ class MapScreenState(
     var targetZoom: Float? = null
     var targetLatLng: org.maplibre.android.geometry.LatLng? = null
 
+    // Camera zoom observable so Compose overlays react instantly to zoom gestures
+    private val _currentZoom = MutableStateFlow(10f)
+    var currentZoom: Float
+        get() = _currentZoom.value
+        set(value) {
+            if (_currentZoom.value != value) _currentZoom.value = value
+        }
+    val currentZoomFlow: StateFlow<Float> = _currentZoom.asStateFlow()
+
     private val _mapStyleUrl = MutableStateFlow(getMapStyleUrl(initialMapStyle))
     var mapStyleUrl: String
         get() = _mapStyleUrl.value

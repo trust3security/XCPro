@@ -66,7 +66,9 @@ class MapInitializer(
                 INITIAL_ZOOM
             )
         )
-        Log.d(TAG, "📍 Initial map position set")
+        // Keep Compose overlays (distance circles) in sync from the first frame
+        mapState.currentZoom = INITIAL_ZOOM.toFloat()
+        Log.d(TAG, "Initial map position set")
     }
 
     private fun loadMapData(map: MapLibreMap) {
@@ -170,11 +172,11 @@ class MapInitializer(
         map.addOnCameraIdleListener {
             try {
                 val currentZoom = map.cameraPosition.zoom
-                // DISABLED: Using Canvas overlay instead
-                // mapState.distanceCirclesOverlay?.updateZoomLevel(currentZoom)
-                Log.d(TAG, "📷 Camera idle, zoom: $currentZoom")
+                mapState.currentZoom = currentZoom.toFloat()
+                // DISABLED: Map-based overlay updates; Canvas overlay listens to currentZoomFlow instead
+                Log.d(TAG, "Camera idle, zoom: $currentZoom")
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Error updating distance circles zoom: ${e.message}", e)
+                Log.e(TAG, "Error updating distance circles zoom: ${e.message}", e)
             }
         }
     }

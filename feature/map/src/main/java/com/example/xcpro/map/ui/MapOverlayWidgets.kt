@@ -435,8 +435,9 @@ private fun DistanceCirclesLayer(
     showDistanceCircles: Boolean
 ) {
     val mapLatitude by flightDataManager.latitudeFlow.collectAsStateWithLifecycle()
+    val mapZoom by mapState.currentZoomFlow.collectAsStateWithLifecycle()
     DistanceCirclesCanvas(
-        mapZoom = mapState.mapLibreMap?.cameraPosition?.zoom?.toFloat() ?: 10f,
+        mapZoom = mapZoom,
         mapLatitude = mapLatitude,
         isVisible = showDistanceCircles,
         modifier = Modifier.zIndex(3.7f)
