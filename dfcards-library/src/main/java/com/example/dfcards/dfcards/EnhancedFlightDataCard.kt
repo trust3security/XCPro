@@ -160,11 +160,16 @@ fun EnhancedFlightDataCard(
         )
 
         flightData.secondaryValue?.let {
+            val secondarySize = if (flightData.id == "wind_spd") {
+                (stableFontSizes.secondarySize * 2f).sp
+            } else {
+                stableFontSizes.secondarySize.sp
+            }
             Text(
                 text = it,
-                fontSize = stableFontSizes.secondarySize.sp,
+                fontSize = secondarySize,
                 fontWeight = FontWeight.Bold,
-                color = visualStyle.secondaryColor.copy(alpha = 0.6f * editModeAlpha),
+                color = Color.Black,
                 textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
