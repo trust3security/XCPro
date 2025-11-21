@@ -1,6 +1,7 @@
 ﻿package com.example.xcpro.sensors
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.hardware.Sensor
@@ -235,7 +236,8 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener, 
     /**
      * Start GPS tracking (1Hz - industry standard)
      */
-        private fun startGPS(): Boolean {
+    @SuppressLint("MissingPermission")
+    private fun startGPS(): Boolean {
         if (isGpsStarted) {
             Log.d(TAG, "GPS already started")
             return true
@@ -470,6 +472,7 @@ class UnifiedSensorManager(private val context: Context) : SensorEventListener, 
     /**
      * Get last known location from any provider
      */
+    @SuppressLint("MissingPermission")
     private fun getLastKnownLocation(): Location? {
         if (!hasLocationPermissions()) return null
 

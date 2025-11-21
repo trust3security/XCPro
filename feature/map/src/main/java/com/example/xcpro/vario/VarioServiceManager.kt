@@ -7,6 +7,7 @@ import android.util.Log
 import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.glider.StillAirSinkProvider
 import com.example.xcpro.sensors.FlightDataCalculator
+import com.example.xcpro.sensors.SensorFusionRepository
 import com.example.xcpro.sensors.UnifiedSensorManager
 import com.example.xcpro.weather.wind.data.WindRepository
 import java.util.concurrent.CountDownLatch
@@ -42,7 +43,7 @@ open class VarioServiceManager @Inject constructor(
     private val mainHandler = Handler(Looper.getMainLooper())
 
     val unifiedSensorManager: UnifiedSensorManager = UnifiedSensorManager(context)
-    val flightDataCalculator: FlightDataCalculator =
+    val sensorFusionRepository: SensorFusionRepository =
         FlightDataCalculator(
             context = context,
             sensorDataSource = unifiedSensorManager,
@@ -84,7 +85,7 @@ open class VarioServiceManager @Inject constructor(
         Log.d(TAG, "Stopping sensors + flight data collection")
         cancelSensorRetry()
         unifiedSensorManager.stopAllSensors()
-        flightDataCalculator.stop()
+        sensorFusionRepository.stop()
         configJob?.cancel()
         configJob = null
         flightDataRepository.update(null)
@@ -95,7 +96,7 @@ open class VarioServiceManager @Inject constructor(
     private fun startCollection() {
         if (collectionJob != null) return
         collectionJob = serviceScope.launch {
-            flightDataCalculator.flightDataFlow.collectLatest { data ->
+            sensorFusionRepository.flightDataFlow.collectLatest { data ->
                 flightDataRepository.update(data)
             }
         }
@@ -105,8 +106,8 @@ open class VarioServiceManager @Inject constructor(
         if (configJob != null) return
         configJob = serviceScope.launch {
             levoVarioPreferencesRepository.config.collectLatest { config ->
-                flightDataCalculator.setMacCreadySetting(config.macCready)
-                flightDataCalculator.setMacCreadyRisk(config.macCreadyRisk)
+                sensorFusionRepository.setMacCreadySetting(config.macCready)
+                sensorFusionRepository.setMacCreadyRisk(config.macCreadyRisk)
             }
         }
     }

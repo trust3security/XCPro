@@ -27,7 +27,7 @@ class LevoVarioSettingsViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val configFlow = preferencesRepository.config
-    private val audioFlow = varioServiceManager.flightDataCalculator.audioEngine.settings
+    private val audioFlow = varioServiceManager.sensorFusionRepository.audioSettings
 
     val uiState: StateFlow<LevoVarioUiState> = combine(configFlow, audioFlow) { config, audio ->
         LevoVarioUiState(
@@ -57,7 +57,7 @@ class LevoVarioSettingsViewModel @Inject constructor(
     private fun updateAudioSettings(transform: (VarioAudioSettings) -> VarioAudioSettings) {
         val current = uiState.value.audioSettings
         val updated = transform(current)
-        varioServiceManager.flightDataCalculator.audioEngine.updateSettings(updated)
+        varioServiceManager.sensorFusionRepository.updateAudioSettings(updated)
     }
 
     fun setAudioEnabled(enabled: Boolean) = updateAudioSettings { it.copy(enabled = enabled) }

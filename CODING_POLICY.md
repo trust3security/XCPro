@@ -1,14 +1,14 @@
-﻿# CODING_POLICY.md â€” XC Pro (Android/Kotlin)
+# CODING_POLICY.md — XC Pro (Android/Kotlin)
 
 A blunt, practical standard for writing and reviewing XC Pro code. This is the source of truth for Codex/Copilot and humans.
 
 ---
 
 ## 0) Purpose
-- Ship a **reliable, lowâ€‘latency digital variometer** using phone sensors.
+- Ship a **reliable, low‑latency digital variometer** using phone sensors.
 - Keep the codebase **predictable, testable, and explainable** to future humans and AI.
 
-**Nonâ€‘negotiables:** Kotlin + Jetpack Compose, MVVM + UDF, Hilt DI, Coroutines + Flow, Clean modules, SSOT, no deprecated APIs, no global mutable state.
+**Non‑negotiables:** Kotlin + Jetpack Compose, MVVM + UDF, Hilt DI, Coroutines + Flow, Clean modules, SSOT, no deprecated APIs, no global mutable state.
 
 ---
 
@@ -27,15 +27,15 @@ A blunt, practical standard for writing and reviewing XC Pro code. This is the s
 - **Data (data/)**: Repositories implement interfaces; sources: Sensors, GNSS, Baro, Accel, IGC Replay, Persistence.
 - **DI (di/)**: Hilt modules bind repos/use cases/sensor services.
 
-**SSOT:** All timeâ€‘varying data (sensors, simulation, settings) flow through a **single StateFlow per concern** owned by the repository layer and exposed to domain/presentation.
+**SSOT:** All time‑varying data (sensors, simulation, settings) flow through a **single StateFlow per concern** owned by the repository layer and exposed to domain/presentation.
 
 ---
 
 ## 2) Modules & Package Layout
-Use a multiâ€‘module Gradle project:
+Use a multi‑module Gradle project:
 ```
 app/                       // Android app; wires screens + navigation
-core/common/               // utils, result types, logging faÃ§ade, time, units
+core/common/               // utils, result types, logging façade, time, units
 core/ui/                   // design system, reusable Compose components
 feature/map/               // map screen + overlays + gestures
 feature/variometer/        // vario widgets, audio, UI
@@ -55,11 +55,11 @@ feature/settings/          // preferences, device caps, calibration
 ---
 
 ## 3) Data Flow (UDF)
-1. **Source** â†’ Repository (`Flow<RawSample>`)
-2. Repository â†’ UseCase (fusion/filtering) â†’ `Flow<DomainModel>`
-3. ViewModel collects domain â†’ maps to `UiState`
+1. **Source** → Repository (`Flow<RawSample>`)
+2. Repository → UseCase (fusion/filtering) → `Flow<DomainModel>`
+3. ViewModel collects domain → maps to `UiState`
 4. Composables render `UiState`, emit `UiEvent`
-5. ViewModel handles `UiEvent` â†’ UseCases/Repos
+5. ViewModel handles `UiEvent` → UseCases/Repos
 
 **Never** call Android sensors or I/O from composables.
 
@@ -81,18 +81,18 @@ private val _snapshot = MutableStateFlow(Snapshot())
 val snapshot: StateFlow<Snapshot> = _snapshot.asStateFlow()
 ```
 
-ViewModel helper (preferred): see Appendix â€œSnippets â€“ Flow.inVmâ€.
+ViewModel helper (preferred): see Appendix “Snippets – Flow.inVm”.
 
 ## 4) Sensors & TE Computation
 - **Fusion inputs:** Barometer (pressure altitude), Accelerometer (specific force), GNSS (vertical/ground speed). Optionally gyro for attitude assist if needed.
 - **Outputs:** TE vario (m/s), filtered vertical speed, confidence/quality metrics.
 - **Filters:** Prefer **discrete Kalman** (or complementary if latency budget is tight). Document tuning constants.
-- **Sampling:** Backpressure via `callbackFlow` + `conflate()`; aim â‰¤ **25â€“50 ms** endâ€‘toâ€‘end latency to audio.
+- **Sampling:** Backpressure via `callbackFlow` + `conflate()`; aim ≤ **25–50 ms** end‑to‑end latency to audio.
 - **Threading:** Collect and fuse sensor feeds on `Dispatchers.Default` (or a named executor tuned for sensors); never block the main thread, and ensure scopes cancel promptly when the owner stops listening.
-- **No adâ€‘hoc Main scopes:** Nonâ€‘UI types must not create `CoroutineScope(Dispatchers.Main + â€¦)`. Inject dispatchers/scopes via DI (see DispatchersModule snippet) and collect sensors on `Default` or a named dispatcher.
-- **WhileSubscribed:** When using `SharingStarted.WhileSubscribed`, ensure essential producers arenâ€™t unintentionally stopped when the UI unsubscribes (document the choice with an `AI-NOTE`).
-- **Samsung S22 Ultra specifics:** Use highâ€‘rate sensor modes where supported; guard with capability checks; expose settings.
-- **Simulation mode:** IGC parser feeds the same repository streams. No specialâ€‘case logic in UI; mode swap is a DI/config switch.
+- **No ad‑hoc Main scopes:** Non‑UI types must not create `CoroutineScope(Dispatchers.Main + …)`. Inject dispatchers/scopes via DI (see DispatchersModule snippet) and collect sensors on `Default` or a named dispatcher.
+- **WhileSubscribed:** When using `SharingStarted.WhileSubscribed`, ensure essential producers aren’t unintentionally stopped when the UI unsubscribes (document the choice with an `AI-NOTE`).
+- **Samsung S22 Ultra specifics:** Use high‑rate sensor modes where supported; guard with capability checks; expose settings.
+- **Simulation mode:** IGC parser feeds the same repository streams. No special‑case logic in UI; mode swap is a DI/config switch.
 
 ### Background Variometer Service (new requirement)
 - The TE/Netto chain **must continue running when the UI is backgrounded** so audio, telemetry, and overlays stay continuous. Own `UnifiedSensorManager`, `FlightDataCalculator`, and `VarioAudioEngine` inside a dedicated **foreground service (or equivalent process-wide component)** instead of a composable/ViewModel scope.
@@ -104,15 +104,39 @@ ViewModel helper (preferred): see Appendix â€œSnippets â€“ Flow.inVmâ�
 - Provide a logged fallback only when no polar/config exists, and annotate the fallback path with `// AI-NOTE: no polar configured`.
 - Justification: Netto is air-mass climb (raw vertical speed minus aircraft sink). Using a generic curve introduces +/-0.5 m/s error and breaks trust; we already capture polar data, so the fusion layer is required to honor it.
 
+### Flight Data Stack (new requirement)
+- To keep the TE/variometer chain predictable, every feature touching flight data **must adhere to the four-layer stack below**. Each component owns a single responsibility and exposes only read-only flows to upstream consumers.
+1. **SensorFusionRepository (feature/sensors/data)**  
+   - Owns the mutable `StateFlow`s for fused GPS, baro, IMU, terrain queries, and replay feeds.  
+   - Maintains history buffers (`FixedSampleAverageWindow`, circling history, wind samples) and timestamp bookkeeping.  
+   - Handles throttling/backpressure and injects dispatchers; exposes read-only streams like `Flow<SensorSnapshot>` and `Flow<CompleteFlightDataRaw>`.  
+   - No UI logic, no audio triggers, no `Log.d` except guarded debug hooks.
+2. **CalculateFlightMetricsUseCase (feature/sensors/domain)**  
+   - Pure Kotlin math: TE altitude, netto, thermal averages (TC30 / TC_AVG / T_AVG), wind vectors, L/D, QNH confidence.  
+   - Receives fusion snapshots and deterministic dependencies (`StillAirSinkProvider`, `SimpleAglCalculator`, filters).  
+   - Emits a `Flow<FlightMetrics>`; contains zero Android references and zero side effects beyond calculations.  
+   - Contains extracted helpers like `FlightCalculationHelpers`, `CirclingDetector`, Kalman config; write tests here first.
+3. **FlightDisplayMapper (feature/sensors/presentation)**  
+   - Maps `FlightMetrics` + sensor context into `CompleteFlightData` / `RealTimeFlightData` structs for UI and cards.  
+   - Owns display-only smoothing (clamps, decay constants, net-zero offsets) so presentation tweaks never touch the domain math.  
+   - Responsible for unit conversions and labeling for downstream components; nothing else writes to `CompleteFlightData`.
+4. **VarioAudioController (feature/variometer/audio)**  
+   - Subscribes to the `FlightMetrics` flow and manages `VarioAudioEngine` lifecycle, gating, and mute/toggle events.  
+   - Lives outside of repositories/use cases so domain logic remains side-effect free; integrates with the background service described above.
+
+- **Data flow contract:** `SensorFusionRepository` ? `CalculateFlightMetricsUseCase` ? `FlightDisplayMapper` ? SSOT `StateFlow<CompleteFlightData>` observed by ViewModels/Compose; `VarioAudioController` taps into the same metrics flow but never feeds back into repositories.
+- **Testing contract:** Record/replay fixtures at each boundary. A regression test must prove that TC30, TC_AVG, T_AVG, netto, and display vario values remain bit-for-bit identical after refactors.
+- **DI contract:** Bind each component via Hilt modules; callers depend on interfaces so simulation/replay sources can be swapped without touching UI.
+
 
 ---
 
 ## 5) State, Errors, and Resilience
-- Represent UI state with a single `data class UiState(...)` + sealed sideâ€‘effects (`OneShot` events).
-- Model domain errors with sealed classes; surface userâ€‘visible errors through `UiState`.
+- Represent UI state with a single `data class UiState(...)` + sealed side‑effects (`OneShot` events).
+- Model domain errors with sealed classes; surface user‑visible errors through `UiState`.
 - All external calls return `Result<T>` or throw domain exceptions only inside domain; catch at boundaries.
 - Map exceptions to sealed `Result<T>` types or explicit error sub-states at layer boundaries; ViewModels surface those errors through `UiState` rather than rethrowing.
-- Offlineâ€‘first: cache lastâ€‘known calibration/settings; degrade gracefully if a sensor drops.
+- Offline‑first: cache last‑known calibration/settings; degrade gracefully if a sensor drops.
 
 ---
 
@@ -137,12 +161,12 @@ data class UiState(
 Repositories should map exceptions to `DomainError`; UI converts `DomainError` to strings/messages at render time.
 
 ## 6) Comments & Documentation (for humans and AI)
-**Mandatory.** Every class, public function, and nonâ€‘obvious block must explain **why**, not just what.
+**Mandatory.** Every class, public function, and non‑obvious block must explain **why**, not just what.
 
 - **Header comment per file:** role in the architecture + invariants.
 - **Rationale notes:** when using specific filters, constants, or threading decisions.
 - **Event flow notes:** when pointer input/gesture consumption is involved.
-- **Promptâ€‘hint marker:** Add `// AI-NOTE:` before rationale that helps future AI agents keep intent intact.
+- **Prompt‑hint marker:** Add `// AI-NOTE:` before rationale that helps future AI agents keep intent intact.
 
 Example:
 ```kotlin
@@ -160,15 +184,15 @@ Example:
 - Keep files under **500 lines** (prefer <= 350). Split when larger.
 
 ### Live Telemetry & Recomposition Discipline
-- **Collect lifecycle-aware**: UI layers must use `collectAsStateWithLifecycle()` (or `stateIn(viewModelScope, SharingStarted.WhileSubscribed)` inside the ViewModel) for every sensor/telemetry flow. No raw `collectAsState()` on `gpsFlow`, `orientationFlow`, etc.—it keeps emitting while backgrounded, wastes battery, and re-triggers full-screen recompositions.
+- **Collect lifecycle-aware**: UI layers must use `collectAsStateWithLifecycle()` (or `stateIn(viewModelScope, SharingStarted.WhileSubscribed)` inside the ViewModel) for every sensor/telemetry flow. No raw `collectAsState()` on `gpsFlow`, `orientationFlow`, etc.�it keeps emitting while backgrounded, wastes battery, and re-triggers full-screen recompositions.
 - **Push fast values to leaves**: High-frequency data (climb rate, airspeed, wind, audio state) must be read only by the composable that renders it. Do **not** plumb entire `FlightDataManager` or `RealTimeFlightData` through `MapScreen`; instead expose precise `StateFlow`s/`State` for each fast datum and pass them directly to the leaf widget. Large parents (Map screens, Card containers, MapView holders) should never recompose at telemetry rates.
-- **Use `rememberUpdatedState` for tick loops**: Any `LaunchedEffect`/`Canvas`/animation loop that runs faster than 5 Hz (vario tones, needles, spark lines) must capture the latest value with `rememberUpdatedState` and read inside the loop. This keeps the effect scoped to lifecycle changes instead of every sensor tick.
-- **Wrap derived formatting**: Whenever you format numbers (`UnitsFormatter`, string interpolation, smoothing, delta math) for display, wrap it in `remember(value) { derivedStateOf { … } }`. Only the text composable should recompose; heavy parents must remain stable.
+- **Use `rememberUpdatedState` for tick loops**: Any `LaunchedEffect`/`Canvas`/animation loop that runs faster than 5?Hz (vario tones, needles, spark lines) must capture the latest value with `rememberUpdatedState` and read inside the loop. This keeps the effect scoped to lifecycle changes instead of every sensor tick.
+- **Wrap derived formatting**: Whenever you format numbers (`UnitsFormatter`, string interpolation, smoothing, delta math) for display, wrap it in `remember(value) { derivedStateOf { � } }`. Only the text composable should recompose; heavy parents must remain stable.
 - **Split heavyweight composables**: Files like `MapScreen`, `MapOverlayWidgets`, `MapUIWidgets`, etc., must be decomposed so that pointer gestures, MapView hosting, and card containers sit in their own composables. A change in the compass, slider, or single HUD number should *not* notify `AndroidView(MapView)` or the entire overlay tree.
 - **Stabilize models**: Mark UI data classes that cross Compose boundaries (`RealTimeFlightData`, HUD models, widget state) as `@Immutable` (or expose individual primitives) so Compose skips recompositions when unrelated fields change.
-- **Throttle debug logging**: Never leave per-pointer/per-tick logging in production composables (e.g., gesture logs inside `pointerInteropFilter`). Guard logs behind `BuildConfig.DEBUG` or remove them—logging inside hot loops causes GC churn and frame drops.
+- **Throttle debug logging**: Never leave per-pointer/per-tick logging in production composables (e.g., gesture logs inside `pointerInteropFilter`). Guard logs behind `BuildConfig.DEBUG` or remove them�logging inside hot loops causes GC churn and frame drops.
 - **Prefer Canvas/animation clocks for gauges**: Needles, tapes, or sparklines should render inside a small composable that owns its draw scope. Drive them with `rememberInfiniteTransition`, `Animatable`, or a tight `LaunchedEffect`, keeping the outer layout stable.
-- **Verification**: Use Layout Inspector’s recomposition counters after each feature. The acceptance bar is “only the leaf composable re-renders when telemetry ticks.”
+- **Verification**: Use Layout Inspector�s recomposition counters after each feature. The acceptance bar is �only the leaf composable re-renders when telemetry ticks.�
 
 ### Recommended Split Targets (for XC Pro)
 | Type | Ideal Size | Hard Limit | Split Trigger |
@@ -183,8 +207,8 @@ Example:
 
 ## 8) Testing Strategy
 - **Unit (domain):** TE math, filter correctness, unit conversions, edge cases (gusts, stick thermals).
-- **Integration (dataâ†’domain):** Sensor streams â†’ fusion â†’ expected outputs under synthetic profiles.
-- **UI tests:** State rendering, gesture paths (e.g., hamburger/variometer longâ€‘press), regression for event routing.
+- **Integration (data→domain):** Sensor streams → fusion → expected outputs under synthetic profiles.
+- **UI tests:** State rendering, gesture paths (e.g., hamburger/variometer long‑press), regression for event routing.
 - **Golden tests:** Snapshot crucial UI states.
 - **Flow mocking:** Default to mocking repository/use-case flows in unit tests; use Turbine or equivalent to assert emissions so each layer is verifiable in isolation.
 - **Determinism:** Simulation provides repeatable seeds; avoid `System.currentTimeMillis()` in domain.
@@ -192,16 +216,16 @@ Example:
 ---
 
 ## 9) Performance Budget
-- Endâ€‘toâ€‘end TE update to audio: **â‰¤ 50 ms** typical.
-- Avoid allocations in hot paths; prefer value classes and preâ€‘allocated buffers.
+- End‑to‑end TE update to audio: **≤ 50 ms** typical.
+- Avoid allocations in hot paths; prefer value classes and pre‑allocated buffers.
 - Use `Dispatchers.Default` for math, `Main.immediate` for UI.
 
 ---
 
 ## 10) Logging & Telemetry
-- Use a logging faÃ§ade in `core/common` with levels: DEBUG (dev only), INFO, WARN, ERROR.
+- Use a logging façade in `core/common` with levels: DEBUG (dev only), INFO, WARN, ERROR.
 - No PII; logs must not include GPS traces unless user enables debug.
-- Provide a toggleable onâ€‘device diagnostics overlay in debug builds.
+- Provide a toggleable on‑device diagnostics overlay in debug builds.
 
 ---
 
@@ -215,10 +239,10 @@ Example:
 Keep versions centralized in `gradle/libs.versions.toml`.
 
 Required (indicative):
-- Kotlin, Coroutines, Kotlinxâ€‘Datetime
-- AndroidX: Core, Lifecycle, Navigation, Activityâ€‘Compose
+- Kotlin, Coroutines, Kotlinx‑Datetime
+- AndroidX: Core, Lifecycle, Navigation, Activity‑Compose
 - Compose BOM (+ UI, Material3, Tooling)
-- Hilt (dagger/hilt-android, hiltâ€‘compiler)
+- Hilt (dagger/hilt-android, hilt‑compiler)
 - Accompanist (permissions if needed)
 - Testing: JUnit, Turbine, MockK, Robolectric/Compose UI Test
 - Detekt + ktlint; baseline checked in
@@ -226,8 +250,8 @@ Required (indicative):
 ---
 
 ## 13) Git & Branching
-- Shortâ€‘lived feature branches; PRs under 400 lines if possible.
-- Commit messages: `scope: concise change` with a oneâ€‘line reason in the body.
+- Short‑lived feature branches; PRs under 400 lines if possible.
+- Commit messages: `scope: concise change` with a one‑line reason in the body.
 - No WIP PRs without failing tests annotated.
 
 ---
@@ -245,16 +269,16 @@ Required (indicative):
 
 - [ ] No public `MutableStateFlow`/`MutableSharedFlow`; only `StateFlow`/`Flow` exposed.
 - [ ] ViewModel flows use `.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), initial)` or `Flow.inVm` helper.
-- [ ] UseCases are singleâ€‘verb, â‰¤150 LOC, no Android deps; `operator fun invoke(...)` entrypoint.
-- [ ] Longâ€‘running/sensor collectors use `Dispatchers.Default` or a named dispatcher; none on Main.
-- [ ] Errors are typed (sealed) or `Result<T>`; no raw string errors in repository â†’ ViewModel paths.
-- [ ] Flow tests use Turbine (repositories/useâ€‘cases) and `runTest` + `MainDispatcherRule` (ViewModels).
-- [ ] No adâ€‘hoc `CoroutineScope(Dispatchers.Main + â€¦)` in nonâ€‘UI types; dispatchers provided via DI.
+- [ ] UseCases are single‑verb, ≤150 LOC, no Android deps; `operator fun invoke(...)` entrypoint.
+- [ ] Long‑running/sensor collectors use `Dispatchers.Default` or a named dispatcher; none on Main.
+- [ ] Errors are typed (sealed) or `Result<T>`; no raw string errors in repository → ViewModel paths.
+- [ ] Flow tests use Turbine (repositories/use‑cases) and `runTest` + `MainDispatcherRule` (ViewModels).
+- [ ] No ad‑hoc `CoroutineScope(Dispatchers.Main + …)` in non‑UI types; dispatchers provided via DI.
 
-## Appendix â€“ Enforcement & Snippets
+## Appendix – Enforcement & Snippets
 
 **Enforcement**
-- Preâ€‘commit guard (temporary, before a detekt rule). Blocks public `Mutable(State|Shared)Flow` outside tests:
+- Pre‑commit guard (temporary, before a detekt rule). Blocks public `Mutable(State|Shared)Flow` outside tests:
   ```bash
   # .githooks/pre-commit
   #!/usr/bin/env bash
@@ -263,7 +287,7 @@ Required (indicative):
      app dfcards-library core feature && {
     echo 'Refuse public Mutable(State|Shared)Flow. Expose StateFlow/Flow.' >&2; exit 1; }
   ```
-- Detekt (longâ€‘term): add a â€œforbidden types in public APIâ€ rule targeting
+- Detekt (long‑term): add a “forbidden types in public API” rule targeting
   `kotlinx.coroutines.flow.MutableStateFlow` and `MutableSharedFlow`.
 
 **Snippets**
@@ -284,7 +308,7 @@ Required (indicative):
   ): StateFlow<T> = stateIn(scope, started, initial)
   ```
 
-- Dispatchers via DI (avoid adâ€‘hoc Main scopes):
+- Dispatchers via DI (avoid ad‑hoc Main scopes):
   ```kotlin
   // core/common/DispatchersModule.kt
   package com.example.common.di
@@ -308,7 +332,7 @@ Required (indicative):
   }
   ```
 
-- Turbine test template for repository/useâ€‘case flows:
+- Turbine test template for repository/use‑case flows:
   ```kotlin
   @Test fun repo_emits_updates() = runTest {
     val repo = createRepoUnderTest()
@@ -337,7 +361,7 @@ Include unit/integration/UI tests where relevant. Optimize for Samsung S22 Ultra
 
 ## 16) Examples to Emulate
 - Rationale comments near gesture consumption, filter tuning, latency choices.
-- Repository exposes `StateFlow<TeState>`; ViewModel maps to `UiState` with oneâ€‘shot events for snackbars/audio.
+- Repository exposes `StateFlow<TeState>`; ViewModel maps to `UiState` with one‑shot events for snackbars/audio.
 
 ---
 
@@ -363,5 +387,6 @@ A feature is done when:
 
 ---
 
-**This file is authoritative.** If a decision isnâ€™t covered, pick the simplest option that preserves SSOT, testability, and low latencyâ€”then document the rationale with an `AI-NOTE`.
+**This file is authoritative.** If a decision isn’t covered, pick the simplest option that preserves SSOT, testability, and low latency—then document the rationale with an `AI-NOTE`.
+
 
