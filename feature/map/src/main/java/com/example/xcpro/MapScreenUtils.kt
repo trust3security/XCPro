@@ -100,6 +100,7 @@ internal fun convertToRealTimeFlightData(completeData: CompleteFlightData): Real
         windSource = completeData.windSource.name,
         windHeadwind = completeData.windHeadwind.value,
         windCrosswind = completeData.windCrosswind.value,
+        windAgeSeconds = windAgeSeconds(completeData.windLastUpdatedMillis),
 
         // NEW: Vario variants for side-by-side testing (VARIO_IMPROVEMENTS.md)
         varioOptimized = completeData.varioOptimized.value,
@@ -124,4 +125,10 @@ internal fun convertToRealTimeFlightData(completeData: CompleteFlightData): Real
         macCready = completeData.macCready,
         macCreadyRisk = completeData.macCreadyRisk
     )
+}
+
+private fun windAgeSeconds(lastUpdatedMillis: Long): Long {
+    if (lastUpdatedMillis <= 0L) return -1
+    val ageMs = System.currentTimeMillis() - lastUpdatedMillis
+    return (ageMs / 1000L).coerceAtLeast(0L)
 }

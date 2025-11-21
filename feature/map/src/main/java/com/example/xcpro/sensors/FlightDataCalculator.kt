@@ -604,6 +604,7 @@ class FlightDataCalculator(
             windCrosswind = SpeedMs(windCrosswind),
             windQuality = windQuality,
             windSource = windSource,
+            windLastUpdatedMillis = windState?.lastUpdatedMillis ?: 0L,
             thermalAverage = VerticalSpeedMs(bruttoAverage30s),
             thermalAverageCircle = VerticalSpeedMs(thermalAvgCircle.toDouble()),
             thermalAverageTotal = VerticalSpeedMs(thermalAvgTotal.toDouble()),

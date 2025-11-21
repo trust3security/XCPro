@@ -67,6 +67,7 @@ data class RealTimeFlightData(
     val windSource: String = "",
     val windHeadwind: Double = 0.0,
     val windCrosswind: Double = 0.0,
+    val windAgeSeconds: Long = -1,
     // NEW: Multiple vario implementations for testing (VARIO_IMPROVEMENTS.md)
     val varioOptimized: Double = 0.0,      // Optimized Kalman (R=0.5m)
     val varioLegacy: Double = 0.0,         // Legacy Kalman (R=2.0m)
