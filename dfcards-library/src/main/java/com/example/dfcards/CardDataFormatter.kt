@@ -1,4 +1,4 @@
-﻿package com.example.dfcards
+package com.example.dfcards
 
 import com.example.xcpro.common.units.AltitudeM
 import com.example.xcpro.common.units.DistanceM
@@ -32,6 +32,7 @@ internal object CardDataFormatter {
                 "-- ${UnitsFormatter.altitude(AltitudeM(0.0), units).unitLabel}"
             "ground_speed", "wind_spd", "wind_arrow", "task_spd", "ias" ->
                 "-- ${UnitsFormatter.speed(SpeedMs(0.0), units).unitLabel}"
+            "wind_dir" -> "--\u00B0"
             "wpt_dist", "task_dist" ->
                 "-- ${UnitsFormatter.distance(DistanceM(0.0), units).unitLabel}"
             else -> "--"
@@ -166,7 +167,7 @@ internal object CardDataFormatter {
             }
 
             "wpt_dist" -> Pair(placeholderFor(cardId), "NO WPT")
-            "wpt_brg" -> Pair("---Â¦", "NO WPT")
+            "wpt_brg" -> Pair("---¦", "NO WPT")
             "final_gld" -> Pair("--:1", "NO WPT")
             "wpt_eta" -> Pair("--:--", "NO WPT")
 
@@ -338,8 +339,8 @@ internal object CardDataFormatter {
             return Pair(placeholder, "NO WIND")
         }
         val formatted = UnitsFormatter.speed(SpeedMs(liveData.windSpeed.toDouble()), units)
-        val badge = windBadge(liveData)
-        return Pair(formatted.text, badge)
+        val arrow = arrowSymbol(liveData.windDirection.toDouble())
+        return Pair(formatted.text, arrow)
     }
 
     private fun formatWindDirection(
@@ -349,11 +350,16 @@ internal object CardDataFormatter {
     ): Pair<String, String?> {
         val hasWind = liveData.windQuality > 0 && liveData.windSpeed > 0.5f
         if (!hasWind) {
-            return Pair(placeholder.replace("?", "-Â¦"), "NO WIND")
+            val placeholderWithDegree = if (placeholder.contains("?")) {
+                placeholder.replace("?", "-\u00B0")
+            } else {
+                placeholder
+            }
+            return Pair(placeholderWithDegree, "NO WIND")
         }
         val windDir = ((liveData.windDirection.roundToInt() % 360) + 360) % 360
-        val headCross = headCrossSummary(liveData, units)
-        return Pair("${windDir}-Â¦", headCross)
+        val speed = UnitsFormatter.speed(SpeedMs(liveData.windSpeed.toDouble()), units).text
+        return Pair("$windDir\u00B0", speed)
     }
 
     private fun formatWindArrow(
@@ -366,9 +372,8 @@ internal object CardDataFormatter {
             return Pair(placeholder, "NO WIND")
         }
         val arrow = arrowSymbol(liveData.windDirection.toDouble())
-        val formatted = UnitsFormatter.speed(SpeedMs(liveData.windSpeed.toDouble()), units)
-        val badge = headCrossSummary(liveData, units)
-        return Pair("$arrow  ${formatted.text}", badge)
+        val speed = UnitsFormatter.speed(SpeedMs(liveData.windSpeed.toDouble()), units).text
+        return Pair(arrow, speed)
     }
 
     private fun windBadge(liveData: RealTimeFlightData): String {
@@ -394,15 +399,45 @@ internal object CardDataFormatter {
         val headSign = if (liveData.windHeadwind >= 0) "+" else "-"
         val cross = UnitsFormatter.speed(SpeedMs(abs(liveData.windCrosswind)), units).text
         val crossSide = if (liveData.windCrosswind >= 0) "R" else "L"
-        val badge = windBadge(liveData)
-        return "Hd $headSign$head / X $crossSide $cross -+ $badge"
+        return "Hd $headSign$head / X $crossSide $cross"
     }
 
     private fun arrowSymbol(directionFromDeg: Double): String {
-        val arrows = listOf("↑", "↗", "→", "↘", "↓", "↙", "←", "↖")
+        val arrows = listOf(
+            "\u2191", // North
+            "\u2197", // North-East
+            "\u2192", // East
+            "\u2198", // South-East
+            "\u2193", // South
+            "\u2199", // South-West
+            "\u2190", // West
+            "\u2196"  // North-West
+        )
         val normalized = ((directionFromDeg % 360.0) + 360.0) % 360.0
         val index = ((normalized + 22.5) / 45.0).toInt() % arrows.size
         return arrows[index]
+    }
+
+    private fun windMeta(liveData: RealTimeFlightData): String {
+        val parts = mutableListOf<String>()
+        windAgeLabel(liveData.windAgeSeconds)?.let { parts += it }
+        parts += windBadge(liveData)
+        return parts.joinToString(" \u00B7 ")
+    }
+
+    private fun windAgeLabel(ageSeconds: Long): String? {
+        if (ageSeconds < 0) return null
+        return when {
+            ageSeconds < 5 -> "LIVE"
+            ageSeconds < 60 -> "${ageSeconds}s"
+            ageSeconds < 3600 -> "${ageSeconds / 60}m"
+            else -> "${ageSeconds / 3600}h"
+        }
+    }
+
+    private fun combineSecondary(vararg labels: String?): String? {
+        val text = labels.filterNot { it.isNullOrBlank() }.joinToString(" \u00B7 ")
+        return text.ifBlank { null }
     }
 
     private fun RealTimeFlightData.primaryVarioValue(): Double {
@@ -424,5 +459,3 @@ internal object CardDataFormatter {
         return fallback ?: finiteDisplay ?: verticalSpeed.takeIf { it.isFinite() } ?: 0.0
     }
 }
-
-

@@ -24,7 +24,7 @@ class VarioDiagnosticsViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            varioServiceManager.flightDataCalculator.diagnosticsFlow.collect { sample ->
+            varioServiceManager.sensorFusionRepository.diagnosticsFlow.collect { sample ->
                 if (sample != null) {
                     _uiState.update { current ->
                         val updatedHistory = (current.history + sample).takeLast(historyLimit)

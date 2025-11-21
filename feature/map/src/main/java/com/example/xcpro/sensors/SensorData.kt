@@ -120,6 +120,7 @@ data class CompleteFlightData(
     val windCrosswind: SpeedMs = SpeedMs(0.0),
     val windQuality: Int = 0,
     val windSource: WindSource = WindSource.NONE,
+    val windLastUpdatedMillis: Long = 0L,
 
     // XCSoar-style thermal metrics for cards/infobox parity
     val thermalAverage: VerticalSpeedMs,  // m/s (TC 30s average climb)

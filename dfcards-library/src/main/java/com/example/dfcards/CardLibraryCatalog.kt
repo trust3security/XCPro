@@ -318,7 +318,7 @@ private val timeWeatherCards = listOf(
     ),
     CardDefinition(
         id = "wind_arrow",
-        title = "WIND ARROW",
+        title = "WIND",
         description = "Arrow showing wind direction plus head/crosswind",
         category = CardCategory.TIME_WEATHER,
         icon = Icons.Filled.Radar,

@@ -7,6 +7,7 @@ import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.glider.StillAirSinkProvider
 import com.example.xcpro.replay.IgcParser.parse
 import com.example.xcpro.sensors.FlightDataCalculator
+import com.example.xcpro.sensors.SensorFusionRepository
 import com.example.xcpro.vario.VarioServiceManager
 import com.example.xcpro.weather.wind.data.WindRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -76,7 +77,7 @@ class IgcReplayController @Inject constructor(
     private var sensorsSuspended = false
 
     private val replaySensorSource = ReplaySensorSource()
-    private val replayCalculator = FlightDataCalculator(
+    private val replayFusionRepository: SensorFusionRepository = FlightDataCalculator(
         context = appContext,
         sensorDataSource = replaySensorSource,
         scope = scope,
@@ -95,7 +96,7 @@ class IgcReplayController @Inject constructor(
 
     init {
         scope.launch {
-            replayCalculator.flightDataFlow.collect { data ->
+            replayFusionRepository.flightDataFlow.collect { data ->
                 if (_session.value.status != SessionStatus.IDLE) {
                     flightDataRepository.update(data)
                 }
@@ -172,7 +173,7 @@ class IgcReplayController @Inject constructor(
             cancelReplayJob()
             replaySensorSource.reset()
             flightDataRepository.update(null)
-            replayCalculator.resetQnhToStandard()
+            replayFusionRepository.resetQnhToStandard()
             resumeSensors()
             points = emptyList()
             currentIndex = 0
@@ -229,7 +230,7 @@ class IgcReplayController @Inject constructor(
             timestamp = current.timestampMillis
         )
         val igcVario = verticalSpeed(current, previous)
-        replayCalculator.updateReplayRealVario(igcVario)
+        replayFusionRepository.updateReplayRealVario(igcVario)
     }
 
     private fun resolveReplayHeading(movement: MovementSnapshot): Float {
@@ -367,7 +368,7 @@ class IgcReplayController @Inject constructor(
         val qnh = log.metadata.qnhHpa ?: DEFAULT_QNH_HPA
         val start = points.first().timestampMillis
         val duration = (points.last().timestampMillis - start).coerceAtLeast(1L)
-        replayCalculator.setManualQnh(qnh)
+        replayFusionRepository.setManualQnh(qnh)
         _session.value = SessionState(
             selection = selection,
             status = SessionStatus.PAUSED,
@@ -442,3 +443,4 @@ class IgcReplayController @Inject constructor(
         return qnhHpa * ratio.pow(EXPONENT)
     }
 }
+
