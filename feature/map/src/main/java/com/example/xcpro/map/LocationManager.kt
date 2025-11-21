@@ -11,7 +11,7 @@ import androidx.lifecycle.LifecycleOwner
 import com.example.xcpro.common.orientation.MapOrientationMode
 import com.example.xcpro.map.QnhPreferencesRepository
 import com.example.xcpro.sensors.UnifiedSensorManager
-import com.example.xcpro.sensors.FlightDataCalculator
+import com.example.xcpro.sensors.SensorFusionRepository
 import com.example.xcpro.sensors.GPSData
 import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.MapOrientationPreferences
@@ -77,12 +77,12 @@ class LocationManager(
     val unifiedSensorManager: UnifiedSensorManager = varioServiceManager.unifiedSensorManager
 
     // ✅ PHASE 2: Flight data calculator (combines all sensor data + calculations)
-    val flightDataCalculator: FlightDataCalculator = varioServiceManager.flightDataCalculator
+    val sensorFusionRepository: SensorFusionRepository = varioServiceManager.sensorFusionRepository
 
     init {
         coroutineScope.launch {
             qnhPreferencesRepository.qnhHpaFlow.collect { storedQnh ->
-                storedQnh?.let { flightDataCalculator.setManualQnh(it) }
+                storedQnh?.let { sensorFusionRepository.setManualQnh(it) }
             }
         }
     }
@@ -222,7 +222,7 @@ class LocationManager(
             // Restart all sensors
             ensureSensorsRunning()
 
-            // FlightDataCalculator starts automatically with sensor data flow (no explicit start)
+    // Flight data fusion starts automatically with sensor data flow (no explicit start)
             Log.d(TAG, "Sensors restarted successfully after sleep/doze")
             return
         }
@@ -240,7 +240,7 @@ class LocationManager(
             // Restart all sensors
             ensureSensorsRunning()
 
-            // FlightDataCalculator starts automatically with sensor data flow
+    // Flight data fusion starts automatically with sensor data flow
             // No explicit start() method needed
 
             Log.d(TAG, "✅ Sensors restarted successfully after sleep mode")
@@ -252,14 +252,14 @@ class LocationManager(
     }
 
     fun setManualQnh(qnh: Double) {
-        flightDataCalculator.setManualQnh(qnh)
+        sensorFusionRepository.setManualQnh(qnh)
         coroutineScope.launch {
             qnhPreferencesRepository.setManualQnh(qnh)
         }
     }
 
     fun resetQnhToStandard() {
-        flightDataCalculator.resetQnhToStandard()
+        sensorFusionRepository.resetQnhToStandard()
         coroutineScope.launch {
             qnhPreferencesRepository.clearManualQnh()
         }
@@ -476,6 +476,7 @@ class LocationManager(
     }
 
 }
+
 
 
 

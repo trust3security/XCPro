@@ -1,28 +1,28 @@
 package com.example.xcpro.sensors
 
 import android.content.Context
-import android.location.Location
 import android.util.Log
 import com.example.dfcards.calculations.BarometricAltitudeCalculator
 import com.example.dfcards.calculations.ConfidenceLevel
 import com.example.dfcards.filters.AdvancedBarometricFilter
 import com.example.dfcards.dfcards.calculations.SimpleAglCalculator
-import com.example.xcpro.audio.VarioAudioEngine
+import com.example.xcpro.audio.VarioAudioController
+import com.example.xcpro.audio.VarioAudioSettings
+import com.example.xcpro.flightdata.FlightDisplayMapper
+import com.example.xcpro.flightdata.FlightDisplaySnapshot
 import com.example.xcpro.glider.StillAirSinkProvider
 import com.example.xcpro.vario.*  // NEW: Vario implementations for side-by-side testing
 import com.example.xcpro.sensors.VarioDiagnosticsSample
+import com.example.xcpro.common.units.AltitudeM
+import com.example.xcpro.sensors.domain.CalculateFlightMetricsUseCase
+import com.example.xcpro.sensors.domain.FlightMetricsRequest
 import com.example.xcpro.weather.wind.data.WindState
 import com.example.xcpro.weather.wind.model.WindSource
-import com.example.xcpro.weather.wind.model.WindVector
-import com.example.xcpro.common.units.AltitudeM
-import com.example.xcpro.common.units.PressureHpa
-import com.example.xcpro.common.units.SpeedMs
-import com.example.xcpro.common.units.VerticalSpeedMs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlin.math.*
+import kotlin.math.abs
 import java.util.Locale
 
 /**
@@ -58,7 +58,7 @@ class FlightDataCalculator(
     private val windStateFlow: StateFlow<WindState>,
     private val enableAudio: Boolean = true,
     private val isReplayMode: Boolean = false
-) {
+): SensorFusionRepository {
 
     companion object {
         private const val TAG = "FlightDataCalculator"
@@ -74,29 +74,11 @@ class FlightDataCalculator(
         // L/D calculation
         private const val LD_CALCULATION_INTERVAL = 5000L     // ms
 
-        // IMU fusion thresholds
-        private const val MIN_SPEED_FOR_IMU_FUSION = 15.0      // m/s; below this we skip IMU fusion
-        private const val MAX_ACCEL_FOR_FUSION = 12.0         // m/s^2 clamp to reject spikes
-
         // QNH jump suppression
         private const val QNH_JUMP_THRESHOLD_HPA = 0.8
         private const val QNH_ALTITUDE_JUMP_THRESHOLD_METERS = 5.0
         private const val QNH_CALIBRATION_ACCURACY_THRESHOLD = 8.0
-        private const val SEA_LEVEL_TEMP_CELSIUS = 15.0
-        private const val TEMP_LAPSE_RATE_C_PER_M = -0.0065
-        private const val GAS_CONSTANT = 287.05
-        private const val GRAVITY = 9.80665
-        private const val MIN_SINK_FOR_IAS_MS = 0.15
-        private const val IAS_SCAN_MIN_MS = 8.0
-        private const val IAS_SCAN_MAX_MS = 80.0
-        private const val IAS_SCAN_STEP_MS = 0.5
-        private const val SEA_LEVEL_PRESSURE_HPA = 1013.25
         private const val VARIO_VALIDITY_MS = 500L
-        private const val AVERAGE_WINDOW_SECONDS = 30
-        private const val DISPLAY_VAR_CLAMP = 7.0
-        private const val DISPLAY_SMOOTH_TIME_S = 0.6
-        private const val DISPLAY_DECAY_FACTOR = 0.9
-        private const val NETTO_DISPLAY_WINDOW_MS = 5_000L
         private const val REPLAY_VARIO_MAX_AGE_MS = 5_000L
     }
 
@@ -116,7 +98,10 @@ class FlightDataCalculator(
         locationHistory = locationHistory,
         sinkProvider = sinkProvider
     )
-    private val circlingDetector = CirclingDetector()
+    private val flightMetricsUseCase = CalculateFlightMetricsUseCase(
+        flightHelpers = flightHelpers,
+        sinkProvider = sinkProvider
+    )
 
     private var latestWindState: WindState? = null
 
@@ -134,14 +119,18 @@ class FlightDataCalculator(
     private val varioComplementary = ComplementaryVario()    // Future (Priority 3)
 
     // ✅ PROFESSIONAL VARIO AUDIO ENGINE (zero-lag audio feedback)
-    val audioEngine = VarioAudioEngine(context, scope)
+
+    private val audioController = VarioAudioController(context, scope, enableAudio)
+    val audioEngine get() = audioController.engine
+    private val flightDisplayMapper = FlightDisplayMapper()
 
     // StateFlow - Single Source of Truth for calculated flight data
     private val _flightDataFlow = MutableStateFlow<CompleteFlightData?>(null)
-    val flightDataFlow: StateFlow<CompleteFlightData?> = _flightDataFlow.asStateFlow()
+    override val flightDataFlow: StateFlow<CompleteFlightData?> = _flightDataFlow.asStateFlow()
 
     private val _diagnosticsFlow = MutableStateFlow<VarioDiagnosticsSample?>(null)
-    val diagnosticsFlow: StateFlow<VarioDiagnosticsSample?> = _diagnosticsFlow.asStateFlow()
+    override val diagnosticsFlow: StateFlow<VarioDiagnosticsSample?> = _diagnosticsFlow.asStateFlow()
+    override val audioSettings: StateFlow<VarioAudioSettings> = audioController.engine.settings
 
     @Volatile
     private var replayRealVarioMs: Double? = null
@@ -154,9 +143,6 @@ class FlightDataCalculator(
     private var lastUpdateTime = 0L
     private var lastVarioUpdateTime = 0L  // For high-speed vario loop
     private var varioValidUntil = 0L
-
-    // Tracking for Total Energy (TE) compensation
-    private var previousGPSSpeed = 0.0  // m/s (for TE calculation)
 
     // ✅ PRIORITY 2: CACHED GPS DATA (for high-speed vario loop)
     // The vario loop runs at 50Hz but GPS only updates at 10Hz
@@ -176,15 +162,6 @@ class FlightDataCalculator(
     private var cachedBaroData: BaroData? = null
     private var cachedCompassData: CompassData? = null
     @Volatile private var latestTeVario: Double? = null
-    private val bruttoAverageWindow = FixedSampleAverageWindow(AVERAGE_WINDOW_SECONDS)
-    private val nettoAverageWindow = FixedSampleAverageWindow(AVERAGE_WINDOW_SECONDS)
-    private val nettoDisplayWindow = TimedAverageWindow(NETTO_DISPLAY_WINDOW_MS)
-    private var displayVarioState = 0.0
-    private var displayNettoState = 0.0
-    private var lastBruttoSampleTime = 0L
-    private var lastNettoSampleTime = 0L
-    private var lastNettoValue = Double.NaN
-    private var lastThermalState = false
     private var lastThermalLogTime = 0L
     private var macCreadySetting = DEFAULT_MACCREADY
     private var macCreadyRisk = DEFAULT_MACCREADY
@@ -214,19 +191,6 @@ class FlightDataCalculator(
                 Pair(gps, compass)
             }.collect { (gps, compass) ->
                 updateGPSData(gps, compass)
-            }
-        }
-
-        // Initialize audio engine for professional vario audio
-        if (enableAudio) {
-            scope.launch {
-                val audioInitialized = audioEngine.initialize()
-                if (audioInitialized) {
-                    audioEngine.start()
-                    Log.i(TAG, "Vario audio engine initialized and started (PRIORITY 2: High-speed mode)")
-                } else {
-                    Log.w(TAG, "Failed to initialize vario audio engine")
-                }
             }
         }
 
@@ -396,8 +360,8 @@ class FlightDataCalculator(
         cachedGPSAltitude = gps.altitude.value
         cachedGPSAccuracy = gps.accuracy.toDouble()
         cachedIsGPSFixed = gps.isHighAccuracy
-        cachedGPSLat = gps.latLng.latitude   // 🚀 For SRTM-based QNH calibration
-        cachedGPSLon = gps.latLng.longitude  // 🚀 For SRTM-based QNH calibration
+        cachedGPSLat = gps.latLng.latitude   // dYs? For SRTM-based QNH calibration
+        cachedGPSLon = gps.latLng.longitude  // dYs? For SRTM-based QNH calibration
         cachedGPS = gps
         cachedCompassData = compass
 
@@ -418,139 +382,27 @@ class FlightDataCalculator(
 
         val baroResult = cachedBaroResult
         val baro = cachedBaroData
-
-        // ✅ TOTAL ENERGY (TE) COMPENSATION: Remove false lift from pilot maneuvers
-        val rawVerticalSpeed = varioResult.verticalSpeed
-        val currentSpeed = gps.speed.value
-
-        val teVerticalSpeed = flightHelpers.calculateTotalEnergy(
-            rawVario = rawVerticalSpeed,
-            currentSpeed = currentSpeed,
-            previousSpeed = previousGPSSpeed,
-            deltaTime = deltaTime
-        )
-
-        // Update previous speed for next calculation
-        previousGPSSpeed = currentSpeed
-
-        // Use TE-compensated vertical speed (removes stick thermals!)
-        val teVario = if (currentTime <= varioValidUntil) teVerticalSpeed else null
-        latestTeVario = teVario
+        val windState = latestWindState
 
         val gpsVarioValue = varioGPS.getVerticalSpeed().takeIf { it.isFinite() } ?: 0.0
-        val bruttoVario = teVario ?: gpsVarioValue
-        val varioSource = if (teVario != null) "TE" else "GPS"
-        val varioValid = teVario != null
-
-        val baroAltitude = varioResult.altitude
-        val verticalSpeed = bruttoVario  // Selected V/S (TE preferred, GPS fallback)
-        val qnh = baroResult?.qnh ?: 1013.25
-        val isQNHCalibrated = baroResult?.isCalibrated ?: false
-
-        val pressureAltitude = baroResult?.pressureAltitudeMeters ?: baroAltitude
-        val baroGpsDelta = baroResult?.gpsDeltaMeters
-            ?: if (!gps.altitude.value.isNaN()) baroAltitude - gps.altitude.value else null
-        val baroConfidence = baroResult?.confidenceLevel ?: ConfidenceLevel.LOW
-        val qnhCalibrationAgeSeconds = baroResult?.lastCalibrationTime?.takeIf { it > 0L }?.let {
-            val delta = (currentTime - it) / 1000L
-            if (delta < 0) 0L else delta
-        } ?: -1L
-        val altitudeForAirspeed = when {
-            baroAltitude.isFinite() && baroAltitude != 0.0 -> baroAltitude
-            gps.altitude.value.isFinite() -> gps.altitude.value
-            else -> 0.0
-        }
-        val windState = latestWindState
-        val windVector = windState?.vector
-
-        val isCircling = circlingDetector.update(
-            trackDegrees = gps.bearing,
-            timestampMillis = gps.timestamp,
-            groundSpeed = gps.speed.value
-        )
-
-        // Update AGL (async network call) - uses baro altitude and speed for ground detection
-        flightHelpers.updateAGL(baroAltitude, gps, gps.speed.value)
-
-        // Maintain history for L/D and replay analytics
-        flightHelpers.recordLocationSample(gps)
-
-        // Calculate L/D ratio
-        val calculatedLD = flightHelpers.calculateCurrentLD(gps, baroAltitude)
-
-        val airspeedFromWind = estimateFromWind(
-            gpsSpeed = gps.speed.value,
-            gpsBearingDeg = gps.bearing,
-            altitudeMeters = altitudeForAirspeed,
-            qnhHpa = qnh,
-            windVector = windVector
-        )
-
-        val nettoResult = flightHelpers.calculateNetto(
-            currentVerticalSpeed = verticalSpeed,
-            trueAirspeed = airspeedFromWind?.trueMs,
-            fallbackGroundSpeed = gps.speed.value
-        )
-        val netto = nettoResult.value.toFloat()
-        val nettoValid = nettoResult.valid
-        val thermalActive = isCircling
-        val nettoSampleValue = resolveNettoSampleValue(nettoResult.value, nettoValid)
-        updateAverageWindows(
-            currentTime = currentTime,
-            bruttoSample = bruttoVario,
-            nettoSample = nettoSampleValue,
-            thermalActive = thermalActive
-        )
-        if (nettoValid) {
-            lastNettoValue = nettoResult.value
-            nettoDisplayWindow.addSample(currentTime, nettoResult.value)
-        } else {
-            nettoDisplayWindow.clear()
-        }
-        val bruttoAverage30s = bruttoAverageWindow.average()
-        val nettoAverage30s = nettoAverageWindow.average()
-        val displayVario = smoothDisplayVario(bruttoVario, deltaTime, varioValid)
-        val rawDisplayNetto = if (!nettoDisplayWindow.isEmpty()) {
-            nettoDisplayWindow.average()
-        } else {
-            nettoResult.value
-        }
-        val displayNetto = smoothDisplayNetto(rawDisplayNetto, deltaTime, nettoValid)
-        val airspeedEstimate = airspeedFromWind ?: if (nettoValid) {
-            estimateFromPolarSink(
-                netto = netto,
-                verticalSpeed = verticalSpeed,
-                altitudeMeters = altitudeForAirspeed,
-                qnhHpa = qnh
+        val metrics = flightMetricsUseCase.execute(
+            FlightMetricsRequest(
+                gps = gps,
+                currentTimeMillis = currentTime,
+                deltaTimeSeconds = deltaTime,
+                varioResult = varioResult,
+                varioGpsValue = gpsVarioValue,
+                baroResult = baroResult,
+                windState = windState,
+                varioValidUntil = varioValidUntil
             )
-        } else {
-            null
-        }
-        val indicatedAirspeedMs = airspeedEstimate?.indicatedMs ?: 0.0
-        val trueAirspeedMs = airspeedEstimate?.trueMs
-            ?: if (gps.speed.value.isFinite()) gps.speed.value else indicatedAirspeedMs
-        val airspeedSourceLabel = (airspeedEstimate?.source ?: AirspeedSource.GPS_GROUND).label
-        val tasValid = trueAirspeedMs.isFinite() && trueAirspeedMs > 0.5
-
-        val teAltitude = computeTotalEnergyAltitude(baroAltitude, trueAirspeedMs)
-        flightHelpers.updateThermalState(
-            timestampMillis = currentTime,
-            teAltitudeMeters = teAltitude,
-            verticalSpeedMs = bruttoVario,
-            isCircling = isCircling
         )
-        val thermalAvgCircle = flightHelpers.thermalAverageCurrent
-        val thermalAvgTotal = flightHelpers.thermalAverageTotal
-        val thermalGain = flightHelpers.thermalGainCurrent
 
-        val windSpeedValue = windVector?.speed?.toFloat() ?: 0f
-        val windDirectionFrom = windVector?.directionFromDeg?.toFloat() ?: 0f
-        val windHeadwind = windState?.headwind ?: 0.0
-        val windCrosswind = windState?.crosswind ?: 0.0
-        val windQuality = windState?.quality ?: 0
-        val windSource = windState?.source ?: WindSource.NONE
+        latestTeVario = metrics.teVario
 
-        // Get all vario results from cached updates
+        val baroAltitude = metrics.baroAltitude
+        val verticalSpeed = metrics.verticalSpeed
+        val varioSource = metrics.varioSource
         val varioResults = mapOf(
             "optimized" to varioOptimized.getVerticalSpeed(),
             "legacy" to varioLegacy.getVerticalSpeed(),
@@ -559,7 +411,6 @@ class FlightDataCalculator(
             "complementary" to varioComplementary.getVerticalSpeed()
         )
 
-        // Determine data quality string
         val dataQuality = buildString {
             append("GPS")
             if (baro != null) append("+BARO")
@@ -578,65 +429,25 @@ class FlightDataCalculator(
             null
         }
 
-        // Create complete flight data
-        val flightData = CompleteFlightData(
+        val snapshot = FlightDisplaySnapshot(
             gps = gps,
             baro = baro,
             compass = compass,
-            baroAltitude = AltitudeM(baroAltitude),
-            qnh = PressureHpa(qnh),
-            isQNHCalibrated = isQNHCalibrated,
-            verticalSpeed = VerticalSpeedMs(verticalSpeed),
-            bruttoVario = VerticalSpeedMs(bruttoVario),
-            displayVario = VerticalSpeedMs(displayVario),
-            bruttoAverage30s = VerticalSpeedMs(bruttoAverage30s),
-            nettoAverage30s = VerticalSpeedMs(nettoAverage30s),
-            varioSource = varioSource,
-            varioValid = varioValid,
-            pressureAltitude = AltitudeM(pressureAltitude),
-            baroGpsDelta = baroGpsDelta?.let { AltitudeM(it) },
-            baroConfidence = baroConfidence,
-            qnhCalibrationAgeSeconds = qnhCalibrationAgeSeconds,
-            agl = AltitudeM(flightHelpers.currentAGL),
-            windSpeed = SpeedMs(windSpeedValue.toDouble()),
-            windDirection = windDirectionFrom,
-            windHeadwind = SpeedMs(windHeadwind),
-            windCrosswind = SpeedMs(windCrosswind),
-            windQuality = windQuality,
-            windSource = windSource,
-            windLastUpdatedMillis = windState?.lastUpdatedMillis ?: 0L,
-            thermalAverage = VerticalSpeedMs(bruttoAverage30s),
-            thermalAverageCircle = VerticalSpeedMs(thermalAvgCircle.toDouble()),
-            thermalAverageTotal = VerticalSpeedMs(thermalAvgTotal.toDouble()),
-            thermalGain = AltitudeM(thermalGain),
-            currentLD = calculatedLD,
-            netto = VerticalSpeedMs(netto.toDouble()),
-            displayNetto = VerticalSpeedMs(displayNetto),
-            nettoValid = nettoValid,
-            trueAirspeed = SpeedMs(trueAirspeedMs),
-            indicatedAirspeed = SpeedMs(indicatedAirspeedMs),
-            airspeedSource = airspeedSourceLabel,
-            tasValid = tasValid,
-            varioOptimized = VerticalSpeedMs(varioResults["optimized"] ?: 0.0),
-            varioLegacy = VerticalSpeedMs(varioResults["legacy"] ?: 0.0),
-            varioRaw = VerticalSpeedMs(varioResults["raw"] ?: 0.0),
-            varioGPS = VerticalSpeedMs(varioResults["gps"] ?: 0.0),
-            varioComplementary = VerticalSpeedMs(varioResults["complementary"] ?: 0.0),
-            realIgcVario = replayIgcVario?.let { VerticalSpeedMs(it) },
-            teAltitude = AltitudeM(teAltitude),
-            macCready = macCreadySetting,
-            macCreadyRisk = macCreadyRisk,
+            metrics = metrics,
+            aglMeters = flightHelpers.currentAGL,
+            varioResults = varioResults,
+            replayIgcVario = replayIgcVario,
+            dataQuality = dataQuality,
             timestamp = currentTime,
-            dataQuality = dataQuality
+            macCready = macCreadySetting,
+            macCreadyRisk = macCreadyRisk
         )
+        val flightData = flightDisplayMapper.map(snapshot)
 
         if (LOG_THERMAL_METRICS && currentTime - lastThermalLogTime >= 1000L) {
             Log.d(
                 TAG,
-                "Thermal metrics: TC30=${flightData.thermalAverage.value} " +
-                    "TC_AVG=${flightData.thermalAverageCircle.value} " +
-                    "T_AVG=${flightData.thermalAverageTotal.value} " +
-                    "TC_GAIN=${flightData.thermalGain.value}"
+                "Thermal metrics: TC30=${flightData.thermalAverage.value} TC_AVG=${flightData.thermalAverageCircle.value} T_AVG=${flightData.thermalAverageTotal.value} TC_GAIN=${flightData.thermalGain.value}"
             )
             lastThermalLogTime = currentTime
         }
@@ -650,244 +461,55 @@ class FlightDataCalculator(
         if (currentTime % 1000 < 100) {
             val varioMode = if (cachedVarioResult != null) "PRIORITY2-50Hz(IMU+BARO)+TE" else "PRIORITY2-50Hz(BARO)+TE"
 
-            Log.d(TAG, "[SLOW GPS 10Hz] $varioMode: GPS alt=${gps.altitude.value.toInt()}m, " +
-                      "Baro alt=${baroAltitude.toInt()}m, " +
-                      "Raw V/S=${String.format("%.2f", rawVerticalSpeed)}m/s, " +
-                      "TE V/S=${String.format("%.2f", verticalSpeed)}m/s, " +
-                      "Speed=${String.format("%.1f", currentSpeed)}m/s, " +
-                      "AGL=${flightHelpers.currentAGL.toInt()}m")
+            Log.d(
+                TAG,
+                "[SLOW GPS 10Hz] $varioMode: GPS alt=${gps.altitude.value.toInt()}m, " +
+                    "Baro alt=${baroAltitude.toInt()}m, " +
+                    "Raw V/S=${String.format("%.2f", varioResult.verticalSpeed)}m/s, " +
+                    "TE V/S=${String.format("%.2f", verticalSpeed)}m/s, " +
+                    "Speed=${String.format("%.1f", gps.speed.value)}m/s, " +
+                    "AGL=${flightHelpers.currentAGL.toInt()}m"
+            )
         }
     }
-
     /**
      * Stop audio engine (SRTM terrain database needs no cleanup)
      */
-    fun stop() {
-        audioEngine.stop()
-        audioEngine.release()
+    override fun updateAudioSettings(settings: VarioAudioSettings) {
+        audioController.engine.updateSettings(settings)
+    }
+
+    override fun stop() {
+        audioController.stop()
         pressureKalmanFilter.reset()
         varioValidUntil = 0L
         replayRealVarioMs = null
         replayRealVarioTimestamp = 0L
         lastReplayBaroTimestamp = 0L
-        bruttoAverageWindow.clear()
-        nettoAverageWindow.clear()
-        nettoDisplayWindow.clear()
-        displayVarioState = 0.0
-        displayNettoState = 0.0
-        lastBruttoSampleTime = 0L
-        lastNettoSampleTime = 0L
-        lastNettoValue = Double.NaN
-        lastThermalState = false
-        circlingDetector.reset()
+        latestTeVario = null
+        flightMetricsUseCase.reset()
         Log.d(TAG, "FlightDataCalculator stopped")
-    }
-
-    private data class AirspeedEstimate(
-        val indicatedMs: Double,
-        val trueMs: Double,
-        val source: AirspeedSource
-    )
-
-    private enum class AirspeedSource(val label: String) {
-        WIND_VECTOR("WIND"),
-        POLAR_SINK("POLAR"),
-        GPS_GROUND("GPS")
-    }
-
-    private fun computeTotalEnergyAltitude(baroAltitude: Double, trueAirspeed: Double): Double {
-        val potential = if (baroAltitude.isFinite()) baroAltitude else 0.0
-        val kinetic = if (trueAirspeed.isFinite()) {
-            (trueAirspeed * trueAirspeed) / (2.0 * GRAVITY)
-        } else {
-            0.0
-        }
-        return potential + kinetic
-    }
-
-    private fun estimateFromWind(
-        gpsSpeed: Double,
-        gpsBearingDeg: Double,
-        altitudeMeters: Double,
-        qnhHpa: Double,
-        windVector: WindVector?
-    ): AirspeedEstimate? {
-        if (windVector == null || !gpsSpeed.isFinite() || gpsSpeed <= 0.1) return null
-        if (!gpsBearingDeg.isFinite()) return null
-        val bearingRad = Math.toRadians(gpsBearingDeg)
-        val groundEast = gpsSpeed * sin(bearingRad)
-        val groundNorth = gpsSpeed * cos(bearingRad)
-        val tasEast = groundEast + windVector.east
-        val tasNorth = groundNorth + windVector.north
-        val tas = hypot(tasEast, tasNorth)
-        if (!tas.isFinite() || tas <= 0.1) return null
-        val densityRatio = computeDensityRatio(altitudeMeters, qnhHpa)
-        val indicated = if (densityRatio > 0.0) tas * sqrt(densityRatio) else tas
-        return AirspeedEstimate(indicatedMs = indicated, trueMs = tas, source = AirspeedSource.WIND_VECTOR)
-    }
-
-    /**
-     * Legacy fallback: match netto vs polar sink to infer TAS, then derive IAS via density ratio.
-     */
-    private fun estimateFromPolarSink(
-        netto: Float,
-        verticalSpeed: Double,
-        altitudeMeters: Double,
-        qnhHpa: Double
-    ): AirspeedEstimate? {
-        val sinkEstimate = kotlin.math.abs(netto.toDouble() - verticalSpeed)
-        if (!sinkEstimate.isFinite() || sinkEstimate < MIN_SINK_FOR_IAS_MS) {
-            return null
-        }
-        val tasMs = findSpeedForSink(sinkEstimate) ?: return null
-        val densityRatio = computeDensityRatio(altitudeMeters, qnhHpa)
-        val indicatedMs = if (densityRatio > 0.0) tasMs * sqrt(densityRatio) else tasMs
-        return AirspeedEstimate(indicatedMs = indicatedMs, trueMs = tasMs, source = AirspeedSource.POLAR_SINK)
-    }
-
-    private fun findSpeedForSink(targetSinkMs: Double): Double? {
-        var speed = IAS_SCAN_MIN_MS
-        var bestSpeed: Double? = null
-        var bestError = Double.POSITIVE_INFINITY
-        while (speed <= IAS_SCAN_MAX_MS) {
-            val sink = sinkProvider.sinkAtSpeed(speed) ?: break
-            val error = abs(sink - targetSinkMs)
-            if (error < bestError) {
-                bestError = error
-                bestSpeed = speed
-            }
-            speed += IAS_SCAN_STEP_MS
-        }
-        return bestSpeed
-    }
-
-    private fun smoothDisplayVario(raw: Double, deltaTime: Double, isValid: Boolean): Double {
-        val targetAlpha = (deltaTime / DISPLAY_SMOOTH_TIME_S).coerceIn(0.0, 1.0)
-        displayVarioState += targetAlpha * (raw - displayVarioState)
-        if (!isValid) {
-            displayVarioState *= DISPLAY_DECAY_FACTOR
-        }
-        if (!displayVarioState.isFinite()) {
-            displayVarioState = 0.0
-        }
-        return displayVarioState.coerceIn(-DISPLAY_VAR_CLAMP, DISPLAY_VAR_CLAMP)
-    }
-
-    private fun smoothDisplayNetto(raw: Double, deltaTime: Double, isValid: Boolean): Double {
-        val targetAlpha = (deltaTime / DISPLAY_SMOOTH_TIME_S).coerceIn(0.0, 1.0)
-        displayNettoState += targetAlpha * (raw - displayNettoState)
-        if (!isValid) {
-            displayNettoState *= DISPLAY_DECAY_FACTOR
-        }
-        if (!displayNettoState.isFinite()) {
-            displayNettoState = 0.0
-        }
-        return displayNettoState.coerceIn(-DISPLAY_VAR_CLAMP, DISPLAY_VAR_CLAMP)
-    }
-
-    private fun computeDensityRatio(altitudeMeters: Double, qnhHpa: Double): Double {
-        val tempSeaLevelK = SEA_LEVEL_TEMP_CELSIUS + 273.15
-        val tempAtAltitude = tempSeaLevelK + (TEMP_LAPSE_RATE_C_PER_M * altitudeMeters)
-        val base = 1.0 + (TEMP_LAPSE_RATE_C_PER_M * altitudeMeters) / tempSeaLevelK
-        val exponent = (-GRAVITY * 0.0289644) / (GAS_CONSTANT * TEMP_LAPSE_RATE_C_PER_M)
-        val pressureRatio = base.pow(exponent)
-        val pressureAtAltPa = (qnhHpa * 100.0) * pressureRatio
-        val densityAtAlt = pressureAtAltPa / (GAS_CONSTANT * tempAtAltitude)
-        val seaLevelDensity = (SEA_LEVEL_PRESSURE_HPA * 100.0) / (GAS_CONSTANT * tempSeaLevelK)
-        return densityAtAlt / seaLevelDensity
-    }
-
-    private fun updateAverageWindows(
-        currentTime: Long,
-        bruttoSample: Double,
-        nettoSample: Double,
-        thermalActive: Boolean
-    ) {
-        val timeWentBack = currentTime < lastBruttoSampleTime || currentTime < lastNettoSampleTime
-        val thermalToggled = thermalActive != lastThermalState
-        if (timeWentBack || thermalToggled) {
-            resetAverageWindows(bruttoSample, nettoSample, currentTime)
-        } else {
-            lastBruttoSampleTime = addSamplesForElapsedSeconds(
-                window = bruttoAverageWindow,
-                lastTimestamp = lastBruttoSampleTime,
-                currentTime = currentTime,
-                sampleValue = bruttoSample
-            )
-            lastNettoSampleTime = addSamplesForElapsedSeconds(
-                window = nettoAverageWindow,
-                lastTimestamp = lastNettoSampleTime,
-                currentTime = currentTime,
-                sampleValue = nettoSample
-            )
-        }
-        lastThermalState = thermalActive
-    }
-
-    private fun addSamplesForElapsedSeconds(
-        window: FixedSampleAverageWindow,
-        lastTimestamp: Long,
-        currentTime: Long,
-        sampleValue: Double
-    ): Long {
-        if (lastTimestamp == 0L) {
-            window.seed(sampleValue)
-            return currentTime
-        }
-
-        if (currentTime < lastTimestamp) {
-            window.seed(sampleValue)
-            return currentTime
-        }
-
-        if (currentTime == lastTimestamp) {
-            return lastTimestamp
-        }
-
-        var nextTimestamp = lastTimestamp + 1000L
-        var latestTimestamp = lastTimestamp
-        while (nextTimestamp <= currentTime) {
-            window.addSample(sampleValue)
-            latestTimestamp = nextTimestamp
-            nextTimestamp += 1000L
-        }
-        return latestTimestamp
-    }
-
-    private fun resetAverageWindows(bruttoSample: Double, nettoSample: Double, timestamp: Long) {
-        bruttoAverageWindow.seed(bruttoSample)
-        nettoAverageWindow.seed(nettoSample)
-        lastBruttoSampleTime = timestamp
-        lastNettoSampleTime = timestamp
-    }
-
-    private fun resolveNettoSampleValue(rawNetto: Double, nettoValid: Boolean): Double {
-        if (nettoValid) {
-            return rawNetto
-        }
-        val fallback = lastNettoValue
-        return if (!fallback.isNaN()) fallback else rawNetto
     }
 
     /**
      * Manually set QNH based on pilot input.
      */
-    fun setManualQnh(qnhHPa: Double) {
+    override fun setManualQnh(qnhHPa: Double) {
         baroCalculator.setQNH(qnhHPa)
         cachedBaroResult = null
         cachedVarioResult = null
         Log.i(TAG, "Manual QNH applied: ${qnhHPa}")
     }
 
-    fun setMacCreadySetting(value: Double) {
+    override fun setMacCreadySetting(value: Double) {
         macCreadySetting = value
     }
 
-    fun setMacCreadyRisk(value: Double) {
+    override fun setMacCreadyRisk(value: Double) {
         macCreadyRisk = value
     }
 
-    fun updateReplayRealVario(realVarioMs: Double?) {
+    override fun updateReplayRealVario(realVarioMs: Double?) {
         if (!isReplayMode) return
         replayRealVarioMs = realVarioMs
         replayRealVarioTimestamp = System.currentTimeMillis()
@@ -896,7 +518,7 @@ class FlightDataCalculator(
     /**
      * Reset to standard atmosphere and allow auto calibration.
      */
-    fun resetQnhToStandard() {
+    override fun resetQnhToStandard() {
         baroCalculator.resetToStandardAtmosphere()
         cachedBaroResult = null
         cachedVarioResult = null
@@ -904,16 +526,9 @@ class FlightDataCalculator(
     }
 
     private fun updateAudioFeed(currentTime: Long, rawVario: Double) {
-        if (!enableAudio) {
-            return
-        }
-
-        val teSample = latestTeVario
-        when {
-            teSample != null && currentTime <= varioValidUntil -> audioEngine.updateVerticalSpeed(teSample)
-            currentTime <= varioValidUntil -> audioEngine.updateVerticalSpeed(rawVario)
-            else -> audioEngine.setSilence()
-        }
+        audioController.update(latestTeVario, rawVario, currentTime, varioValidUntil)
     }
 }
+
+
 
