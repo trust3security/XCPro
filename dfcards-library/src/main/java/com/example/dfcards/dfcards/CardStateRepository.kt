@@ -1,6 +1,9 @@
 package com.example.dfcards.dfcards
 
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.IntSize
 import com.example.dfcards.CardPreferences
+import com.example.dfcards.CardPreferences.CardAnchor
 import com.example.dfcards.RealTimeFlightData
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.dfcards.CardState
@@ -10,6 +13,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 
 internal val FAST_UPDATE_CARD_IDS = setOf(
     "vario",
@@ -58,10 +63,38 @@ internal class CardStateRepository(
     internal var clockTimerJob: Job? = null
 
     internal val essentialCardIds = listOf("gps_alt", "baro_alt", "agl", "vario", "ias", "ground_speed")
+    internal var cardsAcrossPortrait: Int = CardPreferences.DEFAULT_CARDS_ACROSS_PORTRAIT
+    internal var lastContainerSize: IntSize? = null
+    internal var lastDensity: Density? = null
+    private var cardsAcrossJob: Job? = null
+    internal var cardsAnchorPortrait: CardAnchor = CardPreferences.DEFAULT_ANCHOR_PORTRAIT
+    private var cardsAnchorJob: Job? = null
 
     fun setCardPreferences(preferences: CardPreferences) {
         cardPreferences = preferences
         restorePersistedPositions()
+
+        cardsAcrossJob?.cancel()
+        cardsAcrossJob = scope.launch {
+            preferences.getCardsAcrossPortrait().collect { desired ->
+                val clamped = desired.coerceIn(
+                    CardPreferences.MIN_CARDS_ACROSS_PORTRAIT,
+                    CardPreferences.MAX_CARDS_ACROSS_PORTRAIT
+                )
+                if (clamped == cardsAcrossPortrait) return@collect
+                cardsAcrossPortrait = clamped
+                maybeRelayoutExistingCards()
+            }
+        }
+
+        cardsAnchorJob?.cancel()
+        cardsAnchorJob = scope.launch {
+            preferences.getCardsAnchorPortrait().collect { anchor ->
+                if (anchor == cardsAnchorPortrait) return@collect
+                cardsAnchorPortrait = anchor
+                maybeRelayoutExistingCards()
+            }
+        }
     }
 
     fun updateFlightMode(mode: FlightModeSelection) {

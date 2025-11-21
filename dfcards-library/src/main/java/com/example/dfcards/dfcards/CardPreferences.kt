@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -19,8 +20,15 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 class CardPreferences(private val context: Context) {
 
     companion object {
+        const val MIN_CARDS_ACROSS_PORTRAIT = 4
+        const val MAX_CARDS_ACROSS_PORTRAIT = 8
+        const val DEFAULT_CARDS_ACROSS_PORTRAIT = MIN_CARDS_ACROSS_PORTRAIT
+        val DEFAULT_ANCHOR_PORTRAIT = CardAnchor.TOP
+
         private const val DEFAULT_SMOOTHING_ALPHA = 0.25f
         private val VARIO_SMOOTHING_KEY = floatPreferencesKey("vario_smoothing_alpha")
+        private val CARDS_ACROSS_PORTRAIT_KEY = intPreferencesKey("cards_across_portrait")
+        private val CARDS_ANCHOR_PORTRAIT_KEY = stringPreferencesKey("cards_anchor_portrait")
     }
 
     // EXISTING: Save individual card state (keep for backward compatibility)
@@ -118,6 +126,35 @@ class CardPreferences(private val context: Context) {
     suspend fun saveLastActiveTemplate(templateId: String) {
         context.dataStore.edit { preferences ->
             preferences[stringPreferencesKey("last_active_template")] = templateId
+        }
+    }
+
+    fun getCardsAcrossPortrait(): Flow<Int> {
+        return context.dataStore.data.map { preferences ->
+            (preferences[CARDS_ACROSS_PORTRAIT_KEY] ?: DEFAULT_CARDS_ACROSS_PORTRAIT)
+                .coerceIn(MIN_CARDS_ACROSS_PORTRAIT, MAX_CARDS_ACROSS_PORTRAIT)
+        }
+    }
+
+    suspend fun setCardsAcrossPortrait(count: Int) {
+        val clamped = count.coerceIn(MIN_CARDS_ACROSS_PORTRAIT, MAX_CARDS_ACROSS_PORTRAIT)
+        context.dataStore.edit { preferences ->
+            preferences[CARDS_ACROSS_PORTRAIT_KEY] = clamped
+        }
+    }
+
+    fun getCardsAnchorPortrait(): Flow<CardAnchor> {
+        return context.dataStore.data.map { preferences ->
+            when (preferences[CARDS_ANCHOR_PORTRAIT_KEY]) {
+                CardAnchor.BOTTOM.name -> CardAnchor.BOTTOM
+                else -> DEFAULT_ANCHOR_PORTRAIT
+            }
+        }
+    }
+
+    suspend fun setCardsAnchorPortrait(anchor: CardAnchor) {
+        context.dataStore.edit { preferences ->
+            preferences[CARDS_ANCHOR_PORTRAIT_KEY] = anchor.name
         }
     }
 
@@ -444,4 +481,6 @@ class CardPreferences(private val context: Context) {
             keysToRemove.forEach { preferences.remove(it) }
         }
     }
+
+    enum class CardAnchor { TOP, BOTTOM }
 }

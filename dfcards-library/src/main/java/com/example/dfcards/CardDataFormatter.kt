@@ -1,4 +1,4 @@
-package com.example.dfcards
+﻿package com.example.dfcards
 
 import com.example.xcpro.common.units.AltitudeM
 import com.example.xcpro.common.units.DistanceM
@@ -166,7 +166,7 @@ internal object CardDataFormatter {
             }
 
             "wpt_dist" -> Pair(placeholderFor(cardId), "NO WPT")
-            "wpt_brg" -> Pair("---¦", "NO WPT")
+            "wpt_brg" -> Pair("---Â¦", "NO WPT")
             "final_gld" -> Pair("--:1", "NO WPT")
             "wpt_eta" -> Pair("--:--", "NO WPT")
 
@@ -349,11 +349,11 @@ internal object CardDataFormatter {
     ): Pair<String, String?> {
         val hasWind = liveData.windQuality > 0 && liveData.windSpeed > 0.5f
         if (!hasWind) {
-            return Pair(placeholder.replace("?", "-¦"), "NO WIND")
+            return Pair(placeholder.replace("?", "-Â¦"), "NO WIND")
         }
         val windDir = ((liveData.windDirection.roundToInt() % 360) + 360) % 360
         val headCross = headCrossSummary(liveData, units)
-        return Pair("${windDir}-¦", headCross)
+        return Pair("${windDir}-Â¦", headCross)
     }
 
     private fun formatWindArrow(
@@ -399,7 +399,7 @@ internal object CardDataFormatter {
     }
 
     private fun arrowSymbol(directionFromDeg: Double): String {
-        val arrows = listOf("Gåæ", "Gåù", "GåÆ", "Gåÿ", "Gåô", "GåÖ", "GåÉ", "Gåû")
+        val arrows = listOf("↑", "↗", "→", "↘", "↓", "↙", "←", "↖")
         val normalized = ((directionFromDeg % 360.0) + 360.0) % 360.0
         val index = ((normalized + 22.5) / 45.0).toInt() % arrows.size
         return arrows[index]
@@ -424,3 +424,5 @@ internal object CardDataFormatter {
         return fallback ?: finiteDisplay ?: verticalSpeed.takeIf { it.isFinite() } ?: 0.0
     }
 }
+
+
