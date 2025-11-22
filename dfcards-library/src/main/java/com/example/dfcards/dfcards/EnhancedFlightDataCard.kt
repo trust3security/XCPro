@@ -7,6 +7,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -22,6 +23,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -90,94 +92,113 @@ fun EnhancedFlightDataCard(
         baseModifier
     }
 
-    Box(
-        modifier = borderedModifier
-    ) {
-        Text(
-            text = flightData.label,
-            fontSize = stableFontSizes.labelSize.sp,
-            fontWeight = FontWeight.Bold,
-            color = visualStyle.labelColor.copy(alpha = 0.7f * editModeAlpha),
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 2.dp, vertical = 2.dp)
-                .align(Alignment.TopCenter)
-        )
+    BoxWithConstraints(modifier = borderedModifier) {
+        val maxH = maxHeight
+        val minEdge = 0.dp
+
+        // Hug the edges: zero padding, rely on tiny nudges to visually touch edges.
+        val desiredTop = 0.dp
+        val desiredBottom = 0.dp
+
+        val topPad = desiredTop.coerceIn(minEdge, maxH / 2)
+        val bottomPad = desiredBottom.coerceIn(minEdge, maxH / 2)
+
+        val labelNudge = with(LocalDensity.current) { (-3).dp.toPx() }
+        val footerNudge = with(LocalDensity.current) { 3.dp.toPx() }
 
         val primaryColor = flightData.primaryColorOverride ?: visualStyle.primaryColor
+        val primarySize = stableFontSizes.primarySize * 0.8f
 
-        Text(
-            text = buildAnnotatedString {
-                val primaryNumber = flightData.primaryValueNumber
-                val primaryUnit = flightData.primaryValueUnit
-                if (primaryNumber != null) {
-                    withStyle(
-                            style = SpanStyle(
-                                fontSize = stableFontSizes.primarySize.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = primaryColor
-                            )
-                        ) {
-                            append(primaryNumber)
-                    }
-                    primaryUnit?.let { unit ->
-                        append(" ")
-                        withStyle(
-                            style = SpanStyle(
-                                fontSize = (stableFontSizes.primarySize * 0.55f).sp,
-                                fontWeight = FontWeight.Medium,
-                                color = visualStyle.unitColor
-                            )
-                        ) {
-                            append(unit)
-                        }
-                    }
-                } else {
-                    withStyle(
-                        style = SpanStyle(
-                            fontSize = stableFontSizes.primarySize.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = primaryColor
-                        )
-                    ) {
-                        append(flightData.primaryValue)
-                    }
-                }
-            },
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.Center)
-                .graphicsLayer {
-                    scaleX = primaryScale
-                    scaleY = primaryScale
-                }
-        )
-
-        flightData.secondaryValue?.let {
-            val secondarySize = if (flightData.id == "wind_spd") {
-                (stableFontSizes.secondarySize * 2f).sp
-            } else {
-                stableFontSizes.secondarySize.sp
-            }
+                .fillMaxSize()
+                .padding(start = 2.dp, end = 2.dp, top = topPad, bottom = bottomPad)
+        ) {
             Text(
-                text = it,
-                fontSize = secondarySize,
+                text = flightData.label,
+                fontSize = stableFontSizes.labelSize.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.Black,
+                color = Color.Black.copy(alpha = 0.9f * editModeAlpha),
                 textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 2.dp, vertical = 2.dp)
-                    .align(Alignment.BottomCenter)
+                    .align(Alignment.TopCenter)
+                    .graphicsLayer { translationY = labelNudge }
             )
+
+            Text(
+                text = buildAnnotatedString {
+                    val primaryNumber = flightData.primaryValueNumber
+                    val primaryUnit = flightData.primaryValueUnit
+                    if (primaryNumber != null) {
+                        withStyle(
+                            style = SpanStyle(
+                                fontSize = primarySize.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = primaryColor
+                            )
+                        ) {
+                            append(primaryNumber)
+                        }
+                        primaryUnit?.let { unit ->
+                            append(" ")
+                            withStyle(
+                                style = SpanStyle(
+                                    fontSize = (primarySize * 0.55f).sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = visualStyle.unitColor
+                                )
+                            ) {
+                                append(unit)
+                            }
+                        }
+                    } else {
+                        withStyle(
+                            style = SpanStyle(
+                                fontSize = primarySize.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = primaryColor
+                            )
+                        ) {
+                            append(flightData.primaryValue)
+                        }
+                    }
+                },
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.Center)
+                    .graphicsLayer {
+                        scaleX = primaryScale
+                        scaleY = primaryScale
+                    }
+            )
+
+            flightData.secondaryValue?.let { secondaryText ->
+                val secondaryMultiplier = when {
+                    flightData.id == "wind_spd" && secondaryText.equals("NO WIND", ignoreCase = true) -> 1f
+                    flightData.id == "wind_spd" -> 2f
+                    else -> 1f
+                }
+                val secondarySize = (stableFontSizes.secondarySize * secondaryMultiplier).sp
+                Text(
+                    text = secondaryText,
+                    fontSize = secondarySize,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.BottomCenter)
+                        .graphicsLayer { translationY = footerNudge }
+                )
+            }
         }
     }
 }

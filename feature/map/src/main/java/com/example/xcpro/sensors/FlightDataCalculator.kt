@@ -4,7 +4,6 @@ import android.content.Context
 import android.util.Log
 import com.example.dfcards.calculations.BarometricAltitudeCalculator
 import com.example.dfcards.calculations.ConfidenceLevel
-import com.example.dfcards.filters.AdvancedBarometricFilter
 import com.example.dfcards.dfcards.calculations.SimpleAglCalculator
 import com.example.xcpro.audio.VarioAudioController
 import com.example.xcpro.audio.VarioAudioSettings
@@ -12,6 +11,8 @@ import com.example.xcpro.flightdata.FlightDisplayMapper
 import com.example.xcpro.flightdata.FlightDisplaySnapshot
 import com.example.xcpro.glider.StillAirSinkProvider
 import com.example.xcpro.vario.*  // NEW: Vario implementations for side-by-side testing
+import com.example.xcpro.sensors.FlightDataConstants
+import com.example.xcpro.sensors.FlightFilters
 import com.example.xcpro.sensors.VarioDiagnosticsSample
 import com.example.xcpro.common.units.AltitudeM
 import com.example.xcpro.sensors.domain.CalculateFlightMetricsUseCase
@@ -61,25 +62,23 @@ class FlightDataCalculator(
 ): SensorFusionRepository {
 
     companion object {
-        private const val TAG = "FlightDataCalculator"
-        private const val LOG_THERMAL_METRICS = false
-        private const val DEFAULT_MACCREADY = 0.0
+        private const val TAG = FlightDataConstants.TAG
+        private const val LOG_THERMAL_METRICS = FlightDataConstants.LOG_THERMAL_METRICS
+        private const val DEFAULT_MACCREADY = FlightDataConstants.DEFAULT_MACCREADY
 
         // History sizes
-        private const val MAX_LOCATION_HISTORY = 20
-        private const val MAX_VSPEED_HISTORY = 10
-
-        // Wind calculation
+        private const val MAX_LOCATION_HISTORY = FlightDataConstants.MAX_LOCATION_HISTORY
+        private const val MAX_VSPEED_HISTORY = FlightDataConstants.MAX_VSPEED_HISTORY
 
         // L/D calculation
-        private const val LD_CALCULATION_INTERVAL = 5000L     // ms
+        private const val LD_CALCULATION_INTERVAL = FlightDataConstants.LD_CALCULATION_INTERVAL
 
         // QNH jump suppression
-        private const val QNH_JUMP_THRESHOLD_HPA = 0.8
-        private const val QNH_ALTITUDE_JUMP_THRESHOLD_METERS = 5.0
-        private const val QNH_CALIBRATION_ACCURACY_THRESHOLD = 8.0
-        private const val VARIO_VALIDITY_MS = 500L
-        private const val REPLAY_VARIO_MAX_AGE_MS = 5_000L
+        private const val QNH_JUMP_THRESHOLD_HPA = FlightDataConstants.QNH_JUMP_THRESHOLD_HPA
+        private const val QNH_ALTITUDE_JUMP_THRESHOLD_METERS = FlightDataConstants.QNH_ALTITUDE_JUMP_THRESHOLD_METERS
+        private const val QNH_CALIBRATION_ACCURACY_THRESHOLD = FlightDataConstants.QNH_CALIBRATION_ACCURACY_THRESHOLD
+        private const val VARIO_VALIDITY_MS = FlightDataConstants.VARIO_VALIDITY_MS
+        private const val REPLAY_VARIO_MAX_AGE_MS = FlightDataConstants.REPLAY_VARIO_MAX_AGE_MS
     }
 
     // History for calculations (shared with helper) - must be initialized first
@@ -88,8 +87,7 @@ class FlightDataCalculator(
     // Calculation modules (reuse existing code) - aglCalculator must be first!
     private val aglCalculator = SimpleAglCalculator(context)  // KISS: SRTM terrain database
     private val baroCalculator = BarometricAltitudeCalculator(aglCalculator)  // 🚀 SRTM-based QNH calibration
-    private val baroFilter = AdvancedBarometricFilter()  // Old 2-state filter (fallback)
-    private val pressureKalmanFilter = PressureKalmanFilter()
+    private val filters = FlightFilters()
 
     // Flight calculation helpers (extracted to maintain 500-line limit)
     private val flightHelpers = FlightCalculationHelpers(
@@ -231,7 +229,7 @@ class FlightDataCalculator(
             return
         }
 
-        val smoothedPressure = pressureKalmanFilter.update(baro.pressureHPa.value, baro.timestamp)
+        val smoothedPressure = filters.pressureKalmanFilter.update(baro.pressureHPa.value, baro.timestamp)
 
         val previousBaroResult = cachedBaroResult
         val hasCalibrationFix = cachedIsGPSFixed &&
@@ -270,8 +268,8 @@ class FlightDataCalculator(
                     varioRaw.reset()
                     varioGPS.reset()
                     varioComplementary.reset()
-                    baroFilter.reset()
-                    pressureKalmanFilter.reset(smoothedPressure, baro.timestamp)
+                    filters.baroFilter.reset()
+                    filters.pressureKalmanFilter.reset(smoothedPressure, baro.timestamp)
                     cachedVarioResult = null
                     varioValidUntil = 0L
                 }
@@ -318,7 +316,7 @@ class FlightDataCalculator(
             )
         )
 
-        val filteredBaro = baroFilter.processReading(
+        val filteredBaro = filters.baroFilter.processReading(
             rawBaroAltitude = baroResult.altitudeMeters,
             gpsAltitude = cachedGPSAltitude,
             gpsAccuracy = cachedGPSAccuracy
@@ -481,7 +479,7 @@ class FlightDataCalculator(
 
     override fun stop() {
         audioController.stop()
-        pressureKalmanFilter.reset()
+        filters.pressureKalmanFilter.reset()
         varioValidUntil = 0L
         replayRealVarioMs = null
         replayRealVarioTimestamp = 0L

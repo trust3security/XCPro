@@ -30,10 +30,6 @@ import com.example.xcpro.tasks.core.WaypointRole
 import com.example.xcpro.map.MapGestureRegion
 import com.example.xcpro.map.BuildConfig
 import kotlin.math.abs
-import kotlin.math.sin
-import kotlin.math.cos
-import kotlin.math.atan2
-import kotlin.math.sqrt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -105,17 +101,6 @@ private fun checkAATWaypointHit(
 /**
  * Calculate haversine distance between two points in kilometers
  */
-private fun haversineDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
-    val earthRadius = 6371.0 // km
-    val dLat = Math.toRadians(lat2 - lat1)
-    val dLon = Math.toRadians(lon2 - lon1)
-    val a = sin(dLat / 2) * sin(dLat / 2) +
-            cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) *
-            sin(dLon / 2) * sin(dLon / 2)
-    val c = 2 * atan2(sqrt(a), sqrt(1 - a))
-    return earthRadius * c
-}
-
 @Composable
 fun CustomMapGestureHandler(
     mapLibreMap: MapLibreMap?,

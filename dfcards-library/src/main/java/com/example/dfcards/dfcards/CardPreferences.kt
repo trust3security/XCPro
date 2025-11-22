@@ -20,7 +20,7 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 class CardPreferences(private val context: Context) {
 
     companion object {
-        const val MIN_CARDS_ACROSS_PORTRAIT = 4
+        const val MIN_CARDS_ACROSS_PORTRAIT = 3
         const val MAX_CARDS_ACROSS_PORTRAIT = 8
         const val DEFAULT_CARDS_ACROSS_PORTRAIT = MIN_CARDS_ACROSS_PORTRAIT
         val DEFAULT_ANCHOR_PORTRAIT = CardAnchor.TOP

@@ -190,6 +190,7 @@ Example:
 - Provide `@Preview` for each screen and complex component.
 - Hoist state; pass events as lambdas.
 - Keep files under **500 lines** (prefer <= 350). Split when larger.
+- Pointer input consumption: `consumePositionChange()` is deprecated. When touching pointer handlers, switch to `change.consume()` (or the newer helpers) and remove the warnings as part of the refactor.
 
 ### Live Telemetry & Recomposition Discipline
 - **Collect lifecycle-aware**: UI layers must use `collectAsStateWithLifecycle()` (or `stateIn(viewModelScope, SharingStarted.WhileSubscribed)` inside the ViewModel) for every sensor/telemetry flow. No raw `collectAsState()` on `gpsFlow`, `orientationFlow`, etc.it keeps emitting while backgrounded, wastes battery, and re-triggers full-screen recompositions.

@@ -4,18 +4,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.VerticalAlignBottom
 import androidx.compose.material.icons.filled.VerticalAlignTop
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +33,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import com.example.dfcards.CardPreferences
 import com.example.dfcards.CardPreferences.CardAnchor
+import com.example.xcpro.screens.navdrawer.SettingsTopAppBar
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -66,28 +62,19 @@ fun LayoutScreen(
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = androidx.compose.material3.MaterialTheme.colorScheme.primary,
-                    titleContentColor = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary,
-                    actionIconContentColor = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary
-                ),
-                title = { Text("Layouts", style = MaterialTheme.typography.headlineSmall) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Back"
-                        )
+            SettingsTopAppBar(
+                title = "Layouts",
+                onNavigateUp = { navController.navigateUp() },
+                onSecondaryNavigate = {
+                    scope.launch {
+                        navController.popBackStack("map", inclusive = false)
+                        drawerState.open()
                     }
                 },
-                actions = {
-                    IconButton(onClick = { navController.popBackStack("map", inclusive = false) }) {
-                        Icon(
-                            imageVector = Icons.Default.Map,
-                            contentDescription = "Home"
-                        )
+                onNavigateToMap = {
+                    scope.launch {
+                        drawerState.close()
+                        navController.popBackStack("map", inclusive = false)
                     }
                 }
             )

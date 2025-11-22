@@ -145,7 +145,25 @@ fun SettingsScreen(
                         }
                     }
 
-                    // Row 2b: Polar
+                    // Row 2b: Orientation (single)
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            CategoryItem(
+                                title = "Orientation",
+                                icon = Icons.Default.Explore,
+                                onClick = { navController.navigate("orientation_settings") },
+                                modifier = Modifier.weight(1f)
+                            )
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+
+                    // Row 2c: Polar | Levo Vario
                     item {
                         Row(
                             modifier = Modifier
@@ -159,29 +177,16 @@ fun SettingsScreen(
                                 onClick = { navController.navigate("polar_settings") },
                                 modifier = Modifier.weight(1f)
                             )
-                            Spacer(modifier = Modifier.weight(1f))
-                        }
-                    }
-
-                    // Row 2c: Levo Vario toggle screen
-                    item {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
                             CategoryItem(
                                 title = "Levo Vario",
                                 icon = Icons.Default.Speed,
                                 onClick = { navController.navigate("levo_vario_settings") },
                                 modifier = Modifier.weight(1f)
                             )
-                            Spacer(modifier = Modifier.weight(1f))
                         }
                     }
 
-                    // Row 3: Layouts | Airspace
+                    // Row 3: Layouts (single)
                     item {
                         Row(
                             modifier = Modifier
@@ -195,17 +200,7 @@ fun SettingsScreen(
                                 onClick = { navController.navigate("layouts") },
                                 modifier = Modifier.weight(1f)
                             )
-                            CategoryItem(
-                                title = "Airspace",
-                                icon = Icons.Default.Cloud,
-                                onClick = {
-                                    scope.launch {
-                                        navController.popBackStack("map", inclusive = false)
-                                        onShowAirspaceOverlay()
-                                    }
-                                },
-                                modifier = Modifier.weight(1f)
-                            )
+                            Spacer(modifier = Modifier.weight(1f))
                         }
                     }
 
@@ -232,23 +227,6 @@ fun SettingsScreen(
                         }
                     }
 
-                    // Row 5: Orientation | (spacer)
-                    item {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            CategoryItem(
-                                title = "Orientation",
-                                icon = Icons.Default.Explore,
-                                onClick = { navController.navigate("orientation_settings") },
-                                modifier = Modifier.weight(1f)
-                            )
-                            Spacer(modifier = Modifier.weight(1f))
-                        }
-                    }
                 }
             }
         }

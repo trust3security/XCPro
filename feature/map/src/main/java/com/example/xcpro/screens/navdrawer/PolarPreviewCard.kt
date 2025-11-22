@@ -1,0 +1,82 @@
+package com.example.xcpro.screens.navdrawer
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.example.xcpro.glider.GliderRepository
+import com.example.xcpro.glider.PolarCalculator
+
+@Composable
+fun PreviewCard() {
+    val context = LocalContext.current
+    val repo = remember(context) { GliderRepository.getInstance(context) }
+    val model by repo.selectedModel.collectAsState(initial = null)
+    val cfg by repo.config.collectAsState()
+
+    val speedKmh = remember { mutableStateOf(100f) }
+    val sink = model?.let { m -> PolarCalculator.sinkMs(speedKmh.value.toDouble() / 3.6, m, cfg) }
+
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "Quick Preview",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = if (model == null) {
+                    "Select an aircraft to preview polar"
+                } else {
+                    "Model: ${model!!.name} - ${speedKmh.value.toInt()} km/h"
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Slider(
+                value = speedKmh.value,
+                onValueChange = { speedKmh.value = it },
+                valueRange = 50f..200f
+            )
+            if (sink != null) {
+                Text(String.format("Estimated sink: %.2f m/s", sink))
+            }
+            val hint = if (cfg.threePointPolar != null) "Using 3-point polar" else "Using model polar"
+            Text(
+                text = hint,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "Netto/audio use this polar instantly (with bugs + ballast).",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+            )
+        }
+    }
+}
