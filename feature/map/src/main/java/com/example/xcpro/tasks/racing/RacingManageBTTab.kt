@@ -1,4 +1,4 @@
-﻿package com.example.xcpro.tasks.racing
+package com.example.xcpro.tasks.racing
 
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskType
@@ -32,7 +32,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import com.example.xcpro.common.waypoint.WaypointData
 
-// âœ… RACING-ONLY IMPORTS - Zero AAT contamination
+// ✅ RACING-ONLY IMPORTS - Zero AAT contamination
 import com.example.xcpro.tasks.racing.models.RacingWaypoint
 import com.example.xcpro.tasks.racing.models.RacingStartPointType
 import com.example.xcpro.tasks.racing.models.RacingFinishPointType
@@ -40,20 +40,25 @@ import com.example.xcpro.tasks.racing.models.RacingTurnPointType
 
 // Common task imports (separation compliant)
 import com.example.xcpro.tasks.TaskManagerCoordinator
+import com.example.xcpro.tasks.TaskSheetViewModel
 import com.example.xcpro.tasks.racing.ui.RacingTaskPointTypeSelector
 import com.example.xcpro.tasks.SearchableWaypointField
 import com.example.xcpro.tasks.QRCodeDialog
 import com.example.xcpro.tasks.TaskStatsSection
 import com.example.xcpro.tasks.PersistentWaypointSearchBar
+import com.example.xcpro.tasks.AdvanceControls
+import com.example.xcpro.tasks.TaskUiState
 
 /**
  * Racing-specific task management UI
- * âœ… SEPARATION COMPLIANT: Only Racing task imports and logic
+ * ✅ SEPARATION COMPLIANT: Only Racing task imports and logic
  */
 @Composable
 fun RacingManageBTTab(
+    uiState: TaskUiState,
     task: Task,
     taskManager: TaskManagerCoordinator,
+    taskViewModel: TaskSheetViewModel,
     mapLibreMap: MapLibreMap?,
     allWaypoints: List<WaypointData> = emptyList(),
     onClearTask: () -> Unit,
@@ -62,11 +67,13 @@ fun RacingManageBTTab(
     currentQNH: String? = null
 ) {
     RacingFullyExpandedContent(
+        uiState = uiState,
         task = task,
         onClearTask = onClearTask,
         onSaveTask = onSaveTask,
         onDismiss = onDismiss,
         taskManager = taskManager,
+        taskViewModel = taskViewModel,
         mapLibreMap = mapLibreMap,
         allWaypoints = allWaypoints,
         currentQNH = currentQNH
@@ -75,11 +82,13 @@ fun RacingManageBTTab(
 
 @Composable
 private fun RacingFullyExpandedContent(
+    uiState: TaskUiState,
     task: Task,
     onClearTask: () -> Unit,
     onSaveTask: () -> Unit,
     onDismiss: () -> Unit,
     taskManager: TaskManagerCoordinator,
+    taskViewModel: TaskSheetViewModel,
     mapLibreMap: MapLibreMap?,
     allWaypoints: List<WaypointData> = emptyList(),
     currentQNH: String? = null
@@ -98,15 +107,20 @@ private fun RacingFullyExpandedContent(
             onQRCodeClick = { showQRDialog = true }
         )
 
+        AdvanceControls(
+            snapshot = uiState.advanceSnapshot,
+            onModeChange = { mode -> taskViewModel.onAdvanceMode(mode) },
+            onToggleArm = { taskViewModel.onAdvanceArmToggle() },
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+        )
+
         Spacer(modifier = Modifier.height(12.dp))
 
         // Persistent search bar right under header - always visible
         PersistentWaypointSearchBar(
             allWaypoints = allWaypoints,
             onWaypointSelected = { newWaypoint ->
-                // Add new waypoint to the end of the task
-                taskManager.addWaypoint(newWaypoint)
-                taskManager.plotOnMap(mapLibreMap)
+                taskViewModel.onAddWaypoint(newWaypoint)
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -122,21 +136,27 @@ private fun RacingFullyExpandedContent(
                 allWaypoints = allWaypoints,
                 currentQNH = currentQNH,
                 taskManager = taskManager,
+                taskViewModel = taskViewModel,
                 onReorder = { fromIndex, toIndex ->
-                    taskManager.reorderWaypoints(fromIndex, toIndex)
-                    taskManager.plotOnMap(mapLibreMap)
+                    taskViewModel.onReorderWaypoint(fromIndex, toIndex)
                 },
                 onRemove = { index ->
-                    taskManager.removeWaypoint(index)
-                    taskManager.plotOnMap(mapLibreMap)
+                    taskViewModel.onRemoveWaypoint(index)
                 },
                 onTaskPointTypeUpdate = { index, startType, finishType, turnType, gateWidth, keyholeInnerRadius, keyholeAngle, faiQuadrantOuterRadius ->
-                    taskManager.updateWaypointPointType(index, startType, finishType, turnType, gateWidth, keyholeInnerRadius, keyholeAngle, faiQuadrantOuterRadius)
-                    taskManager.plotOnMap(mapLibreMap)
+                    taskViewModel.onUpdateWaypointPointType(
+                        index,
+                        startType,
+                        finishType,
+                        turnType,
+                        gateWidth,
+                        keyholeInnerRadius,
+                        keyholeAngle,
+                        faiQuadrantOuterRadius
+                    )
                 },
                 onWaypointReplace = { index, newWaypoint ->
-                    taskManager.replaceWaypoint(index, newWaypoint)
-                    taskManager.plotOnMap(mapLibreMap)
+                    taskViewModel.onReplaceWaypoint(index, newWaypoint)
                 },
                 modifier = Modifier.weight(1f)
             )
@@ -162,7 +182,9 @@ private fun RacingFullyExpandedContent(
     if (showQRDialog) {
         QRCodeDialog(
             taskManager = taskManager,
-            onDismiss = { showQRDialog = false }
+            uiState = uiState,
+            onDismiss = { showQRDialog = false },
+            onImportJson = { json -> taskViewModel.importPersistedTask(json) }
         )
     }
 }
@@ -176,6 +198,7 @@ private fun RacingReorderableWaypointList(
     onTaskPointTypeUpdate: (Int, RacingStartPointType?, RacingFinishPointType?, RacingTurnPointType?, Double?, Double?, Double?, Double?) -> Unit,
     onWaypointReplace: (Int, SearchWaypoint) -> Unit,
     taskManager: TaskManagerCoordinator,
+    taskViewModel: TaskSheetViewModel,
     currentQNH: String? = null,
     modifier: Modifier = Modifier
 ) {
@@ -225,6 +248,7 @@ private fun RacingReorderableWaypointList(
                 },
                 nextWaypoint = if (index < waypoints.lastIndex) waypoints[index + 1] else null,
                 taskManager = taskManager,
+                taskViewModel = taskViewModel,
                 isExpanded = expandedWaypointIndex == index,
                 onExpandToggle = { shouldExpand ->
                     if (shouldExpand) {
@@ -261,6 +285,7 @@ fun RacingReorderableWaypointItem(
     role: String,
     nextWaypoint: TaskWaypoint? = null,
     taskManager: TaskManagerCoordinator,
+    taskViewModel: TaskSheetViewModel,
     isExpanded: Boolean,
     onExpandToggle: (Boolean) -> Unit,
     onMoveUp: (() -> Unit)?,
@@ -272,11 +297,11 @@ fun RacingReorderableWaypointItem(
 ) {
     val Blue = Color(0xFF007AFF)
 
-    // âœ… RACING-ONLY task-specific waypoint handling
+    // ✅ RACING-ONLY task-specific waypoint handling
     val specificWaypoint = taskManager.getTaskSpecificWaypoint(index)
     val racingWaypoint = specificWaypoint as? RacingWaypoint
 
-    // âœ… DIRECT MODEL READ: No cached UI state - always read from model to prevent override bug
+    // ✅ DIRECT MODEL READ: No cached UI state - always read from model to prevent override bug
     val selectedStartType = racingWaypoint?.startPointType ?: RacingStartPointType.START_CYLINDER
     val selectedFinishType = racingWaypoint?.finishPointType ?: RacingFinishPointType.FINISH_CYLINDER
     val selectedTurnType = racingWaypoint?.turnPointType ?: RacingTurnPointType.TURN_POINT_CYLINDER
@@ -296,7 +321,7 @@ fun RacingReorderableWaypointItem(
 
     var gateWidth by remember { mutableStateOf(displayValue) }
 
-    // âœ… UI REFRESH: Update when underlying waypoint data changes
+    // ✅ UI REFRESH: Update when underlying waypoint data changes
     LaunchedEffect(actualValue) {
         if (actualValue != null) {
             gateWidth = actualValue.toString()
@@ -404,7 +429,7 @@ fun RacingReorderableWaypointItem(
             if (isExpanded) {
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // âœ… RACING TASK POINT TYPE SELECTOR - Only Racing types
+                // ✅ RACING TASK POINT TYPE SELECTOR - Only Racing types
                 RacingTaskPointTypeSelector(
                     role = waypointRole,
                     waypoint = taskWaypoint,
@@ -428,12 +453,12 @@ fun RacingReorderableWaypointItem(
                             keyholeAngle.toDoubleOrNull(), faiQuadrantOuterRadius.toDoubleOrNull())
                     },
                     onTurnTypeChange = { newType ->
-                        // ðŸ”‘ BUG FIX: Pass correct default based on new type, not null
+                        // 🔑 BUG FIX: Pass correct default based on new type, not null
                         val typeSpecificDefault = when (newType) {
                             RacingTurnPointType.KEYHOLE -> 10.0  // 10km keyhole outer radius
                             RacingTurnPointType.TURN_POINT_CYLINDER, RacingTurnPointType.FAI_QUADRANT -> 0.5
                         }
-                        // ðŸ”‘ UI SYNC FIX: Update local UI state to match model
+                        // 🔑 UI SYNC FIX: Update local UI state to match model
                         gateWidth = typeSpecificDefault.toString()
                         onTaskPointTypeUpdate(selectedStartType, selectedFinishType, newType,
                             typeSpecificDefault, null, null, null)

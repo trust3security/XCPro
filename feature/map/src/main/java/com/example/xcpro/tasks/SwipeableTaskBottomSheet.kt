@@ -13,6 +13,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
@@ -27,6 +29,7 @@ import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.tasks.TaskCategory
 import com.example.xcpro.tasks.RulesBTTab
 import com.example.xcpro.tasks.ManageBTTabRouter
+import com.example.xcpro.tasks.core.TaskType
 import android.graphics.Bitmap
 import android.graphics.Color as AndroidColor
 import androidx.compose.foundation.Image
@@ -35,11 +38,19 @@ import androidx.compose.ui.layout.ContentScale
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import com.google.zxing.common.BitMatrix
+import com.google.zxing.MultiFormatReader
+import com.google.zxing.BinaryBitmap
+import com.google.zxing.common.HybridBinarizer
+import com.google.zxing.RGBLuminanceSource
+import android.Manifest
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 
 // Calculate waypoint item height (approximate)
 private val WAYPOINT_ITEM_HEIGHT = 72.dp // Estimated height of ReorderableWaypointItem
@@ -88,10 +99,15 @@ fun SwipeableTaskBottomSheet(
     // Search offset to shift sheet down when search is active
     val searchOffset = if (isSearchActive) WAYPOINT_ITEM_HEIGHT else 0.dp
 
+    // ViewModel wiring (placed near data consumers to avoid scope confusion)
+    val taskViewModel: TaskSheetViewModel = viewModel(factory = TaskSheetViewModel.factory(taskManager))
+    LaunchedEffect(mapLibreMap) { taskViewModel.setMap(mapLibreMap) }
+    val uiState by taskViewModel.uiState.collectAsStateWithLifecycle()
+
     // ✅ SSOT FIX: Make task reactive so distance/UI updates when radius changes
     // CRITICAL: Without derivedStateOf, task captures once and never updates!
-    val task by remember { derivedStateOf { taskManager.currentTask } }
-    var taskType by remember { mutableStateOf(taskManager.taskType) }
+    val task by remember { derivedStateOf { uiState.task } }
+    var taskType by remember { mutableStateOf(uiState.taskType) }
 
     var currentHeightPx by remember(initialHeight) {
         val height = when (initialHeight) {
@@ -213,8 +229,10 @@ fun SwipeableTaskBottomSheet(
                 currentHeightPx >= fullyExpandedPx - 50f -> {
                     // Fully expanded content with categories
                     ExpandedContent(
+                        uiState = uiState,
                         task = task,
                         taskManager = taskManager,
+                        taskViewModel = taskViewModel,
                         selectedCategory = selectedCategory,
                         onCategorySelect = { selectedCategory = it },
                         currentQNH = currentQNH,
@@ -228,8 +246,10 @@ fun SwipeableTaskBottomSheet(
                 else -> {
                     // Half expanded - show same content as fully expanded
                     ExpandedContent(
+                        uiState = uiState,
                         task = task,
                         taskManager = taskManager,
+                        taskViewModel = taskViewModel,
                         selectedCategory = selectedCategory,
                         onCategorySelect = { selectedCategory = it },
                         currentQNH = currentQNH,
@@ -247,8 +267,10 @@ fun SwipeableTaskBottomSheet(
 
 @Composable
 private fun ExpandedContent(
+    uiState: TaskUiState,
     task: Task,
     taskManager: TaskManagerCoordinator,
+    taskViewModel: TaskSheetViewModel,
     selectedCategory: TaskCategory,
     onCategorySelect: (TaskCategory) -> Unit,
     currentQNH: String?,
@@ -297,8 +319,10 @@ private fun ExpandedContent(
         when (selectedCategory) {
             TaskCategory.MANAGE -> {
                 ManageBTTabRouter(
+                    uiState = uiState,
                     task = task,
                     taskManager = taskManager,
+                    taskViewModel = taskViewModel,
                     mapLibreMap = mapLibreMap,
                     allWaypoints = allWaypoints,
                     onClearTask = onClearTask,
@@ -314,12 +338,14 @@ private fun ExpandedContent(
                     onSelect = { taskType ->
                         taskManager.setTaskType(taskType)
                     },
-                    taskManager = taskManager
+                    taskManager = taskManager,
+                    taskViewModel = taskViewModel
                 )
             }
             TaskCategory.FILES -> {
                 FilesBTTab(
                     taskManager = taskManager,
+                    taskViewModel = taskViewModel,
                     currentQNH = currentQNH
                 )
             }
@@ -344,19 +370,48 @@ private fun ExpandedContent(
 @Composable
 fun QRCodeDialog(
     taskManager: TaskManagerCoordinator,
-    onDismiss: () -> Unit
+    uiState: TaskUiState? = null,
+    onDismiss: () -> Unit,
+    onImportJson: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var qrBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var importText by remember { mutableStateOf("") }
+    var importError by remember { mutableStateOf<String?>(null) }
+    val scanLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
+        if (bitmap == null) {
+            importError = "No image captured"
+            return@rememberLauncherForActivityResult
+        }
+        val decoded = runCatching { decodeQRCode(bitmap) }.getOrNull()
+        if (decoded != null) {
+            importError = null
+            onImportJson(decoded)
+            onDismiss()
+        } else {
+            importError = "Could not read QR code from camera preview"
+        }
+    }
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) {
+            scanLauncher.launch(null)
+        } else {
+            importError = "Camera permission denied"
+        }
+    }
 
     // Generate QR code when dialog opens
     LaunchedEffect(Unit) {
         scope.launch {
             try {
-                val taskData = generateTaskQRData(taskManager.currentTask)
+                val taskData = TaskPersistSerializer.serialize(
+                    task = taskManager.currentTask,
+                    taskType = taskManager.taskType,
+                    targets = uiState?.targets.orEmpty()
+                )
                 qrBitmap = generateQRCode(taskData)
                 isLoading = false
             } catch (e: Exception) {
@@ -428,6 +483,69 @@ fun QRCodeDialog(
                         )
                     }
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Import from JSON text (fallback to QR scan)
+                OutlinedTextField(
+                    value = importText,
+                    onValueChange = {
+                        importText = it
+                        importError = null
+                    },
+                    label = { Text("Paste task JSON to import") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (importError != null) {
+                    Text(
+                        text = importError ?: "",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            importError = null
+                            val granted = ContextCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.CAMERA
+                            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                            if (granted) {
+                                scanLauncher.launch(null)
+                            } else {
+                                permissionLauncher.launch(Manifest.permission.CAMERA)
+                            }
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.QrCodeScanner, contentDescription = null)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Scan QR")
+                    }
+                    Button(
+                        onClick = {
+                            try {
+                                onImportJson(importText)
+                                importText = ""
+                                importError = null
+                                onDismiss()
+                            } catch (e: Exception) {
+                                importError = e.message ?: "Import failed"
+                            }
+                        },
+                        enabled = importText.isNotBlank(),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.QrCode, contentDescription = null)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Import")
+                    }
+                }
             }
         },
         confirmButton = {
@@ -436,17 +554,6 @@ fun QRCodeDialog(
             }
         }
     )
-}
-
-// Generate QR-friendly task data
-private fun generateTaskQRData(task: Task): String {
-    val waypoints = task.waypoints.map { wp ->
-        "${wp.title}:${wp.lat}:${wp.lon}"
-    }.joinToString("|")
-
-    val taskType = "RACING" // Default to racing for now
-
-    return "GLIDER_TASK:$taskType:$waypoints"
 }
 
 // Generate QR code bitmap
@@ -465,5 +572,13 @@ private suspend fun generateQRCode(data: String): Bitmap = withContext(Dispatche
     }
 
     return@withContext bitmap
+}
+
+private fun decodeQRCode(bitmap: Bitmap): String? {
+    val intArray = IntArray(bitmap.width * bitmap.height)
+    bitmap.getPixels(intArray, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+    val source = RGBLuminanceSource(bitmap.width, bitmap.height, intArray)
+    val binaryBitmap = BinaryBitmap(HybridBinarizer(source))
+    return runCatching { MultiFormatReader().decode(binaryBitmap).text }.getOrNull()
 }
 

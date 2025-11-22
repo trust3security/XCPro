@@ -4,6 +4,7 @@ package com.example.xcpro.tasks
 import androidx.compose.runtime.Composable
 import org.maplibre.android.maps.MapLibreMap
 import com.example.xcpro.common.waypoint.WaypointData
+import com.example.xcpro.tasks.TaskUiState
 
 // Task type routing imports (separation compliant)
 import com.example.xcpro.tasks.racing.RacingManageBTTab
@@ -15,8 +16,10 @@ import com.example.xcpro.tasks.aat.AATManageBTTab
  */
 @Composable
 fun ManageBTTabRouter(
+    uiState: TaskUiState,
     task: Task,
     taskManager: TaskManagerCoordinator,
+    taskViewModel: TaskSheetViewModel,
     mapLibreMap: MapLibreMap?,
     allWaypoints: List<WaypointData> = emptyList(),
     onClearTask: () -> Unit,
@@ -31,6 +34,8 @@ fun ManageBTTabRouter(
             RacingManageBTTab(
                 task = task,
                 taskManager = taskManager,
+                taskViewModel = taskViewModel,
+                uiState = uiState,
                 mapLibreMap = mapLibreMap,
                 allWaypoints = allWaypoints,
                 onClearTask = onClearTask,
@@ -43,6 +48,8 @@ fun ManageBTTabRouter(
             AATManageBTTab(
                 task = task,
                 taskManager = taskManager,
+                taskViewModel = taskViewModel,
+                uiState = uiState,
                 mapLibreMap = mapLibreMap,
                 allWaypoints = allWaypoints,
                 onClearTask = onClearTask,

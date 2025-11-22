@@ -1,6 +1,7 @@
 package com.example.xcpro.map.ui
 
 import android.util.Log
+<<<<<<< HEAD
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -8,6 +9,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+=======
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
+>>>>>>> main
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -28,6 +39,7 @@ import com.example.xcpro.map.MapGestureSetup
 import com.example.xcpro.map.MapInitializer
 import com.example.xcpro.map.MapModalManager
 import com.example.xcpro.map.MapModalUI
+<<<<<<< HEAD
 import com.example.xcpro.map.MapOverlayGestureTarget
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapTaskIntegration
@@ -41,6 +53,23 @@ import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.variometer.layout.VariometerUiState
 import com.example.xcpro.sensors.GPSData
 import kotlinx.coroutines.flow.StateFlow
+=======
+import com.example.xcpro.map.MapOverlayGestureTarget.CARD_GRID
+import com.example.xcpro.map.MapScreenState
+import com.example.xcpro.map.ballast.BallastCommand
+import com.example.xcpro.map.ballast.BallastUiState
+import com.example.xcpro.map.ui.widgets.MapUIWidgetManager
+import com.example.xcpro.map.ui.widgets.MapUIWidgets
+import com.example.xcpro.replay.IgcReplayController
+import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
+import com.example.xcpro.tasks.TaskManagerCoordinator
+import com.example.xcpro.tasks.TaskSheetViewModel
+import com.example.xcpro.variometer.layout.VariometerUiState
+import com.example.xcpro.sensors.GPSData
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
+import androidx.lifecycle.viewmodel.compose.viewModel
+>>>>>>> main
 
 @Composable
 @Suppress("LongParameterList")
@@ -62,7 +91,11 @@ internal fun MapOverlayStack(
     onEditModeChange: (Boolean) -> Unit,
     onSetAATEditMode: (Boolean) -> Unit,
     onExitAATEditMode: () -> Unit,
+<<<<<<< HEAD
     safeContainerSize: androidx.compose.runtime.MutableState<IntSize>,
+=======
+    safeContainerSize: MutableState<IntSize>,
+>>>>>>> main
     variometerUiState: VariometerUiState,
     minVariometerSizePx: Float,
     maxVariometerSizePx: Float,
@@ -70,9 +103,15 @@ internal fun MapOverlayStack(
     onVariometerSizeChange: (Float) -> Unit,
     onVariometerLongPress: () -> Unit,
     onVariometerEditFinished: () -> Unit,
+<<<<<<< HEAD
     hamburgerOffset: androidx.compose.runtime.MutableState<Offset>,
     flightModeOffset: androidx.compose.runtime.MutableState<Offset>,
     ballastOffset: androidx.compose.runtime.MutableState<Offset>,
+=======
+    hamburgerOffset: MutableState<Offset>,
+    flightModeOffset: MutableState<Offset>,
+    ballastOffset: MutableState<Offset>,
+>>>>>>> main
     widgetManager: MapUIWidgetManager,
     screenWidthPx: Float,
     screenHeightPx: Float,
@@ -92,6 +131,26 @@ internal fun MapOverlayStack(
     showReplayDevFab: Boolean,
     onReplayDevFabClick: () -> Unit
 ) {
+<<<<<<< HEAD
+=======
+    // Shared task VM so we can feed proximity and map references outside the bottom sheet.
+    val taskViewModel: TaskSheetViewModel = viewModel(factory = TaskSheetViewModel.factory(taskManager))
+
+    // Keep map reference in VM for plotting/target updates.
+    LaunchedEffect(mapState.mapLibreMap) {
+        taskViewModel.setMap(mapState.mapLibreMap)
+    }
+
+    // Feed live GNSS positions into task auto-advance logic.
+    LaunchedEffect(Unit) {
+        flightDataManager.liveFlightDataFlow.collectLatest { live ->
+            if (live != null && live.latitude != 0.0 && live.longitude != 0.0) {
+                taskViewModel.onLocationUpdate(live.latitude, live.longitude)
+            }
+        }
+    }
+
+>>>>>>> main
     val currentMode by mapState.currentModeFlow.collectAsStateWithLifecycle()
     val showDistanceCircles by mapState.showDistanceCirclesFlow.collectAsStateWithLifecycle()
     val gestureRegions by widgetManager.gestureRegions.collectAsStateWithLifecycle()
@@ -104,7 +163,11 @@ internal fun MapOverlayStack(
 
     DisposableEffect(Unit) {
         onDispose {
+<<<<<<< HEAD
             widgetManager.clearGestureRegion(MapOverlayGestureTarget.CARD_GRID)
+=======
+            widgetManager.clearGestureRegion(CARD_GRID)
+>>>>>>> main
         }
     }
 
@@ -119,7 +182,10 @@ internal fun MapOverlayStack(
             locationManager = locationManager,
             flightDataManager = flightDataManager,
             flightViewModel = flightViewModel,
+<<<<<<< HEAD
 
+=======
+>>>>>>> main
             taskManager = taskManager,
             orientationManager = orientationManager,
             orientationData = orientationData,
@@ -138,10 +204,17 @@ internal fun MapOverlayStack(
             modifier = Modifier.fillMaxSize(),
             onCardLayerPositioned = { bounds ->
                 if (bounds == Rect.Zero) {
+<<<<<<< HEAD
                     widgetManager.clearGestureRegion(MapOverlayGestureTarget.CARD_GRID)
                 } else {
                     widgetManager.updateGestureRegion(
                         target = MapOverlayGestureTarget.CARD_GRID,
+=======
+                    widgetManager.clearGestureRegion(CARD_GRID)
+                } else {
+                    widgetManager.updateGestureRegion(
+                        target = CARD_GRID,
+>>>>>>> main
                         bounds = bounds,
                         consumeGestures = isUiEditMode
                     )

@@ -16,6 +16,10 @@ import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.example.xcpro.tasks.core.TaskType
+import com.google.gson.JsonParseException
+import com.example.xcpro.common.waypoint.SearchWaypoint
+import com.example.xcpro.tasks.TaskSheetViewModel
 
 object TaskFileOperations {
 
@@ -24,11 +28,18 @@ object TaskFileOperations {
             val task = taskManager.currentTask
             val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
             val fileName = "task_$timestamp.cup"
+            val jsonFileName = "task_$timestamp.xcp.json"
 
             val cupContent = taskToCUP(task, "Generated Task")
             val savedUri = saveToDownloads(context, fileName, cupContent)
+            val jsonContent = TaskPersistSerializer.serialize(
+                task = task,
+                taskType = taskManager.taskType,
+                targets = emptyList()
+            )
+            saveToDownloads(context, jsonFileName, jsonContent)
             if (savedUri != null) {
-                Toast.makeText(context, "Task exported to Downloads/$fileName", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Task exported to Downloads/$fileName (+ $jsonFileName)", Toast.LENGTH_SHORT).show()
             } else {
                 Toast.makeText(context, "Export failed: Unable to create file", Toast.LENGTH_SHORT).show()
             }
@@ -42,12 +53,13 @@ object TaskFileOperations {
             To import tasks:
 
             1. Copy .cup files to Downloads folder
-            2. Files will appear in the Files tab
-            3. Tap a file to import it
+            2. (Optional) Copy .xcp.json files for full-fidelity tasks (OZ + targets)
+            3. Files will appear in the Files tab
+            4. Tap a file to import it
 
             Supported formats:
-            • CUP format (.cup)
-            • SeeYou format (.cup)
+            • CUP format (.cup) - waypoints only
+            • XCPro JSON (.xcp.json) - preserves task type, OZ, targets
         """.trimIndent()
 
         android.app.AlertDialog.Builder(context)
@@ -131,9 +143,16 @@ object TaskFileOperations {
             val task = taskManager.currentTask
             val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
             val fileName = "task_$timestamp.cup"
+            val jsonFileName = "task_$timestamp.xcp.json"
             val cupContent = taskToCUP(task, "Generated Task")
+            val jsonContent = TaskPersistSerializer.serialize(
+                task = task,
+                taskType = taskManager.taskType,
+                targets = emptyList()
+            )
 
-            shareDirectly(context, fileName, cupContent, task, taskManager)
+            shareDirectly(context, fileName, cupContent, task, taskManager, mime = "application/octet-stream")
+            shareDirectly(context, jsonFileName, jsonContent, task, taskManager, mime = "application/json")
         } catch (e: Exception) {
             Toast.makeText(context, "Export with sharing failed: ${e.message}", Toast.LENGTH_SHORT).show()
         }
@@ -152,7 +171,8 @@ object TaskFileOperations {
 
             val pendingValues = ContentValues().apply {
                 put(MediaStore.Downloads.DISPLAY_NAME, fileName)
-                put(MediaStore.Downloads.MIME_TYPE, "application/octet-stream")
+                val mime = if (fileName.endsWith(".json")) "application/json" else "application/octet-stream"
+                put(MediaStore.Downloads.MIME_TYPE, mime)
                 put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
                 put(MediaStore.Downloads.IS_PENDING, 1)
             }
@@ -183,18 +203,67 @@ object TaskFileOperations {
         }
     }
 
-    private fun shareDirectly(context: Context, fileName: String, cupContent: String, task: Task, taskManager: TaskManagerCoordinator) {
+    fun importTaskFile(
+        context: Context,
+        uri: Uri,
+        taskManager: TaskManagerCoordinator,
+        taskViewModel: TaskSheetViewModel
+    ): Boolean {
+        val name = queryDisplayName(context, uri) ?: return false
+        return if (name.endsWith(".json", ignoreCase = true)) {
+            importJsonTask(context, uri, taskManager, taskViewModel)
+        } else {
+            // Keep existing CUP behaviour minimal: delegate to task manager
+            val ok = taskManager.loadTask(context, name)
+            ok
+        }
+    }
+
+    private fun importJsonTask(
+        context: Context,
+        uri: Uri,
+        taskManager: TaskManagerCoordinator,
+        taskViewModel: TaskSheetViewModel
+    ): Boolean {
+        return try {
+            val json = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() } ?: return false
+            taskViewModel.importPersistedTask(json)
+            true
+        } catch (e: JsonParseException) {
+            Toast.makeText(context, "Invalid task JSON: ${e.message}", Toast.LENGTH_SHORT).show()
+            false
+        } catch (e: Exception) {
+            Toast.makeText(context, "Import failed: ${e.message}", Toast.LENGTH_SHORT).show()
+            false
+        }
+    }
+
+    private fun queryDisplayName(context: Context, uri: Uri): String? {
+        val cursor = context.contentResolver.query(uri, arrayOf(MediaStore.MediaColumns.DISPLAY_NAME), null, null, null)
+        return cursor?.use {
+            if (it.moveToFirst()) it.getString(0) else null
+        }
+    }
+
+    private fun shareDirectly(
+        context: Context,
+        fileName: String,
+        content: String,
+        task: Task,
+        taskManager: TaskManagerCoordinator,
+        mime: String
+    ) {
         try {
             val file = File(context.cacheDir, fileName)
             FileOutputStream(file).use { output ->
-                output.write(cupContent.toByteArray())
+                output.write(content.toByteArray())
             }
 
             val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
 
             val shareIntent = Intent().apply {
                 action = Intent.ACTION_SEND
-                type = "application/octet-stream"
+                type = mime
                 putExtra(Intent.EXTRA_STREAM, uri)
                 putExtra(Intent.EXTRA_SUBJECT, "Task: ${task.waypoints.size} waypoints")
                 putExtra(Intent.EXTRA_TEXT, buildString {

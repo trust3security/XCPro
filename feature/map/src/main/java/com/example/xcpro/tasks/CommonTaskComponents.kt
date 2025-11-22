@@ -26,6 +26,7 @@ import com.example.xcpro.common.waypoint.SearchWaypoint
 import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.common.waypoint.toSearchWaypoint
 import androidx.compose.ui.focus.focusRequester
+import com.example.xcpro.tasks.domain.logic.TaskAdvanceState
 
 /**
  * Common UI components shared between task types.
@@ -121,6 +122,56 @@ private fun TaskQRCodeItem(
             text = "QR Code",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+fun AdvanceControls(
+    snapshot: TaskAdvanceState.Snapshot,
+    onModeChange: (TaskAdvanceState.Mode) -> Unit,
+    onToggleArm: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "Advance",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            AssistChip(
+                onClick = { onModeChange(TaskAdvanceState.Mode.MANUAL) },
+                label = { Text("Manual") },
+                leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                colors = AssistChipDefaults.assistChipColors(
+                    containerColor = if (snapshot.mode == TaskAdvanceState.Mode.MANUAL) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface
+                )
+            )
+            AssistChip(
+                onClick = { onModeChange(TaskAdvanceState.Mode.AUTO) },
+                label = { Text("Auto") },
+                leadingIcon = { Icon(Icons.Default.Flag, contentDescription = null) },
+                colors = AssistChipDefaults.assistChipColors(
+                    containerColor = if (snapshot.mode == TaskAdvanceState.Mode.AUTO) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface
+                )
+            )
+        }
+        AssistChip(
+            onClick = onToggleArm,
+            label = { Text(if (snapshot.isArmed) "Armed" else "Disarmed") },
+            leadingIcon = { Icon(if (snapshot.isArmed) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked, contentDescription = null) },
+            colors = AssistChipDefaults.assistChipColors(
+                containerColor = if (snapshot.isArmed) MaterialTheme.colorScheme.secondary.copy(alpha = 0.25f) else MaterialTheme.colorScheme.surface
+            )
         )
     }
 }
