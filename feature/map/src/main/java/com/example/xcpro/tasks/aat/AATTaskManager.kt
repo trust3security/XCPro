@@ -138,6 +138,15 @@ class AATTaskManager(val context: Context? = null) {
         _currentLeg = navigationManager.currentLeg
     }
 
+    fun setAATLeg(index: Int, map: MapLibreMap?) {
+        if (_currentAATTask.waypoints.isEmpty()) return
+        navigationManager.setCurrentLeg(index.coerceIn(0, _currentAATTask.waypoints.lastIndex))
+        _currentLeg = navigationManager.currentLeg
+        if (map != null) {
+            plotAATOnMap(map)
+        }
+    }
+
     /** Initialize AAT task - STAGE 8: Delegate to AATWaypointManager */
     fun initializeAATTask(waypoints: List<SearchWaypoint>) {
         _currentAATTask = waypointManager.initializeTask(waypoints)

@@ -15,6 +15,7 @@ import org.maplibre.android.maps.MapLibreMap
 fun TaskMapOverlay(
     taskManager: TaskManagerCoordinator,
     mapLibreMap: MapLibreMap?,
+    taskViewModel: TaskSheetViewModel? = null,
     modifier: Modifier = Modifier
 ) {
     val currentTask = taskManager.currentTask
@@ -96,4 +97,7 @@ fun TaskMapOverlay(
         // (distance display, task info, etc.)
         // Specific task validation should be handled by dedicated overlays
     }
+
+    // NOTE: MapLibre 10+ location listeners differ; wiring is left to the host to avoid SDK mismatch.
+    // Provide a hook on the taskManager to report proximity from GNSS elsewhere.
 }

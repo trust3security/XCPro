@@ -32,6 +32,8 @@ class TaskManagerCoordinator(val context: Context? = null) {
     private var mapInstance: MapLibreMap? = null
     private var racingDelegate = createRacingDelegate()
     private var aatDelegate = createAATDelegate()
+    private var proximityHandler: ((Boolean, Boolean) -> Unit)? = null
+    private var legChangeHandler: ((Int) -> Unit)? = null
 
     internal var _taskType by mutableStateOf(TaskType.RACING)
     val taskType: TaskType get() = _taskType
@@ -171,6 +173,12 @@ class TaskManagerCoordinator(val context: Context? = null) {
 
     fun advanceToNextLeg() = withCurrentManager(racingBlock = { advanceToNextLeg() }, aatBlock = { advanceToNextLeg() })
     fun goToPreviousLeg() = withCurrentManager(racingBlock = { goToPreviousLeg() }, aatBlock = { goToPreviousLeg() })
+    fun setActiveLeg(index: Int) = withCurrentManager(
+        racingBlock = { setRacingLeg(index, mapInstance) },
+        aatBlock = { setAATLeg(index, mapInstance) }
+    ).also { legChangeHandler?.invoke(currentLeg) }
+
+    fun getActiveLeg(): Int = currentLeg
 
     fun calculateTaskDistanceForTask(task: Task): Double = currentDelegate().calculateDistance()
 
@@ -274,6 +282,18 @@ class TaskManagerCoordinator(val context: Context? = null) {
 
     fun setMapInstance(map: MapLibreMap?) { mapInstance = map }
     fun getMapInstance(): MapLibreMap? = mapInstance
+
+    fun setProximityHandler(handler: (Boolean, Boolean) -> Unit) {
+        proximityHandler = handler
+    }
+
+    fun reportProximity(hasEnteredOZ: Boolean, closeToTarget: Boolean) {
+        proximityHandler?.invoke(hasEnteredOZ, closeToTarget)
+    }
+
+    fun setLegChangeHandler(handler: (Int) -> Unit) {
+        legChangeHandler = handler
+    }
 
     @VisibleForTesting internal fun replaceAATDelegateForTesting(delegate: AATCoordinatorDelegate) { aatDelegate = delegate }
     @VisibleForTesting internal fun replaceRacingDelegateForTesting(delegate: RacingCoordinatorDelegate) { racingDelegate = delegate }

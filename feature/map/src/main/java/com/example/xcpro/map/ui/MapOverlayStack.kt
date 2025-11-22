@@ -38,9 +38,12 @@ import com.example.xcpro.map.ui.widgets.MapUIWidgets
 import com.example.xcpro.replay.IgcReplayController
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
 import com.example.xcpro.tasks.TaskManagerCoordinator
+import com.example.xcpro.tasks.TaskSheetViewModel
 import com.example.xcpro.variometer.layout.VariometerUiState
 import com.example.xcpro.sensors.GPSData
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 @Suppress("LongParameterList")
@@ -92,6 +95,23 @@ internal fun MapOverlayStack(
     showReplayDevFab: Boolean,
     onReplayDevFabClick: () -> Unit
 ) {
+    // Shared task VM so we can feed proximity and map references outside the bottom sheet.
+    val taskViewModel: TaskSheetViewModel = viewModel(factory = TaskSheetViewModel.factory(taskManager))
+
+    // Keep map reference in VM for plotting/target updates.
+    LaunchedEffect(mapState.mapLibreMap) {
+        taskViewModel.setMap(mapState.mapLibreMap)
+    }
+
+    // Feed live GNSS positions into task auto-advance logic.
+    LaunchedEffect(Unit) {
+        flightDataManager.liveFlightDataFlow.collectLatest { live ->
+            if (live != null && live.latitude != 0.0 && live.longitude != 0.0) {
+                taskViewModel.onLocationUpdate(live.latitude, live.longitude)
+            }
+        }
+    }
+
     val currentMode by mapState.currentModeFlow.collectAsStateWithLifecycle()
     val showDistanceCircles by mapState.showDistanceCirclesFlow.collectAsStateWithLifecycle()
     val gestureRegions by widgetManager.gestureRegions.collectAsStateWithLifecycle()

@@ -69,7 +69,7 @@ fun TaskMinimizedIndicator(
                 Box(
                     modifier = Modifier
                         .size(60.dp) // Increased by 25% from 48dp
-                        .clickable { taskManager.goToPreviousLeg() },
+                        .clickable { taskManager.setActiveLeg(taskManager.currentLeg - 1) },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -123,7 +123,7 @@ fun TaskMinimizedIndicator(
                 Box(
                     modifier = Modifier
                         .size(60.dp) // Increased by 25% from 48dp
-                        .clickable { taskManager.advanceToNextLeg() },
+                        .clickable { taskManager.setActiveLeg(taskManager.currentLeg + 1) },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(

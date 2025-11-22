@@ -22,7 +22,8 @@ import com.example.xcpro.tasks.TaskManagerCoordinator
 fun RulesBTTab(
     selected: TaskType,
     onSelect: (TaskType) -> Unit,
-    taskManager: TaskManagerCoordinator? = null
+    taskManager: TaskManagerCoordinator? = null,
+    taskViewModel: TaskSheetViewModel? = null
 ) {
     Column(
         modifier = Modifier
@@ -193,7 +194,10 @@ fun RulesBTTab(
         TaskTypeCard(
             taskType = TaskType.RACING,
             isSelected = selected == TaskType.RACING,
-            onClick = { onSelect(TaskType.RACING) },
+            onClick = {
+                onSelect(TaskType.RACING)
+                taskViewModel?.onSetTaskType(TaskType.RACING)
+            },
             title = "Racing Task",
             description = "Fixed course with turnpoints. Fastest wins.",
             icon = Icons.Default.Speed,
@@ -205,7 +209,10 @@ fun RulesBTTab(
         TaskTypeCard(
             taskType = TaskType.AAT,
             isSelected = selected == TaskType.AAT,
-            onClick = { onSelect(TaskType.AAT) },
+            onClick = {
+                onSelect(TaskType.AAT)
+                taskViewModel?.onSetTaskType(TaskType.AAT)
+            },
             title = "Assigned Area Task (AAT)",
             description = "Flexible course with area targets and minimum time.",
             icon = Icons.Default.LocationOn,

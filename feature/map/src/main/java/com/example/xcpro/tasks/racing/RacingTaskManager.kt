@@ -340,6 +340,16 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
         }
     }
 
+    fun setRacingLeg(index: Int, map: MapLibreMap?) {
+        if (_currentRacingTask.waypoints.isEmpty()) return
+        val clamped = index.coerceIn(0, _currentRacingTask.waypoints.lastIndex)
+        _currentLeg = clamped
+        println("dY?? RACING TASK: Active leg set to $clamped")
+        if (map != null) {
+            plotRacingOnMap(map)
+        }
+    }
+
     // REMOVED: convertAATToRacing() function
     // REASON: Violates CLAUDE.md ZERO cross-contamination rule
     // AAT imports are FORBIDDEN in Racing modules

@@ -68,6 +68,7 @@ private data class CupDownloadEntry(
 @Composable
 fun FilesBTTab(
     taskManager: TaskManagerCoordinator,
+    taskViewModel: TaskSheetViewModel,
     currentQNH: String?,
     modifier: Modifier = Modifier
 ) {
@@ -122,19 +123,20 @@ fun FilesBTTab(
                         items = cupFiles,
                         key = { it.uri.toString() }
                     ) { entry ->
-                        CupTaskFileCard(
-                            entry = entry,
-                            onImport = { selected ->
-                                android.widget.Toast.makeText(
-                                    context,
-                                    "Importing ${selected.displayName}...",
-                                    android.widget.Toast.LENGTH_SHORT
-                                ).show()
-                            }
-                        )
-                    }
+                    CupTaskFileCard(
+                        entry = entry,
+                        onImport = { selected ->
+                            val imported = TaskFileOperations.importTaskFile(context, selected.uri, taskManager, taskViewModel)
+                            android.widget.Toast.makeText(
+                                context,
+                                if (imported) "Imported ${selected.displayName}" else "Import failed for ${selected.displayName}",
+                                android.widget.Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    )
                 }
             }
+        }
         }
     }
 }
@@ -312,8 +314,8 @@ private fun queryCupDownloads(context: Context): List<CupDownloadEntry> {
         MediaStore.Downloads.SIZE,
         MediaStore.Downloads.DATE_MODIFIED
     )
-    val selection = "${MediaStore.Downloads.DISPLAY_NAME} LIKE ?"
-    val selectionArgs = arrayOf("%.cup")
+    val selection = "${MediaStore.Downloads.DISPLAY_NAME} LIKE ? OR ${MediaStore.Downloads.DISPLAY_NAME} LIKE ?"
+    val selectionArgs = arrayOf("%.cup", "%.xcp.json")
     val sortOrder = "${MediaStore.Downloads.DATE_MODIFIED} DESC"
 
     val entries = mutableListOf<CupDownloadEntry>()

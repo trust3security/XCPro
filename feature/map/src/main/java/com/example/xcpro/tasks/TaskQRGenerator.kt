@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,12 +35,15 @@ import kotlinx.coroutines.withContext
 fun QRCodeDialog(
     task: Task,
     taskManager: TaskManagerCoordinator,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onImportJson: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var qrBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var isLoading by remember { mutableStateOf(true) }
+    var importText by remember { mutableStateOf("") }
+    var importError by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(task) {
         scope.launch {
@@ -146,26 +150,55 @@ fun QRCodeDialog(
                         Text("Share")
                     }
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = importText,
+                    onValueChange = {
+                        importText = it
+                        importError = null
+                    },
+                    label = { Text("Paste task JSON to import") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (importError != null) {
+                    Text(
+                        text = importError ?: "",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = {
+                        try {
+                            onImportJson(importText)
+                            importText = ""
+                            importError = null
+                            onDismiss()
+                        } catch (e: Exception) {
+                            importError = e.message ?: "Import failed"
+                        }
+                    },
+                    enabled = importText.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.QrCode, contentDescription = null)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Import")
+                }
             }
         }
     }
 }
 
-private fun generateTaskQRData(task: Task, taskManager: TaskManagerCoordinator): String {
-    val taskData = mapOf(
-        "name" to "Generated Task",
-        "type" to taskManager.taskType.name,
-        "waypoints" to task.waypoints.map { waypoint ->
-            mapOf(
-                "title" to waypoint.title,
-                "lat" to waypoint.lat,
-                "lon" to waypoint.lon
-            )
-        }
+private fun generateTaskQRData(task: Task, taskManager: TaskManagerCoordinator): String =
+    TaskPersistSerializer.serialize(
+        task = task,
+        taskType = taskManager.taskType,
+        targets = emptyList() // legacy QR path lacks repository targets context
     )
-
-    return com.google.gson.Gson().toJson(taskData)
-}
 
 private suspend fun generateQRCode(data: String): Bitmap = withContext(Dispatchers.Default) {
     val writer = QRCodeWriter()
