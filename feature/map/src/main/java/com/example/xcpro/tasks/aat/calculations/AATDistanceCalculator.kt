@@ -1,7 +1,7 @@
 ﻿package com.example.xcpro.tasks.aat.calculations
 
-import com.example.xcpro.tasks.aat.models.*
 import com.example.xcpro.tasks.aat.areas.AreaBoundaryCalculator
+import com.example.xcpro.tasks.aat.models.*
 import kotlin.math.*
 
 /**
@@ -490,119 +490,4 @@ class AATDistanceCalculator {
             }
         }
     }
-}
-
-/**
- * Data classes for interactive distance calculations
- */
-data class AATInteractiveTaskDistance(
-    val totalDistance: Double, // km
-    val segments: List<AATInteractiveDistanceSegment>,
-    val calculationTime: Long = System.currentTimeMillis()
-) {
-    val isValid: Boolean get() = totalDistance > 0.0 && segments.isNotEmpty()
-    val segmentCount: Int get() = segments.size
-
-    fun getDistanceBreakdown(): String {
-        val breakdown = StringBuilder()
-        breakdown.append("Total: ${String.format("%.2f", totalDistance)} km\n")
-
-        segments.forEachIndexed { index, segment ->
-            breakdown.append("Leg ${index + 1}: ${String.format("%.2f", segment.distance)} km\n")
-        }
-
-        return breakdown.toString().trim()
-    }
-}
-
-data class AATInteractiveDistanceSegment(
-    val fromPoint: AATLatLng,
-    val toPoint: AATLatLng,
-    val distance: Double, // km
-    val segmentType: AATInteractiveSegmentType,
-    val fromWaypointIndex: Int,
-    val toWaypointIndex: Int
-)
-
-enum class AATInteractiveSegmentType {
-    START_TO_TURNPOINT,
-    TURNPOINT_TO_TURNPOINT,
-    TURNPOINT_TO_FINISH,
-    START_TO_FINISH,
-    CENTER_TO_TARGET
-}
-
-/**
- * Utility functions for interactive distance calculations
- */
-
-/**
- * Calculate bearing between two points
- */
-private fun calculateBearing(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
-    val dLon = Math.toRadians(lon2 - lon1)
-    val lat1Rad = Math.toRadians(lat1)
-    val lat2Rad = Math.toRadians(lat2)
-
-    val y = sin(dLon) * cos(lat2Rad)
-    val x = cos(lat1Rad) * sin(lat2Rad) - sin(lat1Rad) * cos(lat2Rad) * cos(dLon)
-
-    val bearing = atan2(y, x)
-    return (Math.toDegrees(bearing) + 360) % 360
-}
-
-/**
- * Calculate bisector bearing for optimal turnpoint positioning
- */
-private fun calculateBisectorBearing(
-    prevLat: Double, prevLon: Double,
-    currentLat: Double, currentLon: Double,
-    nextLat: Double, nextLon: Double
-): Double {
-    val bearing1 = calculateBearing(currentLat, currentLon, prevLat, prevLon)
-    val bearing2 = calculateBearing(currentLat, currentLon, nextLat, nextLon)
-
-    // Calculate angle bisector (perpendicular to line between prev and next)
-    val avgBearing = (bearing1 + bearing2) / 2.0
-    return (avgBearing + 90) % 360 // Perpendicular for maximum distance
-}
-
-/**
- * Calculate destination point given start point, bearing and distance
- */
-private fun calculateDestination(lat: Double, lon: Double, bearing: Double, distanceKm: Double): AATLatLng {
-    val earthRadiusKm = 6371.0
-    val bearingRad = Math.toRadians(bearing)
-    val latRad = Math.toRadians(lat)
-    val lonRad = Math.toRadians(lon)
-    val angularDistance = distanceKm / earthRadiusKm
-
-    val destLatRad = asin(
-        sin(latRad) * cos(angularDistance) +
-        cos(latRad) * sin(angularDistance) * cos(bearingRad)
-    )
-
-    val destLonRad = lonRad + atan2(
-        sin(bearingRad) * sin(angularDistance) * cos(latRad),
-        cos(angularDistance) - sin(latRad) * sin(destLatRad)
-    )
-
-    return AATLatLng(
-        latitude = Math.toDegrees(destLatRad),
-        longitude = Math.toDegrees(destLonRad)
-    )
-}
-
-/**
- * Haversine distance calculation (returns km)
- */
-private fun haversineDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
-    val earthRadiusKm = 6371.0
-    val dLat = Math.toRadians(lat2 - lat1)
-    val dLon = Math.toRadians(lon2 - lon1)
-    val a = sin(dLat / 2) * sin(dLat / 2) +
-            cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) *
-            sin(dLon / 2) * sin(dLon / 2)
-    val c = 2 * atan2(sqrt(a), sqrt(1 - a))
-    return earthRadiusKm * c
 }
