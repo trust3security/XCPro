@@ -1,59 +1,47 @@
 package com.example.xcpro.tasks.aat
 
-import com.example.xcpro.tasks.core.Task
-import com.example.xcpro.tasks.core.TaskType
-import com.example.xcpro.tasks.core.TaskWaypoint
-
-import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import kotlinx.coroutines.launch
 import org.maplibre.android.maps.MapLibreMap
+import com.example.xcpro.common.waypoint.SearchWaypoint
 import com.example.xcpro.common.waypoint.WaypointData
-
-// ✅ AAT-ONLY IMPORTS - Zero Racing contamination
-// Common task imports (separation compliant)
-import com.example.xcpro.tasks.TaskUiState
+import com.example.xcpro.tasks.SearchableWaypointField
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.tasks.TaskSheetViewModel
+import com.example.xcpro.tasks.aat.models.*
+import com.example.xcpro.tasks.aat.ui.AATTaskPointTypeSelector
+import com.example.xcpro.tasks.domain.model.TaskTargetSnapshot
 import com.example.xcpro.tasks.AdvanceControls
-
-/**
- * AAT-specific task management UI
- * ✅ SEPARATION COMPLIANT: Only AAT task imports and logic
- */
-@Composable
-fun AATManageBTTab(
-    uiState: TaskUiState,
-    task: Task,
-    taskManager: TaskManagerCoordinator,
-    taskViewModel: TaskSheetViewModel,
-    mapLibreMap: MapLibreMap?,
-    allWaypoints: List<WaypointData> = emptyList(),
-    onClearTask: () -> Unit,
-    onSaveTask: () -> Unit,
-    onDismiss: () -> Unit,
-    currentQNH: String? = null
-) {
-    AATFullyExpandedContent(
-        uiState = uiState,
-        task = task,
-        onClearTask = onClearTask,
-        onSaveTask = onSaveTask,
-        onDismiss = onDismiss,
-        taskManager = taskManager,
-        taskViewModel = taskViewModel,
-        mapLibreMap = mapLibreMap,
-        allWaypoints = allWaypoints,
-        currentQNH = currentQNH
-    )
-}
+import com.example.xcpro.tasks.aat.calculations.AATDistanceCalculator
+import com.example.xcpro.tasks.core.TaskWaypoint
 
 @Composable
-private fun AATReorderableWaypointList(
+internal fun AATReorderableWaypointList(
     waypoints: List<TaskWaypoint>,
     targets: List<TaskTargetSnapshot>,
     allWaypoints: List<WaypointData> = emptyList(),
@@ -66,14 +54,12 @@ private fun AATReorderableWaypointList(
     currentQNH: String? = null,
     modifier: Modifier = Modifier
 ) {
-    // Track which waypoint is expanded (only one at a time)
     var expandedWaypointIndex by remember { mutableStateOf<Int?>(null) }
-
     val lazyListState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
 
     val navBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    val bottomPad = navBarBottom + 48.dp // keep last item fully clear
+    val bottomPad = navBarBottom + 48.dp
 
     LazyColumn(
         state = lazyListState,
@@ -82,16 +68,11 @@ private fun AATReorderableWaypointList(
             .imePadding()
             .navigationBarsPadding(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(
-            top = 8.dp,
-            start = 0.dp,
-            end = 0.dp,
-            bottom = bottomPad
-        )
+        contentPadding = PaddingValues(top = 8.dp, start = 0.dp, end = 0.dp, bottom = bottomPad)
     ) {
         itemsIndexed(
             items = waypoints,
-            key = { index, wp -> "aat_wp_${index}_${wp.id}" } // aat-specific key
+            key = { index, wp -> "aat_wp_${index}_${wp.id}" }
         ) { index, taskWaypoint ->
             AATReorderableWaypointItem(
                 waypoint = SearchWaypoint(
@@ -119,126 +100,83 @@ private fun AATReorderableWaypointList(
                 onExpandToggle = { shouldExpand ->
                     if (shouldExpand) {
                         expandedWaypointIndex = index
-                        // Auto-scroll to show the expanded item
-                        coroutineScope.launch {
-                            lazyListState.animateScrollToItem(index)
-                        }
-                    } else {
-                        expandedWaypointIndex = null
-                    }
+                        coroutineScope.launch { lazyListState.animateScrollToItem(index) }
+                    } else expandedWaypointIndex = null
                 },
                 onMoveUp = if (index > 0) ({ onReorder(index, index - 1) }) else null,
                 onMoveDown = if (index < waypoints.lastIndex) ({ onReorder(index, index + 1) }) else null,
                 onRemove = { onRemove(index) },
-                onWaypointReplace = { newWaypoint ->
-                    onWaypointReplace(index, newWaypoint)
-                }
+                onWaypointReplace = { newWp -> onWaypointReplace(index, newWp) },
+                currentQNH = currentQNH
             )
         }
     }
 }
 
 @Composable
-fun AATReorderableWaypointItem(
+private fun AATReorderableWaypointItem(
     waypoint: SearchWaypoint,
     taskWaypoint: TaskWaypoint,
-    allWaypoints: List<WaypointData> = emptyList(),
+    allWaypoints: List<WaypointData>,
     index: Int,
     totalCount: Int,
     role: String,
-    nextWaypoint: TaskWaypoint? = null,
-    targetSnapshot: TaskTargetSnapshot? = null,
+    nextWaypoint: TaskWaypoint?,
+    targetSnapshot: TaskTargetSnapshot?,
     taskManager: TaskManagerCoordinator,
     taskViewModel: TaskSheetViewModel,
-    mapLibreMap: MapLibreMap? = null,
+    mapLibreMap: MapLibreMap?,
     isExpanded: Boolean,
     onExpandToggle: (Boolean) -> Unit,
     onMoveUp: (() -> Unit)?,
     onMoveDown: (() -> Unit)?,
     onRemove: () -> Unit,
     onWaypointReplace: (SearchWaypoint) -> Unit,
-    qnhValue: String? = null
+    currentQNH: String?
 ) {
-    val Blue = Color(0xFF007AFF)
+    val Blue = Color(0xFF2196F3)
+    val targetParam = remember { mutableStateOf(targetSnapshot?.targetParam ?: 0.5) }
+    var selectedAATStartType by remember { mutableStateOf(AATStartPointType.LINE) }
+    var selectedAATFinishType by remember { mutableStateOf(AATFinishPointType.LINE) }
+    var selectedAATTurnType by remember { mutableStateOf(AATTurnPointType.SECTOR_FAI) }
+    var gateWidth by remember { mutableStateOf(targetSnapshot?.ozParams?.get("radiusMeters")?.div(1000.0)?.toString() ?: "") }
+    var aatKeyholeInnerRadius by remember { mutableStateOf(targetSnapshot?.ozParams?.get("innerRadiusMeters")?.div(1000.0)?.toString() ?: "") }
+    var aatKeyholeAngle by remember { mutableStateOf(targetSnapshot?.ozParams?.get("angleDeg")?.toString() ?: "") }
+    var aatSectorOuterRadius by remember { mutableStateOf(targetSnapshot?.ozParams?.get("outerRadiusMeters")?.div(1000.0)?.toString() ?: "") }
 
-    // ✅ AAT-ONLY task-specific waypoint handling - REACTIVE to task changes
-    val aatWaypoint = remember(taskManager.getAATTaskManager().currentAATTask.waypoints) {
-        taskManager.getAATTaskManager().currentAATTask.waypoints.getOrNull(index)
+    val waypointRole = when (index) {
+        0 -> AATWaypointRole.START
+        totalCount - 1 -> AATWaypointRole.FINISH
+        else -> AATWaypointRole.TURNPOINT
     }
 
-    var selectedAATStartType by remember(aatWaypoint) { mutableStateOf(aatWaypoint?.startPointType ?: AATStartPointType.AAT_START_LINE) }
-    var selectedAATFinishType by remember(aatWaypoint) { mutableStateOf(aatWaypoint?.finishPointType ?: AATFinishPointType.AAT_FINISH_CYLINDER) }
-    var selectedAATTurnType by remember(aatWaypoint) { mutableStateOf(aatWaypoint?.turnPointType ?: AATTurnPointType.AAT_CYLINDER) }
-    var aatTargetPoint by remember(aatWaypoint) { mutableStateOf(aatWaypoint?.targetPoint ?: AATLatLng(taskWaypoint.lat, taskWaypoint.lon)) }
-
-    // Keep track of which waypoint role this is
-    val waypointRole = when {
-        index == 0 -> "Start"
-        index == totalCount - 1 && totalCount > 1 -> "Finish"
-        else -> "Turn Point"
-    }
-
-    // Get actual value from AAT waypoint (Racing pattern)
-    val actualValue = aatWaypoint?.assignedArea?.radiusMeters?.let { it / 1000.0 }
-
-    // Display the actual value - no UI fallbacks (Racing pattern)
-    val displayValue = actualValue?.toString() ?: "10.0"
-
-    var gateWidth by remember { mutableStateOf(displayValue) }
-    var targetParam by remember(targetSnapshot) { mutableStateOf(targetSnapshot?.targetParam ?: 0.5) }
-
-    // Update when waypoint data changes (Racing pattern)
-    LaunchedEffect(actualValue) {
-        if (actualValue != null) {
-            gateWidth = actualValue.toString()
-        }
-    }
-
-    // ✅ SSOT FIX: AAT-specific parameter state variables - Read from assignedArea
-    var aatKeyholeInnerRadius by remember(aatWaypoint) {
-        mutableStateOf(aatWaypoint?.assignedArea?.innerRadiusMeters?.let { (it / 1000.0).toString() } ?: "0.5")
-    }
-    var aatKeyholeAngle by remember(aatWaypoint) {
-        mutableStateOf("90.0")  // Default angle - not stored in waypoint, used for sector calculations
-    }
-    var aatSectorOuterRadius by remember(aatWaypoint) {
-        mutableStateOf(aatWaypoint?.assignedArea?.outerRadiusMeters?.let { (it / 1000.0).toString() } ?: "20.0")
-    }
-
-    Surface(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp)
-            .animateContentSize(),
-        color = MaterialTheme.colorScheme.surface,
+            .animateContentSize()
+            .combinedClickable(
+                onClick = { onExpandToggle(!isExpanded) },
+                onLongClick = { onExpandToggle(!isExpanded) }
+            ),
         shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(
-            width = if (isExpanded) 2.dp else 1.dp,
-            color = if (isExpanded)
-                MaterialTheme.colorScheme.primary
-            else
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-        ),
-        shadowElevation = 1.dp
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 8.dp)
+                .padding(12.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Role bubble - AAT colors with light navy for turn points
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Surface(
                     modifier = Modifier
                         .size(32.dp)
                         .clickable { onExpandToggle(!isExpanded) },
                     shape = RoundedCornerShape(16.dp),
                     color = when (role) {
-                        "Start" -> Color(0xFF4CAF50)    // Green for start
-                        "Finish" -> Color(0xFFF44336)   // Red for finish
-                        else -> Color(0xFF546E7A)       // Light navy for AAT turn points
+                        "Start" -> Color(0xFF4CAF50)
+                        "Finish" -> Color(0xFFF44336)
+                        else -> Color(0xFF546E7A)
                     }
                 ) {
                     Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
@@ -271,7 +209,6 @@ fun AATReorderableWaypointItem(
                     )
                 }
 
-                // Controls only when collapsed
                 if (!isExpanded) {
                     Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
                         IconButton(onClick = { onMoveUp?.invoke() }, enabled = onMoveUp != null) {
@@ -305,7 +242,6 @@ fun AATReorderableWaypointItem(
             if (isExpanded) {
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // ✅ AAT TASK POINT TYPE SELECTOR - Professional UI matching Racing pattern
                 AATTaskPointTypeSelector(
                     role = waypointRole,
                     waypoint = taskWaypoint,
@@ -320,7 +256,6 @@ fun AATReorderableWaypointItem(
                     taskManager = taskManager,
                     onStartTypeChange = { newType ->
                         selectedAATStartType = newType
-                        println("🎯 AAT: Start type changed to ${newType.displayName}")
                         taskViewModel.onUpdateAATWaypointPointType(
                             index = index,
                             startType = newType,
@@ -334,7 +269,6 @@ fun AATReorderableWaypointItem(
                     },
                     onFinishTypeChange = { newType ->
                         selectedAATFinishType = newType
-                        println("🎯 AAT: Finish type changed to ${newType.displayName}")
                         taskViewModel.onUpdateAATWaypointPointType(
                             index = index,
                             startType = null,
@@ -348,7 +282,6 @@ fun AATReorderableWaypointItem(
                     },
                     onTurnTypeChange = { newType ->
                         selectedAATTurnType = newType
-                        println("🎯 AAT: Turn type changed to ${newType.displayName}")
                         taskViewModel.onUpdateAATWaypointPointType(
                             index = index,
                             startType = null,
@@ -361,20 +294,14 @@ fun AATReorderableWaypointItem(
                         )
                     },
                     onGateWidthChange = { newWidth ->
-                        gateWidth = newWidth  // ✅ Update UI immediately (Racing pattern)
-                        try {
-                            val radiusKm = newWidth.toDouble()
-                            val radiusMeters = radiusKm * 1000.0
-                            taskViewModel.onUpdateAATArea(index, radiusMeters)
-                        } catch (e: NumberFormatException) {
-                            // Invalid format - UI still shows what user typed
+                        gateWidth = newWidth
+                        newWidth.toDoubleOrNull()?.let { radiusKm ->
+                            taskViewModel.onUpdateAATArea(index, radiusKm * 1000.0)
                         }
                     },
                     onKeyholeInnerRadiusChange = { newRadius ->
                         aatKeyholeInnerRadius = newRadius
-                        println("🎯 AAT: Keyhole inner radius changed to ${newRadius}km")
-                        try {
-                            val radiusKm = newRadius.toDouble()
+                        newRadius.toDoubleOrNull()?.let { radiusKm ->
                             taskViewModel.onUpdateAATWaypointPointType(
                                 index = index,
                                 startType = null,
@@ -385,17 +312,11 @@ fun AATReorderableWaypointItem(
                                 keyholeAngle = null,
                                 sectorOuterRadius = null
                             )
-                            // ✅ FIX: Re-plot map to show updated keyhole geometry
-                            
-                        } catch (e: NumberFormatException) {
-                            println("🎯 AAT: Invalid keyhole inner radius format: $newRadius")
                         }
                     },
                     onKeyholeAngleChange = { newAngle ->
                         aatKeyholeAngle = newAngle
-                        println("🎯 AAT: Keyhole angle changed to ${newAngle}°")
-                        try {
-                            val angleDegrees = newAngle.toDouble()
+                        newAngle.toDoubleOrNull()?.let { angleDeg ->
                             taskViewModel.onUpdateAATWaypointPointType(
                                 index = index,
                                 startType = null,
@@ -403,20 +324,14 @@ fun AATReorderableWaypointItem(
                                 turnType = null,
                                 gateWidth = null,
                                 keyholeInnerRadius = null,
-                                keyholeAngle = angleDegrees,
+                                keyholeAngle = angleDeg,
                                 sectorOuterRadius = null
                             )
-                            // ✅ FIX: Re-plot map to show updated keyhole geometry
-                            
-                        } catch (e: NumberFormatException) {
-                            println("🎯 AAT: Invalid keyhole angle format: $newAngle")
                         }
                     },
                     onSectorOuterRadiusChange = { newRadius ->
                         aatSectorOuterRadius = newRadius
-                        println("🎯 AAT: Sector outer radius changed to ${newRadius}km")
-                        try {
-                            val radiusKm = newRadius.toDouble()
+                        newRadius.toDoubleOrNull()?.let { radiusKm ->
                             taskViewModel.onUpdateAATWaypointPointType(
                                 index = index,
                                 startType = null,
@@ -427,10 +342,6 @@ fun AATReorderableWaypointItem(
                                 keyholeAngle = null,
                                 sectorOuterRadius = radiusKm
                             )
-                            // ✅ FIX: Re-plot map to show updated sector geometry
-                            
-                        } catch (e: NumberFormatException) {
-                            println("🎯 AAT: Invalid sector outer radius format: $newRadius")
                         }
                     }
                 )
@@ -438,7 +349,7 @@ fun AATReorderableWaypointItem(
                 AATTargetControls(
                     target = targetSnapshot,
                     onParamChanged = { value ->
-                        targetParam = value
+                        targetParam.value = value
                         taskViewModel.onSetTargetParam(index, value)
                     },
                     onLockToggle = { taskViewModel.onToggleTargetLock(index) },
