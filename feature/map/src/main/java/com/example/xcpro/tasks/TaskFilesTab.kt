@@ -58,13 +58,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private data class CupDownloadEntry(
-    val uri: Uri,
-    val displayName: String,
-    val sizeBytes: Long,
-    val lastModifiedEpochMillis: Long
-)
-
 @Composable
 fun FilesBTTab(
     taskManager: TaskManagerCoordinator,

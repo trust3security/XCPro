@@ -8,64 +8,33 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
-<<<<<<< HEAD
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-=======
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.derivedStateOf
->>>>>>> main
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-<<<<<<< HEAD
-import com.example.xcpro.CompassWidget
-import com.example.xcpro.common.orientation.MapOrientationMode
-import com.example.xcpro.common.orientation.OrientationData
-import com.example.xcpro.map.MapScreenState
-import com.example.xcpro.map.FlightDataManager
-import com.example.xcpro.MapOrientationManager
-=======
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.xcpro.CompassWidget
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.common.orientation.MapOrientationMode
@@ -73,24 +42,16 @@ import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.VerticalSpeedMs
 import com.example.xcpro.map.DistanceCirclesCanvas
+import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.map.MapCameraManager
 import com.example.xcpro.map.MapScreenState
-import com.example.xcpro.map.MapTaskIntegration
->>>>>>> main
 import com.example.xcpro.map.ballast.BallastCommand
 import com.example.xcpro.map.ballast.BallastUiState
 import com.example.xcpro.map.ui.widgets.MapUIWidgetManager
 import com.example.xcpro.map.ui.widgets.MapUIWidgets
-<<<<<<< HEAD
-import com.example.xcpro.variometer.layout.VariometerUiState
-import com.example.xcpro.common.units.UnitsFormatter
-import com.example.xcpro.common.units.VerticalSpeedMs
-import com.example.xcpro.map.DistanceCirclesCanvas
-=======
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.variometer.layout.VariometerUiState
-import com.example.xcpro.map.FlightDataManager
->>>>>>> main
+import com.example.xcpro.sensors.GPSData
 import kotlinx.coroutines.flow.StateFlow
 
 @Composable
@@ -125,11 +86,7 @@ internal fun BallastPanel(
     ballastUiState: StateFlow<BallastUiState>,
     hideBallastPill: Boolean,
     widgetManager: MapUIWidgetManager,
-<<<<<<< HEAD
     ballastOffset: androidx.compose.runtime.MutableState<Offset>,
-=======
-    ballastOffset: MutableState<Offset>,
->>>>>>> main
     screenWidthPx: Float,
     screenHeightPx: Float,
     onBallastCommand: (BallastCommand) -> Unit,
@@ -210,87 +167,31 @@ internal fun VariometerPanel(
         onOffsetChange = onVariometerOffsetChange,
         onSizeChange = onVariometerSizeChange,
         onLongPress = onVariometerLongPress,
-        onEditFinished = onVariometerEditFinished,
-        modifier = Modifier.zIndex(if (isUiEditMode) 12f else 3f)
+        onEditFinished = onVariometerEditFinished
     )
 }
 
 @Composable
 internal fun DistanceCirclesLayer(
     mapState: MapScreenState,
-    flightDataManager: FlightDataManager,
+    currentLocation: GPSData?,
     showDistanceCircles: Boolean
 ) {
-    val mapLatitude by flightDataManager.latitudeFlow.collectAsStateWithLifecycle()
-    val mapZoom by mapState.currentZoomFlow.collectAsStateWithLifecycle()
-    DistanceCirclesCanvas(
-        mapZoom = mapZoom,
-        mapLatitude = mapLatitude,
-        isVisible = showDistanceCircles,
-        modifier = Modifier.zIndex(3.7f)
-    )
-}
-<<<<<<< HEAD
-=======
-
-@Composable
-internal fun androidx.compose.foundation.layout.BoxScope.AatEditFab(
-    isAATEditMode: Boolean,
-    taskManager: TaskManagerCoordinator,
-    cameraManager: MapCameraManager,
-    onExitAATEditMode: () -> Unit
-) {
-    MapTaskIntegration.AATEditModeFAB(
-        isAATEditMode = isAATEditMode,
-        taskManager = taskManager,
-        cameraManager = cameraManager,
-        onExitEditMode = onExitAATEditMode,
+    val zoom by mapState.currentZoomFlow.collectAsStateWithLifecycle()
+    val latitude = currentLocation?.latLng?.latitude ?: 0.0
+    AnimatedVisibility(
+        visible = showDistanceCircles,
+        enter = fadeIn() + scaleIn(),
+        exit = fadeOut() + scaleOut(),
         modifier = Modifier
-            .align(Alignment.BottomEnd)
-            .zIndex(11f)
-    )
-}
-
-@Composable
-internal fun androidx.compose.foundation.layout.BoxScope.ReplayDevFab(
-    onReplayDevFabClick: () -> Unit
-) {
-    FloatingActionButton(
-        onClick = onReplayDevFabClick,
-        modifier = Modifier
-            .align(Alignment.BottomEnd)
-            .padding(bottom = 96.dp, end = 16.dp)
-            .zIndex(15f)
+            .fillMaxWidth()
+            .fillMaxHeight()
+            .zIndex(1f)
     ) {
-        Icon(
-            imageVector = Icons.Default.PlayArrow,
-            contentDescription = "Start sample replay"
+        DistanceCirclesCanvas(
+            mapZoom = zoom,
+            mapLatitude = latitude,
+            modifier = Modifier.fillMaxSize()
         )
     }
 }
-
-@Composable
-internal fun androidx.compose.foundation.layout.BoxScope.HamburgerMenu(
-    widgetManager: MapUIWidgetManager,
-    hamburgerOffset: MutableState<Offset>,
-    screenWidthPx: Float,
-    screenHeightPx: Float,
-    onHamburgerTap: () -> Unit,
-    onHamburgerLongPress: () -> Unit,
-    isUiEditMode: Boolean
-) {
-    MapUIWidgets.SideHamburgerMenu(
-        widgetManager = widgetManager,
-        hamburgerOffset = hamburgerOffset.value,
-        screenWidthPx = screenWidthPx,
-        screenHeightPx = screenHeightPx,
-        onHamburgerTap = onHamburgerTap,
-        onHamburgerLongPress = onHamburgerLongPress,
-        onOffsetChange = { offset -> hamburgerOffset.value = offset },
-        isEditMode = isUiEditMode,
-        modifier = Modifier
-            .align(Alignment.TopStart)
-            .zIndex(12f)
-    )
-}
->>>>>>> main

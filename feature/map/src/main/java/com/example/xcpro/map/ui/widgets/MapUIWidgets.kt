@@ -9,13 +9,8 @@ import com.example.xcpro.map.ballast.BallastUiState
 import com.example.xcpro.variometer.layout.VariometerUiState
 
 /**
-<<<<<<< HEAD
- * Thin façade over individual widget implementations.
+ * Thin facade over individual widget implementations.
  * Public API remains the same; implementations live in separate files for readability.
-=======
- * Thin wrapper object to keep existing call sites stable while the implementations
- * live in smaller, focused files. All functions delegate to the extracted contents.
->>>>>>> main
  */
 object MapUIWidgets {
 
@@ -36,11 +31,7 @@ object MapUIWidgets {
         onLongPress: () -> Unit,
         onEditFinished: () -> Unit,
         modifier: Modifier = Modifier
-<<<<<<< HEAD
     ) = VariometerWidgetImpl(
-=======
-    ) = VariometerWidgetContent(
->>>>>>> main
         widgetManager = widgetManager,
         variometerState = variometerState,
         needleValue = needleValue,
@@ -71,11 +62,7 @@ object MapUIWidgets {
         modifier: Modifier = Modifier,
         widthDp: Float = 40f,
         heightDp: Float = 120f
-<<<<<<< HEAD
     ) = BallastWidgetImpl(
-=======
-    ) = BallastWidgetContent(
->>>>>>> main
         widgetManager = widgetManager,
         ballastState = ballastState,
         onCommand = onCommand,
@@ -101,11 +88,7 @@ object MapUIWidgets {
         isEditMode: Boolean,
         modifier: Modifier = Modifier,
         sizeDp: Float = 90f
-<<<<<<< HEAD
     ) = SideHamburgerMenuImpl(
-=======
-    ) = SideHamburgerMenuContent(
->>>>>>> main
         widgetManager = widgetManager,
         hamburgerOffset = hamburgerOffset,
         screenWidthPx = screenWidthPx,
@@ -132,11 +115,7 @@ object MapUIWidgets {
         modifier: Modifier = Modifier,
         widthDp: Float = 96f,
         heightDp: Float = 36f
-<<<<<<< HEAD
     ) = FlightModeMenuImpl(
-=======
-    ) = FlightModeMenuContent(
->>>>>>> main
         widgetManager = widgetManager,
         currentMode = currentMode,
         visibleModes = visibleModes,

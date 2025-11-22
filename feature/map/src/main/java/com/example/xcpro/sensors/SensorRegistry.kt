@@ -250,6 +250,7 @@ internal class SensorRegistry(
         isAccelStarted = false
     }
 
+    @SuppressLint("MissingPermission")
     private fun getLastKnownLocation(): Location? {
         if (!hasLocationPermissions()) return null
         return try {
