@@ -1,6 +1,8 @@
 package com.example.xcpro.tasks.aat
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
@@ -12,7 +14,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,8 +37,6 @@ import com.example.xcpro.tasks.TaskSheetViewModel
 import com.example.xcpro.tasks.aat.models.*
 import com.example.xcpro.tasks.aat.ui.AATTaskPointTypeSelector
 import com.example.xcpro.tasks.domain.model.TaskTargetSnapshot
-import com.example.xcpro.tasks.AdvanceControls
-import com.example.xcpro.tasks.aat.calculations.AATDistanceCalculator
 import com.example.xcpro.tasks.core.TaskWaypoint
 
 @Composable
@@ -114,6 +113,7 @@ internal fun AATReorderableWaypointList(
 }
 
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 private fun AATReorderableWaypointItem(
     waypoint: SearchWaypoint,
     taskWaypoint: TaskWaypoint,
@@ -135,19 +135,44 @@ private fun AATReorderableWaypointItem(
     currentQNH: String?
 ) {
     val Blue = Color(0xFF2196F3)
-    val targetParam = remember { mutableStateOf(targetSnapshot?.targetParam ?: 0.5) }
-    var selectedAATStartType by remember { mutableStateOf(AATStartPointType.LINE) }
-    var selectedAATFinishType by remember { mutableStateOf(AATFinishPointType.LINE) }
-    var selectedAATTurnType by remember { mutableStateOf(AATTurnPointType.SECTOR_FAI) }
-    var gateWidth by remember { mutableStateOf(targetSnapshot?.ozParams?.get("radiusMeters")?.div(1000.0)?.toString() ?: "") }
-    var aatKeyholeInnerRadius by remember { mutableStateOf(targetSnapshot?.ozParams?.get("innerRadiusMeters")?.div(1000.0)?.toString() ?: "") }
-    var aatKeyholeAngle by remember { mutableStateOf(targetSnapshot?.ozParams?.get("angleDeg")?.toString() ?: "") }
-    var aatSectorOuterRadius by remember { mutableStateOf(targetSnapshot?.ozParams?.get("outerRadiusMeters")?.div(1000.0)?.toString() ?: "") }
+    val targetParam = remember(targetSnapshot?.targetParam) { mutableStateOf(targetSnapshot?.targetParam ?: 0.5) }
+    val aatWaypoint = remember(taskManager.getAATTaskManager().currentAATTask.waypoints) {
+        taskManager.getAATTaskManager().currentAATTask.waypoints.getOrNull(index)
+    }
+
+    var selectedAATStartType by remember(aatWaypoint) {
+        mutableStateOf(aatWaypoint?.startPointType ?: AATStartPointType.AAT_START_LINE)
+    }
+    var selectedAATFinishType by remember(aatWaypoint) {
+        mutableStateOf(aatWaypoint?.finishPointType ?: AATFinishPointType.AAT_FINISH_CYLINDER)
+    }
+    var selectedAATTurnType by remember(aatWaypoint) {
+        mutableStateOf(aatWaypoint?.turnPointType ?: AATTurnPointType.AAT_CYLINDER)
+    }
+
+    val defaultRadiusKm = ((aatWaypoint?.assignedArea?.radiusMeters ?: 10000.0) / 1000.0)
+    var gateWidth by remember(aatWaypoint) { mutableStateOf(String.format("%.1f", defaultRadiusKm)) }
+    var aatKeyholeInnerRadius by remember(aatWaypoint) {
+        mutableStateOf(
+            ((aatWaypoint?.assignedArea?.innerRadiusMeters ?: 0.0) / 1000.0)
+                .takeIf { it > 0 }?.let { String.format("%.1f", it) } ?: ""
+        )
+    }
+    var aatKeyholeAngle by remember(aatWaypoint) {
+        val angle = aatWaypoint?.assignedArea?.let { it.endAngleDegrees - it.startAngleDegrees } ?: 90.0
+        mutableStateOf(angle.toString())
+    }
+    var aatSectorOuterRadius by remember(aatWaypoint) {
+        mutableStateOf(
+            ((aatWaypoint?.assignedArea?.outerRadiusMeters
+                ?: aatWaypoint?.assignedArea?.radiusMeters ?: 10000.0) / 1000.0).let { String.format("%.1f", it) }
+        )
+    }
 
     val waypointRole = when (index) {
-        0 -> AATWaypointRole.START
-        totalCount - 1 -> AATWaypointRole.FINISH
-        else -> AATWaypointRole.TURNPOINT
+        0 -> "Start"
+        totalCount - 1 -> "Finish"
+        else -> "Turn Point"
     }
 
     Card(

@@ -11,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.xcpro.common.waypoint.SearchWaypoint
 import org.maplibre.android.maps.MapLibreMap
 import com.example.xcpro.common.waypoint.WaypointData
 
@@ -20,6 +21,7 @@ import com.example.xcpro.tasks.TaskUiState
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.tasks.TaskSheetViewModel
 import com.example.xcpro.tasks.AdvanceControls
+import com.example.xcpro.tasks.domain.model.TaskTargetSnapshot
 
 /**
  * AAT-specific task management UI
