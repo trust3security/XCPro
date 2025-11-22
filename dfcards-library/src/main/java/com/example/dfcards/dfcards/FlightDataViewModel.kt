@@ -41,6 +41,8 @@ class FlightDataViewModel(
 ) : ViewModel() {
 
     private val repository = CardStateRepository(viewModelScope)
+    private var ingest: FlightDataIngest? = null
+    private val derivations = FlightDataDerivations(repository)
 
     private val _cardPreferences = MutableStateFlow<CardPreferences?>(null)
 
@@ -70,15 +72,15 @@ class FlightDataViewModel(
     val availableTemplates: StateFlow<List<FlightTemplate>> = _availableTemplates.asStateFlow()
 
     val cardStateFlows: Map<String, StateFlow<CardState>>
-        get() = repository.cardStateFlows
+        get() = derivations.cardStateFlows
 
     @Deprecated(
         message = "Use cardStateFlows instead for better performance",
         replaceWith = ReplaceWith("cardStateFlows")
     )
-    val cardStates: StateFlow<List<CardState>> = repository.legacyCardStates
+    val cardStates: StateFlow<List<CardState>> = derivations.legacyCardStates
 
-    val selectedCardIds: StateFlow<Set<String>> = repository.selectedCardIds
+    val selectedCardIds: StateFlow<Set<String>> = derivations.selectedCardIds
 
     val activeCardIds: StateFlow<List<String>> =
         combine(_profileModeCards, _activeProfileId, _currentFlightMode) { cardsMap, profileId, mode ->
@@ -117,7 +119,8 @@ class FlightDataViewModel(
     fun initializeCardPreferences(preferences: CardPreferences) {
         if (_cardPreferences.value === preferences) return
         _cardPreferences.value = preferences
-        repository.setCardPreferences(preferences)
+        ingest = FlightDataIngest(preferences, ioDispatcher)
+        derivations.setPreferences(preferences)
         templatesJob?.cancel()
         templatesJob = viewModelScope.launch(ioDispatcher) {
             preferences.getAllTemplates().collect { templates ->
@@ -240,7 +243,7 @@ class FlightDataViewModel(
             this[targetProfileId] = existing
         }
         if (normalizeProfileId(_activeProfileId.value) == targetProfileId && _currentFlightMode.value == flightMode) {
-            repository.setSelectedCardIds(sanitized.toSet())
+            derivations.setSelected(sanitized.toSet())
         }
         ensureVisibilityEntry(targetProfileId)
         persistProfileCards(targetProfileId, flightMode, sanitized)
@@ -313,7 +316,7 @@ class FlightDataViewModel(
         }
         if (_activeProfileId.value == profileId) {
             _activeProfileId.value = null
-            repository.setSelectedCardIds(emptySet())
+            derivations.setSelected(emptySet())
         }
         viewModelScope.launch(ioDispatcher) {
             _cardPreferences.value?.clearProfile(profileId)
@@ -409,9 +412,9 @@ class FlightDataViewModel(
         val mode = _currentFlightMode.value
         val desiredIds = _profileModeCards.value[profileId]?.get(mode)
         if (desiredIds != null) {
-            repository.setSelectedCardIds(desiredIds.toSet())
+            derivations.setSelected(desiredIds.toSet())
         } else {
-            val states = repository.getAllCardStates()
+            val states = derivations.getAllStates()
             val ids = states.map { it.id }
             if (ids.isNotEmpty()) {
                 setProfileCards(profileId, mode, ids)
@@ -422,7 +425,7 @@ class FlightDataViewModel(
     private fun persistActiveCards() {
         val profileId = normalizeProfileId(_activeProfileId.value)
         val mode = _currentFlightMode.value
-        val ids = repository.selectedCardIds.value.toList()
+        val ids = derivations.selectedCardIds.value.toList()
         setProfileCards(profileId, mode, ids)
     }
 
@@ -456,8 +459,9 @@ class FlightDataViewModel(
     }
 
     private suspend fun hydrateFromPreferences(preferences: CardPreferences) {
-        val templateMappingsRaw = preferences.getAllProfileFlightModeTemplates().first()
-        val templateCardsRaw = preferences.getAllProfileTemplateCards().first()
+        val ingestHelper = ingest ?: return
+        val templateMappingsRaw = ingestHelper.loadProfileTemplates()
+        val templateCardsRaw = ingestHelper.loadProfileTemplateCards()
 
         val templateMappings = mutableMapOf<ProfileId, MutableMap<FlightModeSelection, String>>()
         val cardsByMode = mutableMapOf<ProfileId, MutableMap<FlightModeSelection, List<String>>>()
