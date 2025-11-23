@@ -52,3 +52,4 @@ fix-git-objects-recursion.bat
 
 # Temporary files
 nul
+.kotlin/
