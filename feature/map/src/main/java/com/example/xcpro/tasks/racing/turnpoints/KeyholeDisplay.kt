@@ -1,4 +1,4 @@
-package com.example.xcpro.tasks.racing.turnpoints
+﻿package com.example.xcpro.tasks.racing.turnpoints
 
 import com.example.xcpro.tasks.racing.models.RacingWaypoint
 import com.example.xcpro.tasks.racing.RacingGeometryUtils
@@ -31,41 +31,56 @@ class KeyholeDisplay : TurnPointDisplay {
             // Use sector calculation with configurable angle
             val bisectorBearing = KeyholeGeometry.calculateSectorBisector(waypoint, context)
             val halfAngle = sectorAngleDegrees / 2.0
-            val startAngle = (bisectorBearing - halfAngle) % 360.0
+            val startAngle = (bisectorBearing - halfAngle + 360.0) % 360.0
             val endAngle = (bisectorBearing + halfAngle) % 360.0
 
             println("🔑 KEYHOLE DEBUG: Angles - Bisector:${bisectorBearing}°, Start:${startAngle}°, End:${endAngle}°")
 
-            // FIXED: Generate proper keyhole geometry with GSON coordinate arrays
-            val keyholeCoords = KeyholeGeometry.generateFAIKeyholeShapeArray(
-                waypoint.lat, waypoint.lon,
-                cylinderRadiusMeters, // User's inner radius
-                sectorRadiusMeters,   // User's outer radius
-                startAngle, endAngle
+            // Build one closed ring matching XCSoar keyhole (outer arc + inner arc), no separate shapes
+            val outerArc = KeyholeGeometry.generateSectorCoordinatesArray(
+                waypoint.lat,
+                waypoint.lon,
+                sectorRadiusMeters,
+                startAngle,
+                endAngle,
+                includeCenter = false
             )
+            val innerArc = KeyholeGeometry.generateSectorCoordinatesArray(
+                waypoint.lat,
+                waypoint.lon,
+                cylinderRadiusMeters,
+                endAngle,
+                startAngle,
+                includeCenter = false
+            )
+            val ring = mutableListOf<List<Double>>().apply {
+                addAll(outerArc)
+                addAll(innerArc)
+                if (isNotEmpty() && first() != last()) add(first())
+            }
 
-            // Use GSON to properly serialize coordinate arrays
             val gson = com.google.gson.Gson()
-            val coordinatesJson = gson.toJson(listOf(keyholeCoords))
+            val ringJson = gson.toJson(listOf(ring))
 
-            println("🔑 KEYHOLE DEBUG: Generated ${keyholeCoords.size} keyhole coordinate points using GSON")
+            println("dY` KEYHOLE DEBUG: Ring pts=${ring.size} (outer=${outerArc.size} inner=${innerArc.size})")
 
+            // Single Feature Polygon (annular sector) so renderer sees one geometry like XCSoar
             val geoJson = """
             {
-                "type": "Feature",
-                "properties": {
-                    "waypoint_index": ${context.waypointIndex},
-                    "type": "racing_keyhole",
-                    "cylinder_radius": $cylinderRadiusMeters,
-                    "sector_radius": $sectorRadiusMeters,
-                    "sector_angle": $sectorAngleDegrees,
-                    "bisector_bearing": $bisectorBearing,
-                    "role": "turnpoint"
-                },
-                "geometry": {
-                    "type": "Polygon",
-                    "coordinates": $coordinatesJson
-                }
+              "type": "Feature",
+              "properties": {
+                "waypoint_index": ${context.waypointIndex},
+                "type": "racing_keyhole",
+                "cylinder_radius": $cylinderRadiusMeters,
+                "sector_radius": $sectorRadiusMeters,
+                "sector_angle": $sectorAngleDegrees,
+                "bisector_bearing": $bisectorBearing,
+                "role": "turnpoint"
+              },
+              "geometry": {
+                "type": "Polygon",
+                "coordinates": $ringJson
+              }
             }
             """.trimIndent()
 
@@ -100,3 +115,4 @@ class KeyholeDisplay : TurnPointDisplay {
         return "racing_keyhole"
     }
 }
+

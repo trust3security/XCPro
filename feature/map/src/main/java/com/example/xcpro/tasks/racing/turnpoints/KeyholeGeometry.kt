@@ -92,63 +92,32 @@ internal object KeyholeGeometry {
         sectorEndAngle: Double
     ): List<List<Double>> {
         val coordinates = mutableListOf<List<Double>>()
-        val cylinderPoints = 72
-        val startDrawAngle = sectorEndAngle
-        val endDrawAngle = sectorStartAngle + 360.0
+        val sectorPoints = 90 // smoother edge
 
-        for (i in 0..cylinderPoints) {
-            val angleProgress = i.toDouble() / cylinderPoints
-            val currentAngle = startDrawAngle + angleProgress * (endDrawAngle - startDrawAngle)
-            val normalizedAngle = currentAngle % 360.0
-            val point = RacingGeometryUtils.calculateDestinationPoint(
-                centerLat,
-                centerLon,
-                normalizedAngle,
-                cylinderRadiusMeters
-            )
-            coordinates.add(listOf(point.second, point.first))
-        }
+        // Start at center
+        coordinates.add(listOf(centerLon, centerLat))
 
-        val sectorOuterStart = RacingGeometryUtils.calculateDestinationPoint(
-            centerLat,
-            centerLon,
-            sectorStartAngle,
-            sectorRadiusMeters
-        )
-        coordinates.add(listOf(sectorOuterStart.second, sectorOuterStart.first))
-
-        val sectorPoints = 45
-        for (i in 1 until sectorPoints) {
-            val angleProgress = i.toDouble() / sectorPoints
-            val angle = sectorStartAngle + angleProgress * (sectorEndAngle - sectorStartAngle)
-            val point = RacingGeometryUtils.calculateDestinationPoint(
+        // Outer arc from start -> end
+        for (i in 0..sectorPoints) {
+            val t = i.toDouble() / sectorPoints
+            val angle = if (sectorEndAngle >= sectorStartAngle) {
+                sectorStartAngle + (sectorEndAngle - sectorStartAngle) * t
+            } else {
+                // wrap-around case
+                val span = 360.0 - sectorStartAngle + sectorEndAngle
+                (sectorStartAngle + span * t) % 360.0
+            }
+            val p = RacingGeometryUtils.calculateDestinationPoint(
                 centerLat,
                 centerLon,
                 angle,
                 sectorRadiusMeters
             )
-            coordinates.add(listOf(point.second, point.first))
+            coordinates.add(listOf(p.second, p.first))
         }
 
-        val sectorOuterEnd = RacingGeometryUtils.calculateDestinationPoint(
-            centerLat,
-            centerLon,
-            sectorEndAngle,
-            sectorRadiusMeters
-        )
-        coordinates.add(listOf(sectorOuterEnd.second, sectorOuterEnd.first))
-
-        val cylinderSectorEnd = RacingGeometryUtils.calculateDestinationPoint(
-            centerLat,
-            centerLon,
-            sectorEndAngle,
-            cylinderRadiusMeters
-        )
-        coordinates.add(listOf(cylinderSectorEnd.second, cylinderSectorEnd.first))
-
-        if (coordinates.isNotEmpty()) {
-            coordinates.add(coordinates.first())
-        }
+        // Close back to center
+        coordinates.add(listOf(centerLon, centerLat))
 
         return coordinates
     }
