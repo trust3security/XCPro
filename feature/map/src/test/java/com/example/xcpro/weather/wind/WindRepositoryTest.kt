@@ -12,6 +12,7 @@ import com.example.xcpro.common.units.SpeedMs
 import com.example.xcpro.common.units.VerticalSpeedMs
 import com.example.xcpro.weather.wind.data.WindRepository
 import com.example.xcpro.weather.wind.model.WindSource
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -25,6 +26,7 @@ import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.sin
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class WindRepositoryTest {
 
     @Test

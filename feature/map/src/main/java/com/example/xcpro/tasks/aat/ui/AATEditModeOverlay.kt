@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -255,7 +256,7 @@ private fun TargetPointInfoCard(
                 )
             }
 
-            Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
 
             // Distance information
             InfoRow(
@@ -282,7 +283,7 @@ private fun TargetPointInfoCard(
 
             // Progress bar for area usage
             LinearProgressIndicator(
-                progress = (distanceFromCenter / areaRadiusKm).toFloat().coerceIn(0f, 1f),
+                progress = { (distanceFromCenter / areaRadiusKm).toFloat().coerceIn(0f, 1f) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(8.dp),
@@ -416,7 +417,7 @@ private fun EditModeActionButtons(
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.ExitToApp,
+                        imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp)
                     )

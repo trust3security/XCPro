@@ -9,7 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.Undo
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -176,7 +176,7 @@ private fun ReturnButton(
             elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp)
         ) {
             Icon(
-                imageVector = Icons.Default.Undo,
+                imageVector = Icons.AutoMirrored.Filled.Undo,
                 contentDescription = "Return to Previous",
                 modifier = Modifier.size(24.dp)
             )

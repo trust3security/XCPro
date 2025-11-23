@@ -5,8 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.NavigateBefore
-import androidx.compose.material.icons.filled.NavigateNext
+import androidx.compose.material.icons.automirrored.filled.NavigateBefore
+import androidx.compose.material.icons.automirrored.filled.NavigateNext
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -73,7 +73,7 @@ fun TaskMinimizedIndicator(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        Icons.Default.NavigateBefore,
+                        Icons.AutoMirrored.Filled.NavigateBefore,
                         contentDescription = "Previous Leg",
                         tint = Color.Black,
                         modifier = Modifier.size(45.dp) // Increased by 25% from 36dp
@@ -127,7 +127,7 @@ fun TaskMinimizedIndicator(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        Icons.Default.NavigateNext,
+                        Icons.AutoMirrored.Filled.NavigateNext,
                         contentDescription = "Next Leg",
                         tint = Color.Black,
                         modifier = Modifier.size(45.dp) // Increased by 25% from 36dp

@@ -2,7 +2,7 @@ package com.example.xcpro.map
 
 import android.util.Log
 import androidx.compose.runtime.*
-import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.example.xcpro.MapOrientationManager

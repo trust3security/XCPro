@@ -6,6 +6,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -318,7 +319,7 @@ fun BottomMenuItems(
 
     listOf(
         "Manage Account" to Icons.Outlined.AccountCircle to "manage_account",
-        "Support" to Icons.Outlined.HelpOutline to "support",
+        "Support" to Icons.AutoMirrored.Outlined.HelpOutline to "support",
         "About" to Icons.Outlined.Info to "about"
     ).forEach { (titleIcon, route) ->
         ModernNavItem(

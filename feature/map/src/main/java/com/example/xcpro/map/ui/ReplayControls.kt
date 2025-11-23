@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package com.example.xcpro.map.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -44,6 +46,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterialApi::class, ExperimentalFoundationApi::class)
+@Suppress("DEPRECATION") // Material swipeable APIs are deprecated; migrate to anchoredDraggable later.
 @Composable
 internal fun BoxScope.ReplayControlsSheet(
     session: IgcReplayController.SessionState,

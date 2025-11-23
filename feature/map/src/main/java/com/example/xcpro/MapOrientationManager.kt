@@ -15,6 +15,7 @@ import com.example.xcpro.orientation.HeadingResolver
 import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,6 +25,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 
+@OptIn(FlowPreview::class)
 class MapOrientationManager(
     private val context: Context,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main + SupervisorJob()),

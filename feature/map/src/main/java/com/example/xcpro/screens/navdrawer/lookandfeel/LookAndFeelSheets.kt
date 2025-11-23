@@ -177,7 +177,7 @@ private fun ColorThemeRow(
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         tonalElevation = if (selected) 2.dp else 0.dp,
-        border = if (selected) ButtonDefaults.outlinedButtonBorder else null
+        border = if (selected) ButtonDefaults.outlinedButtonBorder(enabled = true) else null
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(

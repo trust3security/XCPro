@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package com.example.xcpro.map.ui.widgets
 
 import android.util.Log

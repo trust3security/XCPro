@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package com.example.xcpro.variometer.ui
 
 import android.util.Log

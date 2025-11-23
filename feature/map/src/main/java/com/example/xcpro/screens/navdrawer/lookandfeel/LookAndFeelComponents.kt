@@ -83,7 +83,7 @@ internal fun StatusBarStyleOption(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         tonalElevation = if (isSelected) 2.dp else 0.dp,
-        border = if (isSelected) ButtonDefaults.outlinedButtonBorder else null,
+        border = if (isSelected) ButtonDefaults.outlinedButtonBorder(enabled = true) else null,
         onClick = onSelect
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -120,7 +120,7 @@ internal fun CardStyleOption(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         tonalElevation = if (isSelected) 2.dp else 0.dp,
-        border = if (isSelected) ButtonDefaults.outlinedButtonBorder else null,
+        border = if (isSelected) ButtonDefaults.outlinedButtonBorder(enabled = true) else null,
         onClick = onSelect
     ) {
         Row(
