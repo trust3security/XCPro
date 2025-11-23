@@ -152,7 +152,8 @@ fun CustomMapGestureHandler(
     androidx.compose.foundation.layout.Box(
         modifier = modifier
             .fillMaxSize()
-            .pointerInput(currentMode, gestureRegions) {
+            // Include AAT state in pointerInput keys so gesture coroutine restarts when task changes
+            .pointerInput(currentMode, gestureRegions, taskType, aatWaypoints, isAATEditMode) {
                 awaitEachGesture {
                     if (BuildConfig.DEBUG) Log.d(MAP_GESTURE_TAG, "awaitEachGesture start (taskType=$taskType, isAATEditMode=$isAATEditMode)")
                     // Pre-scan for down inside overlay regions before map consumes it
