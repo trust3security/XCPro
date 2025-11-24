@@ -5,7 +5,6 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.ui.input.pointer.PointerInputScope
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.FlightTemplate
-import com.example.xcpro.map.BuildConfig
 
 // Helper function to get default flight data template for a given mode
 fun getDefaultTemplateForMode(mode: FlightModeSelection, templates: List<FlightTemplate>): FlightTemplate? {
@@ -29,21 +28,12 @@ fun detectTwoFingerDrag(onDrag: (dx: Float, dy: Float) -> Unit) {
 
 // Helper function to get map style URL based on style name
 fun getMapStyleUrl(style: String): String {
-    val key = BuildConfig.MAPLIBRE_API_KEY
-    val useDemoTiles = key.isNullOrBlank()
-
-    if (useDemoTiles) {
-        // No key provided: use open MapLibre demo style to avoid crashes
-        return "https://demotiles.maplibre.org/style.json"
+    return when (style) {
+        "Topo" -> "https://api.maptiler.com/maps/topo/style.json?key=nYDScLfnBm52GAc3jXEZ"
+        "Satellite" -> "https://api.maptiler.com/maps/hybrid/style.json?key=nYDScLfnBm52GAc3jXEZ"
+        "Terrain" -> "https://api.maptiler.com/maps/outdoor/style.json?key=nYDScLfnBm52GAc3jXEZ"
+        else -> "https://api.maptiler.com/maps/topo/style.json?key=nYDScLfnBm52GAc3jXEZ"
     }
-
-    val mapId = when (style) {
-        "Topo" -> "topo"
-        "Satellite" -> "hybrid"
-        "Terrain" -> "outdoor"
-        else -> "topo"
-    }
-    return "https://api.maptiler.com/maps/$mapId/style.json?key=$key"
 }
 
 // Map style constants
