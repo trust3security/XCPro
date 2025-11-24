@@ -76,12 +76,8 @@ class MainActivity : ComponentActivity(), StatusBarStyleApplier {
 
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
-        val mapLibreKey = BuildConfig.MAPLIBRE_API_KEY
-        if (mapLibreKey.isNullOrBlank()) {
-            Log.e(TAG, "MapLibre API key missing; map tiles will not load. Set MAPLIBRE_API_KEY in gradle/local properties.")
-        } else {
-            MapLibre.getInstance(this, mapLibreKey, WellKnownTileServer.MapTiler)
-        }
+        val mapLibreKey = BuildConfig.MAPLIBRE_API_KEY.ifBlank { "nYDScLfnBm52GAc3jXEZ" }
+        MapLibre.getInstance(this, mapLibreKey, WellKnownTileServer.MapTiler)
 
         val setupManager = FirstTimeSetupManager.getInstance(this)
         lifecycleScope.launch {
