@@ -5,8 +5,6 @@ import com.example.dfcards.CardPreferences
 import com.example.xcpro.common.units.UnitsRepository
 import com.example.xcpro.map.QnhPreferencesRepository
 import com.example.xcpro.tasks.TaskManagerCoordinator
-import com.example.xcpro.tasks.getGlobalTaskManagerCoordinator
-import com.example.xcpro.tasks.setGlobalTaskManagerCoordinator
 import com.example.xcpro.profiles.ProfileStorage
 import com.example.xcpro.profiles.DataStoreProfileStorage
 import com.example.xcpro.vario.LevoVarioPreferencesRepository
@@ -25,15 +23,7 @@ object AppModule {
     @Singleton
     fun provideTaskManagerCoordinator(
         @ApplicationContext context: Context
-    ): TaskManagerCoordinator {
-        val existing = getGlobalTaskManagerCoordinator()
-        if (existing != null) {
-            return existing
-        }
-        val coordinator = TaskManagerCoordinator(context)
-        setGlobalTaskManagerCoordinator(coordinator)
-        return coordinator
-    }
+    ): TaskManagerCoordinator = TaskManagerCoordinator(context)
 
     @Provides
     @Singleton

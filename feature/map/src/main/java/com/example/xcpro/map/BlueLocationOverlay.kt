@@ -114,7 +114,7 @@ class BlueLocationOverlay(
         try {
             // CRASH FIX: Validate coordinates before creating GeoJSON
             if (!isValidCoordinate(location.latitude, location.longitude)) {
-                Log.w(TAG, "âŒ BLUE LOCATION: Invalid coordinates - lat:${location.latitude}, lon:${location.longitude}")
+                Log.w(TAG, "Invalid coordinates - lat:${location.latitude}, lon:${location.longitude}")
                 return
             }
 
@@ -147,10 +147,10 @@ class BlueLocationOverlay(
             }
             layer.setProperties(iconRotate(iconRotation))
 
-            Log.d(TAG, "âœ… Location updated: lat=${location.latitude}, " +
-                      "lon=${location.longitude}, track=${gpsTrack.toInt()}Â°, " +
-                      "magHeading=${magneticHeading.toInt()}Â°, mode=$orientationMode, " +
-                      "iconRotation=${iconRotation.toInt()}Â°")
+            Log.d(TAG, "Location updated: lat=${location.latitude}, " +
+                      "lon=${location.longitude}, track=${gpsTrack.toInt()} deg, " +
+                      "magHeading=${magneticHeading.toInt()} deg, mode=$orientationMode, " +
+                      "iconRotation=${iconRotation.toInt()} deg")
 
         } catch (e: Exception) {
             Log.e(TAG, "âŒ Error updating location: ${e.message}", e)

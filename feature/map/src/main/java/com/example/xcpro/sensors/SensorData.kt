@@ -16,7 +16,7 @@ data class GPSData(
     val latLng: LatLng,
     val altitude: AltitudeM,       // MSL in meters (Mean Sea Level)
     val speed: SpeedMs,            // m/s (ground speed)
-    val bearing: Double,        // 0-360° (accurate when moving > 2 m/s)
+    val bearing: Double,        // 0-360 deg (accurate when moving > 2 m/s)
     val accuracy: Float,        // meters (horizontal accuracy)
     val timestamp: Long
 ) {
@@ -45,7 +45,7 @@ data class BaroData(
  * Single Source of Truth for magnetometer sensor readings
  */
 data class CompassData(
-    val heading: Double,        // 0-360° (magnetic north)
+    val heading: Double,        // 0-360 deg (magnetic north)
     val accuracy: Int,          // SensorManager.SENSOR_STATUS_*
     val timestamp: Long
 )
@@ -58,7 +58,7 @@ data class CompassData(
  * Used for zero-lag variometer with barometer fusion
  */
 data class AccelData(
-    val verticalAcceleration: Double,  // m/s² (earth-Z axis, positive = upward)
+    val verticalAcceleration: Double,  // m/s^2 (earth-Z axis, positive = upward)
     val timestamp: Long,
     val isReliable: Boolean = true     // Whether orientation projection is valid
 )
@@ -115,7 +115,7 @@ data class CompleteFlightData(
 
     // Calculated wind
     val windSpeed: SpeedMs,       // m/s (wind speed magnitude)
-    val windDirection: Float,   // 0-360° (direction wind is coming FROM)
+    val windDirection: Float,   // 0-360 deg (direction wind is coming FROM)
     val windHeadwind: SpeedMs = SpeedMs(0.0),
     val windCrosswind: SpeedMs = SpeedMs(0.0),
     val windQuality: Int = 0,

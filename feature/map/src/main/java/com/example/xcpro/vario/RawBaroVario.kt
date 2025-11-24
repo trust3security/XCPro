@@ -14,7 +14,7 @@ package com.example.xcpro.vario
  * - Fastest possible response (zero lag) but very noisy
  *
  * Expected behavior:
- * - Very noisy (±0.5-2.0 m/s random fluctuations)
+ * - Very noisy (+/-0.5-2.0 m/s random fluctuations)
  * - Instant response (no filter lag)
  * - Unusable for actual flying (too jumpy)
  * - Good for understanding sensor characteristics
