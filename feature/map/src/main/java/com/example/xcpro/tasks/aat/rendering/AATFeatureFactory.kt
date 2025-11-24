@@ -107,67 +107,32 @@ internal class AATFeatureFactory(
     ): List<List<Double>> {
         val coords = mutableListOf<List<Double>>()
 
+        fun sweepAngles(start: Double, end: Double, steps: Int): List<Double> {
+            val range = if (end >= start) end - start else 360.0 - start + end
+            return (0..steps).map { i -> (start + range * (i.toDouble() / steps)) % 360.0 }
+        }
+
         if (innerRadiusKm > 0.0) {
-            // ✅ KEYHOLE: Cylinder + sector extension (true keyhole shape 🔑)
-            val cylinderPoints = 72
-            val sectorPoints = 45
-
-            // Step 1: Draw cylinder outline (the part NOT covered by sector)
-            // Start from sector end, go around to sector start
-            val startDrawAngle = endBearingDeg
-            val endDrawAngle = startBearingDeg + 360.0
-
-            for (i in 0..cylinderPoints) {
-                val angleProgress = i.toDouble() / cylinderPoints
-                val currentAngle = startDrawAngle + angleProgress * (endDrawAngle - startDrawAngle)
-                val normalizedAngle = currentAngle % 360.0
-
-                val point = geometryGenerator.calculateDestinationPoint(centerLat, centerLon, normalizedAngle, innerRadiusKm)
-                coords.add(listOf(point.second, point.first))
+            // Annular sector ring (outer arc start→end, inner arc end→start) like racing keyhole/XCSoar
+            val steps = 64
+            sweepAngles(startBearingDeg, endBearingDeg, steps).forEach { ang ->
+                val p = geometryGenerator.calculateDestinationPoint(centerLat, centerLon, ang, outerRadiusKm)
+                coords.add(listOf(p.second, p.first))
             }
-
-            // Step 2: Connect to sector outer boundary at start angle
-            val sectorOuterStart = geometryGenerator.calculateDestinationPoint(centerLat, centerLon, startBearingDeg, outerRadiusKm)
-            coords.add(listOf(sectorOuterStart.second, sectorOuterStart.first))
-
-            // Step 3: Draw the sector outer arc
-            for (i in 1 until sectorPoints) {
-                val angleProgress = i.toDouble() / sectorPoints
-                val angle = startBearingDeg + angleProgress * (endBearingDeg - startBearingDeg)
-                val point = geometryGenerator.calculateDestinationPoint(centerLat, centerLon, angle, outerRadiusKm)
-                coords.add(listOf(point.second, point.first))
+            sweepAngles(endBearingDeg, startBearingDeg, steps).forEach { ang ->
+                val p = geometryGenerator.calculateDestinationPoint(centerLat, centerLon, ang, innerRadiusKm)
+                coords.add(listOf(p.second, p.first))
             }
-
-            // Step 4: Connect to sector outer boundary at end angle
-            val sectorOuterEnd = geometryGenerator.calculateDestinationPoint(centerLat, centerLon, endBearingDeg, outerRadiusKm)
-            coords.add(listOf(sectorOuterEnd.second, sectorOuterEnd.first))
-
-            // Step 5: Connect back to cylinder edge at sector end angle (closes the keyhole)
-            val cylinderSectorEnd = geometryGenerator.calculateDestinationPoint(centerLat, centerLon, endBearingDeg, innerRadiusKm)
-            coords.add(listOf(cylinderSectorEnd.second, cylinderSectorEnd.first))
 
         } else {
             // ✅ SECTOR: No inner radius - standard sector from center
-            val numPoints = 32
-
-            // Calculate sector span
-            val sectorSpan = if (endBearingDeg >= startBearingDeg) {
-                endBearingDeg - startBearingDeg
-            } else {
-                360.0 - startBearingDeg + endBearingDeg
-            }
+            val numPoints = 48
 
             // Start from center
             coords.add(listOf(centerLon, centerLat))
 
             // Generate outer arc
-            for (i in 0..numPoints) {
-                val fraction = i.toDouble() / numPoints
-                val bearing = if (endBearingDeg >= startBearingDeg) {
-                    startBearingDeg + fraction * (endBearingDeg - startBearingDeg)
-                } else {
-                    (startBearingDeg + fraction * sectorSpan) % 360.0
-                }
+            sweepAngles(startBearingDeg, endBearingDeg, numPoints).forEach { bearing ->
                 val point = geometryGenerator.calculateDestinationPoint(centerLat, centerLon, bearing, outerRadiusKm)
                 coords.add(listOf(point.second, point.first))
             }

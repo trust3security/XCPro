@@ -149,7 +149,7 @@ class KeyholeCalculator : TurnPointCalculator {
         var optimalPoint = Pair(waypoint.lat, waypoint.lon)
 
         val sectorSpan = sectorAngleDegrees / 2.0 // degrees each side of bisector
-        val startAngle = (sectorBisector - sectorSpan) % 360.0
+        val startAngle = (sectorBisector - sectorSpan + 360.0) % 360.0
         val endAngle = (sectorBisector + sectorSpan) % 360.0
         
         // Debug logging for configurable sector
@@ -158,9 +158,17 @@ class KeyholeCalculator : TurnPointCalculator {
         println("   Start: ${startAngle.toInt()}°, End: ${endAngle.toInt()}°")
         println("   Bisector: ${sectorBisector.toInt()}°")
 
-        // Test 20 points along sector edge
-        for (i in 0..20) {
-            val testAngle = startAngle + (endAngle - startAngle) * i / 20.0
+        // Test 21 points along sector edge (handle wrap-around correctly)
+        val steps = 20
+        val angleRange = if (endAngle >= startAngle) {
+            endAngle - startAngle
+        } else {
+            360.0 - startAngle + endAngle
+        }
+
+        for (i in 0..steps) {
+            val fraction = i.toDouble() / steps
+            val testAngle = (startAngle + angleRange * fraction) % 360.0
             val testPoint = RacingGeometryUtils.calculateDestinationPoint(
                 waypoint.lat, waypoint.lon,
                 testAngle, // Already in degrees
