@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.IntOffset
 import org.maplibre.android.geometry.LatLng
 import com.example.xcpro.tasks.aat.models.AATLatLng
 import com.example.xcpro.tasks.aat.models.AATWaypoint
+import com.example.xcpro.tasks.aat.map.AATMovablePointManager
 import com.example.xcpro.tasks.aat.calculations.AATMathUtils
 import kotlin.math.*
 
@@ -90,7 +91,8 @@ class AATTargetPointDragHandler(
     private val dragThreshold: Float = 10f
 ) {
     private var dragState by mutableStateOf(DragState())
-    private var lastValidPosition by mutableStateOf(AATLatLng(waypoint.lat, waypoint.lon))
+    private var lastValidPosition by mutableStateOf(waypoint.targetPoint)
+    private val movablePointManager = AATMovablePointManager()
 
     /**
      * Pointer input modifier for drag gestures
@@ -128,7 +130,7 @@ class AATTargetPointDragHandler(
 
     /**
      * Handle drag movement
-     * ✅ EDIT MODE FIX: Allow unrestricted movement within area - no clamping
+     * Uses movablePointManager to clamp to the allowed geometry.
      */
     private fun handleDrag(dragAmount: Offset) {
         if (!dragState.isDragging) return
@@ -142,31 +144,27 @@ class AATTargetPointDragHandler(
         if (mapCoords != null) {
             val newTargetPoint = AATLatLng(mapCoords.latitude, mapCoords.longitude)
 
-            // Validate position within area bounds
-            val isValid = validatePositionWithinBounds(newTargetPoint)
+            // Clamp/validate within area bounds using shared geometry-aware validator
+            val validatedWaypoint = movablePointManager.moveTargetPoint(
+                waypoint,
+                newTargetPoint.latitude,
+                newTargetPoint.longitude
+            )
+            val validatedPoint = validatedWaypoint.targetPoint
 
-            if (isValid) {
-                // ✅ Valid position - update freely
-                lastValidPosition = newTargetPoint
-                dragState = dragState.copy(
-                    currentPosition = newPosition,
-                    dragOffset = newDragOffset,
-                    isValidPosition = true
-                )
+            lastValidPosition = validatedPoint
+            dragState = dragState.copy(
+                currentPosition = newPosition,
+                dragOffset = newDragOffset,
+                isValidPosition = true
+            )
 
-                onDragUpdate(newTargetPoint)
-            } else {
-                // ✅ FIX: Outside bounds - don't update position, but don't clamp either
-                // Just ignore the drag movement beyond the boundary
-                // This prevents the pin from moving outside, but allows free movement inside
-                onInvalidPosition()
-            }
+            onDragUpdate(validatedPoint)
         }
     }
 
     /**
-     * Handle drag end
-     * ✅ EDIT MODE FIX: Use last valid position, no clamping
+     * Handle drag end using the last valid in-bounds position.
      */
     private fun handleDragEnd() {
         if (!dragState.isDragging) return
@@ -179,19 +177,6 @@ class AATTargetPointDragHandler(
 
         dragState = DragState() // Reset to default state
         onDragEnd(finalPosition)
-    }
-
-    /**
-     * Validate if position is within AAT area bounds
-     */
-    private fun validatePositionWithinBounds(position: AATLatLng): Boolean {
-        val distance = AATMathUtils.calculateDistanceKm(
-            waypoint.lat, waypoint.lon,
-            position.latitude, position.longitude
-        )
-
-        val maxDistanceKm = waypoint.assignedArea.radiusMeters / 1000.0
-        return distance <= maxDistanceKm
     }
 
     /**

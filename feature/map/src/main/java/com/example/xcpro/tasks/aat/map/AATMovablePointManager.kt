@@ -28,67 +28,48 @@ import com.example.xcpro.tasks.aat.calculations.AATMathUtils
  */
 class AATMovablePointManager {
 
+    fun isPointInsideArea(waypoint: AATWaypoint, point: AATLatLng): Boolean {
+        return when (waypoint.assignedArea.shape) {
+            AATAreaShape.CIRCLE, AATAreaShape.LINE -> {
+                val radiusKm = waypoint.assignedArea.radiusMeters / 1000.0
+                val distance = AATMathUtils.calculateDistanceKm(
+                    waypoint.lat, waypoint.lon,
+                    point.latitude, point.longitude
+                )
+                distance <= radiusKm
+            }
+            AATAreaShape.SECTOR -> isPointInSectorOrKeyhole(waypoint, point)
+        }
+    }
+
     /**
-     * Move target point within assigned area bounds with validation
-     * ✅ EDIT MODE FIX: Allow unrestricted movement within area geometry
-     * - No clamping or rejection - pin moves freely within valid boundaries
-     * - Validation only checks actual geometry constraints (circle/sector/keyhole)
+     * Move target point while keeping it inside the assigned area geometry.
+     * For sector/keyhole shapes the point is clamped to the angular wedge and radius band.
+     * For cylinders/lines the point is clamped to the circle radius.
      */
     fun moveTargetPoint(
         waypoint: AATWaypoint,
         newLat: Double,
         newLon: Double
     ): AATWaypoint {
-        val newTargetPoint = AATLatLng(newLat, newLon)
+        val center = AATLatLng(waypoint.lat, waypoint.lon)
+        val candidate = AATLatLng(newLat, newLon)
 
-        // Validate position is within area geometry (but allow movement up to boundary)
-        val isValid = when (waypoint.assignedArea.shape) {
-            AATAreaShape.CIRCLE -> {
-                val distance = AATMathUtils.calculateDistanceKm(
-                    waypoint.lat, waypoint.lon,
-                    newLat, newLon
-                )
-                val radiusKm = waypoint.assignedArea.radiusMeters / 1000.0
-                val valid = distance <= radiusKm
-                println("🎯 AAT CYLINDER MOVE: distance=${String.format("%.3f", distance)}km, radius=${String.format("%.3f", radiusKm)}km, valid=$valid")
-                valid
-            }
-            AATAreaShape.SECTOR -> {
-                val valid = isPointInSectorOrKeyhole(waypoint, newTargetPoint)
-                println("🎯 AAT SECTOR/KEYHOLE MOVE: valid=$valid")
-                valid
-            }
-            AATAreaShape.LINE -> {
-                val distance = AATMathUtils.calculateDistanceKm(
-                    waypoint.lat, waypoint.lon,
-                    newLat, newLon
-                )
-                val radiusKm = waypoint.assignedArea.radiusMeters / 1000.0
-                val valid = distance <= radiusKm
-                println("🎯 AAT LINE MOVE: distance=${String.format("%.3f", distance)}km, radius=${String.format("%.3f", radiusKm)}km, valid=$valid")
-                valid
-            }
-        }
-
-        // ✅ ALWAYS accept valid positions - no rejection, no clamping
-        // User can drag freely anywhere within the assigned area
-        return if (isValid) {
-            println("✅ AAT MOVE: ACCEPTED - Pin moved to ($newLat, $newLon)")
-            waypoint.copy(
-                targetPoint = newTargetPoint,
-                isTargetPointCustomized = true
+        val clamped = when (waypoint.assignedArea.shape) {
+            AATAreaShape.CIRCLE, AATAreaShape.LINE -> clampToCircle(
+                center,
+                candidate,
+                waypoint.assignedArea.radiusMeters / 1000.0
             )
-        } else {
-            println("❌ AAT MOVE: REJECTED - Position outside bounds, pin stays at (${waypoint.targetPoint.latitude}, ${waypoint.targetPoint.longitude})")
-            // ✅ FIX: Still return unchanged waypoint if outside bounds
-            // This prevents dragging OUTSIDE the area, but allows free movement INSIDE
-            waypoint
+            AATAreaShape.SECTOR -> clampToSectorOrKeyhole(waypoint, candidate)
         }
+
+        return waypoint.copy(
+            targetPoint = clamped,
+            isTargetPointCustomized = true
+        )
     }
 
-    /**
-     * Calculate optimal target point position based on strategic factors
-     */
     fun calculateOptimalPosition(
         waypoint: AATWaypoint,
         windDirection: Double, // degrees (0-360, where 0 = North)
@@ -278,6 +259,103 @@ class AATMovablePointManager {
     }
 
     /**
+     * Clamp a point to a circle boundary (used for cylinder/line shapes).
+     */
+    private fun clampToCircle(center: AATLatLng, point: AATLatLng, radiusKm: Double): AATLatLng {
+        val distance = AATMathUtils.calculateDistanceKm(
+            center.latitude, center.longitude,
+            point.latitude, point.longitude
+        )
+
+        if (radiusKm <= 0.0 || distance <= radiusKm) return point
+
+        val bearing = AATMathUtils.calculateBearing(center, point)
+        return calculateDestination(center.latitude, center.longitude, bearing, radiusKm)
+    }
+
+    /**
+     * Clamp a point to a sector/keyhole: keep angle inside sector and distance within radii.
+     * If inside the inner cylinder of a keyhole, leave the point unchanged.
+     */
+    private fun clampToSectorOrKeyhole(waypoint: AATWaypoint, point: AATLatLng): AATLatLng {
+        val center = AATLatLng(waypoint.lat, waypoint.lon)
+        val distanceKm = AATMathUtils.calculateDistanceKm(
+            center.latitude, center.longitude,
+            point.latitude, point.longitude
+        )
+
+        val innerRadiusKm = max(0.0, waypoint.assignedArea.innerRadiusMeters / 1000.0)
+        val outerRadiusKm = waypoint.assignedArea.outerRadiusMeters / 1000.0
+
+        // Inside inner cylinder: no angular restriction, no movement.
+        if (innerRadiusKm > 0.0 && distanceKm <= innerRadiusKm) {
+            return point
+        }
+
+        val bearing = AATMathUtils.calculateBearing(center, point)
+        val angleInside = isAngleInSector(
+            bearing,
+            waypoint.assignedArea.startAngleDegrees,
+            waypoint.assignedArea.endAngleDegrees
+        )
+
+        val clampedBearing = if (angleInside) {
+            bearing
+        } else {
+            clampAngleToSector(
+                bearing,
+                waypoint.assignedArea.startAngleDegrees,
+                waypoint.assignedArea.endAngleDegrees
+            )
+        }
+
+        val clampedDistance = distanceKm.coerceIn(innerRadiusKm, outerRadiusKm)
+        return calculateDestination(center.latitude, center.longitude, clampedBearing, clampedDistance)
+    }
+
+    private fun clampAngleToSector(angle: Double, startAngle: Double, endAngle: Double): Double {
+        val normalizedAngle = normalizeAngle(angle)
+        val normalizedStart = normalizeAngle(startAngle)
+        val normalizedEnd = normalizeAngle(endAngle)
+
+        if (isAngleInSector(normalizedAngle, normalizedStart, normalizedEnd)) {
+            return normalizedAngle
+        }
+
+        val distanceToStart = angularDistance(normalizedAngle, normalizedStart)
+        val distanceToEnd = angularDistance(normalizedAngle, normalizedEnd)
+        return if (distanceToStart <= distanceToEnd) normalizedStart else normalizedEnd
+    }
+
+    private fun angularDistance(a: Double, b: Double): Double {
+        val diff = abs(a - b)
+        return min(diff, 360.0 - diff)
+    }
+
+    private fun calculateDestination(lat: Double, lon: Double, bearing: Double, distanceKm: Double): AATLatLng {
+        val earthRadiusKm = 6371.0
+        val bearingRad = Math.toRadians(bearing)
+        val latRad = Math.toRadians(lat)
+        val lonRad = Math.toRadians(lon)
+        val angularDistance = distanceKm / earthRadiusKm
+
+        val destLatRad = asin(
+            sin(latRad) * cos(angularDistance) +
+            cos(latRad) * sin(angularDistance) * cos(bearingRad)
+        )
+
+        val destLonRad = lonRad + atan2(
+            sin(bearingRad) * sin(angularDistance) * cos(latRad),
+            cos(angularDistance) - sin(latRad) * sin(destLatRad)
+        )
+
+        return AATLatLng(
+            latitude = Math.toDegrees(destLatRad),
+            longitude = Math.toDegrees(destLonRad)
+        )
+    }
+
+    /**
      * Normalize angle to 0-360 degrees
      */
     private fun normalizeAngle(angle: Double): Double {
@@ -287,8 +365,8 @@ class AATMovablePointManager {
     }
 
     /**
-     * ✅ FIXED: Check if a point is within a sector or keyhole observation zone
-     * Pin can move anywhere WITHIN the actual sector/keyhole geometry, but NOT outside
+     * Check if a point is within a sector or keyhole observation zone.
+     * Inner cylinder (keyhole) is always valid; otherwise apply radius and angle limits.
      */
     private fun isPointInSectorOrKeyhole(waypoint: AATWaypoint, point: AATLatLng): Boolean {
         val distance = AATMathUtils.calculateDistanceKm(
@@ -299,17 +377,15 @@ class AATMovablePointManager {
         val innerRadiusKm = waypoint.assignedArea.innerRadiusMeters / 1000.0
         val outerRadiusKm = waypoint.assignedArea.outerRadiusMeters / 1000.0
 
-        // 1️⃣ KEYHOLE: Inner cylinder is always valid (full 360°)
+        // Inner cylinder is always valid (full 360 degrees)
         if (innerRadiusKm > 0.0 && distance <= innerRadiusKm) {
-            return true  // ✅ Inside inner cylinder - no angle restrictions
+            return true
         }
 
-        // 2️⃣ Check outer radius limit
         if (distance > outerRadiusKm) {
-            return false  // ❌ Beyond outer radius - invalid
+            return false
         }
 
-        // 3️⃣ SECTOR/KEYHOLE: Check if within sector angles
         val bearingToPoint = AATMathUtils.calculateBearing(
             AATLatLng(waypoint.lat, waypoint.lon),
             point
@@ -322,25 +398,23 @@ class AATMovablePointManager {
     }
 
     /**
-     * ✅ Check if an angle is within a sector's angular range
-     * Uses 5° tolerance for user-friendly corner/edge selection
+     * Check if an angle is within a sector's angular range.
+     * Uses a small tolerance to make edge selection user-friendly.
      */
     private fun isAngleInSector(angle: Double, startAngle: Double, endAngle: Double): Boolean {
         val normalizedAngle = normalizeAngle(angle)
         val normalizedStart = normalizeAngle(startAngle)
         val normalizedEnd = normalizeAngle(endAngle)
 
-        // ✅ 5° tolerance for easy edge/corner selection
-        val ANGLE_TOLERANCE = 5.0
+        val angleTolerance = 5.0
 
         return if (normalizedEnd >= normalizedStart) {
-            // Normal case: sector doesn't cross 0°
-            (normalizedAngle >= normalizedStart - ANGLE_TOLERANCE) &&
-            (normalizedAngle <= normalizedEnd + ANGLE_TOLERANCE)
+            (normalizedAngle >= normalizedStart - angleTolerance) &&
+            (normalizedAngle <= normalizedEnd + angleTolerance)
         } else {
-            // Sector crosses 0° boundary (e.g., 350° to 10°)
-            (normalizedAngle >= normalizedStart - ANGLE_TOLERANCE) ||
-            (normalizedAngle <= normalizedEnd + ANGLE_TOLERANCE)
+            // Sector crosses 0-degree boundary (e.g., 350 to 10)
+            (normalizedAngle >= normalizedStart - angleTolerance) ||
+            (normalizedAngle <= normalizedEnd + angleTolerance)
         }
     }
 }
