@@ -18,6 +18,9 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Expose the MapLibre token via BuildConfig; supply through gradle.properties/local.properties
+        val mapLibreKey: String = providers.gradleProperty("MAPLIBRE_API_KEY").orElse("").get()
+        buildConfigField("String", "MAPLIBRE_API_KEY", "\"$mapLibreKey\"")
 
     }
 
@@ -52,16 +55,16 @@ android {
 }
 
 dependencies {
-    implementation(project(":dfcards-library"))  // Make sure this line exists
+    implementation(project(":dfcards-library"))
     implementation(project(":core:common"))
     implementation(project(":core:ui"))
     implementation(project(":feature:profile"))
     implementation(project(":feature:map"))
-  //  implementation(libs.json)
+
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
-    implementation("com.squareup.retrofit2:retrofit:3.0.0")
-    implementation("com.squareup.retrofit2:converter-gson:3.0.0")
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
     implementation(libs.androidx.core.splashscreen)
@@ -70,17 +73,14 @@ dependencies {
     implementation("com.google.zxing:core:3.5.3")
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
 
+    implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.material)
-    implementation(libs.androidx.navigation.compose)
     implementation(libs.compose.material.icons.extended)
     implementation(libs.constraintlayout.compose)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.activity.compose)
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.compose.material)
-    implementation(libs.compose.material.icons.extended)
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)

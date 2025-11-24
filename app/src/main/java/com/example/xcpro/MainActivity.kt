@@ -13,6 +13,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.AttrRes
 import androidx.annotation.ColorInt
+import com.example.xcpro.BuildConfig
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -75,14 +76,18 @@ class MainActivity : ComponentActivity(), StatusBarStyleApplier {
 
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
-        MapLibre.getInstance(this, "nYDScLfnBm52GAc3jXEZ", WellKnownTileServer.MapTiler)
+        val mapLibreKey = BuildConfig.MAPLIBRE_API_KEY
+        if (mapLibreKey.isNullOrBlank()) {
+            Log.e(TAG, "MapLibre API key missing; map tiles will not load. Set MAPLIBRE_API_KEY in gradle/local properties.")
+        } else {
+            MapLibre.getInstance(this, mapLibreKey, WellKnownTileServer.MapTiler)
+        }
 
         val setupManager = FirstTimeSetupManager.getInstance(this)
-        if (setupManager.isFirstLaunch()) {
-            Log.i(TAG, "First launch detected - performing setup")
-            setupManager.performFirstTimeSetup()
+        lifecycleScope.launch {
+            setupManager.runIfNeeded()
+            Log.d(TAG, "Setup info: ${setupManager.getSetupInfo()}")
         }
-        Log.d(TAG, "Setup info: ${setupManager.getSetupInfo()}")
 
         // runKeyholeVerificationTest() // TODO: Re-enable after keyhole implementation is completed
 
@@ -225,7 +230,7 @@ class MainActivity : ComponentActivity(), StatusBarStyleApplier {
 
     private fun startVarioServiceIfNeeded() {
         if (hasStartedVarioService) return
-        VarioForegroundService.start(this)
-        hasStartedVarioService = true
+        val started = VarioForegroundService.startIfPermitted(this)
+        hasStartedVarioService = started
     }
 }
