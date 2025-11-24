@@ -60,6 +60,7 @@ class AATInteractiveTurnpointManager(
 ) {
     // Core components
     private val distanceCalculator = AATDistanceCalculator()
+    private val movablePointManager = AATMovablePointManager()
     private var mapInteractionHandler: AATMapInteractionHandler? = null
     private var coordinateConverter: AATMapCoordinateConverter? = null
 
@@ -150,6 +151,8 @@ class AATInteractiveTurnpointManager(
         mapInteractionHandler?.exitEditMode()
     }
 
+    internal fun getCurrentWaypoints(): List<AATWaypoint> = currentWaypoints
+
     /**
      * Move target point to strategic position
      */
@@ -235,26 +238,29 @@ class AATInteractiveTurnpointManager(
 
     // ========== Private Methods ==========
 
-    private fun updateWaypointTargetPoint(index: Int, newTargetPoint: AATLatLng) {
+    internal fun updateWaypointTargetPoint(index: Int, newTargetPoint: AATLatLng) {
         if (index < 0 || index >= currentWaypoints.size) return
 
-        // Update waypoint in current list
-        val updatedWaypoint = currentWaypoints[index].copy(
-            targetPoint = newTargetPoint,
-            isTargetPointCustomized = true
+        val waypoint = currentWaypoints[index]
+        // Clamp through shared geometry manager to keep it inside the displayed area
+        val clampedWaypoint = movablePointManager.moveTargetPoint(
+            waypoint,
+            newTargetPoint.latitude,
+            newTargetPoint.longitude
         )
 
         val updatedWaypoints = currentWaypoints.toMutableList()
-        updatedWaypoints[index] = updatedWaypoint
+        updatedWaypoints[index] = clampedWaypoint
         currentWaypoints = updatedWaypoints
 
         // Update distance calculation
         updateDistance()
 
         // Notify callbacks
-        callbacks.onWaypointUpdated(index, updatedWaypoint)
+        callbacks.onWaypointUpdated(index, clampedWaypoint)
 
-        println("🎯 AAT: Updated waypoint $index target point to ${String.format("%.6f", newTargetPoint.latitude)}, ${String.format("%.6f", newTargetPoint.longitude)}")
+        val tp = clampedWaypoint.targetPoint
+        println("AAT: Updated waypoint $index target point to ${String.format("%.6f", tp.latitude)}, ${String.format("%.6f", tp.longitude)}")
     }
 
     private fun updateDistance() {
