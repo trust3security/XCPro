@@ -3,10 +3,16 @@ package com.example.xcpro
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
 
-class FirstTimeSetupManager private constructor(private val context: Context) {
+class FirstTimeSetupManager private constructor(
+    private val context: Context,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+) {
     
     companion object {
         private const val TAG = "FirstTimeSetup"
@@ -27,143 +33,102 @@ class FirstTimeSetupManager private constructor(private val context: Context) {
     
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     
-    fun isFirstLaunch(): Boolean {
+    suspend fun isFirstLaunch(): Boolean = withContext(ioDispatcher) {
         val isFirst = prefs.getBoolean(KEY_FIRST_LAUNCH, true)
         val setupVersion = prefs.getInt(KEY_SETUP_VERSION, 0)
-        
-        // Consider it first launch if never launched OR setup version is outdated
-        return isFirst || setupVersion < CURRENT_SETUP_VERSION
+        isFirst || setupVersion < CURRENT_SETUP_VERSION
     }
-    
-    fun performFirstTimeSetup() {
+
+    /**
+     * Runs setup work only once per version. Safe to call repeatedly.
+     */
+    suspend fun runIfNeeded() = withContext(ioDispatcher) {
         if (!isFirstLaunch()) {
             Log.d(TAG, "Not first launch, skipping setup")
-            return
+            return@withContext
         }
-        
-        Log.i(TAG, "🚀 Performing first-time setup...")
-        
+
+        Log.i(TAG, "Performing first-time setup...")
         try {
-            // 1. Clear any existing cache/config that might interfere
             clearPreviousCache()
-            
-            // 2. Set default card positions and sizes
             setupDefaultCardLayout()
-            
-            // 3. Set default navigation drawer state
             setupDefaultNavigationDrawer()
-            
-            // 4. Initialize default map settings
             setupDefaultMapSettings()
-            
-            // 5. Mark setup as complete
             markSetupComplete()
-            
-            Log.i(TAG, "✅ First-time setup completed successfully")
-            
+            Log.i(TAG, "First-time setup completed successfully")
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Error during first-time setup", e)
+            Log.e(TAG, "Error during first-time setup", e)
         }
     }
-    
-    private fun clearPreviousCache() {
-        Log.d(TAG, "🧹 Clearing previous cache...")
-        
-        // Clear potentially conflicting preferences
+
+    private suspend fun clearPreviousCache() = withContext(ioDispatcher) {
+        Log.d(TAG, "Clearing previous cache...")
         val prefsToClean = listOf(
             "card_layout_prefs",
             "drawer_config_prefs"
         )
-        
+
         prefsToClean.forEach { prefName ->
-            try {
+            runCatching {
                 context.getSharedPreferences(prefName, Context.MODE_PRIVATE)
                     .edit()
                     .clear()
                     .apply()
-                Log.d(TAG, "Cleared $prefName")
-            } catch (e: Exception) {
+            }.onFailure { e ->
                 Log.w(TAG, "Could not clear $prefName", e)
             }
         }
     }
-    
-    private fun setupDefaultCardLayout() {
-        Log.d(TAG, "📱 Setting up default card layout...")
-        
+
+    private suspend fun setupDefaultCardLayout() = withContext(ioDispatcher) {
+        Log.d(TAG, "Setting up default card layout...")
         val cardLayoutPrefs = context.getSharedPreferences("card_layout_prefs", Context.MODE_PRIVATE)
         cardLayoutPrefs.edit().apply {
-            // Default card arrangement for different screen areas
             putString("top_cards", "[\"altitude\", \"ground_speed\"]")
-            putString("middle_cards", "[\"vario\", \"wind\"]") 
+            putString("middle_cards", "[\"vario\", \"wind\"]")
             putString("bottom_cards", "[\"distance\", \"bearing\"]")
-            
-            // Default card sizes
-            putString("card_size_mode", "medium") // small, medium, large
-            putFloat("card_spacing", 8f) // 8dp between cards
-            putFloat("card_corner_radius", 12f) // Rounded corners
-            
-            // Default margins
+            putString("card_size_mode", "medium")
+            putFloat("card_spacing", 8f)
+            putFloat("card_corner_radius", 12f)
             putFloat("margin_horizontal", 16f)
             putFloat("margin_vertical", 8f)
-            
             apply()
         }
-        
-        Log.d(TAG, "✅ Card layout defaults set")
     }
-    
-    private fun setupDefaultNavigationDrawer() {
-        Log.d(TAG, "🗂️ Setting up default navigation drawer...")
-        
-        try {
-            val configFile = File(context.filesDir, "configuration.json")
-            val jsonObject = JSONObject().apply {
-                put("navDrawer", JSONObject().apply {
-                    put("profileExpanded", true) // Show profile section expanded
-                    put("mapStyleExpanded", false) // Collapse map style initially  
-                    put("settingsExpanded", false) // Collapse settings initially
-                })
-                
-                put("drawer", JSONObject().apply {
-                    put("defaultWidth", 280) // 280dp drawer width
-                    put("gestureEnabled", true)
-                    put("swipeEnabled", true)
-                })
-            }
-            
-            configFile.writeText(jsonObject.toString(2))
-            Log.d(TAG, "✅ Navigation drawer defaults set")
-            
-        } catch (e: Exception) {
-            Log.e(TAG, "Error setting navigation drawer defaults", e)
+
+    private suspend fun setupDefaultNavigationDrawer() = withContext(ioDispatcher) {
+        Log.d(TAG, "Setting up default navigation drawer...")
+        val configFile = File(context.filesDir, "configuration.json")
+        val jsonObject = JSONObject().apply {
+            put("navDrawer", JSONObject().apply {
+                put("profileExpanded", true)
+                put("mapStyleExpanded", false)
+                put("settingsExpanded", false)
+            })
+            put("drawer", JSONObject().apply {
+                put("defaultWidth", 280)
+                put("gestureEnabled", true)
+                put("swipeEnabled", true)
+            })
         }
+        configFile.writeText(jsonObject.toString(2))
     }
-    
-    private fun setupDefaultMapSettings() {
-        Log.d(TAG, "🗺️ Setting up default map settings...")
-        
+
+    private suspend fun setupDefaultMapSettings() = withContext(ioDispatcher) {
+        Log.d(TAG, "Setting up default map settings...")
         val mapPrefs = context.getSharedPreferences("MapScreenPrefs", Context.MODE_PRIVATE)
         mapPrefs.edit().apply {
-            // Default map style
             putString("map_style", "Topo")
-            
-            // Default zoom levels
             putFloat("default_zoom", 10f)
             putFloat("min_zoom", 3f)
             putFloat("max_zoom", 18f)
-            
-            // Default center (approximate world center)
             putFloat("default_lat", 20.0f)
             putFloat("default_lon", 0.0f)
-            
             apply()
         }
-        
-        Log.d(TAG, "✅ Map defaults set")
     }
-    
-    private fun markSetupComplete() {
+
+    private suspend fun markSetupComplete() = withContext(ioDispatcher) {
         prefs.edit().apply {
             putBoolean(KEY_FIRST_LAUNCH, false)
             putInt(KEY_SETUP_VERSION, CURRENT_SETUP_VERSION)
@@ -171,17 +136,16 @@ class FirstTimeSetupManager private constructor(private val context: Context) {
             apply()
         }
     }
-    
-    fun resetToFirstLaunch() {
-        Log.i(TAG, "🔄 Resetting to first launch state")
+
+    suspend fun resetToFirstLaunch() = withContext(ioDispatcher) {
+        Log.i(TAG, "Resetting to first launch state")
         prefs.edit().clear().apply()
     }
-    
-    fun getSetupInfo(): String {
+
+    suspend fun getSetupInfo(): String = withContext(ioDispatcher) {
         val isFirst = isFirstLaunch()
         val version = prefs.getInt(KEY_SETUP_VERSION, 0)
         val timestamp = prefs.getLong("setup_timestamp", 0)
-        
-        return "First Launch: $isFirst, Setup Version: $version, Last Setup: ${if (timestamp > 0) java.util.Date(timestamp) else "Never"}"
+        "First Launch: $isFirst, Setup Version: $version, Last Setup: ${if (timestamp > 0) java.util.Date(timestamp) else "Never"}"
     }
 }

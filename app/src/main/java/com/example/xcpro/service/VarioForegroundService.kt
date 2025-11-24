@@ -4,6 +4,8 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
+import android.Manifest
+import android.content.pm.PackageManager
 import android.content.Context
 import android.content.Intent
 import android.os.Binder
@@ -11,6 +13,7 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.example.xcpro.R
 import com.example.xcpro.vario.VarioServiceManager
 import dagger.hilt.android.AndroidEntryPoint
@@ -31,6 +34,21 @@ class VarioForegroundService : Service() {
             } else {
                 context.startService(intent)
             }
+        }
+
+        /**
+         * Start only if location permission is granted. Returns true when start was requested.
+         */
+        fun startIfPermitted(context: Context): Boolean {
+            val fine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            val coarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            val hasPermission = fine || coarse
+            if (!hasPermission) {
+                Log.w(TAG, "Skipping vario service start; location permission missing")
+                return false
+            }
+            start(context)
+            return true
         }
     }
 
