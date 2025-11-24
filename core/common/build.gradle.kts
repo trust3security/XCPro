@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.example.xcpro.core.common"
-    compileSdk = 36
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 30
