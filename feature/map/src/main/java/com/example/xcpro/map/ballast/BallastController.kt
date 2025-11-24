@@ -46,8 +46,14 @@ class BallastController(
                 _state.update { current ->
                     val next = current.withSnapshot(snapshot)
                     if (current.isAnimating) {
+                        val target = current.targetKg
+                        // If we've effectively hit the target (empty or full), end animation immediately.
+                        if (target != null && snapshot.currentKg.isCloseTo(target, tolerance = 0.1)) {
+                            cancelAnimation = true
+                            return@update next.resetAnimation()
+                        }
+
                         if (animationJob?.isActive == true) {
-                            val target = current.targetKg
                             val selfUpdate = lastWriteKg?.let { snapshot.currentKg.isCloseTo(it, tolerance = 0.5) } ?: false
                             if (!selfUpdate && target != null) {
                                 val prev = current.snapshot.currentKg
