@@ -12,8 +12,6 @@ android {
 
     defaultConfig {
         minSdk = 30
-        val mapLibreKey: String = providers.gradleProperty("MAPLIBRE_API_KEY").orElse("").get()
-        buildConfigField("String", "MAPLIBRE_API_KEY", "\"$mapLibreKey\"")
     }
 
     buildFeatures {

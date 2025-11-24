@@ -78,8 +78,7 @@ class MainActivity : ComponentActivity(), StatusBarStyleApplier {
 
         val mapLibreKey = BuildConfig.MAPLIBRE_API_KEY
         if (mapLibreKey.isNullOrBlank()) {
-            Log.w(TAG, "MapLibre API key missing; falling back to MapLibre demo tiles. Set MAPLIBRE_API_KEY in gradle/local properties for production tiles.")
-            MapLibre.getInstance(this, "", WellKnownTileServer.MapLibre)
+            Log.e(TAG, "MapLibre API key missing; map tiles will not load. Set MAPLIBRE_API_KEY in gradle/local properties.")
         } else {
             MapLibre.getInstance(this, mapLibreKey, WellKnownTileServer.MapTiler)
         }
