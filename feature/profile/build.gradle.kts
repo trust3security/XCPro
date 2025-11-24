@@ -8,7 +8,7 @@ plugins {
 
 android {
     namespace = "com.example.xcpro.profile"
-    compileSdk = 36
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 30
@@ -39,7 +39,7 @@ dependencies {
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.2")
+    implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.navigation.compose)
     implementation(platform(libs.androidx.compose.bom))
