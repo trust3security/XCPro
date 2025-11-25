@@ -35,11 +35,16 @@ internal class CalculateFlightMetricsUseCase(
 
     private var displayVarioState = 0.0
     private var displayNettoState = 0.0
+    private var lastBruttoValue = 0.0
     private var lastBruttoSampleTime = 0L
     private var lastNettoSampleTime = 0L
     private var lastNettoValue = Double.NaN
     private var lastThermalState = false
     private var previousGpsSpeed = 0.0
+    private var lastIndicatedMs = Double.NaN
+    private var lastTrueMs = Double.NaN
+    private var lastAirspeedSource = AirspeedSource.GPS_GROUND
+    private var lastAirspeedTimestamp = 0L
 
     fun execute(request: FlightMetricsRequest): FlightMetricsResult {
         val gps = request.gps
@@ -141,11 +146,27 @@ internal class CalculateFlightMetricsUseCase(
         } else {
             null
         }
-        val indicatedAirspeedMs = airspeedEstimate?.indicatedMs ?: 0.0
-        val trueAirspeedMs = airspeedEstimate?.trueMs
+        val now = currentTime
+        val activeEstimate = airspeedEstimate ?: run {
+            if (now - lastAirspeedTimestamp <= SPEED_HOLD_MS &&
+                lastIndicatedMs.isFinite() && lastTrueMs.isFinite()
+            ) {
+                AirspeedEstimate(lastIndicatedMs, lastTrueMs, lastAirspeedSource)
+            } else null
+        }
+        val indicatedAirspeedMs = activeEstimate?.indicatedMs ?: 0.0
+        val trueAirspeedMs = activeEstimate?.trueMs
             ?: if (gps.speed.value.isFinite()) gps.speed.value else indicatedAirspeedMs
-        val airspeedSourceLabel = (airspeedEstimate?.source ?: AirspeedSource.GPS_GROUND).label
-        val tasValid = trueAirspeedMs.isFinite() && trueAirspeedMs > 0.5
+        val airspeedSourceLabel = (activeEstimate?.source ?: AirspeedSource.GPS_GROUND).label
+        val tasValid = activeEstimate != null
+
+        // Remember last valid airspeed for hold
+        if (airspeedEstimate != null) {
+            lastIndicatedMs = airspeedEstimate.indicatedMs
+            lastTrueMs = airspeedEstimate.trueMs
+            lastAirspeedSource = airspeedEstimate.source
+            lastAirspeedTimestamp = now
+        }
 
         val teAltitude = computeTotalEnergyAltitude(baroAltitude, trueAirspeedMs)
         flightHelpers.updateThermalState(
@@ -355,9 +376,8 @@ internal class CalculateFlightMetricsUseCase(
         sampleValue: Double
     ): Long {
         if (lastTimestamp == 0L || currentTime < lastTimestamp) {
-            if (sampleValue.isFinite()) {
-                window.seed(sampleValue)
-            }
+            val seed = if (sampleValue.isFinite()) sampleValue else window.average()
+            if (seed.isFinite()) window.seed(seed)
             return currentTime
         }
 
@@ -418,6 +438,7 @@ internal class CalculateFlightMetricsUseCase(
         private const val TEMP_LAPSE_RATE_C_PER_M = -0.0065
         private const val GAS_CONSTANT = 287.05
         private const val GRAVITY = 9.80665
+        private const val SPEED_HOLD_MS = 10_000L
     }
 }
 
