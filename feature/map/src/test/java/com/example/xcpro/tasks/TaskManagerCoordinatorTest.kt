@@ -30,7 +30,7 @@ class TaskManagerCoordinatorTest {
 
     @Test
     fun `updateAATTargetPoint delegates when current task is AAT`() {
-        coordinator._taskType = TaskType.AAT
+        coordinator.setTaskTypeForTesting(TaskType.AAT)
 
         coordinator.updateAATTargetPoint(3, 51.3, -0.2)
 
@@ -39,7 +39,7 @@ class TaskManagerCoordinatorTest {
 
     @Test
     fun `updateAATTargetPoint logs and skips when task type is racing`() {
-        coordinator._taskType = TaskType.RACING
+        coordinator.setTaskTypeForTesting(TaskType.RACING)
 
         coordinator.updateAATTargetPoint(1, 40.0, 20.0)
 
@@ -48,7 +48,7 @@ class TaskManagerCoordinatorTest {
 
     @Test
     fun `updateAATArea routes through delegate`() {
-        coordinator._taskType = TaskType.AAT
+        coordinator.setTaskTypeForTesting(TaskType.AAT)
 
         coordinator.updateAATArea(2, 7500.0)
 
@@ -57,7 +57,7 @@ class TaskManagerCoordinatorTest {
 
     @Test
     fun `checkAATTargetPointHit delegates when task type is AAT`() {
-        coordinator._taskType = TaskType.AAT
+        coordinator.setTaskTypeForTesting(TaskType.AAT)
 
         coordinator.checkAATTargetPointHit(12f, 34f)
 
@@ -66,7 +66,7 @@ class TaskManagerCoordinatorTest {
 
     @Test
     fun `checkAATTargetPointHit returns null when task type is racing`() {
-        coordinator._taskType = TaskType.RACING
+        coordinator.setTaskTypeForTesting(TaskType.RACING)
 
         val result = coordinator.checkAATTargetPointHit(10f, 20f)
 
@@ -76,7 +76,7 @@ class TaskManagerCoordinatorTest {
 
     @Test
     fun `plotOnMap delegates to racing implementation when task type is racing`() {
-        coordinator._taskType = TaskType.RACING
+        coordinator.setTaskTypeForTesting(TaskType.RACING)
 
         coordinator.plotOnMap(null)
 
@@ -85,7 +85,7 @@ class TaskManagerCoordinatorTest {
 
     @Test
     fun `plotOnMap delegates to AAT implementation when task type is AAT`() {
-        coordinator._taskType = TaskType.AAT
+        coordinator.setTaskTypeForTesting(TaskType.AAT)
 
         coordinator.plotOnMap(null)
 
@@ -94,7 +94,7 @@ class TaskManagerCoordinatorTest {
 
     @Test
     fun `calculateTaskDistanceForTask uses current delegate distance`() {
-        coordinator._taskType = TaskType.RACING
+        coordinator.setTaskTypeForTesting(TaskType.RACING)
         whenever(racingDelegate.calculateDistance()).thenReturn(123.4)
 
         val distance = coordinator.calculateTaskDistanceForTask(sampleTask)

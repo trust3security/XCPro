@@ -40,6 +40,11 @@ class TaskManagerCoordinator(val context: Context? = null) {
     val taskType: TaskType get() = _taskType.value
     val taskTypeFlow: StateFlow<TaskType> = _taskType.asStateFlow()
 
+    @VisibleForTesting
+    internal fun setTaskTypeForTesting(type: TaskType) {
+        _taskType.value = type
+    }
+
     private inline fun <T> withCurrentManager(
         racingBlock: RacingTaskManager.() -> T,
         aatBlock: AATTaskManager.() -> T

@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.example.xcpro.tasks.aat.SimpleAATTask
+import com.example.xcpro.tasks.aat.models.AATLatLng
 import com.example.xcpro.tasks.aat.models.AATWaypoint
 import com.example.xcpro.tasks.aat.map.AATMovablePointManager
 import org.maplibre.android.maps.MapLibreMap
@@ -30,12 +31,12 @@ import kotlin.math.*
  */
 class AATEditModeManager {
 
-    // Edit mode state
-    private var _isInEditMode by mutableStateOf(false)
-    private var _editWaypointIndex by mutableStateOf(-1)
+    private val gestureController = AATEditGestureController()
+    private val geometryValidator = AATEditGeometryValidator(AATMovablePointManager())
+    private var editState by mutableStateOf(AATEditState())
 
-    val isInEditMode: Boolean get() = _isInEditMode
-    val editWaypointIndex: Int? get() = if (_isInEditMode && _editWaypointIndex >= 0) _editWaypointIndex else null
+    val isInEditMode: Boolean get() = editState.activeWaypointIndex != null
+    val editWaypointIndex: Int? get() = editState.activeWaypointIndex
 
     /**
      * Check if a map tap hit an AAT area
@@ -148,10 +149,13 @@ class AATEditModeManager {
      * @param enabled true to enable edit mode, false to disable
      */
     fun setEditMode(waypointIndex: Int, enabled: Boolean) {
-        _isInEditMode = enabled
-        _editWaypointIndex = if (enabled) waypointIndex else -1
+        val index = if (enabled) waypointIndex else -1
+        editState = editState.copy(
+            activeWaypointIndex = if (enabled) index else null,
+            isDragging = false
+        )
 
-        println("🎯 AAT EDIT MODE: Edit mode ${if (enabled) "enabled" else "disabled"} for waypoint $waypointIndex")
+        println("dYZ_ AAT EDIT MODE: Edit mode ${if (enabled) "enabled" else "disabled"} for waypoint $waypointIndex")
     }
 
     /**
