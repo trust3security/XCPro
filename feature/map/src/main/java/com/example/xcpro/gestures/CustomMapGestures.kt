@@ -352,12 +352,10 @@ fun CustomMapGestureHandler(
                             }
 
                             2 -> {
-                                // ✅ Two finger: Map panning (CLAUDE.md requirement)
-                                if (activePointers.size >= 2) {
-                                    val firstPointer = activePointers[0]
-                                    val secondPointer = activePointers[1]
-
-                                    // Calculate center point of two fingers
+                                // Two finger: Map panning (CLAUDE.md requirement)
+                                val firstPointer = activePointers.getOrNull(0)
+                                val secondPointer = activePointers.getOrNull(1)
+                                if (firstPointer != null && secondPointer != null) {
                                     val centerPoint = Offset(
                                         (firstPointer.position.x + secondPointer.position.x) / 2f,
                                         (firstPointer.position.y + secondPointer.position.y) / 2f
@@ -373,48 +371,38 @@ fun CustomMapGestureHandler(
                                     val panDelta = centerPoint - previousCenterPoint
 
                                     if (abs(panDelta.x) > 1f || abs(panDelta.y) > 1f) {
-                                        // ✅ Save position before first pan
                                         if (!showReturnButton && currentLocation != null) {
                                             onSaveLocation(currentLocation, mapLibreMap?.cameraPosition?.zoom ?: 10.0, mapLibreMap?.cameraPosition?.bearing ?: 0.0)
                                             onShowReturnButton(true)
-                                            if (BuildConfig.DEBUG) Log.d(TAG, "📍 Saved position for return button")
+                                            if (BuildConfig.DEBUG) Log.d(TAG, "Saved position for return button")
                                         }
 
-                                        // Apply pan to map using screen coordinate pan
                                         mapLibreMap?.let { map ->
                                             val currentTarget = map.cameraPosition.target
                                             if (currentTarget != null) {
                                                 val projection = map.projection
-
-                                                // Convert screen pan delta to map coordinate delta
                                                 val screenCenter = android.graphics.PointF(size.width / 2f, size.height / 2f)
                                                 val screenPanned = android.graphics.PointF(
                                                     screenCenter.x - panDelta.x,
                                                     screenCenter.y - panDelta.y
                                                 )
-
                                                 val centerLatLng = projection.fromScreenLocation(screenCenter)
                                                 val pannedLatLng = projection.fromScreenLocation(screenPanned)
-
                                                 if (centerLatLng != null && pannedLatLng != null) {
                                                     val latDelta = pannedLatLng.latitude - centerLatLng.latitude
                                                     val lngDelta = pannedLatLng.longitude - centerLatLng.longitude
-
                                                     val newTarget = org.maplibre.android.geometry.LatLng(
                                                         currentTarget.latitude + latDelta,
                                                         currentTarget.longitude + lngDelta
                                                     )
-
                                                     map.moveCamera(CameraUpdateFactory.newLatLng(newTarget))
-                                                    if (BuildConfig.DEBUG) Log.d(TAG, "🗺️ Two finger pan: delta=(${panDelta.x}, ${panDelta.y})")
+                                                    if (BuildConfig.DEBUG) Log.d(TAG, "Two finger pan: delta=(${panDelta.x}, ${panDelta.y})")
                                                 }
                                             }
                                         }
                                     }
                                 }
-                            }
-
-                            else -> {
+                            }                            else -> {
                                 // ✅ 3+ fingers: Ignore for now
                                 if (BuildConfig.DEBUG) Log.d(TAG, "🖐️ ${fingerCount} fingers detected - ignoring complex gestures")
                             }
