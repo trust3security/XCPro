@@ -23,6 +23,7 @@ import kotlinx.coroutines.launch
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
+import kotlin.collections.ArrayDeque
 
 class LocationManager(
     private val context: Context,
@@ -36,11 +37,14 @@ class LocationManager(
         private const val INITIAL_ZOOM_LEVEL = 10.0
         // XCSoar parity: ignore sub-pixel GPS jitter before recentering
         private const val RECENTER_PIXEL_THRESHOLD = 0.75f
+        private const val MIN_MOVEMENT_METERS = 1.0
+        private const val NORTH_WIND_AVG_WINDOW = 30
     }
 
     private var sensorsStarted = false
     private val orientationPreferences = MapOrientationPreferences(context)
     private val gliderPaddingHelper = GliderPaddingHelper(context.resources, orientationPreferences)
+    private val northWindPositionAverager = PositionAverager(NORTH_WIND_AVG_WINDOW)
 
     private fun ensureSensorsRunning() {
         val status = unifiedSensorManager.getSensorStatus()
@@ -272,8 +276,13 @@ class LocationManager(
         orientationMode: MapOrientationMode = MapOrientationMode.NORTH_UP,
         magneticHeading: Double = 0.0
     ) {
-        Log.d(TAG, "📍 Updating location overlay: ${location.latLng.latitude}, ${location.latLng.longitude}, " +
+        Log.d(TAG, "Updating location overlay: ${location.latLng.latitude}, ${location.latLng.longitude}, " +
                   "bearing=${location.bearing}°, magHeading=${magneticHeading}°, mode=$orientationMode")
+
+        // Skip tiny moves to reduce overlay jitter
+        if (!hasMovedEnough(currentUserLocation, location.latLng)) {
+            return
+        }
 
         // Update the current user location
         currentUserLocation = location.latLng
@@ -328,13 +337,12 @@ class LocationManager(
                 // Save initial position for return button
                 saveLocation(location, INITIAL_ZOOM_LEVEL, 0.0)
 
-                Log.d(TAG, "🎯 INITIAL CENTERING: Centered map on first GPS location: ${location.latitude}, ${location.longitude}")
+                Log.d(TAG, "INITIAL CENTERING: Centered map on first GPS location: ${location.latitude}, ${location.longitude}")
             }
         }
     }
-
     private fun handleAutomaticCameraTracking(location: LatLng, orientationMode: MapOrientationMode) {
-        // ✅ Enable camera tracking for ALL modes when user hasn't panned
+        // Enable camera tracking for ALL modes when user hasn't panned
         // The camera follows the GPS position to keep the aircraft icon in view
         // The icon stays at actual GPS coordinates on the map
         if (isTrackingLocation && !showReturnButton) {
@@ -345,9 +353,18 @@ class LocationManager(
                     return@let
                 }
 
+                val targetLocation = when (orientationMode) {
+                    MapOrientationMode.NORTH_UP,
+                    MapOrientationMode.WIND_UP -> northWindPositionAverager.add(location)
+                    else -> {
+                        northWindPositionAverager.clear()
+                        location
+                    }
+                }
+
                 val currentPosition = map.cameraPosition
                 val newCameraPosition = org.maplibre.android.camera.CameraPosition.Builder()
-                    .target(location)
+                    .target(targetLocation)
                     .zoom(currentPosition.zoom) // Always preserve current zoom - NO AUTO-ZOOM
                     .bearing(currentPosition.bearing) // Bearing is handled by MapCameraManager
                     .tilt(currentPosition.tilt) // Preserve current tilt
@@ -358,10 +375,10 @@ class LocationManager(
                 map.moveCamera(CameraUpdateFactory.newCameraPosition(newCameraPosition))
                 gliderPaddingHelper.applyPadding(map)
 
-                Log.d(TAG, "📍 $orientationMode: Camera following location at ${location.latitude}, ${location.longitude}")
+                Log.d(TAG, "$orientationMode: Camera following location at ${location.latitude}, ${location.longitude}")
             }
         } else {
-            Log.d(TAG, "📍 Camera tracking: mode=$orientationMode, tracking=$isTrackingLocation, returnButton=$showReturnButton")
+            Log.d(TAG, "Camera tracking: mode=$orientationMode, tracking=$isTrackingLocation, returnButton=$showReturnButton")
         }
     }
 
@@ -393,21 +410,28 @@ class LocationManager(
         orientationMode: MapOrientationMode,
         magneticHeading: Double
     ) {
-        Log.d(TAG, "📡 GPS Data: fixed=${liveData}, " +
-                  "lat=${liveData.latitude}, lon=${liveData.longitude}, " +
-                  "accuracy=${liveData.accuracy}, gpsAlt=${liveData.gpsAltitude}m, " +
-                  "speed=${String.format("%.1f", UnitsConverter.msToKnots(liveData.groundSpeed))}kt, track=${liveData.track}°")
+        Log.d(
+            TAG,
+            "GPS Data: fixed=$liveData, lat=${liveData.latitude}, lon=${liveData.longitude}, " +
+                "accuracy=${liveData.accuracy}, gpsAlt=${liveData.gpsAltitude}m, " +
+                "speed=${String.format("%.1f", UnitsConverter.msToKnots(liveData.groundSpeed))}kt, track=${liveData.track}"
+        )
 
         // Update position even without perfect GPS fix for smooth tracking
-        // Just need valid coordinates (not 0,0)
         if (liveData.latitude != 0.0 && liveData.longitude != 0.0) {
             val newLocation = LatLng(liveData.latitude, liveData.longitude)
+
+            // Skip tiny moves to reduce overlay jitter
+            if (!hasMovedEnough(currentUserLocation, newLocation)) {
+                return
+            }
+
             currentUserLocation = newLocation
-            Log.d(TAG, "🌍 User location updated: ${liveData.latitude}, ${liveData.longitude}")
+            Log.d(TAG, "User location updated: ${liveData.latitude}, ${liveData.longitude}")
 
             mapState.mapLibreMap?.let { map ->
                 try {
-                    Log.d(TAG, "🗺️ Map available for sailplane overlay update, style=${map.style != null}")
+                    Log.d(TAG, "Map available for sailplane overlay update, style=${map.style != null}")
 
                     // Update glider icon with GPS track and magnetic heading for proper rotation per mode
                     mapState.blueLocationOverlay?.let { overlay ->
@@ -428,15 +452,16 @@ class LocationManager(
                     // Handle automatic camera tracking for smooth movement
                     handleAutomaticCameraTracking(newLocation, orientationMode)
 
-                    Log.d(TAG, "✅ Custom sailplane overlay updated successfully (track=${liveData.track}°)")
+                    Log.d(TAG, "Custom sailplane overlay updated successfully (track=${liveData.track})")
                 } catch (e: Exception) {
-                    Log.e(TAG, "❌ Error updating sailplane overlay: ${e.message}", e)
+                    Log.e(TAG, "Error updating sailplane overlay: ${e.message}", e)
                 }
-            } ?: Log.w(TAG, "⚠️ MapLibreMap is null, cannot update location")
+            } ?: Log.w(TAG, "MapLibreMap is null, cannot update location")
         } else {
-            Log.d(TAG, "⚠️ GPS not fixed or invalid coordinates: " +
-                      "fixed=${liveData}, " +
-                      "lat=${liveData.latitude}, lon=${liveData.longitude}")
+            Log.d(
+                TAG,
+                "GPS not fixed or invalid coordinates: fixed=$liveData, lat=${liveData.latitude}, lon=${liveData.longitude}"
+            )
         }
     }
 
@@ -444,7 +469,7 @@ class LocationManager(
         savedLocation = location
         savedZoom = zoom
         savedBearing = bearing
-        Log.d(TAG, "📍 Saved position for return: lat=${location.latitude}, zoom=$zoom, bearing=$bearing")
+        Log.d(TAG, "Saved position for return: lat=${location.latitude}, zoom=$zoom, bearing=$bearing")
     }
 
     fun saveLocationFromGPS(location: GPSData?, zoom: Double, bearing: Double) {
@@ -457,12 +482,22 @@ class LocationManager(
         showReturnButton = true
         mapState.showReturnButton = true
         lastUserPanTime = System.currentTimeMillis()
-        Log.d(TAG, "✅ Return button shown due to user interaction")
+        Log.d(TAG, "Return button shown due to user interaction")
     }
 
     fun returnToSavedLocation(): Boolean {
         return savedLocation?.let { location ->
             mapState.mapLibreMap?.let { map ->
+                if (!shouldRecentre(location, map)) {
+                    Log.v(
+                        TAG,
+                        "RECENTER_SKIPPED (return): below pixel threshold (${location.latitude}, ${location.longitude})"
+                    )
+                    showReturnButton = false
+                    mapState.showReturnButton = false
+                    return false
+                }
+
                 val returnCameraPosition = org.maplibre.android.camera.CameraPosition.Builder()
                     .target(location)
                     .zoom(savedZoom ?: map.cameraPosition.zoom)
@@ -486,6 +521,11 @@ class LocationManager(
     fun recenterOnCurrentLocation() {
         currentUserLocation?.let { location ->
             mapState.mapLibreMap?.let { map ->
+                if (!shouldRecentre(location, map)) {
+                    Log.v(TAG, "RECENTER_SKIPPED (manual): below pixel threshold (, )")
+                    return
+                }
+
                 val currentPosition = map.cameraPosition
                 val newCameraPosition = org.maplibre.android.camera.CameraPosition.Builder()
                     .target(location)
@@ -511,6 +551,55 @@ class LocationManager(
         showReturnButton()
     }
 
+    /**
+     * Simple movement guard to ignore <1 m deltas (reduces jitter).
+     */
+    private fun hasMovedEnough(prev: LatLng?, next: LatLng): Boolean {
+        if (prev == null) return true
+        return distanceMeters(prev, next) >= MIN_MOVEMENT_METERS
+    }
+
+    private fun distanceMeters(a: LatLng, b: LatLng): Double {
+        val R = 6371000.0
+        val dLat = Math.toRadians(b.latitude - a.latitude)
+        val dLon = Math.toRadians(b.longitude - a.longitude)
+        val lat1 = Math.toRadians(a.latitude)
+        val lat2 = Math.toRadians(b.latitude)
+        val sinLat = kotlin.math.sin(dLat / 2)
+        val sinLon = kotlin.math.sin(dLon / 2)
+        val term = sinLat * sinLat + kotlin.math.cos(lat1) * kotlin.math.cos(lat2) * sinLon * sinLon
+        val c = 2 * kotlin.math.atan2(kotlin.math.sqrt(term), kotlin.math.sqrt(1 - term))
+        return R * c
+    }
+}
+private class PositionAverager(private val capacity: Int) {
+    private val buffer = ArrayDeque<LatLng>(capacity)
+    private var sumLat = 0.0
+    private var sumLon = 0.0
+
+    fun add(value: LatLng): LatLng {
+        if (buffer.size == capacity) {
+            val removed = buffer.removeFirst()
+            sumLat -= removed.latitude
+            sumLon -= removed.longitude
+        }
+        buffer.addLast(value)
+        sumLat += value.latitude
+        sumLon += value.longitude
+        return averaged()
+    }
+
+    fun clear() {
+        buffer.clear()
+        sumLat = 0.0
+        sumLon = 0.0
+    }
+
+    private fun averaged(): LatLng {
+        if (buffer.isEmpty()) return LatLng(0.0, 0.0)
+        val size = buffer.size.toDouble()
+        return LatLng(sumLat / size, sumLon / size)
+    }
 }
 
 
