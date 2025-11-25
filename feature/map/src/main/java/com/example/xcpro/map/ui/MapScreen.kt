@@ -23,6 +23,7 @@ import com.example.xcpro.map.MapTaskIntegration
 import com.example.xcpro.map.MapScreenViewModel
 import com.example.xcpro.map.MapUiEffect
 import com.example.xcpro.map.MapUiEvent
+import com.example.xcpro.sensors.GpsStatus
 import com.example.dfcards.CardDefinition
 import com.example.ui1.icons.Task
 import com.example.ui1.icons.LocationSailplane
@@ -229,6 +230,7 @@ fun MapScreen(
     val mapInitializer = mapViewModel.mapInitializer
     val currentGpsLocation by unifiedSensorManager.gpsFlow.collectAsStateWithLifecycle()
     val isGpsActive = unifiedSensorManager.isGpsEnabled()
+    val gpsStatus by mapViewModel.gpsStatusFlow.collectAsStateWithLifecycle()
 
     // ✅ Location state through LocationManager
     val showRecenterButton by mapState.showRecenterButtonFlow.collectAsStateWithLifecycle()
@@ -390,6 +392,13 @@ fun MapScreen(
         },
         content = {
             Box(modifier = Modifier.fillMaxSize()) {
+                GpsStatusBanner(
+                    status = gpsStatus,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.TopCenter)
+                        .padding(top = 8.dp, start = 12.dp, end = 12.dp)
+                )
                 MapScreenContent(
                     density = density,
                     mapState = mapState,
@@ -475,6 +484,31 @@ fun MapScreen(
     )
 }
 
+
+@Composable
+private fun GpsStatusBanner(status: GpsStatus, modifier: Modifier = Modifier) {
+    val (text, color) = when (status) {
+        GpsStatus.NoPermission -> "Location permission needed" to Color(0xFFB00020)
+        GpsStatus.Disabled -> "GPS is off" to Color(0xFFB00020)
+        is GpsStatus.LostFix -> "Waiting for GPS…" to Color(0xFFCA8A04)
+        GpsStatus.Searching -> "Searching for GPS…" to Color(0xFFCA8A04)
+        is GpsStatus.Ok -> return // No banner when OK
+    }
+    Surface(
+        color = color.copy(alpha = 0.85f),
+        tonalElevation = 4.dp,
+        shape = RoundedCornerShape(10.dp),
+        modifier = modifier
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            color = Color.White,
+            style = MaterialTheme.typography.labelMedium,
+            textAlign = TextAlign.Center
+        )
+    }
+}
 
 
 

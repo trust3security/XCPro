@@ -107,6 +107,8 @@ class MapScreenViewModel @Inject constructor(
     val windState: StateFlow<WindState> = windRepository.windState
     val replaySessionState: StateFlow<IgcReplayController.SessionState> = igcReplayController.session
     val showReplayDebugFab: Boolean = MapFeatureFlags.showReplayDebugFab
+    val gpsStatusFlow: StateFlow<com.example.xcpro.sensors.GpsStatus> =
+        locationManager.unifiedSensorManager.gpsStatusFlow
 
     private val variometerRepository = VariometerWidgetRepository(mapState.sharedPrefs)
     private val _variometerUiState = MutableStateFlow(VariometerUiState())

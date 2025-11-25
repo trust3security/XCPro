@@ -3,15 +3,30 @@ package com.example.xcpro.sensors
 import android.content.Context
 import android.hardware.SensorManager
 import android.location.LocationManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 /**
  * Public facade exposing raw sensor flows.
  * Delegates registration and updates to [SensorRegistry].
  */
 class UnifiedSensorManager(private val context: Context) : SensorDataSource {
+
+    private val scope = CoroutineScope(Dispatchers.Default)
+    init {
+        // Periodically refresh status so we can transition to LostFix when samples stop.
+        scope.launch {
+            while (true) {
+                updateGpsStatus()
+                kotlinx.coroutines.delay(5_000)
+            }
+        }
+    }
 
     private val _gpsFlow = MutableStateFlow<GPSData?>(null)
     override val gpsFlow: StateFlow<GPSData?> = _gpsFlow.asStateFlow()
@@ -25,6 +40,11 @@ class UnifiedSensorManager(private val context: Context) : SensorDataSource {
     private val _accelFlow = MutableStateFlow<AccelData?>(null)
     override val accelFlow: StateFlow<AccelData?> = _accelFlow.asStateFlow()
 
+    private val gpsStatusMonitor = GpsStatusMonitor(GpsStatus.Searching)
+    val gpsStatusFlow: StateFlow<GpsStatus> = gpsStatusMonitor.status
+    private var lastFixTimestamp: Long? = null
+    private var lastAccuracy: Float? = null
+
     private val _attitudeFlow = MutableStateFlow<AttitudeData?>(null)
     override val attitudeFlow: StateFlow<AttitudeData?> = _attitudeFlow.asStateFlow()
 
@@ -35,7 +55,12 @@ class UnifiedSensorManager(private val context: Context) : SensorDataSource {
         locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager,
         sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager,
         orientationProcessor = orientationProcessor,
-        updateGps = { _gpsFlow.value = it },
+        updateGps = { gps ->
+            _gpsFlow.value = gps
+            lastFixTimestamp = gps.timestamp
+            lastAccuracy = gps.accuracy
+            updateGpsStatus()
+        },
         updateBaro = { _baroFlow.value = it },
         updateCompass = { _compassFlow.value = it },
         updateAttitude = { _attitudeFlow.value = it },
@@ -45,7 +70,11 @@ class UnifiedSensorManager(private val context: Context) : SensorDataSource {
     /**
      * Start all sensors. Call after permissions are granted.
      */
-    fun startAllSensors(): Boolean = registry.startAll()
+    fun startAllSensors(): Boolean {
+        val started = registry.startAll()
+        updateGpsStatus()
+        return started
+    }
 
     /**
      * Stop all sensors. Call when app backgrounds or shuts down.
@@ -57,4 +86,22 @@ class UnifiedSensorManager(private val context: Context) : SensorDataSource {
     fun hasLocationPermissions(): Boolean = registry.hasLocationPermissions()
 
     fun getSensorStatus(): SensorStatus = registry.status()
+
+    private fun updateGpsStatus() {
+        scope.launch {
+            val status = registry.status()
+            val now = System.currentTimeMillis()
+            val age = lastFixTimestamp?.let { now - it }
+
+            val derived = when {
+                !status.hasLocationPermissions -> GpsStatus.NoPermission
+                !status.gpsAvailable -> GpsStatus.Disabled
+                !status.gpsStarted -> GpsStatus.Searching
+                age == null -> GpsStatus.Searching
+                age > 15_000 -> GpsStatus.LostFix(age)
+                else -> GpsStatus.Ok(age, lastAccuracy)
+            }
+            gpsStatusMonitor.update(derived)
+        }
+    }
 }
