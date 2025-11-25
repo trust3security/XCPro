@@ -24,6 +24,7 @@ import com.example.xcpro.map.MapScreenViewModel
 import com.example.xcpro.map.MapUiEffect
 import com.example.xcpro.map.MapUiEvent
 import com.example.xcpro.sensors.GpsStatus
+import com.example.xcpro.map.ui.components.GpsStatusBanner
 import com.example.dfcards.CardDefinition
 import com.example.ui1.icons.Task
 import com.example.ui1.icons.LocationSailplane
