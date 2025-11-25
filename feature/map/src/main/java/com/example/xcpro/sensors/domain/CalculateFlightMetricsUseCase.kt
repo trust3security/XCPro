@@ -62,9 +62,15 @@ internal class CalculateFlightMetricsUseCase(
         previousGpsSpeed = currentSpeed
 
         val teVario = teVerticalSpeed.takeIf { currentTime <= request.varioValidUntil }
-        val bruttoVario = teVario ?: request.varioGpsValue
+        val gpsVario = request.varioGpsValue
         val varioSource = if (teVario != null) "TE" else "GPS"
-        val varioValid = teVario != null
+        val bruttoVario = when {
+            teVario != null -> teVario
+            gpsVario.isFinite() -> gpsVario
+            else -> lastBruttoValue  // hold last valid brutto if both missing
+        }
+        val varioValid = bruttoVario.isFinite()
+        if (bruttoVario.isFinite()) lastBruttoValue = bruttoVario
 
         val baroAltitude = varioResult.altitude
         val baroResult = request.baroResult
@@ -153,12 +159,16 @@ internal class CalculateFlightMetricsUseCase(
             ) {
                 AirspeedEstimate(lastIndicatedMs, lastTrueMs, lastAirspeedSource)
             } else null
-        }
-        val indicatedAirspeedMs = activeEstimate?.indicatedMs ?: 0.0
-        val trueAirspeedMs = activeEstimate?.trueMs
-            ?: if (gps.speed.value.isFinite()) gps.speed.value else indicatedAirspeedMs
-        val airspeedSourceLabel = (activeEstimate?.source ?: AirspeedSource.GPS_GROUND).label
-        val tasValid = activeEstimate != null
+        } ?: AirspeedEstimate(
+            indicatedMs = gps.speed.value.takeIf { it.isFinite() } ?: 0.0,
+            trueMs = gps.speed.value.takeIf { it.isFinite() } ?: 0.0,
+            source = AirspeedSource.GPS_GROUND
+        )
+
+        val indicatedAirspeedMs = activeEstimate.indicatedMs
+        val trueAirspeedMs = activeEstimate.trueMs
+        val airspeedSourceLabel = activeEstimate.source.label
+        val tasValid = activeEstimate.source != AirspeedSource.GPS_GROUND || gps.speed.value.isFinite()
 
         // Remember last valid airspeed for hold
         if (airspeedEstimate != null) {
