@@ -420,18 +420,6 @@ internal class CalculateFlightMetricsUseCase(
         return if (!fallback.isNaN()) fallback else rawNetto
     }
 
-    private data class AirspeedEstimate(
-        val indicatedMs: Double,
-        val trueMs: Double,
-        val source: AirspeedSource
-    )
-
-    private enum class AirspeedSource(val label: String) {
-        WIND_VECTOR("WIND"),
-        POLAR_SINK("POLAR"),
-        GPS_GROUND("GPS")
-    }
-
     companion object {
         private const val DEFAULT_QNH_HPA = 1013.25
         private const val AVERAGE_WINDOW_SECONDS = 30
