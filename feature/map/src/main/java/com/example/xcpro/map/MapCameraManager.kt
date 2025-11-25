@@ -10,6 +10,7 @@ import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
+import kotlin.math.sign
 
 /**
  * Centralized camera management for MapScreen
@@ -24,6 +25,7 @@ class MapCameraManager(
         const val INITIAL_ZOOM = 8.0
         const val INITIAL_LATITUDE = 52.52
         const val INITIAL_LONGITUDE = 13.405
+        private const val MAX_BEARING_STEP_DEG = 5.0
 
         // AAT Edit Zoom: Fraction of screen the circle diameter should occupy
         // LOWER value = MORE padding, MORE zoomed out (circle appears smaller)
@@ -87,34 +89,50 @@ class MapCameraManager(
     ) {
         mapState.mapLibreMap?.let { map ->
             try {
-                val bearingChanged = kotlin.math.abs(newBearing - lastCameraBearing) > 2.0
+                val targetBearing = if (orientationMode == MapOrientationMode.NORTH_UP) {
+                    0.0
+                } else {
+                    newBearing
+                }
+
+                // Clamp rotation step to smooth jitter (XCSoar-like)
+                val delta = shortestDeltaDegrees(lastCameraBearing, targetBearing)
+                val limitedBearing = if (kotlin.math.abs(delta) > MAX_BEARING_STEP_DEG) {
+                    lastCameraBearing + sign(delta) * MAX_BEARING_STEP_DEG
+                } else {
+                    targetBearing
+                }
+
+                val bearingChanged = kotlin.math.abs(shortestDeltaDegrees(lastCameraBearing, limitedBearing)) > 2.0
 
                 if (bearingChanged) {
                     val currentPosition = map.cameraPosition
-                    val targetBearing = if (orientationMode == MapOrientationMode.NORTH_UP) {
-                        0.0
-                    } else {
-                        newBearing
-                    }
 
                     val newCameraPosition = CameraPosition.Builder()
                         .target(currentPosition.target)
                         .zoom(currentPosition.zoom)
-                        .bearing(targetBearing)
+                        .bearing(limitedBearing)
                         .tilt(currentPosition.tilt)
                         .build()
 
                     map.moveCamera(CameraUpdateFactory.newCameraPosition(newCameraPosition))
-                    lastCameraBearing = newBearing
+                    lastCameraBearing = limitedBearing
                     Log.d(
                         TAG,
-                        "Bearing updated: mode=$orientationMode, source=$bearingSource, bearing=$targetBearing"
+                        "Bearing updated: mode=$orientationMode, source=$bearingSource, bearing=$limitedBearing (raw=$newBearing)"
                     )
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error updating camera bearing: ${e.message}")
             }
         }
+    }
+
+    private fun shortestDeltaDegrees(from: Double, to: Double): Double {
+        var delta = (to - from) % 360.0
+        if (delta > 180) delta -= 360.0
+        if (delta < -180) delta += 360.0
+        return delta
     }
 
     /**

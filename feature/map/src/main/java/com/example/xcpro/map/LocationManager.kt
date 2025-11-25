@@ -34,6 +34,8 @@ class LocationManager(
     companion object {
         private const val TAG = "LocationManager"
         private const val INITIAL_ZOOM_LEVEL = 10.0
+        // XCSoar parity: ignore sub-pixel GPS jitter before recentering
+        private const val RECENTER_PIXEL_THRESHOLD = 0.75f
     }
 
     private var sensorsStarted = false
@@ -294,6 +296,11 @@ class LocationManager(
     private fun handleInitialCentering(location: LatLng) {
         if (!hasInitiallyCentered && mapState.mapLibreMap != null) {
             mapState.mapLibreMap?.let { map ->
+                // Skip recenter if projected move is below sub-pixel noise
+                if (!shouldRecentre(location, map)) {
+                    Log.v(TAG, "RECENTER_SKIPPED: below pixel threshold (${location.latitude}, ${location.longitude})")
+                    return@let
+                }
                 // For initial centering ONLY, set a reasonable zoom
                 // After this, always preserve user's zoom preference
                 val zoomToUse = if (map.cameraPosition.zoom < 5.0) {
@@ -332,6 +339,12 @@ class LocationManager(
         // The icon stays at actual GPS coordinates on the map
         if (isTrackingLocation && !showReturnButton) {
             mapState.mapLibreMap?.let { map ->
+                // Skip recenter if projected move is below sub-pixel noise
+                if (!shouldRecentre(location, map)) {
+                    Log.v(TAG, "RECENTER_SKIPPED: below pixel threshold (${location.latitude}, ${location.longitude})")
+                    return@let
+                }
+
                 val currentPosition = map.cameraPosition
                 val newCameraPosition = org.maplibre.android.camera.CameraPosition.Builder()
                     .target(location)
@@ -349,6 +362,29 @@ class LocationManager(
             }
         } else {
             Log.d(TAG, "📍 Camera tracking: mode=$orientationMode, tracking=$isTrackingLocation, returnButton=$showReturnButton")
+        }
+    }
+
+    /**
+     * Mirror XCSoar's SetLocationLazy: only recentre if the new GPS fix would move the aircraft
+     * more than ~0.75px on screen. Prevents left/right flicker from sub-meter noise.
+     */
+    private fun shouldRecentre(target: LatLng, map: MapLibreMap): Boolean {
+        return try {
+            val projection = map.projection
+            val currentCenter = map.cameraPosition.target ?: return true
+
+            val currentPoint = projection.toScreenLocation(currentCenter)
+            val targetPoint = projection.toScreenLocation(target)
+
+            val dx = targetPoint.x - currentPoint.x
+            val dy = targetPoint.y - currentPoint.y
+            val distSq = dx * dx + dy * dy
+
+            distSq >= RECENTER_PIXEL_THRESHOLD * RECENTER_PIXEL_THRESHOLD
+        } catch (e: Exception) {
+            Log.w(TAG, "shouldRecentre: projection failed, defaulting to recenter", e)
+            true
         }
     }
 
