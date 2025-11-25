@@ -18,15 +18,6 @@ import kotlinx.coroutines.delay
 class UnifiedSensorManager(private val context: Context) : SensorDataSource {
 
     private val scope = CoroutineScope(Dispatchers.Default)
-    init {
-        // Periodically refresh status so we can transition to LostFix when samples stop.
-        scope.launch {
-            while (true) {
-                updateGpsStatus()
-                kotlinx.coroutines.delay(5_000)
-            }
-        }
-    }
 
     private val _gpsFlow = MutableStateFlow<GPSData?>(null)
     override val gpsFlow: StateFlow<GPSData?> = _gpsFlow.asStateFlow()
@@ -44,6 +35,7 @@ class UnifiedSensorManager(private val context: Context) : SensorDataSource {
     val gpsStatusFlow: StateFlow<GpsStatus> = gpsStatusMonitor.status
     private var lastFixTimestamp: Long? = null
     private var lastAccuracy: Float? = null
+    private var statusTickerJob: kotlinx.coroutines.Job? = null
 
     private val _attitudeFlow = MutableStateFlow<AttitudeData?>(null)
     override val attitudeFlow: StateFlow<AttitudeData?> = _attitudeFlow.asStateFlow()
@@ -73,13 +65,25 @@ class UnifiedSensorManager(private val context: Context) : SensorDataSource {
     fun startAllSensors(): Boolean {
         val started = registry.startAll()
         updateGpsStatus()
+        if (started && statusTickerJob == null) {
+            statusTickerJob = scope.launch {
+                while (true) {
+                    updateGpsStatus()
+                    delay(5_000)
+                }
+            }
+        }
         return started
     }
 
     /**
      * Stop all sensors. Call when app backgrounds or shuts down.
      */
-    fun stopAllSensors() = registry.stopAll()
+    fun stopAllSensors() {
+        registry.stopAll()
+        statusTickerJob?.cancel()
+        statusTickerJob = null
+    }
 
     fun isGpsEnabled(): Boolean = registry.isGpsEnabled()
 

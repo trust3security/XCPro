@@ -114,7 +114,10 @@ internal class CalculateFlightMetricsUseCase(
             lastNettoValue = nettoResult.value
             nettoDisplayWindow.addSample(currentTime, nettoResult.value)
         } else {
-            nettoDisplayWindow.clear()
+            // XCSoar keeps publishing last known netto through brief dropouts
+            if (!lastNettoValue.isNaN()) {
+                nettoDisplayWindow.addSample(currentTime, lastNettoValue)
+            }
         }
 
         val bruttoAverage30s = bruttoAverageWindow.average()
@@ -352,7 +355,9 @@ internal class CalculateFlightMetricsUseCase(
         sampleValue: Double
     ): Long {
         if (lastTimestamp == 0L || currentTime < lastTimestamp) {
-            window.seed(sampleValue)
+            if (sampleValue.isFinite()) {
+                window.seed(sampleValue)
+            }
             return currentTime
         }
 

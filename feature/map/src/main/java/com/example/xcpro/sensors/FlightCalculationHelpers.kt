@@ -33,6 +33,8 @@ internal class FlightCalculationHelpers(
     companion object {
         private const val MAX_LOCATION_HISTORY = 20
         private const val LD_CALCULATION_INTERVAL = 5000L     // ms
+        private const val SPEED_HOLD_MS = 10_000L
+        private const val DEFAULT_FALLBACK_SPEED_MS = 27.78 // 100 km/h
     }
 
     private val currentThermalInfo = ThermalClimbInfo()
@@ -57,6 +59,11 @@ internal class FlightCalculationHelpers(
     // AGL state
     var currentAGL: Double = 0.0
         private set
+
+    // Last known speeds for dropout resilience
+    private var lastValidTAS: Double? = null
+    private var lastValidGnd: Double? = null
+    private var lastSpeedTimestamp: Long = 0L
 
     /**
      * Update AGL (Above Ground Level) using SRTM terrain database
@@ -266,10 +273,24 @@ internal class FlightCalculationHelpers(
         trueAirspeed: Double?,
         fallbackGroundSpeed: Double
     ): NettoComputation {
+        val now = System.currentTimeMillis()
         val tasCandidate = trueAirspeed?.takeIf { it.isFinite() && it > 0.1 }
+        if (tasCandidate != null) {
+            lastValidTAS = tasCandidate
+            lastSpeedTimestamp = now
+        }
+
+        val gndCandidate = fallbackGroundSpeed.takeIf { it.isFinite() && it > 0.1 }
+        if (gndCandidate != null) {
+            lastValidGnd = gndCandidate
+            lastSpeedTimestamp = now
+        }
+
         val speed = tasCandidate
-            ?: fallbackGroundSpeed.takeIf { it.isFinite() && it > 0.1 }
-            ?: return NettoComputation(currentVerticalSpeed, false)
+            ?: lastValidTAS.takeIf { now - lastSpeedTimestamp <= SPEED_HOLD_MS }
+            ?: gndCandidate
+            ?: lastValidGnd.takeIf { now - lastSpeedTimestamp <= SPEED_HOLD_MS }
+            ?: DEFAULT_FALLBACK_SPEED_MS
 
         val sinkRate = sinkProvider.sinkAtSpeed(speed)
             ?: return NettoComputation(currentVerticalSpeed, false)
