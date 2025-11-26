@@ -213,8 +213,8 @@ class MapScreenViewModel @Inject constructor(
                 val selection = replaySessionState.value.selection
                 if (selection != null) {
                     igcReplayController.play()
-                } else if (showReplayDebugFab) {
-                    // Developer convenience: auto-load bundled sample when launched from Android Studio (debug build).
+                } else {
+                    // Fallback: if nothing is selected, auto-load the built-in sample and start playback.
                     viewModelScope.launch {
                         try {
                             igcReplayController.loadAsset(DEV_REPLAY_ASSET_PATH)
@@ -241,7 +241,6 @@ class MapScreenViewModel @Inject constructor(
     }
 
     fun onReplayDevAutoplay() {
-        if (!showReplayDebugFab) return
         viewModelScope.launch {
             try {
                 igcReplayController.loadAsset(DEV_REPLAY_ASSET_PATH)
