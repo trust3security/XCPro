@@ -210,8 +210,19 @@ class MapScreenViewModel @Inject constructor(
             IgcReplayController.SessionStatus.PLAYING -> igcReplayController.pause()
             IgcReplayController.SessionStatus.PAUSED -> igcReplayController.play()
             IgcReplayController.SessionStatus.IDLE -> {
-                if (replaySessionState.value.selection != null) {
+                val selection = replaySessionState.value.selection
+                if (selection != null) {
                     igcReplayController.play()
+                } else if (showReplayDebugFab) {
+                    // Developer convenience: auto-load bundled sample when launched from Android Studio (debug build).
+                    viewModelScope.launch {
+                        try {
+                            igcReplayController.loadAsset(DEV_REPLAY_ASSET_PATH)
+                            igcReplayController.play()
+                        } catch (t: Throwable) {
+                            Log.e("MapScreenViewModel", "Auto replay failed", t)
+                        }
+                    }
                 }
             }
         }
