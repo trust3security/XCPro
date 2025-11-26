@@ -43,13 +43,20 @@ internal class FlightCalculationHelpers(
     private var lastThermalLiftRate = 0.0
     private var lastThermalGain = 0.0
     private var lastThermalTimestamp = 0L
+    private val tc30Tracker = TcAverageTracker()
     private var totalCirclingSeconds = 0.0
     private var totalHeightGain = 0.0
     var thermalAverageTotal: Float = 0f
         private set
     var thermalAverageCurrent: Float = 0f
         private set
+    var thermalAverage30s: Float = 0f
+        private set
+    var thermalAverage30sValid: Boolean = false
+        private set
     var thermalGainCurrent: Double = 0.0
+        private set
+    var thermalGainValid: Boolean = false
         private set
 
     // L/D tracking state
@@ -149,6 +156,8 @@ internal class FlightCalculationHelpers(
             thermalAverageCurrent = liftRate.toFloat()
             lastThermalLiftRate = liftRate
             lastThermalGain = currentThermalInfo.gain
+            thermalGainValid = true
+            tc30Tracker.update(timestampMillis, liftRate, true)
 
         } else {
             if (currentThermalInfo.isDefined()) {
@@ -159,8 +168,11 @@ internal class FlightCalculationHelpers(
                 lastThermalInfo.copyFrom(currentThermalInfo)
                 currentThermalInfo.clear()
             }
-            thermalGainCurrent = lastThermalGain
+            // Reset gain when leaving circling to mirror XCSoar infobox behaviour
+            thermalGainCurrent = 0.0
+            thermalGainValid = false
             thermalAverageCurrent = lastThermalLiftRate.toFloat()
+            tc30Tracker.update(timestampMillis, lastThermalLiftRate, false)
         }
 
         val cumulativeSeconds = totalCirclingSeconds +
@@ -173,6 +185,8 @@ internal class FlightCalculationHelpers(
         } else {
             0f
         }
+        thermalAverage30s = tc30Tracker.average().toFloat()
+        thermalAverage30sValid = tc30Tracker.isValid()
     }
 
     /**
@@ -214,6 +228,7 @@ internal class FlightCalculationHelpers(
 
         return currentLD
     }
+
 
     /**
      * Calculate Total Energy (TE) compensated vertical speed
@@ -329,10 +344,14 @@ internal class FlightCalculationHelpers(
         lastThermalLiftRate = 0.0
         lastThermalGain = 0.0
         lastThermalTimestamp = 0L
+        tc30Tracker.reset()
         totalCirclingSeconds = 0.0
         totalHeightGain = 0.0
         thermalAverageTotal = 0f
         thermalAverageCurrent = 0f
+        thermalAverage30s = 0f
+        thermalAverage30sValid = false
         thermalGainCurrent = 0.0
+        thermalGainValid = false
     }
 }

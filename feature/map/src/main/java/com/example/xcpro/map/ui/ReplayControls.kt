@@ -163,15 +163,17 @@ internal fun ReplayControlsContent(
         Text(text = "Timeline", style = MaterialTheme.typography.bodySmall)
         Slider(
             value = localProgress,
-            onValueChange = { localProgress = it },
-            onValueChangeFinished = { onSeek(localProgress.coerceIn(0f, 1f)) },
+            onValueChange = {
+                localProgress = it
+                onSeek(it.coerceIn(0f, 1f))
+            },
             modifier = Modifier.fillMaxWidth()
         )
         Text(text = "Speed", style = MaterialTheme.typography.bodySmall)
         Slider(
             value = speed.toFloat(),
             onValueChange = { onSpeedChanged(it.toDouble()) },
-            valueRange = 1f..10f,
+            valueRange = 1f..60f,
             modifier = Modifier.fillMaxWidth()
         )
         Row(

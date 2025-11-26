@@ -46,10 +46,11 @@ class FlightDisplayMapper {
             windCrosswind = SpeedMs(metrics.windCrosswind),
             windQuality = metrics.windQuality,
             windSource = metrics.windSource,
-            thermalAverage = VerticalSpeedMs(metrics.thermalAverageCircle.toDouble()),
+            thermalAverage = VerticalSpeedMs(metrics.thermalAverage30s.toDouble()),
             thermalAverageCircle = VerticalSpeedMs(metrics.thermalAverageCircle.toDouble()),
             thermalAverageTotal = VerticalSpeedMs(metrics.thermalAverageTotal.toDouble()),
             thermalGain = AltitudeM(metrics.thermalGain),
+            thermalGainValid = metrics.thermalGainValid,
             currentLD = metrics.calculatedLD,
             netto = VerticalSpeedMs(metrics.netto.toDouble()),
             displayNetto = VerticalSpeedMs(metrics.displayNetto),
@@ -67,6 +68,8 @@ class FlightDisplayMapper {
             teAltitude = AltitudeM(metrics.teAltitude),
             macCready = snapshot.macCready,
             macCreadyRisk = snapshot.macCreadyRisk,
+            isCircling = metrics.isCircling,
+            thermalAverageValid = metrics.thermalAverage30sValid,
             timestamp = snapshot.timestamp,
             dataQuality = snapshot.dataQuality
         )

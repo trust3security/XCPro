@@ -57,6 +57,7 @@ data class RealTimeFlightData(
     val thermalAverageCircle: Float = 0f,
     val thermalAverageTotal: Float = 0f,
     val thermalGain: Double = 0.0,
+    val thermalGainValid: Boolean = false,
     val currentLD: Float = 0f,
     val netto: Float = 0f,
     val displayNetto: Double = 0.0,
@@ -79,6 +80,8 @@ data class RealTimeFlightData(
     val nettoAverage30s: Double = 0.0,
     val varioSource: String = "UNKNOWN",
     val varioValid: Boolean = false,
+    val isCircling: Boolean = false,
+    val thermalAverageValid: Boolean = false,
 
     val lastUpdateTime: Long = System.currentTimeMillis(),
     val calculationSource: String = "GPS+BARO+AGL",

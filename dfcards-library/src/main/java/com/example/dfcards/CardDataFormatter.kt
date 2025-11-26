@@ -14,6 +14,9 @@ import kotlin.math.roundToInt
 internal object CardDataFormatter {
 
     private const val VARIO_NOISE_FLOOR = 1e-3
+    private const val VARIO_ZERO_THRESHOLD = 0.05
+    private const val VARIO_DECIMALS = 1
+    private const val ALT_DECIMALS = 0
 
     fun mapLiveDataToCard(
         cardId: String,
@@ -180,10 +183,29 @@ internal object CardDataFormatter {
             }
 
             "thermal_avg" -> {
-                val sample = liveData.thermalAverage
-                if (abs(sample) <= 0.1f) return Pair(placeholderFor(cardId), "NO THERMAL")
-                val formatted = UnitsFormatter.verticalSpeed(VerticalSpeedMs(sample.toDouble()), units)
-                Pair(formatted.text, "AVG")
+                // Two-line gauge: top = instantaneous TE vario, bottom = mode-aware 30s avg
+                val primaryVario = if (liveData.verticalSpeed.isFinite()) {
+                    UnitsFormatter.verticalSpeed(
+                        VerticalSpeedMs(clampSmallVario(liveData.verticalSpeed)),
+                        units
+                    ).text
+                } else {
+                    "---"
+                }
+                val avgValue: Double = if (liveData.isCircling) {
+                    if (liveData.thermalAverageValid) liveData.thermalAverage.toDouble() else Double.NaN
+                } else {
+                    liveData.nettoAverage30s
+                }
+                val secondary = if (avgValue.isFinite()) {
+                    UnitsFormatter.verticalSpeed(
+                        VerticalSpeedMs(clampSmallVario(avgValue)),
+                        units
+                    ).text
+                } else {
+                    "---"
+                }
+                Pair(primaryVario, secondary)
             }
 
             "thermal_tc_avg" -> {
@@ -201,15 +223,12 @@ internal object CardDataFormatter {
             }
 
             "thermal_tc_gain" -> {
-                if (abs(liveData.thermalGain) > 1.0) {
-                    val formatted = UnitsFormatter.altitude(
-                        AltitudeM(liveData.thermalGain),
-                        units
-                    )
-                    Pair(formatted.text, "GAIN")
-                } else {
-                    Pair(placeholderFor(cardId), "NO DATA")
-                }
+                val gain = liveData.thermalGain
+                val isValid = liveData.thermalGainValid && gain.isFinite()
+                val formatted = if (isValid) {
+                    formatAltitudeValue(gain, units)
+                } else "---"
+                Pair(formatted, null)
             }
 
             "netto" -> {
@@ -402,6 +421,22 @@ internal object CardDataFormatter {
         return parts.joinToString(" \u00B7 ")
     }
 
+    private fun clampSmallVario(value: Double): Double {
+        return if (value > -VARIO_ZERO_THRESHOLD && value < VARIO_ZERO_THRESHOLD) {
+            if (value < 0) -0.0 else 0.0
+        } else value
+    }
+
+    private fun formatVarioValue(value: Double, units: UnitsPreferences): String {
+        // Force 1 decimal like XCSoar, regardless of UnitsFormatter defaults
+        val v = UnitsFormatter.verticalSpeed(
+            VerticalSpeedMs(value),
+            units,
+            decimals = VARIO_DECIMALS
+        )
+        return v.text
+    }
+
     private fun windAgeLabel(ageSeconds: Long): String? {
         if (ageSeconds < 0) return null
         return when {
@@ -410,6 +445,15 @@ internal object CardDataFormatter {
             ageSeconds < 3600 -> "${ageSeconds / 60}m"
             else -> "${ageSeconds / 3600}h"
         }
+    }
+
+    private fun formatAltitudeValue(value: Double, units: UnitsPreferences): String {
+        val formatted = UnitsFormatter.altitude(
+            AltitudeM(value),
+            units,
+            decimals = ALT_DECIMALS
+        )
+        return formatted.text
     }
 
     private fun combineSecondary(vararg labels: String?): String? {

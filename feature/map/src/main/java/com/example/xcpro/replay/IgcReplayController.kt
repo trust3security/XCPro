@@ -72,6 +72,7 @@ class IgcReplayController @Inject constructor(
 
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
     private var replayJob: Job? = null
+    private var seekJob: Job? = null
     private var points: List<IgcPoint> = emptyList()
     private var currentIndex = 0
     private var sensorsSuspended = false
@@ -174,6 +175,8 @@ class IgcReplayController @Inject constructor(
     fun stop() {
         scope.launch {
             cancelReplayJob()
+            seekJob?.cancel()
+            seekJob = null
             replaySensorSource.reset()
             flightDataRepository.update(null)
             replayFusionRepository.resetQnhToStandard()
@@ -187,12 +190,13 @@ class IgcReplayController @Inject constructor(
     }
 
     fun setSpeed(multiplier: Double) {
-        val clamped = multiplier.coerceIn(1.0, 20.0)
+        val clamped = multiplier.coerceIn(1.0, MAX_SPEED)
         _session.update { it.copy(speedMultiplier = clamped) }
     }
 
     fun seekTo(progress: Float) {
-        scope.launch {
+        seekJob?.cancel()
+        seekJob = scope.launch {
             val pts = points
             if (pts.isEmpty()) return@launch
             val clamped = progress.coerceIn(0f, 1f)
@@ -350,7 +354,8 @@ class IgcReplayController @Inject constructor(
         private const val EARTH_RADIUS_M = 6_371_000.0
         private const val MIN_FRAME_INTERVAL_MS = 200L
         private const val INTERPOLATION_STEP_MS = 1_000L
-        private const val DEFAULT_SPEED = 4.0
+        private const val DEFAULT_SPEED = 30.0
+        private const val MAX_SPEED = 60.0
         private const val DEFAULT_QNH_HPA = 1013.3
         private const val SEA_LEVEL_TEMP_K = 288.15
         private const val LAPSE_RATE_K_PER_M = 0.0065
@@ -363,6 +368,8 @@ class IgcReplayController @Inject constructor(
 
     private fun prepareSession(log: IgcLog, selection: Selection) {
         cancelReplayJob()
+        seekJob?.cancel()
+        seekJob = null
         val densified = densifyPoints(log.points)
         if (densified.isEmpty()) throw IllegalArgumentException("IGC file has no B records")
         points = densified

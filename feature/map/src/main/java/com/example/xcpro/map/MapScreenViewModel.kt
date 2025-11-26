@@ -206,23 +206,23 @@ class MapScreenViewModel @Inject constructor(
     }
 
     fun onReplayPlayPause() {
-        when (replaySessionState.value.status) {
-            IgcReplayController.SessionStatus.PLAYING -> igcReplayController.pause()
-            IgcReplayController.SessionStatus.PAUSED -> igcReplayController.play()
-            IgcReplayController.SessionStatus.IDLE -> {
-                val selection = replaySessionState.value.selection
-                if (selection != null) {
-                    igcReplayController.play()
-                } else {
-                    // Fallback: if nothing is selected, auto-load the built-in sample and start playback.
-                    viewModelScope.launch {
+        viewModelScope.launch {
+            when (replaySessionState.value.status) {
+                IgcReplayController.SessionStatus.PLAYING -> igcReplayController.pause()
+                IgcReplayController.SessionStatus.PAUSED -> igcReplayController.play()
+                IgcReplayController.SessionStatus.IDLE -> {
+                    // Ensure we have a selection before play
+                    val selection = replaySessionState.value.selection
+                    if (selection == null) {
                         try {
                             igcReplayController.loadAsset(DEV_REPLAY_ASSET_PATH)
-                            igcReplayController.play()
                         } catch (t: Throwable) {
                             Log.e("MapScreenViewModel", "Auto replay failed", t)
+                            _uiEffects.emit(MapUiEffect.ShowToast("IGC replay asset missing"))
+                            return@launch
                         }
                     }
+                    igcReplayController.play()
                 }
             }
         }
@@ -233,11 +233,17 @@ class MapScreenViewModel @Inject constructor(
     }
 
     fun onReplaySpeedChanged(multiplier: Double) {
-        igcReplayController.setSpeed(multiplier)
+        viewModelScope.launch {
+            if (!ensureReplaySelectionLoaded()) return@launch
+            igcReplayController.setSpeed(multiplier)
+        }
     }
 
     fun onReplaySeek(progress: Float) {
-        igcReplayController.seekTo(progress)
+        viewModelScope.launch {
+            if (!ensureReplaySelectionLoaded()) return@launch
+            igcReplayController.seekTo(progress)
+        }
     }
 
     fun onReplayDevAutoplay() {
@@ -248,6 +254,22 @@ class MapScreenViewModel @Inject constructor(
             } catch (t: Throwable) {
                 Log.e("MapScreenViewModel", "Failed to start dev replay", t)
             }
+        }
+    }
+
+    /**
+     * Ensures a replay selection is loaded so slider/speed/play actions have data to act on.
+     * Returns true when a selection is present (either pre-existing or after loading the dev asset).
+     */
+    private suspend fun ensureReplaySelectionLoaded(): Boolean {
+        if (replaySessionState.value.selection != null) return true
+        return try {
+            igcReplayController.loadAsset(DEV_REPLAY_ASSET_PATH)
+            true
+        } catch (t: Throwable) {
+            Log.e("MapScreenViewModel", "Replay asset missing", t)
+            _uiEffects.emit(MapUiEffect.ShowToast("IGC replay asset missing"))
+            false
         }
     }
 
@@ -271,6 +293,7 @@ class MapScreenViewModel @Inject constructor(
         }
         _uiState.update { it.copy(isDrawerOpen = isOpen) }
     }
+
 
     private fun observeUnits() {
         unitsState

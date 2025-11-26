@@ -127,6 +127,7 @@ data class CompleteFlightData(
     val thermalAverageCircle: VerticalSpeedMs = VerticalSpeedMs(0.0), // m/s (TC Avg / current thermal)
     val thermalAverageTotal: VerticalSpeedMs = VerticalSpeedMs(0.0), // m/s (T Avg / fleet average)
     val thermalGain: AltitudeM = AltitudeM(0.0), // meters gained in current/last thermal (TC Gain)
+    val thermalGainValid: Boolean = false,
 
     // Calculated L/D ratio
     val currentLD: Float,       // Distance traveled / altitude lost (glide ratio)
@@ -152,6 +153,10 @@ data class CompleteFlightData(
     val teAltitude: AltitudeM = AltitudeM(0.0),
     val macCready: Double = 0.0,
     val macCreadyRisk: Double = 0.0,
+
+    // Flight mode flags
+    val isCircling: Boolean = false,
+    val thermalAverageValid: Boolean = false,
 
     // Metadata
     val timestamp: Long,

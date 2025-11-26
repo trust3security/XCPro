@@ -90,6 +90,7 @@ internal fun convertToRealTimeFlightData(completeData: CompleteFlightData): Real
         thermalAverageCircle = completeData.thermalAverageCircle.value.toFloat(),
         thermalAverageTotal = completeData.thermalAverageTotal.value.toFloat(),
         thermalGain = completeData.thermalGain.value,
+        thermalGainValid = completeData.thermalGainValid,
         currentLD = completeData.currentLD,
         netto = completeData.netto.value.toFloat(),
         displayNetto = completeData.displayNetto.value,
@@ -113,6 +114,8 @@ internal fun convertToRealTimeFlightData(completeData: CompleteFlightData): Real
         nettoAverage30s = completeData.nettoAverage30s.value,
         varioSource = completeData.varioSource,
         varioValid = completeData.varioValid,
+        isCircling = completeData.isCircling,
+        thermalAverageValid = completeData.thermalAverageValid,
 
         // Metadata
         flightTime = formattedFlightTime,

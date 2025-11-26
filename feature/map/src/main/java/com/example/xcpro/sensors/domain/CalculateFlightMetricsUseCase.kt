@@ -9,6 +9,7 @@ import com.example.xcpro.sensors.FixedSampleAverageWindow
 import com.example.xcpro.sensors.FlightCalculationHelpers
 import com.example.xcpro.sensors.GPSData
 import com.example.xcpro.sensors.TimedAverageWindow
+import com.example.xcpro.sensors.addSamplesForElapsedSeconds
 import com.example.xcpro.weather.wind.data.WindState
 import com.example.xcpro.weather.wind.model.WindSource
 import com.example.xcpro.weather.wind.model.WindVector
@@ -191,7 +192,10 @@ internal class CalculateFlightMetricsUseCase(
         )
         val thermalAvgCircle = flightHelpers.thermalAverageCurrent
         val thermalAvgTotal = flightHelpers.thermalAverageTotal
+        val thermalAvg30s = flightHelpers.thermalAverage30s
+        val thermalAvg30sValid = flightHelpers.thermalAverage30sValid
         val thermalGain = flightHelpers.thermalGainCurrent
+        val thermalGainValid = flightHelpers.thermalGainValid
 
         val windSpeedValue = windVector?.speed?.toFloat() ?: 0f
         val windDirectionFrom = windVector?.directionFromDeg?.toFloat() ?: 0f
@@ -224,8 +228,10 @@ internal class CalculateFlightMetricsUseCase(
             airspeedSourceLabel = airspeedSourceLabel,
             tasValid = tasValid,
             thermalAverageCircle = thermalAvgCircle,
+            thermalAverage30s = thermalAvg30s,
             thermalAverageTotal = thermalAvgTotal,
             thermalGain = thermalGain,
+            thermalGainValid = thermalGainValid,
             calculatedLD = calculatedLD,
             windSpeedValue = windSpeedValue,
             windDirectionFrom = windDirectionFrom,
@@ -233,7 +239,9 @@ internal class CalculateFlightMetricsUseCase(
             windCrosswind = windCrosswind,
             windQuality = windQuality,
             windSource = windSource,
-            teAltitude = teAltitude
+            teAltitude = teAltitude,
+            isCircling = isCircling,
+            thermalAverage30sValid = thermalAvg30sValid
         )
     }
 
@@ -380,32 +388,6 @@ internal class CalculateFlightMetricsUseCase(
         lastThermalState = thermalActive
     }
 
-    private fun addSamplesForElapsedSeconds(
-        window: FixedSampleAverageWindow,
-        lastTimestamp: Long,
-        currentTime: Long,
-        sampleValue: Double
-    ): Long {
-        if (lastTimestamp == 0L || currentTime < lastTimestamp) {
-            val seed = if (sampleValue.isFinite()) sampleValue else window.average()
-            if (seed.isFinite()) window.seed(seed)
-            return currentTime
-        }
-
-        if (currentTime == lastTimestamp) {
-            return lastTimestamp
-        }
-
-        var nextTimestamp = lastTimestamp + 1000L
-        var latestTimestamp = lastTimestamp
-        while (nextTimestamp <= currentTime) {
-            window.addSample(sampleValue)
-            latestTimestamp = nextTimestamp
-            nextTimestamp += 1000L
-        }
-        return latestTimestamp
-    }
-
     private fun resetAverageWindows(bruttoSample: Double, nettoSample: Double, timestamp: Long) {
         bruttoAverageWindow.seed(bruttoSample)
         nettoAverageWindow.seed(nettoSample)
@@ -477,8 +459,10 @@ data class FlightMetricsResult(
     val airspeedSourceLabel: String,
     val tasValid: Boolean,
     val thermalAverageCircle: Float,
+    val thermalAverage30s: Float,
     val thermalAverageTotal: Float,
     val thermalGain: Double,
+    val thermalGainValid: Boolean,
     val calculatedLD: Float,
     val windSpeedValue: Float,
     val windDirectionFrom: Float,
@@ -486,5 +470,7 @@ data class FlightMetricsResult(
     val windCrosswind: Double,
     val windQuality: Int,
     val windSource: WindSource,
-    val teAltitude: Double
+    val teAltitude: Double,
+    val isCircling: Boolean,
+    val thermalAverage30sValid: Boolean
 )

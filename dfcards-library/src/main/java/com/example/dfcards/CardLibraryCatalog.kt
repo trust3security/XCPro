@@ -205,8 +205,8 @@ private val navigationCards = listOf(
 private val performanceCards = listOf(
     CardDefinition(
         id = "thermal_avg",
-        title = "THERMAL AVG",
-        description = "Average thermal climb rate",
+        title = "TC 30S",
+        description = "30-second thermal climb average",
         category = CardCategory.PERFORMANCE,
         icon = Icons.Filled.TrendingUp,
         unit = "m/s",

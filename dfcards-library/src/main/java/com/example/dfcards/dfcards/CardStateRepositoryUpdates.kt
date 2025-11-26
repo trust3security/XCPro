@@ -15,7 +15,9 @@ private enum class UpdateTier {
     BACKGROUND
 }
 
-private val NEGATIVE_VARIO_COLOR = Color(0xFFD32F2F)
+// Match XCSoar infobox palette: bright red/green for sink/lift.
+private val NEGATIVE_VARIO_COLOR = Color(0xFFFF0000)
+private val POSITIVE_VARIO_COLOR = Color(0xFF00FF00)
 
 internal fun CardStateRepository.updateCardsWithLiveData(
     liveData: RealTimeFlightData,
@@ -168,11 +170,24 @@ private fun splitPrimaryValue(primaryValue: String): Pair<String?, String?> {
 
 private fun highlightColorFor(cardId: String, realData: RealTimeFlightData): Color? {
     val risk = realData.macCreadyRisk
-    if (risk <= 0.0) return null
-    val (value, factor) = when (cardId) {
-        "thermal_avg", "vario_avg30" -> realData.thermalAverage.toDouble() to 2.0
-        "thermal_tc_avg" -> realData.thermalAverageCircle.toDouble() to 1.5
-        else -> return null
+    // Primary colouring for vario cards: sign-based, fall back to risk highlighting.
+    return when (cardId) {
+        "thermal_avg" -> {
+            val value = realData.verticalSpeed
+            when {
+                value > 0.0 -> POSITIVE_VARIO_COLOR
+                value < 0.0 -> NEGATIVE_VARIO_COLOR
+                else -> null
+            }
+        }
+        else -> {
+            if (risk <= 0.0) return null
+            val (value, factor) = when (cardId) {
+                "vario_avg30" -> realData.thermalAverage.toDouble() to 2.0
+                "thermal_tc_avg" -> realData.thermalAverageCircle.toDouble() to 1.5
+                else -> return null
+            }
+            if (factor * value < risk) NEGATIVE_VARIO_COLOR else null
+        }
     }
-    return if (factor * value < risk) NEGATIVE_VARIO_COLOR else null
 }
