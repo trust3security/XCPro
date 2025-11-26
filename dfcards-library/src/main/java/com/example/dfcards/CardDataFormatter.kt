@@ -180,43 +180,24 @@ internal object CardDataFormatter {
             }
 
             "thermal_avg" -> {
-                if (abs(liveData.thermalAverage) > 0.1f) {
-                    val formatted = UnitsFormatter.verticalSpeed(
-                        VerticalSpeedMs(liveData.thermalAverage.toDouble()),
-                        units
-                    )
-                    Pair(formatted.text, "AVG")
-                } else {
-                    Pair(placeholderFor(cardId), "NO THERMAL")
-                }
+                val sample = liveData.thermalAverage
+                if (abs(sample) <= 0.1f) return Pair(placeholderFor(cardId), "NO THERMAL")
+                val formatted = UnitsFormatter.verticalSpeed(VerticalSpeedMs(sample.toDouble()), units)
+                Pair(formatted.text, "AVG")
             }
 
             "thermal_tc_avg" -> {
-                if (abs(liveData.thermalAverageCircle) > 0.1f) {
-                    val formatted = UnitsFormatter.verticalSpeed(
-                        VerticalSpeedMs(liveData.thermalAverageCircle.toDouble()),
-                        units
-                    )
-                    Pair(formatted.text, "TC AVG")
-                } else {
-                    val formatted = UnitsFormatter.verticalSpeed(
-                        VerticalSpeedMs(liveData.thermalAverageCircle.toDouble()),
-                        units
-                    )
-                    Pair(formatted.text, "TC AVG")
-                }
+                val sample = liveData.thermalAverageCircle
+                if (abs(sample) <= 0.1f) return Pair(placeholderFor(cardId), "NO DATA")
+                val formatted = UnitsFormatter.verticalSpeed(VerticalSpeedMs(sample.toDouble()), units)
+                Pair(formatted.text, "TC AVG")
             }
 
             "thermal_t_avg" -> {
-                if (abs(liveData.thermalAverageTotal) > 0.1f) {
-                    val formatted = UnitsFormatter.verticalSpeed(
-                        VerticalSpeedMs(liveData.thermalAverageTotal.toDouble()),
-                        units
-                    )
-                    Pair(formatted.text, "T AVG")
-                } else {
-                    Pair(placeholderFor(cardId), "NO DATA")
-                }
+                val sample = liveData.thermalAverageTotal
+                if (abs(sample) <= 0.1f) return Pair(placeholderFor(cardId), "NO DATA")
+                val formatted = UnitsFormatter.verticalSpeed(VerticalSpeedMs(sample.toDouble()), units)
+                Pair(formatted.text, "T AVG")
             }
 
             "thermal_tc_gain" -> {
@@ -245,11 +226,7 @@ internal object CardDataFormatter {
                     VerticalSpeedMs(liveData.bruttoAverage30s),
                     units
                 )
-                val tcAvg = UnitsFormatter.verticalSpeed(
-                    VerticalSpeedMs(liveData.thermalAverageCircle.toDouble()),
-                    units
-                )
-                Pair(formatted.text, tcAvg.text)
+                Pair(formatted.text, "AVG")
             }
 
             "netto_avg30" -> {

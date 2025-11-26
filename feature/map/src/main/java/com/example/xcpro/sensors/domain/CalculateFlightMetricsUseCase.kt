@@ -142,7 +142,8 @@ internal class CalculateFlightMetricsUseCase(
         val displayNetto = smoothDisplayNetto(rawDisplayNetto, request.deltaTimeSeconds, nettoResult.valid)
 
         val altitudeForAirspeed = altitudeForAirspeed(baroAltitude, gps.altitude.value)
-        val airspeedEstimate = airspeedFromWind ?: if (nettoResult.valid) {
+        val hasMotion = gps.speed.value.isFinite() && gps.speed.value > MIN_MOVING_SPEED_MS
+        val airspeedEstimate = airspeedFromWind ?: if (nettoResult.valid && hasMotion) {
             estimateFromPolarSink(
                 netto = nettoResult.value.toFloat(),
                 verticalSpeed = bruttoVario,
@@ -168,7 +169,10 @@ internal class CalculateFlightMetricsUseCase(
         val indicatedAirspeedMs = activeEstimate.indicatedMs
         val trueAirspeedMs = activeEstimate.trueMs
         val airspeedSourceLabel = activeEstimate.source.label
-        val tasValid = activeEstimate.source != AirspeedSource.GPS_GROUND || gps.speed.value.isFinite()
+        val tasValid = when (activeEstimate.source) {
+            AirspeedSource.GPS_GROUND -> gps.speed.value.isFinite() && gps.speed.value > MIN_MOVING_SPEED_MS
+            else -> true
+        }
 
         // Remember last valid airspeed for hold
         if (airspeedEstimate != null) {
@@ -318,14 +322,11 @@ internal class CalculateFlightMetricsUseCase(
 
     private fun computeDensityRatio(altitudeMeters: Double, qnhHpa: Double): Double {
         val tempSeaLevelK = SEA_LEVEL_TEMP_CELSIUS + 273.15
-        val tempAtAltitude = tempSeaLevelK + (TEMP_LAPSE_RATE_C_PER_M * altitudeMeters)
-        val base = 1.0 + (TEMP_LAPSE_RATE_C_PER_M * altitudeMeters) / tempSeaLevelK
-        val exponent = (-GRAVITY * 0.0289644) / (GAS_CONSTANT * TEMP_LAPSE_RATE_C_PER_M)
-        val pressureRatio = base.pow(exponent)
-        val pressureAtAltPa = (qnhHpa * 100.0) * pressureRatio
-        val densityAtAlt = pressureAtAltPa / (GAS_CONSTANT * tempAtAltitude)
-        val seaLevelDensity = (SEA_LEVEL_PRESSURE_HPA * 100.0) / (GAS_CONSTANT * tempSeaLevelK)
-        return densityAtAlt / seaLevelDensity
+        val theta = 1.0 + (TEMP_LAPSE_RATE_C_PER_M * altitudeMeters) / tempSeaLevelK
+        if (theta <= 0.0) return 0.0
+        // ISA troposphere: rho/ρ0 = theta^(-g/(R*L) - 1), with L negative
+        val exponent = (-GRAVITY / (GAS_CONSTANT * TEMP_LAPSE_RATE_C_PER_M)) - 1.0
+        return theta.pow(exponent)
     }
 
     private fun smoothDisplayVario(raw: Double, deltaTime: Double, isValid: Boolean): Double {
@@ -437,6 +438,7 @@ internal class CalculateFlightMetricsUseCase(
         private const val GAS_CONSTANT = 287.05
         private const val GRAVITY = 9.80665
         private const val SPEED_HOLD_MS = 10_000L
+        private const val MIN_MOVING_SPEED_MS = 0.5
     }
 }
 

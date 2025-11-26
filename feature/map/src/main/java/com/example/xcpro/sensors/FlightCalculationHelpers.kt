@@ -35,6 +35,7 @@ internal class FlightCalculationHelpers(
         private const val LD_CALCULATION_INTERVAL = 5000L     // ms
         private const val SPEED_HOLD_MS = 10_000L
         private const val DEFAULT_FALLBACK_SPEED_MS = 27.78 // 100 km/h
+        private const val MIN_MOVING_SPEED_MS = 0.5         // ~1 kt; below this we treat as stationary
     }
 
     private val currentThermalInfo = ThermalClimbInfo()
@@ -274,23 +275,32 @@ internal class FlightCalculationHelpers(
         fallbackGroundSpeed: Double
     ): NettoComputation {
         val now = System.currentTimeMillis()
-        val tasCandidate = trueAirspeed?.takeIf { it.isFinite() && it > 0.1 }
+        val tasCandidate = trueAirspeed?.takeIf { it.isFinite() && it > MIN_MOVING_SPEED_MS }
         if (tasCandidate != null) {
             lastValidTAS = tasCandidate
             lastSpeedTimestamp = now
         }
 
-        val gndCandidate = fallbackGroundSpeed.takeIf { it.isFinite() && it > 0.1 }
+        val gndCandidate = fallbackGroundSpeed.takeIf { it.isFinite() && it > MIN_MOVING_SPEED_MS }
         if (gndCandidate != null) {
             lastValidGnd = gndCandidate
             lastSpeedTimestamp = now
         }
 
+        val recentTas = lastValidTAS?.takeIf { now - lastSpeedTimestamp <= SPEED_HOLD_MS && it > MIN_MOVING_SPEED_MS }
+        val recentGnd = lastValidGnd?.takeIf { now - lastSpeedTimestamp <= SPEED_HOLD_MS && it > MIN_MOVING_SPEED_MS }
+        val hasRecentMotion = tasCandidate != null || gndCandidate != null || recentTas != null || recentGnd != null
+
         val speed = tasCandidate
-            ?: lastValidTAS.takeIf { now - lastSpeedTimestamp <= SPEED_HOLD_MS }
+            ?: recentTas
             ?: gndCandidate
-            ?: lastValidGnd.takeIf { now - lastSpeedTimestamp <= SPEED_HOLD_MS }
-            ?: DEFAULT_FALLBACK_SPEED_MS
+            ?: recentGnd
+            ?: if (hasRecentMotion) DEFAULT_FALLBACK_SPEED_MS else null
+
+        if (speed == null) {
+            // No evidence of movement; don't invent sink from polar. Publish brutto and flag invalid.
+            return NettoComputation(currentVerticalSpeed, false)
+        }
 
         val sinkRate = sinkProvider.sinkAtSpeed(speed)
             ?: return NettoComputation(currentVerticalSpeed, false)

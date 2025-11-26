@@ -145,8 +145,11 @@ internal fun ReplayControlsContent(
     val title = state.selection?.displayName ?: "IGC Replay"
     val elapsed = state.elapsedMillis
     val duration = state.durationMillis
-    val progress = state.progressFraction
     val speed = state.speedMultiplier
+    var localProgress by remember { mutableStateOf(state.progressFraction) }
+
+    // Keep slider thumb in sync with playback updates
+    LaunchedEffect(state.progressFraction) { localProgress = state.progressFraction }
 
     Column(
         modifier = Modifier.padding(16.dp),
@@ -154,13 +157,14 @@ internal fun ReplayControlsContent(
     ) {
         Text(text = title, style = MaterialTheme.typography.titleMedium)
         Text(
-            text = "${formatDuration(elapsed)} / ${formatDuration(duration)} • ${"%.1f".format(speed)}x",
+            text = "${formatDuration(elapsed)} / ${formatDuration(duration)} · ${"%.1f".format(speed)}x",
             style = MaterialTheme.typography.bodyMedium
         )
         Text(text = "Timeline", style = MaterialTheme.typography.bodySmall)
         Slider(
-            value = progress,
-            onValueChange = onSeek,
+            value = localProgress,
+            onValueChange = { localProgress = it },
+            onValueChangeFinished = { onSeek(localProgress.coerceIn(0f, 1f)) },
             modifier = Modifier.fillMaxWidth()
         )
         Text(text = "Speed", style = MaterialTheme.typography.bodySmall)
@@ -214,3 +218,4 @@ internal fun formatDuration(millis: Long): String {
         "%02d:%02d".format(minutes, seconds)
     }
 }
+

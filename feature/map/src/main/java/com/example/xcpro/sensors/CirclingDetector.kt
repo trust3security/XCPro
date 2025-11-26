@@ -78,8 +78,8 @@ internal class CirclingDetector {
     }
 
     companion object {
-        private const val MIN_GROUND_SPEED = 8.0  // m/s
-        private const val MIN_TURN_RATE = 0.15    // rad/s (~8.6 deg/s)
+        private const val MIN_GROUND_SPEED = 2.5  // m/s (reduced to pick up thermalling in slow replay/logs)
+        private const val MIN_TURN_RATE = 0.10    // rad/s (~5.7 deg/s)
         private const val ENTER_THRESHOLD_MS = 3_500.0
         private const val EXIT_THRESHOLD_MS = 1_500.0
         private const val MAX_ACCUM_MS = 8_000.0

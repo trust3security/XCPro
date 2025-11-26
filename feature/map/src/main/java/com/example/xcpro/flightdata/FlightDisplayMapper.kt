@@ -46,7 +46,7 @@ class FlightDisplayMapper {
             windCrosswind = SpeedMs(metrics.windCrosswind),
             windQuality = metrics.windQuality,
             windSource = metrics.windSource,
-            thermalAverage = VerticalSpeedMs(metrics.bruttoAverage30s),
+            thermalAverage = VerticalSpeedMs(metrics.thermalAverageCircle.toDouble()),
             thermalAverageCircle = VerticalSpeedMs(metrics.thermalAverageCircle.toDouble()),
             thermalAverageTotal = VerticalSpeedMs(metrics.thermalAverageTotal.toDouble()),
             thermalGain = AltitudeM(metrics.thermalGain),
