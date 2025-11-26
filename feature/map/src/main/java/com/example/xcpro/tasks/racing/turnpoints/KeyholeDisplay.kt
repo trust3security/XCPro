@@ -24,7 +24,9 @@ class KeyholeDisplay : TurnPointDisplay {
             // Configurable Keyhole: Use flexible parameters
             val cylinderRadiusMeters = waypoint.keyholeInnerRadius * 1000.0 // Inner cylinder radius in meters
             val sectorRadiusMeters = waypoint.gateWidth * 1000.0 // Outer sector radius in meters
-            val sectorAngleDegrees = waypoint.keyholeAngle // Configurable angle
+            val sectorAngleDegrees = waypoint.keyholeAngle.let { angle ->
+                if (abs(angle - 90.0) < 1e-3) 90.0 else angle
+            } // Clean up float precision (89.9999 -> 90)
 
             println("🔑 KEYHOLE DEBUG: Params - Inner:${cylinderRadiusMeters}m, Outer:${sectorRadiusMeters}m, Angle:${sectorAngleDegrees}°")
 

@@ -153,14 +153,15 @@ private fun AATReorderableWaypointItem(
     val defaultRadiusKm = ((aatWaypoint?.assignedArea?.radiusMeters ?: 10000.0) / 1000.0)
     var gateWidth by remember(aatWaypoint) { mutableStateOf(String.format("%.1f", defaultRadiusKm)) }
     var aatKeyholeInnerRadius by remember(aatWaypoint) {
-        mutableStateOf(
-            ((aatWaypoint?.assignedArea?.innerRadiusMeters ?: 0.0) / 1000.0)
-                .takeIf { it > 0 }?.let { String.format("%.1f", it) } ?: ""
-        )
+        // Default to 0.5 km when no inner radius is set
+        val innerKm = ((aatWaypoint?.assignedArea?.innerRadiusMeters ?: 0.0) / 1000.0)
+            .takeIf { it > 0 } ?: 0.5
+        mutableStateOf(String.format("%.1f", innerKm))
     }
     var aatKeyholeAngle by remember(aatWaypoint) {
-        val angle = aatWaypoint?.assignedArea?.let { it.endAngleDegrees - it.startAngleDegrees } ?: 90.0
-        mutableStateOf(angle.toString())
+        val rawAngle = aatWaypoint?.assignedArea?.let { it.endAngleDegrees - it.startAngleDegrees } ?: 90.0
+        val displayAngle = if (kotlin.math.abs(rawAngle - 90.0) < 1e-2) 90.0 else rawAngle
+        mutableStateOf(String.format("%.1f", displayAngle))
     }
     var aatSectorOuterRadius by remember(aatWaypoint) {
         mutableStateOf(

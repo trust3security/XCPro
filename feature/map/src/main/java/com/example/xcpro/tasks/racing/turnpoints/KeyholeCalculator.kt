@@ -27,7 +27,10 @@ class KeyholeCalculator : TurnPointCalculator {
         // ✅ CONFIGURABLE: Use new flexible keyhole parameters
         val cylinderRadiusKm = waypoint.keyholeInnerRadius // Inner cylinder radius
         val sectorRadiusKm = waypoint.gateWidth // Outer sector radius
-        val sectorAngleDegrees = waypoint.keyholeAngle // Configurable angle
+        // Clamp tiny floating error (89.9999...) to a clean degree value
+        val sectorAngleDegrees = waypoint.keyholeAngle.let { angle ->
+            if (abs(angle - 90.0) < 1e-3) 90.0 else angle
+        }
 
         println("🔑 CONFIGURABLE KEYHOLE:")
         println("   Inner radius: ${cylinderRadiusKm}km (cylinder)")

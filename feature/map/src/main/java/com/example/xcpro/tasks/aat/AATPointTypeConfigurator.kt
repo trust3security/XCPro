@@ -65,8 +65,12 @@ internal class AATPointTypeConfigurator {
         val currentSectorOuterRadius = waypoint.assignedArea.outerRadiusMeters / 1000.0
 
         // Use UI-provided values or fall back to current assignedArea values
-        val newKeyholeInnerRadius = keyholeInnerRadius ?: currentKeyholeInnerRadius
-        val newKeyholeAngle = keyholeAngle ?: 90.0  // Default sector angle
+        val newKeyholeInnerRadius = (keyholeInnerRadius ?: currentKeyholeInnerRadius).let { inner ->
+            if (inner > 0) inner else 0.5 // Default 0.5 km inner cylinder when unset/zero
+        }
+        val newKeyholeAngle = (keyholeAngle ?: 90.0).let { angle ->
+            if (kotlin.math.abs(angle - 90.0) < 1e-2) 90.0 else angle
+        }  // Default and clamp to a clean 90° when within tolerance
         val newSectorOuterRadius = sectorOuterRadius ?: currentSectorOuterRadius
         val newGateWidth = gateWidth ?: currentGateWidth
         val newTurnType = turnType ?: waypoint.turnPointType

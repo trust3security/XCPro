@@ -24,6 +24,16 @@ data class RacingWaypoint(
     val faiQuadrantOuterRadius: Double = 20.0 // km, visual display radius for FAI quadrant (default 20km, math remains infinite)
 ) {
     /**
+     * Normalized sector angle: clamp floating noise (e.g., 89.999999) to a clean 90.0 when close.
+     */
+    val normalizedKeyholeAngle: Double
+        get() = when {
+            keyholeAngle.isNaN() -> 90.0
+            kotlin.math.abs(keyholeAngle - 90.0) < 1e-2 -> 90.0
+            else -> keyholeAngle
+        }
+
+    /**
      * Get the current point type display name based on role
      */
     val currentPointType: String get() = when (role) {

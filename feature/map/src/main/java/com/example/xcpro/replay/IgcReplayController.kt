@@ -176,22 +176,12 @@ class IgcReplayController @Inject constructor(
             cancelReplayJob()
             replaySensorSource.reset()
             flightDataRepository.update(null)
-            // Fully reset the fusion pipeline so no replay state leaks into live mode
-            replayFusionRepository.stop()
             replayFusionRepository.resetQnhToStandard()
             resumeSensors()
+            points = emptyList()
             currentIndex = 0
             lastReplayHeadingDeg = null
-            _session.update { state ->
-                if (state.selection == null) {
-                    SessionState(speedMultiplier = state.speedMultiplier)
-                } else {
-                    state.copy(
-                        status = SessionStatus.PAUSED,
-                        currentTimestampMillis = state.startTimestampMillis
-                    )
-                }
-            }
+            _session.value = SessionState(speedMultiplier = _session.value.speedMultiplier)
             _events.tryEmit(ReplayEvent.Cancelled)
         }
     }
@@ -360,7 +350,7 @@ class IgcReplayController @Inject constructor(
         private const val EARTH_RADIUS_M = 6_371_000.0
         private const val MIN_FRAME_INTERVAL_MS = 200L
         private const val INTERPOLATION_STEP_MS = 1_000L
-        private const val DEFAULT_SPEED = 1.0
+        private const val DEFAULT_SPEED = 4.0
         private const val DEFAULT_QNH_HPA = 1013.3
         private const val SEA_LEVEL_TEMP_K = 288.15
         private const val LAPSE_RATE_K_PER_M = 0.0065
