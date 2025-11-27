@@ -63,7 +63,7 @@ fun FlightDataAirspaceTab(
 
     val uiState by remember {
         derivedStateOf {
-            val fileItems = buildAirspaceFileItems(selectedAirspaceFiles, airspaceCheckedStates)
+            val fileItems = buildAirspaceFileItems(context, selectedAirspaceFiles, airspaceCheckedStates)
             val enabledFiles = fileItems.filter { it.enabled }.map { it.uri }
             val classItems = buildAirspaceClassItems(context, enabledFiles, airspaceClassStates)
             AirspaceTabDerivedState(fileItems, enabledFiles, classItems)

@@ -11,19 +11,22 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 
 private const val DEFAULT_ZONE_COUNT = 0
 
 fun buildAirspaceFileItems(
+    context: Context,
     files: List<Uri>,
     checkedStates: Map<String, Boolean>
 ): List<FileItem> = files.map { uri ->
     val fileName = uri.lastPathSegment?.substringAfterLast("/") ?: "Unknown"
     val enabled = checkedStates[fileName] ?: false
+    val count = countAirspaceZones(context, uri)
     FileItem(
         name = fileName,
         enabled = enabled,
-        count = DEFAULT_ZONE_COUNT,
+        count = count,
         status = if (enabled) "Loaded" else "Disabled",
         uri = uri
     )
@@ -86,6 +89,15 @@ fun refreshAvailableAirspaceClasses(
             saveSelectedClasses(context, snapshot)
         }
     }
+}
+
+private fun countAirspaceZones(context: Context, uri: Uri): Int {
+    val fileName = uri.lastPathSegment?.substringAfterLast("/") ?: return DEFAULT_ZONE_COUNT
+    val file = File(context.filesDir, fileName)
+    if (!file.exists()) return DEFAULT_ZONE_COUNT
+    return runCatching {
+        file.useLines { lines -> lines.count { it.trimStart().startsWith("AC ") } }
+    }.getOrDefault(DEFAULT_ZONE_COUNT)
 }
 
 private fun airspaceClassColor(className: String): String = when (className.uppercase()) {

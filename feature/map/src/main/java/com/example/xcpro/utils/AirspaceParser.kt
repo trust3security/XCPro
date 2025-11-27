@@ -165,23 +165,88 @@ private fun dmsToDecimal(degrees: Int, minutes: Int, seconds: Double, direction:
 }
 
 private fun parseCoordinate(coord: String): DoubleArray? {
-    val pattern = Pattern.compile("(\\d{2,3})(\\d{2})(\\d{2}\\.\\d)([N|S]) (\\d{3})(\\d{2})(\\d{2}\\.\\d)([E|W])")
-    val matcher = pattern.matcher(coord)
-    return if (matcher.matches()) {
-        val latDeg = matcher.group(1).toInt()
-        val latMin = matcher.group(2).toInt()
-        val latSec = matcher.group(3).toDouble()
-        val latDir = matcher.group(4)[0]
+    // Accept compact DMS (DDMMSS.SN DDDMMSS.SE), colon/space-separated D:M:S with optional
+    // hemisphere prefix/suffix, or signed decimal degrees. Returns [lon, lat].
+    val normalized = coord.replace(',', ' ').trim()
 
-        val lonDeg = matcher.group(5).toInt()
-        val lonMin = matcher.group(6).toInt()
-        val lonSec = matcher.group(7).toDouble()
-        val lonDir = matcher.group(8)[0]
+    fun parseComponent(raw: String): Double? {
+        var token = raw.trim().uppercase()
 
-        val lat = dmsToDecimal(latDeg, latMin, latSec, latDir)
-        val lon = dmsToDecimal(lonDeg, lonMin, lonSec, lonDir)
-        doubleArrayOf(lon, lat)
-    } else null
+        // Hemisphere can be prefix or suffix
+        var hemisphere: Char? = null
+        if (token.isNotEmpty() && token[0] in "NSEW") {
+            hemisphere = token[0]
+            token = token.substring(1).trim()
+        }
+        if (token.isNotEmpty() && token[token.length - 1] in "NSEW") {
+            hemisphere = token[token.length - 1]
+            token = token.substring(0, token.length - 1).trim()
+        }
+
+        val hemiSign = when (hemisphere) {
+            'S', 'W' -> -1.0
+            'N', 'E' -> 1.0
+            else -> null
+        }
+
+        // Colon/space separated D:M:S (seconds optional)
+        Regex("^([+-]?\\d{1,3})(?::(\\d{1,2}))?(?::(\\d{1,2}(?:\\.\\d+)?))?").matchEntire(token)?.let { m ->
+            val deg = m.groupValues[1].toDouble()
+            val min = m.groupValues[2].toDoubleOrNull() ?: 0.0
+            val sec = m.groupValues[3].toDoubleOrNull() ?: 0.0
+            val value = kotlin.math.abs(deg) + min / 60.0 + sec / 3600.0
+            val sign = hemiSign ?: kotlin.math.sign(deg).let { if (it == 0.0) 1.0 else it }
+            return value * sign
+        }
+
+        // Compact digits DDMMSS[.s]
+        Regex("^([+-]?)(\\d{4,7})(?:\\.(\\d+))?").matchEntire(token)?.let { m ->
+            val signChar = m.groupValues[1]
+            val digits = m.groupValues[2]
+            val frac = m.groupValues[3]
+            if (digits.length < 4) return null
+            val secPart = digits.takeLast(2) + if (frac.isNotEmpty()) ".${frac}" else ""
+            val minPart = digits.dropLast(2).takeLast(2)
+            val degPart = digits.dropLast(4)
+            val deg = degPart.toIntOrNull() ?: return null
+            val min = minPart.toIntOrNull() ?: 0
+            val sec = secPart.toDoubleOrNull() ?: 0.0
+            val value = deg + min / 60.0 + sec / 3600.0
+            val sign = hemiSign ?: if (signChar == "-") -1.0 else 1.0
+            return value * sign
+        }
+
+        // Signed decimal degrees
+        token.toDoubleOrNull()?.let { dec ->
+            val sign = hemiSign ?: 1.0
+            return dec * sign
+        }
+
+        return null
+    }
+
+    val tokens = normalized.split(Regex("\\s+")).filter { it.isNotBlank() }
+    if (tokens.isEmpty()) return null
+
+    fun consume(start: Int): Pair<Double?, Int> {
+        var idx = start
+        val buffer = mutableListOf<String>()
+        while (idx < tokens.size && buffer.size < 3) {
+            buffer.add(tokens[idx])
+            val candidate = buffer.joinToString(" ")
+            val parsed = parseComponent(candidate)
+            if (parsed != null) return parsed to (idx + 1)
+            idx++
+        }
+        return null to start
+    }
+
+    val (lat, nextIdx) = consume(0)
+    if (lat == null) return null
+    val (lon, _) = consume(nextIdx)
+    if (lon == null) return null
+
+    return doubleArrayOf(lon, lat)
 }
 
 private fun areCoordinatesClose(coord1: DoubleArray, coord2: DoubleArray, threshold: Double = 0.0001): Boolean {

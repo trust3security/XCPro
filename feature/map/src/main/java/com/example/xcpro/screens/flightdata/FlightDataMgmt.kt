@@ -137,7 +137,7 @@ fun FlightMgmt(
             uri = uri
         )
     }
-    val airspaceFileItems = buildAirspaceFileItems(selectedAirspaceFiles, airspaceCheckedStates)
+    val airspaceFileItems = buildAirspaceFileItems(context, selectedAirspaceFiles, airspaceCheckedStates)
 
     val currentFlightMode by flightViewModel.currentFlightMode.collectAsState()
     val profileModeVisibilities by flightViewModel.profileModeVisibilities.collectAsState()
