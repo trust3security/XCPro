@@ -127,7 +127,7 @@ class WindRepository @Inject constructor(
         }
 
         val evaluated = windStore.evaluate(data.timestamp, data.baroAltitude.value)
-        if (evaluated != null) {
+        if (evaluated != null && data.timestamp - evaluated.timestampMillis <= STALE_MS) {
             publishWindState(
                 vector = evaluated.vector,
                 source = evaluated.source,
@@ -135,6 +135,8 @@ class WindRepository @Inject constructor(
                 headingDeg = data.effectiveHeading,
                 timestamp = evaluated.timestampMillis
             )
+        } else if (evaluated == null || data.timestamp - (evaluated?.timestampMillis ?: 0L) > STALE_MS) {
+            _windState.value = WindState()
         }
     }
 
@@ -220,5 +222,6 @@ class WindRepository @Inject constructor(
         private const val EKF_QUALITY_BONUS = 1
         private const val MAX_MEASUREMENT_QUALITY = 5
         private const val CIRCLING_SUPPRESSION_MS = 5_000L
+        private const val STALE_MS = 120_000L
     }
 }

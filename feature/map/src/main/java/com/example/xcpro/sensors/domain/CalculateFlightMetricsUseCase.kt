@@ -28,7 +28,6 @@ import com.example.xcpro.sensors.domain.FlightMetricsConstants.SPEED_HOLD_MS
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.VARIO_SPIKE_THRESHOLD_MS
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.DEFAULT_QNH_HPA
 import com.example.xcpro.sensors.domain.estimateFromWind
-import com.example.xcpro.sensors.domain.estimateFromPolarSink
 import com.example.xcpro.sensors.domain.estimateFromWind
 import com.example.xcpro.sensors.domain.estimateFromPolarSink
 
@@ -199,17 +198,7 @@ internal class CalculateFlightMetricsUseCase(
 
         val altitudeForAirspeed = altitudeForAirspeed(navAltitude, gps.altitude.value)
         val hasMotion = gps.speed.value.isFinite() && gps.speed.value > MIN_MOVING_SPEED_MS
-        val airspeedEstimate = airspeedFromWind ?: if (nettoResult.valid && hasMotion) {
-            estimateFromPolarSink(
-                netto = nettoResult.value.toFloat(),
-                verticalSpeed = bruttoVario,
-                altitudeMeters = altitudeForAirspeed,
-                qnhHpa = qnh,
-                sinkProvider = sinkProvider
-            )
-        } else {
-            null
-        }
+        val airspeedEstimate = airspeedFromWind
         val now = currentTime
         val activeEstimate = airspeedEstimate ?: run {
             if (now - lastAirspeedTimestamp <= SPEED_HOLD_MS &&
@@ -217,19 +206,12 @@ internal class CalculateFlightMetricsUseCase(
             ) {
                 AirspeedEstimate(lastIndicatedMs, lastTrueMs, lastAirspeedSource)
             } else null
-        } ?: AirspeedEstimate(
-            indicatedMs = gps.speed.value.takeIf { it.isFinite() } ?: 0.0,
-            trueMs = gps.speed.value.takeIf { it.isFinite() } ?: 0.0,
-            source = AirspeedSource.GPS_GROUND
-        )
-
-        val indicatedAirspeedMs = activeEstimate.indicatedMs
-        val trueAirspeedMs = activeEstimate.trueMs
-        val airspeedSourceLabel = activeEstimate.source.label
-        val tasValid = when (activeEstimate.source) {
-            AirspeedSource.GPS_GROUND -> gps.speed.value.isFinite() && gps.speed.value > MIN_MOVING_SPEED_MS
-            else -> true
         }
+
+        val indicatedAirspeedMs = activeEstimate?.indicatedMs ?: 0.0
+        val trueAirspeedMs = activeEstimate?.trueMs ?: 0.0
+        val airspeedSourceLabel = activeEstimate?.source?.label ?: AirspeedSource.GPS_GROUND.label
+        val tasValid = activeEstimate != null
 
         // Remember last valid airspeed for hold
         if (airspeedEstimate != null) {
