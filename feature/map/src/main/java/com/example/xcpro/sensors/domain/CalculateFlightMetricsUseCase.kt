@@ -13,6 +13,8 @@ import com.example.xcpro.sensors.addSamplesForElapsedSeconds
 import com.example.xcpro.weather.wind.data.WindState
 import com.example.xcpro.weather.wind.model.WindSource
 import com.example.xcpro.weather.wind.model.WindVector
+import com.example.xcpro.sensors.domain.AirspeedEstimate
+import com.example.xcpro.sensors.domain.AirspeedSource
 import kotlin.math.abs
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.AVERAGE_WINDOW_SECONDS
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.DISPLAY_DECAY_FACTOR
