@@ -254,16 +254,6 @@ private val performanceCards = listOf(
         unitFontSize = 9
     ),
     CardDefinition(
-        id = "vario_avg30",
-        title = "AVG 30S",
-        description = "30-second average total-energy vario",
-        category = CardCategory.PERFORMANCE,
-        icon = Icons.Filled.Timeline,
-        unit = "m/s",
-        primaryFontSize = 14,
-        unitFontSize = 9
-    ),
-    CardDefinition(
         id = "netto_avg30",
         title = "NETTO 30S",
         description = "30-second average netto vario",

@@ -1,6 +1,8 @@
 package com.example.xcpro.sensors.domain
 
 import com.example.xcpro.glider.StillAirSinkProvider
+import com.example.xcpro.sensors.domain.AirspeedEstimate
+import com.example.xcpro.sensors.domain.AirspeedSource
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.GRAVITY
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.IAS_SCAN_MAX_MS
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.IAS_SCAN_MIN_MS
@@ -23,7 +25,7 @@ internal fun estimateFromWind(
     altitudeMeters: Double,
     qnhHpa: Double,
     windVector: WindVector?
-): CalculateFlightMetricsUseCase.AirspeedEstimate? {
+): AirspeedEstimate? {
     if (windVector == null || !gpsSpeed.isFinite() || gpsSpeed <= 0.1) return null
     if (!gpsBearingDeg.isFinite()) return null
     val bearingRad = Math.toRadians(gpsBearingDeg)
@@ -35,7 +37,7 @@ internal fun estimateFromWind(
     if (!tas.isFinite() || tas <= 0.1) return null
     val densityRatio = computeDensityRatio(altitudeMeters, qnhHpa)
     val indicated = if (densityRatio > 0.0) tas * sqrt(densityRatio) else tas
-    return CalculateFlightMetricsUseCase.AirspeedEstimate(indicatedMs = indicated, trueMs = tas, source = CalculateFlightMetricsUseCase.AirspeedSource.WIND_VECTOR)
+    return AirspeedEstimate(indicatedMs = indicated, trueMs = tas, source = AirspeedSource.WIND_VECTOR)
 }
 
 internal fun estimateFromPolarSink(
@@ -44,7 +46,7 @@ internal fun estimateFromPolarSink(
     altitudeMeters: Double,
     qnhHpa: Double,
     sinkProvider: StillAirSinkProvider
-): CalculateFlightMetricsUseCase.AirspeedEstimate? {
+): AirspeedEstimate? {
     val sinkEstimate = abs(netto.toDouble() - verticalSpeed)
     if (!sinkEstimate.isFinite() || sinkEstimate < MIN_SINK_FOR_IAS_MS) {
         return null
@@ -52,7 +54,7 @@ internal fun estimateFromPolarSink(
     val tasMs = findSpeedForSink(sinkEstimate, sinkProvider) ?: return null
     val densityRatio = computeDensityRatio(altitudeMeters, qnhHpa)
     val indicatedMs = if (densityRatio > 0.0) tasMs * sqrt(densityRatio) else tasMs
-    return CalculateFlightMetricsUseCase.AirspeedEstimate(indicatedMs = indicatedMs, trueMs = tasMs, source = CalculateFlightMetricsUseCase.AirspeedSource.POLAR_SINK)
+    return AirspeedEstimate(indicatedMs = indicatedMs, trueMs = tasMs, source = AirspeedSource.POLAR_SINK)
 }
 
 internal fun findSpeedForSink(targetSinkMs: Double, sinkProvider: StillAirSinkProvider): Double? {

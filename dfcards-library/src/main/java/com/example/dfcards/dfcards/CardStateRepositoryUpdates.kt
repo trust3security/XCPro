@@ -188,7 +188,6 @@ private fun highlightColorFor(cardId: String, realData: RealTimeFlightData): Col
         else -> {
             if (risk <= 0.0) return null
             val (value, factor) = when (cardId) {
-                "vario_avg30" -> realData.thermalAverage.toDouble() to 2.0
                 "thermal_tc_avg" -> realData.thermalAverageCircle.toDouble() to 1.5
                 else -> return null
             }

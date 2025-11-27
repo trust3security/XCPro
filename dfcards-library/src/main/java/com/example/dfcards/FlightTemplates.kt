@@ -42,7 +42,6 @@ object FlightTemplates {
                     "thermal_tc_avg",
                     "thermal_t_avg",
                     "thermal_tc_gain",
-                    "vario_avg30",
                     "netto_avg30",
                     "thermal_avg"
                 ),
@@ -70,7 +69,6 @@ object FlightTemplates {
                     "ground_speed",
                     "thermal_t_avg",
                     "thermal_tc_avg",
-                    "vario_avg30",
                     "ld_curr"
                 ),
                 icon = Icons.Filled.LocationOn,

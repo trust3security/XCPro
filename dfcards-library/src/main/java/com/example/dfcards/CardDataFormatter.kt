@@ -29,7 +29,7 @@ internal object CardDataFormatter {
             "vario", "vario_optimized", "vario_legacy", "vario_raw", "vario_gps",
             "vario_complementary", "real_igc_vario",
             "thermal_avg", "thermal_tc_avg", "thermal_t_avg",
-            "vario_avg30", "netto_avg30", "netto" ->
+            "netto_avg30", "netto" ->
                 "-- ${UnitsFormatter.verticalSpeed(VerticalSpeedMs(0.0), units).unitLabel}"
             "thermal_tc_gain" ->
                 "-- ${UnitsFormatter.altitude(AltitudeM(0.0), units).unitLabel}"
@@ -240,14 +240,6 @@ internal object CardDataFormatter {
                 )
                 val label = if (liveData.nettoValid) "NETTO" else "NO POLAR"
                 Pair(formatted.text, label)
-            }
-
-            "vario_avg30" -> {
-                val formatted = UnitsFormatter.verticalSpeed(
-                    VerticalSpeedMs(liveData.bruttoAverage30s),
-                    units
-                )
-                Pair(formatted.text, "AVG")
             }
 
             "netto_avg30" -> {
