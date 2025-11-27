@@ -133,25 +133,7 @@ internal object CardDataFormatter {
                     val formatted = UnitsFormatter.speed(SpeedMs(indicatedMs), units)
                     return Pair(formatted.text, "LIVE")
                 }
-
-                val groundSpeedMs = liveData.groundSpeed
-                if (!groundSpeedMs.isFinite()) {
-                    return Pair(placeholderFor(cardId), "NO DATA")
-                }
-
-                val altitudeMeters = when {
-                    liveData.baroAltitude.isFinite() && liveData.baroAltitude != 0.0 -> liveData.baroAltitude
-                    liveData.gpsAltitude.isFinite() && liveData.gpsAltitude != 0.0 -> liveData.gpsAltitude
-                    else -> 0.0
-                }
-                val altitudeFeet = UnitsConverter.metersToFeet(altitudeMeters)
-                val approxIasKt = AirspeedCalculator.calculateApproximateIAS(
-                    groundSpeedKt = UnitsConverter.msToKnots(groundSpeedMs.coerceAtLeast(0.0)),
-                    altitudeFt = altitudeFeet
-                )
-                val approxIasMs = UnitsConverter.knotsToMs(approxIasKt).coerceAtLeast(0.0)
-                val formatted = UnitsFormatter.speed(SpeedMs(approxIasMs), units)
-                Pair(formatted.text, "EST")
+                Pair(placeholderFor(cardId), "NO DATA")
             }
 
             "ground_speed" -> Pair(
