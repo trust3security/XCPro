@@ -128,6 +128,8 @@ data class CompleteFlightData(
     val thermalAverageTotal: VerticalSpeedMs = VerticalSpeedMs(0.0), // m/s (T Avg / fleet average)
     val thermalGain: AltitudeM = AltitudeM(0.0), // meters gained in current/last thermal (TC Gain)
     val thermalGainValid: Boolean = false,
+    val currentThermalLiftRate: VerticalSpeedMs = VerticalSpeedMs(0.0),
+    val currentThermalValid: Boolean = false,
 
     // Calculated L/D ratio
     val currentLD: Float,       // Distance traveled / altitude lost (glide ratio)

@@ -28,6 +28,8 @@ internal class CalculateFlightMetricsUseCase(
     private val flightHelpers: FlightCalculationHelpers,
     private val sinkProvider: StillAirSinkProvider
 ) {
+    // Allow choosing whether nav altitude uses baro (XCSoar-style). Default true.
+    var navBaroAltitudeEnabled: Boolean = true
 
     private val bruttoAverageWindow = FixedSampleAverageWindow(AVERAGE_WINDOW_SECONDS)
     private val nettoAverageWindow = FixedSampleAverageWindow(AVERAGE_WINDOW_SECONDS)
@@ -46,13 +48,27 @@ internal class CalculateFlightMetricsUseCase(
     private var lastTrueMs = Double.NaN
     private var lastAirspeedSource = AirspeedSource.GPS_GROUND
     private var lastAirspeedTimestamp = 0L
+    private var lastQnh: Double? = null
+    private var lastCalibrationTime: Long = 0L
+    private var prevPressureAltitude: Double? = null
+    private var prevPressureTime: Long = 0L
+    private var lastCirclingFlag = false
 
     fun execute(request: FlightMetricsRequest): FlightMetricsResult {
         val gps = request.gps
         val currentTime = request.currentTimeMillis
         val varioResult = request.varioResult
 
-        val rawVerticalSpeed = varioResult.verticalSpeed
+        // QNH-agnostic vertical speed from pressure deltas
+        val pressureAltitudeInput = request.baroResult?.pressureAltitudeMeters ?: varioResult.altitude
+        val dtPressure = if (prevPressureTime == 0L) 0.0 else (currentTime - prevPressureTime) / 1000.0
+        val rawBaroVario = if (pressureAltitudeInput.isFinite() && prevPressureAltitude != null && dtPressure > 0.05) {
+            (pressureAltitudeInput - prevPressureAltitude!!) / dtPressure
+        } else Double.NaN
+        prevPressureAltitude = pressureAltitudeInput.takeIf { it.isFinite() }
+        prevPressureTime = currentTime
+
+        val rawVerticalSpeed = if (rawBaroVario.isFinite()) rawBaroVario else varioResult.verticalSpeed
         val currentSpeed = gps.speed.value
         val teVerticalSpeed = flightHelpers.calculateTotalEnergy(
             rawVario = rawVerticalSpeed,
@@ -85,6 +101,18 @@ internal class CalculateFlightMetricsUseCase(
             val delta = (currentTime - it) / 1000L
             if (delta < 0) 0L else delta
         } ?: -1L
+        val qnhJump = lastQnh?.let { kotlin.math.abs(it - qnh) > QNH_JUMP_THRESHOLD_HPA } ?: false
+        val calibrationChanged = qnhJump ||
+            (baroResult?.lastCalibrationTime?.let { it > 0 && it != lastCalibrationTime } ?: false)
+        if (calibrationChanged) {
+            if (baroResult?.lastCalibrationTime != null && baroResult.lastCalibrationTime > 0) {
+                lastCalibrationTime = baroResult.lastCalibrationTime
+            } else {
+                lastCalibrationTime = currentTime
+            }
+            flightHelpers.resetThermalTracking()
+        }
+        lastQnh = qnh
 
         val windState = request.windState
         val windVector = windState?.vector
@@ -94,6 +122,8 @@ internal class CalculateFlightMetricsUseCase(
             timestampMillis = gps.timestamp,
             groundSpeed = gps.speed.value
         )
+        val circlingChanged = isCircling != lastCirclingFlag
+        lastCirclingFlag = isCircling
 
         // Keep helper-driven state (AGL, LD, thermal averages) up to date.
         flightHelpers.updateAGL(baroAltitude, gps, gps.speed.value)
@@ -115,12 +145,19 @@ internal class CalculateFlightMetricsUseCase(
         )
         val nettoSampleValue = resolveNettoSampleValue(nettoResult.value, nettoResult.valid)
 
-        updateAverageWindows(
-            currentTime = currentTime,
-            bruttoSample = bruttoVario,
-            nettoSample = nettoSampleValue,
-            thermalActive = isCircling
-        )
+        // feed 30s windows with QNH-agnostic sample; reset on circling or calibration change
+        val isSpike = rawVerticalSpeed.isFinite() && abs(rawVerticalSpeed) > VARIO_SPIKE_THRESHOLD_MS
+        val avgVarioSample = if (isSpike) lastBruttoValue else rawBaroVario.takeIf { it.isFinite() } ?: bruttoVario
+        if (circlingChanged || calibrationChanged) {
+            resetAverageWindows(avgVarioSample, nettoSampleValue, currentTime)
+        } else {
+            updateAverageWindows(
+                currentTime = currentTime,
+                bruttoSample = avgVarioSample,
+                nettoSample = nettoSampleValue,
+                thermalActive = isCircling
+            )
+        }
 
         if (nettoResult.valid) {
             lastNettoValue = nettoResult.value
@@ -142,7 +179,13 @@ internal class CalculateFlightMetricsUseCase(
         }
         val displayNetto = smoothDisplayNetto(rawDisplayNetto, request.deltaTimeSeconds, nettoResult.valid)
 
-        val altitudeForAirspeed = altitudeForAirspeed(baroAltitude, gps.altitude.value)
+        val navAltitude = when {
+            navBaroAltitudeEnabled && baroResult != null && isQnhCalibrated -> baroAltitude
+            gps.altitude.value.isFinite() -> gps.altitude.value
+            else -> baroAltitude
+        }
+
+        val altitudeForAirspeed = altitudeForAirspeed(navAltitude, gps.altitude.value)
         val hasMotion = gps.speed.value.isFinite() && gps.speed.value > MIN_MOVING_SPEED_MS
         val airspeedEstimate = airspeedFromWind ?: if (nettoResult.valid && hasMotion) {
             estimateFromPolarSink(
@@ -183,19 +226,23 @@ internal class CalculateFlightMetricsUseCase(
             lastAirspeedTimestamp = now
         }
 
-        val teAltitude = computeTotalEnergyAltitude(baroAltitude, trueAirspeedMs)
-        flightHelpers.updateThermalState(
-            timestampMillis = currentTime,
-            teAltitudeMeters = teAltitude,
-            verticalSpeedMs = bruttoVario,
-            isCircling = isCircling
-        )
+        val teAltitude = computeTotalEnergyAltitude(navAltitude, trueAirspeedMs)
+        if (!calibrationChanged) {
+            flightHelpers.updateThermalState(
+                timestampMillis = currentTime,
+                teAltitudeMeters = teAltitude,
+                verticalSpeedMs = bruttoVario,
+                isCircling = isCircling
+            )
+        }
         val thermalAvgCircle = flightHelpers.thermalAverageCurrent
         val thermalAvgTotal = flightHelpers.thermalAverageTotal
         val thermalAvg30s = flightHelpers.thermalAverage30s
         val thermalAvg30sValid = flightHelpers.thermalAverage30sValid
         val thermalGain = flightHelpers.thermalGainCurrent
         val thermalGainValid = flightHelpers.thermalGainValid
+        val currentThermalLift = flightHelpers.currentThermalLiftRate
+        val currentThermalValid = flightHelpers.currentThermalValid
 
         val windSpeedValue = windVector?.speed?.toFloat() ?: 0f
         val windDirectionFrom = windVector?.directionFromDeg?.toFloat() ?: 0f
@@ -217,6 +264,7 @@ internal class CalculateFlightMetricsUseCase(
             varioSource = varioSource,
             varioValid = varioValid,
             teVario = teVario,
+            navAltitude = navAltitude,
             bruttoAverage30s = bruttoAverage30s,
             nettoAverage30s = nettoAverage30s,
             displayVario = displayVario,
@@ -232,6 +280,8 @@ internal class CalculateFlightMetricsUseCase(
             thermalAverageTotal = thermalAvgTotal,
             thermalGain = thermalGain,
             thermalGainValid = thermalGainValid,
+            currentThermalLiftRate = currentThermalLift,
+            currentThermalValid = currentThermalValid,
             calculatedLD = calculatedLD,
             windSpeedValue = windSpeedValue,
             windDirectionFrom = windDirectionFrom,
@@ -421,6 +471,9 @@ internal class CalculateFlightMetricsUseCase(
         private const val GRAVITY = 9.80665
         private const val SPEED_HOLD_MS = 10_000L
         private const val MIN_MOVING_SPEED_MS = 0.5
+        private const val VARIO_SPIKE_THRESHOLD_MS = 10.0
+        private const val QNH_JUMP_THRESHOLD_HPA = 0.5
+        private const val MIN_AVG_SAMPLES = 10
     }
 }
 
@@ -448,6 +501,7 @@ data class FlightMetricsResult(
     val varioSource: String,
     val varioValid: Boolean,
     val teVario: Double?,
+    val navAltitude: Double,
     val bruttoAverage30s: Double,
     val nettoAverage30s: Double,
     val displayVario: Double,
@@ -463,6 +517,8 @@ data class FlightMetricsResult(
     val thermalAverageTotal: Float,
     val thermalGain: Double,
     val thermalGainValid: Boolean,
+    val currentThermalLiftRate: Double,
+    val currentThermalValid: Boolean,
     val calculatedLD: Float,
     val windSpeedValue: Float,
     val windDirectionFrom: Float,

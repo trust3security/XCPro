@@ -36,6 +36,7 @@ class FlightDisplayMapper {
             varioSource = metrics.varioSource,
             varioValid = metrics.varioValid,
             pressureAltitude = AltitudeM(metrics.pressureAltitude),
+            // navAltitude is QNH/GPS chosen; expose via baroAltitude for UI parity if needed later
             baroGpsDelta = metrics.baroGpsDelta?.let { AltitudeM(it) },
             baroConfidence = metrics.baroConfidence,
             qnhCalibrationAgeSeconds = metrics.qnhCalibrationAgeSeconds,
@@ -51,6 +52,8 @@ class FlightDisplayMapper {
             thermalAverageTotal = VerticalSpeedMs(metrics.thermalAverageTotal.toDouble()),
             thermalGain = AltitudeM(metrics.thermalGain),
             thermalGainValid = metrics.thermalGainValid,
+            currentThermalLiftRate = VerticalSpeedMs(metrics.currentThermalLiftRate),
+            currentThermalValid = metrics.currentThermalValid,
             currentLD = metrics.calculatedLD,
             netto = VerticalSpeedMs(metrics.netto.toDouble()),
             displayNetto = VerticalSpeedMs(metrics.displayNetto),

@@ -58,6 +58,8 @@ data class RealTimeFlightData(
     val thermalAverageTotal: Float = 0f,
     val thermalGain: Double = 0.0,
     val thermalGainValid: Boolean = false,
+    val currentThermalLiftRate: Double = Double.NaN,
+    val currentThermalValid: Boolean = false,
     val currentLD: Float = 0f,
     val netto: Float = 0f,
     val displayNetto: Double = 0.0,

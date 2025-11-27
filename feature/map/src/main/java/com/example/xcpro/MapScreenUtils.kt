@@ -91,6 +91,8 @@ internal fun convertToRealTimeFlightData(completeData: CompleteFlightData): Real
         thermalAverageTotal = completeData.thermalAverageTotal.value.toFloat(),
         thermalGain = completeData.thermalGain.value,
         thermalGainValid = completeData.thermalGainValid,
+        currentThermalLiftRate = completeData.currentThermalLiftRate.value,
+        currentThermalValid = completeData.currentThermalValid,
         currentLD = completeData.currentLD,
         netto = completeData.netto.value.toFloat(),
         displayNetto = completeData.displayNetto.value,

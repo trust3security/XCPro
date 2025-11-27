@@ -46,6 +46,8 @@ class FixedSampleAverageWindow(
 
     fun isEmpty(): Boolean = count == 0
 
+    fun count(): Int = count
+
     fun clear() {
         count = 0
         headIndex = 0

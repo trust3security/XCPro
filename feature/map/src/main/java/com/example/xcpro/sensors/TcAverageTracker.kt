@@ -7,7 +7,8 @@ import com.example.xcpro.sensors.addSamplesForElapsedSeconds
  * When circling stops, the buffer is retained so the last average remains visible until circling resumes.
  */
 internal class TcAverageTracker(
-    capacitySeconds: Int = 30
+    capacitySeconds: Int = 30,
+    private val minValidSamples: Int = 10
 ) {
     private val window = FixedSampleAverageWindow(capacitySeconds)
     private var lastTimestamp = 0L
@@ -24,9 +25,7 @@ internal class TcAverageTracker(
         val toggled = isCircling != lastIsCircling
 
         if (timeWentBack || toggled) {
-            if (isCircling) {
-                window.seed(sample)
-            }
+            window.clear()
             lastTimestamp = timestampMillis
             lastIsCircling = isCircling
             return
@@ -49,5 +48,5 @@ internal class TcAverageTracker(
 
     fun average(): Double = window.average()
 
-    fun isValid(): Boolean = !window.isEmpty()
+    fun isValid(): Boolean = window.count() >= minValidSamples
 }

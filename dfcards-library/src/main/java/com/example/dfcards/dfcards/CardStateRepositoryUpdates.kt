@@ -173,10 +173,15 @@ private fun highlightColorFor(cardId: String, realData: RealTimeFlightData): Col
     // Primary colouring for vario cards: sign-based, fall back to risk highlighting.
     return when (cardId) {
         "thermal_avg" -> {
-            val value = realData.verticalSpeed
+            val avg = when {
+                realData.isCircling && realData.thermalAverageValid -> realData.thermalAverage.toDouble()
+                realData.nettoAverage30s.isFinite() -> realData.nettoAverage30s
+                else -> realData.verticalSpeed
+            }
             when {
-                value > 0.0 -> POSITIVE_VARIO_COLOR
-                value < 0.0 -> NEGATIVE_VARIO_COLOR
+                risk > 0.0 && 2 * avg < risk -> NEGATIVE_VARIO_COLOR
+                avg > 0.0 -> POSITIVE_VARIO_COLOR
+                avg < 0.0 -> NEGATIVE_VARIO_COLOR
                 else -> null
             }
         }

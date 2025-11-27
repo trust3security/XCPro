@@ -183,29 +183,31 @@ internal object CardDataFormatter {
             }
 
             "thermal_avg" -> {
-                // Two-line gauge: top = instantaneous TE vario, bottom = mode-aware 30s avg
-                val primaryVario = if (liveData.verticalSpeed.isFinite()) {
-                    UnitsFormatter.verticalSpeed(
-                        VerticalSpeedMs(clampSmallVario(liveData.verticalSpeed)),
-                        units
-                    ).text
-                } else {
-                    "---"
+                // Parity with XCSoar TC 30s: primary shows the 30 s average, secondary shows current vario
+                val avgValue: Double = when {
+                    liveData.isCircling && liveData.thermalAverageValid ->
+                        liveData.thermalAverage.toDouble()
+                    !liveData.isCircling && liveData.bruttoAverage30s.isFinite() ->
+                        liveData.bruttoAverage30s
+                    else -> Double.NaN
                 }
-                val avgValue: Double = if (liveData.isCircling) {
-                    if (liveData.thermalAverageValid) liveData.thermalAverage.toDouble() else Double.NaN
-                } else {
-                    liveData.nettoAverage30s
-                }
-                val secondary = if (avgValue.isFinite()) {
+                val primary = if (avgValue.isFinite()) {
                     UnitsFormatter.verticalSpeed(
                         VerticalSpeedMs(clampSmallVario(avgValue)),
                         units
                     ).text
                 } else {
-                    "---"
+                    placeholderFor(cardId)
                 }
-                Pair(primaryVario, secondary)
+
+                val currentThermal = if (liveData.currentThermalValid) liveData.currentThermalLiftRate else Double.NaN
+                val secondary = if (currentThermal.isFinite()) {
+                    UnitsFormatter.verticalSpeed(
+                        VerticalSpeedMs(clampSmallVario(currentThermal)),
+                        units
+                    ).text
+                } else "---"
+                Pair(primary, secondary)
             }
 
             "thermal_tc_avg" -> {

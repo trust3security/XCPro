@@ -58,6 +58,14 @@ internal class FlightCalculationHelpers(
         private set
     var thermalGainValid: Boolean = false
         private set
+    val currentThermalLiftRate: Double
+        get() = when {
+            currentThermalInfo.isDefined() -> currentThermalInfo.liftRate
+            lastThermalInfo.isDefined() -> lastThermalInfo.liftRate
+            else -> Double.NaN
+        }
+    val currentThermalValid: Boolean
+        get() = currentThermalInfo.isDefined() || lastThermalInfo.isDefined()
 
     // L/D tracking state
     private var lastLDCalculationTime = 0L
@@ -119,9 +127,7 @@ internal class FlightCalculationHelpers(
         isCircling: Boolean
     ) {
         if (!teAltitudeMeters.isFinite()) {
-            if (!isCircling) {
-                currentThermalInfo.clear()
-            }
+            // leave last thermal intact; before first thermal it'll remain undefined
             return
         }
 
@@ -166,11 +172,11 @@ internal class FlightCalculationHelpers(
                 lastThermalLiftRate = currentThermalInfo.liftRate
                 lastThermalGain = currentThermalInfo.gain
                 lastThermalInfo.copyFrom(currentThermalInfo)
-                currentThermalInfo.clear()
             }
-            // Reset gain when leaving circling to mirror XCSoar infobox behaviour
-            thermalGainCurrent = 0.0
-            thermalGainValid = false
+            // Keep showing last thermal stats like XCSoar (current_thermal falls back to last_thermal)
+            currentThermalInfo.copyFrom(lastThermalInfo)
+            thermalGainCurrent = lastThermalGain
+            thermalGainValid = lastThermalInfo.isDefined()
             thermalAverageCurrent = lastThermalLiftRate.toFloat()
             tc30Tracker.update(timestampMillis, lastThermalLiftRate, false)
         }
@@ -338,7 +344,7 @@ internal class FlightCalculationHelpers(
     /**
      * Calculate wind confidence
      */
-    private fun resetThermalTracking() {
+    internal fun resetThermalTracking() {
         currentThermalInfo.clear()
         lastThermalInfo.clear()
         lastThermalLiftRate = 0.0
