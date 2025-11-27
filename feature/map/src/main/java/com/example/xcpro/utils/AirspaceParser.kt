@@ -231,14 +231,17 @@ private fun parseCoordinate(coord: String): DoubleArray? {
     fun consume(start: Int): Pair<Double?, Int> {
         var idx = start
         val buffer = mutableListOf<String>()
+        var lastParsed: Pair<Double, Int>? = null
         while (idx < tokens.size && buffer.size < 3) {
             buffer.add(tokens[idx])
             val candidate = buffer.joinToString(" ")
             val parsed = parseComponent(candidate)
-            if (parsed != null) return parsed to (idx + 1)
-            idx++
+            if (parsed != null) {
+                lastParsed = parsed to (idx + 1)
+            }
+            idx += 1
         }
-        return null to start
+        return lastParsed ?: (null to start)
     }
 
     val (lat, nextIdx) = consume(0)
