@@ -32,6 +32,7 @@ class FlightDisplayMapper {
             bruttoVario = VerticalSpeedMs(metrics.bruttoVario),
             displayVario = VerticalSpeedMs(metrics.displayVario),
             bruttoAverage30s = VerticalSpeedMs(metrics.bruttoAverage30s),
+            bruttoAverage30sValid = metrics.bruttoAverage30sValid,
             nettoAverage30s = VerticalSpeedMs(metrics.nettoAverage30s),
             varioSource = metrics.varioSource,
             varioValid = metrics.varioValid,

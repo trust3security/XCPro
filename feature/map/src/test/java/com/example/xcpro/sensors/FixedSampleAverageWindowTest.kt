@@ -40,32 +40,3 @@ class FixedSampleAverageWindowTest {
         assertEquals(0.0, window.average(), 1e-6)
     }
 }
-
-class TcAverageTrackerTest {
-    @Test
-    fun holdsLastAverageAfterExit() {
-        val tracker = TcAverageTracker()
-
-        tracker.update(1_000L, 2.0, true)   // seed in circling
-        tracker.update(2_000L, 2.0, false)  // exit circling
-
-        assertEquals(2.0, tracker.average(), 1e-6)
-    }
-
-    @Test
-    fun seedsOnReenterAndOverwritesOldSamples() {
-        val tracker = TcAverageTracker(capacitySeconds = 2)
-
-        tracker.update(1_000L, 1.0, true)
-        tracker.update(2_000L, 1.0, true)
-        assertEquals(1.0, tracker.average(), 1e-6)
-
-        // leave circling; average should hold
-        tracker.update(3_000L, 0.0, false)
-        assertEquals(1.0, tracker.average(), 1e-6)
-
-        // re-enter with different lift; buffer should reseed
-        tracker.update(4_000L, 3.0, true)
-        assertEquals(3.0, tracker.average(), 1e-6)
-    }
-}

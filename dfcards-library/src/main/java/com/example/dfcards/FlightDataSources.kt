@@ -79,6 +79,7 @@ data class RealTimeFlightData(
     val varioComplementary: Double = 0.0,  // Complementary filter (future)
     val realIgcVario: Double? = null,
     val bruttoAverage30s: Double = 0.0,
+    val bruttoAverage30sValid: Boolean = false,
     val nettoAverage30s: Double = 0.0,
     val varioSource: String = "UNKNOWN",
     val varioValid: Boolean = false,

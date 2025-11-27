@@ -48,8 +48,6 @@ class CalculateFlightMetricsUseCaseTest {
         whenever(helpers.recordLocationSample(any())).thenAnswer { }
         whenever(helpers.thermalAverageCurrent).thenReturn(0f)
         whenever(helpers.thermalAverageTotal).thenReturn(0f)
-        whenever(helpers.thermalAverage30s).thenReturn(0f)
-        whenever(helpers.thermalAverage30sValid).thenReturn(true)
         whenever(helpers.thermalGainCurrent).thenReturn(0.0)
         whenever(helpers.thermalGainValid).thenReturn(false)
 

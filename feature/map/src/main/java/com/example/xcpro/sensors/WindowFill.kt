@@ -15,8 +15,10 @@ internal fun addSamplesForElapsedSeconds(
     sampleValue: Double
 ): Long {
     if (lastTimestamp == 0L || currentTime < lastTimestamp) {
-        val seed = if (sampleValue.isFinite()) sampleValue else window.average()
-        if (seed.isFinite()) window.seed(seed)
+        window.clear()
+        if (sampleValue.isFinite()) {
+            window.addSample(sampleValue) // start window with a single sample instead of pre-filling
+        }
         return currentTime
     }
 

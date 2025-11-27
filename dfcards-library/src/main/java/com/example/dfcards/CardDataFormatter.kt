@@ -166,28 +166,16 @@ internal object CardDataFormatter {
 
             "thermal_avg" -> {
                 // Parity with XCSoar TC 30s: primary shows the 30 s average, secondary shows current vario
-                val avgValue: Double = when {
-                    liveData.isCircling && liveData.thermalAverageValid ->
-                        liveData.thermalAverage.toDouble()
-                    !liveData.isCircling && liveData.bruttoAverage30s.isFinite() ->
-                        liveData.bruttoAverage30s
-                    else -> Double.NaN
-                }
+                val avgValue: Double = liveData.thermalAverage.toDouble()
                 val primary = if (avgValue.isFinite()) {
-                    UnitsFormatter.verticalSpeed(
-                        VerticalSpeedMs(clampSmallVario(avgValue)),
-                        units
-                    ).text
+                    formatThermalVario(avgValue, units)
                 } else {
                     placeholderFor(cardId)
                 }
 
                 val currentThermal = if (liveData.currentThermalValid) liveData.currentThermalLiftRate else Double.NaN
                 val secondary = if (currentThermal.isFinite()) {
-                    UnitsFormatter.verticalSpeed(
-                        VerticalSpeedMs(clampSmallVario(currentThermal)),
-                        units
-                    ).text
+                    formatThermalVario(currentThermal, units)
                 } else "---"
                 Pair(primary, secondary)
             }
@@ -401,6 +389,26 @@ internal object CardDataFormatter {
         return if (value > -VARIO_ZERO_THRESHOLD && value < VARIO_ZERO_THRESHOLD) {
             if (value < 0) -0.0 else 0.0
         } else value
+    }
+
+    /**
+     * Formats Thermal 30s primary/secondary so that true zero shows as "0.0" (no sign)
+     * and inherits the card's zero-color rule (black).
+     */
+    private fun formatThermalVario(value: Double, units: UnitsPreferences): String {
+        val clamped = clampSmallVario(value)
+        val isZero = kotlin.math.abs(clamped) < VARIO_ZERO_THRESHOLD
+        val formatted = UnitsFormatter.verticalSpeed(
+            VerticalSpeedMs(clamped),
+            units,
+            decimals = VARIO_DECIMALS,
+            showSign = !isZero
+        ).text
+        return if (isZero && (formatted.startsWith("+") || formatted.startsWith("-"))) {
+            formatted.drop(1)
+        } else {
+            formatted
+        }
     }
 
     private fun formatVarioValue(value: Double, units: UnitsPreferences): String {
