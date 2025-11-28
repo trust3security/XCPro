@@ -1,4 +1,24 @@
 package com.example.xcpro.sensors.domain
+
+import com.example.xcpro.sensors.DisplayVarioSmoother
+import com.example.xcpro.sensors.domain.FusionBlackboard
+import com.example.dfcards.calculations.BarometricAltitudeData
+import com.example.dfcards.calculations.ConfidenceLevel
+import com.example.dfcards.filters.ModernVarioResult
+import com.example.xcpro.glider.StillAirSinkProvider
+import com.example.xcpro.sensors.CirclingDetector
+import com.example.xcpro.sensors.FlightCalculationHelpers
+import com.example.xcpro.sensors.GPSData
+import com.example.xcpro.weather.wind.data.WindState
+import com.example.xcpro.weather.wind.model.WindSource
+import com.example.xcpro.weather.wind.model.WindVector
+import com.example.xcpro.sensors.domain.AirspeedEstimate
+import com.example.xcpro.sensors.domain.AirspeedSource
+import com.example.xcpro.sensors.domain.FlightMetricsConstants.*
+import com.example.xcpro.sensors.domain.estimateFromWind
+import com.example.xcpro.sensors.domain.estimateFromPolarSink
+
+package com.example.xcpro.sensors.domain
 import com.example.xcpro.sensors.DisplayVarioSmoother
 import com.example.xcpro.sensors.domain.FusionBlackboard
 import com.example.dfcards.calculations.BarometricAltitudeData
