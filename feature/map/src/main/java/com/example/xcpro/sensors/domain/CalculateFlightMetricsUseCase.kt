@@ -1,34 +1,28 @@
 package com.example.xcpro.sensors.domain
-
+import com.example.xcpro.sensors.DisplayVarioSmoother
+import com.example.xcpro.sensors.domain.FusionBlackboard
 import com.example.dfcards.calculations.BarometricAltitudeData
 import com.example.dfcards.calculations.ConfidenceLevel
 import com.example.dfcards.filters.ModernVarioResult
 import com.example.xcpro.glider.StillAirSinkProvider
 import com.example.xcpro.sensors.CirclingDetector
-import com.example.xcpro.sensors.FixedSampleAverageWindow
 import com.example.xcpro.sensors.FlightCalculationHelpers
 import com.example.xcpro.sensors.GPSData
-import com.example.xcpro.sensors.TimedAverageWindow
-import com.example.xcpro.sensors.DisplayVarioSmoother
-import com.example.xcpro.sensors.addSamplesForElapsedSeconds
 import com.example.xcpro.weather.wind.data.WindState
 import com.example.xcpro.weather.wind.model.WindSource
 import com.example.xcpro.weather.wind.model.WindVector
 import com.example.xcpro.sensors.domain.AirspeedEstimate
 import com.example.xcpro.sensors.domain.AirspeedSource
-import kotlin.math.abs
-import com.example.xcpro.sensors.domain.FlightMetricsConstants.AVERAGE_WINDOW_SECONDS
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.DISPLAY_DECAY_FACTOR
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.DISPLAY_SMOOTH_TIME_S
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.DISPLAY_VAR_CLAMP
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.GRAVITY
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.MIN_MOVING_SPEED_MS
-import com.example.xcpro.sensors.domain.FlightMetricsConstants.NETTO_DISPLAY_WINDOW_MS
-import com.example.xcpro.sensors.domain.FlightMetricsConstants.QNH_JUMP_THRESHOLD_HPA
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.SPEED_HOLD_MS
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.DEFAULT_QNH_HPA
 import com.example.xcpro.sensors.domain.estimateFromWind
 import com.example.xcpro.sensors.domain.estimateFromPolarSink
+
 
 /**
  * Pure domain use case that translates fused sensor samples into flight metrics.
@@ -41,34 +35,20 @@ internal class CalculateFlightMetricsUseCase(
     // Allow choosing whether nav altitude uses baro (XCSoar-style). Default true.
     var navBaroAltitudeEnabled: Boolean = true
 
-    private val bruttoAverageWindow = FixedSampleAverageWindow(AVERAGE_WINDOW_SECONDS)
-    private val nettoAverageWindow = FixedSampleAverageWindow(AVERAGE_WINDOW_SECONDS)
-    private val nettoDisplayWindow = TimedAverageWindow(NETTO_DISPLAY_WINDOW_MS)
     private val circlingDetector = CirclingDetector()
+    private val fusionBlackboard = FusionBlackboard()
 
     private val displaySmoother = DisplayVarioSmoother(
         smoothTimeSeconds = DISPLAY_SMOOTH_TIME_S,
         decayFactor = DISPLAY_DECAY_FACTOR,
         clamp = DISPLAY_VAR_CLAMP
     )
-    private var lastBruttoSampleTime = 0L
-    private var lastNettoSampleTime = 0L
-    private var lastNettoValue = Double.NaN
-    private var lastThermalState = false
+    private var lastBruttoValue = 0.0
     private var lastIndicatedMs = Double.NaN
     private var lastTrueMs = Double.NaN
     private var lastAirspeedSource = AirspeedSource.GPS_GROUND
     private var lastAirspeedTimestamp = 0L
-    private var lastQnh: Double? = null
-    private var lastCalibrationTime: Long = 0L
-    private var prevPressureAltitude: Double? = null
-    private var prevPressureTime: Long = 0L
-    private var prevBaroAltitude: Double? = null
-    private var prevBaroTime: Long = 0L
-    private var prevGpsAltitude: Double? = null
-    private var prevGpsTime: Long = 0L
     private var prevTeSpeed: Double = 0.0
-    private var lastGpsVario: Double = Double.NaN
     private var lastCirclingFlag = false
 
     fun execute(request: FlightMetricsRequest): FlightMetricsResult {
@@ -78,27 +58,10 @@ internal class CalculateFlightMetricsUseCase(
 
         // QNH-agnostic vertical speed from pressure deltas
         val pressureAltitudeInput = request.baroResult?.pressureAltitudeMeters ?: varioResult.altitude
-        val dtPressure = if (prevPressureTime == 0L) 0.0 else (currentTime - prevPressureTime) / 1000.0
-        val rawBaroVario = if (pressureAltitudeInput.isFinite() && prevPressureAltitude != null && dtPressure > 0.05) {
-            (pressureAltitudeInput - prevPressureAltitude!!) / dtPressure
-        } else Double.NaN
-        prevPressureAltitude = pressureAltitudeInput.takeIf { it.isFinite() }
-        prevPressureTime = currentTime
-
-        val dtBaro = if (prevBaroTime == 0L) 0.0 else (currentTime - prevBaroTime) / 1000.0
-        val baroVario = if (varioResult.altitude.isFinite() && prevBaroAltitude != null && dtBaro > 0.05) {
-            (varioResult.altitude - prevBaroAltitude!!) / dtBaro
-        } else Double.NaN
-        prevBaroAltitude = varioResult.altitude.takeIf { it.isFinite() }
-        prevBaroTime = currentTime
-
-        val dtGpsAlt = if (prevGpsTime == 0L) 0.0 else (currentTime - prevGpsTime) / 1000.0
+        val rawBaroVario = fusionBlackboard.pressureVario(pressureAltitudeInput, currentTime)
+        val baroVario = fusionBlackboard.baroVario(varioResult.altitude, currentTime)
         val gpsAlt = gps.altitude.value
-        val gpsAltVario = if (gpsAlt.isFinite() && prevGpsAltitude != null && dtGpsAlt > 0.2) {
-            (gpsAlt - prevGpsAltitude!!) / dtGpsAlt
-        } else Double.NaN
-        prevGpsAltitude = gpsAlt.takeIf { it.isFinite() }
-        prevGpsTime = currentTime
+        val gpsAltVario = fusionBlackboard.gpsVario(gpsAlt, currentTime)
 
         val rawVerticalSpeed = when {
             rawBaroVario.isFinite() -> rawBaroVario
@@ -120,18 +83,10 @@ internal class CalculateFlightMetricsUseCase(
             val delta = (currentTime - it) / 1000L
             if (delta < 0) 0L else delta
         } ?: -1L
-        val qnhJump = lastQnh?.let { kotlin.math.abs(it - qnh) > QNH_JUMP_THRESHOLD_HPA } ?: false
-        val calibrationChanged = qnhJump ||
-            (baroResult?.lastCalibrationTime?.let { it > 0 && it != lastCalibrationTime } ?: false)
+        val calibrationChanged = fusionBlackboard.detectCalibrationChange(qnh, baroResult, currentTime)
         if (calibrationChanged) {
-            if (baroResult?.lastCalibrationTime != null && baroResult.lastCalibrationTime > 0) {
-                lastCalibrationTime = baroResult.lastCalibrationTime
-            } else {
-                lastCalibrationTime = currentTime
-            }
             flightHelpers.resetThermalTracking()
         }
-        lastQnh = qnh
 
         val windState = request.windState
         val windVector = windState?.vector
@@ -153,18 +108,7 @@ internal class CalculateFlightMetricsUseCase(
         )
         prevTeSpeed = teSpeed
 
-        val gpsVarioCandidate = when {
-            rawBaroVario.isFinite() -> rawBaroVario
-            baroVario.isFinite() -> baroVario
-            gpsAltVario.isFinite() -> gpsAltVario
-            else -> Double.NaN
-        }
-        val gpsVario = if (gpsVarioCandidate.isFinite()) {
-            lastGpsVario = gpsVarioCandidate
-            gpsVarioCandidate
-        } else {
-            lastGpsVario
-        }
+        val gpsVario = gpsAltVario
 
         val teVario = teVerticalSpeed.takeIf { currentTime <= request.varioValidUntil }
         val varioSource = if (teVario != null) "TE" else "GPS"
@@ -194,40 +138,24 @@ internal class CalculateFlightMetricsUseCase(
             trueAirspeed = airspeedFromWind?.trueMs,
             fallbackGroundSpeed = gps.speed.value
         )
-        val nettoSampleValue = resolveNettoSampleValue(nettoResult.value, nettoResult.valid)
+        val nettoSampleValue = fusionBlackboard.resolveNettoSampleValue(nettoResult.value, nettoResult.valid)
 
         // feed 30s windows with QNH-agnostic sample; reset on circling or calibration change
         val avgVarioSample = rawBaroVario.takeIf { it.isFinite() } ?: bruttoVario
-        if (circlingChanged || calibrationChanged) {
-            resetAverageWindows(avgVarioSample, nettoSampleValue, currentTime)
-        } else {
-            updateAverageWindows(
-                currentTime = currentTime,
-                bruttoSample = avgVarioSample,
-                nettoSample = nettoSampleValue,
-                thermalActive = isCircling
-            )
-        }
+        val averages = fusionBlackboard.updateAveragesAndDisplay(
+            currentTime = currentTime,
+            bruttoSample = avgVarioSample,
+            nettoSample = nettoSampleValue,
+            thermalActive = isCircling,
+            nettoValue = nettoResult.value,
+            nettoValid = nettoResult.valid
+        )
 
-        if (nettoResult.valid) {
-            lastNettoValue = nettoResult.value
-            nettoDisplayWindow.addSample(currentTime, nettoResult.value)
-        } else {
-            // XCSoar keeps publishing last known netto through brief dropouts
-            if (!lastNettoValue.isNaN()) {
-                nettoDisplayWindow.addSample(currentTime, lastNettoValue)
-            }
-        }
-
-        val bruttoAverage30s = bruttoAverageWindow.average()
-        val bruttoAverage30sValid = bruttoAverage30s.isFinite()
-        val nettoAverage30s = nettoAverageWindow.average()
+        val bruttoAverage30s = averages.bruttoAverage30s
+        val bruttoAverage30sValid = averages.bruttoAverage30sValid
+        val nettoAverage30s = averages.nettoAverage30s
         val displayVario = smoothDisplayVario(bruttoVario, request.deltaTimeSeconds, varioValid)
-        val rawDisplayNetto = if (!nettoDisplayWindow.isEmpty()) {
-            nettoDisplayWindow.average()
-        } else {
-            nettoResult.value
-        }
+        val rawDisplayNetto = averages.displayNettoRaw
         val displayNetto = smoothDisplayNetto(rawDisplayNetto, request.deltaTimeSeconds, nettoResult.valid)
 
         val navAltitude = when {
@@ -262,7 +190,6 @@ internal class CalculateFlightMetricsUseCase(
         }
 
         val teAltitude = computeTotalEnergyAltitude(navAltitude, trueAirspeedMs)
-        if (!calibrationChanged) {
             flightHelpers.updateThermalState(
                 timestampMillis = currentTime,
                 teAltitudeMeters = teAltitude,
@@ -332,24 +259,10 @@ internal class CalculateFlightMetricsUseCase(
     }
 
     fun reset() {
-        bruttoAverageWindow.clear()
-        nettoAverageWindow.clear()
-        nettoDisplayWindow.clear()
+        fusionBlackboard.resetAll()
         displaySmoother.reset()
-
-        lastBruttoSampleTime = 0L
-        lastNettoSampleTime = 0L
-        lastNettoValue = Double.NaN
-        lastThermalState = false
         circlingDetector.reset()
-        prevPressureAltitude = null
-        prevBaroAltitude = null
-        prevGpsAltitude = null
-        prevPressureTime = 0L
-        prevBaroTime = 0L
-        prevGpsTime = 0L
         prevTeSpeed = 0.0
-        lastGpsVario = Double.NaN
     }
 
     private fun altitudeForAirspeed(baroAltitude: Double, gpsAltitude: Double): Double = when {
@@ -373,50 +286,6 @@ internal class CalculateFlightMetricsUseCase(
 
     private fun smoothDisplayNetto(raw: Double, deltaTime: Double, isValid: Boolean): Double =
         displaySmoother.smoothNetto(raw, deltaTime, isValid)
-
-    private fun updateAverageWindows(
-        currentTime: Long,
-        bruttoSample: Double,
-        nettoSample: Double,
-        thermalActive: Boolean
-    ) {
-        val timeWentBack = currentTime < lastBruttoSampleTime || currentTime < lastNettoSampleTime
-        val thermalToggled = thermalActive != lastThermalState
-        if (timeWentBack || thermalToggled) {
-            resetAverageWindows(bruttoSample, nettoSample, currentTime)
-        } else {
-            lastBruttoSampleTime = addSamplesForElapsedSeconds(
-                window = bruttoAverageWindow,
-                lastTimestamp = lastBruttoSampleTime,
-                currentTime = currentTime,
-                sampleValue = bruttoSample
-            )
-            lastNettoSampleTime = addSamplesForElapsedSeconds(
-                window = nettoAverageWindow,
-                lastTimestamp = lastNettoSampleTime,
-                currentTime = currentTime,
-                sampleValue = nettoSample
-            )
-        }
-        lastThermalState = thermalActive
-    }
-
-    private fun resetAverageWindows(bruttoSample: Double, nettoSample: Double, timestamp: Long) {
-        bruttoAverageWindow.clear()
-        nettoAverageWindow.clear()
-        if (bruttoSample.isFinite()) bruttoAverageWindow.addSample(bruttoSample)
-        if (nettoSample.isFinite()) nettoAverageWindow.addSample(nettoSample)
-        lastBruttoSampleTime = timestamp
-        lastNettoSampleTime = timestamp
-    }
-
-    private fun resolveNettoSampleValue(rawNetto: Double, nettoValid: Boolean): Double {
-        if (nettoValid) {
-            return rawNetto
-        }
-        val fallback = lastNettoValue
-        return if (!fallback.isNaN()) fallback else rawNetto
-    }
 
     companion object {
         private const val DEFAULT_QNH_HPA = 1013.25
