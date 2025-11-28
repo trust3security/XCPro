@@ -165,4 +165,43 @@ class CalculateFlightMetricsUseCaseTest {
         // average should remain close to steady 0.5 m/s despite spike
         assertTrue(res.bruttoAverage30s < 2.0)
     }
+
+    @Test
+    fun tc30s_tracks_constant_climb() {
+        val useCase = newUseCase()
+        var time = 0L
+        var altitude = 0.0
+
+        repeat(30) { // 30 seconds of 1 m/s climb
+            useCase.execute(
+                FlightMetricsRequest(
+                    gps = gpsSample(time),
+                    currentTimeMillis = time,
+                    deltaTimeSeconds = 1.0,
+                    varioResult = varioSample(1.0, altitude),
+                    varioGpsValue = 1.0,
+                    baroResult = null,
+                    windState = null,
+                    varioValidUntil = time + 500
+                )
+            )
+            time += 1_000
+            altitude += 1.0
+        }
+
+        val res = useCase.execute(
+            FlightMetricsRequest(
+                gps = gpsSample(time),
+                currentTimeMillis = time,
+                deltaTimeSeconds = 1.0,
+                varioResult = varioSample(1.0, altitude),
+                varioGpsValue = 1.0,
+                baroResult = null,
+                windState = null,
+                varioValidUntil = time + 500
+            )
+        )
+
+        assertTrue(kotlin.math.abs(res.bruttoAverage30s - 1.0) < 0.2)
+    }
 }
