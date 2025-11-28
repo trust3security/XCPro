@@ -53,7 +53,8 @@ class CalculateFlightMetricsUseCaseTest {
 
         return CalculateFlightMetricsUseCase(
             flightHelpers = helpers,
-            sinkProvider = sink
+            sinkProvider = sink,
+            windEstimator = WindEstimator(sink)
         )
     }
 

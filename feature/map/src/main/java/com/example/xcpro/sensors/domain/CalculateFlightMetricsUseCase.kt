@@ -19,8 +19,7 @@ import com.example.xcpro.sensors.domain.FlightMetricsConstants.DISPLAY_VAR_CLAMP
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.GRAVITY
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.SPEED_HOLD_MS
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.DEFAULT_QNH_HPA
-import com.example.xcpro.sensors.domain.estimateFromWind
-import com.example.xcpro.sensors.domain.estimateFromPolarSink
+import com.example.xcpro.sensors.domain.WindEstimator
 
 
 /**
@@ -29,7 +28,8 @@ import com.example.xcpro.sensors.domain.estimateFromPolarSink
  */
 internal class CalculateFlightMetricsUseCase(
     private val flightHelpers: FlightCalculationHelpers,
-    private val sinkProvider: StillAirSinkProvider
+    private val sinkProvider: StillAirSinkProvider,
+    private val windEstimator: WindEstimator
 ) {
     // Allow choosing whether nav altitude uses baro (XCSoar-style). Default true.
     var navBaroAltitudeEnabled: Boolean = true
@@ -84,7 +84,7 @@ internal class CalculateFlightMetricsUseCase(
         val windState = request.windState
         val windVector = windState?.vector
 
-        val airspeedFromWind = estimateFromWind(
+        val airspeedFromWind = windEstimator.fromWind(
             gpsSpeed = gps.speed.value,
             gpsBearingDeg = gps.bearing,
             altitudeMeters = altitudeForAirspeed(baroAltitude, gps.altitude.value),

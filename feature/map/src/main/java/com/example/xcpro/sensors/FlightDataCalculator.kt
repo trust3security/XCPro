@@ -17,6 +17,7 @@ import com.example.xcpro.sensors.VarioDiagnosticsSample
 import com.example.xcpro.common.units.AltitudeM
 import com.example.xcpro.sensors.domain.CalculateFlightMetricsUseCase
 import com.example.xcpro.sensors.domain.FlightMetricsRequest
+import com.example.xcpro.sensors.domain.WindEstimator
 import com.example.xcpro.weather.wind.data.WindState
 import com.example.xcpro.weather.wind.model.WindSource
 import kotlinx.coroutines.CoroutineScope
@@ -98,7 +99,8 @@ class FlightDataCalculator(
     )
     private val flightMetricsUseCase = CalculateFlightMetricsUseCase(
         flightHelpers = flightHelpers,
-        sinkProvider = sinkProvider
+        sinkProvider = sinkProvider,
+        windEstimator = WindEstimator(sinkProvider)
     )
 
     private var latestWindState: WindState? = null
