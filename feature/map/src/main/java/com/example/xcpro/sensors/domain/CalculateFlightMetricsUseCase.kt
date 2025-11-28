@@ -9,6 +9,7 @@ import com.example.xcpro.sensors.FixedSampleAverageWindow
 import com.example.xcpro.sensors.FlightCalculationHelpers
 import com.example.xcpro.sensors.GPSData
 import com.example.xcpro.sensors.TimedAverageWindow
+import com.example.xcpro.sensors.DisplayVarioSmoother
 import com.example.xcpro.sensors.addSamplesForElapsedSeconds
 import com.example.xcpro.weather.wind.data.WindState
 import com.example.xcpro.weather.wind.model.WindSource
@@ -367,14 +368,11 @@ internal class CalculateFlightMetricsUseCase(
         return potential + kinetic
     }
 
-    
-        val targetAlpha = (deltaTime / DISPLAY_SMOOTH_TIME_S).coerceIn(0.0, 1.0)
+    private fun smoothDisplayVario(raw: Double, deltaTime: Double, isValid: Boolean): Double =
         displaySmoother.smoothVario(raw, deltaTime, isValid)
-    }
 
-        val targetAlpha = (deltaTime / DISPLAY_SMOOTH_TIME_S).coerceIn(0.0, 1.0)
+    private fun smoothDisplayNetto(raw: Double, deltaTime: Double, isValid: Boolean): Double =
         displaySmoother.smoothNetto(raw, deltaTime, isValid)
-    }
 
     private fun updateAverageWindows(
         currentTime: Long,
