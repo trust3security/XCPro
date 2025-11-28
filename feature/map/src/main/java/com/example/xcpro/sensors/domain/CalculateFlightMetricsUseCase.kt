@@ -45,9 +45,11 @@ internal class CalculateFlightMetricsUseCase(
     private val nettoDisplayWindow = TimedAverageWindow(NETTO_DISPLAY_WINDOW_MS)
     private val circlingDetector = CirclingDetector()
 
-    private var displayVarioState = 0.0
-    private var displayNettoState = 0.0
-    private var lastBruttoValue = 0.0
+    private val displaySmoother = DisplayVarioSmoother(
+        smoothTimeSeconds = DISPLAY_SMOOTH_TIME_S,
+        decayFactor = DISPLAY_DECAY_FACTOR,
+        clamp = DISPLAY_VAR_CLAMP
+    )
     private var lastBruttoSampleTime = 0L
     private var lastNettoSampleTime = 0L
     private var lastNettoValue = Double.NaN
@@ -332,8 +334,8 @@ internal class CalculateFlightMetricsUseCase(
         bruttoAverageWindow.clear()
         nettoAverageWindow.clear()
         nettoDisplayWindow.clear()
-        displayVarioState = 0.0
-        displayNettoState = 0.0
+        displaySmoother.reset()
+
         lastBruttoSampleTime = 0L
         lastNettoSampleTime = 0L
         lastNettoValue = Double.NaN
@@ -366,28 +368,12 @@ internal class CalculateFlightMetricsUseCase(
     }
 
     
-    private fun smoothDisplayVario(raw: Double, deltaTime: Double, isValid: Boolean): Double {
         val targetAlpha = (deltaTime / DISPLAY_SMOOTH_TIME_S).coerceIn(0.0, 1.0)
-        displayVarioState += targetAlpha * (raw - displayVarioState)
-        if (!isValid) {
-            displayVarioState *= DISPLAY_DECAY_FACTOR
-        }
-        if (!displayVarioState.isFinite()) {
-            displayVarioState = 0.0
-        }
-        return displayVarioState.coerceIn(-DISPLAY_VAR_CLAMP, DISPLAY_VAR_CLAMP)
+        displaySmoother.smoothVario(raw, deltaTime, isValid)
     }
 
-    private fun smoothDisplayNetto(raw: Double, deltaTime: Double, isValid: Boolean): Double {
         val targetAlpha = (deltaTime / DISPLAY_SMOOTH_TIME_S).coerceIn(0.0, 1.0)
-        displayNettoState += targetAlpha * (raw - displayNettoState)
-        if (!isValid) {
-            displayNettoState *= DISPLAY_DECAY_FACTOR
-        }
-        if (!displayNettoState.isFinite()) {
-            displayNettoState = 0.0
-        }
-        return displayNettoState.coerceIn(-DISPLAY_VAR_CLAMP, DISPLAY_VAR_CLAMP)
+        displaySmoother.smoothNetto(raw, deltaTime, isValid)
     }
 
     private fun updateAverageWindows(
