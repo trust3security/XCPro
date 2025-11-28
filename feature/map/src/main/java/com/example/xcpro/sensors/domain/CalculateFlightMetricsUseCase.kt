@@ -17,7 +17,6 @@ import com.example.xcpro.sensors.domain.FlightMetricsConstants.DISPLAY_DECAY_FAC
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.DISPLAY_SMOOTH_TIME_S
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.DISPLAY_VAR_CLAMP
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.GRAVITY
-import com.example.xcpro.sensors.domain.FlightMetricsConstants.MIN_MOVING_SPEED_MS
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.SPEED_HOLD_MS
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.DEFAULT_QNH_HPA
 import com.example.xcpro.sensors.domain.estimateFromWind
@@ -43,13 +42,7 @@ internal class CalculateFlightMetricsUseCase(
         decayFactor = DISPLAY_DECAY_FACTOR,
         clamp = DISPLAY_VAR_CLAMP
     )
-    private var lastBruttoValue = 0.0
-    private var lastIndicatedMs = Double.NaN
-    private var lastTrueMs = Double.NaN
-    private var lastAirspeedSource = AirspeedSource.GPS_GROUND
-    private var lastAirspeedTimestamp = 0L
     private var prevTeSpeed: Double = 0.0
-    private var lastCirclingFlag = false
 
     fun execute(request: FlightMetricsRequest): FlightMetricsResult {
         val gps = request.gps
@@ -68,7 +61,7 @@ internal class CalculateFlightMetricsUseCase(
             baroVario.isFinite() -> baroVario
             gpsAltVario.isFinite() -> gpsAltVario
             varioResult.verticalSpeed.isFinite() -> varioResult.verticalSpeed
-            else -> lastBruttoValue
+            else -> fusionBlackboard.bruttoFallback()
         }
 
         val baroAltitude = varioResult.altitude
@@ -115,18 +108,16 @@ internal class CalculateFlightMetricsUseCase(
         val bruttoVario = when {
             teVario != null -> teVario
             gpsVario.isFinite() -> gpsVario
-            else -> lastBruttoValue  // hold last valid brutto if both missing
+            else -> fusionBlackboard.bruttoFallback()  // hold last valid brutto if both missing
         }
         val varioValid = bruttoVario.isFinite()
-        if (bruttoVario.isFinite()) lastBruttoValue = bruttoVario
+        fusionBlackboard.rememberBrutto(bruttoVario)
 
         val isCircling = circlingDetector.update(
             trackDegrees = gps.bearing,
             timestampMillis = gps.timestamp,
             groundSpeed = gps.speed.value
         )
-        val circlingChanged = isCircling != lastCirclingFlag
-        lastCirclingFlag = isCircling
 
         // Keep helper-driven state (AGL, LD, thermal averages) up to date.
         flightHelpers.updateAGL(baroAltitude, gps, gps.speed.value)
@@ -165,29 +156,14 @@ internal class CalculateFlightMetricsUseCase(
         }
 
         val altitudeForAirspeed = altitudeForAirspeed(navAltitude, gps.altitude.value)
-        val hasMotion = gps.speed.value.isFinite() && gps.speed.value > MIN_MOVING_SPEED_MS
         val airspeedEstimate = airspeedFromWind
         val now = currentTime
-        val activeEstimate = airspeedEstimate ?: run {
-            if (now - lastAirspeedTimestamp <= SPEED_HOLD_MS &&
-                lastIndicatedMs.isFinite() && lastTrueMs.isFinite()
-            ) {
-                AirspeedEstimate(lastIndicatedMs, lastTrueMs, lastAirspeedSource)
-            } else null
-        }
+        val activeEstimate = fusionBlackboard.resolveAirspeedHold(airspeedEstimate, now)
 
         val indicatedAirspeedMs = activeEstimate?.indicatedMs ?: 0.0
         val trueAirspeedMs = activeEstimate?.trueMs ?: 0.0
         val airspeedSourceLabel = activeEstimate?.source?.label ?: AirspeedSource.GPS_GROUND.label
         val tasValid = activeEstimate != null
-
-        // Remember last valid airspeed for hold
-        if (airspeedEstimate != null) {
-            lastIndicatedMs = airspeedEstimate.indicatedMs
-            lastTrueMs = airspeedEstimate.trueMs
-            lastAirspeedSource = airspeedEstimate.source
-            lastAirspeedTimestamp = now
-        }
 
         val teAltitude = computeTotalEnergyAltitude(navAltitude, trueAirspeedMs)
         if (!calibrationChanged) {
@@ -305,7 +281,6 @@ internal class CalculateFlightMetricsUseCase(
         private const val GAS_CONSTANT = 287.05
         private const val GRAVITY = 9.80665
         private const val SPEED_HOLD_MS = 10_000L
-        private const val MIN_MOVING_SPEED_MS = 0.5
         private const val QNH_JUMP_THRESHOLD_HPA = 0.5
     }
 }

@@ -4,6 +4,8 @@ import com.example.dfcards.calculations.BarometricAltitudeData
 import com.example.xcpro.sensors.FixedSampleAverageWindow
 import com.example.xcpro.sensors.TimedAverageWindow
 import com.example.xcpro.sensors.addSamplesForElapsedSeconds
+import com.example.xcpro.sensors.domain.AirspeedEstimate
+import com.example.xcpro.sensors.domain.AirspeedSource
 import kotlin.math.abs
 
 /**
@@ -14,6 +16,9 @@ internal class FusionBlackboard {
     private val bruttoAverageWindow = FixedSampleAverageWindow(FlightMetricsConstants.AVERAGE_WINDOW_SECONDS)
     private val nettoAverageWindow = FixedSampleAverageWindow(FlightMetricsConstants.AVERAGE_WINDOW_SECONDS)
     private val nettoDisplayWindow = TimedAverageWindow(FlightMetricsConstants.NETTO_DISPLAY_WINDOW_MS)
+
+    // Vario fallback
+    private var lastBruttoValue = 0.0
 
     private var lastBruttoSampleTime = 0L
     private var lastNettoSampleTime = 0L
@@ -31,6 +36,12 @@ internal class FusionBlackboard {
     private var prevGpsAltitude: Double? = null
     private var prevGpsTime: Long = 0L
     private var lastGpsVario: Double = Double.NaN
+
+    // Airspeed hold
+    private var lastIndicatedMs = Double.NaN
+    private var lastTrueMs = Double.NaN
+    private var lastAirspeedSource = AirspeedSource.GPS_GROUND
+    private var lastAirspeedTimestamp = 0L
 
     data class AverageOutputs(
         val bruttoAverage30s: Double,
@@ -85,6 +96,33 @@ internal class FusionBlackboard {
         if (nettoValid) return rawNetto
         val fallback = lastNettoValue
         return if (!fallback.isNaN()) fallback else rawNetto
+    }
+
+    fun rememberBrutto(bruttoVario: Double) {
+        if (bruttoVario.isFinite()) lastBruttoValue = bruttoVario
+    }
+
+    fun bruttoFallback(): Double = lastBruttoValue
+
+    fun resolveAirspeedHold(
+        airspeedEstimate: AirspeedEstimate?,
+        now: Long
+    ): AirspeedEstimate? {
+        airspeedEstimate?.let {
+            rememberAirspeed(it, now)
+            return it
+        }
+        val withinHold = now - lastAirspeedTimestamp <= FlightMetricsConstants.SPEED_HOLD_MS
+        return if (withinHold && lastIndicatedMs.isFinite() && lastTrueMs.isFinite()) {
+            AirspeedEstimate(lastIndicatedMs, lastTrueMs, lastAirspeedSource)
+        } else null
+    }
+
+    private fun rememberAirspeed(estimate: AirspeedEstimate, now: Long) {
+        lastIndicatedMs = estimate.indicatedMs
+        lastTrueMs = estimate.trueMs
+        lastAirspeedSource = estimate.source
+        lastAirspeedTimestamp = now
     }
 
     fun updateAveragesAndDisplay(
@@ -148,10 +186,6 @@ internal class FusionBlackboard {
         lastNettoSampleTime = timestamp
     }
 
-    fun rememberBrutto(bruttoVario: Double) {
-        // Keep last known brutto in calling code if needed; no state here.
-    }
-
     fun resetAll() {
         bruttoAverageWindow.clear()
         nettoAverageWindow.clear()
@@ -167,5 +201,10 @@ internal class FusionBlackboard {
         prevGpsAltitude = null
         prevGpsTime = 0L
         lastGpsVario = Double.NaN
+        lastBruttoValue = 0.0
+        lastIndicatedMs = Double.NaN
+        lastTrueMs = Double.NaN
+        lastAirspeedSource = AirspeedSource.GPS_GROUND
+        lastAirspeedTimestamp = 0L
     }
 }
