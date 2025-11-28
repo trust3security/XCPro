@@ -399,3 +399,11 @@ A feature is done when:
 **This file is authoritative.** If a decision isnâ€™t covered, pick the simplest option that preserves SSOT, testability, and low latencyâ€”then document the rationale with an `AI-NOTE`.
 
 
+
+## 20) Telemetry Architecture (Blackboard pattern)
+- Introduce a fusion/blackboard layer that owns mutable sensor state (pressure/altitude deltas, QNH jump detection, spike filtering, 30 s windows, circling flags, last IAS/TAS). Expose only immutable snapshots to domain use cases. Keep Android deps out; inject time/providers.
+- Keep domain calculators pure and small (e.g., ThermalTracker, DisplayVarioSmoother, WindEvaluator); use cases orchestrate helpers and assemble results but do not manage rolling windows or sensor state.
+- Presentation stays stateless: mappers format values; Compose/UI never performs flight math or I/O.
+- Size guardrails: fusion layer ˜300 LOC, helpers ˜200 LOC, use cases ˜200 LOC; split before exceeding policy limits.
+- Testing contract: unit tests for helpers (spike/QNH guards, TC30 stability, wind eval); golden/regression tests to prove vario/netto/TC30 outputs unchanged after refactors.
+
