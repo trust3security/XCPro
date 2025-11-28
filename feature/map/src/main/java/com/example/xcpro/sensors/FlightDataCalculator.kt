@@ -10,7 +10,6 @@ import com.example.xcpro.audio.VarioAudioSettings
 import com.example.xcpro.flightdata.FlightDisplayMapper
 import com.example.xcpro.flightdata.FlightDisplaySnapshot
 import com.example.xcpro.glider.StillAirSinkProvider
-import com.example.xcpro.vario.*  // NEW: Vario implementations for side-by-side testing
 import com.example.xcpro.sensors.FlightDataConstants
 import com.example.xcpro.sensors.FlightFilters
 import com.example.xcpro.sensors.VarioDiagnosticsSample
@@ -21,7 +20,6 @@ import com.example.xcpro.sensors.domain.WindEstimator
 import com.example.xcpro.weather.wind.data.WindState
 import com.example.xcpro.weather.wind.model.WindSource
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -112,11 +110,7 @@ class FlightDataCalculator(
     }
 
     // ✅ VARIO IMPLEMENTATIONS - Side-by-side testing (VARIO_IMPROVEMENTS.md)
-    private val varioOptimized = OptimizedKalmanVario()     // Priority 1: R=0.5m
-    private val varioLegacy = LegacyKalmanVario()           // Baseline: R=2.0m
-    private val varioRaw = RawBaroVario()                   // No filtering
-    private val varioGPS = GPSVario()                        // GPS-based
-    private val varioComplementary = ComplementaryVario()    // Future (Priority 3)
+    private val varioSuite = VarioSuite()
 
     // ✅ PROFESSIONAL VARIO AUDIO ENGINE (zero-lag audio feedback)
 
@@ -265,11 +259,7 @@ class FlightDataCalculator(
                         TAG,
                         "QNH jump detected Δ${qnhLabel} hPa / Δ${altitudeLabel} m - resetting vario filters"
                     )
-                    varioOptimized.reset()
-                    varioLegacy.reset()
-                    varioRaw.reset()
-                    varioGPS.reset()
-                    varioComplementary.reset()
+                    varioSuite.resetAll()
                     filters.baroFilter.reset()
                     filters.pressureKalmanFilter.reset(smoothedPressure, baro.timestamp)
                     cachedVarioResult = null
@@ -280,42 +270,12 @@ class FlightDataCalculator(
 
         val verticalAccelForFusion = 0.0
 
-        val varioResults = mapOf(
-            "optimized" to varioOptimized.update(
-                baroAltitude = baroResult.altitudeMeters,
-                verticalAccel = verticalAccelForFusion,
-                deltaTime = deltaTime,
-                gpsSpeed = cachedGPSSpeed,
-                gpsAltitude = cachedGPSAltitude
-            ),
-            "legacy" to varioLegacy.update(
-                baroAltitude = baroResult.altitudeMeters,
-                verticalAccel = verticalAccelForFusion,
-                deltaTime = deltaTime,
-                gpsSpeed = cachedGPSSpeed,
-                gpsAltitude = cachedGPSAltitude
-            ),
-            "raw" to varioRaw.update(
-                baroAltitude = baroResult.altitudeMeters,
-                verticalAccel = 0.0,
-                deltaTime = deltaTime,
-                gpsSpeed = cachedGPSSpeed,
-                gpsAltitude = cachedGPSAltitude
-            ),
-            "gps" to varioGPS.update(
-                baroAltitude = 0.0,
-                verticalAccel = 0.0,
-                deltaTime = deltaTime,
-                gpsSpeed = cachedGPSSpeed,
-                gpsAltitude = cachedGPSAltitude
-            ),
-            "complementary" to varioComplementary.update(
-                baroAltitude = baroResult.altitudeMeters,
-                verticalAccel = verticalAccelForFusion,
-                deltaTime = deltaTime,
-                gpsSpeed = cachedGPSSpeed,
-                gpsAltitude = cachedGPSAltitude
-            )
+        varioSuite.updateAll(
+            baroAltitude = baroResult.altitudeMeters,
+            verticalAccel = verticalAccelForFusion,
+            deltaTime = deltaTime,
+            gpsSpeed = cachedGPSSpeed,
+            gpsAltitude = cachedGPSAltitude
         )
 
         val filteredBaro = filters.baroFilter.processReading(
@@ -384,7 +344,7 @@ class FlightDataCalculator(
         val baro = cachedBaroData
         val windState = latestWindState
 
-        val gpsVarioValue = varioGPS.getVerticalSpeed().takeIf { it.isFinite() } ?: 0.0
+        val gpsVarioValue = varioSuite.gpsVerticalSpeed().takeIf { it.isFinite() } ?: 0.0
         val metrics = flightMetricsUseCase.execute(
             FlightMetricsRequest(
                 gps = gps,
@@ -403,13 +363,7 @@ class FlightDataCalculator(
         val baroAltitude = metrics.baroAltitude
         val verticalSpeed = metrics.verticalSpeed
         val varioSource = metrics.varioSource
-        val varioResults = mapOf(
-            "optimized" to varioOptimized.getVerticalSpeed(),
-            "legacy" to varioLegacy.getVerticalSpeed(),
-            "raw" to varioRaw.getVerticalSpeed(),
-            "gps" to varioGPS.getVerticalSpeed(),
-            "complementary" to varioComplementary.getVerticalSpeed()
-        )
+        val varioResults = varioSuite.verticalSpeeds()
 
         val dataQuality = buildString {
             append("GPS")
@@ -481,6 +435,7 @@ class FlightDataCalculator(
 
     override fun stop() {
         audioController.stop()
+        varioSuite.resetAll()
         filters.pressureKalmanFilter.reset()
         varioValidUntil = 0L
         replayRealVarioMs = null
