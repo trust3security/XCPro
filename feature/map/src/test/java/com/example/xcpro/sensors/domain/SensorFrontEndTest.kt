@@ -31,6 +31,7 @@ class SensorFrontEndTest {
             gpsAltitude = 1000.0,
             baroResult = baroCalibrated(pressureAlt = 1200.0),
             isQnhCalibrated = true,
+            teVario = null,
             airspeedEstimate = null,
             currentTime = 0L
         )
@@ -49,6 +50,7 @@ class SensorFrontEndTest {
             gpsAltitude = 950.0,
             baroResult = baroCalibrated().copy(isCalibrated = false),
             isQnhCalibrated = false,
+            teVario = null,
             airspeedEstimate = null,
             currentTime = 0L
         )
@@ -70,6 +72,7 @@ class SensorFrontEndTest {
             gpsAltitude = navAlt,
             baroResult = null,
             isQnhCalibrated = false,
+            teVario = null,
             airspeedEstimate = AirspeedEstimate(indicatedMs = tas, trueMs = tas, source = AirspeedSource.WIND_VECTOR),
             currentTime = 0L
         )
@@ -89,6 +92,7 @@ class SensorFrontEndTest {
             gpsAltitude = 0.0,
             baroResult = null,
             isQnhCalibrated = false,
+            teVario = null,
             airspeedEstimate = estimate,
             currentTime = 0L
         )
@@ -99,6 +103,7 @@ class SensorFrontEndTest {
             gpsAltitude = 0.0,
             baroResult = null,
             isQnhCalibrated = false,
+            teVario = null,
             airspeedEstimate = null,
             currentTime = FlightMetricsConstants.SPEED_HOLD_MS - 500
         )
@@ -120,6 +125,7 @@ class SensorFrontEndTest {
             gpsAltitude = 0.0,
             baroResult = null,
             isQnhCalibrated = false,
+            teVario = null,
             airspeedEstimate = estimate,
             currentTime = 0L
         )
@@ -130,6 +136,7 @@ class SensorFrontEndTest {
             gpsAltitude = 0.0,
             baroResult = null,
             isQnhCalibrated = false,
+            teVario = null,
             airspeedEstimate = null,
             currentTime = FlightMetricsConstants.SPEED_HOLD_MS + 1_000
         )
@@ -137,5 +144,69 @@ class SensorFrontEndTest {
         assertFalse(expired.tasValid)
         assertEquals(0.0, expired.trueAirspeedMs, 0.0)
         assertEquals(0.0, expired.indicatedAirspeedMs, 0.0)
+    }
+
+    @Test
+    fun pressure_baro_gps_vario_derivation() {
+        val bb = FusionBlackboard()
+        val fe = SensorFrontEnd(bb)
+
+        val s1 = fe.buildSnapshot(
+            navBaroAltitudeEnabled = true,
+            baroAltitude = 1000.0,
+            gpsAltitude = 1000.0,
+            baroResult = baroCalibrated(pressureAlt = 1000.0),
+            isQnhCalibrated = true,
+            teVario = null,
+            airspeedEstimate = null,
+            currentTime = 0L
+        )
+        assertTrue(s1.pressureVario.isNaN())
+
+        val s2 = fe.buildSnapshot(
+            navBaroAltitudeEnabled = true,
+            baroAltitude = 1010.0,
+            gpsAltitude = 1010.0,
+            baroResult = baroCalibrated(pressureAlt = 1010.0),
+            isQnhCalibrated = true,
+            teVario = null,
+            airspeedEstimate = null,
+            currentTime = 1_000L
+        )
+        assertEquals(10.0, s2.pressureVario, 0.001)
+        assertEquals(10.0, s2.baroVario, 0.001)
+        assertEquals(10.0, s2.gpsVario, 0.001)
+    }
+
+    @Test
+    fun brutto_uses_te_when_available_else_gps() {
+        val bb = FusionBlackboard()
+        val fe = SensorFrontEnd(bb)
+
+        val withTe = fe.buildSnapshot(
+            navBaroAltitudeEnabled = true,
+            baroAltitude = 0.0,
+            gpsAltitude = 0.0,
+            baroResult = null,
+            isQnhCalibrated = false,
+            teVario = 2.5,
+            airspeedEstimate = null,
+            currentTime = 0L
+        )
+        assertEquals(2.5, withTe.bruttoVario, 0.001)
+        assertEquals("TE", withTe.varioSource)
+
+        val withGps = fe.buildSnapshot(
+            navBaroAltitudeEnabled = true,
+            baroAltitude = 0.0,
+            gpsAltitude = 10.0,
+            baroResult = null,
+            isQnhCalibrated = false,
+            teVario = null,
+            airspeedEstimate = null,
+            currentTime = 1_000L
+        )
+        assertEquals("GPS", withGps.varioSource)
+        assertTrue(withGps.bruttoVario.isFinite())
     }
 }

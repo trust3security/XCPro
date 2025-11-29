@@ -51,21 +51,6 @@ internal class CalculateFlightMetricsUseCase(
         val currentTime = request.currentTimeMillis
         val varioResult = request.varioResult
 
-        // QNH-agnostic vertical speed from pressure deltas
-        val pressureAltitudeInput = request.baroResult?.pressureAltitudeMeters ?: varioResult.altitude
-        val rawBaroVario = fusionBlackboard.pressureVario(pressureAltitudeInput, currentTime)
-        val baroVario = fusionBlackboard.baroVario(varioResult.altitude, currentTime)
-        val gpsAlt = gps.altitude.value
-        val gpsAltVario = fusionBlackboard.gpsVario(gpsAlt, currentTime)
-
-        val rawVerticalSpeed = when {
-            rawBaroVario.isFinite() -> rawBaroVario
-            baroVario.isFinite() -> baroVario
-            gpsAltVario.isFinite() -> gpsAltVario
-            varioResult.verticalSpeed.isFinite() -> varioResult.verticalSpeed
-            else -> fusionBlackboard.bruttoFallback()
-        }
-
         val baroAltitude = varioResult.altitude
         val baroResult = request.baroResult
         val qnh = baroResult?.qnh ?: DEFAULT_QNH_HPA
@@ -96,28 +81,33 @@ internal class CalculateFlightMetricsUseCase(
 
         val teSpeed = airspeedFromWind?.trueMs ?: 0.0
         val teVerticalSpeed = flightHelpers.calculateTotalEnergy(
-            rawVario = rawVerticalSpeed,
+            rawVario = varioResult.verticalSpeed,
             currentSpeed = teSpeed,
             previousSpeed = prevTeSpeed,
             deltaTime = request.deltaTimeSeconds
         )
         prevTeSpeed = teSpeed
-
-        val gpsVario = gpsAltVario
-
         val teVario = teVerticalSpeed.takeIf { currentTime <= request.varioValidUntil }
-        val bruttoVario = when {
-            teVario != null -> teVario
-            gpsVario.isFinite() -> gpsVario
-            else -> Double.NaN  // prefer dropping the sample over holding stale values
-        }
-        val varioSource = when {
-            teVario != null -> "TE"
-            gpsVario.isFinite() -> "GPS"
-            else -> "NONE"
-        }
-        val varioValid = bruttoVario.isFinite()
-        fusionBlackboard.rememberBrutto(bruttoVario)
+
+        val snapshot: SensorSnapshot = sensorFrontEnd.buildSnapshot(
+            navBaroAltitudeEnabled = navBaroAltitudeEnabled,
+            baroAltitude = baroAltitude,
+            gpsAltitude = gps.altitude.value,
+            baroResult = baroResult,
+            isQnhCalibrated = isQnhCalibrated,
+            teVario = teVario,
+            airspeedEstimate = airspeedFromWind,
+            currentTime = currentTime
+        )
+        val navAltitude = snapshot.navAltitude
+        val indicatedAirspeedMs = snapshot.indicatedAirspeedMs
+        val trueAirspeedMs = snapshot.trueAirspeedMs
+        val airspeedSourceLabel = snapshot.airspeedSource.label
+        val tasValid = snapshot.tasValid
+        val teAltitude = snapshot.teAltitude
+        val bruttoVario = snapshot.bruttoVario
+        val varioSource = snapshot.varioSource
+        val varioValid = snapshot.varioValid
 
         val isCircling = circlingDetector.update(
             trackDegrees = gps.bearing,
@@ -138,7 +128,7 @@ internal class CalculateFlightMetricsUseCase(
         val nettoSampleValue = fusionBlackboard.resolveNettoSampleValue(nettoResult.value, nettoResult.valid)
 
         // feed 30s windows with QNH-agnostic sample; reset on circling or calibration change
-        val avgVarioSample = rawBaroVario.takeIf { it.isFinite() } ?: bruttoVario
+        val avgVarioSample = bruttoVario
         val averages = fusionBlackboard.updateAveragesAndDisplay(
             currentTime = currentTime,
             bruttoSample = avgVarioSample,
@@ -155,16 +145,7 @@ internal class CalculateFlightMetricsUseCase(
         val rawDisplayNetto = averages.displayNettoRaw
         val displayNetto = smoothDisplayNetto(rawDisplayNetto, request.deltaTimeSeconds, nettoResult.valid)
 
-        val snapshot: SensorSnapshot = sensorFrontEnd.buildSnapshot(
-            navBaroAltitudeEnabled = navBaroAltitudeEnabled,
-            baroAltitude = baroAltitude,
-            gpsAltitude = gps.altitude.value,
-            baroResult = baroResult,
-            isQnhCalibrated = isQnhCalibrated,
-            airspeedEstimate = airspeedFromWind,
-            currentTime = currentTime
-        )
-
+        // snapshot already built above; reuse the values
         val navAltitude = snapshot.navAltitude
         val indicatedAirspeedMs = snapshot.indicatedAirspeedMs
         val trueAirspeedMs = snapshot.trueAirspeedMs

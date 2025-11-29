@@ -13,14 +13,9 @@ import kotlin.math.abs
  * and exposes read-only aggregates to the use case.
  */
 internal class FusionBlackboard {
-    private val minGateDtSeconds = 0.02    // reject duplicate/too-fast timestamps
-    private val minDerivativeDtSeconds = 0.05
     private val bruttoAverageWindow = FixedSampleAverageWindow(FlightMetricsConstants.AVERAGE_WINDOW_SECONDS)
     private val nettoAverageWindow = FixedSampleAverageWindow(FlightMetricsConstants.AVERAGE_WINDOW_SECONDS)
     private val nettoDisplayWindow = TimedAverageWindow(FlightMetricsConstants.NETTO_DISPLAY_WINDOW_MS)
-
-    // Vario fallback
-    private var lastBruttoValue = 0.0
 
     private var lastBruttoSampleTime = 0L
     private var lastNettoSampleTime = 0L
@@ -30,14 +25,6 @@ internal class FusionBlackboard {
 
     private var lastQnh: Double? = null
     private var lastCalibrationTime: Long = 0L
-
-    private var prevPressureAltitude: Double? = null
-    private var prevPressureTime: Long = 0L
-    private var prevBaroAltitude: Double? = null
-    private var prevBaroTime: Long = 0L
-    private var prevGpsAltitude: Double? = null
-    private var prevGpsTime: Long = 0L
-    private var lastGpsVario: Double = Double.NaN
 
     // Airspeed hold
     private var lastIndicatedMs = Double.NaN
@@ -63,93 +50,11 @@ internal class FusionBlackboard {
         return calibrationChanged
     }
 
-    fun pressureVario(pressureAltitude: Double, currentTime: Long): Double {
-        if (!pressureAltitude.isFinite()) {
-            return Double.NaN
-        }
-
-        if (prevPressureTime == 0L) {
-            prevPressureAltitude = pressureAltitude
-            prevPressureTime = currentTime
-            return Double.NaN
-        }
-
-        val dt = (currentTime - prevPressureTime) / 1000.0
-        if (dt <= 0.0 || dt < minGateDtSeconds) {
-            return Double.NaN
-        }
-
-        val vario = if (prevPressureAltitude != null && dt > minDerivativeDtSeconds) {
-            (pressureAltitude - prevPressureAltitude!!) / dt
-        } else Double.NaN
-
-        prevPressureAltitude = pressureAltitude
-        prevPressureTime = currentTime
-        return vario
-    }
-
-    fun baroVario(baroAltitude: Double, currentTime: Long): Double {
-        if (!baroAltitude.isFinite()) {
-            return Double.NaN
-        }
-
-        if (prevBaroTime == 0L) {
-            prevBaroAltitude = baroAltitude
-            prevBaroTime = currentTime
-            return Double.NaN
-        }
-
-        val dt = (currentTime - prevBaroTime) / 1000.0
-        if (dt <= 0.0 || dt < minGateDtSeconds) {
-            return Double.NaN
-        }
-
-        val vario = if (prevBaroAltitude != null && dt > minDerivativeDtSeconds) {
-            (baroAltitude - prevBaroAltitude!!) / dt
-        } else Double.NaN
-
-        prevBaroAltitude = baroAltitude
-        prevBaroTime = currentTime
-        return vario
-    }
-
-    fun gpsVario(gpsAltitude: Double, currentTime: Long): Double {
-        if (!gpsAltitude.isFinite()) {
-            return Double.NaN
-        }
-
-        if (prevGpsTime == 0L) {
-            prevGpsAltitude = gpsAltitude
-            prevGpsTime = currentTime
-            return Double.NaN
-        }
-
-        val dt = (currentTime - prevGpsTime) / 1000.0
-        if (dt <= 0.0 || dt < minGateDtSeconds) {
-            return Double.NaN
-        }
-
-        val vario = if (prevGpsAltitude != null && dt > minDerivativeDtSeconds) {
-            (gpsAltitude - prevGpsAltitude!!) / dt
-        } else Double.NaN
-
-        prevGpsAltitude = gpsAltitude
-        prevGpsTime = currentTime
-        if (vario.isFinite()) lastGpsVario = vario
-        return vario
-    }
-
     fun resolveNettoSampleValue(rawNetto: Double, nettoValid: Boolean): Double {
         if (nettoValid) return rawNetto
         val fallback = lastNettoValue
         return if (!fallback.isNaN()) fallback else rawNetto
     }
-
-    fun rememberBrutto(bruttoVario: Double) {
-        if (bruttoVario.isFinite()) lastBruttoValue = bruttoVario
-    }
-
-    fun bruttoFallback(): Double = lastBruttoValue
 
     fun resolveAirspeedHold(
         airspeedEstimate: AirspeedEstimate?,
@@ -241,14 +146,6 @@ internal class FusionBlackboard {
         lastNettoSampleTime = 0L
         lastThermalState = false
         lastNettoValue = Double.NaN
-        prevPressureAltitude = null
-        prevPressureTime = 0L
-        prevBaroAltitude = null
-        prevBaroTime = 0L
-        prevGpsAltitude = null
-        prevGpsTime = 0L
-        lastGpsVario = Double.NaN
-        lastBruttoValue = 0.0
         lastIndicatedMs = Double.NaN
         lastTrueMs = Double.NaN
         lastAirspeedSource = AirspeedSource.GPS_GROUND
