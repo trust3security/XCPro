@@ -10,6 +10,7 @@ internal class ThermalTracker {
     private var lastThermalLiftRate = 0.0
     private var lastThermalGain = 0.0
     private var lastThermalTimestamp = 0L
+    private var lastCircling = false
     private var totalCirclingSeconds = 0.0
     private var totalHeightGain = 0.0
 
@@ -37,32 +38,49 @@ internal class ThermalTracker {
         verticalSpeedMs: Double,
         isCircling: Boolean
     ) {
-        if (!teAltitudeMeters.isFinite()) {
-            // leave last thermal intact; before first thermal it'll remain undefined
-            return
+        if (!teAltitudeMeters.isFinite()) return
+
+        if (timestampMillis < lastThermalTimestamp) reset()
+
+        // Detect circling edge and reset like XCSoar
+        if (isCircling != lastCircling) {
+            if (lastCircling) {
+                // exiting circling: finalize and store last thermal
+                if (currentThermalInfo.isDefined()) {
+                    currentThermalInfo.endTime = timestampMillis
+                    currentThermalInfo.endTeAltitude = teAltitudeMeters
+                    currentThermalInfo.gain =
+                        currentThermalInfo.endTeAltitude - currentThermalInfo.startTeAltitude
+                    val durationSeconds = currentThermalInfo.durationSeconds
+                    val liftRate = if (durationSeconds > 0.0) currentThermalInfo.gain / durationSeconds else 0.0
+                    currentThermalInfo.liftRate = liftRate
+                    totalCirclingSeconds += durationSeconds
+                    totalHeightGain += currentThermalInfo.gain
+                    lastThermalLiftRate = liftRate
+                    lastThermalGain = currentThermalInfo.gain
+                    lastThermalInfo.copyFrom(currentThermalInfo)
+                }
+                currentThermalInfo.clear()
+            } else {
+                // entering circling: start fresh thermal
+                currentThermalInfo.clear()
+                currentThermalInfo.startTime = timestampMillis
+                currentThermalInfo.startTeAltitude = teAltitudeMeters
+                currentThermalInfo.endTime = timestampMillis
+                currentThermalInfo.endTeAltitude = teAltitudeMeters
+            }
         }
 
-        if (timestampMillis < lastThermalTimestamp) {
-            reset()
-        }
-
+        lastCircling = isCircling
         lastThermalTimestamp = timestampMillis
 
         if (isCircling) {
-            if (!currentThermalInfo.isDefined()) {
-                currentThermalInfo.startTime = timestampMillis
-                currentThermalInfo.startTeAltitude = teAltitudeMeters
-            }
             currentThermalInfo.endTime = timestampMillis
             currentThermalInfo.endTeAltitude = teAltitudeMeters
             currentThermalInfo.gain =
                 currentThermalInfo.endTeAltitude - currentThermalInfo.startTeAltitude
             val durationSeconds = currentThermalInfo.durationSeconds
-            val liftRate = when {
-                durationSeconds > 0.5 -> currentThermalInfo.gain / durationSeconds
-                verticalSpeedMs.isFinite() -> verticalSpeedMs
-                else -> 0.0
-            }
+            val liftRate = if (durationSeconds > 0.0) currentThermalInfo.gain / durationSeconds else 0.0
             currentThermalInfo.liftRate = liftRate
             thermalGainCurrent = currentThermalInfo.gain
             thermalAverageCurrent = liftRate.toFloat()
@@ -70,15 +88,7 @@ internal class ThermalTracker {
             lastThermalGain = currentThermalInfo.gain
             thermalGainValid = true
         } else {
-            if (currentThermalInfo.isDefined()) {
-                totalCirclingSeconds += currentThermalInfo.durationSeconds
-                totalHeightGain += currentThermalInfo.gain
-                lastThermalLiftRate = currentThermalInfo.liftRate
-                lastThermalGain = currentThermalInfo.gain
-                lastThermalInfo.copyFrom(currentThermalInfo)
-            }
-            // Keep showing last thermal stats like XCSoar (current_thermal falls back to last_thermal)
-            currentThermalInfo.copyFrom(lastThermalInfo)
+            // show last thermal like XCSoar when not circling
             thermalGainCurrent = lastThermalGain
             thermalGainValid = lastThermalInfo.isDefined()
             thermalAverageCurrent = lastThermalLiftRate.toFloat()
@@ -102,6 +112,7 @@ internal class ThermalTracker {
         lastThermalLiftRate = 0.0
         lastThermalGain = 0.0
         lastThermalTimestamp = 0L
+        lastCircling = false
         totalCirclingSeconds = 0.0
         totalHeightGain = 0.0
         thermalAverageTotal = 0f
