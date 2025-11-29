@@ -137,6 +137,19 @@ ViewModel helper (preferred): see Appendix “Snippets – Flow.inVm”.
 - **DI contract:** Bind each component via Hilt modules; callers depend on interfaces so simulation/replay sources can be swapped without touching UI.
 
 
+### Sensor Front-End (BasicComputer parity) — new requirement
+- Introduce/maintain a dedicated **SensorFrontEnd** module (Kotlin) that mirrors XCSoar's BasicComputer role. It is the single place that:
+  - Chooses nav altitude (baro QNH if calibrated & enabled, else GPS).
+  - Derives IAS/TAS (pitot/dyn pressure if present; else GS+wind fallback) and flags validity.
+  - Computes energy height and TE altitude = navAltitude + TAS² / (2g).
+  - Computes gps/baro/pressure vario derivatives with timestamp gating; selects brutto/netto vario (prefer TE vario if available).
+  - Exposes an immutable SensorSnapshot consumed by fusion, thermal tracking, and display mapping; no component re-computes these fundamentals downstream.
+- Lifecycle hooks: resets on time warp and circling edge, so downstream averages don't drift.
+- Test-first: add unit tests for altitude selection, TE altitude, vario derivation, and time-warp reset. Regression tests must replay IGC samples at 1× and assert TC30/TC_AVG parity with XCSoar.
+- Reference implementation to mirror: C:\Users\Asus\AndroidStudioProjects\XCSoar\src\Computer\BasicComputer.cpp (nav altitude, airspeed, TE altitude, vario) and ...GlideComputerAirData.cpp (CurrentThermal, circling reset). Do not rely on any bundled snapshots.
+- Any future sensor/vario change that bypasses SensorFrontEnd is a review blocker; centralize, then fan out via the snapshot.
+
+
 ---
 
 ## 5) State, Errors, and Resilience
@@ -404,6 +417,6 @@ A feature is done when:
 - Introduce a fusion/blackboard layer that owns mutable sensor state (pressure/altitude deltas, QNH jump detection, spike filtering, 30 s windows, circling flags, last IAS/TAS). Expose only immutable snapshots to domain use cases. Keep Android deps out; inject time/providers.
 - Keep domain calculators pure and small (e.g., ThermalTracker, DisplayVarioSmoother, WindEvaluator); use cases orchestrate helpers and assemble results but do not manage rolling windows or sensor state.
 - Presentation stays stateless: mappers format values; Compose/UI never performs flight math or I/O.
-- Size guardrails: fusion layer �300 LOC, helpers �200 LOC, use cases �200 LOC; split before exceeding policy limits.
+- Size guardrails: fusion layer �300 LOC, helpers �200 LOC, use cases �200 LOC; split before exceeding policy limits.
 - Testing contract: unit tests for helpers (spike/QNH guards, TC30 stability, wind eval); golden/regression tests to prove vario/netto/TC30 outputs unchanged after refactors.
 
