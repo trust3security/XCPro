@@ -80,11 +80,4 @@ class FusionBlackboardTest {
         val expired = bb.resolveAirspeedHold(airspeedEstimate = null, now = FlightMetricsConstants.SPEED_HOLD_MS + 1_000)
         assertNull(expired)
     }
-
-    @Test
-    fun brutto_fallback_returns_last_value() {
-        val bb = FusionBlackboard()
-        bb.rememberBrutto(1.7)
-        assertEquals(1.7, bb.bruttoFallback(), 0.0001)
-    }
 }

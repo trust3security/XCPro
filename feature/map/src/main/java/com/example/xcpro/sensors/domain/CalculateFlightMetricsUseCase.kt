@@ -144,14 +144,6 @@ internal class CalculateFlightMetricsUseCase(
         val displayVario = smoothDisplayVario(bruttoVario, request.deltaTimeSeconds, varioValid)
         val rawDisplayNetto = averages.displayNettoRaw
         val displayNetto = smoothDisplayNetto(rawDisplayNetto, request.deltaTimeSeconds, nettoResult.valid)
-
-        // snapshot already built above; reuse the values
-        val navAltitude = snapshot.navAltitude
-        val indicatedAirspeedMs = snapshot.indicatedAirspeedMs
-        val trueAirspeedMs = snapshot.trueAirspeedMs
-        val airspeedSourceLabel = snapshot.airspeedSource.label
-        val tasValid = snapshot.tasValid
-        val teAltitude = snapshot.teAltitude
         if (!calibrationChanged) {
             flightHelpers.updateThermalState(
                 timestampMillis = currentTime,
