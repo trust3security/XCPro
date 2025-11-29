@@ -42,14 +42,19 @@ import com.example.xcpro.common.units.PressureUnit
 import com.example.xcpro.common.units.UnitsFormatter
 import com.example.dfcards.FlightDataProvider
 import com.example.dfcards.FlightModeSelection
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
 import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
+import android.net.Uri
+import android.provider.OpenableColumns
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -136,6 +141,27 @@ fun MapScreen(
     mapViewModel: MapScreenViewModel
 ) {
     val context = LocalContext.current
+    val replayFilePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            val type = context.contentResolver.getType(uri)
+            Log.i(TAG, "REPLAY_PICK uri=$uri type=$type")
+            val name = resolveDisplayName(context, uri)
+            runCatching {
+                // Persist so replay survives process death and for better diag of permission errors
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            }.onFailure { t ->
+                Log.w(TAG, "REPLAY_PICK persistable permission failed: ${t.message}")
+            }
+            mapViewModel.onReplayFileChosen(uri, name)
+        } else {
+            Log.w(TAG, "REPLAY_PICK cancelled (uri is null)")
+        }
+    }
     val mapUiState by mapViewModel.uiState.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
@@ -466,7 +492,16 @@ fun MapScreen(
                     onReplaySpeedChange = mapViewModel::onReplaySpeedChanged,
                     onReplaySeek = mapViewModel::onReplaySeek,
                     showReplayDevFab = mapViewModel.showReplayDebugFab,
-                    onReplayDevFabClick = mapViewModel::onReplayDevAutoplay
+                    onReplayPickFileClick = {
+                        replayFilePicker.launch(
+                            arrayOf(
+                                "text/plain",
+                                "application/octet-stream",
+                                "application/*",
+                                "*/*"
+                            )
+                        )
+                    }
                 )
                 if (mapUiState.isLoadingWaypoints) {
                     Box(
@@ -508,6 +543,13 @@ private fun GpsStatusBanner(status: GpsStatus, modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.labelMedium,
             textAlign = TextAlign.Center
         )
+    }
+}
+
+private fun resolveDisplayName(context: Context, uri: Uri): String? {
+    return context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+        val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+        if (nameIndex >= 0 && cursor.moveToFirst()) cursor.getString(nameIndex) else null
     }
 }
 

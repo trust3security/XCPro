@@ -1,6 +1,7 @@
 package com.example.xcpro.map
 
 import android.content.Context
+import android.net.Uri
 import android.util.Log
 import androidx.compose.ui.geometry.Offset
 import androidx.lifecycle.ViewModel
@@ -47,6 +48,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import androidx.compose.ui.unit.IntSize
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 
@@ -127,6 +131,8 @@ class MapScreenViewModel @Inject constructor(
     init {
         observeFlightDataRepository()
         observeSafeContainerSize()
+        observeReplayEvents()
+        observeReplaySessionDebug()
     }
 
     private fun observeFlightDataRepository() {
@@ -155,6 +161,42 @@ class MapScreenViewModel @Inject constructor(
                 if (!_containerReady.value && size.width > 0 && size.height > 0) {
                     _containerReady.value = true
                 }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    private fun observeReplayEvents() {
+        igcReplayController.events
+            .onEach { event ->
+                when (event) {
+                    is IgcReplayController.ReplayEvent.Completed ->
+                        _uiEffects.emit(MapUiEffect.ShowToast("Replay finished (${event.samples} samples)"))
+                    is IgcReplayController.ReplayEvent.Failed -> {
+                        if (event.throwable is kotlinx.coroutines.CancellationException) {
+                            _uiEffects.emit(MapUiEffect.ShowToast("Replay failed: job was cancelled"))
+                            return@onEach
+                        }
+                        Log.e("MapScreenViewModel", "Replay failed", event.throwable)
+                        _uiEffects.emit(MapUiEffect.ShowToast("Replay failed: ${event.throwable.message ?: "Unknown error"}"))
+                    }
+                    IgcReplayController.ReplayEvent.Cancelled -> {
+                        _uiEffects.emit(MapUiEffect.ShowToast("Replay failed: job was cancelled"))
+                    }
+                }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    /**
+     * Debug helper: log session changes so we can see selection/status from the UI layer.
+     */
+    private fun observeReplaySessionDebug() {
+        igcReplayController.session
+            .onEach { session ->
+                Log.i(
+                    "MapScreenViewModel",
+                    "REPLAY_SESSION_UI status=${session.status} selection=${session.selection} elapsed=${session.elapsedMillis} dur=${session.durationMillis}"
+                )
             }
             .launchIn(viewModelScope)
     }
@@ -222,6 +264,10 @@ class MapScreenViewModel @Inject constructor(
                             return@launch
                         }
                     }
+                    // When starting a new replay, force the map to recentre on the first replay point
+                    mapState.hasInitiallyCentered = false
+                    mapState.showReturnButton = false
+                    mapState.isTrackingLocation = true
                     igcReplayController.play()
                 }
             }
@@ -253,6 +299,44 @@ class MapScreenViewModel @Inject constructor(
                 igcReplayController.play()
             } catch (t: Throwable) {
                 Log.e("MapScreenViewModel", "Failed to start dev replay", t)
+            }
+        }
+    }
+
+    /**
+     * Launches an IGC replay from a user-selected SAF Uri.
+     * AI-NOTE: This mirrors the simple flow from IgcReplaySim—pick, load, play—while reusing
+     * the existing replay pipeline (ReplaySensorSource -> FlightDataCalculator -> repository).
+     */
+    fun onReplayFileChosen(uri: Uri, displayName: String?) {
+        viewModelScope.launch {
+            Log.i("MapScreenViewModel", "REPLAY_FILE chosen uri=$uri name=$displayName")
+            _uiEffects.emit(MapUiEffect.ShowToast("Loading replay..."))
+            val loadResult = runCatching {
+                // AI-NOTE: Use NonCancellable so a quick scope cancellation (e.g., navigation churn)
+                // doesn't misreport a successful load as a failure.
+                withContext(NonCancellable) { igcReplayController.loadFile(uri, displayName) }
+            }
+
+            if (igcReplayController.session.value.selection != null) {
+                Log.i("MapScreenViewModel", "REPLAY_FILE load success uri=$uri")
+                mapState.hasInitiallyCentered = false
+                mapState.showReturnButton = false
+                mapState.isTrackingLocation = true
+                Log.i("MapScreenViewModel", "REPLAY_FILE starting play uri=$uri")
+                igcReplayController.play()
+                return@launch
+            }
+
+            loadResult.onFailure { t ->
+                if (t is CancellationException) {
+                    Log.w("MapScreenViewModel", "Replay load cancelled after prepare uri=$uri", t)
+                } else {
+                    Log.e("MapScreenViewModel", "Replay load failed uri=$uri", t)
+                    _uiEffects.emit(
+                        MapUiEffect.ShowToast("Replay failed: ${t.message ?: "Unknown error"}")
+                    )
+                }
             }
         }
     }

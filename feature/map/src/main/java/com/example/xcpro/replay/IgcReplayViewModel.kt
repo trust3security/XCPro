@@ -1,6 +1,7 @@
 package com.example.xcpro.replay
 
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -32,13 +33,54 @@ class IgcReplayViewModel @Inject constructor(
     }
 
     fun onFileSelected(uri: Uri?, displayName: String?) {
+        if (uri == null) {
+            _uiState.update {
+                it.copy(
+                    selectedUri = null,
+                    selectedFileName = null,
+                    errorMessage = null,
+                    statusMessage = "Select an IGC file to begin replay.",
+                    isReplayLoaded = false,
+                    elapsedMillis = 0L,
+                    durationMillis = 0L,
+                    progressFraction = 0f
+                )
+            }
+            return
+        }
+        val name = displayName ?: uri.lastPathSegment
         _uiState.update {
             it.copy(
                 selectedUri = uri,
-                selectedFileName = displayName ?: uri?.lastPathSegment ?: it.selectedFileName,
+                selectedFileName = name,
                 errorMessage = null,
-                statusMessage = if (uri == null) "Select an IGC file to begin replay." else "Ready to load ${displayName ?: "selected file"}."
+                statusMessage = "Loading replay...",
+                isReplayLoaded = false,
+                progressFraction = 0f,
+                elapsedMillis = 0L,
+                durationMillis = 0L
             )
+        }
+        viewModelScope.launch {
+            runCatching {
+                replayController.loadFile(uri, name)
+            }.onSuccess {
+                _uiState.update {
+                    it.copy(
+                        statusMessage = "Replay loaded. Ready to scrub or start.",
+                        errorMessage = null,
+                        isReplayLoaded = true
+                    )
+                }
+            }.onFailure { t ->
+                _uiState.update {
+                    it.copy(
+                        errorMessage = t.message ?: "Replay load failed",
+                        statusMessage = "Replay failed.",
+                        isReplayLoaded = false
+                    )
+                }
+            }
         }
     }
 
@@ -54,8 +96,12 @@ class IgcReplayViewModel @Inject constructor(
         val name = _uiState.value.selectedFileName
         viewModelScope.launch {
             try {
-                _uiState.update { it.copy(statusMessage = "Loading replay...", errorMessage = null) }
-                replayController.loadFile(uri, name)
+                // If already loaded the same file, skip reload
+                val alreadyLoaded = replayController.session.value.selection?.uri == uri
+                if (!alreadyLoaded) {
+                    _uiState.update { it.copy(statusMessage = "Loading replay...", errorMessage = null) }
+                    replayController.loadFile(uri, name)
+                }
                 replayController.play()
                 _events.emit(IgcReplayUiEvent.NavigateBackToMap)
             } catch (t: Throwable) {
@@ -73,6 +119,24 @@ class IgcReplayViewModel @Inject constructor(
         replayController.stop()
     }
 
+    fun seekTo(fraction: Float) {
+        val selection = replayController.session.value.selection
+        val uri = _uiState.value.selectedUri
+        Log.d(
+            "IgcReplayViewModel",
+            "REPLY_VM_SEEK fraction=$fraction selectionNull=${selection == null} uriNull=${uri == null}"
+        )
+        if (selection != null) {
+            replayController.seekTo(fraction)
+        } else if (uri != null) {
+            viewModelScope.launch {
+                runCatching { replayController.loadFile(uri, _uiState.value.selectedFileName) }
+                    .onSuccess { replayController.seekTo(fraction) }
+                    .onFailure { Log.e("IgcReplayViewModel", "REPLY_VM_SEEK load on demand failed", it) }
+            }
+        }
+    }
+
     private fun observeSession() {
         viewModelScope.launch {
             replayController.session.collect { session ->
@@ -81,7 +145,7 @@ class IgcReplayViewModel @Inject constructor(
                     val base = current.copy(
                         isPlaying = session.status == IgcReplayController.SessionStatus.PLAYING,
                         speedMultiplier = session.speedMultiplier,
-                        isReplayLoaded = selection != null,
+                        isReplayLoaded = selection != null, elapsedMillis = session.elapsedMillis, durationMillis = session.durationMillis, progressFraction = session.progressFraction,
                         statusMessage = when {
                             selection == null -> "Select an IGC file to begin replay."
                             session.status == IgcReplayController.SessionStatus.PLAYING ->

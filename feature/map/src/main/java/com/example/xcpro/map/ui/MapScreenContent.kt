@@ -103,7 +103,7 @@ internal fun MapScreenContent(
     onReplaySpeedChange: (Double) -> Unit,
     onReplaySeek: (Float) -> Unit,
     showReplayDevFab: Boolean,
-    onReplayDevFabClick: () -> Unit
+    onReplayPickFileClick: () -> Unit
 ) {
     var showQnhDialog by remember { mutableStateOf(false) }
     var qnhInput by remember { mutableStateOf("") }
@@ -173,7 +173,7 @@ internal fun MapScreenContent(
                     onReplaySpeedChange = onReplaySpeedChange,
                     onReplaySeek = onReplaySeek,
                     showReplayDevFab = showReplayDevFab,
-                    onReplayDevFabClick = onReplayDevFabClick
+                    onReplayPickFileClick = onReplayPickFileClick
                 )
             }
         }

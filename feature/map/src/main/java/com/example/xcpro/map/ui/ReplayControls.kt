@@ -157,7 +157,7 @@ internal fun ReplayControlsContent(
     ) {
         Text(text = title, style = MaterialTheme.typography.titleMedium)
         Text(
-            text = "${formatDuration(elapsed)} / ${formatDuration(duration)} Â· ${"%.1f".format(speed)}x",
+            text = "${formatDuration(elapsed)} / ${formatDuration(duration)}  ·  ${"""%.1f""".format(speed)}x",
             style = MaterialTheme.typography.bodyMedium
         )
         Text(text = "Timeline", style = MaterialTheme.typography.bodySmall)
@@ -171,9 +171,9 @@ internal fun ReplayControlsContent(
         )
         Text(text = "Speed", style = MaterialTheme.typography.bodySmall)
         Slider(
-            value = speed.toFloat(),
+            value = speed.toFloat().coerceIn(1f, 20f),
             onValueChange = { onSpeedChanged(it.toDouble()) },
-            valueRange = 1f..60f,
+            valueRange = 1f..20f,
             modifier = Modifier.fillMaxWidth()
         )
         Row(
