@@ -123,12 +123,12 @@ internal class SensorFrontEnd(
         }
 
         val dt = (currentTime - prevTime) / 1000.0
-        if (dt <= 0.0 || dt < MIN_GATE_DT_SECONDS) {
+        if (dt <= 0.0) {
             remember(altitudeType, pressureAltitude, currentTime)
             return Double.NaN
         }
 
-        val vario = if (prevAlt != null && dt > MIN_DERIVATIVE_DT_SECONDS) {
+        val vario = if (prevAlt != null) {
             (pressureAltitude - prevAlt) / dt
         } else Double.NaN
 
