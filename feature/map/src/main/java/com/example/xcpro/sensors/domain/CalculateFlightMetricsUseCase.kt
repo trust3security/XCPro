@@ -20,6 +20,7 @@ import com.example.xcpro.sensors.domain.FlightMetricsConstants.GRAVITY
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.SPEED_HOLD_MS
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.DEFAULT_QNH_HPA
 import com.example.xcpro.sensors.domain.WindEstimator
+import com.example.xcpro.sensors.domain.SensorFrontEnd.SensorSnapshot
 
 
 /**
@@ -36,6 +37,7 @@ internal class CalculateFlightMetricsUseCase(
 
     private val circlingDetector = CirclingDetector()
     private val fusionBlackboard = FusionBlackboard()
+    private val sensorFrontEnd = SensorFrontEnd(fusionBlackboard)
 
     private val displaySmoother = DisplayVarioSmoother(
         smoothTimeSeconds = DISPLAY_SMOOTH_TIME_S,
@@ -153,23 +155,22 @@ internal class CalculateFlightMetricsUseCase(
         val rawDisplayNetto = averages.displayNettoRaw
         val displayNetto = smoothDisplayNetto(rawDisplayNetto, request.deltaTimeSeconds, nettoResult.valid)
 
-        val navAltitude = when {
-            navBaroAltitudeEnabled && baroResult != null && isQnhCalibrated -> baroAltitude
-            gps.altitude.value.isFinite() -> gps.altitude.value
-            else -> baroAltitude
-        }
+        val snapshot: SensorSnapshot = sensorFrontEnd.buildSnapshot(
+            navBaroAltitudeEnabled = navBaroAltitudeEnabled,
+            baroAltitude = baroAltitude,
+            gpsAltitude = gps.altitude.value,
+            baroResult = baroResult,
+            isQnhCalibrated = isQnhCalibrated,
+            airspeedEstimate = airspeedFromWind,
+            currentTime = currentTime
+        )
 
-        val altitudeForAirspeed = altitudeForAirspeed(navAltitude, gps.altitude.value)
-        val airspeedEstimate = airspeedFromWind
-        val now = currentTime
-        val activeEstimate = fusionBlackboard.resolveAirspeedHold(airspeedEstimate, now)
-
-        val indicatedAirspeedMs = activeEstimate?.indicatedMs ?: 0.0
-        val trueAirspeedMs = activeEstimate?.trueMs ?: 0.0
-        val airspeedSourceLabel = activeEstimate?.source?.label ?: AirspeedSource.GPS_GROUND.label
-        val tasValid = activeEstimate != null
-
-        val teAltitude = computeTotalEnergyAltitude(navAltitude, trueAirspeedMs)
+        val navAltitude = snapshot.navAltitude
+        val indicatedAirspeedMs = snapshot.indicatedAirspeedMs
+        val trueAirspeedMs = snapshot.trueAirspeedMs
+        val airspeedSourceLabel = snapshot.airspeedSource.label
+        val tasValid = snapshot.tasValid
+        val teAltitude = snapshot.teAltitude
         if (!calibrationChanged) {
             flightHelpers.updateThermalState(
                 timestampMillis = currentTime,
@@ -250,16 +251,6 @@ internal class CalculateFlightMetricsUseCase(
         baroAltitude.isFinite() && baroAltitude != 0.0 -> baroAltitude
         gpsAltitude.isFinite() -> gpsAltitude
         else -> 0.0
-    }
-
-    private fun computeTotalEnergyAltitude(baroAltitude: Double, trueAirspeed: Double): Double {
-        val potential = if (baroAltitude.isFinite()) baroAltitude else 0.0
-        val kinetic = if (trueAirspeed.isFinite()) {
-            (trueAirspeed * trueAirspeed) / (2.0 * GRAVITY)
-        } else {
-            0.0
-        }
-        return potential + kinetic
     }
 
     private fun smoothDisplayVario(raw: Double, deltaTime: Double, isValid: Boolean): Double =
