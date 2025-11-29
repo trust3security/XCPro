@@ -182,8 +182,12 @@ internal object CardDataFormatter {
 
             "thermal_tc_avg" -> {
                 val sample = liveData.thermalAverageCircle
-                if (abs(sample) <= 0.1f) return Pair(placeholderFor(cardId), "NO DATA")
-                val formatted = UnitsFormatter.verticalSpeed(VerticalSpeedMs(sample.toDouble()), units)
+                val isValid = liveData.currentThermalValid && sample.isFinite()
+                if (!isValid) return Pair(placeholderFor(cardId), "NO DATA")
+                val formatted = UnitsFormatter.verticalSpeed(
+                    VerticalSpeedMs(sample.toDouble()),
+                    units
+                )
                 Pair(formatted.text, "TC AVG")
             }
 
