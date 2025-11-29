@@ -13,6 +13,8 @@ import kotlin.math.abs
  * and exposes read-only aggregates to the use case.
  */
 internal class FusionBlackboard {
+    private val minGateDtSeconds = 0.02    // reject duplicate/too-fast timestamps
+    private val minDerivativeDtSeconds = 0.05
     private val bruttoAverageWindow = FixedSampleAverageWindow(FlightMetricsConstants.AVERAGE_WINDOW_SECONDS)
     private val nettoAverageWindow = FixedSampleAverageWindow(FlightMetricsConstants.AVERAGE_WINDOW_SECONDS)
     private val nettoDisplayWindow = TimedAverageWindow(FlightMetricsConstants.NETTO_DISPLAY_WINDOW_MS)
@@ -62,31 +64,76 @@ internal class FusionBlackboard {
     }
 
     fun pressureVario(pressureAltitude: Double, currentTime: Long): Double {
-        val dt = if (prevPressureTime == 0L) 0.0 else (currentTime - prevPressureTime) / 1000.0
-        val vario = if (pressureAltitude.isFinite() && prevPressureAltitude != null && dt > 0.05) {
+        if (!pressureAltitude.isFinite()) {
+            return Double.NaN
+        }
+
+        if (prevPressureTime == 0L) {
+            prevPressureAltitude = pressureAltitude
+            prevPressureTime = currentTime
+            return Double.NaN
+        }
+
+        val dt = (currentTime - prevPressureTime) / 1000.0
+        if (dt <= 0.0 || dt < minGateDtSeconds) {
+            return Double.NaN
+        }
+
+        val vario = if (prevPressureAltitude != null && dt > minDerivativeDtSeconds) {
             (pressureAltitude - prevPressureAltitude!!) / dt
         } else Double.NaN
-        prevPressureAltitude = pressureAltitude.takeIf { it.isFinite() }
+
+        prevPressureAltitude = pressureAltitude
         prevPressureTime = currentTime
         return vario
     }
 
     fun baroVario(baroAltitude: Double, currentTime: Long): Double {
-        val dt = if (prevBaroTime == 0L) 0.0 else (currentTime - prevBaroTime) / 1000.0
-        val vario = if (baroAltitude.isFinite() && prevBaroAltitude != null && dt > 0.05) {
+        if (!baroAltitude.isFinite()) {
+            return Double.NaN
+        }
+
+        if (prevBaroTime == 0L) {
+            prevBaroAltitude = baroAltitude
+            prevBaroTime = currentTime
+            return Double.NaN
+        }
+
+        val dt = (currentTime - prevBaroTime) / 1000.0
+        if (dt <= 0.0 || dt < minGateDtSeconds) {
+            return Double.NaN
+        }
+
+        val vario = if (prevBaroAltitude != null && dt > minDerivativeDtSeconds) {
             (baroAltitude - prevBaroAltitude!!) / dt
         } else Double.NaN
-        prevBaroAltitude = baroAltitude.takeIf { it.isFinite() }
+
+        prevBaroAltitude = baroAltitude
         prevBaroTime = currentTime
         return vario
     }
 
     fun gpsVario(gpsAltitude: Double, currentTime: Long): Double {
-        val dt = if (prevGpsTime == 0L) 0.0 else (currentTime - prevGpsTime) / 1000.0
-        val vario = if (gpsAltitude.isFinite() && prevGpsAltitude != null && dt > 0.05) {
+        if (!gpsAltitude.isFinite()) {
+            return Double.NaN
+        }
+
+        if (prevGpsTime == 0L) {
+            prevGpsAltitude = gpsAltitude
+            prevGpsTime = currentTime
+            return Double.NaN
+        }
+
+        val dt = (currentTime - prevGpsTime) / 1000.0
+        if (dt <= 0.0 || dt < minGateDtSeconds) {
+            return Double.NaN
+        }
+
+        val vario = if (prevGpsAltitude != null && dt > minDerivativeDtSeconds) {
             (gpsAltitude - prevGpsAltitude!!) / dt
-        } else lastGpsVario
-        prevGpsAltitude = gpsAltitude.takeIf { it.isFinite() }
+        } else Double.NaN
+
+        prevGpsAltitude = gpsAltitude
         prevGpsTime = currentTime
         if (vario.isFinite()) lastGpsVario = vario
         return vario

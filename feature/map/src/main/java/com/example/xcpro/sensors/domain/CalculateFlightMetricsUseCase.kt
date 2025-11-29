@@ -104,11 +104,15 @@ internal class CalculateFlightMetricsUseCase(
         val gpsVario = gpsAltVario
 
         val teVario = teVerticalSpeed.takeIf { currentTime <= request.varioValidUntil }
-        val varioSource = if (teVario != null) "TE" else "GPS"
         val bruttoVario = when {
             teVario != null -> teVario
             gpsVario.isFinite() -> gpsVario
-            else -> fusionBlackboard.bruttoFallback()  // hold last valid brutto if both missing
+            else -> Double.NaN  // prefer dropping the sample over holding stale values
+        }
+        val varioSource = when {
+            teVario != null -> "TE"
+            gpsVario.isFinite() -> "GPS"
+            else -> "NONE"
         }
         val varioValid = bruttoVario.isFinite()
         fusionBlackboard.rememberBrutto(bruttoVario)
