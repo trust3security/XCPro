@@ -90,7 +90,7 @@ internal fun MapOverlayStack(
     onReplaySpeedChange: (Double) -> Unit,
     onReplaySeek: (Float) -> Unit,
     showReplayDevFab: Boolean,
-    onReplayDevFabClick: () -> Unit
+    onReplayPickFileClick: () -> Unit
 ) {
     val currentMode by mapState.currentModeFlow.collectAsStateWithLifecycle()
     val showDistanceCircles by mapState.showDistanceCirclesFlow.collectAsStateWithLifecycle()
@@ -244,7 +244,7 @@ internal fun MapOverlayStack(
         )
 
         if (showReplayDevFab) {
-            ReplayDevFab(onReplayDevFabClick = onReplayDevFabClick)
+            ReplayDevFab(onReplayPickFileClick = onReplayPickFileClick)
         }
 
         HamburgerMenu(

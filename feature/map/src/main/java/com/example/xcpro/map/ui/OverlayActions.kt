@@ -53,10 +53,10 @@ internal fun BoxScope.AatEditFab(
 
 @Composable
 internal fun BoxScope.ReplayDevFab(
-    onReplayDevFabClick: () -> Unit
+    onReplayPickFileClick: () -> Unit
 ) {
     FloatingActionButton(
-        onClick = onReplayDevFabClick,
+        onClick = onReplayPickFileClick,
         modifier = Modifier
             .align(Alignment.BottomEnd)
             .padding(bottom = 96.dp, end = 16.dp)
@@ -64,7 +64,7 @@ internal fun BoxScope.ReplayDevFab(
     ) {
         Icon(
             imageVector = Icons.Default.PlayArrow,
-            contentDescription = "Start sample replay"
+            contentDescription = "Pick and start IGC replay"
         )
     }
 }

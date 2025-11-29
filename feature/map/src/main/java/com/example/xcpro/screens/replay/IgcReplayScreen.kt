@@ -28,6 +28,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -97,6 +100,11 @@ fun IgcReplayScreen(
 
             SpeedSelector(uiState = uiState, onSpeedChanged = viewModel::setSpeed)
 
+            TimelineCard(
+                uiState = uiState,
+                onSeek = { fraction -> viewModel.seekTo(fraction) }
+            )
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -159,12 +167,50 @@ private fun SpeedSelector(
             Text("Replay speed", fontWeight = FontWeight.Bold)
             Text("${"%.1f".format(uiState.speedMultiplier)} x")
             Slider(
-                value = uiState.speedMultiplier.toFloat(),
+                value = uiState.speedMultiplier.toFloat().coerceIn(1f, 20f),
                 onValueChange = { onSpeedChanged(it.toDouble()) },
-                valueRange = 1f..10f
+                valueRange = 1f..20f
             )
         }
     }
+}
+
+@Composable
+private fun TimelineCard(
+    uiState: IgcReplayUiState,
+    onSeek: (Float) -> Unit
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            val elapsed = formatDuration(uiState.elapsedMillis)
+            val total = formatDuration(uiState.durationMillis)
+            var localProgress by remember { mutableStateOf(uiState.progressFraction.coerceIn(0f, 1f)) }
+            LaunchedEffect(uiState.progressFraction) {
+                localProgress = uiState.progressFraction.coerceIn(0f, 1f)
+            }
+            Text("Timeline", fontWeight = FontWeight.Bold)
+            Text("$elapsed / $total")
+            Slider(
+                value = localProgress,
+                onValueChange = { localProgress = it.coerceIn(0f, 1f) },
+                onValueChangeFinished = { onSeek(localProgress) },
+                enabled = uiState.selectedUri != null
+            )
+        }
+    }
+}
+
+private fun formatDuration(millis: Long): String {
+    if (millis <= 0L) return "00:00"
+    val totalSeconds = millis / 1000
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return String.format("%02d:%02d", minutes, seconds)
 }
 
 @Composable
