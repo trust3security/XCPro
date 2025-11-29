@@ -3,22 +3,23 @@ package com.example.xcpro.map
 import android.Manifest
 import android.content.Context
 import android.util.Log
-import androidx.compose.runtime.Composable
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.lifecycle.LifecycleOwner
-import com.example.xcpro.common.orientation.MapOrientationMode
-import com.example.xcpro.map.QnhPreferencesRepository
-import com.example.xcpro.sensors.UnifiedSensorManager
-import com.example.xcpro.sensors.SensorFusionRepository
-import com.example.xcpro.sensors.GPSData
+import androidx.compose.runtime.Composable
 import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.MapOrientationPreferences
+import com.example.xcpro.common.orientation.MapOrientationMode
 import com.example.xcpro.common.units.UnitsConverter
-import com.example.xcpro.vario.VarioServiceManager
 import com.example.xcpro.map.helpers.GliderPaddingHelper
+import com.example.xcpro.sensors.GPSData
+import com.example.xcpro.sensors.SensorFusionRepository
+import com.example.xcpro.sensors.UnifiedSensorManager
+import com.example.xcpro.vario.VarioServiceManager
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
@@ -39,6 +40,9 @@ class LocationManager(
     private var sensorsStarted = false
     private val orientationPreferences = MapOrientationPreferences(context)
     private val gliderPaddingHelper = GliderPaddingHelper(context.resources, orientationPreferences)
+    private val displayPoseSmoother = DisplayPoseSmoother()
+    private var displayLoopJob: Job? = null
+    private var lastDisplayedLocation: LatLng? = null
 
     private fun ensureSensorsRunning() {
         val status = unifiedSensorManager.getSensorStatus()
@@ -85,6 +89,7 @@ class LocationManager(
                 storedQnh?.let { sensorFusionRepository.setManualQnh(it) }
             }
         }
+        startDisplayLoop()
     }
 
     // Map UI state proxies (MapScreenState is the single owner)
@@ -276,19 +281,21 @@ class LocationManager(
         // Update the current user location
         currentUserLocation = location.latLng
 
-        // Update blue location overlay with real GPS data
-        // Pass GPS track (bearing) and magnetic heading for proper icon rotation
-        mapState.blueLocationOverlay?.updateLocation(location.latLng, location.bearing, magneticHeading, orientationMode)
-        mapState.blueLocationOverlay?.setVisible(true)
+        displayPoseSmoother.pushRawFix(
+            DisplayPoseSmoother.RawFix(
+                latitude = location.latLng.latitude,
+                longitude = location.latLng.longitude,
+                speedMs = location.speed.value,
+                trackDeg = location.bearing,
+                magneticHeading = magneticHeading,
+                accuracyM = location.accuracy.toDouble(),
+                timestampMs = location.timestamp,
+                orientationMode = orientationMode
+            )
+        )
 
-        // DISABLED: Using Canvas overlay instead of map-based circles
-        // mapState.distanceCirclesOverlay?.updateLocation(location.latLng)
-
-        // Handle initial centering
+        // Initial centering still happens here; ongoing motion is handled in the display loop
         handleInitialCentering(location.latLng)
-
-        // Handle automatic camera tracking for TRACK_UP mode only
-        handleAutomaticCameraTracking(location.latLng, orientationMode)
     }
 
     private fun handleInitialCentering(location: LatLng) {
@@ -357,6 +364,69 @@ class LocationManager(
         }
     }
 
+    /**
+     * Decoupled 30 Hz display loop that drives the smoothed pose into the overlay and camera.
+     * Mirrors XCSoar: steady cadence + dead-reckon + light damping.
+     */
+    private fun startDisplayLoop() {
+        if (displayLoopJob != null) return
+        displayLoopJob = coroutineScope.launch {
+            while (isActive) {
+                val pose = displayPoseSmoother.tick(System.currentTimeMillis())
+                if (pose != null) {
+                    val map = mapState.mapLibreMap
+                    val overlay = mapState.blueLocationOverlay
+
+                    if (map != null && overlay != null) {
+                        val thresholdPx = markerThresholdPx(pose.accuracyM)
+                        if (shouldMoveMarkerLazy(lastDisplayedLocation, pose.location, map, thresholdPx)) {
+                            overlay.updateLocation(
+                                pose.location,
+                                pose.trackDeg,
+                                pose.magneticHeading,
+                                pose.orientationMode
+                            )
+                            overlay.setVisible(true)
+                            lastDisplayedLocation = pose.location
+                        }
+
+                        handleInitialCentering(pose.location)
+                        handleAutomaticCameraTracking(pose.location, pose.orientationMode)
+                    }
+                }
+                delay(33L) // ~30 Hz
+            }
+        }
+    }
+
+    private fun markerThresholdPx(accuracyM: Double): Float =
+        when {
+            accuracyM > 20.0 -> 1.0f
+            accuracyM > 12.0 -> 0.75f
+            else -> 0.5f
+        }
+
+    private fun shouldMoveMarkerLazy(
+        current: LatLng?,
+        target: LatLng,
+        map: MapLibreMap,
+        thresholdPx: Float
+    ): Boolean {
+        if (current == null) return true
+        return try {
+            val projection = map.projection
+            val currentPoint = projection.toScreenLocation(current)
+            val targetPoint = projection.toScreenLocation(target)
+            val dx = targetPoint.x - currentPoint.x
+            val dy = targetPoint.y - currentPoint.y
+            val distSq = dx * dx + dy * dy
+            distSq > thresholdPx * thresholdPx
+        } catch (e: Exception) {
+            Log.w(TAG, "shouldMoveMarkerLazy: projection failed, defaulting to update", e)
+            true
+        }
+    }
+
     fun updateLocationFromFlightData(
         liveData: RealTimeFlightData,
         orientationMode: MapOrientationMode,
@@ -374,34 +444,21 @@ class LocationManager(
             currentUserLocation = newLocation
             Log.d(TAG, "🌍 User location updated: ${liveData.latitude}, ${liveData.longitude}")
 
-            mapState.mapLibreMap?.let { map ->
-                try {
-                    Log.d(TAG, "🗺️ Map available for sailplane overlay update, style=${map.style != null}")
+            displayPoseSmoother.pushRawFix(
+                DisplayPoseSmoother.RawFix(
+                    latitude = liveData.latitude,
+                    longitude = liveData.longitude,
+                    speedMs = liveData.groundSpeed,
+                    trackDeg = liveData.track,
+                    magneticHeading = magneticHeading,
+                    accuracyM = liveData.accuracy,
+                    timestampMs = liveData.timestamp,
+                    orientationMode = orientationMode
+                )
+            )
 
-                    // Update glider icon with GPS track and magnetic heading for proper rotation per mode
-                    mapState.blueLocationOverlay?.let { overlay ->
-                        overlay.updateLocation(
-                            newLocation,
-                            liveData.track,  // GPS track (direction of movement)
-                            magneticHeading,  // Magnetic heading (direction nose is pointing)
-                            orientationMode   // Current orientation mode
-                        )
-                        overlay.setVisible(true)
-                    }
-
-                    // Ensure replay sessions also snap the camera to the aircraft once at start
-                    handleInitialCentering(newLocation)
-                    // DISABLED: Using Canvas overlay instead of map-based circles
-                    // mapState.distanceCirclesOverlay?.updateLocation(newLocation)
-
-                    // Handle automatic camera tracking for smooth movement
-                    handleAutomaticCameraTracking(newLocation, orientationMode)
-
-                    Log.d(TAG, "✅ Custom sailplane overlay updated successfully (track=${liveData.track}°)")
-                } catch (e: Exception) {
-                    Log.e(TAG, "❌ Error updating sailplane overlay: ${e.message}", e)
-                }
-            } ?: Log.w(TAG, "⚠️ MapLibreMap is null, cannot update location")
+            // Ensure replay sessions also snap the camera to the aircraft once at start
+            handleInitialCentering(newLocation)
         } else {
             Log.d(TAG, "⚠️ GPS not fixed or invalid coordinates: " +
                       "fixed=${liveData}, " +
