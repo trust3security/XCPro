@@ -40,7 +40,7 @@ class BarometricAltitudeCalculator(
 
     // Calibration settings
     private val CALIBRATION_INTERVAL = 60000L // 1 minute (for initial acquisition only)
-    private val GPS_ACCURACY_THRESHOLD = 100.0 // meters (very relaxed for SRTM-based calibration - only need horizontal position)
+    private val GPS_ACCURACY_THRESHOLD = 35.0 // meters - require confirmed horizontal fix before terrain calibration
     private val CALIBRATION_SAMPLES_REQUIRED = 15 // 15 samples over ~15 seconds for stable QNH
 
     // ✅ FIX: One-time QNH calibration with averaging (aviation standard)
@@ -254,34 +254,32 @@ class BarometricAltitudeCalculator(
     }
 
     /**
-     * Determine if we should collect this sample for calibration
-     * Only during startup, with reasonable GPS horizontal accuracy
-     *
-     * NOTE: isGPSFixed NOT required for SRTM-based calibration
-     * We only need GPS coordinates (horizontal position) to fetch terrain elevation
+     * Determine if we should collect this sample for calibration.
+     * Requires a confirmed GPS fix so SRTM-based auto-QNH stays idle when the handset has no satellites.
      */
     private fun shouldCollectCalibrationSample(
         gpsAltitude: Double?,
         gpsAccuracy: Double?,
         isGPSFixed: Boolean
     ): Boolean {
-        // Validate GPS altitude: allow sea level and common negative elevations; reject NaN and absurd values
         if (gpsAltitude == null || gpsAltitude.isNaN() || gpsAltitude < -500.0) {
-            Log.d(TAG, "🐛 Skip sample: invalid gpsAltitude ($gpsAltitude)")
+            Log.d(TAG, "Skip sample: invalid gpsAltitude ($gpsAltitude)")
             return false
         }
         if (gpsAccuracy == null) {
-            Log.d(TAG, "🐛 Skip sample: gpsAccuracy is null")
+            Log.d(TAG, "Skip sample: gpsAccuracy is null")
             return false
         }
         if (gpsAccuracy >= GPS_ACCURACY_THRESHOLD) {
-            Log.d(TAG, "🐛 Skip sample: gpsAccuracy $gpsAccuracy >= threshold $GPS_ACCURACY_THRESHOLD")
+            Log.d(TAG, "Skip sample: gpsAccuracy $gpsAccuracy >= threshold $GPS_ACCURACY_THRESHOLD")
             return false
         }
-        // ✅ REMOVED: isGPSFixed check - not needed for SRTM-based calibration
-        // We only need GPS coordinates to fetch terrain elevation, not high-quality vertical accuracy
+        if (!isGPSFixed) {
+            Log.d(TAG, "Skip sample: GPS fix not confirmed (isGPSFixed=$isGPSFixed)")
+            return false
+        }
 
-        Log.i(TAG, "✅ Sample ACCEPTED! (alt=$gpsAltitude, acc=$gpsAccuracy, fixed=$isGPSFixed)")
+        Log.i(TAG, "Sample accepted for QNH calibration (alt=$gpsAltitude, acc=$gpsAccuracy, fixed=$isGPSFixed)")
         return true
     }
 
