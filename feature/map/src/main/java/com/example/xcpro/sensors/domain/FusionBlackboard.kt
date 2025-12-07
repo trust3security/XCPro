@@ -17,8 +17,8 @@ internal class FusionBlackboard {
     private val nettoAverageWindow = FixedSampleAverageWindow(FlightMetricsConstants.AVERAGE_WINDOW_SECONDS)
     private val nettoDisplayWindow = TimedAverageWindow(FlightMetricsConstants.NETTO_DISPLAY_WINDOW_MS)
 
-    private var lastBruttoSampleTime = 0L
-    private var lastNettoSampleTime = 0L
+    private var lastBruttoSampleTime = -1L
+    private var lastNettoSampleTime = -1L
     private var lastThermalState = false
 
     private var lastNettoValue = Double.NaN
@@ -142,8 +142,8 @@ internal class FusionBlackboard {
         bruttoAverageWindow.clear()
         nettoAverageWindow.clear()
         nettoDisplayWindow.clear()
-        lastBruttoSampleTime = 0L
-        lastNettoSampleTime = 0L
+        lastBruttoSampleTime = -1L
+        lastNettoSampleTime = -1L
         lastThermalState = false
         lastNettoValue = Double.NaN
         lastIndicatedMs = Double.NaN

@@ -79,15 +79,19 @@ internal class CalculateFlightMetricsUseCase(
             windVector = windVector
         )
 
-        val teSpeed = airspeedFromWind?.trueMs ?: 0.0
-        val teVerticalSpeed = flightHelpers.calculateTotalEnergy(
-            rawVario = varioResult.verticalSpeed,
-            currentSpeed = teSpeed,
-            previousSpeed = prevTeSpeed,
-            deltaTime = request.deltaTimeSeconds
-        )
-        prevTeSpeed = teSpeed
-        val teVario = teVerticalSpeed.takeIf { currentTime <= request.varioValidUntil }
+        val teSpeed = airspeedFromWind?.trueMs
+        val teVario = if (teSpeed != null) {
+            val teVerticalSpeed = flightHelpers.calculateTotalEnergy(
+                rawVario = varioResult.verticalSpeed,
+                currentSpeed = teSpeed,
+                previousSpeed = prevTeSpeed,
+                deltaTime = request.deltaTimeSeconds
+            )
+            prevTeSpeed = teSpeed
+            teVerticalSpeed.takeIf { currentTime <= request.varioValidUntil }
+        } else {
+            null
+        }
 
         val snapshot: SensorSnapshot = sensorFrontEnd.buildSnapshot(
             navBaroAltitudeEnabled = navBaroAltitudeEnabled,

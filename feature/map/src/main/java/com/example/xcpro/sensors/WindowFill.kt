@@ -14,7 +14,8 @@ internal fun addSamplesForElapsedSeconds(
     currentTime: Long,
     sampleValue: Double
 ): Long {
-    if (lastTimestamp == 0L || currentTime < lastTimestamp) {
+    // Use negative timestamp as "uninitialised" sentinel; 0 is a valid epoch timestamp.
+    if (lastTimestamp < 0L || currentTime < lastTimestamp) {
         window.clear()
         if (sampleValue.isFinite()) {
             window.addSample(sampleValue) // start window with a single sample instead of pre-filling

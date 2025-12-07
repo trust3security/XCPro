@@ -2,6 +2,7 @@ package com.example.xcpro.sensors.domain
 
 import com.example.dfcards.calculations.BarometricAltitudeData
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.GRAVITY
+import kotlin.math.abs
 
 private const val MIN_GATE_DT_SECONDS = 0.02  // reject duplicate/too-fast timestamps
 private const val MIN_DERIVATIVE_DT_SECONDS = 0.05
@@ -61,25 +62,16 @@ internal class SensorFrontEnd(
         val baroVario = deriveVario(pressureAltitude = baroAltitude, currentTime = currentTime, altitudeType = AltitudeType.BARO)
         val gpsVario = deriveVario(pressureAltitude = gpsAltitude, currentTime = currentTime, altitudeType = AltitudeType.GPS)
 
-        val bruttoVario: Double
-        val varioSource: String
-        when {
-            teVario != null && teVario.isFinite() -> {
-                bruttoVario = teVario
-                varioSource = "TE"
-            }
-            gpsVario.isFinite() -> {
-                bruttoVario = gpsVario
-                varioSource = "GPS"
-            }
-            pressureVario.isFinite() -> {
-                bruttoVario = pressureVario
-                varioSource = "PRESSURE"
-            }
-            else -> {
-                bruttoVario = Double.NaN
-                varioSource = "NONE"
-            }
+        val (bruttoVario, varioSource) = if (teVario != null && teVario.isFinite()) {
+            teVario to "TE"
+        } else {
+            val candidates = listOf(
+                "GPS" to gpsVario,
+                "PRESSURE" to pressureVario,
+                "BARO" to baroVario
+            ).filter { it.second.isFinite() }
+            val best = candidates.maxByOrNull { abs(it.second) }
+            if (best != null) best.second to best.first else Double.NaN to "NONE"
         }
         val varioValid = bruttoVario.isFinite()
 
@@ -102,11 +94,11 @@ internal class SensorFrontEnd(
     private enum class AltitudeType { PRESSURE, BARO, GPS }
 
     private var prevPressureAltitude: Double? = null
-    private var prevPressureTime: Long = 0L
+    private var prevPressureTime: Long = -1L
     private var prevBaroAltitude: Double? = null
-    private var prevBaroTime: Long = 0L
+    private var prevBaroTime: Long = -1L
     private var prevGpsAltitude: Double? = null
-    private var prevGpsTime: Long = 0L
+    private var prevGpsTime: Long = -1L
 
     private fun deriveVario(pressureAltitude: Double, currentTime: Long, altitudeType: AltitudeType): Double {
         if (!pressureAltitude.isFinite()) return Double.NaN
@@ -117,7 +109,7 @@ internal class SensorFrontEnd(
             AltitudeType.GPS -> prevGpsAltitude to prevGpsTime
         }
 
-        if (prevTime == 0L) {
+        if (prevTime < 0L) {
             remember(altitudeType, pressureAltitude, currentTime)
             return Double.NaN
         }
@@ -155,10 +147,10 @@ internal class SensorFrontEnd(
 
     fun resetDerivatives() {
         prevPressureAltitude = null
-        prevPressureTime = 0L
+        prevPressureTime = -1L
         prevBaroAltitude = null
-        prevBaroTime = 0L
+        prevBaroTime = -1L
         prevGpsAltitude = null
-        prevGpsTime = 0L
+        prevGpsTime = -1L
     }
 }
