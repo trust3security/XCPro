@@ -123,11 +123,16 @@ object MapComposeEffects {
         }
 
         LaunchedEffect(Unit) {
+            flightDataManager.cardFlightDataFlow.collectLatest { displaySample ->
+                if (displaySample != null && cardsReadyState.value) {
+                    flightViewModel.updateCardsWithLiveData(displaySample)
+                }
+            }
+        }
+
+        LaunchedEffect(Unit) {
             flightDataManager.liveFlightDataFlow.collectLatest { liveData ->
                 if (liveData != null) {
-                    if (cardsReadyState.value) {
-                        flightViewModel.updateCardsWithLiveData(liveData)
-                    }
                     orientationManager.updateFromFlightData(liveData)
                     // AI-NOTE: Single-cadence map update to mirror XCSoar's SetLocationLazy flow.
                     locationManager.updateLocationFromFlightData(

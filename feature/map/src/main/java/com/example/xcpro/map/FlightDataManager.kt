@@ -15,9 +15,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 /**
  * Bridge between the map-layer UI and the flight-card SSOT ViewModel. It keeps UI-facing,
@@ -31,17 +32,93 @@ class FlightDataManager(
 ) {
     companion object {
         private const val TAG = "FlightDataManager"
+        private const val UI_NUMERIC_FRAME_MS = 1000L / 12  // ~12 Hz for numbers
+        private const val ALTITUDE_BUCKET_M = 0.5
+        private const val VARIO_BUCKET_MS = 0.1f
+        private const val WIND_SPEED_BUCKET_KT = 1f
+        private const val WIND_DIR_BUCKET_DEG = 5f
+        private const val LD_BUCKET = 0.1f
     }
 
     private val _liveFlightData = MutableStateFlow<RealTimeFlightData?>(null)
     val liveFlightDataFlow: StateFlow<RealTimeFlightData?> = _liveFlightData.asStateFlow()
     val displayVarioFlow: StateFlow<Float> =
         liveFlightDataFlow
-            .map { it?.displayVario?.toFloat() ?: 0f }
+            .map { (it?.displayVario ?: 0.0).toFloat().bucket(VARIO_BUCKET_MS) }
+            .distinctUntilChanged()
+            .throttleFrame(UI_NUMERIC_FRAME_MS)
             .stateIn(
                 scope = coroutineScope,
                 started = SharingStarted.WhileSubscribed(5_000),
                 initialValue = 0f
+            )
+
+    val nettoDisplayFlow: StateFlow<Float> =
+        liveFlightDataFlow
+            .map { (it?.netto ?: 0f).bucket(VARIO_BUCKET_MS) }
+            .distinctUntilChanged()
+            .throttleFrame(UI_NUMERIC_FRAME_MS)
+            .stateIn(
+                scope = coroutineScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = 0f
+            )
+
+    val altitudeDisplayFlow: StateFlow<Double> =
+        liveFlightDataFlow
+            .map { (it?.baroAltitude ?: 0.0).bucket(ALTITUDE_BUCKET_M) }
+            .distinctUntilChanged()
+            .throttleFrame(UI_NUMERIC_FRAME_MS)
+            .stateIn(
+                scope = coroutineScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = 0.0
+            )
+
+    val windSpeedDisplayFlow: StateFlow<Float> =
+        liveFlightDataFlow
+            .map { (it?.windSpeed ?: 0f).bucket(WIND_SPEED_BUCKET_KT) }
+            .distinctUntilChanged()
+            .throttleFrame(UI_NUMERIC_FRAME_MS)
+            .stateIn(
+                scope = coroutineScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = 0f
+            )
+
+    val windDirectionDisplayFlow: StateFlow<Float> =
+        liveFlightDataFlow
+            .map { (it?.windDirection ?: 0f).bucket(WIND_DIR_BUCKET_DEG) }
+            .distinctUntilChanged()
+            .throttleFrame(UI_NUMERIC_FRAME_MS)
+            .stateIn(
+                scope = coroutineScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = 0f
+            )
+
+    val glideRatioDisplayFlow: StateFlow<Float> =
+        liveFlightDataFlow
+            .map { (it?.currentLD ?: 0f).bucket(LD_BUCKET) }
+            .distinctUntilChanged()
+            .throttleFrame(UI_NUMERIC_FRAME_MS)
+            .stateIn(
+                scope = coroutineScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = 0f
+            )
+
+    /**
+     * Throttled, bucketed snapshot for UI/cards; raw flow remains unthrottled for map/audio.
+     */
+    val cardFlightDataFlow: StateFlow<RealTimeFlightData?> =
+        liveFlightDataFlow
+            .map { it?.toDisplayBucket() }
+            .throttleFrame(UI_NUMERIC_FRAME_MS)
+            .stateIn(
+                scope = coroutineScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = null
             )
     val latitudeFlow: StateFlow<Double> =
         liveFlightDataFlow
@@ -154,6 +231,19 @@ class FlightDataManager(
         currentMode in visibleModes
 
     fun getFallbackMode(): FlightMode = FlightMode.CRUISE
+
+    private fun RealTimeFlightData.toDisplayBucket(): RealTimeFlightData =
+        copy(
+            displayVario = displayVario.bucket(VARIO_BUCKET_MS.toDouble()),
+            netto = netto.bucket(VARIO_BUCKET_MS),
+            displayNetto = displayNetto.bucket(VARIO_BUCKET_MS.toDouble()),
+            baroAltitude = baroAltitude.bucket(ALTITUDE_BUCKET_M),
+            gpsAltitude = gpsAltitude.bucket(ALTITUDE_BUCKET_M),
+            agl = agl.bucket(ALTITUDE_BUCKET_M),
+            windSpeed = windSpeed.bucket(WIND_SPEED_BUCKET_KT),
+            windDirection = windDirection.bucket(WIND_DIR_BUCKET_DEG),
+            currentLD = currentLD.bucket(LD_BUCKET)
+        )
 
 }
 

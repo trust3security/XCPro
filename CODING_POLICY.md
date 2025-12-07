@@ -420,3 +420,12 @@ A feature is done when:
 - Size guardrails: fusion layer ï¿½300 LOC, helpers ï¿½200 LOC, use cases ï¿½200 LOC; split before exceeding policy limits.
 - Testing contract: unit tests for helpers (spike/QNH guards, TC30 stability, wind eval); golden/regression tests to prove vario/netto/TC30 outputs unchanged after refactors.
 
+## 21) UI Data Cadence & Compose Throttling (pilot-facing)
+- Split UI streams by metric: expose separate display-ready `StateFlow`s for vario, netto, altitude, wind, LD, mode; cards/overlays collect only what they render.
+- Bucket + distinct: vario/netto to 0.1?m/s, altitude to 0.5?m, wind to 1?kt / 5°, LD to 0.1; apply `distinctUntilChangedBy` on buckets before Compose.
+- Cadence targets (UI only): numbers 10–15?Hz; needles/charts 6–10?FPS; map icon/camera 15–20?Hz. Audio/tone remains full-rate (50–100?Hz) but must not drive recomposition.
+- Throttle helpers: provide shared `throttleFrame(frameMs)`/`sample(frameMs)` in presentation; do throttling in ViewModel scope, not inside Composables.
+- derivedStateOf at edges: format/bucket in `remember { derivedStateOf { … } }` keyed to bucketed values to avoid recomposition storms.
+- Raw vs display flows: keep raw/high-rate streams for logging/audio/diagnostics; only surface display-ready (bucketed + throttled) flows to UI.
+- Scopes: `stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), initial)` for UI flows; no ad-hoc `CoroutineScope` creation in Composables.
+- Instrumentation: run macrobench/frame-timing on mid-tier hardware; target <5% janky frames during climb/replay scenarios.
