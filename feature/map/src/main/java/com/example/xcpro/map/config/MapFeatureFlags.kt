@@ -23,4 +23,16 @@ object MapFeatureFlags {
      */
     @Volatile
     var showReplayDebugFab: Boolean = BuildConfig.DEBUG
+
+    /**
+     * Pixel threshold for map location jitter suppression.
+     */
+    @Volatile
+    var locationJitterThresholdPx: Float = 0.5f
+
+    /**
+     * Window size for glider offset averaging.
+     */
+    @Volatile
+    var locationOffsetHistorySize: Int = 30
 }

@@ -7,7 +7,6 @@ import androidx.compose.runtime.Composable
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.lifecycle.LifecycleOwner
 import com.example.xcpro.common.orientation.MapOrientationMode
 import com.example.xcpro.map.QnhPreferencesRepository
 import com.example.xcpro.sensors.UnifiedSensorManager
@@ -18,11 +17,15 @@ import com.example.xcpro.MapOrientationPreferences
 import com.example.xcpro.common.units.UnitsConverter
 import com.example.xcpro.vario.VarioServiceManager
 import com.example.xcpro.map.helpers.GliderPaddingHelper
+import com.example.xcpro.map.config.MapFeatureFlags
+import com.example.xcpro.map.MapLocationFilter
+import com.example.xcpro.map.MapLibreProjector
+import com.example.xcpro.map.MapPositionController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
-import org.maplibre.android.maps.MapLibreMap
+import kotlin.math.roundToInt
 
 class LocationManager(
     private val context: Context,
@@ -39,6 +42,18 @@ class LocationManager(
     private var sensorsStarted = false
     private val orientationPreferences = MapOrientationPreferences(context)
     private val gliderPaddingHelper = GliderPaddingHelper(context.resources, orientationPreferences)
+    private val locationFilter = MapLocationFilter(
+        MapLocationFilter.Config(
+            thresholdPx = MapFeatureFlags.locationJitterThresholdPx,
+            historySize = MapFeatureFlags.locationOffsetHistorySize
+        ),
+        MapLibreProjector()
+    )
+    private val positionController = MapPositionController(
+        mapState = mapState,
+        maxBearingStepDeg = 5.0,
+        offsetHistorySize = MapFeatureFlags.locationOffsetHistorySize
+    )
 
     private fun ensureSensorsRunning() {
         val status = unifiedSensorManager.getSensorStatus()
@@ -265,30 +280,61 @@ class LocationManager(
         }
     }
 
+    private fun desiredCameraBearing(
+        trackBearing: Double,
+        magneticHeading: Double,
+        orientationMode: MapOrientationMode
+    ): Double =
+        when (orientationMode) {
+            MapOrientationMode.NORTH_UP -> 0.0
+            MapOrientationMode.TRACK_UP -> trackBearing
+            MapOrientationMode.HEADING_UP -> magneticHeading
+            MapOrientationMode.WIND_UP -> trackBearing
+        }
+
     fun updateLocationFromGPS(
         location: GPSData,
         orientationMode: MapOrientationMode = MapOrientationMode.NORTH_UP,
         magneticHeading: Double = 0.0
     ) {
-        Log.d(TAG, "📍 Updating location overlay: ${location.latLng.latitude}, ${location.latLng.longitude}, " +
-                  "bearing=${location.bearing}°, magHeading=${magneticHeading}°, mode=$orientationMode")
+        val map = mapState.mapLibreMap ?: run {
+            Log.w(TAG, "MapLibreMap null; cannot update location")
+            return
+        }
 
-        // Update the current user location
+        // XCSoar-style jitter gate (SetLocationLazy equivalent)
+        val accepted = locationFilter.accept(location.latLng, map)
+        if (!accepted) return
+
         currentUserLocation = location.latLng
 
-        // Update blue location overlay with real GPS data
-        // Pass GPS track (bearing) and magnetic heading for proper icon rotation
-        mapState.blueLocationOverlay?.updateLocation(location.latLng, location.bearing, magneticHeading, orientationMode)
-        mapState.blueLocationOverlay?.setVisible(true)
+        val shouldTrackCamera = isTrackingLocation && !showReturnButton
+        val padding = if (shouldTrackCamera) {
+            val rawPadding = gliderPaddingHelper.paddingArray()
+            positionController.rememberOffset(
+                MapPositionController.Offset(
+                    x = rawPadding[1].toFloat(), // top padding px
+                    y = rawPadding[3].toFloat()  // bottom padding px
+                )
+            )
+            val averaged = positionController.averagedOffset()
+            intArrayOf(0, averaged.x.roundToInt(), 0, averaged.y.roundToInt())
+        } else {
+            null
+        }
 
-        // DISABLED: Using Canvas overlay instead of map-based circles
-        // mapState.distanceCirclesOverlay?.updateLocation(location.latLng)
+        positionController.applyAcceptedSample(
+            map = map,
+            location = location.latLng,
+            trackBearing = location.bearing,
+            magneticHeading = magneticHeading,
+            orientationMode = orientationMode,
+            shouldTrackCamera = shouldTrackCamera,
+            padding = padding,
+            cameraBearing = desiredCameraBearing(location.bearing, magneticHeading, orientationMode)
+        )
 
-        // Handle initial centering
         handleInitialCentering(location.latLng)
-
-        // Handle automatic camera tracking for TRACK_UP mode only
-        handleAutomaticCameraTracking(location.latLng, orientationMode)
     }
 
     private fun handleInitialCentering(location: LatLng) {
@@ -326,87 +372,66 @@ class LocationManager(
         }
     }
 
-    private fun handleAutomaticCameraTracking(location: LatLng, orientationMode: MapOrientationMode) {
-        // Enable camera tracking for ALL modes when user hasn't panned
-        // The camera follows the GPS position to keep the aircraft icon in view
-        // The icon stays at actual GPS coordinates on the map
-        if (isTrackingLocation && !showReturnButton) {
-            mapState.mapLibreMap?.let { map ->
-                // XCSoar-style lazy recenter: skip sub-pixel jitter
-                if (!shouldRecentreLazy(location, map)) {
-                    return@let
-                }
-
-                val currentPosition = map.cameraPosition
-                val newCameraPosition = org.maplibre.android.camera.CameraPosition.Builder()
-                    .target(location)
-                    .zoom(currentPosition.zoom) // Always preserve current zoom - NO AUTO-ZOOM
-                    .bearing(currentPosition.bearing) // Bearing is handled by MapCameraManager
-                    .tilt(currentPosition.tilt) // Preserve current tilt
-                    .build()
-
-                // Instant camera movement for smooth real-time tracking
-                // Using moveCamera instead of animateCamera for butter-smooth following
-                map.moveCamera(CameraUpdateFactory.newCameraPosition(newCameraPosition))
-                gliderPaddingHelper.applyPadding(map)
-
-                Log.d(TAG, "$orientationMode: Camera following location at ${location.latitude}, ${location.longitude}")
-            }
-        } else {
-            Log.d(TAG, "Camera tracking: mode=$orientationMode, tracking=$isTrackingLocation, returnButton=$showReturnButton")
-        }
-    }
-
     fun updateLocationFromFlightData(
         liveData: RealTimeFlightData,
         orientationMode: MapOrientationMode,
         magneticHeading: Double
     ) {
-        Log.d(TAG, "📡 GPS Data: fixed=${liveData}, " +
-                  "lat=${liveData.latitude}, lon=${liveData.longitude}, " +
-                  "accuracy=${liveData.accuracy}, gpsAlt=${liveData.gpsAltitude}m, " +
-                  "speed=${String.format("%.1f", UnitsConverter.msToKnots(liveData.groundSpeed))}kt, track=${liveData.track}°")
+        val groundSpeedKnots = String.format(
+            "%.1f",
+            UnitsConverter.msToKnots(liveData.groundSpeed)
+        )
+        Log.d(
+            TAG,
+            "Replay/live GPS: lat=${liveData.latitude}, lon=${liveData.longitude}, " +
+                "accuracy=${liveData.accuracy}, gpsAlt=${liveData.gpsAltitude}m, " +
+                "gs=${groundSpeedKnots}kt, track=${liveData.track}"
+        )
 
-        // Update position even without perfect GPS fix for smooth tracking
-        // Just need valid coordinates (not 0,0)
-        if (liveData.latitude != 0.0 && liveData.longitude != 0.0) {
-            val newLocation = LatLng(liveData.latitude, liveData.longitude)
-            currentUserLocation = newLocation
-            Log.d(TAG, "🌍 User location updated: ${liveData.latitude}, ${liveData.longitude}")
-
-            mapState.mapLibreMap?.let { map ->
-                try {
-                    Log.d(TAG, "🗺️ Map available for sailplane overlay update, style=${map.style != null}")
-
-                    // Update glider icon with GPS track and magnetic heading for proper rotation per mode
-                    mapState.blueLocationOverlay?.let { overlay ->
-                        overlay.updateLocation(
-                            newLocation,
-                            liveData.track,  // GPS track (direction of movement)
-                            magneticHeading,  // Magnetic heading (direction nose is pointing)
-                            orientationMode   // Current orientation mode
-                        )
-                        overlay.setVisible(true)
-                    }
-
-                    // Ensure replay sessions also snap the camera to the aircraft once at start
-                    handleInitialCentering(newLocation)
-                    // DISABLED: Using Canvas overlay instead of map-based circles
-                    // mapState.distanceCirclesOverlay?.updateLocation(newLocation)
-
-                    // Handle automatic camera tracking for smooth movement
-                    handleAutomaticCameraTracking(newLocation, orientationMode)
-
-                    Log.d(TAG, "✅ Custom sailplane overlay updated successfully (track=${liveData.track}°)")
-                } catch (e: Exception) {
-                    Log.e(TAG, "❌ Error updating sailplane overlay: ${e.message}", e)
-                }
-            } ?: Log.w(TAG, "⚠️ MapLibreMap is null, cannot update location")
-        } else {
-            Log.d(TAG, "⚠️ GPS not fixed or invalid coordinates: " +
-                      "fixed=${liveData}, " +
-                      "lat=${liveData.latitude}, lon=${liveData.longitude}")
+        if (liveData.latitude == 0.0 || liveData.longitude == 0.0) {
+            Log.d(
+                TAG,
+                "Replay feed: invalid coordinates (lat=${liveData.latitude}, lon=${liveData.longitude})"
+            )
+            return
         }
+
+        val map = mapState.mapLibreMap ?: run {
+            Log.w(TAG, "MapLibreMap is null, cannot update location")
+            return
+        }
+
+        val newLocation = LatLng(liveData.latitude, liveData.longitude)
+        if (!locationFilter.accept(newLocation, map)) return
+
+        currentUserLocation = newLocation
+        val shouldTrackCamera = isTrackingLocation && !showReturnButton
+        val padding = if (shouldTrackCamera) {
+            val rawPadding = gliderPaddingHelper.paddingArray()
+            positionController.rememberOffset(
+                MapPositionController.Offset(
+                    x = rawPadding[1].toFloat(),
+                    y = rawPadding[3].toFloat()
+                )
+            )
+            val averaged = positionController.averagedOffset()
+            intArrayOf(0, averaged.x.roundToInt(), 0, averaged.y.roundToInt())
+        } else {
+            null
+        }
+
+        positionController.applyAcceptedSample(
+            map = map,
+            location = newLocation,
+            trackBearing = liveData.track,
+            magneticHeading = magneticHeading,
+            orientationMode = orientationMode,
+            shouldTrackCamera = shouldTrackCamera,
+            padding = padding,
+            cameraBearing = desiredCameraBearing(liveData.track, magneticHeading, orientationMode)
+        )
+
+        handleInitialCentering(newLocation)
     }
 
     fun saveLocation(location: LatLng, zoom: Double, bearing: Double) {
@@ -480,23 +505,4 @@ class LocationManager(
         showReturnButton()
     }
 
-    /**
-     * Mirror XCSoar's SetLocationLazy: only recentre if the projected move
-     * is greater than ~0.5 pixels on screen. Prevents jitter while following.
-     */
-    private fun shouldRecentreLazy(target: LatLng, map: MapLibreMap): Boolean {
-        return try {
-            val projection = map.projection
-            val currentCenter = map.cameraPosition.target ?: return true
-            val currentPoint = projection.toScreenLocation(currentCenter)
-            val targetPoint = projection.toScreenLocation(target)
-            val dx = targetPoint.x - currentPoint.x
-            val dy = targetPoint.y - currentPoint.y
-            val distSq = dx * dx + dy * dy
-            distSq > 0.5f * 0.5f
-        } catch (e: Exception) {
-            Log.w(TAG, "shouldRecentreLazy: projection failed, defaulting to recenter", e)
-            true
-        }
-    }
 }

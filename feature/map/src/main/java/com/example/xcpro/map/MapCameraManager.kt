@@ -346,8 +346,13 @@ object MapCameraEffects {
         cameraManager: MapCameraManager,
         bearing: Double,
         orientationMode: MapOrientationMode,
-        bearingSource: BearingSource
+        bearingSource: BearingSource,
+        replayPlaying: Boolean = false
     ) {
+        // If map tracking is active or replay is playing, bearing is applied with position in MapPositionController.
+        if (replayPlaying || (cameraManager.mapState.isTrackingLocation && !cameraManager.mapState.showReturnButton)) {
+            return
+        }
         DisposableEffect(bearing, orientationMode, bearingSource) {
             cameraManager.updateBearing(bearing, orientationMode, bearingSource)
             Log.d(
@@ -366,7 +371,8 @@ object MapCameraEffects {
         cameraManager: MapCameraManager,
         bearing: Double,
         orientationMode: MapOrientationMode,
-        bearingSource: BearingSource
+        bearingSource: BearingSource,
+        replayPlaying: Boolean = false
     ) {
         AnimatedZoomEffect(
             cameraManager = cameraManager,
@@ -377,7 +383,8 @@ object MapCameraEffects {
             cameraManager = cameraManager,
             bearing = bearing,
             orientationMode = orientationMode,
-            bearingSource = bearingSource
+            bearingSource = bearingSource,
+            replayPlaying = replayPlaying
         )
     }
 }

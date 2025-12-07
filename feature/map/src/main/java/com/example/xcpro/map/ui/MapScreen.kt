@@ -393,7 +393,8 @@ fun MapScreen(
         cameraManager = cameraManager,
         bearing = orientationData.bearing,
         orientationMode = orientationData.mode,
-        bearingSource = orientationData.bearingSource
+        bearingSource = orientationData.bearingSource,
+        replayPlaying = replaySession.status == com.example.xcpro.replay.IgcReplayController.SessionStatus.PLAYING
     )
 
 

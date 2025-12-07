@@ -129,6 +129,7 @@ object MapComposeEffects {
                         flightViewModel.updateCardsWithLiveData(liveData)
                     }
                     orientationManager.updateFromFlightData(liveData)
+                    // AI-NOTE: Single-cadence map update to mirror XCSoar's SetLocationLazy flow.
                     locationManager.updateLocationFromFlightData(
                         liveData,
                         orientationData.mode,
@@ -140,21 +141,6 @@ object MapComposeEffects {
 
         LaunchedEffect(flightDataManager.unitsPreferences) {
             flightViewModel.updateUnitsPreferences(flightDataManager.unitsPreferences)
-        }
-
-        LaunchedEffect(orientationData.mode) {
-            while (isActive) {
-                flightDataManager.liveFlightData?.let { liveData ->
-                    if (liveData.latitude != 0.0 && liveData.longitude != 0.0) {
-                        locationManager.updateLocationFromFlightData(
-                            liveData,
-                            orientationData.mode,
-                            orientationData.bearing
-                        )
-                    }
-                }
-                delay(100)
-            }
         }
     }
 
