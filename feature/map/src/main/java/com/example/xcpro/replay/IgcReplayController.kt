@@ -92,6 +92,25 @@ class IgcReplayController @Inject constructor(
         forwardJob = scope.launch {
             replayFusionRepository.flightDataFlow.collect { data ->
                 if (_session.value.status != SessionStatus.IDLE) {
+                    val now = System.currentTimeMillis()
+                    if (now - lastForwardLogTime >= 1_000L) {
+                        lastForwardLogTime = now
+                        val gps = data?.gps
+                        val verticalSpeed = data?.verticalSpeed?.value
+                        val displayVario = data?.displayVario?.value
+                        val xcsoarDisplayVario = data?.xcsoarDisplayVario?.value
+                        val tc30 = data?.thermalAverage?.value
+                        val tcAvg = data?.thermalAverageCircle?.value
+                        val tAvg = data?.thermalAverageTotal?.value
+                        Log.d(
+                            TAG,
+                            "REPLY_FORWARD gps=${gps?.latLng?.latitude},${gps?.latLng?.longitude} " +
+                                "gs=${gps?.speed?.value} alt=${gps?.altitude?.value} " +
+                                "v=${verticalSpeed} dv=${displayVario} xc=${xcsoarDisplayVario} " +
+                                "tc30=${tc30} tcAvg=${tcAvg} tAvg=${tAvg} tValid=${data?.currentThermalValid} " +
+                                "circling=${data?.isCircling} windQ=${data?.windQuality} wind=${data?.windSpeed?.value}"
+                        )
+                    }
                     flightDataRepository.update(data)
                 }
             }
@@ -100,7 +119,7 @@ class IgcReplayController @Inject constructor(
 
     private fun ensureScopeActive() {
         if (scope.isActive) return
-        Log.w(TAG, "REPLAY_SCOPE inactive; rebuilding replay pipeline")
+        Log.w(TAG, "REPLY_SCOPE inactive; rebuilding replay pipeline")
         scope = createScope()
         replayFusionRepository = createFusionRepository()
         startForwardingFlightData()
@@ -113,6 +132,7 @@ class IgcReplayController @Inject constructor(
     private var points: List<IgcPoint> = emptyList()
     private var currentIndex = 0
     private var sensorsSuspended = false
+    private var lastForwardLogTime = 0L
 
     private val replaySensorSource = ReplaySensorSource()
     private var replayFusionRepository: SensorFusionRepository = createFusionRepository()
@@ -130,28 +150,33 @@ class IgcReplayController @Inject constructor(
 
     suspend fun loadFile(uri: Uri, displayName: String?) {
         ensureScopeActive()
+        var failure: Throwable? = null
         withContext(scope.coroutineContext) {
-            runCatching {
+            try {
                 val log = loadLog(uri)
                 Log.i(TAG, "REPLY_LOAD Loaded IGC file ${displayName ?: uri} with ${log.points.size} raw points (qnh=${log.metadata.qnhHpa})")
                 prepareSession(
                     log = log,
                     selection = Selection(uri, displayName)
                 )
-                // Auto-start playback to mirror IgcReplaySim behavior and avoid UI timing issues.
-                play()
-            }.onFailure { t ->
-                if (t is CancellationException) return@withContext
-                Log.e(TAG, "Failed to load IGC file ${displayName ?: uri}", t)
-                _events.tryEmit(ReplayEvent.Failed(t))
+            } catch (c: CancellationException) {
+                throw c
+            } catch (t: Throwable) {
+                failure = t
             }
+        }
+        failure?.let { t ->
+            Log.e(TAG, "Failed to load IGC file ${displayName ?: uri}", t)
+            _events.tryEmit(ReplayEvent.Failed(t))
+            throw t
         }
     }
 
     suspend fun loadAsset(assetPath: String, displayName: String? = null) {
         ensureScopeActive()
+        var failure: Throwable? = null
         withContext(scope.coroutineContext) {
-            runCatching {
+            try {
                 val log = loadAssetLog(assetPath)
                 val name = displayName ?: assetPath.substringAfterLast('/')
                 val uri = Uri.parse("$ASSET_URI_PREFIX$assetPath")
@@ -160,20 +185,24 @@ class IgcReplayController @Inject constructor(
                     log = log,
                     selection = Selection(uri, name)
                 )
-                play()
-            }.onFailure { t ->
-                if (t is CancellationException) return@withContext
-                Log.e(TAG, "Failed to load IGC asset $assetPath", t)
-                _events.tryEmit(ReplayEvent.Failed(t))
+            } catch (c: CancellationException) {
+                throw c
+            } catch (t: Throwable) {
+                failure = t
             }
+        }
+        failure?.let { t ->
+            Log.e(TAG, "Failed to load IGC asset $assetPath", t)
+            _events.tryEmit(ReplayEvent.Failed(t))
+            throw t
         }
     }
 
     fun play() {
         ensureScopeActive()
-        Log.i(TAG, "REPLAY_PLAY entry scopeActive=${scope.isActive} points=${points.size} jobActive=${replayJob != null}")
+        Log.i(TAG, "REPLY_PLAY entry scopeActive=${scope.isActive} points=${points.size} jobActive=${replayJob != null}")
         scope.launch {
-            Log.i(TAG, "REPLAY_PLAY request status=${_session.value.status} points=${points.size} currentIndex=$currentIndex")
+            Log.i(TAG, "REPLY_PLAY request status=${_session.value.status} points=${points.size} currentIndex=$currentIndex")
             if (points.isEmpty()) {
                 Log.w(TAG, "Play requested but no points are loaded")
                 return@launch
@@ -186,7 +215,7 @@ class IgcReplayController @Inject constructor(
             suspendSensors()
             cancelReplayJob()
             replayJob = launch {
-                Log.i(TAG, "REPLAY_PLAY start idx=$currentIndex total=${points.size}")
+                Log.i(TAG, "REPLY_PLAY start idx=$currentIndex total=${points.size}")
                 _session.update { it.copy(status = SessionStatus.PLAYING) }
                 try {
                     while (currentIndex < points.size && isActive) {
@@ -194,7 +223,7 @@ class IgcReplayController @Inject constructor(
                         val previous = points.getOrNull(currentIndex - 1)
                         emitSample(point, previous, _session.value.qnhHpa)
                         updateProgress(point.timestampMillis)
-                        Log.d(TAG, "REPLAY_FRAME idx=$currentIndex ts=${point.timestampMillis} alt=${point.pressureAltitude ?: point.gpsAltitude} speed=${_session.value.speedMultiplier}")
+                        Log.d(TAG, "REPLY_FRAME idx=$currentIndex ts=${point.timestampMillis} alt=${point.pressureAltitude ?: point.gpsAltitude} speed=${_session.value.speedMultiplier}")
 
                         val nextIndex = currentIndex + 1
                         if (nextIndex >= points.size) {
@@ -209,13 +238,13 @@ class IgcReplayController @Inject constructor(
                         delay(delayMillis)
                     }
                 } catch (c: CancellationException) {
-                    Log.w(TAG, "REPLAY_PLAY cancelled", c)
+                    Log.w(TAG, "REPLY_PLAY cancelled", c)
                     throw c
                 } catch (t: Throwable) {
-                    Log.e(TAG, "REPLAY_PLAY error", t)
+                    Log.e(TAG, "REPLY_PLAY error", t)
                     _events.tryEmit(ReplayEvent.Failed(t))
                 } finally {
-                    Log.i(TAG, "REPLAY_PLAY end status=${_session.value.status} idx=$currentIndex")
+                    Log.i(TAG, "REPLY_PLAY end status=${_session.value.status} idx=$currentIndex")
                 }
             }
         }
@@ -233,7 +262,7 @@ class IgcReplayController @Inject constructor(
     fun stop() {
         ensureScopeActive()
         scope.launch {
-            Log.i(TAG, "REPLAY_STOP request")
+            Log.i(TAG, "REPLY_STOP request")
             cancelReplayJob()
             seekJob?.cancel()
             seekJob = null
@@ -278,10 +307,14 @@ class IgcReplayController @Inject constructor(
             }
 
             runCatching {
+                // Seeking is a teleport: reset fusion state so thermal/circling/wind estimators don't
+                // interpret the jump as a single "mega-sample" or carry stale altitude baselines.
+                replayFusionRepository.stop()
                 emitSample(point, previous, _session.value.qnhHpa)
                 updateProgress(point.timestampMillis)
                 if (_session.value.status == SessionStatus.PLAYING) {
                     cancelReplayJob()
+                    _session.update { it.copy(status = SessionStatus.PAUSED) }
                     play()
                 }
             }.onFailure { t ->
@@ -298,6 +331,10 @@ class IgcReplayController @Inject constructor(
         val groundSpeed = movement.speedMs
         val trackDeg = resolveReplayHeading(movement)
         val gpsAltitude = current.gpsAltitude
+
+        val pressureAltitude = current.pressureAltitude ?: gpsAltitude
+        val pressureHPa = altitudeToPressure(pressureAltitude, qnhHpa)
+        replaySensorSource.emitBaro(pressureHPa = pressureHPa, timestamp = current.timestampMillis)
         replaySensorSource.emitGps(
             latitude = current.latitude,
             longitude = current.longitude,
@@ -307,10 +344,6 @@ class IgcReplayController @Inject constructor(
             accuracy = 5f,
             timestamp = current.timestampMillis
         )
-
-        val pressureAltitude = current.pressureAltitude ?: gpsAltitude
-        val pressureHPa = altitudeToPressure(pressureAltitude, qnhHpa)
-        replaySensorSource.emitBaro(pressureHPa = pressureHPa, timestamp = current.timestampMillis)
         replaySensorSource.emitCompass(
             heading = trackDeg.toDouble(),
             accuracy = 3,
@@ -329,7 +362,9 @@ class IgcReplayController @Inject constructor(
         val nextHeading = when {
             previousHeading == null -> derivedHeading
             shouldReusePrevious -> previousHeading
-            else -> lerpHeading(previousHeading, derivedHeading, REPLAY_HEADING_SMOOTHING_ALPHA)
+            // Preserve raw turn-rate so circling/wind detectors behave like live GPS.
+            // Camera/icon smoothing happens downstream (MapPositionController bearing clamp).
+            else -> derivedHeading
         }
 
         lastReplayHeadingDeg = nextHeading
@@ -428,12 +463,6 @@ class IgcReplayController @Inject constructor(
             }
     }
 
-    private fun lerpHeading(from: Float, to: Float, alpha: Float): Float {
-        val diff = ((to - from + 540f) % 360f) - 180f
-        val blended = (from + diff * alpha + 360f) % 360f
-        return blended
-    }
-
     companion object {
         private const val TAG = "IgcReplayController"
         private const val EARTH_RADIUS_M = 6_371_000.0
@@ -448,15 +477,14 @@ class IgcReplayController @Inject constructor(
         private const val ASSET_URI_PREFIX = "asset:///"
         private const val MIN_REPLAY_HEADING_SPEED_MS = 1.0
         private const val MIN_REPLAY_HEADING_DISTANCE_M = 3.0
-        private const val REPLAY_HEADING_SMOOTHING_ALPHA = 0.2f
     }
 
     private fun prepareSession(log: IgcLog, selection: Selection) {
+        val densified = densifyPoints(log.points)
+        if (densified.isEmpty()) throw IllegalArgumentException("IGC file has no B records")
         cancelReplayJob()
         seekJob?.cancel()
         seekJob = null
-        val densified = densifyPoints(log.points)
-        if (densified.isEmpty()) throw IllegalArgumentException("IGC file has no B records")
         points = densified
         currentIndex = 0
         suspendSensors()
@@ -476,7 +504,7 @@ class IgcReplayController @Inject constructor(
             durationMillis = duration,
             qnhHpa = qnh
         )
-        Log.i(TAG, "REPLAY_SESSION selection=${selection.displayName ?: selection.uri} durationMs=$duration start=$start")
+        Log.i(TAG, "REPLY_SESSION selection=${selection.displayName ?: selection.uri} durationMs=$duration start=$start")
         lastReplayHeadingDeg = null
         emitSample(points.first(), null, qnh)
     }

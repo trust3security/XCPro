@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 /**
  * Bridge between the map-layer UI and the flight-card SSOT ViewModel. It keeps UI-facing,
  * short-lived state (live vario data, smoothing, visibility) while delegating template/card
@@ -35,6 +36,7 @@ class FlightDataManager(
         private const val UI_NUMERIC_FRAME_MS = 1000L / 12  // ~12 Hz for numbers
         private const val ALTITUDE_BUCKET_M = 0.5
         private const val VARIO_BUCKET_MS = 0.1f
+        private const val VARIO_NOISE_FLOOR = 1e-3
         private const val WIND_SPEED_BUCKET_KT = 1f
         private const val WIND_DIR_BUCKET_DEG = 5f
         private const val LD_BUCKET = 0.1f
@@ -44,7 +46,32 @@ class FlightDataManager(
     val liveFlightDataFlow: StateFlow<RealTimeFlightData?> = _liveFlightData.asStateFlow()
     val displayVarioFlow: StateFlow<Float> =
         liveFlightDataFlow
-            .map { (it?.displayVario ?: 0.0).toFloat().bucket(VARIO_BUCKET_MS) }
+            .map { data ->
+                if (data == null) {
+                    0f
+                } else {
+                    val display = data.displayVario
+                    val fallback = data.verticalSpeed
+                    val selected = when {
+                        data.varioValid && display.isFinite() -> display
+                        display.isFinite() && abs(display) > VARIO_NOISE_FLOOR -> display
+                        fallback.isFinite() -> fallback
+                        else -> 0.0
+                    }
+                    selected.toFloat().bucket(VARIO_BUCKET_MS)
+                }
+            }
+            .distinctUntilChanged()
+            .throttleFrame(UI_NUMERIC_FRAME_MS)
+            .stateIn(
+                scope = coroutineScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = 0f
+            )
+
+    val xcsoarDisplayVarioFlow: StateFlow<Float> =
+        liveFlightDataFlow
+            .map { (it?.xcsoarDisplayVario ?: 0.0).toFloat().bucket(VARIO_BUCKET_MS) }
             .distinctUntilChanged()
             .throttleFrame(UI_NUMERIC_FRAME_MS)
             .stateIn(
@@ -234,16 +261,16 @@ class FlightDataManager(
 
     private fun RealTimeFlightData.toDisplayBucket(): RealTimeFlightData =
         copy(
-            displayVario = displayVario.bucket(VARIO_BUCKET_MS.toDouble()),
-            netto = netto.bucket(VARIO_BUCKET_MS),
-            displayNetto = displayNetto.bucket(VARIO_BUCKET_MS.toDouble()),
-            baroAltitude = baroAltitude.bucket(ALTITUDE_BUCKET_M),
-            gpsAltitude = gpsAltitude.bucket(ALTITUDE_BUCKET_M),
-            agl = agl.bucket(ALTITUDE_BUCKET_M),
-            windSpeed = windSpeed.bucket(WIND_SPEED_BUCKET_KT),
-            windDirection = windDirection.bucket(WIND_DIR_BUCKET_DEG),
-            currentLD = currentLD.bucket(LD_BUCKET)
+            displayVario = displayVario.takeIf { it.isFinite() }?.bucket(VARIO_BUCKET_MS.toDouble()) ?: 0.0,
+            xcsoarDisplayVario = xcsoarDisplayVario.takeIf { it.isFinite() }?.bucket(VARIO_BUCKET_MS.toDouble()) ?: 0.0,
+            netto = netto.takeIf { it.isFinite() }?.bucket(VARIO_BUCKET_MS) ?: 0f,
+            displayNetto = displayNetto.takeIf { it.isFinite() }?.bucket(VARIO_BUCKET_MS.toDouble()) ?: 0.0,
+            baroAltitude = baroAltitude.takeIf { it.isFinite() }?.bucket(ALTITUDE_BUCKET_M) ?: 0.0,
+            gpsAltitude = gpsAltitude.takeIf { it.isFinite() }?.bucket(ALTITUDE_BUCKET_M) ?: 0.0,
+            agl = agl.takeIf { it.isFinite() }?.bucket(ALTITUDE_BUCKET_M) ?: 0.0,
+            windSpeed = windSpeed.takeIf { it.isFinite() }?.bucket(WIND_SPEED_BUCKET_KT) ?: 0f,
+            windDirection = windDirection.takeIf { it.isFinite() }?.bucket(WIND_DIR_BUCKET_DEG) ?: 0f,
+            currentLD = currentLD.takeIf { it.isFinite() }?.bucket(LD_BUCKET) ?: 0f
         )
 
 }
-

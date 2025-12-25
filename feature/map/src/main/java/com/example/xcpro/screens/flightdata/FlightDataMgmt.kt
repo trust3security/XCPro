@@ -31,7 +31,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -84,10 +83,10 @@ fun FlightMgmt(
     }
 
     LaunchedEffect(flightDataManager) {
-        snapshotFlow { flightDataManager.liveFlightData }
+        flightDataManager.cardFlightDataFlow
             .filterNotNull()
-            .collectLatest { liveData ->
-                flightViewModel.updateCardsWithLiveData(liveData)
+            .collectLatest { displaySample ->
+                flightViewModel.updateCardsWithLiveData(displaySample)
             }
     }
 

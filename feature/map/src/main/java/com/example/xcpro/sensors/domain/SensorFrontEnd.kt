@@ -6,6 +6,10 @@ import kotlin.math.abs
 
 private const val MIN_GATE_DT_SECONDS = 0.02  // reject duplicate/too-fast timestamps
 private const val MIN_DERIVATIVE_DT_SECONDS = 0.05
+// GPS/baro cadences vary widely (phone GPS can be ~1Hz; replay is typically 1Hz).
+// Keep this loose enough to avoid NaN vario during normal jitter, while still rejecting
+// long gaps (dropouts) that would make derivatives meaningless.
+private const val MAX_DERIVATIVE_DT_SECONDS = 5.0
 
 /**
  * Centralized front-end for sensor-derived fundamentals (nav altitude, IAS/TAS, TE altitude).
@@ -28,7 +32,9 @@ internal class SensorFrontEnd(
         val gpsVario: Double,
         val bruttoVario: Double,
         val varioSource: String,
-        val varioValid: Boolean
+        val varioValid: Boolean,
+        val xcsoarVario: Double,
+        val xcsoarVarioValid: Boolean
     )
 
     fun buildSnapshot(
@@ -53,7 +59,12 @@ internal class SensorFrontEnd(
         val airspeedSource = activeEstimate?.source ?: AirspeedSource.GPS_GROUND
         val tasValid = activeEstimate != null
 
-        val energyHeight = if (trueAirspeedMs.isFinite()) {
+        // TE altitude requires an airspeed estimate (not just GPS ground speed), otherwise energy height
+        // changes would inject bogus "lift/sink" into thermal tracking during turns/accels.
+        val energyHeight = if (
+            airspeedSource != AirspeedSource.GPS_GROUND &&
+            trueAirspeedMs.isFinite()
+        ) {
             (trueAirspeedMs * trueAirspeedMs) / (2.0 * GRAVITY)
         } else 0.0
         val teAltitude = navAltitude + energyHeight
@@ -75,6 +86,14 @@ internal class SensorFrontEnd(
         }
         val varioValid = bruttoVario.isFinite()
 
+        val xcsoarVario = when {
+            pressureVario.isFinite() -> pressureVario
+            baroVario.isFinite() -> baroVario
+            gpsVario.isFinite() -> gpsVario
+            else -> Double.NaN
+        }.guardVario()
+        val xcsoarVarioValid = xcsoarVario.isFinite()
+
         return SensorSnapshot(
             navAltitude = navAltitude,
             teAltitude = teAltitude,
@@ -87,7 +106,9 @@ internal class SensorFrontEnd(
             gpsVario = gpsVario,
             bruttoVario = bruttoVario,
             varioSource = varioSource,
-            varioValid = varioValid
+            varioValid = varioValid,
+            xcsoarVario = xcsoarVario,
+            xcsoarVarioValid = xcsoarVarioValid
         )
     }
 
@@ -115,17 +136,17 @@ internal class SensorFrontEnd(
         }
 
         val dt = (currentTime - prevTime) / 1000.0
-        if (dt <= 0.0) {
+        if (dt <= 0.0 || dt < MIN_DERIVATIVE_DT_SECONDS) {
             remember(altitudeType, pressureAltitude, currentTime)
             return Double.NaN
         }
 
-        val vario = if (prevAlt != null) {
+        val vario = if (prevAlt != null && dt <= MAX_DERIVATIVE_DT_SECONDS) {
             (pressureAltitude - prevAlt) / dt
         } else Double.NaN
 
         remember(altitudeType, pressureAltitude, currentTime)
-        return vario
+        return vario.guardVario()
     }
 
     private fun remember(type: AltitudeType, altitude: Double, time: Long) {
@@ -153,4 +174,7 @@ internal class SensorFrontEnd(
         prevGpsAltitude = null
         prevGpsTime = -1L
     }
+
+    private fun Double.guardVario(): Double =
+        if (!this.isFinite() || kotlin.math.abs(this) > 10.0) Double.NaN else this
 }

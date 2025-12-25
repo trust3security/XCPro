@@ -3,6 +3,7 @@ package com.example.xcpro.map
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStore
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.map
 private const val DATASTORE_NAME = "qnh_preferences"
 private val Context.qnhDataStore: DataStore<Preferences> by preferencesDataStore(name = DATASTORE_NAME)
 private val KEY_QNH_HPA = doublePreferencesKey("qnh_hpa")
+private val KEY_AUTO_QNH = booleanPreferencesKey("auto_qnh_enabled")
 
 @Singleton
 class QnhPreferencesRepository @Inject constructor(
@@ -22,6 +24,9 @@ class QnhPreferencesRepository @Inject constructor(
 ) {
     val qnhHpaFlow: Flow<Double?> = context.qnhDataStore.data.map { preferences ->
         preferences[KEY_QNH_HPA]
+    }
+    val autoQnhEnabledFlow: Flow<Boolean> = context.qnhDataStore.data.map { preferences ->
+        preferences[KEY_AUTO_QNH] ?: false
     }
 
     suspend fun setManualQnh(qnhHpa: Double) {
@@ -33,6 +38,12 @@ class QnhPreferencesRepository @Inject constructor(
     suspend fun clearManualQnh() {
         context.qnhDataStore.edit { preferences ->
             preferences.remove(KEY_QNH_HPA)
+        }
+    }
+
+    suspend fun setAutoQnhEnabled(enabled: Boolean) {
+        context.qnhDataStore.edit { preferences ->
+            preferences[KEY_AUTO_QNH] = enabled
         }
     }
 }

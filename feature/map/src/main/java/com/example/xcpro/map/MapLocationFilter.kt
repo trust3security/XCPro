@@ -28,7 +28,7 @@ class MapLocationFilter(
     )
 
     private val offsetHistory = OffsetHistory(config.historySize)
-    private var lastScreenPoint: PointF? = null
+    private var lastAcceptedScreenPoint: PointF? = null
     private var accepted = 0
     private var rejected = 0
     private var lastMovePxSq: Float = Float.NaN
@@ -42,23 +42,28 @@ class MapLocationFilter(
             return true
         }
 
-        val previous = lastScreenPoint?.let { PointF(it.x, it.y) }
-        lastScreenPoint = PointF(screenPoint.x, screenPoint.y)
+        val previousAccepted = lastAcceptedScreenPoint?.let { PointF(it.x, it.y) }
 
         // First sample always accepted to seed state.
-        if (previous == null) {
+        if (previousAccepted == null) {
             accepted++
+            lastAcceptedScreenPoint = PointF(screenPoint.x, screenPoint.y)
             lastMovePxSq = Float.POSITIVE_INFINITY
             return true
         }
 
-        val dx = screenPoint.x - previous.x
-        val dy = screenPoint.y - previous.y
+        val dx = screenPoint.x - previousAccepted.x
+        val dy = screenPoint.y - previousAccepted.y
         val distSq = dx * dx + dy * dy
         lastMovePxSq = distSq
 
         val passes = distSq > config.thresholdPx * config.thresholdPx
-        if (passes) accepted++ else rejected++
+        if (passes) {
+            accepted++
+            lastAcceptedScreenPoint = PointF(screenPoint.x, screenPoint.y)
+        } else {
+            rejected++
+        }
         return passes
     }
 

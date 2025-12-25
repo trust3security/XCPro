@@ -90,18 +90,27 @@ internal class FusionBlackboard {
         if (timeWentBack || thermalToggled) {
             resetAverageWindows(bruttoSample, nettoSample, currentTime)
         } else {
-            lastBruttoSampleTime = addSamplesForElapsedSeconds(
-                window = bruttoAverageWindow,
-                lastTimestamp = lastBruttoSampleTime,
-                currentTime = currentTime,
-                sampleValue = bruttoSample
-            )
-            lastNettoSampleTime = addSamplesForElapsedSeconds(
-                window = nettoAverageWindow,
-                lastTimestamp = lastNettoSampleTime,
-                currentTime = currentTime,
-                sampleValue = nettoSample
-            )
+            // Avoid poisoning the window with NaNs (especially during replay seeks and derivative warm-up).
+            lastBruttoSampleTime = if (bruttoSample.isFinite()) {
+                addSamplesForElapsedSeconds(
+                    window = bruttoAverageWindow,
+                    lastTimestamp = lastBruttoSampleTime,
+                    currentTime = currentTime,
+                    sampleValue = bruttoSample
+                )
+            } else {
+                currentTime
+            }
+            lastNettoSampleTime = if (nettoSample.isFinite()) {
+                addSamplesForElapsedSeconds(
+                    window = nettoAverageWindow,
+                    lastTimestamp = lastNettoSampleTime,
+                    currentTime = currentTime,
+                    sampleValue = nettoSample
+                )
+            } else {
+                currentTime
+            }
         }
         lastThermalState = thermalActive
 

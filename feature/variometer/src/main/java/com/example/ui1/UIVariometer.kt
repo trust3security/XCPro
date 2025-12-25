@@ -27,6 +27,7 @@ fun UIVariometer(
     needleValue: Float,
     displayValue: Float,
     valueLabel: String = String.format("%+.1f", displayValue),
+    secondaryLabel: String? = null,
     averageNeedleValue: Float? = null,
     modifier: Modifier = Modifier
 ) {
@@ -206,6 +207,22 @@ fun UIVariometer(
             center.y + 30.dp.toPx(),
             microLabelPaint
         )
+
+        secondaryLabel?.let { label ->
+            val secondaryPaint = android.graphics.Paint().apply {
+                color = android.graphics.Color.DKGRAY
+                textSize = 16.sp.toPx()
+                textAlign = android.graphics.Paint.Align.CENTER
+                isAntiAlias = true
+                isFakeBoldText = true
+            }
+            drawContext.canvas.nativeCanvas.drawText(
+                label,
+                center.x,
+                center.y + 50.dp.toPx(),
+                secondaryPaint
+            )
+        }
 
         val centerColor = when {
             microArcValue > 0.3f -> Color(0xFF16A34A)

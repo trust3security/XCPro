@@ -74,6 +74,8 @@ class MapScreenViewModel @Inject constructor(
     @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
+    private var flightStartTimestampMillis: Long? = null
+
     private val ballastController = BallastController(
         repository = gliderRepository,
         scope = viewModelScope,
@@ -93,7 +95,7 @@ class MapScreenViewModel @Inject constructor(
     val orientationManager: MapOrientationManager =
         MapOrientationManager(appContext, viewModelScope, locationManager.unifiedSensorManager)
     val lifecycleManager: MapLifecycleManager =
-        MapLifecycleManager(mapState, orientationManager, locationManager)
+        MapLifecycleManager(mapState, orientationManager, locationManager, igcReplayController)
     val mapInitializer: MapInitializer = MapInitializer(
         context = appContext,
         mapState = mapState,
@@ -145,10 +147,23 @@ class MapScreenViewModel @Inject constructor(
                     if (!_liveDataReady.value) {
                         _liveDataReady.value = true
                     }
+                    val sampleClockMillis = data.gps?.timestamp ?: data.timestamp
+                    val startMillis = flightStartTimestampMillis ?: sampleClockMillis
+                    if (flightStartTimestampMillis == null) {
+                        flightStartTimestampMillis = startMillis
+                    }
+                    val elapsedMillis = (sampleClockMillis - startMillis).coerceAtLeast(0L)
+                    val elapsedMinutes = elapsedMillis / 60_000L
+                    val hours = elapsedMinutes / 60L
+                    val minutes = elapsedMinutes % 60L
+                    val formattedFlightTime = "${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}"
+
                     val liveData = convertToRealTimeFlightData(data)
+                        .copy(flightTime = formattedFlightTime)
                         .applyWindState(wind)
                     flightDataManager.updateLiveFlightData(liveData)
                 } else {
+                    flightStartTimestampMillis = null
                     flightDataManager.updateLiveFlightData(null)
                 }
             }
@@ -208,6 +223,12 @@ class MapScreenViewModel @Inject constructor(
 
         val vector = windState.vector ?: return this
         val directionFrom = ((vector.directionFromDeg % 360.0) + 360.0) % 360.0
+        val windAgeSeconds = if (windState.lastUpdatedMillis > 0L) {
+            val ageMs = (timestamp - windState.lastUpdatedMillis).coerceAtLeast(0L)
+            ageMs / 1000L
+        } else {
+            -1L
+        }
 
         return copy(
             windSpeed = vector.speed.toFloat(),
@@ -215,7 +236,8 @@ class MapScreenViewModel @Inject constructor(
             windQuality = windState.quality,
             windSource = windState.source.name,
             windHeadwind = windState.headwind,
-            windCrosswind = windState.crosswind
+            windCrosswind = windState.crosswind,
+            windAgeSeconds = windAgeSeconds
         )
     }
 
@@ -318,26 +340,25 @@ class MapScreenViewModel @Inject constructor(
                 withContext(NonCancellable) { igcReplayController.loadFile(uri, displayName) }
             }
 
-            if (igcReplayController.session.value.selection != null) {
-                Log.i("MapScreenViewModel", "REPLAY_FILE load success uri=$uri")
-                mapState.hasInitiallyCentered = false
-                mapState.showReturnButton = false
-                mapState.isTrackingLocation = true
-                Log.i("MapScreenViewModel", "REPLAY_FILE starting play uri=$uri")
-                igcReplayController.play()
-                return@launch
-            }
-
-            loadResult.onFailure { t ->
-                if (t is CancellationException) {
-                    Log.w("MapScreenViewModel", "Replay load cancelled after prepare uri=$uri", t)
-                } else {
-                    Log.e("MapScreenViewModel", "Replay load failed uri=$uri", t)
-                    _uiEffects.emit(
-                        MapUiEffect.ShowToast("Replay failed: ${t.message ?: "Unknown error"}")
-                    )
+            loadResult
+                .onSuccess {
+                    Log.i("MapScreenViewModel", "REPLAY_FILE load success uri=$uri")
+                    mapState.hasInitiallyCentered = false
+                    mapState.showReturnButton = false
+                    mapState.isTrackingLocation = true
+                    Log.i("MapScreenViewModel", "REPLAY_FILE starting play uri=$uri")
+                    igcReplayController.play()
                 }
-            }
+                .onFailure { t ->
+                    if (t is CancellationException) {
+                        Log.w("MapScreenViewModel", "Replay load cancelled after prepare uri=$uri", t)
+                    } else {
+                        Log.e("MapScreenViewModel", "Replay load failed uri=$uri", t)
+                        _uiEffects.emit(
+                            MapUiEffect.ShowToast("Replay failed: ${t.message ?: "Unknown error"}")
+                        )
+                    }
+                }
         }
     }
 

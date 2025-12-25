@@ -6,6 +6,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.example.xcpro.MapOrientationManager
+import com.example.xcpro.replay.IgcReplayController
 
 /**
  * Centralized lifecycle management for MapScreen
@@ -14,7 +15,8 @@ import com.example.xcpro.MapOrientationManager
 class MapLifecycleManager(
     internal val mapState: MapScreenState,
     private val orientationManager: MapOrientationManager,
-    internal val locationManager: LocationManager
+    internal val locationManager: LocationManager,
+    private val igcReplayController: IgcReplayController
 ) {
     companion object {
         private const val TAG = "MapLifecycleManager"
@@ -39,7 +41,14 @@ class MapLifecycleManager(
 
                 // ✅ Restart sensors if needed after sleep mode
                 // This ensures GPS and other sensors resume after screen-off
-                locationManager.restartSensorsIfNeeded()
+                val replaySession = igcReplayController.session.value
+                val allowRestart = replaySession.selection == null ||
+                    replaySession.status == IgcReplayController.SessionStatus.IDLE
+                if (allowRestart) {
+                    locationManager.restartSensorsIfNeeded()
+                } else {
+                    Log.d(TAG, "Replay active; skipping sensor restart on resume")
+                }
 
                 Log.d(TAG, "Map view onResume - sensors checked for restart")
             }

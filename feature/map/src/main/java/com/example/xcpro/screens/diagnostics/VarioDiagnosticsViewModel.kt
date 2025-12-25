@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.xcpro.sensors.VarioDiagnosticsSample
 import com.example.xcpro.vario.VarioServiceManager
+import com.example.xcpro.map.throttleFrame
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,13 +19,16 @@ class VarioDiagnosticsViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val historyLimit = 300
+    private val chartFrameMs = 1000L / 8 // ~8 FPS
 
     private val _uiState = MutableStateFlow(VarioDiagnosticsUiState())
     val uiState: StateFlow<VarioDiagnosticsUiState> = _uiState.asStateFlow()
 
     init {
         viewModelScope.launch {
-            varioServiceManager.sensorFusionRepository.diagnosticsFlow.collect { sample ->
+            varioServiceManager.sensorFusionRepository.diagnosticsFlow
+                .throttleFrame(chartFrameMs)
+                .collect { sample ->
                 if (sample != null) {
                     _uiState.update { current ->
                         val updatedHistory = (current.history + sample).takeLast(historyLimit)

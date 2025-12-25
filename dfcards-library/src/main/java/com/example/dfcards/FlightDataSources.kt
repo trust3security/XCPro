@@ -78,6 +78,9 @@ data class RealTimeFlightData(
     val varioGPS: Double = 0.0,            // GPS vertical speed
     val varioComplementary: Double = 0.0,  // Complementary filter (future)
     val realIgcVario: Double? = null,
+    val xcsoarVario: Double = 0.0,
+    val xcsoarDisplayVario: Double = 0.0,
+    val xcsoarVarioValid: Boolean = false,
     val bruttoAverage30s: Double = 0.0,
     val bruttoAverage30sValid: Boolean = false,
     val nettoAverage30s: Double = 0.0,

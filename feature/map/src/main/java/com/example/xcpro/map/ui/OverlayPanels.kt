@@ -136,6 +136,7 @@ internal fun VariometerPanel(
     isUiEditMode: Boolean
 ) {
     val displayNumericVario by flightDataManager.displayVarioFlow.collectAsStateWithLifecycle()
+    val xcsoarDisplayVario by flightDataManager.xcsoarDisplayVarioFlow.collectAsStateWithLifecycle()
     val animatedVario by animateFloatAsState(
         targetValue = displayNumericVario,
         animationSpec = spring(
@@ -153,12 +154,21 @@ internal fun VariometerPanel(
             )
         }
     }
+    val xcsoarFormatted by remember(xcsoarDisplayVario, unitsPreferences) {
+        derivedStateOf {
+            UnitsFormatter.verticalSpeed(
+                VerticalSpeedMs(xcsoarDisplayVario.toDouble()),
+                unitsPreferences
+            )
+        }
+    }
     MapUIWidgets.VariometerWidget(
         widgetManager = widgetManager,
         variometerState = variometerUiState,
         needleValue = animatedVario,
         displayValue = displayNumericVario,
-        displayLabel = varioFormatted.text,
+        displayLabel = stripKt(varioFormatted.text),
+        secondaryLabel = stripKt(xcsoarFormatted.text),
         screenWidthPx = screenWidthPx,
         screenHeightPx = screenHeightPx,
         minSizePx = minVariometerSizePx,
@@ -170,6 +180,9 @@ internal fun VariometerPanel(
         onEditFinished = onVariometerEditFinished
     )
 }
+
+private fun stripKt(label: String): String =
+    label.replace("kt", "").replace("KT", "").trim()
 
 @Composable
 internal fun DistanceCirclesLayer(

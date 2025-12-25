@@ -8,6 +8,8 @@ import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -49,5 +51,17 @@ class QnhPreferencesRepositoryTest {
 
         val stored = repository.qnhHpaFlow.first()
         assertNull(stored)
+    }
+
+    @Test
+    fun autoQnhEnabled_defaultsFalse_andPersists() = runTest {
+        val initial = repository.autoQnhEnabledFlow.first()
+        assertFalse(initial)
+
+        repository.setAutoQnhEnabled(true)
+        assertTrue(repository.autoQnhEnabledFlow.first())
+
+        repository.setAutoQnhEnabled(false)
+        assertFalse(repository.autoQnhEnabledFlow.first())
     }
 }

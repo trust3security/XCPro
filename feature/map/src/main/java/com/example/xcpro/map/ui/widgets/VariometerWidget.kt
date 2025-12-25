@@ -51,6 +51,7 @@ internal fun VariometerWidgetContent(
     needleValue: Float,
     displayValue: Float,
     displayLabel: String = String.format("%+.1f", displayValue),
+    secondaryLabel: String? = null,
     screenWidthPx: Float,
     screenHeightPx: Float,
     minSizePx: Float,
@@ -163,6 +164,7 @@ internal fun VariometerWidgetContent(
             needleValue = needleValue,
             displayValue = displayValue,
             valueLabel = displayLabel,
+            secondaryLabel = secondaryLabel,
             modifier = Modifier.fillMaxSize()
         )
 

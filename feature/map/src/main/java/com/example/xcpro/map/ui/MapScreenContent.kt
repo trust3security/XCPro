@@ -13,6 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -109,6 +110,7 @@ internal fun MapScreenContent(
     var qnhInput by remember { mutableStateOf("") }
     var qnhError by remember { mutableStateOf<String?>(null) }
     var showQnhFab by remember { mutableStateOf(true) }
+    val autoQnhEnabled by locationManager.autoQnhEnabledFlow.collectAsState(initial = false)
 
     Box(Modifier.fillMaxSize()) {
         Scaffold(
@@ -213,6 +215,8 @@ internal fun MapScreenContent(
             qnhError = qnhError,
             unitsPreferences = unitsPreferences,
             liveData = flightDataManager.liveFlightData,
+            autoQnhEnabled = autoQnhEnabled,
+            onAutoQnhToggle = { enabled -> locationManager.setAutoQnhEnabled(enabled) },
             onQnhInputChange = {
                 qnhInput = it
                 qnhError = null
@@ -293,6 +297,8 @@ private fun QnhDialogHost(
     qnhError: String?,
     unitsPreferences: UnitsPreferences,
     liveData: RealTimeFlightData?,
+    autoQnhEnabled: Boolean,
+    onAutoQnhToggle: (Boolean) -> Unit,
     onQnhInputChange: (String) -> Unit,
     onConfirm: (Double) -> Unit,
     onInvalidInput: (String) -> Unit,
@@ -305,6 +311,8 @@ private fun QnhDialogHost(
         qnhError = qnhError,
         unitsPreferences = unitsPreferences,
         liveData = liveData,
+        autoQnhEnabled = autoQnhEnabled,
+        onAutoQnhToggle = onAutoQnhToggle,
         onQnhInputChange = onQnhInputChange,
         onConfirm = onConfirm,
         onInvalidInput = onInvalidInput,

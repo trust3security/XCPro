@@ -21,6 +21,7 @@ import com.example.xcpro.sensors.domain.FlightMetricsConstants.SPEED_HOLD_MS
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.DEFAULT_QNH_HPA
 import com.example.xcpro.sensors.domain.WindEstimator
 import com.example.xcpro.sensors.domain.SensorFrontEnd.SensorSnapshot
+import kotlin.math.abs
 
 
 /**
@@ -44,7 +45,13 @@ internal class CalculateFlightMetricsUseCase(
         decayFactor = DISPLAY_DECAY_FACTOR,
         clamp = DISPLAY_VAR_CLAMP
     )
+    private val xcsoarDisplaySmoother = DisplayVarioSmoother(
+        smoothTimeSeconds = DISPLAY_SMOOTH_TIME_S,
+        decayFactor = DISPLAY_DECAY_FACTOR,
+        clamp = DISPLAY_VAR_CLAMP
+    )
     private var prevTeSpeed: Double = 0.0
+    private var groundZeroAccumulatedSeconds: Double = 0.0
 
     fun execute(request: FlightMetricsRequest): FlightMetricsResult {
         val gps = request.gps
@@ -78,9 +85,25 @@ internal class CalculateFlightMetricsUseCase(
             qnhHpa = qnh,
             windVector = windVector
         )
+        val fallbackAirspeed = gps.speed.value
+            .takeIf { it.isFinite() && it > MIN_FALLBACK_GPS_SPEED_MS }
+            ?.let { speed ->
+                AirspeedEstimate(
+                    indicatedMs = speed,
+                    trueMs = speed,
+                    source = AirspeedSource.GPS_GROUND
+                )
+            }
+        val chosenAirspeed = airspeedFromWind ?: fallbackAirspeed
 
-        val teSpeed = airspeedFromWind?.trueMs
-        val teVario = if (teSpeed != null) {
+        val teSpeed = chosenAirspeed?.trueMs
+        val teVario = if (
+            teSpeed != null &&
+            chosenAirspeed.source != AirspeedSource.GPS_GROUND &&
+            teSpeed > TE_MIN_SPEED_MS &&
+            prevTeSpeed > TE_MIN_SPEED_MS &&
+            request.deltaTimeSeconds > TE_MIN_DT_SECONDS
+        ) {
             val teVerticalSpeed = flightHelpers.calculateTotalEnergy(
                 rawVario = varioResult.verticalSpeed,
                 currentSpeed = teSpeed,
@@ -90,6 +113,7 @@ internal class CalculateFlightMetricsUseCase(
             prevTeSpeed = teSpeed
             teVerticalSpeed.takeIf { currentTime <= request.varioValidUntil }
         } else {
+            prevTeSpeed = 0.0
             null
         }
 
@@ -100,7 +124,7 @@ internal class CalculateFlightMetricsUseCase(
             baroResult = baroResult,
             isQnhCalibrated = isQnhCalibrated,
             teVario = teVario,
-            airspeedEstimate = airspeedFromWind,
+            airspeedEstimate = chosenAirspeed,
             currentTime = currentTime
         )
         val navAltitude = snapshot.navAltitude
@@ -145,7 +169,9 @@ internal class CalculateFlightMetricsUseCase(
         val bruttoAverage30s = averages.bruttoAverage30s
         val bruttoAverage30sValid = averages.bruttoAverage30sValid
         val nettoAverage30s = averages.nettoAverage30s
-        val displayVario = smoothDisplayVario(bruttoVario, request.deltaTimeSeconds, varioValid)
+        val displayVarioRaw = smoothDisplayVario(bruttoVario, request.deltaTimeSeconds, varioValid)
+        val displayVario = applyGroundZeroBias(displayVarioRaw, gps.speed.value, request.deltaTimeSeconds)
+        val displayXcsoarVario = smoothDisplayXcsoar(snapshot.xcsoarVario, request.deltaTimeSeconds, snapshot.xcsoarVarioValid)
         val rawDisplayNetto = averages.displayNettoRaw
         val displayNetto = smoothDisplayNetto(rawDisplayNetto, request.deltaTimeSeconds, nettoResult.valid)
         if (!calibrationChanged) {
@@ -190,6 +216,7 @@ internal class CalculateFlightMetricsUseCase(
             nettoAverage30s = nettoAverage30s,
             bruttoAverage30sValid = bruttoAverage30sValid,
             displayVario = displayVario,
+            displayXcsoarVario = displayXcsoarVario,
             displayNetto = displayNetto,
             netto = nettoResult.value.toFloat(),
             nettoValid = nettoResult.valid,
@@ -197,6 +224,8 @@ internal class CalculateFlightMetricsUseCase(
             trueAirspeedMs = trueAirspeedMs,
             airspeedSourceLabel = airspeedSourceLabel,
             tasValid = tasValid,
+            xcsoarVario = snapshot.xcsoarVario,
+            xcsoarVarioValid = snapshot.xcsoarVarioValid,
             thermalAverageCircle = thermalAvgCircle,
             thermalAverage30s = thermalAvg30s,
             thermalAverageTotal = thermalAvgTotal,
@@ -221,7 +250,9 @@ internal class CalculateFlightMetricsUseCase(
         fusionBlackboard.resetAll()
         displaySmoother.reset()
         circlingDetector.reset()
+        sensorFrontEnd.resetDerivatives()
         prevTeSpeed = 0.0
+        groundZeroAccumulatedSeconds = 0.0
     }
 
     private fun altitudeForAirspeed(baroAltitude: Double, gpsAltitude: Double): Double = when {
@@ -233,15 +264,34 @@ internal class CalculateFlightMetricsUseCase(
     private fun smoothDisplayVario(raw: Double, deltaTime: Double, isValid: Boolean): Double =
         displaySmoother.smoothVario(raw, deltaTime, isValid)
 
+    private fun smoothDisplayXcsoar(raw: Double, deltaTime: Double, isValid: Boolean): Double =
+        xcsoarDisplaySmoother.smoothVario(raw, deltaTime, isValid)
+
     private fun smoothDisplayNetto(raw: Double, deltaTime: Double, isValid: Boolean): Double =
         displaySmoother.smoothNetto(raw, deltaTime, isValid)
+
+    private fun applyGroundZeroBias(
+        displayVario: Double,
+        groundSpeedMs: Double,
+        deltaTimeSeconds: Double
+    ): Double {
+        if (abs(displayVario) < GROUND_ZERO_THRESHOLD_MS && groundSpeedMs < GROUND_ZERO_SPEED_MS) {
+            groundZeroAccumulatedSeconds += deltaTimeSeconds
+            if (groundZeroAccumulatedSeconds >= GROUND_ZERO_SETTLE_SECONDS) {
+                return 0.0
+            }
+        } else {
+            groundZeroAccumulatedSeconds = 0.0
+        }
+        return displayVario
+    }
 
     companion object {
         private const val DEFAULT_QNH_HPA = 1013.25
         private const val AVERAGE_WINDOW_SECONDS = 30
         private const val NETTO_DISPLAY_WINDOW_MS = 5_000L
         private const val DISPLAY_VAR_CLAMP = 7.0
-        private const val DISPLAY_SMOOTH_TIME_S = 0.6
+        private const val DISPLAY_SMOOTH_TIME_S = 0.4
         private const val DISPLAY_DECAY_FACTOR = 0.9
         private const val MIN_SINK_FOR_IAS_MS = 0.15
         private const val IAS_SCAN_MIN_MS = 8.0
@@ -254,6 +304,12 @@ internal class CalculateFlightMetricsUseCase(
         private const val GRAVITY = 9.80665
         private const val SPEED_HOLD_MS = 10_000L
         private const val QNH_JUMP_THRESHOLD_HPA = 0.5
+        private const val MIN_FALLBACK_GPS_SPEED_MS = 0.5
+        private const val TE_MIN_SPEED_MS = 5.0
+        private const val TE_MIN_DT_SECONDS = 0.05
+        private const val GROUND_ZERO_THRESHOLD_MS = 0.05
+        private const val GROUND_ZERO_SPEED_MS = 0.5
+        private const val GROUND_ZERO_SETTLE_SECONDS = 3.0
     }
 }
 
@@ -286,6 +342,7 @@ data class FlightMetricsResult(
     val bruttoAverage30sValid: Boolean,
     val nettoAverage30s: Double,
     val displayVario: Double,
+    val displayXcsoarVario: Double,
     val displayNetto: Double,
     val netto: Float,
     val nettoValid: Boolean,
@@ -293,6 +350,8 @@ data class FlightMetricsResult(
     val trueAirspeedMs: Double,
     val airspeedSourceLabel: String,
     val tasValid: Boolean,
+    val xcsoarVario: Double,
+    val xcsoarVarioValid: Boolean,
     val thermalAverageCircle: Float,
     val thermalAverage30s: Float,
     val thermalAverageTotal: Float,

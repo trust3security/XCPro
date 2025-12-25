@@ -266,4 +266,16 @@ internal class FlightCalculationHelpers(
     internal fun resetThermalTracking() {
         thermalTracker.reset()
     }
+
+    internal fun resetAll() {
+        resetThermalTracking()
+        locationHistory.clear()
+        lastLDCalculationTime = 0L
+        lastLDAltitude = 0.0
+        currentLD = 0f
+        currentAGL = 0.0
+        lastValidTAS = null
+        lastValidGnd = null
+        lastSpeedTimestamp = 0L
+    }
 }

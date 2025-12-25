@@ -17,7 +17,7 @@ import kotlin.math.abs
  */
 class VarioBeepController(
     private val toneGenerator: VarioToneGenerator,
-    private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    scope: CoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 ) {
 
     companion object {
@@ -30,6 +30,8 @@ class VarioBeepController(
     private var currentParams: AudioParams? = null
     private var targetParams: AudioParams? = null
     private var isRunning = false
+
+    private val internalScope = CoroutineScope(scope.coroutineContext + SupervisorJob(scope.coroutineContext[Job]))
 
     // Coroutine job for beep loop
     private var beepJob: Job? = null
@@ -88,7 +90,7 @@ class VarioBeepController(
      * Main beep loop - runs continuously while started
      */
     private fun startBeepLoop() {
-        beepJob = scope.launch {
+        beepJob = internalScope.launch {
             while (isRunning) {
                 try {
                     val target = targetParams
@@ -243,6 +245,6 @@ class VarioBeepController(
      */
     fun release() {
         stop()
-        scope.cancel()
+        internalScope.cancel()
     }
 }

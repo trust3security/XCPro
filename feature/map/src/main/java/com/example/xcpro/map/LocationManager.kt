@@ -93,11 +93,17 @@ class LocationManager(
 
     // ✅ PHASE 2: Flight data calculator (combines all sensor data + calculations)
     val sensorFusionRepository: SensorFusionRepository = varioServiceManager.sensorFusionRepository
+    val autoQnhEnabledFlow = qnhPreferencesRepository.autoQnhEnabledFlow
 
     init {
         coroutineScope.launch {
             qnhPreferencesRepository.qnhHpaFlow.collect { storedQnh ->
                 storedQnh?.let { sensorFusionRepository.setManualQnh(it) }
+            }
+        }
+        coroutineScope.launch {
+            autoQnhEnabledFlow.collect { enabled ->
+                sensorFusionRepository.setAutoQnhEnabled(enabled)
             }
         }
     }
@@ -271,6 +277,11 @@ class LocationManager(
         coroutineScope.launch {
             qnhPreferencesRepository.setManualQnh(qnh)
         }
+    }
+
+    fun setAutoQnhEnabled(enabled: Boolean) {
+        sensorFusionRepository.setAutoQnhEnabled(enabled)
+        coroutineScope.launch { qnhPreferencesRepository.setAutoQnhEnabled(enabled) }
     }
 
     fun resetQnhToStandard() {

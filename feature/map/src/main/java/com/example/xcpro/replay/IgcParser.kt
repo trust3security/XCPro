@@ -2,6 +2,7 @@ package com.example.xcpro.replay
 
 import java.io.BufferedReader
 import java.io.InputStream
+import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneOffset
@@ -35,18 +36,43 @@ object IgcParser {
         var currentDate = LocalDate.now(ZoneOffset.UTC)
         val points = mutableListOf<IgcPoint>()
         var qnhHpa: Double? = null
+        var lastTimestampMillis: Long? = null
 
         reader.forEachLine { rawLine ->
             val line = rawLine.trim()
             when {
                 line.startsWith("HFDTE") && line.length >= 11 -> {
                     currentDate = parseDate(line.substring(5, 11)) ?: currentDate
+                    lastTimestampMillis = null
                 }
                 line.startsWith("HFQNH") -> {
                     parseNumericValue(line.substring(5))?.let { qnhHpa = it }
                 }
                 line.startsWith("B") && line.length >= 35 -> {
-                    parseBRecord(line, currentDate)?.let { points += it }
+                    val time = parseBTime(line) ?: return@forEachLine
+                    val candidateMillis = currentDate.atTime(time).toInstant(ZoneOffset.UTC).toEpochMilli()
+                    val previousMillis = lastTimestampMillis
+                    val effectiveMillis = if (previousMillis != null && candidateMillis < previousMillis) {
+                        val delta = previousMillis - candidateMillis
+                        // IGC B-record timestamps are hhmmss with 1s granularity. Flights can span UTC
+                        // midnight; many loggers keep emitting B records with time-of-day reset but
+                        // do not repeat HFDTE. Detect a large backwards jump and roll the date forward.
+                        if (delta >= MIDNIGHT_ROLLOVER_THRESHOLD.toMillis()) {
+                            currentDate = currentDate.plusDays(1)
+                            currentDate.atTime(time).toInstant(ZoneOffset.UTC).toEpochMilli()
+                        } else {
+                            // Small backwards jumps are likely bad/out-of-order samples; skip them
+                            // to keep downstream estimators monotonic.
+                            return@forEachLine
+                        }
+                    } else {
+                        candidateMillis
+                    }
+
+                    parseBRecord(line, effectiveMillis)?.let { point ->
+                        points += point
+                        lastTimestampMillis = effectiveMillis
+                    }
                 }
             }
         }
@@ -68,15 +94,20 @@ object IgcParser {
         }
     }
 
-    private fun parseBRecord(line: String, date: LocalDate): IgcPoint? {
+    private fun parseBTime(line: String): LocalTime? {
         return try {
-            val time = LocalTime.of(
+            LocalTime.of(
                 line.substring(1, 3).toInt(),
                 line.substring(3, 5).toInt(),
                 line.substring(5, 7).toInt()
             )
-            val timestampMillis = date.atTime(time).toInstant(ZoneOffset.UTC).toEpochMilli()
+        } catch (_: Exception) {
+            null
+        }
+    }
 
+    private fun parseBRecord(line: String, timestampMillis: Long): IgcPoint? {
+        return try {
             val lat = parseCoordinate(line.substring(7, 14), line[14] == 'N', isLatitude = true)
             val lon = parseCoordinate(line.substring(15, 23), line[23] == 'E', isLatitude = false)
             val pressureAltitude = line.substring(25, 30).toIntOrNull()
@@ -112,4 +143,6 @@ object IgcParser {
         val match = Regex("(-?\\d+(\\.\\d+)?)").find(raw) ?: return null
         return match.value.toDoubleOrNull()
     }
+
+    private val MIDNIGHT_ROLLOVER_THRESHOLD: Duration = Duration.ofHours(6)
 }

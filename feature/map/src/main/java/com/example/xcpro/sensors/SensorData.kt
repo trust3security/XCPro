@@ -100,6 +100,9 @@ data class CompleteFlightData(
     val isQNHCalibrated: Boolean, // Whether QNH was calibrated by GPS (vs standard 1013.25)
     val verticalSpeed: VerticalSpeedMs,  // m/s (selected brutto vario)
     val displayVario: VerticalSpeedMs = VerticalSpeedMs(0.0),
+    val xcsoarVario: VerticalSpeedMs = VerticalSpeedMs(0.0),
+    val xcsoarDisplayVario: VerticalSpeedMs = VerticalSpeedMs(0.0),
+    val xcsoarVarioValid: Boolean = false,
     val bruttoVario: VerticalSpeedMs = VerticalSpeedMs(0.0), // m/s (TE if available else GPS)
     val bruttoAverage30s: VerticalSpeedMs = VerticalSpeedMs(0.0),
     val bruttoAverage30sValid: Boolean = false,

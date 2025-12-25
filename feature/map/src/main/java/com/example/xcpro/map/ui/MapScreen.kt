@@ -39,9 +39,11 @@ import com.example.xcpro.common.units.AltitudeM
 import com.example.xcpro.common.units.AltitudeUnit
 import com.example.xcpro.common.units.PressureHpa
 import com.example.xcpro.common.units.PressureUnit
+import com.example.xcpro.common.units.SpeedMs
 import com.example.xcpro.common.units.UnitsFormatter
 import com.example.dfcards.FlightDataProvider
 import com.example.dfcards.FlightModeSelection
+import com.example.xcpro.sensors.GPSData
 import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
@@ -108,6 +110,7 @@ import com.example.xcpro.navdrawer.NavigationDrawer
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
 import com.example.xcpro.screens.navdrawer.lookandfeel.LookAndFeelPreferences
 import kotlinx.coroutines.launch
+import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import java.io.File
@@ -266,6 +269,28 @@ fun MapScreen(
     val showReturnButton by mapState.showReturnButtonFlow.collectAsStateWithLifecycle()
     val replaySession by mapViewModel.replaySessionState.collectAsStateWithLifecycle()
     val suppressLiveGps = replaySession.selection != null
+    val allowSensorStart = replaySession.selection == null ||
+        replaySession.status == com.example.xcpro.replay.IgcReplayController.SessionStatus.IDLE
+    val replayFlightData by flightDataManager.liveFlightDataFlow.collectAsStateWithLifecycle()
+    val replayGpsLocation by remember(replayFlightData) {
+        derivedStateOf {
+            replayFlightData?.let { sample ->
+                if (sample.latitude == 0.0 && sample.longitude == 0.0) {
+                    null
+                } else {
+                    GPSData(
+                        latLng = LatLng(sample.latitude, sample.longitude),
+                        altitude = AltitudeM(sample.gpsAltitude),
+                        speed = SpeedMs(sample.groundSpeed),
+                        bearing = sample.track,
+                        accuracy = sample.accuracy.toFloat(),
+                        timestamp = sample.timestamp
+                    )
+                }
+            }
+        }
+    }
+    val locationForUi = if (suppressLiveGps) replayGpsLocation else currentGpsLocation
 
     // ✅ AAT Edit Mode State - Track when AAT pin editing is active
     val isAATEditMode by mapViewModel.isAATEditMode.collectAsStateWithLifecycle()
@@ -334,7 +359,8 @@ fun MapScreen(
         initialMapStyle = initialMapStyle,
         onMapStyleSelected = onMapStyleSelected,
         cardsReady = cardHydrationReady,
-        suppressLiveGps = suppressLiveGps
+        suppressLiveGps = suppressLiveGps,
+        allowSensorStart = allowSensorStart
     )
 
     // ✅ CENTRALIZED LIFECYCLE EFFECTS - Replace individual DisposableEffect blocks
@@ -439,7 +465,7 @@ fun MapScreen(
                     orientationData = orientationData,
                     cameraManager = cameraManager,
                     currentFlightModeSelection = currentFlightModeSelection,
-                    currentLocation = currentGpsLocation,
+                    currentLocation = locationForUi,
                     showRecenterButton = showRecenterButton,
                     showReturnButton = showReturnButton,
                     showDistanceCircles = showDistanceCircles,
@@ -553,7 +579,5 @@ private fun resolveDisplayName(context: Context, uri: Uri): String? {
         if (nameIndex >= 0 && cursor.moveToFirst()) cursor.getString(nameIndex) else null
     }
 }
-
-
 
 

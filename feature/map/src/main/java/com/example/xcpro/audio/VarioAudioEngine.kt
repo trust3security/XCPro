@@ -33,7 +33,7 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 class VarioAudioEngine(
     private val context: Context,
-    private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    scope: CoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 ) {
 
     companion object {
@@ -42,6 +42,7 @@ class VarioAudioEngine(
 
     // Components
     private val toneGenerator = VarioToneGenerator()
+    private val internalScope = CoroutineScope(scope.coroutineContext + SupervisorJob(scope.coroutineContext[Job]))
     private lateinit var frequencyMapper: VarioFrequencyMapper
     private lateinit var beepController: VarioBeepController
 
@@ -87,7 +88,7 @@ class VarioAudioEngine(
             frequencyMapper = VarioFrequencyMapper(_settings.value)
 
             // Create controller
-            beepController = VarioBeepController(toneGenerator, scope)
+            beepController = VarioBeepController(toneGenerator, internalScope)
 
             // Apply initial volume
             toneGenerator.setVolume(_settings.value.volume)
@@ -269,7 +270,7 @@ class VarioAudioEngine(
             stop()
             beepController.release()
             toneGenerator.release()
-            scope.cancel()
+            internalScope.cancel()
             isInitialized = false
             Log.i(TAG, "Audio engine released (total updates: $audioUpdatesCount)")
         } catch (e: Exception) {

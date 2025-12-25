@@ -3,18 +3,20 @@ package com.example.xcpro.sensors.domain
 import com.example.dfcards.calculations.BarometricAltitudeData
 import com.example.dfcards.calculations.ConfidenceLevel
 import com.example.dfcards.filters.ModernVarioResult
+import com.example.xcpro.common.units.AltitudeM
+import com.example.xcpro.common.units.SpeedMs
 import com.example.xcpro.glider.StillAirSinkProvider
 import com.example.xcpro.sensors.FlightCalculationHelpers
 import com.example.xcpro.sensors.GPSData
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.mockito.invocation.InvocationOnMock
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.maplibre.android.geometry.LatLng
-import com.example.xcpro.common.units.AltitudeM
-import com.example.xcpro.common.units.SpeedMs
 
 private fun gpsSample(timeMs: Long) = GPSData(
     latLng = LatLng(0.0, 0.0),
@@ -34,7 +36,9 @@ private fun varioSample(vs: Double, alt: Double) = ModernVarioResult(
 
 class CalculateFlightMetricsUseCaseTest {
 
-    private fun newUseCase(): CalculateFlightMetricsUseCase {
+    private fun newUseCase(
+        teAnswer: (InvocationOnMock) -> Double = { invocation -> invocation.getArgument<Double>(0) }
+    ): CalculateFlightMetricsUseCase {
         val sink = mock<StillAirSinkProvider> {
             on { sinkAtSpeed(any()) }.thenReturn(0.0)
         }
@@ -42,6 +46,7 @@ class CalculateFlightMetricsUseCaseTest {
         whenever(helpers.calculateNetto(any(), anyOrNull(), any())).thenReturn(
             FlightCalculationHelpers.NettoComputation(0.0, true)
         )
+        whenever(helpers.calculateTotalEnergy(any(), any(), any(), any())).thenAnswer(teAnswer)
         whenever(helpers.calculateCurrentLD(any(), any())).thenReturn(0f)
         whenever(helpers.updateThermalState(any(), any(), any(), any())).thenAnswer { }
         whenever(helpers.updateAGL(any(), any(), any())).thenAnswer { }
@@ -115,6 +120,39 @@ class CalculateFlightMetricsUseCaseTest {
         )
         // TC30s should still reflect ~2 m/s average, not jump
         assertTrue(kotlin.math.abs(res.bruttoAverage30s - 2.0) < 1.0)
+    }
+
+    @Test
+    fun te_vario_not_used_when_only_gps_speed() {
+        val teValue = 3.21
+        val useCase = newUseCase { teValue }
+        val time = 0L
+        val altitude = 500.0
+
+        val result = useCase.execute(
+            FlightMetricsRequest(
+                gps = gpsSample(time),
+                currentTimeMillis = time,
+                deltaTimeSeconds = 1.0,
+                varioResult = varioSample(0.5, altitude),
+                varioGpsValue = 0.5,
+                baroResult = BarometricAltitudeData(
+                    altitudeMeters = altitude,
+                    qnh = 1013.25,
+                    isCalibrated = true,
+                    pressureHPa = 1013.25,
+                    temperatureCompensated = true,
+                    confidenceLevel = ConfidenceLevel.MEDIUM,
+                    pressureAltitudeMeters = altitude,
+                    gpsDeltaMeters = 0.0,
+                    lastCalibrationTime = 0L
+                ),
+                windState = null, // no wind vector -> forces GPS fallback
+                varioValidUntil = time + 500
+            )
+        )
+
+        assertTrue(result.teVario == null || result.varioSource != "TE")
     }
 
     @Test

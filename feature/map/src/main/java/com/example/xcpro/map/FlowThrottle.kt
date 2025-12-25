@@ -23,8 +23,14 @@ fun <T> Flow<T>.throttleFrame(frameMs: Long, clock: () -> Long = { SystemClock.e
         awaitClose { }
     }
 
-internal fun Float.bucket(step: Float): Float =
-    if (step == 0f) this else ((this / step).roundToInt() * step)
+internal fun Float.bucket(step: Float): Float {
+    if (!this.isFinite()) return this
+    if (step == 0f) return this
+    return ((this / step).roundToInt() * step)
+}
 
-internal fun Double.bucket(step: Double): Double =
-    if (step == 0.0) this else ((this / step).roundToInt() * step)
+internal fun Double.bucket(step: Double): Double {
+    if (!this.isFinite()) return this
+    if (step == 0.0) return this
+    return ((this / step).roundToInt() * step)
+}
