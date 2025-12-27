@@ -230,6 +230,6 @@ class WindRepository @Inject constructor(
         private const val EKF_QUALITY_BONUS = 1
         private const val MAX_MEASUREMENT_QUALITY = 5
         private const val CIRCLING_SUPPRESSION_MS = 5_000L
-        private const val STALE_MS = 120_000L
+        private const val STALE_MS = 3_600_000L // 1 hour (soaring-scale glides between wind updates)
     }
 }

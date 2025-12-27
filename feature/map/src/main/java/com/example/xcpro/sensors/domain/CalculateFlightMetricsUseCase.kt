@@ -45,7 +45,7 @@ internal class CalculateFlightMetricsUseCase(
         decayFactor = DISPLAY_DECAY_FACTOR,
         clamp = DISPLAY_VAR_CLAMP
     )
-    private val xcsoarDisplaySmoother = DisplayVarioSmoother(
+    private val xcSoarDisplaySmoother = DisplayVarioSmoother(
         smoothTimeSeconds = DISPLAY_SMOOTH_TIME_S,
         decayFactor = DISPLAY_DECAY_FACTOR,
         clamp = DISPLAY_VAR_CLAMP
@@ -117,15 +117,21 @@ internal class CalculateFlightMetricsUseCase(
             null
         }
 
+        val pressureVarioOverride = varioResult.verticalSpeed.takeIf {
+            it.isFinite() && currentTime <= request.varioValidUntil
+        }
+
         val snapshot: SensorSnapshot = sensorFrontEnd.buildSnapshot(
             navBaroAltitudeEnabled = navBaroAltitudeEnabled,
             baroAltitude = baroAltitude,
             gpsAltitude = gps.altitude.value,
+            gpsTimestampMillis = gps.timestamp,
             baroResult = baroResult,
             isQnhCalibrated = isQnhCalibrated,
             teVario = teVario,
             airspeedEstimate = chosenAirspeed,
-            currentTime = currentTime
+            currentTime = currentTime,
+            pressureVarioOverride = pressureVarioOverride
         )
         val navAltitude = snapshot.navAltitude
         val indicatedAirspeedMs = snapshot.indicatedAirspeedMs
@@ -171,7 +177,7 @@ internal class CalculateFlightMetricsUseCase(
         val nettoAverage30s = averages.nettoAverage30s
         val displayVarioRaw = smoothDisplayVario(bruttoVario, request.deltaTimeSeconds, varioValid)
         val displayVario = applyGroundZeroBias(displayVarioRaw, gps.speed.value, request.deltaTimeSeconds)
-        val displayXcsoarVario = smoothDisplayXcsoar(snapshot.xcsoarVario, request.deltaTimeSeconds, snapshot.xcsoarVarioValid)
+        val displayXcSoarVario = smoothDisplayXcSoar(snapshot.xcSoarVario, request.deltaTimeSeconds, snapshot.xcSoarVarioValid)
         val rawDisplayNetto = averages.displayNettoRaw
         val displayNetto = smoothDisplayNetto(rawDisplayNetto, request.deltaTimeSeconds, nettoResult.valid)
         if (!calibrationChanged) {
@@ -216,7 +222,7 @@ internal class CalculateFlightMetricsUseCase(
             nettoAverage30s = nettoAverage30s,
             bruttoAverage30sValid = bruttoAverage30sValid,
             displayVario = displayVario,
-            displayXcsoarVario = displayXcsoarVario,
+            displayXcSoarVario = displayXcSoarVario,
             displayNetto = displayNetto,
             netto = nettoResult.value.toFloat(),
             nettoValid = nettoResult.valid,
@@ -224,8 +230,8 @@ internal class CalculateFlightMetricsUseCase(
             trueAirspeedMs = trueAirspeedMs,
             airspeedSourceLabel = airspeedSourceLabel,
             tasValid = tasValid,
-            xcsoarVario = snapshot.xcsoarVario,
-            xcsoarVarioValid = snapshot.xcsoarVarioValid,
+            xcSoarVario = snapshot.xcSoarVario,
+            xcSoarVarioValid = snapshot.xcSoarVarioValid,
             thermalAverageCircle = thermalAvgCircle,
             thermalAverage30s = thermalAvg30s,
             thermalAverageTotal = thermalAvgTotal,
@@ -264,8 +270,8 @@ internal class CalculateFlightMetricsUseCase(
     private fun smoothDisplayVario(raw: Double, deltaTime: Double, isValid: Boolean): Double =
         displaySmoother.smoothVario(raw, deltaTime, isValid)
 
-    private fun smoothDisplayXcsoar(raw: Double, deltaTime: Double, isValid: Boolean): Double =
-        xcsoarDisplaySmoother.smoothVario(raw, deltaTime, isValid)
+    private fun smoothDisplayXcSoar(raw: Double, deltaTime: Double, isValid: Boolean): Double =
+        xcSoarDisplaySmoother.smoothVario(raw, deltaTime, isValid)
 
     private fun smoothDisplayNetto(raw: Double, deltaTime: Double, isValid: Boolean): Double =
         displaySmoother.smoothNetto(raw, deltaTime, isValid)
@@ -342,7 +348,7 @@ data class FlightMetricsResult(
     val bruttoAverage30sValid: Boolean,
     val nettoAverage30s: Double,
     val displayVario: Double,
-    val displayXcsoarVario: Double,
+    val displayXcSoarVario: Double,
     val displayNetto: Double,
     val netto: Float,
     val nettoValid: Boolean,
@@ -350,8 +356,8 @@ data class FlightMetricsResult(
     val trueAirspeedMs: Double,
     val airspeedSourceLabel: String,
     val tasValid: Boolean,
-    val xcsoarVario: Double,
-    val xcsoarVarioValid: Boolean,
+    val xcSoarVario: Double,
+    val xcSoarVarioValid: Boolean,
     val thermalAverageCircle: Float,
     val thermalAverage30s: Float,
     val thermalAverageTotal: Float,

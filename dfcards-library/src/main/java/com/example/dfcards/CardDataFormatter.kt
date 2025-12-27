@@ -33,7 +33,7 @@ internal object CardDataFormatter {
                 "-- ${UnitsFormatter.verticalSpeed(VerticalSpeedMs(0.0), units).unitLabel}"
             "thermal_tc_gain" ->
                 "-- ${UnitsFormatter.altitude(AltitudeM(0.0), units).unitLabel}"
-            "ground_speed", "wind_spd", "wind_arrow", "task_spd", "ias" ->
+            "ground_speed", "wind_spd", "wind_arrow", "task_spd", "ias", "tas" ->
                 "-- ${UnitsFormatter.speed(SpeedMs(0.0), units).unitLabel}"
             "wind_dir" -> "--\u00B0"
             "wpt_dist", "task_dist" ->
@@ -128,10 +128,23 @@ internal object CardDataFormatter {
             }
 
             "ias" -> {
-                val indicatedMs = liveData.indicatedAirspeed.takeIf { it.isFinite() && it > 0.1 }
+                // Match XCSoar-style gating: only show IAS when we have a real airspeed estimate
+                // (not the GPS ground-speed fallback).
+                val indicatedMs = liveData.indicatedAirspeed.takeIf {
+                    it.isFinite() && it > 0.1 && liveData.tasValid
+                }
                 if (indicatedMs != null) {
                     val formatted = UnitsFormatter.speed(SpeedMs(indicatedMs), units)
                     return Pair(formatted.text, "LIVE")
+                }
+                Pair(placeholderFor(cardId), "NO DATA")
+            }
+
+            "tas" -> {
+                val tasMs = liveData.trueAirspeed.takeIf { it.isFinite() && it > 0.1 && liveData.tasValid }
+                if (tasMs != null) {
+                    val formatted = UnitsFormatter.speed(SpeedMs(tasMs), units)
+                    return Pair(formatted.text, null)
                 }
                 Pair(placeholderFor(cardId), "NO DATA")
             }

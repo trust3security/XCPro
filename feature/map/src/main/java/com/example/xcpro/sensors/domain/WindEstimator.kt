@@ -31,9 +31,11 @@ internal class WindEstimator(
         val bearingRad = Math.toRadians(gpsBearingDeg)
         val groundEast = gpsSpeed * sin(bearingRad)
         val groundNorth = gpsSpeed * cos(bearingRad)
-        val tasEast = groundEast + windVector.east
-        val tasNorth = groundNorth + windVector.north
-        val tas = hypot(tasEast, tasNorth)
+        // WindVector represents the velocity of the airmass ("wind TO"), so:
+        //   ground = air + wind_to  =>  air = ground - wind_to
+        val airEast = groundEast - windVector.east
+        val airNorth = groundNorth - windVector.north
+        val tas = hypot(airEast, airNorth)
         if (!tas.isFinite() || tas <= 0.1) return null
 
         val densityRatio = computeDensityRatio(altitudeMeters, qnhHpa)

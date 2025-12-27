@@ -33,19 +33,21 @@ internal class SensorFrontEnd(
         val bruttoVario: Double,
         val varioSource: String,
         val varioValid: Boolean,
-        val xcsoarVario: Double,
-        val xcsoarVarioValid: Boolean
+        val xcSoarVario: Double,
+        val xcSoarVarioValid: Boolean
     )
 
     fun buildSnapshot(
         navBaroAltitudeEnabled: Boolean,
         baroAltitude: Double,
         gpsAltitude: Double,
+        gpsTimestampMillis: Long,
         baroResult: BarometricAltitudeData?,
         isQnhCalibrated: Boolean,
         teVario: Double?,
         airspeedEstimate: AirspeedEstimate?,
-        currentTime: Long
+        currentTime: Long,
+        pressureVarioOverride: Double? = null
     ): SensorSnapshot {
         val navAltitude = when {
             navBaroAltitudeEnabled && baroResult != null && isQnhCalibrated -> baroAltitude
@@ -57,7 +59,7 @@ internal class SensorFrontEnd(
         val indicatedAirspeedMs = activeEstimate?.indicatedMs ?: 0.0
         val trueAirspeedMs = activeEstimate?.trueMs ?: 0.0
         val airspeedSource = activeEstimate?.source ?: AirspeedSource.GPS_GROUND
-        val tasValid = activeEstimate != null
+        val tasValid = activeEstimate != null && airspeedSource != AirspeedSource.GPS_GROUND
 
         // TE altitude requires an airspeed estimate (not just GPS ground speed), otherwise energy height
         // changes would inject bogus "lift/sink" into thermal tracking during turns/accels.
@@ -69,30 +71,35 @@ internal class SensorFrontEnd(
         } else 0.0
         val teAltitude = navAltitude + energyHeight
 
-        val pressureVario = deriveVario(pressureAltitude = baroResult?.pressureAltitudeMeters ?: baroAltitude, currentTime = currentTime, altitudeType = AltitudeType.PRESSURE)
-        val baroVario = deriveVario(pressureAltitude = baroAltitude, currentTime = currentTime, altitudeType = AltitudeType.BARO)
-        val gpsVario = deriveVario(pressureAltitude = gpsAltitude, currentTime = currentTime, altitudeType = AltitudeType.GPS)
+        val pressureVario = pressureVarioOverride
+            ?.takeIf { it.isFinite() }
+            ?: baroResult?.pressureAltitudeMeters
+                ?.takeIf { it.isFinite() }
+                ?.let { pressureAltitude -> deriveVario(pressureAltitude = pressureAltitude, currentTime = currentTime, altitudeType = AltitudeType.PRESSURE) }
+            ?: Double.NaN
 
-        val (bruttoVario, varioSource) = if (teVario != null && teVario.isFinite()) {
-            teVario to "TE"
-        } else {
-            val candidates = listOf(
-                "GPS" to gpsVario,
-                "PRESSURE" to pressureVario,
-                "BARO" to baroVario
-            ).filter { it.second.isFinite() }
-            val best = candidates.maxByOrNull { abs(it.second) }
-            if (best != null) best.second to best.first else Double.NaN to "NONE"
+        val baroVario = baroResult
+            ?.let { deriveVario(pressureAltitude = baroAltitude, currentTime = currentTime, altitudeType = AltitudeType.BARO) }
+            ?: Double.NaN
+
+        val gpsVario = deriveVario(pressureAltitude = gpsAltitude, currentTime = gpsTimestampMillis, altitudeType = AltitudeType.GPS)
+
+        val (bruttoVario, varioSource) = when {
+            teVario != null && teVario.isFinite() -> teVario to "TE"
+            pressureVario.isFinite() -> pressureVario to "PRESSURE"
+            baroVario.isFinite() -> baroVario to "BARO"
+            gpsVario.isFinite() -> gpsVario to "GPS"
+            else -> Double.NaN to "NONE"
         }
         val varioValid = bruttoVario.isFinite()
 
-        val xcsoarVario = when {
+        val xcSoarVario = when {
             pressureVario.isFinite() -> pressureVario
             baroVario.isFinite() -> baroVario
             gpsVario.isFinite() -> gpsVario
             else -> Double.NaN
         }.guardVario()
-        val xcsoarVarioValid = xcsoarVario.isFinite()
+        val xcSoarVarioValid = xcSoarVario.isFinite()
 
         return SensorSnapshot(
             navAltitude = navAltitude,
@@ -107,8 +114,8 @@ internal class SensorFrontEnd(
             bruttoVario = bruttoVario,
             varioSource = varioSource,
             varioValid = varioValid,
-            xcsoarVario = xcsoarVario,
-            xcsoarVarioValid = xcsoarVarioValid
+            xcSoarVario = xcSoarVario,
+            xcSoarVarioValid = xcSoarVarioValid
         )
     }
 
@@ -116,18 +123,21 @@ internal class SensorFrontEnd(
 
     private var prevPressureAltitude: Double? = null
     private var prevPressureTime: Long = -1L
+    private var lastPressureVario: Double? = null
     private var prevBaroAltitude: Double? = null
     private var prevBaroTime: Long = -1L
+    private var lastBaroVario: Double? = null
     private var prevGpsAltitude: Double? = null
     private var prevGpsTime: Long = -1L
+    private var lastGpsVario: Double? = null
 
     private fun deriveVario(pressureAltitude: Double, currentTime: Long, altitudeType: AltitudeType): Double {
         if (!pressureAltitude.isFinite()) return Double.NaN
 
-        val (prevAlt, prevTime) = when (altitudeType) {
-            AltitudeType.PRESSURE -> prevPressureAltitude to prevPressureTime
-            AltitudeType.BARO -> prevBaroAltitude to prevBaroTime
-            AltitudeType.GPS -> prevGpsAltitude to prevGpsTime
+        val (prevAlt, prevTime, lastVario) = when (altitudeType) {
+            AltitudeType.PRESSURE -> Triple(prevPressureAltitude, prevPressureTime, lastPressureVario)
+            AltitudeType.BARO -> Triple(prevBaroAltitude, prevBaroTime, lastBaroVario)
+            AltitudeType.GPS -> Triple(prevGpsAltitude, prevGpsTime, lastGpsVario)
         }
 
         if (prevTime < 0L) {
@@ -136,32 +146,35 @@ internal class SensorFrontEnd(
         }
 
         val dt = (currentTime - prevTime) / 1000.0
-        if (dt <= 0.0 || dt < MIN_DERIVATIVE_DT_SECONDS) {
-            remember(altitudeType, pressureAltitude, currentTime)
+        if (dt <= 0.0 || dt < MIN_DERIVATIVE_DT_SECONDS) return lastVario ?: Double.NaN
+
+        if (dt > MAX_DERIVATIVE_DT_SECONDS) {
+            remember(altitudeType, pressureAltitude, currentTime, vario = null)
             return Double.NaN
         }
 
-        val vario = if (prevAlt != null && dt <= MAX_DERIVATIVE_DT_SECONDS) {
-            (pressureAltitude - prevAlt) / dt
-        } else Double.NaN
-
-        remember(altitudeType, pressureAltitude, currentTime)
-        return vario.guardVario()
+        val vario = if (prevAlt != null) (pressureAltitude - prevAlt) / dt else Double.NaN
+        val guarded = vario.guardVario()
+        remember(altitudeType, pressureAltitude, currentTime, vario = guarded.takeIf { it.isFinite() })
+        return guarded
     }
 
-    private fun remember(type: AltitudeType, altitude: Double, time: Long) {
+    private fun remember(type: AltitudeType, altitude: Double, time: Long, vario: Double? = null) {
         when (type) {
             AltitudeType.PRESSURE -> {
                 prevPressureAltitude = altitude
                 prevPressureTime = time
+                lastPressureVario = vario
             }
             AltitudeType.BARO -> {
                 prevBaroAltitude = altitude
                 prevBaroTime = time
+                lastBaroVario = vario
             }
             AltitudeType.GPS -> {
                 prevGpsAltitude = altitude
                 prevGpsTime = time
+                lastGpsVario = vario
             }
         }
     }
@@ -169,10 +182,13 @@ internal class SensorFrontEnd(
     fun resetDerivatives() {
         prevPressureAltitude = null
         prevPressureTime = -1L
+        lastPressureVario = null
         prevBaroAltitude = null
         prevBaroTime = -1L
+        lastBaroVario = null
         prevGpsAltitude = null
         prevGpsTime = -1L
+        lastGpsVario = null
     }
 
     private fun Double.guardVario(): Double =

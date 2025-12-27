@@ -12,7 +12,7 @@ class WindEstimatorTest {
     @Test
     fun fromWind_returns_tas_and_indicated() {
         val estimator = WindEstimator()
-        // Ground: 10 m/s east, wind: 5 m/s headwind (toward west => east component -5)
+        // Ground: 10 m/s east, wind: 5 m/s headwind (wind TO west => east component -5)
         val vector = WindVector(east = -5.0, north = 0.0)
         val result = estimator.fromWind(
             gpsSpeed = 10.0,
@@ -22,8 +22,25 @@ class WindEstimatorTest {
             windVector = vector
         )
         requireNotNull(result)
-        assertEquals(5.0, result.trueMs, 0.001)
-        assertEquals(5.0, result.indicatedMs, 0.001) // sea level density => IAS ~= TAS
+        assertEquals(15.0, result.trueMs, 0.001)
+        assertEquals(15.0, result.indicatedMs, 0.001) // sea level density => IAS ~= TAS
+    }
+
+    @Test
+    fun fromWind_returns_tas_for_crosswind() {
+        val estimator = WindEstimator()
+        // Ground: 10 m/s north, wind: 10 m/s crosswind TO east
+        val vector = WindVector(east = 10.0, north = 0.0)
+        val result = estimator.fromWind(
+            gpsSpeed = 10.0,
+            gpsBearingDeg = 0.0,
+            altitudeMeters = 0.0,
+            qnhHpa = 1013.25,
+            windVector = vector
+        )
+        requireNotNull(result)
+        // air = ground - wind_to => (-10 east, +10 north) => TAS = sqrt(200)
+        assertEquals(kotlin.math.sqrt(200.0), result.trueMs, 0.001)
     }
 
     @Test

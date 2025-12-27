@@ -136,7 +136,7 @@ internal fun VariometerPanel(
     isUiEditMode: Boolean
 ) {
     val displayNumericVario by flightDataManager.displayVarioFlow.collectAsStateWithLifecycle()
-    val xcsoarDisplayVario by flightDataManager.xcsoarDisplayVarioFlow.collectAsStateWithLifecycle()
+    val xcSoarDisplayVario by flightDataManager.xcSoarDisplayVarioFlow.collectAsStateWithLifecycle()
     val animatedVario by animateFloatAsState(
         targetValue = displayNumericVario,
         animationSpec = spring(
@@ -154,10 +154,10 @@ internal fun VariometerPanel(
             )
         }
     }
-    val xcsoarFormatted by remember(xcsoarDisplayVario, unitsPreferences) {
+    val xcSoarFormatted by remember(xcSoarDisplayVario, unitsPreferences) {
         derivedStateOf {
             UnitsFormatter.verticalSpeed(
-                VerticalSpeedMs(xcsoarDisplayVario.toDouble()),
+                VerticalSpeedMs(xcSoarDisplayVario.toDouble()),
                 unitsPreferences
             )
         }
@@ -168,7 +168,7 @@ internal fun VariometerPanel(
         needleValue = animatedVario,
         displayValue = displayNumericVario,
         displayLabel = stripKt(varioFormatted.text),
-        secondaryLabel = stripKt(xcsoarFormatted.text),
+        secondaryLabel = stripKt(xcSoarFormatted.text),
         screenWidthPx = screenWidthPx,
         screenHeightPx = screenHeightPx,
         minSizePx = minVariometerSizePx,

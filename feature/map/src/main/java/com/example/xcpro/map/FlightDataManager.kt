@@ -69,9 +69,9 @@ class FlightDataManager(
                 initialValue = 0f
             )
 
-    val xcsoarDisplayVarioFlow: StateFlow<Float> =
+    val xcSoarDisplayVarioFlow: StateFlow<Float> =
         liveFlightDataFlow
-            .map { (it?.xcsoarDisplayVario ?: 0.0).toFloat().bucket(VARIO_BUCKET_MS) }
+            .map { (it?.xcSoarDisplayVario ?: 0.0).toFloat().bucket(VARIO_BUCKET_MS) }
             .distinctUntilChanged()
             .throttleFrame(UI_NUMERIC_FRAME_MS)
             .stateIn(
@@ -262,7 +262,7 @@ class FlightDataManager(
     private fun RealTimeFlightData.toDisplayBucket(): RealTimeFlightData =
         copy(
             displayVario = displayVario.takeIf { it.isFinite() }?.bucket(VARIO_BUCKET_MS.toDouble()) ?: 0.0,
-            xcsoarDisplayVario = xcsoarDisplayVario.takeIf { it.isFinite() }?.bucket(VARIO_BUCKET_MS.toDouble()) ?: 0.0,
+            xcSoarDisplayVario = xcSoarDisplayVario.takeIf { it.isFinite() }?.bucket(VARIO_BUCKET_MS.toDouble()) ?: 0.0,
             netto = netto.takeIf { it.isFinite() }?.bucket(VARIO_BUCKET_MS) ?: 0f,
             displayNetto = displayNetto.takeIf { it.isFinite() }?.bucket(VARIO_BUCKET_MS.toDouble()) ?: 0.0,
             baroAltitude = baroAltitude.takeIf { it.isFinite() }?.bucket(ALTITUDE_BUCKET_M) ?: 0.0,

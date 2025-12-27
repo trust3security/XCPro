@@ -29,6 +29,7 @@ class SensorFrontEndTest {
             navBaroAltitudeEnabled = true,
             baroAltitude = 1200.0,
             gpsAltitude = 1000.0,
+            gpsTimestampMillis = 0L,
             baroResult = baroCalibrated(pressureAlt = 1200.0),
             isQnhCalibrated = true,
             teVario = null,
@@ -48,6 +49,7 @@ class SensorFrontEndTest {
             navBaroAltitudeEnabled = true,
             baroAltitude = 1200.0,
             gpsAltitude = 950.0,
+            gpsTimestampMillis = 0L,
             baroResult = baroCalibrated().copy(isCalibrated = false),
             isQnhCalibrated = false,
             teVario = null,
@@ -70,6 +72,7 @@ class SensorFrontEndTest {
             navBaroAltitudeEnabled = true,
             baroAltitude = navAlt,
             gpsAltitude = navAlt,
+            gpsTimestampMillis = 0L,
             baroResult = null,
             isQnhCalibrated = false,
             teVario = null,
@@ -90,6 +93,7 @@ class SensorFrontEndTest {
             navBaroAltitudeEnabled = true,
             baroAltitude = 0.0,
             gpsAltitude = 0.0,
+            gpsTimestampMillis = 0L,
             baroResult = null,
             isQnhCalibrated = false,
             teVario = null,
@@ -101,6 +105,7 @@ class SensorFrontEndTest {
             navBaroAltitudeEnabled = true,
             baroAltitude = 0.0,
             gpsAltitude = 0.0,
+            gpsTimestampMillis = FlightMetricsConstants.SPEED_HOLD_MS - 500,
             baroResult = null,
             isQnhCalibrated = false,
             teVario = null,
@@ -123,6 +128,7 @@ class SensorFrontEndTest {
             navBaroAltitudeEnabled = true,
             baroAltitude = 0.0,
             gpsAltitude = 0.0,
+            gpsTimestampMillis = 0L,
             baroResult = null,
             isQnhCalibrated = false,
             teVario = null,
@@ -134,6 +140,7 @@ class SensorFrontEndTest {
             navBaroAltitudeEnabled = true,
             baroAltitude = 0.0,
             gpsAltitude = 0.0,
+            gpsTimestampMillis = FlightMetricsConstants.SPEED_HOLD_MS + 1_000,
             baroResult = null,
             isQnhCalibrated = false,
             teVario = null,
@@ -155,6 +162,7 @@ class SensorFrontEndTest {
             navBaroAltitudeEnabled = true,
             baroAltitude = 1000.0,
             gpsAltitude = 1000.0,
+            gpsTimestampMillis = 0L,
             baroResult = baroCalibrated(pressureAlt = 1000.0),
             isQnhCalibrated = true,
             teVario = null,
@@ -167,6 +175,7 @@ class SensorFrontEndTest {
             navBaroAltitudeEnabled = true,
             baroAltitude = 1010.0,
             gpsAltitude = 1010.0,
+            gpsTimestampMillis = 1_000L,
             baroResult = baroCalibrated(pressureAlt = 1010.0),
             isQnhCalibrated = true,
             teVario = null,
@@ -179,7 +188,7 @@ class SensorFrontEndTest {
     }
 
     @Test
-    fun brutto_uses_te_when_available_else_gps() {
+    fun brutto_uses_te_when_available_else_priority_fallback() {
         val bb = FusionBlackboard()
         val fe = SensorFrontEnd(bb)
 
@@ -187,6 +196,7 @@ class SensorFrontEndTest {
             navBaroAltitudeEnabled = true,
             baroAltitude = 0.0,
             gpsAltitude = 0.0,
+            gpsTimestampMillis = 0L,
             baroResult = null,
             isQnhCalibrated = false,
             teVario = 2.5,
@@ -198,8 +208,9 @@ class SensorFrontEndTest {
 
         val withGps = fe.buildSnapshot(
             navBaroAltitudeEnabled = true,
-            baroAltitude = 0.0,
+            baroAltitude = Double.NaN,
             gpsAltitude = 10.0,
+            gpsTimestampMillis = 1_000L,
             baroResult = null,
             isQnhCalibrated = false,
             teVario = null,

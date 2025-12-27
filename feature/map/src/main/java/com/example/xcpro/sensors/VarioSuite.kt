@@ -11,6 +11,7 @@ import com.example.xcpro.vario.RawBaroVario
  * stays under the 500 LOC guardrail and mirrors XCSoar-style glide computer setup.
  */
 internal class VarioSuite {
+    private val lock = Any()
     private val optimized = OptimizedKalmanVario()     // Priority 1: R=0.5m
     private val legacy = LegacyKalmanVario()           // Baseline: R=2.0m
     private val raw = RawBaroVario()                   // No filtering
@@ -24,28 +25,38 @@ internal class VarioSuite {
         gpsSpeed: Double,
         gpsAltitude: Double
     ) {
-        optimized.update(baroAltitude, verticalAccel, deltaTime, gpsSpeed, gpsAltitude)
-        legacy.update(baroAltitude, verticalAccel, deltaTime, gpsSpeed, gpsAltitude)
-        raw.update(baroAltitude, 0.0, deltaTime, gpsSpeed, gpsAltitude)
-        gps.update(0.0, 0.0, deltaTime, gpsSpeed, gpsAltitude)
-        complementary.update(baroAltitude, verticalAccel, deltaTime, gpsSpeed, gpsAltitude)
+        synchronized(lock) {
+            optimized.update(baroAltitude, verticalAccel, deltaTime, gpsSpeed, gpsAltitude)
+            legacy.update(baroAltitude, verticalAccel, deltaTime, gpsSpeed, gpsAltitude)
+            raw.update(baroAltitude, 0.0, deltaTime, gpsSpeed, gpsAltitude)
+            complementary.update(baroAltitude, verticalAccel, deltaTime, gpsSpeed, gpsAltitude)
+        }
     }
+
+    fun updateGpsVario(gpsAltitudeMeters: Double, gpsTimestampMillis: Long): Double =
+        synchronized(lock) {
+            gps.updateFromGpsFix(gpsAltitudeMeters = gpsAltitudeMeters, gpsTimestampMillis = gpsTimestampMillis)
+        }
 
     fun resetAll() {
-        optimized.reset()
-        legacy.reset()
-        raw.reset()
-        gps.reset()
-        complementary.reset()
+        synchronized(lock) {
+            optimized.reset()
+            legacy.reset()
+            raw.reset()
+            gps.reset()
+            complementary.reset()
+        }
     }
 
-    fun verticalSpeeds(): Map<String, Double> = mapOf(
-        "optimized" to optimized.getVerticalSpeed(),
-        "legacy" to legacy.getVerticalSpeed(),
-        "raw" to raw.getVerticalSpeed(),
-        "gps" to gps.getVerticalSpeed(),
-        "complementary" to complementary.getVerticalSpeed()
-    )
+    fun verticalSpeeds(): Map<String, Double> = synchronized(lock) {
+        mapOf(
+            "optimized" to optimized.getVerticalSpeed(),
+            "legacy" to legacy.getVerticalSpeed(),
+            "raw" to raw.getVerticalSpeed(),
+            "gps" to gps.getVerticalSpeed(),
+            "complementary" to complementary.getVerticalSpeed()
+        )
+    }
 
-    fun gpsVerticalSpeed(): Double = gps.getVerticalSpeed()
+    fun gpsVerticalSpeed(): Double = synchronized(lock) { gps.getVerticalSpeed() }
 }

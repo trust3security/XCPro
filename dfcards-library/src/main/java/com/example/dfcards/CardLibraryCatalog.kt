@@ -76,6 +76,16 @@ private val essentialCards = listOf(
         unitFontSize = 9
     ),
     CardDefinition(
+        id = "tas",
+        title = "TAS",
+        description = "True airspeed (estimated from ground speed and wind)",
+        category = CardCategory.ESSENTIAL,
+        icon = Icons.Filled.Speed,
+        unit = "kt",
+        primaryFontSize = 14,
+        unitFontSize = 9
+    ),
+    CardDefinition(
         id = "ground_speed",
         title = "SPEED GS",
         description = "Ground speed over terrain",
