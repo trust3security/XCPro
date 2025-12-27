@@ -81,9 +81,10 @@ class IgcReplayController @Inject constructor(
         )
 
     private fun startForwardingFlightData() {
+        val repo = replayFusionRepository ?: return
         forwardJob?.cancel()
         forwardJob = scope.launch {
-            replayFusionRepository.flightDataFlow.collect { data ->
+            repo.flightDataFlow.collect { data ->
                 if (_session.value.status != SessionStatus.IDLE) {
                     val now = System.currentTimeMillis()
                     if (now - lastForwardLogTime >= 1_000L) {
@@ -112,10 +113,22 @@ class IgcReplayController @Inject constructor(
 
     private fun ensureScopeActive() {
         if (scope.isActive) return
-        Log.w(TAG, "REPLY_SCOPE inactive; rebuilding replay pipeline")
+        Log.w(TAG, "REPLY_SCOPE inactive; rebuilding replay scope")
         scope = createScope()
-        replayFusionRepository = createFusionRepository()
-        startForwardingFlightData()
+        forwardJob = null
+        replayJob = null
+        seekJob = null
+        replayFusionRepository = null
+    }
+
+    private fun ensureReplayPipelineActive() {
+        ensureScopeActive()
+        if (replayFusionRepository == null) {
+            replayFusionRepository = createFusionRepository()
+        }
+        if (forwardJob?.isActive != true) {
+            startForwardingFlightData()
+        }
     }
 
     private var scope = CoroutineScope(SupervisorJob() + dispatcher)
@@ -128,7 +141,7 @@ class IgcReplayController @Inject constructor(
     private var lastForwardLogTime = 0L
 
     private val replaySensorSource = ReplaySensorSource()
-    private var replayFusionRepository: SensorFusionRepository = createFusionRepository()
+    private var replayFusionRepository: SensorFusionRepository? = null
     private var lastReplayHeadingDeg: Float? = null
 
     private val _session = MutableStateFlow(SessionState())
@@ -137,12 +150,8 @@ class IgcReplayController @Inject constructor(
     private val _events = MutableSharedFlow<ReplayEvent>(extraBufferCapacity = 1)
     val events: SharedFlow<ReplayEvent> = _events.asSharedFlow()
 
-    init {
-        startForwardingFlightData()
-    }
-
     suspend fun loadFile(uri: Uri, displayName: String?) {
-        ensureScopeActive()
+        ensureReplayPipelineActive()
         var failure: Throwable? = null
         withContext(scope.coroutineContext) {
             try {
@@ -166,7 +175,7 @@ class IgcReplayController @Inject constructor(
     }
 
     suspend fun loadAsset(assetPath: String, displayName: String? = null) {
-        ensureScopeActive()
+        ensureReplayPipelineActive()
         var failure: Throwable? = null
         withContext(scope.coroutineContext) {
             try {
@@ -192,7 +201,7 @@ class IgcReplayController @Inject constructor(
     }
 
     fun play() {
-        ensureScopeActive()
+        ensureReplayPipelineActive()
         Log.i(TAG, "REPLY_PLAY entry scopeActive=${scope.isActive} points=${points.size} jobActive=${replayJob != null}")
         scope.launch {
             Log.i(TAG, "REPLY_PLAY request status=${_session.value.status} points=${points.size} currentIndex=$currentIndex")
@@ -261,7 +270,7 @@ class IgcReplayController @Inject constructor(
             seekJob = null
             replaySensorSource.reset()
             flightDataRepository.update(null)
-            replayFusionRepository.resetQnhToStandard()
+            replayFusionRepository?.resetQnhToStandard()
             resumeSensors()
             points = emptyList()
             currentIndex = 0
@@ -302,7 +311,7 @@ class IgcReplayController @Inject constructor(
             runCatching {
                 // Seeking is a teleport: reset fusion state so thermal/circling/wind estimators don't
                 // interpret the jump as a single "mega-sample" or carry stale altitude baselines.
-                replayFusionRepository.stop()
+                replayFusionRepository?.stop() ?: return@runCatching
                 emitSample(point, previous, _session.value.qnhHpa)
                 updateProgress(point.timestampMillis)
                 if (_session.value.status == SessionStatus.PLAYING) {
@@ -343,7 +352,7 @@ class IgcReplayController @Inject constructor(
             timestamp = current.timestampMillis
         )
         val igcVario = IgcReplayMath.verticalSpeed(current, previous)
-        replayFusionRepository.updateReplayRealVario(igcVario)
+        replayFusionRepository?.updateReplayRealVario(igcVario)
     }
 
     private fun resolveReplayHeading(movement: MovementSnapshot): Float {
@@ -425,8 +434,9 @@ class IgcReplayController @Inject constructor(
         val start = points.first().timestampMillis
         val duration = (points.last().timestampMillis - start).coerceAtLeast(1L)
         logSessionPrep(selection, points.size, start, points.last().timestampMillis, qnh)
-        replayFusionRepository.stop() // reset all smoothing/thermal state
-        replayFusionRepository.setManualQnh(qnh)
+        val repo = checkNotNull(replayFusionRepository) { "Replay fusion pipeline not initialized" }
+        repo.stop() // reset all smoothing/thermal state
+        repo.setManualQnh(qnh)
         _session.value = SessionState(
             selection = selection,
             status = SessionStatus.PAUSED,
