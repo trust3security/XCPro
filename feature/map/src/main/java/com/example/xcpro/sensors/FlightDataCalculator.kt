@@ -44,8 +44,9 @@ class FlightDataCalculator(
         private const val MAX_VSPEED_HISTORY = FlightDataConstants.MAX_VSPEED_HISTORY
         private const val LD_CALCULATION_INTERVAL = FlightDataConstants.LD_CALCULATION_INTERVAL
         private const val QNH_JUMP_THRESHOLD_HPA = FlightDataConstants.QNH_JUMP_THRESHOLD_HPA
-        private const val QNH_ALTITUDE_JUMP_THRESHOLD_METERS = FlightDataConstants.QNH_ALTITUDE_JUMP_THRESHOLD_METERS
         private const val QNH_CALIBRATION_ACCURACY_THRESHOLD = FlightDataConstants.QNH_CALIBRATION_ACCURACY_THRESHOLD
+        private const val AUTO_QNH_MAX_SPEED_MS = 5.0
+        private const val AUTO_QNH_SESSION_TIMEOUT_MS = 90_000L
         private const val VARIO_VALIDITY_MS = FlightDataConstants.VARIO_VALIDITY_MS
         private const val REPLAY_VARIO_MAX_AGE_MS = FlightDataConstants.REPLAY_VARIO_MAX_AGE_MS
         private const val ACCEL_FRESHNESS_MS = 250L
@@ -73,7 +74,8 @@ class FlightDataCalculator(
     private val audioController = VarioAudioController(context, scope, enableAudio)
     val audioEngine get() = audioController.engine
     private val flightDisplayMapper = FlightDisplayMapper()
-    @Volatile private var autoQnhEnabled = false
+    @Volatile private var autoQnhSessionActive = false
+    @Volatile private var autoQnhSessionDeadlineMs = 0L
     private val _flightDataFlow = MutableStateFlow<CompleteFlightData?>(null)
     override val flightDataFlow: StateFlow<CompleteFlightData?> = _flightDataFlow.asStateFlow()
     private val _diagnosticsFlow = MutableStateFlow<VarioDiagnosticsSample?>(null)
@@ -157,9 +159,16 @@ class FlightDataCalculator(
             return
         }
 
+        val wallTime = System.currentTimeMillis()
+
         // In replay mode, downstream estimators (wind, circling, etc.) use the sensor timestamps as
         // the "simulation clock". Keep the vario validity clock in the same time base.
         val currentTime = if (isReplayMode) baro.timestamp else System.currentTimeMillis()
+
+        if (!isReplayMode && autoQnhSessionActive && wallTime > autoQnhSessionDeadlineMs) {
+            autoQnhSessionActive = false
+            Log.w(TAG, "Auto QNH calibration timed out; ignoring further samples until requested again")
+        }
 
         val replayDeltaTime = if (isReplayMode && lastReplayBaroTimestamp > 0L) {
             val deltaMs = (baro.timestamp - lastReplayBaroTimestamp).coerceAtLeast(1L)
@@ -183,7 +192,12 @@ class FlightDataCalculator(
         val smoothedPressure = filters.pressureKalmanFilter.update(baro.pressureHPa.value, baro.timestamp)
 
         val previousBaroResult = cachedBaroResult
-        val hasCalibrationFix = autoQnhEnabled &&
+        val canAutoCalibrateNow = !isReplayMode &&
+            autoQnhSessionActive &&
+            cachedGPSSpeed.isFinite() &&
+            cachedGPSSpeed <= AUTO_QNH_MAX_SPEED_MS
+
+        val hasCalibrationFix = canAutoCalibrateNow &&
             cachedIsGPSFixed &&
             !cachedGPSAltitude.isNaN() &&
             cachedGPSAccuracy <= QNH_CALIBRATION_ACCURACY_THRESHOLD
@@ -197,18 +211,23 @@ class FlightDataCalculator(
             gpsLon = cachedGPSLon.takeIf { hasCalibrationFix }
         )
 
+        if (!isReplayMode && autoQnhSessionActive && baroCalculator.isCalibrationFinished()) {
+            autoQnhSessionActive = false
+            val qnhLabel = String.format(Locale.US, "%.1f", baroResult.qnh)
+            Log.i(TAG, "Auto QNH calibration completed (QNH=$qnhLabel)")
+        }
+
         if (previousBaroResult != null) {
             val qnhDelta = abs(baroResult.qnh - previousBaroResult.qnh)
             val altitudeDelta = abs(baroResult.altitudeMeters - previousBaroResult.altitudeMeters)
-            val qnhJumpDetected = qnhDelta > QNH_JUMP_THRESHOLD_HPA ||
-                altitudeDelta > QNH_ALTITUDE_JUMP_THRESHOLD_METERS
+            val qnhJumpDetected = qnhDelta > QNH_JUMP_THRESHOLD_HPA
             if (qnhJumpDetected) {
                 val qnhLabel = String.format(Locale.US, "%.2f", qnhDelta)
                 val altitudeLabel = String.format(Locale.US, "%.1f", altitudeDelta)
                 if (isReplayMode) {
                     Log.w(
                         TAG,
-                        "Replay QNH jump Δ${qnhLabel} hPa / Δ${altitudeLabel} m - ignoring reset to keep vario stable"
+                        "Replay QNH jump detected Δ${qnhLabel} hPa / Δ${altitudeLabel} m - ignoring reset to keep vario stable"
                     )
                 } else {
                     Log.w(
@@ -412,16 +431,22 @@ class FlightDataCalculator(
                 aglMeters = flightHelpers.currentAGL,
                 qnhHpa = cachedBaroResult?.qnh ?: Double.NaN,
                 calibrated = (cachedBaroResult?.isCalibrated == true),
-                autoQnhEnabled = autoQnhEnabled
+                autoQnhSessionActive = autoQnhSessionActive
             )
         }
     }
     override fun updateAudioSettings(settings: VarioAudioSettings) {
         audioController.engine.updateSettings(settings)
     }
-    override fun setAutoQnhEnabled(enabled: Boolean) {
-        autoQnhEnabled = enabled
-        Log.i(TAG, "Auto QNH calibration enabled=$enabled")
+    override fun requestAutoQnhCalibration() {
+        if (isReplayMode) {
+            Log.i(TAG, "Auto QNH calibration ignored in replay mode")
+            return
+        }
+        baroCalculator.beginAutoCalibration()
+        autoQnhSessionActive = true
+        autoQnhSessionDeadlineMs = System.currentTimeMillis() + AUTO_QNH_SESSION_TIMEOUT_MS
+        Log.i(TAG, "Auto QNH calibration requested")
     }
     override fun stop() {
         if (isReplayMode) {
@@ -458,6 +483,8 @@ class FlightDataCalculator(
         lastGpsFixTimestampForGpsVario = 0L
         smoothedVerticalAccel = null
         lastAccelTimestamp = 0L
+        autoQnhSessionActive = false
+        autoQnhSessionDeadlineMs = 0L
         lastThermalLogTime = 0L
         _flightDataFlow.value = null
         _diagnosticsFlow.value = null
@@ -465,6 +492,8 @@ class FlightDataCalculator(
     }
     override fun setManualQnh(qnhHPa: Double) {
         baroCalculator.setQNH(qnhHPa)
+        autoQnhSessionActive = false
+        autoQnhSessionDeadlineMs = 0L
         cachedBaroResult = null
         cachedVarioResult = null
         Log.i(TAG, "Manual QNH applied: ${qnhHPa}")
@@ -482,9 +511,11 @@ class FlightDataCalculator(
     }
     override fun resetQnhToStandard() {
         baroCalculator.resetToStandardAtmosphere()
+        autoQnhSessionActive = false
+        autoQnhSessionDeadlineMs = 0L
         cachedBaroResult = null
         cachedVarioResult = null
-        Log.i(TAG, "QNH reset to standard atmosphere (auto calibration=$autoQnhEnabled)")
+        Log.i(TAG, "QNH reset to standard atmosphere")
     }
     private fun updateAudioFeed(currentTime: Long, rawVario: Double) {
         audioController.update(latestTeVario, rawVario, currentTime, varioValidUntil)

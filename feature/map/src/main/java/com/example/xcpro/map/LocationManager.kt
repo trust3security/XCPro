@@ -22,6 +22,7 @@ import com.example.xcpro.map.MapLocationFilter
 import com.example.xcpro.map.MapLibreProjector
 import com.example.xcpro.map.MapPositionController
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
@@ -93,17 +94,15 @@ class LocationManager(
 
     // ✅ PHASE 2: Flight data calculator (combines all sensor data + calculations)
     val sensorFusionRepository: SensorFusionRepository = varioServiceManager.sensorFusionRepository
-    val autoQnhEnabledFlow = qnhPreferencesRepository.autoQnhEnabledFlow
+    // Auto QNH is triggered as an explicit one-shot action; there is no persisted toggle.
 
     init {
         coroutineScope.launch {
-            qnhPreferencesRepository.qnhHpaFlow.collect { storedQnh ->
-                storedQnh?.let { sensorFusionRepository.setManualQnh(it) }
-            }
-        }
-        coroutineScope.launch {
-            autoQnhEnabledFlow.collect { enabled ->
-                sensorFusionRepository.setAutoQnhEnabled(enabled)
+            val storedQnh = qnhPreferencesRepository.qnhHpaFlow.first()
+            if (storedQnh != null) {
+                sensorFusionRepository.setManualQnh(storedQnh)
+            } else {
+                sensorFusionRepository.requestAutoQnhCalibration()
             }
         }
     }
@@ -279,9 +278,11 @@ class LocationManager(
         }
     }
 
-    fun setAutoQnhEnabled(enabled: Boolean) {
-        sensorFusionRepository.setAutoQnhEnabled(enabled)
-        coroutineScope.launch { qnhPreferencesRepository.setAutoQnhEnabled(enabled) }
+    fun autoCalibrateQnh() {
+        sensorFusionRepository.requestAutoQnhCalibration()
+        coroutineScope.launch {
+            qnhPreferencesRepository.clearManualQnh()
+        }
     }
 
     fun resetQnhToStandard() {

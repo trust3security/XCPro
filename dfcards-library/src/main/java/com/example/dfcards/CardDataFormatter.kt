@@ -348,7 +348,9 @@ internal object CardDataFormatter {
         if (!hasWind) {
             return Pair(placeholder, "NO WIND")
         }
-        val arrow = arrowSymbol(liveData.windDirection.toDouble())
+        val windFrom = liveData.windDirection.toDouble()
+        val relativeFrom = if (liveData.headingValid) windFrom - liveData.headingDeg else windFrom
+        val arrow = arrowSymbol(relativeFrom)
         val speed = UnitsFormatter.speed(SpeedMs(liveData.windSpeed.toDouble()), units).text
         return Pair(arrow, speed)
     }

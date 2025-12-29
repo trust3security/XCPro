@@ -70,9 +70,10 @@ class HeadingResolver {
         var eastComponent = sin(trackRad) * groundSpeed
         var northComponent = cos(trackRad) * groundSpeed
 
-        val windToRad = Math.toRadians(normalizeBearing(windFromDeg + 180.0))
-        eastComponent += sin(windToRad) * windSpeed
-        northComponent += cos(windToRad) * windSpeed
+        // AI-NOTE: Wind is stored as "from" (meteorological). Air vector = ground + wind(from).
+        val windFromRad = Math.toRadians(normalizeBearing(windFromDeg))
+        eastComponent += sin(windFromRad) * windSpeed
+        northComponent += cos(windFromRad) * windSpeed
 
         if (abs(eastComponent) < 1e-3 && abs(northComponent) < 1e-3) {
             return trackDeg

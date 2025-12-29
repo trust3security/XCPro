@@ -1,11 +1,15 @@
 package com.example.xcpro
 
+import android.hardware.SensorManager
 import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.common.units.AltitudeM
 import com.example.xcpro.common.units.PressureHpa
 import com.example.xcpro.common.units.PressureUnit
+import com.example.xcpro.common.units.UnitsConverter
 import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.UnitsPreferences
+import com.example.xcpro.orientation.HeadingResolver
+import com.example.xcpro.orientation.HeadingResolverInput
 import com.example.xcpro.sensors.CompleteFlightData
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -50,6 +54,23 @@ internal fun formatBaroGpsDelta(
 internal fun convertToRealTimeFlightData(completeData: CompleteFlightData): RealTimeFlightData {
     val gps = completeData.gps
     val baro = completeData.baro
+
+    val compass = completeData.compass
+    val compassReliable = compass != null && compass.accuracy != SensorManager.SENSOR_STATUS_UNRELIABLE
+    val hasGpsFix = gps != null
+    val hasWind = completeData.windQuality > 0 && completeData.windSpeed.value > 0.5
+    val headingSolution = HeadingResolver().resolve(
+        HeadingResolverInput(
+            compassHeadingDeg = compass?.heading,
+            compassReliable = compassReliable,
+            gpsTrackDeg = gps?.bearing,
+            groundSpeedMs = gps?.speed?.value ?: 0.0,
+            hasGpsFix = hasGpsFix,
+            windFromDeg = completeData.windDirection.toDouble().takeIf { hasWind },
+            windSpeedMs = completeData.windSpeed.value,
+            minTrackSpeedMs = UnitsConverter.knotsToMs(2.0)
+        )
+    )
 
     // Calculate flight time (simple implementation - starts from app launch)
     val flightTimeMs = System.currentTimeMillis() - completeData.timestamp
@@ -132,7 +153,10 @@ internal fun convertToRealTimeFlightData(completeData: CompleteFlightData): Real
         tasValid = completeData.tasValid,
         teAltitude = completeData.teAltitude.value,
         macCready = completeData.macCready,
-        macCreadyRisk = completeData.macCreadyRisk
+        macCreadyRisk = completeData.macCreadyRisk,
+        headingDeg = headingSolution.bearingDeg,
+        headingValid = headingSolution.isValid,
+        headingSource = headingSolution.source.name
     )
 }
 

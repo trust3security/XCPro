@@ -14,7 +14,6 @@ internal object FlightDataConstants {
 
     // QNH jump suppression
     const val QNH_JUMP_THRESHOLD_HPA = 0.8
-    const val QNH_ALTITUDE_JUMP_THRESHOLD_METERS = 5.0
     const val QNH_CALIBRATION_ACCURACY_THRESHOLD = 8.0
     const val VARIO_VALIDITY_MS = 500L
     const val REPLAY_VARIO_MAX_AGE_MS = 5_000L

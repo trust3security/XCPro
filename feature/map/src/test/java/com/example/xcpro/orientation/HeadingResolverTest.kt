@@ -47,7 +47,7 @@ class HeadingResolverTest {
 
         assertTrue(result.isValid)
         assertEquals(BearingSource.WIND, result.source)
-        assertEquals(71.565, result.bearingDeg, 0.01) // atan2(30E,10N)
+        assertEquals(108.435, result.bearingDeg, 0.01) // atan2(30E,-10N)
     }
 
     @Test

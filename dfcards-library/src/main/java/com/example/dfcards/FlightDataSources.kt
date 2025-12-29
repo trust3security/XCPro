@@ -95,7 +95,12 @@ data class RealTimeFlightData(
     val tasValid: Boolean = true,
     val teAltitude: Double = 0.0,
     val macCready: Double = 0.0,
-    val macCreadyRisk: Double = 0.0
+    val macCreadyRisk: Double = 0.0,
+
+    // Aircraft heading (degrees, 0 = North). Used to render wind-relative UI (e.g., arrow vs nose).
+    val headingDeg: Double = 0.0,
+    val headingValid: Boolean = false,
+    val headingSource: String = "UNKNOWN"
 )
 
 // ✅ PHASE 3: All old calculation classes removed (FlightDataManager, WindData)

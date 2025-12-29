@@ -159,12 +159,10 @@ fun QnhDialog(
     qnhError: String?,
     unitsPreferences: com.example.xcpro.common.units.UnitsPreferences,
     liveData: RealTimeFlightData?,
-    autoQnhEnabled: Boolean,
-    onAutoQnhToggle: (Boolean) -> Unit,
     onQnhInputChange: (String) -> Unit,
     onConfirm: (Double) -> Unit,
     onInvalidInput: (String) -> Unit,
-    onResetToStandard: () -> Unit,
+    onAutoCalibrate: () -> Unit,
     onDismiss: () -> Unit
 ) {
     if (!visible) return
@@ -190,22 +188,6 @@ fun QnhDialog(
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall
                     )
-                }
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Switch(
-                        checked = autoQnhEnabled,
-                        onCheckedChange = { onAutoQnhToggle(it) }
-                    )
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text("Auto-calibrate from GPS")
-                        Text(
-                            "Uses GPS fixes to update QNH (default off).",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
                 }
                 liveData?.let { data ->
                     val status = if (data.isQNHCalibrated) "Calibrated" else "Standard"
@@ -241,7 +223,7 @@ fun QnhDialog(
         },
         dismissButton = {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = onResetToStandard) {
+                TextButton(onClick = onAutoCalibrate) {
                     Text("Auto Cal")
                 }
                 TextButton(onClick = onDismiss) {

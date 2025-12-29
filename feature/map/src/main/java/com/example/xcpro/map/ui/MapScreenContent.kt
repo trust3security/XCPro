@@ -110,7 +110,6 @@ internal fun MapScreenContent(
     var qnhInput by remember { mutableStateOf("") }
     var qnhError by remember { mutableStateOf<String?>(null) }
     var showQnhFab by remember { mutableStateOf(true) }
-    val autoQnhEnabled by locationManager.autoQnhEnabledFlow.collectAsState(initial = false)
 
     Box(Modifier.fillMaxSize()) {
         Scaffold(
@@ -215,8 +214,6 @@ internal fun MapScreenContent(
             qnhError = qnhError,
             unitsPreferences = unitsPreferences,
             liveData = flightDataManager.liveFlightData,
-            autoQnhEnabled = autoQnhEnabled,
-            onAutoQnhToggle = { enabled -> locationManager.setAutoQnhEnabled(enabled) },
             onQnhInputChange = {
                 qnhInput = it
                 qnhError = null
@@ -230,8 +227,8 @@ internal fun MapScreenContent(
             onInvalidInput = { error ->
                 qnhError = error
             },
-            onResetToStandard = {
-                locationManager.resetQnhToStandard()
+            onAutoCalibrate = {
+                locationManager.autoCalibrateQnh()
                 showQnhDialog = false
                 qnhError = null
             },
@@ -297,12 +294,10 @@ private fun QnhDialogHost(
     qnhError: String?,
     unitsPreferences: UnitsPreferences,
     liveData: RealTimeFlightData?,
-    autoQnhEnabled: Boolean,
-    onAutoQnhToggle: (Boolean) -> Unit,
     onQnhInputChange: (String) -> Unit,
     onConfirm: (Double) -> Unit,
     onInvalidInput: (String) -> Unit,
-    onResetToStandard: () -> Unit,
+    onAutoCalibrate: () -> Unit,
     onDismiss: () -> Unit
 ) {
     QnhDialog(
@@ -311,12 +306,10 @@ private fun QnhDialogHost(
         qnhError = qnhError,
         unitsPreferences = unitsPreferences,
         liveData = liveData,
-        autoQnhEnabled = autoQnhEnabled,
-        onAutoQnhToggle = onAutoQnhToggle,
         onQnhInputChange = onQnhInputChange,
         onConfirm = onConfirm,
         onInvalidInput = onInvalidInput,
-        onResetToStandard = onResetToStandard,
+        onAutoCalibrate = onAutoCalibrate,
         onDismiss = onDismiss
     )
 }

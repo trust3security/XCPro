@@ -20,7 +20,7 @@ internal fun logSlowSnapshot(
     aglMeters: Double,
     qnhHpa: Double,
     calibrated: Boolean,
-    autoQnhEnabled: Boolean
+    autoQnhSessionActive: Boolean
 ) {
     Log.d(
         tag,
@@ -33,7 +33,6 @@ internal fun logSlowSnapshot(
             "PressV=${pressureVarioMs?.let { String.format(Locale.US, "%.2f", it) } ?: "--"} " +
             "Spd=${String.format(Locale.US, "%.1f", speedMs)} " +
             "AGL=${aglMeters.toInt()} " +
-            "QNH=${String.format(Locale.US, "%.1f", qnhHpa)} cal=$calibrated autoQNH=$autoQnhEnabled"
+            "QNH=${String.format(Locale.US, "%.1f", qnhHpa)} cal=$calibrated autoCal=$autoQnhSessionActive"
     )
 }
-

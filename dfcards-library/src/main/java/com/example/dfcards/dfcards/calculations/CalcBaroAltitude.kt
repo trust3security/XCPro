@@ -126,13 +126,10 @@ class BarometricAltitudeCalculator(
         val baroAltitude = calculateICAOBaroAltitude(compensatedPressure, referencePressure)
         val pressureAltitudeStd = calculateICAOBaroAltitude(compensatedPressure, STANDARD_PRESSURE)
 
-        // Apply sensor fusion if GPS is available and reliable
-        val finalAltitude = if (isQNHCalibrated && gpsAltitudeMeters != null && isGPSFixed) {
-            // 80% barometric, 20% GPS for stability with accuracy
-            (baroAltitude * 0.8) + (gpsAltitudeMeters * 0.2)
-        } else {
-            baroAltitude
-        }
+        // Keep altitude purely barometric once QNH is established; GPS altitude is too noisy (and
+        // can toggle validity), which creates artificial step changes that then look like fake
+        // vario spikes.
+        val finalAltitude = baroAltitude
 
         // Determine confidence level
         val confidence = determineConfidenceLevel(isGPSFixed, isQNHCalibrated, gpsAccuracy)
@@ -372,6 +369,19 @@ class BarometricAltitudeCalculator(
     fun enableAutoRecalibration() {
         this.allowAutoRecalibration = true
         Log.w(TAG, "Auto-recalibration RE-ENABLED (use carefully!)")
+    }
+
+    /**
+     * Begin a fresh one-shot auto calibration session.
+     *
+     * Keeps the current QNH active until calibration completes, but clears the sample buffer so the
+     * computed QNH is based on the current pressure/position conditions.
+     */
+    fun beginAutoCalibration() {
+        this.allowAutoRecalibration = true
+        this.isCalibrationComplete = false
+        this.calibrationBuffer.clear()
+        Log.i(TAG, "Auto QNH calibration session started")
     }
 
     /**

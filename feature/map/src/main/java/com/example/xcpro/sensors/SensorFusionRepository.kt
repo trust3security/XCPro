@@ -15,7 +15,7 @@ interface SensorFusionRepository {
     fun updateAudioSettings(settings: VarioAudioSettings)
     fun setManualQnh(qnhHPa: Double)
     fun resetQnhToStandard()
-    fun setAutoQnhEnabled(enabled: Boolean)
+    fun requestAutoQnhCalibration()
     fun setMacCreadySetting(value: Double)
     fun setMacCreadyRisk(value: Double)
     fun updateReplayRealVario(realVarioMs: Double?)
