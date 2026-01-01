@@ -6,13 +6,11 @@ import com.example.dfcards.dfcards.calculations.SimpleAglCalculator
 import com.example.xcpro.audio.VarioAudioController
 import com.example.xcpro.audio.VarioAudioSettings
 import com.example.xcpro.flightdata.FlightDisplayMapper
-import com.example.xcpro.flightdata.FlightDisplaySnapshot
 import com.example.xcpro.glider.StillAirSinkProvider
 import com.example.xcpro.sensors.FlightDataConstants
 import com.example.xcpro.sensors.FlightFilters
 import com.example.xcpro.sensors.VarioDiagnosticsSample
 import com.example.xcpro.sensors.domain.CalculateFlightMetricsUseCase
-import com.example.xcpro.sensors.domain.FlightMetricsRequest
 import com.example.xcpro.sensors.domain.WindEstimator
 import com.example.xcpro.weather.wind.data.WindState
 import kotlinx.coroutines.CoroutineScope
@@ -48,7 +46,9 @@ class FlightDataCalculator(
         private const val AUTO_QNH_MAX_SPEED_MS = 5.0
         private const val AUTO_QNH_SESSION_TIMEOUT_MS = 90_000L
         private const val VARIO_VALIDITY_MS = FlightDataConstants.VARIO_VALIDITY_MS
-        private const val REPLAY_VARIO_MAX_AGE_MS = FlightDataConstants.REPLAY_VARIO_MAX_AGE_MS
+        private const val VARIO_VALIDITY_FLOOR_MS = 5_000L
+        private const val EMIT_MIN_INTERVAL_MS = 100L
+        private const val BARO_EMIT_STALE_MS = 500L
         private const val ACCEL_FRESHNESS_MS = 250L
         private const val ACCEL_SMOOTH_TAU_S = 0.15
         private const val MAX_VERTICAL_ACCEL_MS2 = 8.0
@@ -74,22 +74,33 @@ class FlightDataCalculator(
     private val audioController = VarioAudioController(context, scope, enableAudio)
     val audioEngine get() = audioController.engine
     private val flightDisplayMapper = FlightDisplayMapper()
-    @Volatile private var autoQnhSessionActive = false
-    @Volatile private var autoQnhSessionDeadlineMs = 0L
     private val _flightDataFlow = MutableStateFlow<CompleteFlightData?>(null)
     override val flightDataFlow: StateFlow<CompleteFlightData?> = _flightDataFlow.asStateFlow()
     private val _diagnosticsFlow = MutableStateFlow<VarioDiagnosticsSample?>(null)
     override val diagnosticsFlow: StateFlow<VarioDiagnosticsSample?> = _diagnosticsFlow.asStateFlow()
     override val audioSettings: StateFlow<VarioAudioSettings> = audioController.engine.settings
+    private val emissionState = FlightDataEmissionState()
+    private val emitter = FlightDataEmitter(
+        state = emissionState,
+        flightMetricsUseCase = flightMetricsUseCase,
+        flightDisplayMapper = flightDisplayMapper,
+        flightHelpers = flightHelpers,
+        varioSuite = varioSuite,
+        isReplayMode = isReplayMode,
+        flightDataFlow = _flightDataFlow,
+        logThermalMetrics = LOG_THERMAL_METRICS,
+        tag = TAG
+    )
+    @Volatile private var autoQnhSessionActive = false
+    @Volatile private var autoQnhSessionDeadlineMs = 0L
     @Volatile private var replayRealVarioMs: Double? = null
     @Volatile private var replayRealVarioTimestamp: Long = 0L
     private var lastReplayBaroTimestamp: Long = 0L
+    private var lastReplayBaroLogTime: Long = 0L
     private var lastReplayGpsLogTime: Long = 0L
 
     // Tracking for delta-time calculations
-    private var lastUpdateTime = 0L
     private var lastVarioUpdateTime = 0L
-    private var varioValidUntil = 0L
 
     // Cached GPS data for the high-speed vario loop (GPS updates slower than baro/IMU).
     private var cachedGPSSpeed = 0.0
@@ -106,12 +117,10 @@ class FlightDataCalculator(
      private var cachedBaroResult: com.example.dfcards.calculations.BarometricAltitudeData? = null
      private var cachedBaroData: BaroData? = null
      private var cachedCompassData: CompassData? = null
-     @Volatile private var latestTeVario: Double? = null
 
      // IMU vertical acceleration smoothing for 3‑state Kalman / complementary fusion.
      private var lastAccelTimestamp: Long = 0L
      private var smoothedVerticalAccel: Double? = null
-    private var lastThermalLogTime = 0L
     private var macCreadySetting = DEFAULT_MACCREADY
     private var macCreadyRisk = DEFAULT_MACCREADY
 
@@ -238,7 +247,7 @@ class FlightDataCalculator(
                     filters.baroFilter.reset()
                     filters.pressureKalmanFilter.reset(smoothedPressure, baro.timestamp)
                     cachedVarioResult = null
-                    varioValidUntil = 0L
+                    emissionState.varioValidUntil = 0L
                 }
             }
         }
@@ -285,14 +294,64 @@ class FlightDataCalculator(
             confidence = filteredBaro.confidence
         )
 
-        varioValidUntil = currentTime + VARIO_VALIDITY_MS
+        val replayWindowMs = if (isReplayMode) {
+            replayDeltaTime
+                ?.times(1000.0)
+                ?.toLong()
+                ?: 1_000L
+        } else {
+            0L
+        }
+        val validityWindowMs = maxOf(VARIO_VALIDITY_MS, replayWindowMs, VARIO_VALIDITY_FLOOR_MS)
+        emissionState.varioValidUntil = currentTime + validityWindowMs
         updateAudioFeed(currentTime, varioResult.verticalSpeed)
 
         cachedVarioResult = varioResult
         cachedBaroResult = baroResult
         cachedBaroData = baro
 
+        val shouldEmit = cachedGPS != null &&
+            (currentTime - emissionState.lastUpdateTime) >= EMIT_MIN_INTERVAL_MS
+        if (shouldEmit) {
+            // Emit display frames on the baro loop (throttled) so UI/audio follow fast vario cadence.
+            val emitDeltaTime = if (emissionState.lastUpdateTime > 0L) {
+                (currentTime - emissionState.lastUpdateTime) / 1000.0
+            } else {
+                deltaTime
+            }
+            cachedGPS?.let { gps ->
+                emitter.emit(
+                    gps = gps,
+                    compass = cachedCompassData,
+                    currentTime = currentTime,
+                    deltaTime = emitDeltaTime,
+                    varioResultInput = varioResult,
+                    baroResult = cachedBaroResult,
+                    baro = cachedBaroData,
+                    cachedVarioResult = cachedVarioResult,
+                    windState = latestWindState,
+                    replayRealVarioMs = replayRealVarioMs,
+                    replayRealVarioTimestamp = replayRealVarioTimestamp,
+                    macCreadySetting = macCreadySetting,
+                    macCreadyRisk = macCreadyRisk,
+                    autoQnhSessionActive = autoQnhSessionActive
+                )
+            }
+        }
+
         lastVarioUpdateTime = currentTime
+
+        if (isReplayMode && wallTime - lastReplayBaroLogTime >= 1_000L) {
+            lastReplayBaroLogTime = wallTime
+            Log.d(
+                TAG,
+                "REPLAY_BARO ts=${baro.timestamp} p=${"%.2f".format(baro.pressureHPa.value)} " +
+                    "pSmooth=${"%.2f".format(smoothedPressure)} alt=${"%.1f".format(baroResult.altitudeMeters)} " +
+                    "dispAlt=${"%.1f".format(filteredBaro.displayAltitude)} vs=${"%.3f".format(varioResult.verticalSpeed)} " +
+                    "dt=${"%.3f".format(deltaTime)} gpsAlt=${"%.1f".format(cachedGPSAltitude)} " +
+                    "gs=${"%.2f".format(cachedGPSSpeed)} validUntil=${emissionState.varioValidUntil}"
+            )
+        }
 
     }
     private fun updateGPSData(gps: GPSData?, compass: CompassData?) {
@@ -329,108 +388,36 @@ class FlightDataCalculator(
             lastGpsFixTimestampForGpsVario = gps.timestamp
         }
 
-        // Calculate delta time for GPS-based calculations
-        val deltaTime = if (lastUpdateTime > 0) {
-            (currentTime - lastUpdateTime) / 1000.0
+        val deltaTime = if (emissionState.lastUpdateTime > 0) {
+            (currentTime - emissionState.lastUpdateTime) / 1000.0
         } else {
             0.1 // 10Hz = 100ms = 0.1s default
         }
 
-        // Get vario result from high-speed loop (or fallback to GPS altitude)
-        val varioResult = cachedVarioResult ?: com.example.dfcards.filters.ModernVarioResult(
-            altitude = gps.altitude.value,
-            verticalSpeed = 0.0,
-            acceleration = 0.0,
-            confidence = 0.3
-        )
+        val baroAgeMs = currentTime - lastVarioUpdateTime
+        val baroFresh = cachedBaroData != null && baroAgeMs in 0..BARO_EMIT_STALE_MS
 
-        val baroResult = cachedBaroResult
-        val baro = cachedBaroData
-        val windState = latestWindState
-
-        val gpsVarioValue = varioSuite.gpsVerticalSpeed().takeIf { it.isFinite() } ?: 0.0
-        val metrics = flightMetricsUseCase.execute(
-            FlightMetricsRequest(
+        // Emit display/UI data on GPS tick only when baro is stale or unavailable.
+        if (!baroFresh) {
+            emitter.emit(
                 gps = gps,
-                currentTimeMillis = currentTime,
-                deltaTimeSeconds = deltaTime,
-                varioResult = varioResult,
-                varioGpsValue = gpsVarioValue,
-                baroResult = baroResult,
-                windState = windState,
-                varioValidUntil = varioValidUntil
-            )
-        )
-
-        latestTeVario = metrics.teVario
-
-        val baroAltitude = metrics.baroAltitude
-        val verticalSpeed = metrics.verticalSpeed
-        val varioSource = metrics.varioSource
-        val varioResults = varioSuite.verticalSpeeds()
-
-        val dataQuality = buildString {
-            append("GPS")
-            if (baro != null) append("+BARO")
-            if (compass != null) append("+COMPASS")
-            if (cachedVarioResult != null) append("+IMU")
-            append("+VARIO:")
-            append(varioSource)
-            if (flightHelpers.currentAGL > 0) append("+AGL")
-            append("+50Hz")  // Priority 2: High-speed vario
-        }
-
-        val replayIgcVario = if (isReplayMode && replayRealVarioTimestamp != 0L) {
-            val ageMs = wallTime - replayRealVarioTimestamp
-            if (ageMs in 0..REPLAY_VARIO_MAX_AGE_MS) replayRealVarioMs else null
-        } else {
-            null
-        }
-
-        val snapshot = FlightDisplaySnapshot(
-            gps = gps,
-            baro = baro,
-            compass = compass,
-            metrics = metrics,
-            aglMeters = flightHelpers.currentAGL,
-            varioResults = varioResults,
-            replayIgcVario = replayIgcVario,
-            dataQuality = dataQuality,
-            timestamp = currentTime,
-            macCready = macCreadySetting,
-            macCreadyRisk = macCreadyRisk
-        )
-        val flightData = flightDisplayMapper.map(snapshot)
-
-        if (LOG_THERMAL_METRICS && currentTime - lastThermalLogTime >= 1000L) {
-            Log.d(
-                TAG,
-                "Thermal metrics: TC30=${flightData.thermalAverage.value} TC_AVG=${flightData.thermalAverageCircle.value} T_AVG=${flightData.thermalAverageTotal.value} TC_GAIN=${flightData.thermalGain.value}"
-            )
-            lastThermalLogTime = currentTime
-        }
-
-        _flightDataFlow.value = flightData
-        lastUpdateTime = currentTime
-
-        if (currentTime % 1000 < 100) {
-            logSlowSnapshot(
-                tag = TAG,
-                varioMode = if (cachedVarioResult != null) "PRIORITY2-50Hz(IMU+BARO)" else "PRIORITY2-50Hz(BARO)",
-                gpsAltitudeMeters = gps.altitude.value,
-                baroAltitudeMeters = baroAltitude,
-                rawBaroVarioMs = varioResult.verticalSpeed,
-                levoVarioMs = verticalSpeed,
-                levoSource = varioSource,
-                levoValid = metrics.varioValid,
-                xcSoarVarioMs = metrics.xcSoarVario,
-                xcSoarVarioValid = metrics.xcSoarVarioValid,
-                gpsVarioMs = metrics.verticalSpeed.takeIf { metrics.varioSource == "GPS" },
-                pressureVarioMs = metrics.verticalSpeed.takeIf { metrics.varioSource == "PRESSURE" },
-                speedMs = gps.speed.value,
-                aglMeters = flightHelpers.currentAGL,
-                qnhHpa = cachedBaroResult?.qnh ?: Double.NaN,
-                calibrated = (cachedBaroResult?.isCalibrated == true),
+                compass = compass,
+                currentTime = currentTime,
+                deltaTime = deltaTime,
+                varioResultInput = cachedVarioResult ?: com.example.dfcards.filters.ModernVarioResult(
+                    altitude = gps.altitude.value,
+                    verticalSpeed = 0.0,
+                    acceleration = 0.0,
+                    confidence = 0.3
+                ),
+                baroResult = cachedBaroResult,
+                baro = cachedBaroData,
+                cachedVarioResult = cachedVarioResult,
+                windState = latestWindState,
+                replayRealVarioMs = replayRealVarioMs,
+                replayRealVarioTimestamp = replayRealVarioTimestamp,
+                macCreadySetting = macCreadySetting,
+                macCreadyRisk = macCreadyRisk,
                 autoQnhSessionActive = autoQnhSessionActive
             )
         }
@@ -461,12 +448,12 @@ class FlightDataCalculator(
         filters.pressureKalmanFilter.reset()
         flightMetricsUseCase.reset()
         flightHelpers.resetAll()
-        varioValidUntil = 0L
+        emissionState.reset()
         replayRealVarioMs = null
         replayRealVarioTimestamp = 0L
         lastReplayBaroTimestamp = 0L
+        lastReplayBaroLogTime = 0L
         lastReplayGpsLogTime = 0L
-        lastUpdateTime = 0L
         lastVarioUpdateTime = 0L
         cachedGPSSpeed = 0.0
         cachedGPSAltitude = Double.NaN
@@ -479,13 +466,11 @@ class FlightDataCalculator(
         cachedBaroResult = null
         cachedBaroData = null
         cachedCompassData = null
-        latestTeVario = null
         lastGpsFixTimestampForGpsVario = 0L
         smoothedVerticalAccel = null
         lastAccelTimestamp = 0L
         autoQnhSessionActive = false
         autoQnhSessionDeadlineMs = 0L
-        lastThermalLogTime = 0L
         _flightDataFlow.value = null
         _diagnosticsFlow.value = null
         Log.d(TAG, "FlightDataCalculator stopped")
@@ -504,10 +489,10 @@ class FlightDataCalculator(
     override fun setMacCreadyRisk(value: Double) {
         macCreadyRisk = value
     }
-    override fun updateReplayRealVario(realVarioMs: Double?) {
+    override fun updateReplayRealVario(realVarioMs: Double?, timestampMillis: Long) {
         if (!isReplayMode) return
         replayRealVarioMs = realVarioMs
-        replayRealVarioTimestamp = System.currentTimeMillis()
+        replayRealVarioTimestamp = timestampMillis
     }
     override fun resetQnhToStandard() {
         baroCalculator.resetToStandardAtmosphere()
@@ -518,6 +503,6 @@ class FlightDataCalculator(
         Log.i(TAG, "QNH reset to standard atmosphere")
     }
     private fun updateAudioFeed(currentTime: Long, rawVario: Double) {
-        audioController.update(latestTeVario, rawVario, currentTime, varioValidUntil)
+        audioController.update(emissionState.latestTeVario, rawVario, currentTime, emissionState.varioValidUntil)
     }
 }

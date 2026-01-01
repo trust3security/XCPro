@@ -11,7 +11,6 @@ import com.example.xcpro.sensors.SensorFusionRepository
 import com.example.xcpro.vario.VarioServiceManager
 import com.example.xcpro.weather.wind.data.WindRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
-import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.isActive
@@ -31,6 +30,11 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/**
+ * Orchestrates IGC replay sessions and forwards replay samples into the fused sensor pipeline.
+ *
+ * AI-NOTE: Replay uses IGC timestamps as the simulation clock so downstream filters stay deterministic.
+ */
 @Singleton
 class IgcReplayController @Inject constructor(
     @ApplicationContext private val appContext: Context,
@@ -60,6 +64,19 @@ class IgcReplayController @Inject constructor(
 
     enum class SessionStatus { IDLE, PAUSED, PLAYING }
 
+    enum class ReplayMode { REFERENCE, REALTIME_SIM }
+
+    data class ReplaySimConfig(
+        val mode: ReplayMode = ReplayMode.REALTIME_SIM,
+        val baroStepMs: Long = 100L,   // 10 Hz baro cadence
+        val gpsStepMs: Long = 1_000L,  // 1 Hz GPS cadence
+        val jitterMs: Long = 30L,      // +/- 30 ms timing jitter
+        val pressureNoiseSigmaHpa: Double = 0.04,
+        val gpsAltitudeNoiseSigmaM: Double = 1.5,
+        val warmupMillis: Long = 8_000L,
+        val seed: Long = 1_337L
+    )
+
     sealed interface ReplayEvent {
         data class Completed(val samples: Int) : ReplayEvent
         data class Failed(val throwable: Throwable) : ReplayEvent
@@ -85,7 +102,7 @@ class IgcReplayController @Inject constructor(
         forwardJob?.cancel()
         forwardJob = scope.launch {
             repo.flightDataFlow.collect { data ->
-                if (_session.value.status != SessionStatus.IDLE) {
+                if (_session.value.status == SessionStatus.PLAYING) {
                     val now = System.currentTimeMillis()
                     if (now - lastForwardLogTime >= 1_000L) {
                         lastForwardLogTime = now
@@ -98,14 +115,15 @@ class IgcReplayController @Inject constructor(
                         val tAvg = data?.thermalAverageTotal?.value
                         Log.d(
                             TAG,
-                            "REPLY_FORWARD gps=${gps?.latLng?.latitude},${gps?.latLng?.longitude} " +
+                            "REPLAY_FORWARD gps=${gps?.latLng?.latitude},${gps?.latLng?.longitude} " +
                                 "gs=${gps?.speed?.value} alt=${gps?.altitude?.value} " +
                                 "v=${verticalSpeed} dv=${displayVario} xc=${xcSoarDisplayVario} " +
+                                "valid=${data?.varioValid} src=${data?.varioSource} te=${data?.teAltitude?.value} " +
                                 "tc30=${tc30} tcAvg=${tcAvg} tAvg=${tAvg} tValid=${data?.currentThermalValid} " +
                                 "circling=${data?.isCircling} windQ=${data?.windQuality} wind=${data?.windSpeed?.value}"
                         )
                     }
-                    flightDataRepository.update(data)
+                    flightDataRepository.update(data, FlightDataRepository.Source.REPLAY)
                 }
             }
         }
@@ -139,10 +157,13 @@ class IgcReplayController @Inject constructor(
     private var currentIndex = 0
     private var sensorsSuspended = false
     private var lastForwardLogTime = 0L
+    private var lastGpsEmitTimestamp: Long = Long.MIN_VALUE
 
     private val replaySensorSource = ReplaySensorSource()
     private var replayFusionRepository: SensorFusionRepository? = null
-    private var lastReplayHeadingDeg: Float? = null
+    private val simConfig = DEFAULT_SIM_CONFIG
+    private val noiseModel = ReplayNoiseModel(simConfig)
+    private val headingResolver = ReplayHeadingResolver()
 
     private val _session = MutableStateFlow(SessionState())
     val session: StateFlow<SessionState> = _session.asStateFlow()
@@ -155,7 +176,7 @@ class IgcReplayController @Inject constructor(
         var failure: Throwable? = null
         withContext(scope.coroutineContext) {
             try {
-                val log = loadLog(uri)
+                val log = appContext.loadIgcLog(uri)
                 Log.i(TAG, "REPLY_LOAD Loaded IGC file ${displayName ?: uri} with ${log.points.size} raw points (qnh=${log.metadata.qnhHpa})")
                 prepareSession(
                     log = log,
@@ -179,7 +200,7 @@ class IgcReplayController @Inject constructor(
         var failure: Throwable? = null
         withContext(scope.coroutineContext) {
             try {
-                val log = loadAssetLog(assetPath)
+                val log = appContext.loadIgcAssetLog(assetPath)
                 val name = displayName ?: assetPath.substringAfterLast('/')
                 val uri = Uri.parse("$ASSET_URI_PREFIX$assetPath")
                 Log.i(TAG, "REPLY_LOAD Loaded IGC asset $assetPath with ${log.points.size} raw points (qnh=${log.metadata.qnhHpa})")
@@ -213,6 +234,7 @@ class IgcReplayController @Inject constructor(
             if (currentIndex >= points.size) {
                 currentIndex = 0
             }
+            flightDataRepository.setActiveSource(FlightDataRepository.Source.REPLAY)
             Log.d(TAG, "REPLY_PLAY start currentIndex=$currentIndex pts=${points.size}")
             suspendSensors()
             cancelReplayJob()
@@ -269,12 +291,20 @@ class IgcReplayController @Inject constructor(
             seekJob?.cancel()
             seekJob = null
             replaySensorSource.reset()
-            flightDataRepository.update(null)
+            // Clear replay data before switching source back to LIVE to avoid stale UI after stop.
+            flightDataRepository.clear()
+            // Fully reset the replay fusion pipeline so averages/filters don't carry into the next run.
+            replayFusionRepository?.stop()
+            flightDataRepository.setActiveSource(FlightDataRepository.Source.LIVE)
+            // Propagate a null sample in LIVE mode so UI/audio drop back to zero instead of
+            // displaying the last replay value until live sensors tick again.
+            flightDataRepository.update(null, FlightDataRepository.Source.LIVE)
+            silenceReplayAudio("stop")
             replayFusionRepository?.resetQnhToStandard()
             resumeSensors()
             points = emptyList()
             currentIndex = 0
-            lastReplayHeadingDeg = null
+            headingResolver.reset()
             _session.value = SessionState(speedMultiplier = _session.value.speedMultiplier)
             _events.tryEmit(ReplayEvent.Cancelled)
         }
@@ -295,6 +325,7 @@ class IgcReplayController @Inject constructor(
                 _events.tryEmit(ReplayEvent.Failed(IllegalStateException("No points loaded")))
                 return@launch
             }
+            flightDataRepository.setActiveSource(FlightDataRepository.Source.REPLAY)
             val clamped = progress.coerceIn(0f, 1f)
             val targetIndex = (clamped * (pts.size - 1)).toInt().coerceIn(0, pts.lastIndex)
             currentIndex = targetIndex
@@ -331,46 +362,52 @@ class IgcReplayController @Inject constructor(
     private fun emitSample(current: IgcPoint, previous: IgcPoint?, qnhHpa: Double) {
         val movement = IgcReplayMath.groundVector(current, previous)
         val groundSpeed = movement.speedMs
-        val trackDeg = resolveReplayHeading(movement)
+        val trackDeg = headingResolver.resolve(movement)
         val gpsAltitude = current.gpsAltitude
 
         val pressureAltitude = current.pressureAltitude ?: gpsAltitude
         val pressureHPa = IgcReplayMath.altitudeToPressure(pressureAltitude, qnhHpa)
-        replaySensorSource.emitBaro(pressureHPa = pressureHPa, timestamp = current.timestampMillis)
-        replaySensorSource.emitGps(
-            latitude = current.latitude,
-            longitude = current.longitude,
-            altitude = gpsAltitude,
-            speed = groundSpeed,
-            bearing = trackDeg.toDouble(),
-            accuracy = 5f,
+        val pressureNoise = noiseModel.baroNoise(
+            timestampMillis = current.timestampMillis,
+            startTimestampMillis = _session.value.startTimestampMillis
+        )
+        replaySensorSource.emitBaro(
+            pressureHPa = pressureHPa + pressureNoise,
             timestamp = current.timestampMillis
         )
+
+        if (shouldEmitGps(current.timestampMillis)) {
+            val gpsNoise = noiseModel.gpsAltitudeNoise(
+                timestampMillis = current.timestampMillis,
+                startTimestampMillis = _session.value.startTimestampMillis
+            )
+            replaySensorSource.emitGps(
+                latitude = current.latitude,
+                longitude = current.longitude,
+                altitude = gpsAltitude + gpsNoise,
+                speed = groundSpeed,
+                bearing = trackDeg.toDouble(),
+                accuracy = 5f,
+                timestamp = current.timestampMillis
+            )
+            lastGpsEmitTimestamp = current.timestampMillis
+        }
         replaySensorSource.emitCompass(
             heading = trackDeg.toDouble(),
             accuracy = 3,
             timestamp = current.timestampMillis
         )
         val igcVario = IgcReplayMath.verticalSpeed(current, previous)
-        replayFusionRepository?.updateReplayRealVario(igcVario)
-    }
-
-    private fun resolveReplayHeading(movement: MovementSnapshot): Float {
-        val derivedHeading = movement.bearingDeg
-        val previousHeading = lastReplayHeadingDeg
-        val shouldReusePrevious = movement.distanceMeters < MIN_REPLAY_HEADING_DISTANCE_M ||
-            movement.speedMs < MIN_REPLAY_HEADING_SPEED_MS
-
-        val nextHeading = when {
-            previousHeading == null -> derivedHeading
-            shouldReusePrevious -> previousHeading
-            // Preserve raw turn-rate so circling/wind detectors behave like live GPS.
-            // Camera/icon smoothing happens downstream (MapPositionController bearing clamp).
-            else -> derivedHeading
+        Log.d(
+            TAG,
+            "REPLAY_SAMPLE ts=${current.timestampMillis} " +
+                "igcVario=${"%.3f".format(igcVario)} gpsAlt=${"%.1f".format(gpsAltitude)} " +
+                "pressAlt=${"%.1f".format(pressureAltitude)} gs=${"%.2f".format(groundSpeed)} " +
+                "track=${"%.1f".format(trackDeg)}"
+        )
+        if (simConfig.mode == ReplayMode.REFERENCE) {
+            replayFusionRepository?.updateReplayRealVario(igcVario, current.timestampMillis)
         }
-
-        lastReplayHeadingDeg = nextHeading
-        return nextHeading
     }
 
     private fun updateProgress(timestamp: Long) {
@@ -385,7 +422,17 @@ class IgcReplayController @Inject constructor(
     }
 
     private suspend fun finishReplay() {
+        silenceReplayAudio("finish")
+        // Clear replay sample before handing control back to live sensors; order matters because
+        // FlightDataRepository gates by active source.
+        flightDataRepository.clear()
+        // Fully reset the replay fusion pipeline so averages/filters don't carry into the next run.
+        replayFusionRepository?.stop()
         _session.update { it.copy(status = SessionStatus.PAUSED) }
+        flightDataRepository.setActiveSource(FlightDataRepository.Source.LIVE)
+        // Push a null LIVE sample so UI/audio immediately drop to zero instead of waiting for the
+        // next live sensor tick.
+        flightDataRepository.update(null, FlightDataRepository.Source.LIVE)
         resumeSensors()
         _events.emit(ReplayEvent.Completed(points.size))
     }
@@ -409,19 +456,39 @@ class IgcReplayController @Inject constructor(
         }
     }
 
+    private fun silenceReplayAudio(reason: String) {
+        val repo = replayFusionRepository ?: return
+        Log.i(TAG, "REPLAY_AUDIO silence reason=$reason")
+        repo.stop()
+    }
+
+    private fun shouldEmitGps(timestampMillis: Long): Boolean {
+        if (simConfig.mode != ReplayMode.REALTIME_SIM) return true
+        if (lastGpsEmitTimestamp == Long.MIN_VALUE) return true
+        return (timestampMillis - lastGpsEmitTimestamp) >= simConfig.gpsStepMs
+    }
+
     companion object {
         private const val TAG = "IgcReplayController"
-        private const val MIN_FRAME_INTERVAL_MS = 1_000L  // raw IGC cadence (~1 Hz)
+        private const val MIN_FRAME_INTERVAL_MS = 1L  // allow sub-second replay cadence
         private const val DEFAULT_SPEED = 1.0
         private const val MAX_SPEED = 20.0
         private const val DEFAULT_QNH_HPA = 1013.3
         private const val ASSET_URI_PREFIX = "asset:///"
-        private const val MIN_REPLAY_HEADING_SPEED_MS = 1.0
-        private const val MIN_REPLAY_HEADING_DISTANCE_M = 3.0
+        private val DEFAULT_SIM_CONFIG = ReplaySimConfig()
     }
 
     private fun prepareSession(log: IgcLog, selection: Selection) {
-        val densified = IgcReplayMath.densifyPoints(log.points)
+        noiseModel.reset()
+        val densified = when (simConfig.mode) {
+            ReplayMode.REALTIME_SIM -> IgcReplayMath.densifyPoints(
+                original = log.points,
+                stepMs = simConfig.baroStepMs,
+                jitterMs = simConfig.jitterMs,
+                random = noiseModel.random
+            )
+            ReplayMode.REFERENCE -> IgcReplayMath.densifyPoints(log.points)
+        }
         if (densified.isEmpty()) throw IllegalArgumentException("IGC file has no B records")
         cancelReplayJob()
         seekJob?.cancel()
@@ -430,10 +497,19 @@ class IgcReplayController @Inject constructor(
         currentIndex = 0
         suspendSensors()
         replaySensorSource.reset()
+        lastGpsEmitTimestamp = Long.MIN_VALUE
+        flightDataRepository.setActiveSource(FlightDataRepository.Source.REPLAY)
         val qnh = log.metadata.qnhHpa ?: DEFAULT_QNH_HPA
         val start = points.first().timestampMillis
         val duration = (points.last().timestampMillis - start).coerceAtLeast(1L)
-        logSessionPrep(selection, points.size, start, points.last().timestampMillis, qnh)
+        logReplaySessionPrep(
+            selection = selection,
+            pointCount = points.size,
+            startMillis = start,
+            endMillis = points.last().timestampMillis,
+            qnh = qnh,
+            tag = TAG
+        )
         val repo = checkNotNull(replayFusionRepository) { "Replay fusion pipeline not initialized" }
         repo.stop() // reset all smoothing/thermal state
         repo.setManualQnh(qnh)
@@ -447,34 +523,7 @@ class IgcReplayController @Inject constructor(
             qnhHpa = qnh
         )
         Log.i(TAG, "REPLY_SESSION selection=${selection.displayName ?: selection.uri} durationMs=$duration start=$start")
-        lastReplayHeadingDeg = null
+        headingResolver.reset()
         emitSample(points.first(), null, qnh)
-    }
-
-    private fun loadLog(fileUri: Uri): IgcLog =
-        appContext.contentResolver.openInputStream(fileUri)?.use { stream ->
-            IgcParser.parse(stream)
-        } ?: throw IllegalArgumentException("Unable to open IGC file")
-
-    private fun loadAssetLog(assetPath: String): IgcLog =
-        appContext.assets.open(assetPath).use { stream ->
-            IgcParser.parse(stream)
-        }
-
-    private fun logSessionPrep(
-        selection: Selection,
-        pointCount: Int,
-        startMillis: Long,
-        endMillis: Long,
-        qnh: Double
-    ) {
-        val startIso = Instant.ofEpochMilli(startMillis).toString()
-        val endIso = Instant.ofEpochMilli(endMillis).toString()
-        val durationSec = (endMillis - startMillis) / 1000
-        Log.i(
-            TAG,
-            "Prepared replay '${selection.displayName ?: selection.uri}' " +
-                "points=$pointCount duration=${durationSec}s start=$startIso end=$endIso qnh=${"%.1f".format(qnh)}"
-        )
     }
 }
