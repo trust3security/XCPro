@@ -16,11 +16,27 @@ import kotlinx.coroutines.flow.asStateFlow
 @Singleton
 class FlightDataRepository @Inject constructor() {
 
+    enum class Source { LIVE, REPLAY }
+
+    @Volatile private var activeSource: Source = Source.LIVE
+
     private val _flightData = MutableStateFlow<CompleteFlightData?>(null)
     val flightData: StateFlow<CompleteFlightData?> = _flightData.asStateFlow()
 
-    fun update(data: CompleteFlightData?) {
+    fun setActiveSource(source: Source) {
+        activeSource = source
+    }
+
+    fun update(data: CompleteFlightData?, source: Source = Source.LIVE) {
+        if (source != activeSource) return  // AI-NOTE: gate updates so live sensors can't override replay
         _flightData.value = data
     }
-}
 
+    /**
+     * Force-clears the cached sample regardless of the current active source.
+     * Used by replay teardown so stale samples can't linger when source changes.
+     */
+    fun clear() {
+        _flightData.value = null
+    }
+}

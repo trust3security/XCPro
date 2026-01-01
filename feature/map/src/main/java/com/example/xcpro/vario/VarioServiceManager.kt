@@ -58,6 +58,9 @@ open class VarioServiceManager @Inject constructor(
     private val sensorRetryCoordinator = SensorRetryCoordinator(serviceScope, SENSOR_RETRY_DELAY_MS)
 
     open fun start(): Boolean {
+        // Always reset the data source to LIVE so live sensor updates are not gated out after a replay.
+        flightDataRepository.setActiveSource(FlightDataRepository.Source.LIVE)
+
         if (running && unifiedSensorManager.getSensorStatus().gpsStarted) {
             Log.d(TAG, "Sensors already running")
             return true
@@ -88,7 +91,7 @@ open class VarioServiceManager @Inject constructor(
         sensorFusionRepository.stop()
         configJob?.cancel()
         configJob = null
-        flightDataRepository.update(null)
+        flightDataRepository.update(null, FlightDataRepository.Source.LIVE)
         collectionJob?.cancel()
         collectionJob = null
     }
@@ -97,7 +100,7 @@ open class VarioServiceManager @Inject constructor(
         if (collectionJob != null) return
         collectionJob = serviceScope.launch {
             sensorFusionRepository.flightDataFlow.collectLatest { data ->
-                flightDataRepository.update(data)
+                flightDataRepository.update(data, FlightDataRepository.Source.LIVE)
             }
         }
     }

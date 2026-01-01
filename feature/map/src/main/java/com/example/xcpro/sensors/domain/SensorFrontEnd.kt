@@ -2,7 +2,6 @@ package com.example.xcpro.sensors.domain
 
 import com.example.dfcards.calculations.BarometricAltitudeData
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.GRAVITY
-import kotlin.math.abs
 
 private const val MIN_GATE_DT_SECONDS = 0.02  // reject duplicate/too-fast timestamps
 private const val MIN_DERIVATIVE_DT_SECONDS = 0.05
@@ -193,4 +192,5 @@ internal class SensorFrontEnd(
 
     private fun Double.guardVario(): Double =
         if (!this.isFinite() || kotlin.math.abs(this) > 10.0) Double.NaN else this
+
 }

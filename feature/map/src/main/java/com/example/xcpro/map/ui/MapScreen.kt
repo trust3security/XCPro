@@ -23,8 +23,6 @@ import com.example.xcpro.map.MapTaskIntegration
 import com.example.xcpro.map.MapScreenViewModel
 import com.example.xcpro.map.MapUiEffect
 import com.example.xcpro.map.MapUiEvent
-import com.example.xcpro.sensors.GpsStatus
-import com.example.xcpro.map.ui.components.GpsStatusBanner
 import com.example.dfcards.CardDefinition
 import com.example.ui1.icons.Task
 import com.example.ui1.icons.LocationSailplane
@@ -45,16 +43,7 @@ import com.example.dfcards.FlightDataProvider
 import com.example.dfcards.FlightModeSelection
 import com.example.xcpro.sensors.GPSData
 import android.annotation.SuppressLint
-import android.app.Application
-import android.content.Context
-import android.content.Intent
-import android.content.SharedPreferences
-import android.net.Uri
-import android.provider.OpenableColumns
 import android.util.Log
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.animation.core.animateFloatAsState
@@ -106,7 +95,6 @@ import com.example.xcpro.FileWaypointRepo
 import com.example.xcpro.saveConfig
 // ✅ REMOVED DataQuality - no longer used
 import com.example.ui1.UIVariometer
-import com.example.xcpro.navdrawer.NavigationDrawer
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
 import com.example.xcpro.screens.navdrawer.lookandfeel.LookAndFeelPreferences
 import kotlinx.coroutines.launch
@@ -144,45 +132,19 @@ fun MapScreen(
     mapViewModel: MapScreenViewModel
 ) {
     val context = LocalContext.current
-    val replayFilePicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        if (uri != null) {
-            val type = context.contentResolver.getType(uri)
-            Log.i(TAG, "REPLAY_PICK uri=$uri type=$type")
-            val name = resolveDisplayName(context, uri)
-            runCatching {
-                // Persist so replay survives process death and for better diag of permission errors
-                context.contentResolver.takePersistableUriPermission(
-                    uri,
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION
-                )
-            }.onFailure { t ->
-                Log.w(TAG, "REPLAY_PICK persistable permission failed: ${t.message}")
-            }
-            mapViewModel.onReplayFileChosen(uri, name)
-        } else {
-            Log.w(TAG, "REPLAY_PICK cancelled (uri is null)")
-        }
-    }
+    val replayFilePicker = rememberReplayFilePicker(context, mapViewModel::onReplayFileChosen)
+
     val mapUiState by mapViewModel.uiState.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
-    LaunchedEffect(mapViewModel, context) {
-        mapViewModel.uiEffects.collect { effect ->
-            when (effect) {
-                is MapUiEffect.ShowToast -> {
-                    Toast.makeText(context, effect.message, Toast.LENGTH_LONG).show()
-                }
-                MapUiEffect.OpenDrawer -> drawerState.open()
-                MapUiEffect.CloseDrawer -> drawerState.close()
-            }
+    MapScreenSideEffects(
+        uiEffects = mapViewModel.uiEffects,
+        drawerState = drawerState,
+        context = context,
+        onDrawerOpenChanged = { isOpen ->
+            mapViewModel.onEvent(MapUiEvent.SetDrawerOpen(isOpen))
         }
-    }
-
-    LaunchedEffect(drawerState.isOpen) {
-        mapViewModel.onEvent(MapUiEvent.SetDrawerOpen(drawerState.isOpen))
-    }
+    )
 
     // ?o. Centralized state management via ViewModel
     val mapState = mapViewModel.mapState
@@ -329,7 +291,7 @@ fun MapScreen(
     val cardHydrationReady by mapViewModel.cardHydrationReady.collectAsStateWithLifecycle()
 
     // ✅ Location Permission Launcher through LocationManager
-    val locationPermissionLauncher = locationManager.LocationPermissionHandler()
+    val locationPermissionLauncher = rememberLocationPermissionLauncher(locationManager)
 
     // ✅ Map FlightMode to FlightModeSelection using FlightDataManager
     val currentFlightModeSelection = flightDataManager.currentFlightMode
@@ -424,14 +386,14 @@ fun MapScreen(
     )
 
 
-    NavigationDrawer(
+    MapScreenScaffold(
         drawerState = drawerState,
         navController = navController,
         profileExpanded = profileExpanded,
         mapStyleExpanded = mapStyleExpanded,
         settingsExpanded = settingsExpanded,
         initialMapStyle = initialMapStyle,
-        onItemSelected = { item ->
+        onDrawerItemSelected = { item ->
             Log.d(TAG, "Navigation drawer item selected: $item")
             coroutineScope.launch {
                 drawerState.close()
@@ -444,140 +406,84 @@ fun MapScreen(
             Log.d(TAG, "Map style selected: $style, URL: ${mapState.mapStyleUrl}")
             onMapStyleSelected(style)
         },
-        content = {
-            Box(modifier = Modifier.fillMaxSize()) {
-                GpsStatusBanner(
-                    status = gpsStatus,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.TopCenter)
-                        .padding(top = 8.dp, start = 12.dp, end = 12.dp)
+        gpsStatus = gpsStatus,
+        isLoadingWaypoints = mapUiState.isLoadingWaypoints,
+        density = density,
+        mapState = mapState,
+        mapInitializer = mapInitializer,
+        locationManager = locationManager,
+        flightDataManager = flightDataManager,
+        flightViewModel = flightViewModel,
+        taskManager = taskManager,
+        orientationManager = orientationManager,
+        orientationData = orientationData,
+        cameraManager = cameraManager,
+        currentFlightModeSelection = currentFlightModeSelection,
+        currentLocation = locationForUi,
+        showRecenterButton = showRecenterButton,
+        showReturnButton = showReturnButton,
+        showDistanceCircles = showDistanceCircles,
+        isUiEditMode = mapUiState.isUiEditMode,
+        onEditModeChange = { enabled -> mapViewModel.onEvent(MapUiEvent.SetUiEditMode(enabled)) },
+        isAATEditMode = isAATEditMode,
+        onSetAATEditMode = mapViewModel::setAATEditMode,
+        onExitAATEditMode = mapViewModel::exitAATEditMode,
+        safeContainerSize = safeContainerSizeState,
+        overlayManager = overlayManager,
+        modalManager = modalManager,
+        widgetManager = widgetManager,
+        screenWidthPx = screenWidthPx,
+        screenHeightPx = screenHeightPx,
+        variometerUiState = variometerUiState,
+        minVariometerSizePx = minVariometerSizePx,
+        maxVariometerSizePx = maxVariometerSizePx,
+        onVariometerOffsetChange = { offset ->
+            mapViewModel.onVariometerOffsetCommitted(
+                offset = offset,
+                screenWidthPx = screenWidthPx,
+                screenHeightPx = screenHeightPx
+            )
+        },
+        onVariometerSizeChange = { newSize ->
+            mapViewModel.onVariometerSizeCommitted(
+                sizePx = newSize,
+                screenWidthPx = screenWidthPx,
+                screenHeightPx = screenHeightPx,
+                minSizePx = minVariometerSizePx,
+                maxSizePx = maxVariometerSizePx
+            )
+        },
+        onVariometerLongPress = {},
+        onVariometerEditFinished = {},
+        hamburgerOffset = hamburgerOffsetState,
+        flightModeOffset = flightModeOffsetState,
+        ballastOffset = ballastOffsetState,
+        taskScreenManager = taskScreenManager,
+        waypointData = mapUiState.waypoints,
+        unitsPreferences = mapUiState.unitsPreferences,
+        ballastUiState = mapViewModel.ballastUiState,
+        isBallastPillHidden = mapUiState.hideBallastPill,
+        onBallastCommand = mapViewModel::submitBallastCommand,
+        onHamburgerTap = { mapViewModel.onEvent(MapUiEvent.ToggleDrawer) },
+        onHamburgerLongPress = { mapViewModel.onEvent(MapUiEvent.ToggleUiEditMode) },
+        cardStyle = cardStyle,
+        replayState = mapViewModel.replaySessionState,
+        onReplayPlayPause = mapViewModel::onReplayPlayPause,
+        onReplayStop = mapViewModel::onReplayStop,
+        onReplaySpeedChange = mapViewModel::onReplaySpeedChanged,
+        onReplaySeek = mapViewModel::onReplaySeek,
+        showReplayDevFab = mapViewModel.showReplayDebugFab,
+        showVarioDemoFab = mapViewModel.showVarioDemoFab,
+        onVarioDemoClick = mapViewModel::onVarioDemoReplay,
+        onReplayPickFileClick = {
+            replayFilePicker.launch(
+                arrayOf(
+                    "text/plain",
+                    "application/octet-stream",
+                    "application/*",
+                    "*/*"
                 )
-                MapScreenContent(
-                    density = density,
-                    mapState = mapState,
-                    mapInitializer = mapInitializer,
-                    locationManager = locationManager,
-                    flightDataManager = flightDataManager,
-                    flightViewModel = flightViewModel,
-                    taskManager = taskManager,
-                    orientationManager = orientationManager,
-                    orientationData = orientationData,
-                    cameraManager = cameraManager,
-                    currentFlightModeSelection = currentFlightModeSelection,
-                    currentLocation = locationForUi,
-                    showRecenterButton = showRecenterButton,
-                    showReturnButton = showReturnButton,
-                    showDistanceCircles = showDistanceCircles,
-                    isUiEditMode = mapUiState.isUiEditMode,
-                    onEditModeChange = { enabled -> mapViewModel.onEvent(MapUiEvent.SetUiEditMode(enabled)) },
-                    isAATEditMode = isAATEditMode,
-                    onSetAATEditMode = mapViewModel::setAATEditMode,
-                    onExitAATEditMode = mapViewModel::exitAATEditMode,
-                    safeContainerSize = safeContainerSizeState,
-                    overlayManager = overlayManager,
-                    modalManager = modalManager,
-                    widgetManager = widgetManager,
-                    screenWidthPx = screenWidthPx,
-                    screenHeightPx = screenHeightPx,
-                    variometerUiState = variometerUiState,
-                    minVariometerSizePx = minVariometerSizePx,
-                    maxVariometerSizePx = maxVariometerSizePx,
-                    onVariometerOffsetChange = { offset ->
-                        mapViewModel.onVariometerOffsetCommitted(
-                            offset = offset,
-                            screenWidthPx = screenWidthPx,
-                            screenHeightPx = screenHeightPx
-                        )
-                    },
-                    onVariometerSizeChange = { newSize ->
-                        mapViewModel.onVariometerSizeCommitted(
-                            sizePx = newSize,
-                            screenWidthPx = screenWidthPx,
-                            screenHeightPx = screenHeightPx,
-                            minSizePx = minVariometerSizePx,
-                            maxSizePx = maxVariometerSizePx
-                        )
-                    },
-                    onVariometerLongPress = {},
-                    onVariometerEditFinished = {},
-                    hamburgerOffset = hamburgerOffsetState,
-                    flightModeOffset = flightModeOffsetState,
-                    ballastOffset = ballastOffsetState,
-                    taskScreenManager = taskScreenManager,
-                    waypointData = mapUiState.waypoints,
-                    unitsPreferences = mapUiState.unitsPreferences,
-                    ballastUiState = mapViewModel.ballastUiState,
-                    isBallastPillHidden = mapUiState.hideBallastPill,
-                    onBallastCommand = mapViewModel::submitBallastCommand,
-                    onHamburgerTap = { mapViewModel.onEvent(MapUiEvent.ToggleDrawer) },
-                    onHamburgerLongPress = { mapViewModel.onEvent(MapUiEvent.ToggleUiEditMode) },
-                    cardStyle = cardStyle,
-                    replayState = mapViewModel.replaySessionState,
-                    onReplayPlayPause = mapViewModel::onReplayPlayPause,
-                    onReplayStop = mapViewModel::onReplayStop,
-                    onReplaySpeedChange = mapViewModel::onReplaySpeedChanged,
-                    onReplaySeek = mapViewModel::onReplaySeek,
-                    showReplayDevFab = mapViewModel.showReplayDebugFab,
-                    onReplayPickFileClick = {
-                        replayFilePicker.launch(
-                            arrayOf(
-                                "text/plain",
-                                "application/octet-stream",
-                                "application/*",
-                                "*/*"
-                            )
-                        )
-                    }
-                )
-                if (mapUiState.isLoadingWaypoints) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.2f))
-                    ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                        )
-                    }
-                }
-            }
+            )
         }
     )
 }
-
-
-@Composable
-private fun GpsStatusBanner(status: GpsStatus, modifier: Modifier = Modifier) {
-    val (text, color) = when (status) {
-        GpsStatus.NoPermission -> "Location permission needed" to Color(0xFFB00020)
-        GpsStatus.Disabled -> "GPS is off" to Color(0xFFB00020)
-        is GpsStatus.LostFix -> "Waiting for GPS…" to Color(0xFFCA8A04)
-        GpsStatus.Searching -> "Searching for GPS…" to Color(0xFFCA8A04)
-        is GpsStatus.Ok -> return // No banner when OK
-    }
-    Surface(
-        color = color.copy(alpha = 0.85f),
-        tonalElevation = 4.dp,
-        shape = RoundedCornerShape(10.dp),
-        modifier = modifier
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            color = Color.White,
-            style = MaterialTheme.typography.labelMedium,
-            textAlign = TextAlign.Center
-        )
-    }
-}
-
-private fun resolveDisplayName(context: Context, uri: Uri): String? {
-    return context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-        val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-        if (nameIndex >= 0 && cursor.moveToFirst()) cursor.getString(nameIndex) else null
-    }
-}
-
-

@@ -3,10 +3,7 @@ package com.example.xcpro.map
 import android.Manifest
 import android.content.Context
 import android.util.Log
-import androidx.compose.runtime.Composable
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
 import com.example.xcpro.common.orientation.MapOrientationMode
 import com.example.xcpro.map.QnhPreferencesRepository
 import com.example.xcpro.sensors.UnifiedSensorManager
@@ -162,20 +159,12 @@ class LocationManager(
             mapState.savedBearing = value
         }
 
-    @Composable
-    fun LocationPermissionHandler(): ActivityResultLauncher<Array<String>> {
-        return rememberLauncherForActivityResult(
-            ActivityResultContracts.RequestMultiplePermissions()
-        ) { permissions ->
-            val fineLocationGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
-            val coarseLocationGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
-
-            if (fineLocationGranted || coarseLocationGranted) {
-                Log.d(TAG, "✅ Location permissions granted, starting background sensors")
-                ensureSensorsRunning()
-            } else {
-                Log.e(TAG, "❌ Location permissions denied")
-            }
+    fun onLocationPermissionsResult(fineLocationGranted: Boolean, coarseLocationGranted: Boolean) {
+        if (fineLocationGranted || coarseLocationGranted) {
+            Log.d(TAG, "Location permissions granted, starting background sensors")
+            ensureSensorsRunning()
+        } else {
+            Log.e(TAG, "Location permissions denied")
         }
     }
 
@@ -292,17 +281,6 @@ class LocationManager(
         }
     }
 
-    private fun desiredCameraBearing(
-        trackBearing: Double,
-        magneticHeading: Double,
-        orientationMode: MapOrientationMode
-    ): Double =
-        when (orientationMode) {
-            MapOrientationMode.NORTH_UP -> 0.0
-            MapOrientationMode.TRACK_UP -> trackBearing
-            MapOrientationMode.HEADING_UP -> magneticHeading
-            MapOrientationMode.WIND_UP -> trackBearing
-        }
 
     fun updateLocationFromGPS(
         location: GPSData,
@@ -343,7 +321,7 @@ class LocationManager(
             orientationMode = orientationMode,
             shouldTrackCamera = shouldTrackCamera,
             padding = padding,
-            cameraBearing = desiredCameraBearing(location.bearing, magneticHeading, orientationMode)
+            cameraBearing = resolveCameraBearing(location.bearing, magneticHeading, orientationMode)
         )
 
         handleInitialCentering(location.latLng)
@@ -440,7 +418,7 @@ class LocationManager(
             orientationMode = orientationMode,
             shouldTrackCamera = shouldTrackCamera,
             padding = padding,
-            cameraBearing = desiredCameraBearing(liveData.track, magneticHeading, orientationMode)
+            cameraBearing = resolveCameraBearing(liveData.track, magneticHeading, orientationMode)
         )
 
         handleInitialCentering(newLocation)

@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -45,6 +46,8 @@ fun MapActionButtons(
     onShowQnhDialog: () -> Unit,
     showQnhFab: Boolean,
     onDismissQnhFab: () -> Unit,
+    showVarioDemoFab: Boolean,
+    onVarioDemoClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -54,6 +57,7 @@ fun MapActionButtons(
     val qnhTopPadding = 130.dp
     val fabSpacing = 64.dp
     val distanceTopPadding = if (showQnhFab) qnhTopPadding + fabSpacing else qnhTopPadding
+    val demoTopPadding = distanceTopPadding + fabSpacing
     val isTaskSearchVisible by taskScreenManager.showTaskScreen.collectAsStateWithLifecycle()
     val isTaskSheetVisible by taskScreenManager.showTaskBottomSheet.collectAsStateWithLifecycle()
 
@@ -102,6 +106,15 @@ fun MapActionButtons(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(top = qnhTopPadding, end = 16.dp)
+            )
+        }
+
+        if (showVarioDemoFab) {
+            VarioDemoButton(
+                onClick = onVarioDemoClick,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = demoTopPadding, end = 16.dp)
             )
         }
     }
@@ -267,6 +280,32 @@ private fun QnhButton(
                     modifier = Modifier.size(10.dp)
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun VarioDemoButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .size(48.dp)
+            .zIndex(50f)
+    ) {
+        FloatingActionButton(
+            onClick = onClick,
+            modifier = Modifier.fillMaxSize(),
+            containerColor = MaterialTheme.colorScheme.secondary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.PlayArrow,
+                contentDescription = "Run vario demo replay",
+                modifier = Modifier.size(24.dp)
+            )
         }
     }
 }

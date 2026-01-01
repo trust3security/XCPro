@@ -14,6 +14,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -45,11 +46,16 @@ import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.sensors.GPSData
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import android.util.Log
 import com.example.xcpro.seedQnhInputValue
 import com.example.xcpro.convertQnhInputToHpa
 import com.example.xcpro.variometer.layout.VariometerUiState
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
 import com.example.xcpro.replay.IgcReplayController
+import com.example.xcpro.common.units.UnitsFormatter
+import com.example.xcpro.common.units.VerticalSpeedMs
 
 @Composable
 internal fun MapScreenContent(
@@ -104,7 +110,9 @@ internal fun MapScreenContent(
     onReplaySpeedChange: (Double) -> Unit,
     onReplaySeek: (Float) -> Unit,
     showReplayDevFab: Boolean,
-    onReplayPickFileClick: () -> Unit
+    onReplayPickFileClick: () -> Unit,
+    showVarioDemoFab: Boolean,
+    onVarioDemoClick: () -> Unit
 ) {
     var showQnhDialog by remember { mutableStateOf(false) }
     var qnhInput by remember { mutableStateOf("") }
@@ -188,7 +196,7 @@ internal fun MapScreenContent(
             }
         )
 
-        MapActionButtonsLayer(
+    MapActionButtonsLayer(
             mapState = mapState,
             taskManager = taskManager,
             taskScreenManager = taskScreenManager,
@@ -197,6 +205,7 @@ internal fun MapScreenContent(
             showReturnButton = showReturnButton,
             showDistanceCircles = showDistanceCircles,
             showQnhFab = showQnhFab,
+            showVarioDemoFab = showVarioDemoFab,
             onToggleDistanceCircles = { overlayManager.toggleDistanceCircles() },
             onReturn = { locationManager.returnToSavedLocation() },
             onShowQnhDialog = {
@@ -205,7 +214,8 @@ internal fun MapScreenContent(
                 qnhError = null
                 showQnhDialog = true
             },
-            onDismissQnhFab = { showQnhFab = false }
+            onDismissQnhFab = { showQnhFab = false },
+            onVarioDemoClick = onVarioDemoClick
         )
 
         QnhDialogHost(
@@ -238,6 +248,53 @@ internal fun MapScreenContent(
             }
         )
     }
+
+    ReplayDiagnosticsLogger(
+        replayState = replayState,
+        flightDataManager = flightDataManager,
+        unitsPreferences = unitsPreferences
+    )
+}
+
+@Composable
+private fun ReplayDiagnosticsLogger(
+    replayState: StateFlow<IgcReplayController.SessionState>,
+    flightDataManager: FlightDataManager,
+    unitsPreferences: UnitsPreferences
+) {
+    if (!com.example.xcpro.map.BuildConfig.DEBUG) return
+
+    val replaySession by replayState.collectAsState()
+
+    LaunchedEffect(replaySession.status, unitsPreferences) {
+        Log.d("REPLAY_UI", "status=${replaySession.status} speed=${replaySession.speedMultiplier}")
+        if (replaySession.status != IgcReplayController.SessionStatus.PLAYING) return@LaunchedEffect
+
+        while (isActive && replayState.value.status == IgcReplayController.SessionStatus.PLAYING) {
+            val live = flightDataManager.liveFlightData
+            val displayMs = live?.displayVario ?: Double.NaN
+            val displayUnits = if (displayMs.isFinite()) {
+                unitsPreferences.verticalSpeed.fromSi(VerticalSpeedMs(displayMs))
+            } else {
+                Double.NaN
+            }
+            val label = if (displayMs.isFinite()) {
+                UnitsFormatter.verticalSpeed(
+                    VerticalSpeedMs(displayMs),
+                    unitsPreferences
+                ).text
+            } else {
+                "--"
+            }
+            Log.d(
+                "REPLAY_UI",
+                "displayMs=${"%.3f".format(displayMs)} displayUi=${"%.3f".format(displayUnits)} " +
+                    "label=$label units=${unitsPreferences.verticalSpeed} " +
+                    "valid=${live?.varioValid} src=${live?.varioSource} xcDisp=${live?.xcSoarDisplayVario}"
+            )
+            delay(1_000L)
+        }
+    }
 }
 
 @Composable
@@ -264,10 +321,12 @@ private fun MapActionButtonsLayer(
     showReturnButton: Boolean,
     showDistanceCircles: Boolean,
     showQnhFab: Boolean,
+    showVarioDemoFab: Boolean,
     onToggleDistanceCircles: () -> Unit,
     onReturn: () -> Unit,
     onShowQnhDialog: () -> Unit,
     onDismissQnhFab: () -> Unit,
+    onVarioDemoClick: () -> Unit,
     modifier: Modifier = Modifier.fillMaxSize()
 ) {
     MapActionButtons(
@@ -283,6 +342,8 @@ private fun MapActionButtonsLayer(
         onShowQnhDialog = onShowQnhDialog,
         showQnhFab = showQnhFab,
         onDismissQnhFab = onDismissQnhFab,
+        showVarioDemoFab = showVarioDemoFab,
+        onVarioDemoClick = onVarioDemoClick,
         modifier = modifier
     )
 }

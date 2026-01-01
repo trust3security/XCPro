@@ -5,6 +5,7 @@ import kotlin.math.cos
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
+import kotlin.random.Random
 
 internal data class MovementSnapshot(
     val speedMs: Double,
@@ -76,6 +77,40 @@ internal object IgcReplayMath {
         return result
     }
 
+    fun densifyPoints(
+        original: List<IgcPoint>,
+        stepMs: Long,
+        jitterMs: Long,
+        random: Random
+    ): List<IgcPoint> {
+        if (original.size < 2) return original
+        if (stepMs <= 0L) return original
+        val result = ArrayList<IgcPoint>(original.size)
+        for (i in 0 until original.lastIndex) {
+            val current = original[i]
+            val next = original[i + 1]
+            result += current
+            val gap = next.timestampMillis - current.timestampMillis
+            if (gap > stepMs) {
+                var timestamp = current.timestampMillis + stepMs
+                while (timestamp < next.timestampMillis) {
+                    val fraction = ((timestamp - current.timestampMillis).toDouble() / gap.toDouble()).coerceIn(0.0, 1.0)
+                    result += interpolatePoint(current, next, timestamp, fraction)
+                    val jitter = if (jitterMs > 0L) {
+                        val span = jitterMs * 2 + 1
+                        random.nextLong(span) - jitterMs
+                    } else {
+                        0L
+                    }
+                    val nextStep = (stepMs + jitter).coerceAtLeast(1L)
+                    timestamp += nextStep
+                }
+            }
+        }
+        result += original.last()
+        return result
+    }
+
     fun altitudeToPressure(altitudeMeters: Double, qnhHpa: Double): Double {
         val ratio = 1 - (LAPSE_RATE_K_PER_M * altitudeMeters) / SEA_LEVEL_TEMP_K
         return qnhHpa * ratio.pow(EXPONENT)
@@ -125,4 +160,3 @@ internal object IgcReplayMath {
         return (Math.toDegrees(atan2(y, x)) + 360.0) % 360.0
     }
 }
-

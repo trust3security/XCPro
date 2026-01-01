@@ -227,7 +227,8 @@ internal fun MapOverlayStack(
             onVariometerEditFinished = onVariometerEditFinished,
             screenWidthPx = screenWidthPx,
             screenHeightPx = screenHeightPx,
-            isUiEditMode = isUiEditMode
+            isUiEditMode = isUiEditMode,
+            replayState = replayState
         )
 
         DistanceCirclesLayer(

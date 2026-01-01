@@ -18,6 +18,6 @@ interface SensorFusionRepository {
     fun requestAutoQnhCalibration()
     fun setMacCreadySetting(value: Double)
     fun setMacCreadyRisk(value: Double)
-    fun updateReplayRealVario(realVarioMs: Double?)
+    fun updateReplayRealVario(realVarioMs: Double?, timestampMillis: Long)
     fun stop()
 }

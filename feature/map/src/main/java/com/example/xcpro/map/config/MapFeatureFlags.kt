@@ -25,6 +25,12 @@ object MapFeatureFlags {
     var showReplayDebugFab: Boolean = BuildConfig.DEBUG
 
     /**
+     * Shows the developer-only vario demo FAB on the map screen when true.
+     */
+    @Volatile
+    var showVarioDemoFab: Boolean = BuildConfig.DEBUG
+
+    /**
      * Pixel threshold for map location jitter suppression.
      */
     @Volatile

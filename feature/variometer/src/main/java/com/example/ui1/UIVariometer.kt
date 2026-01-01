@@ -22,6 +22,39 @@ import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 
+private const val DIAL_MAX_KTS = 14f
+private const val DIAL_SWEEP_DEG = 300f
+private const val DIAL_PIVOT_KTS = 6f
+private const val DIAL_PIVOT_FRACTION = 0.7f
+
+private fun mapToDialValue(value: Float): Float {
+    val sign = if (value < 0f) -1f else 1f
+    val absValue = abs(value)
+    val pivot = DIAL_PIVOT_KTS.coerceIn(0.1f, DIAL_MAX_KTS - 0.1f)
+    val pivotDial = (DIAL_MAX_KTS * DIAL_PIVOT_FRACTION).coerceIn(0.1f, DIAL_MAX_KTS - 0.1f)
+    val scaled = if (absValue <= pivot) {
+        (absValue / pivot) * pivotDial
+    } else {
+        val highRange = DIAL_MAX_KTS - pivot
+        val highDial = DIAL_MAX_KTS - pivotDial
+        pivotDial + ((absValue - pivot) / highRange) * highDial
+    }
+    val over = absValue - DIAL_MAX_KTS
+    val softened = if (over <= 0f) {
+        scaled
+    } else {
+        val bleed = DIAL_MAX_KTS * 0.02f
+        DIAL_MAX_KTS - (bleed / (1f + over))
+    }
+    return sign * softened.coerceIn(0f, DIAL_MAX_KTS)
+}
+
+private fun dialAngle(value: Float): Float {
+    val dialValue = mapToDialValue(value)
+    val span = DIAL_MAX_KTS * 2f
+    return dialValue * (DIAL_SWEEP_DEG / span) - 90f
+}
+
 @Composable
 fun UIVariometer(
     needleValue: Float,
@@ -49,7 +82,6 @@ fun UIVariometer(
         val radius = size.minDimension / 2f - 20.dp.toPx()
 
         val rawNeedleValue = needleValue
-        val outerNeedleValue = rawNeedleValue.coerceIn(-9f, 9f)
         val microArcValue = rawNeedleValue.coerceIn(-1f, 1f)
         val microArcAngle = microArcValue * 135f
 
@@ -125,8 +157,8 @@ fun UIVariometer(
             )
         }
 
-        for (i in -9..9) {
-            val angle = i * (300f / 18f) - 90f
+        for (i in -DIAL_MAX_KTS.toInt()..DIAL_MAX_KTS.toInt()) {
+            val angle = dialAngle(i.toFloat())
             val startRadius = radius * 0.85f
             val endRadius = radius * 0.95f
 
@@ -152,9 +184,9 @@ fun UIVariometer(
             isFakeBoldText = true
         }
 
-        val numbersToShow = listOf(-9, -6, -3, 0, 3, 6, 9)
+        val numbersToShow = listOf(-14, -10, -6, -3, 0, 3, 6, 10, 14)
         numbersToShow.forEach { number ->
-            val angle = number * (300f / 18f) - 90f
+            val angle = dialAngle(number.toFloat())
             val textRadius = radius * 0.65f
 
             val textX = center.x + cos(Math.toRadians(angle.toDouble())).toFloat() * textRadius
@@ -168,7 +200,7 @@ fun UIVariometer(
             )
         }
 
-        val needleAngle = (outerNeedleValue * (300f / 18f) - 90f)
+        val needleAngle = dialAngle(rawNeedleValue)
         val needleLength = radius * 0.7f
 
         rotate(needleAngle, center) {
@@ -182,7 +214,7 @@ fun UIVariometer(
         }
 
         averageNeedleValue?.let { average ->
-            val averageAngle = (average.coerceIn(-9f, 9f) * (300f / 18f) - 90f)
+            val averageAngle = dialAngle(average)
             rotate(averageAngle, center) {
                 drawLine(
                     color = Color(0xFF7C3AED),

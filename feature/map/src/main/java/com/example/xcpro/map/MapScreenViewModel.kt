@@ -7,9 +7,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.dfcards.CardPreferences
-import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.MapOrientationManager
-import com.example.xcpro.convertToRealTimeFlightData
 import com.example.xcpro.common.di.DefaultDispatcher
 import com.example.xcpro.common.flow.inVm
 import com.example.xcpro.common.units.UnitsPreferences
@@ -74,8 +72,6 @@ class MapScreenViewModel @Inject constructor(
     @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
-    private var flightStartTimestampMillis: Long? = null
-
     private val ballastController = BallastController(
         repository = gliderRepository,
         scope = viewModelScope,
@@ -113,6 +109,7 @@ class MapScreenViewModel @Inject constructor(
     val windState: StateFlow<WindState> = windRepository.windState
     val replaySessionState: StateFlow<IgcReplayController.SessionState> = igcReplayController.session
     val showReplayDebugFab: Boolean = MapFeatureFlags.showReplayDebugFab
+    val showVarioDemoFab: Boolean = MapFeatureFlags.showVarioDemoFab
     val gpsStatusFlow: StateFlow<com.example.xcpro.sensors.GpsStatus> =
         locationManager.unifiedSensorManager.gpsStatusFlow
 
@@ -130,115 +127,20 @@ class MapScreenViewModel @Inject constructor(
         combine(_containerReady, _liveDataReady) { container, data -> container && data }
             .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
+    private val observers = MapScreenObservers(
+        scope = viewModelScope,
+        flightDataRepository = flightDataRepository,
+        windRepository = windRepository,
+        flightDataManager = flightDataManager,
+        mapState = mapState,
+        liveDataReady = _liveDataReady,
+        containerReady = _containerReady,
+        uiEffects = _uiEffects,
+        igcReplayController = igcReplayController
+    )
+
     init {
-        observeFlightDataRepository()
-        observeSafeContainerSize()
-        observeReplayEvents()
-        observeReplaySessionDebug()
-    }
-
-    private fun observeFlightDataRepository() {
-        combine(
-            flightDataRepository.flightData,
-            windRepository.windState
-        ) { data, wind -> data to wind }
-            .onEach { (data, wind) ->
-                if (data != null) {
-                    if (!_liveDataReady.value) {
-                        _liveDataReady.value = true
-                    }
-                    val sampleClockMillis = data.gps?.timestamp ?: data.timestamp
-                    val startMillis = flightStartTimestampMillis ?: sampleClockMillis
-                    if (flightStartTimestampMillis == null) {
-                        flightStartTimestampMillis = startMillis
-                    }
-                    val elapsedMillis = (sampleClockMillis - startMillis).coerceAtLeast(0L)
-                    val elapsedMinutes = elapsedMillis / 60_000L
-                    val hours = elapsedMinutes / 60L
-                    val minutes = elapsedMinutes % 60L
-                    val formattedFlightTime = "${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}"
-
-                    val liveData = convertToRealTimeFlightData(data)
-                        .copy(flightTime = formattedFlightTime)
-                        .applyWindState(wind)
-                    flightDataManager.updateLiveFlightData(liveData)
-                } else {
-                    flightStartTimestampMillis = null
-                    flightDataManager.updateLiveFlightData(null)
-                }
-            }
-            .launchIn(viewModelScope)
-    }
-
-    private fun observeSafeContainerSize() {
-        mapState.safeContainerSizeFlow
-            .onEach { size: IntSize ->
-                if (!_containerReady.value && size.width > 0 && size.height > 0) {
-                    _containerReady.value = true
-                }
-            }
-            .launchIn(viewModelScope)
-    }
-
-    private fun observeReplayEvents() {
-        igcReplayController.events
-            .onEach { event ->
-                when (event) {
-                    is IgcReplayController.ReplayEvent.Completed ->
-                        _uiEffects.emit(MapUiEffect.ShowToast("Replay finished (${event.samples} samples)"))
-                    is IgcReplayController.ReplayEvent.Failed -> {
-                        if (event.throwable is kotlinx.coroutines.CancellationException) {
-                            _uiEffects.emit(MapUiEffect.ShowToast("Replay failed: job was cancelled"))
-                            return@onEach
-                        }
-                        Log.e("MapScreenViewModel", "Replay failed", event.throwable)
-                        _uiEffects.emit(MapUiEffect.ShowToast("Replay failed: ${event.throwable.message ?: "Unknown error"}"))
-                    }
-                    IgcReplayController.ReplayEvent.Cancelled -> {
-                        _uiEffects.emit(MapUiEffect.ShowToast("Replay failed: job was cancelled"))
-                    }
-                }
-            }
-            .launchIn(viewModelScope)
-    }
-
-    /**
-     * Debug helper: log session changes so we can see selection/status from the UI layer.
-     */
-    private fun observeReplaySessionDebug() {
-        igcReplayController.session
-            .onEach { session ->
-                Log.i(
-                    "MapScreenViewModel",
-                    "REPLAY_SESSION_UI status=${session.status} selection=${session.selection} elapsed=${session.elapsedMillis} dur=${session.durationMillis}"
-                )
-            }
-            .launchIn(viewModelScope)
-    }
-
-    private fun RealTimeFlightData.applyWindState(windState: WindState): RealTimeFlightData {
-        if (!windState.isAvailable) {
-            return this
-        }
-
-        val vector = windState.vector ?: return this
-        val directionFrom = ((vector.directionFromDeg % 360.0) + 360.0) % 360.0
-        val windAgeSeconds = if (windState.lastUpdatedMillis > 0L) {
-            val ageMs = (timestamp - windState.lastUpdatedMillis).coerceAtLeast(0L)
-            ageMs / 1000L
-        } else {
-            -1L
-        }
-
-        return copy(
-            windSpeed = vector.speed.toFloat(),
-            windDirection = directionFrom.toFloat(),
-            windQuality = windState.quality,
-            windSource = windState.source.name,
-            windHeadwind = windState.headwind,
-            windCrosswind = windState.crosswind,
-            windAgeSeconds = windAgeSeconds
-        )
+        observers.start()
     }
 
     private val _isAATEditMode = MutableStateFlow(false)
@@ -321,6 +223,24 @@ class MapScreenViewModel @Inject constructor(
                 igcReplayController.play()
             } catch (t: Throwable) {
                 Log.e("MapScreenViewModel", "Failed to start dev replay", t)
+            }
+        }
+    }
+
+    fun onVarioDemoReplay() {
+        viewModelScope.launch {
+            try {
+                Log.i("MapScreenViewModel", "VARIO_DEMO start asset=$VARIO_DEMO_ASSET_PATH")
+                igcReplayController.stop()
+                igcReplayController.loadAsset(VARIO_DEMO_ASSET_PATH, "Vario demo")
+                mapState.hasInitiallyCentered = false
+                mapState.showReturnButton = false
+                mapState.isTrackingLocation = true
+                igcReplayController.play()
+                _uiEffects.emit(MapUiEffect.ShowToast("Vario demo replay started"))
+            } catch (t: Throwable) {
+                Log.e("MapScreenViewModel", "Failed to start vario demo replay", t)
+                _uiEffects.emit(MapUiEffect.ShowToast("Vario demo replay failed"))
             }
         }
     }
@@ -554,5 +474,6 @@ class MapScreenViewModel @Inject constructor(
     }
     companion object {
         private const val DEV_REPLAY_ASSET_PATH = "replay/2025-11-11.igc"
+        private const val VARIO_DEMO_ASSET_PATH = "replay/vario-demo-0-10-0-30s.igc"
     }
 }
