@@ -399,17 +399,24 @@ class FlightDataCalculator(
 
         // Emit display/UI data on GPS tick only when baro is stale or unavailable.
         if (!baroFresh) {
+            // Fallback: if the baro/IMU loop hasn't produced a vario yet, drive the UI with GPS vario
+            // so the needle doesn't stick at zero during startup or brief baro gaps.
+            val gpsFallbackVario = varioSuite.gpsVerticalSpeed().takeIf { it.isFinite() } ?: 0.0
+            val varioResultInput = cachedVarioResult ?: com.example.dfcards.filters.ModernVarioResult(
+                altitude = gps.altitude.value,
+                verticalSpeed = gpsFallbackVario,
+                acceleration = 0.0,
+                confidence = 0.3
+            )
+            if (cachedVarioResult == null) {
+                emissionState.varioValidUntil = currentTime + VARIO_VALIDITY_FLOOR_MS
+            }
             emitter.emit(
                 gps = gps,
                 compass = compass,
                 currentTime = currentTime,
                 deltaTime = deltaTime,
-                varioResultInput = cachedVarioResult ?: com.example.dfcards.filters.ModernVarioResult(
-                    altitude = gps.altitude.value,
-                    verticalSpeed = 0.0,
-                    acceleration = 0.0,
-                    confidence = 0.3
-                ),
+                varioResultInput = varioResultInput,
                 baroResult = cachedBaroResult,
                 baro = cachedBaroData,
                 cachedVarioResult = cachedVarioResult,

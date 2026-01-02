@@ -81,7 +81,7 @@ internal class SensorFrontEnd(
             ?.let { deriveVario(pressureAltitude = baroAltitude, currentTime = currentTime, altitudeType = AltitudeType.BARO) }
             ?: Double.NaN
 
-        val gpsVario = deriveVario(pressureAltitude = gpsAltitude, currentTime = gpsTimestampMillis, altitudeType = AltitudeType.GPS)
+        val gpsVario = deriveGpsVario(gpsAltitude = gpsAltitude, currentTime = gpsTimestampMillis)
 
         val (bruttoVario, varioSource) = when {
             teVario != null && teVario.isFinite() -> teVario to "TE"
@@ -129,6 +129,7 @@ internal class SensorFrontEnd(
     private var prevGpsAltitude: Double? = null
     private var prevGpsTime: Long = -1L
     private var lastGpsVario: Double? = null
+    private val gpsAltitudeWindow = ArrayDeque<Double>(3)
 
     private fun deriveVario(pressureAltitude: Double, currentTime: Long, altitudeType: AltitudeType): Double {
         if (!pressureAltitude.isFinite()) return Double.NaN
@@ -190,7 +191,57 @@ internal class SensorFrontEnd(
         lastGpsVario = null
     }
 
-    private fun Double.guardVario(): Double =
-        if (!this.isFinite() || kotlin.math.abs(this) > 10.0) Double.NaN else this
+    /**
+     * GPS vario gets a tiny 3-sample median on altitude to reject single-sample spikes
+     * before the derivative and clamp are applied.
+     */
+    private fun deriveGpsVario(gpsAltitude: Double, currentTime: Long): Double {
+        if (!gpsAltitude.isFinite()) return Double.NaN
+
+        // Seed or reset window when time moves backwards
+        if (prevGpsTime < 0L || currentTime < prevGpsTime) {
+            gpsAltitudeWindow.clear()
+            gpsAltitudeWindow.addLast(gpsAltitude)
+            prevGpsAltitude = gpsAltitude
+            prevGpsTime = currentTime
+            lastGpsVario = null
+            return Double.NaN
+        }
+
+        val dt = (currentTime - prevGpsTime) / 1000.0
+        if (dt <= 0.0 || dt < MIN_DERIVATIVE_DT_SECONDS) return lastGpsVario ?: Double.NaN
+        if (dt > MAX_DERIVATIVE_DT_SECONDS) {
+            prevGpsAltitude = gpsAltitude
+            prevGpsTime = currentTime
+            lastGpsVario = null
+            gpsAltitudeWindow.clear()
+            gpsAltitudeWindow.addLast(gpsAltitude)
+            return Double.NaN
+        }
+
+        // Maintain last 3 altitude samples
+        gpsAltitudeWindow.addLast(gpsAltitude)
+        if (gpsAltitudeWindow.size > 3) gpsAltitudeWindow.removeFirst()
+        val medianAltitude = gpsAltitudeWindow.sorted()[gpsAltitudeWindow.size / 2]
+
+        val prevAlt = prevGpsAltitude
+        val vario = if (prevAlt != null) (medianAltitude - prevAlt) / dt else Double.NaN
+        val guarded = vario.guardVario()
+
+        prevGpsAltitude = medianAltitude
+        prevGpsTime = currentTime
+        lastGpsVario = guarded.takeIf { it.isFinite() }
+        return guarded
+    }
+
+    /**
+     * Keep output finite and realistic:
+     * - Drop only non‑finite inputs.
+     * - Clamp extreme spikes to a plausible full-scale instead of emitting NaN (prevents UI freeze).
+     */
+    private fun Double.guardVario(): Double {
+        if (!this.isFinite()) return Double.NaN
+        return this.coerceIn(-15.0, 15.0)
+    }
 
 }
