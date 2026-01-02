@@ -24,6 +24,7 @@ import androidx.navigation.NavHostController
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.xcpro.MapOrientationManager
+import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.waypoint.WaypointData
@@ -46,6 +47,7 @@ import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.variometer.layout.VariometerUiState
 import kotlinx.coroutines.flow.StateFlow
+import org.maplibre.android.maps.MapLibreMap
 
 /**
  * Drawer + content scaffold for the map screen, with GPS status and loading overlay.
@@ -65,6 +67,7 @@ internal fun MapScreenScaffold(
     density: Density,
     mapState: MapScreenState,
     mapInitializer: MapInitializer,
+    onMapReady: (MapLibreMap) -> Unit,
     locationManager: LocationManager,
     flightDataManager: FlightDataManager,
     flightViewModel: FlightDataViewModel,
@@ -73,6 +76,9 @@ internal fun MapScreenScaffold(
     orientationData: OrientationData,
     cameraManager: MapCameraManager,
     currentFlightModeSelection: FlightModeSelection,
+    currentMode: FlightMode,
+    currentZoom: Float,
+    onModeChange: (FlightMode) -> Unit,
     currentLocation: GPSData?,
     showRecenterButton: Boolean,
     showReturnButton: Boolean,
@@ -139,6 +145,7 @@ internal fun MapScreenScaffold(
                     density = density,
                     mapState = mapState,
                     mapInitializer = mapInitializer,
+                    onMapReady = onMapReady,
                     locationManager = locationManager,
                     flightDataManager = flightDataManager,
                     flightViewModel = flightViewModel,
@@ -147,6 +154,9 @@ internal fun MapScreenScaffold(
                     orientationData = orientationData,
                     cameraManager = cameraManager,
                     currentFlightModeSelection = currentFlightModeSelection,
+                    currentMode = currentMode,
+                    currentZoom = currentZoom,
+                    onModeChange = onModeChange,
                     currentLocation = currentLocation,
                     showRecenterButton = showRecenterButton,
                     showReturnButton = showReturnButton,

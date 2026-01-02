@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.dfcards.CardPreferences
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.common.di.DefaultDispatcher
+import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.flow.inVm
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.units.UnitsRepository
@@ -72,18 +73,22 @@ class MapScreenViewModel @Inject constructor(
     @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
+    private val initialStyleName = mapStyleRepository.initialStyle()
+    val mapStateStore: MapStateStore = MapStateStore(initialStyleName)
+
     private val ballastController = BallastController(
         repository = gliderRepository,
         scope = viewModelScope,
         dispatcher = defaultDispatcher
     )
 
-    val mapState: MapScreenState = MapScreenState(appContext, mapStyleRepository.initialStyle())
+    val mapState: MapScreenState = MapScreenState(appContext, initialStyleName)
     val flightDataManager: FlightDataManager =
         FlightDataManager(appContext, cardPreferences, viewModelScope)
     val locationManager: LocationManager = LocationManager(
         context = appContext,
         mapState = mapState,
+        mapStateStore = mapStateStore,
         coroutineScope = viewModelScope,
         qnhPreferencesRepository = qnhPreferencesRepository,
         varioServiceManager = varioServiceManager
@@ -95,12 +100,13 @@ class MapScreenViewModel @Inject constructor(
     val mapInitializer: MapInitializer = MapInitializer(
         context = appContext,
         mapState = mapState,
+        mapStateStore = mapStateStore,
         orientationManager = orientationManager,
         taskManager = taskManager,
         unifiedSensorManager = locationManager.unifiedSensorManager
     )
 
-    val cameraManager = MapCameraManager(mapState)
+    val cameraManager = MapCameraManager(mapState, mapStateStore)
     val modalManager = MapModalManager(mapState)
     val overlayManager = MapOverlayManager(appContext, mapState, taskManager)
     val taskScreenManager = MapTaskScreenManager(mapState, taskManager)
@@ -121,6 +127,8 @@ class MapScreenViewModel @Inject constructor(
     val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
     private val _uiEffects = MutableSharedFlow<MapUiEffect>(extraBufferCapacity = 1)
     val uiEffects: SharedFlow<MapUiEffect> = _uiEffects.asSharedFlow()
+    private val _mapCommands = MutableSharedFlow<MapCommand>(extraBufferCapacity = 1)
+    val mapCommands: SharedFlow<MapCommand> = _mapCommands.asSharedFlow()
     private val _containerReady = MutableStateFlow(false)
     private val _liveDataReady = MutableStateFlow(false)
     val cardHydrationReady: StateFlow<Boolean> =
@@ -132,7 +140,7 @@ class MapScreenViewModel @Inject constructor(
         flightDataRepository = flightDataRepository,
         windRepository = windRepository,
         flightDataManager = flightDataManager,
-        mapState = mapState,
+        mapStateStore = mapStateStore,
         liveDataReady = _liveDataReady,
         containerReady = _containerReady,
         uiEffects = _uiEffects,
@@ -159,6 +167,31 @@ class MapScreenViewModel @Inject constructor(
         observeUnits()
         observeGliderConfig()
         onEvent(MapUiEvent.RefreshWaypoints)
+    }
+
+    fun emitMapCommand(command: MapCommand) {
+        _mapCommands.tryEmit(command)
+    }
+
+    fun updateSafeContainerSize(size: MapStateStore.MapSize) {
+        mapStateStore.updateSafeContainerSize(size)
+    }
+
+    fun setMapStyle(styleName: String) {
+        if (mapStateStore.updateMapStyleName(styleName)) {
+            emitMapCommand(MapCommand.SetStyle(styleName))
+        }
+    }
+
+    fun setFlightMode(newMode: FlightMode) {
+        mapStateStore.setCurrentMode(newMode)
+        val selection = when (newMode) {
+            FlightMode.CRUISE -> com.example.dfcards.FlightModeSelection.CRUISE
+            FlightMode.THERMAL -> com.example.dfcards.FlightModeSelection.THERMAL
+            FlightMode.FINAL_GLIDE -> com.example.dfcards.FlightModeSelection.FINAL_GLIDE
+        }
+        mapStateStore.setCurrentFlightMode(selection)
+        flightDataManager.updateFlightModeFromEnum(newMode)
     }
 
     fun onEvent(event: MapUiEvent) {
@@ -189,9 +222,9 @@ class MapScreenViewModel @Inject constructor(
                         }
                     }
                     // When starting a new replay, force the map to recentre on the first replay point
-                    mapState.hasInitiallyCentered = false
-                    mapState.showReturnButton = false
-                    mapState.isTrackingLocation = true
+                    mapStateStore.setHasInitiallyCentered(false)
+                    mapStateStore.setShowReturnButton(false)
+                    mapStateStore.setTrackingLocation(true)
                     igcReplayController.play()
                 }
             }
@@ -233,9 +266,9 @@ class MapScreenViewModel @Inject constructor(
                 Log.i("MapScreenViewModel", "VARIO_DEMO start asset=$VARIO_DEMO_ASSET_PATH")
                 igcReplayController.stop()
                 igcReplayController.loadAsset(VARIO_DEMO_ASSET_PATH, "Vario demo")
-                mapState.hasInitiallyCentered = false
-                mapState.showReturnButton = false
-                mapState.isTrackingLocation = true
+                mapStateStore.setHasInitiallyCentered(false)
+                mapStateStore.setShowReturnButton(false)
+                mapStateStore.setTrackingLocation(true)
                 igcReplayController.play()
                 _uiEffects.emit(MapUiEffect.ShowToast("Vario demo replay started"))
             } catch (t: Throwable) {
@@ -263,9 +296,9 @@ class MapScreenViewModel @Inject constructor(
             loadResult
                 .onSuccess {
                     Log.i("MapScreenViewModel", "REPLAY_FILE load success uri=$uri")
-                    mapState.hasInitiallyCentered = false
-                    mapState.showReturnButton = false
-                    mapState.isTrackingLocation = true
+                    mapStateStore.setHasInitiallyCentered(false)
+                    mapStateStore.setShowReturnButton(false)
+                    mapStateStore.setTrackingLocation(true)
                     Log.i("MapScreenViewModel", "REPLAY_FILE starting play uri=$uri")
                     igcReplayController.play()
                 }

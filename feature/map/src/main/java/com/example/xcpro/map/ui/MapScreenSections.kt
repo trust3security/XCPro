@@ -54,6 +54,7 @@ import com.example.dfcards.dfcards.CardVisualStyles
 fun MapMainLayers(
     mapState: MapScreenState,
     mapInitializer: MapInitializer,
+    onMapReady: (org.maplibre.android.maps.MapLibreMap) -> Unit,
     locationManager: LocationManager,
     flightDataManager: FlightDataManager,
     flightViewModel: FlightDataViewModel,
@@ -76,7 +77,8 @@ fun MapMainLayers(
     Box(modifier = modifier.fillMaxSize()) {
         MapViewHost(
             mapState = mapState,
-            mapInitializer = mapInitializer
+            mapInitializer = mapInitializer,
+            onMapReady = onMapReady
         )
 
         CardGridLayer(
@@ -240,6 +242,7 @@ fun QnhDialog(
 private fun MapViewHost(
     mapState: MapScreenState,
     mapInitializer: MapInitializer,
+    onMapReady: (org.maplibre.android.maps.MapLibreMap) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
@@ -251,6 +254,7 @@ private fun MapViewHost(
                     scope.launch {
                         try {
                             mapInitializer.initializeMap(map)
+                            onMapReady(map)
                         } catch (_: Exception) {}
                     }
                 }

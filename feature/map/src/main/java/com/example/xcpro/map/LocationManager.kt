@@ -28,6 +28,7 @@ import kotlin.math.roundToInt
 class LocationManager(
     private val context: Context,
     private val mapState: MapScreenState,
+    private val mapStateStore: MapStateStore,
     private val coroutineScope: CoroutineScope,
     private val qnhPreferencesRepository: QnhPreferencesRepository,
     private val varioServiceManager: VarioServiceManager
@@ -104,59 +105,63 @@ class LocationManager(
         }
     }
 
-    // Map UI state proxies (MapScreenState is the single owner)
+    // Map UI state proxies (MapStateStore is the single owner)
     private var currentUserLocation: LatLng?
-        get() = mapState.currentUserLocation
+        get() = mapStateStore.currentUserLocation.value?.let { LatLng(it.latitude, it.longitude) }
         set(value) {
-            mapState.currentUserLocation = value
+            mapStateStore.setCurrentUserLocation(
+                value?.let { MapStateStore.MapPoint(it.latitude, it.longitude) }
+            )
         }
 
     private var hasInitiallyCentered: Boolean
-        get() = mapState.hasInitiallyCentered
+        get() = mapStateStore.hasInitiallyCentered.value
         set(value) {
-            mapState.hasInitiallyCentered = value
+            mapStateStore.setHasInitiallyCentered(value)
         }
 
     private var isTrackingLocation: Boolean
-        get() = mapState.isTrackingLocation
+        get() = mapStateStore.isTrackingLocation.value
         set(value) {
-            mapState.isTrackingLocation = value
+            mapStateStore.setTrackingLocation(value)
         }
 
     private var showRecenterButton: Boolean
-        get() = mapState.showRecenterButton
+        get() = mapStateStore.showRecenterButton.value
         set(value) {
-            mapState.showRecenterButton = value
+            mapStateStore.setShowRecenterButton(value)
         }
 
     private var lastUserPanTime: Long
-        get() = mapState.lastUserPanTime
+        get() = mapStateStore.lastUserPanTime.value
         set(value) {
-            mapState.lastUserPanTime = value
+            mapStateStore.updateLastUserPanTime(value)
         }
 
     private var showReturnButton: Boolean
-        get() = mapState.showReturnButton
+        get() = mapStateStore.showReturnButton.value
         set(value) {
-            mapState.showReturnButton = value
+            mapStateStore.setShowReturnButton(value)
         }
 
     private var savedLocation: LatLng?
-        get() = mapState.savedLocation
+        get() = mapStateStore.savedLocation.value?.let { LatLng(it.latitude, it.longitude) }
         set(value) {
-            mapState.savedLocation = value
+            mapStateStore.setSavedLocation(
+                value?.let { MapStateStore.MapPoint(it.latitude, it.longitude) }
+            )
         }
 
     private var savedZoom: Double?
-        get() = mapState.savedZoom
+        get() = mapStateStore.savedZoom.value
         set(value) {
-            mapState.savedZoom = value
+            mapStateStore.setSavedZoom(value)
         }
 
     private var savedBearing: Double?
-        get() = mapState.savedBearing
+        get() = mapStateStore.savedBearing.value
         set(value) {
-            mapState.savedBearing = value
+            mapStateStore.setSavedBearing(value)
         }
 
     fun onLocationPermissionsResult(fineLocationGranted: Boolean, coarseLocationGranted: Boolean) {
@@ -439,7 +444,7 @@ class LocationManager(
 
     fun showReturnButton() {
         showReturnButton = true
-        mapState.showReturnButton = true
+        showReturnButton = true
         lastUserPanTime = System.currentTimeMillis()
         Log.d(TAG, "✅ Return button shown due to user interaction")
     }
@@ -458,7 +463,7 @@ class LocationManager(
                 map.animateCamera(CameraUpdateFactory.newCameraPosition(returnCameraPosition), 1000)
 
                 showReturnButton = false
-                mapState.showReturnButton = false
+                showReturnButton = false
                 isTrackingLocation = true
                 showRecenterButton = false
                 Log.d(TAG, "Returned to saved position")
@@ -496,3 +501,5 @@ class LocationManager(
     }
 
 }
+
+

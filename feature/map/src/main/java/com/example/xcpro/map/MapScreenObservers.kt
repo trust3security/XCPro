@@ -23,7 +23,7 @@ internal class MapScreenObservers(
     private val flightDataRepository: FlightDataRepository,
     private val windRepository: WindRepository,
     private val flightDataManager: FlightDataManager,
-    private val mapState: MapScreenState,
+    private val mapStateStore: MapStateStore,
     private val liveDataReady: MutableStateFlow<Boolean>,
     private val containerReady: MutableStateFlow<Boolean>,
     private val uiEffects: MutableSharedFlow<MapUiEffect>,
@@ -73,9 +73,9 @@ internal class MapScreenObservers(
     }
 
     private fun observeSafeContainerSize() {
-        mapState.safeContainerSizeFlow
+        mapStateStore.safeContainerSize
             .onEach { size ->
-                if (!containerReady.value && size.width > 0 && size.height > 0) {
+                if (!containerReady.value && size.widthPx > 0 && size.heightPx > 0) {
                     containerReady.value = true
                 }
             }

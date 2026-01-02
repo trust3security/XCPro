@@ -40,6 +40,8 @@ object MapGestureSetup {
         flightDataManager: FlightDataManager,
         locationManager: LocationManager,
         cameraManager: MapCameraManager,
+        currentMode: FlightMode,
+        onModeChange: (FlightMode) -> Unit,
         currentLocation: GPSData?,
         showReturnButton: Boolean,
         isAATEditMode: Boolean,
@@ -61,12 +63,10 @@ object MapGestureSetup {
         ) {
             CustomMapGestureHandler(
                 mapLibreMap = mapState.mapLibreMap,
-                currentMode = mapState.currentMode,
+                currentMode = currentMode,
                 onModeChange = { newMode ->
                     Log.d(TAG, " onModeChange callback called with: ${newMode.displayName}")
-                    mapState.updateFlightMode(newMode)
-                    flightDataManager.updateFlightModeFromEnum(newMode)
-                    Log.d(TAG, " mapState.currentMode should now be: ${mapState.currentMode.displayName}")
+                    onModeChange(newMode)
                 },
                 showReturnButton = showReturnButton,
                 onShowReturnButton = { show ->

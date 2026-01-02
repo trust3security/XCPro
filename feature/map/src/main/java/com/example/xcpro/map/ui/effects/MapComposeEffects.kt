@@ -11,14 +11,12 @@ import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.MapOrientationManager
+import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.loadConfig
 import com.example.xcpro.map.LocationManager
 import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.profiles.ProfileUiState
-import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.sensors.GPSData
-import com.example.xcpro.map.MapTaskScreenManager
-import com.example.xcpro.screens.overlays.getMapStyleUrl
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
@@ -58,7 +56,8 @@ object MapComposeEffects {
     fun ProfileAndConfigurationEffects(
         uiState: ProfileUiState,
         flightDataManager: FlightDataManager,
-        mapState: MapScreenState,
+        currentMode: FlightMode,
+        onModeChange: (FlightMode) -> Unit,
         currentFlightModeSelection: FlightModeSelection,
         safeContainerSize: IntSize,
         flightViewModel: FlightDataViewModel,
@@ -70,10 +69,9 @@ object MapComposeEffects {
         LaunchedEffect(uiState.activeProfile?.id) {
             flightDataManager.loadVisibleModes(uiState.activeProfile?.id, uiState.activeProfile?.name)
 
-            val currentMode = mapState.currentMode
             if (!flightDataManager.isCurrentModeVisible(currentMode)) {
                 val fallback = flightDataManager.getFallbackMode()
-                mapState.currentMode = fallback
+                onModeChange(fallback)
             }
         }
 
@@ -155,8 +153,7 @@ object MapComposeEffects {
     @Composable
     fun MapStyleAndConfigurationEffects(
         initialMapStyle: String,
-        mapState: MapScreenState,
-        onMapStyleSelected: (String) -> Unit
+        onStyleResolved: (String) -> Unit
     ) {
         val context = LocalContext.current
         LaunchedEffect(Unit) {
@@ -166,8 +163,7 @@ object MapComposeEffects {
                 }
                 .onSuccess { stored ->
                     val style = stored ?: initialMapStyle
-                    mapState.mapStyleUrl = getMapStyleUrl(style)
-                    onMapStyleSelected(style)
+                    onStyleResolved(style)
                 }
                 .onFailure { _ -> }
         }
@@ -189,7 +185,8 @@ object MapComposeEffects {
         orientationManager: MapOrientationManager,
         uiState: ProfileUiState,
         flightDataManager: FlightDataManager,
-        mapState: MapScreenState,
+        currentMode: FlightMode,
+        onModeChange: (FlightMode) -> Unit,
         currentFlightModeSelection: FlightModeSelection,
         safeContainerSize: IntSize,
         flightViewModel: FlightDataViewModel,
@@ -198,7 +195,7 @@ object MapComposeEffects {
         profileModeTemplates: Map<String, Map<FlightModeSelection, String>>,
         activeTemplateId: String?,
         initialMapStyle: String,
-        onMapStyleSelected: (String) -> Unit,
+        onMapStyleResolved: (String) -> Unit,
         cardsReady: Boolean,
         suppressLiveGps: Boolean = false,
         allowSensorStart: Boolean = true
@@ -217,7 +214,8 @@ object MapComposeEffects {
         ProfileAndConfigurationEffects(
             uiState = uiState,
             flightDataManager = flightDataManager,
-            mapState = mapState,
+            currentMode = currentMode,
+            onModeChange = onModeChange,
             currentFlightModeSelection = currentFlightModeSelection,
             safeContainerSize = safeContainerSize,
             flightViewModel = flightViewModel,
@@ -241,8 +239,7 @@ object MapComposeEffects {
 
         MapStyleAndConfigurationEffects(
             initialMapStyle = initialMapStyle,
-            mapState = mapState,
-            onMapStyleSelected = onMapStyleSelected
+            onStyleResolved = onMapStyleResolved
         )
 
         TestAndDebugEffects(orientationData = orientationData)

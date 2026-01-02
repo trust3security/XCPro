@@ -1,6 +1,5 @@
 package com.example.xcpro.map.components
 
-import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
@@ -14,33 +13,25 @@ import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.example.xcpro.sensors.GPSData
-import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapTaskScreenManager
-import com.example.xcpro.tasks.TaskManagerCoordinator
-import com.example.xcpro.map.helpers.GliderPaddingHelper
-import com.example.xcpro.MapOrientationPreferences
 import com.example.ui1.icons.LocationSailplane
-import org.maplibre.android.camera.CameraUpdateFactory
 
 @Composable
 fun MapActionButtons(
-    mapState: MapScreenState,
-    taskManager: TaskManagerCoordinator,
     taskScreenManager: MapTaskScreenManager,
     currentLocation: GPSData?,
     showRecenterButton: Boolean,
     showReturnButton: Boolean,
     showDistanceCircles: Boolean,
+    onRecenter: () -> Unit,
     onToggleDistanceCircles: () -> Unit,
     onReturn: () -> Unit,
     onShowQnhDialog: () -> Unit,
@@ -50,7 +41,6 @@ fun MapActionButtons(
     onVarioDemoClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
     val topInset = 24.dp
     val bottomInset = 80.dp
     val centerOffset = (bottomInset - topInset) * 0.5f
@@ -71,9 +61,7 @@ fun MapActionButtons(
         // Recenter Button
         if (showRecenterButton && currentLocation != null) {
             RecenterButton(
-                mapState = mapState,
-                currentLocation = currentLocation,
-                context = context,
+                onRecenter = onRecenter,
                 modifier = Modifier.align(Alignment.CenterEnd)
             )
         }
@@ -122,15 +110,9 @@ fun MapActionButtons(
 
 @Composable
 private fun RecenterButton(
-    mapState: MapScreenState,
-    currentLocation: GPSData,
-    context: Context,
+    onRecenter: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val gliderPaddingHelper = remember {
-        GliderPaddingHelper(context.resources, MapOrientationPreferences(context))
-    }
-
     Box(
         modifier = modifier
             .padding(end = 16.dp)
@@ -139,21 +121,7 @@ private fun RecenterButton(
         FloatingActionButton(
             onClick = {
                 if (com.example.xcpro.map.BuildConfig.DEBUG) Log.d("MapActionButtons", "Recenter button clicked")
-                mapState.mapLibreMap?.let { map ->
-                    val currentPosition = map.cameraPosition
-                    val newCameraPosition = org.maplibre.android.camera.CameraPosition.Builder()
-                        .target(currentLocation.latLng)
-                        .zoom(currentPosition.zoom)
-                        .bearing(currentPosition.bearing)
-                        .tilt(currentPosition.tilt)
-                        .build()
-
-                    map.animateCamera(CameraUpdateFactory.newCameraPosition(newCameraPosition), 800)
-                    gliderPaddingHelper.applyPadding(map)
-
-                    mapState.showRecenterButton = false
-                    if (com.example.xcpro.map.BuildConfig.DEBUG) Log.d("MapActionButtons", "Recentered to current location")
-                }
+                onRecenter()
             },
             modifier = Modifier.matchParentSize(),
             containerColor = MaterialTheme.colorScheme.secondary,

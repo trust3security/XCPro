@@ -20,6 +20,7 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.xcpro.MapOrientationManager
+import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.map.BuildConfig
 import com.example.xcpro.map.FlightDataManager
@@ -47,6 +48,7 @@ import kotlinx.coroutines.flow.StateFlow
 internal fun MapOverlayStack(
     mapState: MapScreenState,
     mapInitializer: MapInitializer,
+    onMapReady: (org.maplibre.android.maps.MapLibreMap) -> Unit,
     locationManager: LocationManager,
     flightDataManager: FlightDataManager,
     flightViewModel: FlightDataViewModel,
@@ -55,6 +57,9 @@ internal fun MapOverlayStack(
     orientationManager: MapOrientationManager,
     orientationData: OrientationData,
     cameraManager: MapCameraManager,
+    currentMode: FlightMode,
+    currentZoom: Float,
+    onModeChange: (FlightMode) -> Unit,
     currentLocation: GPSData?,
     showReturnButton: Boolean,
     isAATEditMode: Boolean,
@@ -92,7 +97,6 @@ internal fun MapOverlayStack(
     showReplayDevFab: Boolean,
     onReplayPickFileClick: () -> Unit
 ) {
-    val currentMode by mapState.currentModeFlow.collectAsStateWithLifecycle()
     val showDistanceCircles by mapState.showDistanceCirclesFlow.collectAsStateWithLifecycle()
     val gestureRegions by widgetManager.gestureRegions.collectAsStateWithLifecycle()
 
@@ -116,6 +120,7 @@ internal fun MapOverlayStack(
         MapMainLayers(
             mapState = mapState,
             mapInitializer = mapInitializer,
+            onMapReady = onMapReady,
             locationManager = locationManager,
             flightDataManager = flightDataManager,
             flightViewModel = flightViewModel,
@@ -156,6 +161,8 @@ internal fun MapOverlayStack(
                 flightDataManager = flightDataManager,
                 locationManager = locationManager,
                 cameraManager = cameraManager,
+                currentMode = currentMode,
+                onModeChange = onModeChange,
                 currentLocation = currentLocation,
                 showReturnButton = showReturnButton,
                 isAATEditMode = isAATEditMode,
@@ -181,7 +188,7 @@ internal fun MapOverlayStack(
             widgetManager = widgetManager,
             currentMode = currentMode,
             visibleModes = flightDataManager.visibleModes,
-            onModeChange = { newMode -> mapState.updateFlightMode(newMode) },
+            onModeChange = onModeChange,
             flightModeOffset = flightModeOffset.value,
             screenWidthPx = screenWidthPx,
             screenHeightPx = screenHeightPx,
@@ -232,7 +239,7 @@ internal fun MapOverlayStack(
         )
 
         DistanceCirclesLayer(
-            mapState = mapState,
+            currentZoom = currentZoom,
             currentLocation = currentLocation,
             showDistanceCircles = showDistanceCircles
         )

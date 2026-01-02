@@ -3,7 +3,6 @@ package com.example.xcpro.map.ui
 import com.example.xcpro.tasks.TaskMapOverlay
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.components.AirspaceSettingsContent
-import com.example.xcpro.screens.overlays.getMapStyleUrl
 import com.example.xcpro.profiles.FlightModeIndicator
 import com.example.xcpro.profiles.ProfileIndicator
 import com.example.xcpro.common.flight.FlightMode
@@ -23,6 +22,7 @@ import com.example.xcpro.map.MapTaskIntegration
 import com.example.xcpro.map.MapScreenViewModel
 import com.example.xcpro.map.MapUiEffect
 import com.example.xcpro.map.MapUiEvent
+import com.example.xcpro.map.MapStateStore
 import com.example.dfcards.CardDefinition
 import com.example.ui1.icons.Task
 import com.example.ui1.icons.LocationSailplane
@@ -164,7 +164,12 @@ fun MapScreen(
     LaunchedEffect(safeContainerSize) {
         Log.d("MapScreen", "🔍 CONTAINER SIZE CHANGED: $safeContainerSize")
         if (safeContainerSize.width > 0 && safeContainerSize.height > 0) {
-            mapState.safeContainerSize = safeContainerSize
+            mapViewModel.updateSafeContainerSize(
+            MapStateStore.MapSize(
+                widthPx = safeContainerSize.width,
+                heightPx = safeContainerSize.height
+            )
+        )
         }
     }
 
@@ -215,7 +220,6 @@ fun MapScreen(
     val modalManager = mapViewModel.modalManager
 
     // ✅ Backward compatibility variables (using locationManager)
-    val currentUserLocation by mapState.currentUserLocationFlow.collectAsStateWithLifecycle()
     val unifiedSensorManager = locationManager.unifiedSensorManager
 
     // Map Initializer
@@ -225,10 +229,10 @@ fun MapScreen(
     val gpsStatus by mapViewModel.gpsStatusFlow.collectAsStateWithLifecycle()
 
     // ✅ Location state through LocationManager
-    val showRecenterButton by mapState.showRecenterButtonFlow.collectAsStateWithLifecycle()
-    val isTrackingLocation by mapState.isTrackingLocationFlow.collectAsStateWithLifecycle()
-    val lastUserPanTime by mapState.lastUserPanTimeFlow.collectAsStateWithLifecycle()
-    val showReturnButton by mapState.showReturnButtonFlow.collectAsStateWithLifecycle()
+    val showRecenterButton by mapViewModel.mapStateStore.showRecenterButton.collectAsStateWithLifecycle()
+    val showReturnButton by mapViewModel.mapStateStore.showReturnButton.collectAsStateWithLifecycle()
+    val currentMode by mapViewModel.mapStateStore.currentMode.collectAsStateWithLifecycle()
+    val currentZoom by mapViewModel.mapStateStore.currentZoom.collectAsStateWithLifecycle()
     val replaySession by mapViewModel.replaySessionState.collectAsStateWithLifecycle()
     val suppressLiveGps = replaySession.selection != null
     val allowSensorStart = replaySession.selection == null ||
@@ -283,10 +287,10 @@ fun MapScreen(
             Log.d(TAG, "✅ Drawer gestures enabled")
         }
     }
-    val savedLocation by mapState.savedLocationFlow.collectAsStateWithLifecycle()
-    val savedZoom by mapState.savedZoomFlow.collectAsStateWithLifecycle()
-    val savedBearing by mapState.savedBearingFlow.collectAsStateWithLifecycle()
-    val hasInitiallyCentered by mapState.hasInitiallyCenteredFlow.collectAsStateWithLifecycle()
+    val savedLocation by mapViewModel.mapStateStore.savedLocation.collectAsStateWithLifecycle()
+    val savedZoom by mapViewModel.mapStateStore.savedZoom.collectAsStateWithLifecycle()
+    val savedBearing by mapViewModel.mapStateStore.savedBearing.collectAsStateWithLifecycle()
+    val hasInitiallyCentered by mapViewModel.mapStateStore.hasInitiallyCentered.collectAsStateWithLifecycle()
     val showDistanceCircles by mapState.showDistanceCirclesFlow.collectAsStateWithLifecycle()
     val cardHydrationReady by mapViewModel.cardHydrationReady.collectAsStateWithLifecycle()
 
@@ -310,7 +314,8 @@ fun MapScreen(
         orientationManager = orientationManager,
         uiState = profileUiState,
         flightDataManager = flightDataManager,
-        mapState = mapState,
+        currentMode = currentMode,
+        onModeChange = mapViewModel::setFlightMode,
         currentFlightModeSelection = currentFlightModeSelection,
         safeContainerSize = safeContainerSize,
         flightViewModel = flightViewModel,
@@ -319,22 +324,15 @@ fun MapScreen(
         profileModeTemplates = profileModeTemplates,
         activeTemplateId = activeTemplateId,
         initialMapStyle = initialMapStyle,
-        onMapStyleSelected = onMapStyleSelected,
+        onMapStyleResolved = mapViewModel::setMapStyle,
         cardsReady = cardHydrationReady,
         suppressLiveGps = suppressLiveGps,
         allowSensorStart = allowSensorStart
     )
 
     // ✅ CENTRALIZED LIFECYCLE EFFECTS - Replace individual DisposableEffect blocks
-    val mapStyleUrl by mapState.mapStyleUrlFlow.collectAsStateWithLifecycle()
+    MapLifecycleEffects.LifecycleObserverEffect(lifecycleManager)
 
-    MapLifecycleEffects.AllLifecycleEffects(
-        lifecycleManager = lifecycleManager,
-        styleUrl = mapStyleUrl,
-        onStyleLoaded = {
-            overlayManager.onMapStyleChanged(mapState.mapLibreMap)
-        }
-    )
 
     // Load widget positions using existing widgetManager and density
     val screenWidthPx = with(density) { LocalConfiguration.current.screenWidthDp.dp.toPx() }
@@ -385,6 +383,16 @@ fun MapScreen(
         replayPlaying = replaySession.status == com.example.xcpro.replay.IgcReplayController.SessionStatus.PLAYING
     )
 
+    val mapRuntimeController = remember(overlayManager) {
+        MapRuntimeController(overlayManager)
+    }
+
+    LaunchedEffect(mapRuntimeController) {
+        mapViewModel.mapCommands.collect { command ->
+            mapRuntimeController.apply(command)
+        }
+    }
+
 
     MapScreenScaffold(
         drawerState = drawerState,
@@ -401,9 +409,9 @@ fun MapScreen(
             }
         },
         onMapStyleSelected = { style ->
-            mapState.mapStyleUrl = getMapStyleUrl(style)
+            mapViewModel.setMapStyle(style)
             saveConfig(context, style, emptyMap(), profileExpanded.value, mapStyleExpanded.value)
-            Log.d(TAG, "Map style selected: $style, URL: ${mapState.mapStyleUrl}")
+            Log.d(TAG, "Map style selected: $style")
             onMapStyleSelected(style)
         },
         gpsStatus = gpsStatus,
@@ -411,6 +419,7 @@ fun MapScreen(
         density = density,
         mapState = mapState,
         mapInitializer = mapInitializer,
+        onMapReady = mapRuntimeController::onMapReady,
         locationManager = locationManager,
         flightDataManager = flightDataManager,
         flightViewModel = flightViewModel,
@@ -419,6 +428,9 @@ fun MapScreen(
         orientationData = orientationData,
         cameraManager = cameraManager,
         currentFlightModeSelection = currentFlightModeSelection,
+        currentMode = currentMode,
+        currentZoom = currentZoom,
+        onModeChange = mapViewModel::setFlightMode,
         currentLocation = locationForUi,
         showRecenterButton = showRecenterButton,
         showReturnButton = showReturnButton,
@@ -487,3 +499,7 @@ fun MapScreen(
         }
     )
 }
+
+
+
+

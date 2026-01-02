@@ -48,7 +48,6 @@ import com.example.xcpro.common.units.VerticalSpeedMs
 import com.example.xcpro.map.DistanceCirclesCanvas
 import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.map.MapCameraManager
-import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.ballast.BallastCommand
 import com.example.xcpro.map.ballast.BallastUiState
 import com.example.xcpro.map.ui.widgets.MapUIWidgetManager
@@ -234,11 +233,11 @@ private fun stripUnit(formatted: UnitsFormatter.FormattedValue): String =
 
 @Composable
 internal fun DistanceCirclesLayer(
-    mapState: MapScreenState,
+    currentZoom: Float,
     currentLocation: GPSData?,
     showDistanceCircles: Boolean
 ) {
-    val zoom by mapState.currentZoomFlow.collectAsStateWithLifecycle()
+    val zoom = currentZoom
     val latitude = currentLocation?.latLng?.latitude ?: 0.0
     AnimatedVisibility(
         visible = showDistanceCircles,

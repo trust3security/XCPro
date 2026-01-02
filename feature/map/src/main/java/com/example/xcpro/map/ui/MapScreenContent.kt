@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.example.dfcards.RealTimeFlightData
 import com.example.dfcards.dfcards.FlightDataViewModel
+import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.map.components.MapActionButtons
 import com.example.xcpro.map.MapCameraManager
@@ -56,12 +57,14 @@ import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
 import com.example.xcpro.replay.IgcReplayController
 import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.VerticalSpeedMs
+import org.maplibre.android.maps.MapLibreMap
 
 @Composable
 internal fun MapScreenContent(
     density: Density,
     mapState: MapScreenState,
     mapInitializer: MapInitializer,
+    onMapReady: (MapLibreMap) -> Unit,
     locationManager: LocationManager,
     flightDataManager: FlightDataManager,
     flightViewModel: FlightDataViewModel,
@@ -70,6 +73,9 @@ internal fun MapScreenContent(
     orientationData: OrientationData,
     cameraManager: MapCameraManager,
     currentFlightModeSelection: com.example.dfcards.FlightModeSelection,
+    currentMode: FlightMode,
+    currentZoom: Float,
+    onModeChange: (FlightMode) -> Unit,
     currentLocation: GPSData?,
     showRecenterButton: Boolean,
     showReturnButton: Boolean,
@@ -139,6 +145,7 @@ internal fun MapScreenContent(
                     MapOverlayStack(
                         mapState = mapState,
                         mapInitializer = mapInitializer,
+                        onMapReady = onMapReady,
                         locationManager = locationManager,
                         flightDataManager = flightDataManager,
                         flightViewModel = flightViewModel,
@@ -147,6 +154,9 @@ internal fun MapScreenContent(
                         orientationManager = orientationManager,
                         orientationData = orientationData,
                         cameraManager = cameraManager,
+                        currentMode = currentMode,
+                        currentZoom = currentZoom,
+                        onModeChange = onModeChange,
                         currentLocation = currentLocation,
                         showReturnButton = showReturnButton,
                         isAATEditMode = isAATEditMode,
@@ -197,8 +207,6 @@ internal fun MapScreenContent(
         )
 
     MapActionButtonsLayer(
-            mapState = mapState,
-            taskManager = taskManager,
             taskScreenManager = taskScreenManager,
             currentLocation = currentLocation,
             showRecenterButton = showRecenterButton,
@@ -206,6 +214,7 @@ internal fun MapScreenContent(
             showDistanceCircles = showDistanceCircles,
             showQnhFab = showQnhFab,
             showVarioDemoFab = showVarioDemoFab,
+            onRecenter = locationManager::recenterOnCurrentLocation,
             onToggleDistanceCircles = { overlayManager.toggleDistanceCircles() },
             onReturn = { locationManager.returnToSavedLocation() },
             onShowQnhDialog = {
@@ -313,8 +322,6 @@ private fun MapTaskManagerLayer(
 
 @Composable
 private fun MapActionButtonsLayer(
-    mapState: MapScreenState,
-    taskManager: TaskManagerCoordinator,
     taskScreenManager: MapTaskScreenManager,
     currentLocation: GPSData?,
     showRecenterButton: Boolean,
@@ -322,6 +329,7 @@ private fun MapActionButtonsLayer(
     showDistanceCircles: Boolean,
     showQnhFab: Boolean,
     showVarioDemoFab: Boolean,
+    onRecenter: () -> Unit,
     onToggleDistanceCircles: () -> Unit,
     onReturn: () -> Unit,
     onShowQnhDialog: () -> Unit,
@@ -330,13 +338,12 @@ private fun MapActionButtonsLayer(
     modifier: Modifier = Modifier.fillMaxSize()
 ) {
     MapActionButtons(
-        mapState = mapState,
-        taskManager = taskManager,
         taskScreenManager = taskScreenManager,
         currentLocation = currentLocation,
         showRecenterButton = showRecenterButton,
         showReturnButton = showReturnButton,
         showDistanceCircles = showDistanceCircles,
+        onRecenter = onRecenter,
         onToggleDistanceCircles = onToggleDistanceCircles,
         onReturn = onReturn,
         onShowQnhDialog = onShowQnhDialog,

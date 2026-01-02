@@ -15,10 +15,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 
-// AI-NOTE: MapScreenState intentionally exposes mutable setters that the UI calls directly.
-// The card grid + widget gestures were extremely flaky when routed through MapUiEvents, so we
-// keep the hot-path state local here until we can build a safer SSOT without regressing the
-// drag handles (hamburger, card grid, ballast). See CODING_POLICY §1-3 for the desired target.
+// NOTE: MapScreenState now holds runtime map handles and legacy flags only.
+// UI state should live in MapStateStore; keep mutations out of composables.
 class MapScreenState(
     private val context: Context,
     initialMapStyle: String

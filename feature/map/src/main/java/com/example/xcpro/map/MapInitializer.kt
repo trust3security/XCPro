@@ -3,6 +3,7 @@ package com.example.xcpro.map
 import android.content.Context
 import android.util.Log
 import com.example.xcpro.MapOrientationManager
+import com.example.xcpro.screens.overlays.getMapStyleUrl
 import com.example.xcpro.sensors.UnifiedSensorManager
 import com.example.xcpro.map.BlueLocationOverlay
 import com.example.xcpro.map.DistanceCirclesOverlay
@@ -18,6 +19,7 @@ import com.example.xcpro.loadAndApplyWaypoints
 class MapInitializer(
     private val context: Context,
     private val mapState: MapScreenState,
+    private val mapStateStore: MapStateStore,
     private val orientationManager: MapOrientationManager,
     private val taskManager: TaskManagerCoordinator,
     private val unifiedSensorManager: UnifiedSensorManager
@@ -49,8 +51,10 @@ class MapInitializer(
     }
 
     private fun setupMapStyle(map: MapLibreMap) {
-        map.setStyle(mapState.mapStyleUrl) { _ ->
-            Log.d(TAG, "🎨 Map style loaded: ${mapState.mapStyleUrl}")
+        val styleName = mapStateStore.mapStyleName.value
+        val styleUrl = getMapStyleUrl(styleName)
+        map.setStyle(styleUrl) { _ ->
+            Log.d(TAG, "Map style loaded: $styleName")
 
             // Initialize overlays after style is loaded
             setupOverlays(map)
@@ -67,7 +71,7 @@ class MapInitializer(
             )
         )
         // Keep Compose overlays (distance circles) in sync from the first frame
-        mapState.currentZoom = INITIAL_ZOOM.toFloat()
+        mapStateStore.updateCurrentZoom(INITIAL_ZOOM.toFloat())
         Log.d(TAG, "Initial map position set")
     }
 
@@ -172,8 +176,8 @@ class MapInitializer(
         map.addOnCameraIdleListener {
             try {
                 val currentZoom = map.cameraPosition.zoom
-                mapState.currentZoom = currentZoom.toFloat()
-                // DISABLED: Map-based overlay updates; Canvas overlay listens to currentZoomFlow instead
+                mapStateStore.updateCurrentZoom(currentZoom.toFloat())
+                // Canvas overlay listens to MapStateStore.currentZoom for zoom-adaptive effects.
                 Log.d(TAG, "Camera idle, zoom: $currentZoom")
             } catch (e: Exception) {
                 Log.e(TAG, "Error updating distance circles zoom: ${e.message}", e)
@@ -186,22 +190,25 @@ class MapInitializer(
         orientationManager.onUserInteraction()
 
         // Save current position before movement for return functionality
-        if (!mapState.showReturnButton) {
+        if (!mapStateStore.showReturnButton.value) {
             val currentLocation = unifiedSensorManager.gpsFlow.value
             if (currentLocation != null) {
-                mapState.saveLocation(
-                    currentLocation.latLng,
-                    map.cameraPosition.zoom,
-                    map.cameraPosition.bearing
+                mapStateStore.saveLocation(
+                    location = MapStateStore.MapPoint(
+                        latitude = currentLocation.latLng.latitude,
+                        longitude = currentLocation.latLng.longitude
+                    ),
+                    zoom = map.cameraPosition.zoom,
+                    bearing = map.cameraPosition.bearing
                 )
-                Log.d(TAG, "📍 Saved position for return")
+                Log.d(TAG, "Saved position for return")
             }
         }
 
         // Show return button on user interaction
-        mapState.showReturnButton = true
-        mapState.lastUserPanTime = System.currentTimeMillis()
-        Log.d(TAG, "✅ User interaction detected - return button shown")
+        mapStateStore.setShowReturnButton(true)
+        mapStateStore.updateLastUserPanTime(System.currentTimeMillis())
+        Log.d(TAG, "?. User interaction detected - return button shown")
     }
 
     private fun refreshWaypoints(map: MapLibreMap) {
@@ -214,6 +221,8 @@ class MapInitializer(
     }
 
 }
+
+
 
 
 
