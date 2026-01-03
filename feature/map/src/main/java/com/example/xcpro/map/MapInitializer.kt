@@ -20,6 +20,7 @@ class MapInitializer(
     private val context: Context,
     private val mapState: MapScreenState,
     private val mapStateStore: MapStateStore,
+    private val stateActions: MapStateActions,
     private val orientationManager: MapOrientationManager,
     private val taskManager: TaskManagerCoordinator,
     private val unifiedSensorManager: UnifiedSensorManager
@@ -71,7 +72,7 @@ class MapInitializer(
             )
         )
         // Keep Compose overlays (distance circles) in sync from the first frame
-        mapStateStore.updateCurrentZoom(INITIAL_ZOOM.toFloat())
+        stateActions.updateCurrentZoom(INITIAL_ZOOM.toFloat())
         Log.d(TAG, "Initial map position set")
     }
 
@@ -176,7 +177,7 @@ class MapInitializer(
         map.addOnCameraIdleListener {
             try {
                 val currentZoom = map.cameraPosition.zoom
-                mapStateStore.updateCurrentZoom(currentZoom.toFloat())
+                stateActions.updateCurrentZoom(currentZoom.toFloat())
                 // Canvas overlay listens to MapStateStore.currentZoom for zoom-adaptive effects.
                 Log.d(TAG, "Camera idle, zoom: $currentZoom")
             } catch (e: Exception) {
@@ -193,7 +194,7 @@ class MapInitializer(
         if (!mapStateStore.showReturnButton.value) {
             val currentLocation = unifiedSensorManager.gpsFlow.value
             if (currentLocation != null) {
-                mapStateStore.saveLocation(
+                stateActions.saveLocation(
                     location = MapStateStore.MapPoint(
                         latitude = currentLocation.latLng.latitude,
                         longitude = currentLocation.latLng.longitude
@@ -206,8 +207,8 @@ class MapInitializer(
         }
 
         // Show return button on user interaction
-        mapStateStore.setShowReturnButton(true)
-        mapStateStore.updateLastUserPanTime(System.currentTimeMillis())
+        stateActions.setShowReturnButton(true)
+        stateActions.updateLastUserPanTime(System.currentTimeMillis())
         Log.d(TAG, "?. User interaction detected - return button shown")
     }
 

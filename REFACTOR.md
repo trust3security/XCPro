@@ -27,6 +27,16 @@ and CODING_RULES.md without regressing gesture performance.
 7) Reduce/remove MapScreenState, leaving only UI/runtime cache if needed.
 8) Add tests for MapStateStore + ViewModel intents.
 
+## Phase 2 Plan: ViewModel-Only State Writers
+1) Define MapUiEvent intents for all remaining state writes (distance circles, tracking flags,
+   saved location/zoom/bearing, last pan time, target lat/lng/zoom).
+2) Update MapOverlayManager, MapCameraManager, and LocationManager to call ViewModel intents
+   instead of writing MapStateStore directly.
+3) Centralize MapStateStore mutations inside MapScreenViewModel (single writer).
+4) Preserve imperative map actions by keeping MapRuntimeController for MapLibre calls only.
+5) Add/extend tests for new intents and verify no direct MapStateStore writes from UI/runtime managers.
+6) Audit for direct MapStateStore.set* calls in UI layer and remove/replace.
+
 ## Risks
 - Gesture regressions if high-frequency updates enter UI state flow.
 - Map runtime lifecycle bugs if MapView ownership moves incorrectly.
@@ -41,3 +51,5 @@ and CODING_RULES.md without regressing gesture performance.
 - 2026-01-02: Step 7 complete: runtime MapScreenState + map managers moved to UI; ViewModel no longer owns MapView/MapLibreMap.
 - 2026-01-03: Step 8 complete: added MapStateStore + ViewModel intent tests; distance circle toggle now stored in MapStateStore.
 - 2026-01-03: Cleanup: removed legacy MapScreenState UI fields; task minimized indicator now uses currentLocation instead of MapScreenState.
+- 2026-01-03: Phase 2 plan added to make ViewModel the only MapStateStore writer.
+- 2026-01-03: Phase 2 in progress: added MapStateActions and routed map managers to use ViewModel-only writes.

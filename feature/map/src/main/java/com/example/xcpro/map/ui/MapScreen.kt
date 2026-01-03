@@ -194,8 +194,8 @@ fun MapScreen(
     // ✅ Initialize FlightDataManager
     val flightDataManager = mapViewModel.flightDataManager
     // Map Overlay Manager - centralized overlay management
-    val overlayManager = remember(mapState, taskManager, context, mapViewModel.mapStateStore) {
-        MapOverlayManager(context, mapState, mapViewModel.mapStateStore, taskManager)
+    val overlayManager = remember(mapState, taskManager, context, mapViewModel.mapStateStore, mapViewModel) {
+        MapOverlayManager(context, mapState, mapViewModel.mapStateStore, taskManager, mapViewModel)
     }
 
     // ✅ UI Widget Manager - centralized widget management
@@ -223,8 +223,8 @@ fun MapScreen(
     }
 
     // ✅ CameraManager - Centralized camera handling
-    val cameraManager = remember(mapState, mapViewModel.mapStateStore) {
-        MapCameraManager(mapState, mapViewModel.mapStateStore)
+    val cameraManager = remember(mapState, mapViewModel.mapStateStore, mapViewModel) {
+        MapCameraManager(mapState, mapViewModel.mapStateStore, mapViewModel)
     }
 
     // ✅ LocationManager - Centralized location handling
@@ -240,6 +240,7 @@ fun MapScreen(
             context = context,
             mapState = mapState,
             mapStateStore = mapViewModel.mapStateStore,
+            stateActions = mapViewModel,
             coroutineScope = coroutineScope,
             qnhPreferencesRepository = mapViewModel.qnhPreferencesRepository,
             varioServiceManager = mapViewModel.varioServiceManager
@@ -277,6 +278,7 @@ fun MapScreen(
             context = context,
             mapState = mapState,
             mapStateStore = mapViewModel.mapStateStore,
+            stateActions = mapViewModel,
             orientationManager = orientationManager,
             taskManager = taskManager,
             unifiedSensorManager = mapViewModel.unifiedSensorManager

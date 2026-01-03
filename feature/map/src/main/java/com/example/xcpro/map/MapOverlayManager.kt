@@ -17,15 +17,16 @@ class MapOverlayManager(
     private val context: Context,
     private val mapState: MapScreenState,
     private val mapStateStore: MapStateStore,
-    private val taskManager: TaskManagerCoordinator
+    private val taskManager: TaskManagerCoordinator,
+    private val stateActions: MapStateActions
 ) {
     companion object {
         private const val TAG = "MapOverlayManager"
     }
 
     fun toggleDistanceCircles() {
-        val next = !mapStateStore.showDistanceCircles.value
-        mapStateStore.setShowDistanceCircles(next)
+        stateActions.toggleDistanceCircles()
+        val next = mapStateStore.showDistanceCircles.value
         if (BuildConfig.DEBUG) {
             Log.d(
                 TAG,

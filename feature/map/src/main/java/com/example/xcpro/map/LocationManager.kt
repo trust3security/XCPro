@@ -29,6 +29,7 @@ class LocationManager(
     private val context: Context,
     private val mapState: MapScreenState,
     private val mapStateStore: MapStateStore,
+    private val stateActions: MapStateActions,
     private val coroutineScope: CoroutineScope,
     private val qnhPreferencesRepository: QnhPreferencesRepository,
     private val varioServiceManager: VarioServiceManager
@@ -109,7 +110,7 @@ class LocationManager(
     private var currentUserLocation: LatLng?
         get() = mapStateStore.currentUserLocation.value?.let { LatLng(it.latitude, it.longitude) }
         set(value) {
-            mapStateStore.setCurrentUserLocation(
+            stateActions.setCurrentUserLocation(
                 value?.let { MapStateStore.MapPoint(it.latitude, it.longitude) }
             )
         }
@@ -117,52 +118,41 @@ class LocationManager(
     private var hasInitiallyCentered: Boolean
         get() = mapStateStore.hasInitiallyCentered.value
         set(value) {
-            mapStateStore.setHasInitiallyCentered(value)
+            stateActions.setHasInitiallyCentered(value)
         }
 
     private var isTrackingLocation: Boolean
         get() = mapStateStore.isTrackingLocation.value
         set(value) {
-            mapStateStore.setTrackingLocation(value)
+            stateActions.setTrackingLocation(value)
         }
 
     private var showRecenterButton: Boolean
         get() = mapStateStore.showRecenterButton.value
         set(value) {
-            mapStateStore.setShowRecenterButton(value)
+            stateActions.setShowRecenterButton(value)
         }
 
     private var lastUserPanTime: Long
         get() = mapStateStore.lastUserPanTime.value
         set(value) {
-            mapStateStore.updateLastUserPanTime(value)
+            stateActions.updateLastUserPanTime(value)
         }
 
     private var showReturnButton: Boolean
         get() = mapStateStore.showReturnButton.value
         set(value) {
-            mapStateStore.setShowReturnButton(value)
+            stateActions.setShowReturnButton(value)
         }
 
-    private var savedLocation: LatLng?
+    private val savedLocation: LatLng?
         get() = mapStateStore.savedLocation.value?.let { LatLng(it.latitude, it.longitude) }
-        set(value) {
-            mapStateStore.setSavedLocation(
-                value?.let { MapStateStore.MapPoint(it.latitude, it.longitude) }
-            )
-        }
 
-    private var savedZoom: Double?
+    private val savedZoom: Double?
         get() = mapStateStore.savedZoom.value
-        set(value) {
-            mapStateStore.setSavedZoom(value)
-        }
 
-    private var savedBearing: Double?
+    private val savedBearing: Double?
         get() = mapStateStore.savedBearing.value
-        set(value) {
-            mapStateStore.setSavedBearing(value)
-        }
 
     fun onLocationPermissionsResult(fineLocationGranted: Boolean, coarseLocationGranted: Boolean) {
         if (fineLocationGranted || coarseLocationGranted) {
@@ -430,10 +420,12 @@ class LocationManager(
     }
 
     fun saveLocation(location: LatLng, zoom: Double, bearing: Double) {
-        savedLocation = location
-        savedZoom = zoom
-        savedBearing = bearing
-        Log.d(TAG, "📍 Saved position for return: lat=${location.latitude}, zoom=$zoom, bearing=$bearing")
+        stateActions.saveLocation(
+            location = MapStateStore.MapPoint(location.latitude, location.longitude),
+            zoom = zoom,
+            bearing = bearing
+        )
+        Log.d(TAG, "Saved position for return: lat=${location.latitude}, zoom=$zoom, bearing=$bearing")
     }
 
     fun saveLocationFromGPS(location: GPSData?, zoom: Double, bearing: Double) {

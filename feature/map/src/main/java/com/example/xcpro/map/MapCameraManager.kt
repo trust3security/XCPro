@@ -20,7 +20,8 @@ import kotlin.math.sign
  */
 class MapCameraManager(
     internal val mapState: MapScreenState,
-    private val mapStateStore: MapStateStore
+    private val mapStateStore: MapStateStore,
+    private val stateActions: MapStateActions
 ) {
     companion object {
         private const val TAG = "MapCameraManager"
@@ -86,9 +87,9 @@ class MapCameraManager(
     fun handleDoubleTapZoom(tapLatLng: LatLng) {
         mapState.mapLibreMap?.let { map ->
             try {
-                mapStateStore.setTargetLatLng(toMapPoint(tapLatLng))
-                mapStateStore.setTargetZoom((map.cameraPosition.zoom + DOUBLE_TAP_ZOOM_DELTA).toFloat())
-                Log.d(TAG, "Double tap zoom to: $tapLatLng, new zoom: ${mapStateStore.targetZoom.value}")
+                val targetZoom = (map.cameraPosition.zoom + DOUBLE_TAP_ZOOM_DELTA).toFloat()
+                stateActions.setTarget(toMapPoint(tapLatLng), targetZoom)
+                Log.d(TAG, "Double tap zoom to: $tapLatLng, new zoom: $targetZoom")
             } catch (e: Exception) {
                 Log.e(TAG, "Error handling double tap zoom: ${e.message}")
             }
@@ -189,7 +190,7 @@ class MapCameraManager(
     fun resetToInitialPosition() {
         val initialLatLng = LatLng(INITIAL_LATITUDE, INITIAL_LONGITUDE)
         moveTo(initialLatLng, INITIAL_ZOOM)
-        mapStateStore.setTarget(
+        stateActions.setTarget(
             location = MapStateStore.MapPoint(initialLatLng.latitude, initialLatLng.longitude),
             zoom = INITIAL_ZOOM.toFloat()
         )
@@ -287,7 +288,7 @@ class MapCameraManager(
 
                 val turnpointLatLng = LatLng(turnpointLat, turnpointLon)
 
-                mapStateStore.setTarget(
+                stateActions.setTarget(
                     location = MapStateStore.MapPoint(turnpointLatLng.latitude, turnpointLatLng.longitude),
                     zoom = editZoom.toFloat()
                 )
@@ -310,7 +311,7 @@ class MapCameraManager(
                 if (saved != null) {
                     val target = saved.target
                     if (target != null) {
-                        mapStateStore.setTarget(
+                        stateActions.setTarget(
                             location = MapStateStore.MapPoint(target.latitude, target.longitude),
                             zoom = saved.zoom.toFloat()
                         )
