@@ -46,15 +46,12 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
-import androidx.compose.ui.unit.IntSize
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
-import org.maplibre.android.maps.MapLibreMap
-import org.maplibre.android.maps.MapView
 
 /**
- * Lifecycle-aware owner for long-lived map state and controllers.
+ * Lifecycle-aware owner for map state and domain controllers (no runtime map handles).
  */
 @HiltViewModel
 class MapScreenViewModel @Inject constructor(
@@ -63,13 +60,13 @@ class MapScreenViewModel @Inject constructor(
     val cardPreferences: CardPreferences,
     private val mapStyleRepository: MapStyleRepository,
     private val unitsRepository: UnitsRepository,
-    private val qnhPreferencesRepository: QnhPreferencesRepository,
+    val qnhPreferencesRepository: QnhPreferencesRepository,
     private val waypointLoader: WaypointLoader,
     private val gliderRepository: GliderRepository,
-    private val varioServiceManager: VarioServiceManager,
+    val varioServiceManager: VarioServiceManager,
     private val flightDataRepository: FlightDataRepository,
     private val windRepository: WindRepository,
-    private val igcReplayController: IgcReplayController,
+    val igcReplayController: IgcReplayController,
     @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
@@ -82,34 +79,11 @@ class MapScreenViewModel @Inject constructor(
         dispatcher = defaultDispatcher
     )
 
-    val mapState: MapScreenState = MapScreenState(appContext, initialStyleName)
     val flightDataManager: FlightDataManager =
         FlightDataManager(appContext, cardPreferences, viewModelScope)
-    val locationManager: LocationManager = LocationManager(
-        context = appContext,
-        mapState = mapState,
-        mapStateStore = mapStateStore,
-        coroutineScope = viewModelScope,
-        qnhPreferencesRepository = qnhPreferencesRepository,
-        varioServiceManager = varioServiceManager
-    )
+    val unifiedSensorManager = varioServiceManager.unifiedSensorManager
     val orientationManager: MapOrientationManager =
-        MapOrientationManager(appContext, viewModelScope, locationManager.unifiedSensorManager)
-    val lifecycleManager: MapLifecycleManager =
-        MapLifecycleManager(mapState, orientationManager, locationManager, igcReplayController)
-    val mapInitializer: MapInitializer = MapInitializer(
-        context = appContext,
-        mapState = mapState,
-        mapStateStore = mapStateStore,
-        orientationManager = orientationManager,
-        taskManager = taskManager,
-        unifiedSensorManager = locationManager.unifiedSensorManager
-    )
-
-    val cameraManager = MapCameraManager(mapState, mapStateStore)
-    val modalManager = MapModalManager(mapState)
-    val overlayManager = MapOverlayManager(appContext, mapState, taskManager)
-    val taskScreenManager = MapTaskScreenManager(mapState, taskManager)
+        MapOrientationManager(appContext, viewModelScope, unifiedSensorManager)
     val ballastUiState: StateFlow<BallastUiState> = ballastController.state
     val sharedFlightDataRepository: FlightDataRepository = flightDataRepository
     val windState: StateFlow<WindState> = windRepository.windState
@@ -117,9 +91,10 @@ class MapScreenViewModel @Inject constructor(
     val showReplayDebugFab: Boolean = MapFeatureFlags.showReplayDebugFab
     val showVarioDemoFab: Boolean = MapFeatureFlags.showVarioDemoFab
     val gpsStatusFlow: StateFlow<com.example.xcpro.sensors.GpsStatus> =
-        locationManager.unifiedSensorManager.gpsStatusFlow
+        unifiedSensorManager.gpsStatusFlow
 
-    private val variometerRepository = VariometerWidgetRepository(mapState.sharedPrefs)
+    private val sharedPrefs = appContext.getSharedPreferences("MapPrefs", Context.MODE_PRIVATE)
+    private val variometerRepository = VariometerWidgetRepository(sharedPrefs)
     private val _variometerUiState = MutableStateFlow(VariometerUiState())
     val variometerUiState: StateFlow<VariometerUiState> = _variometerUiState.asStateFlow()
 
@@ -159,11 +134,9 @@ class MapScreenViewModel @Inject constructor(
     )
 
     init {
-        mapState.flightDataManager = flightDataManager
         if (MapFeatureFlags.loadSavedTasksOnInit) {
             taskManager.loadSavedTasks()
         }
-        _uiState.update { it.copy(isUiEditMode = mapState.isUIEditMode, isDrawerOpen = false) }
         observeUnits()
         observeGliderConfig()
         onEvent(MapUiEvent.RefreshWaypoints)
@@ -197,7 +170,7 @@ class MapScreenViewModel @Inject constructor(
     fun onEvent(event: MapUiEvent) {
         when (event) {
             MapUiEvent.RefreshWaypoints -> loadWaypoints()
-            MapUiEvent.ToggleUiEditMode -> setUiEditMode(!mapState.isUIEditMode)
+            MapUiEvent.ToggleUiEditMode -> setUiEditMode(!_uiState.value.isUiEditMode)
             is MapUiEvent.SetUiEditMode -> setUiEditMode(event.enabled)
             MapUiEvent.ToggleDrawer -> toggleDrawer()
             is MapUiEvent.SetDrawerOpen -> setDrawerOpen(event.isOpen)
@@ -332,10 +305,9 @@ class MapScreenViewModel @Inject constructor(
     }
 
     private fun setUiEditMode(enabled: Boolean) {
-        if (mapState.isUIEditMode == enabled) {
+        if (_uiState.value.isUiEditMode == enabled) {
             return
         }
-        mapState.isUIEditMode = enabled
         _uiState.update { it.copy(isUiEditMode = enabled) }
     }
 
@@ -490,18 +462,7 @@ class MapScreenViewModel @Inject constructor(
         ballastController.submit(command)
     }
 
-    fun attachMapView(mapView: MapView) {
-        mapState.mapView = mapView
-    }
-
-    fun initializeMap(map: MapLibreMap) {
-        viewModelScope.launch {
-            mapInitializer.initializeMap(map)
-        }
-    }
-
     override fun onCleared() {
-        lifecycleManager.cleanup()
         ballastController.dispose()
         super.onCleared()
     }

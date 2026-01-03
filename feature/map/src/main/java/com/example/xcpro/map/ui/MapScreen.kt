@@ -15,10 +15,18 @@ import com.example.xcpro.map.components.MapActionButtons
 import com.example.xcpro.map.ui.effects.MapComposeEffects
 import com.example.xcpro.map.ui.widgets.MapUIWidgetManager
 import com.example.xcpro.map.MapCameraEffects
+import com.example.xcpro.map.MapCameraManager
 import com.example.xcpro.map.MapLifecycleEffects
+import com.example.xcpro.map.MapLifecycleManager
+import com.example.xcpro.map.MapInitializer
+import com.example.xcpro.map.MapModalManager
 import com.example.xcpro.map.MapModalUI
 import com.example.xcpro.map.MapGestureSetup
+import com.example.xcpro.map.MapOverlayManager
+import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapTaskIntegration
+import com.example.xcpro.map.MapTaskScreenManager
+import com.example.xcpro.map.LocationManager
 import com.example.xcpro.map.MapScreenViewModel
 import com.example.xcpro.map.MapUiEffect
 import com.example.xcpro.map.MapUiEvent
@@ -146,8 +154,10 @@ fun MapScreen(
         }
     )
 
-    // ?o. Centralized state management via ViewModel
-    val mapState = mapViewModel.mapState
+    // ?o. Runtime map state owned by the UI layer
+    val mapState = remember {
+        MapScreenState(context, initialMapStyle)
+    }
     val modes = FlightMode.values()
 
     // ?o. Map Orientation Manager
@@ -184,9 +194,14 @@ fun MapScreen(
 
     // ✅ Initialize FlightDataManager
     val flightDataManager = mapViewModel.flightDataManager
+    SideEffect {
+        mapState.flightDataManager = flightDataManager
+    }
 
     // Map Overlay Manager - centralized overlay management
-    val overlayManager = mapViewModel.overlayManager
+    val overlayManager = remember(mapState, taskManager, context) {
+        MapOverlayManager(context, mapState, taskManager)
+    }
 
     // ✅ UI Widget Manager - centralized widget management
     val widgetManager = remember {
@@ -205,25 +220,70 @@ fun MapScreen(
         initialValue = lookAndFeelPreferences.getCardStyle(activeProfileId)
     )
     // ✅ TaskScreenManager - Centralized task screen handling
-    val taskScreenManager = mapViewModel.taskScreenManager
+    val taskScreenManager = remember(mapState, taskManager) {
+        MapTaskScreenManager(mapState, taskManager)
+    }
 
     // ✅ CameraManager - Centralized camera handling
-    val cameraManager = mapViewModel.cameraManager
+    val cameraManager = remember(mapState, mapViewModel.mapStateStore) {
+        MapCameraManager(mapState, mapViewModel.mapStateStore)
+    }
 
     // ✅ LocationManager - Centralized location handling
-    val locationManager = mapViewModel.locationManager
+    val locationManager = remember(
+        mapState,
+        coroutineScope,
+        mapViewModel.mapStateStore,
+        mapViewModel.qnhPreferencesRepository,
+        mapViewModel.varioServiceManager,
+        context
+    ) {
+        LocationManager(
+            context = context,
+            mapState = mapState,
+            mapStateStore = mapViewModel.mapStateStore,
+            coroutineScope = coroutineScope,
+            qnhPreferencesRepository = mapViewModel.qnhPreferencesRepository,
+            varioServiceManager = mapViewModel.varioServiceManager
+        )
+    }
 
     // ✅ LifecycleManager - Centralized lifecycle handling
-    val lifecycleManager = mapViewModel.lifecycleManager
+    val lifecycleManager = remember(
+        mapState,
+        orientationManager,
+        locationManager,
+        mapViewModel.igcReplayController
+    ) {
+        MapLifecycleManager(mapState, orientationManager, locationManager, mapViewModel.igcReplayController)
+    }
 
     // ✅ ModalManager - Centralized modal handling
-    val modalManager = mapViewModel.modalManager
+    val modalManager = remember(mapState) {
+        MapModalManager(mapState)
+    }
 
     // ✅ Backward compatibility variables (using locationManager)
     val unifiedSensorManager = locationManager.unifiedSensorManager
 
     // Map Initializer
-    val mapInitializer = mapViewModel.mapInitializer
+    val mapInitializer = remember(
+        mapState,
+        mapViewModel.mapStateStore,
+        orientationManager,
+        taskManager,
+        mapViewModel.unifiedSensorManager,
+        context
+    ) {
+        MapInitializer(
+            context = context,
+            mapState = mapState,
+            mapStateStore = mapViewModel.mapStateStore,
+            orientationManager = orientationManager,
+            taskManager = taskManager,
+            unifiedSensorManager = mapViewModel.unifiedSensorManager
+        )
+    }
     val currentGpsLocation by unifiedSensorManager.gpsFlow.collectAsStateWithLifecycle()
     val isGpsActive = unifiedSensorManager.isGpsEnabled()
     val gpsStatus by mapViewModel.gpsStatusFlow.collectAsStateWithLifecycle()
@@ -332,6 +392,9 @@ fun MapScreen(
 
     // ✅ CENTRALIZED LIFECYCLE EFFECTS - Replace individual DisposableEffect blocks
     MapLifecycleEffects.LifecycleObserverEffect(lifecycleManager)
+    DisposableEffect(lifecycleManager) {
+        onDispose { lifecycleManager.cleanup() }
+    }
 
 
     // Load widget positions using existing widgetManager and density
