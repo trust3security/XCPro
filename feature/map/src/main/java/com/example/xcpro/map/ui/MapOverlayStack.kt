@@ -62,6 +62,7 @@ internal fun MapOverlayStack(
     onModeChange: (FlightMode) -> Unit,
     currentLocation: GPSData?,
     showReturnButton: Boolean,
+    showDistanceCircles: Boolean,
     isAATEditMode: Boolean,
     isUiEditMode: Boolean,
     onEditModeChange: (Boolean) -> Unit,
@@ -97,7 +98,6 @@ internal fun MapOverlayStack(
     showReplayDevFab: Boolean,
     onReplayPickFileClick: () -> Unit
 ) {
-    val showDistanceCircles by mapState.showDistanceCirclesFlow.collectAsStateWithLifecycle()
     val gestureRegions by widgetManager.gestureRegions.collectAsStateWithLifecycle()
 
     LaunchedEffect(gestureRegions) {

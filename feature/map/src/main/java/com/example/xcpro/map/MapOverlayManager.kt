@@ -16,6 +16,7 @@ import org.maplibre.android.maps.MapLibreMap
 class MapOverlayManager(
     private val context: Context,
     private val mapState: MapScreenState,
+    private val mapStateStore: MapStateStore,
     private val taskManager: TaskManagerCoordinator
 ) {
     companion object {
@@ -23,11 +24,12 @@ class MapOverlayManager(
     }
 
     fun toggleDistanceCircles() {
-        mapState.showDistanceCircles = !mapState.showDistanceCircles
+        val next = !mapStateStore.showDistanceCircles.value
+        mapStateStore.setShowDistanceCircles(next)
         if (BuildConfig.DEBUG) {
             Log.d(
                 TAG,
-                "Distance circles toggled: ${mapState.showDistanceCircles} (Canvas overlay is active)"
+                "Distance circles toggled: $next (Canvas overlay is active)"
             )
         }
     }
@@ -129,7 +131,7 @@ class MapOverlayManager(
     fun getOverlayStatus(): String {
         return buildString {
             append("MapOverlayManager Status:\n")
-            append("- Distance Circles: ${mapState.showDistanceCircles}\n")
+            append("- Distance Circles: ${mapStateStore.showDistanceCircles.value}\n")
             append(
                 "- Distance Circles Overlay: ${
                     if (mapState.distanceCirclesOverlay != null) "Initialized" else "Not Initialized"

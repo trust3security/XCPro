@@ -159,6 +159,7 @@ internal fun MapScreenContent(
                         onModeChange = onModeChange,
                         currentLocation = currentLocation,
                         showReturnButton = showReturnButton,
+                        showDistanceCircles = showDistanceCircles,
                         isAATEditMode = isAATEditMode,
                         isUiEditMode = isUiEditMode,
                         onEditModeChange = onEditModeChange,

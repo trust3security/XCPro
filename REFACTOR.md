@@ -39,3 +39,4 @@ and CODING_RULES.md without regressing gesture performance.
 - 2026-01-02: Step 5 complete: flight mode state now flows through MapStateStore + ViewModel setFlightMode; UI uses callbacks.
 - 2026-01-02: Step 6 complete: currentZoom + targetLatLng/targetZoom now sourced from MapStateStore; MapCameraEffects consumes store flows.
 - 2026-01-02: Step 7 complete: runtime MapScreenState + map managers moved to UI; ViewModel no longer owns MapView/MapLibreMap.
+- 2026-01-03: Step 8 complete: added MapStateStore + ViewModel intent tests; distance circle toggle now stored in MapStateStore.

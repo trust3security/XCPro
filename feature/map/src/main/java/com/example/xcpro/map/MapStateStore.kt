@@ -36,6 +36,9 @@ class MapStateStore(
     private val _isTrackingLocation = MutableStateFlow(true)
     val isTrackingLocation: StateFlow<Boolean> = _isTrackingLocation.asStateFlow()
 
+    private val _showDistanceCircles = MutableStateFlow(false)
+    val showDistanceCircles: StateFlow<Boolean> = _showDistanceCircles.asStateFlow()
+
     private val _lastUserPanTime = MutableStateFlow(0L)
     val lastUserPanTime: StateFlow<Long> = _lastUserPanTime.asStateFlow()
 
@@ -97,6 +100,12 @@ class MapStateStore(
     fun setTrackingLocation(enabled: Boolean) {
         if (_isTrackingLocation.value != enabled) {
             _isTrackingLocation.value = enabled
+        }
+    }
+
+    fun setShowDistanceCircles(show: Boolean) {
+        if (_showDistanceCircles.value != show) {
+            _showDistanceCircles.value = show
         }
     }
 

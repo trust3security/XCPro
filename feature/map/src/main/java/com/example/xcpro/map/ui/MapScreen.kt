@@ -199,8 +199,8 @@ fun MapScreen(
     }
 
     // Map Overlay Manager - centralized overlay management
-    val overlayManager = remember(mapState, taskManager, context) {
-        MapOverlayManager(context, mapState, taskManager)
+    val overlayManager = remember(mapState, taskManager, context, mapViewModel.mapStateStore) {
+        MapOverlayManager(context, mapState, mapViewModel.mapStateStore, taskManager)
     }
 
     // ✅ UI Widget Manager - centralized widget management
@@ -351,7 +351,7 @@ fun MapScreen(
     val savedZoom by mapViewModel.mapStateStore.savedZoom.collectAsStateWithLifecycle()
     val savedBearing by mapViewModel.mapStateStore.savedBearing.collectAsStateWithLifecycle()
     val hasInitiallyCentered by mapViewModel.mapStateStore.hasInitiallyCentered.collectAsStateWithLifecycle()
-    val showDistanceCircles by mapState.showDistanceCirclesFlow.collectAsStateWithLifecycle()
+    val showDistanceCircles by mapViewModel.mapStateStore.showDistanceCircles.collectAsStateWithLifecycle()
     val cardHydrationReady by mapViewModel.cardHydrationReady.collectAsStateWithLifecycle()
 
     // ✅ Location Permission Launcher through LocationManager

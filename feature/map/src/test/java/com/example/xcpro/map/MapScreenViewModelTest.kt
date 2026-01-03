@@ -3,15 +3,24 @@ package com.example.xcpro.map
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.example.dfcards.CardPreferences
+import com.example.dfcards.FlightModeSelection
+import com.example.xcpro.common.glider.GliderConfig
+import com.example.xcpro.common.glider.GliderModel
 import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.common.waypoint.WaypointLoader
 import com.example.xcpro.common.units.UnitsRepository
 import com.example.xcpro.glider.GliderRepository
+import com.example.xcpro.sensors.AttitudeData
+import com.example.xcpro.sensors.CompassData
+import com.example.xcpro.sensors.GpsStatus
+import com.example.xcpro.sensors.SensorStatus
+import com.example.xcpro.sensors.UnifiedSensorManager
 import com.example.xcpro.vario.VarioServiceManager
 import com.example.xcpro.weather.wind.data.WindRepository
 import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import com.example.xcpro.map.domain.MapWaypointError
@@ -30,6 +39,7 @@ import org.robolectric.annotation.Config
 import org.mockito.Mockito
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
@@ -46,11 +56,32 @@ class MapScreenViewModelTest {
     private val unitsRepository = UnitsRepository(context)
     private val qnhPreferencesRepository = QnhPreferencesRepository(context)
     private val varioServiceManager = Mockito.mock(VarioServiceManager::class.java)
+    private val unifiedSensorManager = Mockito.mock(UnifiedSensorManager::class.java)
     private val flightDataRepository = FlightDataRepository()
     private val windRepository = Mockito.mock(WindRepository::class.java)
+    private val windStateFlow = MutableStateFlow(com.example.xcpro.weather.wind.data.WindState())
     private val replayController = Mockito.mock(IgcReplayController::class.java)
     private val replaySessionFlow = MutableStateFlow(IgcReplayController.SessionState())
     private val replayEventsFlow = MutableSharedFlow<IgcReplayController.ReplayEvent>()
+    private val gliderRepository = Mockito.mock(GliderRepository::class.java)
+    private val gliderConfigFlow = MutableStateFlow(GliderConfig())
+    private val gliderModelFlow = MutableStateFlow<GliderModel?>(null)
+    private val gpsStatusFlow = MutableStateFlow<GpsStatus>(GpsStatus.Searching)
+    private val compassFlow = MutableStateFlow<CompassData?>(null)
+    private val attitudeFlow = MutableStateFlow<AttitudeData?>(null)
+    private val sensorStatus = SensorStatus(
+        gpsAvailable = false,
+        gpsStarted = false,
+        baroAvailable = false,
+        baroStarted = false,
+        compassAvailable = false,
+        compassStarted = false,
+        accelAvailable = false,
+        accelStarted = false,
+        rotationAvailable = false,
+        rotationStarted = false,
+        hasLocationPermissions = false
+    )
 
     @After
     fun tearDown() {
@@ -63,6 +94,14 @@ class MapScreenViewModelTest {
         MapFeatureFlags.loadSavedTasksOnInit = false
         Mockito.`when`(replayController.session).thenReturn(replaySessionFlow)
         Mockito.`when`(replayController.events).thenReturn(replayEventsFlow)
+        Mockito.`when`(varioServiceManager.unifiedSensorManager).thenReturn(unifiedSensorManager)
+        Mockito.`when`(unifiedSensorManager.gpsStatusFlow).thenReturn(gpsStatusFlow)
+        Mockito.`when`(unifiedSensorManager.compassFlow).thenReturn(compassFlow)
+        Mockito.`when`(unifiedSensorManager.attitudeFlow).thenReturn(attitudeFlow)
+        Mockito.`when`(unifiedSensorManager.getSensorStatus()).thenReturn(sensorStatus)
+        Mockito.`when`(windRepository.windState).thenReturn(windStateFlow)
+        Mockito.`when`(gliderRepository.config).thenReturn(gliderConfigFlow)
+        Mockito.`when`(gliderRepository.selectedModel).thenReturn(gliderModelFlow)
     }
 
     @Ignore("GliderRepository + TaskManager persistence hangs under Robolectric until injected abstractions are provided")
@@ -140,6 +179,29 @@ class MapScreenViewModelTest {
         assertEquals("Failed to read waypoints", (error as MapWaypointError.LoadFailed).recoveryHint)
     }
 
+    @Test
+    fun setMapStyle_emitsCommandAndUpdatesStore() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        val commandDeferred = async { viewModel.mapCommands.first() }
+        viewModel.setMapStyle("Satellite")
+
+        assertEquals(MapCommand.SetStyle("Satellite"), commandDeferred.await())
+        assertEquals("Satellite", viewModel.mapStateStore.mapStyleName.value)
+    }
+
+    @Test
+    fun setFlightMode_updatesStore() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.setFlightMode(com.example.xcpro.common.flight.FlightMode.THERMAL)
+
+        assertEquals(com.example.xcpro.common.flight.FlightMode.THERMAL, viewModel.mapStateStore.currentMode.value)
+        assertEquals(FlightModeSelection.THERMAL, viewModel.mapStateStore.currentFlightMode.value)
+    }
+
     private class SuccessfulWaypointLoader(
         private val waypoints: List<WaypointData>
     ) : WaypointLoader {
@@ -151,4 +213,22 @@ class MapScreenViewModelTest {
     ) : WaypointLoader {
         override suspend fun load(context: Context): List<WaypointData> = throw throwable
     }
+
+    private fun createViewModel(
+        waypointLoader: WaypointLoader = SuccessfulWaypointLoader(emptyList())
+    ): MapScreenViewModel = MapScreenViewModel(
+        appContext = context,
+        taskManager = com.example.xcpro.tasks.TaskManagerCoordinator(null),
+        cardPreferences = cardPreferences,
+        mapStyleRepository = mapStyleRepository,
+        unitsRepository = unitsRepository,
+        qnhPreferencesRepository = qnhPreferencesRepository,
+        waypointLoader = waypointLoader,
+        gliderRepository = gliderRepository,
+        varioServiceManager = varioServiceManager,
+        flightDataRepository = flightDataRepository,
+        windRepository = windRepository,
+        igcReplayController = replayController,
+        defaultDispatcher = mainDispatcherRule.dispatcher
+    )
 }
