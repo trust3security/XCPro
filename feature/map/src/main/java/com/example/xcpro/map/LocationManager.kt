@@ -28,7 +28,7 @@ import kotlin.math.roundToInt
 class LocationManager(
     private val context: Context,
     private val mapState: MapScreenState,
-    private val mapStateStore: MapStateStore,
+    private val mapStateReader: MapStateReader,
     private val stateActions: MapStateActions,
     private val coroutineScope: CoroutineScope,
     private val qnhPreferencesRepository: QnhPreferencesRepository,
@@ -108,7 +108,7 @@ class LocationManager(
 
     // Map UI state proxies (MapStateStore is the single owner)
     private var currentUserLocation: LatLng?
-        get() = mapStateStore.currentUserLocation.value?.let { LatLng(it.latitude, it.longitude) }
+        get() = mapStateReader.currentUserLocation.value?.let { LatLng(it.latitude, it.longitude) }
         set(value) {
             stateActions.setCurrentUserLocation(
                 value?.let { MapStateStore.MapPoint(it.latitude, it.longitude) }
@@ -116,43 +116,43 @@ class LocationManager(
         }
 
     private var hasInitiallyCentered: Boolean
-        get() = mapStateStore.hasInitiallyCentered.value
+        get() = mapStateReader.hasInitiallyCentered.value
         set(value) {
             stateActions.setHasInitiallyCentered(value)
         }
 
     private var isTrackingLocation: Boolean
-        get() = mapStateStore.isTrackingLocation.value
+        get() = mapStateReader.isTrackingLocation.value
         set(value) {
             stateActions.setTrackingLocation(value)
         }
 
     private var showRecenterButton: Boolean
-        get() = mapStateStore.showRecenterButton.value
+        get() = mapStateReader.showRecenterButton.value
         set(value) {
             stateActions.setShowRecenterButton(value)
         }
 
     private var lastUserPanTime: Long
-        get() = mapStateStore.lastUserPanTime.value
+        get() = mapStateReader.lastUserPanTime.value
         set(value) {
             stateActions.updateLastUserPanTime(value)
         }
 
     private var showReturnButton: Boolean
-        get() = mapStateStore.showReturnButton.value
+        get() = mapStateReader.showReturnButton.value
         set(value) {
             stateActions.setShowReturnButton(value)
         }
 
     private val savedLocation: LatLng?
-        get() = mapStateStore.savedLocation.value?.let { LatLng(it.latitude, it.longitude) }
+        get() = mapStateReader.savedLocation.value?.let { LatLng(it.latitude, it.longitude) }
 
     private val savedZoom: Double?
-        get() = mapStateStore.savedZoom.value
+        get() = mapStateReader.savedZoom.value
 
     private val savedBearing: Double?
-        get() = mapStateStore.savedBearing.value
+        get() = mapStateReader.savedBearing.value
 
     fun onLocationPermissionsResult(fineLocationGranted: Boolean, coarseLocationGranted: Boolean) {
         if (fineLocationGranted || coarseLocationGranted) {

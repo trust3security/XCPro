@@ -20,7 +20,7 @@ import kotlin.math.sign
  */
 class MapCameraManager(
     internal val mapState: MapScreenState,
-    private val mapStateStore: MapStateStore,
+    private val mapStateReader: MapStateReader,
     private val stateActions: MapStateActions
 ) {
     companion object {
@@ -40,16 +40,16 @@ class MapCameraManager(
 
     
     val isTrackingLocation: Boolean
-        get() = mapStateStore.isTrackingLocation.value
+        get() = mapStateReader.isTrackingLocation.value
 
     val showReturnButton: Boolean
-        get() = mapStateStore.showReturnButton.value
+        get() = mapStateReader.showReturnButton.value
 
     val targetLatLng: StateFlow<MapStateStore.MapPoint?>
-        get() = mapStateStore.targetLatLng
+        get() = mapStateReader.targetLatLng
 
     val targetZoom: StateFlow<Float?>
-        get() = mapStateStore.targetZoom
+        get() = mapStateReader.targetZoom
 
     // Camera state
     var lastCameraBearing by mutableStateOf(0.0)
@@ -172,9 +172,9 @@ class MapCameraManager(
     fun animateToTarget() {
         mapState.mapLibreMap?.let { map ->
             try {
-                val targetLatLng = toLatLng(mapStateStore.targetLatLng.value)
+                val targetLatLng = toLatLng(mapStateReader.targetLatLng.value)
                     ?: LatLng(INITIAL_LATITUDE, INITIAL_LONGITUDE)
-                val targetZoom = mapStateStore.targetZoom.value ?: INITIAL_ZOOM
+                val targetZoom = mapStateReader.targetZoom.value ?: INITIAL_ZOOM
 
                 map.moveCamera(CameraUpdateFactory.newLatLngZoom(targetLatLng, targetZoom.toDouble()))
                 Log.d(TAG, "Camera animated to target: lat=${targetLatLng.latitude}, lon=${targetLatLng.longitude}, zoom=$targetZoom")

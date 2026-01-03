@@ -188,7 +188,7 @@ class MapScreenViewModelTest {
         viewModel.setMapStyle("Satellite")
 
         assertEquals(MapCommand.SetStyle("Satellite"), commandDeferred.await())
-        assertEquals("Satellite", viewModel.mapStateStore.mapStyleName.value)
+        assertEquals("Satellite", viewModel.mapState.mapStyleName.value)
     }
 
     @Test
@@ -198,8 +198,8 @@ class MapScreenViewModelTest {
 
         viewModel.setFlightMode(com.example.xcpro.common.flight.FlightMode.THERMAL)
 
-        assertEquals(com.example.xcpro.common.flight.FlightMode.THERMAL, viewModel.mapStateStore.currentMode.value)
-        assertEquals(FlightModeSelection.THERMAL, viewModel.mapStateStore.currentFlightMode.value)
+        assertEquals(com.example.xcpro.common.flight.FlightMode.THERMAL, viewModel.mapState.currentMode.value)
+        assertEquals(FlightModeSelection.THERMAL, viewModel.mapState.currentFlightMode.value)
     }
 
     @Test
@@ -207,11 +207,11 @@ class MapScreenViewModelTest {
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        assertTrue(viewModel.mapStateStore.showDistanceCircles.value.not())
+        assertTrue(viewModel.mapState.showDistanceCircles.value.not())
 
         viewModel.toggleDistanceCircles()
 
-        assertTrue(viewModel.mapStateStore.showDistanceCircles.value)
+        assertTrue(viewModel.mapState.showDistanceCircles.value)
     }
 
     @Test
@@ -221,7 +221,7 @@ class MapScreenViewModelTest {
 
         viewModel.updateCurrentZoom(14.5f)
 
-        assertEquals(14.5f, viewModel.mapStateStore.currentZoom.value)
+        assertEquals(14.5f, viewModel.mapState.currentZoom.value)
     }
 
     @Test
@@ -233,8 +233,8 @@ class MapScreenViewModelTest {
 
         viewModel.setTarget(target, 12.0f)
 
-        assertEquals(target, viewModel.mapStateStore.targetLatLng.value)
-        assertEquals(12.0f, viewModel.mapStateStore.targetZoom.value)
+        assertEquals(target, viewModel.mapState.targetLatLng.value)
+        assertEquals(12.0f, viewModel.mapState.targetZoom.value)
     }
 
     @Test
@@ -246,9 +246,9 @@ class MapScreenViewModelTest {
 
         viewModel.saveLocation(location, 9.0, 180.0)
 
-        assertEquals(location, viewModel.mapStateStore.savedLocation.value)
-        assertEquals(9.0, viewModel.mapStateStore.savedZoom.value)
-        assertEquals(180.0, viewModel.mapStateStore.savedBearing.value)
+        assertEquals(location, viewModel.mapState.savedLocation.value)
+        assertEquals(9.0, viewModel.mapState.savedZoom.value)
+        assertEquals(180.0, viewModel.mapState.savedBearing.value)
     }
 
     private class SuccessfulWaypointLoader(

@@ -19,7 +19,7 @@ import com.example.xcpro.loadAndApplyWaypoints
 class MapInitializer(
     private val context: Context,
     private val mapState: MapScreenState,
-    private val mapStateStore: MapStateStore,
+    private val mapStateReader: MapStateReader,
     private val stateActions: MapStateActions,
     private val orientationManager: MapOrientationManager,
     private val taskManager: TaskManagerCoordinator,
@@ -52,7 +52,7 @@ class MapInitializer(
     }
 
     private fun setupMapStyle(map: MapLibreMap) {
-        val styleName = mapStateStore.mapStyleName.value
+        val styleName = mapStateReader.mapStyleName.value
         val styleUrl = getMapStyleUrl(styleName)
         map.setStyle(styleUrl) { _ ->
             Log.d(TAG, "Map style loaded: $styleName")
@@ -191,7 +191,7 @@ class MapInitializer(
         orientationManager.onUserInteraction()
 
         // Save current position before movement for return functionality
-        if (!mapStateStore.showReturnButton.value) {
+        if (!mapStateReader.showReturnButton.value) {
             val currentLocation = unifiedSensorManager.gpsFlow.value
             if (currentLocation != null) {
                 stateActions.saveLocation(

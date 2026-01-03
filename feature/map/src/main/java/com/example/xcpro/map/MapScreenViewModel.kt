@@ -71,7 +71,8 @@ class MapScreenViewModel @Inject constructor(
 ) : ViewModel(), MapStateActions {
 
     private val initialStyleName = mapStyleRepository.initialStyle()
-    val mapStateStore: MapStateStore = MapStateStore(initialStyleName)
+    private val mapStateStore: MapStateStore = MapStateStore(initialStyleName)
+    val mapState: MapStateReader = mapStateStore
 
     private val ballastController = BallastController(
         repository = gliderRepository,

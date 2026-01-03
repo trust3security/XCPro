@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 class MapStateStore(
     initialStyleName: String
-) {
+) : MapStateReader {
     data class MapPoint(val latitude: Double, val longitude: Double)
 
     data class MapSize(val widthPx: Int, val heightPx: Int) {
@@ -22,55 +22,55 @@ class MapStateStore(
     }
 
     private val _safeContainerSize = MutableStateFlow(MapSize.Zero)
-    val safeContainerSize: StateFlow<MapSize> = _safeContainerSize.asStateFlow()
+    override val safeContainerSize: StateFlow<MapSize> = _safeContainerSize.asStateFlow()
 
     private val _mapStyleName = MutableStateFlow(initialStyleName)
-    val mapStyleName: StateFlow<String> = _mapStyleName.asStateFlow()
+    override val mapStyleName: StateFlow<String> = _mapStyleName.asStateFlow()
 
     private val _showRecenterButton = MutableStateFlow(false)
-    val showRecenterButton: StateFlow<Boolean> = _showRecenterButton.asStateFlow()
+    override val showRecenterButton: StateFlow<Boolean> = _showRecenterButton.asStateFlow()
 
     private val _showReturnButton = MutableStateFlow(false)
-    val showReturnButton: StateFlow<Boolean> = _showReturnButton.asStateFlow()
+    override val showReturnButton: StateFlow<Boolean> = _showReturnButton.asStateFlow()
 
     private val _isTrackingLocation = MutableStateFlow(true)
-    val isTrackingLocation: StateFlow<Boolean> = _isTrackingLocation.asStateFlow()
+    override val isTrackingLocation: StateFlow<Boolean> = _isTrackingLocation.asStateFlow()
 
     private val _showDistanceCircles = MutableStateFlow(false)
-    val showDistanceCircles: StateFlow<Boolean> = _showDistanceCircles.asStateFlow()
+    override val showDistanceCircles: StateFlow<Boolean> = _showDistanceCircles.asStateFlow()
 
     private val _lastUserPanTime = MutableStateFlow(0L)
-    val lastUserPanTime: StateFlow<Long> = _lastUserPanTime.asStateFlow()
+    override val lastUserPanTime: StateFlow<Long> = _lastUserPanTime.asStateFlow()
 
     private val _hasInitiallyCentered = MutableStateFlow(false)
-    val hasInitiallyCentered: StateFlow<Boolean> = _hasInitiallyCentered.asStateFlow()
+    override val hasInitiallyCentered: StateFlow<Boolean> = _hasInitiallyCentered.asStateFlow()
 
     private val _savedLocation = MutableStateFlow<MapPoint?>(null)
-    val savedLocation: StateFlow<MapPoint?> = _savedLocation.asStateFlow()
+    override val savedLocation: StateFlow<MapPoint?> = _savedLocation.asStateFlow()
 
     private val _savedZoom = MutableStateFlow<Double?>(null)
-    val savedZoom: StateFlow<Double?> = _savedZoom.asStateFlow()
+    override val savedZoom: StateFlow<Double?> = _savedZoom.asStateFlow()
 
     private val _savedBearing = MutableStateFlow<Double?>(null)
-    val savedBearing: StateFlow<Double?> = _savedBearing.asStateFlow()
+    override val savedBearing: StateFlow<Double?> = _savedBearing.asStateFlow()
 
     private val _currentMode = MutableStateFlow(FlightMode.CRUISE)
-    val currentMode: StateFlow<FlightMode> = _currentMode.asStateFlow()
+    override val currentMode: StateFlow<FlightMode> = _currentMode.asStateFlow()
 
     private val _currentFlightMode = MutableStateFlow(FlightModeSelection.CRUISE)
-    val currentFlightMode: StateFlow<FlightModeSelection> = _currentFlightMode.asStateFlow()
+    override val currentFlightMode: StateFlow<FlightModeSelection> = _currentFlightMode.asStateFlow()
 
     private val _currentZoom = MutableStateFlow(10f)
-    val currentZoom: StateFlow<Float> = _currentZoom.asStateFlow()
+    override val currentZoom: StateFlow<Float> = _currentZoom.asStateFlow()
 
     private val _targetLatLng = MutableStateFlow<MapPoint?>(null)
-    val targetLatLng: StateFlow<MapPoint?> = _targetLatLng.asStateFlow()
+    override val targetLatLng: StateFlow<MapPoint?> = _targetLatLng.asStateFlow()
 
     private val _targetZoom = MutableStateFlow<Float?>(null)
-    val targetZoom: StateFlow<Float?> = _targetZoom.asStateFlow()
+    override val targetZoom: StateFlow<Float?> = _targetZoom.asStateFlow()
 
     private val _currentUserLocation = MutableStateFlow<MapPoint?>(null)
-    val currentUserLocation: StateFlow<MapPoint?> = _currentUserLocation.asStateFlow()
+    override val currentUserLocation: StateFlow<MapPoint?> = _currentUserLocation.asStateFlow()
 
     fun updateSafeContainerSize(size: MapSize) {
         if (size == MapSize.Zero) return

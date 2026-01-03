@@ -23,7 +23,7 @@ internal class MapScreenObservers(
     private val flightDataRepository: FlightDataRepository,
     private val windRepository: WindRepository,
     private val flightDataManager: FlightDataManager,
-    private val mapStateStore: MapStateStore,
+    private val mapStateStore: MapStateReader,
     private val liveDataReady: MutableStateFlow<Boolean>,
     private val containerReady: MutableStateFlow<Boolean>,
     private val uiEffects: MutableSharedFlow<MapUiEffect>,

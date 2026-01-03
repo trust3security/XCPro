@@ -157,6 +157,7 @@ fun MapScreen(
 
     // ?o. Runtime map state owned by the UI layer
     val mapState = remember { MapScreenState() }
+    val mapStateReader = mapViewModel.mapState
     val modes = FlightMode.values()
 
     // ?o. Map Orientation Manager
@@ -194,8 +195,8 @@ fun MapScreen(
     // ✅ Initialize FlightDataManager
     val flightDataManager = mapViewModel.flightDataManager
     // Map Overlay Manager - centralized overlay management
-    val overlayManager = remember(mapState, taskManager, context, mapViewModel.mapStateStore, mapViewModel) {
-        MapOverlayManager(context, mapState, mapViewModel.mapStateStore, taskManager, mapViewModel)
+    val overlayManager = remember(mapState, taskManager, context, mapStateReader, mapViewModel) {
+        MapOverlayManager(context, mapState, mapStateReader, taskManager, mapViewModel)
     }
 
     // ✅ UI Widget Manager - centralized widget management
@@ -223,15 +224,15 @@ fun MapScreen(
     }
 
     // ✅ CameraManager - Centralized camera handling
-    val cameraManager = remember(mapState, mapViewModel.mapStateStore, mapViewModel) {
-        MapCameraManager(mapState, mapViewModel.mapStateStore, mapViewModel)
+    val cameraManager = remember(mapState, mapStateReader, mapViewModel) {
+        MapCameraManager(mapState, mapStateReader, mapViewModel)
     }
 
     // ✅ LocationManager - Centralized location handling
     val locationManager = remember(
         mapState,
         coroutineScope,
-        mapViewModel.mapStateStore,
+        mapStateReader,
         mapViewModel.qnhPreferencesRepository,
         mapViewModel.varioServiceManager,
         context
@@ -239,7 +240,7 @@ fun MapScreen(
         LocationManager(
             context = context,
             mapState = mapState,
-            mapStateStore = mapViewModel.mapStateStore,
+            mapStateReader = mapStateReader,
             stateActions = mapViewModel,
             coroutineScope = coroutineScope,
             qnhPreferencesRepository = mapViewModel.qnhPreferencesRepository,
@@ -268,7 +269,7 @@ fun MapScreen(
     // Map Initializer
     val mapInitializer = remember(
         mapState,
-        mapViewModel.mapStateStore,
+        mapStateReader,
         orientationManager,
         taskManager,
         mapViewModel.unifiedSensorManager,
@@ -277,7 +278,7 @@ fun MapScreen(
         MapInitializer(
             context = context,
             mapState = mapState,
-            mapStateStore = mapViewModel.mapStateStore,
+            mapStateReader = mapStateReader,
             stateActions = mapViewModel,
             orientationManager = orientationManager,
             taskManager = taskManager,
@@ -289,10 +290,10 @@ fun MapScreen(
     val gpsStatus by mapViewModel.gpsStatusFlow.collectAsStateWithLifecycle()
 
     // ✅ Location state through LocationManager
-    val showRecenterButton by mapViewModel.mapStateStore.showRecenterButton.collectAsStateWithLifecycle()
-    val showReturnButton by mapViewModel.mapStateStore.showReturnButton.collectAsStateWithLifecycle()
-    val currentMode by mapViewModel.mapStateStore.currentMode.collectAsStateWithLifecycle()
-    val currentZoom by mapViewModel.mapStateStore.currentZoom.collectAsStateWithLifecycle()
+    val showRecenterButton by mapStateReader.showRecenterButton.collectAsStateWithLifecycle()
+    val showReturnButton by mapStateReader.showReturnButton.collectAsStateWithLifecycle()
+    val currentMode by mapStateReader.currentMode.collectAsStateWithLifecycle()
+    val currentZoom by mapStateReader.currentZoom.collectAsStateWithLifecycle()
     val replaySession by mapViewModel.replaySessionState.collectAsStateWithLifecycle()
     val suppressLiveGps = replaySession.selection != null
     val allowSensorStart = replaySession.selection == null ||
@@ -347,11 +348,11 @@ fun MapScreen(
             Log.d(TAG, "✅ Drawer gestures enabled")
         }
     }
-    val savedLocation by mapViewModel.mapStateStore.savedLocation.collectAsStateWithLifecycle()
-    val savedZoom by mapViewModel.mapStateStore.savedZoom.collectAsStateWithLifecycle()
-    val savedBearing by mapViewModel.mapStateStore.savedBearing.collectAsStateWithLifecycle()
-    val hasInitiallyCentered by mapViewModel.mapStateStore.hasInitiallyCentered.collectAsStateWithLifecycle()
-    val showDistanceCircles by mapViewModel.mapStateStore.showDistanceCircles.collectAsStateWithLifecycle()
+    val savedLocation by mapStateReader.savedLocation.collectAsStateWithLifecycle()
+    val savedZoom by mapStateReader.savedZoom.collectAsStateWithLifecycle()
+    val savedBearing by mapStateReader.savedBearing.collectAsStateWithLifecycle()
+    val hasInitiallyCentered by mapStateReader.hasInitiallyCentered.collectAsStateWithLifecycle()
+    val showDistanceCircles by mapStateReader.showDistanceCircles.collectAsStateWithLifecycle()
     val cardHydrationReady by mapViewModel.cardHydrationReady.collectAsStateWithLifecycle()
 
     // ✅ Location Permission Launcher through LocationManager
