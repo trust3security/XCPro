@@ -1,6 +1,7 @@
 # CONTRIBUTING.md — XC Pro (Android/Kotlin)
 
-This repo uses **Kotlin + Jetpack Compose**, **MVVM + UDF**, **Hilt**, **Coroutines + Flow**, and a **multi‑module** layout. All code must follow **CODING_POLICY.md**.
+This repo uses **Kotlin + Jetpack Compose**, **MVVM + UDF**, **Hilt**, **Coroutines + Flow**, and a **multi‑module** layout.
+All code must follow **CODING_RULES.md** and must not violate **ARCHITECTURE.md**.
 
 ---
 
@@ -18,7 +19,7 @@ This repo uses **Kotlin + Jetpack Compose**, **MVVM + UDF**, **Hilt**, **Corouti
 
 ## 2) Definition of Done
 A change is ready when:
-- [ ] Code adheres to **CODING_POLICY.md** (SSOT, UDF, clean layering).
+- [ ] Code adheres to **CODING_RULES.md** (SSOT, UDF, clean layering).
 - [ ] **Rationale comments** are present for non‑obvious decisions (`// AI-NOTE:` markers encouraged).
 - [ ] Unit tests cover use cases; UI/instrumentation tests for gesture/event flow.
 - [ ] **Lint/detekt** pass; **Compose previews** compile.
@@ -106,7 +107,7 @@ Example:
 
 ## 12) New Contributor Quickstart
 1. Fork/clone, create branch `feat/<scope>-<short>`.
-2. Implement per **CODING_POLICY.md**.
+2. Implement per **ARCHITECTURE.md** + **CODING_RULES.md**.
 3. Add tests + `AI-NOTE` comments.
 4. Run `detekt`, `ktlintCheck`, `test`, `connectedAndroidTest`.
 5. Open PR with a crisp description + screenshots/notes.
@@ -114,5 +115,4 @@ Example:
 
 ---
 
-**Thanks!** Consistency beats cleverness. Preserve SSOT, keep latency low, document the *why*. 
-
+**Thanks!** Consistency beats cleverness. Preserve SSOT, keep latency low, document the *why*.
