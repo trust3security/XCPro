@@ -1,4 +1,9 @@
 package com.example.xcpro.map
+/**
+ * Read-only view of map UI state for UI/runtime consumers.
+ * Invariants: no mutation APIs are exposed.
+ */
+
 
 import com.example.dfcards.FlightModeSelection
 import com.example.xcpro.common.flight.FlightMode

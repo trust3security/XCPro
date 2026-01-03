@@ -1,4 +1,4 @@
-package com.example.xcpro.map
+﻿package com.example.xcpro.map
 
 import android.content.Context
 import android.net.Uri
@@ -28,7 +28,6 @@ import com.example.xcpro.map.domain.MapWaypointError
 import com.example.xcpro.map.domain.toUserMessage
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.variometer.layout.VariometerUiState
-import com.example.xcpro.variometer.layout.VariometerWidgetRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -46,9 +45,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.withContext
 
 /**
  * Lifecycle-aware owner for map state and domain controllers (no runtime map handles).
@@ -95,14 +91,20 @@ class MapScreenViewModel @Inject constructor(
         unifiedSensorManager.gpsStatusFlow
 
     private val sharedPrefs = appContext.getSharedPreferences("MapPrefs", Context.MODE_PRIVATE)
-    private val variometerRepository = VariometerWidgetRepository(sharedPrefs)
-    private val _variometerUiState = MutableStateFlow(VariometerUiState())
-    val variometerUiState: StateFlow<VariometerUiState> = _variometerUiState.asStateFlow()
+    private val variometerLayoutController = VariometerLayoutController(sharedPrefs)
+    val variometerUiState: StateFlow<VariometerUiState> = variometerLayoutController.state
 
     private val _uiState = MutableStateFlow(MapUiState())
     val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
     private val _uiEffects = MutableSharedFlow<MapUiEffect>(extraBufferCapacity = 1)
     val uiEffects: SharedFlow<MapUiEffect> = _uiEffects.asSharedFlow()
+    private val replayCoordinator = MapReplayCoordinator(
+        sessionState = replaySessionState,
+        igcReplayController = igcReplayController,
+        stateActions = this,
+        uiEffects = _uiEffects,
+        scope = viewModelScope
+    )
     private val _mapCommands = MutableSharedFlow<MapCommand>(extraBufferCapacity = 1)
     val mapCommands: SharedFlow<MapCommand> = _mapCommands.asSharedFlow()
     private val _containerReady = MutableStateFlow(false)
@@ -223,133 +225,20 @@ class MapScreenViewModel @Inject constructor(
         }
     }
 
-    fun onReplayPlayPause() {
-        viewModelScope.launch {
-            when (replaySessionState.value.status) {
-                IgcReplayController.SessionStatus.PLAYING -> igcReplayController.pause()
-                IgcReplayController.SessionStatus.PAUSED -> igcReplayController.play()
-                IgcReplayController.SessionStatus.IDLE -> {
-                    // Ensure we have a selection before play
-                    val selection = replaySessionState.value.selection
-                    if (selection == null) {
-                        try {
-                            igcReplayController.loadAsset(DEV_REPLAY_ASSET_PATH)
-                        } catch (t: Throwable) {
-                            Log.e("MapScreenViewModel", "Auto replay failed", t)
-                            _uiEffects.emit(MapUiEffect.ShowToast("IGC replay asset missing"))
-                            return@launch
-                        }
-                    }
-                    // When starting a new replay, force the map to recentre on the first replay point
-                    mapStateStore.setHasInitiallyCentered(false)
-                    mapStateStore.setShowReturnButton(false)
-                    mapStateStore.setTrackingLocation(true)
-                    igcReplayController.play()
-                }
-            }
-        }
-    }
+    fun onReplayPlayPause() = replayCoordinator.onReplayPlayPause()
 
-    fun onReplayStop() {
-        igcReplayController.stop()
-    }
+    fun onReplayStop() = replayCoordinator.onReplayStop()
 
-    fun onReplaySpeedChanged(multiplier: Double) {
-        viewModelScope.launch {
-            if (!ensureReplaySelectionLoaded()) return@launch
-            igcReplayController.setSpeed(multiplier)
-        }
-    }
+    fun onReplaySpeedChanged(multiplier: Double) = replayCoordinator.onReplaySpeedChanged(multiplier)
 
-    fun onReplaySeek(progress: Float) {
-        viewModelScope.launch {
-            if (!ensureReplaySelectionLoaded()) return@launch
-            igcReplayController.seekTo(progress)
-        }
-    }
+    fun onReplaySeek(progress: Float) = replayCoordinator.onReplaySeek(progress)
 
-    fun onReplayDevAutoplay() {
-        viewModelScope.launch {
-            try {
-                igcReplayController.loadAsset(DEV_REPLAY_ASSET_PATH)
-                igcReplayController.play()
-            } catch (t: Throwable) {
-                Log.e("MapScreenViewModel", "Failed to start dev replay", t)
-            }
-        }
-    }
+    fun onReplayDevAutoplay() = replayCoordinator.onReplayDevAutoplay()
 
-    fun onVarioDemoReplay() {
-        viewModelScope.launch {
-            try {
-                Log.i("MapScreenViewModel", "VARIO_DEMO start asset=$VARIO_DEMO_ASSET_PATH")
-                igcReplayController.stop()
-                igcReplayController.loadAsset(VARIO_DEMO_ASSET_PATH, "Vario demo")
-                mapStateStore.setHasInitiallyCentered(false)
-                mapStateStore.setShowReturnButton(false)
-                mapStateStore.setTrackingLocation(true)
-                igcReplayController.play()
-                _uiEffects.emit(MapUiEffect.ShowToast("Vario demo replay started"))
-            } catch (t: Throwable) {
-                Log.e("MapScreenViewModel", "Failed to start vario demo replay", t)
-                _uiEffects.emit(MapUiEffect.ShowToast("Vario demo replay failed"))
-            }
-        }
-    }
+    fun onVarioDemoReplay() = replayCoordinator.onVarioDemoReplay()
 
-    /**
-     * Launches an IGC replay from a user-selected SAF Uri.
-     * AI-NOTE: This mirrors the simple flow from IgcReplaySim—pick, load, play—while reusing
-     * the existing replay pipeline (ReplaySensorSource -> FlightDataCalculator -> repository).
-     */
-    fun onReplayFileChosen(uri: Uri, displayName: String?) {
-        viewModelScope.launch {
-            Log.i("MapScreenViewModel", "REPLAY_FILE chosen uri=$uri name=$displayName")
-            _uiEffects.emit(MapUiEffect.ShowToast("Loading replay..."))
-            val loadResult = runCatching {
-                // AI-NOTE: Use NonCancellable so a quick scope cancellation (e.g., navigation churn)
-                // doesn't misreport a successful load as a failure.
-                withContext(NonCancellable) { igcReplayController.loadFile(uri, displayName) }
-            }
-
-            loadResult
-                .onSuccess {
-                    Log.i("MapScreenViewModel", "REPLAY_FILE load success uri=$uri")
-                    mapStateStore.setHasInitiallyCentered(false)
-                    mapStateStore.setShowReturnButton(false)
-                    mapStateStore.setTrackingLocation(true)
-                    Log.i("MapScreenViewModel", "REPLAY_FILE starting play uri=$uri")
-                    igcReplayController.play()
-                }
-                .onFailure { t ->
-                    if (t is CancellationException) {
-                        Log.w("MapScreenViewModel", "Replay load cancelled after prepare uri=$uri", t)
-                    } else {
-                        Log.e("MapScreenViewModel", "Replay load failed uri=$uri", t)
-                        _uiEffects.emit(
-                            MapUiEffect.ShowToast("Replay failed: ${t.message ?: "Unknown error"}")
-                        )
-                    }
-                }
-        }
-    }
-
-    /**
-     * Ensures a replay selection is loaded so slider/speed/play actions have data to act on.
-     * Returns true when a selection is present (either pre-existing or after loading the dev asset).
-     */
-    private suspend fun ensureReplaySelectionLoaded(): Boolean {
-        if (replaySessionState.value.selection != null) return true
-        return try {
-            igcReplayController.loadAsset(DEV_REPLAY_ASSET_PATH)
-            true
-        } catch (t: Throwable) {
-            Log.e("MapScreenViewModel", "Replay asset missing", t)
-            _uiEffects.emit(MapUiEffect.ShowToast("IGC replay asset missing"))
-            false
-        }
-    }
-
+    fun onReplayFileChosen(uri: Uri, displayName: String?) =
+        replayCoordinator.onReplayFileChosen(uri, displayName)
     private fun setUiEditMode(enabled: Boolean) {
         if (_uiState.value.isUiEditMode == enabled) {
             return
@@ -428,32 +317,13 @@ class MapScreenViewModel @Inject constructor(
         minSizePx: Float,
         maxSizePx: Float
     ) {
-        if (_variometerUiState.value.isInitialized) {
-            return
-        }
-        val centeredOffset = Offset(
-            x = ((screenWidthPx - defaultSizePx) / 2f).coerceAtLeast(0f),
-            y = ((screenHeightPx - defaultSizePx) / 2f).coerceAtLeast(0f)
+        variometerLayoutController.ensureLayout(
+            screenWidthPx = screenWidthPx,
+            screenHeightPx = screenHeightPx,
+            defaultSizePx = defaultSizePx,
+            minSizePx = minSizePx,
+            maxSizePx = maxSizePx
         )
-        val persistedLayout = variometerRepository.load(centeredOffset, defaultSizePx)
-        val sanitizedSize = persistedLayout.sizePx.coerceIn(minSizePx, maxSizePx)
-        val targetOffset = if (persistedLayout.hasPersistedOffset) {
-            persistedLayout.offset
-        } else {
-            centeredOffset
-        }
-        val boundedOffset = clampOffset(targetOffset, sanitizedSize, screenWidthPx, screenHeightPx)
-        _variometerUiState.value = VariometerUiState(
-            offset = boundedOffset,
-            sizePx = sanitizedSize,
-            isInitialized = true
-        )
-        if (!persistedLayout.hasPersistedOffset) {
-            variometerRepository.saveOffset(boundedOffset)
-        }
-        if (!persistedLayout.hasPersistedSize) {
-            variometerRepository.saveSize(sanitizedSize)
-        }
     }
 
     fun onVariometerOffsetCommitted(
@@ -461,10 +331,7 @@ class MapScreenViewModel @Inject constructor(
         screenWidthPx: Float,
         screenHeightPx: Float
     ) {
-        if (!_variometerUiState.value.isInitialized) return
-        val clamped = clampOffset(offset, _variometerUiState.value.sizePx, screenWidthPx, screenHeightPx)
-        _variometerUiState.update { it.copy(offset = clamped) }
-        variometerRepository.saveOffset(clamped)
+        variometerLayoutController.onOffsetCommitted(offset, screenWidthPx, screenHeightPx)
     }
 
     fun onVariometerSizeCommitted(
@@ -474,28 +341,14 @@ class MapScreenViewModel @Inject constructor(
         minSizePx: Float,
         maxSizePx: Float
     ) {
-        if (!_variometerUiState.value.isInitialized) return
-        val clampedSize = sizePx.coerceIn(minSizePx, maxSizePx)
-        val clampedOffset = clampOffset(_variometerUiState.value.offset, clampedSize, screenWidthPx, screenHeightPx)
-        _variometerUiState.update { it.copy(sizePx = clampedSize, offset = clampedOffset) }
-        variometerRepository.saveSize(clampedSize)
-        variometerRepository.saveOffset(clampedOffset)
-    }
-
-    private fun clampOffset(
-        offset: Offset,
-        sizePx: Float,
-        screenWidthPx: Float,
-        screenHeightPx: Float
-    ): Offset {
-        val maxX = (screenWidthPx - sizePx).coerceAtLeast(0f)
-        val maxY = (screenHeightPx - sizePx).coerceAtLeast(0f)
-        return Offset(
-            x = offset.x.coerceIn(0f, maxX),
-            y = offset.y.coerceIn(0f, maxY)
+        variometerLayoutController.onSizeCommitted(
+            sizePx = sizePx,
+            screenWidthPx = screenWidthPx,
+            screenHeightPx = screenHeightPx,
+            minSizePx = minSizePx,
+            maxSizePx = maxSizePx
         )
     }
-
     fun setAATEditMode(enabled: Boolean) {
         _isAATEditMode.value = enabled
     }
@@ -512,8 +365,6 @@ class MapScreenViewModel @Inject constructor(
         ballastController.dispose()
         super.onCleared()
     }
-    companion object {
-        private const val DEV_REPLAY_ASSET_PATH = "replay/2025-11-11.igc"
-        private const val VARIO_DEMO_ASSET_PATH = "replay/vario-demo-0-10-0-30s.igc"
-    }
 }
+
+

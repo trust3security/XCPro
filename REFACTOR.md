@@ -55,3 +55,4 @@ and CODING_RULES.md without regressing gesture performance.
 - 2026-01-03: Phase 2 in progress: added MapStateActions and routed map managers to use ViewModel-only writes.
 - 2026-01-03: Phase 2 complete: audited MapStateStore writes, added MapStateActions tests, removed unused mutators.
 - 2026-01-03: Follow-up: introduced MapStateReader and routed UI/runtime managers to read-only state.
+- 2026-01-03: Follow-up: extracted replay + variometer controllers; split MapScreen root into MapScreenRoot wrapper.

@@ -1,4 +1,9 @@
-package com.example.xcpro.map.ui
+﻿package com.example.xcpro.map.ui
+/**
+ * Map screen body content used inside MapScreenScaffold.
+ * Invariants: UI renders state only and routes mutations through the ViewModel.
+ */
+
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
