@@ -202,6 +202,7 @@ internal fun MapScreenContent(
         MapTaskManagerLayer(
             taskScreenManager = taskScreenManager,
             waypointData = waypointData,
+            currentLocation = currentLocation,
             onWaypointGoto = { waypoint ->
                 cameraManager.moveToWaypoint(waypoint.latitude, waypoint.longitude)
             }
@@ -311,13 +312,15 @@ private fun ReplayDiagnosticsLogger(
 private fun MapTaskManagerLayer(
     taskScreenManager: MapTaskScreenManager,
     waypointData: List<WaypointData>,
+    currentLocation: GPSData?,
     onWaypointGoto: (WaypointData) -> Unit
 ) {
     MapTaskScreenUi.AllTaskScreenComponents(
         taskScreenManager = taskScreenManager,
         allWaypoints = waypointData,
         currentQNH = "1013 hPa",
-        onWaypointGoto = onWaypointGoto
+        onWaypointGoto = onWaypointGoto,
+        currentLocation = currentLocation
     )
 }
 

@@ -29,8 +29,9 @@ class MapOverlayWidgetGesturesTest {
     @Test
     fun hamburgerTapAndLongPressTriggerCallbacks() {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        val mapState = MapScreenState(context, initialMapStyle = "default")
-        val widgetManager = MapUIWidgetManager(mapState, mapState.sharedPrefs)
+        val mapState = MapScreenState()
+        val widgetPrefs = context.getSharedPreferences("MapPrefs", Context.MODE_PRIVATE)
+        val widgetManager = MapUIWidgetManager(mapState, widgetPrefs)
 
         val tapTriggered = mutableStateOf(false)
         val longPressTriggered = mutableStateOf(false)

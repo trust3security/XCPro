@@ -1,6 +1,5 @@
 package com.example.xcpro.map.ui.task
 
-import android.content.Context
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertCountEquals
@@ -8,7 +7,6 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.test.core.app.ApplicationProvider
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapTaskScreenManager
 import com.example.xcpro.tasks.TaskManagerCoordinator
@@ -28,8 +26,6 @@ class MapTaskScreenUiTest {
 
     @get:Rule
     val composeTestRule = createComposeRule()
-
-    private val context: Context = ApplicationProvider.getApplicationContext()
 
     @Test
     fun taskBottomSheet_showsContainerWhenVisible() {
@@ -110,9 +106,7 @@ class MapTaskScreenUiTest {
         val taskManager: TaskManagerCoordinator = mock()
         whenever(taskManager.currentTask).thenReturn(task)
 
-        val mapState = MapScreenState(context, initialMapStyle = "classic")
-        // We don't need flight data for these tests, but initialize to avoid lateinit access.
-        mapState.flightDataManager = mock()
+        val mapState = MapScreenState()
 
         return MapTaskScreenManager(
             mapState = mapState,

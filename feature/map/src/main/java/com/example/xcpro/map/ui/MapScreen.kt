@@ -51,6 +51,7 @@ import com.example.dfcards.FlightDataProvider
 import com.example.dfcards.FlightModeSelection
 import com.example.xcpro.sensors.GPSData
 import android.annotation.SuppressLint
+import android.content.Context
 import android.util.Log
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -116,7 +117,7 @@ import kotlin.math.roundToInt
 import kotlin.math.roundToInt
 
 private const val TAG = "MapScreen"
-private const val PREFS_NAME = "MapScreenPrefs"
+private const val MAP_PREFS_NAME = "MapPrefs"
 const val INITIAL_LATITUDE = -30.87
 
 /**
@@ -155,9 +156,7 @@ fun MapScreen(
     )
 
     // ?o. Runtime map state owned by the UI layer
-    val mapState = remember {
-        MapScreenState(context, initialMapStyle)
-    }
+    val mapState = remember { MapScreenState() }
     val modes = FlightMode.values()
 
     // ?o. Map Orientation Manager
@@ -194,18 +193,17 @@ fun MapScreen(
 
     // ✅ Initialize FlightDataManager
     val flightDataManager = mapViewModel.flightDataManager
-    SideEffect {
-        mapState.flightDataManager = flightDataManager
-    }
-
     // Map Overlay Manager - centralized overlay management
     val overlayManager = remember(mapState, taskManager, context, mapViewModel.mapStateStore) {
         MapOverlayManager(context, mapState, mapViewModel.mapStateStore, taskManager)
     }
 
     // ✅ UI Widget Manager - centralized widget management
-    val widgetManager = remember {
-        MapUIWidgetManager(mapState, mapState.sharedPrefs)
+    val widgetPrefs = remember(context) {
+        context.getSharedPreferences(MAP_PREFS_NAME, Context.MODE_PRIVATE)
+    }
+    val widgetManager = remember(mapState, widgetPrefs) {
+        MapUIWidgetManager(mapState, widgetPrefs)
     }
 
     // ✅ Profile ViewModel

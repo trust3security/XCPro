@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.map.MapTaskScreenManager
+import com.example.xcpro.sensors.GPSData
 import com.example.xcpro.tasks.SwipeableTaskBottomSheet
 import com.example.xcpro.tasks.TaskMinimizedIndicator
 
@@ -86,7 +87,8 @@ object MapTaskScreenUi {
         modifier: Modifier = Modifier,
         indicatorContent: (@Composable BoxScope.() -> Unit)? = null,
         showBottomSheetOverride: Boolean? = null,
-        currentTaskOverride: com.example.xcpro.tasks.core.Task? = null
+        currentTaskOverride: com.example.xcpro.tasks.core.Task? = null,
+        currentLocation: GPSData? = null
     ) {
         val showBottomSheet by taskScreenManager.showTaskBottomSheet.collectAsStateWithLifecycle()
         val currentTask = currentTaskOverride ?: taskScreenManager.taskManager.currentTask
@@ -94,8 +96,8 @@ object MapTaskScreenUi {
         if (!isBottomSheetVisible && currentTask.waypoints.isNotEmpty()) {
             val currentGpsLocation =
                 if (indicatorContent == null) {
-                    taskScreenManager.mapState.flightDataManager.liveFlightData?.let {
-                        Pair(it.latitude, it.longitude)
+                    currentLocation?.let { location ->
+                        Pair(location.latLng.latitude, location.latLng.longitude)
                     }
                 } else {
                     null
@@ -130,7 +132,8 @@ object MapTaskScreenUi {
         allWaypoints: List<WaypointData>,
         currentQNH: String,
         onWaypointGoto: (WaypointData) -> Unit,
-        modifier: Modifier = Modifier
+        modifier: Modifier = Modifier,
+        currentLocation: GPSData? = null
     ) {
         TaskSearchOverlay(
             taskScreenManager = taskScreenManager,
@@ -148,7 +151,8 @@ object MapTaskScreenUi {
 
         TaskMinimizedIndicatorOverlay(
             taskScreenManager = taskScreenManager,
-            modifier = modifier
+            modifier = modifier,
+            currentLocation = currentLocation
         )
     }
 }
