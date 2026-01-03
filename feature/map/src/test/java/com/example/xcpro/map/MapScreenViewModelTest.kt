@@ -202,6 +202,55 @@ class MapScreenViewModelTest {
         assertEquals(FlightModeSelection.THERMAL, viewModel.mapStateStore.currentFlightMode.value)
     }
 
+    @Test
+    fun toggleDistanceCircles_updatesStore() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        assertTrue(viewModel.mapStateStore.showDistanceCircles.value.not())
+
+        viewModel.toggleDistanceCircles()
+
+        assertTrue(viewModel.mapStateStore.showDistanceCircles.value)
+    }
+
+    @Test
+    fun updateCurrentZoom_updatesStore() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.updateCurrentZoom(14.5f)
+
+        assertEquals(14.5f, viewModel.mapStateStore.currentZoom.value)
+    }
+
+    @Test
+    fun setTarget_updatesStore() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        val target = MapStateStore.MapPoint(1.23, 4.56)
+
+        viewModel.setTarget(target, 12.0f)
+
+        assertEquals(target, viewModel.mapStateStore.targetLatLng.value)
+        assertEquals(12.0f, viewModel.mapStateStore.targetZoom.value)
+    }
+
+    @Test
+    fun saveLocation_updatesStore() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        val location = MapStateStore.MapPoint(10.0, -20.0)
+
+        viewModel.saveLocation(location, 9.0, 180.0)
+
+        assertEquals(location, viewModel.mapStateStore.savedLocation.value)
+        assertEquals(9.0, viewModel.mapStateStore.savedZoom.value)
+        assertEquals(180.0, viewModel.mapStateStore.savedBearing.value)
+    }
+
     private class SuccessfulWaypointLoader(
         private val waypoints: List<WaypointData>
     ) : WaypointLoader {

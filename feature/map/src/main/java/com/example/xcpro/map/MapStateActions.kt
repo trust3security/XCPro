@@ -1,7 +1,7 @@
 package com.example.xcpro.map
 
 /**
- * Write-only façade for MapStateStore mutations. UI/runtime managers should call these
+ * Write-only facade for MapStateStore mutations. UI/runtime managers should call these
  * so the ViewModel remains the single writer of map state.
  */
 interface MapStateActions {

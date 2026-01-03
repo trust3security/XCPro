@@ -28,8 +28,8 @@ and CODING_RULES.md without regressing gesture performance.
 8) Add tests for MapStateStore + ViewModel intents.
 
 ## Phase 2 Plan: ViewModel-Only State Writers
-1) Define MapUiEvent intents for all remaining state writes (distance circles, tracking flags,
-   saved location/zoom/bearing, last pan time, target lat/lng/zoom).
+1) Define MapStateActions (write-only intents) for remaining state writes (distance circles,
+   tracking flags, saved location/zoom/bearing, last pan time, target lat/lng/zoom).
 2) Update MapOverlayManager, MapCameraManager, and LocationManager to call ViewModel intents
    instead of writing MapStateStore directly.
 3) Centralize MapStateStore mutations inside MapScreenViewModel (single writer).
@@ -53,3 +53,4 @@ and CODING_RULES.md without regressing gesture performance.
 - 2026-01-03: Cleanup: removed legacy MapScreenState UI fields; task minimized indicator now uses currentLocation instead of MapScreenState.
 - 2026-01-03: Phase 2 plan added to make ViewModel the only MapStateStore writer.
 - 2026-01-03: Phase 2 in progress: added MapStateActions and routed map managers to use ViewModel-only writes.
+- 2026-01-03: Phase 2 complete: audited MapStateStore writes, added MapStateActions tests, removed unused mutators.

@@ -127,24 +127,6 @@ class MapStateStore(
         _savedBearing.value = bearing
     }
 
-    fun setSavedLocation(location: MapPoint?) {
-        _savedLocation.value = location
-    }
-
-    fun setSavedZoom(zoom: Double?) {
-        _savedZoom.value = zoom
-    }
-
-    fun setSavedBearing(bearing: Double?) {
-        _savedBearing.value = bearing
-    }
-
-    fun clearSavedLocation() {
-        _savedLocation.value = null
-        _savedZoom.value = null
-        _savedBearing.value = null
-    }
-
     fun setCurrentMode(mode: FlightMode) {
         if (_currentMode.value != mode) {
             _currentMode.value = mode
@@ -161,14 +143,6 @@ class MapStateStore(
         if (_currentZoom.value != zoom) {
             _currentZoom.value = zoom
         }
-    }
-
-    fun setTargetLatLng(location: MapPoint?) {
-        _targetLatLng.value = location
-    }
-
-    fun setTargetZoom(zoom: Float?) {
-        _targetZoom.value = zoom
     }
 
     fun setTarget(location: MapPoint?, zoom: Float?) {
