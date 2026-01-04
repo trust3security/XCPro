@@ -4,5 +4,6 @@ enum class WindSource {
     NONE,
     CIRCLING,
     EKF,
-    EXTERNAL
+    EXTERNAL,
+    MANUAL
 }

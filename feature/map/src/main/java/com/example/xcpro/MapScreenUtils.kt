@@ -11,6 +11,7 @@ import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.orientation.HeadingResolver
 import com.example.xcpro.orientation.HeadingResolverInput
 import com.example.xcpro.sensors.CompleteFlightData
+import com.example.xcpro.weather.wind.model.WindState
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -51,14 +52,25 @@ internal fun formatBaroGpsDelta(
 }
 
 
-internal fun convertToRealTimeFlightData(completeData: CompleteFlightData): RealTimeFlightData {
+internal fun convertToRealTimeFlightData(
+    completeData: CompleteFlightData,
+    windState: WindState?
+): RealTimeFlightData {
+    // AI-NOTE: Wind is sourced from WindState only; CompleteFlightData no longer carries wind.
     val gps = completeData.gps
     val baro = completeData.baro
 
     val compass = completeData.compass
     val compassReliable = compass != null && compass.accuracy != SensorManager.SENSOR_STATUS_UNRELIABLE
     val hasGpsFix = gps != null
-    val hasWind = completeData.windQuality > 0 && completeData.windSpeed.value > 0.5
+    val windVector = windState?.vector
+    val hasWind = windVector != null && windState.quality > 0 && windVector.speed > 0.5
+    val windFromDeg = if (hasWind) {
+        ((windVector!!.directionFromDeg % 360.0) + 360.0) % 360.0
+    } else {
+        null
+    }
+    val windSpeedMs = if (hasWind) windVector!!.speed else 0.0
     val headingSolution = HeadingResolver().resolve(
         HeadingResolverInput(
             compassHeadingDeg = compass?.heading,
@@ -66,8 +78,8 @@ internal fun convertToRealTimeFlightData(completeData: CompleteFlightData): Real
             gpsTrackDeg = gps?.bearing,
             groundSpeedMs = gps?.speed?.value ?: 0.0,
             hasGpsFix = hasGpsFix,
-            windFromDeg = completeData.windDirection.toDouble().takeIf { hasWind },
-            windSpeedMs = completeData.windSpeed.value,
+            windFromDeg = windFromDeg,
+            windSpeedMs = windSpeedMs,
             minTrackSpeedMs = UnitsConverter.knotsToMs(2.0)
         )
     )
@@ -105,8 +117,8 @@ internal fun convertToRealTimeFlightData(completeData: CompleteFlightData): Real
         qnhCalibrationAgeSeconds = completeData.qnhCalibrationAgeSeconds,
 
         // Performance data
-        windSpeed = completeData.windSpeed.value.toFloat(),
-        windDirection = completeData.windDirection,
+        windSpeed = 0f,
+        windDirection = 0f,
         thermalAverage = completeData.thermalAverage.value.toFloat(),
         thermalAverageCircle = completeData.thermalAverageCircle.value.toFloat(),
         thermalAverageTotal = completeData.thermalAverageTotal.value.toFloat(),
@@ -120,11 +132,11 @@ internal fun convertToRealTimeFlightData(completeData: CompleteFlightData): Real
         nettoValid = completeData.nettoValid,
         trueAirspeed = completeData.trueAirspeed.value,
         indicatedAirspeed = completeData.indicatedAirspeed.value,
-        windQuality = completeData.windQuality,
-        windSource = completeData.windSource.name,
-        windHeadwind = completeData.windHeadwind.value,
-        windCrosswind = completeData.windCrosswind.value,
-        windAgeSeconds = windAgeSeconds(completeData.windLastUpdatedMillis),
+        windQuality = 0,
+        windSource = "",
+        windHeadwind = 0.0,
+        windCrosswind = 0.0,
+        windAgeSeconds = -1,
 
         // NEW: Vario variants for side-by-side testing (VARIO_IMPROVEMENTS.md)
         varioOptimized = completeData.varioOptimized.value,
@@ -160,8 +172,3 @@ internal fun convertToRealTimeFlightData(completeData: CompleteFlightData): Real
     )
 }
 
-private fun windAgeSeconds(lastUpdatedMillis: Long): Long {
-    if (lastUpdatedMillis <= 0L) return -1
-    val ageMs = System.currentTimeMillis() - lastUpdatedMillis
-    return (ageMs / 1000L).coerceAtLeast(0L)
-}

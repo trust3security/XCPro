@@ -7,7 +7,7 @@ import com.example.xcpro.flightdata.FlightDisplayMapper
 import com.example.xcpro.flightdata.FlightDisplaySnapshot
 import com.example.xcpro.sensors.domain.CalculateFlightMetricsUseCase
 import com.example.xcpro.sensors.domain.FlightMetricsRequest
-import com.example.xcpro.weather.wind.data.WindState
+import com.example.xcpro.weather.wind.model.WindState
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /**

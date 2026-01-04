@@ -16,7 +16,7 @@ import com.example.xcpro.sensors.GpsStatus
 import com.example.xcpro.sensors.SensorStatus
 import com.example.xcpro.sensors.UnifiedSensorManager
 import com.example.xcpro.vario.VarioServiceManager
-import com.example.xcpro.weather.wind.data.WindRepository
+import com.example.xcpro.weather.wind.data.WindSensorFusionRepository
 import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -58,8 +58,8 @@ class MapScreenViewModelTest {
     private val varioServiceManager = Mockito.mock(VarioServiceManager::class.java)
     private val unifiedSensorManager = Mockito.mock(UnifiedSensorManager::class.java)
     private val flightDataRepository = FlightDataRepository()
-    private val windRepository = Mockito.mock(WindRepository::class.java)
-    private val windStateFlow = MutableStateFlow(com.example.xcpro.weather.wind.data.WindState())
+    private val windRepository = Mockito.mock(WindSensorFusionRepository::class.java)
+    private val windStateFlow = MutableStateFlow(com.example.xcpro.weather.wind.model.WindState())
     private val replayController = Mockito.mock(IgcReplayController::class.java)
     private val replaySessionFlow = MutableStateFlow(IgcReplayController.SessionState())
     private val replayEventsFlow = MutableSharedFlow<IgcReplayController.ReplayEvent>()
@@ -281,3 +281,5 @@ class MapScreenViewModelTest {
         defaultDispatcher = mainDispatcherRule.dispatcher
     )
 }
+
+

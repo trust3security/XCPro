@@ -3,8 +3,8 @@ package com.example.xcpro.map
 import android.util.Log
 import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.convertToRealTimeFlightData
-import com.example.xcpro.weather.wind.data.WindRepository
-import com.example.xcpro.weather.wind.data.WindState
+import com.example.xcpro.weather.wind.data.WindSensorFusionRepository
+import com.example.xcpro.weather.wind.model.WindState
 import com.example.xcpro.replay.IgcReplayController
 import com.example.xcpro.flightdata.FlightDataRepository
 import kotlinx.coroutines.CancellationException
@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.combine
 internal class MapScreenObservers(
     private val scope: CoroutineScope,
     private val flightDataRepository: FlightDataRepository,
-    private val windRepository: WindRepository,
+    private val windRepository: WindSensorFusionRepository,
     private val flightDataManager: FlightDataManager,
     private val mapStateStore: MapStateReader,
     private val liveDataReady: MutableStateFlow<Boolean>,
@@ -60,7 +60,7 @@ internal class MapScreenObservers(
                     val minutes = elapsedMinutes % 60L
                     val formattedFlightTime = "${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}"
 
-                    val liveData = convertToRealTimeFlightData(data)
+                    val liveData = convertToRealTimeFlightData(data, wind)
                         .copy(flightTime = formattedFlightTime)
                         .applyWindState(wind)
                     flightDataManager.updateLiveFlightData(liveData)

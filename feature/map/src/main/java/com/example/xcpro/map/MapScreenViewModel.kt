@@ -1,4 +1,4 @@
-﻿package com.example.xcpro.map
+package com.example.xcpro.map
 
 import android.content.Context
 import android.net.Uri
@@ -17,8 +17,8 @@ import com.example.xcpro.common.waypoint.WaypointLoader
 import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.glider.GliderRepository
 import com.example.xcpro.vario.VarioServiceManager
-import com.example.xcpro.weather.wind.data.WindRepository
-import com.example.xcpro.weather.wind.data.WindState
+import com.example.xcpro.weather.wind.data.WindSensorFusionRepository
+import com.example.xcpro.weather.wind.model.WindState
 import com.example.xcpro.replay.IgcReplayController
 import com.example.xcpro.map.ballast.BallastCommand
 import com.example.xcpro.map.ballast.BallastController
@@ -61,7 +61,7 @@ class MapScreenViewModel @Inject constructor(
     private val gliderRepository: GliderRepository,
     val varioServiceManager: VarioServiceManager,
     private val flightDataRepository: FlightDataRepository,
-    private val windRepository: WindRepository,
+    private val windRepository: WindSensorFusionRepository,
     val igcReplayController: IgcReplayController,
     @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher
 ) : ViewModel(), MapStateActions {
