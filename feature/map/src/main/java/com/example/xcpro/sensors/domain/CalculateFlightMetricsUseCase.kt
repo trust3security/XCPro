@@ -8,7 +8,7 @@ import com.example.xcpro.glider.StillAirSinkProvider
 import com.example.xcpro.sensors.CirclingDetector
 import com.example.xcpro.sensors.FlightCalculationHelpers
 import com.example.xcpro.sensors.GPSData
-import com.example.xcpro.weather.wind.data.WindState
+import com.example.xcpro.weather.wind.model.WindState
 import com.example.xcpro.weather.wind.model.WindSource
 import com.example.xcpro.weather.wind.model.WindVector
 import com.example.xcpro.sensors.domain.AirspeedEstimate

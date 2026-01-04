@@ -9,7 +9,7 @@ import com.example.xcpro.glider.StillAirSinkProvider
 import com.example.xcpro.sensors.FlightDataCalculator
 import com.example.xcpro.sensors.SensorFusionRepository
 import com.example.xcpro.vario.VarioServiceManager
-import com.example.xcpro.weather.wind.data.WindRepository
+import com.example.xcpro.weather.wind.data.WindSensorFusionRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -41,7 +41,8 @@ class IgcReplayController @Inject constructor(
     private val flightDataRepository: FlightDataRepository,
     private val varioServiceManager: VarioServiceManager,
     private val sinkProvider: StillAirSinkProvider,
-    private val windRepository: WindRepository,
+    private val windRepository: WindSensorFusionRepository,
+    private val replaySensorSource: ReplaySensorSource,
     @DefaultDispatcher private val dispatcher: CoroutineDispatcher
 ) {
 
@@ -159,7 +160,6 @@ class IgcReplayController @Inject constructor(
     private var lastForwardLogTime = 0L
     private var lastGpsEmitTimestamp: Long = Long.MIN_VALUE
 
-    private val replaySensorSource = ReplaySensorSource()
     private var replayFusionRepository: SensorFusionRepository? = null
     private val simConfig = DEFAULT_SIM_CONFIG
     private val noiseModel = ReplayNoiseModel(simConfig)

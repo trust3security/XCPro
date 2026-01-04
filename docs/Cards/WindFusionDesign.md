@@ -5,9 +5,9 @@ _This design must comply with our guardrails: see `ARCHITECTURE.md` (SSOT/UDF/DI
 Goal: make wind estimation a first-class fusion domain (own SSOT, buffers, and validation) instead of deriving wind from downstream flight snapshots. This mirrors XCSoar’s dedicated wind “computer” while fitting our Kotlin/DI/Flow stack.
 
 ## Current state
-- `WindRepository` listens to `FlightDataRepository.flightData` (already-fused `CompleteFlightData`) and computes wind from that. It does not own raw inputs, cadence, or buffering.
-- Flight fusion (`FlightDataCalculator`) already performs heavy smoothing; wind cannot adjust sample rates or filters independently.
-- Replay/source gating is shared with flight fusion, not wind-specific.
+- `WindSensorFusionRepository` consumes normalized raw inputs (GPS + optional baro/heading/airspeed) via a `SensorDataSource` adapter.
+- Replay/source gating is handled inside the wind repository by switching input flows when the active source changes.
+- Airspeed input is optional and not wired yet; EKF outputs only when an independent airspeed stream is provided.
 
 ## Design principles
 - **Single Source of Truth per domain:** Wind owns its own SSOT flow (`StateFlow<WindState>`). No other layer re-derives wind.
@@ -45,6 +45,8 @@ SensorDataSource (raw flows)
 
 - **WindEkfUseCase**
   - Update step using true airspeed + groundspeed vector; blackout during high turn rate or g-load; quality ramp with sample count.
+  - XCSoar gates EKF to "real" airspeed only (instrument/dynamic pressure); do not feed wind-derived TAS to avoid circularity.
+  - Reference gates: requires flying + track/ground speed updates, TAS > 1 m/s, turn rate > ~20 deg/s or |g-load-1| > 0.3 triggers ~3s blackout; emit every N samples (XCSoar uses 10).
 
 - **WindStore**
   - Slot measurements with altitude/time/quality weighting (1 km altitude band, ~1 h time decay, override rule).

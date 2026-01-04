@@ -12,7 +12,7 @@ import com.example.xcpro.sensors.FlightFilters
 import com.example.xcpro.sensors.VarioDiagnosticsSample
 import com.example.xcpro.sensors.domain.CalculateFlightMetricsUseCase
 import com.example.xcpro.sensors.domain.WindEstimator
-import com.example.xcpro.weather.wind.data.WindState
+import com.example.xcpro.weather.wind.model.WindState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch

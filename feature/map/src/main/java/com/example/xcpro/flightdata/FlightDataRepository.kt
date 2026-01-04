@@ -18,17 +18,18 @@ class FlightDataRepository @Inject constructor() {
 
     enum class Source { LIVE, REPLAY }
 
-    @Volatile private var activeSource: Source = Source.LIVE
+    private val _activeSource = MutableStateFlow(Source.LIVE)
+    val activeSource: StateFlow<Source> = _activeSource.asStateFlow()
 
     private val _flightData = MutableStateFlow<CompleteFlightData?>(null)
     val flightData: StateFlow<CompleteFlightData?> = _flightData.asStateFlow()
 
     fun setActiveSource(source: Source) {
-        activeSource = source
+        _activeSource.value = source
     }
 
     fun update(data: CompleteFlightData?, source: Source = Source.LIVE) {
-        if (source != activeSource) return  // AI-NOTE: gate updates so live sensors can't override replay
+        if (source != _activeSource.value) return  // AI-NOTE: gate updates so live sensors can't override replay
         _flightData.value = data
     }
 
