@@ -53,7 +53,6 @@ class WindEkfUseCase(
         airspeed: AirspeedSample?,
         isCircling: Boolean,
         turnRateRad: Double?
-        turnRateRad: Double?
     ): Result? {
         val tas = airspeed?.trueMs ?: Double.NaN
         if (airspeed == null || !airspeed.valid || !tas.isFinite() || tas < minTrueAirspeed) {

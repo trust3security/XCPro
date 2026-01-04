@@ -29,7 +29,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -69,7 +68,6 @@ class WindSensorFusionRepository @Inject constructor(
     init {
         scope.launch {
             flightDataRepository.activeSource
-                .distinctUntilChanged()
                 .onEach { resetForSourceSwitch() }
                 .flatMapLatest { source ->
                     val inputs = if (source == FlightDataRepository.Source.REPLAY) {
