@@ -4,6 +4,7 @@ import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.weather.wind.data.WindSensorFusionRepository
 import com.example.xcpro.weather.wind.data.WindSensorInputs
 import com.example.xcpro.weather.wind.model.AirspeedSample
+import com.example.xcpro.weather.wind.model.GLoadSample
 import com.example.xcpro.weather.wind.model.GpsSample
 import com.example.xcpro.weather.wind.model.HeadingSample
 import com.example.xcpro.weather.wind.model.PressureSample
@@ -149,12 +150,14 @@ class WindSensorFusionRepositoryTest {
         val pressure = MutableStateFlow<PressureSample?>(null)
         val airspeed = MutableStateFlow<AirspeedSample?>(null)
         val heading = MutableStateFlow<HeadingSample?>(null)
+        val gLoad = MutableStateFlow<GLoadSample?>(null)
 
         val inputs = WindSensorInputs(
             gps = gps,
             pressure = pressure,
             airspeed = airspeed,
-            heading = heading
+            heading = heading,
+            gLoad = gLoad
         )
     }
 

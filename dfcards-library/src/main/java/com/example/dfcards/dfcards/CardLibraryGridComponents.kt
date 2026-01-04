@@ -22,7 +22,7 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -178,7 +178,7 @@ internal fun CategoryTabs(
     selectedCategory: CardCategory,
     onCategorySelected: (CardCategory) -> Unit
 ) {
-    ScrollableTabRow(
+    PrimaryScrollableTabRow(
         selectedTabIndex = CardCategory.values().indexOf(selectedCategory),
         modifier = Modifier.fillMaxWidth(),
         edgePadding = 16.dp

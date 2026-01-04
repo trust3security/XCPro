@@ -5,6 +5,7 @@ import com.example.xcpro.sensors.AttitudeData
 import com.example.xcpro.sensors.BaroData
 import com.example.xcpro.sensors.CompassData
 import com.example.xcpro.sensors.GPSData
+import com.example.xcpro.sensors.RawAccelData
 import com.example.xcpro.sensors.SensorDataSource
 import com.example.xcpro.common.units.AltitudeM
 import com.example.xcpro.common.units.PressureHpa
@@ -23,6 +24,9 @@ class ReplaySensorSource : SensorDataSource {
 
     private val _compassFlow = MutableStateFlow<CompassData?>(null)
     override val compassFlow: StateFlow<CompassData?> = _compassFlow.asStateFlow()
+
+    private val _rawAccelFlow = MutableStateFlow<RawAccelData?>(null)
+    override val rawAccelFlow: StateFlow<RawAccelData?> = _rawAccelFlow.asStateFlow()
 
     private val _accelFlow = MutableStateFlow<AccelData?>(null)
     override val accelFlow: StateFlow<AccelData?> = _accelFlow.asStateFlow()
@@ -57,10 +61,21 @@ class ReplaySensorSource : SensorDataSource {
         _compassFlow.value = CompassData(heading = heading, accuracy = accuracy, timestamp = timestamp)
     }
 
+    fun emitRawAccel(x: Double, y: Double, z: Double, timestamp: Long, reliable: Boolean = true) {
+        _rawAccelFlow.value = RawAccelData(
+            x = x,
+            y = y,
+            z = z,
+            timestamp = timestamp,
+            isReliable = reliable
+        )
+    }
+
     fun reset() {
         _gpsFlow.value = null
         _baroFlow.value = null
         _compassFlow.value = null
+        _rawAccelFlow.value = null
         _accelFlow.value = null
         _attitudeFlow.value = null
     }

@@ -1,6 +1,7 @@
 package com.example.xcpro.weather.wind.domain
 
 import com.example.xcpro.weather.wind.model.AirspeedSample
+import com.example.xcpro.weather.wind.model.GLoadSample
 import com.example.xcpro.weather.wind.model.GpsSample
 import com.example.xcpro.weather.wind.model.WindVector
 import kotlin.math.abs
@@ -25,6 +26,7 @@ class WindEkfUseCase(
         TIME_WARP,
         CIRCLING,
         TURNING,
+        G_LOAD,
         BLACKOUT,
         EKF_OUTPUT
     }
@@ -52,7 +54,8 @@ class WindEkfUseCase(
         gps: GpsSample,
         airspeed: AirspeedSample?,
         isCircling: Boolean,
-        turnRateRad: Double?
+        turnRateRad: Double?,
+        gLoad: GLoadSample?
     ): Result? {
         val tas = airspeed?.trueMs ?: Double.NaN
         if (airspeed == null || !airspeed.valid || !tas.isFinite() || tas < minTrueAirspeed) {
@@ -78,6 +81,14 @@ class WindEkfUseCase(
             sampleCount = (sampleCount * 0.8).toInt()
             setBlackout(timestamp, DropReason.TURNING)
             return null
+        }
+
+        if (gLoad != null && gLoad.isReliable) {
+            val gLoadAgeMs = abs(timestamp - gLoad.timestampMillis)
+            if (gLoadAgeMs <= G_LOAD_FRESHNESS_MS && abs(gLoad.gLoad - 1.0) > G_LOAD_THRESHOLD) {
+                setBlackout(timestamp, DropReason.G_LOAD)
+                return null
+            }
         }
 
         if (inBlackout(timestamp)) {
@@ -134,6 +145,8 @@ class WindEkfUseCase(
     companion object {
         private const val SAMPLE_STRIDE = 5
         private const val TIME_WARP_MS = 30_000
+        private const val G_LOAD_THRESHOLD = 0.3
+        private const val G_LOAD_FRESHNESS_MS = 500L
 
         private fun counterToQuality(counter: Int): Int = when {
             counter >= 300 -> 4

@@ -8,11 +8,11 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Flight
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Terrain
-import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -43,7 +43,7 @@ enum class FlightModeSelection(
     val color: androidx.compose.ui.graphics.Color
 ) {
     CRUISE("SCruise", Icons.Filled.Flight, androidx.compose.ui.graphics.Color(0xFF2196F3)),
-    THERMAL("SThermal", Icons.Filled.TrendingUp, androidx.compose.ui.graphics.Color(0xFF9C27B0)),
+    THERMAL("SThermal", Icons.AutoMirrored.Filled.TrendingUp, androidx.compose.ui.graphics.Color(0xFF9C27B0)),
     FINAL_GLIDE("SFinal Glide", Icons.Filled.Terrain, androidx.compose.ui.graphics.Color(0xFFF44336))
 }
 

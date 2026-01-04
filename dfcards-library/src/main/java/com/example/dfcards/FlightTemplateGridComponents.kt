@@ -4,7 +4,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.with
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,7 +25,7 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -59,7 +59,7 @@ fun CategoryTabsSection(
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
-        ScrollableTabRow(
+        PrimaryScrollableTabRow(
             selectedTabIndex = CardCategory.values().indexOf(selectedCategory),
             modifier = Modifier.fillMaxWidth(),
             edgePadding = 0.dp,
@@ -227,7 +227,7 @@ private fun CardGridItem(
                 AnimatedContent(
                     targetState = primaryValue,
                     transitionSpec = {
-                        fadeIn(animationSpec = androidx.compose.animation.core.tween(200)) with
+                        fadeIn(animationSpec = androidx.compose.animation.core.tween(200)) togetherWith
                         fadeOut(animationSpec = androidx.compose.animation.core.tween(200))
                     },
                     label = "primary_value_transition"
@@ -245,7 +245,7 @@ private fun CardGridItem(
                 AnimatedContent(
                     targetState = secondaryValue ?: card.unit.ifEmpty { card.description.take(10) },
                     transitionSpec = {
-                        fadeIn(animationSpec = androidx.compose.animation.core.tween(200)) with
+                        fadeIn(animationSpec = androidx.compose.animation.core.tween(200)) togetherWith
                         fadeOut(animationSpec = androidx.compose.animation.core.tween(200))
                     },
                     label = "secondary_value_transition"

@@ -229,7 +229,7 @@ fun FlightMgmt(
         }
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
-            TabRow(selectedTabIndex = when (activeTab) {
+            PrimaryTabRow(selectedTabIndex = when (activeTab) {
                 "screens" -> 0
                 "airspace" -> 1
                 "waypoints" -> 2

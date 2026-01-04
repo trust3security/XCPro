@@ -28,6 +28,9 @@ class UnifiedSensorManager(private val context: Context) : SensorDataSource {
     private val _compassFlow = MutableStateFlow<CompassData?>(null)
     override val compassFlow: StateFlow<CompassData?> = _compassFlow.asStateFlow()
 
+    private val _rawAccelFlow = MutableStateFlow<RawAccelData?>(null)
+    override val rawAccelFlow: StateFlow<RawAccelData?> = _rawAccelFlow.asStateFlow()
+
     private val _accelFlow = MutableStateFlow<AccelData?>(null)
     override val accelFlow: StateFlow<AccelData?> = _accelFlow.asStateFlow()
 
@@ -55,6 +58,7 @@ class UnifiedSensorManager(private val context: Context) : SensorDataSource {
         },
         updateBaro = { _baroFlow.value = it },
         updateCompass = { _compassFlow.value = it },
+        updateRawAccel = { _rawAccelFlow.value = it },
         updateAttitude = { _attitudeFlow.value = it },
         updateAccel = { _accelFlow.value = it }
     )

@@ -9,6 +9,7 @@ import com.example.xcpro.weather.wind.domain.CirclingWindSample
 import com.example.xcpro.weather.wind.domain.WindEkfUseCase
 import com.example.xcpro.weather.wind.domain.WindStore
 import com.example.xcpro.weather.wind.model.AirspeedSample
+import com.example.xcpro.weather.wind.model.GLoadSample
 import com.example.xcpro.weather.wind.model.GpsSample
 import com.example.xcpro.weather.wind.model.HeadingSample
 import com.example.xcpro.weather.wind.model.PressureSample
@@ -45,7 +46,8 @@ class WindSensorFusionRepository @Inject constructor(
         val gps: GpsSample?,
         val pressure: PressureSample?,
         val airspeed: AirspeedSample?,
-        val heading: HeadingSample?
+        val heading: HeadingSample?,
+        val gLoad: GLoadSample?
     )
 
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
@@ -79,9 +81,10 @@ class WindSensorFusionRepository @Inject constructor(
                         inputs.gps,
                         inputs.pressure,
                         inputs.airspeed,
-                        inputs.heading
-                    ) { gps, pressure, airspeed, heading ->
-                        WindFusionInput(gps, pressure, airspeed, heading)
+                        inputs.heading,
+                        inputs.gLoad
+                    ) { gps, pressure, airspeed, heading, gLoad ->
+                        WindFusionInput(gps, pressure, airspeed, heading, gLoad)
                     }
                 }
                 .collect { input ->
@@ -161,7 +164,8 @@ class WindSensorFusionRepository @Inject constructor(
             gps = gps,
             airspeed = input.airspeed,
             isCircling = estimatorCircling,
-            turnRateRad = turnRate
+            turnRateRad = turnRate,
+            gLoad = input.gLoad
         )
         val canUseEkf = lastCirclingTimestamp == Long.MIN_VALUE ||
             ekfResult?.timestampMillis?.minus(lastCirclingTimestamp) ?: Long.MAX_VALUE > CIRCLING_SUPPRESSION_MS

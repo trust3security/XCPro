@@ -63,6 +63,18 @@ data class AccelData(
 )
 
 /**
+ * Raw accelerometer data (includes gravity).
+ * Used for g-load magnitude estimation.
+ */
+data class RawAccelData(
+    val x: Double,
+    val y: Double,
+    val z: Double,
+    val timestamp: Long,
+    val isReliable: Boolean = true
+)
+
+/**
  * Device attitude derived from rotation vector.
  */
 data class AttitudeData(

@@ -27,6 +27,12 @@ data class HeadingSample(
     val timestampMillis: Long
 )
 
+data class GLoadSample(
+    val gLoad: Double,
+    val timestampMillis: Long,
+    val isReliable: Boolean
+)
+
 enum class WindInputSource {
     LIVE,
     REPLAY

@@ -19,10 +19,10 @@ import com.example.xcpro.vario.VarioServiceManager
 import com.example.xcpro.weather.wind.data.WindSensorFusionRepository
 import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.testing.MainDispatcherRule
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
-import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.runBlocking
 import com.example.xcpro.map.domain.MapWaypointError
 import com.example.xcpro.map.config.MapFeatureFlags
 import com.example.xcpro.replay.IgcReplayController
@@ -106,7 +106,7 @@ class MapScreenViewModelTest {
 
     @Ignore("GliderRepository + TaskManager persistence hangs under Robolectric until injected abstractions are provided")
     @Test
-    fun refreshWaypoints_success_updatesState() = runTest(mainDispatcherRule.dispatcher) {
+    fun refreshWaypoints_success_updatesState() = runBlocking {
         val expected = listOf(
             WaypointData(
                 name = "Test Field",
@@ -140,7 +140,7 @@ class MapScreenViewModelTest {
             defaultDispatcher = mainDispatcherRule.dispatcher
         )
 
-        advanceUntilIdle()
+        drainMain()
 
         val state = viewModel.uiState.value
         assertEquals(expected, state.waypoints)
@@ -150,7 +150,7 @@ class MapScreenViewModelTest {
 
     @Ignore("GliderRepository + TaskManager persistence hangs under Robolectric until injected abstractions are provided")
     @Test
-    fun refreshWaypoints_failure_setsError() = runTest(mainDispatcherRule.dispatcher) {
+    fun refreshWaypoints_failure_setsError() = runBlocking {
         val loader = FailingWaypointLoader(IllegalStateException("Failed to read waypoints"))
 
         val viewModel = MapScreenViewModel(
@@ -169,7 +169,7 @@ class MapScreenViewModelTest {
             defaultDispatcher = mainDispatcherRule.dispatcher
         )
 
-        advanceUntilIdle()
+        drainMain()
 
         val state = viewModel.uiState.value
         assertTrue(state.waypoints.isEmpty())
@@ -180,21 +180,20 @@ class MapScreenViewModelTest {
     }
 
     @Test
-    fun setMapStyle_emitsCommandAndUpdatesStore() = runTest(mainDispatcherRule.dispatcher) {
+    fun setMapStyle_emitsCommandAndUpdatesStore() = runBlocking {
         val viewModel = createViewModel()
-        advanceUntilIdle()
 
-        val commandDeferred = async { viewModel.mapCommands.first() }
-        viewModel.setMapStyle("Satellite")
+        val nextStyle = if (viewModel.mapState.mapStyleName.value == "Satellite") "Topo" else "Satellite"
+        val commandDeferred = async(start = CoroutineStart.UNDISPATCHED) { viewModel.mapCommands.first() }
+        viewModel.setMapStyle(nextStyle)
 
-        assertEquals(MapCommand.SetStyle("Satellite"), commandDeferred.await())
-        assertEquals("Satellite", viewModel.mapState.mapStyleName.value)
+        assertEquals(MapCommand.SetStyle(nextStyle), commandDeferred.await())
+        assertEquals(nextStyle, viewModel.mapState.mapStyleName.value)
     }
 
     @Test
-    fun setFlightMode_updatesStore() = runTest(mainDispatcherRule.dispatcher) {
+    fun setFlightMode_updatesStore() {
         val viewModel = createViewModel()
-        advanceUntilIdle()
 
         viewModel.setFlightMode(com.example.xcpro.common.flight.FlightMode.THERMAL)
 
@@ -203,9 +202,8 @@ class MapScreenViewModelTest {
     }
 
     @Test
-    fun toggleDistanceCircles_updatesStore() = runTest(mainDispatcherRule.dispatcher) {
+    fun toggleDistanceCircles_updatesStore() {
         val viewModel = createViewModel()
-        advanceUntilIdle()
 
         assertTrue(viewModel.mapState.showDistanceCircles.value.not())
 
@@ -215,9 +213,8 @@ class MapScreenViewModelTest {
     }
 
     @Test
-    fun updateCurrentZoom_updatesStore() = runTest(mainDispatcherRule.dispatcher) {
+    fun updateCurrentZoom_updatesStore() {
         val viewModel = createViewModel()
-        advanceUntilIdle()
 
         viewModel.updateCurrentZoom(14.5f)
 
@@ -225,9 +222,8 @@ class MapScreenViewModelTest {
     }
 
     @Test
-    fun setTarget_updatesStore() = runTest(mainDispatcherRule.dispatcher) {
+    fun setTarget_updatesStore() {
         val viewModel = createViewModel()
-        advanceUntilIdle()
 
         val target = MapStateStore.MapPoint(1.23, 4.56)
 
@@ -238,9 +234,8 @@ class MapScreenViewModelTest {
     }
 
     @Test
-    fun saveLocation_updatesStore() = runTest(mainDispatcherRule.dispatcher) {
+    fun saveLocation_updatesStore() {
         val viewModel = createViewModel()
-        advanceUntilIdle()
 
         val location = MapStateStore.MapPoint(10.0, -20.0)
 
@@ -261,6 +256,11 @@ class MapScreenViewModelTest {
         private val throwable: Throwable
     ) : WaypointLoader {
         override suspend fun load(context: Context): List<WaypointData> = throw throwable
+    }
+
+
+    private fun drainMain() {
+        mainDispatcherRule.dispatcher.scheduler.runCurrent()
     }
 
     private fun createViewModel(

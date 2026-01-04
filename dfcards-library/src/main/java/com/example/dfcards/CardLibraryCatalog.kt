@@ -1,8 +1,8 @@
 package com.example.dfcards
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Send
-import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Air
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Compress
@@ -70,7 +70,7 @@ private val essentialCards = listOf(
         title = "IAS",
         description = "Indicated airspeed",
         category = CardCategory.ESSENTIAL,
-        icon = Icons.Filled.Send,
+        icon = Icons.AutoMirrored.Filled.Send,
         unit = "kt",
         primaryFontSize = 14,
         unitFontSize = 9
@@ -103,7 +103,7 @@ private val varioCards = listOf(
         title = "VARIO (Opt)",
         description = "Optimized Kalman filter (Priority 1: R=0.5m)",
         category = CardCategory.VARIO,
-        icon = Icons.Filled.TrendingUp,
+        icon = Icons.AutoMirrored.Filled.TrendingUp,
         unit = "m/s",
         primaryFontSize = 15,
         unitFontSize = 9
@@ -186,7 +186,7 @@ private val navigationCards = listOf(
         title = "WPT BRG",
         description = "Bearing to next waypoint",
         category = CardCategory.NAVIGATION,
-        icon = Icons.Filled.Send,
+        icon = Icons.AutoMirrored.Filled.Send,
         unit = "°",
         primaryFontSize = 14,
         unitFontSize = 8
@@ -218,7 +218,7 @@ private val performanceCards = listOf(
         title = "TC 30s",
         description = "Thermal climb, last 30 s",
         category = CardCategory.PERFORMANCE,
-        icon = Icons.Filled.TrendingUp,
+        icon = Icons.AutoMirrored.Filled.TrendingUp,
         unit = "m/s",
         primaryFontSize = 14,
         unitFontSize = 9
@@ -248,7 +248,7 @@ private val performanceCards = listOf(
         title = "TC GAIN",
         description = "Altitude gained in this thermal",
         category = CardCategory.PERFORMANCE,
-        icon = Icons.Filled.TrendingUp,
+        icon = Icons.AutoMirrored.Filled.TrendingUp,
         unit = "ft",
         primaryFontSize = 14,
         unitFontSize = 9
@@ -301,7 +301,7 @@ private val timeWeatherCards = listOf(
         title = "WIND SPD",
         description = "Wind speed",
         category = CardCategory.TIME_WEATHER,
-        icon = Icons.Filled.Send,
+        icon = Icons.AutoMirrored.Filled.Send,
         unit = "kt",
         primaryFontSize = 14,
         unitFontSize = 9

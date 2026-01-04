@@ -35,7 +35,7 @@ SensorDataSource (raw flows)
 
 ### Components
 - **WindSensorFusionRepository (new, @Singleton)**
-  - Inputs: `StateFlow<GpsSample?>`, `StateFlow<PressureSample?>` (optional), `StateFlow<AirspeedSample?>` (optional), `StateFlow<AttitudeSample?>` (optional), clock, dispatcher.
+  - Inputs: `StateFlow<GpsSample?>`, `StateFlow<PressureSample?>` (optional), `StateFlow<AirspeedSample?>` (optional), `StateFlow<AttitudeSample?>` (optional), `StateFlow<GLoadSample?>` (optional), clock, dispatcher.
   - Responsibilities: subscribe, gate by source (LIVE/REPLAY), coordinate use-cases, maintain `_windState`, expose `windState: StateFlow<WindState>`.
   - Threading: `Dispatchers.Default`; no IO inside.
 
@@ -47,6 +47,7 @@ SensorDataSource (raw flows)
   - Update step using true airspeed + groundspeed vector; blackout during high turn rate or g-load; quality ramp with sample count.
   - XCSoar gates EKF to "real" airspeed only (instrument/dynamic pressure); do not feed wind-derived TAS to avoid circularity.
   - Reference gates: requires flying + track/ground speed updates, TAS > 1 m/s, turn rate > ~20 deg/s or |g-load-1| > 0.3 triggers ~3s blackout; emit every N samples (XCSoar uses 10).
+  - **G-load source (Option B):** derive `gLoad` from raw accelerometer magnitude (`TYPE_ACCELEROMETER`) and apply a short low-pass (~200 ms) before gating. Treat samples as unreliable if stale or sensor accuracy is poor.
 
 - **WindStore**
   - Slot measurements with altitude/time/quality weighting (1 km altitude band, ~1 h time decay, override rule).
@@ -62,6 +63,7 @@ SensorDataSource (raw flows)
   - `PressureSample(pressureHpa, altitudeMeters, timestampMillis)` (optional)
   - `AirspeedSample(trueMs, indicatedMs, timestampMillis, valid)` (optional)
   - `HeadingSample(headingDeg, timestampMillis)` (optional)
+  - `GLoadSample(gLoad, timestampMillis, isReliable)` (optional)
   - `Source` enum: LIVE | REPLAY
 - **Output**
   - `WindState`:
@@ -92,12 +94,13 @@ SensorDataSource (raw flows)
 - Concurrency: cancellation and source-switch reset tests.
 
 ## Migration plan
-1) Add data models (`GpsSample`, `PressureSample`, `AirspeedSample`, `HeadingSample`, `WindState`) in `feature/map/src/main/java/com/example/xcpro/weather/wind/model`.
+1) Add data models (`GpsSample`, `PressureSample`, `AirspeedSample`, `HeadingSample`, `GLoadSample`, `WindState`) in `feature/map/src/main/java/com/example/xcpro/weather/wind/model`.
 2) Extract current wind math from `WindRepository` into use-cases: circling, EKF, store, selector (pure Kotlin, no Android).
 3) Create `WindSensorFusionRepository`:
    - Subscribe directly to sensor flows (`SensorDataSource` or a thin `SensorFrontEnd` adapter), not `CompleteFlightData`.
    - Implement source gating, staleness, and resets.
    - Expose `windState: StateFlow<WindState>`.
+   - (Optional) Add `GLoadSample` input for EKF gating using raw accelerometer magnitude.
 4) Update consumers:
    - `FlightDataCalculator` reads `windState` (read-only) for display/metrics.
    - UI/ViewModels observe `windState` instead of wind fields in `CompleteFlightData`.
@@ -117,7 +120,7 @@ SensorDataSource (raw flows)
 - Tests cover math, gating, staleness, and replay. 
 
 ## Quick adoption checklist
-1) Models: add `GpsSample`, `PressureSample`, `AirspeedSample`, `HeadingSample`, `WindState`, `WindSource`.
+1) Models: add `GpsSample`, `PressureSample`, `AirspeedSample`, `HeadingSample`, `GLoadSample`, `WindState`, `WindSource`.
 2) Domain use-cases: implement circling detector, EKF step, store/weighting, selector (pure Kotlin).
 3) Repository: build `WindSensorFusionRepository` that subscribes to sensor flows (not `CompleteFlightData`), gates by source, handles staleness/reset, exposes `windState`.
 4) DI: bind repo + sensor provider + dispatcher in Hilt; inject where needed.

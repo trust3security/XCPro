@@ -30,6 +30,7 @@ internal class SensorRegistry(
     private val updateGps: (GPSData) -> Unit,
     private val updateBaro: (BaroData) -> Unit,
     private val updateCompass: (CompassData) -> Unit,
+    private val updateRawAccel: (RawAccelData) -> Unit,
     private val updateAttitude: (AttitudeData) -> Unit,
     private val updateAccel: (AccelData) -> Unit
 ) : SensorEventListener {
@@ -45,12 +46,14 @@ internal class SensorRegistry(
 
     private val pressureSensor: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE)
     private val magneticSensor: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
+    private val rawAccelerometerSensor: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
     private val linearAccelerometerSensor: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)
     private val rotationVectorSensor: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
 
     private var isGpsStarted = false
     private var isBaroStarted = false
     private var isCompassStarted = false
+    private var isRawAccelStarted = false
     private var isAccelStarted = false
     private var isRotationStarted = false
 
@@ -121,6 +124,17 @@ internal class SensorRegistry(
                     )
                 )
             }
+            Sensor.TYPE_ACCELEROMETER -> {
+                updateRawAccel(
+                    RawAccelData(
+                        x = event.values[0].toDouble(),
+                        y = event.values[1].toDouble(),
+                        z = event.values[2].toDouble(),
+                        timestamp = System.currentTimeMillis(),
+                        isReliable = event.accuracy != SensorManager.SENSOR_STATUS_UNRELIABLE
+                    )
+                )
+            }
         }
     }
 
@@ -133,8 +147,12 @@ internal class SensorRegistry(
         val baroStarted = startBarometer()
         val compassStarted = startCompass()
         val rotationStarted = startRotationVector()
+        val rawAccelStarted = startRawAccelerometer()
         val accelStarted = startAccelerometer()
-        Log.d(TAG, "Sensor start status -> gps=$gpsStarted, baro=$baroStarted, compass=$compassStarted, rotation=$rotationStarted, accel=$accelStarted")
+        Log.d(
+            TAG,
+            "Sensor start status -> gps=$gpsStarted, baro=$baroStarted, compass=$compassStarted, rotation=$rotationStarted, rawAccel=$rawAccelStarted, accel=$accelStarted"
+        )
         return gpsStarted
     }
 
@@ -143,6 +161,7 @@ internal class SensorRegistry(
         stopBarometer()
         stopCompass()
         stopRotationVector()
+        stopRawAccelerometer()
         stopAccelerometer()
     }
 
@@ -248,6 +267,20 @@ internal class SensorRegistry(
         if (!isAccelStarted) return
         linearAccelerometerSensor?.let { sensorManager.unregisterListener(this, it) }
         isAccelStarted = false
+    }
+
+    private fun startRawAccelerometer(): Boolean {
+        if (isRawAccelStarted) return true
+        val sensor = rawAccelerometerSensor ?: return false
+        val success = sensorManager.registerListener(this, sensor, ACCEL_SENSOR_DELAY)
+        if (success) isRawAccelStarted = true
+        return success
+    }
+
+    private fun stopRawAccelerometer() {
+        if (!isRawAccelStarted) return
+        rawAccelerometerSensor?.let { sensorManager.unregisterListener(this, it) }
+        isRawAccelStarted = false
     }
 
     @SuppressLint("MissingPermission")
