@@ -2,7 +2,7 @@
 
 _This design must comply with our guardrails: see `ARCHITECTURE.md` (SSOT/UDF/DI rules), `CODING_RULES.md` (layering, flows, naming), and `CONTRIBUTING.md` (Definition of Done, testing, AI-NOTE intent). Keep this doc in sync when those files change._
 
-Goal: make wind estimation a first-class fusion domain (own SSOT, buffers, and validation) instead of deriving wind from downstream flight snapshots. This mirrors XCSoar’s dedicated wind “computer” while fitting our Kotlin/DI/Flow stack.
+Goal: make wind estimation a first-class fusion domain (own SSOT, buffers, and validation) instead of deriving wind from downstream flight snapshots. This mirrors XCSoar's dedicated wind "computer" while fitting our Kotlin/DI/Flow stack.
 
 ## Current state
 - `WindSensorFusionRepository` consumes normalized raw inputs (GPS + optional baro/heading/airspeed) via a `SensorDataSource` adapter.
@@ -21,14 +21,14 @@ Goal: make wind estimation a first-class fusion domain (own SSOT, buffers, and v
 ## Target architecture
 ```
 SensorDataSource (raw flows)
-   └─ WindSensorFusionRepository (SSOT)
-        ├─ CirclingWindUseCase
-        ├─ WindEkfUseCase
-        ├─ WindStore (quality-weighted cache)
-        └─ WindSelectorUseCase
-             ↓
+   -> WindSensorFusionRepository (SSOT)
+        -> CirclingWindUseCase
+        -> WindEkfUseCase
+        -> WindStore (quality-weighted cache)
+        -> WindSelectorUseCase
+             v
         StateFlow<WindState> (immutable)
-             ↓
+             v
    Consumers: FlightDataCalculator (read-only for display/metrics),
               ViewModels/UI, logging, replay tools
 ```
@@ -53,7 +53,7 @@ SensorDataSource (raw flows)
   - Provide freshest non-stale estimate or return empty if stale.
 
 - **WindSelectorUseCase**
-  - Priority: EKF (if available) → Circling → External/manual (future) → None.
+  - Priority: EKF (if available) -> Circling -> External/manual (future) -> None.
   - Compute headwind/crosswind from heading.
 
 ### Data contracts
@@ -74,7 +74,7 @@ SensorDataSource (raw flows)
 
 ### Replay and source gating
 - Repository tracks `activeSource`; drops samples from mismatched sources.
-- Replay uses the sample timestamp as “simulation time” for derivations and staleness; avoids wall-clock drift.
+- Replay uses the sample timestamp as "simulation time" for derivations and staleness; avoids wall-clock drift.
 - On source switch, reset buffers (EKF, circling detector, store) to prevent cross-contamination.
 
 ### Staleness and quality
@@ -110,6 +110,7 @@ SensorDataSource (raw flows)
 
 ## Done definition
 - One wind SSOT (`WindSensorFusionRepository`) fed by sensor primitives, not by `CompleteFlightData`.
+- `CompleteFlightData` does not carry wind fields; UI uses `WindState` as the only wind source.
 - Immutable `StateFlow<WindState>` used everywhere; no other wind SSOT exists.
 - Platform concerns abstracted; wind fusion code is pure Kotlin + coroutines.
 - Replay deterministic; source switches reset buffers cleanly.
@@ -123,3 +124,4 @@ SensorDataSource (raw flows)
 5) Consumers: switch `FlightDataCalculator` and UI/ViewModels to `windState`; stop using wind fields from `CompleteFlightData`.
 6) Tests: unit (circling/EKF/store/selector) + integration (live/replay fake streams); verify deterministic replay and staleness.
 7) Cleanup: remove legacy `WindRepository` and any wind derivation from flight data consumers; delete redundant wind fields if unused to restore single-SSOT.
+

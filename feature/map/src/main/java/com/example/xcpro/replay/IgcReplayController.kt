@@ -107,6 +107,9 @@ class IgcReplayController @Inject constructor(
                     val now = System.currentTimeMillis()
                     if (now - lastForwardLogTime >= 1_000L) {
                         lastForwardLogTime = now
+                        val windState = windRepository.windState.value
+                        val windSpeed = windState.vector?.speed
+                        val windQuality = windState.quality
                         val gps = data?.gps
                         val verticalSpeed = data?.verticalSpeed?.value
                         val displayVario = data?.displayVario?.value
@@ -117,11 +120,11 @@ class IgcReplayController @Inject constructor(
                         Log.d(
                             TAG,
                             "REPLAY_FORWARD gps=${gps?.latLng?.latitude},${gps?.latLng?.longitude} " +
-                                "gs=${gps?.speed?.value} alt=${gps?.altitude?.value} " +
-                                "v=${verticalSpeed} dv=${displayVario} xc=${xcSoarDisplayVario} " +
-                                "valid=${data?.varioValid} src=${data?.varioSource} te=${data?.teAltitude?.value} " +
-                                "tc30=${tc30} tcAvg=${tcAvg} tAvg=${tAvg} tValid=${data?.currentThermalValid} " +
-                                "circling=${data?.isCircling} windQ=${data?.windQuality} wind=${data?.windSpeed?.value}"
+                            "gs=${gps?.speed?.value} alt=${gps?.altitude?.value} " +
+                            "v=${verticalSpeed} dv=${displayVario} xc=${xcSoarDisplayVario} " +
+                            "valid=${data?.varioValid} src=${data?.varioSource} te=${data?.teAltitude?.value} " +
+                            "tc30=${tc30} tcAvg=${tcAvg} tAvg=${tAvg} tValid=${data?.currentThermalValid} " +
+                            "circling=${data?.isCircling} windQ=${windQuality} wind=${windSpeed}"
                         )
                     }
                     flightDataRepository.update(data, FlightDataRepository.Source.REPLAY)
@@ -527,3 +530,4 @@ class IgcReplayController @Inject constructor(
         emitSample(points.first(), null, qnh)
     }
 }
+

@@ -2,7 +2,6 @@ package com.example.xcpro.sensors
 
 import com.example.dfcards.calculations.ConfidenceLevel
 import org.maplibre.android.geometry.LatLng
-import com.example.xcpro.weather.wind.model.WindSource
 import com.example.xcpro.common.units.AltitudeM
 import com.example.xcpro.common.units.PressureHpa
 import com.example.xcpro.common.units.SpeedMs
@@ -82,7 +81,6 @@ data class AttitudeData(
  * - Raw sensor data (GPS, Barometer, Compass)
  * - Calculated barometric altitude and QNH
  * - Calculated vertical speed (from barometer)
- * - Calculated wind speed and direction
  * - Calculated thermal average
  * - Calculated L/D ratio
  * - Calculated netto variometer
@@ -116,15 +114,6 @@ data class CompleteFlightData(
 
     // AGL (Above Ground Level) - from network service
     val agl: AltitudeM,            // meters above ground (GPS altitude - terrain elevation)
-
-    // Calculated wind
-    val windSpeed: SpeedMs,       // m/s (wind speed magnitude)
-    val windDirection: Float,   // 0-360 deg (direction wind is coming FROM)
-    val windHeadwind: SpeedMs = SpeedMs(0.0),
-    val windCrosswind: SpeedMs = SpeedMs(0.0),
-    val windQuality: Int = 0,
-    val windSource: WindSource = WindSource.NONE,
-    val windLastUpdatedMillis: Long = 0L,
 
     // XCSoar-style thermal metrics for cards/infobox parity
     val thermalAverage: VerticalSpeedMs,  // m/s (TC 30s average climb)

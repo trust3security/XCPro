@@ -9,7 +9,6 @@ import com.example.xcpro.sensors.CirclingDetector
 import com.example.xcpro.sensors.FlightCalculationHelpers
 import com.example.xcpro.sensors.GPSData
 import com.example.xcpro.weather.wind.model.WindState
-import com.example.xcpro.weather.wind.model.WindSource
 import com.example.xcpro.weather.wind.model.WindVector
 import com.example.xcpro.sensors.domain.AirspeedEstimate
 import com.example.xcpro.sensors.domain.AirspeedSource
@@ -197,13 +196,6 @@ internal class CalculateFlightMetricsUseCase(
         val currentThermalLift = flightHelpers.currentThermalLiftRate
         val currentThermalValid = flightHelpers.currentThermalValid
 
-        val windSpeedValue = windVector?.speed?.toFloat() ?: 0f
-        val windDirectionFrom = windVector?.directionFromDeg?.toFloat() ?: 0f
-        val windHeadwind = windState?.headwind ?: 0.0
-        val windCrosswind = windState?.crosswind ?: 0.0
-        val windQuality = windState?.quality ?: 0
-        val windSource = windState?.source ?: WindSource.NONE
-
         return FlightMetricsResult(
             baroAltitude = baroAltitude,
             qnh = qnh,
@@ -240,12 +232,6 @@ internal class CalculateFlightMetricsUseCase(
             currentThermalLiftRate = currentThermalLift,
             currentThermalValid = currentThermalValid,
             calculatedLD = calculatedLD,
-            windSpeedValue = windSpeedValue,
-            windDirectionFrom = windDirectionFrom,
-            windHeadwind = windHeadwind,
-            windCrosswind = windCrosswind,
-            windQuality = windQuality,
-            windSource = windSource,
             teAltitude = teAltitude,
             isCircling = isCircling,
             thermalAverage30sValid = thermalAvg30sValid
@@ -366,12 +352,6 @@ data class FlightMetricsResult(
     val currentThermalLiftRate: Double,
     val currentThermalValid: Boolean,
     val calculatedLD: Float,
-    val windSpeedValue: Float,
-    val windDirectionFrom: Float,
-    val windHeadwind: Double,
-    val windCrosswind: Double,
-    val windQuality: Int,
-    val windSource: WindSource,
     val teAltitude: Double,
     val isCircling: Boolean,
     val thermalAverage30sValid: Boolean

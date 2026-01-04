@@ -55,7 +55,7 @@ class FlightDataCalculator(
     }
     private val locationHistory = mutableListOf<LocationWithTime>()
     private val aglCalculator = SimpleAglCalculator(context)  // KISS: SRTM terrain database
-    private val baroCalculator = BarometricAltitudeCalculator(aglCalculator)  // 🚀 SRTM-based QNH calibration
+    private val baroCalculator = BarometricAltitudeCalculator(aglCalculator)  // ???? SRTM-based QNH calibration
     private val filters = FlightFilters()
     private val flightHelpers = FlightCalculationHelpers(
         scope = scope,
@@ -108,8 +108,8 @@ class FlightDataCalculator(
     private var cachedGPSAltitude = Double.NaN
     private var cachedGPSAccuracy = 15.0
     private var cachedIsGPSFixed = false
-    private var cachedGPSLat = 0.0  // 🚀 For SRTM-based QNH calibration
-    private var cachedGPSLon = 0.0  // 🚀 For SRTM-based QNH calibration
+    private var cachedGPSLat = 0.0  // ???? For SRTM-based QNH calibration
+    private var cachedGPSLon = 0.0  // ???? For SRTM-based QNH calibration
     private var cachedGPS: GPSData? = null  // Full GPS data for calculations
 
     // Cached results from vario loop for GPS loop to use
@@ -118,7 +118,7 @@ class FlightDataCalculator(
      private var cachedBaroData: BaroData? = null
      private var cachedCompassData: CompassData? = null
 
-     // IMU vertical acceleration smoothing for 3‑state Kalman / complementary fusion.
+     // IMU vertical acceleration smoothing for 3???state Kalman / complementary fusion.
      private var lastAccelTimestamp: Long = 0L
      private var smoothedVerticalAccel: Double? = null
     private var macCreadySetting = DEFAULT_MACCREADY
@@ -236,12 +236,12 @@ class FlightDataCalculator(
                 if (isReplayMode) {
                     Log.w(
                         TAG,
-                        "Replay QNH jump detected Δ${qnhLabel} hPa / Δ${altitudeLabel} m - ignoring reset to keep vario stable"
+                        "Replay QNH jump detected ??${qnhLabel} hPa / ??${altitudeLabel} m - ignoring reset to keep vario stable"
                     )
                 } else {
                     Log.w(
                         TAG,
-                        "QNH jump detected Δ${qnhLabel} hPa / Δ${altitudeLabel} m - resetting vario filters"
+                        "QNH jump detected ??${qnhLabel} hPa / ??${altitudeLabel} m - resetting vario filters"
                     )
                     varioSuite.resetAll()
                     filters.baroFilter.reset()

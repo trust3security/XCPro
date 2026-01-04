@@ -34,10 +34,8 @@ class WindEkfUseCase(
     private var lastTimestamp = 0L
     private var sampleCount = 0
     private var blackoutUntil = 0L
-
     var lastRejectReason: DropReason? = null
         private set
-
     var lastRejectTimestamp: Long = 0L
         private set
 
@@ -54,6 +52,7 @@ class WindEkfUseCase(
         gps: GpsSample,
         airspeed: AirspeedSample?,
         isCircling: Boolean,
+        turnRateRad: Double?
         turnRateRad: Double?
     ): Result? {
         val tas = airspeed?.trueMs ?: Double.NaN

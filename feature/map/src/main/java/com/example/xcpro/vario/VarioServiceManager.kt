@@ -28,11 +28,11 @@ import kotlinx.coroutines.launch
 @Singleton
 open class VarioServiceManager @Inject constructor(
     @ApplicationContext private val context: Context,
+    val unifiedSensorManager: UnifiedSensorManager,
     private val sinkProvider: StillAirSinkProvider,
     private val flightDataRepository: FlightDataRepository,
     private val levoVarioPreferencesRepository: LevoVarioPreferencesRepository,
-    private val windRepository: WindSensorFusionRepository,
-    val unifiedSensorManager: UnifiedSensorManager
+    private val windRepository: WindSensorFusionRepository
 ) {
 
     companion object {
@@ -162,3 +162,4 @@ open class VarioServiceManager @Inject constructor(
         return result
     }
 }
+

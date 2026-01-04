@@ -281,3 +281,5 @@ class MapScreenViewModelTest {
         defaultDispatcher = mainDispatcherRule.dispatcher
     )
 }
+
+

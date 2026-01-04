@@ -60,7 +60,7 @@ internal class MapScreenObservers(
                     val minutes = elapsedMinutes % 60L
                     val formattedFlightTime = "${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}"
 
-                    val liveData = convertToRealTimeFlightData(data)
+                    val liveData = convertToRealTimeFlightData(data, wind)
                         .copy(flightTime = formattedFlightTime)
                         .applyWindState(wind)
                     flightDataManager.updateLiveFlightData(liveData)
