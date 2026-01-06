@@ -18,7 +18,9 @@ It must **not** be used for:
 - Wind EKF still needs **real** TAS/IAS input (external vario). Phone-derived TAS must not feed EKF.
 - Add external/manual wind override selection (EXTERNAL > MANUAL; AUTO only if newer than manual).
 - Replay currently auto-navigates back when it starts; future polish could offer a dedicated "View on Map" action instead.
+ - Implementation plan for future airspeed wiring: `docs/Cards/TAS-IAS-Wiring-Plan.md`.
 
 ### Implemented Since This Note
 - G-load gating for EKF is live (raw accelerometer magnitude + smoothing).
 - Wind-based TAS proxy uses wind-to vector math (air = ground - wind).
+ - EKF gating now requires updated GPS + airspeed samples and uses VTakeoff fallback 10 m/s.

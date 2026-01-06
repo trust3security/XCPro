@@ -25,7 +25,8 @@ Implemented:
 
 Remaining gaps:
 1) **TAS wiring (EKF input):** airspeed flow exists, but no BLE/real-air source is feeding it yet; EKF remains inactive in live flights.
-   - Also align EKF gate to XCSoar: require airspeed_real, TAS > VTakeoff (polar fallback 10 m/s), and only run on updated speed samples.
+   - EKF gating now mirrors XCSoar: require airspeed_real, TAS > VTakeoff (polar fallback 10 m/s), and only run on updated speed samples.
+   - Implementation plan: `docs/Cards/TAS-IAS-Wiring-Plan.md`.
 2) **External/manual wind selection:** selection policy is defined (AUTO if newer than manual, else EXTERNAL, else MANUAL), but UI/external feeds still need to populate overrides.
 3) **Tests:** g-load gating, blackout timing, staleness, and replay determinism coverage is missing.
 4) **Doc drift:** ensure other docs refer to `WindSensorFusionRepository`, not `WindRepository`.

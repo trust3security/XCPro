@@ -9,6 +9,7 @@ Provide a **pilot-facing TAS card** and a **stable TAS estimate** using **phone 
 - XCPro’s wind math uses **wind-to** vectors; TAS proxy uses `air = ground - wind_to` in `WindEstimator`.
 - Wind SSOT now lives in `WindSensorFusionRepository` with a 1-hour staleness window.
 - EKF gating requires **real** airspeed; we must wire external (BLE vario) TAS/IAS into wind inputs.
+- EKF gating now requires updated GPS + airspeed samples and uses VTakeoff fallback 10 m/s.
 - G-load gating (raw accelerometer magnitude + smoothing) is implemented for the wind EKF.
 
 ## XCSoar reference (what we’re mirroring)
