@@ -63,6 +63,7 @@ A change is ready when:
 ---
 
 ## 6) Documentation Rules
+- Keep files ASCII or UTF-8 only; see CODING_RULES.md -> File Encoding Rules.
 - Add/update **KDoc** for public APIs.
 - Add top‑of‑file header describing role and invariants.
 - Use `// AI-NOTE:` before intent‑critical rationale so future AI tools preserve design.

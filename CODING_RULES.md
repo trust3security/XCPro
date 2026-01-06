@@ -212,7 +212,15 @@ Forbidden:
 
 ---
 
-## 14. Testing Rules
+## 14. File Encoding Rules
+
+- Keep source files ASCII or UTF-8 (no smart quotes or special punctuation)
+- Avoid hidden non-ASCII characters in code, docs, and commit messages
+- If a file is not UTF-8, edit with byte-safe tools and document why
+
+---
+
+## 15. Testing Rules
 
 Must be testable without Android:
 - Repositories (with fakes)
@@ -223,7 +231,7 @@ No “hard to test” exceptions.
 
 ---
 
-## 15. AI / Codex Rules
+## 16. AI / Codex Rules
 
 Assume:
 - AI forgets everything
