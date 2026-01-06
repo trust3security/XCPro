@@ -9,6 +9,7 @@ import com.example.xcpro.sensors.domain.CalculateFlightMetricsUseCase
 import com.example.xcpro.sensors.domain.FlightMetricsRequest
 import com.example.xcpro.weather.wind.model.WindState
 import kotlinx.coroutines.flow.MutableStateFlow
+import java.util.Locale
 
 /**
  * Builds display-ready flight frames from fused sensor inputs.
@@ -37,6 +38,7 @@ internal class FlightDataEmitter(
         baro: BaroData?,
         cachedVarioResult: ModernVarioResult?,
         windState: WindState?,
+        isFlying: Boolean,
         replayRealVarioMs: Double?,
         replayRealVarioTimestamp: Long,
         macCreadySetting: Double,
@@ -73,7 +75,8 @@ internal class FlightDataEmitter(
                 varioGpsValue = varioGpsValueForMetrics,
                 baroResult = baroResult,
                 windState = windState,
-                varioValidUntil = state.varioValidUntil
+                varioValidUntil = state.varioValidUntil,
+                isFlying = isFlying
             )
         )
 
@@ -133,24 +136,22 @@ internal class FlightDataEmitter(
         state.lastUpdateTime = currentTime
 
         if (currentTime % 1000 < 100) {
-            logSlowSnapshot(
-                tag = tag,
-                varioMode = if (cachedVarioResult != null) "PRIORITY2-50Hz(IMU+BARO)" else "PRIORITY2-50Hz(BARO)",
-                gpsAltitudeMeters = gps.altitude.value,
-                baroAltitudeMeters = metrics.baroAltitude,
-                rawBaroVarioMs = varioResultInput.verticalSpeed,
-                levoVarioMs = metrics.verticalSpeed,
-                levoSource = metrics.varioSource,
-                levoValid = metrics.varioValid,
-                xcSoarVarioMs = metrics.xcSoarVario,
-                xcSoarVarioValid = metrics.xcSoarVarioValid,
-                gpsVarioMs = metrics.verticalSpeed.takeIf { metrics.varioSource == "GPS" },
-                pressureVarioMs = metrics.verticalSpeed.takeIf { metrics.varioSource == "PRESSURE" },
-                speedMs = gps.speed.value,
-                aglMeters = flightHelpers.currentAGL,
-                qnhHpa = baroResult?.qnh ?: Double.NaN,
-                calibrated = (baroResult?.isCalibrated == true),
-                autoQnhSessionActive = autoQnhSessionActive
+            val gpsVarioMs = metrics.verticalSpeed.takeIf { metrics.varioSource == "GPS" }
+            val pressureVarioMs = metrics.verticalSpeed.takeIf { metrics.varioSource == "PRESSURE" }
+            Log.d(
+                tag,
+                "[SLOW] " +
+                    (if (cachedVarioResult != null) "PRIORITY2-50Hz(IMU+BARO)" else "PRIORITY2-50Hz(BARO)") + " " +
+                    "GPSalt=${gps.altitude.value.toInt()}m BaroAlt=${metrics.baroAltitude.toInt()}m " +
+                    "RawBaro=${String.format(Locale.US, "%.2f", varioResultInput.verticalSpeed)} " +
+                    "Levo=${String.format(Locale.US, "%.2f", metrics.verticalSpeed)}(src=${metrics.varioSource},val=${metrics.varioValid}) " +
+                    "XC=${String.format(Locale.US, "%.2f", metrics.xcSoarVario)}(val=${metrics.xcSoarVarioValid}) " +
+                    "GPSv=${gpsVarioMs?.let { String.format(Locale.US, "%.2f", it) } ?: "--"} " +
+                    "PressV=${pressureVarioMs?.let { String.format(Locale.US, "%.2f", it) } ?: "--"} " +
+                    "Spd=${String.format(Locale.US, "%.1f", gps.speed.value)} " +
+                    "AGL=${flightHelpers.currentAGL.toInt()} " +
+                    "QNH=${String.format(Locale.US, "%.1f", baroResult?.qnh ?: Double.NaN)} " +
+                    "cal=${baroResult?.isCalibrated == true} autoCal=$autoQnhSessionActive"
             )
         }
     }

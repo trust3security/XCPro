@@ -7,6 +7,7 @@ import android.util.Log
 import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.glider.StillAirSinkProvider
 import com.example.xcpro.sensors.FlightDataCalculator
+import com.example.xcpro.sensors.FlightStateSource
 import com.example.xcpro.sensors.SensorFusionRepository
 import com.example.xcpro.sensors.UnifiedSensorManager
 import com.example.xcpro.weather.wind.data.WindSensorFusionRepository
@@ -32,6 +33,7 @@ open class VarioServiceManager @Inject constructor(
     private val sinkProvider: StillAirSinkProvider,
     private val flightDataRepository: FlightDataRepository,
     private val levoVarioPreferencesRepository: LevoVarioPreferencesRepository,
+    private val flightStateSource: FlightStateSource,
     private val windRepository: WindSensorFusionRepository
 ) {
 
@@ -49,7 +51,8 @@ open class VarioServiceManager @Inject constructor(
             sensorDataSource = unifiedSensorManager,
             scope = serviceScope,
             sinkProvider = sinkProvider,
-            windStateFlow = windRepository.windState
+            windStateFlow = windRepository.windState,
+            flightStateSource = flightStateSource
         )
 
     private var running = false

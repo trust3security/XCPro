@@ -7,6 +7,7 @@ import com.example.xcpro.common.di.DefaultDispatcher
 import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.glider.StillAirSinkProvider
 import com.example.xcpro.sensors.FlightDataCalculator
+import com.example.xcpro.sensors.FlightStateSource
 import com.example.xcpro.sensors.SensorFusionRepository
 import com.example.xcpro.vario.VarioServiceManager
 import com.example.xcpro.weather.wind.data.WindSensorFusionRepository
@@ -29,6 +30,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.Instant
 
 /**
  * Orchestrates IGC replay sessions and forwards replay samples into the fused sensor pipeline.
@@ -42,6 +44,7 @@ class IgcReplayController @Inject constructor(
     private val varioServiceManager: VarioServiceManager,
     private val sinkProvider: StillAirSinkProvider,
     private val windRepository: WindSensorFusionRepository,
+    private val flightStateSource: FlightStateSource,
     private val replaySensorSource: ReplaySensorSource,
     @DefaultDispatcher private val dispatcher: CoroutineDispatcher
 ) {
@@ -94,6 +97,7 @@ class IgcReplayController @Inject constructor(
             scope = scope,
             sinkProvider = sinkProvider,
             windStateFlow = windRepository.windState,
+            flightStateSource = flightStateSource,
             enableAudio = true,
             isReplayMode = true
         )
@@ -179,7 +183,7 @@ class IgcReplayController @Inject constructor(
         var failure: Throwable? = null
         withContext(scope.coroutineContext) {
             try {
-                val log = appContext.loadIgcLog(uri)
+                val log = loadIgcLog(uri)
                 Log.i(TAG, "REPLY_LOAD Loaded IGC file ${displayName ?: uri} with ${log.points.size} raw points (qnh=${log.metadata.qnhHpa})")
                 prepareSession(
                     log = log,
@@ -203,7 +207,7 @@ class IgcReplayController @Inject constructor(
         var failure: Throwable? = null
         withContext(scope.coroutineContext) {
             try {
-                val log = appContext.loadIgcAssetLog(assetPath)
+                val log = loadIgcAssetLog(assetPath)
                 val name = displayName ?: assetPath.substringAfterLast('/')
                 val uri = Uri.parse("$ASSET_URI_PREFIX$assetPath")
                 Log.i(TAG, "REPLY_LOAD Loaded IGC asset $assetPath with ${log.points.size} raw points (qnh=${log.metadata.qnhHpa})")
@@ -469,6 +473,34 @@ class IgcReplayController @Inject constructor(
         if (simConfig.mode != ReplayMode.REALTIME_SIM) return true
         if (lastGpsEmitTimestamp == Long.MIN_VALUE) return true
         return (timestampMillis - lastGpsEmitTimestamp) >= simConfig.gpsStepMs
+    }
+
+    private fun loadIgcLog(fileUri: Uri): IgcLog =
+        appContext.contentResolver.openInputStream(fileUri)?.use { stream ->
+            IgcParser.parse(stream)
+        } ?: throw IllegalArgumentException("Unable to open IGC file")
+
+    private fun loadIgcAssetLog(assetPath: String): IgcLog =
+        appContext.assets.open(assetPath).use { stream ->
+            IgcParser.parse(stream)
+        }
+
+    private fun logReplaySessionPrep(
+        selection: Selection,
+        pointCount: Int,
+        startMillis: Long,
+        endMillis: Long,
+        qnh: Double,
+        tag: String
+    ) {
+        val startIso = Instant.ofEpochMilli(startMillis).toString()
+        val endIso = Instant.ofEpochMilli(endMillis).toString()
+        val durationSec = (endMillis - startMillis) / 1000
+        Log.i(
+            tag,
+            "Prepared replay '${selection.displayName ?: selection.uri}' " +
+                "points=$pointCount duration=${durationSec}s start=$startIso end=$endIso qnh=${"%.1f".format(qnh)}"
+        )
     }
 
     companion object {

@@ -5,9 +5,31 @@ _This design must comply with our guardrails: see `ARCHITECTURE.md` (SSOT/UDF/DI
 Goal: make wind estimation a first-class fusion domain (own SSOT, buffers, and validation) instead of deriving wind from downstream flight snapshots. This mirrors XCSoar's dedicated wind "computer" while fitting our Kotlin/DI/Flow stack.
 
 ## Current state
-- `WindSensorFusionRepository` consumes normalized raw inputs (GPS + optional baro/heading/airspeed) via a `SensorDataSource` adapter.
+- `WindSensorFusionRepository` consumes normalized raw inputs (GPS + optional baro/heading/airspeed/g-load) via a `SensorDataSource` adapter.
 - Replay/source gating is handled inside the wind repository by switching input flows when the active source changes.
 - Airspeed input is optional and not wired yet; EKF outputs only when an independent airspeed stream is provided.
+- G-load gating (Option B) is implemented using raw accelerometer magnitude with a short low-pass and EKF blackout.
+- Wind is no longer carried in `CompleteFlightData`; UI uses `WindState` only.
+
+## Implementation status (as of 2026-01-06)
+Implemented:
+- Wind SSOT (`WindSensorFusionRepository`) with circling, EKF, store, selector in Kotlin.
+- Raw sensor input adapter + replay/live source gating.
+- G-load gating for EKF using raw accelerometer magnitude (Option B).
+- UI and consumers source wind from `WindState` only (no wind in `CompleteFlightData`).
+- EKF gating parameters aligned to XCSoar (turn-rate 20 deg/s, stride 10, quality ramp 30/120/600, ~3s blackout).
+- Circling detector thresholds aligned to XCSoar (turn-rate 4 deg/s, enter 15s, exit 10s).
+- Circling detector parity: flying-state gate + turn-rate clamp/low-pass; no ground-speed gate.
+- Flying-state gating now mirrors XCSoar (AGL >= 300 m override, altitude-based takeoff-speed reduction when no airspeed/AGL) and is wired into circling detection + EKF reset logic.
+- Takeoff-speed fallback is 10 m/s (XCSoar default) until polar `VTakeoff` wiring exists.
+
+Remaining gaps:
+1) **TAS wiring (EKF input):** airspeed flow exists, but no BLE/real-air source is feeding it yet; EKF remains inactive in live flights.
+   - Also align EKF gate to XCSoar: require airspeed_real, TAS > VTakeoff (polar fallback 10 m/s), and only run on updated speed samples.
+2) **External/manual wind selection:** selection policy is defined (AUTO if newer than manual, else EXTERNAL, else MANUAL), but UI/external feeds still need to populate overrides.
+3) **Tests:** g-load gating, blackout timing, staleness, and replay determinism coverage is missing.
+4) **Doc drift:** ensure other docs refer to `WindSensorFusionRepository`, not `WindRepository`.
+5) **Polar takeoff speed:** wire `VTakeoff` from the polar into the flying-state detector (currently fixed at 10 m/s fallback).
 
 ## Design principles
 - **Single Source of Truth per domain:** Wind owns its own SSOT flow (`StateFlow<WindState>`). No other layer re-derives wind.
@@ -40,21 +62,31 @@ SensorDataSource (raw flows)
   - Threading: `Dispatchers.Default`; no IO inside.
 
 - **CirclingWindUseCase**
-  - Detect sustained circling (turn rate + groundspeed thresholds, hysteresis).
+  - Detect sustained circling (turn-rate threshold + enter/exit timers); gated by flying state.
   - Produce wind estimate + quality from a full circle; reset on gaps/time-warp.
+  - Reset immediately when circling flag goes false (XCSoar parity; no inactivity grace).
+  - XCSoar algorithm: wind direction at max ground speed, magnitude = (max-min)/2 over one full circle.
+  - Reject if average sample interval > 2s or wind magnitude >= 30 m/s; time-warp (>30s) resets.
+  - Quality 1-5 from fit error, with penalties for early circles (<2/<3).
 
 - **WindEkfUseCase**
   - Update step using true airspeed + groundspeed vector; blackout during high turn rate or g-load; quality ramp with sample count.
   - XCSoar gates EKF to "real" airspeed only (instrument/dynamic pressure); do not feed wind-derived TAS to avoid circularity.
-  - Reference gates: requires flying + track/ground speed updates, TAS > 1 m/s, turn rate > ~20 deg/s or |g-load-1| > 0.3 triggers ~3s blackout; emit every N samples (XCSoar uses 10).
+  - Reference gates (XCSoar): requires flying, updated ground speed + airspeed samples, airspeed_real, and TAS > VTakeoff (polar fallback 10 m/s).
+  - Turn rate > ~20 deg/s or |g-load-1| > 0.3 triggers ~3s blackout; emit every N samples (XCSoar uses 10).
+  - Circling resets the EKF sample counter so the next output is delayed by another 10 seconds.
+  - **Direct-use behavior:** EKF results are published directly while active (still stored for history).
   - **G-load source (Option B):** derive `gLoad` from raw accelerometer magnitude (`TYPE_ACCELEROMETER`) and apply a short low-pass (~200 ms) before gating. Treat samples as unreliable if stale or sensor accuracy is poor.
 
 - **WindStore**
   - Slot measurements with altitude/time/quality weighting (1 km altitude band, ~1 h time decay, override rule).
   - Provide freshest non-stale estimate or return empty if stale.
+  - Recompute only when updated or |Δalt| > 100 m; discard samples if time/alt diff >= 1.
+  - Weighting factors match XCSoar (quality 100 / altitude 100 / time 200) with 1 h time window.
+  - Reject estimated wind magnitude >= 30 m/s; quality 6 reserved for overrides (manual/external).
 
 - **WindSelectorUseCase**
-  - Priority: EKF (if available) -> Circling -> External/manual (future) -> None.
+  - Priority: AUTO (EKF/circling/store) if newer than manual -> EXTERNAL -> MANUAL -> NONE.
   - Compute headwind/crosswind from heading.
 
 ### Data contracts
@@ -94,19 +126,22 @@ SensorDataSource (raw flows)
 - Concurrency: cancellation and source-switch reset tests.
 
 ## Migration plan
+Completed migration steps:
 1) Add data models (`GpsSample`, `PressureSample`, `AirspeedSample`, `HeadingSample`, `GLoadSample`, `WindState`) in `feature/map/src/main/java/com/example/xcpro/weather/wind/model`.
-2) Extract current wind math from `WindRepository` into use-cases: circling, EKF, store, selector (pure Kotlin, no Android).
+2) Extract wind math into use-cases: circling, EKF, store, selector (pure Kotlin, no Android).
 3) Create `WindSensorFusionRepository`:
-   - Subscribe directly to sensor flows (`SensorDataSource` or a thin `SensorFrontEnd` adapter), not `CompleteFlightData`.
+   - Subscribe directly to sensor flows (`SensorDataSource`), not `CompleteFlightData`.
    - Implement source gating, staleness, and resets.
    - Expose `windState: StateFlow<WindState>`.
-   - (Optional) Add `GLoadSample` input for EKF gating using raw accelerometer magnitude.
+   - Add `GLoadSample` input for EKF gating using raw accelerometer magnitude.
 4) Update consumers:
    - `FlightDataCalculator` reads `windState` (read-only) for display/metrics.
    - UI/ViewModels observe `windState` instead of wind fields in `CompleteFlightData`.
-5) Deprecate old `WindRepository` and remove wind derivation from `FlightDataRepository` consumers.
+
+Remaining migration work:
+5) Deprecate/remove legacy `WindRepository` references in docs/utilities (if any remain).
 6) Add tests (unit + integration with fake sensor streams) and replay determinism checks.
-7) Cleanup: delete `WindRepository` and any duplicate wind fields/paths once all consumers are on `windState`; ensure only one wind SSOT remains.
+7) Cleanup: delete any duplicate wind derivation paths once all consumers are on `windState`; ensure only one wind SSOT remains.
 
 ## Notes from XCSoar parity
 - XCSoar keeps wind separate: circling + EKF + store, owning raw inputs and publishing a chosen wind plus source and quality. We replicate the ownership pattern but modernize with DI, coroutines, and immutable flows.

@@ -12,7 +12,6 @@ import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -27,7 +26,7 @@ class WindSensorInputAdapter @Inject constructor(
 ) {
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
 
-    fun adapt(source: SensorDataSource): WindSensorInputs {
+    fun adapt(source: SensorDataSource, airspeedSource: AirspeedDataSource): WindSensorInputs {
         val gpsFlow: StateFlow<GpsSample?> = source.gpsFlow
             .map { gps ->
                 gps?.let {
@@ -78,8 +77,8 @@ class WindSensorInputAdapter @Inject constructor(
             .scan(null as GLoadSample?) { previous, current -> smoothGLoad(previous, current) }
             .stateIn(scope, SharingStarted.Eagerly, null)
 
-        // Airspeed is optional and not wired yet (no independent TAS/IAS source).
-        val airspeedFlow: StateFlow<AirspeedSample?> = MutableStateFlow(null)
+        // Airspeed is optional; provide a real source when available (e.g., external vario).
+        val airspeedFlow: StateFlow<AirspeedSample?> = airspeedSource.airspeedFlow
 
         return WindSensorInputs(
             gps = gpsFlow,

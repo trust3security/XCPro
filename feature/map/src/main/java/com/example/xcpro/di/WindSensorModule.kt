@@ -2,10 +2,18 @@ package com.example.xcpro.di
 
 import android.content.Context
 import com.example.xcpro.replay.ReplaySensorSource
+import com.example.xcpro.sensors.FlightStateRepository
+import com.example.xcpro.sensors.FlightStateSource
 import com.example.xcpro.sensors.SensorDataSource
 import com.example.xcpro.sensors.UnifiedSensorManager
+import com.example.xcpro.weather.wind.data.AirspeedDataSource
+import com.example.xcpro.weather.wind.data.ExternalAirspeedRepository
+import com.example.xcpro.weather.wind.data.ReplayAirspeedRepository
 import com.example.xcpro.weather.wind.data.WindSensorInputAdapter
 import com.example.xcpro.weather.wind.data.WindSensorInputs
+import com.example.xcpro.weather.wind.data.WindOverrideRepository
+import com.example.xcpro.weather.wind.data.WindOverrideSource
+import com.example.xcpro.weather.wind.domain.WindSelectionUseCase
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -44,16 +52,48 @@ object WindSensorModule {
     @Provides
     @Singleton
     @LiveSource
+    fun provideLiveAirspeedSource(
+        externalAirspeedRepository: ExternalAirspeedRepository
+    ): AirspeedDataSource = externalAirspeedRepository
+
+    @Provides
+    @Singleton
+    @ReplaySource
+    fun provideReplayAirspeedSource(
+        replayAirspeedRepository: ReplayAirspeedRepository
+    ): AirspeedDataSource = replayAirspeedRepository
+
+    @Provides
+    @Singleton
+    fun provideWindOverrideSource(
+        repository: WindOverrideRepository
+    ): WindOverrideSource = repository
+
+    @Provides
+    @Singleton
+    fun provideWindSelectionUseCase(): WindSelectionUseCase = WindSelectionUseCase()
+
+    @Provides
+    @Singleton
+    fun provideFlightStateSource(
+        repository: FlightStateRepository
+    ): FlightStateSource = repository
+
+    @Provides
+    @Singleton
+    @LiveSource
     fun provideLiveWindInputs(
         adapter: WindSensorInputAdapter,
-        @LiveSource source: SensorDataSource
-    ): WindSensorInputs = adapter.adapt(source)
+        @LiveSource source: SensorDataSource,
+        @LiveSource airspeedSource: AirspeedDataSource
+    ): WindSensorInputs = adapter.adapt(source, airspeedSource)
 
     @Provides
     @Singleton
     @ReplaySource
     fun provideReplayWindInputs(
         adapter: WindSensorInputAdapter,
-        @ReplaySource source: SensorDataSource
-    ): WindSensorInputs = adapter.adapt(source)
+        @ReplaySource source: SensorDataSource,
+        @ReplaySource airspeedSource: AirspeedDataSource
+    ): WindSensorInputs = adapter.adapt(source, airspeedSource)
 }

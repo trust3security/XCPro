@@ -86,7 +86,8 @@ class LevoVarioPipelineTest {
                 varioGpsValue = climbMs,
                 baroResult = null,
                 windState = null,
-                varioValidUntil = time + 500
+                varioValidUntil = time + 500,
+                isFlying = true
             )
         )
 
@@ -101,7 +102,8 @@ class LevoVarioPipelineTest {
                     varioGpsValue = climbMs,
                     baroResult = null,
                     windState = null,
-                    varioValidUntil = time + 500
+                    varioValidUntil = time + 500,
+                    isFlying = true
                 )
             )
             time += 1_000

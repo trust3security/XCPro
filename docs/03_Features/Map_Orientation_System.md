@@ -1,6 +1,6 @@
 # Map Orientation System - Technical Reference
 
-**Last Updated:** 2025-01-08
+**Last Updated:** 2026-01-04
 **Status:** ✅ Production
 **Critical:** Read this BEFORE modifying orientation code
 
@@ -131,7 +131,8 @@ The map orientation system controls how the map rotates relative to the aircraft
 - Aircraft icon still shows actual track, so you see drift relative to wind immediately
 
 **Data Source**:
-- Wind direction/speed solved by `WindRepository` (direction stored as "from")
+- Wind direction/speed solved by `WindSensorFusionRepository` via `WindState`
+  (direction stored as "from")
 - Falls back to last-known value if wind confidence drops
 
 **When To Use**:

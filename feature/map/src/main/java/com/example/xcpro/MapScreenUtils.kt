@@ -52,7 +52,7 @@ internal fun formatBaroGpsDelta(
 }
 
 
-internal fun convertToRealTimeFlightData(
+fun convertToRealTimeFlightData(
     completeData: CompleteFlightData,
     windState: WindState?
 ): RealTimeFlightData {

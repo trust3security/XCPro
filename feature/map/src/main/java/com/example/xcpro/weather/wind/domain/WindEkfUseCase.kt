@@ -10,8 +10,8 @@ import kotlin.math.max
 import kotlin.math.sin
 
 class WindEkfUseCase(
-    private val maxTurnRateRad: Double = Math.toRadians(30.0),
-    private val blackoutDurationMs: Long = 1_500,
+    private val maxTurnRateRad: Double = Math.toRadians(20.0),
+    private val blackoutDurationMs: Long = 3_000,
     private val minTrueAirspeed: Double = 4.5
 ) {
 
@@ -143,15 +143,15 @@ class WindEkfUseCase(
     }
 
     companion object {
-        private const val SAMPLE_STRIDE = 5
+        private const val SAMPLE_STRIDE = 10
         private const val TIME_WARP_MS = 30_000
         private const val G_LOAD_THRESHOLD = 0.3
         private const val G_LOAD_FRESHNESS_MS = 500L
 
         private fun counterToQuality(counter: Int): Int = when {
-            counter >= 300 -> 4
-            counter >= 80 -> 3
-            counter >= 20 -> 2
+            counter >= 600 -> 4
+            counter >= 120 -> 3
+            counter >= 30 -> 2
             else -> 1
         }
     }

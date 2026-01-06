@@ -42,6 +42,30 @@ class CirclingWindTest {
         assertTrue("Expected usable quality result", result.quality >= 2)
     }
 
+    @Test
+    fun `circling estimator resets immediately when circling stops`() {
+        val estimator = CirclingWind()
+        val samples = generateCircularSamples().take(6)
+        samples.forEach { estimator.addSample(it) }
+
+        val sizeBefore = estimator.sampleSize()
+        assertTrue("Expected samples before reset", sizeBefore > 0)
+
+        val lastTimestamp = samples.last().timestampMillis
+        estimator.addSample(
+            CirclingWindSample(
+                timestampMillis = lastTimestamp + SAMPLE_INTERVAL_MS,
+                trackRad = 0.0,
+                groundSpeed = 10.0,
+                isCircling = false
+            )
+        )
+
+        assertTrue("Expected samples cleared after circling=false", estimator.sampleSize() == 0)
+        assertTrue("Expected circleCount reset", estimator.circleCount() == 0)
+        assertTrue("Expected currentCircle reset", estimator.currentCircle() == 0.0)
+    }
+
     private fun CirclingWind.debugState(): String {
         val circleCount: Int = getFieldValue("circleCount")
         val currentCircle: Double = getFieldValue("currentCircle")
@@ -126,6 +150,15 @@ class CirclingWindTest {
 
         return "analysis: samples=$size circleCount=$circleCount magnitude=$magnitude residual=$residual quality=$quality idxMax=$idxMax idxMin=$idxMin avgSpacing=$avgSpacing"
     }
+
+    private fun CirclingWind.sampleSize(): Int {
+        val samples: ArrayDeque<*> = getFieldValue("samples")
+        return samples.size
+    }
+
+    private fun CirclingWind.circleCount(): Int = getFieldValue("circleCount")
+
+    private fun CirclingWind.currentCircle(): Double = getFieldValue("currentCircle")
 
     private fun CirclingWind.snapshotSamples(): List<SampleSnapshot> {
         val samples: ArrayDeque<*> = getFieldValue("samples")

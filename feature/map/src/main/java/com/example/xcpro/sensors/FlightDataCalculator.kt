@@ -11,6 +11,7 @@ import com.example.xcpro.sensors.FlightDataConstants
 import com.example.xcpro.sensors.FlightFilters
 import com.example.xcpro.sensors.VarioDiagnosticsSample
 import com.example.xcpro.sensors.domain.CalculateFlightMetricsUseCase
+import com.example.xcpro.sensors.domain.FlyingState
 import com.example.xcpro.sensors.domain.WindEstimator
 import com.example.xcpro.weather.wind.model.WindState
 import kotlinx.coroutines.CoroutineScope
@@ -30,6 +31,7 @@ class FlightDataCalculator(
     private val scope: CoroutineScope,
     private val sinkProvider: StillAirSinkProvider,
     private val windStateFlow: StateFlow<WindState>,
+    private val flightStateSource: FlightStateSource,
     private val enableAudio: Boolean = true,
     private val isReplayMode: Boolean = false
 ): SensorFusionRepository {
@@ -69,6 +71,7 @@ class FlightDataCalculator(
         windEstimator = WindEstimator(sinkProvider)
     )
     private var latestWindState: WindState? = null
+    private var latestFlightState: FlyingState? = null
     private var lastGpsFixTimestampForGpsVario: Long = 0L
     private val varioSuite = VarioSuite()
     private val audioController = VarioAudioController(context, scope, enableAudio)
@@ -126,6 +129,7 @@ class FlightDataCalculator(
 
     init {
         scope.launch { windStateFlow.collect { latestWindState = it } }
+        scope.launch { flightStateSource.flightState.collect { latestFlightState = it } }
 
         // Decoupled sample rates: high-speed baro+IMU loop and slower GPS loop.
         // HIGH-SPEED VARIO LOOP: Barometer + IMU (50Hz - unleashed!)
@@ -330,6 +334,7 @@ class FlightDataCalculator(
                     baro = cachedBaroData,
                     cachedVarioResult = cachedVarioResult,
                     windState = latestWindState,
+                    isFlying = latestFlightState?.isFlying == true,
                     replayRealVarioMs = replayRealVarioMs,
                     replayRealVarioTimestamp = replayRealVarioTimestamp,
                     macCreadySetting = macCreadySetting,
@@ -421,6 +426,7 @@ class FlightDataCalculator(
                 baro = cachedBaroData,
                 cachedVarioResult = cachedVarioResult,
                 windState = latestWindState,
+                isFlying = latestFlightState?.isFlying == true,
                 replayRealVarioMs = replayRealVarioMs,
                 replayRealVarioTimestamp = replayRealVarioTimestamp,
                 macCreadySetting = macCreadySetting,

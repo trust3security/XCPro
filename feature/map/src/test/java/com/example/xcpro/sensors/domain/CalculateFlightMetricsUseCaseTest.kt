@@ -89,7 +89,8 @@ class CalculateFlightMetricsUseCaseTest {
                         lastCalibrationTime = 0L
                     ),
                     windState = null,
-                    varioValidUntil = time + 500
+                    varioValidUntil = time + 500,
+                    isFlying = true
                 )
             )
             time += 1000
@@ -115,7 +116,8 @@ class CalculateFlightMetricsUseCaseTest {
                         lastCalibrationTime = time
                     ),
                     windState = null,
-                    varioValidUntil = time + 500
+                    varioValidUntil = time + 500,
+                    isFlying = true
                 )
         )
         // TC30s should still reflect ~2 m/s average, not jump
@@ -148,7 +150,8 @@ class CalculateFlightMetricsUseCaseTest {
                     lastCalibrationTime = 0L
                 ),
                 windState = null, // no wind vector -> forces GPS fallback
-                varioValidUntil = time + 500
+                varioValidUntil = time + 500,
+                isFlying = true
             )
         )
 
@@ -171,7 +174,8 @@ class CalculateFlightMetricsUseCaseTest {
                     varioGpsValue = 0.5,
                     baroResult = null,
                     windState = null,
-                    varioValidUntil = time + 500
+                    varioValidUntil = time + 500,
+                    isFlying = true
                 )
             )
             time += 1000; altitude += 0.5
@@ -186,7 +190,8 @@ class CalculateFlightMetricsUseCaseTest {
                 varioGpsValue = 15.0,
                 baroResult = null,
                 windState = null,
-                varioValidUntil = time + 500
+                varioValidUntil = time + 500,
+                isFlying = true
             )
         )
         val res = useCase.execute(
@@ -198,7 +203,8 @@ class CalculateFlightMetricsUseCaseTest {
                 varioGpsValue = 0.5,
                 baroResult = null,
                 windState = null,
-                varioValidUntil = time + 1500
+                varioValidUntil = time + 1500,
+                isFlying = true
             )
         )
         // average should remain close to steady 0.5 m/s despite spike
@@ -221,7 +227,8 @@ class CalculateFlightMetricsUseCaseTest {
                     varioGpsValue = 1.0,
                     baroResult = null,
                     windState = null,
-                    varioValidUntil = time + 500
+                    varioValidUntil = time + 500,
+                    isFlying = true
                 )
             )
             time += 1_000
@@ -237,7 +244,8 @@ class CalculateFlightMetricsUseCaseTest {
                 varioGpsValue = 1.0,
                 baroResult = null,
                 windState = null,
-                varioValidUntil = time + 500
+                varioValidUntil = time + 500,
+                isFlying = true
             )
         )
 

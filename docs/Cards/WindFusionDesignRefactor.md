@@ -85,6 +85,21 @@ Green build:
 - [x] IM3 complete
 - [x] IM4 complete
 
+## Current Implementation Status (as of 2026-01-06)
+- Wind SSOT is live: `WindSensorFusionRepository` is wired and consumes raw sensor primitives via `WindSensorInputAdapter`.
+- Wind is no longer carried on `CompleteFlightData`; UI derives wind from `WindState` only (via `MapScreenObservers.applyWindState`).
+- G-load gating (Option B) is implemented using raw accelerometer magnitude with smoothing and EKF blackout.
+- Replay/live source switching resets wind buffers and uses replay timestamps for determinism.
+- Wind domain pieces exist (circling estimator, EKF, store, weighted list) with EKF direct-use; EKF only produces output when TAS is supplied.
+- Flying-state detection now mirrors XCSoar (AGL override + altitude-based takeoff-speed reduction) and gates circling detection / EKF reset.
+
+## Remaining Gaps / Next Steps
+1) **TAS/IAS wiring**: airspeed flow exists, but no BLE/real-air feed yet; EKF remains inactive in live flights.
+2) **External/manual wind selection**: selection policy is defined (AUTO if newer than manual, else EXTERNAL, else MANUAL), but UI/external feeds still need to populate overrides.
+3) **Tests**: no unit/integration tests for g-load gating, blackout timing, staleness expiry, or replay determinism.
+4) **Doc drift**: verify no remaining references to legacy `WindRepository` elsewhere.
+5) **Polar takeoff speed**: wire `VTakeoff` from the polar into flying-state detection (currently fixed at 10 m/s fallback).
+
 ## XCSoar Parity Follow-ups (post-refactor)
 These are intentionally out-of-scope for the refactor, but should be evaluated for
 release-grade parity against XCSoar’s wind stack.
@@ -112,24 +127,23 @@ release-grade parity against XCSoar’s wind stack.
 3) **g-load gating for EKF** (XCSoar gate)
    - XCSoar blocks EKF if `|g_load - 1| > 0.3` (plus turn-rate gate) and
      enters a short blackout (~3s).
-   - XCPro currently gates on turn-rate + circling only.
-   - Action: surface a g-load signal to wind fusion and add the gate + blackout.
-   - **Option B (preferred):** compute g-load from raw accelerometer magnitude
-     (`TYPE_ACCELEROMETER`) with a short low-pass (~200 ms). This requires a
-     new `RawAccelData` flow in `SensorDataSource` and a `GLoadSample` in wind inputs.
-   - Proposed wiring (needs validation):
-     - `SensorDataSource.accelFlow` already provides `AccelData` (linear accel).
-     - Add `GLoadSample` (or extend `WindSensorInputs`) and compute
-       `gLoad = 1.0 + verticalAcceleration / 9.80665` when reliable.
-     - In `WindEkfUseCase`, treat `abs(gLoad - 1) > 0.3` as a blackout trigger.
+   - **Status: Implemented (Option B).** Raw accelerometer magnitude (`TYPE_ACCELEROMETER`)
+     is converted to `GLoadSample` with ~200 ms smoothing and used for blackout gating
+     in `WindEkfUseCase`. Freshness and threshold are enforced; see code for exact values.
 
 4) **EKF direct-use behavior**
    - XCSoar publishes EKF wind directly when EKF is active, bypassing WindStore
      (while still storing it for analysis).
-   - XCPro always passes EKF results through WindStore evaluation.
-   - Action: track an “ekfActive” flag and publish EKF output directly when valid.
+   - **Status: Implemented.** XCPro publishes EKF output directly when valid and still stores
+     the measurement for history/weighting.
+
+5) **Circling detector parity**
+   - XCSoar uses a smoothed/clamped turn rate (clamp to 50 deg/s, low-pass 0.3) with
+     a 4 deg/s threshold and 15s/10s enter/exit timers, gated by `flight.flying`.
+   - **Status: Implemented.** XCPro uses the flying-state gate and XCSoar-equivalent
+     turn-rate smoothing/clamp and timers.
 
 ### Parameter deltas worth aligning
-- Turn-rate gate: XCSoar uses ~20 deg/s; XCPro uses 30 deg/s.
-- EKF sample stride: XCSoar emits every 10 samples; XCPro uses 5.
-- EKF quality ramp: XCSoar thresholds 30/120/600; XCPro uses 20/80/300.
+- Turn-rate gate aligned to ~20 deg/s.
+- EKF sample stride aligned to 10 samples.
+- EKF quality ramp aligned to 30/120/600.

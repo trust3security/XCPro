@@ -4,6 +4,13 @@
 Provide a **pilot-facing TAS card** and a **stable TAS estimate** using **phone sensors only** (GPS + baro + IMU optional), matching XCSoar’s fallback behavior:
 - If real airspeed is not available, but **ground speed + wind + flying** are available, compute **estimated TAS** from the **air vector magnitude**.
 
+## Status Update (2026-01-04)
+- XCSoar’s TAS/IAS fallback uses **GPS + wind + altitude** only (no IMU). We should mirror that behavior.
+- XCPro’s wind math uses **wind-to** vectors; TAS proxy uses `air = ground - wind_to` in `WindEstimator`.
+- Wind SSOT now lives in `WindSensorFusionRepository` with a 1-hour staleness window.
+- EKF gating requires **real** airspeed; we must wire external (BLE vario) TAS/IAS into wind inputs.
+- G-load gating (raw accelerometer magnitude + smoothing) is implemented for the wind EKF.
+
 ## XCSoar reference (what we’re mirroring)
 - TAS fallback is implemented in `C:\Users\Asus\AndroidStudioProjects\XCSoar\src\Computer\BasicComputer.cpp` in `ComputeAirspeed()` (case 3).
 - It only uses the “GS + wind” method when:

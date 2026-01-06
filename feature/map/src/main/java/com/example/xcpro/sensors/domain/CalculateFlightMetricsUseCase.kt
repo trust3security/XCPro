@@ -142,11 +142,12 @@ internal class CalculateFlightMetricsUseCase(
         val varioSource = snapshot.varioSource
         val varioValid = snapshot.varioValid
 
-        val isCircling = circlingDetector.update(
+        val circlingDecision = circlingDetector.update(
             trackDegrees = gps.bearing,
             timestampMillis = gps.timestamp,
-            groundSpeed = gps.speed.value
+            isFlying = request.isFlying
         )
+        val isCircling = circlingDecision.isCircling
 
         // Keep helper-driven state (AGL, LD, thermal averages) up to date.
         flightHelpers.updateAGL(baroAltitude, gps, gps.speed.value)
@@ -313,7 +314,8 @@ data class FlightMetricsRequest(
     val varioGpsValue: Double,
     val baroResult: BarometricAltitudeData?,
     val windState: WindState?,
-    val varioValidUntil: Long
+    val varioValidUntil: Long,
+    val isFlying: Boolean
 )
 
 data class FlightMetricsResult(

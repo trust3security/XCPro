@@ -13,33 +13,33 @@ class CirclingDetectorTest {
         var bearing = 0.0
         var state = false
 
-        repeat(10) {
+        repeat(40) {
             timestamp += 500L
             bearing += 15.0
-            state = detector.update(bearing, timestamp, 20.0)
+            state = detector.update(bearing, timestamp, isFlying = true).isCircling
         }
         assertTrue("Expected detector to enter circling after sustained turn", state)
 
-        repeat(10) {
+        repeat(35) {
             timestamp += 500L
             // stop turning but keep moving
-            state = detector.update(bearing, timestamp, 20.0)
+            state = detector.update(bearing, timestamp, isFlying = true).isCircling
         }
         assertFalse("Expected detector to exit circling after straight flight", state)
     }
 
     @Test
-    fun `ignores low speed turns`() {
+    fun `detects circling when flying even at low speed`() {
         val detector = CirclingDetector()
         var timestamp = 0L
         var bearing = 0.0
         var state = false
 
-        repeat(20) {
+        repeat(40) {
             timestamp += 500L
             bearing += 20.0
-            state = detector.update(bearing, timestamp, 2.0)
+            state = detector.update(bearing, timestamp, isFlying = true).isCircling
         }
-        assertFalse("Low-speed turns should not trigger circling", state)
+        assertTrue("Low-speed turns should still trigger circling when flying", state)
     }
 }
