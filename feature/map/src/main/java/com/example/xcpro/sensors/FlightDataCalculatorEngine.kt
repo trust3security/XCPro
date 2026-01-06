@@ -17,8 +17,6 @@ import com.example.xcpro.weather.wind.model.WindState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlin.math.abs
-import java.util.Locale
 
 /**
  * Combines sensor streams into [CompleteFlightData] (SSOT).
@@ -34,55 +32,55 @@ internal class FlightDataCalculatorEngine(
     private val sinkProvider: StillAirSinkProvider,
     private val windStateFlow: StateFlow<WindState>,
     private val flightStateSource: FlightStateSource,
-    private val enableAudio: Boolean = true,
-    private val isReplayMode: Boolean = false
+    internal val enableAudio: Boolean = true,
+    internal val isReplayMode: Boolean = false
 ): SensorFusionRepository {
 
     companion object {
-        private const val TAG = FlightDataConstants.TAG
-        private const val LOG_THERMAL_METRICS = FlightDataConstants.LOG_THERMAL_METRICS
-        private const val DEFAULT_MACCREADY = FlightDataConstants.DEFAULT_MACCREADY
-        private const val QNH_JUMP_THRESHOLD_HPA = FlightDataConstants.QNH_JUMP_THRESHOLD_HPA
-        private const val QNH_CALIBRATION_ACCURACY_THRESHOLD = FlightDataConstants.QNH_CALIBRATION_ACCURACY_THRESHOLD
-        private const val AUTO_QNH_MAX_SPEED_MS = 5.0
-        private const val AUTO_QNH_SESSION_TIMEOUT_MS = 90_000L
-        private const val VARIO_VALIDITY_MS = FlightDataConstants.VARIO_VALIDITY_MS
-        private const val VARIO_VALIDITY_FLOOR_MS = 5_000L
-        private const val EMIT_MIN_INTERVAL_MS = 100L
-        private const val BARO_EMIT_STALE_MS = 500L
-        private const val ACCEL_FRESHNESS_MS = 250L
-        private const val ACCEL_SMOOTH_TAU_S = 0.15
-        private const val MAX_VERTICAL_ACCEL_MS2 = 8.0
+        internal const val TAG = FlightDataConstants.TAG
+        internal const val LOG_THERMAL_METRICS = FlightDataConstants.LOG_THERMAL_METRICS
+        internal const val DEFAULT_MACCREADY = FlightDataConstants.DEFAULT_MACCREADY
+        internal const val QNH_JUMP_THRESHOLD_HPA = FlightDataConstants.QNH_JUMP_THRESHOLD_HPA
+        internal const val QNH_CALIBRATION_ACCURACY_THRESHOLD = FlightDataConstants.QNH_CALIBRATION_ACCURACY_THRESHOLD
+        internal const val AUTO_QNH_MAX_SPEED_MS = 5.0
+        internal const val AUTO_QNH_SESSION_TIMEOUT_MS = 90_000L
+        internal const val VARIO_VALIDITY_MS = FlightDataConstants.VARIO_VALIDITY_MS
+        internal const val VARIO_VALIDITY_FLOOR_MS = 5_000L
+        internal const val EMIT_MIN_INTERVAL_MS = 100L
+        internal const val BARO_EMIT_STALE_MS = 500L
+        internal const val ACCEL_FRESHNESS_MS = 250L
+        internal const val ACCEL_SMOOTH_TAU_S = 0.15
+        internal const val MAX_VERTICAL_ACCEL_MS2 = 8.0
     }
-    private val locationHistory = mutableListOf<LocationWithTime>()
-    private val aglCalculator = SimpleAglCalculator(context)  // KISS: SRTM terrain database
-    private val baroCalculator = BarometricAltitudeCalculator(aglCalculator)  // ???? SRTM-based QNH calibration
-    private val filters = FlightFilters()
-    private val flightHelpers = FlightCalculationHelpers(
+    internal val locationHistory = mutableListOf<LocationWithTime>()
+    internal val aglCalculator = SimpleAglCalculator(context)  // KISS: SRTM terrain database
+    internal val baroCalculator = BarometricAltitudeCalculator(aglCalculator)  // ???? SRTM-based QNH calibration
+    internal val filters = FlightFilters()
+    internal val flightHelpers = FlightCalculationHelpers(
         scope = scope,
         aglCalculator = aglCalculator,
         locationHistory = locationHistory,
         sinkProvider = sinkProvider
     )
-    private val flightMetricsUseCase = CalculateFlightMetricsUseCase(
+    internal val flightMetricsUseCase = CalculateFlightMetricsUseCase(
         flightHelpers = flightHelpers,
         sinkProvider = sinkProvider,
         windEstimator = WindEstimator(sinkProvider)
     )
-    private var latestWindState: WindState? = null
-    private var latestFlightState: FlyingState? = null
-    private var lastGpsFixTimestampForGpsVario: Long = 0L
-    private val varioSuite = VarioSuite()
-    private val audioController = VarioAudioController(context, scope, enableAudio)
+    internal var latestWindState: WindState? = null
+    internal var latestFlightState: FlyingState? = null
+    internal var lastGpsFixTimestampForGpsVario: Long = 0L
+    internal val varioSuite = VarioSuite()
+    internal val audioController = VarioAudioController(context, scope, enableAudio)
     val audioEngine get() = audioController.engine
-    private val flightDisplayMapper = FlightDisplayMapper()
-    private val _flightDataFlow = MutableStateFlow<CompleteFlightData?>(null)
+    internal val flightDisplayMapper = FlightDisplayMapper()
+    internal val _flightDataFlow = MutableStateFlow<CompleteFlightData?>(null)
     override val flightDataFlow: StateFlow<CompleteFlightData?> = _flightDataFlow.asStateFlow()
-    private val _diagnosticsFlow = MutableStateFlow<VarioDiagnosticsSample?>(null)
+    internal val _diagnosticsFlow = MutableStateFlow<VarioDiagnosticsSample?>(null)
     override val diagnosticsFlow: StateFlow<VarioDiagnosticsSample?> = _diagnosticsFlow.asStateFlow()
     override val audioSettings: StateFlow<VarioAudioSettings> = audioController.engine.settings
-    private val emissionState = FlightDataEmissionState()
-    private val emitter = FlightDataEmitter(
+    internal val emissionState = FlightDataEmissionState()
+    internal val emitter = FlightDataEmitter(
         state = emissionState,
         flightMetricsUseCase = flightMetricsUseCase,
         flightDisplayMapper = flightDisplayMapper,
@@ -93,34 +91,34 @@ internal class FlightDataCalculatorEngine(
         logThermalMetrics = LOG_THERMAL_METRICS,
         tag = TAG
     )
-    @Volatile private var autoQnhSessionActive = false
-    @Volatile private var autoQnhSessionDeadlineMs = 0L
-    @Volatile private var replayRealVarioMs: Double? = null
-    @Volatile private var replayRealVarioTimestamp: Long = 0L
-    private var lastReplayBaroTimestamp: Long = 0L
-    private var lastReplayBaroLogTime: Long = 0L
-    private var lastReplayGpsLogTime: Long = 0L
+    @Volatile internal var autoQnhSessionActive = false
+    @Volatile internal var autoQnhSessionDeadlineMs = 0L
+    @Volatile internal var replayRealVarioMs: Double? = null
+    @Volatile internal var replayRealVarioTimestamp: Long = 0L
+    internal var lastReplayBaroTimestamp: Long = 0L
+    internal var lastReplayBaroLogTime: Long = 0L
+    internal var lastReplayGpsLogTime: Long = 0L
     // Tracking for delta-time calculations
-    private var lastVarioUpdateTime = 0L
+    internal var lastVarioUpdateTime = 0L
     // Cached GPS data for the high-speed vario loop (GPS updates slower than baro/IMU).
-    private var cachedGPSSpeed = 0.0
+    internal var cachedGPSSpeed = 0.0
     // Use NaN as a sentinel until we have a real GPS altitude (prevents false calibration)
-    private var cachedGPSAltitude = Double.NaN
-    private var cachedGPSAccuracy = 15.0
-    private var cachedIsGPSFixed = false
-    private var cachedGPSLat = 0.0  // ???? For SRTM-based QNH calibration
-    private var cachedGPSLon = 0.0  // ???? For SRTM-based QNH calibration
-    private var cachedGPS: GPSData? = null  // Full GPS data for calculations
+    internal var cachedGPSAltitude = Double.NaN
+    internal var cachedGPSAccuracy = 15.0
+    internal var cachedIsGPSFixed = false
+    internal var cachedGPSLat = 0.0  // ???? For SRTM-based QNH calibration
+    internal var cachedGPSLon = 0.0  // ???? For SRTM-based QNH calibration
+    internal var cachedGPS: GPSData? = null  // Full GPS data for calculations
     // Cached results from vario loop for GPS loop to use
-    private var cachedVarioResult: com.example.dfcards.filters.ModernVarioResult? = null
-     private var cachedBaroResult: com.example.dfcards.calculations.BarometricAltitudeData? = null
-     private var cachedBaroData: BaroData? = null
-     private var cachedCompassData: CompassData? = null
+    internal var cachedVarioResult: com.example.dfcards.filters.ModernVarioResult? = null
+     internal var cachedBaroResult: com.example.dfcards.calculations.BarometricAltitudeData? = null
+     internal var cachedBaroData: BaroData? = null
+     internal var cachedCompassData: CompassData? = null
      // IMU vertical acceleration smoothing for 3???state Kalman / complementary fusion.
-     private var lastAccelTimestamp: Long = 0L
-     private var smoothedVerticalAccel: Double? = null
-    private var macCreadySetting = DEFAULT_MACCREADY
-    private var macCreadyRisk = DEFAULT_MACCREADY
+     internal var lastAccelTimestamp: Long = 0L
+     internal var smoothedVerticalAccel: Double? = null
+    internal var macCreadySetting = DEFAULT_MACCREADY
+    internal var macCreadyRisk = DEFAULT_MACCREADY
     init {
         scope.launch { windStateFlow.collect { latestWindState = it } }
         scope.launch { flightStateSource.flightState.collect { latestFlightState = it } }
@@ -160,262 +158,6 @@ internal class FlightDataCalculatorEngine(
         Log.d(TAG, "FlightDataCalculator initialized with PRIORITY 2: Decoupled sample rates (50Hz vario + 10Hz GPS)")
     }
 
-    private fun updateVarioFilter(baro: BaroData?, accel: AccelData?) {
-        if (baro == null) {
-            Log.d(TAG, "No barometer data - skipping vario update")
-            return
-        }
-
-        val wallTime = System.currentTimeMillis()
-
-        // In replay mode, downstream estimators (wind, circling, etc.) use the sensor timestamps as
-        // the "simulation clock". Keep the vario validity clock in the same time base.
-        val currentTime = if (isReplayMode) baro.timestamp else System.currentTimeMillis()
-
-        if (!isReplayMode && autoQnhSessionActive && wallTime > autoQnhSessionDeadlineMs) {
-            autoQnhSessionActive = false
-            Log.w(TAG, "Auto QNH calibration timed out; ignoring further samples until requested again")
-        }
-
-        val replayDeltaTime = if (isReplayMode && lastReplayBaroTimestamp > 0L) {
-            val deltaMs = (baro.timestamp - lastReplayBaroTimestamp).coerceAtLeast(1L)
-            deltaMs / 1000.0
-        } else {
-            null
-        }
-        val deltaTime = when {
-            replayDeltaTime != null -> replayDeltaTime
-            lastVarioUpdateTime > 0 -> (currentTime - lastVarioUpdateTime) / 1000.0
-            else -> 0.02 // 50Hz = 20ms = 0.02s default
-        }
-        if (isReplayMode) {
-            lastReplayBaroTimestamp = baro.timestamp
-        }
-        if (deltaTime < 0.01) {
-            return
-        }
-        val smoothedPressure = filters.pressureKalmanFilter.update(baro.pressureHPa.value, baro.timestamp)
-
-        val previousBaroResult = cachedBaroResult
-        val canAutoCalibrateNow = !isReplayMode &&
-            autoQnhSessionActive &&
-            cachedGPSSpeed.isFinite() &&
-            cachedGPSSpeed <= AUTO_QNH_MAX_SPEED_MS
-
-        val hasCalibrationFix = canAutoCalibrateNow &&
-            cachedIsGPSFixed &&
-            !cachedGPSAltitude.isNaN() &&
-            cachedGPSAccuracy <= QNH_CALIBRATION_ACCURACY_THRESHOLD
-
-        val baroResult = baroCalculator.calculateBarometricAltitude(
-            rawPressureHPa = smoothedPressure,
-            gpsAltitudeMeters = if (hasCalibrationFix) cachedGPSAltitude else null,
-            gpsAccuracy = if (hasCalibrationFix) cachedGPSAccuracy else null,
-            isGPSFixed = hasCalibrationFix,
-            gpsLat = cachedGPSLat.takeIf { hasCalibrationFix },
-            gpsLon = cachedGPSLon.takeIf { hasCalibrationFix }
-        )
-
-        if (!isReplayMode && autoQnhSessionActive && baroCalculator.isCalibrationFinished()) {
-            autoQnhSessionActive = false
-            val qnhLabel = String.format(Locale.US, "%.1f", baroResult.qnh)
-            Log.i(TAG, "Auto QNH calibration completed (QNH=$qnhLabel)")
-        }
-
-        if (previousBaroResult != null) {
-            val qnhDelta = abs(baroResult.qnh - previousBaroResult.qnh)
-            val altitudeDelta = abs(baroResult.altitudeMeters - previousBaroResult.altitudeMeters)
-            val qnhJumpDetected = qnhDelta > QNH_JUMP_THRESHOLD_HPA
-            if (qnhJumpDetected) {
-                val qnhLabel = String.format(Locale.US, "%.2f", qnhDelta)
-                val altitudeLabel = String.format(Locale.US, "%.1f", altitudeDelta)
-                if (isReplayMode) {
-                    Log.w(
-                        TAG,
-                        "Replay QNH jump detected ??${qnhLabel} hPa / ??${altitudeLabel} m - ignoring reset to keep vario stable"
-                    )
-                } else {
-                    Log.w(
-                        TAG,
-                        "QNH jump detected ??${qnhLabel} hPa / ??${altitudeLabel} m - resetting vario filters"
-                    )
-                    varioSuite.resetAll()
-                    filters.baroFilter.reset()
-                    filters.pressureKalmanFilter.reset(smoothedPressure, baro.timestamp)
-                    cachedVarioResult = null
-                    emissionState.varioValidUntil = 0L
-                }
-            }
-        }
-
-        val verticalAccelForFusion = accel?.let { accelSample ->
-            val ageMs = currentTime - accelSample.timestamp
-            val fresh = ageMs in 0..ACCEL_FRESHNESS_MS
-            if (!accelSample.isReliable || !fresh) {
-                0.0
-            } else {
-                val clamped = accelSample.verticalAcceleration
-                    .coerceIn(-MAX_VERTICAL_ACCEL_MS2, MAX_VERTICAL_ACCEL_MS2)
-                val dt = deltaTime.coerceAtLeast(1e-3)
-                val alpha = dt / (ACCEL_SMOOTH_TAU_S + dt)
-                val prev = smoothedVerticalAccel
-                val next = if (prev == null || accelSample.timestamp <= lastAccelTimestamp) {
-                    clamped
-                } else {
-                    prev + alpha * (clamped - prev)
-                }
-                lastAccelTimestamp = accelSample.timestamp
-                smoothedVerticalAccel = next
-                next
-            }
-        } ?: 0.0
-
-        varioSuite.updateAll(
-            baroAltitude = baroResult.altitudeMeters,
-            verticalAccel = verticalAccelForFusion,
-            deltaTime = deltaTime,
-            gpsSpeed = cachedGPSSpeed,
-            gpsAltitude = cachedGPSAltitude
-        )
-
-        val filteredBaro = filters.baroFilter.processReading(
-            rawBaroAltitude = baroResult.altitudeMeters,
-            gpsAltitude = cachedGPSAltitude,
-            gpsAccuracy = cachedGPSAccuracy
-        )
-        val varioResult = com.example.dfcards.filters.ModernVarioResult(
-            altitude = filteredBaro.displayAltitude,
-            verticalSpeed = filteredBaro.verticalSpeed,
-            acceleration = 0.0,
-            confidence = filteredBaro.confidence
-        )
-
-        val replayWindowMs = if (isReplayMode) {
-            replayDeltaTime
-                ?.times(1000.0)
-                ?.toLong()
-                ?: 1_000L
-        } else {
-            0L
-        }
-        val validityWindowMs = maxOf(VARIO_VALIDITY_MS, replayWindowMs, VARIO_VALIDITY_FLOOR_MS)
-        emissionState.varioValidUntil = currentTime + validityWindowMs
-        audioController.update(emissionState.latestTeVario, varioResult.verticalSpeed, currentTime, emissionState.varioValidUntil)
-
-        cachedVarioResult = varioResult
-        cachedBaroResult = baroResult
-        cachedBaroData = baro
-
-        val shouldEmit = cachedGPS != null &&
-            (currentTime - emissionState.lastUpdateTime) >= EMIT_MIN_INTERVAL_MS
-        if (shouldEmit) {
-            // Emit display frames on the baro loop (throttled) so UI/audio follow fast vario cadence.
-            val emitDeltaTime = if (emissionState.lastUpdateTime > 0L) {
-                (currentTime - emissionState.lastUpdateTime) / 1000.0
-            } else {
-                deltaTime
-            }
-            cachedGPS?.let { gps ->
-                emitter.emit(
-                    gps = gps,
-                    compass = cachedCompassData,
-                    currentTime = currentTime,
-                    deltaTime = emitDeltaTime,
-                    varioResultInput = varioResult,
-                    baroResult = cachedBaroResult,
-                    baro = cachedBaroData,
-                    cachedVarioResult = cachedVarioResult,
-                    windState = latestWindState,
-                    isFlying = latestFlightState?.isFlying == true,
-                    replayRealVarioMs = replayRealVarioMs,
-                    replayRealVarioTimestamp = replayRealVarioTimestamp,
-                    macCreadySetting = macCreadySetting,
-                    macCreadyRisk = macCreadyRisk,
-                    autoQnhSessionActive = autoQnhSessionActive
-                )
-            }
-        }
-
-        lastVarioUpdateTime = currentTime
-
-        if (isReplayMode && wallTime - lastReplayBaroLogTime >= 1_000L) {
-            lastReplayBaroLogTime = wallTime
-            logReplayBaroSample(TAG, baro.timestamp, baro.pressureHPa.value, smoothedPressure, baroResult.altitudeMeters, filteredBaro.displayAltitude, varioResult.verticalSpeed, deltaTime, cachedGPSAltitude, cachedGPSSpeed, emissionState.varioValidUntil)
-        }
-
-    }
-    private fun updateGPSData(gps: GPSData?, compass: CompassData?) {
-        if (gps == null) {
-            Log.d(TAG, "No GPS data - skipping GPS update")
-            return
-        }
-
-        val wallTime = System.currentTimeMillis()
-        // Use GPS timestamps as the "simulation clock" in replay mode so time-based metrics (wind,
-        // thermal windows, circling detection) advance with the IGC log instead of wall clock.
-        val currentTime = if (isReplayMode) gps.timestamp else wallTime
-        if (isReplayMode && wallTime - lastReplayGpsLogTime >= 1_000L) {
-            lastReplayGpsLogTime = wallTime
-            logReplayGpsSample(TAG, gps.position.latitude, gps.position.longitude, gps.altitude.value, gps.speed.value, gps.bearing.toDouble(), gps.timestamp)
-        }
-
-        // Update cached GPS data for high-speed vario loop
-        cachedGPSSpeed = gps.speed.value
-        cachedGPSAltitude = gps.altitude.value
-        cachedGPSAccuracy = gps.accuracy.toDouble()
-        cachedIsGPSFixed = gps.isHighAccuracy
-        cachedGPSLat = gps.position.latitude   // dYs? For SRTM-based QNH calibration
-        cachedGPSLon = gps.position.longitude  // dYs? For SRTM-based QNH calibration
-        cachedGPS = gps
-        cachedCompassData = compass
-
-        if (gps.timestamp != lastGpsFixTimestampForGpsVario && gps.altitude.value.isFinite()) {
-            varioSuite.updateGpsVario(gpsAltitudeMeters = gps.altitude.value, gpsTimestampMillis = gps.timestamp)
-            lastGpsFixTimestampForGpsVario = gps.timestamp
-        }
-
-        val deltaTime = if (emissionState.lastUpdateTime > 0) {
-            (currentTime - emissionState.lastUpdateTime) / 1000.0
-        } else {
-            0.1 // 10Hz = 100ms = 0.1s default
-        }
-
-        val baroAgeMs = currentTime - lastVarioUpdateTime
-        val baroFresh = cachedBaroData != null && baroAgeMs in 0..BARO_EMIT_STALE_MS
-
-        // Emit display/UI data on GPS tick only when baro is stale or unavailable.
-        if (!baroFresh) {
-            // Fallback: if the baro/IMU loop hasn't produced a vario yet, drive the UI with GPS vario
-            // so the needle doesn't stick at zero during startup or brief baro gaps.
-            val gpsFallbackVario = varioSuite.gpsVerticalSpeed().takeIf { it.isFinite() } ?: 0.0
-            val varioResultInput = cachedVarioResult ?: com.example.dfcards.filters.ModernVarioResult(
-                altitude = gps.altitude.value,
-                verticalSpeed = gpsFallbackVario,
-                acceleration = 0.0,
-                confidence = 0.3
-            )
-            if (cachedVarioResult == null) {
-                emissionState.varioValidUntil = currentTime + VARIO_VALIDITY_FLOOR_MS
-            }
-            emitter.emit(
-                gps = gps,
-                compass = compass,
-                currentTime = currentTime,
-                deltaTime = deltaTime,
-                varioResultInput = varioResultInput,
-                baroResult = cachedBaroResult,
-                baro = cachedBaroData,
-                cachedVarioResult = cachedVarioResult,
-                windState = latestWindState,
-                isFlying = latestFlightState?.isFlying == true,
-                replayRealVarioMs = replayRealVarioMs,
-                replayRealVarioTimestamp = replayRealVarioTimestamp,
-                macCreadySetting = macCreadySetting,
-                macCreadyRisk = macCreadyRisk,
-                autoQnhSessionActive = autoQnhSessionActive
-            )
-        }
-    }
     override fun updateAudioSettings(settings: VarioAudioSettings) {
         audioController.engine.updateSettings(settings)
     }

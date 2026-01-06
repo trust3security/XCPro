@@ -4,7 +4,6 @@ package com.example.xcpro.map.ui
  * Invariants: UI renders state only; mutations are routed through MapScreenViewModel.
  */
 
-
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.map.ui.effects.MapComposeEffects
@@ -52,9 +51,6 @@ import com.example.xcpro.saveConfig
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
 import com.example.xcpro.screens.navdrawer.lookandfeel.LookAndFeelPreferences
 import kotlinx.coroutines.launch
-import kotlin.math.min
-import kotlin.math.roundToInt
-import kotlin.math.roundToInt
 
 private const val TAG = "MapScreen"
 private const val MAP_PREFS_NAME = "MapPrefs"
@@ -111,16 +107,13 @@ internal fun MapScreenRoot(
     var safeContainerSize by safeContainerSizeState
 
     // G£à DEBUG: Track container size changes
-    LaunchedEffect(safeContainerSize) {
-        Log.d("MapScreen", "=ƒöì CONTAINER SIZE CHANGED: $safeContainerSize")
-        if (safeContainerSize.width > 0 && safeContainerSize.height > 0) {
-            mapViewModel.updateSafeContainerSize(
+    trackSafeContainerSize(safeContainerSize) { size ->
+        mapViewModel.updateSafeContainerSize(
             MapStateStore.MapSize(
-                widthPx = safeContainerSize.width,
-                heightPx = safeContainerSize.height
+                widthPx = size.width,
+                heightPx = size.height
             )
         )
-        }
     }
 
     // G£à Flight Cards ViewModel
@@ -314,66 +307,35 @@ internal fun MapScreenRoot(
         onDispose { lifecycleManager.cleanup() }
     }
 
-
     // Load widget positions using existing widgetManager and density
     val screenWidthPx = with(density) { LocalConfiguration.current.screenWidthDp.dp.toPx() }
     val screenHeightPx = with(density) { LocalConfiguration.current.screenHeightDp.dp.toPx() }
 
-    val widgetPositions = remember(screenWidthPx, screenHeightPx) {
-        widgetManager.loadWidgetPositions(screenWidthPx, screenHeightPx, density)
-    }
+    val (hamburgerOffsetState, flightModeOffsetState, ballastOffsetState) = 
+        rememberMapWidgetOffsets(widgetManager, screenWidthPx, screenHeightPx, density)
 
     // If the card layer hasn't reported its safe bounds yet, seed the size from the screen metrics
     // so MapScreenViewModel can mark cardHydrationReady once flight data arrives. The card grid
     // will overwrite this fallback as soon as its own onGloballyPositioned callback fires.
-    LaunchedEffect(screenWidthPx, screenHeightPx) {
-        if (safeContainerSize == IntSize.Zero) {
-            val fallbackWidth = screenWidthPx.roundToInt().coerceAtLeast(1)
-            val fallbackHeight = screenHeightPx.roundToInt().coerceAtLeast(1)
-            if (fallbackWidth > 0 && fallbackHeight > 0) {
-                safeContainerSizeState.value = IntSize(fallbackWidth, fallbackHeight)
-            }
-        }
-    }
+    ensureSafeContainerFallback(safeContainerSizeState, screenWidthPx, screenHeightPx)
 
-    val hamburgerOffsetState = remember { mutableStateOf(widgetPositions.sideHamburgerOffset) }
-    val flightModeOffsetState = remember { mutableStateOf(widgetPositions.flightModeOffset) }
-    val ballastOffsetState = remember { mutableStateOf(widgetPositions.ballastOffset) }
-
-    val variometerUiState by mapViewModel.variometerUiState.collectAsStateWithLifecycle()
-    val minVariometerSizePx = with(density) { 60.dp.toPx() }
-    val maxVariometerSizePx = min(screenWidthPx, screenHeightPx)
-    val defaultVariometerSizePx = with(density) { 150.dp.toPx() }
-
-    LaunchedEffect(screenWidthPx, screenHeightPx) {
-        mapViewModel.ensureVariometerLayout(
-            screenWidthPx = screenWidthPx,
-            screenHeightPx = screenHeightPx,
-            defaultSizePx = defaultVariometerSizePx,
-            minSizePx = minVariometerSizePx,
-            maxSizePx = maxVariometerSizePx
-        )
-    }
-
-    // G£à CENTRALIZED CAMERA EFFECTS - Replace camera animation and orientation effects
-    MapCameraEffects.AllCameraEffects(
-        cameraManager = cameraManager,
-        bearing = orientationData.bearing,
-        orientationMode = orientationData.mode,
-        bearingSource = orientationData.bearingSource,
-        replayPlaying = replaySession.status == com.example.xcpro.replay.SessionStatus.PLAYING
+    val variometerLayout = rememberVariometerLayout(
+        mapViewModel = mapViewModel,
+        screenWidthPx = screenWidthPx,
+        screenHeightPx = screenHeightPx,
+        density = density
     )
+    val variometerUiState = variometerLayout.uiState
+    val minVariometerSizePx = variometerLayout.minSizePx
+    val maxVariometerSizePx = variometerLayout.maxSizePx
 
-    val mapRuntimeController = remember(overlayManager) {
-        MapRuntimeController(overlayManager)
-    }
-
-    LaunchedEffect(mapRuntimeController) {
-        mapViewModel.mapCommands.collect { command ->
-            mapRuntimeController.apply(command)
-        }
-    }
-
+    val mapRuntimeController = rememberMapRuntimeController(
+        overlayManager = overlayManager,
+        mapViewModel = mapViewModel,
+        cameraManager = cameraManager,
+        orientationData = orientationData,
+        isReplayPlaying = replaySession.status == com.example.xcpro.replay.SessionStatus.PLAYING
+    )
 
     MapScreenScaffold(
         drawerState = drawerState,
@@ -480,7 +442,4 @@ internal fun MapScreenRoot(
         }
     )
 }
-
-
-
 

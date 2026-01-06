@@ -1,6 +1,5 @@
 package com.example.xcpro.map
 
-import android.Manifest
 import android.content.Context
 import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
@@ -39,9 +38,12 @@ class LocationManager(
         private const val INITIAL_ZOOM_LEVEL = 10.0
     }
 
-    private var sensorsStarted = false
     private val orientationPreferences = MapOrientationPreferences(context)
     private val gliderPaddingHelper = GliderPaddingHelper(context.resources, orientationPreferences)
+    private val sensorsController = LocationSensorsController(
+        context = context,
+        varioServiceManager = varioServiceManager
+    )
     private val locationFilter = MapLocationFilter(
         MapLocationFilter.Config(
             thresholdPx = MapFeatureFlags.locationJitterThresholdPx,
@@ -54,39 +56,6 @@ class LocationManager(
         maxBearingStepDeg = 5.0,
         offsetHistorySize = MapFeatureFlags.locationOffsetHistorySize
     )
-
-    private fun ensureSensorsRunning() {
-        val status = unifiedSensorManager.getSensorStatus()
-        if (sensorsStarted && status.gpsStarted) {
-            return
-        }
-        if (!sensorsStarted && status.gpsStarted) {
-            // Sensors might still be producing data from a previous session, but
-            // the vario service (flight data collection, MacCready observers, etc.)
-            // is not running. Make sure we spin it up so cards receive data.
-            val startedNow = varioServiceManager.start()
-            val statusAfterStart = unifiedSensorManager.getSensorStatus()
-            sensorsStarted = startedNow || statusAfterStart.gpsStarted
-            if (sensorsStarted) {
-                return
-            }
-        }
-
-        val started = varioServiceManager.start()
-        val statusAfterStart = unifiedSensorManager.getSensorStatus()
-        sensorsStarted = started || statusAfterStart.gpsStarted
-        if (!sensorsStarted) {
-            Log.w(TAG, "Sensor start deferred (likely waiting on location permission)")
-        }
-    }
-
-    private fun stopSensors() {
-        val status = unifiedSensorManager.getSensorStatus()
-        if (!sensorsStarted && !status.gpsStarted) return
-        varioServiceManager.stop()
-        sensorsStarted = false
-    }
-
 
     // ✅ PHASE 2: Unified sensor management
     val unifiedSensorManager: UnifiedSensorManager = varioServiceManager.unifiedSensorManager
@@ -155,45 +124,20 @@ class LocationManager(
         get() = mapStateReader.savedBearing.value
 
     fun onLocationPermissionsResult(fineLocationGranted: Boolean, coarseLocationGranted: Boolean) {
-        if (fineLocationGranted || coarseLocationGranted) {
-            Log.d(TAG, "Location permissions granted, starting background sensors")
-            ensureSensorsRunning()
-        } else {
-            Log.e(TAG, "Location permissions denied")
-        }
+        sensorsController.onLocationPermissionsResult(
+            fineLocationGranted = fineLocationGranted,
+            coarseLocationGranted = coarseLocationGranted
+        )
     }
 
     fun checkAndRequestLocationPermissions(
         locationPermissionLauncher: ActivityResultLauncher<Array<String>>
     ) {
-        Log.d(TAG, "🚀 Checking location permissions...")
-
-        val fineLocationGranted = context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) ==
-            android.content.pm.PackageManager.PERMISSION_GRANTED
-        val coarseLocationGranted = context.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) ==
-            android.content.pm.PackageManager.PERMISSION_GRANTED
-
-        if (fineLocationGranted || coarseLocationGranted) {
-            Log.d(TAG, "✅ Location permissions already granted, starting background sensors")
-            ensureSensorsRunning()
-        } else {
-            Log.d(TAG, "📋 Requesting location permissions...")
-            locationPermissionLauncher.launch(
-                arrayOf(
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION
-                )
-            )
-        }
+        sensorsController.checkAndRequestLocationPermissions(locationPermissionLauncher)
     }
 
     fun stopLocationTracking(force: Boolean = false) {
-        if (!force) {
-            Log.d(TAG, "Background service keeps sensors alive (force=false)")
-            return
-        }
-        Log.d(TAG, "Force stopping background sensors")
-        stopSensors()
+        sensorsController.stopLocationTracking(force)
     }
 
     /**
@@ -201,58 +145,7 @@ class LocationManager(
      * This ensures GPS and other sensors resume properly when screen turns back on
      */
     fun restartSensorsIfNeeded() {
-        Log.d(TAG, "🔄 Checking if sensors need restart after sleep mode...")
-
-        val sensorStatus = unifiedSensorManager.getSensorStatus()
-
-        // Restart if any critical sensor is not running (common after doze/background)
-        val needsRestart = (
-            (!sensorStatus.gpsStarted && sensorStatus.hasLocationPermissions) ||
-            (!sensorStatus.baroStarted && sensorStatus.baroAvailable) ||
-            (!sensorStatus.accelStarted && sensorStatus.accelAvailable)
-        )
-        if (needsRestart) {
-            Log.d(
-                TAG,
-                "One or more sensors stopped (gpsStarted=${sensorStatus.gpsStarted}, baroStarted=${sensorStatus.baroStarted}, accelStarted=${sensorStatus.accelStarted}) - restarting all sensors"
-            )
-
-            // Stop everything first to clean up any stale listeners
-            stopSensors()
-
-            // Short delay to ensure clean shutdown
-            Thread.sleep(100)
-
-            // Restart all sensors
-            ensureSensorsRunning()
-
-    // Flight data fusion starts automatically with sensor data flow (no explicit start)
-            Log.d(TAG, "Sensors restarted successfully after sleep/doze")
-            return
-        }
-
-        // If GPS was started but is no longer receiving updates, restart all sensors
-        if (!sensorStatus.gpsStarted && sensorStatus.hasLocationPermissions) {
-            Log.d(TAG, "📱 Sensors appear to be stopped (likely due to sleep mode), restarting...")
-
-            // Stop everything first to clean up any stale listeners
-            stopSensors()
-
-            // Short delay to ensure clean shutdown
-            Thread.sleep(100)
-
-            // Restart all sensors
-            ensureSensorsRunning()
-
-    // Flight data fusion starts automatically with sensor data flow
-            // No explicit start() method needed
-
-            Log.d(TAG, "✅ Sensors restarted successfully after sleep mode")
-        } else if (sensorStatus.gpsStarted) {
-            Log.d(TAG, "✅ Sensors already running, no restart needed")
-        } else {
-            Log.d(TAG, "⚠️ No location permissions, cannot restart sensors")
-        }
+        sensorsController.restartSensorsIfNeeded()
     }
 
     fun setManualQnh(qnh: Double) {

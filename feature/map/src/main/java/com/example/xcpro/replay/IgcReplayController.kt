@@ -127,12 +127,10 @@ class IgcReplayController @Inject constructor(
     private var currentIndex = 0
     private var sensorsSuspended = false
     private var lastForwardLogTime = 0L
-    private var lastGpsEmitTimestamp: Long = Long.MIN_VALUE
 
     private var replayFusionRepository: SensorFusionRepository? = null
     private val simConfig = DEFAULT_SIM_CONFIG
-    private val noiseModel = ReplayNoiseModel(simConfig)
-    private val headingResolver = ReplayHeadingResolver()
+    private val sampleEmitter = ReplaySampleEmitter(replaySensorSource, simConfig)
 
     private val _session = MutableStateFlow(SessionState())
     val session: StateFlow<SessionState> = _session.asStateFlow()
@@ -214,7 +212,7 @@ class IgcReplayController @Inject constructor(
                     while (currentIndex < points.size && isActive) {
                         val point = points[currentIndex]
                         val previous = points.getOrNull(currentIndex - 1)
-                        emitSample(point, previous, _session.value.qnhHpa)
+                        sampleEmitter.emitSample(point, previous, _session.value.qnhHpa, _session.value.startTimestampMillis, replayFusionRepository)
                         updateProgress(point.timestampMillis)
                         Log.d(TAG, "REPLY_FRAME idx=$currentIndex ts=${point.timestampMillis} alt=${point.pressureAltitude ?: point.gpsAltitude} speed=${_session.value.speedMultiplier}")
 
@@ -273,7 +271,7 @@ class IgcReplayController @Inject constructor(
             resumeSensors()
             points = emptyList()
             currentIndex = 0
-            headingResolver.reset()
+    
             _session.value = SessionState(speedMultiplier = _session.value.speedMultiplier)
             _events.tryEmit(ReplayEvent.Cancelled)
         }
@@ -312,7 +310,7 @@ class IgcReplayController @Inject constructor(
                 // Seeking is a teleport: reset fusion state so thermal/circling/wind estimators don't
                 // interpret the jump as a single "mega-sample" or carry stale altitude baselines.
                 replayFusionRepository?.stop() ?: return@runCatching
-                emitSample(point, previous, _session.value.qnhHpa)
+                sampleEmitter.emitSample(point, previous, _session.value.qnhHpa, _session.value.startTimestampMillis, replayFusionRepository)
                 updateProgress(point.timestampMillis)
                 if (_session.value.status == SessionStatus.PLAYING) {
                     cancelReplayJob()
@@ -328,56 +326,6 @@ class IgcReplayController @Inject constructor(
         }
     }
 
-    private fun emitSample(current: IgcPoint, previous: IgcPoint?, qnhHpa: Double) {
-        val movement = IgcReplayMath.groundVector(current, previous)
-        val groundSpeed = movement.speedMs
-        val trackDeg = headingResolver.resolve(movement)
-        val gpsAltitude = current.gpsAltitude
-
-        val pressureAltitude = current.pressureAltitude ?: gpsAltitude
-        val pressureHPa = IgcReplayMath.altitudeToPressure(pressureAltitude, qnhHpa)
-        val pressureNoise = noiseModel.baroNoise(
-            timestampMillis = current.timestampMillis,
-            startTimestampMillis = _session.value.startTimestampMillis
-        )
-        replaySensorSource.emitBaro(
-            pressureHPa = pressureHPa + pressureNoise,
-            timestamp = current.timestampMillis
-        )
-
-        if (shouldEmitGps(current.timestampMillis)) {
-            val gpsNoise = noiseModel.gpsAltitudeNoise(
-                timestampMillis = current.timestampMillis,
-                startTimestampMillis = _session.value.startTimestampMillis
-            )
-            replaySensorSource.emitGps(
-                latitude = current.latitude,
-                longitude = current.longitude,
-                altitude = gpsAltitude + gpsNoise,
-                speed = groundSpeed,
-                bearing = trackDeg.toDouble(),
-                accuracy = 5f,
-                timestamp = current.timestampMillis
-            )
-            lastGpsEmitTimestamp = current.timestampMillis
-        }
-        replaySensorSource.emitCompass(
-            heading = trackDeg.toDouble(),
-            accuracy = 3,
-            timestamp = current.timestampMillis
-        )
-        val igcVario = IgcReplayMath.verticalSpeed(current, previous)
-        Log.d(
-            TAG,
-            "REPLAY_SAMPLE ts=${current.timestampMillis} " +
-                "igcVario=${"%.3f".format(igcVario)} gpsAlt=${"%.1f".format(gpsAltitude)} " +
-                "pressAlt=${"%.1f".format(pressureAltitude)} gs=${"%.2f".format(groundSpeed)} " +
-                "track=${"%.1f".format(trackDeg)}"
-        )
-        if (simConfig.mode == ReplayMode.REFERENCE) {
-            replayFusionRepository?.updateReplayRealVario(igcVario, current.timestampMillis)
-        }
-    }
 
     private fun updateProgress(timestamp: Long) {
         _session.update { state ->
@@ -431,11 +379,6 @@ class IgcReplayController @Inject constructor(
         repo.stop()
     }
 
-    private fun shouldEmitGps(timestampMillis: Long): Boolean {
-        if (simConfig.mode != ReplayMode.REALTIME_SIM) return true
-        if (lastGpsEmitTimestamp == Long.MIN_VALUE) return true
-        return (timestampMillis - lastGpsEmitTimestamp) >= simConfig.gpsStepMs
-    }
 
     companion object {
         private const val TAG = "IgcReplayController"
@@ -446,13 +389,13 @@ class IgcReplayController @Inject constructor(
     }
 
     private fun prepareSession(log: IgcLog, selection: Selection) {
-        noiseModel.reset()
+        sampleEmitter.reset()
         val densified = when (simConfig.mode) {
             ReplayMode.REALTIME_SIM -> IgcReplayMath.densifyPoints(
                 original = log.points,
                 stepMs = simConfig.baroStepMs,
                 jitterMs = simConfig.jitterMs,
-                random = noiseModel.random
+                random = sampleEmitter.random
             )
             ReplayMode.REFERENCE -> IgcReplayMath.densifyPoints(log.points)
         }
@@ -464,7 +407,7 @@ class IgcReplayController @Inject constructor(
         currentIndex = 0
         suspendSensors()
         replaySensorSource.reset()
-        lastGpsEmitTimestamp = Long.MIN_VALUE
+
         flightDataRepository.setActiveSource(FlightDataRepository.Source.REPLAY)
         val qnh = log.metadata.qnhHpa ?: DEFAULT_QNH_HPA
         val start = points.first().timestampMillis
@@ -490,8 +433,8 @@ class IgcReplayController @Inject constructor(
             qnhHpa = qnh
         )
         Log.i(TAG, "REPLY_SESSION selection=${selection.displayName ?: selection.uri} durationMs=$duration start=$start")
-        headingResolver.reset()
-        emitSample(points.first(), null, qnh)
+
+        sampleEmitter.emitSample(points.first(), null, qnh, start, replayFusionRepository)
     }
 }
 
