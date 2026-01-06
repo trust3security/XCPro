@@ -123,6 +123,8 @@ internal object IgcReplayMath {
         fraction: Double
     ): IgcPoint {
         fun lerp(a: Double, b: Double): Double = a + (b - a) * fraction
+        fun lerpOptional(a: Double?, b: Double?): Double? =
+            if (a != null && b != null) lerp(a, b) else null
 
         val pressureAltitude = when {
             start.pressureAltitude != null && end.pressureAltitude != null ->
@@ -137,7 +139,9 @@ internal object IgcReplayMath {
             latitude = lerp(start.latitude, end.latitude),
             longitude = lerp(start.longitude, end.longitude),
             gpsAltitude = lerp(start.gpsAltitude, end.gpsAltitude),
-            pressureAltitude = pressureAltitude
+            pressureAltitude = pressureAltitude,
+            indicatedAirspeedKmh = lerpOptional(start.indicatedAirspeedKmh, end.indicatedAirspeedKmh),
+            trueAirspeedKmh = lerpOptional(start.trueAirspeedKmh, end.trueAirspeedKmh)
         )
     }
 

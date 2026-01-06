@@ -2,9 +2,14 @@
 
 import android.util.Log
 import com.example.xcpro.sensors.SensorFusionRepository
+import com.example.xcpro.sensors.domain.FlightMetricsConstants
+import com.example.xcpro.weather.wind.data.ReplayAirspeedRepository
+import kotlin.math.pow
+import kotlin.math.sqrt
 
 internal class ReplaySampleEmitter(
     private val replaySensorSource: ReplaySensorSource,
+    private val replayAirspeedRepository: ReplayAirspeedRepository,
     private val simConfig: ReplaySimConfig
 ) {
     private val noiseModel = ReplayNoiseModel(simConfig)
@@ -16,6 +21,7 @@ internal class ReplaySampleEmitter(
         noiseModel.reset()
         headingResolver.reset()
         lastGpsEmitTimestamp = Long.MIN_VALUE
+        replayAirspeedRepository.reset()
     }
 
     fun emitSample(
@@ -62,6 +68,7 @@ internal class ReplaySampleEmitter(
             accuracy = 3,
             timestamp = current.timestampMillis
         )
+        emitAirspeedSample(current)
         val igcVario = IgcReplayMath.verticalSpeed(current, previous)
         Log.d(
             TAG,
@@ -81,7 +88,56 @@ internal class ReplaySampleEmitter(
         return (timestampMillis - lastGpsEmitTimestamp) >= simConfig.gpsStepMs
     }
 
+    private fun emitAirspeedSample(point: IgcPoint) {
+        val indicatedKmh = point.indicatedAirspeedKmh
+        val trueKmh = point.trueAirspeedKmh
+        if (indicatedKmh == null && trueKmh == null) {
+            replayAirspeedRepository.reset()
+            return
+        }
+
+        val altitudeMeters = (point.pressureAltitude ?: point.gpsAltitude).takeIf { it.isFinite() } ?: 0.0
+        val densityRatio = computeDensityRatio(altitudeMeters)
+        val indicatedMs: Double
+        val trueMs: Double
+
+        if (indicatedKmh != null && trueKmh != null) {
+            indicatedMs = kmhToMs(indicatedKmh)
+            trueMs = kmhToMs(trueKmh)
+        } else if (indicatedKmh != null) {
+            indicatedMs = kmhToMs(indicatedKmh)
+            trueMs = if (densityRatio > 0.0) indicatedMs / sqrt(densityRatio) else indicatedMs
+        } else {
+            trueMs = kmhToMs(trueKmh!!)
+            indicatedMs = if (densityRatio > 0.0) trueMs * sqrt(densityRatio) else trueMs
+        }
+
+        if (!indicatedMs.isFinite() || !trueMs.isFinite()) {
+            replayAirspeedRepository.reset()
+            return
+        }
+
+        replayAirspeedRepository.emitAirspeed(
+            trueMs = trueMs,
+            indicatedMs = indicatedMs,
+            timestampMillis = point.timestampMillis,
+            valid = true
+        )
+    }
+
+    private fun kmhToMs(valueKmh: Double): Double = valueKmh * KMH_TO_MS
+
+    private fun computeDensityRatio(altitudeMeters: Double): Double {
+        val tempSeaLevelK = FlightMetricsConstants.SEA_LEVEL_TEMP_CELSIUS + 273.15
+        val theta = 1.0 + (FlightMetricsConstants.TEMP_LAPSE_RATE_C_PER_M * altitudeMeters) / tempSeaLevelK
+        if (theta <= 0.0) return 0.0
+        val exponent = (-FlightMetricsConstants.GRAVITY /
+            (FlightMetricsConstants.GAS_CONSTANT * FlightMetricsConstants.TEMP_LAPSE_RATE_C_PER_M)) - 1.0
+        return theta.pow(exponent)
+    }
+
     companion object {
         private const val TAG = "ReplaySampleEmitter"
+        private const val KMH_TO_MS = 1000.0 / 3600.0
     }
 }

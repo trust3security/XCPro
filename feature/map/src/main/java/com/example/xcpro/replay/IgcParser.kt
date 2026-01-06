@@ -12,7 +12,9 @@ data class IgcPoint(
     val latitude: Double,
     val longitude: Double,
     val gpsAltitude: Double,
-    val pressureAltitude: Double?
+    val pressureAltitude: Double?,
+    val indicatedAirspeedKmh: Double? = null,
+    val trueAirspeedKmh: Double? = null
 )
 
 data class IgcMetadata(
@@ -37,6 +39,7 @@ object IgcParser {
         val points = mutableListOf<IgcPoint>()
         var qnhHpa: Double? = null
         var lastTimestampMillis: Long? = null
+        var extensions: List<IgcExtension> = emptyList()
 
         reader.forEachLine { rawLine ->
             val line = rawLine.trim()
@@ -47,6 +50,11 @@ object IgcParser {
                 }
                 line.startsWith("HFQNH") -> {
                     parseNumericValue(line.substring(5))?.let { qnhHpa = it }
+                }
+                line.startsWith("I") -> {
+                    parseExtensions(line)?.let { parsed ->
+                        extensions = parsed
+                    }
                 }
                 line.startsWith("B") && line.length >= 35 -> {
                     val time = parseBTime(line) ?: return@forEachLine
@@ -69,7 +77,7 @@ object IgcParser {
                         candidateMillis
                     }
 
-                    parseBRecord(line, effectiveMillis)?.let { point ->
+                    parseBRecord(line, effectiveMillis, extensions)?.let { point ->
                         points += point
                         lastTimestampMillis = effectiveMillis
                     }
@@ -106,19 +114,26 @@ object IgcParser {
         }
     }
 
-    private fun parseBRecord(line: String, timestampMillis: Long): IgcPoint? {
+    private fun parseBRecord(
+        line: String,
+        timestampMillis: Long,
+        extensions: List<IgcExtension>
+    ): IgcPoint? {
         return try {
             val lat = parseCoordinate(line.substring(7, 14), line[14] == 'N', isLatitude = true)
             val lon = parseCoordinate(line.substring(15, 23), line[23] == 'E', isLatitude = false)
             val pressureAltitude = line.substring(25, 30).toIntOrNull()
             val gpsAltitude = line.substring(30, 35).toIntOrNull()
+            val extensionValues = parseExtensionValues(line, extensions)
 
             IgcPoint(
                 timestampMillis = timestampMillis,
                 latitude = lat,
                 longitude = lon,
                 gpsAltitude = gpsAltitude?.toDouble() ?: 0.0,
-                pressureAltitude = pressureAltitude?.toDouble()
+                pressureAltitude = pressureAltitude?.toDouble(),
+                indicatedAirspeedKmh = extensionValues.indicatedAirspeedKmh,
+                trueAirspeedKmh = extensionValues.trueAirspeedKmh
             )
         } catch (_: Exception) {
             null
@@ -145,4 +160,69 @@ object IgcParser {
     }
 
     private val MIDNIGHT_ROLLOVER_THRESHOLD: Duration = Duration.ofHours(6)
+
+    private data class IgcExtension(
+        val start: Int,
+        val end: Int,
+        val code: String
+    )
+
+    private data class IgcExtensionValues(
+        val indicatedAirspeedKmh: Double?,
+        val trueAirspeedKmh: Double?
+    )
+
+    private fun parseExtensions(line: String): List<IgcExtension>? {
+        if (!line.startsWith("I") || line.length < 3) return null
+        val count = line.substring(1, 3).toIntOrNull() ?: return null
+        var index = 3
+        val parsed = mutableListOf<IgcExtension>()
+        repeat(count) {
+            if (index + 7 > line.length) return null
+            val start = line.substring(index, index + 2).toIntOrNull() ?: return null
+            index += 2
+            val end = line.substring(index, index + 2).toIntOrNull() ?: return null
+            index += 2
+            val code = line.substring(index, index + 3)
+            index += 3
+            if (start < MIN_EXTENSION_START || end < start) return null
+            if (!code.all { it.isLetterOrDigit() }) return null
+            parsed += IgcExtension(start = start, end = end, code = code)
+        }
+        return parsed
+    }
+
+    private fun parseExtensionValues(line: String, extensions: List<IgcExtension>): IgcExtensionValues {
+        var iasKmh: Double? = null
+        var tasKmh: Double? = null
+        extensions.forEach { extension ->
+            if (extension.end > line.length) return@forEach
+            when (extension.code) {
+                "IAS" -> parseExtensionValueN(line, extension, EXTENSION_VALUE_DIGITS)?.let {
+                    iasKmh = it.toDouble()
+                }
+                "TAS" -> parseExtensionValueN(line, extension, EXTENSION_VALUE_DIGITS)?.let {
+                    tasKmh = it.toDouble()
+                }
+            }
+        }
+        return IgcExtensionValues(
+            indicatedAirspeedKmh = iasKmh,
+            trueAirspeedKmh = tasKmh
+        )
+    }
+
+    private fun parseExtensionValueN(line: String, extension: IgcExtension, digits: Int): Int? {
+        val startIndex = extension.start - 1
+        if (startIndex < 0) return null
+        val endIndex = extension.end.coerceAtMost(line.length)
+        if (startIndex >= endIndex) return null
+        val length = digits.coerceAtMost(endIndex - startIndex)
+        val raw = line.substring(startIndex, startIndex + length)
+        if (raw.any { !it.isDigit() }) return null
+        return raw.toIntOrNull()
+    }
+
+    private const val MIN_EXTENSION_START = 8
+    private const val EXTENSION_VALUE_DIGITS = 3
 }

@@ -10,6 +10,7 @@ import com.example.xcpro.sensors.FlightDataCalculator
 import com.example.xcpro.sensors.FlightStateSource
 import com.example.xcpro.sensors.SensorFusionRepository
 import com.example.xcpro.vario.VarioServiceManager
+import com.example.xcpro.weather.wind.data.ReplayAirspeedRepository
 import com.example.xcpro.weather.wind.data.WindSensorFusionRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -45,6 +46,7 @@ class IgcReplayController @Inject constructor(
     private val windRepository: WindSensorFusionRepository,
     private val flightStateSource: FlightStateSource,
     private val replaySensorSource: ReplaySensorSource,
+    private val replayAirspeedRepository: ReplayAirspeedRepository,
     @DefaultDispatcher private val dispatcher: CoroutineDispatcher
 ) {
 
@@ -130,7 +132,7 @@ class IgcReplayController @Inject constructor(
 
     private var replayFusionRepository: SensorFusionRepository? = null
     private val simConfig = DEFAULT_SIM_CONFIG
-    private val sampleEmitter = ReplaySampleEmitter(replaySensorSource, simConfig)
+    private val sampleEmitter = ReplaySampleEmitter(replaySensorSource, replayAirspeedRepository, simConfig)
 
     private val _session = MutableStateFlow(SessionState())
     val session: StateFlow<SessionState> = _session.asStateFlow()
@@ -258,6 +260,7 @@ class IgcReplayController @Inject constructor(
             seekJob?.cancel()
             seekJob = null
             replaySensorSource.reset()
+            replayAirspeedRepository.reset()
             // Clear replay data before switching source back to LIVE to avoid stale UI after stop.
             flightDataRepository.clear()
             // Fully reset the replay fusion pipeline so averages/filters don't carry into the next run.

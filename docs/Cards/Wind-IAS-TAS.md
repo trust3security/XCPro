@@ -23,4 +23,5 @@ It must **not** be used for:
 ### Implemented Since This Note
 - G-load gating for EKF is live (raw accelerometer magnitude + smoothing).
 - Wind-based TAS proxy uses wind-to vector math (air = ground - wind).
- - EKF gating now requires updated GPS + airspeed samples and uses VTakeoff fallback 10 m/s.
+- EKF gating now requires updated GPS + airspeed samples and uses VTakeoff fallback 10 m/s.
+- Replay now parses IAS/TAS from IGC I-record extensions and emits airspeed for replay fusion.
