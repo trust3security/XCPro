@@ -85,7 +85,7 @@ class IgcReplayController @Inject constructor(
                         val tAvg = data?.thermalAverageTotal?.value
                         Log.d(
                             TAG,
-                            "REPLAY_FORWARD gps=${gps?.latLng?.latitude},${gps?.latLng?.longitude} " +
+                            "REPLAY_FORWARD gps=${gps?.position?.latitude},${gps?.position?.longitude} " +
                             "gs=${gps?.speed?.value} alt=${gps?.altitude?.value} " +
                             "v=${verticalSpeed} dv=${displayVario} xc=${xcSoarDisplayVario} " +
                             "valid=${data?.varioValid} src=${data?.varioSource} te=${data?.teAltitude?.value} " +

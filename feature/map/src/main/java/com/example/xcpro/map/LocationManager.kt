@@ -288,10 +288,10 @@ class LocationManager(
         }
 
         // XCSoar-style jitter gate (SetLocationLazy equivalent)
-        val accepted = locationFilter.accept(location.latLng, map)
+        val accepted = locationFilter.accept(location.toLatLng(), map)
         if (!accepted) return
 
-        currentUserLocation = location.latLng
+        currentUserLocation = location.toLatLng()
 
         val shouldTrackCamera = isTrackingLocation && !showReturnButton
         val padding = if (shouldTrackCamera) {
@@ -310,7 +310,7 @@ class LocationManager(
 
         positionController.applyAcceptedSample(
             map = map,
-            location = location.latLng,
+            location = location.toLatLng(),
             trackBearing = location.bearing,
             magneticHeading = magneticHeading,
             orientationMode = orientationMode,
@@ -319,7 +319,7 @@ class LocationManager(
             cameraBearing = resolveCameraBearing(location.bearing, magneticHeading, orientationMode)
         )
 
-        handleInitialCentering(location.latLng)
+        handleInitialCentering(location.toLatLng())
     }
 
     private fun handleInitialCentering(location: LatLng) {
@@ -430,7 +430,7 @@ class LocationManager(
 
     fun saveLocationFromGPS(location: GPSData?, zoom: Double, bearing: Double) {
         location?.let {
-            saveLocation(it.latLng, zoom, bearing)
+            saveLocation(it.toLatLng(), zoom, bearing)
         }
     }
 

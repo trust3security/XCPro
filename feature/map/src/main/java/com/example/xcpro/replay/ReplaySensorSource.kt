@@ -6,6 +6,7 @@ import com.example.xcpro.sensors.BaroData
 import com.example.xcpro.sensors.CompassData
 import com.example.xcpro.sensors.GPSData
 import com.example.xcpro.sensors.RawAccelData
+import com.example.xcpro.common.geo.GeoPoint
 import com.example.xcpro.sensors.SensorDataSource
 import com.example.xcpro.common.units.AltitudeM
 import com.example.xcpro.common.units.PressureHpa
@@ -13,7 +14,6 @@ import com.example.xcpro.common.units.SpeedMs
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import org.maplibre.android.geometry.LatLng
 
 class ReplaySensorSource : SensorDataSource {
     private val _gpsFlow = MutableStateFlow<GPSData?>(null)
@@ -44,7 +44,7 @@ class ReplaySensorSource : SensorDataSource {
         timestamp: Long
     ) {
         _gpsFlow.value = GPSData(
-            latLng = LatLng(latitude, longitude),
+            position = GeoPoint(latitude, longitude),
             altitude = AltitudeM(altitude),
             speed = SpeedMs(speed),
             bearing = bearing,

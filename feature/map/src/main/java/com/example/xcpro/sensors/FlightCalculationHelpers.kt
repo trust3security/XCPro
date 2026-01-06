@@ -80,8 +80,8 @@ internal class FlightCalculationHelpers(
         scope.launch {
             val newAGL = aglCalculator.calculateAgl(
                 altitude = baroAltitude,  // Use baro for stability
-                lat = gps.latLng.latitude,
-                lon = gps.latLng.longitude,
+                lat = gps.position.latitude,
+                lon = gps.position.longitude,
                 speed = speed
             )
 
@@ -99,8 +99,8 @@ internal class FlightCalculationHelpers(
      */
     fun recordLocationSample(gps: GPSData) {
         val location = Location("").apply {
-            latitude = gps.latLng.latitude
-            longitude = gps.latLng.longitude
+            latitude = gps.position.latitude
+            longitude = gps.position.longitude
         }
         addLocationToHistory(location, gps.speed.value.toFloat(), gps.bearing.toFloat())
     }
@@ -134,8 +134,8 @@ internal class FlightCalculationHelpers(
         val distanceTraveled = if (locationHistory.size >= 2) {
             val oldLocation = locationHistory[locationHistory.size - min(locationHistory.size, 5)]
             val currentLocation = Location("").apply {
-                latitude = gps.latLng.latitude
-                longitude = gps.latLng.longitude
+                latitude = gps.position.latitude
+                longitude = gps.position.longitude
             }
             currentLocation.distanceTo(oldLocation.location)
         } else {

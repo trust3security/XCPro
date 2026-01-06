@@ -288,6 +288,11 @@ If a component cannot be tested in isolation, the design is incorrect.
 
 ---
 
+## Related Docs
+- ARCHITECTURE_DECISIONS.md: rationale for major architecture refactors and why they were made.
+- REFACTOR.md: active UDF/SSOT map refactor plan and progress.
+- REFACTOR_GEOPOINT.md: map-agnostic GPS refactor plan.
+
 ## Final Rule
 
 Architecture is not optional.  

@@ -48,7 +48,7 @@ import androidx.navigation.NavHostController
 import kotlinx.coroutines.flow.collect
 import com.example.xcpro.FileWaypointRepo
 import com.example.xcpro.saveConfig
-// G£à REMOVED DataQuality - no longer used
+// GÂ£Ã  REMOVED DataQuality - no longer used
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
 import com.example.xcpro.screens.navdrawer.lookandfeel.LookAndFeelPreferences
 import kotlinx.coroutines.launch
@@ -61,7 +61,7 @@ private const val MAP_PREFS_NAME = "MapPrefs"
 const val INITIAL_LATITUDE = -30.87
 
 /**
- * G£à PHASE 2: Convert CompleteFlightData (from FlightDataCalculator) to RealTimeFlightData (for cards)
+ * GÂ£Ã  PHASE 2: Convert CompleteFlightData (from FlightDataCalculator) to RealTimeFlightData (for cards)
  *
  * This adapter function maintains backward compatibility with existing card system
  * while migrating to the new unified sensor architecture.
@@ -106,13 +106,13 @@ internal fun MapScreenRoot(
     val taskManager = mapViewModel.taskManager  // ?o. Using coordinator for task management
     val waypointRepo = remember(mapUiState.waypoints) { FileWaypointRepo(mapUiState.waypoints) }
 
-    // G£à SIMPLIFIED: Remove permission dialog variables, always enable everything
+    // GÂ£Ã  SIMPLIFIED: Remove permission dialog variables, always enable everything
     val safeContainerSizeState = remember { mutableStateOf(IntSize.Zero) }
     var safeContainerSize by safeContainerSizeState
 
-    // G£à DEBUG: Track container size changes
+    // GÂ£Ã  DEBUG: Track container size changes
     LaunchedEffect(safeContainerSize) {
-        Log.d("MapScreen", "=ƒöì CONTAINER SIZE CHANGED: $safeContainerSize")
+        Log.d("MapScreen", "=Æ’Ã¶Ã¬ CONTAINER SIZE CHANGED: $safeContainerSize")
         if (safeContainerSize.width > 0 && safeContainerSize.height > 0) {
             mapViewModel.updateSafeContainerSize(
             MapStateStore.MapSize(
@@ -123,23 +123,23 @@ internal fun MapScreenRoot(
         }
     }
 
-    // G£à Flight Cards ViewModel
+    // GÂ£Ã  Flight Cards ViewModel
     val flightViewModel: FlightDataViewModel = viewModel()
-    // G£à REFACTORED: No longer collect cardStates here - CardContainer handles it directly
+    // GÂ£Ã  REFACTORED: No longer collect cardStates here - CardContainer handles it directly
     val selectedCardIds by flightViewModel.selectedCardIds.collectAsStateWithLifecycle()
     val profileModeCards by flightViewModel.profileModeCards.collectAsStateWithLifecycle()
     val profileModeTemplates by flightViewModel.profileModeTemplates.collectAsStateWithLifecycle()
     val activeTemplateId by flightViewModel.activeTemplateId.collectAsStateWithLifecycle()
     val cardPreferences = mapViewModel.cardPreferences
 
-    // G£à Initialize FlightDataManager
+    // GÂ£Ã  Initialize FlightDataManager
     val flightDataManager = mapViewModel.flightDataManager
     // Map Overlay Manager - centralized overlay management
     val overlayManager = remember(mapState, taskManager, context, mapStateReader, mapViewModel) {
         MapOverlayManager(context, mapState, mapStateReader, taskManager, mapViewModel)
     }
 
-    // G£à UI Widget Manager - centralized widget management
+    // GÂ£Ã  UI Widget Manager - centralized widget management
     val widgetPrefs = remember(context) {
         context.getSharedPreferences(MAP_PREFS_NAME, Context.MODE_PRIVATE)
     }
@@ -147,7 +147,7 @@ internal fun MapScreenRoot(
         MapUIWidgetManager(mapState, widgetPrefs)
     }
 
-    // G£à Profile ViewModel
+    // GÂ£Ã  Profile ViewModel
     val profileViewModel: com.example.xcpro.profiles.ProfileViewModel = hiltViewModel()
     val profileUiState by profileViewModel.uiState.collectAsStateWithLifecycle()
     val activeProfileId = profileUiState.activeProfile?.id ?: "default"
@@ -158,17 +158,17 @@ internal fun MapScreenRoot(
     val cardStyle by cardStyleFlow.collectAsStateWithLifecycle(
         initialValue = lookAndFeelPreferences.getCardStyle(activeProfileId)
     )
-    // G£à TaskScreenManager - Centralized task screen handling
+    // GÂ£Ã  TaskScreenManager - Centralized task screen handling
     val taskScreenManager = remember(mapState, taskManager) {
         MapTaskScreenManager(mapState, taskManager)
     }
 
-    // G£à CameraManager - Centralized camera handling
+    // GÂ£Ã  CameraManager - Centralized camera handling
     val cameraManager = remember(mapState, mapStateReader, mapViewModel) {
         MapCameraManager(mapState, mapStateReader, mapViewModel)
     }
 
-    // G£à LocationManager - Centralized location handling
+    // GÂ£Ã  LocationManager - Centralized location handling
     val locationManager = remember(
         mapState,
         coroutineScope,
@@ -188,7 +188,7 @@ internal fun MapScreenRoot(
         )
     }
 
-    // G£à LifecycleManager - Centralized lifecycle handling
+    // GÂ£Ã  LifecycleManager - Centralized lifecycle handling
     val lifecycleManager = remember(
         mapState,
         orientationManager,
@@ -198,13 +198,12 @@ internal fun MapScreenRoot(
         MapLifecycleManager(mapState, orientationManager, locationManager, mapViewModel.igcReplayController)
     }
 
-    // G£à ModalManager - Centralized modal handling
+    // GÂ£Ã  ModalManager - Centralized modal handling
     val modalManager = remember(mapState) {
         MapModalManager(mapState)
     }
 
-    // G£à Backward compatibility variables (using locationManager)
-    val unifiedSensorManager = locationManager.unifiedSensorManager
+    // GÂ£Ã  Backward compatibility variables (using locationManager)
 
     // Map Initializer
     val mapInitializer = remember(
@@ -225,35 +224,30 @@ internal fun MapScreenRoot(
             unifiedSensorManager = mapViewModel.unifiedSensorManager
         )
     }
-    val currentGpsLocation by unifiedSensorManager.gpsFlow.collectAsStateWithLifecycle()
-    val isGpsActive = unifiedSensorManager.isGpsEnabled()
     val gpsStatus by mapViewModel.gpsStatusFlow.collectAsStateWithLifecycle()
 
-    // G£à Location state through LocationManager
+    // G?? Location state through LocationManager
     val showRecenterButton by mapStateReader.showRecenterButton.collectAsStateWithLifecycle()
     val showReturnButton by mapStateReader.showReturnButton.collectAsStateWithLifecycle()
     val currentMode by mapStateReader.currentMode.collectAsStateWithLifecycle()
     val currentZoom by mapStateReader.currentZoom.collectAsStateWithLifecycle()
     val replaySession by mapViewModel.replaySessionState.collectAsStateWithLifecycle()
-    val suppressLiveGps = replaySession.selection != null
-    val allowSensorStart = replaySession.selection == null ||
-        replaySession.status == com.example.xcpro.replay.SessionStatus.IDLE
-    val replayFlightData by flightDataManager.liveFlightDataFlow.collectAsStateWithLifecycle()
-    val replayGpsLocation by rememberReplayGpsLocation(replayFlightData)
-    val locationForUi = if (suppressLiveGps) replayGpsLocation else currentGpsLocation
+    val suppressLiveGps by mapViewModel.suppressLiveGps.collectAsStateWithLifecycle()
+    val allowSensorStart by mapViewModel.allowSensorStart.collectAsStateWithLifecycle()
+    val locationForUi by mapViewModel.mapLocation.collectAsStateWithLifecycle()
 
-    // G£à AAT Edit Mode State - Track when AAT pin editing is active
+    // GÂ£Ã  AAT Edit Mode State - Track when AAT pin editing is active
     val isAATEditMode by mapViewModel.isAATEditMode.collectAsStateWithLifecycle()
     
-    // G£à CRITICAL FIX: Reset AAT edit mode when task type changes
+    // GÂ£Ã  CRITICAL FIX: Reset AAT edit mode when task type changes
     LaunchedEffect(taskManager.taskType, isAATEditMode) {
         if (taskManager.taskType != TaskType.AAT && isAATEditMode) {
-            Log.d(TAG, "=ƒöº Task type changed to ${taskManager.taskType} - resetting AAT edit mode")
+            Log.d(TAG, "=Æ’Ã¶Âº Task type changed to ${taskManager.taskType} - resetting AAT edit mode")
             mapViewModel.exitAATEditMode()
         }
     }
 
-    // G£à Control drawer gestures based on task type and edit mode
+    // GÂ£Ã  Control drawer gestures based on task type and edit mode
     // Uses MapTaskIntegration to determine if drawer should be blocked
     LaunchedEffect(isAATEditMode, taskManager.taskType) {
         val shouldBlock = MapTaskIntegration.shouldBlockDrawerGestures(
@@ -266,9 +260,9 @@ internal fun MapScreenRoot(
             if (drawerState.isOpen) {
                 drawerState.close()
             }
-            Log.d(TAG, "=ƒÜ½ Task-specific drawer blocking active (${taskManager.taskType})")
+            Log.d(TAG, "=Æ’ÃœÂ½ Task-specific drawer blocking active (${taskManager.taskType})")
         } else {
-            Log.d(TAG, "G£à Drawer gestures enabled")
+            Log.d(TAG, "GÂ£Ã  Drawer gestures enabled")
         }
     }
     val savedLocation by mapStateReader.savedLocation.collectAsStateWithLifecycle()
@@ -278,22 +272,22 @@ internal fun MapScreenRoot(
     val showDistanceCircles by mapStateReader.showDistanceCircles.collectAsStateWithLifecycle()
     val cardHydrationReady by mapViewModel.cardHydrationReady.collectAsStateWithLifecycle()
 
-    // G£à Location Permission Launcher through LocationManager
+    // GÂ£Ã  Location Permission Launcher through LocationManager
     val locationPermissionLauncher = rememberLocationPermissionLauncher(locationManager)
 
-    // G£à Map FlightMode to FlightModeSelection using FlightDataManager
+    // GÂ£Ã  Map FlightMode to FlightModeSelection using FlightDataManager
     val currentFlightModeSelection = flightDataManager.currentFlightMode
     LaunchedEffect(currentFlightModeSelection) {
         orientationManager.setFlightMode(currentFlightModeSelection)
     }
 
-    // G£à Variometer test state for debug effects
-    // G£à CENTRALIZED EFFECTS - Replace all individual LaunchedEffect blocks
-    // G£à REFACTORED: Removed cardStates parameter - no longer needed
+    // GÂ£Ã  Variometer test state for debug effects
+    // GÂ£Ã  CENTRALIZED EFFECTS - Replace all individual LaunchedEffect blocks
+    // GÂ£Ã  REFACTORED: Removed cardStates parameter - no longer needed
     MapComposeEffects.AllMapEffects(
         locationManager = locationManager,
         locationPermissionLauncher = locationPermissionLauncher,
-        currentLocation = currentGpsLocation,
+        currentLocation = locationForUi,
         orientationData = orientationData,
         orientationManager = orientationManager,
         uiState = profileUiState,
@@ -314,7 +308,7 @@ internal fun MapScreenRoot(
         allowSensorStart = allowSensorStart
     )
 
-    // G£à CENTRALIZED LIFECYCLE EFFECTS - Replace individual DisposableEffect blocks
+    // GÂ£Ã  CENTRALIZED LIFECYCLE EFFECTS - Replace individual DisposableEffect blocks
     MapLifecycleEffects.LifecycleObserverEffect(lifecycleManager)
     DisposableEffect(lifecycleManager) {
         onDispose { lifecycleManager.cleanup() }
@@ -361,7 +355,7 @@ internal fun MapScreenRoot(
         )
     }
 
-    // G£à CENTRALIZED CAMERA EFFECTS - Replace camera animation and orientation effects
+    // GÂ£Ã  CENTRALIZED CAMERA EFFECTS - Replace camera animation and orientation effects
     MapCameraEffects.AllCameraEffects(
         cameraManager = cameraManager,
         bearing = orientationData.bearing,

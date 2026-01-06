@@ -93,8 +93,8 @@ fun convertToRealTimeFlightData(
 
     return RealTimeFlightData(
         // GPS data
-        latitude = gps?.latLng?.latitude ?: 0.0,
-        longitude = gps?.latLng?.longitude ?: 0.0,
+        latitude = gps?.position?.latitude ?: 0.0,
+        longitude = gps?.position?.longitude ?: 0.0,
         gpsAltitude = gps?.altitude?.value ?: 0.0,
         groundSpeed = gps?.speed?.value ?: 0.0,
         track = gps?.bearing ?: 0.0,

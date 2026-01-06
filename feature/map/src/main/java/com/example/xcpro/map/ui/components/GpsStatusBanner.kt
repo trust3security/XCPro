@@ -17,8 +17,8 @@ fun GpsStatusBanner(status: GpsStatus, modifier: Modifier = Modifier) {
     val (text, color) = when (status) {
         GpsStatus.NoPermission -> "Location permission needed" to Color(0xFFB00020)
         GpsStatus.Disabled -> "GPS is off" to Color(0xFFB00020)
-        is GpsStatus.LostFix -> "Waiting for GPS…" to Color(0xFFCA8A04)
-        GpsStatus.Searching -> "Searching for GPS…" to Color(0xFFCA8A04)
+        is GpsStatus.LostFix -> "Waiting for GPSâ€¦" to Color(0xFFCA8A04)
+        GpsStatus.Searching -> "Searching for GPSâ€¦" to Color(0xFFCA8A04)
         is GpsStatus.Ok -> return // No banner when OK
     }
     Surface(

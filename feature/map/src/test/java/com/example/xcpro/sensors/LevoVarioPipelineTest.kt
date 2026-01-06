@@ -14,20 +14,20 @@ import com.example.xcpro.flightdata.FlightDisplayMapper
 import com.example.xcpro.flightdata.FlightDisplaySnapshot
 import com.example.xcpro.glider.StillAirSinkProvider
 import com.example.xcpro.convertToRealTimeFlightData
+import com.example.xcpro.common.geo.GeoPoint
 import com.example.xcpro.sensors.domain.CalculateFlightMetricsUseCase
 import com.example.xcpro.sensors.domain.FlightMetricsRequest
 import com.example.xcpro.sensors.domain.WindEstimator
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.maplibre.android.geometry.LatLng
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
 private fun gpsSample(timeMs: Long, altitude: Double) = GPSData(
-    latLng = LatLng(0.0, 0.0),
+    position = GeoPoint(0.0, 0.0),
     altitude = AltitudeM(altitude),
     speed = SpeedMs(20.0),
     bearing = 0.0,

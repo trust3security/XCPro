@@ -97,7 +97,7 @@ object MapTaskScreenUi {
             val currentGpsLocation =
                 if (indicatorContent == null) {
                     currentLocation?.let { location ->
-                        Pair(location.latLng.latitude, location.latLng.longitude)
+                        Pair(location.position.latitude, location.position.longitude)
                     }
                 } else {
                     null

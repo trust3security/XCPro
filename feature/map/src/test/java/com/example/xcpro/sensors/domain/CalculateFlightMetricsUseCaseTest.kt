@@ -3,6 +3,7 @@ package com.example.xcpro.sensors.domain
 import com.example.dfcards.calculations.BarometricAltitudeData
 import com.example.dfcards.calculations.ConfidenceLevel
 import com.example.dfcards.filters.ModernVarioResult
+import com.example.xcpro.common.geo.GeoPoint
 import com.example.xcpro.common.units.AltitudeM
 import com.example.xcpro.common.units.SpeedMs
 import com.example.xcpro.glider.StillAirSinkProvider
@@ -16,10 +17,9 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
-import org.maplibre.android.geometry.LatLng
 
 private fun gpsSample(timeMs: Long) = GPSData(
-    latLng = LatLng(0.0, 0.0),
+    position = GeoPoint(0.0, 0.0),
     altitude = AltitudeM(1000.0),
     speed = SpeedMs(20.0),
     bearing = 0.0,

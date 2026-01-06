@@ -239,7 +239,7 @@ internal fun DistanceCirclesLayer(
     showDistanceCircles: Boolean
 ) {
     val zoom = currentZoom
-    val latitude = currentLocation?.latLng?.latitude ?: 0.0
+    val latitude = currentLocation?.position?.latitude ?: 0.0
     AnimatedVisibility(
         visible = showDistanceCircles,
         enter = fadeIn() + scaleIn(),

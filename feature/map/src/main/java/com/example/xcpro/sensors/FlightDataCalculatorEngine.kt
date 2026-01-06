@@ -356,7 +356,7 @@ internal class FlightDataCalculatorEngine(
         val currentTime = if (isReplayMode) gps.timestamp else wallTime
         if (isReplayMode && wallTime - lastReplayGpsLogTime >= 1_000L) {
             lastReplayGpsLogTime = wallTime
-            logReplayGpsSample(TAG, gps.latLng.latitude, gps.latLng.longitude, gps.altitude.value, gps.speed.value, gps.bearing.toDouble(), gps.timestamp)
+            logReplayGpsSample(TAG, gps.position.latitude, gps.position.longitude, gps.altitude.value, gps.speed.value, gps.bearing.toDouble(), gps.timestamp)
         }
 
         // Update cached GPS data for high-speed vario loop
@@ -364,8 +364,8 @@ internal class FlightDataCalculatorEngine(
         cachedGPSAltitude = gps.altitude.value
         cachedGPSAccuracy = gps.accuracy.toDouble()
         cachedIsGPSFixed = gps.isHighAccuracy
-        cachedGPSLat = gps.latLng.latitude   // dYs? For SRTM-based QNH calibration
-        cachedGPSLon = gps.latLng.longitude  // dYs? For SRTM-based QNH calibration
+        cachedGPSLat = gps.position.latitude   // dYs? For SRTM-based QNH calibration
+        cachedGPSLon = gps.position.longitude  // dYs? For SRTM-based QNH calibration
         cachedGPS = gps
         cachedCompassData = compass
 

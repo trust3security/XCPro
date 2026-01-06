@@ -91,7 +91,7 @@ SensorDataSource (raw flows)
 
 ### Data contracts
 - **Inputs (normalized, no Android types)**
-  - `GpsSample(latLng, groundSpeedMs, trackRad, timestampMillis)`
+  - `GpsSample(latitude, longitude, altitudeMeters, groundSpeedMs, trackRad, timestampMillis)`
   - `PressureSample(pressureHpa, altitudeMeters, timestampMillis)` (optional)
   - `AirspeedSample(trueMs, indicatedMs, timestampMillis, valid)` (optional)
   - `HeadingSample(headingDeg, timestampMillis)` (optional)

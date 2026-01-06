@@ -196,8 +196,8 @@ class MapInitializer(
             if (currentLocation != null) {
                 stateActions.saveLocation(
                     location = MapStateStore.MapPoint(
-                        latitude = currentLocation.latLng.latitude,
-                        longitude = currentLocation.latLng.longitude
+                        latitude = currentLocation.position.latitude,
+                        longitude = currentLocation.position.longitude
                     ),
                     zoom = map.cameraPosition.zoom,
                     bearing = map.cameraPosition.bearing

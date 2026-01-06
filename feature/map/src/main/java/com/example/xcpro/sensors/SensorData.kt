@@ -1,7 +1,7 @@
 package com.example.xcpro.sensors
 
 import com.example.dfcards.calculations.ConfidenceLevel
-import org.maplibre.android.geometry.LatLng
+import com.example.xcpro.common.geo.GeoPoint
 import com.example.xcpro.common.units.AltitudeM
 import com.example.xcpro.common.units.PressureHpa
 import com.example.xcpro.common.units.SpeedMs
@@ -12,13 +12,16 @@ import com.example.xcpro.common.units.VerticalSpeedMs
  * Single Source of Truth for GPS sensor readings
  */
 data class GPSData(
-    val latLng: LatLng,
+    val position: GeoPoint,
     val altitude: AltitudeM,       // MSL in meters (Mean Sea Level)
     val speed: SpeedMs,            // m/s (ground speed)
     val bearing: Double,        // 0-360 deg (accurate when moving > 2 m/s)
     val accuracy: Float,        // meters (horizontal accuracy)
     val timestamp: Long
 ) {
+    val latitude: Double get() = position.latitude
+    val longitude: Double get() = position.longitude
+
     /**
      * Check if this is a high-accuracy GPS fix
      */

@@ -7,10 +7,14 @@ import androidx.compose.ui.geometry.Offset
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.dfcards.CardPreferences
+import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.common.di.DefaultDispatcher
 import com.example.xcpro.common.flight.FlightMode
+import com.example.xcpro.common.geo.GeoPoint
 import com.example.xcpro.common.flow.inVm
+import com.example.xcpro.common.units.AltitudeM
+import com.example.xcpro.common.units.SpeedMs
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.units.UnitsRepository
 import com.example.xcpro.common.waypoint.WaypointLoader
@@ -21,6 +25,7 @@ import com.example.xcpro.weather.wind.data.WindSensorFusionRepository
 import com.example.xcpro.weather.wind.model.WindState
 import com.example.xcpro.replay.IgcReplayController
 import com.example.xcpro.replay.SessionState
+import com.example.xcpro.replay.SessionStatus
 import com.example.xcpro.map.ballast.BallastCommand
 import com.example.xcpro.map.ballast.BallastController
 import com.example.xcpro.map.ballast.BallastUiState
@@ -29,6 +34,7 @@ import com.example.xcpro.map.domain.MapWaypointError
 import com.example.xcpro.map.domain.toUserMessage
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.variometer.layout.VariometerUiState
+import com.example.xcpro.sensors.GPSData
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -41,6 +47,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -90,6 +97,34 @@ class MapScreenViewModel @Inject constructor(
     val showVarioDemoFab: Boolean = MapFeatureFlags.showVarioDemoFab
     val gpsStatusFlow: StateFlow<com.example.xcpro.sensors.GpsStatus> =
         unifiedSensorManager.gpsStatusFlow
+    val suppressLiveGps: StateFlow<Boolean> =
+        replaySessionState
+            .map { it.selection != null }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = replaySessionState.value.selection != null
+            )
+    val allowSensorStart: StateFlow<Boolean> =
+        replaySessionState
+            .map { it.selection == null || it.status == SessionStatus.IDLE }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = replaySessionState.value.selection == null ||
+                    replaySessionState.value.status == SessionStatus.IDLE
+            )
+    val mapLocation: StateFlow<GPSData?> =
+        combine(
+            flightDataRepository.activeSource,
+            unifiedSensorManager.gpsFlow,
+            flightDataManager.liveFlightDataFlow
+        ) { source, liveGps, replayData ->
+            when (source) {
+                FlightDataRepository.Source.REPLAY -> toGpsData(replayData)
+                FlightDataRepository.Source.LIVE -> liveGps
+            }
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     private val sharedPrefs = appContext.getSharedPreferences("MapPrefs", Context.MODE_PRIVATE)
     private val variometerLayoutController = VariometerLayoutController(sharedPrefs)
@@ -240,6 +275,19 @@ class MapScreenViewModel @Inject constructor(
 
     fun onReplayFileChosen(uri: Uri, displayName: String?) =
         replayCoordinator.onReplayFileChosen(uri, displayName)
+
+    private fun toGpsData(sample: RealTimeFlightData?): GPSData? {
+        if (sample == null) return null
+        if (sample.latitude == 0.0 && sample.longitude == 0.0) return null
+        return GPSData(
+            position = GeoPoint(sample.latitude, sample.longitude),
+            altitude = AltitudeM(sample.gpsAltitude),
+            speed = SpeedMs(sample.groundSpeed),
+            bearing = sample.track,
+            accuracy = sample.accuracy.toFloat(),
+            timestamp = sample.timestamp
+        )
+    }
     private fun setUiEditMode(enabled: Boolean) {
         if (_uiState.value.isUiEditMode == enabled) {
             return

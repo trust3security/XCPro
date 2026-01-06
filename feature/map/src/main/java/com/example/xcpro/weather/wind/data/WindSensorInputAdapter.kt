@@ -31,8 +31,8 @@ class WindSensorInputAdapter @Inject constructor(
             .map { gps ->
                 gps?.let {
                     GpsSample(
-                        latitude = it.latLng.latitude,
-                        longitude = it.latLng.longitude,
+                        latitude = it.position.latitude,
+                        longitude = it.position.longitude,
                         altitudeMeters = it.altitude.value,
                         groundSpeedMs = it.speed.value,
                         trackRad = Math.toRadians(it.bearing),

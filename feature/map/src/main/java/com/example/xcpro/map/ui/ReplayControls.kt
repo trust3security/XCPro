@@ -158,7 +158,7 @@ internal fun ReplayControlsContent(
     ) {
         Text(text = title, style = MaterialTheme.typography.titleMedium)
         Text(
-            text = "${formatDuration(elapsed)} / ${formatDuration(duration)}  ·  ${"""%.1f""".format(speed)}x",
+            text = "${formatDuration(elapsed)} / ${formatDuration(duration)}  Â·  ${"""%.1f""".format(speed)}x",
             style = MaterialTheme.typography.bodyMedium
         )
         Text(text = "Timeline", style = MaterialTheme.typography.bodySmall)

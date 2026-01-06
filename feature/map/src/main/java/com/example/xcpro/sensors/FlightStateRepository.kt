@@ -77,8 +77,8 @@ class FlightStateRepository @Inject constructor(
                             if (!altitude.isFinite()) return@mapLatest null
                             aglCalculator.calculateAgl(
                                 altitude = altitude,
-                                lat = gps.latLng.latitude,
-                                lon = gps.latLng.longitude,
+                                lat = gps.position.latitude,
+                                lon = gps.position.longitude,
                                 speed = gps.speed.value
                             )
                         }

@@ -13,10 +13,10 @@ import android.location.LocationListener
 import android.location.LocationManager
 import android.util.Log
 import androidx.core.app.ActivityCompat
+import com.example.xcpro.common.geo.GeoPoint
 import com.example.xcpro.common.units.AltitudeM
 import com.example.xcpro.common.units.PressureHpa
 import com.example.xcpro.common.units.SpeedMs
-import org.maplibre.android.geometry.LatLng
 
 /**
  * Handles sensor registration/start/stop and pushes raw data via callbacks.
@@ -60,7 +60,7 @@ internal class SensorRegistry(
     private val gpsListener = object : LocationListener {
         override fun onLocationChanged(location: Location) {
             val gpsData = GPSData(
-                latLng = LatLng(location.latitude, location.longitude),
+                position = GeoPoint(location.latitude, location.longitude),
                 altitude = AltitudeM(if (location.hasAltitude()) location.altitude else 0.0),
                 speed = SpeedMs(if (location.hasSpeed()) location.speed.toDouble() else 0.0),
                 bearing = if (location.hasBearing()) location.bearing.toDouble() else 0.0,
