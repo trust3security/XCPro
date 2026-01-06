@@ -12,7 +12,7 @@ import kotlin.math.sin
 class WindEkfUseCase(
     private val maxTurnRateRad: Double = Math.toRadians(20.0),
     private val blackoutDurationMs: Long = 3_000,
-    private val minTrueAirspeed: Double = 4.5
+    private val minTrueAirspeed: Double = DEFAULT_TAKEOFF_SPEED_MS
 ) {
 
     data class Result(
@@ -24,6 +24,7 @@ class WindEkfUseCase(
     enum class DropReason {
         NO_TAS,
         TIME_WARP,
+        NO_UPDATE,
         CIRCLING,
         TURNING,
         G_LOAD,
@@ -34,6 +35,8 @@ class WindEkfUseCase(
     private val ekf = WindEkf()
     private var resetPending = true
     private var lastTimestamp = 0L
+    private var lastGpsTimestamp = UNSET_TIMESTAMP
+    private var lastAirspeedTimestamp = UNSET_TIMESTAMP
     private var sampleCount = 0
     private var blackoutUntil = 0L
     var lastRejectReason: DropReason? = null
@@ -44,6 +47,8 @@ class WindEkfUseCase(
     fun reset() {
         resetPending = true
         lastTimestamp = 0L
+        lastGpsTimestamp = UNSET_TIMESTAMP
+        lastAirspeedTimestamp = UNSET_TIMESTAMP
         sampleCount = 0
         blackoutUntil = 0L
         lastRejectReason = null
@@ -65,11 +70,26 @@ class WindEkfUseCase(
         }
 
         val timestamp = gps.timestampMillis
+        val airspeedTimestamp = airspeed.timestampMillis
         if (lastTimestamp != 0L && abs(timestamp - lastTimestamp) > TIME_WARP_MS) {
             recordDrop(DropReason.TIME_WARP, timestamp)
             reset()
         }
         lastTimestamp = timestamp
+        val hasLastGps = lastGpsTimestamp != UNSET_TIMESTAMP
+        val hasLastAirspeed = lastAirspeedTimestamp != UNSET_TIMESTAMP
+        if ((hasLastGps && timestamp < lastGpsTimestamp) ||
+            (hasLastAirspeed && airspeedTimestamp < lastAirspeedTimestamp)) {
+            recordDrop(DropReason.TIME_WARP, timestamp)
+            reset()
+        }
+        if ((hasLastGps && timestamp == lastGpsTimestamp) ||
+            (hasLastAirspeed && airspeedTimestamp == lastAirspeedTimestamp)) {
+            recordDrop(DropReason.NO_UPDATE, timestamp)
+            return null
+        }
+        lastGpsTimestamp = timestamp
+        lastAirspeedTimestamp = airspeedTimestamp
 
         if (isCircling) {
             sampleCount = (sampleCount * 0.5).toInt()
@@ -143,6 +163,9 @@ class WindEkfUseCase(
     }
 
     companion object {
+        // XCSoar fallback until polar VTakeoff wiring exists.
+        private const val DEFAULT_TAKEOFF_SPEED_MS = 10.0
+        private const val UNSET_TIMESTAMP = Long.MIN_VALUE
         private const val SAMPLE_STRIDE = 10
         private const val TIME_WARP_MS = 30_000
         private const val G_LOAD_THRESHOLD = 0.3
