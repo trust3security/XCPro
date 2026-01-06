@@ -95,6 +95,7 @@ Green build:
 
 ## Remaining Gaps / Next Steps
 1) **TAS/IAS wiring**: airspeed flow exists, but no BLE/real-air feed yet; EKF remains inactive in live flights.
+   - Implementation plan: `docs/Cards/TAS-IAS-Wiring-Plan.md`.
 2) **External/manual wind selection**: selection policy is defined (AUTO if newer than manual, else EXTERNAL, else MANUAL), but UI/external feeds still need to populate overrides.
 3) **Tests**: no unit/integration tests for g-load gating, blackout timing, staleness expiry, or replay determinism.
 4) **Doc drift**: verify no remaining references to legacy `WindRepository` elsewhere.
