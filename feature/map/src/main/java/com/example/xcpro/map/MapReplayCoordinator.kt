@@ -8,6 +8,8 @@ package com.example.xcpro.map
 import android.net.Uri
 import android.util.Log
 import com.example.xcpro.replay.IgcReplayController
+import com.example.xcpro.replay.SessionState
+import com.example.xcpro.replay.SessionStatus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.NonCancellable
@@ -21,7 +23,7 @@ import kotlinx.coroutines.withContext
  * Invariants: state writes go through MapStateActions; UI effects are emitted via MapUiEffect.
  */
 internal class MapReplayCoordinator(
-    private val sessionState: StateFlow<IgcReplayController.SessionState>,
+    private val sessionState: StateFlow<SessionState>,
     private val igcReplayController: IgcReplayController,
     private val stateActions: MapStateActions,
     private val uiEffects: MutableSharedFlow<MapUiEffect>,
@@ -31,9 +33,9 @@ internal class MapReplayCoordinator(
     fun onReplayPlayPause() {
         scope.launch {
             when (sessionState.value.status) {
-                IgcReplayController.SessionStatus.PLAYING -> igcReplayController.pause()
-                IgcReplayController.SessionStatus.PAUSED -> igcReplayController.play()
-                IgcReplayController.SessionStatus.IDLE -> {
+                SessionStatus.PLAYING -> igcReplayController.pause()
+                SessionStatus.PAUSED -> igcReplayController.play()
+                SessionStatus.IDLE -> {
                     val selection = sessionState.value.selection
                     if (selection == null) {
                         try {

@@ -1,7 +1,5 @@
 package com.example.xcpro.replay
 
-import com.example.xcpro.replay.IgcReplayController.ReplayMode
-import com.example.xcpro.replay.IgcReplayController.ReplaySimConfig
 import kotlin.math.cos
 import kotlin.math.ln
 import kotlin.math.max

@@ -54,4 +54,5 @@ fix-git-objects-recursion.bat
 nul
 .kotlin/
 /.gradle-user-home/
+.gradle-home/
 /.idea/firebender/

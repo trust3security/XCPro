@@ -26,6 +26,8 @@ import kotlinx.coroutines.runBlocking
 import com.example.xcpro.map.domain.MapWaypointError
 import com.example.xcpro.map.config.MapFeatureFlags
 import com.example.xcpro.replay.IgcReplayController
+import com.example.xcpro.replay.ReplayEvent
+import com.example.xcpro.replay.SessionState
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -61,8 +63,8 @@ class MapScreenViewModelTest {
     private val windRepository = Mockito.mock(WindSensorFusionRepository::class.java)
     private val windStateFlow = MutableStateFlow(com.example.xcpro.weather.wind.model.WindState())
     private val replayController = Mockito.mock(IgcReplayController::class.java)
-    private val replaySessionFlow = MutableStateFlow(IgcReplayController.SessionState())
-    private val replayEventsFlow = MutableSharedFlow<IgcReplayController.ReplayEvent>()
+    private val replaySessionFlow = MutableStateFlow(SessionState())
+    private val replayEventsFlow = MutableSharedFlow<ReplayEvent>()
     private val gliderRepository = Mockito.mock(GliderRepository::class.java)
     private val gliderConfigFlow = MutableStateFlow(GliderConfig())
     private val gliderModelFlow = MutableStateFlow<GliderModel?>(null)

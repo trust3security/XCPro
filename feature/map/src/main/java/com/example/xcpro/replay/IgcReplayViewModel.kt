@@ -143,12 +143,12 @@ class IgcReplayViewModel @Inject constructor(
                 val selection = session.selection
                 _uiState.update { current ->
                     val base = current.copy(
-                        isPlaying = session.status == IgcReplayController.SessionStatus.PLAYING,
+                        isPlaying = session.status == SessionStatus.PLAYING,
                         speedMultiplier = session.speedMultiplier,
                         isReplayLoaded = selection != null, elapsedMillis = session.elapsedMillis, durationMillis = session.durationMillis, progressFraction = session.progressFraction,
                         statusMessage = when {
                             selection == null -> "Select an IGC file to begin replay."
-                            session.status == IgcReplayController.SessionStatus.PLAYING ->
+                            session.status == SessionStatus.PLAYING ->
                                 "Replaying… use the map controls to pause or scrub."
                             else -> "Replay loaded. Control playback from the map overlay."
                         },
@@ -169,21 +169,21 @@ class IgcReplayViewModel @Inject constructor(
         viewModelScope.launch {
             replayController.events.collect { event ->
                 when (event) {
-                    is IgcReplayController.ReplayEvent.Completed -> _uiState.update {
+                    is ReplayEvent.Completed -> _uiState.update {
                         it.copy(
                             statusMessage = "Replay finished (${event.samples} samples).",
                             errorMessage = null,
                             isPlaying = false
                         )
                     }
-                    is IgcReplayController.ReplayEvent.Failed -> _uiState.update {
+                    is ReplayEvent.Failed -> _uiState.update {
                         it.copy(
                             statusMessage = "Replay stopped due to error.",
                             errorMessage = event.throwable.message ?: "Replay failed",
                             isPlaying = false
                         )
                     }
-                    IgcReplayController.ReplayEvent.Cancelled -> _uiState.update {
+                    ReplayEvent.Cancelled -> _uiState.update {
                         it.copy(
                             statusMessage = "Replay stopped.",
                             isPlaying = false

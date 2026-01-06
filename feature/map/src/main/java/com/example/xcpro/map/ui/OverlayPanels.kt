@@ -52,7 +52,8 @@ import com.example.xcpro.map.ballast.BallastCommand
 import com.example.xcpro.map.ballast.BallastUiState
 import com.example.xcpro.map.ui.widgets.MapUIWidgetManager
 import com.example.xcpro.map.ui.widgets.MapUIWidgets
-import com.example.xcpro.replay.IgcReplayController
+import com.example.xcpro.replay.SessionState
+import com.example.xcpro.replay.SessionStatus
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.variometer.layout.VariometerUiState
 import com.example.xcpro.sensors.GPSData
@@ -140,7 +141,7 @@ internal fun VariometerPanel(
     screenWidthPx: Float,
     screenHeightPx: Float,
     isUiEditMode: Boolean,
-    replayState: StateFlow<IgcReplayController.SessionState>
+    replayState: StateFlow<SessionState>
 ) {
     val displayNumericVario by flightDataManager.displayVarioFlow.collectAsStateWithLifecycle()
     val xcSoarDisplayVario by flightDataManager.xcSoarDisplayVarioFlow.collectAsStateWithLifecycle()
@@ -151,7 +152,7 @@ internal fun VariometerPanel(
         }
     }
     val replaySession by replayState.collectAsStateWithLifecycle()
-    val animationSpec: AnimationSpec<Float> = if (replaySession.status == IgcReplayController.SessionStatus.PLAYING) {
+    val animationSpec: AnimationSpec<Float> = if (replaySession.status == SessionStatus.PLAYING) {
         // AI-NOTE: During replay we want a critically damped response to avoid overshoot on 10 Hz updates.
         spring(dampingRatio = 1f, stiffness = Spring.StiffnessLow)
     } else {
@@ -166,12 +167,12 @@ internal fun VariometerPanel(
     val targetVarioState = rememberUpdatedState(displayVarioUnits.toFloat())
     if (com.example.xcpro.map.BuildConfig.DEBUG) {
         LaunchedEffect(replaySession.status) {
-            if (replaySession.status != IgcReplayController.SessionStatus.PLAYING) return@LaunchedEffect
+            if (replaySession.status != SessionStatus.PLAYING) return@LaunchedEffect
             // Higher cadence logging during replay to diagnose needle jitter.
             // AI-NOTE: keep this DEBUG-only to avoid log spam in prod.
             var lastNeedle = animatedVarioState.value
             var lastTarget = targetVarioState.value
-            while (isActive && replayState.value.status == IgcReplayController.SessionStatus.PLAYING) {
+            while (isActive && replayState.value.status == SessionStatus.PLAYING) {
                 val needleValue = animatedVarioState.value
                 val targetValue = targetVarioState.value
                 val clamped = needleValue.coerceIn(-14f, 14f)

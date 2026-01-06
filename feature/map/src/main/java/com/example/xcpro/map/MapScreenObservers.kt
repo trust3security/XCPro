@@ -6,6 +6,7 @@ import com.example.xcpro.convertToRealTimeFlightData
 import com.example.xcpro.weather.wind.data.WindSensorFusionRepository
 import com.example.xcpro.weather.wind.model.WindState
 import com.example.xcpro.replay.IgcReplayController
+import com.example.xcpro.replay.ReplayEvent
 import com.example.xcpro.flightdata.FlightDataRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -86,9 +87,9 @@ internal class MapScreenObservers(
         igcReplayController.events
             .onEach { event ->
                 when (event) {
-                    is IgcReplayController.ReplayEvent.Completed ->
+                    is ReplayEvent.Completed ->
                         uiEffects.emit(MapUiEffect.ShowToast("Replay finished (${event.samples} samples)"))
-                    is IgcReplayController.ReplayEvent.Failed -> {
+                    is ReplayEvent.Failed -> {
                         if (event.throwable is CancellationException) {
                             uiEffects.emit(MapUiEffect.ShowToast("Replay failed: job was cancelled"))
                             return@onEach
@@ -98,7 +99,7 @@ internal class MapScreenObservers(
                             MapUiEffect.ShowToast("Replay failed: ${event.throwable.message ?: "Unknown error"}")
                         )
                     }
-                    IgcReplayController.ReplayEvent.Cancelled -> {
+                    ReplayEvent.Cancelled -> {
                         uiEffects.emit(MapUiEffect.ShowToast("Replay failed: job was cancelled"))
                     }
                 }

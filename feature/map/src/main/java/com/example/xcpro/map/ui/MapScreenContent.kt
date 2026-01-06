@@ -1,4 +1,4 @@
-﻿package com.example.xcpro.map.ui
+package com.example.xcpro.map.ui
 /**
  * Map screen body content used inside MapScreenScaffold.
  * Invariants: UI renders state only and routes mutations through the ViewModel.
@@ -59,7 +59,8 @@ import com.example.xcpro.seedQnhInputValue
 import com.example.xcpro.convertQnhInputToHpa
 import com.example.xcpro.variometer.layout.VariometerUiState
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
-import com.example.xcpro.replay.IgcReplayController
+import com.example.xcpro.replay.SessionState
+import com.example.xcpro.replay.SessionStatus
 import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.VerticalSpeedMs
 import org.maplibre.android.maps.MapLibreMap
@@ -115,7 +116,7 @@ internal fun MapScreenContent(
     onHamburgerTap: () -> Unit,
     onHamburgerLongPress: () -> Unit,
     cardStyle: CardStyle,
-    replayState: StateFlow<IgcReplayController.SessionState>,
+    replayState: StateFlow<SessionState>,
     onReplayPlayPause: () -> Unit,
     onReplayStop: () -> Unit,
     onReplaySpeedChange: (Double) -> Unit,
@@ -274,7 +275,7 @@ internal fun MapScreenContent(
 
 @Composable
 private fun ReplayDiagnosticsLogger(
-    replayState: StateFlow<IgcReplayController.SessionState>,
+    replayState: StateFlow<SessionState>,
     flightDataManager: FlightDataManager,
     unitsPreferences: UnitsPreferences
 ) {
@@ -284,9 +285,9 @@ private fun ReplayDiagnosticsLogger(
 
     LaunchedEffect(replaySession.status, unitsPreferences) {
         Log.d("REPLAY_UI", "status=${replaySession.status} speed=${replaySession.speedMultiplier}")
-        if (replaySession.status != IgcReplayController.SessionStatus.PLAYING) return@LaunchedEffect
+        if (replaySession.status != SessionStatus.PLAYING) return@LaunchedEffect
 
-        while (isActive && replayState.value.status == IgcReplayController.SessionStatus.PLAYING) {
+        while (isActive && replayState.value.status == SessionStatus.PLAYING) {
             val live = flightDataManager.liveFlightData
             val displayMs = live?.displayVario ?: Double.NaN
             val displayUnits = if (displayMs.isFinite()) {

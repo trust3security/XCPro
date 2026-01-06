@@ -7,6 +7,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.replay.IgcReplayController
+import com.example.xcpro.replay.SessionStatus
 
 /**
  * Centralized lifecycle management for MapScreen
@@ -43,7 +44,7 @@ class MapLifecycleManager(
                 // This ensures GPS and other sensors resume after screen-off
                 val replaySession = igcReplayController.session.value
                 val allowRestart = replaySession.selection == null ||
-                    replaySession.status == IgcReplayController.SessionStatus.IDLE
+                    replaySession.status == SessionStatus.IDLE
                 if (allowRestart) {
                     locationManager.restartSensorsIfNeeded()
                 } else {

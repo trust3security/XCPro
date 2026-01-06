@@ -30,7 +30,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.time.Instant
 
 /**
  * Orchestrates IGC replay sessions and forwards replay samples into the fused sensor pipeline.
@@ -49,43 +48,6 @@ class IgcReplayController @Inject constructor(
     @DefaultDispatcher private val dispatcher: CoroutineDispatcher
 ) {
 
-    data class SessionState(
-        val selection: Selection? = null,
-        val status: SessionStatus = SessionStatus.IDLE,
-        val speedMultiplier: Double = DEFAULT_SPEED,
-        val startTimestampMillis: Long = 0L,
-        val currentTimestampMillis: Long = 0L,
-        val durationMillis: Long = 0L,
-        val qnhHpa: Double = DEFAULT_QNH_HPA
-    ) {
-        val hasSelection: Boolean get() = selection != null
-        val elapsedMillis: Long get() = (currentTimestampMillis - startTimestampMillis).coerceAtLeast(0L)
-        val progressFraction: Float
-            get() = if (durationMillis <= 0L) 0f else (elapsedMillis.toFloat() / durationMillis).coerceIn(0f, 1f)
-    }
-
-    data class Selection(val uri: Uri, val displayName: String?)
-
-    enum class SessionStatus { IDLE, PAUSED, PLAYING }
-
-    enum class ReplayMode { REFERENCE, REALTIME_SIM }
-
-    data class ReplaySimConfig(
-        val mode: ReplayMode = ReplayMode.REALTIME_SIM,
-        val baroStepMs: Long = 100L,   // 10 Hz baro cadence
-        val gpsStepMs: Long = 1_000L,  // 1 Hz GPS cadence
-        val jitterMs: Long = 30L,      // +/- 30 ms timing jitter
-        val pressureNoiseSigmaHpa: Double = 0.04,
-        val gpsAltitudeNoiseSigmaM: Double = 1.5,
-        val warmupMillis: Long = 8_000L,
-        val seed: Long = 1_337L
-    )
-
-    sealed interface ReplayEvent {
-        data class Completed(val samples: Int) : ReplayEvent
-        data class Failed(val throwable: Throwable) : ReplayEvent
-        object Cancelled : ReplayEvent
-    }
 
     private fun createScope(): CoroutineScope =
         CoroutineScope(SupervisorJob() + dispatcher)
@@ -183,7 +145,7 @@ class IgcReplayController @Inject constructor(
         var failure: Throwable? = null
         withContext(scope.coroutineContext) {
             try {
-                val log = loadIgcLog(uri)
+                val log = appContext.loadIgcLog(uri)
                 Log.i(TAG, "REPLY_LOAD Loaded IGC file ${displayName ?: uri} with ${log.points.size} raw points (qnh=${log.metadata.qnhHpa})")
                 prepareSession(
                     log = log,
@@ -207,7 +169,7 @@ class IgcReplayController @Inject constructor(
         var failure: Throwable? = null
         withContext(scope.coroutineContext) {
             try {
-                val log = loadIgcAssetLog(assetPath)
+                val log = appContext.loadIgcAssetLog(assetPath)
                 val name = displayName ?: assetPath.substringAfterLast('/')
                 val uri = Uri.parse("$ASSET_URI_PREFIX$assetPath")
                 Log.i(TAG, "REPLY_LOAD Loaded IGC asset $assetPath with ${log.points.size} raw points (qnh=${log.metadata.qnhHpa})")
@@ -318,7 +280,7 @@ class IgcReplayController @Inject constructor(
     }
 
     fun setSpeed(multiplier: Double) {
-        val clamped = multiplier.coerceIn(1.0, MAX_SPEED)
+        val clamped = multiplier.coerceIn(DEFAULT_SPEED, MAX_SPEED)
         _session.update { it.copy(speedMultiplier = clamped) }
     }
 
@@ -475,40 +437,10 @@ class IgcReplayController @Inject constructor(
         return (timestampMillis - lastGpsEmitTimestamp) >= simConfig.gpsStepMs
     }
 
-    private fun loadIgcLog(fileUri: Uri): IgcLog =
-        appContext.contentResolver.openInputStream(fileUri)?.use { stream ->
-            IgcParser.parse(stream)
-        } ?: throw IllegalArgumentException("Unable to open IGC file")
-
-    private fun loadIgcAssetLog(assetPath: String): IgcLog =
-        appContext.assets.open(assetPath).use { stream ->
-            IgcParser.parse(stream)
-        }
-
-    private fun logReplaySessionPrep(
-        selection: Selection,
-        pointCount: Int,
-        startMillis: Long,
-        endMillis: Long,
-        qnh: Double,
-        tag: String
-    ) {
-        val startIso = Instant.ofEpochMilli(startMillis).toString()
-        val endIso = Instant.ofEpochMilli(endMillis).toString()
-        val durationSec = (endMillis - startMillis) / 1000
-        Log.i(
-            tag,
-            "Prepared replay '${selection.displayName ?: selection.uri}' " +
-                "points=$pointCount duration=${durationSec}s start=$startIso end=$endIso qnh=${"%.1f".format(qnh)}"
-        )
-    }
-
     companion object {
         private const val TAG = "IgcReplayController"
         private const val MIN_FRAME_INTERVAL_MS = 1L  // allow sub-second replay cadence
-        private const val DEFAULT_SPEED = 1.0
         private const val MAX_SPEED = 20.0
-        private const val DEFAULT_QNH_HPA = 1013.3
         private const val ASSET_URI_PREFIX = "asset:///"
         private val DEFAULT_SIM_CONFIG = ReplaySimConfig()
     }

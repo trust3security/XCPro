@@ -36,7 +36,7 @@ import com.example.xcpro.map.ballast.BallastCommand
 import com.example.xcpro.map.ballast.BallastUiState
 import com.example.xcpro.map.ui.widgets.MapUIWidgetManager
 import com.example.xcpro.map.ui.widgets.MapUIWidgets
-import com.example.xcpro.replay.IgcReplayController
+import com.example.xcpro.replay.SessionState
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.variometer.layout.VariometerUiState
@@ -90,7 +90,7 @@ internal fun MapOverlayStack(
     onHamburgerTap: () -> Unit,
     onHamburgerLongPress: () -> Unit,
     cardStyle: CardStyle,
-    replayState: StateFlow<IgcReplayController.SessionState>,
+    replayState: StateFlow<SessionState>,
     onReplayPlayPause: () -> Unit,
     onReplayStop: () -> Unit,
     onReplaySpeedChange: (Double) -> Unit,

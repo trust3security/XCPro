@@ -20,6 +20,7 @@ import com.example.xcpro.vario.VarioServiceManager
 import com.example.xcpro.weather.wind.data.WindSensorFusionRepository
 import com.example.xcpro.weather.wind.model.WindState
 import com.example.xcpro.replay.IgcReplayController
+import com.example.xcpro.replay.SessionState
 import com.example.xcpro.map.ballast.BallastCommand
 import com.example.xcpro.map.ballast.BallastController
 import com.example.xcpro.map.ballast.BallastUiState
@@ -84,7 +85,7 @@ class MapScreenViewModel @Inject constructor(
     val ballastUiState: StateFlow<BallastUiState> = ballastController.state
     val sharedFlightDataRepository: FlightDataRepository = flightDataRepository
     val windState: StateFlow<WindState> = windRepository.windState
-    val replaySessionState: StateFlow<IgcReplayController.SessionState> = igcReplayController.session
+    val replaySessionState: StateFlow<SessionState> = igcReplayController.session
     val showReplayDebugFab: Boolean = MapFeatureFlags.showReplayDebugFab
     val showVarioDemoFab: Boolean = MapFeatureFlags.showVarioDemoFab
     val gpsStatusFlow: StateFlow<com.example.xcpro.sensors.GpsStatus> =

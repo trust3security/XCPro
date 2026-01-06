@@ -41,7 +41,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import com.example.xcpro.replay.IgcReplayController
+import com.example.xcpro.replay.SessionState
+import com.example.xcpro.replay.SessionStatus
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -49,7 +50,7 @@ import kotlin.math.roundToInt
 @Suppress("DEPRECATION") // Material swipeable APIs are deprecated; migrate to anchoredDraggable later.
 @Composable
 internal fun BoxScope.ReplayControlsSheet(
-    session: IgcReplayController.SessionState,
+    session: SessionState,
     modifier: Modifier = Modifier,
     onPlayPause: () -> Unit,
     onStop: () -> Unit,
@@ -134,14 +135,14 @@ internal fun BoxScope.ReplayControlsSheet(
 
 @Composable
 internal fun ReplayControlsContent(
-    state: IgcReplayController.SessionState,
+    state: SessionState,
     onPlayPause: () -> Unit,
     onStop: () -> Unit,
     onSpeedChanged: (Double) -> Unit,
     onSeek: (Float) -> Unit
 ) {
     if (!state.hasSelection) return
-    val isPlaying = state.status == IgcReplayController.SessionStatus.PLAYING
+    val isPlaying = state.status == SessionStatus.PLAYING
     val title = state.selection?.displayName ?: "IGC Replay"
     val elapsed = state.elapsedMillis
     val duration = state.durationMillis
