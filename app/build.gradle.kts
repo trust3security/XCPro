@@ -50,6 +50,10 @@ android {
         buildConfig = true
         compose = true
     }
+    lint {
+        // Work around a lint FIR crash in androidTest sources (Kotlin analysis bug).
+        checkTestSources = false
+    }
     testOptions {
         unitTests.isIncludeAndroidResources = true
     }
