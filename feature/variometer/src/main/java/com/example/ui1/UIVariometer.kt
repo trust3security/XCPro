@@ -21,38 +21,65 @@ import kotlinx.coroutines.delay
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.math.roundToInt
 
-private const val DIAL_MAX_KTS = 14f
-private const val DIAL_SWEEP_DEG = 300f
-private const val DIAL_PIVOT_KTS = 6f
-private const val DIAL_PIVOT_FRACTION = 0.7f
+private const val DEFAULT_DIAL_MAX_SI = 5f
+private const val DEFAULT_DIAL_SWEEP_DEG = 300f
+private const val DEFAULT_PIVOT_RATIO = 6f / 14f
+private const val DEFAULT_PIVOT_FRACTION = 0.7f
+private const val DEFAULT_MICRO_RANGE_SI = 1f
 
-private fun mapToDialValue(value: Float): Float {
+data class VarioDialLabel(
+    val valueSi: Float,
+    val text: String
+)
+
+data class VarioDialConfig(
+    val maxValueSi: Float = DEFAULT_DIAL_MAX_SI,
+    val sweepDegrees: Float = DEFAULT_DIAL_SWEEP_DEG,
+    val pivotValueSi: Float = maxValueSi * DEFAULT_PIVOT_RATIO,
+    val pivotDialFraction: Float = DEFAULT_PIVOT_FRACTION,
+    val microRangeSi: Float = DEFAULT_MICRO_RANGE_SI,
+    val microTicks: List<Float> = listOf(-1f, -0.75f, -0.5f, -0.25f, 0f, 0.25f, 0.5f, 0.75f, 1f),
+    val majorTickStepSi: Float = 1f,
+    val labelValues: List<VarioDialLabel> = defaultLabelValues(maxValueSi)
+)
+
+private fun defaultLabelValues(maxValueSi: Float): List<VarioDialLabel> {
+    val maxRounded = maxValueSi.roundToInt().coerceAtLeast(1)
+    return (-maxRounded..maxRounded).map { tick ->
+        VarioDialLabel(tick.toFloat(), tick.toString())
+    }
+}
+
+private fun mapToDialValue(value: Float, config: VarioDialConfig): Float {
+    val maxValue = config.maxValueSi.coerceAtLeast(0.1f)
     val sign = if (value < 0f) -1f else 1f
     val absValue = abs(value)
-    val pivot = DIAL_PIVOT_KTS.coerceIn(0.1f, DIAL_MAX_KTS - 0.1f)
-    val pivotDial = (DIAL_MAX_KTS * DIAL_PIVOT_FRACTION).coerceIn(0.1f, DIAL_MAX_KTS - 0.1f)
+    val pivot = config.pivotValueSi.coerceIn(0.1f, maxValue - 0.1f)
+    val pivotDial = (maxValue * config.pivotDialFraction).coerceIn(0.1f, maxValue - 0.1f)
     val scaled = if (absValue <= pivot) {
         (absValue / pivot) * pivotDial
     } else {
-        val highRange = DIAL_MAX_KTS - pivot
-        val highDial = DIAL_MAX_KTS - pivotDial
+        val highRange = maxValue - pivot
+        val highDial = maxValue - pivotDial
         pivotDial + ((absValue - pivot) / highRange) * highDial
     }
-    val over = absValue - DIAL_MAX_KTS
+    val over = absValue - maxValue
     val softened = if (over <= 0f) {
         scaled
     } else {
-        val bleed = DIAL_MAX_KTS * 0.02f
-        DIAL_MAX_KTS - (bleed / (1f + over))
+        val bleed = maxValue * 0.02f
+        maxValue - (bleed / (1f + over))
     }
-    return sign * softened.coerceIn(0f, DIAL_MAX_KTS)
+    return sign * softened.coerceIn(0f, maxValue)
 }
 
-private fun dialAngle(value: Float): Float {
-    val dialValue = mapToDialValue(value)
-    val span = DIAL_MAX_KTS * 2f
-    return dialValue * (DIAL_SWEEP_DEG / span) - 90f
+private fun dialAngle(value: Float, config: VarioDialConfig): Float {
+    val maxValue = config.maxValueSi.coerceAtLeast(0.1f)
+    val dialValue = mapToDialValue(value, config)
+    val span = maxValue * 2f
+    return dialValue * (config.sweepDegrees / span) - 90f
 }
 
 @Composable
@@ -62,13 +89,14 @@ fun UIVariometer(
     valueLabel: String = String.format("%+.1f", displayValue),
     secondaryLabel: String? = null,
     averageNeedleValue: Float? = null,
+    dialConfig: VarioDialConfig = VarioDialConfig(),
     modifier: Modifier = Modifier
 ) {
     var isFlashing by remember { mutableStateOf(false) }
 
-    LaunchedEffect(needleValue <= -5f || needleValue > 3f) {
-        if (needleValue <= -5f || needleValue > 3f) {
-            while (needleValue <= -5f || needleValue > 3f) {
+    LaunchedEffect(displayValue <= -5f || displayValue > 3f) {
+        if (displayValue <= -5f || displayValue > 3f) {
+            while (displayValue <= -5f || displayValue > 3f) {
                 isFlashing = !isFlashing
                 delay(500)
             }
@@ -82,7 +110,8 @@ fun UIVariometer(
         val radius = size.minDimension / 2f - 20.dp.toPx()
 
         val rawNeedleValue = needleValue
-        val microArcValue = rawNeedleValue.coerceIn(-1f, 1f)
+        val microRange = dialConfig.microRangeSi.coerceAtLeast(0.1f)
+        val microArcValue = (rawNeedleValue / microRange).coerceIn(-1f, 1f)
         val microArcAngle = microArcValue * 135f
 
         val microBandOuter = radius * 0.78f
@@ -139,8 +168,7 @@ fun UIVariometer(
             )
         }
 
-        val microTicks = listOf(-1f, -0.75f, -0.5f, -0.25f, 0f, 0.25f, 0.5f, 0.75f, 1f)
-        microTicks.forEach { tick ->
+        dialConfig.microTicks.forEach { tick ->
             val angle = tick * 135f - 90f
             val innerR = microBandInner - 6.dp.toPx()
             val outerR = microBandOuter + 4.dp.toPx()
@@ -157,8 +185,11 @@ fun UIVariometer(
             )
         }
 
-        for (i in -DIAL_MAX_KTS.toInt()..DIAL_MAX_KTS.toInt()) {
-            val angle = dialAngle(i.toFloat())
+        val majorStep = dialConfig.majorTickStepSi.coerceAtLeast(0.1f)
+        val maxTick = dialConfig.maxValueSi.coerceAtLeast(majorStep)
+        var tick = -maxTick
+        while (tick <= maxTick + 1e-3f) {
+            val angle = dialAngle(tick, dialConfig)
             val startRadius = radius * 0.85f
             val endRadius = radius * 0.95f
 
@@ -171,8 +202,9 @@ fun UIVariometer(
                 color = Color.Black.copy(alpha = 0.4f),
                 start = Offset(startX, startY),
                 end = Offset(endX, endY),
-                strokeWidth = if (i == 0) 3.dp.toPx() else 1.dp.toPx()
+                strokeWidth = if (abs(tick) < 1e-3f) 3.dp.toPx() else 1.dp.toPx()
             )
+            tick += majorStep
         }
 
         val numberPaint = android.graphics.Paint().apply {
@@ -184,23 +216,22 @@ fun UIVariometer(
             isFakeBoldText = true
         }
 
-        val numbersToShow = listOf(-14, -10, -6, -3, 0, 3, 6, 10, 14)
-        numbersToShow.forEach { number ->
-            val angle = dialAngle(number.toFloat())
+        dialConfig.labelValues.forEach { label ->
+            val angle = dialAngle(label.valueSi, dialConfig)
             val textRadius = radius * 0.65f
 
             val textX = center.x + cos(Math.toRadians(angle.toDouble())).toFloat() * textRadius
             val textY = center.y + sin(Math.toRadians(angle.toDouble())).toFloat() * textRadius
 
             drawContext.canvas.nativeCanvas.drawText(
-                number.toString(),
+                label.text,
                 textX,
                 textY + numberPaint.textSize / 3f,
                 numberPaint
             )
         }
 
-        val needleAngle = dialAngle(rawNeedleValue)
+        val needleAngle = dialAngle(rawNeedleValue, dialConfig)
         val needleLength = radius * 0.7f
 
         rotate(needleAngle, center) {
@@ -214,7 +245,7 @@ fun UIVariometer(
         }
 
         averageNeedleValue?.let { average ->
-            val averageAngle = dialAngle(average)
+            val averageAngle = dialAngle(average, dialConfig)
             rotate(averageAngle, center) {
                 drawLine(
                     color = Color(0xFF7C3AED),

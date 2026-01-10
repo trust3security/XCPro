@@ -19,7 +19,7 @@ class DisplayPoseSmoother {
         val longitude: Double,
         val speedMs: Double,
         val trackDeg: Double,
-        val magneticHeading: Double,
+        val headingDeg: Double,
         val accuracyM: Double,
         val timestampMs: Long,
         val orientationMode: MapOrientationMode
@@ -28,7 +28,7 @@ class DisplayPoseSmoother {
     data class DisplayPose(
         val location: LatLng,
         val trackDeg: Double,
-        val magneticHeading: Double,
+        val headingDeg: Double,
         val orientationMode: MapOrientationMode,
         val accuracyM: Double,
         val speedMs: Double,
@@ -74,7 +74,7 @@ class DisplayPoseSmoother {
         val pose = DisplayPose(
             location = newLocation,
             trackDeg = newTrack,
-            magneticHeading = raw.magneticHeading,
+            headingDeg = raw.headingDeg,
             orientationMode = raw.orientationMode,
             accuracyM = raw.accuracyM,
             speedMs = raw.speedMs,

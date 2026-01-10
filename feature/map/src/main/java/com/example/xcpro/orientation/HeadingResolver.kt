@@ -2,35 +2,37 @@ package com.example.xcpro.orientation
 
 import com.example.xcpro.common.orientation.BearingSource
 import com.example.xcpro.common.orientation.HeadingSolution
+import javax.inject.Inject
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
 
 data class HeadingResolverInput(
-    val compassHeadingDeg: Double?,
-    val compassReliable: Boolean,
+    val primaryHeadingDeg: Double?,
+    val primaryHeadingReliable: Boolean,
     val gpsTrackDeg: Double?,
     val groundSpeedMs: Double,
     val hasGpsFix: Boolean,
     val windFromDeg: Double?,
     val windSpeedMs: Double,
-    val minTrackSpeedMs: Double
+    val minTrackSpeedMs: Double,
+    val isFlying: Boolean
 )
 
 /**
  * Reconstructs a heading suitable for HEAD_UP mode using the same fallbacks as XCSoar:
- * 1) Trust the compass when it is reliable.
+ * 1) Trust the primary heading when it is reliable.
  * 2) Otherwise derive the aircraft axis from ground track + wind.
  * 3) Otherwise fall back to GPS track if we're moving fast enough.
  * 4) Emit the last known bearing (handled by the controller) when everything else fails.
  */
-class HeadingResolver {
+class HeadingResolver @Inject constructor() {
 
     fun resolve(input: HeadingResolverInput): HeadingSolution {
-        val compass = input.compassHeadingDeg?.takeIf { it.isFinite() }?.let(::normalizeBearing)
-        if (compass != null && input.compassReliable) {
-            return HeadingSolution(bearingDeg = compass, source = BearingSource.COMPASS, isValid = true)
+        val primaryHeading = input.primaryHeadingDeg?.takeIf { it.isFinite() }?.let(::normalizeBearing)
+        if (primaryHeading != null && input.primaryHeadingReliable) {
+            return HeadingSolution(bearingDeg = primaryHeading, source = BearingSource.COMPASS, isValid = true)
         }
 
         val track = input.gpsTrackDeg?.takeIf { it.isFinite() }?.let(::normalizeBearing)
@@ -39,7 +41,7 @@ class HeadingResolver {
 
         if (trackAvailable) {
             val hasWindSolution = input.windFromDeg != null && input.windSpeedMs > 0.1
-            if (trackAboveThreshold && hasWindSolution) {
+            if (input.isFlying && trackAboveThreshold && hasWindSolution) {
                 val heading = resolveFromWind(
                     trackDeg = track!!,
                     groundSpeed = input.groundSpeedMs,

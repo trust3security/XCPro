@@ -8,6 +8,7 @@ import com.example.xcpro.common.units.UnitsConverter
 import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.units.VerticalSpeedMs
+import com.example.xcpro.common.units.VerticalSpeedUnit
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -417,10 +418,11 @@ internal object CardDataFormatter {
     private fun formatThermalVario(value: Double, units: UnitsPreferences): String {
         val clamped = clampSmallVario(value)
         val isZero = kotlin.math.abs(clamped) < VARIO_ZERO_THRESHOLD
+        val decimals = varioDecimals(units)
         val formatted = UnitsFormatter.verticalSpeed(
             VerticalSpeedMs(clamped),
             units,
-            decimals = VARIO_DECIMALS,
+            decimals = decimals,
             showSign = !isZero
         ).text
         return if (isZero && (formatted.startsWith("+") || formatted.startsWith("-"))) {
@@ -431,14 +433,17 @@ internal object CardDataFormatter {
     }
 
     private fun formatVarioValue(value: Double, units: UnitsPreferences): String {
-        // Force 1 decimal like XCSoar, regardless of UnitsFormatter defaults
+        // Match XCSoar formatting: 0 decimals for fpm, 1 for other vertical speed units.
         val v = UnitsFormatter.verticalSpeed(
             VerticalSpeedMs(value),
             units,
-            decimals = VARIO_DECIMALS
+            decimals = varioDecimals(units)
         )
         return v.text
     }
+
+    private fun varioDecimals(units: UnitsPreferences): Int =
+        if (units.verticalSpeed == VerticalSpeedUnit.FEET_PER_MINUTE) 0 else VARIO_DECIMALS
 
     private fun windAgeLabel(ageSeconds: Long): String? {
         if (ageSeconds < 0) return null

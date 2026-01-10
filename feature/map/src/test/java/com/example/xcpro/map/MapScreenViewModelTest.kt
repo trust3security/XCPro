@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.example.dfcards.CardPreferences
 import com.example.dfcards.FlightModeSelection
+import com.example.xcpro.MapOrientationManagerFactory
+import com.example.xcpro.OrientationDataSourceFactory
 import com.example.xcpro.common.glider.GliderConfig
 import com.example.xcpro.common.glider.GliderModel
 import com.example.xcpro.common.waypoint.WaypointData
@@ -12,9 +14,11 @@ import com.example.xcpro.common.units.UnitsRepository
 import com.example.xcpro.glider.GliderRepository
 import com.example.xcpro.sensors.AttitudeData
 import com.example.xcpro.sensors.CompassData
+import com.example.xcpro.sensors.FlightStateSource
 import com.example.xcpro.sensors.GpsStatus
 import com.example.xcpro.sensors.SensorStatus
 import com.example.xcpro.sensors.UnifiedSensorManager
+import com.example.xcpro.sensors.domain.FlyingState
 import com.example.xcpro.vario.VarioServiceManager
 import com.example.xcpro.weather.wind.data.WindSensorFusionRepository
 import com.example.xcpro.flightdata.FlightDataRepository
@@ -25,6 +29,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import com.example.xcpro.map.domain.MapWaypointError
 import com.example.xcpro.map.config.MapFeatureFlags
+import com.example.xcpro.orientation.HeadingResolver
 import com.example.xcpro.replay.IgcReplayController
 import com.example.xcpro.replay.ReplayEvent
 import com.example.xcpro.replay.SessionState
@@ -59,6 +64,18 @@ class MapScreenViewModelTest {
     private val qnhPreferencesRepository = QnhPreferencesRepository(context)
     private val varioServiceManager = Mockito.mock(VarioServiceManager::class.java)
     private val unifiedSensorManager = Mockito.mock(UnifiedSensorManager::class.java)
+    private val flightStateFlow = MutableStateFlow(FlyingState())
+    private val flightStateSource = object : FlightStateSource {
+        override val flightState = flightStateFlow
+    }
+    private val orientationManagerFactory = MapOrientationManagerFactory(
+        context = context,
+        orientationDataSourceFactory = OrientationDataSourceFactory(
+            unifiedSensorManager = unifiedSensorManager,
+            headingResolver = HeadingResolver(),
+            flightStateSource = flightStateSource
+        )
+    )
     private val flightDataRepository = FlightDataRepository()
     private val windRepository = Mockito.mock(WindSensorFusionRepository::class.java)
     private val windStateFlow = MutableStateFlow(com.example.xcpro.weather.wind.model.WindState())
@@ -97,6 +114,7 @@ class MapScreenViewModelTest {
         Mockito.`when`(replayController.session).thenReturn(replaySessionFlow)
         Mockito.`when`(replayController.events).thenReturn(replayEventsFlow)
         Mockito.`when`(varioServiceManager.unifiedSensorManager).thenReturn(unifiedSensorManager)
+        Mockito.`when`(varioServiceManager.flightStateSource).thenReturn(flightStateSource)
         Mockito.`when`(unifiedSensorManager.gpsStatusFlow).thenReturn(gpsStatusFlow)
         Mockito.`when`(unifiedSensorManager.compassFlow).thenReturn(compassFlow)
         Mockito.`when`(unifiedSensorManager.attitudeFlow).thenReturn(attitudeFlow)
@@ -139,6 +157,7 @@ class MapScreenViewModelTest {
             flightDataRepository = flightDataRepository,
             windRepository = windRepository,
             igcReplayController = replayController,
+            orientationManagerFactory = orientationManagerFactory,
             defaultDispatcher = mainDispatcherRule.dispatcher
         )
 
@@ -168,6 +187,7 @@ class MapScreenViewModelTest {
             flightDataRepository = flightDataRepository,
             windRepository = windRepository,
             igcReplayController = replayController,
+            orientationManagerFactory = orientationManagerFactory,
             defaultDispatcher = mainDispatcherRule.dispatcher
         )
 
@@ -280,6 +300,7 @@ class MapScreenViewModelTest {
         flightDataRepository = flightDataRepository,
         windRepository = windRepository,
         igcReplayController = replayController,
+        orientationManagerFactory = orientationManagerFactory,
         defaultDispatcher = mainDispatcherRule.dispatcher
     )
 }

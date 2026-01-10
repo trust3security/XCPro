@@ -106,7 +106,6 @@ fun CompassWidget(
                     MapOrientationMode.NORTH_UP -> 0f
                     MapOrientationMode.TRACK_UP -> -animatedBearing
                     MapOrientationMode.HEADING_UP -> -animatedBearing
-                    MapOrientationMode.WIND_UP -> -animatedBearing
                 }
                 Log.d(
                     tag,
@@ -137,7 +136,6 @@ fun CompassWidget(
                 MapOrientationMode.NORTH_UP -> 0f
                 MapOrientationMode.TRACK_UP -> -animatedBearing
                 MapOrientationMode.HEADING_UP -> -animatedBearing
-                MapOrientationMode.WIND_UP -> -animatedBearing
             }
 
             rotate(degrees = rotation, pivot = center) {
@@ -209,7 +207,6 @@ fun CompassWidget(
         val modeBadge = when (orientation.mode) {
             MapOrientationMode.TRACK_UP -> "T"
             MapOrientationMode.HEADING_UP -> "H"
-            MapOrientationMode.WIND_UP -> "W"
             else -> ""
         }
         if (modeBadge.isNotEmpty()) {

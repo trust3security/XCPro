@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.example.xcpro.common.orientation.MapOrientationMode
 import com.example.xcpro.common.units.UnitsConverter
+import kotlin.math.abs
 
 class MapOrientationPreferences(context: Context) {
 
@@ -28,16 +29,19 @@ class MapOrientationPreferences(context: Context) {
         private const val DEFAULT_ORIENTATION_MODE = "TRACK_UP"
         private const val DEFAULT_AUTO_RESET_ENABLED = true
         private const val DEFAULT_AUTO_RESET_TIMEOUT = 10 // seconds
-        private const val DEFAULT_MIN_SPEED_THRESHOLD_KT = 2.0 // XCSoar parity
-        private val DEFAULT_MIN_SPEED_THRESHOLD_MS =
-            UnitsConverter.knotsToMs(DEFAULT_MIN_SPEED_THRESHOLD_KT)
+        private const val LEGACY_MIN_SPEED_THRESHOLD_KT = 2.0 // Old default (pre-2026-01-09)
+        private val LEGACY_MIN_SPEED_THRESHOLD_MS =
+            UnitsConverter.knotsToMs(LEGACY_MIN_SPEED_THRESHOLD_KT)
+        private const val DEFAULT_MIN_SPEED_THRESHOLD_MS = 2.0 // XCSoar parity (2 m/s)
         private const val DEFAULT_GLIDER_SCREEN_PERCENT = 35 // Approx current 65% from top
         private const val DEFAULT_BEARING_SMOOTHING = true
     }
 
     init {
         migrateLegacyOrientationMode()
+        migrateRemovedWindUpMode()
         migrateMinSpeedThresholdToMeters()
+        migrateMinSpeedThresholdDefault()
     }
 
     private fun migrateLegacyOrientationMode() {
@@ -174,7 +178,7 @@ class MapOrientationPreferences(context: Context) {
         }
 
         val legacyKnots = preferences
-            .getFloat(KEY_MIN_SPEED_THRESHOLD, DEFAULT_MIN_SPEED_THRESHOLD_KT.toFloat())
+            .getFloat(KEY_MIN_SPEED_THRESHOLD, LEGACY_MIN_SPEED_THRESHOLD_KT.toFloat())
             .toDouble()
 
         val convertedMs = UnitsConverter.knotsToMs(legacyKnots).toFloat()
@@ -182,6 +186,42 @@ class MapOrientationPreferences(context: Context) {
             .putFloat(KEY_MIN_SPEED_THRESHOLD, convertedMs)
             .putBoolean(KEY_MIN_SPEED_IS_MS, true)
             .apply()
+    }
+
+    private fun migrateRemovedWindUpMode() {
+        migrateWindUpValue(KEY_CRUISE_ORIENTATION)
+        migrateWindUpValue(KEY_CIRCLING_ORIENTATION)
+    }
+
+    private fun migrateWindUpValue(key: String): Boolean {
+        if (!preferences.contains(key)) {
+            return false
+        }
+        val stored = preferences.getString(key, DEFAULT_ORIENTATION_MODE) ?: DEFAULT_ORIENTATION_MODE
+        if (stored != "WIND_UP") {
+            return false
+        }
+        preferences.edit()
+            .putString(key, MapOrientationMode.TRACK_UP.name)
+            .apply()
+        return true
+    }
+
+    private fun migrateMinSpeedThresholdDefault() {
+        if (!preferences.contains(KEY_MIN_SPEED_THRESHOLD)) {
+            return
+        }
+        if (!preferences.getBoolean(KEY_MIN_SPEED_IS_MS, false)) {
+            return
+        }
+        val stored = preferences
+            .getFloat(KEY_MIN_SPEED_THRESHOLD, DEFAULT_MIN_SPEED_THRESHOLD_MS.toFloat())
+            .toDouble()
+        if (abs(stored - LEGACY_MIN_SPEED_THRESHOLD_MS) < 1e-3) {
+            preferences.edit()
+                .putFloat(KEY_MIN_SPEED_THRESHOLD, DEFAULT_MIN_SPEED_THRESHOLD_MS.toFloat())
+                .apply()
+        }
     }
 
     fun getGliderScreenPercent(): Int {

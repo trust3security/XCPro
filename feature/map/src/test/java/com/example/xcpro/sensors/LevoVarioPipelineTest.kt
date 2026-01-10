@@ -124,7 +124,11 @@ class LevoVarioPipelineTest {
             macCreadyRisk = 0.0
         )
         val complete = FlightDisplayMapper().map(displaySnapshot)
-        val realtime = convertToRealTimeFlightData(complete, windState = null)
+        val realtime = convertToRealTimeFlightData(
+            completeData = complete,
+            windState = null,
+            isFlying = true
+        )
 
         assertTrue(realtime.varioValid)
 

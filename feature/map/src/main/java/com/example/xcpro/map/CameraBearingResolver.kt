@@ -7,11 +7,10 @@ import com.example.xcpro.common.orientation.MapOrientationMode
  */
 internal fun resolveCameraBearing(
     trackBearing: Double,
-    magneticHeading: Double,
+    headingDeg: Double,
     orientationMode: MapOrientationMode
 ): Double = when (orientationMode) {
     MapOrientationMode.NORTH_UP -> 0.0
     MapOrientationMode.TRACK_UP -> trackBearing
-    MapOrientationMode.HEADING_UP -> magneticHeading
-    MapOrientationMode.WIND_UP -> trackBearing
+    MapOrientationMode.HEADING_UP -> headingDeg
 }

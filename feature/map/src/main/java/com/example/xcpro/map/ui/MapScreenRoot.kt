@@ -77,8 +77,6 @@ internal fun MapScreenRoot(
     mapViewModel: MapScreenViewModel
 ) {
     val context = LocalContext.current
-    val replayFilePicker = rememberReplayFilePicker(context, mapViewModel::onReplayFileChosen)
-
     val mapUiState by mapViewModel.uiState.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
@@ -423,23 +421,8 @@ internal fun MapScreenRoot(
         onHamburgerLongPress = { mapViewModel.onEvent(MapUiEvent.ToggleUiEditMode) },
         cardStyle = cardStyle,
         replayState = mapViewModel.replaySessionState,
-        onReplayPlayPause = mapViewModel::onReplayPlayPause,
-        onReplayStop = mapViewModel::onReplayStop,
-        onReplaySpeedChange = mapViewModel::onReplaySpeedChanged,
-        onReplaySeek = mapViewModel::onReplaySeek,
-        showReplayDevFab = mapViewModel.showReplayDebugFab,
         showVarioDemoFab = mapViewModel.showVarioDemoFab,
-        onVarioDemoClick = mapViewModel::onVarioDemoReplay,
-        onReplayPickFileClick = {
-            replayFilePicker.launch(
-                arrayOf(
-                    "text/plain",
-                    "application/octet-stream",
-                    "application/*",
-                    "*/*"
-                )
-            )
-        }
+        onVarioDemoClick = mapViewModel::onVarioDemoReplay
     )
 }
 

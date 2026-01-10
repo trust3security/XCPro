@@ -45,6 +45,7 @@ import com.example.xcpro.common.orientation.MapOrientationMode
 import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.VerticalSpeedMs
+import com.example.xcpro.common.units.VerticalSpeedUnit
 import com.example.xcpro.map.DistanceCirclesCanvas
 import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.map.MapCameraManager
@@ -57,6 +58,8 @@ import com.example.xcpro.replay.SessionStatus
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.variometer.layout.VariometerUiState
 import com.example.xcpro.sensors.GPSData
+import com.example.ui1.VarioDialConfig
+import com.example.ui1.VarioDialLabel
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -79,8 +82,7 @@ internal fun CompassPanel(
                 val nextMode = when (orientationManager.getCurrentMode()) {
                     MapOrientationMode.NORTH_UP -> MapOrientationMode.TRACK_UP
                     MapOrientationMode.TRACK_UP -> MapOrientationMode.HEADING_UP
-                    MapOrientationMode.HEADING_UP -> MapOrientationMode.WIND_UP
-                    MapOrientationMode.WIND_UP -> MapOrientationMode.NORTH_UP
+                    MapOrientationMode.HEADING_UP -> MapOrientationMode.NORTH_UP
                 }
                 orientationManager.setOrientationMode(nextMode)
             }
@@ -151,6 +153,9 @@ internal fun VariometerPanel(
             unitsPreferences.verticalSpeed.fromSi(VerticalSpeedMs(displayNumericVario.toDouble()))
         }
     }
+    val dialConfig by remember(unitsPreferences) {
+        derivedStateOf { buildVarioDialConfig(unitsPreferences) }
+    }
     val replaySession by replayState.collectAsStateWithLifecycle()
     val animationSpec: AnimationSpec<Float> = if (replaySession.status == SessionStatus.PLAYING) {
         // AI-NOTE: During replay we want a critically damped response to avoid overshoot on 10 Hz updates.
@@ -159,12 +164,12 @@ internal fun VariometerPanel(
         spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium)
     }
     val animatedVario by animateFloatAsState(
-        targetValue = displayVarioUnits.toFloat(),
+        targetValue = displayNumericVario,
         animationSpec = animationSpec,
         label = "vario"
     )
     val animatedVarioState = rememberUpdatedState(animatedVario)
-    val targetVarioState = rememberUpdatedState(displayVarioUnits.toFloat())
+    val targetVarioState = rememberUpdatedState(displayNumericVario)
     if (com.example.xcpro.map.BuildConfig.DEBUG) {
         LaunchedEffect(replaySession.status) {
             if (replaySession.status != SessionStatus.PLAYING) return@LaunchedEffect
@@ -175,8 +180,9 @@ internal fun VariometerPanel(
             while (isActive && replayState.value.status == SessionStatus.PLAYING) {
                 val needleValue = animatedVarioState.value
                 val targetValue = targetVarioState.value
-                val clamped = needleValue.coerceIn(-14f, 14f)
-                val angle = clamped * (300f / 28f) - 90f
+                val maxNeedle = dialConfig.maxValueSi.coerceAtLeast(0.1f)
+                val clamped = needleValue.coerceIn(-maxNeedle, maxNeedle)
+                val angle = clamped * (dialConfig.sweepDegrees / (maxNeedle * 2f)) - 90f
                 val delta = needleValue - targetValue
                 val targetStep = targetValue - lastTarget
                 val needleStep = needleValue - lastNeedle
@@ -217,6 +223,7 @@ internal fun VariometerPanel(
         displayValue = displayVarioUnits.toFloat(),
         displayLabel = stripUnit(varioFormatted),
         secondaryLabel = stripUnit(xcSoarFormatted),
+        dialConfig = dialConfig,
         screenWidthPx = screenWidthPx,
         screenHeightPx = screenHeightPx,
         minSizePx = minVariometerSizePx,
@@ -231,6 +238,36 @@ internal fun VariometerPanel(
 
 private fun stripUnit(formatted: UnitsFormatter.FormattedValue): String =
     formatted.text.replace(formatted.unitLabel, "").trim()
+
+private fun buildVarioDialConfig(unitsPreferences: com.example.xcpro.common.units.UnitsPreferences): VarioDialConfig {
+    val maxSi = 5f
+    val unit = unitsPreferences.verticalSpeed
+    val stepUser = when (unit) {
+        VerticalSpeedUnit.METERS_PER_SECOND -> 1.0
+        VerticalSpeedUnit.KNOTS -> 2.0
+        VerticalSpeedUnit.FEET_PER_MINUTE -> 200.0
+    }
+    val maxUserRaw = unit.fromSi(VerticalSpeedMs(maxSi.toDouble()))
+    val maxUserRounded = when (unit) {
+        VerticalSpeedUnit.METERS_PER_SECOND -> maxUserRaw
+        else -> kotlin.math.round(maxUserRaw / stepUser) * stepUser
+    }.coerceAtLeast(stepUser)
+    val labels = buildList {
+        var value = -maxUserRounded
+        while (value <= maxUserRounded + 1e-6) {
+            val valueSi = unit.toSi(value).value.toFloat().coerceIn(-maxSi, maxSi)
+            add(VarioDialLabel(valueSi, formatVarioLabel(value)))
+            value += stepUser
+        }
+    }
+    return VarioDialConfig(
+        maxValueSi = maxSi,
+        labelValues = labels
+    )
+}
+
+private fun formatVarioLabel(value: Double): String =
+    kotlin.math.round(value).toInt().toString()
 
 @Composable
 internal fun DistanceCirclesLayer(

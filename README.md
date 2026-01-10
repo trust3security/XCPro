@@ -20,11 +20,7 @@ It is designed for **experimental, training, and development use** — not as a 
 
 ## Documentation
 
-Read these in order:
-
-- **ARCHITECTURE.md** — system invariants (data flow, SSOT, threading, DI, lifecycle rules)
-- **CODING_RULES.md** — day-to-day coding constraints that enforce the architecture
-- **CONTRIBUTING.md** — workflow, branching, PR rules, testing expectations, and AI usage
+See `CONTRIBUTING.md` for required reading order and contributor workflow.
 
 ---
 

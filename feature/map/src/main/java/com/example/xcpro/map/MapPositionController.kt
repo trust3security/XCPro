@@ -35,7 +35,8 @@ class MapPositionController(
         map: MapLibreMap,
         location: LatLng,
         trackBearing: Double,
-        magneticHeading: Double,
+        headingDeg: Double,
+        mapBearing: Double,
         orientationMode: com.example.xcpro.common.orientation.MapOrientationMode,
         shouldTrackCamera: Boolean = true,
         padding: IntArray? = null,
@@ -46,7 +47,8 @@ class MapPositionController(
         mapState.blueLocationOverlay?.updateLocation(
             location,
             clampedBearing,
-            magneticHeading,
+            headingDeg,
+            mapBearing,
             orientationMode
         )
         mapState.blueLocationOverlay?.setVisible(true)

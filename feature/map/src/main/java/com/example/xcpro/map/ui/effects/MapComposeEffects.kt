@@ -44,8 +44,7 @@ object MapComposeEffects {
                 currentLocation?.let { location ->
                     locationManager.updateLocationFromGPS(
                         location,
-                        orientationData.mode,
-                        orientationData.bearing
+                        orientationData
                     )
                 }
             }
@@ -106,7 +105,8 @@ object MapComposeEffects {
         locationManager: LocationManager,
         orientationData: OrientationData,
         orientationManager: MapOrientationManager,
-        cardsReady: Boolean
+        cardsReady: Boolean,
+        suppressLiveGps: Boolean
     ) {
         val cardsReadyState = rememberUpdatedState(cardsReady)
 
@@ -135,12 +135,13 @@ object MapComposeEffects {
             flightDataManager.liveFlightDataFlow.collectLatest { liveData ->
                 if (liveData != null) {
                     orientationManager.updateFromFlightData(liveData)
-                    // AI-NOTE: Single-cadence map update to mirror XCSoar's SetLocationLazy flow.
-                    locationManager.updateLocationFromFlightData(
-                        liveData,
-                        orientationData.mode,
-                        orientationData.bearing
-                    )
+                    if (suppressLiveGps) {
+                        // Replay/IGC: use flight data for map updates when GPS is suppressed.
+                        locationManager.updateLocationFromFlightData(
+                            liveData,
+                            orientationData
+                        )
+                    }
                 }
             }
         }
@@ -234,7 +235,8 @@ object MapComposeEffects {
             locationManager = locationManager,
             orientationData = orientationData,
             orientationManager = orientationManager,
-            cardsReady = cardsReady
+            cardsReady = cardsReady,
+            suppressLiveGps = suppressLiveGps
         )
 
         MapStyleAndConfigurationEffects(

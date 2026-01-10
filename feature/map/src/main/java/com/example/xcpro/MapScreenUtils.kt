@@ -54,7 +54,8 @@ internal fun formatBaroGpsDelta(
 
 fun convertToRealTimeFlightData(
     completeData: CompleteFlightData,
-    windState: WindState?
+    windState: WindState?,
+    isFlying: Boolean
 ): RealTimeFlightData {
     // AI-NOTE: Wind is sourced from WindState only; CompleteFlightData no longer carries wind.
     val gps = completeData.gps
@@ -73,14 +74,15 @@ fun convertToRealTimeFlightData(
     val windSpeedMs = if (hasWind) windVector!!.speed else 0.0
     val headingSolution = HeadingResolver().resolve(
         HeadingResolverInput(
-            compassHeadingDeg = compass?.heading,
-            compassReliable = compassReliable,
+            primaryHeadingDeg = compass?.heading,
+            primaryHeadingReliable = compassReliable,
             gpsTrackDeg = gps?.bearing,
             groundSpeedMs = gps?.speed?.value ?: 0.0,
             hasGpsFix = hasGpsFix,
             windFromDeg = windFromDeg,
             windSpeedMs = windSpeedMs,
-            minTrackSpeedMs = UnitsConverter.knotsToMs(2.0)
+            minTrackSpeedMs = 2.0,
+            isFlying = isFlying
         )
     )
 

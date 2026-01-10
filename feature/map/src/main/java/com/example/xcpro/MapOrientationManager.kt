@@ -9,9 +9,7 @@ import com.example.xcpro.common.orientation.MapOrientationMode
 import com.example.xcpro.common.orientation.OrientationController
 import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.common.orientation.OrientationSensorData
-import com.example.xcpro.sensors.UnifiedSensorManager
 import com.example.xcpro.map.BuildConfig
-import com.example.xcpro.orientation.HeadingResolver
 import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -29,14 +27,10 @@ import kotlinx.coroutines.launch
 class MapOrientationManager(
     private val context: Context,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main + SupervisorJob()),
-    private val unifiedSensorManager: UnifiedSensorManager
+    orientationDataSourceFactory: OrientationDataSourceFactory
 ) : OrientationController {
     private val preferences = MapOrientationPreferences(context)
-    private val orientationDataSource = OrientationDataSource(
-        unifiedSensorManager = unifiedSensorManager,
-        scope = scope,
-        headingResolver = HeadingResolver()
-    )
+    private val orientationDataSource = orientationDataSourceFactory.create(scope)
 
     private val _orientationFlow = MutableStateFlow(OrientationData())
     override val orientationFlow: StateFlow<OrientationData> = _orientationFlow.asStateFlow()
@@ -50,14 +44,26 @@ class MapOrientationManager(
     private var isUserOverrideActive = false
     private var lastUserInteractionTime = 0L
     private var lastValidBearing = 0.0
+    private var lastValidTrackTime = 0L
+    private var lastValidHeadingTime = 0L
+    private var lastHeadingSampleTime = 0L
+    private var lastHeadingSampleBearing = 0.0
+    private var lastJitterLogTime = 0L
     private var updatesJob: Job? = null
     private var minSpeedForTrackMs: Double = 0.0
 
     companion object {
         private const val TAG = "MapOrientationManager"
+        private const val JITTER_TAG = "JITTER"
         private const val USER_OVERRIDE_TIMEOUT_MS = 10000L // 10 seconds
         private const val BEARING_UPDATE_THROTTLE_MS = 66L // ~15Hz
         private const val BEARING_CHANGE_THRESHOLD = 5.0 // degrees
+        private const val TRACK_STALE_TIMEOUT_MS = 10000L // XCSoar parity for track expiry
+        private const val HEADING_STALE_TIMEOUT_MS = 5000L // XCSoar parity for heading expiry
+        private const val JITTER_DELTA_DEG = 10.0
+        private const val JITTER_WINDOW_MS = 500L
+        private const val JITTER_DEG_PER_SEC = 30.0
+        private const val JITTER_LOG_COOLDOWN_MS = 1000L
     }
 
     private inline fun debugLog(message: () -> String) {
@@ -118,38 +124,59 @@ class MapOrientationManager(
 
         }
 
+        val now = System.currentTimeMillis()
         val bearingResult = calculateBearing(sensorData)
 
         val normalizedBearing = normalizeBearing(bearingResult.bearing)
         if (bearingResult.isValid) {
             lastValidBearing = normalizedBearing
-        }
-        val finalBearing = if (bearingResult.isValid) normalizedBearing else lastValidBearing
-        val finalSource = if (bearingResult.isValid) {
-            bearingResult.source
-        } else {
-            BearingSource.LAST_KNOWN
+            if (currentMode == MapOrientationMode.TRACK_UP) {
+                lastValidTrackTime = now
+            }
+            if (currentMode == MapOrientationMode.HEADING_UP) {
+                lastValidHeadingTime = now
+            }
         }
 
+        val trackIsStale = currentMode == MapOrientationMode.TRACK_UP &&
+            (lastValidTrackTime == 0L || now - lastValidTrackTime > TRACK_STALE_TIMEOUT_MS)
+
+        val headingIsStale = currentMode == MapOrientationMode.HEADING_UP &&
+            !bearingResult.isValid &&
+            (lastValidHeadingTime == 0L || now - lastValidHeadingTime > HEADING_STALE_TIMEOUT_MS)
+
+        val finalBearing = when {
+            bearingResult.isValid -> normalizedBearing
+            headingIsStale -> 0.0
+            trackIsStale -> 0.0
+            else -> lastValidBearing
+        }
+        val finalSource = when {
+            bearingResult.isValid -> bearingResult.source
+            headingIsStale -> BearingSource.NONE
+            trackIsStale -> BearingSource.NONE
+            else -> BearingSource.LAST_KNOWN
+        }
+        val finalValid = bearingResult.isValid ||
+            (currentMode == MapOrientationMode.TRACK_UP && !trackIsStale)
+
+        val headingSolution = sensorData.headingSolution
         val orientationData = OrientationData(
-
             bearing = finalBearing,
-
             mode = currentMode,
-
-            isValid = bearingResult.isValid,
-
+            isValid = finalValid,
             bearingSource = finalSource,
-
-            timestamp = System.currentTimeMillis()
-
+            headingDeg = headingSolution.bearingDeg,
+            headingValid = headingSolution.isValid,
+            headingSource = headingSolution.source,
+            timestamp = now
         )
 
         if (!bearingResult.isValid &&
             sensorData.isGPSValid &&
             sensorData.groundSpeed < minSpeedForTrackMs &&
             BuildConfig.DEBUG &&
-            System.currentTimeMillis() % 2000L < 25
+            now % 2000L < 25
         ) {
             Log.v(
                 TAG,
@@ -164,15 +191,25 @@ class MapOrientationManager(
 
         // Log bearing updates periodically (every 30 updates to avoid spam)
 
-        if (System.currentTimeMillis() % 30 == 0L) {
+        if (now % 30 == 0L) {
 
-            debugLog { "Orientation: mode=$currentMode, bearing=${finalBearing.toInt()}, source=$finalSource, valid=${bearingResult.isValid}" }
+            debugLog { "Orientation: mode=$currentMode, bearing=${finalBearing.toInt()}, source=$finalSource, valid=$finalValid" }
 
         }
 
 
 
         _orientationFlow.value = orientationData
+
+        if (BuildConfig.DEBUG && currentMode == MapOrientationMode.HEADING_UP) {
+            logHeadingJitterIfNeeded(
+                now = now,
+                bearing = finalBearing,
+                finalSource = finalSource,
+                finalValid = finalValid,
+                sensorData = sensorData
+            )
+        }
 
     }
 
@@ -210,20 +247,6 @@ class MapOrientationManager(
 
                 val solution = sensorData.headingSolution
                 BearingResult(solution.bearingDeg, solution.isValid, solution.source)
-
-            }
-
-
-
-            MapOrientationMode.WIND_UP -> {
-
-                val hasWind = sensorData.windSpeed > 0.5
-                val windBearing = if (hasWind) {
-                    normalizeBearing(sensorData.windDirectionFrom + 180.0)
-                } else {
-                    0.0
-                }
-                BearingResult(windBearing, hasWind, BearingSource.WIND)
 
             }
 
@@ -395,6 +418,8 @@ class MapOrientationManager(
         updatesJob?.cancel()
         updatesJob = null
         lastValidBearing = 0.0
+        lastValidTrackTime = 0L
+        lastValidHeadingTime = 0L
         debugLog { "MapOrientationManager stopped" }
     }
 
@@ -411,6 +436,65 @@ class MapOrientationManager(
             result += 360.0
         }
         return result
+    }
+
+    private fun logHeadingJitterIfNeeded(
+        now: Long,
+        bearing: Double,
+        finalSource: BearingSource,
+        finalValid: Boolean,
+        sensorData: OrientationSensorData
+    ) {
+        if (lastHeadingSampleTime == 0L) {
+            lastHeadingSampleTime = now
+            lastHeadingSampleBearing = bearing
+            return
+        }
+
+        val dt = now - lastHeadingSampleTime
+        val delta = kotlin.math.abs(shortestDeltaDegrees(lastHeadingSampleBearing, bearing))
+        val dps = if (dt > 0L) (delta * 1000.0 / dt.toDouble()) else 0.0
+
+        val isJitter = (delta >= JITTER_DELTA_DEG && dt <= JITTER_WINDOW_MS) ||
+            dps >= JITTER_DEG_PER_SEC
+
+        if (isJitter && now - lastJitterLogTime >= JITTER_LOG_COOLDOWN_MS) {
+            val snapshot = orientationDataSource.getHeadingDebugSnapshot(now)
+            val deltaText = String.format(Locale.US, "%.1f", delta)
+            val dpsText = String.format(Locale.US, "%.1f", dps)
+            val bearingText = String.format(Locale.US, "%.1f", bearing)
+            val compassText = snapshot.compassHeading?.let { String.format(Locale.US, "%.1f", it) } ?: "na"
+            val attText = snapshot.attitudeHeading?.let { String.format(Locale.US, "%.1f", it) } ?: "na"
+            val activeText = snapshot.activeHeading?.let { String.format(Locale.US, "%.1f", it) } ?: "na"
+            val trackText = String.format(Locale.US, "%.1f", sensorData.track)
+            val gsText = String.format(Locale.US, "%.2f", sensorData.groundSpeed)
+            val windSpdText = String.format(Locale.US, "%.2f", sensorData.windSpeed)
+            val windFromText = String.format(Locale.US, "%.1f", sensorData.windDirectionFrom)
+            Log.w(
+                JITTER_TAG,
+                "HU_JITTER delta=${deltaText}deg dt=${dt}ms dps=${dpsText} " +
+                    "bearing=${bearingText} src=$finalSource valid=$finalValid " +
+                    "input=${snapshot.inputSource} active=${snapshot.activeSource} activeHead=${activeText} " +
+                    "compass=${compassText} " +
+                    "compassAge=${snapshot.compassAgeMs ?: -1}ms compRel=${snapshot.compassReliable} " +
+                    "att=${attText} " +
+                    "attAge=${snapshot.attitudeAgeMs ?: -1}ms attRel=${snapshot.attitudeReliable} " +
+                    "track=${trackText} gs=${gsText} " +
+                    "windSpd=${windSpdText} windFrom=${windFromText} " +
+                    "headSrc=${sensorData.headingSolution.source} headValid=${sensorData.headingSolution.isValid}"
+            )
+            lastJitterLogTime = now
+        }
+
+        lastHeadingSampleTime = now
+        lastHeadingSampleBearing = bearing
+    }
+
+    private fun shortestDeltaDegrees(from: Double, to: Double): Double {
+        var delta = (to - from) % 360.0
+        if (delta > 180.0) delta -= 360.0
+        if (delta < -180.0) delta += 360.0
+        return delta
     }
 }
 

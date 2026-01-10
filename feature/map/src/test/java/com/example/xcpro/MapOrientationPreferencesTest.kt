@@ -42,10 +42,9 @@ class MapOrientationPreferencesTest {
     }
 
     @Test
-    fun defaultThresholdMatchesTwoKnots() {
+    fun defaultThresholdMatchesTwoMetersPerSecond() {
         val subject = MapOrientationPreferences(appContext)
-        val expectedMs = UnitsConverter.knotsToMs(2.0)
-        assertEquals(expectedMs, subject.getMinSpeedThreshold(), 1e-3)
+        assertEquals(2.0, subject.getMinSpeedThreshold(), 1e-3)
     }
 
     @Test
@@ -61,6 +60,19 @@ class MapOrientationPreferencesTest {
         assertEquals(UnitsConverter.knotsToMs(4.0), stored, 1e-3)
     }
 
+    @Test
+    fun bumpsLegacyDefaultToTwoMetersPerSecond() {
+        val prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(KEY_MIN_SPEED_THRESHOLD, UnitsConverter.knotsToMs(2.0).toFloat())
+            .putBoolean(KEY_MIN_SPEED_IS_MS, true)
+            .apply()
+
+        val subject = MapOrientationPreferences(appContext)
+
+        assertEquals(2.0, subject.getMinSpeedThreshold(), 1e-3)
+    }
+
     private fun clearPrefs() {
         appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().clear().commit()
     }
@@ -68,5 +80,6 @@ class MapOrientationPreferencesTest {
     companion object {
         private const val PREFS_NAME = "map_orientation_prefs"
         private const val KEY_MIN_SPEED_THRESHOLD = "min_speed_threshold_kt"
+        private const val KEY_MIN_SPEED_IS_MS = "min_speed_threshold_is_ms"
     }
 }

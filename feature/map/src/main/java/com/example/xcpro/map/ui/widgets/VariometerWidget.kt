@@ -33,6 +33,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.example.ui1.UIVariometer
+import com.example.ui1.VarioDialConfig
 import com.example.xcpro.map.MapOverlayGestureTarget
 import com.example.xcpro.map.ui.widgets.common.editModeBorder
 import com.example.xcpro.map.ui.widgets.common.updateWidgetGestureRegion
@@ -52,6 +53,7 @@ internal fun VariometerWidgetContent(
     displayValue: Float,
     displayLabel: String = String.format("%+.1f", displayValue),
     secondaryLabel: String? = null,
+    dialConfig: VarioDialConfig = VarioDialConfig(),
     screenWidthPx: Float,
     screenHeightPx: Float,
     minSizePx: Float,
@@ -165,6 +167,7 @@ internal fun VariometerWidgetContent(
             displayValue = displayValue,
             valueLabel = displayLabel,
             secondaryLabel = secondaryLabel,
+            dialConfig = dialConfig,
             modifier = Modifier.fillMaxSize()
         )
 

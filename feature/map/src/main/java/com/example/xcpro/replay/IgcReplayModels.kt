@@ -28,9 +28,9 @@ enum class ReplayMode { REFERENCE, REALTIME_SIM }
 
 data class ReplaySimConfig(
     val mode: ReplayMode = ReplayMode.REALTIME_SIM,
-    val baroStepMs: Long = 100L,   // 10 Hz baro cadence
+    val baroStepMs: Long = 20L,    // 50 Hz baro cadence (closer to live sensors)
     val gpsStepMs: Long = 1_000L,  // 1 Hz GPS cadence
-    val jitterMs: Long = 30L,      // +/- 30 ms timing jitter
+    val jitterMs: Long = 8L,       // +/- 8 ms timing jitter
     val pressureNoiseSigmaHpa: Double = 0.04,
     val gpsAltitudeNoiseSigmaM: Double = 1.5,
     val warmupMillis: Long = 8_000L,

@@ -3,6 +3,7 @@ package com.example.xcpro.map.ui.widgets
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import com.example.ui1.VarioDialConfig
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.map.ballast.BallastCommand
 import com.example.xcpro.map.ballast.BallastUiState
@@ -22,6 +23,7 @@ object MapUIWidgets {
         displayValue: Float,
         displayLabel: String = String.format("%+.1f", displayValue),
         secondaryLabel: String? = null,
+        dialConfig: VarioDialConfig = VarioDialConfig(),
         screenWidthPx: Float,
         screenHeightPx: Float,
         minSizePx: Float,
@@ -39,6 +41,7 @@ object MapUIWidgets {
         displayValue = displayValue,
         displayLabel = displayLabel,
         secondaryLabel = secondaryLabel,
+        dialConfig = dialConfig,
         screenWidthPx = screenWidthPx,
         screenHeightPx = screenHeightPx,
         minSizePx = minSizePx,

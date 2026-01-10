@@ -26,6 +26,7 @@ internal class SensorFrontEnd(
         val trueAirspeedMs: Double,
         val airspeedSource: AirspeedSource,
         val tasValid: Boolean,
+        val pressureAltitudeVario: Double,
         val pressureVario: Double,
         val baroVario: Double,
         val gpsVario: Double,
@@ -70,12 +71,20 @@ internal class SensorFrontEnd(
         } else 0.0
         val teAltitude = navAltitude + energyHeight
 
+        val pressureAltitudeVario = baroResult?.pressureAltitudeMeters
+            ?.takeIf { it.isFinite() }
+            ?.let { pressureAltitude ->
+                deriveVario(
+                    pressureAltitude = pressureAltitude,
+                    currentTime = currentTime,
+                    altitudeType = AltitudeType.PRESSURE
+                )
+            }
+            ?: Double.NaN
+
         val pressureVario = pressureVarioOverride
             ?.takeIf { it.isFinite() }
-            ?: baroResult?.pressureAltitudeMeters
-                ?.takeIf { it.isFinite() }
-                ?.let { pressureAltitude -> deriveVario(pressureAltitude = pressureAltitude, currentTime = currentTime, altitudeType = AltitudeType.PRESSURE) }
-            ?: Double.NaN
+            ?: pressureAltitudeVario
 
         val baroVario = baroResult
             ?.let { deriveVario(pressureAltitude = baroAltitude, currentTime = currentTime, altitudeType = AltitudeType.BARO) }
@@ -107,6 +116,7 @@ internal class SensorFrontEnd(
             trueAirspeedMs = trueAirspeedMs,
             airspeedSource = airspeedSource,
             tasValid = tasValid,
+            pressureAltitudeVario = pressureAltitudeVario,
             pressureVario = pressureVario,
             baroVario = baroVario,
             gpsVario = gpsVario,

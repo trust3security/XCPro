@@ -3,7 +3,7 @@ package com.example.xcpro.map
 import android.content.Context
 import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
-import com.example.xcpro.common.orientation.MapOrientationMode
+import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.map.QnhPreferencesRepository
 import com.example.xcpro.sensors.UnifiedSensorManager
 import com.example.xcpro.sensors.SensorFusionRepository
@@ -172,8 +172,7 @@ class LocationManager(
 
     fun updateLocationFromGPS(
         location: GPSData,
-        orientationMode: MapOrientationMode = MapOrientationMode.NORTH_UP,
-        magneticHeading: Double = 0.0
+        orientation: OrientationData
     ) {
         val map = mapState.mapLibreMap ?: run {
             Log.w(TAG, "MapLibreMap null; cannot update location")
@@ -182,11 +181,16 @@ class LocationManager(
 
         // XCSoar-style jitter gate (SetLocationLazy equivalent)
         val accepted = locationFilter.accept(location.toLatLng(), map)
-        if (!accepted) return
+        val shouldTrackCamera = isTrackingLocation && !showReturnButton
+        if (!accepted) {
+            if (shouldTrackCamera) {
+                updateCameraBearingIfNeeded(map, orientation.bearing)
+            }
+            return
+        }
 
         currentUserLocation = location.toLatLng()
 
-        val shouldTrackCamera = isTrackingLocation && !showReturnButton
         val padding = if (shouldTrackCamera) {
             val rawPadding = gliderPaddingHelper.paddingArray()
             positionController.rememberOffset(
@@ -205,11 +209,12 @@ class LocationManager(
             map = map,
             location = location.toLatLng(),
             trackBearing = location.bearing,
-            magneticHeading = magneticHeading,
-            orientationMode = orientationMode,
+            headingDeg = orientation.headingDeg,
+            mapBearing = orientation.bearing,
+            orientationMode = orientation.mode,
             shouldTrackCamera = shouldTrackCamera,
             padding = padding,
-            cameraBearing = resolveCameraBearing(location.bearing, magneticHeading, orientationMode)
+            cameraBearing = orientation.bearing
         )
 
         handleInitialCentering(location.toLatLng())
@@ -252,8 +257,7 @@ class LocationManager(
 
     fun updateLocationFromFlightData(
         liveData: RealTimeFlightData,
-        orientationMode: MapOrientationMode,
-        magneticHeading: Double
+        orientation: OrientationData
     ) {
         val groundSpeedKnots = String.format(
             "%.1f",
@@ -280,10 +284,16 @@ class LocationManager(
         }
 
         val newLocation = LatLng(liveData.latitude, liveData.longitude)
-        if (!locationFilter.accept(newLocation, map)) return
+        val accepted = locationFilter.accept(newLocation, map)
+        val shouldTrackCamera = isTrackingLocation && !showReturnButton
+        if (!accepted) {
+            if (shouldTrackCamera) {
+                updateCameraBearingIfNeeded(map, orientation.bearing)
+            }
+            return
+        }
 
         currentUserLocation = newLocation
-        val shouldTrackCamera = isTrackingLocation && !showReturnButton
         val padding = if (shouldTrackCamera) {
             val rawPadding = gliderPaddingHelper.paddingArray()
             positionController.rememberOffset(
@@ -302,14 +312,39 @@ class LocationManager(
             map = map,
             location = newLocation,
             trackBearing = liveData.track,
-            magneticHeading = magneticHeading,
-            orientationMode = orientationMode,
+            headingDeg = orientation.headingDeg,
+            mapBearing = orientation.bearing,
+            orientationMode = orientation.mode,
             shouldTrackCamera = shouldTrackCamera,
             padding = padding,
-            cameraBearing = resolveCameraBearing(liveData.track, magneticHeading, orientationMode)
+            cameraBearing = orientation.bearing
         )
 
         handleInitialCentering(newLocation)
+    }
+
+    private fun updateCameraBearingIfNeeded(map: org.maplibre.android.maps.MapLibreMap, bearing: Double) {
+        val currentPosition = map.cameraPosition
+        val delta = shortestDeltaDegrees(currentPosition.bearing, bearing)
+        if (kotlin.math.abs(delta) < 2.0) {
+            return
+        }
+
+        val newCameraPosition = org.maplibre.android.camera.CameraPosition.Builder()
+            .target(currentPosition.target)
+            .zoom(currentPosition.zoom)
+            .bearing(bearing)
+            .tilt(currentPosition.tilt)
+            .build()
+
+        map.moveCamera(CameraUpdateFactory.newCameraPosition(newCameraPosition))
+    }
+
+    private fun shortestDeltaDegrees(from: Double, to: Double): Double {
+        var delta = (to - from) % 360.0
+        if (delta > 180.0) delta -= 360.0
+        if (delta < -180.0) delta += 360.0
+        return delta
     }
 
     fun saveLocation(location: LatLng, zoom: Double, bearing: Double) {

@@ -6,8 +6,7 @@ import kotlinx.coroutines.flow.StateFlow
 enum class MapOrientationMode {
     NORTH_UP,
     TRACK_UP,
-    HEADING_UP,
-    WIND_UP
+    HEADING_UP
 }
 
 enum class BearingSource {
@@ -29,6 +28,9 @@ data class OrientationData(
     val mode: MapOrientationMode = MapOrientationMode.NORTH_UP,
     val isValid: Boolean = true,
     val bearingSource: BearingSource = BearingSource.NONE,
+    val headingDeg: Double = 0.0,
+    val headingValid: Boolean = false,
+    val headingSource: BearingSource = BearingSource.NONE,
     val timestamp: Long = System.currentTimeMillis()
 )
 

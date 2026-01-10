@@ -114,14 +114,8 @@ internal fun MapScreenScaffold(
     onHamburgerLongPress: () -> Unit,
     cardStyle: CardStyle,
     replayState: StateFlow<SessionState>,
-    onReplayPlayPause: () -> Unit,
-    onReplayStop: () -> Unit,
-    onReplaySpeedChange: (Double) -> Unit,
-    onReplaySeek: (Float) -> Unit,
-    showReplayDevFab: Boolean,
     showVarioDemoFab: Boolean,
-    onVarioDemoClick: () -> Unit,
-    onReplayPickFileClick: () -> Unit
+    onVarioDemoClick: () -> Unit
 ) {
     NavigationDrawer(
         drawerState = drawerState,
@@ -192,12 +186,6 @@ internal fun MapScreenScaffold(
                     onHamburgerLongPress = onHamburgerLongPress,
                     cardStyle = cardStyle,
                     replayState = replayState,
-                    onReplayPlayPause = onReplayPlayPause,
-                    onReplayStop = onReplayStop,
-                    onReplaySpeedChange = onReplaySpeedChange,
-                    onReplaySeek = onReplaySeek,
-                    showReplayDevFab = showReplayDevFab,
-                    onReplayPickFileClick = onReplayPickFileClick,
                     showVarioDemoFab = showVarioDemoFab,
                     onVarioDemoClick = onVarioDemoClick
                 )

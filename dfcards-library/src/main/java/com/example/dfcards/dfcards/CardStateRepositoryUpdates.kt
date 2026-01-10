@@ -18,7 +18,6 @@ private enum class UpdateTier {
 // Match XCSoar infobox palette: bright red/green for sink/lift.
 private val NEGATIVE_VARIO_COLOR = Color(0xFFFF0000)
 private val POSITIVE_VARIO_COLOR = Color(0xFF0D8A16) // darker green for readability
-private const val THERMAL_ZERO_THRESHOLD = 0.05  // m/s: treat smaller as zero
 
 internal fun CardStateRepository.updateCardsWithLiveData(
     liveData: RealTimeFlightData,
@@ -175,12 +174,8 @@ private fun highlightColorFor(cardId: String, realData: RealTimeFlightData): Col
     return when (cardId) {
         "thermal_avg" -> {
             // Colour must match the primary value (TC 30s), not alternate vario sources.
-            val rawAvg = realData.thermalAverage.toDouble()
-            val avg = when {
-                rawAvg > -THERMAL_ZERO_THRESHOLD && rawAvg < THERMAL_ZERO_THRESHOLD -> 0.0
-                else -> rawAvg
-            }
-            if (!avg.isFinite() || avg == 0.0) return null  // zero/invalid: no color
+            val avg = realData.thermalAverage.toDouble()
+            if (!avg.isFinite()) return null
             when {
                 risk > 0.0 && 2 * avg < risk -> NEGATIVE_VARIO_COLOR
                 avg > 0.0 -> POSITIVE_VARIO_COLOR

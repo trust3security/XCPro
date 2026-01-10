@@ -125,7 +125,8 @@ internal fun FlightDataCalculatorEngine.updateVarioFilter(baro: BaroData?, accel
     val filteredBaro = filters.baroFilter.processReading(
         rawBaroAltitude = baroResult.altitudeMeters,
         gpsAltitude = cachedGPSAltitude,
-        gpsAccuracy = cachedGPSAccuracy
+        gpsAccuracy = cachedGPSAccuracy,
+        timestampMillis = baro.timestamp
     )
     val varioResult = com.example.dfcards.filters.ModernVarioResult(
         altitude = filteredBaro.displayAltitude,
@@ -178,6 +179,22 @@ internal fun FlightDataCalculatorEngine.updateVarioFilter(baro: BaroData?, accel
                 autoQnhSessionActive = autoQnhSessionActive
             )
         }
+    }
+
+    val diagnosticsTime = currentTime
+    if (diagnosticsTime - lastDiagnosticsEmitTime >= FlightDataCalculatorEngine.DIAGNOSTICS_EMIT_MIN_INTERVAL_MS) {
+        val gpsAccuracy = cachedGPSAccuracy.takeIf { it.isFinite() } ?: Double.POSITIVE_INFINITY
+        val diagnostics = varioSuite.optimizedDiagnostics(
+            gpsAccuracy = gpsAccuracy,
+            gpsSatelliteCount = 0
+        )
+        _diagnosticsFlow.value = VarioDiagnosticsSample(
+            timestamp = diagnosticsTime,
+            teVerticalSpeed = emissionState.latestTeVario,
+            rawVerticalSpeed = diagnostics.filteredVerticalSpeed,
+            diagnostics = diagnostics
+        )
+        lastDiagnosticsEmitTime = diagnosticsTime
     }
 
     lastVarioUpdateTime = currentTime

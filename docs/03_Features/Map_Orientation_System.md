@@ -84,9 +84,9 @@ The map orientation system controls how the map rotates relative to the aircraft
 
 **Rotation Value**: `-GPS_TRACK` (map counter-rotates to GPS bearing)
 
-**Critical Speed Threshold**: `2.0 knots` (3.7 km/h)
-- Below 2kts: Holds last valid bearing (prevents spinning when stationary)
-- Above 2kts: Uses live GPS track
+**Critical Speed Threshold**: `2.0 m/s` (~3.9 kt, 7.2 km/h)
+- Below 2 m/s: Holds last valid bearing (prevents spinning when stationary)
+- Above 2 m/s: Uses live GPS track
 
 ---
 
@@ -119,36 +119,8 @@ The map orientation system controls how the map rotates relative to the aircraft
 
 **Fallback Logic**:
 1. Use magnetometer heading if available and valid
-2. Else use GPS track if speed > 2kts
+2. Else use GPS track if speed > 2 m/s
 3. Else hold last valid bearing
-
----
-
-### 4. WIND_UP (Wind-Aligned Map)
-
-**What It Does**:
-- Map rotates so the active wind vector points up (upwind = top of screen)
-- Aircraft icon still shows actual track, so you see drift relative to wind immediately
-
-**Data Source**:
-- Wind direction/speed solved by `WindSensorFusionRepository` via `WindState`
-  (direction stored as "from")
-- Falls back to last-known value if wind confidence drops
-
-**When To Use**:
-- Final glides in strong drift
-- Planning AAT cylinder entries: quickly see crab angle vs. airflow
-- Training to read wind corrections without interpreting separate overlays
-
-**Compass Widget**:
-- Shows "W" badge when active
-- Source badge displays `W` or `LK` when falling back to last-known bearing
-
-**Rotation Value**: `-(windDirectionFrom + 180°)` (convert FROM -> TO vector, then counter-rotate)
-
-**Fallback Logic**:
-1. Use live wind vector when speed ≥ 0.5 m/s
-2. Else hold last valid wind bearing (compass badge switches to `LK`)
 
 ---
 
@@ -388,31 +360,31 @@ when (orientation.mode) {
 ### Speed Threshold Constants
 
 ```kotlin
-// MapOrientationManager.kt
-MIN_SPEED_FOR_TRACK_KT = 2.0  // Minimum speed for valid GPS track
+// MapOrientationPreferences.kt
+DEFAULT_MIN_SPEED_THRESHOLD_MS = 2.0  // Minimum speed for valid GPS track (m/s)
 BEARING_CHANGE_THRESHOLD = 5.0  // Degrees - minimum change to update
 ```
 
-**Why 2.0 knots?**
+**Why 2.0 m/s?**
 - GPS track unreliable when stationary
 - Prevents "spinning map" when parked
-- Reduced from 5kts to be responsive during slow flight
+- Matches XCSoar movement gate (2 m/s)
 
 ### Fallback Logic Flow
 
 **TRACK_UP Mode**:
 ```
 1. Is GPS fixed? NO → Keep last bearing
-2. Speed >= 2kts? NO → Keep last bearing
-3. Speed >= 2kts? YES → Use GPS track ✓
+2. Speed >= 2 m/s? NO → Keep last bearing
+3. Speed >= 2 m/s? YES → Use GPS track ✓
 ```
 
 **HEADING_UP Mode**:
 ```
 1. Magnetometer available? YES → Use magnetic heading ✓
 2. Magnetometer available? NO → Check GPS
-   3a. GPS fixed AND speed >= 2kts? YES → Use GPS track ✓
-   3b. GPS fixed AND speed >= 2kts? NO → Keep last bearing
+   3a. GPS fixed AND speed >= 2 m/s? YES → Use GPS track ✓
+   3b. GPS fixed AND speed >= 2 m/s? NO → Keep last bearing
 ```
 
 ### Last Valid Bearing Hold
@@ -431,7 +403,7 @@ val finalBearing = if (isValid) bearing else lastValidBearing
 ```
 
 **When Held**:
-- GPS speed drops below 2kts
+- GPS speed drops below 2 m/s
 - Magnetometer becomes unreliable
 - Sensor data temporarily unavailable
 
@@ -637,8 +609,8 @@ orientation: FloatArray(3)    // 12 bytes
 **TRACK_UP Mode**:
 - [ ] Map rotates to keep GPS track pointing up
 - [ ] Compass visible, shows "T" indicator
-- [ ] At <2kts: Bearing holds steady (doesn't spin)
-- [ ] At >2kts: Bearing follows GPS smoothly
+- [ ] At <2 m/s: Bearing holds steady (doesn't spin)
+- [ ] At >2 m/s: Bearing follows GPS smoothly
 - [ ] Compass needle points to North correctly
 
 **HEADING_UP Mode**:
@@ -721,7 +693,7 @@ orientation: FloatArray(3)    // 12 bytes
 │  ┌──────────────────────────────────────────────────────┐   │
 │  │  calculateBearing(sensorData, mode)                  │   │
 │  │  - NORTH_UP: return 0.0                              │   │
-│  │  - TRACK_UP: return GPS track (if speed >= 2kts)     │   │
+│  │  - TRACK_UP: return GPS track (if speed >= 2 m/s)     │   │
 │  │  - HEADING_UP: return mag heading (or GPS fallback)  │   │
 │  └──────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────┘
@@ -760,7 +732,7 @@ orientation: FloatArray(3)    // 12 bytes
 ### Key Constants
 
 ```kotlin
-MIN_SPEED_FOR_TRACK_KT = 2.0           // Speed threshold for valid GPS track
+DEFAULT_MIN_SPEED_THRESHOLD_MS = 2.0   // Speed threshold for valid GPS track (m/s)
 BEARING_UPDATE_THROTTLE_MS = 66        // ~15Hz update rate
 USER_OVERRIDE_TIMEOUT_MS = 10000       // User pan override duration
 HEADING_UPDATE_INTERVAL_MS = 50        // ~20Hz magnetometer rate

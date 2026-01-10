@@ -8,6 +8,7 @@ import com.example.xcpro.weather.wind.model.WindState
 import com.example.xcpro.replay.IgcReplayController
 import com.example.xcpro.replay.ReplayEvent
 import com.example.xcpro.flightdata.FlightDataRepository
+import com.example.xcpro.sensors.FlightStateSource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -23,6 +24,7 @@ internal class MapScreenObservers(
     private val scope: CoroutineScope,
     private val flightDataRepository: FlightDataRepository,
     private val windRepository: WindSensorFusionRepository,
+    private val flightStateSource: FlightStateSource,
     private val flightDataManager: FlightDataManager,
     private val mapStateStore: MapStateReader,
     private val liveDataReady: MutableStateFlow<Boolean>,
@@ -43,9 +45,10 @@ internal class MapScreenObservers(
     private fun observeFlightDataRepository() {
         combine(
             flightDataRepository.flightData,
-            windRepository.windState
-        ) { data, wind -> data to wind }
-            .onEach { (data, wind) ->
+            windRepository.windState,
+            flightStateSource.flightState
+        ) { data, wind, flightState -> Triple(data, wind, flightState) }
+            .onEach { (data, wind, flightState) ->
                 if (data != null) {
                     if (!liveDataReady.value) {
                         liveDataReady.value = true
@@ -61,7 +64,11 @@ internal class MapScreenObservers(
                     val minutes = elapsedMinutes % 60L
                     val formattedFlightTime = "${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}"
 
-                    val liveData = convertToRealTimeFlightData(data, wind)
+                    val liveData = convertToRealTimeFlightData(
+                        completeData = data,
+                        windState = wind,
+                        isFlying = flightState.isFlying
+                    )
                         .copy(flightTime = formattedFlightTime)
                         .applyWindState(wind)
                     flightDataManager.updateLiveFlightData(liveData)

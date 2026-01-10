@@ -51,6 +51,7 @@ internal class FlightDataCalculatorEngine(
         internal const val ACCEL_FRESHNESS_MS = 250L
         internal const val ACCEL_SMOOTH_TAU_S = 0.15
         internal const val MAX_VERTICAL_ACCEL_MS2 = 8.0
+        internal const val DIAGNOSTICS_EMIT_MIN_INTERVAL_MS = 100L
     }
     internal val locationHistory = mutableListOf<LocationWithTime>()
     internal val aglCalculator = SimpleAglCalculator(context)  // KISS: SRTM terrain database
@@ -112,8 +113,9 @@ internal class FlightDataCalculatorEngine(
     // Cached results from vario loop for GPS loop to use
     internal var cachedVarioResult: com.example.dfcards.filters.ModernVarioResult? = null
      internal var cachedBaroResult: com.example.dfcards.calculations.BarometricAltitudeData? = null
-     internal var cachedBaroData: BaroData? = null
-     internal var cachedCompassData: CompassData? = null
+    internal var cachedBaroData: BaroData? = null
+    internal var cachedCompassData: CompassData? = null
+    internal var lastDiagnosticsEmitTime: Long = 0L
      // IMU vertical acceleration smoothing for 3???state Kalman / complementary fusion.
      internal var lastAccelTimestamp: Long = 0L
      internal var smoothedVerticalAccel: Double? = null
@@ -191,6 +193,7 @@ internal class FlightDataCalculatorEngine(
         lastReplayBaroLogTime = 0L
         lastReplayGpsLogTime = 0L
         lastVarioUpdateTime = 0L
+        lastDiagnosticsEmitTime = 0L
         cachedGPSSpeed = 0.0
         cachedGPSAltitude = Double.NaN
         cachedGPSAccuracy = 15.0

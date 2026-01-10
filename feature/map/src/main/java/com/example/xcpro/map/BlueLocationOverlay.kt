@@ -44,8 +44,9 @@ class BlueLocationOverlay(
     }
 
     private var currentLocation: LatLng? = null
-    private var currentBearing: Double = 0.0
-    private var currentMagHeading: Double = 0.0
+    private var currentTrack: Double = 0.0
+    private var currentHeadingDeg: Double = 0.0
+    private var currentMapBearing: Double = 0.0
     private var currentOrientationMode: MapOrientationMode = MapOrientationMode.NORTH_UP
     private var isLayerAdded = false
 
@@ -97,13 +98,15 @@ class BlueLocationOverlay(
      * Update location position and bearing
      * @param location GPS location
      * @param gpsTrack GPS track direction (direction of movement)
-     * @param magneticHeading Magnetic heading from compass (direction device is pointing)
+     * @param headingDeg Aircraft heading (degrees)
+     * @param mapBearing Map bearing applied to the camera (screen angle)
      * @param orientationMode Current map orientation mode
      */
     fun updateLocation(
         location: LatLng,
         gpsTrack: Double,
-        magneticHeading: Double = 0.0,
+        headingDeg: Double = 0.0,
+        mapBearing: Double = 0.0,
         orientationMode: MapOrientationMode = MapOrientationMode.NORTH_UP
     ) {
         if (!isLayerAdded) {
@@ -119,8 +122,9 @@ class BlueLocationOverlay(
             }
 
             currentLocation = location
-            currentBearing = gpsTrack
-            currentMagHeading = magneticHeading
+            currentTrack = gpsTrack
+            currentHeadingDeg = headingDeg
+            currentMapBearing = mapBearing
             currentOrientationMode = orientationMode
 
             val style = map.style ?: return
@@ -134,23 +138,17 @@ class BlueLocationOverlay(
             source.setGeoJson(feature)
 
             // Update icon rotation based on orientation mode
-            val iconRotation = when (orientationMode) {
-                MapOrientationMode.TRACK_UP -> 0f  // Icon always points up (you're flying "into" the screen)
-                MapOrientationMode.NORTH_UP -> gpsTrack.toFloat()  // Icon rotates to show actual direction of travel
-                MapOrientationMode.HEADING_UP -> {
-                    // Icon shows drift angle (difference between track and heading)
-                    // Positive = drifting right, Negative = drifting left, 0 = no drift
-                    val drift = normalizeAngle(gpsTrack - magneticHeading)
-                    drift.toFloat()
-                }
-                MapOrientationMode.WIND_UP -> gpsTrack.toFloat()
-            }
+            // XCSoar-style: icon rotation is heading relative to screen angle (map bearing).
+            val iconRotation = normalizeAngle(headingDeg - mapBearing).toFloat()
             layer.setProperties(iconRotate(iconRotation))
 
-            Log.d(TAG, "Location updated: lat=${location.latitude}, " +
-                      "lon=${location.longitude}, track=${gpsTrack.toInt()} deg, " +
-                      "magHeading=${magneticHeading.toInt()} deg, mode=$orientationMode, " +
-                      "iconRotation=${iconRotation.toInt()} deg")
+            Log.d(
+                TAG,
+                "Location updated: lat=${location.latitude}, " +
+                    "lon=${location.longitude}, track=${gpsTrack.toInt()} deg, " +
+                    "heading=${headingDeg.toInt()} deg, map=${mapBearing.toInt()} deg, " +
+                    "mode=$orientationMode, iconRotation=${iconRotation.toInt()} deg"
+            )
 
         } catch (e: Exception) {
             Log.e(TAG, "âŒ Error updating location: ${e.message}", e)
@@ -158,7 +156,7 @@ class BlueLocationOverlay(
     }
 
     /**
-     * Normalize angle to -180 to 180 range for drift display
+     * Normalize angle to -180 to 180 range for relative rotation display
      */
     private fun normalizeAngle(angle: Double): Double {
         var normalized = angle % 360
@@ -244,7 +242,7 @@ class BlueLocationOverlay(
             style.addLayer(layer)
             Log.d(TAG, "Re-added aircraft overlay to keep it on top")
             currentLocation?.let {
-                updateLocation(it, currentBearing, currentMagHeading, currentOrientationMode)
+                updateLocation(it, currentTrack, currentHeadingDeg, currentMapBearing, currentOrientationMode)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error bringing aircraft overlay to front: ${e.message}", e)

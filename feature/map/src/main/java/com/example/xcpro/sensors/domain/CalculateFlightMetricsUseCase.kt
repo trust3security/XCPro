@@ -162,7 +162,13 @@ internal class CalculateFlightMetricsUseCase(
         val nettoSampleValue = fusionBlackboard.resolveNettoSampleValue(nettoResult.value, nettoResult.valid)
 
         // feed 30s windows with QNH-agnostic sample; reset on circling or calibration change
-        val avgVarioSample = bruttoVario
+        val avgVarioSample = when {
+            teVario != null && teVario.isFinite() -> teVario
+            snapshot.pressureVario.isFinite() -> snapshot.pressureVario
+            snapshot.pressureAltitudeVario.isFinite() -> snapshot.pressureAltitudeVario
+            snapshot.gpsVario.isFinite() -> snapshot.gpsVario
+            else -> bruttoVario
+        }
         val averages = fusionBlackboard.updateAveragesAndDisplay(
             currentTime = currentTime,
             bruttoSample = avgVarioSample,
@@ -176,7 +182,12 @@ internal class CalculateFlightMetricsUseCase(
         val bruttoAverage30sValid = averages.bruttoAverage30sValid
         val nettoAverage30s = averages.nettoAverage30s
         val displayVarioRaw = smoothDisplayVario(bruttoVario, request.deltaTimeSeconds, varioValid)
-        val displayVario = applyGroundZeroBias(displayVarioRaw, gps.speed.value, request.deltaTimeSeconds)
+        // Avoid ground-zero clamping while flying; it can force sudden zero snaps in lift.
+        val displayVario = if (request.isFlying) {
+            displayVarioRaw
+        } else {
+            applyGroundZeroBias(displayVarioRaw, gps.speed.value, request.deltaTimeSeconds)
+        }
         val displayXcSoarVario = smoothDisplayXcSoar(snapshot.xcSoarVario, request.deltaTimeSeconds, snapshot.xcSoarVarioValid)
         val rawDisplayNetto = averages.displayNettoRaw
         val displayNetto = smoothDisplayNetto(rawDisplayNetto, request.deltaTimeSeconds, nettoResult.valid)

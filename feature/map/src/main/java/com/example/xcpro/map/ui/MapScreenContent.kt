@@ -117,12 +117,6 @@ internal fun MapScreenContent(
     onHamburgerLongPress: () -> Unit,
     cardStyle: CardStyle,
     replayState: StateFlow<SessionState>,
-    onReplayPlayPause: () -> Unit,
-    onReplayStop: () -> Unit,
-    onReplaySpeedChange: (Double) -> Unit,
-    onReplaySeek: (Float) -> Unit,
-    showReplayDevFab: Boolean,
-    onReplayPickFileClick: () -> Unit,
     showVarioDemoFab: Boolean,
     onVarioDemoClick: () -> Unit
 ) {
@@ -193,13 +187,7 @@ internal fun MapScreenContent(
                         onHamburgerTap = onHamburgerTap,
                         onHamburgerLongPress = onHamburgerLongPress,
                     cardStyle = cardStyle,
-                    replayState = replayState,
-                    onReplayPlayPause = onReplayPlayPause,
-                    onReplayStop = onReplayStop,
-                    onReplaySpeedChange = onReplaySpeedChange,
-                    onReplaySeek = onReplaySeek,
-                    showReplayDevFab = showReplayDevFab,
-                    onReplayPickFileClick = onReplayPickFileClick
+                    replayState = replayState
                 )
             }
         }

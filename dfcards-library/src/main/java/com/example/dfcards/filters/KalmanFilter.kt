@@ -1,4 +1,4 @@
-package com.example.dfcards.filters
+﻿package com.example.dfcards.filters
 
 import kotlin.math.abs
 import kotlin.math.sqrt
@@ -86,10 +86,6 @@ class BarometricKalmanFilter {
         stateVector[0] = predictedAltitude + kalmanGain[0] * innovation
         var filteredVelocity = predictedVelocity + kalmanGain[1] * innovation
         
-        // ✅ DEADBAND: Zero out small velocities to eliminate phantom readings
-        if (abs(filteredVelocity) < 0.05) {  // 0.05 m/s = 10 fpm deadband
-            filteredVelocity = 0.0
-        }
         
         stateVector[1] = filteredVelocity
         
@@ -251,14 +247,20 @@ class AdvancedBarometricFilter {
     private var lastUpdateTime = 0L
     
     fun processReading(
-        rawBaroAltitude: Double, 
+        rawBaroAltitude: Double,
         gpsAltitude: Double? = null,
-        gpsAccuracy: Double? = null
+        gpsAccuracy: Double? = null,
+        timestampMillis: Long? = null
     ): FilteredBarometricData {
-        
-        val currentTime = System.currentTimeMillis()
-        val deltaTime = if (lastUpdateTime > 0) {
-            (currentTime - lastUpdateTime) / 1000.0
+
+        val resolvedTime = if (timestampMillis != null && timestampMillis > 0L) {
+            timestampMillis
+        } else {
+            System.currentTimeMillis()
+        }
+        val deltaTime = if (lastUpdateTime > 0L) {
+            val deltaMs = resolvedTime - lastUpdateTime
+            if (deltaMs <= 0L) 0.1 else deltaMs / 1000.0
         } else {
             0.1 // Default 100ms for first reading
         }
@@ -275,7 +277,7 @@ class AdvancedBarometricFilter {
         // Stage 4: Final smoothing for display (optional)
         val displayAltitude = displayFilter.filter(kalmanResult.altitude)
         
-        lastUpdateTime = currentTime
+        lastUpdateTime = resolvedTime
         
         return FilteredBarometricData(
             rawAltitude = rawBaroAltitude,

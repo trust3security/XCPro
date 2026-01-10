@@ -1,6 +1,7 @@
 package com.example.xcpro.vario
 
 import com.example.dfcards.filters.Modern3StateKalmanFilter
+import com.example.dfcards.filters.VarioFilterDiagnostics
 
 /**
  * Optimized Kalman Filter Vario (Priority 1: VARIO_IMPROVEMENTS.md)
@@ -60,5 +61,16 @@ class OptimizedKalmanVario : IVarioCalculator {
     override fun getDiagnostics(): String {
         return "$name: ${String.format("%.2f", lastVerticalSpeed)} m/s | " +
                filter.getDiagnosticStats()
+    }
+
+    fun getDiagnosticsData(
+        gpsAccuracy: Double,
+        gpsSatelliteCount: Int
+    ): VarioFilterDiagnostics {
+        return filter.getDiagnostics(
+            gpsAccuracy = gpsAccuracy,
+            gpsSatelliteCount = gpsSatelliteCount,
+            filterMode = "KALMAN"
+        )
     }
 }

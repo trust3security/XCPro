@@ -90,13 +90,7 @@ internal fun MapOverlayStack(
     onHamburgerTap: () -> Unit,
     onHamburgerLongPress: () -> Unit,
     cardStyle: CardStyle,
-    replayState: StateFlow<SessionState>,
-    onReplayPlayPause: () -> Unit,
-    onReplayStop: () -> Unit,
-    onReplaySpeedChange: (Double) -> Unit,
-    onReplaySeek: (Float) -> Unit,
-    showReplayDevFab: Boolean,
-    onReplayPickFileClick: () -> Unit
+    replayState: StateFlow<SessionState>
 ) {
     val gestureRegions by widgetManager.gestureRegions.collectAsStateWithLifecycle()
 
@@ -172,18 +166,6 @@ internal fun MapOverlayStack(
             )
         }
 
-        val replaySession by replayState.collectAsStateWithLifecycle()
-        ReplayControlsSheet(
-            session = replaySession,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .zIndex(20f),
-            onPlayPause = onReplayPlayPause,
-            onStop = onReplayStop,
-            onSpeedChanged = onReplaySpeedChange,
-            onSeek = onReplaySeek
-        )
-
         MapUIWidgets.FlightModeMenu(
             widgetManager = widgetManager,
             currentMode = currentMode,
@@ -250,10 +232,6 @@ internal fun MapOverlayStack(
             cameraManager = cameraManager,
             onExitAATEditMode = onExitAATEditMode
         )
-
-        if (showReplayDevFab) {
-            ReplayDevFab(onReplayPickFileClick = onReplayPickFileClick)
-        }
 
         HamburgerMenu(
             widgetManager = widgetManager,

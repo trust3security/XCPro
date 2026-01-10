@@ -1,7 +1,6 @@
 package com.example.xcpro.map
 
 import android.content.Context
-import android.net.Uri
 import android.util.Log
 import androidx.compose.ui.geometry.Offset
 import androidx.lifecycle.ViewModel
@@ -9,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.dfcards.CardPreferences
 import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.MapOrientationManager
+import com.example.xcpro.MapOrientationManagerFactory
 import com.example.xcpro.common.di.DefaultDispatcher
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.geo.GeoPoint
@@ -71,6 +71,7 @@ class MapScreenViewModel @Inject constructor(
     private val flightDataRepository: FlightDataRepository,
     private val windRepository: WindSensorFusionRepository,
     val igcReplayController: IgcReplayController,
+    private val orientationManagerFactory: MapOrientationManagerFactory,
     @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher
 ) : ViewModel(), MapStateActions {
 
@@ -88,12 +89,11 @@ class MapScreenViewModel @Inject constructor(
         FlightDataManager(appContext, cardPreferences, viewModelScope)
     val unifiedSensorManager = varioServiceManager.unifiedSensorManager
     val orientationManager: MapOrientationManager =
-        MapOrientationManager(appContext, viewModelScope, unifiedSensorManager)
+        orientationManagerFactory.create(viewModelScope)
     val ballastUiState: StateFlow<BallastUiState> = ballastController.state
     val sharedFlightDataRepository: FlightDataRepository = flightDataRepository
     val windState: StateFlow<WindState> = windRepository.windState
     val replaySessionState: StateFlow<SessionState> = igcReplayController.session
-    val showReplayDebugFab: Boolean = MapFeatureFlags.showReplayDebugFab
     val showVarioDemoFab: Boolean = MapFeatureFlags.showVarioDemoFab
     val gpsStatusFlow: StateFlow<com.example.xcpro.sensors.GpsStatus> =
         unifiedSensorManager.gpsStatusFlow
@@ -134,13 +134,6 @@ class MapScreenViewModel @Inject constructor(
     val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
     private val _uiEffects = MutableSharedFlow<MapUiEffect>(extraBufferCapacity = 1)
     val uiEffects: SharedFlow<MapUiEffect> = _uiEffects.asSharedFlow()
-    private val replayCoordinator = MapReplayCoordinator(
-        sessionState = replaySessionState,
-        igcReplayController = igcReplayController,
-        stateActions = this,
-        uiEffects = _uiEffects,
-        scope = viewModelScope
-    )
     private val _mapCommands = MutableSharedFlow<MapCommand>(extraBufferCapacity = 1)
     val mapCommands: SharedFlow<MapCommand> = _mapCommands.asSharedFlow()
     private val _containerReady = MutableStateFlow(false)
@@ -153,6 +146,7 @@ class MapScreenViewModel @Inject constructor(
         scope = viewModelScope,
         flightDataRepository = flightDataRepository,
         windRepository = windRepository,
+        flightStateSource = varioServiceManager.flightStateSource,
         flightDataManager = flightDataManager,
         mapStateStore = mapStateStore,
         liveDataReady = _liveDataReady,
@@ -183,6 +177,24 @@ class MapScreenViewModel @Inject constructor(
 
     fun emitMapCommand(command: MapCommand) {
         _mapCommands.tryEmit(command)
+    }
+
+    fun onVarioDemoReplay() {
+        viewModelScope.launch {
+            try {
+                Log.i(TAG, "VARIO_DEMO start asset=$VARIO_DEMO_ASSET_PATH")
+                igcReplayController.stop()
+                igcReplayController.loadAsset(VARIO_DEMO_ASSET_PATH, "Vario demo")
+                setHasInitiallyCentered(false)
+                setShowReturnButton(false)
+                setTrackingLocation(true)
+                igcReplayController.play()
+                _uiEffects.emit(MapUiEffect.ShowToast("Vario demo replay started"))
+            } catch (t: Throwable) {
+                Log.e(TAG, "Failed to start vario demo replay", t)
+                _uiEffects.emit(MapUiEffect.ShowToast("Vario demo replay failed"))
+            }
+        }
     }
 
     fun updateSafeContainerSize(size: MapStateStore.MapSize) {
@@ -260,21 +272,6 @@ class MapScreenViewModel @Inject constructor(
             is MapUiEvent.SetDrawerOpen -> setDrawerOpen(event.isOpen)
         }
     }
-
-    fun onReplayPlayPause() = replayCoordinator.onReplayPlayPause()
-
-    fun onReplayStop() = replayCoordinator.onReplayStop()
-
-    fun onReplaySpeedChanged(multiplier: Double) = replayCoordinator.onReplaySpeedChanged(multiplier)
-
-    fun onReplaySeek(progress: Float) = replayCoordinator.onReplaySeek(progress)
-
-    fun onReplayDevAutoplay() = replayCoordinator.onReplayDevAutoplay()
-
-    fun onVarioDemoReplay() = replayCoordinator.onVarioDemoReplay()
-
-    fun onReplayFileChosen(uri: Uri, displayName: String?) =
-        replayCoordinator.onReplayFileChosen(uri, displayName)
 
     private fun toGpsData(sample: RealTimeFlightData?): GPSData? {
         if (sample == null) return null
@@ -413,6 +410,11 @@ class MapScreenViewModel @Inject constructor(
     override fun onCleared() {
         ballastController.dispose()
         super.onCleared()
+    }
+
+    private companion object {
+        private const val TAG = "MapScreenViewModel"
+        private const val VARIO_DEMO_ASSET_PATH = "replay/vario-demo-0-10-0-30s.igc"
     }
 }
 

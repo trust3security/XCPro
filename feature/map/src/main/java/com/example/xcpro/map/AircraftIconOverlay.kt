@@ -10,7 +10,6 @@ import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.unit.dp
-import com.example.xcpro.common.orientation.MapOrientationMode
 
 /**
  * Fixed position aircraft icon overlay that draws on top of the map.
@@ -20,8 +19,8 @@ import com.example.xcpro.common.orientation.MapOrientationMode
 @Composable
 fun AircraftIconOverlay(
     gpsTrack: Float,
-    magneticHeading: Float,
-    orientationMode: MapOrientationMode,
+    headingDeg: Float,
+    mapBearing: Float,
     modifier: Modifier = Modifier
 ) {
     Canvas(modifier = modifier.fillMaxSize()) {
@@ -29,21 +28,12 @@ fun AircraftIconOverlay(
         val centerX = size.width / 2f
         val centerY = size.height * 0.65f
 
-        // Calculate rotation based on orientation mode
-        val rotation = when (orientationMode) {
-            MapOrientationMode.TRACK_UP -> 0f  // Always points up
-            MapOrientationMode.NORTH_UP -> gpsTrack  // Rotates to show track direction
-            MapOrientationMode.HEADING_UP -> {
-                // Shows drift angle (difference between track and heading)
-                val drift = gpsTrack - magneticHeading
-                // Normalize to -180 to 180 range
-                when {
-                    drift > 180 -> drift - 360
-                    drift < -180 -> drift + 360
-                    else -> drift
-                }
-            }
-            MapOrientationMode.WIND_UP -> gpsTrack
+        val effectiveHeading = if (headingDeg.isFinite()) headingDeg else gpsTrack
+        // XCSoar-style: icon rotation is heading relative to screen angle (map bearing).
+        val rotation = when {
+            (effectiveHeading - mapBearing) > 180f -> effectiveHeading - mapBearing - 360f
+            (effectiveHeading - mapBearing) < -180f -> effectiveHeading - mapBearing + 360f
+            else -> effectiveHeading - mapBearing
         }
 
         // Size of the aircraft icon

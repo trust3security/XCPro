@@ -85,32 +85,26 @@ internal class FusionBlackboard {
         nettoValue: Double,
         nettoValid: Boolean
     ): AverageOutputs {
+        val safeBruttoSample = if (bruttoSample.isFinite()) bruttoSample else 0.0
+        val safeNettoSample = if (nettoSample.isFinite()) nettoSample else 0.0
         val timeWentBack = currentTime < lastBruttoSampleTime || currentTime < lastNettoSampleTime
         val thermalToggled = thermalActive != lastThermalState
         if (timeWentBack || thermalToggled) {
-            resetAverageWindows(bruttoSample, nettoSample, currentTime)
+            resetAverageWindows(safeBruttoSample, safeNettoSample, currentTime)
         } else {
-            // Avoid poisoning the window with NaNs (especially during replay seeks and derivative warm-up).
-            lastBruttoSampleTime = if (bruttoSample.isFinite()) {
-                addSamplesForElapsedSeconds(
-                    window = bruttoAverageWindow,
-                    lastTimestamp = lastBruttoSampleTime,
-                    currentTime = currentTime,
-                    sampleValue = bruttoSample
-                )
-            } else {
-                currentTime
-            }
-            lastNettoSampleTime = if (nettoSample.isFinite()) {
-                addSamplesForElapsedSeconds(
-                    window = nettoAverageWindow,
-                    lastTimestamp = lastNettoSampleTime,
-                    currentTime = currentTime,
-                    sampleValue = nettoSample
-                )
-            } else {
-                currentTime
-            }
+            // Keep the window moving even when samples are non-finite.
+            lastBruttoSampleTime = addSamplesForElapsedSeconds(
+                window = bruttoAverageWindow,
+                lastTimestamp = lastBruttoSampleTime,
+                currentTime = currentTime,
+                sampleValue = safeBruttoSample
+            )
+            lastNettoSampleTime = addSamplesForElapsedSeconds(
+                window = nettoAverageWindow,
+                lastTimestamp = lastNettoSampleTime,
+                currentTime = currentTime,
+                sampleValue = safeNettoSample
+            )
         }
         lastThermalState = thermalActive
 
@@ -141,8 +135,8 @@ internal class FusionBlackboard {
     private fun resetAverageWindows(bruttoSample: Double, nettoSample: Double, timestamp: Long) {
         bruttoAverageWindow.clear()
         nettoAverageWindow.clear()
-        if (bruttoSample.isFinite()) bruttoAverageWindow.addSample(bruttoSample)
-        if (nettoSample.isFinite()) nettoAverageWindow.addSample(nettoSample)
+        bruttoAverageWindow.addSample(bruttoSample)
+        nettoAverageWindow.addSample(nettoSample)
         lastBruttoSampleTime = timestamp
         lastNettoSampleTime = timestamp
     }

@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L9,3 L0,6 Z" fill="#333"/>
+    </marker>
+    <style>
+      .title { font: 700 22px Arial, sans-serif; fill: #111; }
+      .lane { font: 700 14px Arial, sans-serif; fill: #111; }
+      .box { fill: #f7f7f7; stroke: #333; stroke-width: 1.5; }
+      .box-title { font: 600 13px Arial, sans-serif; fill: #111; }
+      .box-small { font: 12px Arial, sans-serif; fill: #333; }
+      .arrow { stroke: #333; stroke-width: 1.5; fill: none; marker-end: url(#arrow); }
+      .arrow-dashed { stroke: #555; stroke-width: 1.2; fill: none; stroke-dasharray: 6 4; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <text x="600" y="40" class="title" text-anchor="middle">Levo Vario Pipeline (Live and Replay)</text>
+
+  <text x="270" y="75" class="lane" text-anchor="middle">LIVE PIPELINE</text>
+  <text x="930" y="75" class="lane" text-anchor="middle">REPLAY PIPELINE</text>
+
+  <!-- Live column -->
+  <rect x="60" y="100" width="420" height="50" rx="6" class="box"/>
+  <text x="270" y="122" class="box-title" text-anchor="middle">Android Sensors</text>
+  <text x="270" y="140" class="box-small" text-anchor="middle">GPS, Baro, Compass, IMU</text>
+
+  <rect x="60" y="170" width="420" height="50" rx="6" class="box"/>
+  <text x="270" y="194" class="box-title" text-anchor="middle">SensorRegistry</text>
+
+  <rect x="60" y="240" width="420" height="50" rx="6" class="box"/>
+  <text x="270" y="262" class="box-title" text-anchor="middle">UnifiedSensorManager</text>
+  <text x="270" y="280" class="box-small" text-anchor="middle">SensorDataSource (StateFlow)</text>
+
+  <rect x="60" y="400" width="420" height="60" rx="6" class="box"/>
+  <text x="270" y="425" class="box-title" text-anchor="middle">FlightDataCalculatorEngine</text>
+  <text x="270" y="444" class="box-small" text-anchor="middle">Live fusion + filters + metrics</text>
+
+  <rect x="60" y="480" width="420" height="50" rx="6" class="box"/>
+  <text x="270" y="503" class="box-title" text-anchor="middle">FlightDataRepository (LIVE)</text>
+  <text x="270" y="521" class="box-small" text-anchor="middle">SSOT + source gate</text>
+
+  <!-- Replay column -->
+  <rect x="720" y="100" width="420" height="50" rx="6" class="box"/>
+  <text x="930" y="122" class="box-title" text-anchor="middle">IGC Log / Asset</text>
+
+  <rect x="720" y="170" width="420" height="50" rx="6" class="box"/>
+  <text x="930" y="194" class="box-title" text-anchor="middle">IgcReplayController</text>
+
+  <rect x="720" y="240" width="420" height="50" rx="6" class="box"/>
+  <text x="930" y="262" class="box-title" text-anchor="middle">ReplaySensorSource</text>
+  <text x="930" y="280" class="box-small" text-anchor="middle">SensorDataSource (StateFlow)</text>
+
+  <rect x="720" y="400" width="420" height="60" rx="6" class="box"/>
+  <text x="930" y="425" class="box-title" text-anchor="middle">FlightDataCalculatorEngine</text>
+  <text x="930" y="444" class="box-small" text-anchor="middle">Replay fusion (IGC timestamps)</text>
+
+  <rect x="720" y="480" width="420" height="50" rx="6" class="box"/>
+  <text x="930" y="503" class="box-title" text-anchor="middle">FlightDataRepository (REPLAY)</text>
+  <text x="930" y="521" class="box-small" text-anchor="middle">SSOT + source gate</text>
+
+  <!-- Wind / airspeed -->
+  <rect x="480" y="300" width="240" height="60" rx="6" class="box"/>
+  <text x="600" y="322" class="box-title" text-anchor="middle">WindSensorFusionRepository</text>
+  <text x="600" y="340" class="box-small" text-anchor="middle">WindState (GPS, baro, airspeed)</text>
+
+  <!-- Audio pipeline -->
+  <rect x="500" y="400" width="200" height="60" rx="6" class="box"/>
+  <text x="600" y="422" class="box-title" text-anchor="middle">VarioAudioController</text>
+  <text x="600" y="440" class="box-small" text-anchor="middle">AudioEngine -> AudioTrack</text>
+
+  <!-- UI pipeline -->
+  <rect x="100" y="560" width="1000" height="70" rx="6" class="box"/>
+  <text x="600" y="586" class="box-title" text-anchor="middle">MapScreenObservers -> FlightDataManager</text>
+  <text x="600" y="606" class="box-small" text-anchor="middle">Variometer UI (Map overlay + UIVariometer)</text>
+
+  <!-- Live arrows -->
+  <line x1="270" y1="150" x2="270" y2="170" class="arrow"/>
+  <line x1="270" y1="220" x2="270" y2="240" class="arrow"/>
+  <line x1="270" y1="290" x2="270" y2="400" class="arrow"/>
+  <line x1="270" y1="460" x2="270" y2="480" class="arrow"/>
+  <line x1="270" y1="530" x2="270" y2="560" class="arrow"/>
+
+  <!-- Replay arrows -->
+  <line x1="930" y1="150" x2="930" y2="170" class="arrow"/>
+  <line x1="930" y1="220" x2="930" y2="240" class="arrow"/>
+  <line x1="930" y1="290" x2="930" y2="400" class="arrow"/>
+  <line x1="930" y1="460" x2="930" y2="480" class="arrow"/>
+  <line x1="930" y1="530" x2="930" y2="560" class="arrow"/>
+
+  <!-- Wind inputs (dashed) -->
+  <line x1="480" y1="265" x2="480" y2="330" class="arrow-dashed"/>
+  <line x1="720" y1="265" x2="720" y2="330" class="arrow-dashed"/>
+  <line x1="480" y1="360" x2="270" y2="400" class="arrow-dashed"/>
+  <line x1="720" y1="360" x2="930" y2="400" class="arrow-dashed"/>
+
+  <!-- Audio arrows -->
+  <line x1="480" y1="430" x2="500" y2="430" class="arrow"/>
+  <line x1="720" y1="430" x2="700" y2="430" class="arrow"/>
+
+</svg>

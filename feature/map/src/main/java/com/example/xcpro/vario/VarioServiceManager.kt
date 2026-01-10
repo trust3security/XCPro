@@ -33,7 +33,7 @@ open class VarioServiceManager @Inject constructor(
     private val sinkProvider: StillAirSinkProvider,
     private val flightDataRepository: FlightDataRepository,
     private val levoVarioPreferencesRepository: LevoVarioPreferencesRepository,
-    private val flightStateSource: FlightStateSource,
+    val flightStateSource: FlightStateSource,
     private val windRepository: WindSensorFusionRepository
 ) {
 
