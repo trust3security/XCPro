@@ -10,7 +10,7 @@ import kotlin.math.round
 private data class WindMeasurement(
     val vector: WindVector,
     val quality: Int,
-    val timestampMillis: Long,
+    val clockMillis: Long,
     val altitudeMeters: Double,
     val source: WindSource
 )
@@ -28,28 +28,28 @@ class WindMeasurementList(
     private val measurements = mutableListOf<WindMeasurement>()
 
     fun addMeasurement(
-        timestampMillis: Long,
+        clockMillis: Long,
         vector: WindVector,
         altitudeMeters: Double,
         quality: Int,
         source: WindSource
     ) {
         if (measurements.size >= maxMeasurements) {
-            val index = leastImportantIndex(timestampMillis)
+            val index = leastImportantIndex(clockMillis)
             measurements.removeAt(index)
         }
         measurements.add(
             WindMeasurement(
                 vector = vector,
                 quality = quality,
-                timestampMillis = timestampMillis,
+                clockMillis = clockMillis,
                 altitudeMeters = altitudeMeters,
                 source = source
             )
         )
     }
 
-    fun getWeightedWind(currentTimeMillis: Long, altitudeMeters: Double): WeightedWind? {
+    fun getWeightedWind(currentClockMillis: Long, altitudeMeters: Double): WeightedWind? {
         if (measurements.isEmpty()) return null
 
         var totalWeight = 0.0
@@ -63,12 +63,12 @@ class WindMeasurementList(
         var overridden = false
 
         for (measurement in measurements) {
-            if (currentTimeMillis < measurement.timestampMillis) {
+            if (currentClockMillis < measurement.clockMillis) {
                 continue
             }
 
             val timeDiff =
-                (currentTimeMillis - measurement.timestampMillis).toDouble() / TIME_RANGE_MILLIS
+                (currentClockMillis - measurement.clockMillis).toDouble() / TIME_RANGE_MILLIS
             if (timeDiff >= 1.0) {
                 continue
             }
@@ -135,11 +135,11 @@ class WindMeasurementList(
         return WeightedWind(vector, approxQuality, dominantSource)
     }
 
-    private fun leastImportantIndex(now: Long): Int {
+    private fun leastImportantIndex(nowClockMillis: Long): Int {
         var maxScore = Double.NEGATIVE_INFINITY
         var targetIndex = measurements.lastIndex
         for ((index, measurement) in measurements.withIndex()) {
-            val ageSeconds = max(0L, now - measurement.timestampMillis) / 1000.0
+            val ageSeconds = max(0L, nowClockMillis - measurement.clockMillis) / 1000.0
             val score = 600.0 * (6 - measurement.quality) + ageSeconds
             if (score > maxScore) {
                 maxScore = score

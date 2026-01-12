@@ -10,7 +10,7 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 
 data class CirclingWindSample(
-    val timestampMillis: Long,
+    val clockMillis: Long,
     val trackRad: Double,
     val groundSpeed: Double,
     val isCircling: Boolean
@@ -19,7 +19,7 @@ data class CirclingWindSample(
 data class CirclingWindResult(
     val quality: Int,
     val windVector: WindVector,
-    val timestampMillis: Long
+    val clockMillis: Long
 )
 
 /**
@@ -32,7 +32,7 @@ class CirclingWind(
 ) {
 
     private data class Sample(
-        val timestamp: Long,
+        val clockMillis: Long,
         val trackRad: Double,
         val groundSpeed: Double
     )
@@ -42,14 +42,14 @@ class CirclingWind(
     private var circleCount = 0
     private var currentCircle = 0.0
     private var lastTrackRad: Double? = null
-    private var lastTimestamp: Long = 0L
+    private var lastClockMillis: Long = 0L
 
     fun reset() {
         active = false
         circleCount = 0
         currentCircle = 0.0
         lastTrackRad = null
-        lastTimestamp = 0L
+        lastClockMillis = 0L
         samples.clear()
     }
 
@@ -66,12 +66,12 @@ class CirclingWind(
             samples.clear()
         }
 
-        if (lastTimestamp != 0L && sample.timestampMillis - lastTimestamp > TIME_WARP_MS) {
+        if (lastClockMillis != 0L && sample.clockMillis - lastClockMillis > TIME_WARP_MS) {
             reset()
             active = true
         }
 
-        lastTimestamp = sample.timestampMillis
+        lastClockMillis = sample.clockMillis
 
         lastTrackRad?.let { previous ->
             currentCircle += abs(angularDifference(sample.trackRad, previous))
@@ -89,7 +89,7 @@ class CirclingWind(
         }
         samples.addLast(
             Sample(
-                timestamp = sample.timestampMillis,
+                clockMillis = sample.clockMillis,
                 trackRad = sample.trackRad,
                 groundSpeed = sample.groundSpeed
             )
@@ -109,7 +109,7 @@ class CirclingWind(
             return null
         }
 
-        val spanMs = samples.last().timestamp - samples.first().timestamp
+        val spanMs = samples.last().clockMillis - samples.first().clockMillis
         if (spanMs <= 0 || (spanMs / (samples.size - 1)) > maxSampleSpacingMs) {
             return null
         }
@@ -181,11 +181,11 @@ class CirclingWind(
 
         val windBearingFrom = normalizeRadians(samples[idxMax].trackRad + PI)
         val windVector = WindVector.fromSpeedAndBearing(magnitude, windBearingFrom)
-        val timestamp = samples[idxMax].timestamp
+        val timestamp = samples[idxMax].clockMillis
         return CirclingWindResult(
             quality = quality,
             windVector = windVector,
-            timestampMillis = timestamp
+            clockMillis = timestamp
         )
     }
 

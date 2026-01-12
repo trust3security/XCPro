@@ -7,6 +7,7 @@ import kotlin.math.abs
 data class WindStoreResult(
     val vector: WindVector,
     val quality: Int,
+    val clockMillis: Long,
     val timestampMillis: Long,
     val source: WindSource
 )
@@ -19,15 +20,18 @@ class WindStore(
     private var lastAltitude: Double = Double.NaN
     private var updated = false
     private var lastUpdateClock: Long = 0L
+    private var lastUpdateWall: Long = 0L
 
     fun reset() {
         measurementList.reset()
         lastAltitude = Double.NaN
         updated = false
         lastUpdateClock = 0L
+        lastUpdateWall = 0L
     }
 
     fun slotMeasurement(
+        clockMillis: Long,
         timestampMillis: Long,
         altitudeMeters: Double,
         vector: WindVector,
@@ -39,13 +43,15 @@ class WindStore(
             measurementList.reset()
             updated = false
             lastUpdateClock = 0L
+            lastUpdateWall = 0L
         }
-        measurementList.addMeasurement(timestampMillis, vector, altitudeMeters, quality, source)
-        lastUpdateClock = timestampMillis
+        measurementList.addMeasurement(clockMillis, vector, altitudeMeters, quality, source)
+        lastUpdateClock = clockMillis
+        lastUpdateWall = timestampMillis
         updated = true
     }
 
-    fun evaluate(currentTimeMillis: Long, altitudeMeters: Double): WindStoreResult? {
+    fun evaluate(currentClockMillis: Long, altitudeMeters: Double): WindStoreResult? {
         val altitudeChanged = if (lastAltitude.isNaN()) {
             true
         } else {
@@ -56,7 +62,7 @@ class WindStore(
             return null
         }
 
-        val weighted = measurementList.getWeightedWind(currentTimeMillis, altitudeMeters) ?: return null
+        val weighted = measurementList.getWeightedWind(currentClockMillis, altitudeMeters) ?: return null
 
         lastAltitude = altitudeMeters
         updated = false
@@ -64,7 +70,8 @@ class WindStore(
         return WindStoreResult(
             vector = weighted.vector,
             quality = weighted.approximateQuality,
-            timestampMillis = if (lastUpdateClock != 0L) lastUpdateClock else currentTimeMillis,
+            clockMillis = if (lastUpdateClock != 0L) lastUpdateClock else currentClockMillis,
+            timestampMillis = lastUpdateWall,
             source = weighted.source
         )
     }

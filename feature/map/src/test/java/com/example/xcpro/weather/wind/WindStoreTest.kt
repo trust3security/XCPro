@@ -18,8 +18,22 @@ class WindStoreTest {
         val vector1 = WindVector(east = 4.0, north = 0.0)
         val vector2 = WindVector(east = 6.0, north = 2.0)
 
-        store.slotMeasurement(now, 1000.0, vector1, quality = 5, source = WindSource.CIRCLING)
-        store.slotMeasurement(now + 5000, 1010.0, vector2, quality = 4, source = WindSource.EKF)
+        store.slotMeasurement(
+            clockMillis = now,
+            timestampMillis = now,
+            altitudeMeters = 1000.0,
+            vector = vector1,
+            quality = 5,
+            source = WindSource.CIRCLING
+        )
+        store.slotMeasurement(
+            clockMillis = now + 5000,
+            timestampMillis = now + 5000,
+            altitudeMeters = 1010.0,
+            vector = vector2,
+            quality = 4,
+            source = WindSource.EKF
+        )
 
         val evaluated = store.evaluate(now + 6000, 1005.0)
         assertNotNull(evaluated)

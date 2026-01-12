@@ -30,13 +30,15 @@ class WindSensorInputAdapter @Inject constructor(
         val gpsFlow: StateFlow<GpsSample?> = source.gpsFlow
             .map { gps ->
                 gps?.let {
+                    val clockMillis = it.timeForCalculationsMillis
                     GpsSample(
                         latitude = it.position.latitude,
                         longitude = it.position.longitude,
                         altitudeMeters = it.altitude.value,
                         groundSpeedMs = it.speed.value,
                         trackRad = Math.toRadians(it.bearing),
-                        timestampMillis = it.timestamp
+                        timestampMillis = it.timestamp,
+                        clockMillis = clockMillis
                     )
                 }
             }
@@ -46,10 +48,12 @@ class WindSensorInputAdapter @Inject constructor(
             .map { baro ->
                 baro?.let {
                     val altitude = pressureToAltitudeMeters(it.pressureHPa.value)
+                    val clockMillis = resolveClockMillis(it.timestamp, it.monotonicTimestampMillis)
                     PressureSample(
                         pressureHpa = it.pressureHPa.value,
                         altitudeMeters = altitude,
-                        timestampMillis = it.timestamp
+                        timestampMillis = it.timestamp,
+                        clockMillis = clockMillis
                     )
                 }
             }
@@ -60,14 +64,22 @@ class WindSensorInputAdapter @Inject constructor(
             source.attitudeFlow
         ) { compass, attitude ->
             when {
-                attitude?.isReliable == true -> HeadingSample(
-                    headingDeg = attitude.headingDeg,
-                    timestampMillis = attitude.timestamp
-                )
-                compass != null && compass.accuracy != SensorManager.SENSOR_STATUS_UNRELIABLE -> HeadingSample(
-                    headingDeg = compass.heading,
-                    timestampMillis = compass.timestamp
-                )
+                attitude?.isReliable == true -> {
+                    val clockMillis = resolveClockMillis(attitude.timestamp, attitude.monotonicTimestampMillis)
+                    HeadingSample(
+                        headingDeg = attitude.headingDeg,
+                        timestampMillis = attitude.timestamp,
+                        clockMillis = clockMillis
+                    )
+                }
+                compass != null && compass.accuracy != SensorManager.SENSOR_STATUS_UNRELIABLE -> {
+                    val clockMillis = resolveClockMillis(compass.timestamp, compass.monotonicTimestampMillis)
+                    HeadingSample(
+                        headingDeg = compass.heading,
+                        timestampMillis = compass.timestamp,
+                        clockMillis = clockMillis
+                    )
+                }
                 else -> null
             }
         }.stateIn(scope, SharingStarted.Eagerly, null)
@@ -103,6 +115,7 @@ class WindSensorInputAdapter @Inject constructor(
         return GLoadSample(
             gLoad = gLoad,
             timestampMillis = raw.timestamp,
+            clockMillis = resolveClockMillis(raw.timestamp, raw.monotonicTimestampMillis),
             isReliable = raw.isReliable
         )
     }
@@ -110,11 +123,15 @@ class WindSensorInputAdapter @Inject constructor(
     private fun smoothGLoad(previous: GLoadSample?, current: GLoadSample?): GLoadSample? {
         if (current == null) return null
         if (previous == null || !current.isReliable || !previous.isReliable) return current
-        val dtMs = (current.timestampMillis - previous.timestampMillis).coerceAtLeast(0L)
+        val dtMs = (current.clockMillis - previous.clockMillis).coerceAtLeast(0L)
         if (dtMs == 0L || dtMs > MAX_SMOOTH_GAP_MS) return current
         val alpha = dtMs / (GLOAD_SMOOTH_TAU_MS + dtMs)
         val smoothed = previous.gLoad + alpha * (current.gLoad - previous.gLoad)
         return current.copy(gLoad = smoothed)
+    }
+
+    private fun resolveClockMillis(timestampMillis: Long, monotonicMillis: Long): Long {
+        return if (monotonicMillis > 0L) monotonicMillis else timestampMillis
     }
 
     private companion object {

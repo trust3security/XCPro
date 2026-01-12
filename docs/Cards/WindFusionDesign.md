@@ -92,11 +92,11 @@ SensorDataSource (raw flows)
 
 ### Data contracts
 - **Inputs (normalized, no Android types)**
-  - `GpsSample(latitude, longitude, altitudeMeters, groundSpeedMs, trackRad, timestampMillis)`
-  - `PressureSample(pressureHpa, altitudeMeters, timestampMillis)` (optional)
-  - `AirspeedSample(trueMs, indicatedMs, timestampMillis, valid)` (optional)
-  - `HeadingSample(headingDeg, timestampMillis)` (optional)
-  - `GLoadSample(gLoad, timestampMillis, isReliable)` (optional)
+  - `GpsSample(latitude, longitude, altitudeMeters, groundSpeedMs, trackRad, timestampMillis, clockMillis)`
+  - `PressureSample(pressureHpa, altitudeMeters, timestampMillis, clockMillis)` (optional)
+  - `AirspeedSample(trueMs, indicatedMs, timestampMillis, clockMillis, valid)` (optional)
+  - `HeadingSample(headingDeg, timestampMillis, clockMillis)` (optional)
+  - `GLoadSample(gLoad, timestampMillis, clockMillis, isReliable)` (optional)
   - `Source` enum: LIVE | REPLAY
 - **Output**
   - `WindState`:

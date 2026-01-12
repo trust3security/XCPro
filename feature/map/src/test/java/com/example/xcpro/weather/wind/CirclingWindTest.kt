@@ -51,10 +51,10 @@ class CirclingWindTest {
         val sizeBefore = estimator.sampleSize()
         assertTrue("Expected samples before reset", sizeBefore > 0)
 
-        val lastTimestamp = samples.last().timestampMillis
+        val lastTimestamp = samples.last().clockMillis
         estimator.addSample(
             CirclingWindSample(
-                timestampMillis = lastTimestamp + SAMPLE_INTERVAL_MS,
+                clockMillis = lastTimestamp + SAMPLE_INTERVAL_MS,
                 trackRad = 0.0,
                 groundSpeed = 10.0,
                 isCircling = false
@@ -70,8 +70,8 @@ class CirclingWindTest {
         val circleCount: Int = getFieldValue("circleCount")
         val currentCircle: Double = getFieldValue("currentCircle")
         val samples: ArrayDeque<*> = getFieldValue("samples")
-        val lastTimestamp: Long = getFieldValue("lastTimestamp")
-        return "circleCount=$circleCount currentCircle=$currentCircle sampleSize=${samples.size} lastTimestamp=$lastTimestamp"
+        val lastClockMillis: Long = getFieldValue("lastClockMillis")
+        return "circleCount=$circleCount currentCircle=$currentCircle sampleSize=${samples.size} lastClockMillis=$lastClockMillis"
     }
 
     private fun CirclingWind.debugAnalysis(): String {
@@ -84,7 +84,7 @@ class CirclingWindTest {
             return "analysis: insufficient samples ${samples.size}"
         }
 
-        val spanMs = samples.last().timestamp - samples.first().timestamp
+        val spanMs = samples.last().clockMillis - samples.first().clockMillis
         if (spanMs <= 0) {
             return "analysis: non-positive span"
         }
@@ -166,7 +166,7 @@ class CirclingWindTest {
         for (sample in samples) {
             if (sample != null) {
                 list += SampleSnapshot(
-                    timestamp = sample.readLongField("timestamp"),
+                    clockMillis = sample.readLongField("clockMillis"),
                     trackRad = sample.readDoubleField("trackRad"),
                     groundSpeed = sample.readDoubleField("groundSpeed")
                 )
@@ -195,7 +195,7 @@ class CirclingWindTest {
     }
 
     private data class SampleSnapshot(
-        val timestamp: Long,
+        val clockMillis: Long,
         val trackRad: Double,
         val groundSpeed: Double
     )
@@ -214,7 +214,7 @@ class CirclingWindTest {
             val trackRad = atan2(groundEast, groundNorth)
 
             samples += CirclingWindSample(
-                timestampMillis = timestamp,
+                clockMillis = timestamp,
                 trackRad = trackRad,
                 groundSpeed = groundSpeed,
                 isCircling = true

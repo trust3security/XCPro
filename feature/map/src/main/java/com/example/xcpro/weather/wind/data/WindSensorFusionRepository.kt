@@ -67,7 +67,9 @@ class WindSensorFusionRepository @Inject constructor(
     private val _windState = MutableStateFlow(WindState())
     val windState: StateFlow<WindState> = _windState.asStateFlow()
 
-    private var lastCirclingTimestamp = Long.MIN_VALUE
+    private var lastCirclingClockMillis = Long.MIN_VALUE
+    private var lastGpsClockMillis = Long.MIN_VALUE
+    private var lastUpdatedClockMillis = Long.MIN_VALUE
 
     init {
         scope.launch {
@@ -122,7 +124,9 @@ class WindSensorFusionRepository @Inject constructor(
         circlingWind.reset()
         windEkf.reset()
         windStore.reset()
-        lastCirclingTimestamp = Long.MIN_VALUE
+        lastCirclingClockMillis = Long.MIN_VALUE
+        lastGpsClockMillis = Long.MIN_VALUE
+        lastUpdatedClockMillis = Long.MIN_VALUE
         _windState.value = WindState()
     }
 
@@ -135,17 +139,23 @@ class WindSensorFusionRepository @Inject constructor(
         if (!gps.trackRad.isFinite() || !gps.groundSpeedMs.isFinite()) {
             return
         }
+        val gpsClockMillis = gps.clockMillis
+        if (gpsClockMillis <= lastGpsClockMillis) {
+            return
+        }
+        lastGpsClockMillis = gpsClockMillis
+        val gpsWallMillis = gps.timestampMillis
         val trackRad = gps.trackRad
         val isFlying = flightStateSource.flightState.value.isFlying
         val circlingDecision = circlingDetector.update(
             trackDegrees = Math.toDegrees(trackRad),
-            timestampMillis = gps.timestampMillis,
+            timestampMillis = gpsClockMillis,
             isFlying = isFlying
         )
         val isCircling = circlingDecision.isCircling
         val result = circlingWind.addSample(
             CirclingWindSample(
-                timestampMillis = gps.timestampMillis,
+                clockMillis = gpsClockMillis,
                 trackRad = trackRad,
                 groundSpeed = gps.groundSpeedMs,
                 isCircling = isCircling
@@ -156,14 +166,14 @@ class WindSensorFusionRepository @Inject constructor(
         val headingDeg = headingFromSample(gps, input.heading)
 
         if (result != null) {
-            lastCirclingTimestamp = result.timestampMillis
+            lastCirclingClockMillis = result.clockMillis
             windStore.slotMeasurement(
-                timestampMillis = result.timestampMillis,
+                clockMillis = result.clockMillis,
+                timestampMillis = gpsWallMillis,
                 altitudeMeters = altitudeMeters,
                 vector = result.windVector,
                 quality = result.quality,
-                source = WindSource.CIRCLING,
-                clearExisting = true
+                source = WindSource.CIRCLING
             )
         }
 
@@ -179,33 +189,36 @@ class WindSensorFusionRepository @Inject constructor(
             windEkf.reset()
             null
         }
-        val canUseEkf = lastCirclingTimestamp == Long.MIN_VALUE ||
-            ekfResult?.timestampMillis?.minus(lastCirclingTimestamp) ?: Long.MAX_VALUE > CIRCLING_SUPPRESSION_MS
+        val canUseEkf = lastCirclingClockMillis == Long.MIN_VALUE ||
+            ((ekfResult?.clockMillis?.minus(lastCirclingClockMillis)) ?: Long.MAX_VALUE) > CIRCLING_SUPPRESSION_MS
 
         // AI-NOTE: EKF direct-use mirrors XCSoar behavior: publish the freshest straight-flight wind
         // when real airspeed is available, while still storing the measurement for history/weighting.
         // Override selection still applies (AUTO newer-than-manual -> EXTERNAL -> MANUAL).
+        var ekfCandidateClockMillis: Long? = null
         val ekfCandidate = if (ekfResult != null && canUseEkf) {
             val boostedQuality = (ekfResult.quality + EKF_QUALITY_BONUS).coerceAtMost(MAX_MEASUREMENT_QUALITY)
             windStore.slotMeasurement(
-                timestampMillis = ekfResult.timestampMillis,
+                clockMillis = ekfResult.clockMillis,
+                timestampMillis = gpsWallMillis,
                 altitudeMeters = altitudeMeters,
                 vector = ekfResult.windVector,
                 quality = boostedQuality,
                 source = WindSource.EKF
             )
+            ekfCandidateClockMillis = ekfResult.clockMillis
             WindCandidate(
                 vector = ekfResult.windVector,
                 source = WindSource.EKF,
                 quality = boostedQuality,
-                timestampMillis = ekfResult.timestampMillis
+                timestampMillis = gpsWallMillis
             )
         } else {
             null
         }
 
         val evaluated = if (ekfCandidate == null) {
-            windStore.evaluate(gps.timestampMillis, altitudeMeters)
+            windStore.evaluate(gpsClockMillis, altitudeMeters)
         } else {
             null
         }
@@ -218,12 +231,15 @@ class WindSensorFusionRepository @Inject constructor(
             )
         }
         val autoCandidate = ekfCandidate ?: storeCandidate
+        val autoClockMillis = ekfCandidateClockMillis ?: evaluated?.clockMillis
 
         val manualCandidate = input.manualWind?.let { it.toCandidate() }
         val externalCandidate = input.externalWind?.let { it.toCandidate() }
 
         val autoFresh = autoCandidate != null &&
-            gps.timestampMillis - autoCandidate.timestampMillis <= STALE_MS
+            autoClockMillis != null &&
+            gpsClockMillis >= autoClockMillis &&
+            gpsClockMillis - autoClockMillis <= STALE_MS
 
         val selected = windSelectionUseCase.select(
             auto = autoCandidate?.takeIf { autoFresh },
@@ -232,6 +248,11 @@ class WindSensorFusionRepository @Inject constructor(
         )
 
         if (selected != null) {
+            lastUpdatedClockMillis = if (isAutoSource(selected.source)) {
+                autoClockMillis ?: Long.MIN_VALUE
+            } else {
+                Long.MIN_VALUE
+            }
             publishWindState(
                 vector = selected.vector,
                 source = selected.source,
@@ -244,8 +265,18 @@ class WindSensorFusionRepository @Inject constructor(
         }
 
         val existing = _windState.value
-        val age = if (existing.vector != null && existing.lastUpdatedMillis > 0) {
-            gps.timestampMillis - existing.lastUpdatedMillis
+        val age = if (existing.vector != null) {
+            if (isAutoSource(existing.source)) {
+                if (lastUpdatedClockMillis != Long.MIN_VALUE && gpsClockMillis >= lastUpdatedClockMillis) {
+                    gpsClockMillis - lastUpdatedClockMillis
+                } else {
+                    Long.MAX_VALUE
+                }
+            } else if (existing.lastUpdatedMillis > 0) {
+                (gpsWallMillis - existing.lastUpdatedMillis).coerceAtLeast(0L)
+            } else {
+                Long.MAX_VALUE
+            }
         } else {
             Long.MAX_VALUE
         }
@@ -307,6 +338,9 @@ class WindSensorFusionRepository @Inject constructor(
         quality = quality,
         timestampMillis = timestampMillis
     )
+
+    private fun isAutoSource(source: WindSource): Boolean =
+        source == WindSource.CIRCLING || source == WindSource.EKF
 
     companion object {
         private const val EKF_QUALITY_BONUS = 1

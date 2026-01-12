@@ -16,8 +16,9 @@ rules as XCSoar. Phone-only TAS estimates must not be used as EKF input.
 - IGC replay feeds IAS/TAS when present (B-record extensions).
 
 ## XCPro current state
-- Airspeed flow exists: AirspeedSample(trueMs, indicatedMs, timestampMillis, valid)
+- Airspeed flow exists: AirspeedSample(trueMs, indicatedMs, timestampMillis, clockMillis, valid)
   with ExternalAirspeedRepository (live) and ReplayAirspeedRepository (replay).
+- clockMillis must be monotonic (or replay clock); if unknown, set 0 so EKF drops updates.
 - No live source feeds ExternalAirspeedRepository; replay parser ignores IAS/TAS.
 - Wind EKF gates on AirspeedSample.valid but has no updated-sample check and uses
   a fixed minTrueAirspeed (4.5 m/s) instead of VTakeoff.

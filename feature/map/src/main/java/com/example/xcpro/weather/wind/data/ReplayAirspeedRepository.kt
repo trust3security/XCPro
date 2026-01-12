@@ -17,12 +17,14 @@ class ReplayAirspeedRepository @Inject constructor() : AirspeedDataSource {
         trueMs: Double,
         indicatedMs: Double,
         timestampMillis: Long,
+        clockMillis: Long = timestampMillis,
         valid: Boolean = true
     ) {
         _airspeedFlow.value = AirspeedSample(
             trueMs = trueMs,
             indicatedMs = indicatedMs,
             timestampMillis = timestampMillis,
+            clockMillis = clockMillis,
             valid = valid
         )
     }

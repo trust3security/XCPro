@@ -72,7 +72,8 @@ class WindEkfUseCaseTest {
             altitudeMeters = 1000.0,
             groundSpeedMs = 25.0,
             trackRad = 0.0,
-            timestampMillis = timestampMillis
+            timestampMillis = timestampMillis,
+            clockMillis = timestampMillis
         )
 
     private fun airspeedSample(timestampMillis: Long): AirspeedSample =
@@ -80,6 +81,7 @@ class WindEkfUseCaseTest {
             trueMs = 30.0,
             indicatedMs = 30.0,
             timestampMillis = timestampMillis,
+            clockMillis = timestampMillis,
             valid = true
         )
 }

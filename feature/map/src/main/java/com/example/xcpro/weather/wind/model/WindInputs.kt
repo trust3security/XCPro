@@ -6,30 +6,35 @@ data class GpsSample(
     val altitudeMeters: Double,
     val groundSpeedMs: Double,
     val trackRad: Double,
-    val timestampMillis: Long
+    val timestampMillis: Long,
+    val clockMillis: Long
 )
 
 data class PressureSample(
     val pressureHpa: Double,
     val altitudeMeters: Double,
-    val timestampMillis: Long
+    val timestampMillis: Long,
+    val clockMillis: Long
 )
 
 data class AirspeedSample(
     val trueMs: Double,
     val indicatedMs: Double,
     val timestampMillis: Long,
+    val clockMillis: Long,
     val valid: Boolean
 )
 
 data class HeadingSample(
     val headingDeg: Double,
-    val timestampMillis: Long
+    val timestampMillis: Long,
+    val clockMillis: Long
 )
 
 data class GLoadSample(
     val gLoad: Double,
     val timestampMillis: Long,
+    val clockMillis: Long,
     val isReliable: Boolean
 )
 

@@ -18,7 +18,7 @@ class WindEkfUseCase(
     data class Result(
         val windVector: WindVector,
         val quality: Int,
-        val timestampMillis: Long
+        val clockMillis: Long
     )
 
     enum class DropReason {
@@ -34,9 +34,9 @@ class WindEkfUseCase(
 
     private val ekf = WindEkf()
     private var resetPending = true
-    private var lastTimestamp = 0L
-    private var lastGpsTimestamp = UNSET_TIMESTAMP
-    private var lastAirspeedTimestamp = UNSET_TIMESTAMP
+    private var lastClockMillis = 0L
+    private var lastGpsClockMillis = UNSET_TIMESTAMP
+    private var lastAirspeedClockMillis = UNSET_TIMESTAMP
     private var sampleCount = 0
     private var blackoutUntil = 0L
     var lastRejectReason: DropReason? = null
@@ -46,9 +46,9 @@ class WindEkfUseCase(
 
     fun reset() {
         resetPending = true
-        lastTimestamp = 0L
-        lastGpsTimestamp = UNSET_TIMESTAMP
-        lastAirspeedTimestamp = UNSET_TIMESTAMP
+        lastClockMillis = 0L
+        lastGpsClockMillis = UNSET_TIMESTAMP
+        lastAirspeedClockMillis = UNSET_TIMESTAMP
         sampleCount = 0
         blackoutUntil = 0L
         lastRejectReason = null
@@ -64,32 +64,37 @@ class WindEkfUseCase(
     ): Result? {
         val tas = airspeed?.trueMs ?: Double.NaN
         if (airspeed == null || !airspeed.valid || !tas.isFinite() || tas < minTrueAirspeed) {
-            recordDrop(DropReason.NO_TAS, gps.timestampMillis)
+            recordDrop(DropReason.NO_TAS, gps.clockMillis)
             resetBlackout()
             return null
         }
 
-        val timestamp = gps.timestampMillis
-        val airspeedTimestamp = airspeed.timestampMillis
-        if (lastTimestamp != 0L && abs(timestamp - lastTimestamp) > TIME_WARP_MS) {
+        val timestamp = gps.clockMillis
+        val airspeedTimestamp = airspeed.clockMillis
+        if (airspeedTimestamp <= 0L) {
+            recordDrop(DropReason.NO_UPDATE, timestamp)
+            resetBlackout()
+            return null
+        }
+        if (lastClockMillis != 0L && abs(timestamp - lastClockMillis) > TIME_WARP_MS) {
             recordDrop(DropReason.TIME_WARP, timestamp)
             reset()
         }
-        lastTimestamp = timestamp
-        val hasLastGps = lastGpsTimestamp != UNSET_TIMESTAMP
-        val hasLastAirspeed = lastAirspeedTimestamp != UNSET_TIMESTAMP
-        if ((hasLastGps && timestamp < lastGpsTimestamp) ||
-            (hasLastAirspeed && airspeedTimestamp < lastAirspeedTimestamp)) {
+        lastClockMillis = timestamp
+        val hasLastGps = lastGpsClockMillis != UNSET_TIMESTAMP
+        val hasLastAirspeed = lastAirspeedClockMillis != UNSET_TIMESTAMP
+        if ((hasLastGps && timestamp < lastGpsClockMillis) ||
+            (hasLastAirspeed && airspeedTimestamp < lastAirspeedClockMillis)) {
             recordDrop(DropReason.TIME_WARP, timestamp)
             reset()
         }
-        if ((hasLastGps && timestamp == lastGpsTimestamp) ||
-            (hasLastAirspeed && airspeedTimestamp == lastAirspeedTimestamp)) {
+        if ((hasLastGps && timestamp == lastGpsClockMillis) ||
+            (hasLastAirspeed && airspeedTimestamp == lastAirspeedClockMillis)) {
             recordDrop(DropReason.NO_UPDATE, timestamp)
             return null
         }
-        lastGpsTimestamp = timestamp
-        lastAirspeedTimestamp = airspeedTimestamp
+        lastGpsClockMillis = timestamp
+        lastAirspeedClockMillis = airspeedTimestamp
 
         if (isCircling) {
             sampleCount = (sampleCount * 0.5).toInt()
@@ -104,7 +109,7 @@ class WindEkfUseCase(
         }
 
         if (gLoad != null && gLoad.isReliable) {
-            val gLoadAgeMs = abs(timestamp - gLoad.timestampMillis)
+            val gLoadAgeMs = abs(timestamp - gLoad.clockMillis)
             if (gLoadAgeMs <= G_LOAD_FRESHNESS_MS && abs(gLoad.gLoad - 1.0) > G_LOAD_THRESHOLD) {
                 setBlackout(timestamp, DropReason.G_LOAD)
                 return null
@@ -141,7 +146,7 @@ class WindEkfUseCase(
         return Result(
             windVector = vector,
             quality = quality,
-            timestampMillis = timestamp
+            clockMillis = timestamp
         )
     }
 
