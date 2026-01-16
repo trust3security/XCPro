@@ -28,6 +28,7 @@ import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.TaskWaypoint
 import com.example.xcpro.tasks.core.WaypointRole
 import com.example.xcpro.map.MapGestureRegion
+import com.example.xcpro.map.MapZoomConstraints
 import com.example.xcpro.map.BuildConfig
 import kotlin.math.abs
 import kotlinx.coroutines.delay
@@ -134,6 +135,7 @@ fun CustomMapGestureHandler(
     val coordinateConverter = remember(mapLibreMap) {
         mapLibreMap?.let { AATMapCoordinateConverterFactory.create(it) }
     }
+    val density = LocalDensity.current
 
     // ✅ AAT Double-Tap Detection State
     var lastTapTime by remember { mutableStateOf(0L) }
@@ -341,8 +343,18 @@ fun CustomMapGestureHandler(
                                         if (abs(currentDrag.y) > 2f) {
                                             val zoomDelta = -currentDrag.y * 0.008
                                             mapLibreMap?.let { map ->
-                                                map.moveCamera(CameraUpdateFactory.zoomBy(zoomDelta.toDouble()))
-                                                if (BuildConfig.DEBUG) Log.d(TAG, "🔍 Single finger vertical: Custom zoom $zoomDelta")
+                                                val currentZoom = map.cameraPosition.zoom
+                                                val targetZoom = currentZoom + zoomDelta
+                                                val clampedZoom = MapZoomConstraints.clampZoom(
+                                                    zoom = targetZoom,
+                                                    widthPx = size.width.toInt(),
+                                                    latitude = map.cameraPosition.target?.latitude ?: 0.0,
+                                                    pixelRatio = density.density
+                                                )
+                                                if (clampedZoom != currentZoom) {
+                                                    map.moveCamera(CameraUpdateFactory.zoomTo(clampedZoom))
+                                                    if (BuildConfig.DEBUG) Log.d(TAG, "🔍 Single finger vertical: Custom zoom $zoomDelta")
+                                                }
                                             }
                                         }
                                     }

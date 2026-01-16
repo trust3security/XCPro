@@ -21,7 +21,6 @@ It is designed for **experimental, training, and development use** — not as a 
 ## Documentation
 
 See `CONTRIBUTING.md` for required reading order and contributor workflow.
-Levo pipeline docs index: `docs/LevoVario/README.md`.
 
 ---
 

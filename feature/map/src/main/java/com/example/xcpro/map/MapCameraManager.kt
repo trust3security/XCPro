@@ -64,7 +64,10 @@ class MapCameraManager(
     fun moveTo(latLng: LatLng, zoom: Double? = null) {
         mapState.mapLibreMap?.let { map ->
             try {
-                val targetZoom = zoom ?: map.cameraPosition.zoom
+                val targetZoom = clampZoom(
+                    zoom = zoom ?: map.cameraPosition.zoom,
+                    latitude = latLng.latitude
+                )
                 map.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, targetZoom))
                 AppLogger.d(TAG, "Camera moved to lat=${latLng.latitude}, lon=${latLng.longitude}, zoom=$targetZoom")
             } catch (e: Exception) {
@@ -87,7 +90,10 @@ class MapCameraManager(
     fun handleDoubleTapZoom(tapLatLng: LatLng) {
         mapState.mapLibreMap?.let { map ->
             try {
-                val targetZoom = (map.cameraPosition.zoom + DOUBLE_TAP_ZOOM_DELTA).toFloat()
+                val targetZoom = clampZoom(
+                    zoom = map.cameraPosition.zoom + DOUBLE_TAP_ZOOM_DELTA,
+                    latitude = tapLatLng.latitude
+                ).toFloat()
                 stateActions.setTarget(toMapPoint(tapLatLng), targetZoom)
                 AppLogger.d(TAG, "Double tap zoom to: $tapLatLng, new zoom: $targetZoom")
             } catch (e: Exception) {
@@ -152,6 +158,19 @@ class MapCameraManager(
         return delta
     }
 
+    private fun clampZoom(zoom: Double, latitude: Double? = null): Double {
+        val mapView = mapState.mapView ?: return zoom
+        val width = mapView.width
+        if (width <= 0) return zoom
+        val lat = latitude ?: mapState.mapLibreMap?.cameraPosition?.target?.latitude ?: 0.0
+        return MapZoomConstraints.clampZoom(
+            zoom = zoom,
+            widthPx = width,
+            latitude = lat,
+            pixelRatio = mapView.pixelRatio
+        )
+    }
+
     /**
      * Get current camera position
      */
@@ -174,9 +193,10 @@ class MapCameraManager(
             try {
                 val targetLatLng = toLatLng(mapStateReader.targetLatLng.value)
                     ?: LatLng(INITIAL_LATITUDE, INITIAL_LONGITUDE)
-                val targetZoom = mapStateReader.targetZoom.value ?: INITIAL_ZOOM
+                val rawZoom = mapStateReader.targetZoom.value ?: INITIAL_ZOOM
+                val targetZoom = clampZoom(rawZoom.toDouble(), targetLatLng.latitude)
 
-                map.moveCamera(CameraUpdateFactory.newLatLngZoom(targetLatLng, targetZoom.toDouble()))
+                map.moveCamera(CameraUpdateFactory.newLatLngZoom(targetLatLng, targetZoom))
                 AppLogger.d(TAG, "Camera animated to target: lat=${targetLatLng.latitude}, lon=${targetLatLng.longitude}, zoom=$targetZoom")
             } catch (e: Exception) {
                 AppLogger.e(TAG, "Error animating camera to target: ${e.message}")
@@ -282,7 +302,10 @@ class MapCameraManager(
 
                 // Clamp zoom between reasonable bounds for AAT editing
                 // Lower bound allows more zoom out for larger turnpoints
-                val editZoom = adjustedZoom.coerceIn(8.0, 16.0)  // Was 11.0 - now allows much more zoom out
+                val editZoom = clampZoom(
+                    zoom = adjustedZoom.coerceIn(8.0, 16.0),
+                    latitude = turnpointLat
+                )  // Was 11.0 - now allows much more zoom out
 
                 val turnpointLatLng = LatLng(turnpointLat, turnpointLon)
 
@@ -308,12 +331,13 @@ class MapCameraManager(
                 if (saved != null) {
                     val target = saved.target
                     if (target != null) {
+                        val clampedZoom = clampZoom(saved.zoom, target.latitude)
                         stateActions.setTarget(
                             location = MapStateStore.MapPoint(target.latitude, target.longitude),
-                            zoom = saved.zoom.toFloat()
+                            zoom = clampedZoom.toFloat()
                         )
 
-                        AppLogger.d(TAG, "dYZ_ AAT: Restored camera position - lat=${target.latitude}, lon=${target.longitude}, zoom=${saved.zoom}")
+                        AppLogger.d(TAG, "dYZ_ AAT: Restored camera position - lat=${target.latitude}, lon=${target.longitude}, zoom=$clampedZoom")
                     } else {
                         AppLogger.w(TAG, "dYZ_ AAT: Saved camera target missing")
                     }
