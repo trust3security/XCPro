@@ -4,7 +4,6 @@ package com.example.xcpro.map.ui
  * Invariants: UI renders state only; mutations are routed through MapScreenViewModel.
  */
 
-import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.map.ui.effects.MapComposeEffects
 import com.example.xcpro.map.MapLifecycleEffects
 import com.example.xcpro.map.MapScreenState
@@ -25,11 +24,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import com.example.xcpro.FileWaypointRepo
 // G£à REMOVED DataQuality - no longer used
 import com.example.xcpro.screens.navdrawer.lookandfeel.LookAndFeelPreferences
-
-const val INITIAL_LATITUDE = -30.87
 
 /**
  * G£à PHASE 2: Convert CompleteFlightData (from FlightDataCalculator) to RealTimeFlightData (for cards)
@@ -48,7 +44,6 @@ internal fun MapScreenRoot(
     settingsExpanded: MutableState<Boolean>,
     initialMapStyle: String,
     onMapStyleSelected: (String) -> Unit = {},
-    onSaveConfig: () -> Unit = {},
     mapViewModel: MapScreenViewModel
 ) {
     val context = LocalContext.current
@@ -67,14 +62,12 @@ internal fun MapScreenRoot(
     // ?o. Runtime map state owned by the UI layer
     val mapState = remember { MapScreenState() }
     val mapStateReader = mapViewModel.mapState
-    val modes = FlightMode.values()
 
     // GAœAÿ Map Orientation Manager
     val orientationManager = mapViewModel.orientationManager
     val orientationData by orientationManager.orientationFlow.collectAsStateWithLifecycle()
     val windArrowState by mapViewModel.windArrowState.collectAsStateWithLifecycle()
     val taskManager = mapViewModel.taskManager
-    val waypointRepo = remember(mapUiState.waypoints) { FileWaypointRepo(mapUiState.waypoints) }
 
     // GAœAÿ SIMPLIFIED: Remove permission dialog variables, always enable everything
     val safeContainerSizeState = remember { mutableStateOf(IntSize.Zero) }
@@ -93,7 +86,6 @@ internal fun MapScreenRoot(
     // GAœAÿ Flight Cards ViewModel
     val flightViewModel: FlightDataViewModel = viewModel()
     // GAœAÿ REFACTORED: No longer collect cardStates here - CardContainer handles it directly
-    val selectedCardIds by flightViewModel.selectedCardIds.collectAsStateWithLifecycle()
     val profileModeCards by flightViewModel.profileModeCards.collectAsStateWithLifecycle()
     val profileModeTemplates by flightViewModel.profileModeTemplates.collectAsStateWithLifecycle()
     val activeTemplateId by flightViewModel.activeTemplateId.collectAsStateWithLifecycle()
