@@ -2,7 +2,9 @@ package com.example.xcpro.tasks
 
 import com.example.xcpro.common.waypoint.SearchWaypoint
 import com.example.xcpro.tasks.racing.navigation.RacingAdvanceState
+import com.example.xcpro.tasks.racing.navigation.RacingNavigationEngine
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationFix
+import com.example.xcpro.tasks.racing.navigation.RacingNavigationStateStore
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationStatus
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -18,7 +20,7 @@ class TaskNavigationControllerTest {
     fun controllerAdvancesLegWhenAutoAdvanceArmed() = runTest {
         val coordinator = TaskManagerCoordinator(context = null)
         coordinator.getRacingTaskManager().initializeRacingTask(sampleWaypoints())
-        val controller = TaskNavigationController(coordinator)
+        val controller = createController(coordinator)
         controller.setAdvanceArmed(true)
 
         val fixes = MutableSharedFlow<RacingNavigationFix>(extraBufferCapacity = 2)
@@ -43,7 +45,7 @@ class TaskNavigationControllerTest {
         try {
             val coordinator = TaskManagerCoordinator(context = null)
             coordinator.getRacingTaskManager().initializeRacingTask(sampleWaypoints())
-            val controller = TaskNavigationController(coordinator)
+            val controller = createController(coordinator)
             controller.setAdvanceArmed(true)
 
             val fixes = MutableSharedFlow<RacingNavigationFix>(extraBufferCapacity = 2)
@@ -67,7 +69,7 @@ class TaskNavigationControllerTest {
     fun manualLegChangeDisarmsAndSyncsState() = runTest {
         val coordinator = TaskManagerCoordinator(context = null)
         coordinator.getRacingTaskManager().initializeRacingTask(sampleWaypoints())
-        val controller = TaskNavigationController(coordinator)
+        val controller = createController(coordinator)
         controller.setAdvanceArmed(true)
 
         val fixes = MutableSharedFlow<RacingNavigationFix>(extraBufferCapacity = 1)
@@ -93,5 +95,15 @@ class TaskNavigationControllerTest {
         SearchWaypoint(id = "start", title = "Start", subtitle = "", lat = 0.0, lon = 0.0),
         SearchWaypoint(id = "tp1", title = "TP1", subtitle = "", lat = 0.0, lon = 0.1),
         SearchWaypoint(id = "finish", title = "Finish", subtitle = "", lat = 0.0, lon = 0.2)
+    )
+
+    private fun createController(
+        coordinator: TaskManagerCoordinator
+    ): TaskNavigationController = TaskNavigationController(
+        taskManager = coordinator,
+        stateStore = RacingNavigationStateStore(),
+        advanceState = RacingAdvanceState(),
+        engine = RacingNavigationEngine(),
+        featureFlags = TaskFeatureFlags
     )
 }

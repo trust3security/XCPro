@@ -20,12 +20,12 @@ import kotlinx.coroutines.flow.onEach
  * Consumes RacingNavigationFix samples and applies the Racing navigation engine
  * when task type is RACING.
  */
-internal class TaskNavigationController(
+class TaskNavigationController internal constructor(
     private val taskManager: TaskManagerCoordinator,
-    private val stateStore: RacingNavigationStateStore = RacingNavigationStateStore(),
-    private val advanceState: RacingAdvanceState = RacingAdvanceState(),
-    private val engine: RacingNavigationEngine = RacingNavigationEngine(),
-    private val featureFlags: TaskFeatureFlags = TaskFeatureFlags
+    private val stateStore: RacingNavigationStateStore,
+    private val advanceState: RacingAdvanceState,
+    private val engine: RacingNavigationEngine,
+    private val featureFlags: TaskFeatureFlags
 ) {
 
     val racingState = stateStore.state

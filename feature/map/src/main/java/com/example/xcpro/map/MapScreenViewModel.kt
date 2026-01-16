@@ -21,7 +21,6 @@ import com.example.xcpro.weather.wind.data.WindSensorFusionRepository
 import com.example.xcpro.weather.wind.model.WindState
 import com.example.xcpro.map.replay.RacingReplayLogBuilder
 import com.example.xcpro.replay.IgcReplayController
-import com.example.xcpro.replay.ReplayMode
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.replay.SessionStatus
 import com.example.xcpro.map.ballast.BallastCommand
@@ -36,12 +35,6 @@ import com.example.xcpro.qnh.QnhCalibrationFailureReason
 import com.example.xcpro.qnh.QnhRepository
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.tasks.TaskNavigationController
-import com.example.xcpro.tasks.core.TaskType
-import com.example.xcpro.tasks.racing.SimpleRacingTask
-import com.example.xcpro.tasks.racing.navigation.RacingAdvanceState
-import com.example.xcpro.tasks.racing.navigation.RacingNavigationEvent
-import com.example.xcpro.tasks.racing.navigation.RacingNavigationEventType
-import com.example.xcpro.tasks.racing.navigation.RacingNavigationFix
 import com.example.xcpro.variometer.layout.VariometerUiState
 import com.example.xcpro.sensors.GPSData
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -55,7 +48,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -72,6 +64,7 @@ import java.util.Locale
 class MapScreenViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
     val taskManager: TaskManagerCoordinator,
+    private val taskNavigationController: TaskNavigationController,
     val cardPreferences: CardPreferences,
     private val mapStyleRepository: MapStyleRepository,
     private val unitsRepository: UnitsRepository,
@@ -181,28 +174,25 @@ class MapScreenViewModel @Inject constructor(
         igcReplayController = igcReplayController
     )
 
-    private val taskNavigationController = TaskNavigationController(taskManager)
-    private val racingEventDebouncer = RacingNavigationEventDebouncer()
-    private val racingReplayLogger = RacingReplayEventLogger()
-    private var racingReplayActive = false
-    private var racingReplayAdvanceSnapshot: RacingAdvanceState.Snapshot? = null
-    private var racingReplaySpeedSnapshot: Double? = null
-    private var lastRacingFix: RacingNavigationFix? = null
-    private val racingFixFlow = flightDataRepository.flightData
-        .mapNotNull { data -> data?.gps?.let(RacingNavigationFixAdapter::toFix) }
-        .onEach { fix -> lastRacingFix = fix }
-
-    private var demoReplaySnapshot: ReplayUiSnapshot? = null
+    private val replayCoordinator = MapScreenReplayCoordinator(
+        taskManager = taskManager,
+        taskNavigationController = taskNavigationController,
+        flightDataRepository = flightDataRepository,
+        igcReplayController = igcReplayController,
+        racingReplayLogBuilder = racingReplayLogBuilder,
+        mapStateStore = mapStateStore,
+        mapStateActions = this,
+        uiEffects = _uiEffects,
+        replaySessionState = replaySessionState,
+        scope = viewModelScope
+    )
 
     init {
         mapStateStore.setTrailSettings(trailSettingsUseCase.getSettings())
         setDisplaySmoothingProfile(MapFeatureFlags.defaultDisplaySmoothingProfile)
         observeTrailSettings()
         observers.start()
-        observeReplayEvents()
-        observeReplayDisplayPoseMode()
-        observeRacingNavigationEvents()
-        taskNavigationController.bind(racingFixFlow, viewModelScope)
+        replayCoordinator.start()
     }
 
     private val _isAATEditMode = MutableStateFlow(false)
@@ -227,90 +217,15 @@ class MapScreenViewModel @Inject constructor(
     }
 
     fun onVarioDemoReplay() {
-        viewModelScope.launch {
-            try {
-                captureDemoReplaySnapshot()
-                igcReplayController.setAutoStopAfterFinish(true)
-                Log.i(TAG, "VARIO_DEMO start asset=$VARIO_DEMO_ASSET_PATH")
-                igcReplayController.stopAndWait(emitCancelledEvent = false)
-                igcReplayController.setReplayMode(ReplayMode.REFERENCE, resetAfterSession = true)
-                igcReplayController.loadAsset(VARIO_DEMO_ASSET_PATH, "Vario demo")
-                setHasInitiallyCentered(false)
-                setShowReturnButton(false)
-                setTrackingLocation(true)
-                igcReplayController.play()
-                _uiEffects.emit(MapUiEffect.ShowToast("Vario demo replay started"))
-            } catch (t: Throwable) {
-                restoreDemoReplaySnapshot()
-                Log.e(TAG, "Failed to start vario demo replay", t)
-                _uiEffects.emit(MapUiEffect.ShowToast("Vario demo replay failed"))
-            }
-        }
+        replayCoordinator.onVarioDemoReplay()
     }
 
     fun onRacingTaskReplay() {
-        viewModelScope.launch {
-            racingReplayActive = true
-            racingReplayLogger.reset()
-            try {
-                val task = currentRacingTaskOrNull()
-                if (task == null) {
-                    racingReplayActive = false
-                    _uiEffects.emit(
-                        MapUiEffect.ShowToast("Racing replay needs an active racing task with at least 2 waypoints")
-                    )
-                    return@launch
-                }
-                captureRacingReplayAdvanceSnapshot()
-                captureRacingReplaySpeedSnapshot()
-                taskNavigationController.resetNavigationState()
-                taskManager.setActiveLeg(0)
-                taskNavigationController.setAdvanceMode(RacingAdvanceState.Mode.AUTO)
-                taskNavigationController.setAdvanceArmed(true)
-                igcReplayController.setSpeed(RACING_REPLAY_SPEED_MULTIPLIER)
-                igcReplayController.setAutoStopAfterFinish(true)
-                igcReplayController.stopAndWait(emitCancelledEvent = false)
-                igcReplayController.setReplayMode(ReplayMode.REFERENCE, resetAfterSession = true)
-                val log = racingReplayLogBuilder.build(
-                    task = task,
-                    logPoints = true
-                )
-                igcReplayController.loadLog(log, "Racing task replay")
-                setHasInitiallyCentered(false)
-                setShowReturnButton(false)
-                setTrackingLocation(true)
-                igcReplayController.play()
-                _uiEffects.emit(MapUiEffect.ShowToast("Racing task replay started"))
-            } catch (t: Throwable) {
-                restoreRacingReplayAdvanceSnapshot()
-                restoreRacingReplaySpeedSnapshot()
-                racingReplayActive = false
-                Log.e(TAG, "Failed to start racing task replay", t)
-                _uiEffects.emit(MapUiEffect.ShowToast("Racing task replay failed"))
-            }
-        }
+        replayCoordinator.onRacingTaskReplay()
     }
 
     fun onVarioDemoReplaySim() {
-        viewModelScope.launch {
-            try {
-                captureDemoReplaySnapshot()
-                igcReplayController.setAutoStopAfterFinish(true)
-                Log.i(TAG, "VARIO_DEMO_SIM start asset=$VARIO_DEMO_ASSET_PATH")
-                igcReplayController.stopAndWait(emitCancelledEvent = false)
-                igcReplayController.setReplayMode(ReplayMode.REALTIME_SIM, resetAfterSession = true)
-                igcReplayController.loadAsset(VARIO_DEMO_ASSET_PATH, "Vario demo (sim)")
-                setHasInitiallyCentered(false)
-                setShowReturnButton(false)
-                setTrackingLocation(true)
-                igcReplayController.play()
-                _uiEffects.emit(MapUiEffect.ShowToast("Vario demo (sim) replay started"))
-            } catch (t: Throwable) {
-                restoreDemoReplaySnapshot()
-                Log.e(TAG, "Failed to start vario demo replay (sim)", t)
-                _uiEffects.emit(MapUiEffect.ShowToast("Vario demo (sim) replay failed"))
-            }
-        }
+        replayCoordinator.onVarioDemoReplaySim()
     }
 
     fun updateSafeContainerSize(size: MapStateStore.MapSize) {
@@ -454,144 +369,6 @@ class MapScreenViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
-    private fun observeReplayEvents() {
-        igcReplayController.events
-            .onEach { event ->
-                if (demoReplaySnapshot != null) {
-                    restoreDemoReplaySnapshot()
-                    when (event) {
-                        is com.example.xcpro.replay.ReplayEvent.Failed -> {
-                            igcReplayController.setAutoStopAfterFinish(false)
-                            viewModelScope.launch {
-                                igcReplayController.stopAndWait(emitCancelledEvent = false)
-                            }
-                        }
-                        com.example.xcpro.replay.ReplayEvent.Cancelled -> {
-                            igcReplayController.setAutoStopAfterFinish(false)
-                        }
-                        is com.example.xcpro.replay.ReplayEvent.Completed -> Unit
-                    }
-                }
-                if (racingReplayActive) {
-                    val session = replaySessionState.value
-                    racingReplayLogger.flush(session)
-                    racingReplayLogger.reset()
-                    restoreRacingReplayAdvanceSnapshot()
-                    restoreRacingReplaySpeedSnapshot()
-                    racingReplayActive = false
-                }
-            }
-            .launchIn(viewModelScope)
-    }
-
-    private fun observeReplayDisplayPoseMode() {
-        replaySessionState
-            .onEach { session ->
-                val useRawReplay = MapFeatureFlags.useRawReplayPose &&
-                    session.selection != null &&
-                    session.status != SessionStatus.IDLE
-                val mode = if (useRawReplay) DisplayPoseMode.RAW_REPLAY else DisplayPoseMode.SMOOTHED
-                setDisplayPoseMode(mode)
-            }
-            .launchIn(viewModelScope)
-    }
-
-    private fun observeRacingNavigationEvents() {
-        taskNavigationController.racingEvents
-            .onEach { event ->
-                if (racingReplayActive) {
-                    racingReplayLogger.record(event)
-                }
-                if (BuildConfig.DEBUG) {
-                    val fix = lastRacingFix
-                    val fixLabel = if (fix != null) {
-                        "fix=${fix.lat},${fix.lon} fixT=${fix.timestampMillis}"
-                    } else {
-                        "fix=unknown"
-                    }
-                    Log.i(
-                        TAG,
-                        "RACING_EVENT type=${event.type} from=${event.fromLegIndex} " +
-                            "to=${event.toLegIndex} t=${event.timestampMillis} $fixLabel"
-                    )
-                }
-                if (!racingEventDebouncer.shouldEmit(event)) return@onEach
-                _uiEffects.emit(MapUiEffect.ShowToast(buildRacingEventMessage(event)))
-            }
-            .launchIn(viewModelScope)
-    }
-
-    private fun captureRacingReplayAdvanceSnapshot() {
-        if (racingReplayAdvanceSnapshot != null) return
-        racingReplayAdvanceSnapshot = taskNavigationController.snapshot()
-    }
-
-    private fun restoreRacingReplayAdvanceSnapshot() {
-        val snapshot = racingReplayAdvanceSnapshot ?: return
-        taskNavigationController.setAdvanceMode(snapshot.mode)
-        taskNavigationController.setAdvanceArmed(snapshot.isArmed)
-        racingReplayAdvanceSnapshot = null
-    }
-
-    private fun captureRacingReplaySpeedSnapshot() {
-        if (racingReplaySpeedSnapshot != null) return
-        racingReplaySpeedSnapshot = replaySessionState.value.speedMultiplier
-    }
-
-    private fun restoreRacingReplaySpeedSnapshot() {
-        val snapshot = racingReplaySpeedSnapshot ?: return
-        igcReplayController.setSpeed(snapshot)
-        racingReplaySpeedSnapshot = null
-    }
-
-    private fun currentRacingTaskOrNull(): SimpleRacingTask? {
-        if (taskManager.taskType != TaskType.RACING) {
-            return null
-        }
-        val task = taskManager.getRacingTaskManager().currentRacingTask
-        if (task.waypoints.size < 2) {
-            return null
-        }
-        return task
-    }
-
-    private fun buildRacingEventMessage(event: RacingNavigationEvent): String {
-        val task = taskManager.getRacingTaskManager().currentRacingTask
-        val reachedIndex = event.fromLegIndex
-        val waypointName = task.waypoints.getOrNull(reachedIndex)?.title
-        return when (event.type) {
-            RacingNavigationEventType.START ->
-                if (waypointName != null) "Start crossed: $waypointName" else "Start crossed"
-            RacingNavigationEventType.TURNPOINT ->
-                if (waypointName != null) "Turnpoint reached: $waypointName" else "Turnpoint reached"
-            RacingNavigationEventType.FINISH ->
-                if (waypointName != null) "Finish reached: $waypointName" else "Finish reached"
-        }
-    }
-
-    private fun captureDemoReplaySnapshot() {
-        if (demoReplaySnapshot != null) return
-        demoReplaySnapshot = ReplayUiSnapshot(
-            isTrackingLocation = mapStateStore.isTrackingLocation.value,
-            showReturnButton = mapStateStore.showReturnButton.value,
-            showRecenterButton = mapStateStore.showRecenterButton.value,
-            hasInitiallyCentered = mapStateStore.hasInitiallyCentered.value,
-            savedLocation = mapStateStore.savedLocation.value,
-            savedZoom = mapStateStore.savedZoom.value,
-            savedBearing = mapStateStore.savedBearing.value
-        )
-    }
-
-    private fun restoreDemoReplaySnapshot() {
-        val snapshot = demoReplaySnapshot ?: return
-        demoReplaySnapshot = null
-        setTrackingLocation(snapshot.isTrackingLocation)
-        setShowReturnButton(snapshot.showReturnButton)
-        setShowRecenterButton(snapshot.showRecenterButton)
-        setHasInitiallyCentered(snapshot.hasInitiallyCentered)
-        saveLocation(snapshot.savedLocation, snapshot.savedZoom, snapshot.savedBearing)
-    }
-
     private fun loadWaypoints() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingWaypoints = true, waypointError = null) }
@@ -705,20 +482,8 @@ class MapScreenViewModel @Inject constructor(
 
     private companion object {
         private const val TAG = "MapScreenViewModel"
-        private const val VARIO_DEMO_ASSET_PATH = "replay/vario-demo-0-10-0-60s.igc"
-        private const val RACING_REPLAY_SPEED_MULTIPLIER = 1.0
     }
 }
-
-private data class ReplayUiSnapshot(
-    val isTrackingLocation: Boolean,
-    val showReturnButton: Boolean,
-    val showRecenterButton: Boolean,
-    val hasInitiallyCentered: Boolean,
-    val savedLocation: MapStateStore.MapPoint?,
-    val savedZoom: Double?,
-    val savedBearing: Double?
-)
 
 private fun QnhCalibrationFailureReason.toUserMessage(): String = when (this) {
     QnhCalibrationFailureReason.REPLAY_MODE -> "Auto calibration disabled in replay"

@@ -93,9 +93,10 @@ internal class ReplaySampleEmitter(
     }
 
     private fun shouldEmitGps(timestampMillis: Long): Boolean {
-        if (simConfig.mode != ReplayMode.REALTIME_SIM) return true
+        val stepMs = simConfig.gpsStepMs
+        if (stepMs <= 0L) return true
         if (lastGpsEmitTimestamp == Long.MIN_VALUE) return true
-        return (timestampMillis - lastGpsEmitTimestamp) >= simConfig.gpsStepMs
+        return (timestampMillis - lastGpsEmitTimestamp) >= stepMs
     }
 
     private fun emitAirspeedSample(point: IgcPoint) {

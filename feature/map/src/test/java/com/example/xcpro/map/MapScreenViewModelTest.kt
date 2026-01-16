@@ -42,6 +42,11 @@ import com.example.xcpro.replay.ReplayEvent
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.map.trail.MapTrailPreferences
 import com.example.xcpro.map.trail.MapTrailSettingsUseCase
+import com.example.xcpro.tasks.TaskFeatureFlags
+import com.example.xcpro.tasks.TaskNavigationController
+import com.example.xcpro.tasks.racing.navigation.RacingAdvanceState
+import com.example.xcpro.tasks.racing.navigation.RacingNavigationEngine
+import com.example.xcpro.tasks.racing.navigation.RacingNavigationStateStore
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -67,6 +72,13 @@ class MapScreenViewModelTest {
 
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val taskManager = com.example.xcpro.tasks.TaskManagerCoordinator(context)
+    private val taskNavigationController = TaskNavigationController(
+        taskManager = taskManager,
+        stateStore = RacingNavigationStateStore(),
+        advanceState = RacingAdvanceState(),
+        engine = RacingNavigationEngine(),
+        featureFlags = TaskFeatureFlags
+    )
     private val cardPreferences = CardPreferences(context)
     private val mapStyleRepository = MapStyleRepository(context)
     private val unitsRepository = UnitsRepository(context)
@@ -158,6 +170,7 @@ class MapScreenViewModelTest {
         val viewModel = MapScreenViewModel(
             appContext = context,
             taskManager = taskManager,
+            taskNavigationController = taskNavigationController,
             cardPreferences = cardPreferences,
             mapStyleRepository = mapStyleRepository,
             unitsRepository = unitsRepository,
@@ -191,6 +204,7 @@ class MapScreenViewModelTest {
         val viewModel = MapScreenViewModel(
             appContext = context,
             taskManager = taskManager,
+            taskNavigationController = taskNavigationController,
             cardPreferences = cardPreferences,
             mapStyleRepository = mapStyleRepository,
             unitsRepository = unitsRepository,
@@ -304,25 +318,36 @@ class MapScreenViewModelTest {
 
     private fun createViewModel(
         waypointLoader: WaypointLoader = SuccessfulWaypointLoader(emptyList())
-    ): MapScreenViewModel = MapScreenViewModel(
-        appContext = context,
-        taskManager = com.example.xcpro.tasks.TaskManagerCoordinator(null),
-        cardPreferences = cardPreferences,
-        mapStyleRepository = mapStyleRepository,
-        unitsRepository = unitsRepository,
-        waypointLoader = waypointLoader,
-        gliderRepository = gliderRepository,
-        varioServiceManager = varioServiceManager,
-        flightDataRepository = flightDataRepository,
-        windRepository = windRepository,
-        igcReplayController = replayController,
-        racingReplayLogBuilder = RacingReplayLogBuilder(),
-        orientationManagerFactory = orientationManagerFactory,
-        defaultDispatcher = mainDispatcherRule.dispatcher,
-        qnhRepository = qnhRepository,
-        trailSettingsUseCase = trailSettingsUseCase,
-        calibrateQnhUseCase = calibrateQnhUseCase
-    )
+    ): MapScreenViewModel {
+        val localTaskManager = com.example.xcpro.tasks.TaskManagerCoordinator(null)
+        val localTaskNavigationController = TaskNavigationController(
+            taskManager = localTaskManager,
+            stateStore = RacingNavigationStateStore(),
+            advanceState = RacingAdvanceState(),
+            engine = RacingNavigationEngine(),
+            featureFlags = TaskFeatureFlags
+        )
+        return MapScreenViewModel(
+            appContext = context,
+            taskManager = localTaskManager,
+            taskNavigationController = localTaskNavigationController,
+            cardPreferences = cardPreferences,
+            mapStyleRepository = mapStyleRepository,
+            unitsRepository = unitsRepository,
+            waypointLoader = waypointLoader,
+            gliderRepository = gliderRepository,
+            varioServiceManager = varioServiceManager,
+            flightDataRepository = flightDataRepository,
+            windRepository = windRepository,
+            igcReplayController = replayController,
+            racingReplayLogBuilder = RacingReplayLogBuilder(),
+            orientationManagerFactory = orientationManagerFactory,
+            defaultDispatcher = mainDispatcherRule.dispatcher,
+            qnhRepository = qnhRepository,
+            trailSettingsUseCase = trailSettingsUseCase,
+            calibrateQnhUseCase = calibrateQnhUseCase
+        )
+    }
 
     private class FakeQnhRepository : QnhRepository {
         private val initialValue = QnhValue(

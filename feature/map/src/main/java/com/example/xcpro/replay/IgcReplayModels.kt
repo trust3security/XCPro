@@ -30,12 +30,23 @@ data class ReplaySimConfig(
     val mode: ReplayMode = ReplayMode.REALTIME_SIM,
     val baroStepMs: Long = 20L,    // 50 Hz baro cadence (closer to live sensors)
     val gpsStepMs: Long = 1_000L,  // 1 Hz GPS cadence
+    val referenceStepMs: Long = 1_000L, // REFERENCE densify cadence (matches B-record seconds by default)
     val jitterMs: Long = 8L,       // +/- 8 ms timing jitter
     val pressureNoiseSigmaHpa: Double = 0.04,
     val gpsAltitudeNoiseSigmaM: Double = 1.5,
     val warmupMillis: Long = 8_000L,
     val seed: Long = 1_337L
 )
+
+data class ReplayCadenceProfile(
+    val referenceStepMs: Long = 1_000L,
+    val gpsStepMs: Long = 1_000L
+) {
+    companion object {
+        val DEFAULT = ReplayCadenceProfile()
+        val LIVE_100MS = ReplayCadenceProfile(referenceStepMs = 100L, gpsStepMs = 100L)
+    }
+}
 
 sealed interface ReplayEvent {
     data class Completed(val samples: Int) : ReplayEvent
