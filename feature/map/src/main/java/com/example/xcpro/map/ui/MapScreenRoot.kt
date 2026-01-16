@@ -132,7 +132,7 @@ internal fun MapScreenRoot(
     val flightDataManager = mapViewModel.flightDataManager
     // Map Overlay Manager - centralized overlay management
     val overlayManager = remember(mapState, taskManager, context, mapStateReader, mapViewModel, snailTrailManager, coroutineScope) {
-        MapOverlayManager(context, mapState, mapStateReader, taskManager, mapViewModel, snailTrailManager, coroutineScope)
+        MapOverlayManager(context, mapState, mapStateReader, taskManager, mapViewModel.mapStateActions, snailTrailManager, coroutineScope)
     }
 
     // G£à UI Widget Manager - centralized widget management
@@ -161,7 +161,7 @@ internal fun MapScreenRoot(
 
     // G£à CameraManager - Centralized camera handling
     val cameraManager = remember(mapState, mapStateReader, mapViewModel) {
-        MapCameraManager(mapState, mapStateReader, mapViewModel)
+        MapCameraManager(mapState, mapStateReader, mapViewModel.mapStateActions)
     }
 
     // G£à LocationManager - Centralized location handling
@@ -175,7 +175,7 @@ internal fun MapScreenRoot(
             context = context,
             mapState = mapState,
             mapStateReader = mapStateReader,
-            stateActions = mapViewModel,
+            stateActions = mapViewModel.mapStateActions,
             coroutineScope = coroutineScope,
             varioServiceManager = mapViewModel.varioServiceManager
         )
@@ -211,7 +211,7 @@ internal fun MapScreenRoot(
             context = context,
             mapState = mapState,
             mapStateReader = mapStateReader,
-            stateActions = mapViewModel,
+            stateActions = mapViewModel.mapStateActions,
             orientationManager = orientationManager,
             taskManager = taskManager,
             snailTrailManager = snailTrailManager,

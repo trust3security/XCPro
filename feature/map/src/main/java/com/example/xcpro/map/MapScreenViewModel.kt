@@ -80,11 +80,12 @@ class MapScreenViewModel @Inject constructor(
     private val qnhRepository: QnhRepository,
     private val trailSettingsUseCase: MapTrailSettingsUseCase,
     private val calibrateQnhUseCase: CalibrateQnhUseCase
-) : ViewModel(), MapStateActions {
+) : ViewModel() {
 
     private val initialStyleName = mapStyleRepository.initialStyle()
     private val mapStateStore: MapStateStore = MapStateStore(initialStyleName)
     val mapState: MapStateReader = mapStateStore
+    val mapStateActions: MapStateActions = MapStateActionsDelegate(mapStateStore)
 
     private val ballastController = BallastController(
         repository = gliderRepository,
@@ -181,15 +182,20 @@ class MapScreenViewModel @Inject constructor(
         igcReplayController = igcReplayController,
         racingReplayLogBuilder = racingReplayLogBuilder,
         mapStateStore = mapStateStore,
-        mapStateActions = this,
+        mapStateActions = mapStateActions,
         uiEffects = _uiEffects,
         replaySessionState = replaySessionState,
         scope = viewModelScope
     )
+    private val uiEventHandler = MapScreenUiEventHandler(
+        uiState = _uiState,
+        uiEffects = _uiEffects,
+        onRefreshWaypoints = ::loadWaypoints
+    )
 
     init {
         mapStateStore.setTrailSettings(trailSettingsUseCase.getSettings())
-        setDisplaySmoothingProfile(MapFeatureFlags.defaultDisplaySmoothingProfile)
+        mapStateStore.setDisplaySmoothingProfile(MapFeatureFlags.defaultDisplaySmoothingProfile)
         observeTrailSettings()
         observers.start()
         replayCoordinator.start()
@@ -232,59 +238,6 @@ class MapScreenViewModel @Inject constructor(
         mapStateStore.updateSafeContainerSize(size)
     }
 
-    override fun setShowDistanceCircles(show: Boolean) {
-        mapStateStore.setShowDistanceCircles(show)
-    }
-
-    override fun toggleDistanceCircles() {
-        val next = !mapStateStore.showDistanceCircles.value
-        mapStateStore.setShowDistanceCircles(next)
-    }
-
-    override fun updateCurrentZoom(zoom: Float) {
-        mapStateStore.updateCurrentZoom(zoom)
-    }
-
-    override fun setTarget(location: MapStateStore.MapPoint?, zoom: Float?) {
-        mapStateStore.setTarget(location, zoom)
-    }
-
-    override fun setCurrentUserLocation(location: MapStateStore.MapPoint?) {
-        mapStateStore.setCurrentUserLocation(location)
-    }
-
-    override fun setHasInitiallyCentered(centered: Boolean) {
-        mapStateStore.setHasInitiallyCentered(centered)
-    }
-
-    override fun setTrackingLocation(enabled: Boolean) {
-        mapStateStore.setTrackingLocation(enabled)
-    }
-
-    override fun setShowRecenterButton(show: Boolean) {
-        mapStateStore.setShowRecenterButton(show)
-    }
-
-    override fun setShowReturnButton(show: Boolean) {
-        mapStateStore.setShowReturnButton(show)
-    }
-
-    override fun updateLastUserPanTime(timestampMillis: Long) {
-        mapStateStore.updateLastUserPanTime(timestampMillis)
-    }
-
-    override fun saveLocation(location: MapStateStore.MapPoint?, zoom: Double?, bearing: Double?) {
-        mapStateStore.saveLocation(location, zoom, bearing)
-    }
-
-    override fun setDisplayPoseMode(mode: DisplayPoseMode) {
-        mapStateStore.setDisplayPoseMode(mode)
-    }
-
-    override fun setDisplaySmoothingProfile(profile: DisplaySmoothingProfile) {
-        mapStateStore.setDisplaySmoothingProfile(profile)
-    }
-
     fun setMapStyle(styleName: String) {
         if (mapStateStore.updateMapStyleName(styleName)) {
             emitMapCommand(MapCommand.SetStyle(styleName))
@@ -303,13 +256,7 @@ class MapScreenViewModel @Inject constructor(
     }
 
     fun onEvent(event: MapUiEvent) {
-        when (event) {
-            MapUiEvent.RefreshWaypoints -> loadWaypoints()
-            MapUiEvent.ToggleUiEditMode -> setUiEditMode(!_uiState.value.isUiEditMode)
-            is MapUiEvent.SetUiEditMode -> setUiEditMode(event.enabled)
-            MapUiEvent.ToggleDrawer -> toggleDrawer()
-            is MapUiEvent.SetDrawerOpen -> setDrawerOpen(event.isOpen)
-        }
+        uiEventHandler.onEvent(event)
     }
 
     private fun normalizeAngleDeg(angle: Float): Float {
@@ -317,27 +264,6 @@ class MapScreenViewModel @Inject constructor(
         if (normalized < 0f) normalized += 360f
         return normalized
     }
-    private fun setUiEditMode(enabled: Boolean) {
-        if (_uiState.value.isUiEditMode == enabled) {
-            return
-        }
-        _uiState.update { it.copy(isUiEditMode = enabled) }
-    }
-
-    private fun toggleDrawer() {
-        val shouldOpen = !_uiState.value.isDrawerOpen
-        _uiState.update { it.copy(isDrawerOpen = shouldOpen) }
-        _uiEffects.tryEmit(if (shouldOpen) MapUiEffect.OpenDrawer else MapUiEffect.CloseDrawer)
-    }
-
-    private fun setDrawerOpen(isOpen: Boolean) {
-        if (_uiState.value.isDrawerOpen == isOpen) {
-            return
-        }
-        _uiState.update { it.copy(isDrawerOpen = isOpen) }
-    }
-
-
     private fun observeUnits() {
         unitsState
             .onEach { preferences ->

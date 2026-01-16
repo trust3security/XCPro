@@ -260,7 +260,7 @@ class MapScreenViewModelTest {
 
         assertTrue(viewModel.mapState.showDistanceCircles.value.not())
 
-        viewModel.toggleDistanceCircles()
+        viewModel.mapStateActions.toggleDistanceCircles()
 
         assertTrue(viewModel.mapState.showDistanceCircles.value)
     }
@@ -269,7 +269,7 @@ class MapScreenViewModelTest {
     fun updateCurrentZoom_updatesStore() {
         val viewModel = createViewModel()
 
-        viewModel.updateCurrentZoom(14.5f)
+        viewModel.mapStateActions.updateCurrentZoom(14.5f)
 
         assertEquals(14.5f, viewModel.mapState.currentZoom.value)
     }
@@ -280,7 +280,7 @@ class MapScreenViewModelTest {
 
         val target = MapStateStore.MapPoint(1.23, 4.56)
 
-        viewModel.setTarget(target, 12.0f)
+        viewModel.mapStateActions.setTarget(target, 12.0f)
 
         assertEquals(target, viewModel.mapState.targetLatLng.value)
         assertEquals(12.0f, viewModel.mapState.targetZoom.value)
@@ -292,7 +292,7 @@ class MapScreenViewModelTest {
 
         val location = MapStateStore.MapPoint(10.0, -20.0)
 
-        viewModel.saveLocation(location, 9.0, 180.0)
+        viewModel.mapStateActions.saveLocation(location, 9.0, 180.0)
 
         assertEquals(location, viewModel.mapState.savedLocation.value)
         assertEquals(9.0, viewModel.mapState.savedZoom.value)
