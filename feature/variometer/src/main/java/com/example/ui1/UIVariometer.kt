@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
@@ -85,11 +86,14 @@ private fun dialAngle(value: Float, config: VarioDialConfig): Float {
 @Composable
 fun UIVariometer(
     needleValue: Float,
+    fastNeedleValue: Float? = null,
     displayValue: Float,
     valueLabel: String = String.format("%+.1f", displayValue),
     secondaryLabel: String? = null,
     averageNeedleValue: Float? = null,
     dialConfig: VarioDialConfig = VarioDialConfig(),
+    windDirectionScreenDeg: Float? = null,
+    windIsValid: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var isFlashing by remember { mutableStateOf(false) }
@@ -244,6 +248,19 @@ fun UIVariometer(
             )
         }
 
+        fastNeedleValue?.let { fast ->
+            val fastAngle = dialAngle(fast, dialConfig)
+            rotate(fastAngle, center) {
+                drawLine(
+                    color = Color(0xFFEF4444),
+                    start = center,
+                    end = Offset(center.x + needleLength, center.y),
+                    strokeWidth = 4.dp.toPx(),
+                    cap = StrokeCap.Round
+                )
+            }
+        }
+
         averageNeedleValue?.let { average ->
             val averageAngle = dialAngle(average, dialConfig)
             rotate(averageAngle, center) {
@@ -254,6 +271,28 @@ fun UIVariometer(
                     strokeWidth = 4.dp.toPx(),
                     cap = StrokeCap.Round
                 )
+            }
+        }
+
+        windDirectionScreenDeg?.let { rawDirection ->
+            val direction = ((rawDirection % 360f) + 360f) % 360f
+            val arrowColor = if (windIsValid) Color(0xFF22C55E) else Color(0xFFEF4444)
+            val arrowHeight = (radius * 0.12f).coerceIn(8.dp.toPx(), 18.dp.toPx())
+            val arrowWidth = (arrowHeight * 0.9f).coerceIn(6.dp.toPx(), 16.dp.toPx())
+            val ringStroke = 6.dp.toPx()
+            val baseRadius = radius - ringStroke * 0.5f
+            val tipRadius = (baseRadius - arrowHeight).coerceAtLeast(radius * 0.4f)
+            val baseY = center.y - baseRadius
+            val tipY = center.y - tipRadius
+            val halfWidth = arrowWidth / 2f
+            val arrowPath = Path().apply {
+                moveTo(center.x - halfWidth, baseY)
+                lineTo(center.x + halfWidth, baseY)
+                lineTo(center.x, tipY)
+                close()
+            }
+            rotate(direction, center) {
+                drawPath(arrowPath, color = arrowColor)
             }
         }
 

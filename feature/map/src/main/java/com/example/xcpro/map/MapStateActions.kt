@@ -16,4 +16,6 @@ interface MapStateActions {
     fun setShowReturnButton(show: Boolean)
     fun updateLastUserPanTime(timestampMillis: Long)
     fun saveLocation(location: MapStateStore.MapPoint?, zoom: Double?, bearing: Double?)
+    fun setDisplayPoseMode(mode: DisplayPoseMode)
+    fun setDisplaySmoothingProfile(profile: DisplaySmoothingProfile)
 }

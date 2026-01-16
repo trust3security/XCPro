@@ -1,7 +1,7 @@
 package com.example.xcpro.map
 
 import android.content.Context
-import android.util.Log
+import com.example.xcpro.core.common.logging.AppLogger
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import org.maplibre.android.geometry.LatLng
@@ -60,7 +60,7 @@ class DistanceCirclesOverlay(
     fun initialize() {
         try {
             val style = map.style ?: return
-            Log.d(TAG, "Initializing distance circles overlay")
+            AppLogger.d(TAG, "Initializing distance circles overlay")
 
             // Create GeoJSON source for circle geometries
             val circlesSource = GeoJsonSource(CIRCLES_SOURCE_ID)
@@ -102,10 +102,10 @@ class DistanceCirclesOverlay(
             currentZoomLevel = map.cameraPosition.zoom
             updateCircles()
 
-            Log.d(TAG, "Distance circles overlay initialized successfully")
+            AppLogger.d(TAG, "Distance circles overlay initialized successfully")
 
         } catch (e: Exception) {
-            Log.e(TAG, "Error initializing distance circles overlay: ${e.message}", e)
+            AppLogger.e(TAG, "Error initializing distance circles overlay: ${e.message}", e)
         }
     }
 
@@ -124,7 +124,9 @@ class DistanceCirclesOverlay(
         if (shouldUpdate && isVisible) {
             lastUpdateLocation = location
             updateCircles()
-            Log.d(TAG, "Location updated: lat=${location.latitude}, lon=${location.longitude}")
+            if (AppLogger.rateLimit(TAG, "location_update", 1_000L)) {
+                AppLogger.d(TAG, "Location updated: lat=${location.latitude}, lon=${location.longitude}")
+            }
         }
     }
 
@@ -135,7 +137,7 @@ class DistanceCirclesOverlay(
         if (abs(zoomLevel - currentZoomLevel) > 0.5) { // Only update on significant zoom changes
             currentZoomLevel = zoomLevel
             updateCircles()
-            Log.d(TAG, "Zoom level updated: $zoomLevel")
+            AppLogger.d(TAG, "Zoom level updated: $zoomLevel")
         }
     }
 
@@ -171,7 +173,7 @@ class DistanceCirclesOverlay(
         */
 
         // Still log the visibility state for debugging
-        Log.d(TAG, "Distance circles visibility: $visible (using Canvas overlay)")
+        AppLogger.d(TAG, "Distance circles visibility: $visible (using Canvas overlay)")
     }
 
     /**
@@ -187,11 +189,11 @@ class DistanceCirclesOverlay(
                 style.removeSource(LABELS_SOURCE_ID)
                 style.removeSource(CIRCLES_SOURCE_ID)
                 isLayerAdded = false
-                Log.d(TAG, "Distance circles overlay cleaned up")
+                AppLogger.d(TAG, "Distance circles overlay cleaned up")
             }
 
         } catch (e: Exception) {
-            Log.e(TAG, "Error cleaning up overlay: ${e.message}", e)
+            AppLogger.e(TAG, "Error cleaning up overlay: ${e.message}", e)
         }
     }
 
@@ -218,11 +220,11 @@ class DistanceCirclesOverlay(
                 calculateDistance(center, corner)
             } ?: 10.0 // Fallback to 10km
 
-            Log.d(TAG, "Calculated max screen distance: ${maxDistance}km")
+            AppLogger.d(TAG, "Calculated max screen distance: ${maxDistance}km")
             return maxDistance
 
         } catch (e: Exception) {
-            Log.e(TAG, "Error calculating screen distance, using fallback: ${e.message}")
+            AppLogger.e(TAG, "Error calculating screen distance, using fallback: ${e.message}")
             return 10.0 // Fallback distance
         }
     }
@@ -251,7 +253,7 @@ class DistanceCirclesOverlay(
             optimalInterval * multiplier
         }
 
-        Log.d(TAG, "Optimal interval: ${optimalInterval}km, distances: $distances")
+        AppLogger.d(TAG, "Optimal interval: ${optimalInterval}km, distances: $distances")
         return distances
     }
 
@@ -300,10 +302,10 @@ class DistanceCirclesOverlay(
             circlesSource.setGeoJson(FeatureCollection.fromFeatures(circleFeatures))
             labelsSource.setGeoJson(FeatureCollection.fromFeatures(labelFeatures))
 
-            Log.d(TAG, "Updated circles with screen-adaptive distances: $distances")
+            AppLogger.d(TAG, "Updated circles with screen-adaptive distances: $distances")
 
         } catch (e: Exception) {
-            Log.e(TAG, "Error updating circles: ${e.message}", e)
+            AppLogger.e(TAG, "Error updating circles: ${e.message}", e)
         }
     }
 
@@ -380,21 +382,21 @@ class DistanceCirclesOverlay(
                 if (style.getLayer(labelLayer) != null) {
                     style.addLayerBelow(layer, labelLayer)
                     addedBelow = true
-                    Log.d(TAG, "Added circles layer below: $labelLayer")
+                    AppLogger.d(TAG, "Added circles layer below: $labelLayer")
                     break
                 }
             }
 
             if (!addedBelow) {
                 style.addLayer(layer)
-                Log.d(TAG, "Added circles layer on top")
+                AppLogger.d(TAG, "Added circles layer on top")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error positioning layer, adding on top: ${e.message}")
+            AppLogger.e(TAG, "Error positioning layer, adding on top: ${e.message}")
             try {
                 map.style?.addLayer(layer)
             } catch (e2: Exception) {
-                Log.e(TAG, "Failed to add layer at all: ${e2.message}")
+                AppLogger.e(TAG, "Failed to add layer at all: ${e2.message}")
             }
         }
     }

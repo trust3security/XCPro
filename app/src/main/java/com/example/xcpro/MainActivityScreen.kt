@@ -24,6 +24,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -59,7 +60,10 @@ fun MainActivityScreen(
     // ✅ Status bar is automatically transparent (#00000000) on this device
     // ✅ This allows map to show behind status bar as requested by user
     // ✅ The applyUserStatusBarStyle function ensures dark icons for visibility
-    val config = loadConfig(context)
+    val configRepository = remember(context) { ConfigurationRepository(context) }
+    val config by produceState<org.json.JSONObject?>(initialValue = null, context) {
+        value = configRepository.readConfig()
+    }
     val initialMapStyle = config?.optJSONObject("app")?.optString("mapStyle") ?: "Topo"
     var navigationBarHeight by remember { mutableStateOf(56.dp) }
     val density = LocalDensity.current

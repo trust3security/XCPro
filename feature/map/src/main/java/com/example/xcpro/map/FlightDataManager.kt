@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -34,12 +35,14 @@ class FlightDataManager(
     companion object {
         private const val TAG = "FlightDataManager"
         private const val UI_NUMERIC_FRAME_MS = 1000L / 12  // ~12 Hz for numbers
+        private const val UI_NEEDLE_FRAME_MS = 1000L / 30   // smoother needle motion
         private const val ALTITUDE_BUCKET_M = 0.5
         private const val VARIO_BUCKET_MS = 0.1f
         private const val VARIO_NOISE_FLOOR = 1e-3
         private const val WIND_SPEED_BUCKET_KT = 1f
         private const val WIND_DIR_BUCKET_DEG = 5f
         private const val LD_BUCKET = 0.1f
+        private const val WIND_VALID_MIN_SPEED_MS = 0.5f
     }
 
     private val _liveFlightData = MutableStateFlow<RealTimeFlightData?>(null)
@@ -63,6 +66,32 @@ class FlightDataManager(
             }
             .distinctUntilChanged()
             .throttleFrame(UI_NUMERIC_FRAME_MS)
+            .stateIn(
+                scope = coroutineScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = 0f
+            )
+
+    val needleVarioFlow: StateFlow<Float> =
+        liveFlightDataFlow
+            .map { data ->
+                (data?.displayNeedleVario ?: 0.0).toFloat()
+            }
+            .distinctUntilChanged()
+            .throttleFrame(UI_NEEDLE_FRAME_MS)
+            .stateIn(
+                scope = coroutineScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = 0f
+            )
+
+    val fastNeedleVarioFlow: StateFlow<Float> =
+        liveFlightDataFlow
+            .map { data ->
+                (data?.displayNeedleVarioFast ?: 0.0).toFloat()
+            }
+            .distinctUntilChanged()
+            .throttleFrame(UI_NEEDLE_FRAME_MS)
             .stateIn(
                 scope = coroutineScope,
                 started = SharingStarted.WhileSubscribed(5_000),
@@ -133,6 +162,18 @@ class FlightDataManager(
                 scope = coroutineScope,
                 started = SharingStarted.WhileSubscribed(5_000),
                 initialValue = 0f
+            )
+
+    val windIndicatorStateFlow: StateFlow<WindIndicatorState> =
+        liveFlightDataFlow
+            .scan(WindIndicatorState()) { previous, data ->
+                deriveWindIndicatorState(previous, data)
+            }
+            .distinctUntilChanged()
+            .stateIn(
+                scope = coroutineScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = WindIndicatorState()
             )
 
     /**
@@ -272,5 +313,40 @@ class FlightDataManager(
             windDirection = windDirection.takeIf { it.isFinite() }?.bucket(WIND_DIR_BUCKET_DEG) ?: 0f,
             currentLD = currentLD.takeIf { it.isFinite() }?.bucket(LD_BUCKET) ?: 0f
         )
+
+    private fun deriveWindIndicatorState(
+        previous: WindIndicatorState,
+        data: RealTimeFlightData?
+    ): WindIndicatorState {
+        if (data == null) {
+            return previous.copy(
+                isValid = false,
+                quality = 0,
+                ageSeconds = -1
+            )
+        }
+        val quality = data.windQuality
+        val speed = data.windSpeed
+        val isValid = quality > 0 && speed > WIND_VALID_MIN_SPEED_MS
+        // AI-NOTE: Preserve last known wind direction when wind becomes invalid so the UI arrow
+        // stays stable (red) instead of snapping back to North.
+        val direction = if (isValid) {
+            normalizeAngleDeg(data.windDirection)
+        } else {
+            previous.directionFromDeg
+        }
+        return WindIndicatorState(
+            directionFromDeg = direction,
+            isValid = isValid,
+            quality = quality,
+            ageSeconds = data.windAgeSeconds
+        )
+    }
+
+    private fun normalizeAngleDeg(angle: Float): Float {
+        var normalized = angle % 360f
+        if (normalized < 0f) normalized += 360f
+        return normalized
+    }
 
 }

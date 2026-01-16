@@ -45,10 +45,13 @@ internal fun VariometerWidgetImpl(
     widgetManager: MapUIWidgetManager,
     variometerState: VariometerUiState,
     needleValue: Float,
+    fastNeedleValue: Float,
     displayValue: Float,
     displayLabel: String = String.format("%+.1f", displayValue),
     secondaryLabel: String? = null,
     dialConfig: VarioDialConfig = VarioDialConfig(),
+    windDirectionScreenDeg: Float,
+    windIsValid: Boolean,
     screenWidthPx: Float,
     screenHeightPx: Float,
     minSizePx: Float,
@@ -151,10 +154,13 @@ internal fun VariometerWidgetImpl(
         Box(modifier = Modifier.fillMaxSize()) {
             UIVariometer(
                 needleValue = needleValue,
+                fastNeedleValue = fastNeedleValue,
                 displayValue = displayValue,
                 valueLabel = displayLabel,
                 secondaryLabel = secondaryLabel,
                 dialConfig = dialConfig,
+                windDirectionScreenDeg = windDirectionScreenDeg,
+                windIsValid = windIsValid,
                 modifier = Modifier.fillMaxSize()
             )
 

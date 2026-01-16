@@ -1,7 +1,13 @@
 # Real-Time Data Implementation Guide
 
-**Last Updated**: 2025-10-02
+**Last Updated**: 2026-01-11
 **Purpose**: Document how real-time flight data flows to DFCards and displays live values on the map
+
+**Status note**: This document contains legacy flow details. The authoritative
+data flow for vario/sensors now runs through the app module and the Levo
+pipeline (`docs/LevoVario/levo.md`). Treat this file as historical context
+and confirm fields against the source data class in
+`dfcards-library/src/main/java/com/example/dfcards/FlightDataSources.kt`.
 
 ---
 
@@ -93,7 +99,7 @@ class FlightDataManager(private val context: Context) : SensorEventListener {
 
 ---
 
-#### `RealTimeFlightData` (Lines 593-624)
+#### `RealTimeFlightData` (refer to source for full fields)
 ```kotlin
 data class RealTimeFlightData(
     // GPS Position
@@ -111,6 +117,7 @@ data class RealTimeFlightData(
     // Derived Values
     val agl: Double = 0.0,             // Height above ground (from MapTiler)
     val verticalSpeed: Double = 0.0,   // m/s (climb/sink)
+    val displayNeedleVario: Double = 0.0, // pneumatic needle value (separate from numeric/audio)
     val ias: Double = 0.0,             // Estimated indicated airspeed
 
     // Flight Performance

@@ -23,8 +23,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.snapshots.SnapshotStateMap
@@ -61,13 +61,20 @@ fun FlightDataAirspaceTab(
 ) {
     val context = LocalContext.current
 
-    val uiState by remember {
-        derivedStateOf {
-            val fileItems = buildAirspaceFileItems(context, selectedAirspaceFiles, airspaceCheckedStates)
-            val enabledFiles = fileItems.filter { it.enabled }.map { it.uri }
-            val classItems = buildAirspaceClassItems(context, enabledFiles, airspaceClassStates)
-            AirspaceTabDerivedState(fileItems, enabledFiles, classItems)
-        }
+    val uiState by produceState(
+        initialValue = AirspaceTabDerivedState(emptyList(), emptyList(), emptyList()),
+        selectedAirspaceFiles.toList(),
+        airspaceCheckedStates.toMap(),
+        airspaceClassStates.toMap()
+    ) {
+        val filesSnapshot = selectedAirspaceFiles.toList()
+        val checkedSnapshot = airspaceCheckedStates.toMap()
+        val classStatesSnapshot = airspaceClassStates.toMap()
+
+        val fileItems = buildAirspaceFileItems(context, filesSnapshot, checkedSnapshot)
+        val enabledFiles = fileItems.filter { it.enabled }.map { it.uri }
+        val classItems = buildAirspaceClassItems(context, enabledFiles, classStatesSnapshot)
+        value = AirspaceTabDerivedState(fileItems, enabledFiles, classItems)
     }
 
     LaunchedEffect(selectedAirspaceFiles.size, airspaceCheckedStates.size) {

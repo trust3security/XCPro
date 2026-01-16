@@ -79,7 +79,14 @@ fun NavigationDrawer(
                         isExpanded = profileExpanded.value,
                         onToggle = {
                             profileExpanded.value = !profileExpanded.value
-                            saveNavDrawerConfig(context, profileExpanded.value, mapStyleExpanded.value, settingsExpanded.value)
+                            scope.launch {
+                                saveNavDrawerConfig(
+                                    context,
+                                    profileExpanded.value,
+                                    mapStyleExpanded.value,
+                                    settingsExpanded.value
+                                )
+                            }
                         },
                         navController = navController,
                         drawerState = drawerState,
@@ -105,7 +112,14 @@ fun NavigationDrawer(
                         isExpanded = mapStyleExpanded.value,
                         onToggle = {
                             mapStyleExpanded.value = !mapStyleExpanded.value
-                            saveNavDrawerConfig(context, profileExpanded.value, mapStyleExpanded.value, settingsExpanded.value)
+                            scope.launch {
+                                saveNavDrawerConfig(
+                                    context,
+                                    profileExpanded.value,
+                                    mapStyleExpanded.value,
+                                    settingsExpanded.value
+                                )
+                            }
                         },
                         selectedMapStyle = selectedMapStyle,
                         onMapStyleSelected = mapStyleSelectedCallback
@@ -119,7 +133,14 @@ fun NavigationDrawer(
                         isExpanded = settingsExpanded.value,
                         onToggle = {
                             settingsExpanded.value = !settingsExpanded.value
-                            saveNavDrawerConfig(context, profileExpanded.value, mapStyleExpanded.value, settingsExpanded.value)
+                            scope.launch {
+                                saveNavDrawerConfig(
+                                    context,
+                                    profileExpanded.value,
+                                    mapStyleExpanded.value,
+                                    settingsExpanded.value
+                                )
+                            }
                         },
                         navController = navController,
                         drawerState = drawerState,

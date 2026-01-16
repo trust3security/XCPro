@@ -31,6 +31,8 @@ class FlightDisplayMapper {
             verticalSpeed = VerticalSpeedMs(metrics.verticalSpeed),
             bruttoVario = VerticalSpeedMs(metrics.bruttoVario),
             displayVario = VerticalSpeedMs(metrics.displayVario),
+            displayNeedleVario = VerticalSpeedMs(metrics.displayNeedleVario),
+            displayNeedleVarioFast = VerticalSpeedMs(metrics.displayNeedleVarioFast),
             xcSoarVario = VerticalSpeedMs(metrics.xcSoarVario),
             xcSoarDisplayVario = VerticalSpeedMs(metrics.displayXcSoarVario),
             xcSoarVarioValid = metrics.xcSoarVarioValid,

@@ -3,6 +3,7 @@ package com.example.xcpro.screens.navdrawer.lookandfeel
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -20,6 +21,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
@@ -27,6 +30,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.xcpro.map.trail.TrailLength
+import com.example.xcpro.map.trail.TrailSettings
+import com.example.xcpro.map.trail.TrailType
 import com.example.xcpro.ui.theme.AppColorTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -161,6 +167,228 @@ internal fun ColorThemeSheet(
                 }
                 Spacer(modifier = Modifier.height(16.dp))
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun SnailTrailSheet(
+    showSheet: MutableState<Boolean>,
+    currentSettings: TrailSettings,
+    onLengthSelected: (TrailLength) -> Unit,
+    onTypeSelected: (TrailType) -> Unit,
+    onWindDriftChanged: (Boolean) -> Unit,
+    onScalingChanged: (Boolean) -> Unit
+) {
+    if (showSheet.value) {
+        ModalBottomSheet(onDismissRequest = { showSheet.value = false }) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                item {
+                    Text(
+                        text = "Snail Trail",
+                        style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                }
+
+                item {
+                    SectionHeader(title = "Trail Length")
+                }
+                items(
+                    listOf(
+                        TrailLength.FULL,
+                        TrailLength.LONG,
+                        TrailLength.MEDIUM,
+                        TrailLength.SHORT,
+                        TrailLength.OFF
+                    )
+                ) { length ->
+                    RadioRow(
+                        title = trailLengthLabel(length),
+                        description = when (length) {
+                            TrailLength.FULL -> "Show all recorded points."
+                            TrailLength.LONG -> "Show the last 60 minutes."
+                            TrailLength.MEDIUM -> "Show the last 30 minutes."
+                            TrailLength.SHORT -> "Show the last 10 minutes."
+                            TrailLength.OFF -> "Disable trail rendering."
+                        },
+                        selected = currentSettings.length == length,
+                        onSelect = { onLengthSelected(length) }
+                    )
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    SectionHeader(title = "Trail Style")
+                }
+
+                items(trailTypeOptions) { option ->
+                    RadioRow(
+                        title = option.title,
+                        description = option.description,
+                        selected = currentSettings.type == option.type,
+                        onSelect = { onTypeSelected(option.type) }
+                    )
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    SectionHeader(title = "Behavior")
+                }
+
+                item {
+                    ToggleRow(
+                        title = "Wind drift",
+                        description = "Drift the trail with wind when circling.",
+                        checked = currentSettings.windDriftEnabled,
+                        onCheckedChange = onWindDriftChanged
+                    )
+                }
+
+                item {
+                    ToggleRow(
+                        title = "Width scaling",
+                        description = "Scale trail width based on lift.",
+                        checked = currentSettings.scalingEnabled,
+                        onCheckedChange = onScalingChanged
+                    )
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+        }
+    }
+}
+
+private data class TrailTypeOption(
+    val type: TrailType,
+    val title: String,
+    val description: String
+)
+
+private val trailTypeOptions = listOf(
+    TrailTypeOption(
+        type = TrailType.VARIO_1,
+        title = "Vario 1",
+        description = "Green lift, brown sink, gray near zero."
+    ),
+    TrailTypeOption(
+        type = TrailType.VARIO_1_DOTS,
+        title = "Vario 1 dots",
+        description = "Dotted sink, solid lift."
+    ),
+    TrailTypeOption(
+        type = TrailType.VARIO_2,
+        title = "Vario 2",
+        description = "Orange/red lift, blue sink."
+    ),
+    TrailTypeOption(
+        type = TrailType.VARIO_2_DOTS,
+        title = "Vario 2 dots",
+        description = "Dotted sink, solid lift."
+    ),
+    TrailTypeOption(
+        type = TrailType.VARIO_DOTS_AND_LINES,
+        title = "Dots + lines",
+        description = "Dots with lines for lift."
+    ),
+    TrailTypeOption(
+        type = TrailType.VARIO_EINK,
+        title = "Vario E-ink",
+        description = "Monochrome dots and lines."
+    ),
+    TrailTypeOption(
+        type = TrailType.ALTITUDE,
+        title = "Altitude",
+        description = "Colors follow altitude."
+    )
+)
+
+@Composable
+private fun SectionHeader(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.SemiBold
+    )
+}
+
+@Composable
+private fun RadioRow(
+    title: String,
+    description: String,
+    selected: Boolean,
+    onSelect: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        tonalElevation = if (selected) 2.dp else 0.dp,
+        border = if (selected) ButtonDefaults.outlinedButtonBorder(enabled = true) else null,
+        onClick = onSelect
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            RadioButton(selected = selected, onClick = onSelect)
+        }
+    }
+}
+
+@Composable
+private fun ToggleRow(
+    title: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        tonalElevation = 0.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Switch(checked = checked, onCheckedChange = onCheckedChange)
         }
     }
 }

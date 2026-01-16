@@ -13,6 +13,7 @@ import android.location.LocationListener
 import android.location.LocationManager
 import android.util.Log
 import androidx.core.app.ActivityCompat
+import androidx.core.location.LocationCompat
 import com.example.xcpro.common.geo.GeoPoint
 import com.example.xcpro.common.units.AltitudeM
 import com.example.xcpro.common.units.PressureHpa
@@ -38,6 +39,8 @@ internal class SensorRegistry(
     companion object {
         private const val TAG = "UnifiedSensorManager"
         private const val GPS_UPDATE_INTERVAL_MS = 1000L
+        private const val GPS_UPDATE_INTERVAL_MIN_MS = 200L
+        private const val GPS_UPDATE_INTERVAL_MAX_MS = 2000L
         private const val GPS_MIN_DISTANCE_M = 0f
         private const val BARO_SENSOR_DELAY = SensorManager.SENSOR_DELAY_GAME
         private const val COMPASS_SENSOR_DELAY = SensorManager.SENSOR_DELAY_UI
@@ -57,15 +60,28 @@ internal class SensorRegistry(
     private var isAccelStarted = false
     private var isRotationStarted = false
 
+    @Volatile
+    private var gpsUpdateIntervalMs: Long = GPS_UPDATE_INTERVAL_MS
+
     private val gpsListener = object : LocationListener {
         override fun onLocationChanged(location: Location) {
+            val monotonicMillis = location.elapsedRealtimeNanos / 1_000_000L
+            val bearingAccuracyDeg = if (LocationCompat.hasBearingAccuracy(location)) {
+                LocationCompat.getBearingAccuracyDegrees(location).toDouble()
+            } else null
+            val speedAccuracyMs = if (LocationCompat.hasSpeedAccuracy(location)) {
+                LocationCompat.getSpeedAccuracyMetersPerSecond(location).toDouble()
+            } else null
             val gpsData = GPSData(
                 position = GeoPoint(location.latitude, location.longitude),
                 altitude = AltitudeM(if (location.hasAltitude()) location.altitude else 0.0),
                 speed = SpeedMs(if (location.hasSpeed()) location.speed.toDouble() else 0.0),
                 bearing = if (location.hasBearing()) location.bearing.toDouble() else 0.0,
                 accuracy = location.accuracy,
-                timestamp = location.time
+                bearingAccuracyDeg = bearingAccuracyDeg,
+                speedAccuracyMs = speedAccuracyMs,
+                timestamp = location.time,
+                monotonicTimestampMillis = monotonicMillis
             )
             updateGps(gpsData)
         }
@@ -79,15 +95,18 @@ internal class SensorRegistry(
         if (event == null) return
         when (event.sensor.type) {
             Sensor.TYPE_PRESSURE -> {
+                val monotonicMillis = event.timestamp / 1_000_000L
                 val pressureHPa = event.values[0].toDouble()
                 updateBaro(
                     BaroData(
                         pressureHPa = PressureHpa(pressureHPa),
-                        timestamp = System.currentTimeMillis()
+                        timestamp = System.currentTimeMillis(),
+                        monotonicTimestampMillis = monotonicMillis
                     )
                 )
             }
             Sensor.TYPE_MAGNETIC_FIELD -> {
+                val monotonicMillis = event.timestamp / 1_000_000L
                 val x = event.values[0]
                 val y = event.values[1]
                 val heading = Math.toDegrees(Math.atan2(y.toDouble(), x.toDouble()))
@@ -96,11 +115,13 @@ internal class SensorRegistry(
                     CompassData(
                         heading = normalizedHeading,
                         accuracy = event.accuracy,
-                        timestamp = System.currentTimeMillis()
+                        timestamp = System.currentTimeMillis(),
+                        monotonicTimestampMillis = monotonicMillis
                     )
                 )
             }
             Sensor.TYPE_ROTATION_VECTOR -> {
+                val monotonicMillis = event.timestamp / 1_000_000L
                 orientationProcessor.updateRotationVector(event.values)
                 orientationProcessor.attitude()?.let { attitude ->
                     updateAttitude(
@@ -109,29 +130,34 @@ internal class SensorRegistry(
                             pitchDeg = attitude.pitchDeg,
                             rollDeg = attitude.rollDeg,
                             timestamp = System.currentTimeMillis(),
-                            isReliable = attitude.isReliable
+                            isReliable = attitude.isReliable,
+                            monotonicTimestampMillis = monotonicMillis
                         )
                     )
                 }
             }
             Sensor.TYPE_LINEAR_ACCELERATION -> {
+                val monotonicMillis = event.timestamp / 1_000_000L
                 val sample = orientationProcessor.projectVerticalAcceleration(event.values)
                 updateAccel(
                     AccelData(
                         verticalAcceleration = sample.verticalAcceleration,
                         timestamp = System.currentTimeMillis(),
-                        isReliable = sample.isReliable
+                        isReliable = sample.isReliable,
+                        monotonicTimestampMillis = monotonicMillis
                     )
                 )
             }
             Sensor.TYPE_ACCELEROMETER -> {
+                val monotonicMillis = event.timestamp / 1_000_000L
                 updateRawAccel(
                     RawAccelData(
                         x = event.values[0].toDouble(),
                         y = event.values[1].toDouble(),
                         z = event.values[2].toDouble(),
                         timestamp = System.currentTimeMillis(),
-                        isReliable = event.accuracy != SensorManager.SENSOR_STATUS_UNRELIABLE
+                        isReliable = event.accuracy != SensorManager.SENSOR_STATUS_UNRELIABLE,
+                        monotonicTimestampMillis = monotonicMillis
                     )
                 )
             }
@@ -165,6 +191,15 @@ internal class SensorRegistry(
         stopAccelerometer()
     }
 
+    fun setGpsUpdateIntervalMs(intervalMs: Long) {
+        val clamped = intervalMs.coerceIn(GPS_UPDATE_INTERVAL_MIN_MS, GPS_UPDATE_INTERVAL_MAX_MS)
+        if (gpsUpdateIntervalMs == clamped) return
+        gpsUpdateIntervalMs = clamped
+        if (isGpsStarted) {
+            restartGps()
+        }
+    }
+
     @SuppressLint("MissingPermission")
     private fun startGPS(): Boolean {
         if (isGpsStarted) return true
@@ -175,19 +210,11 @@ internal class SensorRegistry(
             if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
                 locationManager.requestLocationUpdates(
                     LocationManager.GPS_PROVIDER,
-                    GPS_UPDATE_INTERVAL_MS,
+                    gpsUpdateIntervalMs,
                     GPS_MIN_DISTANCE_M,
                     gpsListener
                 )
                 gpsProviderStarted = true
-            }
-            if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
-                locationManager.requestLocationUpdates(
-                    LocationManager.NETWORK_PROVIDER,
-                    GPS_UPDATE_INTERVAL_MS,
-                    GPS_MIN_DISTANCE_M,
-                    gpsListener
-                )
             }
             if (gpsProviderStarted) {
                 getLastKnownLocation()?.let { gpsListener.onLocationChanged(it) }
@@ -210,6 +237,11 @@ internal class SensorRegistry(
         } catch (e: Exception) {
             Log.e(TAG, "Error stopping GPS: ${e.message}")
         }
+    }
+
+    private fun restartGps() {
+        stopGPS()
+        startGPS()
     }
 
     private fun startBarometer(): Boolean {
@@ -287,14 +319,7 @@ internal class SensorRegistry(
     private fun getLastKnownLocation(): Location? {
         if (!hasLocationPermissions()) return null
         return try {
-            val gpsLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-            val networkLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-            when {
-                gpsLocation != null && networkLocation != null -> if (gpsLocation.time > networkLocation.time) gpsLocation else networkLocation
-                gpsLocation != null -> gpsLocation
-                networkLocation != null -> networkLocation
-                else -> null
-            }
+            locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
         } catch (_: SecurityException) {
             null
         }
@@ -303,8 +328,7 @@ internal class SensorRegistry(
     fun isGpsEnabled(): Boolean = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
 
     fun hasLocationPermissions(): Boolean {
-        return ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
-                ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        return ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
     }
 
     fun status(): SensorStatus {

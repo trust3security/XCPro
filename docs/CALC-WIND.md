@@ -8,6 +8,7 @@ wind pipeline and conventions.
 Scope:
 - Phone-only wind estimation (no external airspeed sensor).
 - Wind vector conventions, selection, and UI outputs.
+- Map display smoothing is UI-only and does not affect wind math.
 
 Related code (primary):
 - feature/map/src/main/java/com/example/xcpro/weather/wind/data/WindSensorFusionRepository.kt
@@ -52,6 +53,10 @@ Replay-specific notes:
 - ReplaySampleEmitter derives GPS bearing and speed from the last GPS point
   (1 Hz) and reuses that for compass/heading between GPS ticks.
   This keeps circling detection and wind estimation consistent with live GPS.
+
+Display-only note:
+- Any map icon smoothing, heading gating, or visual interpolation happens
+  after SSOT data is produced and does not feed back into wind calculation.
 
 ## Wind vector conventions
 

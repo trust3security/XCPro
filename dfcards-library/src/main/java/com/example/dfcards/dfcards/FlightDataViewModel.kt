@@ -173,7 +173,7 @@ class FlightDataViewModel(
         persistActiveCards()
     }
 
-    fun applyTemplate(
+    suspend fun applyTemplate(
         template: FlightTemplate,
         containerSize: IntSize,
         density: Density

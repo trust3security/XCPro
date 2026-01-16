@@ -13,6 +13,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.WaypointParser
+import com.example.ui1.screens.FileItem
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
 
@@ -30,8 +33,8 @@ private const val TAG = "WaypointHelpers"
 /**
  * Get waypoint count from a .cup file
  */
-fun getWaypointCount(context: Context, uri: Uri): Int {
-    return try {
+suspend fun getWaypointCount(context: Context, uri: Uri): Int = withContext(Dispatchers.IO) {
+    try {
         WaypointParser.parseWaypointFile(context, uri).size
     } catch (e: Exception) {
         Log.e(TAG, "Error getting waypoint count: ${e.message}")
@@ -42,12 +45,12 @@ fun getWaypointCount(context: Context, uri: Uri): Int {
 /**
  * Get all waypoints from enabled files
  */
-fun getAllWaypoints(
+suspend fun getAllWaypoints(
     context: Context,
     uris: List<Uri>,
     checkedStates: Map<String, Boolean>
-): List<WaypointData> {
-    return uris.flatMap { uri ->
+): List<WaypointData> = withContext(Dispatchers.IO) {
+    uris.flatMap { uri ->
         try {
             val fileName = uri.lastPathSegment?.substringAfterLast("/") ?: return@flatMap emptyList()
             if (checkedStates[fileName] == true) {
@@ -59,6 +62,25 @@ fun getAllWaypoints(
             Log.e(TAG, "Error reading waypoint file: ${e.message}")
             emptyList()
         }
+    }
+}
+
+suspend fun buildWaypointFileItems(
+    context: Context,
+    files: List<Uri>,
+    checkedStates: Map<String, Boolean>
+): List<FileItem> = withContext(Dispatchers.IO) {
+    files.map { uri ->
+        val fileName = uri.lastPathSegment?.substringAfterLast("/") ?: "Unknown"
+        val enabled = checkedStates[fileName] ?: false
+        val count = getWaypointCount(context, uri)
+        FileItem(
+            name = fileName,
+            enabled = enabled,
+            count = count,
+            status = if (enabled) "Loaded" else "Disabled",
+            uri = uri
+        )
     }
 }
 

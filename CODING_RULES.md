@@ -138,12 +138,14 @@ Forbidden:
 ## 8. UI (Compose) Rules
 
 Allowed:
+- Frame-ticker loops for visual-only smoothing when scoped to `LaunchedEffect` and cancel on composition end
 - Rendering
 - Animations
 - User input
 - Visual effects
 
 Forbidden:
+- Unbounded loops outside the frame-ticker display exception
 - Business logic
 - State derivation
 - Domain calculations
@@ -231,6 +233,24 @@ No “hard to test” exceptions.
 
 ---
 
+## 15A. Regression Resistance Rules
+
+These rules make changes durable and reduce future rewrites.
+
+- Any non-trivial refactor must include a written plan (phases, ownership, tests).
+- SSOT ownership must be documented with a simple flow diagram or bullet flow.
+- Time base must be explicit and enforced in code and tests (monotonic or replay only).
+- State machines must be explicit: list states and transitions in docs.
+- Add regression tests for new behavior (unit tests first, replay tests when applicable).
+
+Review red flags (reject changes):
+- Business logic in UI code.
+- Shared utilities across task types.
+- Wall time used in navigation or scoring logic.
+- Duplicate state owners for the same data.
+
+---
+
 ## 16. AI / Codex Rules
 
 Assume:
@@ -242,6 +262,21 @@ Therefore:
 - Code must be explicit
 - Intent must be readable from files
 - Architecture must enforce correctness
+
+---
+
+## 17. Time Base and Sensor Cadence Rules
+
+These rules prevent hidden timing bugs in sensor fusion and replay.
+
+- Live sensor math (deltas, validity windows) must use monotonic time
+  (`SensorEvent.timestamp` or `Location.elapsedRealtimeNanos`).
+- Wall time is for UI output, persistence, and user-entered data
+  (example: manual wind). Never compare or subtract across time bases.
+- Replay uses replay timestamps as the simulation clock. Do not mix with wall clock.
+- Fusion loops that combine sensors of different cadences must advance only
+  when the primary sensor updates (example: baro-gated vario loop). High-rate
+  only ticks are forbidden if they would reuse stale samples.
 
 ---
 

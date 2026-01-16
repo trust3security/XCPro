@@ -1,5 +1,6 @@
 package com.example.xcpro.map
 
+import com.example.xcpro.map.trail.SnailTrailOverlay
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 
@@ -12,4 +13,5 @@ class MapScreenState {
     var mapView: MapView? = null
     var blueLocationOverlay: BlueLocationOverlay? = null
     var distanceCirclesOverlay: DistanceCirclesOverlay? = null
+    var snailTrailOverlay: SnailTrailOverlay? = null
 }

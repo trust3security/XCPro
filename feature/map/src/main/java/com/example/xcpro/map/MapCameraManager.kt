@@ -1,6 +1,6 @@
 package com.example.xcpro.map
 
-import android.util.Log
+import com.example.xcpro.core.common.logging.AppLogger
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.*
@@ -66,9 +66,9 @@ class MapCameraManager(
             try {
                 val targetZoom = zoom ?: map.cameraPosition.zoom
                 map.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, targetZoom))
-                Log.d(TAG, "Camera moved to lat=${latLng.latitude}, lon=${latLng.longitude}, zoom=$targetZoom")
+                AppLogger.d(TAG, "Camera moved to lat=${latLng.latitude}, lon=${latLng.longitude}, zoom=$targetZoom")
             } catch (e: Exception) {
-                Log.e(TAG, "Error moving camera: ${e.message}")
+                AppLogger.e(TAG, "Error moving camera: ${e.message}")
             }
         }
     }
@@ -89,9 +89,9 @@ class MapCameraManager(
             try {
                 val targetZoom = (map.cameraPosition.zoom + DOUBLE_TAP_ZOOM_DELTA).toFloat()
                 stateActions.setTarget(toMapPoint(tapLatLng), targetZoom)
-                Log.d(TAG, "Double tap zoom to: $tapLatLng, new zoom: $targetZoom")
+                AppLogger.d(TAG, "Double tap zoom to: $tapLatLng, new zoom: $targetZoom")
             } catch (e: Exception) {
-                Log.e(TAG, "Error handling double tap zoom: ${e.message}")
+                AppLogger.e(TAG, "Error handling double tap zoom: ${e.message}")
             }
         }
     }
@@ -134,13 +134,13 @@ class MapCameraManager(
 
                     map.moveCamera(CameraUpdateFactory.newCameraPosition(newCameraPosition))
                     lastCameraBearing = limitedBearing
-                    Log.d(
+                    AppLogger.d(
                         TAG,
                         "Bearing updated: mode=$orientationMode, source=$bearingSource, bearing=$limitedBearing (raw=$newBearing)"
                     )
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error updating camera bearing: ${e.message}")
+                AppLogger.e(TAG, "Error updating camera bearing: ${e.message}")
             }
         }
     }
@@ -177,9 +177,9 @@ class MapCameraManager(
                 val targetZoom = mapStateReader.targetZoom.value ?: INITIAL_ZOOM
 
                 map.moveCamera(CameraUpdateFactory.newLatLngZoom(targetLatLng, targetZoom.toDouble()))
-                Log.d(TAG, "Camera animated to target: lat=${targetLatLng.latitude}, lon=${targetLatLng.longitude}, zoom=$targetZoom")
+                AppLogger.d(TAG, "Camera animated to target: lat=${targetLatLng.latitude}, lon=${targetLatLng.longitude}, zoom=$targetZoom")
             } catch (e: Exception) {
-                Log.e(TAG, "Error animating camera to target: ${e.message}")
+                AppLogger.e(TAG, "Error animating camera to target: ${e.message}")
             }
         }
     }
@@ -216,7 +216,7 @@ class MapCameraManager(
             try {
                 // Save current camera position BEFORE zooming in
                 savedCameraPosition = map.cameraPosition
-                Log.d(TAG, "🎯 AAT: Saved camera position - lat=${savedCameraPosition?.target?.latitude}, lon=${savedCameraPosition?.target?.longitude}, zoom=${savedCameraPosition?.zoom}")
+                AppLogger.d(TAG, "AAT: Saved camera position - lat=${savedCameraPosition?.target?.latitude}, lon=${savedCameraPosition?.target?.longitude}, zoom=${savedCameraPosition?.zoom}")
 
                 // Get actual screen dimensions from MapView (not safeContainerSize which may be 0)
                 // MapView.width/height are native View dimensions, always available after layout
@@ -224,7 +224,7 @@ class MapCameraManager(
                 val screenHeight = mapState.mapView?.height ?: 2340
 
                 if (mapState.mapView == null) {
-                    Log.w(TAG, "⚠️ AAT: MapView is null, using fallback screen size ${screenWidth}×${screenHeight}")
+                    AppLogger.w(TAG, "AAT: MapView is null, using fallback screen size ${screenWidth}x${screenHeight}")
                 }
 
                 // Account for bottom sheet covering part of the map
@@ -235,8 +235,7 @@ class MapCameraManager(
 
                 // Use the smaller dimension to ensure circle fits in both orientations
                 val minScreenDimension = kotlin.math.min(screenWidth, availableMapHeight)
-
-                Log.d(TAG, "🎯 AAT: Screen size - width=${screenWidth}px, height=${screenHeight}px, bottomSheet=${bottomSheetHeightPx}px, available=${minScreenDimension}px")
+                AppLogger.d(TAG, "AAT: Screen size - width=${screenWidth}px, height=${screenHeight}px, bottomSheet=${bottomSheetHeightPx}px, available=${minScreenDimension}px")
 
                 // Calculate optimal zoom level to fit entire turnpoint on screen
                 // MapLibre zoom relationship:
@@ -262,8 +261,7 @@ class MapCameraManager(
                 }
 
                 val usableScreenPixels = minScreenDimension * circleFraction
-
-                Log.d(TAG, "🎯 AAT: Radius=${turnpointRadiusKm}km, diameter=${String.format("%.1f", diameterKm)}km → fraction=${String.format("%.1f", circleFraction * 100)}% → usablePixels=${String.format("%.0f", usableScreenPixels)}px")
+                AppLogger.d(TAG, "AAT: Radius=${turnpointRadiusKm}km, diameter=${String.format("%.1f", diameterKm)}km, fraction=${String.format("%.1f", circleFraction * 100)}%, usablePixels=${String.format("%.0f", usableScreenPixels)}px")
 
                 // Meters per pixel needed to fit circle in available space
                 val requiredMetersPerPixel = diameterMeters / usableScreenPixels
@@ -292,10 +290,9 @@ class MapCameraManager(
                     location = MapStateStore.MapPoint(turnpointLatLng.latitude, turnpointLatLng.longitude),
                     zoom = editZoom.toFloat()
                 )
-
-                Log.d(TAG, "🎯 AAT: Zooming to turnpoint - radius=${turnpointRadiusKm}km, diameter=${String.format("%.1f", diameterKm)}km, screen=${minScreenDimension}px, calculated zoom=${String.format("%.2f", editZoom)}, at: $turnpointLatLng")
+                AppLogger.d(TAG, "AAT: Zooming to turnpoint - radius=${turnpointRadiusKm}km, diameter=${String.format("%.1f", diameterKm)}km, screen=${minScreenDimension}px, calculated zoom=${String.format("%.2f", editZoom)}, at: $turnpointLatLng")
             } catch (e: Exception) {
-                Log.e(TAG, "🎯 AAT: Error zooming to AAT area: ${e.message}")
+                AppLogger.e(TAG, "AAT: Error zooming to AAT area: ${e.message}")
             }
         }
     }
@@ -316,18 +313,18 @@ class MapCameraManager(
                             zoom = saved.zoom.toFloat()
                         )
 
-                        Log.d(TAG, "dYZ_ AAT: Restored camera position - lat=${target.latitude}, lon=${target.longitude}, zoom=${saved.zoom}")
+                        AppLogger.d(TAG, "dYZ_ AAT: Restored camera position - lat=${target.latitude}, lon=${target.longitude}, zoom=${saved.zoom}")
                     } else {
-                        Log.w(TAG, "dYZ_ AAT: Saved camera target missing")
+                        AppLogger.w(TAG, "dYZ_ AAT: Saved camera target missing")
                     }
 
                     // Clear saved position
                     savedCameraPosition = null
                 } else {
-                    Log.w(TAG, "dYZ_ AAT: No saved camera position to restore")
+                    AppLogger.w(TAG, "dYZ_ AAT: No saved camera position to restore")
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "dYZ_ AAT: Error restoring camera position: ${e.message}")
+                AppLogger.e(TAG, "dYZ_ AAT: Error restoring camera position: ${e.message}")
             }
         }
     }
@@ -367,9 +364,9 @@ object MapCameraEffects {
                     val latLng = targetLatLng?.let { LatLng(it.latitude, it.longitude) }
                         ?: LatLng(MapCameraManager.INITIAL_LATITUDE, MapCameraManager.INITIAL_LONGITUDE)
                     map.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, animatedZoom.toDouble()))
-                    Log.d("MapCameraEffects", "Camera moved to lat=${latLng.latitude}, lon=${latLng.longitude}, zoom=$animatedZoom")
+                    AppLogger.d("MapCameraEffects", "Camera moved to lat=${latLng.latitude}, lon=${latLng.longitude}, zoom=$animatedZoom")
                 } catch (e: Exception) {
-                    Log.e("MapCameraEffects", "Error moving camera: ${e.message}")
+                    AppLogger.e("MapCameraEffects", "Error moving camera: ${e.message}")
                 }
             }
             onDispose { }
@@ -393,7 +390,7 @@ object MapCameraEffects {
         }
         DisposableEffect(bearing, orientationMode, bearingSource) {
             cameraManager.updateBearing(bearing, orientationMode, bearingSource)
-            Log.d(
+            AppLogger.d(
                 "MapCameraEffects",
                 "Orientation updated: mode=$orientationMode, source=$bearingSource, bearing=$bearing"
             )

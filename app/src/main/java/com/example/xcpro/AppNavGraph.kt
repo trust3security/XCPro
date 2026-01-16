@@ -56,9 +56,15 @@ fun AppNavGraph(
             MapScreen(
                 navController = navController,
                 drawerState = drawerState,
-                profileExpanded = remember { mutableStateOf(config?.optJSONObject("navDrawer")?.optBoolean("profileExpanded", true) ?: true) },
-                mapStyleExpanded = remember { mutableStateOf(config?.optJSONObject("navDrawer")?.optBoolean("mapStyleExpanded", false) ?: false) },
-                settingsExpanded = remember { mutableStateOf(config?.optJSONObject("navDrawer")?.optBoolean("settingsExpanded", true) ?: true) },
+                profileExpanded = remember(config) {
+                    mutableStateOf(config?.optJSONObject("navDrawer")?.optBoolean("profileExpanded", true) ?: true)
+                },
+                mapStyleExpanded = remember(config) {
+                    mutableStateOf(config?.optJSONObject("navDrawer")?.optBoolean("mapStyleExpanded", false) ?: false)
+                },
+                settingsExpanded = remember(config) {
+                    mutableStateOf(config?.optJSONObject("navDrawer")?.optBoolean("settingsExpanded", true) ?: true)
+                },
                 initialMapStyle = initialMapStyle,
                 mapViewModel = mapViewModel
             )

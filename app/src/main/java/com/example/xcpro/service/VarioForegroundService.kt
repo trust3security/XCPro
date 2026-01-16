@@ -18,6 +18,11 @@ import com.example.xcpro.R
 import com.example.xcpro.vario.VarioServiceManager
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class VarioForegroundService : Service() {
@@ -40,9 +45,7 @@ class VarioForegroundService : Service() {
          * Start only if location permission is granted. Returns true when start was requested.
          */
         fun startIfPermitted(context: Context): Boolean {
-            val fine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-            val coarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-            val hasPermission = fine || coarse
+            val hasPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
             if (!hasPermission) {
                 Log.w(TAG, "Skipping vario service start; location permission missing")
                 return false
@@ -59,14 +62,17 @@ class VarioForegroundService : Service() {
     }
 
     private val binder = VarioBinder()
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, createNotification())
-        val sensorsStarted = manager.start()
-        if (!sensorsStarted) {
-            Log.w(TAG, "Foreground service active but waiting for GPS permission before publishing data")
+        serviceScope.launch {
+            val sensorsStarted = manager.start()
+            if (!sensorsStarted) {
+                Log.w(TAG, "Foreground service active but waiting for GPS permission before publishing data")
+            }
         }
     }
 
@@ -90,6 +96,7 @@ class VarioForegroundService : Service() {
             stopForeground(true)
         }
         manager.stop()
+        serviceScope.cancel()
         super.onDestroy()
     }
 

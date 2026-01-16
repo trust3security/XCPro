@@ -84,6 +84,7 @@ class VariometerOverlayTest {
             var isEditing by remember { mutableStateOf(startInEditMode) }
             VariometerOverlay(
                 needleValue = 0f,
+                fastNeedleValue = 0f,
                 displayValue = 0f,
                 offset = Offset(10f, 10f),
                 sizePx = 150f,
@@ -94,11 +95,11 @@ class VariometerOverlayTest {
                 isEditMode = isEditing,
                 onOffsetChange = onOffsetChange,
                 onSizeChange = onSizeChange,
-                onEnterEditMode = {
+                onLongPress = {
                     isEditing = true
                     onEnterEditMode()
                 },
-                onExitEditMode = {
+                onEditFinished = {
                     isEditing = false
                     onExitEditMode()
                 },

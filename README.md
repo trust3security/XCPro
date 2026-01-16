@@ -21,6 +21,37 @@ It is designed for **experimental, training, and development use** — not as a 
 ## Documentation
 
 See `CONTRIBUTING.md` for required reading order and contributor workflow.
+Levo pipeline docs index: `docs/LevoVario/README.md`.
+
+---
+
+## Levo Vario Quickstart
+
+If you touch the variometer or replay pipeline, start here:
+- Read `docs/LevoVario/levo.md` for the end-to-end pipeline map.
+- Entry points: `VarioForegroundService` -> `VarioServiceManager` -> `FlightDataCalculatorEngine`.
+- Replay entry: `IgcReplayController` (replay clock is IGC time, not wall time).
+- Time base rules: live deltas use monotonic time, output uses wall time
+  (see `CODING_RULES.md` and `ARCHITECTURE.md`).
+- Baro-gated loop: vario only advances on new baro samples (no accel-only ticks).
+
+Tiny map:
+```
+Sensors -> SensorRegistry -> UnifiedSensorManager -> FlightDataCalculatorEngine
+        -> FlightDataRepository -> MapScreenObservers -> UI + Audio
+
+IGC -> IgcReplayController -> ReplaySensorSource -> FlightDataCalculatorEngine
+    -> FlightDataRepository -> MapScreenObservers -> UI + Audio
+```
+
+Key files:
+- `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngine.kt`
+- `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt`
+- `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt`
+- `feature/map/src/main/java/com/example/xcpro/flightdata/FlightDataRepository.kt`
+- `feature/map/src/main/java/com/example/xcpro/replay/IgcReplayController.kt`
+- `feature/map/src/main/java/com/example/xcpro/audio/VarioAudioEngine.kt`
+- `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt`
 
 ---
 
@@ -152,4 +183,4 @@ Add at least one screenshot or a short GIF/video link here.
 
 ## Changelog / Releases
 
-If you tag releases, link release notes here (or maintain a `CHANGELOG.md`).
+If you tag releases, link release notes here.

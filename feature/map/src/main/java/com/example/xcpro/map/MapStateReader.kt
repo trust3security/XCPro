@@ -7,6 +7,7 @@ package com.example.xcpro.map
 
 import com.example.dfcards.FlightModeSelection
 import com.example.xcpro.common.flight.FlightMode
+import com.example.xcpro.map.trail.TrailSettings
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -30,4 +31,7 @@ interface MapStateReader {
     val targetLatLng: StateFlow<MapStateStore.MapPoint?>
     val targetZoom: StateFlow<Float?>
     val currentUserLocation: StateFlow<MapStateStore.MapPoint?>
+    val trailSettings: StateFlow<TrailSettings>
+    val displayPoseMode: StateFlow<DisplayPoseMode>
+    val displaySmoothingProfile: StateFlow<DisplaySmoothingProfile>
 }

@@ -3,6 +3,7 @@ package com.example.xcpro.map.ui.effects
 import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
@@ -12,15 +13,16 @@ import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.common.flight.FlightMode
-import com.example.xcpro.loadConfig
+import com.example.xcpro.ConfigurationRepository
 import com.example.xcpro.map.LocationManager
 import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.profiles.ProfileUiState
+import com.example.xcpro.replay.SessionState
 import com.example.xcpro.sensors.GPSData
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.withFrameNanos
 
 object MapComposeEffects {
 
@@ -39,7 +41,7 @@ object MapComposeEffects {
             }
         }
 
-        LaunchedEffect(currentLocation, suppressLiveGps, orientationData.mode, orientationData.bearing) {
+        LaunchedEffect(currentLocation, suppressLiveGps) {
             if (!suppressLiveGps) {
                 currentLocation?.let { location ->
                     locationManager.updateLocationFromGPS(
@@ -109,6 +111,8 @@ object MapComposeEffects {
         suppressLiveGps: Boolean
     ) {
         val cardsReadyState = rememberUpdatedState(cardsReady)
+        val orientationState = rememberUpdatedState(orientationData)
+        val suppressLiveGpsState = rememberUpdatedState(suppressLiveGps)
 
         LaunchedEffect(Unit) {
             flightViewModel.initializeCardPreferences(cardPreferences)
@@ -135,11 +139,13 @@ object MapComposeEffects {
             flightDataManager.liveFlightDataFlow.collectLatest { liveData ->
                 if (liveData != null) {
                     orientationManager.updateFromFlightData(liveData)
-                    if (suppressLiveGps) {
+                    // AI-NOTE: Avoid stale captures in a long-lived collector; replay map updates
+                    // must see the latest orientation and replay/live toggle values.
+                    if (suppressLiveGpsState.value) {
                         // Replay/IGC: use flight data for map updates when GPS is suppressed.
                         locationManager.updateLocationFromFlightData(
                             liveData,
-                            orientationData
+                            orientationState.value
                         )
                     }
                 }
@@ -152,13 +158,35 @@ object MapComposeEffects {
     }
 
     @Composable
+    fun DisplayPoseEffects(
+        locationManager: LocationManager,
+        orientationData: OrientationData,
+        replaySessionState: SessionState
+    ) {
+        val orientationState = rememberUpdatedState(orientationData)
+
+        LaunchedEffect(replaySessionState.speedMultiplier) {
+            locationManager.setReplaySpeedMultiplier(replaySessionState.speedMultiplier)
+        }
+
+        LaunchedEffect(locationManager) {
+            while (isActive) {
+                withFrameNanos { }
+                locationManager.updateOrientation(orientationState.value)
+                locationManager.onDisplayFrame()
+            }
+        }
+    }
+
+    @Composable
     fun MapStyleAndConfigurationEffects(
         initialMapStyle: String,
         onStyleResolved: (String) -> Unit
     ) {
         val context = LocalContext.current
+        val configRepository = remember(context) { ConfigurationRepository(context) }
         LaunchedEffect(Unit) {
-            runCatching { loadConfig(context) }
+            runCatching { configRepository.readConfig() }
                 .mapCatching { config ->
                     config?.optJSONObject("app")?.optString("mapStyle")
                 }
@@ -198,6 +226,7 @@ object MapComposeEffects {
         initialMapStyle: String,
         onMapStyleResolved: (String) -> Unit,
         cardsReady: Boolean,
+        replaySessionState: SessionState,
         suppressLiveGps: Boolean = false,
         allowSensorStart: Boolean = true
     ) {
@@ -237,6 +266,12 @@ object MapComposeEffects {
             orientationManager = orientationManager,
             cardsReady = cardsReady,
             suppressLiveGps = suppressLiveGps
+        )
+
+        DisplayPoseEffects(
+            locationManager = locationManager,
+            orientationData = orientationData,
+            replaySessionState = replaySessionState
         )
 
         MapStyleAndConfigurationEffects(

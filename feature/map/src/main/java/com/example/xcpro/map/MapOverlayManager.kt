@@ -2,11 +2,15 @@ package com.example.xcpro.map
 
 import android.content.Context
 import android.util.Log
+import com.example.xcpro.AirspaceRepository
 import com.example.xcpro.map.BuildConfig
 import com.example.xcpro.loadAndApplyAirspace
 import com.example.xcpro.loadAndApplyWaypoints
 import com.example.xcpro.loadWaypointFiles
+import com.example.xcpro.map.trail.SnailTrailManager
 import com.example.xcpro.tasks.TaskManagerCoordinator
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import org.maplibre.android.maps.MapLibreMap
 
 /**
@@ -18,11 +22,15 @@ class MapOverlayManager(
     private val mapState: MapScreenState,
     private val mapStateReader: MapStateReader,
     private val taskManager: TaskManagerCoordinator,
-    private val stateActions: MapStateActions
+    private val stateActions: MapStateActions,
+    private val snailTrailManager: SnailTrailManager,
+    private val coroutineScope: CoroutineScope
 ) {
     companion object {
         private const val TAG = "MapOverlayManager"
     }
+
+    private val airspaceRepository = AirspaceRepository(context)
 
     fun toggleDistanceCircles() {
         stateActions.toggleDistanceCircles()
@@ -37,7 +45,9 @@ class MapOverlayManager(
 
     fun refreshAirspace(map: MapLibreMap?) {
         try {
-            loadAndApplyAirspace(context, map)
+            coroutineScope.launch {
+                loadAndApplyAirspace(context, map, airspaceRepository)
+            }
             if (BuildConfig.DEBUG) {
                 Log.d(TAG, "Airspace overlays refreshed")
             }
@@ -48,8 +58,10 @@ class MapOverlayManager(
 
     fun refreshWaypoints(map: MapLibreMap?) {
         try {
-            val (files, checks) = loadWaypointFiles(context)
-            loadAndApplyWaypoints(context, map, files, checks)
+            coroutineScope.launch {
+                val (files, checks) = loadWaypointFiles(context)
+                loadAndApplyWaypoints(context, map, files, checks)
+            }
             if (BuildConfig.DEBUG) {
                 Log.d(TAG, "Waypoint overlays refreshed")
             }
@@ -94,6 +106,9 @@ class MapOverlayManager(
             refreshAirspace(map)
             refreshWaypoints(map)
             plotSavedTask(map)
+            mapState.blueLocationOverlay?.initialize()
+            snailTrailManager.onMapStyleChanged(map)
+            mapState.blueLocationOverlay?.bringToFront()
             if (BuildConfig.DEBUG) {
                 Log.d(TAG, "All overlays reloaded for new style")
             }

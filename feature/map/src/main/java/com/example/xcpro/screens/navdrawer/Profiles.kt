@@ -17,8 +17,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.launch
-import java.io.File
-import java.io.IOException
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.asPaddingValues
@@ -28,6 +26,7 @@ import com.example.xcpro.profiles.ProfileImportDialog
 import com.example.xcpro.screens.navdrawer.SettingsTopAppBar
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.compose.runtime.collectAsState
+import com.example.xcpro.ConfigurationRepository
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,6 +38,7 @@ fun ProfilesScreen(
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val configRepository = remember(context) { ConfigurationRepository(context) }
     val profileViewModel: ProfileViewModel = hiltViewModel()
     val uiState by profileViewModel.uiState.collectAsState()
     
@@ -51,17 +51,17 @@ fun ProfilesScreen(
     val navBarInsets = WindowInsets.navigationBars.asPaddingValues()
     val hasNavBar = navBarInsets.calculateBottomPadding() > 0.dp
 
-    fun loadConfigFile() {
+    suspend fun loadConfigFile() {
         try {
-            val file = File(context.filesDir, "configuration.json")
-            if (file.exists()) {
-                configContent = file.readText()
+            val config = configRepository.readConfig()
+            if (config != null) {
+                configContent = config.toString(2)
                 errorMessage = null
             } else {
                 errorMessage = "configuration.json not found in internal storage"
                 configContent = null
             }
-        } catch (e: IOException) {
+        } catch (e: Exception) {
             errorMessage = "Error loading configuration.json: ${e.message}"
             configContent = null
         }
@@ -97,13 +97,13 @@ fun ProfilesScreen(
                 ) {
                     Button(onClick = {
                         onLoadConfig()
-                        loadConfigFile()
+                        scope.launch { loadConfigFile() }
                     }) {
                         Text("Load")
                     }
                     Button(onClick = {
                         onSaveConfig()
-                        loadConfigFile()
+                        scope.launch { loadConfigFile() }
                     }) {
                         Text("Save")
                     }
@@ -297,13 +297,13 @@ fun ProfilesScreen(
                         ) {
                             Button(onClick = {
                                 onLoadConfig()
-                                loadConfigFile()
+                                scope.launch { loadConfigFile() }
                             }) {
                                 Text("Load")
                             }
                             Button(onClick = {
                                 onSaveConfig()
-                                loadConfigFile()
+                                scope.launch { loadConfigFile() }
                             }) {
                                 Text("Save")
                             }

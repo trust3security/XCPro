@@ -371,11 +371,18 @@ fun CustomMapGestureHandler(
                                     val panDelta = centerPoint - previousCenterPoint
 
                                     if (abs(panDelta.x) > 1f || abs(panDelta.y) > 1f) {
-                                        if (!showReturnButton && currentLocation != null) {
-                                            onSaveLocation(currentLocation, mapLibreMap?.cameraPosition?.zoom ?: 10.0, mapLibreMap?.cameraPosition?.bearing ?: 0.0)
-                                            onShowReturnButton(true)
+                                    if (!showReturnButton) {
+                                        if (currentLocation != null) {
+                                            onSaveLocation(
+                                                currentLocation,
+                                                mapLibreMap?.cameraPosition?.zoom ?: 10.0,
+                                                mapLibreMap?.cameraPosition?.bearing ?: 0.0
+                                            )
                                             if (BuildConfig.DEBUG) Log.d(TAG, "Saved position for return button")
                                         }
+                                        // Always allow users to break tracking even if location is null.
+                                        onShowReturnButton(true)
+                                    }
 
                                         mapLibreMap?.let { map ->
                                             val currentTarget = map.cameraPosition.target

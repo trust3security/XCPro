@@ -50,7 +50,8 @@ Key files:
 - Camera effects and clamping: `feature/map/src/main/java/com/example/xcpro/map/MapCameraManager.kt`
 - Camera bearing resolver (legacy helper; currently unused in tracking path): `feature/map/src/main/java/com/example/xcpro/map/CameraBearingResolver.kt`
 - Location jitter gate: `feature/map/src/main/java/com/example/xcpro/map/MapLocationFilter.kt`
-- Icon rotation logic: `feature/map/src/main/java/com/example/xcpro/map/BlueLocationOverlay.kt`
+- Icon rotation policy: `feature/map/src/main/java/com/example/xcpro/map/IconHeadingSmoother.kt`
+- Icon rendering: `feature/map/src/main/java/com/example/xcpro/map/BlueLocationOverlay.kt`
 - Orientation UI: `feature/map/src/main/java/com/example/xcpro/CompassWidget.kt`
 
 ## Orientation modes overview
@@ -118,6 +119,12 @@ For Track Up:
 - The map rotates beneath it (screen angle = track).
 - `OrientationData.headingDeg` is used to compute icon rotation against map bearing.
 
+### Icon rotation policy (visual-only)
+- Drift is shown only when `headingValid` is true and speed is above the enter threshold.
+- When heading is invalid or below the exit threshold, the icon holds the last stable
+  heading or falls back to track-based rotation to avoid jitter (no icon change).
+- Rotation uses a time-based clamp and a small deadband for micro-rotations.
+
 ## XCSoar parity notes (Track Up)
 
 These notes summarize how XCSoar handles Track Up and where XCPro currently differs.
@@ -155,24 +162,27 @@ These components interact to create or reduce jumpiness:
 - Defaults: `MapFeatureFlags.locationJitterThresholdPx = 0.5f` and history size 30.
 - File: `feature/map/src/main/java/com/example/xcpro/map/MapLocationFilter.kt`
 
-4) Track-bearing clamp (position updates)
-- `MapPositionController.clampBearingStep()` limits the track-bearing applied to icon updates,
-  but icon rotation now uses heading vs map bearing.
+4) Track-bearing clamp (display)
+- `MapPositionController.clampBearingStep()` limits the displayed track to 5 deg/step.
 - File: `feature/map/src/main/java/com/example/xcpro/map/MapPositionController.kt`
 
-5) Camera bearing clamp (only when NOT tracking)
+5) Icon rotation clamp (visual)
+- `IconHeadingSmoother` applies a time-based max angular velocity and deadband.
+- File: `feature/map/src/main/java/com/example/xcpro/map/IconHeadingSmoother.kt`
+
+6) Camera bearing clamp (only when NOT tracking)
 - `MapCameraManager.updateBearing()` limits rotation step to 5 deg/step.
 - File: `feature/map/src/main/java/com/example/xcpro/map/MapCameraManager.kt`
 
-6) Compass widget animation
+7) Compass widget animation
 - `CompassWidget` uses `animateFloatAsState` with 300ms tween.
 - This is visual only and does not affect the map.
 
-7) User override (temporary freeze)
+8) User override (temporary freeze)
 - `MapOrientationManager.onUserInteraction()` freezes bearing updates for 10s.
 - Triggered when the map is moved or rotated (see `MapInitializer` listeners).
 
-8) Track stale timeout (XCSoar parity)
+9) Track stale timeout (XCSoar parity)
 - `MapOrientationManager` forces Track Up bearing to 0 after ~10s without a valid track.
 - File: `feature/map/src/main/java/com/example/xcpro/MapOrientationManager.kt`
 

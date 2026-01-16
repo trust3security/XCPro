@@ -1,6 +1,7 @@
 package com.example.xcpro
 
 import android.hardware.SensorManager
+import android.os.SystemClock
 import android.util.Log
 import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.common.orientation.OrientationSensorData
@@ -129,7 +130,11 @@ class OrientationDataSource(
         latestCompass = compass
         val reliable = compass.accuracy != SensorManager.SENSOR_STATUS_UNRELIABLE
         lastCompassHeading = compass.heading
-        lastCompassTime = compass.timestamp
+        lastCompassTime = if (compass.monotonicTimestampMillis > 0L) {
+            compass.monotonicTimestampMillis
+        } else {
+            SystemClock.elapsedRealtime()
+        }
         lastCompassReliable = reliable
         lastHeadingInputSource = "COMPASS"
         updateCompassHeading(compass.heading, reliable)
@@ -138,7 +143,11 @@ class OrientationDataSource(
     private fun handleAttitudeUpdate(attitude: AttitudeData) {
         latestAttitude = attitude
         lastAttitudeHeading = attitude.headingDeg
-        lastAttitudeTime = attitude.timestamp
+        lastAttitudeTime = if (attitude.monotonicTimestampMillis > 0L) {
+            attitude.monotonicTimestampMillis
+        } else {
+            SystemClock.elapsedRealtime()
+        }
         lastAttitudeReliable = attitude.isReliable
         lastHeadingInputSource = "ATTITUDE"
         attitudeSensorSeen = true
@@ -146,7 +155,7 @@ class OrientationDataSource(
     }
 
     private fun updateCompassHeading(newHeading: Double, reliable: Boolean) {
-        val now = System.currentTimeMillis()
+        val now = SystemClock.elapsedRealtime()
 
         if (hasCompassHeading && now - lastCompassUpdateTime < HEADING_UPDATE_INTERVAL_MS) {
             updateCompassReliability(now, reliable)
@@ -167,7 +176,7 @@ class OrientationDataSource(
     }
 
     private fun updateAttitudeHeading(newHeading: Double, reliable: Boolean) {
-        val now = System.currentTimeMillis()
+        val now = SystemClock.elapsedRealtime()
 
         if (hasAttitudeHeading && now - lastAttitudeUpdateTime < HEADING_UPDATE_INTERVAL_MS) {
             updateAttitudeReliability(now, reliable)
@@ -188,25 +197,25 @@ class OrientationDataSource(
     }
 
     private fun updateOrientationData() {
-        val now = System.currentTimeMillis()
+        val nowMono = SystemClock.elapsedRealtime()
+        val nowWall = System.currentTimeMillis()
         val allowDeviceHeading = MapFeatureFlags.allowHeadingWhileStationary ||
             isFlying ||
             currentFlightData.groundSpeed >= minSpeedThresholdMs
-        val allowCompassFallback = !attitudeSensorSeen
-
+        val attitudeFresh = allowDeviceHeading &&
+            hasAttitudeHeading &&
+            (nowMono - lastAttitudeReliableTime) <= HEADING_STALE_THRESHOLD_MS
+        val allowCompassFallback = !attitudeSensorSeen || !attitudeFresh
         val compassFresh = allowDeviceHeading &&
             allowCompassFallback &&
             hasCompassHeading &&
-            (now - lastCompassReliableTime) <= HEADING_STALE_THRESHOLD_MS
-        val attitudeFresh = allowDeviceHeading &&
-            hasAttitudeHeading &&
-            (now - lastAttitudeReliableTime) <= HEADING_STALE_THRESHOLD_MS
+            (nowMono - lastCompassReliableTime) <= HEADING_STALE_THRESHOLD_MS
 
-        val compassStable = compassFresh && (now - compassReliableSince) >= SOURCE_SWITCH_STABLE_MS
-        val attitudeStable = attitudeFresh && (now - attitudeReliableSince) >= SOURCE_SWITCH_STABLE_MS
+        val compassStable = compassFresh && (nowMono - compassReliableSince) >= SOURCE_SWITCH_STABLE_MS
+        val attitudeStable = attitudeFresh && (nowMono - attitudeReliableSince) >= SOURCE_SWITCH_STABLE_MS
 
         updateActiveHeadingSource(
-            now = now,
+            now = nowMono,
             compassFresh = compassFresh,
             attitudeFresh = attitudeFresh,
             compassStable = compassStable,
@@ -249,10 +258,10 @@ class OrientationDataSource(
             windDirectionFrom = currentFlightData.windDirection.toDouble(),
             windSpeed = currentFlightData.windSpeed.toDouble(),
             headingSolution = headingSolution,
-            timestamp = now
+            timestamp = nowWall
         )
 
-        if (now % 3000 < 100) {
+        if (nowWall % 3000 < 100) {
             Log.d(
                 TAG,
                 "📊 Orientation update: " +

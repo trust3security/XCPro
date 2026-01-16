@@ -23,6 +23,12 @@ object MapFeatureFlags {
     var showVarioDemoFab: Boolean = BuildConfig.DEBUG
 
     /**
+     * Shows the developer-only racing replay FAB on the map screen when true.
+     */
+    @Volatile
+    var showRacingReplayFab: Boolean = BuildConfig.DEBUG
+
+    /**
      * Pixel threshold for map location jitter suppression.
      */
     @Volatile
@@ -39,4 +45,29 @@ object MapFeatureFlags {
      */
     @Volatile
     var allowHeadingWhileStationary: Boolean = false
+
+    /**
+     * Use raw replay fixes for the glider marker (no smoothing/prediction).
+     * This aligns UI with navigation events during replay/testing.
+     */
+    @Volatile
+    var useRawReplayPose: Boolean = BuildConfig.DEBUG
+
+    /**
+     * Default live display smoothing profile.
+     */
+    @Volatile
+    var defaultDisplaySmoothingProfile: com.example.xcpro.map.DisplaySmoothingProfile =
+        if (BuildConfig.DEBUG) {
+            com.example.xcpro.map.DisplaySmoothingProfile.RESPONSIVE
+        } else {
+            com.example.xcpro.map.DisplaySmoothingProfile.SMOOTH
+        }
+
+    /**
+     * Enable adaptive display smoothing based on live speed/accuracy.
+     * UI-only; does not affect navigation or SSOT data.
+     */
+    @Volatile
+    var useAdaptiveDisplaySmoothing: Boolean = true
 }

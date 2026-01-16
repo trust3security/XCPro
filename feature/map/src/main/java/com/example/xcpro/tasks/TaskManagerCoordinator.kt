@@ -34,7 +34,7 @@ class TaskManagerCoordinator(val context: Context? = null) {
     private var racingDelegate = createRacingDelegate()
     private var aatDelegate = createAATDelegate()
     private var proximityHandler: ((Boolean, Boolean) -> Unit)? = null
-    private var legChangeHandler: ((Int) -> Unit)? = null
+    private val legChangeHandlers = LinkedHashSet<(Int) -> Unit>()
 
     private val _taskType = MutableStateFlow(TaskType.RACING)
     val taskType: TaskType get() = _taskType.value
@@ -173,12 +173,27 @@ class TaskManagerCoordinator(val context: Context? = null) {
         log("Finished loading saved tasks (racing=${result.racingLoaded}, aat=${result.aatLoaded})")
     }
 
-    fun advanceToNextLeg() = withCurrentManager(racingBlock = { advanceToNextLeg() }, aatBlock = { advanceToNextLeg() })
-    fun goToPreviousLeg() = withCurrentManager(racingBlock = { goToPreviousLeg() }, aatBlock = { goToPreviousLeg() })
+    fun advanceToNextLeg() {
+        val before = currentLeg
+        withCurrentManager(racingBlock = { advanceToNextLeg() }, aatBlock = { advanceToNextLeg() })
+        val after = currentLeg
+        if (after != before) {
+            legChangeHandlers.forEach { handler -> handler.invoke(after) }
+        }
+    }
+
+    fun goToPreviousLeg() {
+        val before = currentLeg
+        withCurrentManager(racingBlock = { goToPreviousLeg() }, aatBlock = { goToPreviousLeg() })
+        val after = currentLeg
+        if (after != before) {
+            legChangeHandlers.forEach { handler -> handler.invoke(after) }
+        }
+    }
     fun setActiveLeg(index: Int) = withCurrentManager(
         racingBlock = { setRacingLeg(index, mapInstanceRef.get()) },
         aatBlock = { setAATLeg(index, mapInstanceRef.get()) }
-    ).also { legChangeHandler?.invoke(currentLeg) }
+    ).also { legChangeHandlers.forEach { handler -> handler.invoke(currentLeg) } }
 
     fun getActiveLeg(): Int = currentLeg
 
@@ -299,7 +314,16 @@ class TaskManagerCoordinator(val context: Context? = null) {
     }
 
     fun setLegChangeHandler(handler: (Int) -> Unit) {
-        legChangeHandler = handler
+        legChangeHandlers.clear()
+        legChangeHandlers.add(handler)
+    }
+
+    fun addLegChangeListener(handler: (Int) -> Unit) {
+        legChangeHandlers.add(handler)
+    }
+
+    fun removeLegChangeListener(handler: (Int) -> Unit) {
+        legChangeHandlers.remove(handler)
     }
 
     @VisibleForTesting internal fun replaceAATDelegateForTesting(delegate: AATCoordinatorDelegate) { aatDelegate = delegate }

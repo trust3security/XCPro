@@ -16,7 +16,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlin.math.max
 import kotlin.math.ceil
 
@@ -275,7 +274,7 @@ internal fun CardStateRepository.restorePersistedPositions(cardIds: Set<String>?
     }
 }
 
-internal fun CardStateRepository.applyTemplate(
+internal suspend fun CardStateRepository.applyTemplate(
     template: FlightTemplate,
     containerSize: IntSize,
     density: Density
@@ -283,7 +282,7 @@ internal fun CardStateRepository.applyTemplate(
     applyTemplateInternal(template, containerSize, density, isAutoLoad = false)
 }
 
-private fun CardStateRepository.applyTemplateInternal(
+private suspend fun CardStateRepository.applyTemplateInternal(
     template: FlightTemplate,
     containerSize: IntSize,
     density: Density,
@@ -296,9 +295,7 @@ private fun CardStateRepository.applyTemplateInternal(
     val cardsToCreate = templateCardIds - currentCardIds
 
     if (cardsToCreate.isNotEmpty()) {
-        val newCards = runBlocking {
-            createCardsFromTemplate(template, containerSize, density)
-        }
+        val newCards = createCardsFromTemplate(template, containerSize, density)
 
         newCards.filter { it.id in cardsToCreate }.forEach { cardState ->
             cardStateFlowsMap[cardState.id] = MutableStateFlow(cardState)

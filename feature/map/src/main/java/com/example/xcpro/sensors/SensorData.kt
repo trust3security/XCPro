@@ -17,10 +17,15 @@ data class GPSData(
     val speed: SpeedMs,            // m/s (ground speed)
     val bearing: Double,        // 0-360 deg (accurate when moving > 2 m/s)
     val accuracy: Float,        // meters (horizontal accuracy)
-    val timestamp: Long
+    val bearingAccuracyDeg: Double? = null,
+    val speedAccuracyMs: Double? = null,
+    val timestamp: Long,
+    val monotonicTimestampMillis: Long = 0L
 ) {
     val latitude: Double get() = position.latitude
     val longitude: Double get() = position.longitude
+    val timeForCalculationsMillis: Long
+        get() = if (monotonicTimestampMillis > 0L) monotonicTimestampMillis else timestamp
 
     /**
      * Check if this is a high-accuracy GPS fix
@@ -39,7 +44,8 @@ data class GPSData(
  */
 data class BaroData(
     val pressureHPa: PressureHpa,    // Atmospheric pressure in hPa
-    val timestamp: Long
+    val timestamp: Long,
+    val monotonicTimestampMillis: Long = 0L
 )
 
 /**
@@ -49,7 +55,8 @@ data class BaroData(
 data class CompassData(
     val heading: Double,        // 0-360 deg (magnetic north)
     val accuracy: Int,          // SensorManager.SENSOR_STATUS_*
-    val timestamp: Long
+    val timestamp: Long,
+    val monotonicTimestampMillis: Long = 0L
 )
 
 /**
@@ -62,7 +69,8 @@ data class CompassData(
 data class AccelData(
     val verticalAcceleration: Double,  // m/s^2 (earth-Z axis, positive = upward)
     val timestamp: Long,
-    val isReliable: Boolean = true     // Whether orientation projection is valid
+    val isReliable: Boolean = true,    // Whether orientation projection is valid
+    val monotonicTimestampMillis: Long = 0L
 )
 
 /**
@@ -74,7 +82,8 @@ data class RawAccelData(
     val y: Double,
     val z: Double,
     val timestamp: Long,
-    val isReliable: Boolean = true
+    val isReliable: Boolean = true,
+    val monotonicTimestampMillis: Long = 0L
 )
 
 /**
@@ -85,7 +94,8 @@ data class AttitudeData(
     val pitchDeg: Double,    // degrees, positive = nose up
     val rollDeg: Double,     // degrees, positive = right wing down
     val timestamp: Long,
-    val isReliable: Boolean
+    val isReliable: Boolean,
+    val monotonicTimestampMillis: Long = 0L
 )
 
 /**
@@ -113,6 +123,8 @@ data class CompleteFlightData(
     val isQNHCalibrated: Boolean, // Whether QNH was calibrated by GPS (vs standard 1013.25)
     val verticalSpeed: VerticalSpeedMs,  // m/s (selected brutto vario)
     val displayVario: VerticalSpeedMs = VerticalSpeedMs(0.0),
+    val displayNeedleVario: VerticalSpeedMs = VerticalSpeedMs(0.0),
+    val displayNeedleVarioFast: VerticalSpeedMs = VerticalSpeedMs(0.0),
     val xcSoarVario: VerticalSpeedMs = VerticalSpeedMs(0.0),
     val xcSoarDisplayVario: VerticalSpeedMs = VerticalSpeedMs(0.0),
     val xcSoarVarioValid: Boolean = false,

@@ -89,6 +89,10 @@ class UnifiedSensorManager(private val context: Context) : SensorDataSource {
         statusTickerJob = null
     }
 
+    fun setGpsUpdateIntervalMs(intervalMs: Long) {
+        registry.setGpsUpdateIntervalMs(intervalMs)
+    }
+
     fun isGpsEnabled(): Boolean = registry.isGpsEnabled()
 
     fun hasLocationPermissions(): Boolean = registry.hasLocationPermissions()

@@ -8,8 +8,12 @@ import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.example.xcpro.map.trail.TrailLength
+import com.example.xcpro.map.trail.TrailSettings
+import com.example.xcpro.map.trail.TrailType
 
 data class LookAndFeelOption(
     val id: String,
@@ -99,7 +103,8 @@ enum class CardStyle(
 object LookAndFeelMenuDefaults {
     fun defaultMenuOptions(
         statusBarStyle: StatusBarStyle,
-        cardStyle: CardStyle
+        cardStyle: CardStyle,
+        snailTrailSummary: String
     ): List<LookAndFeelOption> = listOf(
         LookAndFeelOption(
             id = "colors",
@@ -121,6 +126,12 @@ object LookAndFeelMenuDefaults {
             icon = Icons.Filled.Dashboard
         ),
         LookAndFeelOption(
+            id = "snail_trail",
+            title = "Snail Trail",
+            subtitle = snailTrailSummary,
+            icon = Icons.Filled.Timeline
+        ),
+        LookAndFeelOption(
             id = "theme",
             title = "Theme",
             subtitle = "System default",
@@ -139,4 +150,28 @@ object LookAndFeelMenuDefaults {
             icon = Icons.Filled.FormatSize
         )
     )
+}
+
+internal fun trailSummary(settings: TrailSettings): String {
+    val lengthLabel = trailLengthLabel(settings.length)
+    val typeLabel = trailTypeLabel(settings.type)
+    return "$lengthLabel \u2022 $typeLabel"
+}
+
+internal fun trailLengthLabel(length: TrailLength): String = when (length) {
+    TrailLength.FULL -> "Full"
+    TrailLength.LONG -> "Long"
+    TrailLength.MEDIUM -> "Medium"
+    TrailLength.SHORT -> "Short"
+    TrailLength.OFF -> "None"
+}
+
+internal fun trailTypeLabel(type: TrailType): String = when (type) {
+    TrailType.VARIO_1 -> "Vario 1"
+    TrailType.VARIO_1_DOTS -> "Vario 1 dots"
+    TrailType.VARIO_2 -> "Vario 2"
+    TrailType.VARIO_2_DOTS -> "Vario 2 dots"
+    TrailType.VARIO_DOTS_AND_LINES -> "Dots + lines"
+    TrailType.VARIO_EINK -> "Vario E-ink"
+    TrailType.ALTITUDE -> "Altitude"
 }

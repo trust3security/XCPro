@@ -41,9 +41,6 @@ internal class FlightDataCalculatorEngine(
         internal const val LOG_THERMAL_METRICS = FlightDataConstants.LOG_THERMAL_METRICS
         internal const val DEFAULT_MACCREADY = FlightDataConstants.DEFAULT_MACCREADY
         internal const val QNH_JUMP_THRESHOLD_HPA = FlightDataConstants.QNH_JUMP_THRESHOLD_HPA
-        internal const val QNH_CALIBRATION_ACCURACY_THRESHOLD = FlightDataConstants.QNH_CALIBRATION_ACCURACY_THRESHOLD
-        internal const val AUTO_QNH_MAX_SPEED_MS = 5.0
-        internal const val AUTO_QNH_SESSION_TIMEOUT_MS = 90_000L
         internal const val VARIO_VALIDITY_MS = FlightDataConstants.VARIO_VALIDITY_MS
         internal const val VARIO_VALIDITY_FLOOR_MS = 5_000L
         internal const val EMIT_MIN_INTERVAL_MS = 100L
@@ -55,7 +52,7 @@ internal class FlightDataCalculatorEngine(
     }
     internal val locationHistory = mutableListOf<LocationWithTime>()
     internal val aglCalculator = SimpleAglCalculator(context)  // KISS: SRTM terrain database
-    internal val baroCalculator = BarometricAltitudeCalculator(aglCalculator)  // ???? SRTM-based QNH calibration
+    internal val baroCalculator = BarometricAltitudeCalculator()
     internal val filters = FlightFilters()
     internal val flightHelpers = FlightCalculationHelpers(
         scope = scope,
@@ -92,8 +89,6 @@ internal class FlightDataCalculatorEngine(
         logThermalMetrics = LOG_THERMAL_METRICS,
         tag = TAG
     )
-    @Volatile internal var autoQnhSessionActive = false
-    @Volatile internal var autoQnhSessionDeadlineMs = 0L
     @Volatile internal var replayRealVarioMs: Double? = null
     @Volatile internal var replayRealVarioTimestamp: Long = 0L
     internal var lastReplayBaroTimestamp: Long = 0L
@@ -101,14 +96,15 @@ internal class FlightDataCalculatorEngine(
     internal var lastReplayGpsLogTime: Long = 0L
     // Tracking for delta-time calculations
     internal var lastVarioUpdateTime = 0L
+    internal var lastBaroSampleTime = 0L
     // Cached GPS data for the high-speed vario loop (GPS updates slower than baro/IMU).
     internal var cachedGPSSpeed = 0.0
     // Use NaN as a sentinel until we have a real GPS altitude (prevents false calibration)
     internal var cachedGPSAltitude = Double.NaN
     internal var cachedGPSAccuracy = 15.0
     internal var cachedIsGPSFixed = false
-    internal var cachedGPSLat = 0.0  // ???? For SRTM-based QNH calibration
-    internal var cachedGPSLon = 0.0  // ???? For SRTM-based QNH calibration
+    internal var cachedGPSLat = 0.0  // Reserved for terrain-aware metrics
+    internal var cachedGPSLon = 0.0  // Reserved for terrain-aware metrics
     internal var cachedGPS: GPSData? = null  // Full GPS data for calculations
     // Cached results from vario loop for GPS loop to use
     internal var cachedVarioResult: com.example.dfcards.filters.ModernVarioResult? = null
@@ -163,16 +159,6 @@ internal class FlightDataCalculatorEngine(
     override fun updateAudioSettings(settings: VarioAudioSettings) {
         audioController.engine.updateSettings(settings)
     }
-    override fun requestAutoQnhCalibration() {
-        if (isReplayMode) {
-            Log.i(TAG, "Auto QNH calibration ignored in replay mode")
-            return
-        }
-        baroCalculator.beginAutoCalibration()
-        autoQnhSessionActive = true
-        autoQnhSessionDeadlineMs = System.currentTimeMillis() + AUTO_QNH_SESSION_TIMEOUT_MS
-        Log.i(TAG, "Auto QNH calibration requested")
-    }
     override fun stop() {
         if (isReplayMode) {
             // Replay sessions frequently call stop() to reset smoothing/state; keep the audio engine
@@ -193,6 +179,7 @@ internal class FlightDataCalculatorEngine(
         lastReplayBaroLogTime = 0L
         lastReplayGpsLogTime = 0L
         lastVarioUpdateTime = 0L
+        lastBaroSampleTime = 0L
         lastDiagnosticsEmitTime = 0L
         cachedGPSSpeed = 0.0
         cachedGPSAltitude = Double.NaN
@@ -208,16 +195,12 @@ internal class FlightDataCalculatorEngine(
         lastGpsFixTimestampForGpsVario = 0L
         smoothedVerticalAccel = null
         lastAccelTimestamp = 0L
-        autoQnhSessionActive = false
-        autoQnhSessionDeadlineMs = 0L
         _flightDataFlow.value = null
         _diagnosticsFlow.value = null
         Log.d(TAG, "FlightDataCalculator stopped")
     }
     override fun setManualQnh(qnhHPa: Double) {
         baroCalculator.setQNH(qnhHPa)
-        autoQnhSessionActive = false
-        autoQnhSessionDeadlineMs = 0L
         cachedBaroResult = null
         cachedVarioResult = null
         Log.i(TAG, "Manual QNH applied: ${qnhHPa}")
@@ -235,8 +218,6 @@ internal class FlightDataCalculatorEngine(
     }
     override fun resetQnhToStandard() {
         baroCalculator.resetToStandardAtmosphere()
-        autoQnhSessionActive = false
-        autoQnhSessionDeadlineMs = 0L
         cachedBaroResult = null
         cachedVarioResult = null
         Log.i(TAG, "QNH reset to standard atmosphere")

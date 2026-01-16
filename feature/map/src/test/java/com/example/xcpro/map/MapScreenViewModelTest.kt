@@ -12,6 +12,12 @@ import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.common.waypoint.WaypointLoader
 import com.example.xcpro.common.units.UnitsRepository
 import com.example.xcpro.glider.GliderRepository
+import com.example.xcpro.qnh.CalibrateQnhUseCase
+import com.example.xcpro.qnh.QnhCalibrationState
+import com.example.xcpro.qnh.QnhRepository
+import com.example.xcpro.qnh.QnhValue
+import com.example.xcpro.qnh.QnhSource
+import com.example.xcpro.qnh.QnhConfidence
 import com.example.xcpro.sensors.AttitudeData
 import com.example.xcpro.sensors.CompassData
 import com.example.xcpro.sensors.FlightStateSource
@@ -29,10 +35,13 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import com.example.xcpro.map.domain.MapWaypointError
 import com.example.xcpro.map.config.MapFeatureFlags
+import com.example.xcpro.map.replay.RacingReplayLogBuilder
 import com.example.xcpro.orientation.HeadingResolver
 import com.example.xcpro.replay.IgcReplayController
 import com.example.xcpro.replay.ReplayEvent
 import com.example.xcpro.replay.SessionState
+import com.example.xcpro.map.trail.MapTrailPreferences
+import com.example.xcpro.map.trail.MapTrailSettingsUseCase
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -61,7 +70,9 @@ class MapScreenViewModelTest {
     private val cardPreferences = CardPreferences(context)
     private val mapStyleRepository = MapStyleRepository(context)
     private val unitsRepository = UnitsRepository(context)
-    private val qnhPreferencesRepository = QnhPreferencesRepository(context)
+    private val qnhRepository = FakeQnhRepository()
+    private val calibrateQnhUseCase = Mockito.mock(CalibrateQnhUseCase::class.java)
+    private val trailSettingsUseCase = MapTrailSettingsUseCase(MapTrailPreferences(context))
     private val varioServiceManager = Mockito.mock(VarioServiceManager::class.java)
     private val unifiedSensorManager = Mockito.mock(UnifiedSensorManager::class.java)
     private val flightStateFlow = MutableStateFlow(FlyingState())
@@ -150,15 +161,18 @@ class MapScreenViewModelTest {
             cardPreferences = cardPreferences,
             mapStyleRepository = mapStyleRepository,
             unitsRepository = unitsRepository,
-            qnhPreferencesRepository = qnhPreferencesRepository,
             waypointLoader = loader,
             gliderRepository = GliderRepository.getInstance(context),
             varioServiceManager = varioServiceManager,
             flightDataRepository = flightDataRepository,
             windRepository = windRepository,
             igcReplayController = replayController,
+            racingReplayLogBuilder = RacingReplayLogBuilder(),
             orientationManagerFactory = orientationManagerFactory,
-            defaultDispatcher = mainDispatcherRule.dispatcher
+            defaultDispatcher = mainDispatcherRule.dispatcher,
+            qnhRepository = qnhRepository,
+            trailSettingsUseCase = trailSettingsUseCase,
+            calibrateQnhUseCase = calibrateQnhUseCase
         )
 
         drainMain()
@@ -180,15 +194,18 @@ class MapScreenViewModelTest {
             cardPreferences = cardPreferences,
             mapStyleRepository = mapStyleRepository,
             unitsRepository = unitsRepository,
-            qnhPreferencesRepository = qnhPreferencesRepository,
             waypointLoader = loader,
             gliderRepository = GliderRepository.getInstance(context),
             varioServiceManager = varioServiceManager,
             flightDataRepository = flightDataRepository,
             windRepository = windRepository,
             igcReplayController = replayController,
+            racingReplayLogBuilder = RacingReplayLogBuilder(),
             orientationManagerFactory = orientationManagerFactory,
-            defaultDispatcher = mainDispatcherRule.dispatcher
+            defaultDispatcher = mainDispatcherRule.dispatcher,
+            qnhRepository = qnhRepository,
+            trailSettingsUseCase = trailSettingsUseCase,
+            calibrateQnhUseCase = calibrateQnhUseCase
         )
 
         drainMain()
@@ -293,16 +310,48 @@ class MapScreenViewModelTest {
         cardPreferences = cardPreferences,
         mapStyleRepository = mapStyleRepository,
         unitsRepository = unitsRepository,
-        qnhPreferencesRepository = qnhPreferencesRepository,
         waypointLoader = waypointLoader,
         gliderRepository = gliderRepository,
         varioServiceManager = varioServiceManager,
         flightDataRepository = flightDataRepository,
         windRepository = windRepository,
         igcReplayController = replayController,
+        racingReplayLogBuilder = RacingReplayLogBuilder(),
         orientationManagerFactory = orientationManagerFactory,
-        defaultDispatcher = mainDispatcherRule.dispatcher
+        defaultDispatcher = mainDispatcherRule.dispatcher,
+        qnhRepository = qnhRepository,
+        trailSettingsUseCase = trailSettingsUseCase,
+        calibrateQnhUseCase = calibrateQnhUseCase
     )
+
+    private class FakeQnhRepository : QnhRepository {
+        private val initialValue = QnhValue(
+            hpa = 1013.25,
+            source = QnhSource.STANDARD,
+            calibratedAtMillis = 0L,
+            confidence = QnhConfidence.LOW
+        )
+        private val qnhFlow = MutableStateFlow(initialValue)
+        private val calibrationFlow = MutableStateFlow<QnhCalibrationState>(QnhCalibrationState.Idle)
+        override val qnhState = qnhFlow
+        override val calibrationState = calibrationFlow
+
+        override suspend fun setManualQnh(hpa: Double) {
+            qnhFlow.value = initialValue.copy(hpa = hpa, source = QnhSource.MANUAL)
+        }
+
+        override suspend fun resetToStandard() {
+            qnhFlow.value = initialValue
+        }
+
+        override suspend fun applyAutoQnh(value: QnhValue) {
+            qnhFlow.value = value
+        }
+
+        override fun updateCalibrationState(state: QnhCalibrationState) {
+            calibrationFlow.value = state
+        }
+    }
 }
 
 

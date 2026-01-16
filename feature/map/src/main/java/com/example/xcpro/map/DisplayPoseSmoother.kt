@@ -12,7 +12,12 @@ import kotlin.math.*
  *
  * All smoothing is visual-only; raw fixes are untouched elsewhere.
  */
-class DisplayPoseSmoother {
+class DisplayPoseSmoother(
+    private val minSpeedForHeadingMs: Double = DEFAULT_MIN_SPEED_FOR_HEADING_MS,
+    private val minSpeedForPredictionMs: Double = DEFAULT_MIN_SPEED_FOR_HEADING_MS,
+    private val config: DisplayPoseSmoothingConfig = DisplayPoseSmoothingConfig(),
+    private val adaptiveSmoothingEnabled: Boolean = false
+) {
 
     data class RawFix(
         val latitude: Double,
@@ -21,6 +26,8 @@ class DisplayPoseSmoother {
         val trackDeg: Double,
         val headingDeg: Double,
         val accuracyM: Double,
+        val bearingAccuracyDeg: Double?,
+        val speedAccuracyMs: Double?,
         val timestampMs: Long,
         val orientationMode: MapOrientationMode
     )
@@ -31,6 +38,8 @@ class DisplayPoseSmoother {
         val headingDeg: Double,
         val orientationMode: MapOrientationMode,
         val accuracyM: Double,
+        val bearingAccuracyDeg: Double?,
+        val speedAccuracyMs: Double?,
         val speedMs: Double,
         val updatedAtMs: Long
     )
@@ -38,6 +47,12 @@ class DisplayPoseSmoother {
     private var lastRaw: RawFix? = null
     private var lastDisplay: DisplayPose? = null
     private var lastTickMs: Long = 0L
+
+    fun reset() {
+        lastRaw = null
+        lastDisplay = null
+        lastTickMs = 0L
+    }
 
     fun pushRawFix(raw: RawFix) {
         lastRaw = raw
@@ -47,28 +62,55 @@ class DisplayPoseSmoother {
         val raw = lastRaw ?: return null
         lastTickMs = nowMs
 
+        val effectiveConfig = if (adaptiveSmoothingEnabled) {
+            DisplayPoseAdaptiveSmoothing.effectiveConfig(config, raw.speedMs, raw.accuracyM)
+        } else {
+            config
+        }
+
         val rawAgeMs = (nowMs - raw.timestampMs).coerceAtLeast(0L)
-        if (rawAgeMs > STALE_FIX_TIMEOUT_MS) {
+        if (rawAgeMs > effectiveConfig.staleFixTimeoutMs) {
             // Keep showing the last pose rather than jumping to stale data
             return lastDisplay
         }
 
-        val targetLocation = predictLocation(raw, rawAgeMs)
+        val targetLocation = predictLocation(raw, rawAgeMs, effectiveConfig.deadReckonLimitMs)
 
-        val dtMs = if (lastDisplay == null) POS_SMOOTH_MS.toLong() else (nowMs - lastDisplay!!.updatedAtMs).coerceAtLeast(1L)
-        val posAlpha = positionAlpha(dtMs, raw.accuracyM)
+        val dtMs = if (lastDisplay == null) {
+            effectiveConfig.posSmoothMs.toLong()
+        } else {
+            (nowMs - lastDisplay!!.updatedAtMs).coerceAtLeast(1L)
+        }
+        val posAlpha = positionAlpha(dtMs, raw.accuracyM, effectiveConfig.posSmoothMs)
+
+        val clampedTarget = lastDisplay?.let { previous ->
+            clampTarget(
+                previous = previous.location,
+                target = targetLocation,
+                speedMs = raw.speedMs,
+                speedAccuracyMs = raw.speedAccuracyMs,
+                accuracyM = raw.accuracyM,
+                dtMs = dtMs
+            )
+        } ?: targetLocation
 
         val newLocation = if (lastDisplay == null) {
-            targetLocation
+            clampedTarget
         } else {
             val prev = lastDisplay!!.location
             LatLng(
-                lerp(prev.latitude, targetLocation.latitude, posAlpha),
-                lerp(prev.longitude, targetLocation.longitude, posAlpha)
+                lerp(prev.latitude, clampedTarget.latitude, posAlpha),
+                lerp(prev.longitude, clampedTarget.longitude, posAlpha)
             )
         }
 
-        val headingAlpha = headingAlpha(dtMs, raw.speedMs, raw.accuracyM)
+        val headingAlpha = headingAlpha(
+            dtMs,
+            raw.speedMs,
+            raw.accuracyM,
+            raw.bearingAccuracyDeg,
+            effectiveConfig.headingSmoothMs
+        )
         val newTrack = if (lastDisplay == null) raw.trackDeg else lerpAngle(lastDisplay!!.trackDeg, raw.trackDeg, headingAlpha)
 
         val pose = DisplayPose(
@@ -77,6 +119,8 @@ class DisplayPoseSmoother {
             headingDeg = raw.headingDeg,
             orientationMode = raw.orientationMode,
             accuracyM = raw.accuracyM,
+            bearingAccuracyDeg = raw.bearingAccuracyDeg,
+            speedAccuracyMs = raw.speedAccuracyMs,
             speedMs = raw.speedMs,
             updatedAtMs = nowMs
         )
@@ -85,8 +129,8 @@ class DisplayPoseSmoother {
         return pose
     }
 
-    private fun positionAlpha(dtMs: Long, accuracyM: Double): Double {
-        val base = (dtMs.toDouble() / POS_SMOOTH_MS).coerceIn(0.0, 1.0)
+    private fun positionAlpha(dtMs: Long, accuracyM: Double, posSmoothMs: Double): Double {
+        val base = (dtMs.toDouble() / posSmoothMs).coerceIn(0.0, 1.0)
         val accuracyScale = when {
             accuracyM > 20.0 -> 0.25
             accuracyM > 12.0 -> 0.4
@@ -97,15 +141,43 @@ class DisplayPoseSmoother {
         return base * accuracyScale
     }
 
-    private fun headingAlpha(dtMs: Long, speedMs: Double, accuracyM: Double): Double {
-        val base = (dtMs.toDouble() / HEADING_SMOOTH_MS).coerceIn(0.0, 1.0)
-        val speedGate = if (speedMs < MIN_SPEED_FOR_HEADING_MS) 0.25 else 1.0
+    private fun headingAlpha(
+        dtMs: Long,
+        speedMs: Double,
+        accuracyM: Double,
+        bearingAccuracyDeg: Double?,
+        headingSmoothMs: Double
+    ): Double {
+        val base = (dtMs.toDouble() / headingSmoothMs).coerceIn(0.0, 1.0)
+        val speedGate = if (speedMs < minSpeedForHeadingMs) 0.25 else 1.0
         val accuracyGate = if (accuracyM > 15.0) 0.5 else 1.0
-        return base * speedGate * accuracyGate
+        val bearingGate = bearingAccuracyDeg
+            ?.takeIf { it.isFinite() && it >= 0.0 }
+            ?.let { accuracyDeg ->
+                val clamped = accuracyDeg.coerceIn(1.0, 30.0)
+                (1.0 - ((clamped - 1.0) / 29.0)) * 0.8 + 0.2
+            } ?: 1.0
+        return base * speedGate * accuracyGate * bearingGate
     }
 
-    private fun predictLocation(raw: RawFix, rawAgeMs: Long): LatLng {
-        val travelTimeS = (rawAgeMs.coerceAtMost(DEAD_RECKON_LIMIT_MS)).toDouble() / 1000.0
+    private fun predictLocation(
+        raw: RawFix,
+        rawAgeMs: Long,
+        deadReckonLimitMs: Long
+    ): LatLng {
+        if (raw.speedMs < minSpeedForPredictionMs) {
+            return LatLng(raw.latitude, raw.longitude)
+        }
+        val speedAccuracy = raw.speedAccuracyMs
+            ?.takeIf { it.isFinite() && it >= 0.0 }
+        if (speedAccuracy != null && speedAccuracy > SPEED_ACCURACY_POOR_MS) {
+            return LatLng(raw.latitude, raw.longitude)
+        }
+
+        val bearingScale = bearingPredictionScale(raw.bearingAccuracyDeg)
+        val effectiveAgeMs = (rawAgeMs.coerceAtMost(deadReckonLimitMs).toDouble() * bearingScale)
+            .coerceAtLeast(0.0)
+        val travelTimeS = effectiveAgeMs / 1000.0
         if (travelTimeS <= 0.0 || raw.speedMs <= 0.0) {
             return LatLng(raw.latitude, raw.longitude)
         }
@@ -113,6 +185,67 @@ class DisplayPoseSmoother {
         val distance = raw.speedMs * travelTimeS
         val (lat, lon) = project(raw.latitude, raw.longitude, raw.trackDeg, distance)
         return LatLng(lat, lon)
+    }
+
+    private fun bearingPredictionScale(bearingAccuracyDeg: Double?): Double {
+        val accuracy = bearingAccuracyDeg?.takeIf { it.isFinite() && it >= 0.0 } ?: return 1.0
+        val clamped = accuracy.coerceIn(BEARING_ACCURACY_MIN_DEG, BEARING_ACCURACY_BAD_DEG)
+        val t = (clamped - BEARING_ACCURACY_MIN_DEG) / (BEARING_ACCURACY_BAD_DEG - BEARING_ACCURACY_MIN_DEG)
+        return (1.0 - t) * 1.0 + t * PREDICTION_SCALE_MIN
+    }
+
+    private fun clampTarget(
+        previous: LatLng,
+        target: LatLng,
+        speedMs: Double,
+        speedAccuracyMs: Double?,
+        accuracyM: Double,
+        dtMs: Long
+    ): LatLng {
+        val distance = distanceMeters(previous.latitude, previous.longitude, target.latitude, target.longitude)
+        if (!distance.isFinite()) return target
+
+        val cappedDtMs = dtMs.coerceAtMost(CLAMP_MAX_DT_MS)
+        val dtSec = cappedDtMs.toDouble() / 1000.0
+
+        val safeAccuracyM = accuracyM.takeIf { it.isFinite() && it >= 0.0 } ?: 0.0
+        val accuracyTerm = safeAccuracyM * CLAMP_ACCURACY_MULTIPLIER
+        val speedTerm = if (speedMs.isFinite() && speedMs > 0.0) speedMs * dtSec * CLAMP_SPEED_MULTIPLIER else 0.0
+        val speedAccuracy = speedAccuracyMs?.takeIf { it.isFinite() && it >= 0.0 }
+        val speedAccuracyPoor = speedAccuracy != null && speedAccuracy > SPEED_ACCURACY_POOR_MS
+
+        val allowed = max(
+            CLAMP_MIN_METERS,
+            if (speedAccuracyPoor) accuracyTerm else accuracyTerm + speedTerm
+        )
+
+        if (distance <= allowed) return target
+
+        val bearing = bearingDegrees(previous.latitude, previous.longitude, target.latitude, target.longitude)
+        if (!bearing.isFinite()) return target
+        val (lat, lon) = project(previous.latitude, previous.longitude, bearing, allowed)
+        return LatLng(lat, lon)
+    }
+
+    private fun distanceMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+        val rLat1 = Math.toRadians(lat1)
+        val rLat2 = Math.toRadians(lat2)
+        val a = sin(dLat / 2) * sin(dLat / 2) +
+            cos(rLat1) * cos(rLat2) * sin(dLon / 2) * sin(dLon / 2)
+        val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+        return EARTH_RADIUS_M * c
+    }
+
+    private fun bearingDegrees(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val rLat1 = Math.toRadians(lat1)
+        val rLat2 = Math.toRadians(lat2)
+        val dLon = Math.toRadians(lon2 - lon1)
+        val y = sin(dLon) * cos(rLat2)
+        val x = cos(rLat1) * sin(rLat2) - sin(rLat1) * cos(rLat2) * cos(dLon)
+        val bearing = Math.toDegrees(atan2(y, x))
+        return (bearing + 360.0) % 360.0
     }
 
     private fun project(latDeg: Double, lonDeg: Double, trackDeg: Double, distanceM: Double): Pair<Double, Double> {
@@ -145,10 +278,14 @@ class DisplayPoseSmoother {
 
     companion object {
         private const val EARTH_RADIUS_M = 6_371_000.0
-        private const val DEAD_RECKON_LIMIT_MS = 500L          // how far ahead we predict
-        private const val STALE_FIX_TIMEOUT_MS = 2_000L        // stop updating after this
-        private const val POS_SMOOTH_MS = 300.0                // position low-pass time constant
-        private const val HEADING_SMOOTH_MS = 250.0            // heading low-pass time constant
-        private const val MIN_SPEED_FOR_HEADING_MS = 2.0       // below this, heading is noisy
+        private const val DEFAULT_MIN_SPEED_FOR_HEADING_MS = 2.0 // below this, heading is noisy
+        private const val BEARING_ACCURACY_MIN_DEG = 1.0
+        private const val BEARING_ACCURACY_BAD_DEG = 20.0
+        private const val PREDICTION_SCALE_MIN = 0.2
+        private const val SPEED_ACCURACY_POOR_MS = 2.5
+        private const val CLAMP_MIN_METERS = 5.0
+        private const val CLAMP_ACCURACY_MULTIPLIER = 3.0
+        private const val CLAMP_SPEED_MULTIPLIER = 1.5
+        private const val CLAMP_MAX_DT_MS = 2_000L
     }
 }

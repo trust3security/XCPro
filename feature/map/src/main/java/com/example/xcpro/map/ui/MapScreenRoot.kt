@@ -22,10 +22,10 @@ import com.example.xcpro.map.LocationManager
 import com.example.xcpro.map.MapScreenViewModel
 import com.example.xcpro.map.MapUiEvent
 import com.example.xcpro.map.MapStateStore
+import com.example.xcpro.map.trail.SnailTrailManager
 import com.example.ui1.icons.Task
 import com.example.dfcards.dfcards.CardContainer
 import com.example.dfcards.dfcards.FlightDataViewModel
-import com.example.dfcards.FlightModeSelection
 import android.annotation.SuppressLint
 import android.content.Context
 import android.util.Log
@@ -94,9 +94,14 @@ internal fun MapScreenRoot(
     val mapStateReader = mapViewModel.mapState
     val modes = FlightMode.values()
 
+    val snailTrailManager = remember(mapState, context) {
+        SnailTrailManager(context, mapState)
+    }
+
     // ?o. Map Orientation Manager
     val orientationManager = mapViewModel.orientationManager
     val orientationData by orientationManager.orientationFlow.collectAsStateWithLifecycle()
+    val windArrowState by mapViewModel.windArrowState.collectAsStateWithLifecycle()
     val taskManager = mapViewModel.taskManager  // ?o. Using coordinator for task management
     val waypointRepo = remember(mapUiState.waypoints) { FileWaypointRepo(mapUiState.waypoints) }
 
@@ -126,8 +131,8 @@ internal fun MapScreenRoot(
     // G£à Initialize FlightDataManager
     val flightDataManager = mapViewModel.flightDataManager
     // Map Overlay Manager - centralized overlay management
-    val overlayManager = remember(mapState, taskManager, context, mapStateReader, mapViewModel) {
-        MapOverlayManager(context, mapState, mapStateReader, taskManager, mapViewModel)
+    val overlayManager = remember(mapState, taskManager, context, mapStateReader, mapViewModel, snailTrailManager, coroutineScope) {
+        MapOverlayManager(context, mapState, mapStateReader, taskManager, mapViewModel, snailTrailManager, coroutineScope)
     }
 
     // G£à UI Widget Manager - centralized widget management
@@ -162,9 +167,7 @@ internal fun MapScreenRoot(
     // G£à LocationManager - Centralized location handling
     val locationManager = remember(
         mapState,
-        coroutineScope,
         mapStateReader,
-        mapViewModel.qnhPreferencesRepository,
         mapViewModel.varioServiceManager,
         context
     ) {
@@ -174,7 +177,6 @@ internal fun MapScreenRoot(
             mapStateReader = mapStateReader,
             stateActions = mapViewModel,
             coroutineScope = coroutineScope,
-            qnhPreferencesRepository = mapViewModel.qnhPreferencesRepository,
             varioServiceManager = mapViewModel.varioServiceManager
         )
     }
@@ -202,8 +204,8 @@ internal fun MapScreenRoot(
         mapStateReader,
         orientationManager,
         taskManager,
-        mapViewModel.unifiedSensorManager,
-        context
+        context,
+        coroutineScope
     ) {
         MapInitializer(
             context = context,
@@ -212,7 +214,8 @@ internal fun MapScreenRoot(
             stateActions = mapViewModel,
             orientationManager = orientationManager,
             taskManager = taskManager,
-            unifiedSensorManager = mapViewModel.unifiedSensorManager
+            snailTrailManager = snailTrailManager,
+            coroutineScope = coroutineScope
         )
     }
     val gpsStatus by mapViewModel.gpsStatusFlow.collectAsStateWithLifecycle()
@@ -226,6 +229,9 @@ internal fun MapScreenRoot(
     val suppressLiveGps by mapViewModel.suppressLiveGps.collectAsStateWithLifecycle()
     val allowSensorStart by mapViewModel.allowSensorStart.collectAsStateWithLifecycle()
     val locationForUi by mapViewModel.mapLocation.collectAsStateWithLifecycle()
+    val trailSettings by mapStateReader.trailSettings.collectAsStateWithLifecycle()
+    val flightState by mapViewModel.varioServiceManager.flightStateSource.flightState.collectAsStateWithLifecycle()
+    val liveFlightData by flightDataManager.liveFlightDataFlow.collectAsStateWithLifecycle()
 
     // G£à AAT Edit Mode State - Track when AAT pin editing is active
     val isAATEditMode by mapViewModel.isAATEditMode.collectAsStateWithLifecycle()
@@ -256,6 +262,22 @@ internal fun MapScreenRoot(
             Log.d(TAG, "G£à Drawer gestures enabled")
         }
     }
+
+    LaunchedEffect(
+        liveFlightData,
+        trailSettings,
+        currentZoom,
+        flightState.isFlying,
+        suppressLiveGps
+    ) {
+        snailTrailManager.updateFromFlightData(
+            liveData = liveFlightData,
+            isFlying = flightState.isFlying,
+            isReplay = suppressLiveGps,
+            settings = trailSettings,
+            currentZoom = currentZoom
+        )
+    }
     val savedLocation by mapStateReader.savedLocation.collectAsStateWithLifecycle()
     val savedZoom by mapStateReader.savedZoom.collectAsStateWithLifecycle()
     val savedBearing by mapStateReader.savedBearing.collectAsStateWithLifecycle()
@@ -275,29 +297,30 @@ internal fun MapScreenRoot(
     // G£à Variometer test state for debug effects
     // G£à CENTRALIZED EFFECTS - Replace all individual LaunchedEffect blocks
     // G£à REFACTORED: Removed cardStates parameter - no longer needed
-    MapComposeEffects.AllMapEffects(
-        locationManager = locationManager,
-        locationPermissionLauncher = locationPermissionLauncher,
-        currentLocation = locationForUi,
-        orientationData = orientationData,
-        orientationManager = orientationManager,
-        uiState = profileUiState,
-        flightDataManager = flightDataManager,
-        currentMode = currentMode,
-        onModeChange = mapViewModel::setFlightMode,
-        currentFlightModeSelection = currentFlightModeSelection,
-        safeContainerSize = safeContainerSize,
-        flightViewModel = flightViewModel,
-        cardPreferences = cardPreferences,
-        profileModeCards = profileModeCards,
-        profileModeTemplates = profileModeTemplates,
-        activeTemplateId = activeTemplateId,
-        initialMapStyle = initialMapStyle,
-        onMapStyleResolved = mapViewModel::setMapStyle,
-        cardsReady = cardHydrationReady,
-        suppressLiveGps = suppressLiveGps,
-        allowSensorStart = allowSensorStart
-    )
+        MapComposeEffects.AllMapEffects(
+            locationManager = locationManager,
+            locationPermissionLauncher = locationPermissionLauncher,
+            currentLocation = locationForUi,
+            orientationData = orientationData,
+            orientationManager = orientationManager,
+            uiState = profileUiState,
+            flightDataManager = flightDataManager,
+            currentMode = currentMode,
+            onModeChange = mapViewModel::setFlightMode,
+            currentFlightModeSelection = currentFlightModeSelection,
+            safeContainerSize = safeContainerSize,
+            flightViewModel = flightViewModel,
+            cardPreferences = cardPreferences,
+            profileModeCards = profileModeCards,
+            profileModeTemplates = profileModeTemplates,
+            activeTemplateId = activeTemplateId,
+            initialMapStyle = initialMapStyle,
+            onMapStyleResolved = mapViewModel::setMapStyle,
+            cardsReady = cardHydrationReady,
+            replaySessionState = replaySession,
+            suppressLiveGps = suppressLiveGps,
+            allowSensorStart = allowSensorStart
+        )
 
     // G£à CENTRALIZED LIFECYCLE EFFECTS - Replace individual DisposableEffect blocks
     MapLifecycleEffects.LifecycleObserverEffect(lifecycleManager)
@@ -351,7 +374,9 @@ internal fun MapScreenRoot(
         },
         onMapStyleSelected = { style ->
             mapViewModel.setMapStyle(style)
-            saveConfig(context, style, emptyMap(), profileExpanded.value, mapStyleExpanded.value)
+            coroutineScope.launch {
+                saveConfig(context, style, emptyMap(), profileExpanded.value, mapStyleExpanded.value)
+            }
             Log.d(TAG, "Map style selected: $style")
             onMapStyleSelected(style)
         },
@@ -365,10 +390,8 @@ internal fun MapScreenRoot(
         flightDataManager = flightDataManager,
         flightViewModel = flightViewModel,
         taskManager = taskManager,
-        orientationManager = orientationManager,
-        orientationData = orientationData,
+        windArrowState = windArrowState,
         cameraManager = cameraManager,
-        currentFlightModeSelection = currentFlightModeSelection,
         currentMode = currentMode,
         currentZoom = currentZoom,
         onModeChange = mapViewModel::setFlightMode,
@@ -414,6 +437,9 @@ internal fun MapScreenRoot(
         taskScreenManager = taskScreenManager,
         waypointData = mapUiState.waypoints,
         unitsPreferences = mapUiState.unitsPreferences,
+        qnhCalibrationState = mapUiState.qnhCalibrationState,
+        onAutoCalibrateQnh = mapViewModel::onAutoCalibrateQnh,
+        onSetManualQnh = mapViewModel::onSetManualQnh,
         ballastUiState = mapViewModel.ballastUiState,
         isBallastPillHidden = mapUiState.hideBallastPill,
         onBallastCommand = mapViewModel::submitBallastCommand,
@@ -422,7 +448,10 @@ internal fun MapScreenRoot(
         cardStyle = cardStyle,
         replayState = mapViewModel.replaySessionState,
         showVarioDemoFab = mapViewModel.showVarioDemoFab,
-        onVarioDemoClick = mapViewModel::onVarioDemoReplay
+        onVarioDemoReferenceClick = mapViewModel::onVarioDemoReplay,
+        onVarioDemoSimClick = mapViewModel::onVarioDemoReplaySim,
+        showRacingReplayFab = mapViewModel.showRacingReplayFab,
+        onRacingReplayClick = mapViewModel::onRacingTaskReplay
     )
 }
 

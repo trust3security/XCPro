@@ -1,25 +1,35 @@
 package com.example.xcpro.sensors
 
-import android.util.Log
+import com.example.xcpro.core.common.logging.AppLogger
 import java.util.Locale
 import kotlin.math.abs
 
 internal fun FlightDataCalculatorEngine.updateVarioFilter(baro: BaroData?, accel: AccelData?) {
     if (baro == null) {
-        Log.d(FlightDataCalculatorEngine.TAG, "No barometer data - skipping vario update")
+        if (AppLogger.rateLimit(FlightDataCalculatorEngine.TAG, "no_baro", 1_000L)) {
+            AppLogger.d(FlightDataCalculatorEngine.TAG, "No barometer data - skipping vario update")
+        }
         return
     }
 
     val wallTime = System.currentTimeMillis()
 
+    val calcTime = if (isReplayMode) {
+        baro.timestamp
+    } else {
+        baro.monotonicTimestampMillis.takeIf { it > 0L } ?: baro.timestamp
+    }
+
+    if (lastBaroSampleTime != 0L && calcTime == lastBaroSampleTime) {
+        return
+    }
+    lastBaroSampleTime = calcTime
+
+    val outputTime = if (isReplayMode) calcTime else wallTime
+
     // In replay mode, downstream estimators (wind, circling, etc.) use the sensor timestamps as
     // the "simulation clock". Keep the vario validity clock in the same time base.
-    val currentTime = if (isReplayMode) baro.timestamp else System.currentTimeMillis()
-
-    if (!isReplayMode && autoQnhSessionActive && wallTime > autoQnhSessionDeadlineMs) {
-        autoQnhSessionActive = false
-        Log.w(FlightDataCalculatorEngine.TAG, "Auto QNH calibration timed out; ignoring further samples until requested again")
-    }
+    val currentTime = calcTime
 
     val replayDeltaTime = if (isReplayMode && lastReplayBaroTimestamp > 0L) {
         val deltaMs = (baro.timestamp - lastReplayBaroTimestamp).coerceAtLeast(1L)
@@ -38,33 +48,15 @@ internal fun FlightDataCalculatorEngine.updateVarioFilter(baro: BaroData?, accel
     if (deltaTime < 0.01) {
         return
     }
-    val smoothedPressure = filters.pressureKalmanFilter.update(baro.pressureHPa.value, baro.timestamp)
+    val smoothedPressure = filters.pressureKalmanFilter.update(baro.pressureHPa.value, currentTime)
 
     val previousBaroResult = cachedBaroResult
-    val canAutoCalibrateNow = !isReplayMode &&
-        autoQnhSessionActive &&
-        cachedGPSSpeed.isFinite() &&
-        cachedGPSSpeed <= FlightDataCalculatorEngine.AUTO_QNH_MAX_SPEED_MS
-
-    val hasCalibrationFix = canAutoCalibrateNow &&
-        cachedIsGPSFixed &&
-        !cachedGPSAltitude.isNaN() &&
-        cachedGPSAccuracy <= FlightDataCalculatorEngine.QNH_CALIBRATION_ACCURACY_THRESHOLD
-
     val baroResult = baroCalculator.calculateBarometricAltitude(
         rawPressureHPa = smoothedPressure,
-        gpsAltitudeMeters = if (hasCalibrationFix) cachedGPSAltitude else null,
-        gpsAccuracy = if (hasCalibrationFix) cachedGPSAccuracy else null,
-        isGPSFixed = hasCalibrationFix,
-        gpsLat = cachedGPSLat.takeIf { hasCalibrationFix },
-        gpsLon = cachedGPSLon.takeIf { hasCalibrationFix }
+        gpsAltitudeMeters = null,
+        gpsAccuracy = null,
+        isGPSFixed = false
     )
-
-    if (!isReplayMode && autoQnhSessionActive && baroCalculator.isCalibrationFinished()) {
-        autoQnhSessionActive = false
-        val qnhLabel = String.format(Locale.US, "%.1f", baroResult.qnh)
-        Log.i(FlightDataCalculatorEngine.TAG, "Auto QNH calibration completed (QNH=$qnhLabel)")
-    }
 
     if (previousBaroResult != null) {
         val qnhDelta = abs(baroResult.qnh - previousBaroResult.qnh)
@@ -74,18 +66,18 @@ internal fun FlightDataCalculatorEngine.updateVarioFilter(baro: BaroData?, accel
             val qnhLabel = String.format(Locale.US, "%.2f", qnhDelta)
             val altitudeLabel = String.format(Locale.US, "%.1f", altitudeDelta)
             if (isReplayMode) {
-                Log.w(
+                AppLogger.w(
                     FlightDataCalculatorEngine.TAG,
                     "Replay QNH jump detected ??${qnhLabel} hPa / ??${altitudeLabel} m - ignoring reset to keep vario stable"
                 )
             } else {
-                Log.w(
+                AppLogger.w(
                     FlightDataCalculatorEngine.TAG,
                     "QNH jump detected ??${qnhLabel} hPa / ??${altitudeLabel} m - resetting vario filters"
                 )
                 varioSuite.resetAll()
                 filters.baroFilter.reset()
-                filters.pressureKalmanFilter.reset(smoothedPressure, baro.timestamp)
+                filters.pressureKalmanFilter.reset(smoothedPressure, currentTime)
                 cachedVarioResult = null
                 emissionState.varioValidUntil = 0L
             }
@@ -93,7 +85,8 @@ internal fun FlightDataCalculatorEngine.updateVarioFilter(baro: BaroData?, accel
     }
 
     val verticalAccelForFusion = accel?.let { accelSample ->
-        val ageMs = currentTime - accelSample.timestamp
+        val accelTimestamp = accelSample.monotonicTimestampMillis.takeIf { it > 0L } ?: accelSample.timestamp
+        val ageMs = currentTime - accelTimestamp
         val fresh = ageMs in 0..FlightDataCalculatorEngine.ACCEL_FRESHNESS_MS
         if (!accelSample.isReliable || !fresh) {
             0.0
@@ -103,12 +96,12 @@ internal fun FlightDataCalculatorEngine.updateVarioFilter(baro: BaroData?, accel
             val dt = deltaTime.coerceAtLeast(1e-3)
             val alpha = dt / (FlightDataCalculatorEngine.ACCEL_SMOOTH_TAU_S + dt)
             val prev = smoothedVerticalAccel
-            val next = if (prev == null || accelSample.timestamp <= lastAccelTimestamp) {
+            val next = if (prev == null || accelTimestamp <= lastAccelTimestamp) {
                 clamped
             } else {
                 prev + alpha * (clamped - prev)
             }
-            lastAccelTimestamp = accelSample.timestamp
+            lastAccelTimestamp = accelTimestamp
             smoothedVerticalAccel = next
             next
         }
@@ -126,7 +119,7 @@ internal fun FlightDataCalculatorEngine.updateVarioFilter(baro: BaroData?, accel
         rawBaroAltitude = baroResult.altitudeMeters,
         gpsAltitude = cachedGPSAltitude,
         gpsAccuracy = cachedGPSAccuracy,
-        timestampMillis = baro.timestamp
+        timestampMillis = currentTime
     )
     val varioResult = com.example.dfcards.filters.ModernVarioResult(
         altitude = filteredBaro.displayAltitude,
@@ -165,6 +158,7 @@ internal fun FlightDataCalculatorEngine.updateVarioFilter(baro: BaroData?, accel
                 gps = gps,
                 compass = cachedCompassData,
                 currentTime = currentTime,
+                outputTimestampMillis = outputTime,
                 deltaTime = emitDeltaTime,
                 varioResultInput = varioResult,
                 baroResult = cachedBaroResult,
@@ -175,8 +169,7 @@ internal fun FlightDataCalculatorEngine.updateVarioFilter(baro: BaroData?, accel
                 replayRealVarioMs = replayRealVarioMs,
                 replayRealVarioTimestamp = replayRealVarioTimestamp,
                 macCreadySetting = macCreadySetting,
-                macCreadyRisk = macCreadyRisk,
-                autoQnhSessionActive = autoQnhSessionActive
+                macCreadyRisk = macCreadyRisk
             )
         }
     }
@@ -208,14 +201,22 @@ internal fun FlightDataCalculatorEngine.updateVarioFilter(baro: BaroData?, accel
 
 internal fun FlightDataCalculatorEngine.updateGPSData(gps: GPSData?, compass: CompassData?) {
     if (gps == null) {
-        Log.d(FlightDataCalculatorEngine.TAG, "No GPS data - skipping GPS update")
+        if (AppLogger.rateLimit(FlightDataCalculatorEngine.TAG, "no_gps", 1_000L)) {
+            AppLogger.d(FlightDataCalculatorEngine.TAG, "No GPS data - skipping GPS update")
+        }
         return
     }
 
     val wallTime = System.currentTimeMillis()
     // Use GPS timestamps as the "simulation clock" in replay mode so time-based metrics (wind,
     // thermal windows, circling detection) advance with the IGC log instead of wall clock.
-    val currentTime = if (isReplayMode) gps.timestamp else wallTime
+    val calcTime = if (isReplayMode) {
+        gps.timestamp
+    } else {
+        gps.monotonicTimestampMillis.takeIf { it > 0L } ?: gps.timestamp
+    }
+    val currentTime = calcTime
+    val outputTime = if (isReplayMode) calcTime else wallTime
     if (isReplayMode && wallTime - lastReplayGpsLogTime >= 1_000L) {
         lastReplayGpsLogTime = wallTime
         logReplayGpsSample(FlightDataCalculatorEngine.TAG, gps.position.latitude, gps.position.longitude, gps.altitude.value, gps.speed.value, gps.bearing.toDouble(), gps.timestamp)
@@ -226,14 +227,14 @@ internal fun FlightDataCalculatorEngine.updateGPSData(gps: GPSData?, compass: Co
     cachedGPSAltitude = gps.altitude.value
     cachedGPSAccuracy = gps.accuracy.toDouble()
     cachedIsGPSFixed = gps.isHighAccuracy
-    cachedGPSLat = gps.position.latitude   // dYs? For SRTM-based QNH calibration
-    cachedGPSLon = gps.position.longitude  // dYs? For SRTM-based QNH calibration
+    cachedGPSLat = gps.position.latitude   // Reserved for terrain-aware metrics
+    cachedGPSLon = gps.position.longitude  // Reserved for terrain-aware metrics
     cachedGPS = gps
     cachedCompassData = compass
 
-    if (gps.timestamp != lastGpsFixTimestampForGpsVario && gps.altitude.value.isFinite()) {
-        varioSuite.updateGpsVario(gpsAltitudeMeters = gps.altitude.value, gpsTimestampMillis = gps.timestamp)
-        lastGpsFixTimestampForGpsVario = gps.timestamp
+    if (currentTime != lastGpsFixTimestampForGpsVario && gps.altitude.value.isFinite()) {
+        varioSuite.updateGpsVario(gpsAltitudeMeters = gps.altitude.value, gpsTimestampMillis = currentTime)
+        lastGpsFixTimestampForGpsVario = currentTime
     }
 
     val deltaTime = if (emissionState.lastUpdateTime > 0) {
@@ -263,6 +264,7 @@ internal fun FlightDataCalculatorEngine.updateGPSData(gps: GPSData?, compass: Co
             gps = gps,
             compass = compass,
             currentTime = currentTime,
+            outputTimestampMillis = outputTime,
             deltaTime = deltaTime,
             varioResultInput = varioResultInput,
             baroResult = cachedBaroResult,
@@ -273,8 +275,7 @@ internal fun FlightDataCalculatorEngine.updateGPSData(gps: GPSData?, compass: Co
             replayRealVarioMs = replayRealVarioMs,
             replayRealVarioTimestamp = replayRealVarioTimestamp,
             macCreadySetting = macCreadySetting,
-            macCreadyRisk = macCreadyRisk,
-            autoQnhSessionActive = autoQnhSessionActive
+            macCreadyRisk = macCreadyRisk
         )
     }
 }

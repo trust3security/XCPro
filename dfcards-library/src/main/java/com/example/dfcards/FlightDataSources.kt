@@ -36,6 +36,8 @@ data class RealTimeFlightData(
     val agl: Double = 0.0,
     val verticalSpeed: Double = 0.0,  // Default vario (currently optimized)
     val displayVario: Double = 0.0,
+    val displayNeedleVario: Double = 0.0,
+    val displayNeedleVarioFast: Double = 0.0,
     val pressureAltitude: Double = 0.0,
     val baroGpsDelta: Double? = null,
     val baroConfidence: ConfidenceLevel = ConfidenceLevel.LOW,

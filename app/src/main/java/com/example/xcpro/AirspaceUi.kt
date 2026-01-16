@@ -35,40 +35,26 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.toColorInt
-import java.io.File
 
 // Airspace UI helpers for the flight management screen.
 
-internal fun extractAirspaceClassesFromFile(context: Context, fileName: String): List<String> {
-    return try {
-        val file = File(context.filesDir, fileName)
-        if (!file.exists()) return emptyList()
-        file.readLines()
-            .filter { it.startsWith("AC ") }
-            .map { it.substring(3).trim() }
-            .distinct()
-    } catch (e: Exception) {
-        emptyList()
-    }
-}
-
-internal fun updateUniqueAirspaceClasses(
+internal suspend fun updateUniqueAirspaceClasses(
     context: Context,
     files: List<Uri>,
     checkedStates: Map<String, Boolean>,
     onError: (String) -> Unit
 ): List<String> {
-    val enabledFileNames = files.filter { uri ->
-        val name = uri.lastPathSegment ?: ""
-        checkedStates[name] ?: false
-    }.map { uri ->
-        uri.lastPathSegment ?: ""
+    val enabledFiles = files.filter { uri ->
+        val name = uri.lastPathSegment ?: return@filter false
+        checkedStates[name] == true
     }
 
     return try {
-        enabledFileNames.flatMap { fileName ->
-            extractAirspaceClassesFromFile(context, fileName)
-        }.distinct().sorted()
+        if (enabledFiles.isEmpty()) {
+            emptyList()
+        } else {
+            AirspaceRepository(context).parseClasses(enabledFiles)
+        }
     } catch (e: Exception) {
         onError("Error extracting airspace classes: ${e.message}")
         emptyList()

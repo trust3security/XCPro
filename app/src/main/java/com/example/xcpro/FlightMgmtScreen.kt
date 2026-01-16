@@ -30,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -39,7 +40,10 @@ import com.example.dfcards.CardCategory
 import com.example.dfcards.CardPreferences
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.FlightTemplate
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 // FlightMgmtScreen hosts the flight management UI (airspace, waypoints, templates).
 
@@ -59,6 +63,7 @@ fun FlightMgmt(
     var selectedFlightMode by remember { mutableStateOf(FlightModeSelection.CRUISE) }
     var allTemplates by remember { mutableStateOf<List<FlightTemplate>>(emptyList()) }
     var selectedTemplate by remember { mutableStateOf<FlightTemplate?>(null) }
+    val coroutineScope = rememberCoroutineScope()
     val selectedAirspaceFiles = remember { mutableStateListOf<Uri>() }
     val airspaceCheckedStates = remember { mutableStateOf(mutableMapOf<String, Boolean>()) }
     val selectedWaypointFiles = remember { mutableStateListOf<Uri>() }
@@ -68,7 +73,7 @@ fun FlightMgmt(
     var uniqueAirspaceClasses by remember { mutableStateOf<List<String>>(emptyList()) }
 
     LaunchedEffect(Unit) {
-        val (airspaceFiles, airspaceChecks) = loadAirspaceFiles(context)
+        val (airspaceFiles, airspaceChecks) = withContext(Dispatchers.IO) { loadAirspaceFiles(context) }
         val (waypointFiles, waypointChecks) = loadWaypointFiles(context)
         selectedAirspaceFiles.clear()
         selectedAirspaceFiles.addAll(airspaceFiles)
@@ -76,7 +81,7 @@ fun FlightMgmt(
         selectedWaypointFiles.clear()
         selectedWaypointFiles.addAll(waypointFiles)
         waypointCheckedStates.value = waypointChecks
-        selectedClasses.value = loadSelectedClasses(context) ?: mutableMapOf()
+        selectedClasses.value = withContext(Dispatchers.IO) { loadSelectedClasses(context) } ?: mutableMapOf()
         val templates = cardPreferences.getAllTemplates().first()
         allTemplates = templates
         cardPreferences.saveFlightModeTemplate("CRUISE", "essential")
@@ -109,30 +114,38 @@ fun FlightMgmt(
 
     val airspaceLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
-            try {
-                val fileName = copyFileToInternalStorage(context, it)
-                selectedAirspaceFiles.add(it)
-                airspaceCheckedStates.value[fileName] = true
-                saveAirspaceFiles(context, selectedAirspaceFiles, airspaceCheckedStates.value)
-                uniqueAirspaceClasses = updateUniqueAirspaceClasses(
-                    context,
-                    selectedAirspaceFiles,
-                    airspaceCheckedStates.value
-                ) { error -> errorMessage = error }
-            } catch (e: Exception) {
-                errorMessage = "Error adding airspace file: ${e.message}"
+            coroutineScope.launch {
+                try {
+                    val fileName = withContext(Dispatchers.IO) { copyFileToInternalStorage(context, it) }
+                    selectedAirspaceFiles.add(it)
+                    airspaceCheckedStates.value[fileName] = true
+                    withContext(Dispatchers.IO) {
+                        saveAirspaceFiles(context, selectedAirspaceFiles, airspaceCheckedStates.value)
+                    }
+                    uniqueAirspaceClasses = updateUniqueAirspaceClasses(
+                        context,
+                        selectedAirspaceFiles,
+                        airspaceCheckedStates.value
+                    ) { error -> errorMessage = error }
+                } catch (e: Exception) {
+                    errorMessage = "Error adding airspace file: ${e.message}"
+                }
             }
         }
     }
 
     fun onToggleAirspaceFile(name: String) {
         airspaceCheckedStates.value[name] = !(airspaceCheckedStates.value[name] ?: false)
-        saveAirspaceFiles(context, selectedAirspaceFiles, airspaceCheckedStates.value)
-        uniqueAirspaceClasses = updateUniqueAirspaceClasses(
-            context,
-            selectedAirspaceFiles,
-            airspaceCheckedStates.value
-        ) { error -> errorMessage = error }
+        coroutineScope.launch {
+            withContext(Dispatchers.IO) {
+                saveAirspaceFiles(context, selectedAirspaceFiles, airspaceCheckedStates.value)
+            }
+            uniqueAirspaceClasses = updateUniqueAirspaceClasses(
+                context,
+                selectedAirspaceFiles,
+                airspaceCheckedStates.value
+            ) { error -> errorMessage = error }
+        }
     }
 
     Scaffold(

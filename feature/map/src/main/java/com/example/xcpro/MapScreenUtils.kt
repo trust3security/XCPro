@@ -112,6 +112,8 @@ fun convertToRealTimeFlightData(
         // Calculated values
         verticalSpeed = completeData.verticalSpeed.value,
         displayVario = completeData.displayVario.value,
+        displayNeedleVario = completeData.displayNeedleVario.value,
+        displayNeedleVarioFast = completeData.displayNeedleVarioFast.value,
         agl = completeData.agl.value,
         pressureAltitude = completeData.pressureAltitude.value,
         baroGpsDelta = completeData.baroGpsDelta?.value,

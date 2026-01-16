@@ -32,6 +32,7 @@ internal class FlightDataEmitter(
         gps: GPSData,
         compass: CompassData?,
         currentTime: Long,
+        outputTimestampMillis: Long,
         deltaTime: Double,
         varioResultInput: ModernVarioResult,
         baroResult: BarometricAltitudeData?,
@@ -42,8 +43,7 @@ internal class FlightDataEmitter(
         replayRealVarioMs: Double?,
         replayRealVarioTimestamp: Long,
         macCreadySetting: Double,
-        macCreadyRisk: Double,
-        autoQnhSessionActive: Boolean
+        macCreadyRisk: Double
     ) {
         val wallTime = System.currentTimeMillis()
 
@@ -70,6 +70,8 @@ internal class FlightDataEmitter(
             FlightMetricsRequest(
                 gps = gps,
                 currentTimeMillis = currentTime,
+                wallTimeMillis = wallTime,
+                gpsTimestampMillis = gps.timeForCalculationsMillis,
                 deltaTimeSeconds = deltaTime,
                 varioResult = varioResultForMetrics,
                 varioGpsValue = varioGpsValueForMetrics,
@@ -104,7 +106,8 @@ internal class FlightDataEmitter(
             varioResults = varioResults,
             replayIgcVario = replayIgcVario,
             dataQuality = dataQuality,
-            timestamp = currentTime,
+            // Wall time for live UI, IGC time for replay UI.
+            timestamp = outputTimestampMillis,
             macCready = macCreadySetting,
             macCreadyRisk = macCreadyRisk
         )
@@ -151,7 +154,7 @@ internal class FlightDataEmitter(
                     "Spd=${String.format(Locale.US, "%.1f", gps.speed.value)} " +
                     "AGL=${flightHelpers.currentAGL.toInt()} " +
                     "QNH=${String.format(Locale.US, "%.1f", baroResult?.qnh ?: Double.NaN)} " +
-                    "cal=${baroResult?.isCalibrated == true} autoCal=$autoQnhSessionActive"
+                    "cal=${baroResult?.isCalibrated == true}"
             )
         }
     }

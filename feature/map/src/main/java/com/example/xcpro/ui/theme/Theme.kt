@@ -1,24 +1,20 @@
-package com.example.xcpro.ui.theme
+﻿package com.example.xcpro.ui.theme
 
-import android.content.Context
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.profiles.ProfileViewModel
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import kotlinx.coroutines.delay
 
 private val LightColorScheme = lightColorScheme(
     primary = BluePrimary, // 0xFF007AFF - blue
@@ -36,6 +32,7 @@ private val LightColorScheme = lightColorScheme(
     outlineVariant = OutlineVariantLight
 )
 
+@Suppress("UNUSED_PARAMETER")
 @Composable
 fun Baseui1Theme(
     darkTheme: Boolean = false, // Force light mode only
@@ -45,48 +42,26 @@ fun Baseui1Theme(
     val profileViewModel: ProfileViewModel = hiltViewModel()
     val profileUiState = profileViewModel.uiState.collectAsStateWithLifecycle()
     val profileId = profileUiState.value.activeProfile?.id ?: "default"
-    
-    // Create a state for the current theme ID that can be observed
-    val sharedPrefs = remember { context.getSharedPreferences("ColorThemePrefs", Context.MODE_PRIVATE) }
-    var currentThemeId by remember(profileId) { 
-        mutableStateOf<String>(sharedPrefs.getString("profile_${profileId}_color_theme", AppColorTheme.DEFAULT.id) ?: AppColorTheme.DEFAULT.id)
+
+    val themePrefs = remember(context) { ThemePreferencesRepository(context) }
+
+    val themeId by themePrefs.observeThemeId(profileId)
+        .collectAsStateWithLifecycle(initialValue = themePrefs.getThemeId(profileId))
+
+    val customColorsJson by themePrefs.observeCustomColorsJson(profileId, themeId)
+        .collectAsStateWithLifecycle(initialValue = themePrefs.getCustomColorsJson(profileId, themeId))
+
+    val effectiveDarkTheme = false
+
+    val colorScheme = remember(profileId, themeId, customColorsJson) {
+        loadUserColorScheme(
+            profileId = profileId,
+            themeId = themeId,
+            customColorsJson = customColorsJson,
+            darkTheme = effectiveDarkTheme
+        )
     }
-    
-    // React to theme changes by checking SharedPreferences periodically
-    LaunchedEffect(profileId) {
-        while (true) {
-            delay(100) // Check every 100ms for faster theme changes
-            val newThemeId = sharedPrefs.getString("profile_${profileId}_color_theme", AppColorTheme.DEFAULT.id) ?: AppColorTheme.DEFAULT.id
-            if (currentThemeId != newThemeId) {
-                currentThemeId = newThemeId
-            }
-        }
-    }
-    
-    // Track custom colors changes to force theme reload
-    var customColorsTrigger by remember { mutableStateOf(0) }
-    
-    // Check for custom color changes
-    var lastCustomColorsJson by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(profileId, currentThemeId) {
-        while (true) {
-            delay(100) // Check every 100ms for custom color changes
-            val newCustomColorsJson = sharedPrefs.getString("profile_${profileId}_theme_${currentThemeId}_custom_colors", null)
-            // Only increment trigger when custom colors actually change
-            if (newCustomColorsJson != lastCustomColorsJson) {
-                lastCustomColorsJson = newCustomColorsJson
-                customColorsTrigger++
-                android.util.Log.d("Theme", "🎨 Custom colors changed, triggering recomposition. New JSON: $newCustomColorsJson")
-            }
-        }
-    }
-    
-    // Load color scheme based on current theme (recomputes when customColorsTrigger changes)
-    // Always use light mode (darkTheme = false)
-    val colorScheme = remember(profileId, currentThemeId, customColorsTrigger) {
-        loadUserColorScheme(context, profileId, false)
-    }
-    
+
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography.copy(
@@ -99,28 +74,27 @@ fun Baseui1Theme(
     )
 }
 
-private fun loadUserColorScheme(context: Context, profileId: String, darkTheme: Boolean): androidx.compose.material3.ColorScheme {
-    val sharedPrefs = context.getSharedPreferences("ColorThemePrefs", Context.MODE_PRIVATE)
-    val themeId = sharedPrefs.getString("profile_${profileId}_color_theme", AppColorTheme.DEFAULT.id)
-    
-    // Try to find the theme from predefined themes
+private fun loadUserColorScheme(
+    profileId: String,
+    themeId: String,
+    customColorsJson: String?,
+    darkTheme: Boolean
+): androidx.compose.material3.ColorScheme {
     val selectedTheme = AppColorTheme.values().find { it.id == themeId } ?: AppColorTheme.DEFAULT
-    
-    // Check if there are custom colors for this specific theme
-    val customColorsJson = sharedPrefs.getString("profile_${profileId}_theme_${themeId}_custom_colors", null)
-    
-    android.util.Log.d("Theme", "🎨 Loading color scheme for profile=$profileId, theme=$themeId")
-    android.util.Log.d("Theme", "🎨 Custom colors JSON: $customColorsJson")
-    
+
+    AppLogger.d(
+        "Theme",
+        "Loading color scheme for profile=$profileId, theme=$themeId, customColorsLength=${customColorsJson?.length ?: 0}"
+    )
+
     return if (customColorsJson != null) {
-        // Use custom colors for this theme
         try {
             val gson = Gson()
             val customColors = gson.fromJson<CustomColorScheme>(
                 customColorsJson,
                 object : TypeToken<CustomColorScheme>() {}.type
             )
-            
+
             // Create custom ColorScheme directly
             createCustomColorScheme(
                 customColors.toPrimaryColor(),
@@ -148,29 +122,29 @@ private fun createCustomColorScheme(
             onPrimary = Color.Black,
             primaryContainer = primaryColor.copy(alpha = 0.3f),
             onPrimaryContainer = primaryColor.copy(alpha = 0.9f),
-            
+
             secondary = secondaryColor.copy(alpha = 0.9f),
             onSecondary = Color.Black,
             secondaryContainer = secondaryColor.copy(alpha = 0.3f),
             onSecondaryContainer = secondaryColor.copy(alpha = 0.9f),
-            
-            
+
+
             error = Color(0xFFFFB4AB),
             onError = Color(0xFF690005),
             errorContainer = Color(0xFF93000A),
             onErrorContainer = Color(0xFFFFDAD6),
-            
+
             background = Color(0xFF1A1C1E),
             onBackground = Color(0xFFE3E2E6),
-            
+
             surface = Color(0xFF1A1C1E),
             onSurface = Color(0xFFE3E2E6),
             surfaceVariant = Color(0xFF44474C),
             onSurfaceVariant = Color(0xFFC4C6CF),
-            
+
             outline = Color(0xFF8E9099),
             outlineVariant = Color(0xFF44474C),
-            
+
             scrim = Color.Black,
             inverseSurface = Color(0xFFE3E2E6),
             inverseOnSurface = Color(0xFF1A1C1E),
@@ -182,29 +156,29 @@ private fun createCustomColorScheme(
             onPrimary = Color.White,
             primaryContainer = primaryColor.copy(alpha = 0.1f),
             onPrimaryContainer = primaryColor,
-            
+
             secondary = secondaryColor,
             onSecondary = Color.White,
             secondaryContainer = secondaryColor.copy(alpha = 0.1f),
             onSecondaryContainer = secondaryColor,
-            
-            
+
+
             error = Color(0xFFBA1A1A),
             onError = Color.White,
             errorContainer = Color(0xFFFFDAD6),
             onErrorContainer = Color(0xFF410002),
-            
+
             background = Color(0xFFFDFDFD),
             onBackground = Color(0xFF1A1C1E),
-            
+
             surface = Color.White,
             onSurface = Color(0xFF1A1C1E),
             surfaceVariant = Color(0xFFE0E3E8),
             onSurfaceVariant = Color(0xFF44474C),
-            
+
             outline = Color(0xFF74777F),
             outlineVariant = Color(0xFFC4C6CF),
-            
+
             scrim = Color.Black,
             inverseSurface = Color(0xFF2F3133),
             inverseOnSurface = Color(0xFFF1F0F4),

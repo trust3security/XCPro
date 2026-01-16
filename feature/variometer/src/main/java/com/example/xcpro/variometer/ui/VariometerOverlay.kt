@@ -48,6 +48,7 @@ object VariometerTestTags {
 @Composable
 fun VariometerOverlay(
     needleValue: Float,
+    fastNeedleValue: Float,
     displayValue: Float,
     offset: Offset,
     sizePx: Float,
@@ -146,6 +147,7 @@ fun VariometerOverlay(
     ) {
         UIVariometer(
             needleValue = needleValue,
+            fastNeedleValue = fastNeedleValue,
             displayValue = displayValue,
             modifier = Modifier.fillMaxSize()
         )

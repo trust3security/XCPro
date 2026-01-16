@@ -9,8 +9,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.xcpro.common.flight.FlightMode
+import com.example.xcpro.AirspaceRepository
 import com.example.xcpro.loadAndApplyAirspace
 import com.example.xcpro.loadAndApplyWaypoints
+import kotlinx.coroutines.launch
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
@@ -56,6 +58,8 @@ fun TaskMapView(
     )
 
     var mapLibreMap by remember { mutableStateOf<MapLibreMap?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+    val airspaceRepository = remember(context) { AirspaceRepository(context) }
 
     // Camera animation effect
     LaunchedEffect(animatedZoom, targetLatLng) {
@@ -106,8 +110,12 @@ fun TaskMapView(
                     })
 
                     // Load and apply airspace and waypoints
-                    loadAndApplyAirspace(ctx, map)
-                    loadAndApplyWaypoints(ctx, map, selectedWaypointFiles, waypointCheckedStates)
+                    coroutineScope.launch {
+                        loadAndApplyAirspace(ctx, map, airspaceRepository)
+                    }
+                    coroutineScope.launch {
+                        loadAndApplyWaypoints(ctx, map, selectedWaypointFiles, waypointCheckedStates)
+                    }
 
                     Log.d(TAG, "✅ MapView initialized successfully")
                 }

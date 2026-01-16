@@ -43,8 +43,7 @@ class MainActivity : ComponentActivity(), StatusBarStyleApplier {
     private var keepSplashVisible = true
 
     private val locationPermissions = arrayOf(
-        Manifest.permission.ACCESS_FINE_LOCATION,
-        Manifest.permission.ACCESS_COARSE_LOCATION
+        Manifest.permission.ACCESS_FINE_LOCATION
     )
 
     private val locationPermissionLauncher =

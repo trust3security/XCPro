@@ -15,12 +15,16 @@ internal class ReplaySampleEmitter(
     private val noiseModel = ReplayNoiseModel(simConfig)
     private val headingResolver = ReplayHeadingResolver()
     private var lastGpsEmitTimestamp: Long = Long.MIN_VALUE
+    private var lastGpsPoint: IgcPoint? = null
+    private var lastResolvedHeadingDeg: Float? = null
     val random = noiseModel.random
 
     fun reset() {
         noiseModel.reset()
         headingResolver.reset()
         lastGpsEmitTimestamp = Long.MIN_VALUE
+        lastGpsPoint = null
+        lastResolvedHeadingDeg = null
         replayAirspeedRepository.reset()
     }
 
@@ -33,7 +37,7 @@ internal class ReplaySampleEmitter(
     ) {
         val movement = IgcReplayMath.groundVector(current, previous)
         val groundSpeed = movement.speedMs
-        val trackDeg = headingResolver.resolve(movement)
+        val fallbackTrackDeg = headingResolver.resolve(movement)
         val gpsAltitude = current.gpsAltitude
 
         val pressureAltitude = current.pressureAltitude ?: gpsAltitude
@@ -48,6 +52,9 @@ internal class ReplaySampleEmitter(
         )
 
         if (shouldEmitGps(current.timestampMillis)) {
+            val gpsMovement = IgcReplayMath.groundVector(current, lastGpsPoint ?: previous ?: current)
+            val gpsTrackDeg = gpsMovement.bearingDeg
+            val gpsSpeed = gpsMovement.speedMs
             val gpsNoise = noiseModel.gpsAltitudeNoise(
                 timestampMillis = current.timestampMillis,
                 startTimestampMillis = startTimestampMillis
@@ -56,15 +63,18 @@ internal class ReplaySampleEmitter(
                 latitude = current.latitude,
                 longitude = current.longitude,
                 altitude = gpsAltitude + gpsNoise,
-                speed = groundSpeed,
-                bearing = trackDeg.toDouble(),
+                speed = gpsSpeed,
+                bearing = gpsTrackDeg.toDouble(),
                 accuracy = 5f,
                 timestamp = current.timestampMillis
             )
             lastGpsEmitTimestamp = current.timestampMillis
+            lastGpsPoint = current
+            lastResolvedHeadingDeg = gpsTrackDeg
         }
+        val headingDeg = (lastResolvedHeadingDeg ?: fallbackTrackDeg).toDouble()
         replaySensorSource.emitCompass(
-            heading = trackDeg.toDouble(),
+            heading = headingDeg,
             accuracy = 3,
             timestamp = current.timestampMillis
         )
@@ -75,7 +85,7 @@ internal class ReplaySampleEmitter(
             "REPLAY_SAMPLE ts=${current.timestampMillis} " +
                 "igcVario=${"%.3f".format(igcVario)} gpsAlt=${"%.1f".format(gpsAltitude)} " +
                 "pressAlt=${"%.1f".format(pressureAltitude)} gs=${"%.2f".format(groundSpeed)} " +
-                "track=${"%.1f".format(trackDeg)}"
+                "track=${"%.1f".format(headingDeg)}"
         )
         if (simConfig.mode == ReplayMode.REFERENCE) {
             replayFusionRepository?.updateReplayRealVario(igcVario, current.timestampMillis)

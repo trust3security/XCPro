@@ -2,6 +2,7 @@ package com.example.xcpro.map
 
 import com.example.dfcards.FlightModeSelection
 import com.example.xcpro.common.flight.FlightMode
+import com.example.xcpro.map.trail.TrailSettings
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -71,6 +72,16 @@ class MapStateStore(
 
     private val _currentUserLocation = MutableStateFlow<MapPoint?>(null)
     override val currentUserLocation: StateFlow<MapPoint?> = _currentUserLocation.asStateFlow()
+
+    private val _trailSettings = MutableStateFlow(TrailSettings())
+    override val trailSettings: StateFlow<TrailSettings> = _trailSettings.asStateFlow()
+
+    private val _displayPoseMode = MutableStateFlow(DisplayPoseMode.SMOOTHED)
+    override val displayPoseMode: StateFlow<DisplayPoseMode> = _displayPoseMode.asStateFlow()
+
+    private val _displaySmoothingProfile = MutableStateFlow(DisplaySmoothingProfile.SMOOTH)
+    override val displaySmoothingProfile: StateFlow<DisplaySmoothingProfile> =
+        _displaySmoothingProfile.asStateFlow()
 
     fun updateSafeContainerSize(size: MapSize) {
         if (size == MapSize.Zero) return
@@ -152,5 +163,23 @@ class MapStateStore(
 
     fun setCurrentUserLocation(location: MapPoint?) {
         _currentUserLocation.value = location
+    }
+
+    fun setTrailSettings(settings: TrailSettings) {
+        if (_trailSettings.value != settings) {
+            _trailSettings.value = settings
+        }
+    }
+
+    fun setDisplayPoseMode(mode: DisplayPoseMode) {
+        if (_displayPoseMode.value != mode) {
+            _displayPoseMode.value = mode
+        }
+    }
+
+    fun setDisplaySmoothingProfile(profile: DisplaySmoothingProfile) {
+        if (_displaySmoothingProfile.value != profile) {
+            _displaySmoothingProfile.value = profile
+        }
     }
 }

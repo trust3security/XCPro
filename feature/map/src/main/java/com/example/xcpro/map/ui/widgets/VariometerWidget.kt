@@ -50,6 +50,7 @@ internal fun VariometerWidgetContent(
     widgetManager: MapUIWidgetManager,
     variometerState: VariometerUiState,
     needleValue: Float,
+    fastNeedleValue: Float,
     displayValue: Float,
     displayLabel: String = String.format("%+.1f", displayValue),
     secondaryLabel: String? = null,
@@ -164,6 +165,7 @@ internal fun VariometerWidgetContent(
     ) {
         UIVariometer(
             needleValue = needleValue,
+            fastNeedleValue = fastNeedleValue,
             displayValue = displayValue,
             valueLabel = displayLabel,
             secondaryLabel = secondaryLabel,

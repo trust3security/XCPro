@@ -23,6 +23,7 @@ import com.example.xcpro.profiles.ProfileViewModel
 import kotlinx.coroutines.launch
 import com.example.xcpro.screens.navdrawer.lookandfeel.StatusBarStyleApplier
 import com.example.xcpro.screens.navdrawer.SettingsTopAppBar
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,6 +38,8 @@ fun LookAndFeelScreen(
     val profileId = profileUiState.activeProfile?.id ?: "default"
 
     val preferences = remember { LookAndFeelPreferences(context) }
+    val snailTrailViewModel: SnailTrailSettingsViewModel = hiltViewModel()
+    val trailSettings by snailTrailViewModel.settings.collectAsStateWithLifecycle()
 
     var statusBarStyle = remember(profileId) {
         mutableStateOf(preferences.getStatusBarStyle(profileId))
@@ -51,11 +54,13 @@ fun LookAndFeelScreen(
     val showStatusSheet = remember { mutableStateOf(false) }
     val showCardSheet = remember { mutableStateOf(false) }
     val showColorSheet = remember { mutableStateOf(false) }
+    val showSnailTrailSheet = remember { mutableStateOf(false) }
 
-    val menuOptions = remember(statusBarStyle.value, cardStyle.value) {
+    val menuOptions = remember(statusBarStyle.value, cardStyle.value, trailSettings) {
         LookAndFeelMenuDefaults.defaultMenuOptions(
             statusBarStyle = statusBarStyle.value,
-            cardStyle = cardStyle.value
+            cardStyle = cardStyle.value,
+            snailTrailSummary = trailSummary(trailSettings)
         )
     }
 
@@ -94,6 +99,7 @@ fun LookAndFeelScreen(
                             "colors" -> showColorSheet.value = true
                             "status_bar" -> showStatusSheet.value = true
                             "card_style" -> showCardSheet.value = true
+                            "snail_trail" -> showSnailTrailSheet.value = true
                             else -> Unit
                         }
                     }
@@ -131,5 +137,14 @@ fun LookAndFeelScreen(
         onNavigateToColors = {
             navController.navigate("colors")
         }
+    )
+
+    SnailTrailSheet(
+        showSheet = showSnailTrailSheet,
+        currentSettings = trailSettings,
+        onLengthSelected = { length -> snailTrailViewModel.setLength(length) },
+        onTypeSelected = { type -> snailTrailViewModel.setType(type) },
+        onWindDriftChanged = { enabled -> snailTrailViewModel.setWindDriftEnabled(enabled) },
+        onScalingChanged = { enabled -> snailTrailViewModel.setScalingEnabled(enabled) }
     )
 }

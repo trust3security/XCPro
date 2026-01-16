@@ -1,5 +1,6 @@
 package com.example.xcpro.sensors.domain
 import com.example.xcpro.sensors.DisplayVarioSmoother
+import com.example.xcpro.sensors.NeedleVarioDynamics
 import com.example.xcpro.sensors.domain.FusionBlackboard
 import com.example.dfcards.calculations.BarometricAltitudeData
 import com.example.dfcards.calculations.ConfidenceLevel
@@ -15,6 +16,8 @@ import com.example.xcpro.sensors.domain.AirspeedSource
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.DISPLAY_DECAY_FACTOR
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.DISPLAY_SMOOTH_TIME_S
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.DISPLAY_VAR_CLAMP
+import com.example.xcpro.sensors.domain.FlightMetricsConstants.FAST_NEEDLE_T95_SECONDS
+import com.example.xcpro.sensors.domain.FlightMetricsConstants.NEEDLE_T95_SECONDS
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.GRAVITY
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.SPEED_HOLD_MS
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.DEFAULT_QNH_HPA
@@ -49,12 +52,21 @@ internal class CalculateFlightMetricsUseCase(
         decayFactor = DISPLAY_DECAY_FACTOR,
         clamp = DISPLAY_VAR_CLAMP
     )
+    private val needleDynamics = NeedleVarioDynamics(
+        t95Seconds = NEEDLE_T95_SECONDS,
+        clamp = DISPLAY_VAR_CLAMP
+    )
+    private val fastNeedleDynamics = NeedleVarioDynamics(
+        t95Seconds = FAST_NEEDLE_T95_SECONDS,
+        clamp = DISPLAY_VAR_CLAMP
+    )
     private var prevTeSpeed: Double = 0.0
     private var groundZeroAccumulatedSeconds: Double = 0.0
 
     fun execute(request: FlightMetricsRequest): FlightMetricsResult {
         val gps = request.gps
         val currentTime = request.currentTimeMillis
+        val wallTime = request.wallTimeMillis
         val varioResult = request.varioResult
 
         val baroAltitude = varioResult.altitude
@@ -66,10 +78,10 @@ internal class CalculateFlightMetricsUseCase(
             ?: gps.altitude.value.takeIf { !it.isNaN() }?.let { baroAltitude - it }
         val baroConfidence = baroResult?.confidenceLevel ?: ConfidenceLevel.LOW
         val qnhCalibrationAgeSeconds = baroResult?.lastCalibrationTime?.takeIf { it > 0L }?.let {
-            val delta = (currentTime - it) / 1000L
+            val delta = (wallTime - it) / 1000L
             if (delta < 0) 0L else delta
         } ?: -1L
-        val calibrationChanged = fusionBlackboard.detectCalibrationChange(qnh, baroResult, currentTime)
+        val calibrationChanged = fusionBlackboard.detectCalibrationChange(qnh, baroResult, wallTime)
         if (calibrationChanged) {
             flightHelpers.resetThermalTracking()
         }
@@ -124,7 +136,7 @@ internal class CalculateFlightMetricsUseCase(
             navBaroAltitudeEnabled = navBaroAltitudeEnabled,
             baroAltitude = baroAltitude,
             gpsAltitude = gps.altitude.value,
-            gpsTimestampMillis = gps.timestamp,
+            gpsTimestampMillis = request.gpsTimestampMillis,
             baroResult = baroResult,
             isQnhCalibrated = isQnhCalibrated,
             teVario = teVario,
@@ -144,7 +156,7 @@ internal class CalculateFlightMetricsUseCase(
 
         val circlingDecision = circlingDetector.update(
             trackDegrees = gps.bearing,
-            timestampMillis = gps.timestamp,
+            timestampMillis = request.gpsTimestampMillis,
             isFlying = request.isFlying
         )
         val isCircling = circlingDecision.isCircling
@@ -191,6 +203,16 @@ internal class CalculateFlightMetricsUseCase(
         val displayXcSoarVario = smoothDisplayXcSoar(snapshot.xcSoarVario, request.deltaTimeSeconds, snapshot.xcSoarVarioValid)
         val rawDisplayNetto = averages.displayNettoRaw
         val displayNetto = smoothDisplayNetto(rawDisplayNetto, request.deltaTimeSeconds, nettoResult.valid)
+        val displayNeedleVario = needleDynamics.update(
+            target = bruttoVario,
+            deltaTimeSeconds = request.deltaTimeSeconds,
+            isValid = varioValid
+        )
+        val displayNeedleVarioFast = fastNeedleDynamics.update(
+            target = bruttoVario,
+            deltaTimeSeconds = request.deltaTimeSeconds,
+            isValid = varioValid
+        )
         if (!calibrationChanged) {
             flightHelpers.updateThermalState(
                 timestampMillis = currentTime,
@@ -226,6 +248,8 @@ internal class CalculateFlightMetricsUseCase(
             nettoAverage30s = nettoAverage30s,
             bruttoAverage30sValid = bruttoAverage30sValid,
             displayVario = displayVario,
+            displayNeedleVario = displayNeedleVario,
+            displayNeedleVarioFast = displayNeedleVarioFast,
             displayXcSoarVario = displayXcSoarVario,
             displayNetto = displayNetto,
             netto = nettoResult.value.toFloat(),
@@ -253,6 +277,8 @@ internal class CalculateFlightMetricsUseCase(
     fun reset() {
         fusionBlackboard.resetAll()
         displaySmoother.reset()
+        needleDynamics.reset()
+        fastNeedleDynamics.reset()
         circlingDetector.reset()
         sensorFrontEnd.resetDerivatives()
         prevTeSpeed = 0.0
@@ -320,6 +346,8 @@ internal class CalculateFlightMetricsUseCase(
 data class FlightMetricsRequest(
     val gps: GPSData,
     val currentTimeMillis: Long,
+    val wallTimeMillis: Long,
+    val gpsTimestampMillis: Long,
     val deltaTimeSeconds: Double,
     val varioResult: ModernVarioResult,
     val varioGpsValue: Double,
@@ -347,6 +375,8 @@ data class FlightMetricsResult(
     val bruttoAverage30sValid: Boolean,
     val nettoAverage30s: Double,
     val displayVario: Double,
+    val displayNeedleVario: Double,
+    val displayNeedleVarioFast: Double,
     val displayXcSoarVario: Double,
     val displayNetto: Double,
     val netto: Float,

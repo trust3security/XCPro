@@ -4,6 +4,7 @@ import android.graphics.PointF
 import android.util.Log
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
+import kotlin.math.roundToInt
 
 /**
  * Centralized gating/smoothing for aircraft location updates.
@@ -64,7 +65,29 @@ class MapLocationFilter(
         } else {
             rejected++
         }
+        if (com.example.xcpro.map.BuildConfig.DEBUG) {
+            Log.d(
+                TAG,
+                "accept=$passes distSq=${"%.3f".format(distSq)} thresholdSq=${"%.3f".format(config.thresholdPx * config.thresholdPx)} " +
+                    "screen=(${screenPoint.x.roundToInt()},${screenPoint.y.roundToInt()}) " +
+                    "prev=(${previousAccepted.x.roundToInt()},${previousAccepted.y.roundToInt()}) " +
+                    "lat=${location.latitude},lon=${location.longitude} accepted=$accepted rejected=$rejected"
+            )
+        }
         return passes
+    }
+
+    fun resetTo(location: LatLng, map: MapLibreMap) {
+        val screenPoint = projector.toScreenPoint(map, location) ?: return
+        lastAcceptedScreenPoint = PointF(screenPoint.x, screenPoint.y)
+        lastMovePxSq = Float.NaN
+        if (com.example.xcpro.map.BuildConfig.DEBUG) {
+            Log.d(
+                TAG,
+                "resetTo screen=(${screenPoint.x.roundToInt()},${screenPoint.y.roundToInt()}) " +
+                    "lat=${location.latitude},lon=${location.longitude}"
+            )
+        }
     }
 
     fun rememberOffset(offset: PointF) {

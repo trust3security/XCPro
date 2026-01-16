@@ -4,6 +4,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.example.xcpro.map.trail.TrailLength
+import com.example.xcpro.map.trail.TrailSettings
+import com.example.xcpro.map.trail.TrailType
 
 class MapStateStoreTest {
 
@@ -32,5 +35,20 @@ class MapStateStoreTest {
         store.setShowDistanceCircles(true)
 
         assertTrue(store.showDistanceCircles.value)
+    }
+
+    @Test
+    fun setTrailSettings_updatesState() {
+        val store = MapStateStore(initialStyleName = "Topo")
+        val settings = TrailSettings(
+            length = TrailLength.SHORT,
+            type = TrailType.VARIO_2_DOTS,
+            windDriftEnabled = false,
+            scalingEnabled = false
+        )
+
+        store.setTrailSettings(settings)
+
+        assertEquals(settings, store.trailSettings.value)
     }
 }

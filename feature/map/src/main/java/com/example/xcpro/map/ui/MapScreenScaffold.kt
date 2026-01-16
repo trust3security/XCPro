@@ -21,11 +21,8 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.dfcards.FlightDataViewModel
-import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.common.flight.FlightMode
-import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.map.FlightDataManager
@@ -36,6 +33,8 @@ import com.example.xcpro.map.MapModalManager
 import com.example.xcpro.map.MapOverlayManager
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapTaskScreenManager
+import com.example.xcpro.map.WindArrowUiState
+import com.example.xcpro.qnh.QnhCalibrationState
 import com.example.xcpro.map.ui.widgets.MapUIWidgetManager
 import com.example.xcpro.map.ballast.BallastCommand
 import com.example.xcpro.map.ballast.BallastUiState
@@ -72,10 +71,8 @@ internal fun MapScreenScaffold(
     flightDataManager: FlightDataManager,
     flightViewModel: FlightDataViewModel,
     taskManager: TaskManagerCoordinator,
-    orientationManager: MapOrientationManager,
-    orientationData: OrientationData,
+    windArrowState: WindArrowUiState,
     cameraManager: MapCameraManager,
-    currentFlightModeSelection: FlightModeSelection,
     currentMode: FlightMode,
     currentZoom: Float,
     onModeChange: (FlightMode) -> Unit,
@@ -107,6 +104,9 @@ internal fun MapScreenScaffold(
     taskScreenManager: MapTaskScreenManager,
     waypointData: List<WaypointData>,
     unitsPreferences: UnitsPreferences,
+    qnhCalibrationState: QnhCalibrationState,
+    onAutoCalibrateQnh: () -> Unit,
+    onSetManualQnh: (Double) -> Unit,
     ballastUiState: StateFlow<BallastUiState>,
     isBallastPillHidden: Boolean,
     onBallastCommand: (BallastCommand) -> Unit,
@@ -115,7 +115,10 @@ internal fun MapScreenScaffold(
     cardStyle: CardStyle,
     replayState: StateFlow<SessionState>,
     showVarioDemoFab: Boolean,
-    onVarioDemoClick: () -> Unit
+    onVarioDemoReferenceClick: () -> Unit,
+    onVarioDemoSimClick: () -> Unit,
+    showRacingReplayFab: Boolean,
+    onRacingReplayClick: () -> Unit
 ) {
     NavigationDrawer(
         drawerState = drawerState,
@@ -144,10 +147,8 @@ internal fun MapScreenScaffold(
                     flightDataManager = flightDataManager,
                     flightViewModel = flightViewModel,
                     taskManager = taskManager,
-                    orientationManager = orientationManager,
-                    orientationData = orientationData,
+                    windArrowState = windArrowState,
                     cameraManager = cameraManager,
-                    currentFlightModeSelection = currentFlightModeSelection,
                     currentMode = currentMode,
                     currentZoom = currentZoom,
                     onModeChange = onModeChange,
@@ -179,6 +180,9 @@ internal fun MapScreenScaffold(
                     taskScreenManager = taskScreenManager,
                     waypointData = waypointData,
                     unitsPreferences = unitsPreferences,
+                    qnhCalibrationState = qnhCalibrationState,
+                    onAutoCalibrateQnh = onAutoCalibrateQnh,
+                    onSetManualQnh = onSetManualQnh,
                     ballastUiState = ballastUiState,
                     isBallastPillHidden = isBallastPillHidden,
                     onBallastCommand = onBallastCommand,
@@ -187,7 +191,10 @@ internal fun MapScreenScaffold(
                     cardStyle = cardStyle,
                     replayState = replayState,
                     showVarioDemoFab = showVarioDemoFab,
-                    onVarioDemoClick = onVarioDemoClick
+                    onVarioDemoReferenceClick = onVarioDemoReferenceClick,
+                    onVarioDemoSimClick = onVarioDemoSimClick,
+                    showRacingReplayFab = showRacingReplayFab,
+                    onRacingReplayClick = onRacingReplayClick
                 )
                 if (isLoadingWaypoints) {
                     Box(

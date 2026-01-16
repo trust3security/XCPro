@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.example.xcpro.sensors.GPSData
 import com.example.xcpro.map.MapTaskScreenManager
@@ -38,7 +39,10 @@ fun MapActionButtons(
     showQnhFab: Boolean,
     onDismissQnhFab: () -> Unit,
     showVarioDemoFab: Boolean,
-    onVarioDemoClick: () -> Unit,
+    onVarioDemoReferenceClick: () -> Unit,
+    onVarioDemoSimClick: () -> Unit,
+    showRacingReplayFab: Boolean,
+    onRacingReplayClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val topInset = 24.dp
@@ -47,7 +51,15 @@ fun MapActionButtons(
     val qnhTopPadding = 130.dp
     val fabSpacing = 64.dp
     val distanceTopPadding = if (showQnhFab) qnhTopPadding + fabSpacing else qnhTopPadding
-    val demoTopPadding = distanceTopPadding + fabSpacing
+    val demoFabSize = 48.dp
+    val demoSpacing = 12.6.dp // ~2mm gap between FAB edges
+    val demoSimBottomPadding = 16.dp
+    val demoRefBottomPadding = demoSimBottomPadding + demoFabSize + demoSpacing
+    val demoTaskBottomPadding = if (showVarioDemoFab) {
+        demoRefBottomPadding + demoFabSize + demoSpacing
+    } else {
+        demoSimBottomPadding
+    }
     val isTaskSearchVisible by taskScreenManager.showTaskScreen.collectAsStateWithLifecycle()
     val isTaskSheetVisible by taskScreenManager.showTaskBottomSheet.collectAsStateWithLifecycle()
 
@@ -99,10 +111,34 @@ fun MapActionButtons(
 
         if (showVarioDemoFab) {
             VarioDemoButton(
-                onClick = onVarioDemoClick,
+                onClick = onVarioDemoReferenceClick,
+                badgeText = "REF",
+                badgeColor = MaterialTheme.colorScheme.primary,
+                contentDescription = "Run vario demo replay (reference)",
                 modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = demoTopPadding, end = 16.dp)
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 16.dp, bottom = demoRefBottomPadding)
+            )
+            VarioDemoButton(
+                onClick = onVarioDemoSimClick,
+                badgeText = "SIM",
+                badgeColor = MaterialTheme.colorScheme.tertiary,
+                contentDescription = "Run vario demo replay (sim)",
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 16.dp, bottom = demoSimBottomPadding)
+            )
+        }
+
+        if (showRacingReplayFab) {
+            VarioDemoButton(
+                onClick = onRacingReplayClick,
+                badgeText = "TASK",
+                badgeColor = MaterialTheme.colorScheme.secondary,
+                contentDescription = "Run racing task replay",
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 16.dp, bottom = demoTaskBottomPadding)
             )
         }
     }
@@ -255,6 +291,9 @@ private fun QnhButton(
 @Composable
 private fun VarioDemoButton(
     onClick: () -> Unit,
+    badgeText: String,
+    badgeColor: Color,
+    contentDescription: String,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -271,9 +310,33 @@ private fun VarioDemoButton(
         ) {
             Icon(
                 imageVector = Icons.Filled.PlayArrow,
-                contentDescription = "Run vario demo replay",
+                contentDescription = contentDescription,
                 modifier = Modifier.size(24.dp)
             )
+        }
+
+        Surface(
+            color = badgeColor,
+            shape = CircleShape,
+            tonalElevation = 0.dp,
+            shadowElevation = 2.dp,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .offset(x = 6.dp, y = (-6).dp)
+                .size(22.dp)
+                .zIndex(60f)
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = badgeText,
+                    color = Color.White,
+                    fontSize = 8.sp,
+                    maxLines = 1
+                )
+            }
         }
     }
 }

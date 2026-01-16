@@ -8,6 +8,7 @@ import org.mockito.kotlin.verify
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import kotlinx.coroutines.runBlocking
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
@@ -22,7 +23,9 @@ class VarioForegroundServiceTest {
         service.manager = fakeManager
 
         controller.create()
-        verify(fakeManager).start()
+        runBlocking {
+            verify(fakeManager).start()
+        }
 
         controller.destroy()
         verify(fakeManager).stop()

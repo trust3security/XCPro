@@ -1,12 +1,11 @@
 package com.example.xcpro.map
 
 import android.content.Context
+import android.os.SystemClock
 import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
 import com.example.xcpro.common.orientation.OrientationData
-import com.example.xcpro.map.QnhPreferencesRepository
 import com.example.xcpro.sensors.UnifiedSensorManager
-import com.example.xcpro.sensors.SensorFusionRepository
 import com.example.xcpro.sensors.GPSData
 import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.MapOrientationPreferences
@@ -17,11 +16,10 @@ import com.example.xcpro.map.config.MapFeatureFlags
 import com.example.xcpro.map.MapLocationFilter
 import com.example.xcpro.map.MapLibreProjector
 import com.example.xcpro.map.MapPositionController
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
+import kotlinx.coroutines.CoroutineScope
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 class LocationManager(
@@ -30,21 +28,29 @@ class LocationManager(
     private val mapStateReader: MapStateReader,
     private val stateActions: MapStateActions,
     private val coroutineScope: CoroutineScope,
-    private val qnhPreferencesRepository: QnhPreferencesRepository,
     private val varioServiceManager: VarioServiceManager
 ) {
     companion object {
         private const val TAG = "LocationManager"
         private const val INITIAL_ZOOM_LEVEL = 10.0
+        private const val CAMERA_MIN_UPDATE_INTERVAL_MS = 80L
+        private const val CAMERA_ANIMATION_MS = 250
+        private const val CAMERA_BEARING_EPS_DEG = 2.0
     }
 
     private val orientationPreferences = MapOrientationPreferences(context)
     private val gliderPaddingHelper = GliderPaddingHelper(context.resources, orientationPreferences)
+    private val iconRotationConfig = if (MapFeatureFlags.allowHeadingWhileStationary) {
+        IconRotationConfig.fromMinSpeedThreshold(0.0)
+    } else {
+        IconRotationConfig.fromPreferences(orientationPreferences)
+    }
     private val sensorsController = LocationSensorsController(
         context = context,
+        scope = coroutineScope,
         varioServiceManager = varioServiceManager
     )
-    private val locationFilter = MapLocationFilter(
+    private val cameraUpdateGate = MapLocationFilter(
         MapLocationFilter.Config(
             thresholdPx = MapFeatureFlags.locationJitterThresholdPx,
             historySize = MapFeatureFlags.locationOffsetHistorySize
@@ -54,26 +60,22 @@ class LocationManager(
     private val positionController = MapPositionController(
         mapState = mapState,
         maxBearingStepDeg = 5.0,
-        offsetHistorySize = MapFeatureFlags.locationOffsetHistorySize
+        offsetHistorySize = MapFeatureFlags.locationOffsetHistorySize,
+        iconRotationConfig = iconRotationConfig
     )
+    private var displaySmoother = buildDisplaySmoother(DisplaySmoothingProfile.SMOOTH)
+    private var lastSmoothingProfile: DisplaySmoothingProfile? = null
+    private val displayClock = DisplayClock()
+    private var lastDisplayPoseMode: DisplayPoseMode? = null
+    private var lastRawFix: DisplayPoseSmoother.RawFix? = null
+    private var latestOrientation: OrientationData = OrientationData()
+    private var lastCameraUpdateMs: Long = 0L
+    private var lastTimeBase: DisplayClock.TimeBase? = null
 
     // ✅ PHASE 2: Unified sensor management
     val unifiedSensorManager: UnifiedSensorManager = varioServiceManager.unifiedSensorManager
 
     // ✅ PHASE 2: Flight data calculator (combines all sensor data + calculations)
-    val sensorFusionRepository: SensorFusionRepository = varioServiceManager.sensorFusionRepository
-    // Auto QNH is triggered as an explicit one-shot action; there is no persisted toggle.
-
-    init {
-        coroutineScope.launch {
-            val storedQnh = qnhPreferencesRepository.qnhHpaFlow.first()
-            if (storedQnh != null) {
-                sensorFusionRepository.setManualQnh(storedQnh)
-            } else {
-                sensorFusionRepository.requestAutoQnhCalibration()
-            }
-        }
-    }
 
     // Map UI state proxies (MapStateStore is the single owner)
     private var currentUserLocation: LatLng?
@@ -123,11 +125,8 @@ class LocationManager(
     private val savedBearing: Double?
         get() = mapStateReader.savedBearing.value
 
-    fun onLocationPermissionsResult(fineLocationGranted: Boolean, coarseLocationGranted: Boolean) {
-        sensorsController.onLocationPermissionsResult(
-            fineLocationGranted = fineLocationGranted,
-            coarseLocationGranted = coarseLocationGranted
-        )
+    fun onLocationPermissionsResult(fineLocationGranted: Boolean) {
+        sensorsController.onLocationPermissionsResult(fineLocationGranted)
     }
 
     fun checkAndRequestLocationPermissions(
@@ -148,76 +147,80 @@ class LocationManager(
         sensorsController.restartSensorsIfNeeded()
     }
 
-    fun setManualQnh(qnh: Double) {
-        sensorFusionRepository.setManualQnh(qnh)
-        coroutineScope.launch {
-            qnhPreferencesRepository.setManualQnh(qnh)
-        }
-    }
-
-    fun autoCalibrateQnh() {
-        sensorFusionRepository.requestAutoQnhCalibration()
-        coroutineScope.launch {
-            qnhPreferencesRepository.clearManualQnh()
-        }
-    }
-
-    fun resetQnhToStandard() {
-        sensorFusionRepository.resetQnhToStandard()
-        coroutineScope.launch {
-            qnhPreferencesRepository.clearManualQnh()
-        }
-    }
-
 
     fun updateLocationFromGPS(
         location: GPSData,
         orientation: OrientationData
     ) {
-        val map = mapState.mapLibreMap ?: run {
-            Log.w(TAG, "MapLibreMap null; cannot update location")
-            return
+        latestOrientation = orientation
+        val envelope = buildRawFixFromGps(location, orientation) ?: return
+        pushRawFix(envelope)
+    }
+
+    fun updateOrientation(orientation: OrientationData) {
+        latestOrientation = orientation
+    }
+
+    fun setReplaySpeedMultiplier(multiplier: Double) {
+        if (multiplier.isFinite() && multiplier > 0.0) {
+            displayClock.replaySpeedMultiplier = multiplier
         }
+    }
 
-        // XCSoar-style jitter gate (SetLocationLazy equivalent)
-        val accepted = locationFilter.accept(location.toLatLng(), map)
-        val shouldTrackCamera = isTrackingLocation && !showReturnButton
-        if (!accepted) {
-            if (shouldTrackCamera) {
-                updateCameraBearingIfNeeded(map, orientation.bearing)
-            }
-            return
+    fun onDisplayFrame() {
+        val nowMs = displayClock.nowMs()
+        val mode = mapStateReader.displayPoseMode.value
+        val smoothingProfile = mapStateReader.displaySmoothingProfile.value
+        if (smoothingProfile != lastSmoothingProfile) {
+            displaySmoother = buildDisplaySmoother(smoothingProfile)
+            displaySmoother.reset()
+            lastSmoothingProfile = smoothingProfile
         }
-
-        currentUserLocation = location.toLatLng()
-
-        val padding = if (shouldTrackCamera) {
-            val rawPadding = gliderPaddingHelper.paddingArray()
-            positionController.rememberOffset(
-                MapPositionController.Offset(
-                    x = rawPadding[1].toFloat(), // top padding px
-                    y = rawPadding[3].toFloat()  // bottom padding px
-                )
-            )
-            val averaged = positionController.averagedOffset()
-            intArrayOf(0, averaged.x.roundToInt(), 0, averaged.y.roundToInt())
-        } else {
-            null
+        if (mode != lastDisplayPoseMode) {
+            displaySmoother.reset()
+            lastDisplayPoseMode = mode
         }
+        val smoothedPose = displaySmoother.tick(nowMs)
+        val rawPose = lastRawFix?.let { buildRawPose(it, nowMs) }
+        val pose = DisplayPoseSelector.selectPose(mode, rawPose, smoothedPose) ?: return
+        val map = mapState.mapLibreMap ?: return
 
-        positionController.applyAcceptedSample(
-            map = map,
-            location = location.toLatLng(),
-            trackBearing = location.bearing,
+        val orientation = latestOrientation
+        val cameraBearing = map.cameraPosition.bearing.toDouble()
+        val overlayBearing = if (cameraBearing.isFinite()) cameraBearing else orientation.bearing
+        positionController.updateOverlay(
+            location = pose.location,
+            trackBearing = pose.trackDeg,
             headingDeg = orientation.headingDeg,
-            mapBearing = orientation.bearing,
+            headingValid = orientation.headingValid,
+            bearingAccuracyDeg = pose.bearingAccuracyDeg,
+            speedAccuracyMs = pose.speedAccuracyMs,
+            mapBearing = overlayBearing,
             orientationMode = orientation.mode,
-            shouldTrackCamera = shouldTrackCamera,
-            padding = padding,
-            cameraBearing = orientation.bearing
+            speedMs = pose.speedMs,
+            nowMs = nowMs
         )
 
-        handleInitialCentering(location.toLatLng())
+        if (!hasInitiallyCentered) {
+            handleInitialCentering(pose.location)
+            if (!hasInitiallyCentered) return
+        }
+
+        val shouldTrackCamera = isTrackingLocation && !showReturnButton
+        if (shouldTrackCamera) {
+            val padding = computeSmoothedPadding()
+            if (shouldUpdateCamera(map, pose.location, orientation.bearing, nowMs)) {
+                positionController.updateCamera(
+                    map = map,
+                    location = pose.location,
+                    cameraBearing = orientation.bearing,
+                    padding = padding,
+                    animationMs = CAMERA_ANIMATION_MS
+                )
+                cameraUpdateGate.resetTo(pose.location, map)
+                lastCameraUpdateMs = nowMs
+            }
+        }
     }
 
     private fun handleInitialCentering(location: LatLng) {
@@ -248,9 +251,11 @@ class LocationManager(
                 hasInitiallyCentered = true
 
                 // Save initial position for return button
-                saveLocation(location, INITIAL_ZOOM_LEVEL, 0.0)
+                saveLocation(location, zoomToUse, 0.0)
 
-                Log.d(TAG, "🎯 INITIAL CENTERING: Centered map on first GPS location: ${location.latitude}, ${location.longitude}")
+                logLocationDebug {
+                    "🎯 INITIAL CENTERING: Centered map on first GPS location: ${location.latitude}, ${location.longitude}"
+                }
             }
         }
     }
@@ -259,85 +264,136 @@ class LocationManager(
         liveData: RealTimeFlightData,
         orientation: OrientationData
     ) {
-        val groundSpeedKnots = String.format(
-            "%.1f",
-            UnitsConverter.msToKnots(liveData.groundSpeed)
-        )
-        Log.d(
-            TAG,
+        logLocationDebug {
+            val groundSpeedKnots = String.format(
+                "%.1f",
+                UnitsConverter.msToKnots(liveData.groundSpeed)
+            )
             "Replay/live GPS: lat=${liveData.latitude}, lon=${liveData.longitude}, " +
                 "accuracy=${liveData.accuracy}, gpsAlt=${liveData.gpsAltitude}m, " +
                 "gs=${groundSpeedKnots}kt, track=${liveData.track}"
-        )
+        }
 
         if (liveData.latitude == 0.0 || liveData.longitude == 0.0) {
-            Log.d(
-                TAG,
+            logLocationDebug {
                 "Replay feed: invalid coordinates (lat=${liveData.latitude}, lon=${liveData.longitude})"
-            )
-            return
-        }
-
-        val map = mapState.mapLibreMap ?: run {
-            Log.w(TAG, "MapLibreMap is null, cannot update location")
-            return
-        }
-
-        val newLocation = LatLng(liveData.latitude, liveData.longitude)
-        val accepted = locationFilter.accept(newLocation, map)
-        val shouldTrackCamera = isTrackingLocation && !showReturnButton
-        if (!accepted) {
-            if (shouldTrackCamera) {
-                updateCameraBearingIfNeeded(map, orientation.bearing)
             }
             return
         }
 
-        currentUserLocation = newLocation
-        val padding = if (shouldTrackCamera) {
-            val rawPadding = gliderPaddingHelper.paddingArray()
-            positionController.rememberOffset(
-                MapPositionController.Offset(
-                    x = rawPadding[1].toFloat(),
-                    y = rawPadding[3].toFloat()
-                )
-            )
-            val averaged = positionController.averagedOffset()
-            intArrayOf(0, averaged.x.roundToInt(), 0, averaged.y.roundToInt())
-        } else {
-            null
-        }
-
-        positionController.applyAcceptedSample(
-            map = map,
-            location = newLocation,
-            trackBearing = liveData.track,
-            headingDeg = orientation.headingDeg,
-            mapBearing = orientation.bearing,
-            orientationMode = orientation.mode,
-            shouldTrackCamera = shouldTrackCamera,
-            padding = padding,
-            cameraBearing = orientation.bearing
-        )
-
-        handleInitialCentering(newLocation)
+        latestOrientation = orientation
+        val envelope = buildRawFixFromFlightData(liveData, orientation) ?: return
+        pushRawFix(envelope)
     }
 
-    private fun updateCameraBearingIfNeeded(map: org.maplibre.android.maps.MapLibreMap, bearing: Double) {
-        val currentPosition = map.cameraPosition
-        val delta = shortestDeltaDegrees(currentPosition.bearing, bearing)
-        if (kotlin.math.abs(delta) < 2.0) {
-            return
+    private fun pushRawFix(envelope: RawFixEnvelope) {
+        if (lastTimeBase != envelope.timeBase) {
+            // Intentional source switch (live <-> replay) should snap the overlay to the new track.
+            displaySmoother.reset()
+            lastTimeBase = envelope.timeBase
+            mapState.mapLibreMap?.let { map ->
+                cameraUpdateGate.resetTo(LatLng(envelope.fix.latitude, envelope.fix.longitude), map)
+            }
         }
+        lastRawFix = envelope.fix
+        displayClock.updateFromFix(envelope.fix.timestampMs, envelope.timeBase)
+        displaySmoother.pushRawFix(envelope.fix)
+        currentUserLocation = LatLng(envelope.fix.latitude, envelope.fix.longitude)
+    }
 
-        val newCameraPosition = org.maplibre.android.camera.CameraPosition.Builder()
-            .target(currentPosition.target)
-            .zoom(currentPosition.zoom)
-            .bearing(bearing)
-            .tilt(currentPosition.tilt)
-            .build()
+    private fun buildRawFixFromGps(location: GPSData, orientation: OrientationData): RawFixEnvelope? {
+        if (!isValidCoordinate(location.latitude, location.longitude)) {
+            logLocationDebug {
+                "Live GPS: invalid coordinates (lat=${location.latitude}, lon=${location.longitude})"
+            }
+            return null
+        }
+        val timeBase = if (location.monotonicTimestampMillis > 0L) {
+            DisplayClock.TimeBase.MONOTONIC
+        } else {
+            DisplayClock.TimeBase.WALL
+        }
+        val timestampMs = if (timeBase == DisplayClock.TimeBase.MONOTONIC) {
+            location.monotonicTimestampMillis
+        } else {
+            location.timestamp
+        }
+        val fix = DisplayPoseSmoother.RawFix(
+            latitude = location.latitude,
+            longitude = location.longitude,
+            speedMs = location.speed.value,
+            trackDeg = location.bearing,
+            headingDeg = orientation.headingDeg,
+            accuracyM = location.accuracy.toDouble(),
+            bearingAccuracyDeg = location.bearingAccuracyDeg,
+            speedAccuracyMs = location.speedAccuracyMs,
+            timestampMs = timestampMs,
+            orientationMode = orientation.mode
+        )
+        return RawFixEnvelope(fix, timeBase)
+    }
 
-        map.moveCamera(CameraUpdateFactory.newCameraPosition(newCameraPosition))
+    private fun buildRawFixFromFlightData(
+        liveData: RealTimeFlightData,
+        orientation: OrientationData
+    ): RawFixEnvelope? {
+        if (!isValidCoordinate(liveData.latitude, liveData.longitude)) {
+            logLocationDebug {
+                "Replay feed: invalid coordinates (lat=${liveData.latitude}, lon=${liveData.longitude})"
+            }
+            return null
+        }
+        val fix = DisplayPoseSmoother.RawFix(
+            latitude = liveData.latitude,
+            longitude = liveData.longitude,
+            speedMs = liveData.groundSpeed,
+            trackDeg = liveData.track,
+            headingDeg = orientation.headingDeg,
+            accuracyM = liveData.accuracy,
+            bearingAccuracyDeg = null,
+            speedAccuracyMs = null,
+            timestampMs = liveData.timestamp,
+            orientationMode = orientation.mode
+        )
+        return RawFixEnvelope(fix, DisplayClock.TimeBase.REPLAY)
+    }
+
+    private fun computeSmoothedPadding(): IntArray {
+        val rawPadding = gliderPaddingHelper.paddingArray()
+        positionController.rememberOffset(
+            MapPositionController.Offset(
+                x = rawPadding[1].toFloat(),
+                y = rawPadding[3].toFloat()
+            )
+        )
+        val averaged = positionController.averagedOffset()
+        return intArrayOf(0, averaged.x.roundToInt(), 0, averaged.y.roundToInt())
+    }
+
+    private fun shouldUpdateCamera(
+        map: org.maplibre.android.maps.MapLibreMap,
+        location: LatLng,
+        targetBearing: Double,
+        nowMs: Long
+    ): Boolean {
+        val bearingDelta = abs(shortestDeltaDegrees(map.cameraPosition.bearing, targetBearing))
+        val bearingMoved = bearingDelta >= CAMERA_BEARING_EPS_DEG
+        val timeDue = nowMs - lastCameraUpdateMs >= CAMERA_MIN_UPDATE_INTERVAL_MS
+        if (!timeDue && !bearingMoved) return false
+
+        val positionMoved = if (timeDue || bearingMoved) {
+            cameraUpdateGate.accept(location, map)
+        } else {
+            false
+        }
+        return bearingMoved || (timeDue && positionMoved)
+    }
+
+    private fun isValidCoordinate(lat: Double, lon: Double): Boolean {
+        if (!lat.isFinite() || !lon.isFinite()) return false
+        if (lat < -90.0 || lat > 90.0) return false
+        if (lon < -180.0 || lon > 180.0) return false
+        return true
     }
 
     private fun shortestDeltaDegrees(from: Double, to: Double): Double {
@@ -353,7 +409,9 @@ class LocationManager(
             zoom = zoom,
             bearing = bearing
         )
-        Log.d(TAG, "Saved position for return: lat=${location.latitude}, zoom=$zoom, bearing=$bearing")
+        logLocationDebug {
+            "Saved position for return: lat=${location.latitude}, zoom=$zoom, bearing=$bearing"
+        }
     }
 
     fun saveLocationFromGPS(location: GPSData?, zoom: Double, bearing: Double) {
@@ -420,6 +478,72 @@ class LocationManager(
         showReturnButton()
     }
 
+    private data class RawFixEnvelope(
+        val fix: DisplayPoseSmoother.RawFix,
+        val timeBase: DisplayClock.TimeBase
+    )
+
+    private fun buildRawPose(
+        fix: DisplayPoseSmoother.RawFix,
+        nowMs: Long
+    ): DisplayPoseSmoother.DisplayPose {
+        return DisplayPoseSmoother.DisplayPose(
+            location = LatLng(fix.latitude, fix.longitude),
+            trackDeg = fix.trackDeg,
+            headingDeg = fix.headingDeg,
+            orientationMode = fix.orientationMode,
+            accuracyM = fix.accuracyM,
+            bearingAccuracyDeg = fix.bearingAccuracyDeg,
+            speedAccuracyMs = fix.speedAccuracyMs,
+            speedMs = fix.speedMs,
+            updatedAtMs = nowMs
+        )
+    }
+
+    private fun buildDisplaySmoother(profile: DisplaySmoothingProfile): DisplayPoseSmoother {
+        return DisplayPoseSmoother(
+            minSpeedForHeadingMs = orientationPreferences.getMinSpeedThreshold(),
+            minSpeedForPredictionMs = orientationPreferences.getMinSpeedThreshold(),
+            config = profile.config,
+            adaptiveSmoothingEnabled = MapFeatureFlags.useAdaptiveDisplaySmoothing
+        )
+    }
+
+    private class DisplayClock {
+        enum class TimeBase { MONOTONIC, WALL, REPLAY }
+
+        var replaySpeedMultiplier: Double = 1.0
+        private var timeBase: TimeBase = TimeBase.MONOTONIC
+        private var lastFixTimestampMs: Long = 0L
+        private var lastFixWallMs: Long = 0L
+
+        fun updateFromFix(timestampMs: Long, base: TimeBase) {
+            timeBase = base
+            lastFixTimestampMs = timestampMs
+            lastFixWallMs = SystemClock.elapsedRealtime()
+        }
+
+        fun nowMs(): Long {
+            return when (timeBase) {
+                TimeBase.MONOTONIC -> SystemClock.elapsedRealtime()
+                TimeBase.WALL -> System.currentTimeMillis()
+                TimeBase.REPLAY -> {
+                    // AI-NOTE: Replay timestamps advance by wall-time elapsed (scaled by speed) so
+                    // display smoothing can interpolate between fixed replay samples without
+                    // mixing time bases in the fusion pipeline.
+                    val elapsedWall = (SystemClock.elapsedRealtime() - lastFixWallMs).coerceAtLeast(0L)
+                    lastFixTimestampMs + (elapsedWall * replaySpeedMultiplier).toLong()
+                }
+            }
+        }
+    }
+
+
+    private inline fun logLocationDebug(message: () -> String) {
+        if (com.example.xcpro.map.BuildConfig.DEBUG) {
+            Log.d(TAG, message())
+        }
+    }
 }
 
 

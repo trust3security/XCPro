@@ -44,8 +44,6 @@ class FlightDataCalculator(
 
     override fun resetQnhToStandard() = engine.resetQnhToStandard()
 
-    override fun requestAutoQnhCalibration() = engine.requestAutoQnhCalibration()
-
     override fun setMacCreadySetting(value: Double) = engine.setMacCreadySetting(value)
 
     override fun setMacCreadyRisk(value: Double) = engine.setMacCreadyRisk(value)

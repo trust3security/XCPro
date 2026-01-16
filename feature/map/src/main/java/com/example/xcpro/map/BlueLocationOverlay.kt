@@ -5,7 +5,8 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
-import android.util.Log
+import android.location.Location
+import com.example.xcpro.core.common.logging.AppLogger
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import com.example.xcpro.common.orientation.MapOrientationMode
@@ -40,7 +41,7 @@ class BlueLocationOverlay(
         private const val SOURCE_ID = "aircraft-location-source"
         internal const val LAYER_ID = "aircraft-location-layer"
         private const val ICON_ID = "aircraft-location-icon"
-        private const val ICON_SIZE = 144 // Bitmap size in pixels (3x larger = 300% increase)
+        internal const val ICON_SIZE_PX = 144 // Bitmap size in pixels (3x larger = 300% increase)
     }
 
     private var currentLocation: LatLng? = null
@@ -49,6 +50,7 @@ class BlueLocationOverlay(
     private var currentMapBearing: Double = 0.0
     private var currentOrientationMode: MapOrientationMode = MapOrientationMode.NORTH_UP
     private var isLayerAdded = false
+    private val verboseLogging = com.example.xcpro.map.BuildConfig.DEBUG
 
     /**
      * Initialize the blue location overlay on the map
@@ -56,7 +58,7 @@ class BlueLocationOverlay(
     fun initialize() {
         try {
             val style = map.style ?: return
-            Log.d(TAG, "Initializing aircraft location overlay")
+            AppLogger.d(TAG, "Initializing aircraft location overlay")
 
             // Create triangle icon bitmap
             val triangleIcon = createSailplaneIconBitmap()
@@ -74,10 +76,10 @@ class BlueLocationOverlay(
             style.addLayer(layer)
             isLayerAdded = true
 
-            Log.d(TAG, "Sailplane location overlay initialized successfully")
+            AppLogger.d(TAG, "Sailplane location overlay initialized successfully")
 
         } catch (e: Exception) {
-            Log.e(TAG, "Error initializing blue location overlay: ${e.message}", e)
+            AppLogger.e(TAG, "Error initializing blue location overlay: ${e.message}", e)
         }
     }
 
@@ -110,17 +112,19 @@ class BlueLocationOverlay(
         orientationMode: MapOrientationMode = MapOrientationMode.NORTH_UP
     ) {
         if (!isLayerAdded) {
-            Log.w(TAG, "Overlay not initialized, cannot update location")
+            AppLogger.w(TAG, "Overlay not initialized, cannot update location")
             return
         }
 
         try {
             // CRASH FIX: Validate coordinates before creating GeoJSON
             if (!isValidCoordinate(location.latitude, location.longitude)) {
-                Log.w(TAG, "Invalid coordinates - lat:${location.latitude}, lon:${location.longitude}")
+                AppLogger.w(TAG, "Invalid coordinates - update skipped")
                 return
             }
 
+            val previousLocation = currentLocation
+            val deltaMeters = previousLocation?.let { distanceMeters(it, location) }
             currentLocation = location
             currentTrack = gpsTrack
             currentHeadingDeg = headingDeg
@@ -142,16 +146,27 @@ class BlueLocationOverlay(
             val iconRotation = normalizeAngle(headingDeg - mapBearing).toFloat()
             layer.setProperties(iconRotate(iconRotation))
 
-            Log.d(
-                TAG,
-                "Location updated: lat=${location.latitude}, " +
-                    "lon=${location.longitude}, track=${gpsTrack.toInt()} deg, " +
-                    "heading=${headingDeg.toInt()} deg, map=${mapBearing.toInt()} deg, " +
-                    "mode=$orientationMode, iconRotation=${iconRotation.toInt()} deg"
-            )
+            if (verboseLogging && AppLogger.rateLimit(TAG, "location_verbose", 1_000L)) {
+                val moveLabel = if (deltaMeters == null) "delta=--" else "delta=${"%.1f".format(deltaMeters)}m"
+                AppLogger.d(
+                    TAG,
+                    "Location updated: lat=${location.latitude}, " +
+                        "lon=${location.longitude}, track=${gpsTrack.toInt()} deg, " +
+                        "heading=${headingDeg.toInt()} deg, map=${mapBearing.toInt()} deg, " +
+                        "mode=$orientationMode, iconRotation=${iconRotation.toInt()} deg, " +
+                        moveLabel
+                )
+                if (previousLocation != null) {
+                    AppLogger.d(
+                        TAG,
+                        "Location delta: from=${previousLocation.latitude},${previousLocation.longitude} " +
+                            "to=${location.latitude},${location.longitude}"
+                    )
+                }
+            }
 
         } catch (e: Exception) {
-            Log.e(TAG, "âŒ Error updating location: ${e.message}", e)
+            AppLogger.e(TAG, "Error updating location: ${e.message}", e)
         }
     }
 
@@ -187,6 +202,18 @@ class BlueLocationOverlay(
         return true
     }
 
+    private fun distanceMeters(from: LatLng, to: LatLng): Float {
+        val results = FloatArray(1)
+        Location.distanceBetween(
+            from.latitude,
+            from.longitude,
+            to.latitude,
+            to.longitude,
+            results
+        )
+        return results[0]
+    }
+
     /**
      * Show or hide the location overlay
      */
@@ -201,10 +228,10 @@ class BlueLocationOverlay(
                 visibility(if (visible) "visible" else "none")
             )
 
-            Log.d(TAG, "Location overlay visibility: $visible")
+            AppLogger.d(TAG, "Location overlay visibility: $visible")
 
         } catch (e: Exception) {
-            Log.e(TAG, "Error setting location visibility: ${e.message}", e)
+            AppLogger.e(TAG, "Error setting location visibility: ${e.message}", e)
         }
     }
 
@@ -220,11 +247,11 @@ class BlueLocationOverlay(
                 style.removeSource(SOURCE_ID)
                 style.removeImage(ICON_ID)
                 isLayerAdded = false
-                Log.d(TAG, "Location overlay cleaned up")
+                AppLogger.d(TAG, "Location overlay cleaned up")
             }
 
         } catch (e: Exception) {
-            Log.e(TAG, "Error cleaning up location overlay: ${e.message}", e)
+            AppLogger.e(TAG, "Error cleaning up location overlay: ${e.message}", e)
         }
     }
 
@@ -240,12 +267,12 @@ class BlueLocationOverlay(
             style.removeLayer(LAYER_ID)
             val layer = createLocationLayer()
             style.addLayer(layer)
-            Log.d(TAG, "Re-added aircraft overlay to keep it on top")
+            AppLogger.d(TAG, "Re-added aircraft overlay to keep it on top")
             currentLocation?.let {
                 updateLocation(it, currentTrack, currentHeadingDeg, currentMapBearing, currentOrientationMode)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error bringing aircraft overlay to front: ${e.message}", e)
+            AppLogger.e(TAG, "Error bringing aircraft overlay to front: ${e.message}", e)
         }
     }
 
@@ -255,25 +282,25 @@ class BlueLocationOverlay(
      */
     private fun createSailplaneIconBitmap(): Bitmap {
         // Create bitmap with transparent background
-        val bitmap = Bitmap.createBitmap(ICON_SIZE, ICON_SIZE, Bitmap.Config.ARGB_8888)
+        val bitmap = Bitmap.createBitmap(ICON_SIZE_PX, ICON_SIZE_PX, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
 
-        val centerX = ICON_SIZE / 2f
-        val centerY = ICON_SIZE / 2f
+        val centerX = ICON_SIZE_PX / 2f
+        val centerY = ICON_SIZE_PX / 2f
 
         // Sharp arrow points with SLIGHT rounding (5% radius for subtle softness)
-        val topPoint = centerY - ICON_SIZE * 0.40f       // Sharp tip
-        val leftPoint = centerX - ICON_SIZE * 0.32f      // Left wing
-        val leftPointY = centerY + ICON_SIZE * 0.28f
-        val rightPoint = centerX + ICON_SIZE * 0.32f     // Right wing
-        val rightPointY = centerY + ICON_SIZE * 0.28f
-        val bottomPoint = centerY + ICON_SIZE * 0.12f    // Bottom indent
+        val topPoint = centerY - ICON_SIZE_PX * 0.40f       // Sharp tip
+        val leftPoint = centerX - ICON_SIZE_PX * 0.32f      // Left wing
+        val leftPointY = centerY + ICON_SIZE_PX * 0.28f
+        val rightPoint = centerX + ICON_SIZE_PX * 0.32f     // Right wing
+        val rightPointY = centerY + ICON_SIZE_PX * 0.28f
+        val bottomPoint = centerY + ICON_SIZE_PX * 0.12f    // Bottom indent
 
-        val cornerRadius = ICON_SIZE * 0.05f  // SLIGHT rounding only
+        val cornerRadius = ICON_SIZE_PX * 0.05f  // SLIGHT rounding only
 
         // LEFT FACET (light blue/cyan - shadow side)
         val leftFacet = Path().apply {
-            moveTo(centerX - ICON_SIZE * 0.01f, topPoint + cornerRadius)
+            moveTo(centerX - ICON_SIZE_PX * 0.01f, topPoint + cornerRadius)
 
             // Top corner - slightly rounded
             quadTo(centerX, topPoint, centerX, topPoint + cornerRadius * 0.5f)
@@ -285,7 +312,7 @@ class BlueLocationOverlay(
             quadTo(leftPoint, leftPointY, leftPoint + cornerRadius * 0.8f, leftPointY + cornerRadius * 0.3f)
 
             // Edge to bottom
-            lineTo(centerX - ICON_SIZE * 0.01f, bottomPoint - cornerRadius * 0.5f)
+            lineTo(centerX - ICON_SIZE_PX * 0.01f, bottomPoint - cornerRadius * 0.5f)
 
             // Small bottom rounding
             quadTo(centerX, bottomPoint, centerX, bottomPoint)
@@ -298,27 +325,27 @@ class BlueLocationOverlay(
             moveTo(centerX, topPoint + cornerRadius * 0.5f)
 
             // Slight top rounding
-            quadTo(centerX, topPoint, centerX + ICON_SIZE * 0.01f, topPoint + cornerRadius)
+            quadTo(centerX, topPoint, centerX + ICON_SIZE_PX * 0.01f, topPoint + cornerRadius)
 
             // Edge to bottom
-            lineTo(centerX + ICON_SIZE * 0.01f, bottomPoint - cornerRadius * 0.5f)
+            lineTo(centerX + ICON_SIZE_PX * 0.01f, bottomPoint - cornerRadius * 0.5f)
 
             // Bottom
             quadTo(centerX, bottomPoint, centerX, bottomPoint)
-            lineTo(centerX - ICON_SIZE * 0.01f, bottomPoint - cornerRadius * 0.5f)
+            lineTo(centerX - ICON_SIZE_PX * 0.01f, bottomPoint - cornerRadius * 0.5f)
 
             close()
         }
 
         // RIGHT FACET (dark blue - lit side)
         val rightFacet = Path().apply {
-            moveTo(centerX + ICON_SIZE * 0.01f, topPoint + cornerRadius)
+            moveTo(centerX + ICON_SIZE_PX * 0.01f, topPoint + cornerRadius)
 
             // Top corner - slightly rounded
             quadTo(centerX, topPoint, centerX, topPoint + cornerRadius * 0.5f)
 
             // Bottom edge
-            lineTo(centerX + ICON_SIZE * 0.01f, bottomPoint - cornerRadius * 0.5f)
+            lineTo(centerX + ICON_SIZE_PX * 0.01f, bottomPoint - cornerRadius * 0.5f)
 
             // Small bottom rounding
             quadTo(centerX, bottomPoint, rightPoint - cornerRadius * 0.8f, rightPointY + cornerRadius * 0.3f)
@@ -327,7 +354,7 @@ class BlueLocationOverlay(
             quadTo(rightPoint, rightPointY, rightPoint - cornerRadius, rightPointY - cornerRadius * 0.3f)
 
             // Back to top
-            lineTo(centerX + ICON_SIZE * 0.01f, topPoint + cornerRadius)
+            lineTo(centerX + ICON_SIZE_PX * 0.01f, topPoint + cornerRadius)
 
             close()
         }
@@ -337,7 +364,7 @@ class BlueLocationOverlay(
             moveTo(centerX, topPoint + cornerRadius * 0.3f)
 
             // Top - slightly rounded
-            quadTo(centerX, topPoint, centerX - ICON_SIZE * 0.015f, topPoint + cornerRadius * 0.8f)
+            quadTo(centerX, topPoint, centerX - ICON_SIZE_PX * 0.015f, topPoint + cornerRadius * 0.8f)
 
             // Left edge to wing
             lineTo(leftPoint + cornerRadius * 0.7f, leftPointY - cornerRadius * 0.5f)
@@ -347,9 +374,9 @@ class BlueLocationOverlay(
                    leftPoint + cornerRadius * 0.6f, leftPointY + cornerRadius * 0.6f)
 
             // To bottom
-            lineTo(centerX - ICON_SIZE * 0.02f, bottomPoint - cornerRadius * 0.3f)
+            lineTo(centerX - ICON_SIZE_PX * 0.02f, bottomPoint - cornerRadius * 0.3f)
             quadTo(centerX, bottomPoint + cornerRadius * 0.2f,
-                   centerX + ICON_SIZE * 0.02f, bottomPoint - cornerRadius * 0.3f)
+                   centerX + ICON_SIZE_PX * 0.02f, bottomPoint - cornerRadius * 0.3f)
 
             // To right wing
             lineTo(rightPoint - cornerRadius * 0.6f, rightPointY + cornerRadius * 0.6f)
@@ -359,7 +386,7 @@ class BlueLocationOverlay(
                    rightPoint - cornerRadius * 0.7f, rightPointY - cornerRadius * 0.5f)
 
             // Back to top
-            lineTo(centerX + ICON_SIZE * 0.015f, topPoint + cornerRadius * 0.8f)
+            lineTo(centerX + ICON_SIZE_PX * 0.015f, topPoint + cornerRadius * 0.8f)
             quadTo(centerX, topPoint, centerX, topPoint + cornerRadius * 0.3f)
 
             close()

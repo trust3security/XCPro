@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="750" viewBox="0 0 1500 750">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#333" />
+    </marker>
+    <style><![CDATA[
+      .title { font: 20px Arial, Helvetica, sans-serif; font-weight: bold; fill: #111; }
+      .label { font: 14px Arial, Helvetica, sans-serif; font-weight: bold; fill: #111; }
+      .text { font: 12px Arial, Helvetica, sans-serif; fill: #111; }
+      .small { font: 11px Arial, Helvetica, sans-serif; fill: #111; }
+      .box { fill: #f9f9f9; stroke: #333; stroke-width: 1.5; }
+      .arrow { stroke: #333; stroke-width: 1.5; fill: none; marker-end: url(#arrow); }
+      .dashed { stroke-dasharray: 6 4; }
+    ]]></style>
+  </defs>
+
+  <text class="title" x="20" y="30">XCSoar Wind Data Flow (NMEA to UI)</text>
+
+  <!-- Top row: ingest and fast compute -->
+  <text class="label" x="20" y="60">MergeThread (fast)</text>
+
+  <rect class="box" x="20" y="70" width="200" height="60" rx="6" ry="6" />
+  <text class="text" x="32" y="95">NMEA / Sensors</text>
+  <text class="small" x="32" y="112">GPS, vario, pitot, compass</text>
+
+  <rect class="box" x="240" y="70" width="220" height="60" rx="6" ry="6" />
+  <text class="text" x="252" y="95">DeviceBlackboard</text>
+  <text class="small" x="252" y="112">real / replay / sim merge</text>
+
+  <rect class="box" x="500" y="70" width="200" height="60" rx="6" ry="6" />
+  <text class="text" x="512" y="95">MergeThread</text>
+  <text class="small" x="512" y="112">Fill + Compute basic</text>
+
+  <rect class="box" x="720" y="50" width="280" height="100" rx="6" ry="6" />
+  <text class="text" x="732" y="75">BasicComputer</text>
+  <text class="small" x="732" y="93">ComputeAirspeed / Heading</text>
+  <text class="small" x="732" y="110">ComputeEnergyHeight, GPS vario</text>
+  <text class="small" x="732" y="127">Uses last DerivedInfo.wind if needed</text>
+
+  <rect class="box" x="1040" y="70" width="180" height="60" rx="6" ry="6" />
+  <text class="text" x="1052" y="95">MoreData</text>
+  <text class="small" x="1052" y="112">Inputs for calculations</text>
+
+  <!-- Bottom row: calculation thread -->
+  <text class="label" x="500" y="205">CalculationThread (slow)</text>
+
+  <rect class="box" x="500" y="220" width="320" height="80" rx="6" ry="6" />
+  <text class="text" x="512" y="245">GlideComputer.ProcessGPS</text>
+  <text class="small" x="512" y="262">Reads MoreData, settings</text>
+  <text class="small" x="512" y="279">Calls AirData.ProcessVertical</text>
+
+  <rect class="box" x="860" y="220" width="300" height="80" rx="6" ry="6" />
+  <text class="text" x="872" y="245">GlideComputerAirData.ProcessVertical</text>
+  <text class="small" x="872" y="262">Circling + Wind + flight metrics</text>
+
+  <rect class="box" x="860" y="320" width="200" height="60" rx="6" ry="6" />
+  <text class="text" x="872" y="345">CirclingComputer</text>
+  <text class="small" x="872" y="362">turn rate / circling state</text>
+
+  <rect class="box" x="1180" y="220" width="250" height="80" rx="6" ry="6" />
+  <text class="text" x="1192" y="245">WindComputer</text>
+  <text class="small" x="1192" y="262">Circling + EKF + Store</text>
+  <text class="small" x="1192" y="279">Select wind source</text>
+
+  <rect class="box" x="1180" y="340" width="250" height="70" rx="6" ry="6" />
+  <text class="text" x="1192" y="365">DerivedInfo.wind</text>
+  <text class="small" x="1192" y="382">wind_source + head_wind</text>
+
+  <rect class="box" x="1180" y="440" width="250" height="90" rx="6" ry="6" />
+  <text class="text" x="1192" y="465">UI / Outputs</text>
+  <text class="small" x="1192" y="482">Wind arrow + wind chart</text>
+  <text class="small" x="1192" y="499">InfoBoxes, alerts, Lua</text>
+
+  <!-- Arrows top row -->
+  <line class="arrow" x1="220" y1="100" x2="240" y2="100" />
+  <line class="arrow" x1="460" y1="100" x2="500" y2="100" />
+  <line class="arrow" x1="700" y1="100" x2="720" y2="100" />
+  <line class="arrow" x1="1000" y1="100" x2="1040" y2="100" />
+
+  <!-- Down to calculation thread -->
+  <line class="arrow" x1="1130" y1="130" x2="1130" y2="220" />
+  <line class="arrow" x1="1130" y1="220" x2="820" y2="260" />
+
+  <!-- Calculation flow -->
+  <line class="arrow" x1="820" y1="260" x2="860" y2="260" />
+  <line class="arrow" x1="1160" y1="260" x2="1180" y2="260" />
+  <line class="arrow" x1="1305" y1="300" x2="1305" y2="340" />
+  <line class="arrow" x1="1305" y1="410" x2="1305" y2="440" />
+
+  <!-- CirclingComputer to WindComputer -->
+  <line class="arrow" x1="1060" y1="350" x2="1180" y2="260" />
+
+  <!-- DerivedInfo wind feeds BasicComputer (fallback) -->
+  <line class="arrow dashed" x1="1180" y1="375" x2="720" y2="100" />
+  <text class="small" x="780" y="330">wind used for airspeed/heading fallback</text>
+</svg>

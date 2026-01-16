@@ -8,7 +8,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import com.google.gson.Gson
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import com.google.gson.GsonBuilder
@@ -95,6 +94,7 @@ fun ProfileExportDialog(
     onExport: (String) -> Unit
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val exportImport = remember { ProfileExportImport(context) }
     var isExporting by remember { mutableStateOf(false) }
     var exportResult by remember { mutableStateOf<Result<String>?>(null) }
@@ -139,7 +139,7 @@ fun ProfileExportDialog(
                     // Note: In a real implementation, you'd get all profiles from repository
                     val profiles = if (profile != null) listOf(profile) else emptyList()
                     
-                    CoroutineScope(Dispatchers.Main).launch {
+                    coroutineScope.launch {
                         val result = if (profile != null) {
                             exportImport.exportProfile(profile)
                         } else {
@@ -182,6 +182,7 @@ fun ProfileImportDialog(
     onError: (String) -> Unit
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val exportImport = remember { ProfileExportImport(context) }
     var isImporting by remember { mutableStateOf(false) }
     
@@ -190,28 +191,33 @@ fun ProfileImportDialog(
     ) { uri ->
         if (uri != null) {
             isImporting = true
-            try {
-                val inputStream = context.contentResolver.openInputStream(uri)
-                val json = inputStream?.bufferedReader()?.use { it.readText() }
-                
-                if (json != null) {
-                    CoroutineScope(Dispatchers.Main).launch {
-                        val result = exportImport.importProfiles(json)
-                        isImporting = false
-                        
-                        if (result.isSuccess) {
-                            onImport(result.getOrNull()!!)
-                        } else {
-                            onError("Import failed: ${result.exceptionOrNull()?.message}")
-                        }
+            coroutineScope.launch {
+                val json = runCatching {
+                    withContext(Dispatchers.IO) {
+                        context.contentResolver.openInputStream(uri)
+                            ?.bufferedReader()
+                            ?.use { it.readText() }
                     }
-                } else {
+                }.getOrElse { error ->
+                    isImporting = false
+                    onError("Failed to read file: ${error.message}")
+                    return@launch
+                }
+
+                if (json == null) {
                     isImporting = false
                     onError("Failed to read file")
+                    return@launch
                 }
-            } catch (e: Exception) {
+
+                val result = exportImport.importProfiles(json)
                 isImporting = false
-                onError("Failed to read file: ${e.message}")
+
+                if (result.isSuccess) {
+                    onImport(result.getOrNull()!!)
+                } else {
+                    onError("Import failed: ${result.exceptionOrNull()?.message}")
+                }
             }
         }
     }

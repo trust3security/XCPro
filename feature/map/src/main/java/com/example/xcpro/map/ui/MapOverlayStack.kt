@@ -3,7 +3,6 @@ package com.example.xcpro.map.ui
 import android.util.Log
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -13,15 +12,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.dfcards.dfcards.FlightDataViewModel
-import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.common.flight.FlightMode
-import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.map.BuildConfig
 import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.map.LocationManager
@@ -37,6 +32,7 @@ import com.example.xcpro.map.ballast.BallastUiState
 import com.example.xcpro.map.ui.widgets.MapUIWidgetManager
 import com.example.xcpro.map.ui.widgets.MapUIWidgets
 import com.example.xcpro.replay.SessionState
+import com.example.xcpro.map.WindArrowUiState
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.variometer.layout.VariometerUiState
@@ -52,10 +48,8 @@ internal fun MapOverlayStack(
     locationManager: LocationManager,
     flightDataManager: FlightDataManager,
     flightViewModel: FlightDataViewModel,
-    currentFlightModeSelection: com.example.dfcards.FlightModeSelection,
     taskManager: TaskManagerCoordinator,
-    orientationManager: MapOrientationManager,
-    orientationData: OrientationData,
+    windArrowState: WindArrowUiState,
     cameraManager: MapCameraManager,
     currentMode: FlightMode,
     currentZoom: Float,
@@ -82,7 +76,6 @@ internal fun MapOverlayStack(
     widgetManager: MapUIWidgetManager,
     screenWidthPx: Float,
     screenHeightPx: Float,
-    density: Density,
     modalManager: MapModalManager,
     ballastUiState: StateFlow<BallastUiState>,
     hideBallastPill: Boolean,
@@ -115,19 +108,11 @@ internal fun MapOverlayStack(
             mapState = mapState,
             mapInitializer = mapInitializer,
             onMapReady = onMapReady,
-            locationManager = locationManager,
             flightDataManager = flightDataManager,
             flightViewModel = flightViewModel,
             taskManager = taskManager,
-            orientationManager = orientationManager,
-            orientationData = orientationData,
-            cameraManager = cameraManager,
-            currentLocation = currentLocation,
-            showReturnButton = showReturnButton,
-            isAATEditMode = isAATEditMode,
             isUiEditMode = isUiEditMode,
             onEditModeChange = onEditModeChange,
-            onSetAATEditMode = onSetAATEditMode,
             onContainerSizeChanged = { size ->
                 if (size.width > 0 && size.height > 0) {
                     safeContainerSize.value = size
@@ -181,15 +166,6 @@ internal fun MapOverlayStack(
                 .zIndex(12f)
         )
 
-        CompassPanel(
-            orientationData = orientationData,
-            orientationManager = orientationManager,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 80.dp, end = 16.dp)
-                .zIndex(5f)
-        )
-
         BallastPanel(
             ballastUiState = ballastUiState,
             hideBallastPill = hideBallastPill,
@@ -207,6 +183,7 @@ internal fun MapOverlayStack(
         VariometerPanel(
             flightDataManager = flightDataManager,
             widgetManager = widgetManager,
+            windArrowState = windArrowState,
             variometerUiState = variometerUiState,
             minVariometerSizePx = minVariometerSizePx,
             maxVariometerSizePx = maxVariometerSizePx,

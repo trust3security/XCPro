@@ -25,13 +25,11 @@ import android.util.Log
 import kotlinx.coroutines.launch
 import org.maplibre.android.maps.MapLibreMap
 import java.io.File
-import com.example.xcpro.loadAirspaceFiles
+import com.example.xcpro.AirspaceRepository
 import com.example.xcpro.copyFileToInternalStorage
-import com.example.xcpro.saveAirspaceFiles
-import com.example.xcpro.parseAirspaceClasses
-import com.example.xcpro.loadSelectedClasses
-import com.example.xcpro.saveSelectedClasses
 import com.example.xcpro.loadAndApplyAirspace
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 private const val TAG = "AirspaceComponents"
 
@@ -47,14 +45,15 @@ fun AirspaceSettingsContent(
     val airspaceCheckedStates = remember { mutableStateOf(mutableMapOf<String, Boolean>()) }
     val selectedClasses = remember { mutableStateOf(mutableMapOf<String, Boolean>()) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    val airspaceRepository = remember(context) { AirspaceRepository(context) }
 
     // Load saved airspace files and checkbox states
     LaunchedEffect(Unit) {
-        val (airspaceFiles, airspaceChecks) = loadAirspaceFiles(context)
+        val (airspaceFiles, airspaceChecks) = airspaceRepository.loadAirspaceFiles()
         selectedAirspaceFiles.clear()
         selectedAirspaceFiles.addAll(airspaceFiles)
         airspaceCheckedStates.value = airspaceChecks
-        selectedClasses.value = loadSelectedClasses(context) ?: mutableMapOf()
+        selectedClasses.value = airspaceRepository.loadSelectedClasses() ?: mutableMapOf()
     }
 
     val airspaceFilePickerLauncher =
@@ -73,13 +72,13 @@ fun AirspaceSettingsContent(
                             airspaceCheckedStates.value = airspaceCheckedStates.value.toMutableMap().apply {
                                 put(fileName, false)
                             }
-                            saveAirspaceFiles(context, selectedAirspaceFiles, airspaceCheckedStates.value)
-                            val newClasses = parseAirspaceClasses(context, selectedAirspaceFiles)
+                            airspaceRepository.saveAirspaceFiles(selectedAirspaceFiles, airspaceCheckedStates.value)
+                            val newClasses = airspaceRepository.parseClasses(selectedAirspaceFiles)
                             selectedClasses.value = selectedClasses.value.toMutableMap().apply {
                                 newClasses.forEach { put(it, it == "R" || it == "D") }
                             }
-                            saveSelectedClasses(context, selectedClasses.value)
-                            loadAndApplyAirspace(context, mapLibreMap)
+                            airspaceRepository.saveSelectedClasses(selectedClasses.value)
+                            loadAndApplyAirspace(context, mapLibreMap, airspaceRepository)
                             errorMessage = null
                         }
                     } catch (e: Exception) {
@@ -177,25 +176,29 @@ fun AirspaceSettingsContent(
                                     airspaceCheckedStates.value = airspaceCheckedStates.value.toMutableMap().apply {
                                         put(fileName, checked)
                                     }
-                                    saveAirspaceFiles(context, selectedAirspaceFiles, airspaceCheckedStates.value)
-                                    loadAndApplyAirspace(context, mapLibreMap)
+                                    coroutineScope.launch {
+                                        airspaceRepository.saveAirspaceFiles(selectedAirspaceFiles, airspaceCheckedStates.value)
+                                        loadAndApplyAirspace(context, mapLibreMap, airspaceRepository)
+                                    }
                                 }
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Button(
                                 onClick = {
-                                    selectedAirspaceFiles.removeIf { it.lastPathSegment?.substringAfterLast("/") == fileName }
-                                    airspaceCheckedStates.value = airspaceCheckedStates.value.toMutableMap().apply {
-                                        remove(fileName)
-                                    }
-                                    saveAirspaceFiles(context, selectedAirspaceFiles, airspaceCheckedStates.value)
-                                    val newClasses = parseAirspaceClasses(context, selectedAirspaceFiles)
-                                    selectedClasses.value = newClasses.associateWith { it == "R" || it == "D" }.toMutableMap()
-                                    saveSelectedClasses(context, selectedClasses.value)
-                                    loadAndApplyAirspace(context, mapLibreMap)
-                                    val file = File(context.filesDir, fileName)
-                                    if (file.exists()) {
-                                        file.delete()
+                                    coroutineScope.launch {
+                                        selectedAirspaceFiles.removeIf { it.lastPathSegment?.substringAfterLast("/") == fileName }
+                                        airspaceCheckedStates.value = airspaceCheckedStates.value.toMutableMap().apply {
+                                            remove(fileName)
+                                        }
+                                        airspaceRepository.saveAirspaceFiles(selectedAirspaceFiles, airspaceCheckedStates.value)
+                                        val newClasses = airspaceRepository.parseClasses(selectedAirspaceFiles)
+                                        selectedClasses.value = newClasses.associateWith { it == "R" || it == "D" }.toMutableMap()
+                                        airspaceRepository.saveSelectedClasses(selectedClasses.value)
+                                        loadAndApplyAirspace(context, mapLibreMap, airspaceRepository)
+                                        val file = File(context.filesDir, fileName)
+                                        if (file.exists()) {
+                                            withContext(Dispatchers.IO) { file.delete() }
+                                        }
                                     }
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
@@ -259,8 +262,10 @@ fun AirspaceSettingsContent(
                                 selectedClasses.value = selectedClasses.value.toMutableMap().apply {
                                     put(className, checked)
                                 }
-                                saveSelectedClasses(context, selectedClasses.value)
-                                loadAndApplyAirspace(context, mapLibreMap)
+                                coroutineScope.launch {
+                                    airspaceRepository.saveSelectedClasses(selectedClasses.value)
+                                    loadAndApplyAirspace(context, mapLibreMap, airspaceRepository)
+                                }
                             }
                         )
                     }

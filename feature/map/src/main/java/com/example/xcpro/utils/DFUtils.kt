@@ -16,6 +16,8 @@ import org.maplibre.android.style.layers.PropertyFactory
 import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
 import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 private const val TAG = "DFUtils"
 
@@ -92,97 +94,83 @@ fun parseCupToGeoJson(cupText: String): String {
 }
 
 
-fun loadAndApplyWaypoints(
+suspend fun loadAndApplyWaypoints(
     context: Context,
     map: MapLibreMap?,
     waypointFiles: List<Uri>,
-    checkedStates: Map<String, Boolean>
+    checkedStates: Map<String, Boolean>,
+    repository: WaypointOverlayRepository = WaypointOverlayRepository(context)
 ) {
-    map?.let { mapInstance ->
-        try {
+    val mapInstance = map ?: run {
+        Log.e(TAG, "Map instance not available")
+        return
+    }
+
+    try {
+        val scaleKm = withContext(Dispatchers.Main.immediate) {
             val zoom = mapInstance.cameraPosition.zoom
             val latitude = mapInstance.cameraPosition.target?.latitude ?: MapCameraManager.INITIAL_LATITUDE
             val metersPerPixel = 156543.03392 * Math.cos(Math.toRadians(latitude)) / Math.pow(2.0, zoom)
             val screenWidthPx = 1080.0 // Assume 1080px screen width
-            val scaleKm = (metersPerPixel * screenWidthPx) / 1000.0
-            if (scaleKm > 800) {
-                Log.d(TAG, "Not rendering waypoints: scale ($scaleKm km) exceeds 800 km")
+            (metersPerPixel * screenWidthPx) / 1000.0
+        }
+
+        if (scaleKm > 800) {
+            Log.d(TAG, "Not rendering waypoints: scale ($scaleKm km) exceeds 800 km")
+            withContext(Dispatchers.Main.immediate) {
                 mapInstance.getStyle()?.let { style ->
                     style.removeLayer("waypoint-layer")
                     style.removeSource("waypoint-source")
                 }
-                return
             }
+            return
+        }
 
+        Log.d(TAG, "Loading waypoints: ${waypointFiles.size} files found, checkedStates: $checkedStates")
+        val geoJson = repository.buildGeoJson(waypointFiles, checkedStates)
+
+        withContext(Dispatchers.Main.immediate) {
             mapInstance.getStyle()?.let { style ->
                 style.removeLayer("waypoint-layer")
                 style.removeSource("waypoint-source")
-            }
-            val features = JSONArray()
-            Log.d(TAG, "📍 Loading waypoints: ${waypointFiles.size} files found, checkedStates: $checkedStates")
-            waypointFiles.forEach { uri ->
-                val fileName = uri.lastPathSegment?.substringAfterLast("/") ?: return@forEach
-                Log.d(TAG, "📍 Checking file: $fileName, enabled: ${checkedStates[fileName]}")
-                if (checkedStates[fileName] == true) {
-                    val file = File(context.filesDir, fileName)
-                    if (file.exists()) {
-                        val geoJsonData = parseCupToGeoJson(file.readText())
-                        val geoJsonObject = JSONObject(geoJsonData)
-                        val fileFeatures = geoJsonObject.optJSONArray("features") ?: JSONArray()
-                        for (i in 0 until fileFeatures.length()) {
-                            features.put(fileFeatures.getJSONObject(i))
-                        }
-                        Log.d(TAG, "✅ Processed waypoint file: $fileName (${fileFeatures.length()} waypoints)")
-                    } else {
-                        Log.e(TAG, "❌ Waypoint file $fileName does not exist at ${file.absolutePath}")
-                    }
-                } else {
-                    Log.d(TAG, "⏭️ Skipping disabled waypoint file: $fileName")
-                }
-            }
-            Log.d(TAG, "📍 Total waypoints to display: ${features.length()}")
-            val geoJson = JSONObject().apply {
-                put("type", "FeatureCollection")
-                put("features", features)
-            }.toString()
-            mapInstance.getStyle()?.let { style ->
                 style.addSource(GeoJsonSource("waypoint-source", geoJson))
                 val layer = SymbolLayer("waypoint-layer", "waypoint-source").withProperties(
-                    // ✅ FIX: Text-only waypoints (no icon required - was causing invisibility)
+                    // Text-only waypoints (no icon required - was causing invisibility)
                     PropertyFactory.textField("{name}"),
                     PropertyFactory.textSize(11f),
-                    PropertyFactory.textColor("#000000"), // Black text
-                    PropertyFactory.textHaloColor("#FFFFFF"), // White halo for contrast
+                    PropertyFactory.textColor("#000000"),
+                    PropertyFactory.textHaloColor("#FFFFFF"),
                     PropertyFactory.textHaloWidth(1.5f),
                     PropertyFactory.textAnchor("center"),
-                    PropertyFactory.textAllowOverlap(false), // Prevent overlap clutter
+                    PropertyFactory.textAllowOverlap(false),
                     PropertyFactory.textIgnorePlacement(false)
                 )
                 val aircraftLayerExists = style.getLayer(BlueLocationOverlay.LAYER_ID) != null
                 if (aircraftLayerExists) {
                     style.addLayerBelow(layer, BlueLocationOverlay.LAYER_ID)
-                    Log.d(TAG, "✅ Waypoint text labels added below aircraft overlay (${features.length()} waypoints)")
+                    Log.d(TAG, "Waypoint text labels added below aircraft overlay")
                 } else {
                     try {
                         if (style.getLayer("road-label") != null) {
                             style.addLayerAbove(layer, "road-label")
-                            Log.d(TAG, "✅ Waypoint text labels added above road-label (${features.length()} waypoints)")
+                            Log.d(TAG, "Waypoint text labels added above road-label")
                         } else {
                             style.addLayer(layer)
-                            Log.d(TAG, "✅ Waypoint text labels added to map (${features.length()} waypoints, road-label not found)")
+                            Log.d(TAG, "Waypoint text labels added to map (road-label not found)")
                         }
                     } catch (e: Exception) {
                         style.addLayer(layer)
-                        Log.e(TAG, "⚠️ Waypoint layer added with fallback method: ${e.message}")
+                        Log.e(TAG, "Waypoint layer added with fallback method: ${e.message}")
                     }
                 }
             } ?: Log.e(TAG, "Map style not loaded")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error loading waypoint files: ${e.message}", e)
         }
-    } ?: Log.e(TAG, "Map instance not available")
+    } catch (e: Exception) {
+        Log.e(TAG, "Error loading waypoint files: ${e.message}", e)
+    }
 }
-fun saveConfig(
+
+suspend fun saveConfig(
     context: Context,
     style: String,
     cardStatesByMode: Map<FlightMode, List<MutableState<Pair<Offset, Pair<Float, Float>>>>>,
@@ -190,93 +178,62 @@ fun saveConfig(
     mapStyleExpanded: Boolean
 ) {
     try {
-        val file = File(context.filesDir, "configuration.json")
-        val jsonObject = if (file.exists()) {
-            JSONObject(file.readText())
-        } else {
-            JSONObject()
-        }
-        val appObject = jsonObject.optJSONObject("app") ?: JSONObject()
-        appObject.put("mapStyle", style)
-        jsonObject.put("app", appObject)
+        val repository = ConfigurationRepository(context)
+        repository.updateConfig { jsonObject ->
+            val appObject = jsonObject.optJSONObject("app") ?: JSONObject()
+            appObject.put("mapStyle", style)
+            jsonObject.put("app", appObject)
 
-        cardStatesByMode.forEach { (mode, cards) ->
-            val modeObject = JSONObject()
-            modeObject.put("card_count", cards.size)
-            cards.forEachIndexed { index, state ->
-                val cardObject = JSONObject()
-                cardObject.put("x", state.value.first.x)
-                cardObject.put("y", state.value.first.y)
-                cardObject.put("width", state.value.second.first)
-                cardObject.put("height", state.value.second.second)
-                modeObject.put("card_$index", cardObject)
+            cardStatesByMode.forEach { (mode, cards) ->
+                val modeObject = JSONObject()
+                modeObject.put("card_count", cards.size)
+                cards.forEachIndexed { index, state ->
+                    val cardObject = JSONObject()
+                    cardObject.put("x", state.value.first.x)
+                    cardObject.put("y", state.value.first.y)
+                    cardObject.put("width", state.value.second.first)
+                    cardObject.put("height", state.value.second.second)
+                    modeObject.put("card_$index", cardObject)
+                }
+                jsonObject.put(mode.name.lowercase(), modeObject)
             }
-            jsonObject.put(mode.name.lowercase(), modeObject)
+
+            val navDrawerObject = jsonObject.optJSONObject("navDrawer") ?: JSONObject()
+            navDrawerObject.put("profileExpanded", profileExpanded)
+            navDrawerObject.put("mapStyleExpanded", mapStyleExpanded)
+            jsonObject.put("navDrawer", navDrawerObject)
         }
-
-        val navDrawerObject = jsonObject.optJSONObject("navDrawer") ?: JSONObject()
-        navDrawerObject.put("profileExpanded", profileExpanded)
-        navDrawerObject.put("mapStyleExpanded", mapStyleExpanded)
-        jsonObject.put("navDrawer", navDrawerObject)
-
-        file.writeText(jsonObject.toString(2))
-        Log.d(TAG, "Saved config to configuration.json: mapStyle=$style, cards=$cardStatesByMode, profileExpanded=$profileExpanded, mapStyleExpanded=$mapStyleExpanded")
+        Log.d(
+            TAG,
+            "Saved config to configuration.json: mapStyle=$style, cards=$cardStatesByMode, profileExpanded=$profileExpanded, mapStyleExpanded=$mapStyleExpanded"
+        )
     } catch (e: Exception) {
         Log.e(TAG, "Error saving config to configuration.json: ${e.message}")
     }
 }
 
-fun loadConfig(context: Context): JSONObject? {
+suspend fun loadConfig(context: Context): JSONObject? {
     return try {
-        val file = File(context.filesDir, "configuration.json")
-        if (file.exists()) {
-            val jsonString = file.readText()
-            JSONObject(jsonString)
-        } else {
-            null
-        }
+        ConfigurationRepository(context).readConfig()
     } catch (e: Exception) {
         Log.e(TAG, "Error loading config from configuration.json: ${e.message}")
         null
     }
 }
 
-fun loadWaypointFiles(context: Context): Pair<List<Uri>, MutableMap<String, Boolean>> {
-    try {
-        val file = File(context.filesDir, "configuration.json")
-        if (!file.exists()) return Pair(emptyList(), mutableMapOf())
-        val json = JSONObject(file.readText())
-        val waypointFiles = json.optJSONObject("waypoint_files")?.optJSONObject("selected_files") ?: return Pair(emptyList(), mutableMapOf())
-        val files = mutableListOf<Uri>()
-        val checkedStates = mutableMapOf<String, Boolean>()
-        waypointFiles.keys().forEach { fileName ->
-            val file = File(context.filesDir, fileName)
-            if (file.exists()) {
-                files.add(Uri.fromFile(file))
-                checkedStates[fileName] = waypointFiles.getBoolean(fileName)
-            }
-        }
-        return Pair(files, checkedStates)
+suspend fun loadWaypointFiles(context: Context): Pair<List<Uri>, MutableMap<String, Boolean>> {
+    return try {
+        ConfigurationRepository(context).loadWaypointFiles()
     } catch (e: Exception) {
         Log.e(TAG, "Error loading waypoint files: ${e.message}")
-        return Pair(emptyList(), mutableMapOf())
+        Pair(emptyList(), mutableMapOf())
     }
 }
 
-fun saveWaypointFiles(context: Context, files: List<Uri>, checkedStates: Map<String, Boolean>) {
+suspend fun saveWaypointFiles(context: Context, files: List<Uri>, checkedStates: Map<String, Boolean>) {
     try {
-        val file = File(context.filesDir, "configuration.json")
-        val json = if (file.exists()) JSONObject(file.readText()) else JSONObject()
-        val waypointFiles = JSONObject()
-        val filesArray = JSONObject()
-        files.forEach { uri ->
-            val fileName = uri.lastPathSegment?.substringAfterLast("/") ?: return@forEach
-            filesArray.put(fileName, checkedStates[fileName] ?: false)
-        }
-        waypointFiles.put("selected_files", filesArray)
-        json.put("waypoint_files", waypointFiles)
-        file.writeText(json.toString(2))
-        Log.d(TAG, "Saved waypoint files: $filesArray")
+        ConfigurationRepository(context).saveWaypointFiles(files, checkedStates)
+        Log.d(TAG, "Saved waypoint files: $checkedStates")
     } catch (e: Exception) {
         Log.e(TAG, "Error saving waypoint files: ${e.message}")
     }
@@ -284,31 +241,18 @@ fun saveWaypointFiles(context: Context, files: List<Uri>, checkedStates: Map<Str
 
 // Add these functions to your existing DFUtils.kt file or any utility file
 
-fun saveSelectedTemplates(context: Context, selectedTemplates: Map<String, Boolean>) {
+suspend fun saveSelectedTemplates(context: Context, selectedTemplates: Map<String, Boolean>) {
     try {
-        val file = File(context.filesDir, "configuration.json")
-        val json = if (file.exists()) JSONObject(file.readText()) else JSONObject()
-        val templatesJson = JSONObject()
-        selectedTemplates.forEach { (key, value) -> templatesJson.put(key, value) }
-        json.put("selected_templates", templatesJson)
-        file.writeText(json.toString(2))
+        ConfigurationRepository(context).saveSelectedTemplates(selectedTemplates)
         Log.d("Templates", "Saved selected templates: $selectedTemplates")
     } catch (e: Exception) {
         Log.e("Templates", "Error saving selected templates: ${e.message}")
     }
 }
 
-fun loadSelectedTemplates(context: Context): MutableMap<String, Boolean>? {
+suspend fun loadSelectedTemplates(context: Context): MutableMap<String, Boolean>? {
     return try {
-        val file = File(context.filesDir, "configuration.json")
-        if (!file.exists()) return null
-        val json = JSONObject(file.readText())
-        val templatesJson = json.optJSONObject("selected_templates") ?: return null
-        val templates = mutableMapOf<String, Boolean>()
-        templatesJson.keys().forEach { key ->
-            templates[key] = templatesJson.getBoolean(key)
-        }
-        templates
+        ConfigurationRepository(context).loadSelectedTemplates()
     } catch (e: Exception) {
         Log.e("Templates", "Error loading selected templates: ${e.message}")
         null

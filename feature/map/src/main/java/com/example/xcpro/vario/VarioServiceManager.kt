@@ -1,8 +1,6 @@
 package com.example.xcpro.vario
 
 import android.content.Context
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
 import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.glider.StillAirSinkProvider
@@ -11,7 +9,6 @@ import com.example.xcpro.sensors.FlightStateSource
 import com.example.xcpro.sensors.SensorFusionRepository
 import com.example.xcpro.sensors.UnifiedSensorManager
 import com.example.xcpro.weather.wind.data.WindSensorFusionRepository
-import java.util.concurrent.CountDownLatch
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -20,7 +17,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Application-wide manager that keeps the sensor/vario pipeline alive even when no UI is visible.
@@ -40,10 +40,11 @@ open class VarioServiceManager @Inject constructor(
     companion object {
         private const val TAG = "VarioServiceManager"
         private const val SENSOR_RETRY_DELAY_MS = 5_000L
+        private const val GPS_UPDATE_INTERVAL_SLOW_MS = 1_000L
+        private const val GPS_UPDATE_INTERVAL_FAST_MS = 200L
     }
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val mainHandler = Handler(Looper.getMainLooper())
 
     val sensorFusionRepository: SensorFusionRepository =
         FlightDataCalculator(
@@ -58,9 +59,11 @@ open class VarioServiceManager @Inject constructor(
     private var running = false
     private var collectionJob: Job? = null
     private var configJob: Job? = null
+    private var gpsCadenceJob: Job? = null
+    private var lastGpsIntervalMs: Long? = null
     private val sensorRetryCoordinator = SensorRetryCoordinator(serviceScope, SENSOR_RETRY_DELAY_MS)
 
-    open fun start(): Boolean {
+    open suspend fun start(): Boolean {
         // Always reset the data source to LIVE so live sensor updates are not gated out after a replay.
         flightDataRepository.setActiveSource(FlightDataRepository.Source.LIVE)
 
@@ -74,9 +77,11 @@ open class VarioServiceManager @Inject constructor(
             Log.d(TAG, "Starting sensors + flight data collection")
             observeLevoPreferences()
             startCollection()
+            observeGpsCadence()
         }
 
         cancelSensorRetry()
+        applyGpsUpdateInterval(GPS_UPDATE_INTERVAL_SLOW_MS)
         val sensorsStarted = startSensorsOnMainThread()
         if (!sensorsStarted) {
             Log.w(TAG, "GPS listener not registered; scheduling retry every ${SENSOR_RETRY_DELAY_MS} ms")
@@ -94,6 +99,9 @@ open class VarioServiceManager @Inject constructor(
         sensorFusionRepository.stop()
         configJob?.cancel()
         configJob = null
+        gpsCadenceJob?.cancel()
+        gpsCadenceJob = null
+        lastGpsIntervalMs = null
         flightDataRepository.update(null, FlightDataRepository.Source.LIVE)
         collectionJob?.cancel()
         collectionJob = null
@@ -118,6 +126,23 @@ open class VarioServiceManager @Inject constructor(
         }
     }
 
+    private fun observeGpsCadence() {
+        if (gpsCadenceJob != null) return
+        gpsCadenceJob = serviceScope.launch {
+            combine(flightDataRepository.activeSource, flightStateSource.flightState) { source, state ->
+                GpsCadencePolicy.select(source, state)
+            }
+                .distinctUntilChanged()
+                .collectLatest { cadence ->
+                    val interval = when (cadence) {
+                        GpsCadenceMode.FAST -> GPS_UPDATE_INTERVAL_FAST_MS
+                        GpsCadenceMode.SLOW -> GPS_UPDATE_INTERVAL_SLOW_MS
+                    }
+                    applyGpsUpdateInterval(interval)
+                }
+        }
+    }
+
     private fun scheduleSensorRetry() {
         sensorRetryCoordinator.schedule {
             val started = startSensorsOnMainThread()
@@ -134,35 +159,23 @@ open class VarioServiceManager @Inject constructor(
         sensorRetryCoordinator.cancel()
     }
 
-    private fun startSensorsOnMainThread(): Boolean {
-        if (Looper.myLooper() == Looper.getMainLooper()) {
-            return unifiedSensorManager.startAllSensors()
-        }
-
-        var result = false
-        var error: Throwable? = null
-        val latch = CountDownLatch(1)
-        mainHandler.post {
-            try {
-                result = unifiedSensorManager.startAllSensors()
-            } catch (t: Throwable) {
-                error = t
-            } finally {
-                latch.countDown()
+    private suspend fun startSensorsOnMainThread(): Boolean {
+        return try {
+            withContext(Dispatchers.Main.immediate) {
+                unifiedSensorManager.startAllSensors()
             }
+        } catch (t: Throwable) {
+            throw RuntimeException("Failed to start sensors", t)
         }
+    }
 
-        try {
-            latch.await()
-        } catch (ie: InterruptedException) {
-            Thread.currentThread().interrupt()
-            return false
+    private suspend fun applyGpsUpdateInterval(intervalMs: Long) {
+        if (lastGpsIntervalMs == intervalMs) return
+        lastGpsIntervalMs = intervalMs
+        withContext(Dispatchers.Main.immediate) {
+            unifiedSensorManager.setGpsUpdateIntervalMs(intervalMs)
         }
-
-        if (error != null) {
-            throw RuntimeException("Failed to start sensors", error)
-        }
-        return result
+        Log.d(TAG, "GPS update interval set to ${intervalMs}ms")
     }
 }
 

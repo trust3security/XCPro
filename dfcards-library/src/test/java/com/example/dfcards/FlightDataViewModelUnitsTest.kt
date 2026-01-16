@@ -6,6 +6,7 @@ import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.xcpro.common.units.AltitudeUnit
 import com.example.xcpro.common.units.VerticalSpeedUnit
 import com.example.xcpro.common.units.UnitsPreferences
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -21,11 +22,13 @@ class FlightDataViewModelUnitsTest {
             cardIds = listOf("agl")
         )
 
-        viewModel.applyTemplate(
-            template = template,
-            containerSize = IntSize(800, 600),
-            density = Density(1f)
-        )
+        runBlocking {
+            viewModel.applyTemplate(
+                template = template,
+                containerSize = IntSize(800, 600),
+                density = Density(1f)
+            )
+        }
 
         val liveData = RealTimeFlightData(
             agl = 100.0,
@@ -55,11 +58,13 @@ class FlightDataViewModelUnitsTest {
             cardIds = listOf("vario")
         )
 
-        viewModel.applyTemplate(
-            template = template,
-            containerSize = IntSize(800, 600),
-            density = Density(1f)
-        )
+        runBlocking {
+            viewModel.applyTemplate(
+                template = template,
+                containerSize = IntSize(800, 600),
+                density = Density(1f)
+            )
+        }
 
         viewModel.updateCardsWithLiveData(
             RealTimeFlightData(

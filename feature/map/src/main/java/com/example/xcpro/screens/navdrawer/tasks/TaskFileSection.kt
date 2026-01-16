@@ -16,6 +16,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme as Material3Theme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -23,14 +25,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.ui1.screens.AirspaceClassItem
 import org.maplibre.android.maps.MapLibreMap
+import com.example.xcpro.AirspaceRepository
 import com.example.xcpro.loadAndApplyAirspace
 import com.example.xcpro.loadAndApplyWaypoints
-import com.example.xcpro.parseAirspaceClasses
-import com.example.xcpro.saveAirspaceFiles
-import com.example.xcpro.saveSelectedClasses
 import com.example.xcpro.saveWaypointFiles
 import com.example.xcpro.screens.navdrawer.tasks.rememberAirspaceClasses
-import androidx.compose.ui.draw.drawWithContent
+import kotlinx.coroutines.launch
 
 @Composable
 fun WaypointSection(
@@ -42,6 +42,7 @@ fun WaypointSection(
     selectedWaypointFiles: MutableList<Uri>,
     waypointCheckedStates: androidx.compose.runtime.MutableState<MutableMap<String, Boolean>>
 ) {
+    val coroutineScope = rememberCoroutineScope()
     SectionHeader(
         title = "Waypoint Files",
         description = "Import CUP files and toggle them on the map",
@@ -57,8 +58,10 @@ fun WaypointSection(
         files = selectedWaypointFiles,
         onRemove = { uri ->
             selectedWaypointFiles.remove(uri)
-            saveWaypointFiles(context, selectedWaypointFiles, waypointCheckedStates.value)
-            loadAndApplyWaypoints(context, mapLibreMap, selectedWaypointFiles, waypointCheckedStates.value)
+            coroutineScope.launch {
+                saveWaypointFiles(context, selectedWaypointFiles, waypointCheckedStates.value)
+                loadAndApplyWaypoints(context, mapLibreMap, selectedWaypointFiles, waypointCheckedStates.value)
+            }
         }
     )
 }
@@ -73,6 +76,8 @@ fun AirspaceSection(
     selectedAirspaceFiles: MutableList<Uri>,
     airspaceCheckedStates: androidx.compose.runtime.MutableState<MutableMap<String, Boolean>>
 ) {
+    val coroutineScope = rememberCoroutineScope()
+    val airspaceRepository = remember(context) { AirspaceRepository(context) }
     SectionHeader(
         title = "Airspace Files",
         description = "Import TXT files and toggle them on the map",
@@ -88,8 +93,10 @@ fun AirspaceSection(
         files = selectedAirspaceFiles,
         onRemove = { uri ->
             selectedAirspaceFiles.remove(uri)
-            saveAirspaceFiles(context, selectedAirspaceFiles, airspaceCheckedStates.value)
-            loadAndApplyAirspace(context, mapLibreMap)
+            coroutineScope.launch {
+                airspaceRepository.saveAirspaceFiles(selectedAirspaceFiles, airspaceCheckedStates.value)
+                loadAndApplyAirspace(context, mapLibreMap, airspaceRepository)
+            }
         }
     )
 }
@@ -101,6 +108,8 @@ fun AirspaceClassesSection(
     airspaceFiles: List<Uri>,
     selectedClasses: androidx.compose.runtime.MutableState<MutableMap<String, Boolean>>
 ) {
+    val coroutineScope = rememberCoroutineScope()
+    val airspaceRepository = remember(context) { AirspaceRepository(context) }
     SectionHeader(
         title = "Airspace Classes",
         description = "Toggle which airspace classes are visible on the map"
@@ -145,8 +154,10 @@ fun AirspaceClassesSection(
                     selectedClasses.value = selectedClasses.value.toMutableMap().apply {
                         put(className, !(get(className) ?: false))
                     }
-                    saveSelectedClasses(context, selectedClasses.value)
-                    loadAndApplyAirspace(context, mapLibreMap)
+                    coroutineScope.launch {
+                        airspaceRepository.saveSelectedClasses(selectedClasses.value)
+                        loadAndApplyAirspace(context, mapLibreMap, airspaceRepository)
+                    }
                 }
             )
         }

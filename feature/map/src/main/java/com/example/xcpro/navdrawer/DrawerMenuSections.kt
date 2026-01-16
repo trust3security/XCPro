@@ -14,12 +14,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.example.ui1.icons.ActivityLog
 import com.example.ui1.icons.Hangglider
 import com.example.ui1.icons.Task
 import com.example.xcpro.common.orientation.MapOrientationMode
-import com.example.xcpro.common.waypoint.loadHomeWaypoint
+import com.example.xcpro.common.waypoint.HomeWaypointRepository
 import com.example.xcpro.profiles.ProfileViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -137,28 +138,9 @@ fun TaskSection(
 ) {
     val context = LocalContext.current
 
-    // Home waypoint state tracking (NO ANIMATION)
-    var homeWaypointName by remember { mutableStateOf<String?>(null) }
-
-    // Load home waypoint name on first composition
-    LaunchedEffect(Unit) {
-        val savedHome = loadHomeWaypoint(context)
-        homeWaypointName = savedHome?.name
-    }
-
-    // Listen for home waypoint updates
-    LaunchedEffect(Unit) {
-        val sharedPrefs = context.getSharedPreferences("HomeWaypointPrefs", Context.MODE_PRIVATE)
-
-        // Poll for changes every second
-        while (true) {
-            val currentName = sharedPrefs.getString("current_home_waypoint", null)
-            if (currentName != homeWaypointName) {
-                homeWaypointName = currentName
-            }
-            kotlinx.coroutines.delay(1000)
-        }
-    }
+    val homeWaypointRepository = remember(context) { HomeWaypointRepository(context) }
+    val homeWaypointName by homeWaypointRepository.observeHomeWaypointName()
+        .collectAsStateWithLifecycle(initialValue = homeWaypointRepository.getHomeWaypointName())
 
     val infiniteTransition = rememberInfiniteTransition(label = "home_pulse")
 

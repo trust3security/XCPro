@@ -1,10 +1,10 @@
 # Racing Tasks - Complete Guide
 
-**Last Updated:** 2025-01-08
+**Last Updated:** 2026-01-15
 **Status:** ✅ Current - Consolidated from multiple sources
 **Module:** `app/src/main/java/.../tasks/racing/`
 
-> **Quick Links:** [Task Separation Rules](../01_Core/Task_Type_Separation.md) | [Default Values](./Default_Values.md) | [Racing ARCHITECTURE](../../app/src/main/java/com/example/xcpro/tasks/racing/ARCHITECTURE.md)
+> **Quick Links:** [Task Separation Rules](../01_Core/Task_Type_Separation.md) | [Default Values](./Default_Values.md) | [Racing ARCHITECTURE](../../app/src/main/java/com/example/xcpro/tasks/racing/ARCHITECTURE.md) | [Racing Task Summary](./racingtask.md) | [XCSoar-Style Navigation](./Racing_XCSoar_Navigation.md)
 
 ---
 
@@ -185,6 +185,18 @@ Racing tasks display:
 
 ---
 
+## Navigation (XCSoar Alignment)
+
+XCPro will follow XCSoar's transition-driven task logic:
+- Start is detected on exit from the start observation zone (line/cylinder/sector).
+- Turnpoints advance on entry into the observation zone.
+- Finish is detected on entry, and only after previous points are achieved.
+- Transition checks use last GPS vs current GPS positions (not single-point proximity).
+
+Implementation details and the long-term strategy live in:
+- `docs/02_Tasks/Racing_XCSoar_Navigation.md`
+
+---
 ## ⚖️ FAI Compliance
 
 ### Racing Task Validation
@@ -313,3 +325,4 @@ if (result.isValid) {
 ---
 
 **Questions?** See [DOCS_INDEX.md](../../DOCS_INDEX.md) for complete documentation map.
+

@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -46,8 +47,7 @@ import com.example.ui1.screens.flightmgmt.FlightDataClassesTab
 import com.example.ui1.screens.flightmgmt.FlightDataScreensTab
 import com.example.ui1.screens.flightmgmt.buildAirspaceFileItems
 import com.example.ui1.screens.flightmgmt.refreshAvailableAirspaceClasses
-import com.example.xcpro.loadAirspaceFiles
-import com.example.xcpro.loadSelectedClasses
+import com.example.xcpro.AirspaceRepository
 import com.example.xcpro.loadWaypointFiles
 import com.example.xcpro.saveAirspaceFiles
 import com.example.xcpro.saveWaypointFiles
@@ -77,6 +77,7 @@ fun FlightMgmt(
     val scope = rememberCoroutineScope()
     val cardPreferences = remember { CardPreferences(context) }
     val flightViewModel: FlightDataViewModel = viewModel()
+    val airspaceRepository = remember(context) { AirspaceRepository(context) }
 
     LaunchedEffect(cardPreferences) {
         flightViewModel.initializeCardPreferences(cardPreferences)
@@ -115,13 +116,13 @@ fun FlightMgmt(
         waypointCheckedStates.clear()
         waypointCheckedStates.putAll(waypointChecks)
 
-        val (airspaceFiles, airspaceChecks) = loadAirspaceFiles(context)
+        val (airspaceFiles, airspaceChecks) = airspaceRepository.loadAirspaceFiles()
         selectedAirspaceFiles.clear()
         selectedAirspaceFiles.addAll(airspaceFiles)
         airspaceCheckedStates.clear()
         airspaceCheckedStates.putAll(airspaceChecks)
 
-        val savedClassStates = loadSelectedClasses(context) ?: emptyMap()
+        val savedClassStates = airspaceRepository.loadSelectedClasses() ?: emptyMap()
         airspaceClassStates.clear()
         airspaceClassStates.putAll(savedClassStates)
     }
@@ -136,7 +137,17 @@ fun FlightMgmt(
             uri = uri
         )
     }
-    val airspaceFileItems = buildAirspaceFileItems(context, selectedAirspaceFiles, airspaceCheckedStates)
+    val airspaceFileItems by produceState(
+        initialValue = emptyList<FileItem>(),
+        selectedAirspaceFiles.toList(),
+        airspaceCheckedStates.toMap()
+    ) {
+        value = buildAirspaceFileItems(
+            context,
+            selectedAirspaceFiles.toList(),
+            airspaceCheckedStates.toMap()
+        )
+    }
 
     val currentFlightMode by flightViewModel.currentFlightMode.collectAsState()
     val profileModeVisibilities by flightViewModel.profileModeVisibilities.collectAsState()
@@ -330,11 +341,13 @@ fun FlightMgmt(
                                     uri.lastPathSegment?.substringAfterLast("/") == fileName
                                 }
                                 waypointCheckedStates.remove(fileName)
-                                saveWaypointFiles(
-                                    context,
-                                    selectedWaypointFiles,
-                                    waypointCheckedStates.toMap()
-                                )
+                                scope.launch {
+                                    saveWaypointFiles(
+                                        context,
+                                        selectedWaypointFiles,
+                                        waypointCheckedStates.toMap()
+                                    )
+                                }
                             }
 
                             "airspace" -> {

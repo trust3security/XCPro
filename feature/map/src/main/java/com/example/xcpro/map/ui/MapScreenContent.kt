@@ -20,14 +20,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import com.example.dfcards.RealTimeFlightData
 import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.xcpro.common.flight.FlightMode
@@ -36,7 +34,6 @@ import com.example.xcpro.map.components.MapActionButtons
 import com.example.xcpro.map.MapCameraManager
 import com.example.xcpro.map.MapModalManager
 import com.example.xcpro.map.MapOverlayManager
-import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.map.ui.MapOverlayStack
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapTaskScreenManager
@@ -47,9 +44,9 @@ import com.example.xcpro.map.LocationManager
 import com.example.xcpro.map.ballast.BallastCommand
 import com.example.xcpro.map.ballast.BallastUiState
 import com.example.xcpro.tasks.TaskManagerCoordinator
-import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.map.FlightDataManager
+import com.example.xcpro.map.WindArrowUiState
 import com.example.xcpro.sensors.GPSData
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.delay
@@ -64,6 +61,7 @@ import com.example.xcpro.replay.SessionStatus
 import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.VerticalSpeedMs
 import org.maplibre.android.maps.MapLibreMap
+import com.example.xcpro.qnh.QnhCalibrationState
 
 @Composable
 internal fun MapScreenContent(
@@ -75,10 +73,8 @@ internal fun MapScreenContent(
     flightDataManager: FlightDataManager,
     flightViewModel: FlightDataViewModel,
     taskManager: TaskManagerCoordinator,
-    orientationManager: MapOrientationManager,
-    orientationData: OrientationData,
+    windArrowState: WindArrowUiState,
     cameraManager: MapCameraManager,
-    currentFlightModeSelection: com.example.dfcards.FlightModeSelection,
     currentMode: FlightMode,
     currentZoom: Float,
     onModeChange: (FlightMode) -> Unit,
@@ -110,6 +106,9 @@ internal fun MapScreenContent(
     taskScreenManager: MapTaskScreenManager,
     waypointData: List<WaypointData>,
     unitsPreferences: UnitsPreferences,
+    qnhCalibrationState: QnhCalibrationState,
+    onAutoCalibrateQnh: () -> Unit,
+    onSetManualQnh: (Double) -> Unit,
     ballastUiState: StateFlow<BallastUiState>,
     isBallastPillHidden: Boolean,
     onBallastCommand: (BallastCommand) -> Unit,
@@ -118,7 +117,10 @@ internal fun MapScreenContent(
     cardStyle: CardStyle,
     replayState: StateFlow<SessionState>,
     showVarioDemoFab: Boolean,
-    onVarioDemoClick: () -> Unit
+    onVarioDemoReferenceClick: () -> Unit,
+    onVarioDemoSimClick: () -> Unit,
+    showRacingReplayFab: Boolean,
+    onRacingReplayClick: () -> Unit
 ) {
     var showQnhDialog by remember { mutableStateOf(false) }
     var qnhInput by remember { mutableStateOf("") }
@@ -149,10 +151,8 @@ internal fun MapScreenContent(
                         locationManager = locationManager,
                         flightDataManager = flightDataManager,
                         flightViewModel = flightViewModel,
-                        currentFlightModeSelection = currentFlightModeSelection,
                         taskManager = taskManager,
-                        orientationManager = orientationManager,
-                        orientationData = orientationData,
+                        windArrowState = windArrowState,
                         cameraManager = cameraManager,
                         currentMode = currentMode,
                         currentZoom = currentZoom,
@@ -179,7 +179,6 @@ internal fun MapScreenContent(
                         widgetManager = widgetManager,
                         screenWidthPx = screenWidthPx,
                         screenHeightPx = screenHeightPx,
-                        density = density,
                         modalManager = modalManager,
                         ballastUiState = ballastUiState,
                         hideBallastPill = isBallastPillHidden,
@@ -202,7 +201,7 @@ internal fun MapScreenContent(
             }
         )
 
-    MapActionButtonsLayer(
+        MapActionButtonsLayer(
             taskScreenManager = taskScreenManager,
             currentLocation = currentLocation,
             showRecenterButton = showRecenterButton,
@@ -210,6 +209,7 @@ internal fun MapScreenContent(
             showDistanceCircles = showDistanceCircles,
             showQnhFab = showQnhFab,
             showVarioDemoFab = showVarioDemoFab,
+            showRacingReplayFab = showRacingReplayFab,
             onRecenter = locationManager::recenterOnCurrentLocation,
             onToggleDistanceCircles = { overlayManager.toggleDistanceCircles() },
             onReturn = { locationManager.returnToSavedLocation() },
@@ -220,7 +220,9 @@ internal fun MapScreenContent(
                 showQnhDialog = true
             },
             onDismissQnhFab = { showQnhFab = false },
-            onVarioDemoClick = onVarioDemoClick
+            onVarioDemoReferenceClick = onVarioDemoReferenceClick,
+            onVarioDemoSimClick = onVarioDemoSimClick,
+            onRacingReplayClick = onRacingReplayClick
         )
 
         QnhDialogHost(
@@ -229,13 +231,14 @@ internal fun MapScreenContent(
             qnhError = qnhError,
             unitsPreferences = unitsPreferences,
             liveData = flightDataManager.liveFlightData,
+            calibrationState = qnhCalibrationState,
             onQnhInputChange = {
                 qnhInput = it
                 qnhError = null
             },
             onConfirm = { parsed ->
                 val qnhHpa = convertQnhInputToHpa(parsed, unitsPreferences)
-                locationManager.setManualQnh(qnhHpa)
+                onSetManualQnh(qnhHpa)
                 showQnhDialog = false
                 qnhError = null
             },
@@ -243,7 +246,7 @@ internal fun MapScreenContent(
                 qnhError = error
             },
             onAutoCalibrate = {
-                locationManager.autoCalibrateQnh()
+                onAutoCalibrateQnh()
                 showQnhDialog = false
                 qnhError = null
             },
@@ -327,12 +330,15 @@ private fun MapActionButtonsLayer(
     showDistanceCircles: Boolean,
     showQnhFab: Boolean,
     showVarioDemoFab: Boolean,
+    showRacingReplayFab: Boolean,
     onRecenter: () -> Unit,
     onToggleDistanceCircles: () -> Unit,
     onReturn: () -> Unit,
     onShowQnhDialog: () -> Unit,
     onDismissQnhFab: () -> Unit,
-    onVarioDemoClick: () -> Unit,
+    onVarioDemoReferenceClick: () -> Unit,
+    onVarioDemoSimClick: () -> Unit,
+    onRacingReplayClick: () -> Unit,
     modifier: Modifier = Modifier.fillMaxSize()
 ) {
     MapActionButtons(
@@ -348,7 +354,10 @@ private fun MapActionButtonsLayer(
         showQnhFab = showQnhFab,
         onDismissQnhFab = onDismissQnhFab,
         showVarioDemoFab = showVarioDemoFab,
-        onVarioDemoClick = onVarioDemoClick,
+        showRacingReplayFab = showRacingReplayFab,
+        onVarioDemoReferenceClick = onVarioDemoReferenceClick,
+        onVarioDemoSimClick = onVarioDemoSimClick,
+        onRacingReplayClick = onRacingReplayClick,
         modifier = modifier
     )
 }
@@ -360,6 +369,7 @@ private fun QnhDialogHost(
     qnhError: String?,
     unitsPreferences: UnitsPreferences,
     liveData: RealTimeFlightData?,
+    calibrationState: QnhCalibrationState,
     onQnhInputChange: (String) -> Unit,
     onConfirm: (Double) -> Unit,
     onInvalidInput: (String) -> Unit,
@@ -372,6 +382,7 @@ private fun QnhDialogHost(
         qnhError = qnhError,
         unitsPreferences = unitsPreferences,
         liveData = liveData,
+        calibrationState = calibrationState,
         onQnhInputChange = onQnhInputChange,
         onConfirm = onConfirm,
         onInvalidInput = onInvalidInput,

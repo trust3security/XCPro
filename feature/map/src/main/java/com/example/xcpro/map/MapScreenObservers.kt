@@ -98,7 +98,7 @@ internal class MapScreenObservers(
                         uiEffects.emit(MapUiEffect.ShowToast("Replay finished (${event.samples} samples)"))
                     is ReplayEvent.Failed -> {
                         if (event.throwable is CancellationException) {
-                            uiEffects.emit(MapUiEffect.ShowToast("Replay failed: job was cancelled"))
+                            uiEffects.emit(MapUiEffect.ShowToast("Replay stopped."))
                             return@onEach
                         }
                         Log.e("MapScreenViewModel", "Replay failed", event.throwable)
@@ -107,7 +107,7 @@ internal class MapScreenObservers(
                         )
                     }
                     ReplayEvent.Cancelled -> {
-                        uiEffects.emit(MapUiEffect.ShowToast("Replay failed: job was cancelled"))
+                        uiEffects.emit(MapUiEffect.ShowToast("Replay stopped."))
                     }
                 }
             }

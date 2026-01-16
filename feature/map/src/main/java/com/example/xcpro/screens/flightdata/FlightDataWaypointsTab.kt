@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Modifier
@@ -112,15 +113,15 @@ fun FlightDataWaypointsTab(
     }
 
     // Create file items with dynamic counts
-    val waypointFileItems = selectedWaypointFiles.map { uri ->
-        val fileName = uri.lastPathSegment?.substringAfterLast("/") ?: "Unknown"
-        val waypointCount = getWaypointCount(context, uri)
-        FileItem(
-            name = fileName,
-            enabled = waypointCheckedStates[fileName] ?: false,
-            count = waypointCount,
-            status = if (waypointCheckedStates[fileName] == true) "Loaded" else "Disabled",
-            uri = uri
+    val waypointFileItems by produceState(
+        initialValue = emptyList<FileItem>(),
+        selectedWaypointFiles.toList(),
+        waypointCheckedStates.toMap()
+    ) {
+        value = buildWaypointFileItems(
+            context,
+            selectedWaypointFiles.toList(),
+            waypointCheckedStates.toMap()
         )
     }
 
@@ -168,11 +169,13 @@ fun FlightDataWaypointsTab(
                             Log.d(TAG, "Toggling waypoint file: $fileName")
                             val newValue = !(waypointCheckedStates[fileName] ?: false)
                             waypointCheckedStates[fileName] = newValue
-                            saveWaypointFiles(
-                                context,
-                                selectedWaypointFiles,
-                                waypointCheckedStates.toMap()
-                            )
+                            scope.launch {
+                                saveWaypointFiles(
+                                    context,
+                                    selectedWaypointFiles,
+                                    waypointCheckedStates.toMap()
+                                )
+                            }
                             val statusLabel = if (newValue) "enabled" else "disabled"
                             Log.d(TAG, "Waypoint file $fileName is now ${statusLabel}")
                         },
@@ -200,11 +203,13 @@ fun FlightDataWaypointsTab(
                             Log.d(TAG, "Toggling waypoint file: $fileName")
                             val newValue = !(waypointCheckedStates[fileName] ?: false)
                             waypointCheckedStates[fileName] = newValue
-                            saveWaypointFiles(
-                                context,
-                                selectedWaypointFiles,
-                                waypointCheckedStates.toMap()
-                            )
+                            scope.launch {
+                                saveWaypointFiles(
+                                    context,
+                                    selectedWaypointFiles,
+                                    waypointCheckedStates.toMap()
+                                )
+                            }
                         },
                         { fileName -> onShowDeleteDialog(fileName) }
                     )

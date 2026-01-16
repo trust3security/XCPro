@@ -1,7 +1,7 @@
 package com.example.ui1.screens
 
 import android.net.Uri
-import android.util.Log
+import com.example.xcpro.core.common.logging.AppLogger
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
@@ -32,15 +32,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavHostController
 import com.example.xcpro.common.flight.FlightMode
+import com.example.xcpro.AirspaceRepository
 import com.example.xcpro.copyFileToInternalStorage
-import com.example.xcpro.loadAirspaceFiles
 import com.example.xcpro.loadAndApplyAirspace
 import com.example.xcpro.loadAndApplyWaypoints
-import com.example.xcpro.loadSelectedClasses
 import com.example.xcpro.loadWaypointFiles
-import com.example.xcpro.parseAirspaceClasses
-import com.example.xcpro.saveAirspaceFiles
-import com.example.xcpro.saveSelectedClasses
 import com.example.xcpro.saveWaypointFiles
 import com.example.xcpro.screens.navdrawer.tasks.TaskAirspaceClassCard
 import com.example.xcpro.screens.navdrawer.tasks.TaskFilesBottomBar
@@ -89,6 +85,7 @@ fun Task(
     val scope = rememberCoroutineScope()
     var selectedItem by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
+    val airspaceRepository = remember(context) { AirspaceRepository(context) }
     val selectedAirspaceFiles = remember { mutableStateListOf<Uri>() }
     val airspaceCheckedStates = remember { mutableStateOf(mutableMapOf<String, Boolean>()) }
     val selectedWaypointFiles = remember { mutableStateListOf<Uri>() }
@@ -104,7 +101,7 @@ fun Task(
     var targetLatLng by remember { mutableStateOf<LatLng?>(null) }
 
     LaunchedEffect(Unit) {
-        val (airspaceFiles, airspaceChecks) = loadAirspaceFiles(context)
+        val (airspaceFiles, airspaceChecks) = airspaceRepository.loadAirspaceFiles()
         val (waypointFiles, waypointChecks) = loadWaypointFiles(context)
         selectedAirspaceFiles.clear()
         selectedAirspaceFiles.addAll(airspaceFiles)
@@ -112,7 +109,7 @@ fun Task(
         selectedWaypointFiles.clear()
         selectedWaypointFiles.addAll(waypointFiles)
         waypointCheckedStates.value = waypointChecks
-        selectedClasses.value = loadSelectedClasses(context) ?: mutableMapOf()
+        selectedClasses.value = airspaceRepository.loadSelectedClasses() ?: mutableMapOf()
     }
 
     val airspaceFilePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
@@ -122,7 +119,7 @@ fun Task(
                     val fileName = copyFileToInternalStorage(context, it)
                     if (!fileName.endsWith(".txt", ignoreCase = true)) {
                         errorMessage = "Only .txt files are supported for airspace files."
-                        Log.e(TAG, "Selected file is not a .txt file: $fileName")
+                        AppLogger.e(TAG, "Selected file is not a .txt file: $fileName")
                         return@launch
                     }
                     if (!selectedAirspaceFiles.any { file -> file.lastPathSegment?.substringAfterLast("/") == fileName }) {
@@ -130,17 +127,17 @@ fun Task(
                         airspaceCheckedStates.value = airspaceCheckedStates.value.toMutableMap().apply {
                             put(fileName, false)
                         }
-                        saveAirspaceFiles(context, selectedAirspaceFiles, airspaceCheckedStates.value)
-                        val newClasses = parseAirspaceClasses(context, selectedAirspaceFiles)
+                        airspaceRepository.saveAirspaceFiles(selectedAirspaceFiles, airspaceCheckedStates.value)
+                        val newClasses = airspaceRepository.parseClasses(selectedAirspaceFiles)
                         selectedClasses.value = selectedClasses.value.toMutableMap().apply {
                             newClasses.forEach { put(it, it == "R" || it == "D") }
                         }
-                        saveSelectedClasses(context, selectedClasses.value)
-                        loadAndApplyAirspace(context, mapLibreMap)
+                        airspaceRepository.saveSelectedClasses(selectedClasses.value)
+                        loadAndApplyAirspace(context, mapLibreMap, airspaceRepository)
                         errorMessage = null
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error copying file: ${e.message}")
+                    AppLogger.e(TAG, "Error copying file: ${e.message}")
                     errorMessage = "Error copying file: ${e.message}"
                 }
             }
@@ -154,7 +151,7 @@ fun Task(
                     val fileName = copyFileToInternalStorage(context, it)
                     if (!fileName.endsWith(".cup", ignoreCase = true)) {
                         errorMessage = "Only .cup files are supported for waypoint files."
-                        Log.e(TAG, "Selected file is not a .cup file: $fileName")
+                        AppLogger.e(TAG, "Selected file is not a .cup file: $fileName")
                         return@launch
                     }
                     if (!selectedWaypointFiles.any { file -> file.lastPathSegment?.substringAfterLast("/") == fileName }) {
@@ -165,13 +162,13 @@ fun Task(
                         saveWaypointFiles(context, selectedWaypointFiles, waypointCheckedStates.value)
                         errorMessage = null
                         loadAndApplyWaypoints(context, mapLibreMap, selectedWaypointFiles, waypointCheckedStates.value)
-                        Log.d(TAG, "Waypoint file added and saved: $fileName")
+                        AppLogger.d(TAG, "Waypoint file added and saved: $fileName")
                     } else {
                         errorMessage = "File already selected: $fileName"
-                        Log.d(TAG, "Duplicate waypoint file ignored: $fileName")
+                        AppLogger.d(TAG, "Duplicate waypoint file ignored: $fileName")
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error copying waypoint file: ${e.message}")
+                    AppLogger.e(TAG, "Error copying waypoint file: ${e.message}")
                     errorMessage = "Error copying file: ${e.message}"
                 }
             }
@@ -188,9 +185,9 @@ fun Task(
             try {
                 val latLng = targetLatLng ?: LatLng(INITIAL_LATITUDE, INITIAL_LONGITUDE)
                 map.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, animatedZoom.toDouble()))
-                Log.d(TAG, "Camera moved to lat=${latLng.latitude}, lon=${latLng.longitude}, zoom=$animatedZoom")
+                AppLogger.d(TAG, "Camera moved to lat=${latLng.latitude}, lon=${latLng.longitude}, zoom=$animatedZoom")
             } catch (e: Exception) {
-                Log.e(TAG, "Error moving camera: ${e.message}")
+                AppLogger.e(TAG, "Error moving camera: ${e.message}")
             }
         }
     }
@@ -273,35 +270,35 @@ fun Task(
             AndroidView(
                 factory = { ctx ->
                     MapView(ctx).apply {
-                        Log.d(TAG, "🏗️ Creating MapView for Task screen")
+                        AppLogger.d(TAG, "Creating MapView for Task screen")
                         getMapAsync { map: MapLibreMap ->
                             mapLibreMap = map
                             map.setStyle("https://api.maptiler.com/maps/streets-v2/style.json?key=nYDScLfnBm52GAc3jXEZ") {
                                 // Configure UI settings AFTER style is loaded
-                                map.uiSettings.isZoomGesturesEnabled = true   // ✅ ENABLE zoom gestures (pinch to zoom)
+                                map.uiSettings.isZoomGesturesEnabled = true   // ENABLE zoom gestures (pinch to zoom)
                                 map.uiSettings.isRotateGesturesEnabled = false
                                 map.uiSettings.isTiltGesturesEnabled = false
-                                map.uiSettings.isScrollGesturesEnabled = true  // ✅ ENABLE pan gestures (drag to pan)
+                                map.uiSettings.isScrollGesturesEnabled = true  // ENABLE pan gestures (drag to pan)
                                 map.uiSettings.isQuickZoomGesturesEnabled = false
 
                                 // Add gesture listeners to debug
                                 map.addOnMoveListener(object : MapLibreMap.OnMoveListener {
                                     override fun onMoveBegin(detector: MoveGestureDetector) {
-                                        Log.d(TAG, "🖐️ TASK MAP MOVE DETECTED - Task screen gesture working!")
+                                        AppLogger.d(TAG, "TASK MAP MOVE DETECTED - Task screen gesture working!")
                                     }
                                     override fun onMove(detector: MoveGestureDetector) {}
                                     override fun onMoveEnd(detector: MoveGestureDetector) {
-                                        Log.d(TAG, "🖐️ TASK MAP MOVE ENDED")
+                                        AppLogger.d(TAG, "TASK MAP MOVE ENDED")
                                     }
                                 })
 
                                 map.addOnScaleListener(object : MapLibreMap.OnScaleListener {
                                     override fun onScaleBegin(detector: StandardScaleGestureDetector) {
-                                        Log.d(TAG, "🔍 TASK MAP ZOOM DETECTED - Task screen zoom working!")
+                                        AppLogger.d(TAG, "TASK MAP ZOOM DETECTED - Task screen zoom working!")
                                     }
                                     override fun onScale(detector: StandardScaleGestureDetector) {}
                                     override fun onScaleEnd(detector: StandardScaleGestureDetector) {
-                                        Log.d(TAG, "🔍 TASK MAP ZOOM ENDED")
+                                        AppLogger.d(TAG, "TASK MAP ZOOM ENDED")
                                     }
                                 })
 
@@ -309,10 +306,13 @@ fun Task(
                                     .target(LatLng(-30.8700, 150.5200))
                                     .zoom(8.0)
                                     .build()
-                                loadAndApplyAirspace(ctx, map)
-                                loadAndApplyWaypoints(ctx, map, selectedWaypointFiles, waypointCheckedStates.value)
-
-                                Log.d(TAG, "✅ MapLibre gestures configured: scroll=${map.uiSettings.isScrollGesturesEnabled}, zoom=${map.uiSettings.isZoomGesturesEnabled}")
+                                scope.launch {
+                                    loadAndApplyAirspace(ctx, map, airspaceRepository)
+                                }
+                                scope.launch {
+                                    loadAndApplyWaypoints(ctx, map, selectedWaypointFiles, waypointCheckedStates.value)
+                                }
+                                AppLogger.d(TAG, "MapLibre gestures configured: scroll=${map.uiSettings.isScrollGesturesEnabled}, zoom=${map.uiSettings.isZoomGesturesEnabled}")
                             }
                         }
                     }
@@ -323,7 +323,9 @@ fun Task(
                         awaitPointerEventScope {
                             while (true) {
                                 val event = awaitPointerEvent()
-                                Log.d(TAG, "👆 Parent received touch event: ${event.type}, pointers: ${event.changes.size}")
+                                if (AppLogger.rateLimit(TAG, "task_pointer", 1_000L)) {
+                                    AppLogger.d(TAG, "Parent received touch event: ${event.type}, pointers: ${event.changes.size}")
+                                }
                             }
                         }
                     }

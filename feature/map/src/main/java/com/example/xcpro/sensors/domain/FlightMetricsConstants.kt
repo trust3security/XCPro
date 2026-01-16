@@ -7,6 +7,8 @@ internal object FlightMetricsConstants {
     const val DISPLAY_VAR_CLAMP = 7.0
     const val DISPLAY_SMOOTH_TIME_S = 0.4
     const val DISPLAY_DECAY_FACTOR = 0.9
+    const val NEEDLE_T95_SECONDS = 0.6
+    const val FAST_NEEDLE_T95_SECONDS = 0.4
     const val MIN_SINK_FOR_IAS_MS = 0.15
     const val IAS_SCAN_MIN_MS = 8.0
     const val IAS_SCAN_MAX_MS = 80.0

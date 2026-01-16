@@ -18,7 +18,6 @@ fun rememberLocationPermissionLauncher(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         val fineLocationGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
-        val coarseLocationGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
-        locationManager.onLocationPermissionsResult(fineLocationGranted, coarseLocationGranted)
+        locationManager.onLocationPermissionsResult(fineLocationGranted)
     }
 }

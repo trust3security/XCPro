@@ -128,6 +128,20 @@ Repositories may use `MutableStateFlow` internally but MUST expose only
 
 ---
 
+## 4A. Time Base Rules
+
+### Live vs Replay
+- Live fusion uses monotonic time for delta/validity windows.
+- Replay uses IGC timestamps as the simulation clock.
+- Wall time is used only for storage/output/UX (e.g., manual wind timestamps, UI labels).
+
+### Rules
+- Never compare monotonic timestamps to wall time.
+- All live SensorDataSource implementations must populate monotonic timestamps.
+- If a source cannot provide monotonic time, use `0` and ensure all related inputs fall back to wall time consistently.
+
+---
+
 ## 5. Data Flow Contract
 
 ### Allowed Flow
@@ -143,6 +157,26 @@ Sensors / Data Sources
 - Implemented by swapping repositories via DI
 - No conditional logic in ViewModel or UI
 - Architecture must remain unchanged
+
+---
+
+
+## 5A. Map Display Pipeline (UI Only)
+
+The map is a UI consumer of SSOT. It must not bypass repositories or
+write back smoothed values.
+
+### Rules
+- Map position comes from `FlightDataRepository` only.
+- ViewModels never read raw sensor flows for map position.
+- Display smoothing is visual-only and must not alter SSOT data.
+- MapLibre types are owned by UI/runtime controllers, not ViewModels.
+- Display time must match the fix time base:
+  - Live: monotonic if present, otherwise wall time.
+  - Replay: IGC timestamps as the simulation clock.
+- Camera updates are gated and short-animated to avoid jumps.
+
+See `mapposition.md` for the concrete flow and component list.
 
 ---
 
@@ -213,13 +247,14 @@ Global mutable singletons may not.
 
 ### Responsibilities
 - Render state
+- Frame-ticker loops for visual-only smoothing when scoped to `LaunchedEffect`
 - Emit user intents
 - Handle visuals and animations only
 
 ### Forbidden
 - Business logic
 - State derivation
-- Long-running coroutines
+- Long-running coroutines outside the frame-ticker display exception
 - Side effects outside `LaunchedEffect`
 
 ---
@@ -288,10 +323,30 @@ If a component cannot be tested in isolation, the design is incorrect.
 
 ---
 
+## 14. Change Safety Requirements
+
+These rules prevent regressions and future rewrites.
+
+Rules:
+- Non-trivial refactors must have a written plan doc with phases, ownership, and tests.
+- SSOT ownership must be explicit with a simple flow diagram or bullet flow.
+- Time base must be specified and enforced in code and tests (monotonic or replay only).
+- State machines must be explicit: list states and transitions in docs.
+- Regression tests are mandatory for new behavior (unit tests first, replay tests when applicable).
+
+Red flags in review (reject changes):
+- Business logic in UI code.
+- Shared utilities across task types.
+- Wall time used in navigation or scoring logic.
+- Duplicate state owners for the same data.
+
+---
+
 ## Related Docs
 - ARCHITECTURE_DECISIONS.md: rationale for major architecture refactors and why they were made.
 - REFACTOR.md: active UDF/SSOT map refactor plan and progress.
 - REFACTOR_GEOPOINT.md: map-agnostic GPS refactor plan.
+- mapposition.md: map display update flow and time-base rules.
 
 ## Final Rule
 

@@ -4,17 +4,20 @@ import android.content.Context
 import android.util.Log
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.screens.overlays.getMapStyleUrl
-import com.example.xcpro.sensors.UnifiedSensorManager
 import com.example.xcpro.map.BlueLocationOverlay
 import com.example.xcpro.map.DistanceCirclesOverlay
+import com.example.xcpro.map.trail.SnailTrailManager
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.gestures.MoveGestureDetector
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
+import com.example.xcpro.AirspaceRepository
 import com.example.xcpro.loadAndApplyAirspace
 import com.example.xcpro.loadWaypointFiles
 import com.example.xcpro.loadAndApplyWaypoints
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 class MapInitializer(
     private val context: Context,
@@ -23,7 +26,8 @@ class MapInitializer(
     private val stateActions: MapStateActions,
     private val orientationManager: MapOrientationManager,
     private val taskManager: TaskManagerCoordinator,
-    private val unifiedSensorManager: UnifiedSensorManager
+    private val snailTrailManager: SnailTrailManager,
+    private val coroutineScope: CoroutineScope
 ) {
     companion object {
         private const val TAG = "MapInitializer"
@@ -31,6 +35,8 @@ class MapInitializer(
         private const val INITIAL_LONGITUDE = 6.63
         private const val INITIAL_ZOOM = 8.0
     }
+
+    private val airspaceRepository = AirspaceRepository(context)
 
     suspend fun initializeMap(map: MapLibreMap): MapLibreMap {
         return try {
@@ -79,11 +85,15 @@ class MapInitializer(
     private fun loadMapData(map: MapLibreMap) {
         try {
             // Load airspace data
-            loadAndApplyAirspace(context, map)
+            coroutineScope.launch {
+                loadAndApplyAirspace(context, map, airspaceRepository)
+            }
 
             // Load waypoints
-            val (waypointFiles, waypointChecks) = loadWaypointFiles(context)
-            loadAndApplyWaypoints(context, map, waypointFiles, waypointChecks)
+            coroutineScope.launch {
+                val (waypointFiles, waypointChecks) = loadWaypointFiles(context)
+                loadAndApplyWaypoints(context, map, waypointFiles, waypointChecks)
+            }
 
             // Plot saved task if available
             plotSavedTask(map)
@@ -112,6 +122,7 @@ class MapInitializer(
             // Initialize blue location overlay
             mapState.blueLocationOverlay = BlueLocationOverlay(context, map)
             mapState.blueLocationOverlay?.initialize()
+            snailTrailManager.initialize(map)
             Log.d(TAG, "🔵 Blue location overlay initialized")
 
             // DISABLED: Map-based distance circles replaced with DistanceCirclesCanvas
@@ -192,13 +203,10 @@ class MapInitializer(
 
         // Save current position before movement for return functionality
         if (!mapStateReader.showReturnButton.value) {
-            val currentLocation = unifiedSensorManager.gpsFlow.value
+            val currentLocation = mapStateReader.currentUserLocation.value
             if (currentLocation != null) {
                 stateActions.saveLocation(
-                    location = MapStateStore.MapPoint(
-                        latitude = currentLocation.position.latitude,
-                        longitude = currentLocation.position.longitude
-                    ),
+                    location = currentLocation,
                     zoom = map.cameraPosition.zoom,
                     bearing = map.cameraPosition.bearing
                 )
@@ -214,8 +222,10 @@ class MapInitializer(
 
     private fun refreshWaypoints(map: MapLibreMap) {
         try {
-            val (waypointFiles, waypointChecks) = loadWaypointFiles(context)
-            loadAndApplyWaypoints(context, map, waypointFiles, waypointChecks)
+            coroutineScope.launch {
+                val (waypointFiles, waypointChecks) = loadWaypointFiles(context)
+                loadAndApplyWaypoints(context, map, waypointFiles, waypointChecks)
+            }
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error refreshing waypoints: ${e.message}", e)
         }

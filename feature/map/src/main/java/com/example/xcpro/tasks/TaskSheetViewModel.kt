@@ -32,8 +32,9 @@ class TaskSheetViewModel(
         taskManager.setProximityHandler { entered, close ->
             onProximityEvent(entered, close)
         }
-        taskManager.setLegChangeHandler { _ ->
+        taskManager.addLegChangeListener { _ ->
             repository.armAdvance(false) // manual leg change disarms auto-advance
+            sync()
         }
         sync()
     }

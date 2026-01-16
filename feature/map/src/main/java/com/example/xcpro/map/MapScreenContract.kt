@@ -3,6 +3,7 @@ package com.example.xcpro.map
 import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.map.domain.MapWaypointError
+import com.example.xcpro.qnh.QnhCalibrationState
 
 data class MapUiState(
     val unitsPreferences: UnitsPreferences = UnitsPreferences(),
@@ -11,7 +12,8 @@ data class MapUiState(
     val waypointError: MapWaypointError? = null,
     val isUiEditMode: Boolean = false,
     val isDrawerOpen: Boolean = false,
-    val hideBallastPill: Boolean = false
+    val hideBallastPill: Boolean = false,
+    val qnhCalibrationState: QnhCalibrationState = QnhCalibrationState.Idle
 )
 
 sealed interface MapUiEvent {

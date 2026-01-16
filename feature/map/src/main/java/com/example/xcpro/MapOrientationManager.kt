@@ -1,6 +1,7 @@
 package com.example.xcpro
 
 import android.content.Context
+import android.os.SystemClock
 import android.util.Log
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.RealTimeFlightData
@@ -108,7 +109,7 @@ class MapOrientationManager(
 
         if (isUserOverrideActive) {
 
-            val timeSinceInteraction = System.currentTimeMillis() - lastUserInteractionTime
+            val timeSinceInteraction = SystemClock.elapsedRealtime() - lastUserInteractionTime
 
             if (timeSinceInteraction > USER_OVERRIDE_TIMEOUT_MS) {
 
@@ -124,26 +125,27 @@ class MapOrientationManager(
 
         }
 
-        val now = System.currentTimeMillis()
+        val nowMono = SystemClock.elapsedRealtime()
+        val nowWall = System.currentTimeMillis()
         val bearingResult = calculateBearing(sensorData)
 
         val normalizedBearing = normalizeBearing(bearingResult.bearing)
         if (bearingResult.isValid) {
             lastValidBearing = normalizedBearing
             if (currentMode == MapOrientationMode.TRACK_UP) {
-                lastValidTrackTime = now
+                lastValidTrackTime = nowMono
             }
             if (currentMode == MapOrientationMode.HEADING_UP) {
-                lastValidHeadingTime = now
+                lastValidHeadingTime = nowMono
             }
         }
 
         val trackIsStale = currentMode == MapOrientationMode.TRACK_UP &&
-            (lastValidTrackTime == 0L || now - lastValidTrackTime > TRACK_STALE_TIMEOUT_MS)
+            (lastValidTrackTime == 0L || nowMono - lastValidTrackTime > TRACK_STALE_TIMEOUT_MS)
 
         val headingIsStale = currentMode == MapOrientationMode.HEADING_UP &&
             !bearingResult.isValid &&
-            (lastValidHeadingTime == 0L || now - lastValidHeadingTime > HEADING_STALE_TIMEOUT_MS)
+            (lastValidHeadingTime == 0L || nowMono - lastValidHeadingTime > HEADING_STALE_TIMEOUT_MS)
 
         val finalBearing = when {
             bearingResult.isValid -> normalizedBearing
@@ -169,14 +171,14 @@ class MapOrientationManager(
             headingDeg = headingSolution.bearingDeg,
             headingValid = headingSolution.isValid,
             headingSource = headingSolution.source,
-            timestamp = now
+            timestamp = nowWall
         )
 
         if (!bearingResult.isValid &&
             sensorData.isGPSValid &&
             sensorData.groundSpeed < minSpeedForTrackMs &&
             BuildConfig.DEBUG &&
-            now % 2000L < 25
+            nowMono % 2000L < 25
         ) {
             Log.v(
                 TAG,
@@ -191,7 +193,7 @@ class MapOrientationManager(
 
         // Log bearing updates periodically (every 30 updates to avoid spam)
 
-        if (now % 30 == 0L) {
+        if (nowMono % 30 == 0L) {
 
             debugLog { "Orientation: mode=$currentMode, bearing=${finalBearing.toInt()}, source=$finalSource, valid=$finalValid" }
 
@@ -203,7 +205,7 @@ class MapOrientationManager(
 
         if (BuildConfig.DEBUG && currentMode == MapOrientationMode.HEADING_UP) {
             logHeadingJitterIfNeeded(
-                now = now,
+                now = nowMono,
                 bearing = finalBearing,
                 finalSource = finalSource,
                 finalValid = finalValid,
@@ -391,7 +393,7 @@ class MapOrientationManager(
 
     override fun onUserInteraction() {
         isUserOverrideActive = true
-        lastUserInteractionTime = System.currentTimeMillis()
+        lastUserInteractionTime = SystemClock.elapsedRealtime()
     }
 
     override fun resetUserOverride() {

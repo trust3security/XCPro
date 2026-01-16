@@ -51,7 +51,8 @@ Key files:
 - Location / camera updates: `feature/map/src/main/java/com/example/xcpro/map/LocationManager.kt`
 - Camera effects and clamping: `feature/map/src/main/java/com/example/xcpro/map/MapCameraManager.kt`
 - Location jitter gate: `feature/map/src/main/java/com/example/xcpro/map/MapLocationFilter.kt`
-- Icon rotation logic: `feature/map/src/main/java/com/example/xcpro/map/BlueLocationOverlay.kt`
+- Icon rotation policy: `feature/map/src/main/java/com/example/xcpro/map/IconHeadingSmoother.kt`
+- Icon rendering: `feature/map/src/main/java/com/example/xcpro/map/BlueLocationOverlay.kt`
 - Orientation UI: `feature/map/src/main/java/com/example/xcpro/CompassWidget.kt`
 
 ## Orientation modes (behavior summary)
@@ -66,6 +67,23 @@ Map bearing and icon behavior:
 Note: `OrientationData` carries both the map bearing and a separate heading
 (`headingDeg/headingValid/headingSource`) so UI can rotate the aircraft icon as
 `heading - mapBearing` (XCSoar convention).
+
+## Icon rotation vs heading validity
+
+### Current behavior (icon-rotation policy)
+- `OrientationData.headingValid` is computed by `OrientationDataSource` / `HeadingResolver` and
+  indicates whether the heading solution is stable (sensor reliability + speed gate + staleness).
+- Map bearing respects validity in `MapOrientationManager` (HEADING_UP can fall back to north or
+  last-known bearing when heading is invalid).
+- Icon rotation is gated by `headingValid` plus a speed hysteresis band derived from
+  `MapOrientationPreferences.getMinSpeedThreshold()`.
+- When heading is invalid or below the exit threshold, the icon holds the last stable heading
+  or falls back to track (Track Up / North Up) or map bearing (Heading Up).
+- In North Up, track is used only when speed is above the enter threshold; otherwise the icon
+  holds the last stable heading.
+- Rotation uses time-based smoothing and an angular-velocity clamp, plus a small deadband
+  for micro-rotations.
+- This remains visual-only and uses the display clock time base. It does not modify SSOT data.
 
 Mode-specific deep dives:
 - Track Up: `docs/Orientation/TrackUp.md`
@@ -106,8 +124,8 @@ B) Not tracking (user has panned; return button is shown)
 5) Location jitter gate
 - `MapLocationFilter` rejects location updates if movement < `thresholdPx` (default 0.5 px)
 
-6) Icon bearing clamp
-- `MapPositionController.clampBearingStep()` limits icon rotation to 5 deg/step
+6) Track bearing clamp (display)
+- `MapPositionController.clampBearingStep()` limits the displayed track to 5 deg/step
 
 7) Camera bearing clamp (not tracking path)
 - `MapCameraManager.updateBearing()` limits rotation step to 5 deg/step
@@ -115,6 +133,29 @@ B) Not tracking (user has panned; return button is shown)
 8) User override freeze
 - `MapOrientationManager.onUserInteraction()` freezes bearing updates for 10s
 - Triggered by pan/rotate in `MapInitializer`
+
+9) Icon rotation policy
+- Heading validity gate + speed hysteresis for rotation
+- Time-based smoothing + max angular velocity clamp
+- Deadband for micro-rotation
+
+## Further improvements (optional)
+
+These are optional extensions beyond the current icon-rotation policy.
+
+1) Accuracy-aware smoothing (implemented)
+- Display smoothing scales track filtering using bearing accuracy when available.
+- Icon rotation scales deadband and max turn rate when falling back to track (heading invalid).
+- Heading-valid rotation does not use GPS bearing accuracy.
+- Replay fixes currently provide null accuracy fields (default behavior).
+
+2) Configurable icon smoothing toggle
+- Wire `MapOrientationPreferences.KEY_BEARING_SMOOTHING` to enable/disable extra icon smoothing
+  while keeping the heading-valid gate in place.
+
+3) Refined fusion for icon only
+- Use a blended heading for the icon (track + heading weighting) while keeping camera bearing
+  aligned to the selected orientation mode.
 
 ## XCSoar parity highlights (orientation)
 
@@ -177,3 +218,4 @@ Use the mode-specific docs for Track Up and Heading Up. For new modes:
 - Wire UI (settings + compass cycle).
 
 Do not bypass architecture rules in `ARCHITECTURE.md` or `CODING_RULES.md`.
+

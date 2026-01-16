@@ -81,6 +81,8 @@ class LevoVarioPipelineTest {
             FlightMetricsRequest(
                 gps = gpsSample(time, altitude),
                 currentTimeMillis = time,
+                wallTimeMillis = time,
+                gpsTimestampMillis = time,
                 deltaTimeSeconds = 1.0,
                 varioResult = varioSample(climbMs, altitude),
                 varioGpsValue = climbMs,
@@ -97,6 +99,8 @@ class LevoVarioPipelineTest {
                 FlightMetricsRequest(
                     gps = gpsSample(time, altitude),
                     currentTimeMillis = time,
+                    wallTimeMillis = time,
+                    gpsTimestampMillis = time,
                     deltaTimeSeconds = 1.0,
                     varioResult = varioSample(climbMs, altitude),
                     varioGpsValue = climbMs,
@@ -131,6 +135,8 @@ class LevoVarioPipelineTest {
         )
 
         assertTrue(realtime.varioValid)
+        assertTrue(complete.displayNeedleVario.value <= complete.bruttoVario.value + 1e-6)
+        assertTrue(complete.displayNeedleVario.value >= complete.bruttoVario.value * 0.95)
 
         val formatted = UnitsFormatter.verticalSpeed(
             VerticalSpeedMs(realtime.displayVario),

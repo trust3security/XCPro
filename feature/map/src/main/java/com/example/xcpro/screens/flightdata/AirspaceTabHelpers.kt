@@ -5,7 +5,7 @@ import android.net.Uri
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import com.example.ui1.screens.AirspaceClassItem
 import com.example.ui1.screens.FileItem
-import com.example.xcpro.parseAirspaceClasses
+import com.example.xcpro.AirspaceRepository
 import com.example.xcpro.saveSelectedClasses
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -15,30 +15,33 @@ import java.io.File
 
 private const val DEFAULT_ZONE_COUNT = 0
 
-fun buildAirspaceFileItems(
+suspend fun buildAirspaceFileItems(
     context: Context,
     files: List<Uri>,
     checkedStates: Map<String, Boolean>
-): List<FileItem> = files.map { uri ->
-    val fileName = uri.lastPathSegment?.substringAfterLast("/") ?: "Unknown"
-    val enabled = checkedStates[fileName] ?: false
-    val count = countAirspaceZones(context, uri)
-    FileItem(
-        name = fileName,
-        enabled = enabled,
-        count = count,
-        status = if (enabled) "Loaded" else "Disabled",
-        uri = uri
-    )
+): List<FileItem> = withContext(Dispatchers.IO) {
+    files.map { uri ->
+        val fileName = uri.lastPathSegment?.substringAfterLast("/") ?: "Unknown"
+        val enabled = checkedStates[fileName] ?: false
+        val count = countAirspaceZones(context, uri)
+        FileItem(
+            name = fileName,
+            enabled = enabled,
+            count = count,
+            status = if (enabled) "Loaded" else "Disabled",
+            uri = uri
+        )
+    }
 }
 
-fun buildAirspaceClassItems(
+suspend fun buildAirspaceClassItems(
     context: Context,
     enabledFiles: List<Uri>,
     classStates: Map<String, Boolean>
 ): List<AirspaceClassItem> {
     if (enabledFiles.isEmpty()) return emptyList()
-    val classes = parseAirspaceClasses(context, enabledFiles)
+    val repository = AirspaceRepository(context)
+    val classes = repository.parseClasses(enabledFiles)
     return classes.map { className ->
         AirspaceClassItem(
             className = className,
@@ -58,14 +61,12 @@ fun refreshAvailableAirspaceClasses(
     persist: Boolean = true
 ) {
     scope.launch(Dispatchers.IO) {
+        val repository = AirspaceRepository(context)
         val enabledFiles = selectedFiles.filter { uri ->
             val fileName = uri.lastPathSegment?.substringAfterLast("/") ?: return@filter false
             checkedStates[fileName] == true
         }
-        val latestClasses = if (enabledFiles.isEmpty()) emptySet() else parseAirspaceClasses(
-            context,
-            enabledFiles
-        ).toSet()
+        val latestClasses = if (enabledFiles.isEmpty()) emptySet() else repository.parseClasses(enabledFiles).toSet()
 
         var shouldSave = false
         var snapshot: Map<String, Boolean> = emptyMap()

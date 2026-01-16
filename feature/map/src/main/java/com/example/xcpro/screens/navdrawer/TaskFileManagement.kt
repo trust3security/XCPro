@@ -7,12 +7,10 @@ import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.*
+import com.example.xcpro.AirspaceRepository
 import com.example.xcpro.copyFileToInternalStorage
 import com.example.xcpro.loadAndApplyAirspace
 import com.example.xcpro.loadAndApplyWaypoints
-import com.example.xcpro.parseAirspaceClasses
-import com.example.xcpro.saveAirspaceFiles
-import com.example.xcpro.saveSelectedClasses
 import com.example.xcpro.saveWaypointFiles
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -38,6 +36,7 @@ fun rememberAirspaceFilePicker(
     selectedClasses: MutableState<MutableMap<String, Boolean>>,
     onError: (String?) -> Unit
 ): ManagedActivityResultLauncher<String, Uri?> {
+    val airspaceRepository = remember(context) { AirspaceRepository(context) }
     return rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri ->
@@ -57,13 +56,13 @@ fun rememberAirspaceFilePicker(
                         airspaceCheckedStates.value = airspaceCheckedStates.value.toMutableMap().apply {
                             put(fileName, false)
                         }
-                        saveAirspaceFiles(context, selectedAirspaceFiles, airspaceCheckedStates.value)
-                        val newClasses = parseAirspaceClasses(context, selectedAirspaceFiles)
+                        airspaceRepository.saveAirspaceFiles(selectedAirspaceFiles, airspaceCheckedStates.value)
+                        val newClasses = airspaceRepository.parseClasses(selectedAirspaceFiles)
                         selectedClasses.value = selectedClasses.value.toMutableMap().apply {
                             newClasses.forEach { put(it, it == "R" || it == "D") }
                         }
-                        saveSelectedClasses(context, selectedClasses.value)
-                        loadAndApplyAirspace(context, mapLibreMap)
+                        airspaceRepository.saveSelectedClasses(selectedClasses.value)
+                        loadAndApplyAirspace(context, mapLibreMap, airspaceRepository)
                         onError(null)
                         Log.d(TAG, "✅ Airspace file added: $fileName")
                     }

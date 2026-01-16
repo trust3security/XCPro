@@ -21,8 +21,9 @@ Related docs that provide context:
 - ARCHITECTURE_DECISIONS.md
 - REFACTOR.md
 - REFACTOR_GEOPOINT.md
-- levo-replay.md (current replay debugging context)
+- levo-replay.md (replay debugging context)
 - PhoneElectronicVarioCalc_TE.md (algorithm notes)
+- README.md (this folder's index)
 
 ------------------------------------------------------------------------------
 SCOPE
@@ -85,6 +86,7 @@ Sensors + fusion (feature/map):
 - feature/map/src/main/java/com/example/xcpro/vario/*
 - feature/map/src/main/java/com/example/xcpro/flightdata/*
 - feature/map/src/main/java/com/example/xcpro/replay/*
+- feature/map/src/main/java/com/example/xcpro/sensors/NeedleVarioDynamics.kt (pneumatic needle response)
 
 Audio:
 - feature/map/src/main/java/com/example/xcpro/audio/*
@@ -165,6 +167,11 @@ Reliability:
 Sensor models are defined in:
 feature/map/src/main/java/com/example/xcpro/sensors/SensorData.kt
 
+Time base note (live):
+- Sensor models carry wall time (timestamp) and monotonic time (monotonicTimestampMillis).
+- Fusion and validity windows use monotonic time to avoid clock jumps.
+- Output timestamps stay in wall time for UI and for manual wind comparisons.
+
 ------------------------------------------------------------------------------
 FUSION AND FILTERING PIPELINE
 ------------------------------------------------------------------------------
@@ -189,6 +196,7 @@ The engine uses two loops with decoupled cadences:
    Function: updateVarioFilter(...)
 
    Steps:
+   - Only advance the vario loop when a new baro sample arrives (avoid IMU-only ticks that can invent lift/sink).
    - Use baro timestamp in replay mode for deterministic time.
    - Smooth pressure via PressureKalmanFilter.
    - Run BarometricAltitudeCalculator (QNH, pressure altitude, confidence).
@@ -273,6 +281,10 @@ Key steps:
 - Compute TE vario only when airspeed is real and above thresholds.
 - Compute netto (sink compensation) using polar and airspeed.
 - Smooth display vario and display netto with DisplayVarioSmoother.
+- Compute a pneumatic-style needle value (displayNeedleVario) with a
+  deterministic response (95% in 0.6s, no overshoot). This value uses
+  bruttoVario as its target and is for the needle only; numeric/audio
+  remain on displayVario.
 - Maintain 30s rolling averages (FusionBlackboard).
 - Detect circling (CirclingDetector) to reset averages and thermal state.
 
@@ -336,6 +348,10 @@ Replay data sources:
 
 Note: Replay also supports a "real time sim" mode that adds noise
 and cadence differences to better match live sensor behavior.
+
+Time base note (replay vs live):
+- Replay uses IGC timestamps as the simulation clock for fusion timing.
+- Live uses monotonic time for delta calculations but emits wall time for UI/output.
 
 ------------------------------------------------------------------------------
 WIND AND AIRSPEED (USED BY TE AND NETTO)
@@ -407,8 +423,11 @@ Key files:
 Display rules:
 - displayVarioFlow chooses displayVario when valid, else fall back to
   verticalSpeed (raw) if needed.
-- Values are bucketed to 0.1 m/s and throttled to ~12 Hz.
-- VariometerPanel converts values to user units and animates needle.
+- needleVarioFlow uses displayNeedleVario (pneumatic response) for the
+  UI needle only. Compose does not add extra smoothing.
+- Numeric values are bucketed to 0.1 m/s and throttled to ~12 Hz; the
+  needle uses a higher cadence (~30 Hz) without bucketing.
+- VariometerPanel converts values to user units and renders the needle.
 - Secondary label shows XCSoar-style display vario for comparison.
 
 ------------------------------------------------------------------------------
@@ -482,6 +501,9 @@ COMMON PITFALLS AND INVARIANTS
 - Vario validity is time based. If you change cadence, update validity windows.
 - QNH jumps reset filters in live mode. Preserve replay behavior.
 - Use sensor timestamps in replay mode; do not mix with wall clock.
+- Do not compare monotonic timestamps to wall time; manual wind timestamps are wall time.
+- Do not reintroduce UI animation for the variometer needle; pneumatic
+  response is in the domain pipeline (NeedleVarioDynamics).
 - Do not log location data in release builds (see CODING_RULES).
 - Avoid log spam in hot loops; keep logs gated or DEBUG-only.
 

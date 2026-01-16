@@ -1,5 +1,8 @@
 package com.example.xcpro.map
 
+import android.os.SystemClock
+import android.util.Log
+
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import kotlin.math.abs
@@ -13,11 +16,20 @@ import kotlin.math.sign
 class MapPositionController(
     private val mapState: MapScreenState,
     private val maxBearingStepDeg: Double = 5.0,
-    offsetHistorySize: Int = 30
+    offsetHistorySize: Int = 30,
+    iconRotationConfig: IconRotationConfig = IconRotationConfig.defaults()
 ) {
-    private var lastIconBearing: Double = 0.0
+    companion object {
+        private const val TAG = "MapPositionController"
+        private const val OVERLAY_LOG_INTERVAL_MS = 1_000L
+    }
+
+    private var lastTrackBearing: Double = 0.0
     private val offsetHistory = OffsetHistory(offsetHistorySize)
     private var lastPadding: IntArray? = null
+    private var lastOverlayLogMs: Long = 0L
+    private val verboseLogging = com.example.xcpro.map.BuildConfig.DEBUG
+    private val iconHeadingSmoother = IconHeadingSmoother(iconRotationConfig)
 
     /**
      * Represents map padding to smooth (top, bottom) in pixels.
@@ -31,53 +43,110 @@ class MapPositionController(
 
     fun averagedOffset(): Offset = offsetHistory.average() ?: Offset(0f, 0f)
 
-    fun applyAcceptedSample(
-        map: MapLibreMap,
+    fun updateOverlay(
         location: LatLng,
         trackBearing: Double,
         headingDeg: Double,
+        headingValid: Boolean,
+        bearingAccuracyDeg: Double?,
+        speedAccuracyMs: Double?,
         mapBearing: Double,
         orientationMode: com.example.xcpro.common.orientation.MapOrientationMode,
-        shouldTrackCamera: Boolean = true,
-        padding: IntArray? = null,
-        cameraBearing: Double? = null
+        speedMs: Double,
+        nowMs: Long
     ) {
         val clampedBearing = clampBearingStep(trackBearing)
+        val iconHeading = iconHeadingSmoother.update(
+            IconHeadingSmoother.IconHeadingInput(
+                headingDeg = headingDeg,
+                headingValid = headingValid,
+                trackDeg = clampedBearing,
+                bearingAccuracyDeg = bearingAccuracyDeg,
+                speedAccuracyMs = speedAccuracyMs,
+                mapBearing = mapBearing,
+                orientationMode = orientationMode,
+                speedMs = speedMs,
+                nowMs = nowMs
+            )
+        )
+        if (verboseLogging) {
+            val now = SystemClock.elapsedRealtime()
+            if (now - lastOverlayLogMs >= OVERLAY_LOG_INTERVAL_MS) {
+                lastOverlayLogMs = now
+                Log.d(
+                    TAG,
+                    "overlayUpdate loc=${location.latitude},${location.longitude} " +
+                        "track=${"%.1f".format(trackBearing)} clamped=${"%.1f".format(clampedBearing)} " +
+                        "heading=${"%.1f".format(headingDeg)} valid=$headingValid " +
+                        "icon=${"%.1f".format(iconHeading)} mapBearing=${"%.1f".format(mapBearing)} " +
+                        "orientation=$orientationMode speed=${"%.2f".format(speedMs)}"
+                )
+            }
+        }
 
         mapState.blueLocationOverlay?.updateLocation(
             location,
             clampedBearing,
-            headingDeg,
+            iconHeading,
             mapBearing,
             orientationMode
         )
         mapState.blueLocationOverlay?.setVisible(true)
+    }
 
-        // AI-NOTE: Only move the camera when tracking is enabled so user pans aren't overridden.
-        if (shouldTrackCamera) {
-            val currentPosition = map.cameraPosition
-            val newCameraPosition = org.maplibre.android.camera.CameraPosition.Builder()
-                .target(location)
-                .zoom(currentPosition.zoom)
-                .bearing(cameraBearing ?: currentPosition.bearing)
-                .tilt(currentPosition.tilt)
-                .build()
+    fun updateCamera(
+        map: MapLibreMap,
+        location: LatLng,
+        cameraBearing: Double?,
+        padding: IntArray?,
+        animationMs: Int?
+    ) {
+        val currentPosition = map.cameraPosition
+        val newCameraPosition = org.maplibre.android.camera.CameraPosition.Builder()
+            .target(location)
+            .zoom(currentPosition.zoom)
+            .bearing(cameraBearing ?: currentPosition.bearing)
+            .tilt(currentPosition.tilt)
+            .build()
 
-            map.moveCamera(
-                org.maplibre.android.camera.CameraUpdateFactory.newCameraPosition(newCameraPosition)
+        if (verboseLogging) {
+            val fromTarget = currentPosition.target
+            val toTarget = newCameraPosition.target
+            Log.d(
+                TAG,
+                "cameraMove from lat=${formatCoord(fromTarget?.latitude)},lon=${formatCoord(fromTarget?.longitude)}, " +
+                    "zoom=${"%.2f".format(currentPosition.zoom)} bearing=${"%.1f".format(currentPosition.bearing)} " +
+                    "to lat=${formatCoord(toTarget?.latitude)},lon=${formatCoord(toTarget?.longitude)}, " +
+                    "zoom=${"%.2f".format(newCameraPosition.zoom)} bearing=${"%.1f".format(newCameraPosition.bearing)}"
             )
-            padding?.let {
-                if (!it.contentEquals(lastPadding)) {
-                    map.setPadding(it[0], it[1], it[2], it[3])
-                    lastPadding = it
+        }
+
+        val update = org.maplibre.android.camera.CameraUpdateFactory.newCameraPosition(newCameraPosition)
+        if (animationMs != null && animationMs > 0) {
+            map.animateCamera(update, animationMs)
+        } else {
+            map.moveCamera(update)
+        }
+
+        padding?.let {
+            if (!it.contentEquals(lastPadding)) {
+                map.setPadding(it[0], it[1], it[2], it[3])
+                lastPadding = it
+                if (verboseLogging) {
+                    Log.d(TAG, "mapPadding updated to ${it.contentToString()}")
                 }
+            } else if (verboseLogging) {
+                Log.d(TAG, "mapPadding unchanged ${it.contentToString()}")
             }
         }
     }
 
+    private fun formatCoord(value: Double?): String =
+        value?.let { "%.6f".format(it) } ?: "null"
+
     fun clampBearingStep(newBearing: Double): Double {
         val newNorm = normalize(newBearing)
-        val prevNorm = normalize(lastIconBearing)
+        val prevNorm = normalize(lastTrackBearing)
         var delta = newNorm - prevNorm
         if (delta > 180.0) delta -= 360.0
         if (delta < -180.0) delta += 360.0
@@ -86,8 +155,8 @@ class MapPositionController(
         } else {
             newNorm
         }
-        lastIconBearing = normalize(limited)
-        return lastIconBearing
+        lastTrackBearing = normalize(limited)
+        return lastTrackBearing
     }
 
     private fun normalize(bearing: Double): Double {

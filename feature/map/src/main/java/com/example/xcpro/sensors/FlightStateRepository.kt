@@ -121,7 +121,7 @@ class FlightStateRepository @Inject constructor(
         val altitudeMeters = resolveAltitudeMeters(gps, input.baro)
 
         val state = detector.update(
-            timestampMillis = gps.timestamp,
+            timestampMillis = gps.timeForCalculationsMillis,
             groundSpeedMs = gps.speed.value,
             trueAirspeedMs = airspeed?.trueMs,
             airspeedReal = airspeedReal,

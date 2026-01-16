@@ -74,6 +74,8 @@ class CalculateFlightMetricsUseCaseTest {
                 FlightMetricsRequest(
                     gps = gpsSample(time),
                     currentTimeMillis = time,
+                    wallTimeMillis = time,
+                    gpsTimestampMillis = time,
                     deltaTimeSeconds = 1.0,
                     varioResult = varioSample(2.0, altitude),
                     varioGpsValue = 2.0,
@@ -101,6 +103,8 @@ class CalculateFlightMetricsUseCaseTest {
             FlightMetricsRequest(
                 gps = gpsSample(time),
                 currentTimeMillis = time,
+                wallTimeMillis = time,
+                gpsTimestampMillis = time,
                 deltaTimeSeconds = 1.0,
                 varioResult = varioSample(2.0, altitude),
                 varioGpsValue = 2.0,
@@ -135,6 +139,8 @@ class CalculateFlightMetricsUseCaseTest {
             FlightMetricsRequest(
                 gps = gpsSample(time),
                 currentTimeMillis = time,
+                wallTimeMillis = time,
+                gpsTimestampMillis = time,
                 deltaTimeSeconds = 1.0,
                 varioResult = varioSample(0.5, altitude),
                 varioGpsValue = 0.5,
@@ -169,6 +175,8 @@ class CalculateFlightMetricsUseCaseTest {
                 FlightMetricsRequest(
                     gps = gpsSample(time),
                     currentTimeMillis = time,
+                    wallTimeMillis = time,
+                    gpsTimestampMillis = time,
                     deltaTimeSeconds = 1.0,
                     varioResult = varioSample(0.5, altitude),
                     varioGpsValue = 0.5,
@@ -185,6 +193,8 @@ class CalculateFlightMetricsUseCaseTest {
             FlightMetricsRequest(
                 gps = gpsSample(time),
                 currentTimeMillis = time,
+                wallTimeMillis = time,
+                gpsTimestampMillis = time,
                 deltaTimeSeconds = 1.0,
                 varioResult = varioSample(15.0, altitude + 15),
                 varioGpsValue = 15.0,
@@ -198,6 +208,8 @@ class CalculateFlightMetricsUseCaseTest {
             FlightMetricsRequest(
                 gps = gpsSample(time + 1000),
                 currentTimeMillis = time + 1000,
+                wallTimeMillis = time + 1000,
+                gpsTimestampMillis = time + 1000,
                 deltaTimeSeconds = 1.0,
                 varioResult = varioSample(0.5, altitude + 15.5),
                 varioGpsValue = 0.5,
@@ -222,6 +234,8 @@ class CalculateFlightMetricsUseCaseTest {
                 FlightMetricsRequest(
                     gps = gpsSample(time),
                     currentTimeMillis = time,
+                    wallTimeMillis = time,
+                    gpsTimestampMillis = time,
                     deltaTimeSeconds = 1.0,
                     varioResult = varioSample(1.0, altitude),
                     varioGpsValue = 1.0,
@@ -239,6 +253,8 @@ class CalculateFlightMetricsUseCaseTest {
             FlightMetricsRequest(
                 gps = gpsSample(time),
                 currentTimeMillis = time,
+                wallTimeMillis = time,
+                gpsTimestampMillis = time,
                 deltaTimeSeconds = 1.0,
                 varioResult = varioSample(1.0, altitude),
                 varioGpsValue = 1.0,

@@ -1,6 +1,6 @@
 package com.example.xcpro.sensors
 
-import android.util.Log
+import com.example.xcpro.core.common.logging.AppLogger
 
 internal fun logReplayBaroSample(
     tag: String,
@@ -15,7 +15,7 @@ internal fun logReplayBaroSample(
     gpsSpeed: Double,
     validUntil: Long
 ) {
-    Log.d(
+    AppLogger.d(
         tag,
         "REPLAY_BARO ts=$baroTimestamp p=${"%.2f".format(pressureHpa)} " +
             "pSmooth=${"%.2f".format(smoothedPressure)} alt=${"%.1f".format(baroAltitude)} " +
@@ -34,7 +34,7 @@ internal fun logReplayGpsSample(
     bearing: Double,
     timestamp: Long
 ) {
-    Log.d(
+    AppLogger.d(
         tag,
         "REPLY_GPS_SAMPLE lat=$latitude, lon=$longitude " +
             "alt=$altitude gs=$groundSpeed track=$bearing ts=$timestamp"

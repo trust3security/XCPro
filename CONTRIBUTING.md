@@ -6,9 +6,18 @@ All code must follow **CODING_RULES.md** and must not violate **ARCHITECTURE.md*
 ---
 
 ## 1) Required Reading
+
+### Map Display (Quick Notes)
+- Map position must come from `FlightDataRepository` (SSOT); do not read sensor flows in ViewModels.
+- Display smoothing is UI-only; do not write smoothed values back into repositories.
+- Time base rules apply to display smoothing (live monotonic, replay IGC time). See `mapposition.md`.
+- Never log location data in release builds (debug-only if needed).
+
+
 Read these in order before making changes:
 - `ARCHITECTURE.md` - system invariants (data flow, SSOT, threading, DI, lifecycle rules)
 - `CODING_RULES.md` - day-to-day coding constraints that enforce the architecture
+- If touching Levo vario or replay, also read `docs/LevoVario/levo.md`
 - `CONTRIBUTING.md` - workflow, branching, PR rules, testing expectations, and AI usage
 AI/agents: read the three files in order before edits.
 
@@ -29,7 +38,9 @@ AI/agents: read the three files in order before edits.
 ## 3) Definition of Done
 A change is ready when:
 - [ ] Code adheres to **CODING_RULES.md** (SSOT, UDF, clean layering).
-- [ ] **Rationale comments** are present for non‑obvious decisions (`// AI-NOTE:` markers encouraged).
+- [ ] **Rationale comments** are present for non-obvious decisions (`// AI-NOTE:` markers encouraged).
+- [ ] Levo pipeline changes are documented in `docs/LevoVario/levo.md` and any
+      related architecture/time-base rules are updated.
 - [ ] Unit tests cover use cases; UI/instrumentation tests for gesture/event flow.
 - [ ] **Lint/detekt** pass; **Compose previews** compile.
 - [ ] No deprecated APIs; no global mutable state.
@@ -92,6 +103,8 @@ Example:
 ## 8) AI & Automation Policy
 - AI may generate code **only** within this policy.
 - AI commits must include: a short “why” paragraph in the PR description and inline `AI-NOTE` comments where intent matters.
+- AI must not choose the fastest shortcut if it violates **CODING_RULES.md** or **ARCHITECTURE.md**.
+  Prefer correct layering and SSOT compliance over minimal plumbing.
 - No committing secret keys or personal data. Redact GPS traces unless explicitly enabled in debug config.
 
 ---

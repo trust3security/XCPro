@@ -49,7 +49,8 @@ Key files:
 - Location / camera updates: `feature/map/src/main/java/com/example/xcpro/map/LocationManager.kt`
 - Camera effects and clamping: `feature/map/src/main/java/com/example/xcpro/map/MapCameraManager.kt`
 - Location jitter gate: `feature/map/src/main/java/com/example/xcpro/map/MapLocationFilter.kt`
-- Icon rotation logic: `feature/map/src/main/java/com/example/xcpro/map/BlueLocationOverlay.kt`
+- Icon rotation policy: `feature/map/src/main/java/com/example/xcpro/map/IconHeadingSmoother.kt`
+- Icon rendering: `feature/map/src/main/java/com/example/xcpro/map/BlueLocationOverlay.kt`
 - Orientation UI: `feature/map/src/main/java/com/example/xcpro/CompassWidget.kt`
 
 ## Orientation modes overview
@@ -136,6 +137,14 @@ For Heading Up:
 - The icon points **up** (rotation = `heading - mapBearing` = 0 in Heading Up).
 - Drift is shown in **Track Up** (`heading - track`).
 - `OrientationData` now carries `headingDeg/headingValid/headingSource` separately from map bearing.
+
+### Icon rotation policy (visual-only)
+- Icon rotation respects `headingValid` with a speed hysteresis gate derived from
+  `MapOrientationPreferences.getMinSpeedThreshold()`.
+- When heading is invalid or below the exit threshold, the icon holds the last stable
+  heading or falls back to the current map bearing (keeps the icon pointing up).
+- Rotation is smoothed with a time-based clamp and a small deadband to prevent jitter.
+- This is UI-only and does not alter SSOT or sensor pipelines.
 
 ## XCSoar parity notes (Heading Up)
 
@@ -264,17 +273,20 @@ Files:
 - `MapLocationFilter` rejects location updates if screen movement < `thresholdPx`.
 - Defaults: `MapFeatureFlags.locationJitterThresholdPx = 0.5f` and history size 30.
 
-7) Icon bearing clamp
-- `MapPositionController.clampBearingStep()` limits icon rotation to 5 deg/step.
+7) Track bearing clamp (display)
+- `MapPositionController.clampBearingStep()` limits the displayed track to 5 deg/step.
 
-8) Camera bearing clamp (only when NOT tracking)
+8) Icon rotation clamp (visual)
+- `IconHeadingSmoother` applies a time-based max angular velocity and deadband.
+
+9) Camera bearing clamp (only when NOT tracking)
 - `MapCameraManager.updateBearing()` limits rotation step to 5 deg/step.
 
-9) User override (temporary freeze)
+10) User override (temporary freeze)
 - `MapOrientationManager.onUserInteraction()` freezes bearing updates for 10s.
 - Triggered when the map is moved or rotated (see `MapInitializer` listeners).
 
-10) Min-speed threshold for track fallback
+11) Min-speed threshold for track fallback
 - Preferences: `MapOrientationPreferences.getMinSpeedThreshold()` (default 2 m/s).
 
 ## Why Heading Up can feel wrong or jumpy (current behavior)

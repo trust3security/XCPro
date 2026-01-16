@@ -1,22 +1,10 @@
 package com.example.xcpro.map.ui
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Explore
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.pointer.pointerInteropFilter
@@ -26,48 +14,31 @@ import androidx.compose.ui.zIndex
 import android.util.Log
 import android.view.MotionEvent
 import com.example.xcpro.map.BuildConfig
-import com.example.dfcards.FlightModeSelection
-import com.example.dfcards.FlightTemplate
 import com.example.dfcards.RealTimeFlightData
 import com.example.dfcards.dfcards.CardContainer
 import com.example.dfcards.dfcards.FlightDataViewModel
-import com.example.xcpro.CompassWidget
-import com.example.xcpro.common.orientation.OrientationData
-import com.example.xcpro.common.orientation.MapOrientationMode
-import com.example.xcpro.screens.overlays.getMapStyleUrl
 import com.example.xcpro.tasks.TaskMapOverlay
-import com.example.xcpro.sensors.GPSData
-import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapInitializer
-import com.example.xcpro.map.LocationManager
 import com.example.xcpro.map.FlightDataManager
-import com.example.xcpro.map.MapCameraManager
 import kotlinx.coroutines.launch
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
 import com.example.dfcards.dfcards.CardVisualStyles
+import com.example.xcpro.qnh.QnhCalibrationState
 
 @Composable
 fun MapMainLayers(
     mapState: MapScreenState,
     mapInitializer: MapInitializer,
     onMapReady: (org.maplibre.android.maps.MapLibreMap) -> Unit,
-    locationManager: LocationManager,
     flightDataManager: FlightDataManager,
     flightViewModel: FlightDataViewModel,
     taskManager: TaskManagerCoordinator,
-    orientationManager: MapOrientationManager,
-    orientationData: OrientationData,
-    cameraManager: MapCameraManager,
-    currentLocation: GPSData?,
-    showReturnButton: Boolean,
-    isAATEditMode: Boolean,
     isUiEditMode: Boolean,
     onEditModeChange: (Boolean) -> Unit,
-    onSetAATEditMode: (Boolean) -> Unit,
     onContainerSizeChanged: (androidx.compose.ui.unit.IntSize) -> Unit,
     cardSafeTopOffsetPx: Float = 0f,
     modifier: Modifier = Modifier,
@@ -104,51 +75,6 @@ fun MapMainLayers(
                 modifier = Modifier.fillMaxSize()
             )
         }
-
-        val showCompass = orientationData.mode != MapOrientationMode.NORTH_UP
-        val toggleOrientation = {
-            val nextMode = when (orientationManager.getCurrentMode()) {
-                MapOrientationMode.NORTH_UP -> MapOrientationMode.TRACK_UP
-                MapOrientationMode.TRACK_UP -> MapOrientationMode.HEADING_UP
-                MapOrientationMode.HEADING_UP -> MapOrientationMode.NORTH_UP
-            }
-            orientationManager.setOrientationMode(nextMode)
-        }
-
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 80.dp, end = 16.dp)
-                .zIndex(5f)
-        ) {
-            AnimatedVisibility(
-                visible = showCompass,
-                enter = fadeIn(animationSpec = tween(300)) + scaleIn(animationSpec = tween(300)),
-                exit = fadeOut(animationSpec = tween(300)) + scaleOut(animationSpec = tween(300))
-            ) {
-                CompassWidget(
-                    orientation = orientationData,
-                    onModeToggle = toggleOrientation
-                )
-            }
-
-            AnimatedVisibility(
-                visible = !showCompass,
-                enter = fadeIn(animationSpec = tween(200)),
-                exit = fadeOut(animationSpec = tween(200))
-            ) {
-                AssistChip(
-                    onClick = toggleOrientation,
-                    label = { Text("Change orientation") },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Filled.Explore,
-                            contentDescription = "Change orientation"
-                        )
-                    }
-                )
-            }
-        }
     }
 }
 
@@ -160,6 +86,7 @@ fun QnhDialog(
     qnhError: String?,
     unitsPreferences: com.example.xcpro.common.units.UnitsPreferences,
     liveData: RealTimeFlightData?,
+    calibrationState: QnhCalibrationState,
     onQnhInputChange: (String) -> Unit,
     onConfirm: (Double) -> Unit,
     onInvalidInput: (String) -> Unit,
@@ -189,6 +116,29 @@ fun QnhDialog(
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall
                     )
+                }
+                when (calibrationState) {
+                    is QnhCalibrationState.Collecting -> {
+                        Text(
+                            text = "Auto Cal: ${calibrationState.samplesCollected}/${calibrationState.samplesRequired}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    is QnhCalibrationState.TimedOut -> {
+                        Text(
+                            text = "Auto Cal timed out",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                    is QnhCalibrationState.Failed -> {
+                        Text(
+                            text = "Auto Cal failed",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                    else -> Unit
                 }
                 liveData?.let { data ->
                     val status = if (data.isQNHCalibrated) "Calibrated" else "Standard"
