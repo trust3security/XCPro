@@ -54,6 +54,15 @@ object MapZoomConstraints {
         return if (zoom > maxZoom) maxZoom else zoom
     }
 
+    fun resolveScaleBarDistanceMeters(maxDistanceMeters: Double): Double? {
+        if (!maxDistanceMeters.isFinite() || maxDistanceMeters <= 0.0) return null
+        val step = METRIC_SCALE_STEPS_METERS
+            .lastOrNull { it.toDouble() <= maxDistanceMeters }
+            ?: METRIC_SCALE_STEPS_METERS.firstOrNull()
+            ?: return null
+        return step.toDouble()
+    }
+
     private fun resolveMinScaleMeters(minScaleMeters: Double): Double {
         if (minScaleMeters <= 0.0) return minScaleMeters
         val step = METRIC_SCALE_STEPS_METERS.firstOrNull { it.toDouble() >= minScaleMeters }?.toDouble()

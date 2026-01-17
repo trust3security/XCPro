@@ -58,7 +58,9 @@ fun CardContainer(
     var showEditOptions by remember { mutableStateOf(false) }
 
     val selectedCardIds by viewModel.selectedCardIds.collectAsState()
-    val cardStateFlows = remember(selectedCardIds) { viewModel.cardStateFlows }
+    // Recompose when cards are created so we re-read the backing flow map.
+    val activeCards by viewModel.activeCards.collectAsState()
+    val cardStateFlows = remember(selectedCardIds, activeCards) { viewModel.cardStateFlows }
 
     val navigationBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val navigationBarHeightPx = with(density) { navigationBarHeight.toPx() }
