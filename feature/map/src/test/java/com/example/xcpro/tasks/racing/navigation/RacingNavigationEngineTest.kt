@@ -9,6 +9,7 @@ import com.example.xcpro.tasks.racing.models.RacingWaypointRole
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class RacingNavigationEngineTest {
@@ -16,7 +17,7 @@ class RacingNavigationEngineTest {
     private val engine = RacingNavigationEngine()
 
     @Test
-    fun startLineExitStartsTaskAndUsesPreviousFixTimestamp() {
+    fun startLineExitStartsTaskWithinFixWindow() {
         val task = buildLineStartTask()
         val firstFix = RacingNavigationFix(lat = 0.0, lon = -0.001, timestampMillis = 1_000L)
         val firstDecision = engine.step(task, RacingNavigationState(), firstFix)
@@ -28,7 +29,10 @@ class RacingNavigationEngineTest {
         assertNotNull(event)
         assertEquals(RacingNavigationEventType.START, event?.type)
         assertEquals(1, secondDecision.state.currentLegIndex)
-        assertEquals(1_000L, event?.timestampMillis)
+        assertTrue(
+            "Start time should be within fix window",
+            event!!.timestampMillis in firstFix.timestampMillis..secondFix.timestampMillis
+        )
     }
 
     @Test
@@ -65,6 +69,10 @@ class RacingNavigationEngineTest {
         )
         val decision = engine.step(task, state, insideFix)
         assertEquals(RacingNavigationEventType.TURNPOINT, decision.event?.type)
+        assertTrue(
+            "Transition time should be within fix window",
+            decision.event!!.timestampMillis in outsideFix.timestampMillis..insideFix.timestampMillis
+        )
         assertEquals(2, decision.state.currentLegIndex)
     }
 
@@ -89,6 +97,10 @@ class RacingNavigationEngineTest {
         )
         val decision = engine.step(task, state, insideFix)
         assertEquals(RacingNavigationEventType.FINISH, decision.event?.type)
+        assertTrue(
+            "Finish time should be within fix window",
+            decision.event!!.timestampMillis in outsideFix.timestampMillis..insideFix.timestampMillis
+        )
         assertEquals(RacingNavigationStatus.FINISHED, decision.state.status)
     }
 

@@ -11,7 +11,8 @@ enum class RacingNavigationStatus {
 data class RacingNavigationFix(
     val lat: Double,
     val lon: Double,
-    val timestampMillis: Long
+    val timestampMillis: Long,
+    val accuracyMeters: Double? = null
 )
 
 data class RacingNavigationState(

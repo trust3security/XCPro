@@ -4,11 +4,15 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.annotation.VisibleForTesting
 import com.example.xcpro.common.waypoint.SearchWaypoint
+import com.example.xcpro.gestures.TaskGestureCallbacks
+import com.example.xcpro.gestures.TaskGestureHandler
 import com.example.xcpro.tasks.aat.AATTaskManager
+import com.example.xcpro.tasks.aat.gestures.AatGestureHandler
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.TaskWaypoint
 import com.example.xcpro.tasks.racing.RacingTaskManager
+import com.example.xcpro.tasks.racing.gestures.RacingGestureHandler
 import java.lang.ref.WeakReference
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -120,6 +124,17 @@ class TaskManagerCoordinator(val context: Context? = null) {
 
     fun getRacingTaskManager(): RacingTaskManager = racingTaskManager
     fun getAATTaskManager(): AATTaskManager = aatTaskManager
+
+    fun createGestureHandler(callbacks: TaskGestureCallbacks): TaskGestureHandler {
+        return if (_taskType.value == TaskType.AAT) {
+            AatGestureHandler(
+                waypointsProvider = { currentTask.waypoints },
+                callbacks = callbacks
+            )
+        } else {
+            RacingGestureHandler()
+        }
+    }
 
     fun getCurrentLegWaypoint(): TaskWaypoint? = currentTask.waypoints.getOrNull(currentLeg)
 

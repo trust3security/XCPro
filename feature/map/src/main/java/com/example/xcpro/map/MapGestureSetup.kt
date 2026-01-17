@@ -5,17 +5,17 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.gestures.CustomMapGestureHandler
+import com.example.xcpro.gestures.TaskGestureCallbacks
 import com.example.xcpro.sensors.GPSData
 import com.example.xcpro.tasks.TaskManagerCoordinator
-import com.example.xcpro.tasks.core.TaskType
-import com.example.xcpro.tasks.core.TaskWaypoint
-import com.example.xcpro.tasks.core.WaypointRole
-import com.example.xcpro.tasks.aat.models.AATLatLng
 
 /**
  * MapGestureSetup - Centralized gesture handling configuration
@@ -50,13 +50,34 @@ object MapGestureSetup {
         gestureRegions: List<MapGestureRegion> = emptyList(),
         modifier: Modifier = Modifier
     ) {
-        //  CRITICAL FIX: Remember AAT waypoints and recompute when task type or waypoints change
-        val aatWaypoints by androidx.compose.runtime.remember(taskManager.taskType) {
-            androidx.compose.runtime.derivedStateOf {
-                getAATWaypointsForGestures(taskManager)
-            }
-        }
+        val taskType by taskManager.taskTypeFlow.collectAsStateWithLifecycle()
         val pixelRatio = mapState.mapView?.pixelRatio ?: LocalDensity.current.density
+        val gestureCallbacks = remember(cameraManager, taskManager, onAATEditModeChange) {
+            TaskGestureCallbacks(
+                onEnterEditMode = { waypointIndex, lat, lon, radiusKm ->
+                    onAATEditModeChange(true)
+                    cameraManager.zoomToAATAreaForEdit(lat, lon, radiusKm)
+                    taskManager.enterAATEditMode(waypointIndex)
+                    Log.d(TAG, "Entered AAT edit mode for waypoint $waypointIndex")
+                },
+                onExitEditMode = {
+                    onAATEditModeChange(false)
+                    cameraManager.restoreAATCameraPosition()
+                    taskManager.exitAATEditMode()
+                    Log.d(TAG, "Exited AAT edit mode")
+                },
+                onDragTarget = { waypointIndex, lat, lon ->
+                    taskManager.updateAATTargetPoint(waypointIndex, lat, lon)
+                }
+            )
+        }
+        val taskGestureHandler = remember(taskType, gestureCallbacks) {
+            taskManager.createGestureHandler(gestureCallbacks)
+        }
+
+        LaunchedEffect(taskGestureHandler, isAATEditMode) {
+            taskGestureHandler.onExternalEditModeChanged(isAATEditMode)
+        }
 
         Box(
             modifier = modifier
@@ -79,79 +100,11 @@ object MapGestureSetup {
                     locationManager.handleUserInteraction(location, zoom, bearing)
                 },
                 visibleModes = flightDataManager.visibleModes,
-                //  AAT-specific gesture support (delegated to separate function)
-                taskType = taskManager.taskType,
-                aatWaypoints = aatWaypoints,
-                isAATEditMode = isAATEditMode,
-                onAATLongPress = { waypointIndex ->
-                    onAATEditModeChange(true)
-
-                    // Get waypoint coordinates and radius for dynamic zoom
-                    val waypoint = aatWaypoints.getOrNull(waypointIndex)
-                    if (waypoint != null) {
-                        // Extract AAT area radius from custom parameters
-                        val areaRadiusKm = (waypoint.customParameters["aatAreaRadiusKm"] as? Double) ?: 10.0
-
-                        // Zoom to turnpoint with calculated zoom level based on area size
-                        cameraManager.zoomToAATAreaForEdit(waypoint.lat, waypoint.lon, areaRadiusKm)
-                        Log.d(TAG, " AAT: Zoomed to turnpoint ${waypoint.title} (radius=${areaRadiusKm}km) for edit mode")
-                    }
-
-                    taskManager.enterAATEditMode(waypointIndex)
-                    Log.d(TAG, " Entered AAT edit mode for waypoint $waypointIndex")
-                },
-                onAATExitEditMode = {
-                    onAATEditModeChange(false)
-
-                    // Restore camera position to where user was before edit mode
-                    cameraManager.restoreAATCameraPosition()
-                    Log.d(TAG, " AAT: Restored camera position after exiting edit mode")
-
-                    taskManager.exitAATEditMode()
-                    Log.d(TAG, " Exited AAT edit mode")
-                },
-                onAATDrag = { waypointIndex, newPosition ->
-                    taskManager.updateAATTargetPoint(waypointIndex, newPosition.latitude, newPosition.longitude)
-                },
+                taskGestureHandler = taskGestureHandler,
                 gestureRegions = gestureRegions,
                 mapViewPixelRatio = pixelRatio,
                 modifier = Modifier.fillMaxSize()
             )
-        }
-    }
-
-    /**
-     * Get AAT waypoints with area data for gesture detection
-     * ZERO DEPENDENCIES on Racing - AAT-only extraction
-     *
-     * Returns empty list if task type is not AAT (Racing tasks don't need this)
-     */
-    private fun getAATWaypointsForGestures(taskManager: TaskManagerCoordinator): List<TaskWaypoint> {
-        if (taskManager.taskType != TaskType.AAT) {
-            return emptyList()
-        }
-
-        return try {
-            taskManager.getAATTaskManager().currentAATTask.waypoints.map { aatWp ->
-                TaskWaypoint(
-                    id = aatWp.id,
-                    title = aatWp.title,
-                    subtitle = "", // Not used for hit detection
-                    lat = aatWp.lat,
-                    lon = aatWp.lon,
-                    role = when (aatWp.role) {
-                        com.example.xcpro.tasks.aat.models.AATWaypointRole.START -> WaypointRole.START
-                        com.example.xcpro.tasks.aat.models.AATWaypointRole.TURNPOINT -> WaypointRole.TURNPOINT
-                        com.example.xcpro.tasks.aat.models.AATWaypointRole.FINISH -> WaypointRole.FINISH
-                    },
-                    customParameters = mapOf(
-                        "aatAreaRadiusKm" to (aatWp.assignedArea.radiusMeters / 1000.0)
-                    )
-                )
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error extracting AAT waypoints for gestures: ${e.message}")
-            emptyList()
         }
     }
 }

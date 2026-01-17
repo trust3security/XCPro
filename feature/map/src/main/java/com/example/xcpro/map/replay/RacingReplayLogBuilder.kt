@@ -7,10 +7,16 @@ import com.example.xcpro.replay.IgcMetadata
 import com.example.xcpro.replay.IgcPoint
 import com.example.xcpro.tasks.racing.RacingGeometryUtils
 import com.example.xcpro.tasks.racing.SimpleRacingTask
+import com.example.xcpro.tasks.racing.boundary.RacingBoundaryEpsilonPolicy
+import com.example.xcpro.tasks.racing.boundary.RacingBoundaryGeometry
+import com.example.xcpro.tasks.racing.boundary.RacingBoundaryPoint
 import com.example.xcpro.tasks.racing.models.RacingFinishPointType
 import com.example.xcpro.tasks.racing.models.RacingStartPointType
 import com.example.xcpro.tasks.racing.models.RacingTurnPointType
 import com.example.xcpro.tasks.racing.models.RacingWaypoint
+import com.example.xcpro.tasks.racing.turnpoints.CylinderCalculator
+import com.example.xcpro.tasks.racing.turnpoints.KeyholeCalculator
+import com.example.xcpro.tasks.racing.turnpoints.TaskContext
 import kotlin.math.abs
 import kotlin.math.max
 
@@ -21,8 +27,12 @@ import kotlin.math.max
 class RacingReplayLogBuilder(
     private val stepMillis: Long = DEFAULT_STEP_MS,
     private val altitudeMeters: Double = DEFAULT_ALTITUDE_M,
-    private val targetSpeedKmh: Double = DEFAULT_TARGET_SPEED_KMH
+    private val targetSpeedKmh: Double = DEFAULT_TARGET_SPEED_KMH,
+    private val epsilonPolicy: RacingBoundaryEpsilonPolicy = RacingBoundaryEpsilonPolicy()
 ) {
+
+    private val cylinderCalculator = CylinderCalculator()
+    private val keyholeCalculator = KeyholeCalculator()
 
     fun build(
         task: SimpleRacingTask,
@@ -119,7 +129,14 @@ class RacingReplayLogBuilder(
                 addPoint(pre.first, pre.second)
                 addPoint(post.first, post.second)
             }
-            RacingStartPointType.START_CYLINDER,
+            RacingStartPointType.START_CYLINDER -> {
+                val (inside, outside) = cylinderAnchors(
+                    waypoint = start,
+                    boundaryPoint = cylinderBoundaryPointForStart(start, next)
+                )
+                addPoint(inside.lat, inside.lon)
+                addPoint(outside.lat, outside.lon)
+            }
             RacingStartPointType.FAI_START_SECTOR -> {
                 val inside = start.lat to start.lon
                 val outsideDistance = outsideRadiusMeters(start.gateWidth)
@@ -137,10 +154,24 @@ class RacingReplayLogBuilder(
         addPoint: (Double, Double) -> Unit
     ) {
         val inboundBearing = RacingGeometryUtils.calculateBearing(previous.lat, previous.lon, turn.lat, turn.lon)
-        val inside = turnInsidePoint(turn, previous, next)
-        val outside = turnOutsidePoint(turn, previous, next, inboundBearing)
-        addPoint(outside.first, outside.second)
-        addPoint(inside.first, inside.second)
+        if (turn.turnPointType == RacingTurnPointType.TURN_POINT_CYLINDER && next != null) {
+            val (inside, outside) = cylinderAnchors(
+                waypoint = turn,
+                boundaryPoint = cylinderBoundaryPointForTurn(turn, previous, next)
+            )
+            addPoint(outside.lat, outside.lon)
+            addPoint(inside.lat, inside.lon)
+        } else if (turn.turnPointType == RacingTurnPointType.KEYHOLE && next != null) {
+            val boundaryPoint = keyholeBoundaryPointForTurn(turn, previous, next)
+            val (inside, outside) = neighborAnchors(boundaryPoint, previous, next)
+            addPoint(outside.lat, outside.lon)
+            addPoint(inside.lat, inside.lon)
+        } else {
+            val inside = turnInsidePoint(turn, previous, next)
+            val outside = turnOutsidePoint(turn, previous, next, inboundBearing)
+            addPoint(outside.first, outside.second)
+            addPoint(inside.first, inside.second)
+        }
     }
 
     private fun appendFinishSegment(
@@ -158,10 +189,12 @@ class RacingReplayLogBuilder(
                 addPoint(post.first, post.second)
             }
             RacingFinishPointType.FINISH_CYLINDER -> {
-                val outside = destination(finish, inboundBearing + 180.0, outsideRadiusMeters(finish.gateWidth))
-                val inside = finish.lat to finish.lon
-                addPoint(outside.first, outside.second)
-                addPoint(inside.first, inside.second)
+                val (inside, outside) = cylinderAnchors(
+                    waypoint = finish,
+                    boundaryPoint = cylinderBoundaryPointForFinish(finish, previous)
+                )
+                addPoint(outside.lat, outside.lon)
+                addPoint(inside.lat, inside.lon)
             }
         }
     }
@@ -180,6 +213,84 @@ class RacingReplayLogBuilder(
                 destination(turn, sectorBearing, 150.0)
             }
         }
+    }
+
+    private fun cylinderBoundaryPointForStart(
+        start: RacingWaypoint,
+        next: RacingWaypoint
+    ): Pair<Double, Double> {
+        val context = TaskContext(
+            waypointIndex = 0,
+            allWaypoints = listOf(start, next),
+            previousWaypoint = null,
+            nextWaypoint = next
+        )
+        return cylinderCalculator.calculateOptimalTouchPoint(start, context)
+    }
+
+    private fun cylinderBoundaryPointForTurn(
+        turn: RacingWaypoint,
+        previous: RacingWaypoint,
+        next: RacingWaypoint
+    ): Pair<Double, Double> {
+        val context = TaskContext(
+            waypointIndex = 0,
+            allWaypoints = listOf(previous, turn, next),
+            previousWaypoint = previous,
+            nextWaypoint = next
+        )
+        return cylinderCalculator.calculateOptimalTouchPoint(turn, context)
+    }
+
+    private fun cylinderBoundaryPointForFinish(
+        finish: RacingWaypoint,
+        previous: RacingWaypoint
+    ): Pair<Double, Double> {
+        return cylinderCalculator.calculateOptimalEntryPoint(finish, previous)
+    }
+
+    private fun keyholeBoundaryPointForTurn(
+        turn: RacingWaypoint,
+        previous: RacingWaypoint,
+        next: RacingWaypoint
+    ): Pair<Double, Double> {
+        val context = TaskContext(
+            waypointIndex = 0,
+            allWaypoints = listOf(previous, turn, next),
+            previousWaypoint = previous,
+            nextWaypoint = next
+        )
+        return keyholeCalculator.calculateOptimalTouchPoint(turn, context)
+    }
+
+    private fun cylinderAnchors(
+        waypoint: RacingWaypoint,
+        boundaryPoint: Pair<Double, Double>
+    ): Pair<RacingBoundaryPoint, RacingBoundaryPoint> {
+        val center = RacingBoundaryPoint(waypoint.lat, waypoint.lon)
+        val boundary = RacingBoundaryPoint(boundaryPoint.first, boundaryPoint.second)
+        val radiusMeters = waypoint.gateWidth * 1000.0
+        val epsilonMeters = epsilonPolicy.epsilonMeters()
+        return RacingBoundaryGeometry.anchorsForBoundaryPoint(
+            center = center,
+            boundaryPoint = boundary,
+            radiusMeters = radiusMeters,
+            epsilonMeters = epsilonMeters
+        )
+    }
+
+    private fun neighborAnchors(
+        boundaryPoint: Pair<Double, Double>,
+        previous: RacingWaypoint,
+        next: RacingWaypoint
+    ): Pair<RacingBoundaryPoint, RacingBoundaryPoint> {
+        val epsilonMeters = epsilonPolicy.epsilonMeters()
+        val boundary = RacingBoundaryPoint(boundaryPoint.first, boundaryPoint.second)
+        val bearingToPrev = RacingGeometryUtils.calculateBearing(boundary.lat, boundary.lon, previous.lat, previous.lon)
+        val bearingToNext = RacingGeometryUtils.calculateBearing(boundary.lat, boundary.lon, next.lat, next.lon)
+        val outside = RacingBoundaryGeometry.pointOnBearing(boundary, bearingToPrev, epsilonMeters)
+        val inside = RacingBoundaryGeometry.pointOnBearing(boundary, bearingToNext, epsilonMeters)
+        return inside to outside
     }
 
     private fun turnOutsidePoint(
@@ -232,8 +343,20 @@ class RacingReplayLogBuilder(
     )
 
     private fun lineCrossOffsetMeters(gateWidthKm: Double): Double {
-        val raw = gateWidthKm * 1000.0 * 0.2
-        return raw.coerceIn(MIN_LINE_OFFSET_METERS, MAX_LINE_OFFSET_METERS)
+        val lineLengthMeters = max(0.0, gateWidthKm) * 1000.0
+        if (lineLengthMeters <= 0.0) return 0.0
+
+        val radiusMeters = lineLengthMeters / 2.0
+        val epsilonMeters = epsilonPolicy.epsilonMeters()
+        val safeMax = (radiusMeters - epsilonMeters).coerceAtLeast(0.0)
+
+        val raw = lineLengthMeters * 0.2
+        val base = raw.coerceIn(MIN_LINE_OFFSET_METERS, MAX_LINE_OFFSET_METERS)
+        return if (safeMax > 0.0) {
+            base.coerceAtMost(safeMax)
+        } else {
+            0.0
+        }
     }
 
     private fun outsideRadiusMeters(radiusKm: Double): Double {

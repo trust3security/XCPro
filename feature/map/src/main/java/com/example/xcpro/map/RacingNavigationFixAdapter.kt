@@ -11,6 +11,7 @@ object RacingNavigationFixAdapter {
     fun toFix(gps: GPSData): RacingNavigationFix = RacingNavigationFix(
         lat = gps.latitude,
         lon = gps.longitude,
-        timestampMillis = gps.timeForCalculationsMillis
+        timestampMillis = gps.timeForCalculationsMillis,
+        accuracyMeters = gps.accuracy.toDouble()
     )
 }
