@@ -1,7 +1,6 @@
 package com.example.xcpro.map
 
 import android.content.Context
-import android.os.SystemClock
 import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
 import com.example.xcpro.common.orientation.OrientationData
@@ -63,11 +62,12 @@ class LocationManager(
         offsetHistorySize = MapFeatureFlags.locationOffsetHistorySize,
         iconRotationConfig = iconRotationConfig
     )
-    private var displaySmoother = buildDisplaySmoother(DisplaySmoothingProfile.SMOOTH)
-    private var lastSmoothingProfile: DisplaySmoothingProfile? = null
     private val displayClock = DisplayClock()
-    private var lastDisplayPoseMode: DisplayPoseMode? = null
-    private var lastRawFix: DisplayPoseSmoother.RawFix? = null
+    private val feedAdapter = LocationFeedAdapter()
+    private val posePipeline = DisplayPosePipeline(
+        minSpeedProvider = { orientationPreferences.getMinSpeedThreshold() },
+        adaptiveSmoothingEnabled = MapFeatureFlags.useAdaptiveDisplaySmoothing
+    )
     private var latestOrientation: OrientationData = OrientationData()
     private var lastCameraUpdateMs: Long = 0L
     private var lastTimeBase: DisplayClock.TimeBase? = null
@@ -153,7 +153,13 @@ class LocationManager(
         orientation: OrientationData
     ) {
         latestOrientation = orientation
-        val envelope = buildRawFixFromGps(location, orientation) ?: return
+        if (!isValidCoordinate(location.latitude, location.longitude)) {
+            logLocationDebug {
+                "Live GPS: invalid coordinates (lat=${location.latitude}, lon=${location.longitude})"
+            }
+            return
+        }
+        val envelope = feedAdapter.fromGps(location, orientation)
         pushRawFix(envelope)
     }
 
@@ -171,18 +177,7 @@ class LocationManager(
         val nowMs = displayClock.nowMs()
         val mode = mapStateReader.displayPoseMode.value
         val smoothingProfile = mapStateReader.displaySmoothingProfile.value
-        if (smoothingProfile != lastSmoothingProfile) {
-            displaySmoother = buildDisplaySmoother(smoothingProfile)
-            displaySmoother.reset()
-            lastSmoothingProfile = smoothingProfile
-        }
-        if (mode != lastDisplayPoseMode) {
-            displaySmoother.reset()
-            lastDisplayPoseMode = mode
-        }
-        val smoothedPose = displaySmoother.tick(nowMs)
-        val rawPose = lastRawFix?.let { buildRawPose(it, nowMs) }
-        val pose = DisplayPoseSelector.selectPose(mode, rawPose, smoothedPose) ?: return
+        val pose = posePipeline.selectPose(nowMs, mode, smoothingProfile) ?: return
         val map = mapState.mapLibreMap ?: return
 
         val orientation = latestOrientation
@@ -280,82 +275,30 @@ class LocationManager(
             }
             return
         }
+        if (!isValidCoordinate(liveData.latitude, liveData.longitude)) {
+            logLocationDebug {
+                "Replay feed: invalid coordinates (lat=${liveData.latitude}, lon=${liveData.longitude})"
+            }
+            return
+        }
 
         latestOrientation = orientation
-        val envelope = buildRawFixFromFlightData(liveData, orientation) ?: return
+        val envelope = feedAdapter.fromFlightData(liveData, orientation)
         pushRawFix(envelope)
     }
 
-    private fun pushRawFix(envelope: RawFixEnvelope) {
+    private fun pushRawFix(envelope: LocationFeedAdapter.RawFixEnvelope) {
         if (lastTimeBase != envelope.timeBase) {
             // Intentional source switch (live <-> replay) should snap the overlay to the new track.
-            displaySmoother.reset()
+            posePipeline.resetSmoother()
             lastTimeBase = envelope.timeBase
             mapState.mapLibreMap?.let { map ->
                 cameraUpdateGate.resetTo(LatLng(envelope.fix.latitude, envelope.fix.longitude), map)
             }
         }
-        lastRawFix = envelope.fix
         displayClock.updateFromFix(envelope.fix.timestampMs, envelope.timeBase)
-        displaySmoother.pushRawFix(envelope.fix)
+        posePipeline.pushRawFix(envelope.fix)
         currentUserLocation = LatLng(envelope.fix.latitude, envelope.fix.longitude)
-    }
-
-    private fun buildRawFixFromGps(location: GPSData, orientation: OrientationData): RawFixEnvelope? {
-        if (!isValidCoordinate(location.latitude, location.longitude)) {
-            logLocationDebug {
-                "Live GPS: invalid coordinates (lat=${location.latitude}, lon=${location.longitude})"
-            }
-            return null
-        }
-        val timeBase = if (location.monotonicTimestampMillis > 0L) {
-            DisplayClock.TimeBase.MONOTONIC
-        } else {
-            DisplayClock.TimeBase.WALL
-        }
-        val timestampMs = if (timeBase == DisplayClock.TimeBase.MONOTONIC) {
-            location.monotonicTimestampMillis
-        } else {
-            location.timestamp
-        }
-        val fix = DisplayPoseSmoother.RawFix(
-            latitude = location.latitude,
-            longitude = location.longitude,
-            speedMs = location.speed.value,
-            trackDeg = location.bearing,
-            headingDeg = orientation.headingDeg,
-            accuracyM = location.accuracy.toDouble(),
-            bearingAccuracyDeg = location.bearingAccuracyDeg,
-            speedAccuracyMs = location.speedAccuracyMs,
-            timestampMs = timestampMs,
-            orientationMode = orientation.mode
-        )
-        return RawFixEnvelope(fix, timeBase)
-    }
-
-    private fun buildRawFixFromFlightData(
-        liveData: RealTimeFlightData,
-        orientation: OrientationData
-    ): RawFixEnvelope? {
-        if (!isValidCoordinate(liveData.latitude, liveData.longitude)) {
-            logLocationDebug {
-                "Replay feed: invalid coordinates (lat=${liveData.latitude}, lon=${liveData.longitude})"
-            }
-            return null
-        }
-        val fix = DisplayPoseSmoother.RawFix(
-            latitude = liveData.latitude,
-            longitude = liveData.longitude,
-            speedMs = liveData.groundSpeed,
-            trackDeg = liveData.track,
-            headingDeg = orientation.headingDeg,
-            accuracyM = liveData.accuracy,
-            bearingAccuracyDeg = null,
-            speedAccuracyMs = null,
-            timestampMs = liveData.timestamp,
-            orientationMode = orientation.mode
-        )
-        return RawFixEnvelope(fix, DisplayClock.TimeBase.REPLAY)
     }
 
     private fun computeSmoothedPadding(): IntArray {
@@ -478,65 +421,6 @@ class LocationManager(
         showReturnButton()
     }
 
-    private data class RawFixEnvelope(
-        val fix: DisplayPoseSmoother.RawFix,
-        val timeBase: DisplayClock.TimeBase
-    )
-
-    private fun buildRawPose(
-        fix: DisplayPoseSmoother.RawFix,
-        nowMs: Long
-    ): DisplayPoseSmoother.DisplayPose {
-        return DisplayPoseSmoother.DisplayPose(
-            location = LatLng(fix.latitude, fix.longitude),
-            trackDeg = fix.trackDeg,
-            headingDeg = fix.headingDeg,
-            orientationMode = fix.orientationMode,
-            accuracyM = fix.accuracyM,
-            bearingAccuracyDeg = fix.bearingAccuracyDeg,
-            speedAccuracyMs = fix.speedAccuracyMs,
-            speedMs = fix.speedMs,
-            updatedAtMs = nowMs
-        )
-    }
-
-    private fun buildDisplaySmoother(profile: DisplaySmoothingProfile): DisplayPoseSmoother {
-        return DisplayPoseSmoother(
-            minSpeedForHeadingMs = orientationPreferences.getMinSpeedThreshold(),
-            minSpeedForPredictionMs = orientationPreferences.getMinSpeedThreshold(),
-            config = profile.config,
-            adaptiveSmoothingEnabled = MapFeatureFlags.useAdaptiveDisplaySmoothing
-        )
-    }
-
-    private class DisplayClock {
-        enum class TimeBase { MONOTONIC, WALL, REPLAY }
-
-        var replaySpeedMultiplier: Double = 1.0
-        private var timeBase: TimeBase = TimeBase.MONOTONIC
-        private var lastFixTimestampMs: Long = 0L
-        private var lastFixWallMs: Long = 0L
-
-        fun updateFromFix(timestampMs: Long, base: TimeBase) {
-            timeBase = base
-            lastFixTimestampMs = timestampMs
-            lastFixWallMs = SystemClock.elapsedRealtime()
-        }
-
-        fun nowMs(): Long {
-            return when (timeBase) {
-                TimeBase.MONOTONIC -> SystemClock.elapsedRealtime()
-                TimeBase.WALL -> System.currentTimeMillis()
-                TimeBase.REPLAY -> {
-                    // AI-NOTE: Replay timestamps advance by wall-time elapsed (scaled by speed) so
-                    // display smoothing can interpolate between fixed replay samples without
-                    // mixing time bases in the fusion pipeline.
-                    val elapsedWall = (SystemClock.elapsedRealtime() - lastFixWallMs).coerceAtLeast(0L)
-                    lastFixTimestampMs + (elapsedWall * replaySpeedMultiplier).toLong()
-                }
-            }
-        }
-    }
 
 
     private inline fun logLocationDebug(message: () -> String) {
