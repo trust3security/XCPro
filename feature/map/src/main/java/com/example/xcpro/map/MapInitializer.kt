@@ -224,10 +224,13 @@ class MapInitializer(
         val width = mapView.width
         if (width <= 0) return
         val latitude = map.cameraPosition.target?.latitude ?: 0.0
+        val metersPerPixel = map.projection.getMetersPerPixelAtLatitude(latitude)
+        val pixelRatio = mapView.pixelRatio
+        val distancePerPixel = if (pixelRatio > 0f) metersPerPixel / pixelRatio else metersPerPixel
         val maxZoom = MapZoomConstraints.maxZoomForMinScaleMeters(
             widthPx = width,
-            latitude = latitude,
-            pixelRatio = mapView.pixelRatio
+            currentZoom = map.cameraPosition.zoom,
+            distancePerPixel = distancePerPixel
         ) ?: return
         map.setMaxZoomPreference(maxZoom)
         if (map.cameraPosition.zoom > maxZoom + 1e-3) {

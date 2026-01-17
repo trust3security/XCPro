@@ -16,7 +16,6 @@ import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerType
-import androidx.compose.ui.platform.LocalDensity
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.maps.MapLibreMap
 import com.example.xcpro.sensors.GPSData
@@ -121,6 +120,7 @@ fun CustomMapGestureHandler(
     onAATExitEditMode: () -> Unit = {},
     onAATDrag: (Int, AATLatLng) -> Unit = { _, _ -> },
     gestureRegions: List<MapGestureRegion> = emptyList(),
+    mapViewPixelRatio: Float = 0f,
     modifier: Modifier = Modifier
 ) {
     var totalDragX by remember { mutableStateOf(0f) }
@@ -135,7 +135,7 @@ fun CustomMapGestureHandler(
     val coordinateConverter = remember(mapLibreMap) {
         mapLibreMap?.let { AATMapCoordinateConverterFactory.create(it) }
     }
-    val density = LocalDensity.current
+    val pixelRatio = if (mapViewPixelRatio > 0f) mapViewPixelRatio else 1f
 
     // ✅ AAT Double-Tap Detection State
     var lastTapTime by remember { mutableStateOf(0L) }
@@ -348,8 +348,12 @@ fun CustomMapGestureHandler(
                                                 val clampedZoom = MapZoomConstraints.clampZoom(
                                                     zoom = targetZoom,
                                                     widthPx = size.width.toInt(),
-                                                    latitude = map.cameraPosition.target?.latitude ?: 0.0,
-                                                    pixelRatio = density.density
+                                                    currentZoom = map.cameraPosition.zoom,
+                                                    distancePerPixel = run {
+                                                        val lat = map.cameraPosition.target?.latitude ?: 0.0
+                                                        val metersPerPixel = map.projection.getMetersPerPixelAtLatitude(lat)
+                                                        if (pixelRatio > 0f) metersPerPixel / pixelRatio else metersPerPixel
+                                                    }
                                                 )
                                                 if (clampedZoom != currentZoom) {
                                                     map.moveCamera(CameraUpdateFactory.zoomTo(clampedZoom))

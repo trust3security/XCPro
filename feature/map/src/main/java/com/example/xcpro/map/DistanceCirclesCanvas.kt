@@ -3,7 +3,6 @@ package com.example.xcpro.map
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -13,6 +12,7 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import android.graphics.Paint
+import java.util.Locale
 import kotlin.math.*
 
 /**
@@ -22,28 +22,30 @@ import kotlin.math.*
  */
 @Composable
 fun DistanceCirclesCanvas(
-    mapZoom: Float,
-    mapLatitude: Double,
+    distancePerPixelMeters: Double,
     isVisible: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
 
-    if (!isVisible) return
-
-    // Get appropriate distances for current zoom level - moved outside Canvas
-    val distances = remember(mapZoom) {
-        getDistancesForZoom(mapZoom)
-    }
+    if (!isVisible || distancePerPixelMeters <= 0.0) return
 
     Canvas(modifier = modifier.fillMaxSize()) {
         // Position circles at same center as aircraft icon
         val centerX = size.width / 2f
         val centerY = size.height * 0.65f  // 65% down from top, matching aircraft
+        val maxRadiusPx = max(
+            max(centerX, size.width - centerX),
+            max(centerY, size.height - centerY)
+        )
+        if (maxRadiusPx <= 0f) return@Canvas
+        val maxDistanceKm = (maxRadiusPx * distancePerPixelMeters) / 1000.0
+        if (maxDistanceKm <= 0.0 || !maxDistanceKm.isFinite()) return@Canvas
+        val distances = getDistancesForScale(maxDistanceKm)
 
         // Draw circles from largest to smallest
         distances.reversed().forEach { distanceKm ->
-            val radiusPx = calculatePixelRadius(distanceKm, mapZoom, mapLatitude, size.width)
+            val radiusPx = calculatePixelRadius(distanceKm, distancePerPixelMeters)
 
             // Draw ALL circles, even if they extend beyond screen
             // This ensures pilots can see distance to screen edges
@@ -68,11 +70,7 @@ fun DistanceCirclesCanvas(
                     }
 
                     // Format distance text
-                    val text = if (distanceKm >= 1.0) {
-                        "${distanceKm.toInt()} km"
-                    } else {
-                        "${(distanceKm * 1000).toInt()} m"
-                    }
+                    val text = formatDistanceLabel(distanceKm)
 
                     // Position label at top of circle with slight offset
                     canvas.nativeCanvas.drawText(
@@ -95,49 +93,28 @@ fun DistanceCirclesCanvas(
  */
 private fun calculatePixelRadius(
     distanceKm: Double,
-    zoom: Float,
-    latitude: Double,
-    screenWidth: Float
+    distancePerPixelMeters: Double
 ): Float {
-    // Web Mercator meters per pixel formula
-    // At zoom 0, equator: ~156543 meters per pixel
-    // Each zoom level halves the meters per pixel
-    val metersPerPixelAtEquator = 156543.03392 / (2.0.pow(zoom.toDouble()))
-
-    // Correct for latitude - distances get compressed as you move from equator
-    // This is crucial for accurate circle sizes at different latitudes
-    val latRad = Math.toRadians(latitude)
-    val metersPerPixel = metersPerPixelAtEquator * cos(latRad)
-
-    // Convert distance to pixels
     val distanceMeters = distanceKm * 1000.0
-    val radiusPx = (distanceMeters / metersPerPixel).toFloat()
+    val radiusPx = (distanceMeters / distancePerPixelMeters).toFloat()
 
     // Don't clamp - we want to see partial circles at screen edges
     return radiusPx
 }
 
 /**
- * Get appropriate circle distances based on zoom level.
- * Shows 10 circles spread out to reach screen edges for gliding.
+ * Get appropriate circle distances based on the current visible radius.
+ * Shows 10 circles spread out to reach screen edges.
  */
-private fun getDistancesForZoom(zoom: Float): List<Double> {
+private fun getDistancesForScale(maxDistanceKm: Double): List<Double> {
     // Standard aviation distance intervals
     val availableIntervals = listOf(
         0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0, 20.0, 50.0, 100.0, 200.0, 400.0, 800.0
     )
 
-    // Calculate visible distance using Web Mercator formula
-    // At zoom level Z, the visible distance is approximately 40,000km / 2^Z
-    val baseVisibleDistance = 40000.0 / 2.0.pow(zoom.toDouble())
-
-    // DOUBLE THE SPREAD: Multiply by 5.0 for maximum coverage
-    // This ensures circles extend well beyond screen edges for gliding
-    val visibleDistanceKm = baseVisibleDistance * 5.0
-
     // Show 10 circles for better gliding reference
     val targetCircleCount = 10
-    val idealInterval = visibleDistanceKm / targetCircleCount
+    val idealInterval = maxDistanceKm / targetCircleCount
 
     // Find the closest standard interval
     val optimalInterval = availableIntervals.minByOrNull { interval ->
@@ -152,4 +129,17 @@ private fun getDistancesForZoom(zoom: Float): List<Double> {
     }
 
     return distances
+}
+
+private fun formatDistanceLabel(distanceKm: Double): String {
+    return if (distanceKm >= 1.0) {
+        val whole = kotlin.math.abs(distanceKm % 1.0)
+        if (whole < 1e-6) {
+            "${distanceKm.toInt()} km"
+        } else {
+            String.format(Locale.getDefault(), "%.1f km", distanceKm)
+        }
+    } else {
+        "${(distanceKm * 1000).toInt()} m"
+    }
 }

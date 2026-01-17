@@ -198,6 +198,7 @@ internal fun MapOverlayStack(
         )
 
         DistanceCirclesLayer(
+            mapState = mapState,
             currentZoom = currentZoom,
             currentLocation = currentLocation,
             showDistanceCircles = showDistanceCircles

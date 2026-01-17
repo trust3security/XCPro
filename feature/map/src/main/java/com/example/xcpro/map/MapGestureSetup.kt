@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.zIndex
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.gestures.CustomMapGestureHandler
@@ -55,6 +56,7 @@ object MapGestureSetup {
                 getAATWaypointsForGestures(taskManager)
             }
         }
+        val pixelRatio = mapState.mapView?.pixelRatio ?: LocalDensity.current.density
 
         Box(
             modifier = modifier
@@ -112,6 +114,7 @@ object MapGestureSetup {
                     taskManager.updateAATTargetPoint(waypointIndex, newPosition.latitude, newPosition.longitude)
                 },
                 gestureRegions = gestureRegions,
+                mapViewPixelRatio = pixelRatio,
                 modifier = Modifier.fillMaxSize()
             )
         }

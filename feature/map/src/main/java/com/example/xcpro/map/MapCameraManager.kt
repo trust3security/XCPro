@@ -160,14 +160,18 @@ class MapCameraManager(
 
     private fun clampZoom(zoom: Double, latitude: Double? = null): Double {
         val mapView = mapState.mapView ?: return zoom
+        val map = mapState.mapLibreMap ?: return zoom
         val width = mapView.width
         if (width <= 0) return zoom
-        val lat = latitude ?: mapState.mapLibreMap?.cameraPosition?.target?.latitude ?: 0.0
+        val lat = latitude ?: map.cameraPosition.target?.latitude ?: 0.0
+        val metersPerPixel = map.projection.getMetersPerPixelAtLatitude(lat)
+        val pixelRatio = mapView.pixelRatio
+        val distancePerPixel = if (pixelRatio > 0f) metersPerPixel / pixelRatio else metersPerPixel
         return MapZoomConstraints.clampZoom(
             zoom = zoom,
             widthPx = width,
-            latitude = lat,
-            pixelRatio = mapView.pixelRatio
+            currentZoom = map.cameraPosition.zoom,
+            distancePerPixel = distancePerPixel
         )
     }
 

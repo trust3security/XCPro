@@ -17,6 +17,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.zIndex
 import android.util.Log
 import com.example.xcpro.common.units.UnitsFormatter
@@ -25,6 +26,7 @@ import com.example.xcpro.common.units.VerticalSpeedUnit
 import com.example.xcpro.map.DistanceCirclesCanvas
 import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.map.WindArrowUiState
+import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.ballast.BallastCommand
 import com.example.xcpro.map.ballast.BallastUiState
 import com.example.xcpro.map.ui.widgets.MapUIWidgetManager
@@ -38,6 +40,7 @@ import com.example.ui1.VarioDialLabel
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlin.math.pow
 
 @Composable
 internal fun BallastPanel(
@@ -215,12 +218,26 @@ private fun formatVarioLabel(value: Double): String =
 
 @Composable
 internal fun DistanceCirclesLayer(
+    mapState: MapScreenState,
     currentZoom: Float,
     currentLocation: GPSData?,
     showDistanceCircles: Boolean
 ) {
     val zoom = currentZoom
-    val latitude = currentLocation?.position?.latitude ?: 0.0
+    val density = LocalDensity.current
+    val mapView = mapState.mapView
+    val map = mapState.mapLibreMap
+    val latitude = map?.cameraPosition?.target?.latitude
+        ?: currentLocation?.position?.latitude
+        ?: 0.0
+    val pixelRatio = mapView?.pixelRatio?.takeIf { it > 0f } ?: density.density
+    val metersPerPixel = map?.projection?.getMetersPerPixelAtLatitude(latitude)
+        ?: run {
+            val latRad = Math.toRadians(latitude)
+            val metersPerPixelAtEquator = 156543.03392 / (2.0.pow(zoom.toDouble()))
+            metersPerPixelAtEquator * kotlin.math.cos(latRad)
+        }
+    val distancePerPixelMeters = if (pixelRatio > 0f) metersPerPixel / pixelRatio else metersPerPixel
     AnimatedVisibility(
         visible = showDistanceCircles,
         enter = fadeIn() + scaleIn(),
@@ -229,11 +246,10 @@ internal fun DistanceCirclesLayer(
             .fillMaxWidth()
             .fillMaxHeight()
             .zIndex(1f)
-    ) {
-        DistanceCirclesCanvas(
-            mapZoom = zoom,
-            mapLatitude = latitude,
-            modifier = Modifier.fillMaxSize()
-        )
-    }
-}
+      ) {
+          DistanceCirclesCanvas(
+              distancePerPixelMeters = distancePerPixelMeters,
+              modifier = Modifier.fillMaxSize()
+          )
+      }
+  }
