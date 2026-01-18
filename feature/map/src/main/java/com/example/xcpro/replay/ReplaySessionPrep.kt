@@ -17,19 +17,32 @@ internal fun prepareReplaySession(
     tag: String
 ): PreparedReplaySession {
     sampleEmitter.reset()
-    val densified = when (simConfig.mode) {
-        ReplayMode.REALTIME_SIM -> IgcReplayMath.densifyPoints(
-            original = log.points,
-            stepMs = simConfig.baroStepMs,
-            jitterMs = simConfig.jitterMs,
-            random = sampleEmitter.random
-        )
-        ReplayMode.REFERENCE -> IgcReplayMath.densifyPoints(
-            original = log.points,
-            stepMs = simConfig.referenceStepMs,
-            jitterMs = 0L,
-            random = sampleEmitter.random
-        )
+    val densified = when (simConfig.interpolation) {
+        ReplayInterpolation.CATMULL_ROM_RUNTIME -> log.points
+        ReplayInterpolation.CATMULL_ROM -> {
+            val stepMs = when (simConfig.mode) {
+                ReplayMode.REALTIME_SIM -> simConfig.baroStepMs
+                ReplayMode.REFERENCE -> simConfig.referenceStepMs
+            }
+            IgcReplayMath.densifyPointsCatmullRom(
+                original = log.points,
+                stepMs = stepMs
+            )
+        }
+        ReplayInterpolation.LINEAR -> when (simConfig.mode) {
+            ReplayMode.REALTIME_SIM -> IgcReplayMath.densifyPoints(
+                original = log.points,
+                stepMs = simConfig.baroStepMs,
+                jitterMs = simConfig.jitterMs,
+                random = sampleEmitter.random
+            )
+            ReplayMode.REFERENCE -> IgcReplayMath.densifyPoints(
+                original = log.points,
+                stepMs = simConfig.referenceStepMs,
+                jitterMs = 0L,
+                random = sampleEmitter.random
+            )
+        }
     }
     if (densified.isEmpty()) throw IllegalArgumentException("IGC file has no B records")
     val qnh = log.metadata.qnhHpa ?: DEFAULT_QNH_HPA

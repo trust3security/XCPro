@@ -4,14 +4,17 @@ import android.util.Log
 import androidx.compose.material3.DrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.withFrameNanos
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.map.MapTaskIntegration
+import com.example.xcpro.map.LocationManager
 import com.example.xcpro.map.trail.SnailTrailManager
 import com.example.xcpro.map.trail.TrailSettings
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.tasks.core.TaskType
+import kotlinx.coroutines.isActive
 
 @Composable
 internal fun MapScreenRuntimeEffects(
@@ -20,6 +23,7 @@ internal fun MapScreenRuntimeEffects(
     isAATEditMode: Boolean,
     onExitAATEditMode: () -> Unit,
     snailTrailManager: SnailTrailManager,
+    locationManager: LocationManager,
     liveFlightData: RealTimeFlightData?,
     trailSettings: TrailSettings,
     currentZoom: Float,
@@ -62,13 +66,37 @@ internal fun MapScreenRuntimeEffects(
         isFlying,
         suppressLiveGps
     ) {
+        val displayLocation = if (suppressLiveGps) {
+            locationManager.getDisplayPoseLocation()
+        } else {
+            null
+        }
+        val displayTimeMillis = if (suppressLiveGps) {
+            locationManager.getDisplayPoseTimestampMs()
+        } else {
+            null
+        }
         snailTrailManager.updateFromFlightData(
             liveData = liveFlightData,
             isFlying = isFlying,
             isReplay = suppressLiveGps,
             settings = trailSettings,
-            currentZoom = currentZoom
+            currentZoom = currentZoom,
+            displayLocation = displayLocation,
+            displayTimeMillis = displayTimeMillis
         )
+    }
+
+
+    LaunchedEffect(suppressLiveGps) {
+        if (!suppressLiveGps) return@LaunchedEffect
+        while (isActive) {
+            withFrameNanos { }
+            snailTrailManager.updateDisplayPose(
+                displayLocation = locationManager.getDisplayPoseLocation(),
+                displayTimeMillis = locationManager.getDisplayPoseTimestampMs()
+            )
+        }
     }
 
     // GAœAÿ Map FlightMode to FlightModeSelection using FlightDataManager

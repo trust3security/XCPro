@@ -23,6 +23,8 @@ class SnailTrailManager(
     private var lastReplaySample: TrailSample? = null
     private var lastReplayTimestampAdjusted: Long? = null
     private val replaySampleStepMillis = 250L
+    private var lastRenderPoseTimeMs: Long? = null
+    private var lastRenderPoseLocation: LatLng? = null
 
     fun initialize(map: MapLibreMap) {
         val overlay = SnailTrailOverlay(context, map, mapState.mapView)
@@ -44,12 +46,16 @@ class SnailTrailManager(
         isFlying: Boolean,
         isReplay: Boolean,
         settings: TrailSettings,
-        currentZoom: Float
+        currentZoom: Float,
+        displayLocation: LatLng? = null,
+        displayTimeMillis: Long? = null
     ) {
         val overlay = mapState.snailTrailOverlay ?: return
         if (liveData == null) {
             overlay.clear()
             lastContext = null
+            lastRenderPoseTimeMs = null
+            lastRenderPoseLocation = null
             return
         }
 
@@ -60,6 +66,8 @@ class SnailTrailManager(
             lastContext = null
             lastReplaySample = null
             lastReplayTimestampAdjusted = null
+            lastRenderPoseTimeMs = null
+            lastRenderPoseLocation = null
         }
         lastIsReplay = isReplay
 
@@ -74,6 +82,10 @@ class SnailTrailManager(
         }
 
         val timestamp = liveData.timestamp
+        val renderLocation = displayLocation?.takeIf {
+            TrailGeo.isValidCoordinate(it.latitude, it.longitude)
+        } ?: LatLng(lat, lon)
+        val renderTime = displayTimeMillis?.takeIf { it > 0L } ?: timestamp
         val altitude = if (liveData.baroAltitude.isFinite()) {
             liveData.baroAltitude
         } else {
@@ -101,8 +113,8 @@ class SnailTrailManager(
         }
 
         lastContext = RenderContext(
-            currentLocation = LatLng(lat, lon),
-            currentTimeMillis = timestamp,
+            currentLocation = renderLocation,
+            currentTimeMillis = renderTime,
             windSpeedMs = liveData.windSpeed.toDouble(),
             windDirectionFromDeg = liveData.windDirection.toDouble(),
             isCircling = isCircling,
@@ -112,6 +124,44 @@ class SnailTrailManager(
         if (sampleAdded || settingsChanged || zoomChanged) {
             render(overlay)
         }
+    }
+
+    fun updateDisplayPose(
+        displayLocation: LatLng?,
+        displayTimeMillis: Long?
+    ) {
+        if (lastIsReplay != true) return
+        val overlay = mapState.snailTrailOverlay ?: return
+        val context = lastContext ?: return
+        val location = displayLocation
+            ?.takeIf { TrailGeo.isValidCoordinate(it.latitude, it.longitude) }
+            ?: return
+        val time = displayTimeMillis?.takeIf { it > 0L } ?: context.currentTimeMillis
+        if (time <= 0L) return
+        if (time < context.currentTimeMillis) return
+
+        val prevLocation = lastRenderPoseLocation
+        val movedEnough = if (prevLocation == null) {
+            true
+        } else {
+            TrailGeo.distanceMeters(
+                prevLocation.latitude,
+                prevLocation.longitude,
+                location.latitude,
+                location.longitude
+            ) >= DISPLAY_RENDER_MIN_DISTANCE_M
+        }
+        val prevTime = lastRenderPoseTimeMs ?: 0L
+        val dt = time - prevTime
+        if (dt < DISPLAY_RENDER_MIN_STEP_MS && !movedEnough) return
+
+        lastRenderPoseTimeMs = time
+        lastRenderPoseLocation = location
+        lastContext = context.copy(
+            currentLocation = location,
+            currentTimeMillis = time
+        )
+        render(overlay)
     }
 
     fun onSettingsChanged(settings: TrailSettings) {
@@ -134,8 +184,20 @@ class SnailTrailManager(
         val context = lastContext ?: return
         val isReplay = lastIsReplay ?: false
         val store = activeStore(isReplay)
+        val allPoints = store.snapshot()
+        val renderPoints = if (context.currentTimeMillis > 0L) {
+            val firstTimestamp = allPoints.firstOrNull()?.timestampMillis
+            if (firstTimestamp != null && context.currentTimeMillis >= firstTimestamp) {
+                val filtered = allPoints.filter { it.timestampMillis <= context.currentTimeMillis }
+                if (filtered.isNotEmpty()) filtered else allPoints
+            } else {
+                allPoints
+            }
+        } else {
+            allPoints
+        }
         overlay.render(
-            points = store.snapshot(),
+            points = renderPoints,
             settings = lastSettings,
             currentLocation = context.currentLocation,
             currentTimeMillis = context.currentTimeMillis,
@@ -250,4 +312,9 @@ class SnailTrailManager(
         val isCircling: Boolean,
         val currentZoom: Float
     )
+
+    private companion object {
+        private const val DISPLAY_RENDER_MIN_STEP_MS = 100L
+        private const val DISPLAY_RENDER_MIN_DISTANCE_M = 0.5
+    }
 }

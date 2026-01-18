@@ -41,6 +41,7 @@ fun MapActionButtons(
     showVarioDemoFab: Boolean,
     onVarioDemoReferenceClick: () -> Unit,
     onVarioDemoSimClick: () -> Unit,
+    onVarioDemoSim2Click: () -> Unit,
     showRacingReplayFab: Boolean,
     onRacingReplayClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -54,7 +55,8 @@ fun MapActionButtons(
     val demoFabSize = 48.dp
     val demoSpacing = 12.6.dp // ~2mm gap between FAB edges
     val demoSimBottomPadding = 16.dp
-    val demoRefBottomPadding = demoSimBottomPadding + demoFabSize + demoSpacing
+    val demoSim2BottomPadding = demoSimBottomPadding + demoFabSize + demoSpacing
+    val demoRefBottomPadding = demoSim2BottomPadding + demoFabSize + demoSpacing
     val demoTaskBottomPadding = if (showVarioDemoFab) {
         demoRefBottomPadding + demoFabSize + demoSpacing
     } else {
@@ -118,6 +120,15 @@ fun MapActionButtons(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(end = 16.dp, bottom = demoRefBottomPadding)
+            )
+            VarioDemoButton(
+                onClick = onVarioDemoSim2Click,
+                badgeText = "SIM2",
+                badgeColor = MaterialTheme.colorScheme.error,
+                contentDescription = "Run vario demo replay (sim2)",
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 16.dp, bottom = demoSim2BottomPadding)
             )
             VarioDemoButton(
                 onClick = onVarioDemoSimClick,

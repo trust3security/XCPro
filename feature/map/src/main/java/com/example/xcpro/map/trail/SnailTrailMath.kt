@@ -7,6 +7,7 @@ import kotlin.math.min
 import kotlin.math.pow
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
+import org.maplibre.android.maps.MapView
 
 internal object SnailTrailMath {
     private const val METERS_PER_PIXEL_EQUATOR = 156543.03392
@@ -165,6 +166,24 @@ internal object SnailTrailMath {
     fun metersPerPixelAtLatitude(latitude: Double, zoom: Float): Double {
         val latRad = Math.toRadians(latitude)
         return METERS_PER_PIXEL_EQUATOR * cos(latRad) / 2.0.pow(zoom.toDouble())
+    }
+
+    fun metersPerPixel(
+        map: MapLibreMap,
+        mapView: MapView?,
+        latitude: Double,
+        zoom: Float
+    ): Double {
+        val metersPerPixel = try {
+            map.projection?.getMetersPerPixelAtLatitude(latitude)
+        } catch (e: Exception) {
+            null
+        }
+        val pixelRatio = mapView?.pixelRatio ?: 0f
+        if (metersPerPixel != null && metersPerPixel.isFinite() && metersPerPixel > 0.0) {
+            return if (pixelRatio > 0f) metersPerPixel / pixelRatio else metersPerPixel
+        }
+        return metersPerPixelAtLatitude(latitude, zoom)
     }
 
     fun clipLineToIconClearance(

@@ -93,7 +93,7 @@ class BlueLocationOverlay(
                 iconIgnorePlacement(true),
                 iconRotationAlignment("viewport"),
                 iconAnchor("center"),
-                iconOffset(arrayOf(0f, -6f))
+                iconOffset(arrayOf(0f, 0f))
             )
 
     /**

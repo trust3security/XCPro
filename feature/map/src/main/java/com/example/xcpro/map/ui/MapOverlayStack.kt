@@ -108,6 +108,7 @@ internal fun MapOverlayStack(
             mapState = mapState,
             mapInitializer = mapInitializer,
             onMapReady = onMapReady,
+            locationManager = locationManager,
             flightDataManager = flightDataManager,
             flightViewModel = flightViewModel,
             taskManager = taskManager,

@@ -155,6 +155,7 @@ internal fun MapScreenRoot(
         isAATEditMode = isAATEditMode,
         onExitAATEditMode = mapViewModel::exitAATEditMode,
         snailTrailManager = snailTrailManager,
+        locationManager = locationManager,
         liveFlightData = liveFlightData,
         trailSettings = trailSettings,
         currentZoom = currentZoom,

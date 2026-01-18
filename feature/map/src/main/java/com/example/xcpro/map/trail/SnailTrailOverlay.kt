@@ -36,7 +36,8 @@ class SnailTrailOverlay(
         private const val REPLAY_DISTANCE_FACTOR = 1.0
         private const val REPLAY_MAX_DISTANCE_METERS = 30.0
         private const val MIN_CURRENT_SEGMENT_METERS = 0.5
-        private const val ICON_CLEARANCE_FRACTION = 0.35f
+        private const val ICON_CLEARANCE_FRACTION = 0f
+        private const val TAIL_OFFSET_FRACTION = 0.12f
     }
 
     private var isInitialized = false
@@ -172,7 +173,12 @@ class SnailTrailOverlay(
             return
         }
 
-        val metersPerPixel = SnailTrailMath.metersPerPixelAtLatitude(currentLocation.latitude, currentZoom)
+        val metersPerPixel = SnailTrailMath.metersPerPixel(
+            map = map,
+            mapView = mapView,
+            latitude = currentLocation.latitude,
+            zoom = currentZoom
+        )
         val distanceFactor = if (isReplay) REPLAY_DISTANCE_FACTOR else 3.0
         val rawMinDistance = metersPerPixel * distanceFactor
         val minDistanceMeters = if (isReplay) {
@@ -181,22 +187,35 @@ class SnailTrailOverlay(
             rawMinDistance
         }
         val filtered = SnailTrailMath.applyDistanceFilter(renderPoints, minDistanceMeters)
+        val latestPoint = renderPoints.lastOrNull()
+        val filteredWithTail = if (
+            latestPoint != null &&
+            filtered.isNotEmpty() &&
+            filtered.last().timestampMillis < latestPoint.timestampMillis
+        ) {
+            val extended = ArrayList<RenderPoint>(filtered.size + 1)
+            extended.addAll(filtered)
+            extended.add(latestPoint)
+            extended
+        } else {
+            filtered
+        }
         if (verboseLogging) {
             Log.d(
                 TAG_RENDER,
-                "render#$renderId filtered points=${filtered.size} minDistanceMeters=${"%.2f".format(minDistanceMeters)} " +
+                "render#$renderId filtered points=${filteredWithTail.size} minDistanceMeters=${"%.2f".format(minDistanceMeters)} " +
                     "metersPerPixel=${"%.6f".format(metersPerPixel)} minTime=${minTime ?: -1}"
             )
         }
-        if (filtered.isEmpty()) {
+        if (filteredWithTail.isEmpty()) {
             clear()
             return
         }
 
         val (valueMin, valueMax) = if (settings.type == TrailType.ALTITUDE) {
-            SnailTrailMath.altitudeRange(filtered)
+            SnailTrailMath.altitudeRange(filteredWithTail)
         } else {
-            SnailTrailMath.varioRange(filtered)
+            SnailTrailMath.varioRange(filteredWithTail)
         }
 
         val density = context.resources.displayMetrics.density
@@ -211,15 +230,15 @@ class SnailTrailOverlay(
             )
         }
 
-        val lineFeatures = ArrayList<Feature>(filtered.size)
-        val dotFeatures = ArrayList<Feature>(filtered.size)
+        val lineFeatures = ArrayList<Feature>(filteredWithTail.size)
+        val dotFeatures = ArrayList<Feature>(filteredWithTail.size)
 
         val bounds = ScreenBounds(mapView)
         var last: RenderPoint? = null
         var lastInside = false
         var segmentLogCount = 0
 
-        for (point in filtered) {
+        for (point in filteredWithTail) {
             val inside = bounds.isInside(map, point.latitude, point.longitude)
             if (last != null && lastInside && inside) {
                 val colorIndex = if (settings.type == TrailType.ALTITUDE) {
@@ -328,51 +347,80 @@ class SnailTrailOverlay(
             lastInside = inside
         }
 
-        val lastPoint = filtered.lastOrNull()
+        val lastPoint = filteredWithTail.lastOrNull()
         if (lastPoint != null && currentLocation != null) {
-            val distToCurrent = TrailGeo.distanceMeters(
+            val trackBearing = TrailGeo.bearingDegrees(
                 lastPoint.latitude,
                 lastPoint.longitude,
                 currentLocation.latitude,
                 currentLocation.longitude
             )
-            if (distToCurrent >= MIN_CURRENT_SEGMENT_METERS) {
-                val clearancePx = com.example.xcpro.map.BlueLocationOverlay.ICON_SIZE_PX * ICON_CLEARANCE_FRACTION
-                val clipped = SnailTrailMath.clipLineToIconClearance(map, lastPoint, currentLocation, clearancePx)
-                    ?: return
-                val colorIndex = if (settings.type == TrailType.ALTITUDE) {
-                    SnailTrailMath.altitudeColorIndex(lastPoint.altitudeMeters, valueMin, valueMax)
-                } else {
-                    SnailTrailMath.varioColorIndex(lastPoint.varioMs, valueMin, valueMax)
-                }
-                val width = if (useScaledLines) scaledWidths[colorIndex] else minWidth
-                val colorInt = if (verboseLogging) SnailTrailPalette.colorFor(settings.type, colorIndex) else 0
-                val currentPoint = RenderPoint(
-                    latitude = clipped.latitude,
-                    longitude = clipped.longitude,
-                    altitudeMeters = lastPoint.altitudeMeters,
-                    varioMs = lastPoint.varioMs,
-                    timestampMillis = currentTimeMillis
+            val tailOffsetMeters = if (metersPerPixel.isFinite() && metersPerPixel > 0.0) {
+                com.example.xcpro.map.BlueLocationOverlay.ICON_SIZE_PX *
+                    TAIL_OFFSET_FRACTION * metersPerPixel
+            } else {
+                0.0
+            }
+            val tailLocation = if (trackBearing.isFinite() && tailOffsetMeters > 0.0) {
+                val tailBearing = (trackBearing + 180.0) % 360.0
+                val (lat, lon) = TrailGeo.destinationPoint(
+                    currentLocation.latitude,
+                    currentLocation.longitude,
+                    tailBearing,
+                    tailOffsetMeters
                 )
-                lineFeatures.add(
-                    SnailTrailFeatureBuilder.lineFeature(
+                if (TrailGeo.isValidCoordinate(lat, lon)) {
+                    LatLng(lat, lon)
+                } else {
+                    currentLocation
+                }
+            } else {
+                currentLocation
+            }
+            val distToAnchor = TrailGeo.distanceMeters(
+                lastPoint.latitude,
+                lastPoint.longitude,
+                tailLocation.latitude,
+                tailLocation.longitude
+            )
+            if (distToAnchor >= MIN_CURRENT_SEGMENT_METERS) {
+                val clearancePx = com.example.xcpro.map.BlueLocationOverlay.ICON_SIZE_PX * ICON_CLEARANCE_FRACTION
+                val clipped = SnailTrailMath.clipLineToIconClearance(map, lastPoint, tailLocation, clearancePx)
+                if (clipped != null) {
+                    val colorIndex = if (settings.type == TrailType.ALTITUDE) {
+                        SnailTrailMath.altitudeColorIndex(lastPoint.altitudeMeters, valueMin, valueMax)
+                    } else {
+                        SnailTrailMath.varioColorIndex(lastPoint.varioMs, valueMin, valueMax)
+                    }
+                    val width = if (useScaledLines) scaledWidths[colorIndex] else minWidth
+                    val colorInt = if (verboseLogging) SnailTrailPalette.colorFor(settings.type, colorIndex) else 0
+                    val currentPoint = RenderPoint(
+                        latitude = clipped.latitude,
+                        longitude = clipped.longitude,
+                        altitudeMeters = lastPoint.altitudeMeters,
+                        varioMs = lastPoint.varioMs,
+                        timestampMillis = currentTimeMillis
+                    )
+                    lineFeatures.add(
+                        SnailTrailFeatureBuilder.lineFeature(
+                            lastPoint,
+                            currentPoint,
+                            colorIndex,
+                            width
+                        )
+                    )
+                    logSegment(
+                        renderId,
+                        segmentLogCount++,
+                        "line-to-current",
                         lastPoint,
                         currentPoint,
                         colorIndex,
-                        width
+                        colorInt,
+                        width,
+                        null
                     )
-                )
-                logSegment(
-                    renderId,
-                    segmentLogCount++,
-                    "line-to-current",
-                    lastPoint,
-                    currentPoint,
-                    colorIndex,
-                    colorInt,
-                    width,
-                    null
-                )
+                }
             }
         }
 

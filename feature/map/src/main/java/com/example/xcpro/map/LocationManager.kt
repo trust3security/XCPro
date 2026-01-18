@@ -1,6 +1,7 @@
 package com.example.xcpro.map
 
 import android.content.Context
+import android.os.Looper
 import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
 import com.example.xcpro.common.orientation.OrientationData
@@ -15,6 +16,9 @@ import com.example.xcpro.map.config.MapFeatureFlags
 import com.example.xcpro.map.MapLocationFilter
 import com.example.xcpro.map.MapLibreProjector
 import com.example.xcpro.map.MapPositionController
+import com.example.xcpro.common.orientation.MapOrientationMode
+import com.example.xcpro.replay.ReplayDisplayPose
+import org.maplibre.android.maps.MapView
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import kotlinx.coroutines.CoroutineScope
@@ -27,7 +31,9 @@ class LocationManager(
     private val mapStateReader: MapStateReader,
     private val stateActions: MapStateActions,
     private val coroutineScope: CoroutineScope,
-    private val varioServiceManager: VarioServiceManager
+    private val varioServiceManager: VarioServiceManager,
+    private val replayHeadingProvider: ((Long) -> Double?)? = null,
+    private val replayFixProvider: ((Long) -> ReplayDisplayPose?)? = null
 ) {
     companion object {
         private const val TAG = "LocationManager"
@@ -58,7 +64,8 @@ class LocationManager(
     )
     private val positionController = MapPositionController(
         mapState = mapState,
-        maxBearingStepDeg = 5.0,
+        maxBearingStepDegProvider = { MapFeatureFlags.maxTrackBearingStepDeg },
+        headingSmoothingEnabledProvider = { MapFeatureFlags.useIconHeadingSmoothing },
         offsetHistorySize = MapFeatureFlags.locationOffsetHistorySize,
         iconRotationConfig = iconRotationConfig
     )
@@ -71,6 +78,12 @@ class LocationManager(
     private var latestOrientation: OrientationData = OrientationData()
     private var lastCameraUpdateMs: Long = 0L
     private var lastTimeBase: DisplayClock.TimeBase? = null
+    @Volatile private var lastDisplayPoseLocation: LatLng? = null
+    @Volatile private var lastDisplayPoseTimestampMs: Long = 0L
+    private var renderFrameMapView: MapView? = null
+    private val renderFrameListener = MapView.OnWillStartRenderingFrameListener {
+        dispatchRenderFrame()
+    }
 
     // ✅ PHASE 2: Unified sensor management
     val unifiedSensorManager: UnifiedSensorManager = varioServiceManager.unifiedSensorManager
@@ -174,47 +187,131 @@ class LocationManager(
     }
 
     fun onDisplayFrame() {
+        if (MapFeatureFlags.useRenderFrameSync) {
+            mapState.mapLibreMap?.triggerRepaint()
+            return
+        }
+        renderDisplayFrame()
+    }
+
+    fun onRenderFrame() {
+        if (!MapFeatureFlags.useRenderFrameSync) {
+            return
+        }
+        renderDisplayFrame()
+    }
+
+    fun getDisplayPoseLocation(): LatLng? = lastDisplayPoseLocation
+
+    fun getDisplayPoseTimestampMs(): Long? =
+        lastDisplayPoseTimestampMs.takeIf { it > 0L }
+
+    private fun renderDisplayFrame() {
         val nowMs = displayClock.nowMs()
         val mode = mapStateReader.displayPoseMode.value
         val smoothingProfile = mapStateReader.displaySmoothingProfile.value
         val pose = posePipeline.selectPose(nowMs, mode, smoothingProfile) ?: return
         val map = mapState.mapLibreMap ?: return
-
         val orientation = latestOrientation
-        val cameraBearing = map.cameraPosition.bearing.toDouble()
-        val overlayBearing = if (cameraBearing.isFinite()) cameraBearing else orientation.bearing
-        positionController.updateOverlay(
-            location = pose.location,
-            trackBearing = pose.trackDeg,
-            headingDeg = orientation.headingDeg,
-            headingValid = orientation.headingValid,
-            bearingAccuracyDeg = pose.bearingAccuracyDeg,
-            speedAccuracyMs = pose.speedAccuracyMs,
-            mapBearing = overlayBearing,
-            orientationMode = orientation.mode,
-            speedMs = pose.speedMs,
-            nowMs = nowMs
-        )
+        val forceTrackHeading = MapFeatureFlags.forceReplayTrackHeading &&
+            lastTimeBase == DisplayClock.TimeBase.REPLAY
+        val runtimeFix = if (forceTrackHeading && MapFeatureFlags.useRuntimeReplayHeading) {
+            replayFixProvider?.invoke(nowMs)
+        } else {
+            null
+        }
+        val runtimeBearing = runtimeFix?.bearingDeg
+            ?: if (forceTrackHeading && MapFeatureFlags.useRuntimeReplayHeading) {
+                replayHeadingProvider?.invoke(nowMs)
+            } else {
+                null
+            }
+        val poseLocation = runtimeFix?.let { fix ->
+            LatLng(fix.latitude, fix.longitude)
+        } ?: pose.location
+        val poseTimestampMs = runtimeFix?.timestampMillis ?: pose.updatedAtMs
+        val headingDeg = when {
+            runtimeBearing != null -> runtimeBearing
+            forceTrackHeading -> pose.trackDeg
+            else -> orientation.headingDeg
+        }
+        val headingValid = runtimeBearing != null || forceTrackHeading || orientation.headingValid
+        val trackDeg = runtimeBearing ?: pose.trackDeg
+        val speedMs = runtimeFix?.speedMs ?: pose.speedMs
+        val cameraTargetBearing = if (runtimeBearing != null &&
+            orientation.mode != MapOrientationMode.NORTH_UP
+        ) {
+            runtimeBearing
+        } else {
+            orientation.bearing
+        }
+
+        lastDisplayPoseLocation = poseLocation
+        lastDisplayPoseTimestampMs = poseTimestampMs
 
         if (!hasInitiallyCentered) {
-            handleInitialCentering(pose.location)
+            handleInitialCentering(poseLocation)
             if (!hasInitiallyCentered) return
         }
 
         val shouldTrackCamera = isTrackingLocation && !showReturnButton
         if (shouldTrackCamera) {
             val padding = computeSmoothedPadding()
-            if (shouldUpdateCamera(map, pose.location, orientation.bearing, nowMs)) {
+            if (shouldUpdateCamera(map, poseLocation, cameraTargetBearing, nowMs)) {
+                val animationMs = if (MapFeatureFlags.useRuntimeReplayHeading &&
+                    lastTimeBase == DisplayClock.TimeBase.REPLAY
+                ) {
+                    0
+                } else {
+                    CAMERA_ANIMATION_MS
+                }
                 positionController.updateCamera(
                     map = map,
-                    location = pose.location,
-                    cameraBearing = orientation.bearing,
+                    location = poseLocation,
+                    cameraBearing = cameraTargetBearing,
                     padding = padding,
-                    animationMs = CAMERA_ANIMATION_MS
+                    animationMs = animationMs
                 )
-                cameraUpdateGate.resetTo(pose.location, map)
+                cameraUpdateGate.resetTo(poseLocation, map)
                 lastCameraUpdateMs = nowMs
             }
+        }
+
+        val cameraBearing = map.cameraPosition.bearing.toDouble()
+        val overlayBearing = if (cameraBearing.isFinite()) cameraBearing else orientation.bearing
+        positionController.updateOverlay(
+            location = poseLocation,
+            trackBearing = trackDeg,
+            headingDeg = headingDeg,
+            headingValid = headingValid,
+            bearingAccuracyDeg = pose.bearingAccuracyDeg,
+            speedAccuracyMs = pose.speedAccuracyMs,
+            mapBearing = overlayBearing,
+            orientationMode = orientation.mode,
+            speedMs = speedMs,
+            nowMs = nowMs
+        )
+    }
+
+    fun bindRenderFrameListener(mapView: MapView) {
+        if (renderFrameMapView === mapView) return
+        renderFrameMapView?.removeOnWillStartRenderingFrameListener(renderFrameListener)
+        mapView.addOnWillStartRenderingFrameListener(renderFrameListener)
+        renderFrameMapView = mapView
+    }
+
+    fun unbindRenderFrameListener() {
+        renderFrameMapView?.removeOnWillStartRenderingFrameListener(renderFrameListener)
+        renderFrameMapView = null
+    }
+
+    private fun dispatchRenderFrame() {
+        if (!MapFeatureFlags.useRenderFrameSync) return
+        val mapView = renderFrameMapView ?: return
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            onRenderFrame()
+        } else {
+            mapView.post { onRenderFrame() }
         }
     }
 

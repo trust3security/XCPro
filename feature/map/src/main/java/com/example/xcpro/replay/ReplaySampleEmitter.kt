@@ -33,11 +33,16 @@ internal class ReplaySampleEmitter(
         previous: IgcPoint?,
         qnhHpa: Double,
         startTimestampMillis: Long,
-        replayFusionRepository: SensorFusionRepository?
+        replayFusionRepository: SensorFusionRepository?,
+        movementOverride: MovementSnapshot? = null
     ) {
-        val movement = IgcReplayMath.groundVector(current, previous)
+        val movement = movementOverride ?: IgcReplayMath.groundVector(current, previous)
         val groundSpeed = movement.speedMs
-        val fallbackTrackDeg = headingResolver.resolve(movement)
+        val fallbackTrackDeg = if (movementOverride != null) {
+            movement.bearingDeg
+        } else {
+            headingResolver.resolve(movement)
+        }
         val gpsAltitude = current.gpsAltitude
 
         val pressureAltitude = current.pressureAltitude ?: gpsAltitude
@@ -52,7 +57,8 @@ internal class ReplaySampleEmitter(
         )
 
         if (shouldEmitGps(current.timestampMillis)) {
-            val gpsMovement = IgcReplayMath.groundVector(current, lastGpsPoint ?: previous ?: current)
+            val gpsMovement = movementOverride
+                ?: IgcReplayMath.groundVector(current, lastGpsPoint ?: previous ?: current)
             val gpsTrackDeg = gpsMovement.bearingDeg
             val gpsSpeed = gpsMovement.speedMs
             val gpsNoise = noiseModel.gpsAltitudeNoise(
@@ -65,7 +71,7 @@ internal class ReplaySampleEmitter(
                 altitude = gpsAltitude + gpsNoise,
                 speed = gpsSpeed,
                 bearing = gpsTrackDeg.toDouble(),
-                accuracy = 5f,
+                accuracy = simConfig.gpsAccuracyMeters,
                 timestamp = current.timestampMillis
             )
             lastGpsEmitTimestamp = current.timestampMillis

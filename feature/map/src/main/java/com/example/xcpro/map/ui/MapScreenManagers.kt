@@ -88,7 +88,8 @@ internal fun rememberMapScreenManagers(
         mapState,
         mapStateReader,
         varioServiceManager,
-        context
+        context,
+        igcReplayController
     ) {
         LocationManager(
             context = context,
@@ -96,7 +97,9 @@ internal fun rememberMapScreenManagers(
             mapStateReader = mapStateReader,
             stateActions = mapStateActions,
             coroutineScope = coroutineScope,
-            varioServiceManager = varioServiceManager
+            varioServiceManager = varioServiceManager,
+            replayHeadingProvider = igcReplayController::getInterpolatedReplayHeadingDeg,
+            replayFixProvider = igcReplayController::getInterpolatedReplayPose
         )
     }
 

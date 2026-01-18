@@ -4,7 +4,7 @@ import kotlin.math.log2
 import org.maplibre.android.constants.MapLibreConstants
 
 object MapZoomConstraints {
-    const val MIN_SCALE_BAR_METERS = 600.0
+    const val MIN_SCALE_BAR_METERS = 200.0
     const val SCALE_BAR_MAX_WIDTH_RATIO = 0.35f
     private const val SCALE_STEP_EPSILON_METERS = 1.0
     private val METRIC_SCALE_STEPS_METERS = intArrayOf(

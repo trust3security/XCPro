@@ -64,6 +64,7 @@ class MapLifecycleManager(
             }
             Lifecycle.Event.ON_DESTROY -> {
                 mapState.mapView?.onDestroy()
+                locationManager.unbindRenderFrameListener()
                 Log.d(TAG, "Map view onDestroy")
             }
             else -> Unit
@@ -77,6 +78,7 @@ class MapLifecycleManager(
         try {
             orientationManager.stop()
             locationManager.stopLocationTracking()
+            locationManager.unbindRenderFrameListener()
             mapState.mapView?.onDestroy()
             Log.d(TAG, "Cleanup completed: orientation manager stopped, location tracking stopped, map view destroyed")
         } catch (e: Exception) {

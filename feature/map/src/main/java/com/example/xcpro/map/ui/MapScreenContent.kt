@@ -119,6 +119,7 @@ internal fun MapScreenContent(
     showVarioDemoFab: Boolean,
     onVarioDemoReferenceClick: () -> Unit,
     onVarioDemoSimClick: () -> Unit,
+    onVarioDemoSim2Click: () -> Unit,
     showRacingReplayFab: Boolean,
     onRacingReplayClick: () -> Unit
 ) {
@@ -222,6 +223,7 @@ internal fun MapScreenContent(
             onDismissQnhFab = { showQnhFab = false },
             onVarioDemoReferenceClick = onVarioDemoReferenceClick,
             onVarioDemoSimClick = onVarioDemoSimClick,
+            onVarioDemoSim2Click = onVarioDemoSim2Click,
             onRacingReplayClick = onRacingReplayClick
         )
 
@@ -338,6 +340,7 @@ private fun MapActionButtonsLayer(
     onDismissQnhFab: () -> Unit,
     onVarioDemoReferenceClick: () -> Unit,
     onVarioDemoSimClick: () -> Unit,
+    onVarioDemoSim2Click: () -> Unit,
     onRacingReplayClick: () -> Unit,
     modifier: Modifier = Modifier.fillMaxSize()
 ) {
@@ -357,6 +360,7 @@ private fun MapActionButtonsLayer(
         showRacingReplayFab = showRacingReplayFab,
         onVarioDemoReferenceClick = onVarioDemoReferenceClick,
         onVarioDemoSimClick = onVarioDemoSimClick,
+        onVarioDemoSim2Click = onVarioDemoSim2Click,
         onRacingReplayClick = onRacingReplayClick,
         modifier = modifier
     )

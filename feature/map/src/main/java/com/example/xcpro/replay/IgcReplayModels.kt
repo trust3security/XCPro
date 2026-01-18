@@ -26,6 +26,8 @@ enum class SessionStatus { IDLE, PAUSED, PLAYING }
 
 enum class ReplayMode { REFERENCE, REALTIME_SIM }
 
+enum class ReplayInterpolation { LINEAR, CATMULL_ROM, CATMULL_ROM_RUNTIME }
+
 data class ReplaySimConfig(
     val mode: ReplayMode = ReplayMode.REALTIME_SIM,
     val baroStepMs: Long = 20L,    // 50 Hz baro cadence (closer to live sensors)
@@ -34,8 +36,16 @@ data class ReplaySimConfig(
     val jitterMs: Long = 8L,       // +/- 8 ms timing jitter
     val pressureNoiseSigmaHpa: Double = 0.04,
     val gpsAltitudeNoiseSigmaM: Double = 1.5,
+    val gpsAccuracyMeters: Float = 5f,
     val warmupMillis: Long = 8_000L,
-    val seed: Long = 1_337L
+    val seed: Long = 1_337L,
+    val interpolation: ReplayInterpolation = ReplayInterpolation.LINEAR
+)
+
+data class ReplayNoiseProfile(
+    val pressureNoiseSigmaHpa: Double,
+    val gpsAltitudeNoiseSigmaM: Double,
+    val jitterMs: Long
 )
 
 data class ReplayCadenceProfile(

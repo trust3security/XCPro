@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
+import kotlin.coroutines.coroutineContext
 
 /**
  * Orchestrates IGC replay sessions and forwards replay samples into the fused sensor pipeline.
@@ -53,8 +54,12 @@ class IgcReplayController @Inject constructor(
     private var currentIndex = 0
     private var simConfig = DEFAULT_SIM_CONFIG
     private var sampleEmitter = ReplaySampleEmitter(replaySensorSource, replayAirspeedRepository, simConfig)
+    private var runtimeInterpolator: ReplayRuntimeInterpolator? = null
+    private var uiRuntimeInterpolator: ReplayRuntimeInterpolator? = null
+    private var runtimeTimestampMs: Long = 0L
     private var resetModeAfterSession = false
     private var autoStopAfterFinish = false
+    private val uiInterpolatorLock = Any()
 
 
     private val _session = MutableStateFlow(SessionState())
@@ -188,6 +193,18 @@ class IgcReplayController @Inject constructor(
         gpsStepMs = simConfig.gpsStepMs
     )
 
+    fun getReplayBaroStepMs(): Long = simConfig.baroStepMs
+
+    fun getReplayNoiseProfile(): ReplayNoiseProfile = ReplayNoiseProfile(
+        pressureNoiseSigmaHpa = simConfig.pressureNoiseSigmaHpa,
+        gpsAltitudeNoiseSigmaM = simConfig.gpsAltitudeNoiseSigmaM,
+        jitterMs = simConfig.jitterMs
+    )
+
+    fun getReplayGpsAccuracyMeters(): Float = simConfig.gpsAccuracyMeters
+
+    fun getReplayInterpolation(): ReplayInterpolation = simConfig.interpolation
+
     fun setReplayCadence(profile: ReplayCadenceProfile) {
         if (_session.value.status == SessionStatus.PLAYING) {
             AppLogger.w(TAG, "Replay cadence change ignored while playing")
@@ -204,8 +221,103 @@ class IgcReplayController @Inject constructor(
         AppLogger.i(TAG, "Replay cadence set referenceStepMs=$referenceStepMs gpsStepMs=$gpsStepMs")
     }
 
+    fun setReplayBaroStepMs(stepMs: Long) {
+        if (_session.value.status == SessionStatus.PLAYING) {
+            AppLogger.w(TAG, "Replay baro step change ignored while playing")
+            return
+        }
+        val clamped = stepMs.coerceAtLeast(1L)
+        if (simConfig.baroStepMs == clamped) return
+        simConfig = simConfig.copy(baroStepMs = clamped)
+        sampleEmitter = ReplaySampleEmitter(replaySensorSource, replayAirspeedRepository, simConfig)
+        AppLogger.i(TAG, "Replay baro step set baroStepMs=$clamped")
+    }
+
+    fun setReplayNoiseProfile(profile: ReplayNoiseProfile) {
+        if (_session.value.status == SessionStatus.PLAYING) {
+            AppLogger.w(TAG, "Replay noise profile change ignored while playing")
+            return
+        }
+        val jitterMs = profile.jitterMs.coerceAtLeast(0L)
+        val pressureSigma = profile.pressureNoiseSigmaHpa.coerceAtLeast(0.0)
+        val gpsSigma = profile.gpsAltitudeNoiseSigmaM.coerceAtLeast(0.0)
+        if (simConfig.pressureNoiseSigmaHpa == pressureSigma &&
+            simConfig.gpsAltitudeNoiseSigmaM == gpsSigma &&
+            simConfig.jitterMs == jitterMs
+        ) return
+        simConfig = simConfig.copy(
+            pressureNoiseSigmaHpa = pressureSigma,
+            gpsAltitudeNoiseSigmaM = gpsSigma,
+            jitterMs = jitterMs
+        )
+        sampleEmitter = ReplaySampleEmitter(replaySensorSource, replayAirspeedRepository, simConfig)
+        AppLogger.i(
+            TAG,
+            "Replay noise profile set pressureSigma=$pressureSigma gpsSigma=$gpsSigma jitterMs=$jitterMs"
+        )
+    }
+
+    fun setReplayGpsAccuracyMeters(accuracyMeters: Float) {
+        if (_session.value.status == SessionStatus.PLAYING) {
+            AppLogger.w(TAG, "Replay GPS accuracy change ignored while playing")
+            return
+        }
+        val clamped = accuracyMeters.coerceIn(MIN_GPS_ACCURACY_M, MAX_GPS_ACCURACY_M)
+        if (simConfig.gpsAccuracyMeters == clamped) return
+        simConfig = simConfig.copy(gpsAccuracyMeters = clamped)
+        sampleEmitter = ReplaySampleEmitter(replaySensorSource, replayAirspeedRepository, simConfig)
+        AppLogger.i(TAG, "Replay GPS accuracy set accuracyMeters=$clamped")
+    }
+
+    fun setReplayInterpolation(interpolation: ReplayInterpolation) {
+        if (_session.value.status == SessionStatus.PLAYING) {
+            AppLogger.w(TAG, "Replay interpolation change ignored while playing")
+            return
+        }
+        if (simConfig.interpolation == interpolation) return
+        simConfig = simConfig.copy(interpolation = interpolation)
+        sampleEmitter = ReplaySampleEmitter(replaySensorSource, replayAirspeedRepository, simConfig)
+        AppLogger.i(TAG, "Replay interpolation set to ${interpolation.name}")
+    }
+
     fun setAutoStopAfterFinish(enabled: Boolean) {
         autoStopAfterFinish = enabled
+    }
+
+    fun getInterpolatedReplayHeadingDeg(timestampMs: Long): Double? {
+        if (simConfig.interpolation != ReplayInterpolation.CATMULL_ROM_RUNTIME) return null
+        val session = _session.value
+        if (session.selection == null) return null
+        val start = session.startTimestampMillis
+        val end = start + session.durationMillis
+        if (end <= start) return null
+        val clamped = timestampMs.coerceIn(start, end)
+        val interpolator = uiRuntimeInterpolator ?: return null
+        val fix = synchronized(uiInterpolatorLock) {
+            interpolator.interpolate(clamped)
+        } ?: return null
+        return fix.movement.bearingDeg.toDouble()
+    }
+
+    fun getInterpolatedReplayPose(timestampMs: Long): ReplayDisplayPose? {
+        if (simConfig.interpolation != ReplayInterpolation.CATMULL_ROM_RUNTIME) return null
+        val session = _session.value
+        if (session.selection == null) return null
+        val start = session.startTimestampMillis
+        val end = start + session.durationMillis
+        if (end <= start) return null
+        val clamped = timestampMs.coerceIn(start, end)
+        val interpolator = uiRuntimeInterpolator ?: return null
+        val fix = synchronized(uiInterpolatorLock) {
+            interpolator.interpolate(clamped)
+        } ?: return null
+        return ReplayDisplayPose(
+            latitude = fix.point.latitude,
+            longitude = fix.point.longitude,
+            timestampMillis = fix.point.timestampMillis,
+            bearingDeg = fix.movement.bearingDeg.toDouble(),
+            speedMs = fix.movement.speedMs
+        )
     }
 
     fun play() {
@@ -230,36 +342,40 @@ class IgcReplayController @Inject constructor(
                 AppLogger.i(TAG, "REPLY_PLAY start idx=$currentIndex total=${points.size}")
                 _session.update { it.copy(status = SessionStatus.PLAYING) }
                 try {
-                    while (currentIndex < points.size && isActive) {
-                        val point = points[currentIndex]
-                        val previous = points.getOrNull(currentIndex - 1)
-                        sampleEmitter.emitSample(
-                            point,
-                            previous,
-                            _session.value.qnhHpa,
-                            _session.value.startTimestampMillis,
-                            pipeline.replayFusionRepository
-                        )
-                        updateProgress(point.timestampMillis)
-                        if (AppLogger.rateLimit(TAG, "replay_frame", 1_000L)) {
-                            AppLogger.d(
-                                TAG,
-                                "REPLY_FRAME idx=$currentIndex ts=${point.timestampMillis} " +
-                                    "alt=${point.pressureAltitude ?: point.gpsAltitude} speed=${_session.value.speedMultiplier}"
+                    if (simConfig.interpolation == ReplayInterpolation.CATMULL_ROM_RUNTIME) {
+                        playRuntimeInterpolation()
+                    } else {
+                        while (currentIndex < points.size && isActive) {
+                            val point = points[currentIndex]
+                            val previous = points.getOrNull(currentIndex - 1)
+                            sampleEmitter.emitSample(
+                                point,
+                                previous,
+                                _session.value.qnhHpa,
+                                _session.value.startTimestampMillis,
+                                pipeline.replayFusionRepository
                             )
-                        }
+                            updateProgress(point.timestampMillis)
+                            if (AppLogger.rateLimit(TAG, "replay_frame", 1_000L)) {
+                                AppLogger.d(
+                                    TAG,
+                                    "REPLY_FRAME idx=$currentIndex ts=${point.timestampMillis} " +
+                                        "alt=${point.pressureAltitude ?: point.gpsAltitude} speed=${_session.value.speedMultiplier}"
+                                )
+                            }
 
-                        val nextIndex = currentIndex + 1
-                        if (nextIndex >= points.size) {
-                            finishReplay()
-                            break
+                            val nextIndex = currentIndex + 1
+                            if (nextIndex >= points.size) {
+                                finishReplay()
+                                break
+                            }
+                            val nextPoint = points[nextIndex]
+                            val delta = (nextPoint.timestampMillis - point.timestampMillis).coerceAtLeast(MIN_FRAME_INTERVAL_MS)
+                            val speed = _session.value.speedMultiplier
+                            val delayMillis = (delta / speed).toLong().coerceAtLeast(1L)
+                            currentIndex = nextIndex
+                            delay(delayMillis)
                         }
-                        val nextPoint = points[nextIndex]
-                        val delta = (nextPoint.timestampMillis - point.timestampMillis).coerceAtLeast(MIN_FRAME_INTERVAL_MS)
-                        val speed = _session.value.speedMultiplier
-                        val delayMillis = (delta / speed).toLong().coerceAtLeast(1L)
-                        currentIndex = nextIndex
-                        delay(delayMillis)
                     }
                 } catch (c: CancellationException) {
                     AppLogger.w(TAG, "REPLY_PLAY cancelled", c)
@@ -319,6 +435,9 @@ class IgcReplayController @Inject constructor(
         resumeSensors()
         points = emptyList()
         currentIndex = 0
+        runtimeInterpolator = null
+        uiRuntimeInterpolator = null
+        runtimeTimestampMs = 0L
 
         _session.value = SessionState(speedMultiplier = _session.value.speedMultiplier)
         resetReplayModeIfNeeded()
@@ -349,29 +468,63 @@ class IgcReplayController @Inject constructor(
             currentIndex = targetIndex
             val point = pts[targetIndex]
             val previous = pts.getOrNull(targetIndex - 1)
-            AppLogger.i(TAG, "REPLY_SEEK progress=$clamped index=$targetIndex ts=${point.timestampMillis}")
+            val previousTime = _session.value.currentTimestampMillis
+            val targetTimeForSession = if (simConfig.interpolation == ReplayInterpolation.CATMULL_ROM_RUNTIME) {
+                val start = _session.value.startTimestampMillis
+                val duration = _session.value.durationMillis
+                (start + (duration * clamped)).toLong()
+                    .coerceAtLeast(start)
+                    .coerceAtMost(start + duration)
+            } else {
+                point.timestampMillis
+            }
+            AppLogger.i(TAG, "REPLY_SEEK progress=$clamped index=$targetIndex ts=$targetTimeForSession")
 
             // Update session immediately so UI reflects the new position even if play is paused
             _session.update { state ->
                 if (state.selection == null) state else
-                    state.copy(currentTimestampMillis = point.timestampMillis)
+                    state.copy(currentTimestampMillis = targetTimeForSession)
             }
 
             runCatching {
                 // Seeking is a teleport: reset fusion state so thermal/circling/wind estimators don't
                 // interpret the jump as a single "mega-sample" or carry stale altitude baselines.
                 pipeline.replayFusionRepository?.stop() ?: return@runCatching
-                if (previousIndex >= pts.size || targetIndex < previousIndex) {
-                    resetReplayEmitterState("seek")
+                if (simConfig.interpolation == ReplayInterpolation.CATMULL_ROM_RUNTIME) {
+                    val targetTime = targetTimeForSession
+                    val stepMs = simConfig.gpsStepMs.coerceAtLeast(1L)
+                    runtimeTimestampMs = targetTime
+                    runtimeInterpolator?.seekTo(targetTime)
+                    val interpolated = runtimeInterpolator?.interpolate(targetTime)
+                    val previousInterpolated = runtimeInterpolator
+                        ?.interpolate(targetTime - stepMs)
+                        ?.point
+                    val fixPoint = interpolated?.point ?: point
+                    if (previousIndex >= pts.size || targetTime < previousTime) {
+                        resetReplayEmitterState("seek")
+                    }
+                    sampleEmitter.emitSample(
+                        fixPoint,
+                        previousInterpolated,
+                        _session.value.qnhHpa,
+                        _session.value.startTimestampMillis,
+                        pipeline.replayFusionRepository,
+                        interpolated?.movement
+                    )
+                    updateProgress(targetTime)
+                } else {
+                    if (previousIndex >= pts.size || targetIndex < previousIndex) {
+                        resetReplayEmitterState("seek")
+                    }
+                    sampleEmitter.emitSample(
+                        point,
+                        previous,
+                        _session.value.qnhHpa,
+                        _session.value.startTimestampMillis,
+                        pipeline.replayFusionRepository
+                    )
+                    updateProgress(point.timestampMillis)
                 }
-                sampleEmitter.emitSample(
-                    point,
-                    previous,
-                    _session.value.qnhHpa,
-                    _session.value.startTimestampMillis,
-                    pipeline.replayFusionRepository
-                )
-                updateProgress(point.timestampMillis)
                 if (_session.value.status == SessionStatus.PLAYING) {
                     cancelReplayJob()
                     _session.update { it.copy(status = SessionStatus.PAUSED) }
@@ -481,6 +634,8 @@ class IgcReplayController @Inject constructor(
         AppLogger.d(TAG, "REPLAY_RESET reason=$reason")
         sampleEmitter.reset()
         replaySensorSource.reset()
+        runtimeInterpolator?.reset()
+        runtimeTimestampMs = _session.value.startTimestampMillis
     }
 
 
@@ -488,6 +643,8 @@ class IgcReplayController @Inject constructor(
         private const val TAG = "IgcReplayController"
         private const val MIN_FRAME_INTERVAL_MS = 1L  // allow sub-second replay cadence
         private const val MAX_SPEED = 20.0
+        private const val MIN_GPS_ACCURACY_M = 1f
+        private const val MAX_GPS_ACCURACY_M = 50f
         private const val ASSET_URI_PREFIX = "asset:///"
         private val DEFAULT_SIM_CONFIG = ReplaySimConfig()
     }
@@ -505,6 +662,17 @@ class IgcReplayController @Inject constructor(
         seekJob = null
         points = prepared.points
         currentIndex = 0
+        runtimeInterpolator = if (simConfig.interpolation == ReplayInterpolation.CATMULL_ROM_RUNTIME) {
+            ReplayRuntimeInterpolator(points)
+        } else {
+            null
+        }
+        uiRuntimeInterpolator = if (simConfig.interpolation == ReplayInterpolation.CATMULL_ROM_RUNTIME) {
+            ReplayRuntimeInterpolator(points)
+        } else {
+            null
+        }
+        runtimeTimestampMs = prepared.startMillis
         suspendSensors()
         replaySensorSource.reset()
 
@@ -521,13 +689,62 @@ class IgcReplayController @Inject constructor(
             durationMillis = prepared.durationMillis,
             qnhHpa = prepared.qnhHpa
         )
-        sampleEmitter.emitSample(
-            points.first(),
-            null,
-            prepared.qnhHpa,
-            prepared.startMillis,
-            pipeline.replayFusionRepository
-        )
+        if (simConfig.interpolation == ReplayInterpolation.CATMULL_ROM_RUNTIME) {
+            val interpolated = runtimeInterpolator?.interpolate(prepared.startMillis)
+            val initialPoint = interpolated?.point ?: points.first()
+            sampleEmitter.emitSample(
+                initialPoint,
+                null,
+                prepared.qnhHpa,
+                prepared.startMillis,
+                pipeline.replayFusionRepository,
+                interpolated?.movement
+            )
+        } else {
+            sampleEmitter.emitSample(
+                points.first(),
+                null,
+                prepared.qnhHpa,
+                prepared.startMillis,
+                pipeline.replayFusionRepository
+            )
+        }
+    }
+
+    private suspend fun playRuntimeInterpolation() {
+        val interpolator = runtimeInterpolator ?: return
+        val stepMs = simConfig.gpsStepMs.coerceAtLeast(1L)
+        val sessionStart = _session.value.startTimestampMillis
+        val sessionEnd = sessionStart + _session.value.durationMillis
+        var previousPoint: IgcPoint? = null
+        while (runtimeTimestampMs <= sessionEnd && coroutineContext.isActive) {
+            val fix = interpolator.interpolate(runtimeTimestampMs) ?: break
+            sampleEmitter.emitSample(
+                fix.point,
+                previousPoint,
+                _session.value.qnhHpa,
+                _session.value.startTimestampMillis,
+                pipeline.replayFusionRepository,
+                fix.movement
+            )
+            previousPoint = fix.point
+            updateProgress(runtimeTimestampMs)
+            if (AppLogger.rateLimit(TAG, "replay_frame", 1_000L)) {
+                AppLogger.d(
+                    TAG,
+                    "REPLY_FRAME runtime ts=${runtimeTimestampMs} " +
+                        "alt=${fix.point.pressureAltitude ?: fix.point.gpsAltitude} speed=${_session.value.speedMultiplier}"
+                )
+            }
+            if (runtimeTimestampMs >= sessionEnd) {
+                finishReplay()
+                break
+            }
+            val speed = _session.value.speedMultiplier
+            val delayMillis = (stepMs / speed).toLong().coerceAtLeast(1L)
+            runtimeTimestampMs += stepMs
+            delay(delayMillis)
+        }
     }
 }
 

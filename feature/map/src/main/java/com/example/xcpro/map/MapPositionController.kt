@@ -15,7 +15,8 @@ import kotlin.math.sign
  */
 class MapPositionController(
     private val mapState: MapScreenState,
-    private val maxBearingStepDeg: Double = 5.0,
+    private val maxBearingStepDegProvider: () -> Double = { 5.0 },
+    private val headingSmoothingEnabledProvider: () -> Boolean = { true },
     offsetHistorySize: Int = 30,
     iconRotationConfig: IconRotationConfig = IconRotationConfig.defaults()
 ) {
@@ -56,19 +57,23 @@ class MapPositionController(
         nowMs: Long
     ) {
         val clampedBearing = clampBearingStep(trackBearing)
-        val iconHeading = iconHeadingSmoother.update(
-            IconHeadingSmoother.IconHeadingInput(
-                headingDeg = headingDeg,
-                headingValid = headingValid,
-                trackDeg = clampedBearing,
-                bearingAccuracyDeg = bearingAccuracyDeg,
-                speedAccuracyMs = speedAccuracyMs,
-                mapBearing = mapBearing,
-                orientationMode = orientationMode,
-                speedMs = speedMs,
-                nowMs = nowMs
+        val iconHeading = if (headingSmoothingEnabledProvider()) {
+            iconHeadingSmoother.update(
+                IconHeadingSmoother.IconHeadingInput(
+                    headingDeg = headingDeg,
+                    headingValid = headingValid,
+                    trackDeg = clampedBearing,
+                    bearingAccuracyDeg = bearingAccuracyDeg,
+                    speedAccuracyMs = speedAccuracyMs,
+                    mapBearing = mapBearing,
+                    orientationMode = orientationMode,
+                    speedMs = speedMs,
+                    nowMs = nowMs
+                )
             )
-        )
+        } else {
+            headingDeg
+        }
         if (verboseLogging) {
             val now = SystemClock.elapsedRealtime()
             if (now - lastOverlayLogMs >= OVERLAY_LOG_INTERVAL_MS) {
@@ -145,13 +150,18 @@ class MapPositionController(
         value?.let { "%.6f".format(it) } ?: "null"
 
     fun clampBearingStep(newBearing: Double): Double {
+        val maxStep = maxBearingStepDegProvider()
+        if (!maxStep.isFinite() || maxStep <= 0.0 || maxStep >= 180.0) {
+            lastTrackBearing = normalize(newBearing)
+            return lastTrackBearing
+        }
         val newNorm = normalize(newBearing)
         val prevNorm = normalize(lastTrackBearing)
         var delta = newNorm - prevNorm
         if (delta > 180.0) delta -= 360.0
         if (delta < -180.0) delta += 360.0
-        val limited = if (abs(delta) > maxBearingStepDeg) {
-            prevNorm + sign(delta) * maxBearingStepDeg
+        val limited = if (abs(delta) > maxStep) {
+            prevNorm + sign(delta) * maxStep
         } else {
             newNorm
         }

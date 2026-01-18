@@ -54,6 +54,19 @@ object MapFeatureFlags {
     var useRawReplayPose: Boolean = BuildConfig.DEBUG
 
     /**
+     * Force the replay glider icon heading to follow track (ignores device sensors).
+     * Useful when replaying on the ground to mimic in-flight heading behavior.
+     */
+    @Volatile
+    var forceReplayTrackHeading: Boolean = false
+
+    /**
+     * Max per-frame track bearing change (degrees). Set >= 180 to disable clamping.
+     */
+    @Volatile
+    var maxTrackBearingStepDeg: Double = 5.0
+
+    /**
      * Default live display smoothing profile.
      */
     @Volatile
@@ -70,4 +83,23 @@ object MapFeatureFlags {
      */
     @Volatile
     var useAdaptiveDisplaySmoothing: Boolean = true
+
+    /**
+     * Enable icon heading smoothing (angular velocity clamp + deadband).
+     */
+    @Volatile
+    var useIconHeadingSmoothing: Boolean = true
+
+    /**
+     * Use runtime replay interpolation to derive heading per display frame.
+     */
+    @Volatile
+    var useRuntimeReplayHeading: Boolean = false
+
+    /**
+     * Drive SIM2 display updates off the MapView render frame callbacks.
+     * Keeps camera + aircraft updates in the same render pass.
+     */
+    @Volatile
+    var useRenderFrameSync: Boolean = false
 }

@@ -22,6 +22,7 @@ import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapInitializer
 import com.example.xcpro.map.FlightDataManager
+import com.example.xcpro.map.LocationManager
 import kotlinx.coroutines.launch
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
@@ -34,6 +35,7 @@ fun MapMainLayers(
     mapState: MapScreenState,
     mapInitializer: MapInitializer,
     onMapReady: (org.maplibre.android.maps.MapLibreMap) -> Unit,
+    locationManager: LocationManager,
     flightDataManager: FlightDataManager,
     flightViewModel: FlightDataViewModel,
     taskManager: TaskManagerCoordinator,
@@ -49,7 +51,8 @@ fun MapMainLayers(
         MapViewHost(
             mapState = mapState,
             mapInitializer = mapInitializer,
-            onMapReady = onMapReady
+            onMapReady = onMapReady,
+            locationManager = locationManager
         )
 
         CardGridLayer(
@@ -192,6 +195,7 @@ private fun MapViewHost(
     mapState: MapScreenState,
     mapInitializer: MapInitializer,
     onMapReady: (org.maplibre.android.maps.MapLibreMap) -> Unit,
+    locationManager: LocationManager,
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
@@ -199,6 +203,7 @@ private fun MapViewHost(
         factory = { ctx ->
             MapView(ctx).apply {
                 mapState.mapView = this
+                locationManager.bindRenderFrameListener(this)
                 getMapAsync { map: MapLibreMap ->
                     scope.launch {
                         try {
@@ -208,6 +213,10 @@ private fun MapViewHost(
                     }
                 }
             }
+        },
+        update = { view ->
+            mapState.mapView = view
+            locationManager.bindRenderFrameListener(view)
         },
         modifier = modifier.fillMaxSize()
     )

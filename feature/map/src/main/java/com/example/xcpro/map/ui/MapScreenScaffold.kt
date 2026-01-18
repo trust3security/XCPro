@@ -118,6 +118,7 @@ internal fun MapScreenScaffold(inputs: MapScreenScaffoldInputs) {
         showVarioDemoFab = inputs.showVarioDemoFab,
         onVarioDemoReferenceClick = inputs.onVarioDemoReferenceClick,
         onVarioDemoSimClick = inputs.onVarioDemoSimClick,
+        onVarioDemoSim2Click = inputs.onVarioDemoSim2Click,
         showRacingReplayFab = inputs.showRacingReplayFab,
         onRacingReplayClick = inputs.onRacingReplayClick
     )
@@ -189,6 +190,7 @@ internal fun MapScreenScaffold(
     showVarioDemoFab: Boolean,
     onVarioDemoReferenceClick: () -> Unit,
     onVarioDemoSimClick: () -> Unit,
+    onVarioDemoSim2Click: () -> Unit,
     showRacingReplayFab: Boolean,
     onRacingReplayClick: () -> Unit
 ) {
@@ -265,6 +267,7 @@ internal fun MapScreenScaffold(
                     showVarioDemoFab = showVarioDemoFab,
                     onVarioDemoReferenceClick = onVarioDemoReferenceClick,
                     onVarioDemoSimClick = onVarioDemoSimClick,
+                    onVarioDemoSim2Click = onVarioDemoSim2Click,
                     showRacingReplayFab = showRacingReplayFab,
                     onRacingReplayClick = onRacingReplayClick
                 )
