@@ -78,7 +78,7 @@ We must evaluate OZ membership using TaskContext (previous + next waypoint).
 - inside if distance(center, pos) <= radius
 
 ### FAI Quadrant
-- 90-degree infinite sector
+- 90-degree sector with finite radius (10km default, XCSoar parity)
 - oriented by the bisector of inbound/outbound legs
 - requires previous + next waypoint
 

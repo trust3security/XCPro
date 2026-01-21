@@ -79,10 +79,31 @@ Key files:
    - Distance filtering no longer drops the most recent point; it is appended back if needed.
    - Prevents a long “tail‑lag” segment from the arrow to an older filtered point.
 
+9) **SIM2 tail update every render frame**
+   - Removed time/distance gating for replay when render-frame sync is enabled.
+   - Eliminates ~1s tail update gaps observed in SIM2 logs.
+
+10) **Render-frame callback for tail sync**
+   - SIM2 tail updates now fire directly from the MapLibre render-frame callback.
+   - Ensures the tail update runs in the same frame as the aircraft overlay update.
+
+11) **Zoom should not reset trail**
+   - Zoom changes now re-render via `SnailTrailManager.onZoomChanged(...)` without touching replay samples.
+   - SIM2 disables distance filtering + bounds culling so the full trail remains visible while zooming.
+
+12) **Wind-drift ramp + replay time-backstep guard (SIM2 realism)**
+   - Replay trail now eases wind drift in over ~4s to avoid sudden shape snaps when wind becomes valid.
+   - Replay store resets now ignore small timestamp regressions (<= 2s) to prevent mid-thermal trail drops.
+
+13) **Per-point wind drift (no retroactive repaint)**
+   - Each trail point now stores wind (speed + direction) at the time it was recorded.
+   - Drift is computed per point using its own wind, so older circles no longer “snap” when wind becomes valid.
+
 ## Known data quirks
-- The SIM2 IGC asset has a timestamp gap at the end:
+- The original IGC asset has a timestamp gap at the end:
   - `app/src/main/assets/replay/vario-demo-0-10-0-60s.igc` jumps from `B120059` to `B120100`.
   - This is a 1-second gap; interpolation should hide it, but it can still influence the last frame if the UI is using raw timestamps.
+- SIM2 now uses the extended asset: `app/src/main/assets/replay/vario-demo-0-10-0-120s.igc` (synthetic 120s / 4-turn circle, no seam).
 
 ## Current hypothesis for the user-visible issues
 - The ?pause then big jump? was caused by trail rendering aborting when the current segment was too short. This is now fixed.
@@ -309,9 +330,9 @@ Key files:
 ## Log capture + analysis tooling
 Use the helper script to capture SIM2 logcat data and quantify trail/arrow lag.
 
-Capture (60s):
+Capture (120s):
 ```
-python tools/sim2_log_tool.py capture --seconds 60 --out logs/sim2_logcat.txt --launch
+python tools/sim2_log_tool.py capture --seconds 120 --out logs/sim2_logcat.txt --launch
 ```
 
 Analyze:
@@ -323,3 +344,25 @@ The analysis reports:
 - gap between trail updates,
 - segment length distribution,
 - lag (time + meters) between overlay location and trail tail anchor.
+
+## Next implementation plan (1–3)
+**Goal:** remove remaining jerkiness by guaranteeing frame‑synchronized pose, and minimizing heavy trail updates.
+
+1) **Frame‑sync tail + overlay (single frame id)**
+   - Generate a frame id in `LocationManager.onRenderFrame()` and pass it to:
+     - `MapPositionController.updateOverlay(...)`
+     - `SnailTrailManager.updateDisplayPose(...)`
+   - Log frame id + pose once per frame (SIM2 only) to prove tail + overlay are aligned.
+   - Added `framePose` + `line-to-current frame=` logging; analysis script parses these.
+   - SIM2 demo sets `sim2FrameLogIntervalMs = 0` to log **every frame** (max precision).
+
+2) **Decouple trail: static + dynamic tail**
+   - Update the full trail GeoJSON only when new samples arrive.
+   - Render a separate **tail segment** every frame from last sample → current pose.
+   - This eliminates heavy per‑frame trail rebuilds and prevents tail lag.
+   - Implemented: added a dedicated tail source/layer; `updateDisplayPose` now updates tail only.
+
+3) **Overlay gating parity (SIM2 only)**
+   - Disable or reduce overlay bearing/time gating when SIM2 is active.
+   - Target: arrow rotation and position update every render frame.
+   - Implemented: camera gating bypassed when render‑frame sync + replay.

@@ -3,6 +3,7 @@ package com.example.xcpro
 import android.content.Context
 import android.content.SharedPreferences
 import com.example.xcpro.common.orientation.MapOrientationMode
+import com.example.xcpro.map.domain.MapShiftBiasMode
 import com.example.xcpro.common.units.UnitsConverter
 import kotlin.math.abs
 
@@ -24,6 +25,8 @@ class MapOrientationPreferences(context: Context) {
         private const val KEY_MIN_SPEED_IS_MS = "min_speed_threshold_is_ms"
         private const val KEY_GLIDER_SCREEN_PERCENT = "glider_screen_percent"
         private const val KEY_BEARING_SMOOTHING = "bearing_smoothing_enabled"
+        private const val KEY_MAP_SHIFT_BIAS_MODE = "map_shift_bias_mode"
+        private const val KEY_MAP_SHIFT_BIAS_STRENGTH = "map_shift_bias_strength"
 
         // Default values
         private const val DEFAULT_ORIENTATION_MODE = "TRACK_UP"
@@ -35,6 +38,8 @@ class MapOrientationPreferences(context: Context) {
         private const val DEFAULT_MIN_SPEED_THRESHOLD_MS = 2.0 // XCSoar parity (2 m/s)
         private const val DEFAULT_GLIDER_SCREEN_PERCENT = 35 // Approx current 65% from top
         private const val DEFAULT_BEARING_SMOOTHING = true
+        private const val DEFAULT_MAP_SHIFT_BIAS_MODE = "NONE"
+        private const val DEFAULT_MAP_SHIFT_BIAS_STRENGTH = 1.0
     }
 
     init {
@@ -152,6 +157,8 @@ class MapOrientationPreferences(context: Context) {
             .putBoolean(KEY_MIN_SPEED_IS_MS, true)
             .putInt(KEY_GLIDER_SCREEN_PERCENT, DEFAULT_GLIDER_SCREEN_PERCENT)
             .putBoolean(KEY_BEARING_SMOOTHING, DEFAULT_BEARING_SMOOTHING)
+            .putString(KEY_MAP_SHIFT_BIAS_MODE, DEFAULT_MAP_SHIFT_BIAS_MODE)
+            .putFloat(KEY_MAP_SHIFT_BIAS_STRENGTH, DEFAULT_MAP_SHIFT_BIAS_STRENGTH.toFloat())
             .apply()
     }
 
@@ -163,7 +170,9 @@ class MapOrientationPreferences(context: Context) {
             "autoResetTimeoutSeconds" to getAutoResetTimeoutSeconds(),
             "minSpeedThreshold" to getMinSpeedThreshold(),
             "gliderScreenPercent" to getGliderScreenPercent(),
-            "bearingSmoothingEnabled" to isBearingSmoothingEnabled()
+            "bearingSmoothingEnabled" to isBearingSmoothingEnabled(),
+            "mapShiftBiasMode" to getMapShiftBiasMode().name,
+            "mapShiftBiasStrength" to getMapShiftBiasStrength()
         )
     }
 
@@ -226,13 +235,42 @@ class MapOrientationPreferences(context: Context) {
 
     fun getGliderScreenPercent(): Int {
         return preferences.getInt(KEY_GLIDER_SCREEN_PERCENT, DEFAULT_GLIDER_SCREEN_PERCENT)
-            .coerceIn(20, 80)
+            .coerceIn(10, 50)
     }
 
     fun setGliderScreenPercent(percentFromBottom: Int) {
-        val clamped = percentFromBottom.coerceIn(20, 80)
+        val clamped = percentFromBottom.coerceIn(10, 50)
         preferences.edit()
             .putInt(KEY_GLIDER_SCREEN_PERCENT, clamped)
+            .apply()
+    }
+
+    fun getMapShiftBiasMode(): MapShiftBiasMode {
+        val stored = preferences.getString(KEY_MAP_SHIFT_BIAS_MODE, DEFAULT_MAP_SHIFT_BIAS_MODE)
+        return try {
+            MapShiftBiasMode.valueOf(stored ?: DEFAULT_MAP_SHIFT_BIAS_MODE)
+        } catch (_: IllegalArgumentException) {
+            MapShiftBiasMode.NONE
+        }
+    }
+
+    fun setMapShiftBiasMode(mode: MapShiftBiasMode) {
+        preferences.edit()
+            .putString(KEY_MAP_SHIFT_BIAS_MODE, mode.name)
+            .apply()
+    }
+
+    fun getMapShiftBiasStrength(): Double {
+        return preferences.getFloat(
+            KEY_MAP_SHIFT_BIAS_STRENGTH,
+            DEFAULT_MAP_SHIFT_BIAS_STRENGTH.toFloat()
+        ).toDouble().coerceIn(0.0, 1.0)
+    }
+
+    fun setMapShiftBiasStrength(strength: Double) {
+        val clamped = strength.coerceIn(0.0, 1.0)
+        preferences.edit()
+            .putFloat(KEY_MAP_SHIFT_BIAS_STRENGTH, clamped.toFloat())
             .apply()
     }
 }

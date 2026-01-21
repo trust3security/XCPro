@@ -21,7 +21,7 @@ data class RacingWaypoint(
     val keyholeInnerRadius: Double = 0.5, // km, inner cylinder radius for keyhole (default 0.5km)
     val keyholeAngle: Double = 90.0, // degrees, sector angle for keyhole (default 90°)
     // FAI Quadrant-specific parameters
-    val faiQuadrantOuterRadius: Double = 20.0 // km, visual display radius for FAI quadrant (default 20km, math remains infinite)
+    val faiQuadrantOuterRadius: Double = 10.0 // km, sector radius for FAI quadrant (default 10km, XCSoar parity)
 ) {
     /**
      * Normalized sector angle: clamp floating noise (e.g., 89.999999) to a clean 90.0 when close.
@@ -57,7 +57,7 @@ data class RacingWaypoint(
         }
         RacingWaypointRole.TURNPOINT -> when (turnPointType) {
             RacingTurnPointType.TURN_POINT_CYLINDER -> gateWidth
-            RacingTurnPointType.FAI_QUADRANT -> faiQuadrantOuterRadius // Display radius (math calculations remain infinite)
+            RacingTurnPointType.FAI_QUADRANT -> faiQuadrantOuterRadius // Sector radius (finite, XCSoar default 10km)
             RacingTurnPointType.KEYHOLE -> gateWidth // Outer radius (sector part)
         }
     }
@@ -65,9 +65,9 @@ data class RacingWaypoint(
     companion object {
         /**
          * Create a Racing waypoint with standardized defaults
-         * - Start waypoints: 1km default (matches PRD FAI standard)
+         * - Start waypoints: 10km default (matches PRD FAI standard)
          * - Finish waypoints: 3km default
-         * - Turnpoints: 0.5km default for cylinders/FAI quadrants, 10km for keyholes
+         * - Turnpoints: 0.5km default for cylinders, 10km FAI quadrant radius, 10km for keyholes
          */
         fun createWithStandardizedDefaults(
             id: String,
@@ -82,7 +82,7 @@ data class RacingWaypoint(
             customGateWidth: Double? = null, // Allow override for user customizations
             keyholeInnerRadius: Double = 0.5,
             keyholeAngle: Double = 90.0,
-            faiQuadrantOuterRadius: Double = 20.0
+            faiQuadrantOuterRadius: Double = 10.0
         ): RacingWaypoint {
             val standardizedGateWidth = customGateWidth ?: when (role) {
                 RacingWaypointRole.START -> 10.0   // 10km start lines/sectors/cylinders (FAI standard per PRD)
@@ -155,6 +155,6 @@ enum class RacingTurnPointType(
     val description: String
 ) {
     TURN_POINT_CYLINDER("Cylinder", "Simple cylinder observation zone"),
-    FAI_QUADRANT("FAI Quadrant", "90° sector with infinite radius"),
+    FAI_QUADRANT("FAI Quadrant", "90° sector with finite radius (default 10km)"),
     KEYHOLE("Keyhole", "0.5km cylinder + 10km sector combination")
 }

@@ -4,6 +4,7 @@ import com.example.xcpro.tasks.racing.RacingGeometryUtils
 import com.example.xcpro.tasks.racing.SimpleRacingTask
 import com.example.xcpro.tasks.racing.boundary.RacingBoundaryCrossing
 import com.example.xcpro.tasks.racing.boundary.RacingBoundaryCrossingPlanner
+import com.example.xcpro.tasks.racing.boundary.RacingBoundaryEpsilonPolicy
 import com.example.xcpro.tasks.racing.boundary.RacingBoundaryPoint
 import com.example.xcpro.tasks.racing.boundary.RacingBoundaryTransition
 import com.example.xcpro.tasks.racing.models.RacingFinishPointType
@@ -12,16 +13,13 @@ import com.example.xcpro.tasks.racing.models.RacingTurnPointType
 import com.example.xcpro.tasks.racing.models.RacingWaypoint
 import com.example.xcpro.tasks.racing.models.RacingWaypointRole
 import kotlin.math.abs
+import kotlin.math.max
 
 internal class RacingNavigationEngine(
     private val zoneDetector: RacingZoneDetector = RacingZoneDetector(),
-    private val crossingPlanner: RacingBoundaryCrossingPlanner = RacingBoundaryCrossingPlanner()
+    private val crossingPlanner: RacingBoundaryCrossingPlanner = RacingBoundaryCrossingPlanner(),
+    private val epsilonPolicy: RacingBoundaryEpsilonPolicy = RacingBoundaryEpsilonPolicy()
 ) {
-
-    companion object {
-        private const val TRANSITION_COOLDOWN_MILLIS = 1500L
-        private const val MIN_MOVEMENT_METERS = 1.0
-    }
 
     fun step(
         task: SimpleRacingTask,
@@ -48,25 +46,25 @@ internal class RacingNavigationEngine(
         }
 
         val lastFix = state.lastFix
-        if (lastFix != null && distanceMeters(lastFix, fix) < MIN_MOVEMENT_METERS) {
-            return RacingNavigationDecision(
-                state = state.copy(lastFix = fix),
-                event = null
-            )
-        }
-
-        val cooldownActive = fix.timestampMillis - state.lastTransitionTimeMillis < TRANSITION_COOLDOWN_MILLIS
-        if (cooldownActive) {
-            return RacingNavigationDecision(
-                state = state.copy(lastFix = fix),
-                event = null
-            )
-        }
-
         val activeIndex = state.currentLegIndex.coerceIn(0, task.waypoints.lastIndex)
         val activeWaypoint = task.waypoints[activeIndex]
         val previousWaypoint = task.waypoints.getOrNull(activeIndex - 1)
         val nextWaypoint = task.waypoints.getOrNull(activeIndex + 1)
+
+        val status = if (state.status == RacingNavigationStatus.STARTED) {
+            RacingNavigationStatus.IN_PROGRESS
+        } else {
+            state.status
+        }
+
+        if (!shouldEvaluateTransitions(activeWaypoint, previousWaypoint, nextWaypoint, fix, lastFix)) {
+            val updatedState = state.copy(
+                status = status,
+                lastFix = fix,
+                taskSignature = signature
+            )
+            return RacingNavigationDecision(state = updatedState, event = null)
+        }
 
         val currentNavPoint = NavPoint(fix.lat, fix.lon)
         val previousNavPoint = lastFix?.let { NavPoint(it.lat, it.lon) }
@@ -76,12 +74,6 @@ internal class RacingNavigationEngine(
         val insidePrevious = previousNavPoint?.let {
             isInside(activeWaypoint, it, previousWaypoint, nextWaypoint)
         } ?: false
-
-        val status = if (state.status == RacingNavigationStatus.STARTED) {
-            RacingNavigationStatus.IN_PROGRESS
-        } else {
-            state.status
-        }
 
         val decision = when (status) {
             RacingNavigationStatus.PENDING_START -> handleStartTransition(
@@ -327,12 +319,103 @@ internal class RacingNavigationEngine(
                 append(waypoint.turnPointType.name)
                 append(":")
                 append(waypoint.gateWidth)
+                append(":")
+                append(waypoint.keyholeInnerRadius)
+                append(":")
+                append(waypoint.keyholeAngle)
+                append(":")
+                append(waypoint.faiQuadrantOuterRadius)
+                append(":")
+                append(waypoint.lat)
+                append(":")
+                append(waypoint.lon)
             }
         }
     }
 
     private fun distanceMeters(a: RacingNavigationFix, b: RacingNavigationFix): Double {
         val km = RacingGeometryUtils.haversineDistance(a.lat, a.lon, b.lat, b.lon)
+        return abs(km * 1000.0)
+    }
+
+    private fun shouldEvaluateTransitions(
+        activeWaypoint: RacingWaypoint,
+        previousWaypoint: RacingWaypoint?,
+        nextWaypoint: RacingWaypoint?,
+        fix: RacingNavigationFix,
+        lastFix: RacingNavigationFix?
+    ): Boolean {
+        val radiusMeters = proximityRadiusMeters(activeWaypoint, previousWaypoint, nextWaypoint) ?: return true
+        val margin = epsilonPolicy.epsilonMeters(fix)
+        val limit = radiusMeters + margin
+        val currentDistance = distanceMeters(activeWaypoint, fix)
+        if (currentDistance <= limit) return true
+        val lastDistance = lastFix?.let { distanceMeters(activeWaypoint, it) } ?: currentDistance
+        return lastDistance <= limit
+    }
+
+    private fun proximityRadiusMeters(
+        waypoint: RacingWaypoint,
+        previousWaypoint: RacingWaypoint?,
+        nextWaypoint: RacingWaypoint?
+    ): Double? {
+        return when (waypoint.role) {
+            RacingWaypointRole.START -> when (waypoint.startPointType) {
+                RacingStartPointType.START_LINE -> lineRadiusMeters(waypoint)
+                RacingStartPointType.START_CYLINDER -> cylinderRadiusMeters(waypoint)
+                RacingStartPointType.FAI_START_SECTOR -> sectorRadiusMeters(waypoint, nextWaypoint)
+            }
+            RacingWaypointRole.TURNPOINT -> when (waypoint.turnPointType) {
+                RacingTurnPointType.TURN_POINT_CYLINDER -> cylinderRadiusMeters(waypoint)
+                RacingTurnPointType.KEYHOLE -> keyholeRadiusMeters(waypoint, previousWaypoint, nextWaypoint)
+                RacingTurnPointType.FAI_QUADRANT -> faiQuadrantRadiusMeters(waypoint, previousWaypoint, nextWaypoint)
+            }
+            RacingWaypointRole.FINISH -> when (waypoint.finishPointType) {
+                RacingFinishPointType.FINISH_LINE -> lineRadiusMeters(waypoint)
+                RacingFinishPointType.FINISH_CYLINDER -> cylinderRadiusMeters(waypoint)
+            }
+        }?.takeIf { it > 0.0 }
+    }
+
+    private fun lineRadiusMeters(waypoint: RacingWaypoint): Double {
+        val lengthMeters = waypoint.gateWidth * 1000.0
+        return lengthMeters / 2.0
+    }
+
+    private fun cylinderRadiusMeters(waypoint: RacingWaypoint): Double {
+        return waypoint.gateWidth * 1000.0
+    }
+
+    private fun sectorRadiusMeters(
+        waypoint: RacingWaypoint,
+        nextWaypoint: RacingWaypoint?
+    ): Double {
+        if (nextWaypoint == null) return 0.0
+        return waypoint.gateWidth * 1000.0
+    }
+
+    private fun keyholeRadiusMeters(
+        waypoint: RacingWaypoint,
+        previousWaypoint: RacingWaypoint?,
+        nextWaypoint: RacingWaypoint?
+    ): Double {
+        if (previousWaypoint == null || nextWaypoint == null) return 0.0
+        val outer = waypoint.gateWidth * 1000.0
+        val inner = waypoint.keyholeInnerRadius * 1000.0
+        return max(outer, inner)
+    }
+
+    private fun faiQuadrantRadiusMeters(
+        waypoint: RacingWaypoint,
+        previousWaypoint: RacingWaypoint?,
+        nextWaypoint: RacingWaypoint?
+    ): Double {
+        if (previousWaypoint == null || nextWaypoint == null) return 0.0
+        return waypoint.faiQuadrantOuterRadius * 1000.0
+    }
+
+    private fun distanceMeters(waypoint: RacingWaypoint, fix: RacingNavigationFix): Double {
+        val km = RacingGeometryUtils.haversineDistance(waypoint.lat, waypoint.lon, fix.lat, fix.lon)
         return abs(km * 1000.0)
     }
 

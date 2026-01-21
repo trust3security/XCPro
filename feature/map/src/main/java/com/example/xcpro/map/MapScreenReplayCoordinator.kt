@@ -51,6 +51,7 @@ internal class MapScreenReplayCoordinator(
     private var demoReplaySnapshot: ReplayUiSnapshot? = null
     private var demoDisplayPoseOverride: DisplayPoseMode? = null
     private var demoReplayCadenceSnapshot: ReplayCadenceProfile? = null
+    private var demoReplaySpeedSnapshot: Double? = null
     private var demoReplayBaroStepSnapshot: Long? = null
     private var demoReplayNoiseSnapshot: ReplayNoiseProfile? = null
     private var demoReplayGpsAccuracySnapshot: Float? = null
@@ -60,6 +61,7 @@ internal class MapScreenReplayCoordinator(
     private var demoReplayIconHeadingSmoothingSnapshot: Boolean? = null
     private var demoReplayRuntimeHeadingSnapshot: Boolean? = null
     private var demoReplayRenderFrameSyncSnapshot: Boolean? = null
+    private var demoReplayFrameLogIntervalSnapshot: Long? = null
     private val liveGpsProfileTracker = LiveGpsProfileTracker()
 
     private val racingFixFlow = flightDataRepository.flightData
@@ -132,6 +134,7 @@ internal class MapScreenReplayCoordinator(
                 demoDisplayPoseOverride = DisplayPoseMode.SMOOTHED
                 mapStateActions.setDisplayPoseMode(DisplayPoseMode.SMOOTHED)
                 captureDemoReplayCadenceSnapshot()
+                captureDemoReplaySpeedSnapshot()
                 captureDemoReplayBaroStepSnapshot()
                 captureDemoReplayNoiseSnapshot()
                 captureDemoReplayGpsAccuracySnapshot()
@@ -141,15 +144,18 @@ internal class MapScreenReplayCoordinator(
                 captureDemoReplayIconHeadingSmoothingSnapshot()
                 captureDemoReplayRuntimeHeadingSnapshot()
                 captureDemoReplayRenderFrameSyncSnapshot()
+                captureDemoReplayFrameLogIntervalSnapshot()
                 MapFeatureFlags.forceReplayTrackHeading = true
                 MapFeatureFlags.maxTrackBearingStepDeg = SIM2_XCSOAR_BEARING_STEP_DEG
                 MapFeatureFlags.useIconHeadingSmoothing = false
                 MapFeatureFlags.useRuntimeReplayHeading = true
                 MapFeatureFlags.useRenderFrameSync = true
+                MapFeatureFlags.sim2FrameLogIntervalMs = 0L
                 val cadenceMs = SIM2_XCSOAR_STEP_MS
                 val accuracyM = SIM2_XCSOAR_ACCURACY_M
+                igcReplayController.setSpeed(SIM2_REPLAY_SPEED_MULTIPLIER)
                 igcReplayController.setAutoStopAfterFinish(true)
-                Log.i(TAG, "VARIO_DEMO_SIM_LIVE start asset=$VARIO_DEMO_ASSET_PATH")
+                Log.i(TAG, "VARIO_DEMO_SIM_LIVE start asset=$VARIO_DEMO_SIM2_ASSET_PATH")
                 igcReplayController.stopAndWait(emitCancelledEvent = false)
                 igcReplayController.setReplayMode(ReplayMode.REALTIME_SIM, resetAfterSession = true)
                 igcReplayController.setReplayCadence(
@@ -168,7 +174,7 @@ internal class MapScreenReplayCoordinator(
                 )
                 igcReplayController.setReplayGpsAccuracyMeters(accuracyM)
                 igcReplayController.setReplayInterpolation(ReplayInterpolation.CATMULL_ROM_RUNTIME)
-                igcReplayController.loadAsset(VARIO_DEMO_ASSET_PATH, "Vario demo (sim2)")
+                igcReplayController.loadAsset(VARIO_DEMO_SIM2_ASSET_PATH, "Vario demo (sim2)")
                 mapStateActions.setHasInitiallyCentered(false)
                 mapStateActions.setShowReturnButton(false)
                 mapStateActions.setTrackingLocation(true)
@@ -334,6 +340,11 @@ internal class MapScreenReplayCoordinator(
         demoReplayCadenceSnapshot = igcReplayController.getReplayCadence()
     }
 
+    private fun captureDemoReplaySpeedSnapshot() {
+        if (demoReplaySpeedSnapshot != null) return
+        demoReplaySpeedSnapshot = replaySessionState.value.speedMultiplier
+    }
+
     private fun captureDemoReplayBaroStepSnapshot() {
         if (demoReplayBaroStepSnapshot != null) return
         demoReplayBaroStepSnapshot = igcReplayController.getReplayBaroStepMs()
@@ -377,6 +388,11 @@ internal class MapScreenReplayCoordinator(
     private fun captureDemoReplayRenderFrameSyncSnapshot() {
         if (demoReplayRenderFrameSyncSnapshot != null) return
         demoReplayRenderFrameSyncSnapshot = MapFeatureFlags.useRenderFrameSync
+    }
+
+    private fun captureDemoReplayFrameLogIntervalSnapshot() {
+        if (demoReplayFrameLogIntervalSnapshot != null) return
+        demoReplayFrameLogIntervalSnapshot = MapFeatureFlags.sim2FrameLogIntervalMs
     }
 
     private fun restoreRacingReplayCadenceSnapshot() {
@@ -437,8 +453,12 @@ internal class MapScreenReplayCoordinator(
         demoReplayRuntimeHeadingSnapshot = null
         demoReplayRenderFrameSyncSnapshot?.let { MapFeatureFlags.useRenderFrameSync = it }
         demoReplayRenderFrameSyncSnapshot = null
+        demoReplayFrameLogIntervalSnapshot?.let { MapFeatureFlags.sim2FrameLogIntervalMs = it }
+        demoReplayFrameLogIntervalSnapshot = null
         demoReplayCadenceSnapshot?.let { igcReplayController.setReplayCadence(it) }
         demoReplayCadenceSnapshot = null
+        demoReplaySpeedSnapshot?.let { igcReplayController.setSpeed(it) }
+        demoReplaySpeedSnapshot = null
         demoReplayBaroStepSnapshot?.let { igcReplayController.setReplayBaroStepMs(it) }
         demoReplayBaroStepSnapshot = null
         demoReplayNoiseSnapshot?.let { igcReplayController.setReplayNoiseProfile(it) }
@@ -457,6 +477,7 @@ internal class MapScreenReplayCoordinator(
     private companion object {
         private const val TAG = "MapScreenReplayCoord"
         private const val VARIO_DEMO_ASSET_PATH = "replay/vario-demo-0-10-0-60s.igc"
+        private const val VARIO_DEMO_SIM2_ASSET_PATH = "replay/vario-demo-0-10-0-120s.igc"
         private const val RACING_REPLAY_SPEED_MULTIPLIER = 1.0
         private val RACING_REPLAY_CADENCE_PROFILE = ReplayCadenceProfile.LIVE_100MS
         private const val SIM2_FALLBACK_GPS_STEP_MS = 1_000L
@@ -464,6 +485,7 @@ internal class MapScreenReplayCoordinator(
         private const val SIM2_XCSOAR_STEP_MS = 1_000L
         private const val SIM2_XCSOAR_ACCURACY_M = 1f
         private const val SIM2_XCSOAR_BEARING_STEP_DEG = 360.0
+        private const val SIM2_REPLAY_SPEED_MULTIPLIER = 1.0
     }
 }
 

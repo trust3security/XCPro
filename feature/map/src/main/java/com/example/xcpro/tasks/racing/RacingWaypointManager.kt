@@ -118,7 +118,8 @@ class RacingWaypointManager {
         turnType: RacingTurnPointType? = null,
         gateWidth: Double? = null,
         keyholeInnerRadius: Double? = null,
-        keyholeAngle: Double? = null
+        keyholeAngle: Double? = null,
+        faiQuadrantOuterRadius: Double? = null
     ): SimpleRacingTask {
         val currentWaypoints = currentTask.waypoints.toMutableList()
         if (index in currentWaypoints.indices) {
@@ -154,13 +155,20 @@ class RacingWaypointManager {
             }
             println("ðŸ” KEYHOLE DEBUG: finalGateWidth=$finalGateWidth")
 
+            val finalFaiQuadrantOuterRadius = when {
+                faiQuadrantOuterRadius != null -> faiQuadrantOuterRadius
+                turnType == RacingTurnPointType.FAI_QUADRANT && turnType != waypoint.turnPointType -> 10.0
+                else -> waypoint.faiQuadrantOuterRadius
+            }
+
             currentWaypoints[index] = waypoint.copy(
                 startPointType = startType ?: waypoint.startPointType,
                 finishPointType = finishType ?: waypoint.finishPointType,
                 turnPointType = turnType ?: waypoint.turnPointType,
                 gateWidth = finalGateWidth,
                 keyholeInnerRadius = keyholeInnerRadius ?: waypoint.keyholeInnerRadius,
-                keyholeAngle = keyholeAngle ?: waypoint.keyholeAngle
+                keyholeAngle = keyholeAngle ?: waypoint.keyholeAngle,
+                faiQuadrantOuterRadius = finalFaiQuadrantOuterRadius
             )
 
             val newWaypoint = currentWaypoints[index]
@@ -201,7 +209,8 @@ class RacingWaypointManager {
                 gateWidth = existingWaypoint.gateWidth,
                 // FIXED: Preserve keyhole-specific parameters when replacing waypoint
                 keyholeInnerRadius = existingWaypoint.keyholeInnerRadius,
-                keyholeAngle = existingWaypoint.keyholeAngle
+                keyholeAngle = existingWaypoint.keyholeAngle,
+                faiQuadrantOuterRadius = existingWaypoint.faiQuadrantOuterRadius
             )
             return currentTask.copy(waypoints = currentWaypoints)
         }

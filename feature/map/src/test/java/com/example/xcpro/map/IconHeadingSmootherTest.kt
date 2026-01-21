@@ -29,7 +29,7 @@ class IconHeadingSmootherTest {
                 nowMs = 1000L
             )
         )
-        assertEquals(45.0, out1, 1e-6)
+        assertEquals(90.0, out1, 1e-6)
 
         val out2 = smoother.update(
             IconHeadingSmoother.IconHeadingInput(
@@ -80,7 +80,7 @@ class IconHeadingSmootherTest {
             )
         )
 
-        assertEquals(60.0, out, 1e-6)
+        assertEquals(120.0, out, 1e-6)
     }
 
     @Test
@@ -398,7 +398,7 @@ class IconHeadingSmootherTest {
                 trackDeg = 0.0,
                 bearingAccuracyDeg = 1.0,
                 mapBearing = 0.0,
-                orientationMode = MapOrientationMode.TRACK_UP,
+                orientationMode = MapOrientationMode.HEADING_UP,
                 speedMs = 5.0,
                 nowMs = 0L
             )
@@ -410,7 +410,7 @@ class IconHeadingSmootherTest {
                 trackDeg = 90.0,
                 bearingAccuracyDeg = 1.0,
                 mapBearing = 0.0,
-                orientationMode = MapOrientationMode.TRACK_UP,
+                orientationMode = MapOrientationMode.HEADING_UP,
                 speedMs = 5.0,
                 nowMs = 1000L
             )
@@ -424,7 +424,7 @@ class IconHeadingSmootherTest {
                 trackDeg = 0.0,
                 bearingAccuracyDeg = 30.0,
                 mapBearing = 0.0,
-                orientationMode = MapOrientationMode.TRACK_UP,
+                orientationMode = MapOrientationMode.HEADING_UP,
                 speedMs = 5.0,
                 nowMs = 0L
             )
@@ -436,7 +436,7 @@ class IconHeadingSmootherTest {
                 trackDeg = 90.0,
                 bearingAccuracyDeg = 30.0,
                 mapBearing = 0.0,
-                orientationMode = MapOrientationMode.TRACK_UP,
+                orientationMode = MapOrientationMode.HEADING_UP,
                 speedMs = 5.0,
                 nowMs = 1000L
             )

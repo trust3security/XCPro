@@ -66,9 +66,9 @@ tasks/racing/
 - **NO shared switches:** Avoid `when (turnpointType)` in calculations
 - **Single Algorithm Principle:** Visual display and math use SAME geometry engine
 - **Examples:**
-  - FAI Quadrant: Infinite radius 90° sectors, turn direction-based orientation
+  - FAI Quadrant: Finite radius 90° sector (10km default, XCSoar parity), turn direction-based orientation
   - Cylinder: Fixed radius, simple circular geometry
-  - Keyhole: Combined 500m cylinder + infinite sector, dual validation
+  - Keyhole: Combined 500m cylinder + 10km sector, dual validation
 
 ### 3. **Coordinator Pattern**
 - `RacingTaskManager` coordinates between specialized modules
@@ -301,10 +301,10 @@ val entryPoint = cylinderCalc.calculateOptimalEntryPoint(
 
 ### 📐 FAI Quadrant (`turnpoints/FAIQuadrantCalculator.kt` & `FAIQuadrantDisplay.kt`)
 
-**Geometry:** 90° sector with infinite radius, turn direction-based orientation
+**Geometry:** 90° sector with finite 10km radius, turn direction-based orientation
 
 **Calculations:**
-- Infinite radius (no distance limit)
+- Finite radius (10km default)
 - 90° sector angle
 - Orientation based on: previous waypoint → current → next waypoint
 - Turn direction determines which quadrant (left/right turn)
@@ -341,7 +341,7 @@ val sector = faiCalc.calculateSectorGeometry(
 
 ### 🔑 Keyhole (`turnpoints/KeyholeCalculator.kt` & `KeyholeDisplay.kt`)
 
-**Geometry:** Combined 500m cylinder + 90° infinite sector
+**Geometry:** Combined 500m cylinder + 90° sector (10km radius)
 
 **Calculations:**
 - Two-part validation: cylinder OR sector

@@ -198,10 +198,19 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
         turnType: RacingTurnPointType? = null,
         gateWidth: Double? = null,
         keyholeInnerRadius: Double? = null,
-        keyholeAngle: Double? = null
+        keyholeAngle: Double? = null,
+        faiQuadrantOuterRadius: Double? = null
     ) {
         _currentRacingTask = waypointManager.updateWaypointType(
-            _currentRacingTask, index, startType, finishType, turnType, gateWidth, keyholeInnerRadius, keyholeAngle
+            _currentRacingTask,
+            index,
+            startType,
+            finishType,
+            turnType,
+            gateWidth,
+            keyholeInnerRadius,
+            keyholeAngle,
+            faiQuadrantOuterRadius
         )
         saveRacingTask()
         println("ðŸ RACING TASK: New distance: ${calculateRacingDistance()} km")
@@ -228,13 +237,9 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
             turnType = turnType as? RacingTurnPointType,
             gateWidth = gateWidth,
             keyholeInnerRadius = keyholeInnerRadius,
-            keyholeAngle = keyholeAngle
+            keyholeAngle = keyholeAngle,
+            faiQuadrantOuterRadius = faiQuadrantOuterRadius
         )
-
-        // faiQuadrantOuterRadius is handled within waypoint manager when turn type changes.
-        faiQuadrantOuterRadius?.let {
-            println("ðŸ RACING TASK: Received FAI quadrant radius=$it (handled by waypoint manager)")
-        }
     }
 
     /**

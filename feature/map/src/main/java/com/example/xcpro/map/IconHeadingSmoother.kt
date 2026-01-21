@@ -81,12 +81,18 @@ class IconHeadingSmoother(
             return lastOutputDeg!!
         }
 
-        val bearingAccuracyDeg = if (!headingModeActive) {
-            input.bearingAccuracyDeg
-                ?.takeIf { it.isFinite() && it >= 0.0 }
-                ?.coerceIn(0.0, MAX_BEARING_ACCURACY_DEG)
-        } else {
-            null
+        val bearingAccuracyDeg = when {
+            input.orientationMode == MapOrientationMode.TRACK_UP -> {
+                input.bearingAccuracyDeg
+                    ?.takeIf { it.isFinite() && it >= 0.0 }
+                    ?.coerceIn(0.0, MAX_BEARING_ACCURACY_DEG)
+            }
+            !headingModeActive -> {
+                input.bearingAccuracyDeg
+                    ?.takeIf { it.isFinite() && it >= 0.0 }
+                    ?.coerceIn(0.0, MAX_BEARING_ACCURACY_DEG)
+            }
+            else -> null
         }
 
         val deadbandDeg = bearingAccuracyDeg?.let { accuracyDeg ->
@@ -136,12 +142,8 @@ class IconHeadingSmoother(
                 }
             }
             MapOrientationMode.TRACK_UP -> {
-                if (headingModeActive) {
-                    input.headingDeg
-                } else {
-                    // Remove drift when heading is invalid.
-                    trackFallback
-                }
+                // Always align icon with ground track in TRACK_UP to match travel direction.
+                trackFallback
             }
             MapOrientationMode.NORTH_UP -> {
                 if (headingModeActive) {

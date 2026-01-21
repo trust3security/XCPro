@@ -34,7 +34,7 @@ Racing tasks support multiple turnpoint geometries, each with specific FAI rules
 - **FAI reference:** SC3 Section 6.3.1
 
 #### 2. FAI Quadrant
-- **Radius:** Infinite (90° sector)
+- **Radius:** 10km (finite 90° sector, XCSoar parity)
 - **Orientation:** Based on turn direction (left/right)
 - **Rule:** Bisector is perpendicular to task line bisector
 - **Use case:** FAI Triangle races, long-distance racing
@@ -42,7 +42,7 @@ Racing tasks support multiple turnpoint geometries, each with specific FAI rules
 
 #### 3. Keyhole
 - **Inner cylinder:** 500m radius (fixed)
-- **Outer sector:** 90° infinite sector
+- **Outer sector:** 90° sector, 10km radius
 - **Orientation:** Sector opens away from previous turnpoint
 - **Rule:** Must enter either cylinder OR sector
 - **Use case:** Flexible racing with safety margin
@@ -61,7 +61,7 @@ Racing tasks support multiple turnpoint geometries, each with specific FAI rules
 |------|----------|--------------|----------|
 | **Start Line** | Perpendicular line | 10km | Standard (most common) |
 | **Start Cylinder** | Circle around point | 10km radius | Alternative start |
-| **FAI Start Quadrant** | 90° sector | Infinite radius | FAI competitions |
+| **FAI Start Quadrant** | 90° sector | 10km radius | FAI competitions |
 
 ### Finish Types
 

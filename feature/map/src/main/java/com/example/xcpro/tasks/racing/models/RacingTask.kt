@@ -239,8 +239,8 @@ data class RacingTurnpoint(
                 require(cylinderRadius != null && cylinderRadius > 0) { "Cylinder turnpoint requires positive radius" }
             }
             RacingTurnPointType.FAI_QUADRANT -> {
-                // FAI quadrant has infinite radius, 90-degree sectors
-                // No specific radius requirement
+                // FAI quadrant uses a finite sector radius (XCSoar default 10km)
+                // No cylinder radius requirement
             }
             RacingTurnPointType.KEYHOLE -> {
                 // Keyhole is 500m cylinder + 10km, 90-degree sector
@@ -255,18 +255,16 @@ data class RacingTurnpoint(
     fun getEffectiveRadius(): Double? {
         return when (type) {
             RacingTurnPointType.TURN_POINT_CYLINDER -> cylinderRadius
-            RacingTurnPointType.FAI_QUADRANT -> null // Infinite
+            RacingTurnPointType.FAI_QUADRANT -> sectorRadius ?: 10000.0
             RacingTurnPointType.KEYHOLE -> 500.0 // Inner cylinder radius
         }
     }
 
     /**
-     * Check if this turnpoint has an infinite observation zone
+     * Check if this turnpoint has an unbounded observation zone (currently none)
      */
     fun hasInfiniteRadius(): Boolean {
-        return type in listOf(
-            RacingTurnPointType.FAI_QUADRANT
-        )
+        return false
     }
 }
 

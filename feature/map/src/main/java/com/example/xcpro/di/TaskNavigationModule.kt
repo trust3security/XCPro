@@ -32,12 +32,16 @@ object TaskNavigationModule {
     @ViewModelScoped
     fun provideTaskNavigationController(
         taskManager: TaskManagerCoordinator,
-        crossingPlanner: RacingBoundaryCrossingPlanner
+        crossingPlanner: RacingBoundaryCrossingPlanner,
+        epsilonPolicy: RacingBoundaryEpsilonPolicy
     ): TaskNavigationController = TaskNavigationController(
         taskManager = taskManager,
         stateStore = RacingNavigationStateStore(),
         advanceState = RacingAdvanceState(),
-        engine = RacingNavigationEngine(crossingPlanner = crossingPlanner),
+        engine = RacingNavigationEngine(
+            crossingPlanner = crossingPlanner,
+            epsilonPolicy = epsilonPolicy
+        ),
         featureFlags = TaskFeatureFlags
     )
 }

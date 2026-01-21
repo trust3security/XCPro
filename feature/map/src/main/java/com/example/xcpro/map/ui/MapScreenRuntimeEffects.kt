@@ -3,6 +3,7 @@ package com.example.xcpro.map.ui
 import android.util.Log
 import androidx.compose.material3.DrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.withFrameNanos
 import com.example.dfcards.FlightModeSelection
@@ -10,6 +11,7 @@ import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.map.MapTaskIntegration
 import com.example.xcpro.map.LocationManager
+import com.example.xcpro.map.config.MapFeatureFlags
 import com.example.xcpro.map.trail.SnailTrailManager
 import com.example.xcpro.map.trail.TrailSettings
 import com.example.xcpro.tasks.TaskManagerCoordinator
@@ -62,7 +64,6 @@ internal fun MapScreenRuntimeEffects(
     LaunchedEffect(
         liveFlightData,
         trailSettings,
-        currentZoom,
         isFlying,
         suppressLiveGps
     ) {
@@ -87,15 +88,36 @@ internal fun MapScreenRuntimeEffects(
         )
     }
 
+    LaunchedEffect(currentZoom) {
+        snailTrailManager.onZoomChanged(currentZoom)
+    }
 
     LaunchedEffect(suppressLiveGps) {
-        if (!suppressLiveGps) return@LaunchedEffect
+        if (!suppressLiveGps || MapFeatureFlags.useRenderFrameSync) return@LaunchedEffect
         while (isActive) {
             withFrameNanos { }
+            val snapshot = locationManager.getDisplayPoseSnapshot()
             snailTrailManager.updateDisplayPose(
-                displayLocation = locationManager.getDisplayPoseLocation(),
-                displayTimeMillis = locationManager.getDisplayPoseTimestampMs()
+                displayLocation = snapshot?.location,
+                displayTimeMillis = snapshot?.timestampMs,
+                frameId = snapshot?.frameId
             )
+        }
+    }
+
+    DisposableEffect(suppressLiveGps) {
+        if (!suppressLiveGps || !MapFeatureFlags.useRenderFrameSync) {
+            onDispose { locationManager.setDisplayPoseFrameListener(null) }
+        } else {
+            val listener: (LocationManager.DisplayPoseSnapshot) -> Unit = { snapshot ->
+                snailTrailManager.updateDisplayPose(
+                    displayLocation = snapshot.location,
+                    displayTimeMillis = snapshot.timestampMs,
+                    frameId = snapshot.frameId
+                )
+            }
+            locationManager.setDisplayPoseFrameListener(listener)
+            onDispose { locationManager.setDisplayPoseFrameListener(null) }
         }
     }
 

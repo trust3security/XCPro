@@ -38,7 +38,7 @@
 - Finish: 3 km
 - Turnpoint cylinder: 0.5 km
 - Keyhole: inner cylinder 0.5 km, outer sector radius 10 km
-- FAI Quadrant: infinite radius (display uses a finite radius)
+- FAI Quadrant: finite radius (default 10 km, XCSoar parity)
 
 Source of defaults: `RacingWaypoint.createWithStandardizedDefaults()`
 

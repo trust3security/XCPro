@@ -8,7 +8,8 @@ import kotlin.math.*
  * FAI Quadrant Calculator - Extracted from RacingTaskCalculator.kt
  *
  * Implements the CORRECT FAI sector orientation algorithm.
- * FAI sectors are infinite 90-degree quadrants oriented on the angle bisector
+ * FAI sectors are finite 90-degree quadrants oriented on the angle bisector
+ * (XCSoar default radius: 10km).
  * between inbound and outbound legs.
  */
 class FAIQuadrantCalculator : TurnPointCalculator {
@@ -36,7 +37,7 @@ class FAIQuadrantCalculator : TurnPointCalculator {
         println("   Next: (${nextWaypoint.lat}, ${nextWaypoint.lon})")
         println("   FAI Sector Bisector: ${sectorBisector.toInt()}°")
         println("   ✅ FAI Rule: 90° sector (±45°), perpendicular to track bisector, oriented OUTWARD")
-        println("   ✅ Infinite radius sector starting AT waypoint")
+        println("   ✅ Finite radius sector (default 10km) starting AT waypoint")
 
         // FAI quadrants originate at waypoint → optimal touch point is always the waypoint itself
         return Pair(waypoint.lat, waypoint.lon)
@@ -51,18 +52,15 @@ class FAIQuadrantCalculator : TurnPointCalculator {
      * Uses official FAI sector orientation rules.
      */
     override fun isWithinObservationZone(position: Pair<Double, Double>, waypoint: RacingWaypoint): Boolean {
-        // For a real check, we need context with previous and next waypoints
-        // This method is called without context, so we'll use a simplified check
-        // In practice, the TaskContext version should be used
-        
-        // TODO: This method needs TaskContext to properly calculate FAI sector orientation
-        // For now, assume position is valid (infinite sector)
+        // For a real check, we need context with previous and next waypoints.
+        // This method is called without context, so we'll use a simplified check.
+        // TODO: Add a context-aware check that respects sector orientation + radius.
+        // For now, assume position is valid (permissive).
         return true
     }
 
     override fun getEffectiveRadius(waypoint: RacingWaypoint): Double? {
-        // FAI quadrants are infinite
-        return null
+        return waypoint.faiQuadrantOuterRadius
     }
 
     // ---------- Helpers ----------

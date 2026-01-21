@@ -12,7 +12,9 @@ data class TrailSample(
     val longitude: Double,
     val timestampMillis: Long,
     val altitudeMeters: Double,
-    val varioMs: Double
+    val varioMs: Double,
+    val windSpeedMs: Double,
+    val windDirectionFromDeg: Double
 )
 
 data class TrailPoint(
@@ -21,7 +23,9 @@ data class TrailPoint(
     val timestampMillis: Long,
     val altitudeMeters: Double,
     val varioMs: Double,
-    val driftFactor: Double
+    val driftFactor: Double,
+    val windSpeedMs: Double,
+    val windDirectionFromDeg: Double
 )
 
 class TrailStore(
@@ -77,7 +81,9 @@ class TrailStore(
                 timestampMillis = sample.timestampMillis,
                 altitudeMeters = sample.altitudeMeters,
                 varioMs = sample.varioMs,
-                driftFactor = driftFactor
+                driftFactor = driftFactor,
+                windSpeedMs = sample.windSpeedMs,
+                windDirectionFromDeg = sample.windDirectionFromDeg
             )
         )
         return true

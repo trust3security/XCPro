@@ -43,7 +43,7 @@ internal class RacingZoneDetector {
             RacingTurnPointType.FAI_QUADRANT -> {
                 if (previous == null || next == null) return false
                 val sectorBisector = calculateFAISectorBisector(turn, previous, next)
-                isWithinSector(position, turn, sectorBisector, FAI_SECTOR_ANGLE_DEGREES / 2.0, null)
+                isWithinSector(position, turn, sectorBisector, FAI_SECTOR_ANGLE_DEGREES / 2.0, turn.faiQuadrantOuterRadius)
             }
             RacingTurnPointType.KEYHOLE -> {
                 val distanceKm = distanceKm(position, turn)

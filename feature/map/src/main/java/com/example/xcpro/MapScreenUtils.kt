@@ -16,16 +16,16 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 
-internal fun pressurePrecision(preferences: UnitsPreferences): Int =
+fun pressurePrecision(preferences: UnitsPreferences): Int =
     if (preferences.pressure == PressureUnit.INHG) 2 else 1
 
-internal fun seedQnhInputValue(qnhHpa: Double, preferences: UnitsPreferences): String {
+fun seedQnhInputValue(qnhHpa: Double, preferences: UnitsPreferences): String {
     val decimals = pressurePrecision(preferences)
     val displayValue = preferences.pressure.fromSi(PressureHpa(qnhHpa))
     return "%.${decimals}f".format(Locale.US, displayValue)
 }
 
-internal fun formatQnhDisplay(
+fun formatQnhDisplay(
     qnhHpa: Double,
     preferences: UnitsPreferences,
     decimals: Int = pressurePrecision(preferences)
@@ -33,14 +33,14 @@ internal fun formatQnhDisplay(
     return UnitsFormatter.pressure(PressureHpa(qnhHpa), preferences, decimals).text
 }
 
-internal fun convertQnhInputToHpa(
+fun convertQnhInputToHpa(
     inputValue: Double,
     preferences: UnitsPreferences
 ): Double {
     return preferences.pressure.toSi(inputValue).value
 }
 
-internal fun formatBaroGpsDelta(
+fun formatBaroGpsDelta(
     deltaMeters: Double,
     preferences: UnitsPreferences
 ): String {

@@ -7,12 +7,18 @@ import androidx.activity.result.ActivityResultLauncher
 import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.sensors.UnifiedSensorManager
 import com.example.xcpro.sensors.GPSData
+import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.MapOrientationPreferences
 import com.example.xcpro.common.units.UnitsConverter
 import com.example.xcpro.vario.VarioServiceManager
 import com.example.xcpro.map.helpers.GliderPaddingHelper
 import com.example.xcpro.map.config.MapFeatureFlags
+import com.example.xcpro.map.domain.MapShiftBiasCalculator
+import com.example.xcpro.map.domain.MapShiftBiasConfig
+import com.example.xcpro.map.domain.MapShiftBiasInput
+import com.example.xcpro.map.domain.MapShiftBiasMode
+import com.example.xcpro.map.domain.ScreenOffset
 import com.example.xcpro.map.MapLocationFilter
 import com.example.xcpro.map.MapLibreProjector
 import com.example.xcpro.map.MapPositionController
@@ -41,6 +47,7 @@ class LocationManager(
         private const val CAMERA_MIN_UPDATE_INTERVAL_MS = 80L
         private const val CAMERA_ANIMATION_MS = 250
         private const val CAMERA_BEARING_EPS_DEG = 2.0
+        private const val FRAME_LOG_INTERVAL_MS = 100L
     }
 
     private val orientationPreferences = MapOrientationPreferences(context)
@@ -69,6 +76,7 @@ class LocationManager(
         offsetHistorySize = MapFeatureFlags.locationOffsetHistorySize,
         iconRotationConfig = iconRotationConfig
     )
+    private val mapShiftBiasCalculator = MapShiftBiasCalculator()
     private val displayClock = DisplayClock()
     private val feedAdapter = LocationFeedAdapter()
     private val posePipeline = DisplayPosePipeline(
@@ -80,7 +88,11 @@ class LocationManager(
     private var lastTimeBase: DisplayClock.TimeBase? = null
     @Volatile private var lastDisplayPoseLocation: LatLng? = null
     @Volatile private var lastDisplayPoseTimestampMs: Long = 0L
+    @Volatile private var lastDisplayPoseFrameId: Long = 0L
+    @Volatile private var displayPoseFrameListener: ((DisplayPoseSnapshot) -> Unit)? = null
+    private var displayFrameCounter: Long = 0L
     private var renderFrameMapView: MapView? = null
+    private var lastFrameLogMs: Long = 0L
     private val renderFrameListener = MapView.OnWillStartRenderingFrameListener {
         dispatchRenderFrame()
     }
@@ -201,10 +213,29 @@ class LocationManager(
         renderDisplayFrame()
     }
 
+    data class DisplayPoseSnapshot(
+        val location: LatLng,
+        val timestampMs: Long,
+        val frameId: Long
+    )
+
     fun getDisplayPoseLocation(): LatLng? = lastDisplayPoseLocation
 
     fun getDisplayPoseTimestampMs(): Long? =
         lastDisplayPoseTimestampMs.takeIf { it > 0L }
+
+    fun getDisplayPoseSnapshot(): DisplayPoseSnapshot? {
+        val location = lastDisplayPoseLocation ?: return null
+        val timestamp = lastDisplayPoseTimestampMs
+        if (timestamp <= 0L) return null
+        val frameId = lastDisplayPoseFrameId
+        if (frameId <= 0L) return null
+        return DisplayPoseSnapshot(location, timestamp, frameId)
+    }
+
+    fun setDisplayPoseFrameListener(listener: ((DisplayPoseSnapshot) -> Unit)?) {
+        displayPoseFrameListener = listener
+    }
 
     private fun renderDisplayFrame() {
         val nowMs = displayClock.nowMs()
@@ -246,8 +277,38 @@ class LocationManager(
             orientation.bearing
         }
 
+        displayFrameCounter += 1
+        lastDisplayPoseFrameId = displayFrameCounter
         lastDisplayPoseLocation = poseLocation
         lastDisplayPoseTimestampMs = poseTimestampMs
+        if (MapFeatureFlags.useRenderFrameSync) {
+            val nowElapsed = android.os.SystemClock.elapsedRealtime()
+            val interval = MapFeatureFlags.sim2FrameLogIntervalMs.takeIf { it >= 0L }
+                ?: FRAME_LOG_INTERVAL_MS
+            if (interval <= 0L || nowElapsed - lastFrameLogMs >= interval) {
+                lastFrameLogMs = nowElapsed
+                Log.d(
+                    TAG,
+                    "framePose frame=$lastDisplayPoseFrameId " +
+                        "t=$poseTimestampMs " +
+                        "lat=${"%.6f".format(poseLocation.latitude)} " +
+                        "lon=${"%.6f".format(poseLocation.longitude)} " +
+                        "track=${"%.1f".format(trackDeg)} " +
+                        "heading=${"%.1f".format(headingDeg)} " +
+                        "camera=${"%.1f".format(cameraTargetBearing)} " +
+                        "timeBase=${lastTimeBase ?: "NONE"}"
+                )
+            }
+        }
+        if (MapFeatureFlags.useRenderFrameSync) {
+            displayPoseFrameListener?.invoke(
+                DisplayPoseSnapshot(
+                    location = poseLocation,
+                    timestampMs = poseTimestampMs,
+                    frameId = lastDisplayPoseFrameId
+                )
+            )
+        }
 
         if (!hasInitiallyCentered) {
             handleInitialCentering(poseLocation)
@@ -256,7 +317,12 @@ class LocationManager(
 
         val shouldTrackCamera = isTrackingLocation && !showReturnButton
         if (shouldTrackCamera) {
-            val padding = computeSmoothedPadding()
+            val padding = computeSmoothedPadding(
+                trackDeg = trackDeg,
+                mapBearing = cameraTargetBearing,
+                speedMs = speedMs,
+                orientationMode = orientation.mode
+            )
             if (shouldUpdateCamera(map, poseLocation, cameraTargetBearing, nowMs)) {
                 val animationMs = if (MapFeatureFlags.useRuntimeReplayHeading &&
                     lastTimeBase == DisplayClock.TimeBase.REPLAY
@@ -275,6 +341,8 @@ class LocationManager(
                 cameraUpdateGate.resetTo(poseLocation, map)
                 lastCameraUpdateMs = nowMs
             }
+        } else {
+            mapShiftBiasCalculator.reset()
         }
 
         val cameraBearing = map.cameraPosition.bearing.toDouble()
@@ -289,7 +357,8 @@ class LocationManager(
             mapBearing = overlayBearing,
             orientationMode = orientation.mode,
             speedMs = speedMs,
-            nowMs = nowMs
+            nowMs = nowMs,
+            frameId = lastDisplayPoseFrameId
         )
     }
 
@@ -388,6 +457,7 @@ class LocationManager(
         if (lastTimeBase != envelope.timeBase) {
             // Intentional source switch (live <-> replay) should snap the overlay to the new track.
             posePipeline.resetSmoother()
+            mapShiftBiasCalculator.reset()
             lastTimeBase = envelope.timeBase
             mapState.mapLibreMap?.let { map ->
                 cameraUpdateGate.resetTo(LatLng(envelope.fix.latitude, envelope.fix.longitude), map)
@@ -398,7 +468,18 @@ class LocationManager(
         currentUserLocation = LatLng(envelope.fix.latitude, envelope.fix.longitude)
     }
 
-    private fun computeSmoothedPadding(): IntArray {
+    private fun computeSmoothedPadding(
+        trackDeg: Double,
+        mapBearing: Double,
+        speedMs: Double,
+        orientationMode: MapOrientationMode
+    ): IntArray {
+        val rawPadding = computeBasePadding()
+        val biasOffset = computeBiasOffset(trackDeg, mapBearing, speedMs, orientationMode)
+        return applyBiasToPadding(rawPadding, biasOffset)
+    }
+
+    private fun computeBasePadding(): IntArray {
         val rawPadding = gliderPaddingHelper.paddingArray()
         positionController.rememberOffset(
             MapPositionController.Offset(
@@ -410,12 +491,80 @@ class LocationManager(
         return intArrayOf(0, averaged.x.roundToInt(), 0, averaged.y.roundToInt())
     }
 
+    private fun computeBiasOffset(
+        trackDeg: Double,
+        mapBearing: Double,
+        speedMs: Double,
+        orientationMode: MapOrientationMode
+    ): ScreenOffset {
+        val baseMode = orientationPreferences.getMapShiftBiasMode()
+        if (baseMode == MapShiftBiasMode.NONE) {
+            mapShiftBiasCalculator.reset()
+            return ScreenOffset.ZERO
+        }
+        if (orientationMode != MapOrientationMode.NORTH_UP) {
+            mapShiftBiasCalculator.reset()
+            return ScreenOffset.ZERO
+        }
+        if (mapStateReader.currentFlightMode.value == FlightModeSelection.THERMAL) {
+            mapShiftBiasCalculator.reset()
+            return ScreenOffset.ZERO
+        }
+
+        val mapView = mapState.mapView
+        val input = MapShiftBiasInput(
+            trackBearingDeg = trackDeg.takeIf { it.isFinite() },
+            targetBearingDeg = null,
+            mapBearingDeg = mapBearing,
+            speedMs = speedMs.takeIf { it.isFinite() },
+            screenWidthPx = mapView?.width ?: 0,
+            screenHeightPx = mapView?.height ?: 0,
+            gliderScreenPercent = orientationPreferences.getGliderScreenPercent()
+        )
+        val config = MapShiftBiasConfig(
+            mode = baseMode,
+            biasStrength = orientationPreferences.getMapShiftBiasStrength(),
+            minSpeedMs = MapFeatureFlags.mapShiftBiasMinSpeedMs,
+            historySize = MapFeatureFlags.mapShiftBiasHistorySize,
+            maxOffsetFraction = MapFeatureFlags.mapShiftBiasMaxOffsetFraction,
+            holdOnInvalid = MapFeatureFlags.mapShiftBiasHoldOnInvalid
+        )
+        return mapShiftBiasCalculator.update(input, config).offset
+    }
+
+    private fun applyBiasToPadding(basePadding: IntArray, biasOffset: ScreenOffset): IntArray {
+        val left = if (biasOffset.dxPx > 0.0) {
+            basePadding[0] + biasOffset.dxPx.roundToInt()
+        } else {
+            basePadding[0]
+        }
+        val right = if (biasOffset.dxPx < 0.0) {
+            basePadding[2] + (-biasOffset.dxPx).roundToInt()
+        } else {
+            basePadding[2]
+        }
+        val top = if (biasOffset.dyPx > 0.0) {
+            basePadding[1] + biasOffset.dyPx.roundToInt()
+        } else {
+            basePadding[1]
+        }
+        val bottom = if (biasOffset.dyPx < 0.0) {
+            basePadding[3] + (-biasOffset.dyPx).roundToInt()
+        } else {
+            basePadding[3]
+        }
+        return intArrayOf(left, top, right, bottom)
+    }
+
     private fun shouldUpdateCamera(
         map: org.maplibre.android.maps.MapLibreMap,
         location: LatLng,
         targetBearing: Double,
         nowMs: Long
     ): Boolean {
+        if (MapFeatureFlags.useRenderFrameSync && lastTimeBase == DisplayClock.TimeBase.REPLAY) {
+            return true
+        }
         val bearingDelta = abs(shortestDeltaDegrees(map.cameraPosition.bearing, targetBearing))
         val bearingMoved = bearingDelta >= CAMERA_BEARING_EPS_DEG
         val timeDue = nowMs - lastCameraUpdateMs >= CAMERA_MIN_UPDATE_INTERVAL_MS

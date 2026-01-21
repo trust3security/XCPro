@@ -5,9 +5,15 @@ package com.example.xcpro.map.trail
 import android.content.Context
 import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.map.MapScreenState
+import com.example.xcpro.map.config.MapFeatureFlags
 import com.example.xcpro.sensors.CirclingDetector
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.exp
+import kotlin.math.hypot
+import kotlin.math.sin
 
 class SnailTrailManager(
     private val context: Context,
@@ -22,9 +28,16 @@ class SnailTrailManager(
     private var lastIsReplay: Boolean? = null
     private var lastReplaySample: TrailSample? = null
     private var lastReplayTimestampAdjusted: Long? = null
+    private var lastReplayStoreTimestamp: Long? = null
     private val replaySampleStepMillis = 250L
     private var lastRenderPoseTimeMs: Long? = null
     private var lastRenderPoseLocation: LatLng? = null
+    private var lastRawTailPoint: TrailPoint? = null
+    private var lastRenderPoseFrameId: Long? = null
+    private val replayWindSmoother = WindSmoother(
+        tauMs = REPLAY_WIND_SMOOTH_MS,
+        minValidSpeedMs = REPLAY_WIND_VALID_MIN_SPEED_MS
+    )
 
     fun initialize(map: MapLibreMap) {
         val overlay = SnailTrailOverlay(context, map, mapState.mapView)
@@ -56,6 +69,7 @@ class SnailTrailManager(
             lastContext = null
             lastRenderPoseTimeMs = null
             lastRenderPoseLocation = null
+            lastRawTailPoint = null
             return
         }
 
@@ -66,8 +80,10 @@ class SnailTrailManager(
             lastContext = null
             lastReplaySample = null
             lastReplayTimestampAdjusted = null
+            replayWindSmoother.reset()
             lastRenderPoseTimeMs = null
             lastRenderPoseLocation = null
+            lastRawTailPoint = null
         }
         lastIsReplay = isReplay
 
@@ -97,14 +113,35 @@ class SnailTrailManager(
         val zoomChanged = lastContext?.currentZoom?.let { it != currentZoom } ?: false
         var sampleAdded = false
 
+        val windSample = if (isReplay) {
+            replayWindSmoother.update(
+                speedMs = liveData.windSpeed.toDouble(),
+                directionFromDeg = liveData.windDirection.toDouble(),
+                timestampMs = timestamp
+            )
+        } else {
+            WindSample(
+                speedMs = liveData.windSpeed.toDouble(),
+                directionFromDeg = liveData.windDirection.toDouble()
+            )
+        }
+
         if ((isFlying || isReplay) && timestamp > 0L) {
             val sample = TrailSample(
                 latitude = lat,
                 longitude = lon,
                 timestampMillis = timestamp,
                 altitudeMeters = altitude,
-                varioMs = vario
+                varioMs = vario,
+                windSpeedMs = windSample.speedMs,
+                windDirectionFromDeg = windSample.directionFromDeg
             )
+            if (isReplay) {
+                if (shouldResetReplayStore(sample)) {
+                    resetReplayStore(overlay)
+                }
+                lastReplayStoreTimestamp = sample.timestampMillis
+            }
             sampleAdded = if (isReplay) {
                 addReplaySample(sample, store)
             } else {
@@ -115,8 +152,8 @@ class SnailTrailManager(
         lastContext = RenderContext(
             currentLocation = renderLocation,
             currentTimeMillis = renderTime,
-            windSpeedMs = liveData.windSpeed.toDouble(),
-            windDirectionFromDeg = liveData.windDirection.toDouble(),
+            windSpeedMs = windSample.speedMs,
+            windDirectionFromDeg = windSample.directionFromDeg,
             isCircling = isCircling,
             currentZoom = currentZoom
         )
@@ -128,7 +165,8 @@ class SnailTrailManager(
 
     fun updateDisplayPose(
         displayLocation: LatLng?,
-        displayTimeMillis: Long?
+        displayTimeMillis: Long?,
+        frameId: Long? = null
     ) {
         if (lastIsReplay != true) return
         val overlay = mapState.snailTrailOverlay ?: return
@@ -139,8 +177,19 @@ class SnailTrailManager(
         val time = displayTimeMillis?.takeIf { it > 0L } ?: context.currentTimeMillis
         if (time <= 0L) return
         if (time < context.currentTimeMillis) return
+        if (frameId != null && lastRenderPoseFrameId == frameId) return
 
         val prevLocation = lastRenderPoseLocation
+        val minStepMs = if (MapFeatureFlags.useRenderFrameSync && lastIsReplay == true) {
+            0L
+        } else {
+            DISPLAY_RENDER_MIN_STEP_MS
+        }
+        val minDistanceM = if (MapFeatureFlags.useRenderFrameSync && lastIsReplay == true) {
+            0.0
+        } else {
+            DISPLAY_RENDER_MIN_DISTANCE_M
+        }
         val movedEnough = if (prevLocation == null) {
             true
         } else {
@@ -149,19 +198,33 @@ class SnailTrailManager(
                 prevLocation.longitude,
                 location.latitude,
                 location.longitude
-            ) >= DISPLAY_RENDER_MIN_DISTANCE_M
+            ) >= minDistanceM
         }
         val prevTime = lastRenderPoseTimeMs ?: 0L
         val dt = time - prevTime
-        if (dt < DISPLAY_RENDER_MIN_STEP_MS && !movedEnough) return
+        if (dt < minStepMs && !movedEnough) return
 
         lastRenderPoseTimeMs = time
         lastRenderPoseLocation = location
+        if (frameId != null) {
+            lastRenderPoseFrameId = frameId
+        }
         lastContext = context.copy(
             currentLocation = location,
             currentTimeMillis = time
         )
-        render(overlay)
+        overlay.renderTail(
+            lastPoint = lastRawTailPoint,
+            settings = lastSettings,
+            currentLocation = location,
+            currentTimeMillis = time,
+            windSpeedMs = context.windSpeedMs,
+            windDirectionFromDeg = context.windDirectionFromDeg,
+            isCircling = context.isCircling,
+            currentZoom = context.currentZoom,
+            isReplay = lastIsReplay ?: false,
+            frameId = frameId
+        )
     }
 
     fun onSettingsChanged(settings: TrailSettings) {
@@ -180,7 +243,7 @@ class SnailTrailManager(
         render(overlay)
     }
 
-    private fun render(overlay: SnailTrailOverlay) {
+    private fun render(overlay: SnailTrailOverlay, frameId: Long? = null) {
         val context = lastContext ?: return
         val isReplay = lastIsReplay ?: false
         val store = activeStore(isReplay)
@@ -196,6 +259,7 @@ class SnailTrailManager(
         } else {
             allPoints
         }
+        lastRawTailPoint = renderPoints.lastOrNull()
         overlay.render(
             points = renderPoints,
             settings = lastSettings,
@@ -205,7 +269,8 @@ class SnailTrailManager(
             windDirectionFromDeg = context.windDirectionFromDeg,
             isCircling = context.isCircling,
             currentZoom = context.currentZoom,
-            isReplay = isReplay
+            isReplay = isReplay,
+            frameId = frameId
         )
     }
 
@@ -235,7 +300,13 @@ class SnailTrailManager(
                             longitude = lerp(previous.longitude, adjusted.longitude, t),
                             timestampMillis = ts,
                             altitudeMeters = lerp(previous.altitudeMeters, adjusted.altitudeMeters, t),
-                            varioMs = lerp(previous.varioMs, adjusted.varioMs, t)
+                            varioMs = lerp(previous.varioMs, adjusted.varioMs, t),
+                            windSpeedMs = lerp(previous.windSpeedMs, adjusted.windSpeedMs, t),
+                            windDirectionFromDeg = lerpAngleDeg(
+                                previous.windDirectionFromDeg,
+                                adjusted.windDirectionFromDeg,
+                                t
+                            )
                         )
                         if (store.addSample(intermediate)) {
                             added = true
@@ -251,8 +322,47 @@ class SnailTrailManager(
         return added
     }
 
+    private fun shouldResetReplayStore(sample: TrailSample): Boolean {
+        val last = lastReplaySample ?: return false
+        val backstep = last.timestampMillis - sample.timestampMillis
+        if (backstep > REPLAY_RESET_TIME_BACKSTEP_MS) return true
+        val lastTimestamp = lastReplayStoreTimestamp
+        if (lastTimestamp != null) {
+            val rawBackstep = lastTimestamp - sample.timestampMillis
+            if (rawBackstep > REPLAY_RESET_TIME_BACKSTEP_MS) return true
+        }
+        val distance = TrailGeo.distanceMeters(
+            last.latitude,
+            last.longitude,
+            sample.latitude,
+            sample.longitude
+        )
+        return distance >= REPLAY_RESET_DISTANCE_M
+    }
+
+    private fun resetReplayStore(overlay: SnailTrailOverlay) {
+        replayStore.clear()
+        overlay.clear()
+        lastReplaySample = null
+        lastReplayTimestampAdjusted = null
+        lastReplayStoreTimestamp = null
+        replayWindSmoother.reset()
+        lastRenderPoseTimeMs = null
+        lastRenderPoseLocation = null
+        lastRenderPoseFrameId = null
+        lastRawTailPoint = null
+    }
+
     private fun lerp(start: Double, end: Double, t: Float): Double =
         start + (end - start) * t
+
+    private fun lerpAngleDeg(start: Double, end: Double, t: Float): Double {
+        if (!start.isFinite() || !end.isFinite()) {
+            return if (start.isFinite()) start else end
+        }
+        val delta = ((end - start + 540.0) % 360.0) - 180.0
+        return (start + delta * t + 360.0) % 360.0
+    }
 
     private fun adjustReplaySample(sample: TrailSample): TrailSample {
         val lastAdjusted = lastReplayTimestampAdjusted
@@ -313,8 +423,70 @@ class SnailTrailManager(
         val currentZoom: Float
     )
 
+    private data class WindSample(
+        val speedMs: Double,
+        val directionFromDeg: Double
+    )
+
+    private class WindSmoother(
+        private val tauMs: Long,
+        private val minValidSpeedMs: Double
+    ) {
+        private var lastTimeMs: Long? = null
+        private var vx: Double = 0.0
+        private var vy: Double = 0.0
+
+        fun reset() {
+            lastTimeMs = null
+            vx = 0.0
+            vy = 0.0
+        }
+
+        fun update(speedMs: Double, directionFromDeg: Double, timestampMs: Long): WindSample {
+            if (timestampMs <= 0L) {
+                return WindSample(speedMs, directionFromDeg)
+            }
+            val valid = speedMs.isFinite() &&
+                directionFromDeg.isFinite() &&
+                speedMs > minValidSpeedMs
+            val windToDeg = if (valid) (directionFromDeg + 180.0) % 360.0 else 0.0
+            val windToRad = Math.toRadians(windToDeg)
+            val targetVx = if (valid) speedMs * sin(windToRad) else 0.0
+            val targetVy = if (valid) speedMs * cos(windToRad) else 0.0
+
+            val last = lastTimeMs
+            if (last == null) {
+                vx = 0.0
+                vy = 0.0
+                lastTimeMs = timestampMs
+            } else {
+                val dtMs = (timestampMs - last).coerceAtLeast(0L)
+                val alpha = if (tauMs > 0L) {
+                    1.0 - exp(-dtMs.toDouble() / tauMs.toDouble())
+                } else {
+                    1.0
+                }
+                vx += (targetVx - vx) * alpha
+                vy += (targetVy - vy) * alpha
+                lastTimeMs = timestampMs
+            }
+
+            val speed = hypot(vx, vy)
+            if (speed <= 1e-3) {
+                return WindSample(0.0, directionFromDeg.takeIf { it.isFinite() } ?: 0.0)
+            }
+            val windTo = (Math.toDegrees(atan2(vx, vy)) + 360.0) % 360.0
+            val windFrom = (windTo + 180.0) % 360.0
+            return WindSample(speed, windFrom)
+        }
+    }
+
     private companion object {
         private const val DISPLAY_RENDER_MIN_STEP_MS = 100L
         private const val DISPLAY_RENDER_MIN_DISTANCE_M = 0.5
+        private const val REPLAY_RESET_DISTANCE_M = 2_000.0
+        private const val REPLAY_RESET_TIME_BACKSTEP_MS = 2_000L
+        private const val REPLAY_WIND_SMOOTH_MS = 4_000L
+        private const val REPLAY_WIND_VALID_MIN_SPEED_MS = 0.5
     }
 }

@@ -203,7 +203,7 @@ private fun RacingReorderableWaypointItem(
 
     var keyholeInnerRadius by remember { mutableStateOf(racingWaypoint?.keyholeInnerRadius?.toString() ?: "0.5") }
     var keyholeAngle by remember { mutableStateOf(racingWaypoint?.keyholeAngle?.toString() ?: "45") }
-    var faiQuadrantOuterRadius by remember { mutableStateOf(racingWaypoint?.faiQuadrantOuterRadius?.toString() ?: "20") }
+    var faiQuadrantOuterRadius by remember { mutableStateOf(racingWaypoint?.faiQuadrantOuterRadius?.toString() ?: "10") }
 
     Surface(
         modifier = Modifier
@@ -331,10 +331,14 @@ private fun RacingReorderableWaypointItem(
                             RacingTurnPointType.KEYHOLE -> 10.0  // 10km keyhole outer radius
                             RacingTurnPointType.TURN_POINT_CYLINDER, RacingTurnPointType.FAI_QUADRANT -> 0.5
                         }
+                        val faiQuadrantDefault = if (newType == RacingTurnPointType.FAI_QUADRANT) 10.0 else null
                         // UI SYNC FIX: Update local UI state to match model
                         gateWidth = typeSpecificDefault.toString()
+                        if (faiQuadrantDefault != null) {
+                            faiQuadrantOuterRadius = faiQuadrantDefault.toString()
+                        }
                         onTaskPointTypeUpdate(selectedStartType, selectedFinishType, newType,
-                            typeSpecificDefault, null, null, null)
+                            typeSpecificDefault, null, null, faiQuadrantDefault)
                     },
                     onGateWidthChange = { newWidth ->
                         gateWidth = newWidth

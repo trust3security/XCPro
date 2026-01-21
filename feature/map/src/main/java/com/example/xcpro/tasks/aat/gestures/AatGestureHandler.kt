@@ -15,7 +15,7 @@ import org.maplibre.android.maps.MapLibreMap
 
 private const val DEFAULT_RADIUS_KM = 10.0
 
-internal fun findAatWaypointHitForMapPoint(
+fun findAatWaypointHitForMapPoint(
     mapLat: Double,
     mapLon: Double,
     waypoints: List<TaskWaypoint>

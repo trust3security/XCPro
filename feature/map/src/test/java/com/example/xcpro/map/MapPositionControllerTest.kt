@@ -8,7 +8,10 @@ class MapPositionControllerTest {
 
     @Test
     fun clampBearingStep_limits_to_max_step_and_wraps() {
-        val controller = MapPositionController(mapState = mock(), maxBearingStepDeg = 5.0)
+        val controller = MapPositionController(
+            mapState = mock(),
+            maxBearingStepDegProvider = { 5.0 }
+        )
 
         // Seed bearing near wrap boundary.
         controller.clampBearingStep(350.0) // moves to 355

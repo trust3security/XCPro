@@ -102,4 +102,34 @@ object MapFeatureFlags {
      */
     @Volatile
     var useRenderFrameSync: Boolean = false
+
+    /**
+     * Debug log interval for SIM2 frame pose logs (ms). Set to 0 to log every frame.
+     */
+    @Volatile
+    var sim2FrameLogIntervalMs: Long = 100L
+
+    /**
+     * Minimum speed to enable directional bias (m/s).
+     */
+    @Volatile
+    var mapShiftBiasMinSpeedMs: Double = 8.0
+
+    /**
+     * Window size for bias averaging.
+     */
+    @Volatile
+    var mapShiftBiasHistorySize: Int = 30
+
+    /**
+     * Cap bias offset to this fraction of the smaller screen dimension.
+     */
+    @Volatile
+    var mapShiftBiasMaxOffsetFraction: Double = 0.35
+
+    /**
+     * Hold last valid bias while inputs are invalid.
+     */
+    @Volatile
+    var mapShiftBiasHoldOnInvalid: Boolean = true
 }

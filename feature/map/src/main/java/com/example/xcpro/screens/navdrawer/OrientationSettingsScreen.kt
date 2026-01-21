@@ -31,6 +31,7 @@ import androidx.navigation.NavHostController
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.MapOrientationPreferences
 import com.example.xcpro.common.orientation.MapOrientationMode
+import com.example.xcpro.map.domain.MapShiftBiasMode
 import com.example.xcpro.screens.navdrawer.SettingsTopAppBar
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -52,6 +53,8 @@ fun OrientationSettingsScreen(
     var cruiseMode by remember { mutableStateOf(preferences.getCruiseOrientationMode()) }
     var circlingMode by remember { mutableStateOf(preferences.getCirclingOrientationMode()) }
     var gliderOffsetPercent by remember { mutableStateOf(preferences.getGliderScreenPercent()) }
+    var biasMode by remember { mutableStateOf(preferences.getMapShiftBiasMode()) }
+    var biasStrength by remember { mutableStateOf(preferences.getMapShiftBiasStrength()) }
 
     fun persistAndRefresh() {
         orientationManager.reloadFromPreferences()
@@ -114,6 +117,20 @@ fun OrientationSettingsScreen(
                     onPercentChanged = {
                         gliderOffsetPercent = it
                         preferences.setGliderScreenPercent(it)
+                    }
+                )
+            }
+            item {
+                MapShiftBiasCard(
+                    mode = biasMode,
+                    strength = biasStrength,
+                    onModeChanged = {
+                        biasMode = it
+                        preferences.setMapShiftBiasMode(it)
+                    },
+                    onStrengthChanged = {
+                        biasStrength = it
+                        preferences.setMapShiftBiasStrength(it)
                     }
                 )
             }
@@ -200,19 +217,91 @@ private fun GliderPositionCard(
             val percentFromTop = 100 - percentFromBottom
             Text(
                 text = "Offsets the aircraft icon while auto-centering. " +
-                    "$percentFromBottom% from bottom · $percentFromTop% from top.",
+                    "$percentFromBottom% from bottom - $percentFromTop% from top.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
             )
             Slider(
                 value = percentFromBottom.toFloat(),
                 onValueChange = {
-                    val snapped = it.roundToInt().coerceIn(20, 80)
+                    val snapped = it.roundToInt().coerceIn(10, 50)
                     if (snapped != percentFromBottom) {
                         onPercentChanged(snapped)
                     }
                 },
-                valueRange = 20f..80f
+                valueRange = 10f..50f
+            )
+        }
+    }
+}
+
+@Composable
+private fun MapShiftBiasCard(
+    mode: MapShiftBiasMode,
+    strength: Double,
+    onModeChanged: (MapShiftBiasMode) -> Unit,
+    onStrengthChanged: (Double) -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Directional look-ahead",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "Shifts the map forward in North Up to show more ahead. " +
+                    "Disabled in Thermal/Circling and when Track Up or Heading Up is selected.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+            )
+            listOf(
+                MapShiftBiasMode.NONE to "Off",
+                MapShiftBiasMode.TRACK to "Track"
+            ).forEach { (itemMode, label) ->
+                androidx.compose.foundation.layout.Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(selected = mode == itemMode, onClick = { onModeChanged(itemMode) })
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            val strengthPercent = (strength * 100.0).roundToInt().coerceIn(0, 100)
+            Text(
+                text = "Strength: $strengthPercent%",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+            )
+            Slider(
+                value = strengthPercent.toFloat(),
+                onValueChange = {
+                    val snapped = it.roundToInt().coerceIn(0, 100)
+                    val newStrength = snapped / 100.0
+                    if (newStrength != strength) {
+                        onStrengthChanged(newStrength)
+                    }
+                },
+                valueRange = 0f..100f,
+                enabled = mode != MapShiftBiasMode.NONE
             )
         }
     }

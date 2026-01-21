@@ -7,7 +7,7 @@ import org.maplibre.android.maps.MapLibreMap
 /**
  * Centralizes glider offset configuration (percent from bottom) and map padding updates.
  *
- * Offsets can range between 20% and 80% from the bottom, mirroring XCSoar's behavior.
+ * Offsets can range between 10% and 50% from the bottom, aligning with XCSoar's behavior.
  */
 class GliderPaddingHelper(
     private val resources: Resources,

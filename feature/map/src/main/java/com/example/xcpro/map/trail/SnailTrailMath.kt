@@ -26,28 +26,12 @@ internal object SnailTrailMath {
     fun filterPoints(
         points: List<TrailPoint>,
         minTimeMillis: Long?,
-        currentLocation: LatLng,
         currentTimeMillis: Long,
-        windSpeedMs: Double,
-        windDirectionFromDeg: Double,
         isCircling: Boolean,
         settings: TrailSettings
     ): List<RenderPoint> {
         if (points.isEmpty()) return emptyList()
-        val windValid = windSpeedMs > 0.5 && windDirectionFromDeg.isFinite()
-        val applyDrift = settings.windDriftEnabled && isCircling && windValid
-        val (driftLat, driftLon) = if (applyDrift) {
-            val windToDeg = (windDirectionFromDeg + 180.0) % 360.0
-            val (destLat, destLon) = TrailGeo.destinationPoint(
-                currentLocation.latitude,
-                currentLocation.longitude,
-                windToDeg,
-                windSpeedMs
-            )
-            (currentLocation.latitude - destLat) to (currentLocation.longitude - destLon)
-        } else {
-            0.0 to 0.0
-        }
+        val applyDrift = settings.windDriftEnabled && isCircling
 
         return points
             .asSequence()
@@ -57,6 +41,21 @@ internal object SnailTrailMath {
                     max(0.0, (currentTimeMillis - point.timestampMillis) / 1000.0)
                 } else {
                     0.0
+                }
+                val windValid = applyDrift &&
+                    point.windSpeedMs > 0.5 &&
+                    point.windDirectionFromDeg.isFinite()
+                val (driftLat, driftLon) = if (windValid) {
+                    val windToDeg = (point.windDirectionFromDeg + 180.0) % 360.0
+                    val (destLat, destLon) = TrailGeo.destinationPoint(
+                        point.latitude,
+                        point.longitude,
+                        windToDeg,
+                        point.windSpeedMs
+                    )
+                    (point.latitude - destLat) to (point.longitude - destLon)
+                } else {
+                    0.0 to 0.0
                 }
                 val driftScale = driftSeconds * point.driftFactor
                 RenderPoint(

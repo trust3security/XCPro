@@ -42,9 +42,9 @@ interface TurnPointCalculator {
     fun isWithinObservationZone(position: Pair<Double, Double>, waypoint: RacingWaypoint): Boolean
     
     /**
-     * Get the effective radius for this turnpoint (null for infinite sectors)
+     * Get the effective radius for this turnpoint (null for unbounded sectors, if any)
      * @param waypoint The turnpoint waypoint
-     * @return Radius in kilometers, or null for infinite sectors
+     * @return Radius in kilometers, or null when unbounded
      */
     fun getEffectiveRadius(waypoint: RacingWaypoint): Double?
 }
@@ -63,7 +63,7 @@ interface TurnPointDisplay {
     fun generateVisualGeometry(waypoint: RacingWaypoint, context: TaskContext): String
     
     /**
-     * Get the display radius for visualization (practical limit for infinite sectors)
+     * Get the display radius for visualization
      * @param waypoint The turnpoint waypoint
      * @return Display radius in meters
      */

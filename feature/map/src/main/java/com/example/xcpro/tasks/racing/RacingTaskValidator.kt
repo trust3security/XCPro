@@ -163,12 +163,17 @@ class RacingTaskValidator {
             }
 
             RacingTurnPointType.FAI_QUADRANT -> {
-                // FAI quadrant has INFINITE radius - no distance constraint
-                // Validation should check sector orientation, not distance
+                // FAI quadrant uses a finite sector radius (XCSoar default 10km)
+                val maxRadius = waypoint.faiQuadrantOuterRadius * 1000.0
+                val isValid = distanceFromCenter <= maxRadius + TOLERANCE_METERS
                 TouchPointResult(
-                    isValid = true, // Always valid for infinite sectors (distance irrelevant)
+                    isValid = isValid,
                     distanceFromCenter = distanceFromCenter,
-                    message = "FAI quadrant (infinite sector) - distance validation not applicable"
+                    message = if (isValid) {
+                        "FAI quadrant within ${maxRadius}m radius"
+                    } else {
+                        "FAI quadrant radius ${maxRadius}m exceeded (got ${distanceFromCenter}m)"
+                    }
                 )
             }
 

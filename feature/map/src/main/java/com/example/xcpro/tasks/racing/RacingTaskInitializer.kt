@@ -90,7 +90,7 @@ class RacingTaskInitializer {
             // Extract advanced parameters with sensible defaults
             val keyholeInnerRadius = (genericWaypoint.customParameters["keyholeInnerRadius"] as? Double) ?: 0.5
             val keyholeAngle = (genericWaypoint.customParameters["keyholeAngle"] as? Double) ?: 90.0
-            val faiQuadrantOuterRadius = (genericWaypoint.customParameters["faiQuadrantOuterRadius"] as? Double) ?: 20.0
+            val faiQuadrantOuterRadius = (genericWaypoint.customParameters["faiQuadrantOuterRadius"] as? Double) ?: 10.0
 
             // Get user customized radius if available, otherwise let factory method apply proper defaults
             val customGateWidth = genericWaypoint.customRadius?.takeIf { it > 0.0 }

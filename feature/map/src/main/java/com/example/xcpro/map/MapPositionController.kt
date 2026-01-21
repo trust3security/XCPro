@@ -54,7 +54,8 @@ class MapPositionController(
         mapBearing: Double,
         orientationMode: com.example.xcpro.common.orientation.MapOrientationMode,
         speedMs: Double,
-        nowMs: Long
+        nowMs: Long,
+        frameId: Long? = null
     ) {
         val clampedBearing = clampBearingStep(trackBearing)
         val iconHeading = if (headingSmoothingEnabledProvider()) {
@@ -84,7 +85,7 @@ class MapPositionController(
                         "track=${"%.1f".format(trackBearing)} clamped=${"%.1f".format(clampedBearing)} " +
                         "heading=${"%.1f".format(headingDeg)} valid=$headingValid " +
                         "icon=${"%.1f".format(iconHeading)} mapBearing=${"%.1f".format(mapBearing)} " +
-                        "orientation=$orientationMode speed=${"%.2f".format(speedMs)}"
+                        "orientation=$orientationMode speed=${"%.2f".format(speedMs)} frame=${frameId ?: -1}"
                 )
             }
         }

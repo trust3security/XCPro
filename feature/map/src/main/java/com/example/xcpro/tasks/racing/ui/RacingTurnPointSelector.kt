@@ -206,7 +206,7 @@ internal fun RacingTurnPointSelector(
                             faiQuadrantOuterRadiusTextFieldValue = newValue
                             onFAIQuadrantOuterRadiusChange(newValue.text)
                         },
-                        label = { Text("Display Radius (km)") },
+                        label = { Text("Sector Radius (km)") },
                         modifier = Modifier
                             .fillMaxWidth()
                             .onFocusChanged { focusState ->
@@ -218,7 +218,7 @@ internal fun RacingTurnPointSelector(
                             },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
-                        supportingText = { Text("Visual display radius (default: 20km). Mathematical calculations remain infinite as per FAI rules.") },
+                        supportingText = { Text("Sector radius for FAI quadrant (default: 10km, XCSoar parity).") },
                         shape = RoundedCornerShape(20.dp)
                     )
                 }

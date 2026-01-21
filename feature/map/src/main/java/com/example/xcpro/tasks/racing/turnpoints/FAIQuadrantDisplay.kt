@@ -16,7 +16,7 @@ import kotlin.math.*
 class FAIQuadrantDisplay : TurnPointDisplay {
     
     companion object {
-        private const val DEFAULT_DISPLAY_RADIUS_METERS = 20000.0 // 20km default for FAI quadrant visibility
+        private const val DEFAULT_DISPLAY_RADIUS_METERS = 10000.0 // 10km default (XCSoar parity)
     }
     
     override fun generateVisualGeometry(waypoint: RacingWaypoint, context: TaskContext): String {
@@ -93,7 +93,7 @@ class FAIQuadrantDisplay : TurnPointDisplay {
                     "role": "turnpoint",
                     "radius": $displayRadiusMeters,
                     "bisector_bearing": $bisectorBearing,
-                    "infinite_radius": true
+                    "infinite_radius": false
                 },
                 "geometry": {
                     "type": "Polygon",
