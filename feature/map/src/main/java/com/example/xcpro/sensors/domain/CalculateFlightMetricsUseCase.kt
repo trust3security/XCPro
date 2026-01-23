@@ -181,8 +181,14 @@ internal class CalculateFlightMetricsUseCase(
             snapshot.gpsVario.isFinite() -> snapshot.gpsVario
             else -> bruttoVario
         }
+        val tc30TimeMillis = if (request.gpsTimestampMillis > 0L) {
+            request.gpsTimestampMillis
+        } else {
+            currentTime
+        }
         val averages = fusionBlackboard.updateAveragesAndDisplay(
             currentTime = currentTime,
+            tc30TimeMillis = tc30TimeMillis,
             bruttoSample = avgVarioSample,
             nettoSample = nettoSampleValue,
             thermalActive = isCircling,

@@ -9,7 +9,7 @@ package com.example.xcpro.sensors
  *
  * @return the latest timestamp that was written (or currentTime when seeded)
  */
-internal fun addSamplesForElapsedSeconds(
+fun addSamplesForElapsedSeconds(
     window: FixedSampleAverageWindow,
     lastTimestamp: Long,
     currentTime: Long,

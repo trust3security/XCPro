@@ -14,6 +14,7 @@ class FusionBlackboardTest {
         // steady climb samples with thermal inactive
         var outputs = bb.updateAveragesAndDisplay(
             currentTime = 0L,
+            tc30TimeMillis = 0L,
             bruttoSample = 2.0,
             nettoSample = 1.5,
             thermalActive = false,
@@ -24,6 +25,7 @@ class FusionBlackboardTest {
 
         outputs = bb.updateAveragesAndDisplay(
             currentTime = 1_000L,
+            tc30TimeMillis = 1_000L,
             bruttoSample = 2.0,
             nettoSample = 1.5,
             thermalActive = false,
@@ -35,6 +37,7 @@ class FusionBlackboardTest {
         // toggle circling flag -> windows should reset to new value, not mix with old
         outputs = bb.updateAveragesAndDisplay(
             currentTime = 2_000L,
+            tc30TimeMillis = 2_000L,
             bruttoSample = 5.0,
             nettoSample = 4.0,
             thermalActive = true,
@@ -52,6 +55,7 @@ class FusionBlackboardTest {
         // First valid netto stores the fallback
         bb.updateAveragesAndDisplay(
             currentTime = 0L,
+            tc30TimeMillis = 0L,
             bruttoSample = 0.0,
             nettoSample = 1.0,
             thermalActive = false,

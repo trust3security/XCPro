@@ -93,8 +93,10 @@ XCPro TC30s pipeline
      owns the 30-second rolling window.
    - `feature/map/src/main/java/com/example/xcpro/sensors/WindowFill.kt`
      adds one sample per elapsed second.
-   - **Time base for averaging is the baro loop time
-     (`currentTime` from baro monotonic or baro timestamp).**
+   - **Time base for TC30s averaging uses the GPS timestamp**
+     (`tc30TimeMillis = request.gpsTimestampMillis`), so the window advances
+     on GPS fixes (monotonic GPS time in live mode, IGC time in replay).
+     Baro time still drives fast display/vario updates.
 
 6) Display
    - `feature/map/src/main/java/com/example/xcpro/flightdata/FlightDisplayMapper.kt`
@@ -102,7 +104,7 @@ XCPro TC30s pipeline
      shows TC30s on card `thermal_avg`.
 
 XCPro key behavior implications
-- TC30s advances on baro time (50 Hz loop), not GPS time.
+- TC30s advances on GPS time (fix cadence), not the baro loop.
 - Non-finite samples are treated as 0.0 to keep the window moving
   (`FusionBlackboard.updateAveragesAndDisplay()`).
 - Window resets on time going backwards or circling state toggles.
@@ -117,13 +119,14 @@ Relevant files (XCPro)
 - `dfcards-library/src/main/java/com/example/dfcards/CardDataFormatter.kt`
 
 ------------------------------------------------------------------------------
-Why XCPro TC30s looks "faster" than XCSoar (phone sensors)
+Why XCPro TC30s can still differ from XCSoar (phone sensors)
 
-1) Different time base and gating
+1) Time base and gating (now aligned in cadence)
 - XCSoar TC30s uses GPS time (`basic.time`) and updates only when GPS time
-  advances. On Android this is usually 1 Hz (`android/src/InternalGPS.java`).
-- XCPro TC30s uses baro monotonic time from the high-speed baro loop, so it
-  advances continuously.
+  advances (usually ~1 Hz on Android).
+- XCPro TC30s now advances on GPS timestamp (`gpsTimestampMillis`), so cadence
+  matches XCSoar. The remaining difference is that XCPro uses monotonic GPS
+  time, while XCSoar uses GPS time-of-day, which can jump if GPS time changes.
 
 2) Different sensor rate
 - XCSoar pressure sensor is read at `SENSOR_DELAY_NORMAL` (slower).
@@ -140,10 +143,9 @@ Why XCPro TC30s looks "faster" than XCSoar (phone sensors)
 - XCSoar: window advances only when `DeltaTime` gets a positive dt from GPS time.
 
 Net effect
-- XCSoar TC30s tends to feel slower and more stable because it is
-  GPS-time gated and more heavily smoothed for phone sensors.
-- XCPro TC30s feels more responsive because it is baro-time gated and updates
-  with higher cadence and different filtering.
+- With GPS-tick gating, XCPro TC30s cadence now matches XCSoar.
+- Remaining differences are mostly due to filtering, vario source selection,
+  and handling of invalid samples / circling resets.
 
 ------------------------------------------------------------------------------
 Debug hooks
@@ -159,9 +161,7 @@ XCSoar
 ------------------------------------------------------------------------------
 If we want XCPro TC30s to behave more like XCSoar (phone sensors)
 
-Options to consider
-- Gate TC30s update time to GPS time (use `gpsTimestampMillis` instead of
-  baro time for `FusionBlackboard.updateAveragesAndDisplay()`).
+Options to consider (remaining)
 - Reduce baro cadence contribution (e.g., update TC30s only when a new GPS
   fix arrives).
 - Change `addSamplesForElapsedSeconds()` to floor instead of round seconds,
@@ -170,5 +170,4 @@ Options to consider
   window instead of pulling the average.
 - Revisit circling toggle resets if they cause frequent TC30s jumps.
 
-Note: These are behavioral alignment ideas, not changes made.
-
+Note: GPS-tick gating is now implemented; the items above remain optional.

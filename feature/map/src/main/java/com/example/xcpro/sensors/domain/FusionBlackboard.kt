@@ -79,6 +79,7 @@ internal class FusionBlackboard {
 
     fun updateAveragesAndDisplay(
         currentTime: Long,
+        tc30TimeMillis: Long,
         bruttoSample: Double,
         nettoSample: Double,
         thermalActive: Boolean,
@@ -87,22 +88,22 @@ internal class FusionBlackboard {
     ): AverageOutputs {
         val safeBruttoSample = if (bruttoSample.isFinite()) bruttoSample else 0.0
         val safeNettoSample = if (nettoSample.isFinite()) nettoSample else 0.0
-        val timeWentBack = currentTime < lastBruttoSampleTime || currentTime < lastNettoSampleTime
+        val timeWentBack = tc30TimeMillis < lastBruttoSampleTime || tc30TimeMillis < lastNettoSampleTime
         val thermalToggled = thermalActive != lastThermalState
         if (timeWentBack || thermalToggled) {
-            resetAverageWindows(safeBruttoSample, safeNettoSample, currentTime)
+            resetAverageWindows(safeBruttoSample, safeNettoSample, tc30TimeMillis)
         } else {
             // Keep the window moving even when samples are non-finite.
             lastBruttoSampleTime = addSamplesForElapsedSeconds(
                 window = bruttoAverageWindow,
                 lastTimestamp = lastBruttoSampleTime,
-                currentTime = currentTime,
+                currentTime = tc30TimeMillis,
                 sampleValue = safeBruttoSample
             )
             lastNettoSampleTime = addSamplesForElapsedSeconds(
                 window = nettoAverageWindow,
                 lastTimestamp = lastNettoSampleTime,
-                currentTime = currentTime,
+                currentTime = tc30TimeMillis,
                 sampleValue = safeNettoSample
             )
         }

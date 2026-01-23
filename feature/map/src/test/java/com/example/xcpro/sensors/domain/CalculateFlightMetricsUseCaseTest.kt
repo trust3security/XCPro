@@ -267,4 +267,65 @@ class CalculateFlightMetricsUseCaseTest {
 
         assertTrue(kotlin.math.abs(res.bruttoAverage30s - 1.0) < 0.2)
     }
+
+    @Test
+    fun tc30s_gps_tick_gating() {
+        val useCase = newUseCase()
+        var altitude = 1000.0
+
+        val t0 = 1000L
+        val res1 = useCase.execute(
+            FlightMetricsRequest(
+                gps = gpsSample(t0),
+                currentTimeMillis = t0,
+                wallTimeMillis = t0,
+                gpsTimestampMillis = t0,
+                deltaTimeSeconds = 0.1,
+                varioResult = varioSample(1.0, altitude),
+                varioGpsValue = 1.0,
+                baroResult = null,
+                windState = null,
+                varioValidUntil = t0 + 500,
+                isFlying = true
+            )
+        )
+
+        // High-rate baro tick without a new GPS fix; TC30s should not advance.
+        val t1 = 1100L
+        val res2 = useCase.execute(
+            FlightMetricsRequest(
+                gps = gpsSample(t0),
+                currentTimeMillis = t1,
+                wallTimeMillis = t1,
+                gpsTimestampMillis = t0,
+                deltaTimeSeconds = 0.1,
+                varioResult = varioSample(5.0, altitude),
+                varioGpsValue = 5.0,
+                baroResult = null,
+                windState = null,
+                varioValidUntil = t1 + 500,
+                isFlying = true
+            )
+        )
+        assertEquals(res1.bruttoAverage30s, res2.bruttoAverage30s, 1e-6)
+
+        // New GPS fix advances TC30s.
+        val t2 = 2000L
+        val res3 = useCase.execute(
+            FlightMetricsRequest(
+                gps = gpsSample(t2),
+                currentTimeMillis = t2,
+                wallTimeMillis = t2,
+                gpsTimestampMillis = t2,
+                deltaTimeSeconds = 0.9,
+                varioResult = varioSample(5.0, altitude),
+                varioGpsValue = 5.0,
+                baroResult = null,
+                windState = null,
+                varioValidUntil = t2 + 500,
+                isFlying = true
+            )
+        )
+        assertTrue(res3.bruttoAverage30s > res2.bruttoAverage30s + 0.1)
+    }
 }
