@@ -33,9 +33,11 @@ class MapOrientationManager(
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main + SupervisorJob()),
     orientationDataSourceFactory: OrientationDataSourceFactory,
     private val settingsRepository: MapOrientationSettingsRepository,
-    private val clock: OrientationClock = SystemOrientationClock()
+    private val clock: OrientationClock = SystemOrientationClock(),
+    orientationDataSourceOverride: OrientationSensorSource? = null
 ) : OrientationController {
-    private val orientationDataSource = orientationDataSourceFactory.create(scope)
+    private val orientationDataSource =
+        orientationDataSourceOverride ?: orientationDataSourceFactory.create(scope)
     private val orientationEngine = OrientationEngine()
     private var engineState = OrientationEngine.State()
 
@@ -51,6 +53,8 @@ class MapOrientationManager(
         (orientationDataSource as? OrientationDataSource)?.getHeadingDebugSnapshot(now)
     }
     private var updatesJob: Job? = null
+    private var settingsJob: Job? = null
+    private var isRunning = false
 
     companion object {
         private const val TAG = "MapOrientationManager"
@@ -85,7 +89,11 @@ class MapOrientationManager(
     }
 
     private fun startSettingsUpdates() {
-        scope.launch {
+        if (settingsJob?.isActive == true) {
+            return
+        }
+
+        settingsJob = scope.launch {
             settingsRepository.settingsFlow.collect { settings ->
                 currentSettings = settings
                 val newThreshold = settings.minSpeedThresholdMs
@@ -94,7 +102,7 @@ class MapOrientationManager(
                     orientationDataSource.updateMinSpeedThreshold(minSpeedForTrackMs)
                 }
 
-                if (updatesJob?.isActive == true) {
+                if (isRunning) {
                     processOrientation(latestSensorData)
                 }
             }
@@ -108,6 +116,7 @@ class MapOrientationManager(
         }
 
         debugLog { "Starting orientation updates..." }
+        isRunning = true
         val sensorEvents = orientationDataSource.orientationFlow
             .sample(BEARING_UPDATE_THROTTLE_MS)
             .map { OrientationEvent.Sensor(it) }
@@ -235,6 +244,7 @@ class MapOrientationManager(
     override fun start() {
         debugLog { "Starting MapOrientationManager..." }
         orientationDataSource.start()
+        startSettingsUpdates()
         startEventLoop()
         engineState = engineState.copy(lastOrientation = _orientationFlow.value)
         debugLog { "MapOrientationManager started" }
@@ -243,8 +253,11 @@ class MapOrientationManager(
     override fun stop() {
         debugLog { "Stopping MapOrientationManager..." }
         orientationDataSource.stop()
+        isRunning = false
         updatesJob?.cancel()
         updatesJob = null
+        settingsJob?.cancel()
+        settingsJob = null
         engineState = engineState.copy(
             isUserOverrideActive = false,
             lastUserInteractionMonoMs = 0L,

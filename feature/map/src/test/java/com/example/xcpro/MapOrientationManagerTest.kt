@@ -10,15 +10,16 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -45,14 +46,14 @@ class MapOrientationManagerTest {
         val settingsRepository = MapOrientationSettingsRepository(appContext)
         val fakeSource = FakeOrientationSensorSource()
         val factory = Mockito.mock(OrientationDataSourceFactory::class.java)
-        Mockito.`when`(factory.create(any())).thenReturn(fakeSource)
         val clock = FakeOrientationClock()
 
         val manager = MapOrientationManager(
-            scope = this,
+            scope = backgroundScope,
             orientationDataSourceFactory = factory,
             settingsRepository = settingsRepository,
-            clock = clock
+            clock = clock,
+            orientationDataSourceOverride = fakeSource
         )
 
         clock.monoMs = 1_000L
@@ -99,6 +100,8 @@ class MapOrientationManagerTest {
         advanceUntilIdle()
 
         assertEquals(180.0, manager.orientationFlow.value.bearing, 1e-6)
+        manager.stop()
+        advanceUntilIdle()
     }
 
     @Test
@@ -106,14 +109,14 @@ class MapOrientationManagerTest {
         val settingsRepository = MapOrientationSettingsRepository(appContext)
         val fakeSource = FakeOrientationSensorSource()
         val factory = Mockito.mock(OrientationDataSourceFactory::class.java)
-        Mockito.`when`(factory.create(any())).thenReturn(fakeSource)
         val clock = FakeOrientationClock()
 
         val manager = MapOrientationManager(
-            scope = this,
+            scope = backgroundScope,
             orientationDataSourceFactory = factory,
             settingsRepository = settingsRepository,
-            clock = clock
+            clock = clock,
+            orientationDataSourceOverride = fakeSource
         )
 
         clock.monoMs = 1_000L
@@ -132,10 +135,14 @@ class MapOrientationManagerTest {
         assertEquals(MapOrientationMode.TRACK_UP, manager.orientationFlow.value.mode)
 
         settingsRepository.setCruiseOrientationMode(MapOrientationMode.NORTH_UP)
-        advanceUntilIdle()
+        val updated = withTimeout(1_000L) {
+            manager.orientationFlow.first { it.mode == MapOrientationMode.NORTH_UP }
+        }
 
-        assertEquals(0.0, manager.orientationFlow.value.bearing, 1e-6)
-        assertEquals(MapOrientationMode.NORTH_UP, manager.orientationFlow.value.mode)
+        assertEquals(0.0, updated.bearing, 1e-6)
+        assertEquals(MapOrientationMode.NORTH_UP, updated.mode)
+        manager.stop()
+        advanceUntilIdle()
     }
 
     private fun clearPrefs() {
