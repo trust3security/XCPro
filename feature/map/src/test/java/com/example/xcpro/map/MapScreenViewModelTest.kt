@@ -37,6 +37,7 @@ import com.example.xcpro.map.domain.MapWaypointError
 import com.example.xcpro.map.config.MapFeatureFlags
 import com.example.xcpro.map.replay.RacingReplayLogBuilder
 import com.example.xcpro.orientation.HeadingResolver
+import com.example.xcpro.orientation.SystemOrientationClock
 import com.example.xcpro.replay.IgcReplayController
 import com.example.xcpro.replay.ReplayEvent
 import com.example.xcpro.replay.SessionState
@@ -97,7 +98,8 @@ class MapScreenViewModelTest {
             unifiedSensorManager = unifiedSensorManager,
             headingResolver = HeadingResolver(),
             flightStateSource = flightStateSource
-        )
+        ),
+        clock = SystemOrientationClock()
     )
     private val flightDataRepository = FlightDataRepository()
     private val windRepository = Mockito.mock(WindSensorFusionRepository::class.java)
