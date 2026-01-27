@@ -44,6 +44,7 @@ UI
 - UI never mutates state
 - ViewModel never references UI types
 - All state changes originate in ViewModel
+- Transient interactions (one-off signals) are modeled as events (SharedFlow), not stored in UI state
 
 ### Forbidden
 - Logic in Composables
@@ -68,6 +69,7 @@ Each piece of data has **exactly one authoritative owner**.
 - No cached mirrors across layers
 - UI must not store derived values
 - ViewModel does not persist domain data
+- Settings/preferences are owned by repositories and exposed as Flow/StateFlow
 
 Repositories may use `MutableStateFlow` internally but MUST expose only
 `StateFlow` or `Flow` to consumers.
@@ -76,6 +78,7 @@ Repositories may use `MutableStateFlow` internally but MUST expose only
 - Same value stored in multiple layers
 - UI recalculating business logic
 - Temporary mirrors of SSOT data
+- UI or ViewModel reading SharedPreferences directly
 
 ---
 
@@ -139,6 +142,7 @@ Repositories may use `MutableStateFlow` internally but MUST expose only
 - Never compare monotonic timestamps to wall time.
 - All live SensorDataSource implementations must populate monotonic timestamps.
 - If a source cannot provide monotonic time, use `0` and ensure all related inputs fall back to wall time consistently.
+- Time sources must be injected (Clock interface). Domain logic must not call SystemClock/System.currentTimeMillis directly.
 
 ---
 

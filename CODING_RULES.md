@@ -90,6 +90,7 @@ If state exists in two places, one is wrong.
 - Prefer `StateFlow` for UI state
 - Prefer cold `Flow` for data streams
 - No shared mutable state outside Flow
+- Use `SharedFlow` for one-off events; do not model events as `StateFlow`
 
 ### Coroutines
 - Use structured concurrency only
@@ -160,6 +161,7 @@ Repositories:
 - Own authoritative data (SSOT)
 - Hide data sources
 - Expose `Flow` / `StateFlow` only
+- Own preference access (UI/ViewModel must not construct SharedPreferences or preference wrappers)
 
 Forbidden:
 - UI logic
@@ -240,6 +242,7 @@ These rules make changes durable and reduce future rewrites.
 - Any non-trivial refactor must include a written plan (phases, ownership, tests).
 - SSOT ownership must be documented with a simple flow diagram or bullet flow.
 - Time base must be explicit and enforced in code and tests (monotonic or replay only).
+- Time-dependent refactors must add tests with a fake Clock and TestDispatcher.
 - State machines must be explicit: list states and transitions in docs.
 - Add regression tests for new behavior (unit tests first, replay tests when applicable).
 
@@ -274,6 +277,7 @@ These rules prevent hidden timing bugs in sensor fusion and replay.
 - Wall time is for UI output, persistence, and user-entered data
   (example: manual wind). Never compare or subtract across time bases.
 - Replay uses replay timestamps as the simulation clock. Do not mix with wall clock.
+- Domain logic must use an injected Clock; do not call SystemClock/System.currentTimeMillis directly.
 - Fusion loops that combine sensors of different cadences must advance only
   when the primary sensor updates (example: baro-gated vario loop). High-rate
   only ticks are forbidden if they would reuse stale samples.
