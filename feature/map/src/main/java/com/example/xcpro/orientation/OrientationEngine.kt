@@ -1,5 +1,7 @@
 ﻿package com.example.xcpro.orientation
 
+import com.example.dfcards.FlightModeSelection
+import com.example.xcpro.MapOrientationSettings
 import com.example.xcpro.common.orientation.BearingSource
 import com.example.xcpro.common.orientation.MapOrientationMode
 import com.example.xcpro.common.orientation.OrientationData
@@ -14,7 +16,13 @@ class OrientationEngine(
         val headingStaleTimeoutMs: Long = HEADING_STALE_TIMEOUT_MS
     )
 
+    enum class OrientationProfile {
+        CRUISE,
+        CIRCLING
+    }
+
     data class State(
+        val activeProfile: OrientationProfile = OrientationProfile.CRUISE,
         val isUserOverrideActive: Boolean = false,
         val lastUserInteractionMonoMs: Long = 0L,
         val lastValidBearing: Double = 0.0,
@@ -47,29 +55,46 @@ class OrientationEngine(
 
     fun resetUserOverride(state: State): State = state.copy(isUserOverrideActive = false)
 
-    fun syncLastValidBearing(state: State): State {
-        return state.copy(lastValidBearing = normalizeBearing(state.lastOrientation.bearing))
+    fun updateProfile(state: State, selection: FlightModeSelection): State {
+        val newProfile = if (selection == FlightModeSelection.THERMAL) {
+            OrientationProfile.CIRCLING
+        } else {
+            OrientationProfile.CRUISE
+        }
+        if (newProfile == state.activeProfile) {
+            return state
+        }
+        return state.copy(
+            activeProfile = newProfile,
+            lastValidBearing = normalizeBearing(state.lastOrientation.bearing)
+        )
     }
 
     fun reduce(
         state: State,
         sensorData: OrientationSensorData,
-        currentMode: MapOrientationMode,
-        minSpeedThresholdMs: Double,
+        settings: MapOrientationSettings,
         nowMonoMs: Long,
         nowWallMs: Long
     ): Output {
-        if (state.isUserOverrideActive) {
-            val timeSinceInteraction = nowMonoMs - state.lastUserInteractionMonoMs
+        val currentMode = resolveMode(state.activeProfile, settings)
+        var nextState = state
+
+        if (currentMode != state.lastOrientation.mode) {
+            nextState = nextState.copy(lastValidBearing = normalizeBearing(state.lastOrientation.bearing))
+        }
+
+        if (nextState.isUserOverrideActive) {
+            val timeSinceInteraction = nowMonoMs - nextState.lastUserInteractionMonoMs
             if (timeSinceInteraction <= config.userOverrideTimeoutMs) {
                 val frozenResult = BearingResult(
-                    bearing = state.lastOrientation.bearing,
-                    isValid = state.lastOrientation.isValid,
-                    source = state.lastOrientation.bearingSource
+                    bearing = nextState.lastOrientation.bearing,
+                    isValid = nextState.lastOrientation.isValid,
+                    source = nextState.lastOrientation.bearingSource
                 )
                 return Output(
-                    state = state,
-                    orientation = state.lastOrientation,
+                    state = nextState,
+                    orientation = nextState.lastOrientation,
                     bearingResult = frozenResult,
                     trackIsStale = false,
                     headingIsStale = false,
@@ -78,8 +103,12 @@ class OrientationEngine(
             }
         }
 
-        var nextState = state.copy(isUserOverrideActive = false)
-        val bearingResult = calculateBearing(sensorData, currentMode, minSpeedThresholdMs)
+        nextState = nextState.copy(isUserOverrideActive = false)
+        val bearingResult = calculateBearing(
+            sensorData = sensorData,
+            currentMode = currentMode,
+            minSpeedThresholdMs = settings.minSpeedThresholdMs
+        )
         val normalizedBearing = normalizeBearing(bearingResult.bearing)
 
         if (bearingResult.isValid) {
@@ -138,6 +167,17 @@ class OrientationEngine(
             headingIsStale = headingIsStale,
             didUpdate = true
         )
+    }
+
+    private fun resolveMode(
+        profile: OrientationProfile,
+        settings: MapOrientationSettings
+    ): MapOrientationMode {
+        return if (profile == OrientationProfile.CRUISE) {
+            settings.cruiseMode
+        } else {
+            settings.circlingMode
+        }
     }
 
     private fun calculateBearing(

@@ -11,7 +11,7 @@ class OrientationDataSourceFactory @Inject constructor(
     private val headingResolver: HeadingResolver,
     private val flightStateSource: FlightStateSource
 ) {
-    fun create(scope: CoroutineScope): OrientationDataSource =
+    fun create(scope: CoroutineScope): OrientationSensorSource =
         OrientationDataSource(
             unifiedSensorManager = unifiedSensorManager,
             scope = scope,

@@ -1,5 +1,6 @@
 ﻿package com.example.xcpro.orientation
 
+import com.example.xcpro.MapOrientationSettings
 import com.example.xcpro.common.orientation.BearingSource
 import com.example.xcpro.common.orientation.HeadingSolution
 import com.example.xcpro.common.orientation.MapOrientationMode
@@ -25,8 +26,7 @@ class OrientationEngineTest {
         val output = engine.reduce(
             state = OrientationEngine.State(),
             sensorData = sensorData,
-            currentMode = MapOrientationMode.NORTH_UP,
-            minSpeedThresholdMs = minSpeedMs,
+            settings = settingsFor(MapOrientationMode.NORTH_UP),
             nowMonoMs = 1_000L,
             nowWallMs = 2_000L
         )
@@ -47,8 +47,7 @@ class OrientationEngineTest {
         val output = engine.reduce(
             state = OrientationEngine.State(),
             sensorData = sensorData,
-            currentMode = MapOrientationMode.TRACK_UP,
-            minSpeedThresholdMs = minSpeedMs,
+            settings = settingsFor(MapOrientationMode.TRACK_UP),
             nowMonoMs = 1_000L,
             nowWallMs = 2_000L
         )
@@ -68,8 +67,7 @@ class OrientationEngineTest {
         val first = engine.reduce(
             state = OrientationEngine.State(),
             sensorData = validData,
-            currentMode = MapOrientationMode.TRACK_UP,
-            minSpeedThresholdMs = minSpeedMs,
+            settings = settingsFor(MapOrientationMode.TRACK_UP),
             nowMonoMs = 1_000L,
             nowWallMs = 2_000L
         )
@@ -82,8 +80,7 @@ class OrientationEngineTest {
         val second = engine.reduce(
             state = first.state,
             sensorData = slowData,
-            currentMode = MapOrientationMode.TRACK_UP,
-            minSpeedThresholdMs = minSpeedMs,
+            settings = settingsFor(MapOrientationMode.TRACK_UP),
             nowMonoMs = 2_000L,
             nowWallMs = 3_000L
         )
@@ -103,8 +100,7 @@ class OrientationEngineTest {
         val first = engine.reduce(
             state = OrientationEngine.State(),
             sensorData = validData,
-            currentMode = MapOrientationMode.TRACK_UP,
-            minSpeedThresholdMs = minSpeedMs,
+            settings = settingsFor(MapOrientationMode.TRACK_UP),
             nowMonoMs = 1_000L,
             nowWallMs = 2_000L
         )
@@ -117,8 +113,7 @@ class OrientationEngineTest {
         val second = engine.reduce(
             state = first.state,
             sensorData = staleData,
-            currentMode = MapOrientationMode.TRACK_UP,
-            minSpeedThresholdMs = minSpeedMs,
+            settings = settingsFor(MapOrientationMode.TRACK_UP),
             nowMonoMs = 12_000L,
             nowWallMs = 13_000L
         )
@@ -140,8 +135,7 @@ class OrientationEngineTest {
         val first = engine.reduce(
             state = OrientationEngine.State(),
             sensorData = validHeading,
-            currentMode = MapOrientationMode.HEADING_UP,
-            minSpeedThresholdMs = minSpeedMs,
+            settings = settingsFor(MapOrientationMode.HEADING_UP),
             nowMonoMs = 1_000L,
             nowWallMs = 2_000L
         )
@@ -156,8 +150,7 @@ class OrientationEngineTest {
         val second = engine.reduce(
             state = first.state,
             sensorData = invalidHeading,
-            currentMode = MapOrientationMode.HEADING_UP,
-            minSpeedThresholdMs = minSpeedMs,
+            settings = settingsFor(MapOrientationMode.HEADING_UP),
             nowMonoMs = 2_000L,
             nowWallMs = 3_000L
         )
@@ -179,8 +172,7 @@ class OrientationEngineTest {
         val first = engine.reduce(
             state = OrientationEngine.State(),
             sensorData = validHeading,
-            currentMode = MapOrientationMode.HEADING_UP,
-            minSpeedThresholdMs = minSpeedMs,
+            settings = settingsFor(MapOrientationMode.HEADING_UP),
             nowMonoMs = 1_000L,
             nowWallMs = 2_000L
         )
@@ -195,8 +187,7 @@ class OrientationEngineTest {
         val second = engine.reduce(
             state = first.state,
             sensorData = invalidHeading,
-            currentMode = MapOrientationMode.HEADING_UP,
-            minSpeedThresholdMs = minSpeedMs,
+            settings = settingsFor(MapOrientationMode.HEADING_UP),
             nowMonoMs = 7_000L,
             nowWallMs = 8_000L
         )
@@ -218,8 +209,7 @@ class OrientationEngineTest {
         val suppressed = engine.reduce(
             state = initialState,
             sensorData = sensorData,
-            currentMode = MapOrientationMode.TRACK_UP,
-            minSpeedThresholdMs = minSpeedMs,
+            settings = settingsFor(MapOrientationMode.TRACK_UP),
             nowMonoMs = 2_000L,
             nowWallMs = 3_000L
         )
@@ -230,13 +220,20 @@ class OrientationEngineTest {
         val resumed = engine.reduce(
             state = suppressed.state,
             sensorData = sensorData,
-            currentMode = MapOrientationMode.TRACK_UP,
-            minSpeedThresholdMs = minSpeedMs,
+            settings = settingsFor(MapOrientationMode.TRACK_UP),
             nowMonoMs = 12_500L,
             nowWallMs = 13_500L
         )
 
         assertTrue(resumed.didUpdate)
         assertEquals(100.0, resumed.orientation.bearing, 1e-6)
+    }
+
+    private fun settingsFor(mode: MapOrientationMode): MapOrientationSettings {
+        return MapOrientationSettings(
+            cruiseMode = mode,
+            circlingMode = mode,
+            minSpeedThresholdMs = minSpeedMs
+        )
     }
 }

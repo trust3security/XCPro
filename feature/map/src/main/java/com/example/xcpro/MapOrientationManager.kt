@@ -19,10 +19,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 
@@ -40,27 +43,35 @@ class MapOrientationManager(
     private val _orientationFlow = MutableStateFlow(OrientationData())
     override val orientationFlow: StateFlow<OrientationData> = _orientationFlow.asStateFlow()
 
-    private enum class OrientationProfile { CRUISE, CIRCLING }
-
-    private var activeProfile = OrientationProfile.CRUISE
+    private val userEvents = MutableSharedFlow<UserEvent>(extraBufferCapacity = 8)
+    private var latestSensorData: OrientationSensorData = orientationDataSource.getCurrentData()
     private var currentSettings = settingsRepository.settingsFlow.value
-    private var currentMode = resolveMode(currentSettings)
+    private var minSpeedForTrackMs: Double = currentSettings.minSpeedThresholdMs
+
     private var lastHeadingSampleTime = 0L
     private var lastHeadingSampleBearing = 0.0
     private var lastJitterLogTime = 0L
     private var updatesJob: Job? = null
-    private var settingsJob: Job? = null
-    private var minSpeedForTrackMs: Double = currentSettings.minSpeedThresholdMs
 
     companion object {
         private const val TAG = "MapOrientationManager"
         private const val JITTER_TAG = "JITTER"
         private const val BEARING_UPDATE_THROTTLE_MS = 66L // ~15Hz
-        private const val BEARING_CHANGE_THRESHOLD = 5.0 // degrees
         private const val JITTER_DELTA_DEG = 10.0
         private const val JITTER_WINDOW_MS = 500L
         private const val JITTER_DEG_PER_SEC = 30.0
         private const val JITTER_LOG_COOLDOWN_MS = 1000L
+    }
+
+    private sealed interface UserEvent {
+        object UserInteraction : UserEvent
+        object ResetUserOverride : UserEvent
+        data class FlightMode(val selection: FlightModeSelection) : UserEvent
+    }
+
+    private sealed interface OrientationEvent {
+        data class Sensor(val data: OrientationSensorData) : OrientationEvent
+        data class User(val event: UserEvent) : OrientationEvent
     }
 
     private inline fun debugLog(message: () -> String) {
@@ -73,69 +84,79 @@ class MapOrientationManager(
         debugLog { "MapOrientationManager initializing..." }
 
         orientationDataSource.updateMinSpeedThreshold(minSpeedForTrackMs)
-        debugLog { "Loaded orientation mode: $currentMode" }
-
         startSettingsUpdates()
-        startOrientationUpdates()
+        startEventLoop()
         engineState = engineState.copy(lastOrientation = _orientationFlow.value)
-        engineState = orientationEngine.syncLastValidBearing(engineState)
         debugLog { "MapOrientationManager initialized successfully" }
     }
 
-    private fun resolveMode(settings: MapOrientationSettings): MapOrientationMode {
-        return if (activeProfile == OrientationProfile.CRUISE) {
-            settings.cruiseMode
-        } else {
-            settings.circlingMode
-        }
-    }
-
     private fun startSettingsUpdates() {
-        settingsJob = scope.launch {
+        scope.launch {
             settingsRepository.settingsFlow.collect { settings ->
-                val previousSettings = currentSettings
                 currentSettings = settings
+                val newThreshold = settings.minSpeedThresholdMs
+                if (newThreshold != minSpeedForTrackMs) {
+                    minSpeedForTrackMs = newThreshold
+                    orientationDataSource.updateMinSpeedThreshold(minSpeedForTrackMs)
+                }
 
-                minSpeedForTrackMs = settings.minSpeedThresholdMs
-                orientationDataSource.updateMinSpeedThreshold(minSpeedForTrackMs)
-
-                val newMode = resolveMode(settings)
-                val modeChanged = newMode != currentMode
-                currentMode = newMode
-
-                if (modeChanged || settings != previousSettings) {
-                    engineState = engineState.copy(lastOrientation = _orientationFlow.value)
-                    engineState = orientationEngine.syncLastValidBearing(engineState)
-                    updateOrientation(orientationDataSource.getCurrentData())
+                if (updatesJob?.isActive == true) {
+                    processOrientation(latestSensorData)
                 }
             }
         }
     }
 
-    private fun startOrientationUpdates() {
+    private fun startEventLoop() {
         if (updatesJob?.isActive == true) {
             debugLog { "Orientation updates already running" }
             return
         }
 
         debugLog { "Starting orientation updates..." }
+        val sensorEvents = orientationDataSource.orientationFlow
+            .sample(BEARING_UPDATE_THROTTLE_MS)
+            .map { OrientationEvent.Sensor(it) }
+        val userEventsFlow = userEvents.map { OrientationEvent.User(it) }
+
         updatesJob = scope.launch {
-            orientationDataSource.orientationFlow
-                .sample(BEARING_UPDATE_THROTTLE_MS)
-                .collect { sensorData ->
-                    updateOrientation(sensorData)
-                }
+            merge(sensorEvents, userEventsFlow)
+                .collect { event -> handleEvent(event) }
         }
     }
 
-    private fun updateOrientation(sensorData: OrientationSensorData) {
+    private fun handleEvent(event: OrientationEvent) {
+        when (event) {
+            is OrientationEvent.Sensor -> {
+                latestSensorData = event.data
+                processOrientation(event.data)
+            }
+            is OrientationEvent.User -> handleUserEvent(event.event)
+        }
+    }
+
+    private fun handleUserEvent(event: UserEvent) {
+        when (event) {
+            UserEvent.UserInteraction -> {
+                engineState = orientationEngine.onUserInteraction(engineState, clock.nowMonoMs())
+            }
+            UserEvent.ResetUserOverride -> {
+                engineState = orientationEngine.resetUserOverride(engineState)
+            }
+            is UserEvent.FlightMode -> {
+                engineState = orientationEngine.updateProfile(engineState, event.selection)
+                processOrientation(latestSensorData)
+            }
+        }
+    }
+
+    private fun processOrientation(sensorData: OrientationSensorData) {
         val nowMono = clock.nowMonoMs()
         val nowWall = clock.nowWallMs()
         val output = orientationEngine.reduce(
             state = engineState,
             sensorData = sensorData,
-            currentMode = currentMode,
-            minSpeedThresholdMs = minSpeedForTrackMs,
+            settings = currentSettings,
             nowMonoMs = nowMono,
             nowWallMs = nowWall
         )
@@ -166,14 +187,14 @@ class MapOrientationManager(
 
         if (nowMono % 30 == 0L) {
             debugLog {
-                "Orientation: mode=$currentMode, bearing=${orientationData.bearing.toInt()}, " +
+                "Orientation: mode=${orientationData.mode}, bearing=${orientationData.bearing.toInt()}, " +
                     "source=${orientationData.bearingSource}, valid=${orientationData.isValid}"
             }
         }
 
         _orientationFlow.value = orientationData
 
-        if (BuildConfig.DEBUG && currentMode == MapOrientationMode.HEADING_UP) {
+        if (BuildConfig.DEBUG && orientationData.mode == MapOrientationMode.HEADING_UP) {
             logHeadingJitterIfNeeded(
                 now = nowMono,
                 bearing = orientationData.bearing,
@@ -185,61 +206,33 @@ class MapOrientationManager(
     }
 
     override fun setOrientationMode(mode: MapOrientationMode) {
-        if (currentMode == mode) {
+        if (_orientationFlow.value.mode == mode) {
             return
         }
 
-        debugLog { "Map orientation changing: $currentMode -> $mode" }
+        debugLog { "Map orientation changing: ${_orientationFlow.value.mode} -> $mode" }
 
-        when (activeProfile) {
-            OrientationProfile.CRUISE -> settingsRepository.setCruiseOrientationMode(mode)
-            OrientationProfile.CIRCLING -> settingsRepository.setCirclingOrientationMode(mode)
-        }
-
-        currentSettings = when (activeProfile) {
-            OrientationProfile.CRUISE -> currentSettings.copy(cruiseMode = mode)
-            OrientationProfile.CIRCLING -> currentSettings.copy(circlingMode = mode)
-        }
-        currentMode = mode
-        engineState = engineState.copy(lastOrientation = _orientationFlow.value)
-        engineState = orientationEngine.syncLastValidBearing(engineState)
-
-        scope.launch {
-            val currentSensorData = orientationDataSource.getCurrentData()
-            updateOrientation(currentSensorData)
+        when (engineState.activeProfile) {
+            OrientationEngine.OrientationProfile.CRUISE ->
+                settingsRepository.setCruiseOrientationMode(mode)
+            OrientationEngine.OrientationProfile.CIRCLING ->
+                settingsRepository.setCirclingOrientationMode(mode)
         }
     }
 
     fun setFlightMode(selection: FlightModeSelection) {
-        val newProfile = if (selection == FlightModeSelection.THERMAL) {
-            OrientationProfile.CIRCLING
-        } else {
-            OrientationProfile.CRUISE
-        }
-        if (newProfile == activeProfile) {
-            return
-        }
-
-        activeProfile = newProfile
-        currentMode = resolveMode(currentSettings)
-        engineState = engineState.copy(lastOrientation = _orientationFlow.value)
-        engineState = orientationEngine.syncLastValidBearing(engineState)
-
-        scope.launch {
-            val currentSensorData = orientationDataSource.getCurrentData()
-            updateOrientation(currentSensorData)
-        }
+        userEvents.tryEmit(UserEvent.FlightMode(selection))
     }
 
     override fun onUserInteraction() {
-        engineState = orientationEngine.onUserInteraction(engineState, clock.nowMonoMs())
+        userEvents.tryEmit(UserEvent.UserInteraction)
     }
 
     override fun resetUserOverride() {
-        engineState = orientationEngine.resetUserOverride(engineState)
+        userEvents.tryEmit(UserEvent.ResetUserOverride)
     }
 
-    override fun getCurrentMode(): MapOrientationMode = currentMode
+    override fun getCurrentMode(): MapOrientationMode = _orientationFlow.value.mode
 
     override fun getCurrentBearing(): Double = _orientationFlow.value.bearing
 
@@ -248,9 +241,8 @@ class MapOrientationManager(
     override fun start() {
         debugLog { "Starting MapOrientationManager..." }
         orientationDataSource.start()
-        startOrientationUpdates()
+        startEventLoop()
         engineState = engineState.copy(lastOrientation = _orientationFlow.value)
-        engineState = orientationEngine.syncLastValidBearing(engineState)
         debugLog { "MapOrientationManager started" }
     }
 
@@ -259,7 +251,14 @@ class MapOrientationManager(
         orientationDataSource.stop()
         updatesJob?.cancel()
         updatesJob = null
-        engineState = OrientationEngine.State(lastOrientation = _orientationFlow.value)
+        engineState = engineState.copy(
+            isUserOverrideActive = false,
+            lastUserInteractionMonoMs = 0L,
+            lastValidBearing = 0.0,
+            lastValidTrackTimeMs = 0L,
+            lastValidHeadingTimeMs = 0L,
+            lastOrientation = _orientationFlow.value
+        )
         debugLog { "MapOrientationManager stopped" }
     }
 
@@ -288,7 +287,8 @@ class MapOrientationManager(
             dps >= JITTER_DEG_PER_SEC
 
         if (isJitter && now - lastJitterLogTime >= JITTER_LOG_COOLDOWN_MS) {
-            val snapshot = orientationDataSource.getHeadingDebugSnapshot(now)
+            val debugSource = orientationDataSource as? OrientationDataSource ?: return
+            val snapshot = debugSource.getHeadingDebugSnapshot(now)
             val deltaText = String.format(Locale.US, "%.1f", delta)
             val dpsText = String.format(Locale.US, "%.1f", dps)
             val bearingText = String.format(Locale.US, "%.1f", bearing)

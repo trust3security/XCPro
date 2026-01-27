@@ -1,4 +1,4 @@
-package com.example.xcpro
+﻿package com.example.xcpro
 
 import android.hardware.SensorManager
 import android.os.SystemClock
@@ -24,10 +24,10 @@ class OrientationDataSource(
     private val scope: CoroutineScope,
     private val headingResolver: HeadingResolver,
     private val flightStateSource: FlightStateSource? = null
-) {
+) : OrientationSensorSource {
 
     private val _orientationFlow = MutableStateFlow(OrientationSensorData())
-    val orientationFlow: StateFlow<OrientationSensorData> = _orientationFlow.asStateFlow()
+    override val orientationFlow: StateFlow<OrientationSensorData> = _orientationFlow.asStateFlow()
 
     private var currentFlightData = RealTimeFlightData()
 
@@ -73,26 +73,26 @@ class OrientationDataSource(
     }
 
     init {
-        Log.d(TAG, "📡 OrientationDataSource initializing with UnifiedSensorManager")
-        Log.d(TAG, "🔧 Sensor availability: ${getSensorInfo()}")
+        Log.d(TAG, "ðŸ“¡ OrientationDataSource initializing with UnifiedSensorManager")
+        Log.d(TAG, "ðŸ”§ Sensor availability: ${getSensorInfo()}")
     }
 
-    fun updateFromFlightData(flightData: RealTimeFlightData) {
+    override fun updateFromFlightData(flightData: RealTimeFlightData) {
         currentFlightData = flightData
         updateOrientationData()
     }
 
-    fun updateMinSpeedThreshold(thresholdMs: Double) {
+    override fun updateMinSpeedThreshold(thresholdMs: Double) {
         minSpeedThresholdMs = thresholdMs
     }
 
-    fun start() {
+    override fun start() {
         if (isStarted) {
-            Log.d(TAG, "⚠️ OrientationDataSource already started")
+            Log.d(TAG, "âš ï¸ OrientationDataSource already started")
             return
         }
         isStarted = true
-        Log.d(TAG, "▶️ Starting OrientationDataSource (Unified)")
+        Log.d(TAG, "â–¶ï¸ Starting OrientationDataSource (Unified)")
 
         sensorJob = scope.launch {
             launch {
@@ -113,17 +113,17 @@ class OrientationDataSource(
         }
     }
 
-    fun stop() {
+    override fun stop() {
         if (!isStarted) {
-            Log.d(TAG, "⚠️ OrientationDataSource already stopped")
+            Log.d(TAG, "âš ï¸ OrientationDataSource already stopped")
             return
         }
         isStarted = false
-        Log.d(TAG, "⏹️ Stopping OrientationDataSource (Unified)")
+        Log.d(TAG, "â¹ï¸ Stopping OrientationDataSource (Unified)")
         sensorJob?.cancel()
         sensorJob = null
         resetHeadingState()
-        Log.d(TAG, "✅ OrientationDataSource stopped")
+        Log.d(TAG, "âœ… OrientationDataSource stopped")
     }
 
     private fun handleCompassUpdate(compass: CompassData) {
@@ -264,9 +264,9 @@ class OrientationDataSource(
         if (nowWall % 3000 < 100) {
             Log.d(
                 TAG,
-                "📊 Orientation update: " +
-                    "track=${orientationData.track}°, " +
-                    "magHeading=${orientationData.magneticHeading.toInt()}°, " +
+                "ðŸ“Š Orientation update: " +
+                    "track=${orientationData.track}Â°, " +
+                    "magHeading=${orientationData.magneticHeading.toInt()}Â°, " +
                     "speed=${orientationData.groundSpeed}kt, " +
                     "gpsValid=${orientationData.isGPSValid}, " +
                     "headingValid=${orientationData.hasValidHeading}"
@@ -359,7 +359,7 @@ class OrientationDataSource(
         attitudeSensorSeen = false
     }
 
-    fun getCurrentData(): OrientationSensorData = _orientationFlow.value
+    override fun getCurrentData(): OrientationSensorData = _orientationFlow.value
 
     fun hasRequiredSensors(): Boolean {
         val status = unifiedSensorManager.getSensorStatus()
