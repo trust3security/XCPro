@@ -140,6 +140,7 @@ Forbidden:
 
 Allowed:
 - Frame-ticker loops for visual-only smoothing when scoped to `LaunchedEffect` and cancel on composition end
+- Collect flows with lifecycle-aware APIs (`collectAsStateWithLifecycle` in Compose; `repeatOnLifecycle` elsewhere)
 - Rendering
 - Animations
 - User input
@@ -150,6 +151,7 @@ Forbidden:
 - Business logic
 - State derivation
 - Domain calculations
+- Collecting flows directly in Composables without lifecycle awareness
 - Manual coroutine scopes
 - Side effects outside `LaunchedEffect`
 

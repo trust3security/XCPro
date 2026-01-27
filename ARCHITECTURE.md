@@ -252,6 +252,7 @@ Global mutable singletons may not.
 ### Responsibilities
 - Render state
 - Frame-ticker loops for visual-only smoothing when scoped to `LaunchedEffect`
+- Collect flows with lifecycle-aware APIs (`collectAsStateWithLifecycle` in Compose; `repeatOnLifecycle` elsewhere)
 - Emit user intents
 - Handle visuals and animations only
 
