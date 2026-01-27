@@ -30,6 +30,8 @@ import com.example.xcpro.map.config.MapFeatureFlags
 import com.example.xcpro.map.domain.MapWaypointError
 import com.example.xcpro.map.domain.toUserMessage
 import com.example.xcpro.map.trail.MapTrailSettingsUseCase
+import com.example.xcpro.map.trail.domain.TrailProcessor
+import com.example.xcpro.map.trail.domain.TrailUpdateResult
 import com.example.xcpro.qnh.CalibrateQnhUseCase
 import com.example.xcpro.qnh.QnhCalibrationFailureReason
 import com.example.xcpro.qnh.QnhRepository
@@ -152,6 +154,9 @@ class MapScreenViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(MapUiState())
     val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
+    private val trailProcessor = TrailProcessor()
+    private val _trailUpdates = MutableStateFlow<TrailUpdateResult?>(null)
+    internal val trailUpdates: StateFlow<TrailUpdateResult?> = _trailUpdates.asStateFlow()
     private val _uiEffects = MutableSharedFlow<MapUiEffect>(extraBufferCapacity = 1)
     val uiEffects: SharedFlow<MapUiEffect> = _uiEffects.asSharedFlow()
     private val _mapCommands = MutableSharedFlow<MapCommand>(extraBufferCapacity = 1)
@@ -172,7 +177,9 @@ class MapScreenViewModel @Inject constructor(
         liveDataReady = _liveDataReady,
         containerReady = _containerReady,
         uiEffects = _uiEffects,
-        igcReplayController = igcReplayController
+        igcReplayController = igcReplayController,
+        trailProcessor = trailProcessor,
+        trailUpdates = _trailUpdates
     )
 
     private val replayCoordinator = MapScreenReplayCoordinator(
@@ -236,6 +243,10 @@ class MapScreenViewModel @Inject constructor(
 
     fun onVarioDemoReplaySimLive() {
         replayCoordinator.onVarioDemoReplaySimLive()
+    }
+
+    fun onVarioDemoReplaySim3() {
+        replayCoordinator.onVarioDemoReplaySim3()
     }
 
     fun updateSafeContainerSize(size: MapStateStore.MapSize) {

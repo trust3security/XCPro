@@ -8,12 +8,16 @@ import com.example.xcpro.weather.wind.model.WindState
 import com.example.xcpro.replay.IgcReplayController
 import com.example.xcpro.replay.ReplayEvent
 import com.example.xcpro.flightdata.FlightDataRepository
+import com.example.xcpro.map.trail.domain.TrailProcessor
+import com.example.xcpro.map.trail.domain.TrailUpdateInput
+import com.example.xcpro.map.trail.domain.TrailUpdateResult
 import com.example.xcpro.sensors.FlightStateSource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.combine
 
@@ -30,7 +34,9 @@ internal class MapScreenObservers(
     private val liveDataReady: MutableStateFlow<Boolean>,
     private val containerReady: MutableStateFlow<Boolean>,
     private val uiEffects: MutableSharedFlow<MapUiEffect>,
-    private val igcReplayController: IgcReplayController
+    private val igcReplayController: IgcReplayController,
+    private val trailProcessor: TrailProcessor,
+    private val trailUpdates: MutableStateFlow<TrailUpdateResult?>
 ) {
 
     private var flightStartTimestampMillis: Long? = null
@@ -46,9 +52,10 @@ internal class MapScreenObservers(
         combine(
             flightDataRepository.flightData,
             windRepository.windState,
-            flightStateSource.flightState
-        ) { data, wind, flightState -> Triple(data, wind, flightState) }
-            .onEach { (data, wind, flightState) ->
+            flightStateSource.flightState,
+            igcReplayController.session.map { it.selection != null }
+        ) { data, wind, flightState, isReplay -> Quadruple(data, wind, flightState, isReplay) }
+            .onEach { (data, wind, flightState, isReplay) ->
                 if (data != null) {
                     if (!liveDataReady.value) {
                         liveDataReady.value = true
@@ -72,9 +79,20 @@ internal class MapScreenObservers(
                         .copy(flightTime = formattedFlightTime)
                         .applyWindState(wind)
                     flightDataManager.updateLiveFlightData(liveData)
+
+                    val trailResult = trailProcessor.update(
+                        TrailUpdateInput(
+                            data = data,
+                            windState = wind,
+                            isFlying = flightState.isFlying,
+                            isReplay = isReplay
+                        )
+                    )
+                    trailUpdates.value = trailResult
                 } else {
                     flightStartTimestampMillis = null
                     flightDataManager.updateLiveFlightData(null)
+                    trailUpdates.value = null
                 }
             }
             .launchIn(scope)
@@ -151,3 +169,10 @@ internal class MapScreenObservers(
         )
     }
 }
+
+private data class Quadruple<A, B, C, D>(
+    val first: A,
+    val second: B,
+    val third: C,
+    val fourth: D
+)

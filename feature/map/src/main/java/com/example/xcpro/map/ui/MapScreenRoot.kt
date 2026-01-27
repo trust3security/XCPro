@@ -128,8 +128,7 @@ internal fun MapScreenRoot(
     val mapInitializer = managers.mapInitializer
     val bindings = rememberMapScreenBindings(
         mapViewModel = mapViewModel,
-        mapStateReader = mapStateReader,
-        flightDataManager = flightDataManager
+        mapStateReader = mapStateReader
     )
     val gpsStatus = bindings.gpsStatus
     val showRecenterButton = bindings.showRecenterButton
@@ -141,8 +140,7 @@ internal fun MapScreenRoot(
     val allowSensorStart = bindings.allowSensorStart
     val locationForUi = bindings.locationForUi
     val trailSettings = bindings.trailSettings
-    val flightState = bindings.flightState
-    val liveFlightData = bindings.liveFlightData
+    val trailUpdateResult = bindings.trailUpdateResult
 
     // G£à AAT Edit Mode State - Track when AAT pin editing is active
     val isAATEditMode = bindings.isAATEditMode
@@ -156,10 +154,9 @@ internal fun MapScreenRoot(
         onExitAATEditMode = mapViewModel::exitAATEditMode,
         snailTrailManager = snailTrailManager,
         locationManager = locationManager,
-        liveFlightData = liveFlightData,
+        trailUpdateResult = trailUpdateResult,
         trailSettings = trailSettings,
         currentZoom = currentZoom,
-        isFlying = flightState.isFlying,
         suppressLiveGps = suppressLiveGps,
         currentFlightModeSelection = currentFlightModeSelection,
         orientationManager = orientationManager

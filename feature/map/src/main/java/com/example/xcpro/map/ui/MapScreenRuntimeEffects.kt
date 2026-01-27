@@ -7,13 +7,13 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.withFrameNanos
 import com.example.dfcards.FlightModeSelection
-import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.map.MapTaskIntegration
 import com.example.xcpro.map.LocationManager
 import com.example.xcpro.map.config.MapFeatureFlags
 import com.example.xcpro.map.trail.SnailTrailManager
 import com.example.xcpro.map.trail.TrailSettings
+import com.example.xcpro.map.trail.domain.TrailUpdateResult
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.tasks.core.TaskType
 import kotlinx.coroutines.isActive
@@ -26,10 +26,9 @@ internal fun MapScreenRuntimeEffects(
     onExitAATEditMode: () -> Unit,
     snailTrailManager: SnailTrailManager,
     locationManager: LocationManager,
-    liveFlightData: RealTimeFlightData?,
+    trailUpdateResult: TrailUpdateResult?,
     trailSettings: TrailSettings,
     currentZoom: Float,
-    isFlying: Boolean,
     suppressLiveGps: Boolean,
     currentFlightModeSelection: FlightModeSelection,
     orientationManager: MapOrientationManager
@@ -62,9 +61,8 @@ internal fun MapScreenRuntimeEffects(
     }
 
     LaunchedEffect(
-        liveFlightData,
+        trailUpdateResult,
         trailSettings,
-        isFlying,
         suppressLiveGps
     ) {
         val displayLocation = if (suppressLiveGps) {
@@ -77,10 +75,8 @@ internal fun MapScreenRuntimeEffects(
         } else {
             null
         }
-        snailTrailManager.updateFromFlightData(
-            liveData = liveFlightData,
-            isFlying = isFlying,
-            isReplay = suppressLiveGps,
+        snailTrailManager.updateFromTrailUpdate(
+            update = trailUpdateResult,
             settings = trailSettings,
             currentZoom = currentZoom,
             displayLocation = displayLocation,
