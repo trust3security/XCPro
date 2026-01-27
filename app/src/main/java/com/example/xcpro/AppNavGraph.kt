@@ -136,12 +136,9 @@ fun AppNavGraph(
         composable("layouts") { LayoutScreen(navController, drawerState) }
         composable("dfnavboxes") { DFNavboxes(navController, drawerState) }
         composable("orientation_settings") { backStackEntry ->
-            val mapEntry = remember(backStackEntry) { navController.getBackStackEntry("map") }
-            val mapViewModel: MapScreenViewModel = hiltViewModel(mapEntry)
             OrientationSettingsScreen(
                 navController = navController,
-                drawerState = drawerState,
-                orientationManager = mapViewModel.orientationManager
+                drawerState = drawerState
             )
         }
         composable("igcReplay") { IgcReplayScreen(navController = navController) }

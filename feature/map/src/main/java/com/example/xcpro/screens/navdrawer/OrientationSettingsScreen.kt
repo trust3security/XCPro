@@ -1,4 +1,4 @@
-package com.example.xcpro.screens.navdrawer
+﻿package com.example.xcpro.screens.navdrawer
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -18,18 +18,14 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
-import com.example.xcpro.MapOrientationManager
-import com.example.xcpro.MapOrientationPreferences
 import com.example.xcpro.common.orientation.MapOrientationMode
 import com.example.xcpro.map.domain.MapShiftBiasMode
 import com.example.xcpro.screens.navdrawer.SettingsTopAppBar
@@ -45,20 +41,10 @@ import kotlin.math.roundToInt
 fun OrientationSettingsScreen(
     navController: NavHostController,
     drawerState: DrawerState,
-    orientationManager: MapOrientationManager
+    viewModel: OrientationSettingsViewModel = hiltViewModel()
 ) {
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
-    val preferences = remember { MapOrientationPreferences(context) }
-    var cruiseMode by remember { mutableStateOf(preferences.getCruiseOrientationMode()) }
-    var circlingMode by remember { mutableStateOf(preferences.getCirclingOrientationMode()) }
-    var gliderOffsetPercent by remember { mutableStateOf(preferences.getGliderScreenPercent()) }
-    var biasMode by remember { mutableStateOf(preferences.getMapShiftBiasMode()) }
-    var biasStrength by remember { mutableStateOf(preferences.getMapShiftBiasStrength()) }
-
-    fun persistAndRefresh() {
-        orientationManager.reloadFromPreferences()
-    }
+    val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
@@ -91,47 +77,30 @@ fun OrientationSettingsScreen(
                 OrientationModeCard(
                     title = "Cruise / Final Glide",
                     description = "Applies when flying straight, final glide, or navigating menus.",
-                    selectedMode = cruiseMode,
-                    onModeSelected = {
-                        cruiseMode = it
-                        preferences.setCruiseOrientationMode(it)
-                        persistAndRefresh()
-                    }
+                    selectedMode = uiState.cruiseMode,
+                    onModeSelected = viewModel::setCruiseMode
                 )
             }
             item {
                 OrientationModeCard(
                     title = "Thermal / Circling",
                     description = "Used while thermalling or whenever flight mode switches to Thermal.",
-                    selectedMode = circlingMode,
-                    onModeSelected = {
-                        circlingMode = it
-                        preferences.setCirclingOrientationMode(it)
-                        persistAndRefresh()
-                    }
+                    selectedMode = uiState.circlingMode,
+                    onModeSelected = viewModel::setCirclingMode
                 )
             }
             item {
                 GliderPositionCard(
-                    percentFromBottom = gliderOffsetPercent,
-                    onPercentChanged = {
-                        gliderOffsetPercent = it
-                        preferences.setGliderScreenPercent(it)
-                    }
+                    percentFromBottom = uiState.gliderScreenPercent,
+                    onPercentChanged = viewModel::setGliderScreenPercent
                 )
             }
             item {
                 MapShiftBiasCard(
-                    mode = biasMode,
-                    strength = biasStrength,
-                    onModeChanged = {
-                        biasMode = it
-                        preferences.setMapShiftBiasMode(it)
-                    },
-                    onStrengthChanged = {
-                        biasStrength = it
-                        preferences.setMapShiftBiasStrength(it)
-                    }
+                    mode = uiState.mapShiftBiasMode,
+                    strength = uiState.mapShiftBiasStrength,
+                    onModeChanged = viewModel::setMapShiftBiasMode,
+                    onStrengthChanged = viewModel::setMapShiftBiasStrength
                 )
             }
         }
@@ -173,21 +142,21 @@ private fun OrientationModeCard(
                 MapOrientationMode.TRACK_UP,
                 MapOrientationMode.HEADING_UP
             ).forEach { mode ->
-                    OrientationModeRow(
-                        title = when (mode) {
-                            MapOrientationMode.NORTH_UP -> "North Up"
-                            MapOrientationMode.TRACK_UP -> "Track Up"
-                            MapOrientationMode.HEADING_UP -> "Heading Up"
-                        },
-                        description = when (mode) {
-                            MapOrientationMode.NORTH_UP -> "Never rotate the map."
-                            MapOrientationMode.TRACK_UP -> "Rotate map to match GPS course."
-                            MapOrientationMode.HEADING_UP -> "Rotate map to match sensor heading."
-                        },
-                        selected = selectedMode == mode,
-                        onSelect = { onModeSelected(mode) }
-                    )
-                }
+                OrientationModeRow(
+                    title = when (mode) {
+                        MapOrientationMode.NORTH_UP -> "North Up"
+                        MapOrientationMode.TRACK_UP -> "Track Up"
+                        MapOrientationMode.HEADING_UP -> "Heading Up"
+                    },
+                    description = when (mode) {
+                        MapOrientationMode.NORTH_UP -> "Never rotate the map."
+                        MapOrientationMode.TRACK_UP -> "Rotate map to match GPS course."
+                        MapOrientationMode.HEADING_UP -> "Rotate map to match sensor heading."
+                    },
+                    selected = selectedMode == mode,
+                    onSelect = { onModeSelected(mode) }
+                )
+            }
         }
     }
 }

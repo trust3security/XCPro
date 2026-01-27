@@ -273,4 +273,12 @@ class MapOrientationPreferences(context: Context) {
             .putFloat(KEY_MAP_SHIFT_BIAS_STRENGTH, clamped.toFloat())
             .apply()
     }
+
+    internal fun registerListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
+        preferences.registerOnSharedPreferenceChangeListener(listener)
+    }
+
+    internal fun unregisterListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
+        preferences.unregisterOnSharedPreferenceChangeListener(listener)
+    }
 }

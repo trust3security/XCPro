@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.example.dfcards.CardPreferences
 import com.example.dfcards.FlightModeSelection
 import com.example.xcpro.MapOrientationManagerFactory
+import com.example.xcpro.MapOrientationSettingsRepository
 import com.example.xcpro.OrientationDataSourceFactory
 import com.example.xcpro.common.glider.GliderConfig
 import com.example.xcpro.common.glider.GliderModel
@@ -92,13 +93,14 @@ class MapScreenViewModelTest {
     private val flightStateSource = object : FlightStateSource {
         override val flightState = flightStateFlow
     }
+    private val orientationSettingsRepository = MapOrientationSettingsRepository(context)
     private val orientationManagerFactory = MapOrientationManagerFactory(
-        context = context,
         orientationDataSourceFactory = OrientationDataSourceFactory(
             unifiedSensorManager = unifiedSensorManager,
             headingResolver = HeadingResolver(),
             flightStateSource = flightStateSource
         ),
+        settingsRepository = orientationSettingsRepository,
         clock = SystemOrientationClock()
     )
     private val flightDataRepository = FlightDataRepository()

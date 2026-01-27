@@ -1,6 +1,5 @@
 ﻿package com.example.xcpro
 
-import android.content.Context
 import android.util.Log
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.RealTimeFlightData
@@ -29,12 +28,11 @@ import kotlinx.coroutines.launch
 
 @OptIn(FlowPreview::class)
 class MapOrientationManager(
-    private val context: Context,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main + SupervisorJob()),
     orientationDataSourceFactory: OrientationDataSourceFactory,
+    private val settingsRepository: MapOrientationSettingsRepository,
     private val clock: OrientationClock = SystemOrientationClock()
 ) : OrientationController {
-    private val preferences = MapOrientationPreferences(context)
     private val orientationDataSource = orientationDataSourceFactory.create(scope)
     private val orientationEngine = OrientationEngine()
     private var engineState = OrientationEngine.State()
@@ -44,15 +42,15 @@ class MapOrientationManager(
 
     private enum class OrientationProfile { CRUISE, CIRCLING }
 
-    private var cruiseMode = preferences.getCruiseOrientationMode()
-    private var circlingMode = preferences.getCirclingOrientationMode()
     private var activeProfile = OrientationProfile.CRUISE
-    private var currentMode = cruiseMode
+    private var currentSettings = settingsRepository.settingsFlow.value
+    private var currentMode = resolveMode(currentSettings)
     private var lastHeadingSampleTime = 0L
     private var lastHeadingSampleBearing = 0.0
     private var lastJitterLogTime = 0L
     private var updatesJob: Job? = null
-    private var minSpeedForTrackMs: Double = 0.0
+    private var settingsJob: Job? = null
+    private var minSpeedForTrackMs: Double = currentSettings.minSpeedThresholdMs
 
     companion object {
         private const val TAG = "MapOrientationManager"
@@ -74,14 +72,44 @@ class MapOrientationManager(
     init {
         debugLog { "MapOrientationManager initializing..." }
 
-        minSpeedForTrackMs = preferences.getMinSpeedThreshold()
         orientationDataSource.updateMinSpeedThreshold(minSpeedForTrackMs)
         debugLog { "Loaded orientation mode: $currentMode" }
 
+        startSettingsUpdates()
         startOrientationUpdates()
         engineState = engineState.copy(lastOrientation = _orientationFlow.value)
         engineState = orientationEngine.syncLastValidBearing(engineState)
         debugLog { "MapOrientationManager initialized successfully" }
+    }
+
+    private fun resolveMode(settings: MapOrientationSettings): MapOrientationMode {
+        return if (activeProfile == OrientationProfile.CRUISE) {
+            settings.cruiseMode
+        } else {
+            settings.circlingMode
+        }
+    }
+
+    private fun startSettingsUpdates() {
+        settingsJob = scope.launch {
+            settingsRepository.settingsFlow.collect { settings ->
+                val previousSettings = currentSettings
+                currentSettings = settings
+
+                minSpeedForTrackMs = settings.minSpeedThresholdMs
+                orientationDataSource.updateMinSpeedThreshold(minSpeedForTrackMs)
+
+                val newMode = resolveMode(settings)
+                val modeChanged = newMode != currentMode
+                currentMode = newMode
+
+                if (modeChanged || settings != previousSettings) {
+                    engineState = engineState.copy(lastOrientation = _orientationFlow.value)
+                    engineState = orientationEngine.syncLastValidBearing(engineState)
+                    updateOrientation(orientationDataSource.getCurrentData())
+                }
+            }
+        }
     }
 
     private fun startOrientationUpdates() {
@@ -156,35 +184,22 @@ class MapOrientationManager(
         }
     }
 
-    private fun OrientationProfile.mode(): MapOrientationMode = when (this) {
-        OrientationProfile.CRUISE -> cruiseMode
-        OrientationProfile.CIRCLING -> circlingMode
-    }
-
-    private fun OrientationProfile.setMode(mode: MapOrientationMode) {
-        when (this) {
-            OrientationProfile.CRUISE -> {
-                cruiseMode = mode
-                preferences.setCruiseOrientationMode(mode)
-            }
-            OrientationProfile.CIRCLING -> {
-                circlingMode = mode
-                preferences.setCirclingOrientationMode(mode)
-            }
-        }
-    }
-
     override fun setOrientationMode(mode: MapOrientationMode) {
         if (currentMode == mode) {
             return
         }
 
         debugLog { "Map orientation changing: $currentMode -> $mode" }
-        minSpeedForTrackMs = preferences.getMinSpeedThreshold()
-        orientationDataSource.updateMinSpeedThreshold(minSpeedForTrackMs)
 
-        activeProfile.setMode(mode)
+        when (activeProfile) {
+            OrientationProfile.CRUISE -> settingsRepository.setCruiseOrientationMode(mode)
+            OrientationProfile.CIRCLING -> settingsRepository.setCirclingOrientationMode(mode)
+        }
 
+        currentSettings = when (activeProfile) {
+            OrientationProfile.CRUISE -> currentSettings.copy(cruiseMode = mode)
+            OrientationProfile.CIRCLING -> currentSettings.copy(circlingMode = mode)
+        }
         currentMode = mode
         engineState = engineState.copy(lastOrientation = _orientationFlow.value)
         engineState = orientationEngine.syncLastValidBearing(engineState)
@@ -206,24 +221,7 @@ class MapOrientationManager(
         }
 
         activeProfile = newProfile
-        currentMode = activeProfile.mode()
-        engineState = engineState.copy(lastOrientation = _orientationFlow.value)
-        engineState = orientationEngine.syncLastValidBearing(engineState)
-
-        scope.launch {
-            val currentSensorData = orientationDataSource.getCurrentData()
-            updateOrientation(currentSensorData)
-        }
-    }
-
-    fun reloadFromPreferences() {
-        cruiseMode = preferences.getCruiseOrientationMode()
-        circlingMode = preferences.getCirclingOrientationMode()
-
-        minSpeedForTrackMs = preferences.getMinSpeedThreshold()
-        orientationDataSource.updateMinSpeedThreshold(minSpeedForTrackMs)
-
-        currentMode = activeProfile.mode()
+        currentMode = resolveMode(currentSettings)
         engineState = engineState.copy(lastOrientation = _orientationFlow.value)
         engineState = orientationEngine.syncLastValidBearing(engineState)
 
