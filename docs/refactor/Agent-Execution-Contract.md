@@ -1,7 +1,7 @@
-# AGENT.md — Autonomous Engineering Execution Template
+# AGENT.md -- Autonomous Engineering Execution Template
 
 Use this file as the **single source of truth** when asking an agent (Codex) to implement a change end-to-end.
-You (the human) fill in the “Change Request” and any project-specific notes. The agent must follow the contract below.
+You (the human) fill in the "Change Request" and any project-specific notes. The agent must follow the contract below.
 
 ---
 
@@ -44,7 +44,7 @@ Work is complete only when:
 
 # 1) Change Request (HUMAN FILLS THIS IN)
 
-## 1.1 Feature Summary (1–3 sentences)
+## 1.1 Feature Summary (1-3 sentences)
 - [ ] Describe what you want built.
 
 ## 1.2 User Stories / Use Cases
@@ -73,7 +73,7 @@ Work is complete only when:
   - [ ] Data stored:
   - [ ] Logs / metrics:
 
-## 1.6 “Behavior Parity” Checklist (if refactor or replacements)
+## 1.6 "Behavior Parity" Checklist (if refactor or replacements)
 - [ ] List behaviors that must remain identical.
 
 ## 1.7 SnailTrailManager Refactor Guidance (pre-filled for this task)
@@ -123,35 +123,35 @@ Optional minimal steps (if doing incremental refactor):
 
 # 2) Execution Plan (AGENT OWNS THIS, BUT MAY EDIT FOR REALITY)
 
-## Phase 0 — Baseline & Safety Net
+## Phase 0 -- Baseline & Safety Net
 - Locate relevant code paths, entry points, and current behavior.
 - Add/confirm tests that lock current behavior (when applicable).
 - Document current defaults and edge cases.
 
 **Gate:** no functional changes; repo builds.
 
-## Phase 1 — Core Implementation
+## Phase 1 -- Core Implementation
 - Implement the minimal viable slice of the change.
 - Keep business logic testable and isolated.
 - Add unit tests for core logic and edge cases.
 
 **Gate:** unit tests pass; behavior matches Section 3.
 
-## Phase 2 — Integration & UI Wiring
+## Phase 2 -- Integration & UI Wiring
 - Connect the feature into the app architecture (DI, VM, flows, etc.).
 - Implement UI changes.
 - Add integration tests (if you have them) or VM tests.
 
 **Gate:** feature works end-to-end in debug build.
 
-## Phase 3 — Hardening
+## Phase 3 -- Hardening
 - Handle failures, lifecycles, cancellation, threading.
 - Add logging behind debug flags if needed.
 - Remove dead code; update docs.
 
 **Gate:** all required checks pass (Section 4).
 
-## Phase 4 — Polish & PR Readiness
+## Phase 4 -- Polish & PR Readiness
 - Ensure code style, readability, and minimal diffs.
 - Update changelog / release notes if your repo uses them.
 - Provide a short PR summary and testing evidence.
@@ -265,6 +265,6 @@ At the end of each phase, the agent outputs:
 - Next:
 
 At the end of the task, include:
-- Final “Done” checklist (Definition of Done items)
+- Final "Done" checklist (Definition of Done items)
 - PR-ready summary (what/why/how)
-- How to verify manually (2–5 steps)
+- How to verify manually (2-5 steps)
