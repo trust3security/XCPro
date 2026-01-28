@@ -176,11 +176,11 @@ Agent must report:
 # 5) Notes / ADR (Architecture Decisions Record)
 
 If any non-trivial decision is made, record it here:
-- Decision:
-- Alternatives considered:
-- Why chosen:
-- Impact / risks:
-- Follow-ups:
+- Decision: Wrap Log.d calls in FlightDataViewModel with a logDebug helper that swallows JVM "not mocked" exceptions.
+- Alternatives considered: Enable testOptions.returnDefaultValues; remove Log.d statements.
+- Why chosen: Keeps production logging intact while avoiding JVM unit test failures without build config changes.
+- Impact / risks: Logs are skipped only when Log.d throws (JVM tests); no runtime behavior change expected.
+- Follow-ups: None.
 
 ---
 
