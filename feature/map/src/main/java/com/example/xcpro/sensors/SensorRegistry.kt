@@ -18,6 +18,7 @@ import com.example.xcpro.common.geo.GeoPoint
 import com.example.xcpro.common.units.AltitudeM
 import com.example.xcpro.common.units.PressureHpa
 import com.example.xcpro.common.units.SpeedMs
+import com.example.xcpro.core.time.Clock
 
 /**
  * Handles sensor registration/start/stop and pushes raw data via callbacks.
@@ -28,6 +29,7 @@ internal class SensorRegistry(
     private val locationManager: LocationManager,
     private val sensorManager: SensorManager,
     private val orientationProcessor: OrientationProcessor,
+    private val clock: Clock,
     private val updateGps: (GPSData) -> Unit,
     private val updateBaro: (BaroData) -> Unit,
     private val updateCompass: (CompassData) -> Unit,
@@ -97,10 +99,11 @@ internal class SensorRegistry(
             Sensor.TYPE_PRESSURE -> {
                 val monotonicMillis = event.timestamp / 1_000_000L
                 val pressureHPa = event.values[0].toDouble()
+                val wallTime = clock.nowWallMs()
                 updateBaro(
                     BaroData(
                         pressureHPa = PressureHpa(pressureHPa),
-                        timestamp = System.currentTimeMillis(),
+                        timestamp = wallTime,
                         monotonicTimestampMillis = monotonicMillis
                     )
                 )
@@ -111,11 +114,12 @@ internal class SensorRegistry(
                 val y = event.values[1]
                 val heading = Math.toDegrees(Math.atan2(y.toDouble(), x.toDouble()))
                 val normalizedHeading = (heading + 360) % 360
+                val wallTime = clock.nowWallMs()
                 updateCompass(
                     CompassData(
                         heading = normalizedHeading,
                         accuracy = event.accuracy,
-                        timestamp = System.currentTimeMillis(),
+                        timestamp = wallTime,
                         monotonicTimestampMillis = monotonicMillis
                     )
                 )
@@ -123,13 +127,14 @@ internal class SensorRegistry(
             Sensor.TYPE_ROTATION_VECTOR -> {
                 val monotonicMillis = event.timestamp / 1_000_000L
                 orientationProcessor.updateRotationVector(event.values)
+                val wallTime = clock.nowWallMs()
                 orientationProcessor.attitude()?.let { attitude ->
                     updateAttitude(
                         AttitudeData(
                             headingDeg = attitude.headingDeg,
                             pitchDeg = attitude.pitchDeg,
                             rollDeg = attitude.rollDeg,
-                            timestamp = System.currentTimeMillis(),
+                            timestamp = wallTime,
                             isReliable = attitude.isReliable,
                             monotonicTimestampMillis = monotonicMillis
                         )
@@ -139,10 +144,11 @@ internal class SensorRegistry(
             Sensor.TYPE_LINEAR_ACCELERATION -> {
                 val monotonicMillis = event.timestamp / 1_000_000L
                 val sample = orientationProcessor.projectVerticalAcceleration(event.values)
+                val wallTime = clock.nowWallMs()
                 updateAccel(
                     AccelData(
                         verticalAcceleration = sample.verticalAcceleration,
-                        timestamp = System.currentTimeMillis(),
+                        timestamp = wallTime,
                         isReliable = sample.isReliable,
                         monotonicTimestampMillis = monotonicMillis
                     )
@@ -150,12 +156,13 @@ internal class SensorRegistry(
             }
             Sensor.TYPE_ACCELEROMETER -> {
                 val monotonicMillis = event.timestamp / 1_000_000L
+                val wallTime = clock.nowWallMs()
                 updateRawAccel(
                     RawAccelData(
                         x = event.values[0].toDouble(),
                         y = event.values[1].toDouble(),
                         z = event.values[2].toDouble(),
-                        timestamp = System.currentTimeMillis(),
+                        timestamp = wallTime,
                         isReliable = event.accuracy != SensorManager.SENSOR_STATUS_UNRELIABLE,
                         monotonicTimestampMillis = monotonicMillis
                     )

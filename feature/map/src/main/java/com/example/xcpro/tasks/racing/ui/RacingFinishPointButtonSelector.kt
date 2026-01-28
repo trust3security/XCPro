@@ -20,7 +20,7 @@ import com.example.xcpro.tasks.racing.models.RacingFinishPointType
  * Replaces dropdown-based selection with horizontal buttons for better UX.
  *
  * Features:
- * - Single-tap selection (vs dropdown → tap → select)
+ * - Single-tap selection (vs dropdown  tap  select)
  * - Visual icons for each finish point type
  * - Immediate visual feedback with thin blue border
  * - Better space utilization in bottom sheet
@@ -47,11 +47,11 @@ fun RacingFinishPointButtonSelector(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            // 📍 Line Button
+            //  Line Button
             FinishPointTypeButton(
                 type = RacingFinishPointType.FINISH_LINE,
                 icon = Icons.Default.LinearScale, // Line icon
-                emoji = "📍",
+                emoji = "",
                 selected = selectedType == RacingFinishPointType.FINISH_LINE,
                 onClick = { onTypeChange(RacingFinishPointType.FINISH_LINE) },
                 modifier = Modifier.weight(1f)
@@ -59,11 +59,11 @@ fun RacingFinishPointButtonSelector(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // 🔵 Cylinder Button
+            //  Cylinder Button
             FinishPointTypeButton(
                 type = RacingFinishPointType.FINISH_CYLINDER,
                 icon = Icons.Default.RadioButtonUnchecked, // Circle icon
-                emoji = "🔵",
+                emoji = "",
                 selected = selectedType == RacingFinishPointType.FINISH_CYLINDER,
                 onClick = { onTypeChange(RacingFinishPointType.FINISH_CYLINDER) },
                 modifier = Modifier.weight(1f)

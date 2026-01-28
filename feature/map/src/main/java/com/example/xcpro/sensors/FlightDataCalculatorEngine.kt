@@ -3,6 +3,8 @@ import android.content.Context
 import android.util.Log
 import com.example.dfcards.calculations.BarometricAltitudeCalculator
 import com.example.dfcards.dfcards.calculations.SimpleAglCalculator
+import com.example.xcpro.core.time.Clock
+import com.example.xcpro.audio.AudioFocusManager
 import com.example.xcpro.audio.VarioAudioController
 import com.example.xcpro.audio.VarioAudioSettings
 import com.example.xcpro.flightdata.FlightDisplayMapper
@@ -32,6 +34,8 @@ internal class FlightDataCalculatorEngine(
     private val sinkProvider: StillAirSinkProvider,
     private val windStateFlow: StateFlow<WindState>,
     private val flightStateSource: FlightStateSource,
+    private val audioFocusManager: AudioFocusManager,
+    internal val clock: Clock,
     internal val enableAudio: Boolean = true,
     internal val isReplayMode: Boolean = false
 ): SensorFusionRepository {
@@ -69,7 +73,7 @@ internal class FlightDataCalculatorEngine(
     internal var latestFlightState: FlyingState? = null
     internal var lastGpsFixTimestampForGpsVario: Long = 0L
     internal val varioSuite = VarioSuite()
-    internal val audioController = VarioAudioController(context, scope, enableAudio)
+    internal val audioController = VarioAudioController(context, audioFocusManager, scope, enableAudio)
     val audioEngine get() = audioController.engine
     internal val flightDisplayMapper = FlightDisplayMapper()
     internal val _flightDataFlow = MutableStateFlow<CompleteFlightData?>(null)
@@ -112,7 +116,7 @@ internal class FlightDataCalculatorEngine(
     internal var cachedBaroData: BaroData? = null
     internal var cachedCompassData: CompassData? = null
     internal var lastDiagnosticsEmitTime: Long = 0L
-     // IMU vertical acceleration smoothing for 3???state Kalman / complementary fusion.
+     // IMU vertical acceleration smoothing for 3-state Kalman / complementary fusion.
      internal var lastAccelTimestamp: Long = 0L
      internal var smoothedVerticalAccel: Double? = null
     internal var macCreadySetting = DEFAULT_MACCREADY
@@ -200,7 +204,7 @@ internal class FlightDataCalculatorEngine(
         Log.d(TAG, "FlightDataCalculator stopped")
     }
     override fun setManualQnh(qnhHPa: Double) {
-        baroCalculator.setQNH(qnhHPa)
+        baroCalculator.setQNH(qnhHPa, clock.nowWallMs())
         cachedBaroResult = null
         cachedVarioResult = null
         Log.i(TAG, "Manual QNH applied: ${qnhHPa}")

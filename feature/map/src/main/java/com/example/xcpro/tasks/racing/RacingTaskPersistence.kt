@@ -18,7 +18,7 @@ class RacingTaskPersistence(private val context: Context) {
      */
     fun saveRacingTask(currentTask: SimpleRacingTask) {
         racingTaskStorage.saveRacingTask(currentTask) ?: run {
-            println("🏁 RACING TASK: Cannot save - no storage available")
+            println(" RACING TASK: Cannot save - no storage available")
         }
     }
 
@@ -27,9 +27,9 @@ class RacingTaskPersistence(private val context: Context) {
      */
     fun loadRacingTask(): SimpleRacingTask? {
         return racingTaskStorage.loadRacingTask()?.also { task ->
-            println("🏁 RACING TASK: Loaded task with ${task.waypoints.size} waypoints")
+            println(" RACING TASK: Loaded task with ${task.waypoints.size} waypoints")
         } ?: run {
-            println("🏁 RACING TASK: Storage not available")
+            println(" RACING TASK: Storage not available")
             null
         }
     }

@@ -1,6 +1,7 @@
 package com.example.xcpro.audio
 
 import android.content.Context
+import android.os.SystemClock
 import android.util.Log
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,7 +24,7 @@ import kotlinx.coroutines.flow.asStateFlow
  *
  * Usage:
  * ```
- * val engine = VarioAudioEngine(context)
+ * val engine = VarioAudioEngine(context, audioFocusManager)
  * engine.initialize()
  * engine.start()
  * engine.updateVerticalSpeed(verticalSpeedMs)
@@ -33,11 +34,13 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 class VarioAudioEngine(
     private val context: Context,
+    private val audioFocusManager: AudioFocusManager,
     scope: CoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 ) {
 
     companion object {
         private const val TAG = "VarioAudioEngine"
+        private const val ENSURE_BACKOFF_MS = 1_000L
     }
 
     // Components
@@ -62,6 +65,8 @@ class VarioAudioEngine(
 
     private var isInitialized = false
     private var isStarted = false
+    private var lastEnsureAttemptElapsedMs = 0L
+    private var ensureAttemptCount = 0
 
     // Statistics
     private var audioUpdatesCount = 0L
@@ -72,12 +77,19 @@ class VarioAudioEngine(
      * Must be called before start()
      */
     fun initialize(): Boolean {
-        if (isInitialized) {
+        if (isInitialized && toneGenerator.isReady()) {
             Log.w(TAG, "Already initialized")
             return true
         }
 
         try {
+            if (isInitialized && !toneGenerator.isReady()) {
+                Log.w(TAG, "Tone generator lost readiness; reinitializing")
+                cleanupForReinit()
+            } else if (!isInitialized && this::beepController.isInitialized) {
+                // A previous init attempt partially succeeded; clean it up before retrying.
+                cleanupForReinit()
+            }
             // Initialize tone generator
             if (!toneGenerator.initialize()) {
                 Log.e(TAG, "Failed to initialize tone generator")
@@ -108,11 +120,6 @@ class VarioAudioEngine(
      * Begins processing vertical speed updates
      */
     fun start() {
-        if (!isInitialized) {
-            Log.w(TAG, "Not initialized, call initialize() first")
-            return
-        }
-
         if (isStarted) {
             Log.w(TAG, "Already started")
             return
@@ -124,11 +131,27 @@ class VarioAudioEngine(
         }
 
         try {
-            isStarted = true
-            beepController.start()
-            Log.i(TAG, "Audio engine started")
+            if (!isInitialized && !initialize()) {
+                Log.w(TAG, "Start requested but initialization failed")
+                return
+            }
+            val focusGranted = audioFocusManager.requestFocus()
+            if (!focusGranted) {
+                Log.w(TAG, "Audio focus not granted; will retry on updates")
+                return
+            }
+            val started = beepController.start()
+            isStarted = started
+            if (started) {
+                Log.i(TAG, "Audio engine started")
+            } else {
+                Log.w(TAG, "Audio engine start failed; will retry on updates")
+                audioFocusManager.abandonFocus()
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start audio engine", e)
+            audioFocusManager.abandonFocus()
+            isStarted = false
         }
     }
 
@@ -142,12 +165,70 @@ class VarioAudioEngine(
         }
 
         try {
-            beepController.stop()
+            if (this::beepController.isInitialized) {
+                beepController.stop()
+            }
             isStarted = false
+            audioFocusManager.abandonFocus()
             Log.i(TAG, "Audio engine stopped")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to stop audio engine", e)
         }
+    }
+
+    private fun shouldAttemptEnsure(): Boolean {
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastEnsureAttemptElapsedMs < ENSURE_BACKOFF_MS) {
+            return false
+        }
+        lastEnsureAttemptElapsedMs = now
+        ensureAttemptCount++
+        return true
+    }
+
+    private fun cleanupForReinit() {
+        runCatching {
+            if (this::beepController.isInitialized) {
+                beepController.release()
+            }
+        }
+        runCatching { toneGenerator.release() }
+        runCatching { audioFocusManager.abandonFocus() }
+        isStarted = false
+        isInitialized = false
+        _currentMode.value = AudioMode.SILENCE
+        _currentFrequency.value = 0.0
+    }
+
+    private fun ensureStarted(): Boolean {
+        if (!_isEnabled.value) {
+            return false
+        }
+        if (isInitialized && !toneGenerator.isReady()) {
+            Log.w(TAG, "Tone generator not ready; resetting audio engine")
+            cleanupForReinit()
+        }
+        if (isInitialized && isStarted && audioFocusManager.hasFocus()) {
+            return true
+        }
+        if (isInitialized && isStarted && !audioFocusManager.hasFocus()) {
+            Log.w(TAG, "Audio focus lost; stopping beep controller")
+            if (this::beepController.isInitialized) {
+                beepController.stop()
+            }
+            isStarted = false
+        }
+        if (!shouldAttemptEnsure()) {
+            return false
+        }
+        start()
+        val ready = isInitialized && isStarted
+        if (ready) {
+            ensureAttemptCount = 0
+        } else {
+            Log.w(TAG, "Audio ensure attempt $ensureAttemptCount failed")
+        }
+        return ready
     }
 
     /**
@@ -157,7 +238,10 @@ class VarioAudioEngine(
      * @param verticalSpeedMs TE-compensated vertical speed in m/s
      */
     fun updateVerticalSpeed(verticalSpeedMs: Double) {
-        if (!isInitialized || !isStarted || !_isEnabled.value) {
+        if (!_isEnabled.value) {
+            return
+        }
+        if (!ensureStarted()) {
             return
         }
 
@@ -177,7 +261,7 @@ class VarioAudioEngine(
      * Force the audio engine into silence (used when no fresh vario data).
      */
     fun setSilence() {
-        if (!isInitialized || !isStarted) {
+        if (!isInitialized || !isStarted || !this::beepController.isInitialized) {
             return
         }
         try {
@@ -202,8 +286,10 @@ class VarioAudioEngine(
     fun updateSettings(newSettings: VarioAudioSettings) {
         _settings.value = newSettings
 
-        // Recreate frequency mapper with new settings
-        frequencyMapper = VarioFrequencyMapper(newSettings)
+        // Recreate frequency mapper with new settings once initialization succeeds.
+        if (isInitialized) {
+            frequencyMapper = VarioFrequencyMapper(newSettings)
+        }
 
         // Update volume
         toneGenerator.setVolume(newSettings.volume)
@@ -242,7 +328,7 @@ class VarioAudioEngine(
      * Check if audio is currently active (making sound)
      */
     fun isAudioActive(): Boolean {
-        if (!isStarted) return false
+        if (!isStarted || !this::beepController.isInitialized) return false
         return beepController.isAudioActive()
     }
 
@@ -268,7 +354,9 @@ class VarioAudioEngine(
     fun release() {
         try {
             stop()
-            beepController.release()
+            if (this::beepController.isInitialized) {
+                beepController.release()
+            }
             toneGenerator.release()
             internalScope.cancel()
             isInitialized = false

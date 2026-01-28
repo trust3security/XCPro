@@ -47,7 +47,7 @@ class RawBaroVario : IVarioCalculator {
             return currentVerticalSpeed
         }
 
-        // Simple differentiation: V = ΔAltitude / ΔTime
+        // Simple differentiation: V = Altitude / Time
         val deltaAltitude = baroAltitude - lastAltitude
         currentVerticalSpeed = deltaAltitude / deltaTime
 

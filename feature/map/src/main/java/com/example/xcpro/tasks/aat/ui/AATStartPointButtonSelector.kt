@@ -39,11 +39,11 @@ fun AATStartPointButtonSelector(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            // 📍 AAT Start Line Button
+            //  AAT Start Line Button
             AATStartPointTypeChip(
                 type = AATStartPointType.AAT_START_LINE,
                 icon = Icons.Default.LinearScale, // Line icon
-                emoji = "📍",
+                emoji = "",
                 selected = selectedType == AATStartPointType.AAT_START_LINE,
                 onClick = { onTypeSelected(AATStartPointType.AAT_START_LINE) },
                 modifier = Modifier.weight(1f)
@@ -51,11 +51,11 @@ fun AATStartPointButtonSelector(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // 🔵 AAT Start Cylinder Button
+            //  AAT Start Cylinder Button
             AATStartPointTypeChip(
                 type = AATStartPointType.AAT_START_CYLINDER,
                 icon = Icons.Default.RadioButtonUnchecked, // Circle icon
-                emoji = "🔵",
+                emoji = "",
                 selected = selectedType == AATStartPointType.AAT_START_CYLINDER,
                 onClick = { onTypeSelected(AATStartPointType.AAT_START_CYLINDER) },
                 modifier = Modifier.weight(1f)
@@ -63,11 +63,11 @@ fun AATStartPointButtonSelector(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // 🔶 AAT Start Sector Button
+            //  AAT Start Sector Button
             AATStartPointTypeChip(
                 type = AATStartPointType.AAT_START_SECTOR,
                 icon = Icons.Default.ChangeHistory, // Triangle icon for sector
-                emoji = "🔶",
+                emoji = "",
                 selected = selectedType == AATStartPointType.AAT_START_SECTOR,
                 onClick = { onTypeSelected(AATStartPointType.AAT_START_SECTOR) },
                 modifier = Modifier.weight(1f)

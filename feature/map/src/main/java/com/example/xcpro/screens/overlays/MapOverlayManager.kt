@@ -40,7 +40,7 @@ fun MapOverlayManager(
                 .zIndex(5f)
         )
 
-        // ❌ REMOVED: Duplicate compass widget (MapScreen.kt has the active compass implementation)
+        //  REMOVED: Duplicate compass widget (MapScreen.kt has the active compass implementation)
     }
 }
 
@@ -102,7 +102,7 @@ fun ConditionalMapOverlayManager(
             )
         }
 
-        // ❌ REMOVED: Duplicate compass widget (MapScreen.kt has the active compass implementation)
+        //  REMOVED: Duplicate compass widget (MapScreen.kt has the active compass implementation)
     }
 }
 

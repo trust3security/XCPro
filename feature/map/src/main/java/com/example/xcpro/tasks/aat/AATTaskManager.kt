@@ -1,4 +1,4 @@
-﻿package com.example.xcpro.tasks.aat
+package com.example.xcpro.tasks.aat
 
 import android.content.Context
 import android.content.SharedPreferences

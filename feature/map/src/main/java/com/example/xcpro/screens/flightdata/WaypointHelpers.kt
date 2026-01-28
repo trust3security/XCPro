@@ -127,7 +127,7 @@ fun saveHomeWaypoint(context: Context, waypoint: WaypointData?) {
         file.writeText(json.toString(2))
 
         broadcastHomeWaypointChange(context, waypoint.name)
-        Log.d(TAG, "💾 Saved home waypoint: ${waypoint.name}")
+        Log.d(TAG, " Saved home waypoint: ${waypoint.name}")
     } catch (e: Exception) {
         Log.e(TAG, "Error saving home waypoint: ${e.message}")
     }

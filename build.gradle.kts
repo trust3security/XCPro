@@ -7,3 +7,26 @@ plugins {
     alias(libs.plugins.dagger.hilt) apply false
     alias(libs.plugins.ksp) apply false
 }
+
+val isWindows = System.getProperty("os.name").lowercase().contains("windows")
+
+fun commandExists(command: String): Boolean {
+    return try {
+        val probe = if (isWindows) listOf("where", command) else listOf("which", command)
+        val proc = ProcessBuilder(probe).redirectErrorStream(true).start()
+        proc.waitFor() == 0
+    } catch (e: Exception) {
+        false
+    }
+}
+
+tasks.register<Exec>("enforceRules") {
+    group = "verification"
+    description = "Enforce architecture/coding rules via scripts/ci/enforce_rules.ps1."
+    val shell = when {
+        commandExists("pwsh") -> "pwsh"
+        isWindows && commandExists("powershell") -> "powershell"
+        else -> "pwsh"
+    }
+    commandLine(shell, "-ExecutionPolicy", "Bypass", "-File", "scripts/ci/enforce_rules.ps1")
+}

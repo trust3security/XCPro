@@ -1,4 +1,4 @@
-﻿package com.example.xcpro.tasks
+package com.example.xcpro.tasks
 
 import android.content.Context
 import androidx.compose.animation.*

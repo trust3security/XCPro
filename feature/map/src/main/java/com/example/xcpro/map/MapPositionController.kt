@@ -2,16 +2,13 @@ package com.example.xcpro.map
 
 import android.os.SystemClock
 import android.util.Log
-
 import org.maplibre.android.geometry.LatLng
-import org.maplibre.android.maps.MapLibreMap
 import kotlin.math.abs
 import kotlin.math.sign
 
 /**
  * Single owner for applying accepted (already gated) location samples
- * to both camera and icon. Mirrors XCSoar smoothness: shared gate,
- * bearing clamp, offset averaging.
+ * to both camera and icon. Shared gate, bearing clamp, offset averaging.
  */
 class MapPositionController(
     private val mapState: MapScreenState,
@@ -101,19 +98,19 @@ class MapPositionController(
     }
 
     fun updateCamera(
-        map: MapLibreMap,
+        camera: MapCameraController,
         location: LatLng,
         cameraBearing: Double?,
         padding: IntArray?,
         animationMs: Int?
     ) {
-        val currentPosition = map.cameraPosition
-        val newCameraPosition = org.maplibre.android.camera.CameraPosition.Builder()
-            .target(location)
-            .zoom(currentPosition.zoom)
-            .bearing(cameraBearing ?: currentPosition.bearing)
-            .tilt(currentPosition.tilt)
-            .build()
+        val currentPosition = camera.cameraPosition
+        val newCameraPosition = MapCameraPositionSnapshot(
+            target = location,
+            zoom = currentPosition.zoom,
+            bearing = cameraBearing ?: currentPosition.bearing,
+            tilt = currentPosition.tilt
+        )
 
         if (verboseLogging) {
             val fromTarget = currentPosition.target
@@ -127,16 +124,15 @@ class MapPositionController(
             )
         }
 
-        val update = org.maplibre.android.camera.CameraUpdateFactory.newCameraPosition(newCameraPosition)
         if (animationMs != null && animationMs > 0) {
-            map.animateCamera(update, animationMs)
+            camera.animateCamera(newCameraPosition, animationMs)
         } else {
-            map.moveCamera(update)
+            camera.moveCamera(newCameraPosition)
         }
 
         padding?.let {
             if (!it.contentEquals(lastPadding)) {
-                map.setPadding(it[0], it[1], it[2], it[3])
+                camera.setPadding(it[0], it[1], it[2], it[3])
                 lastPadding = it
                 if (verboseLogging) {
                     Log.d(TAG, "mapPadding updated to ${it.contentToString()}")

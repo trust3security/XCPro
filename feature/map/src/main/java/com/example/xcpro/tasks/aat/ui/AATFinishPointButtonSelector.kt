@@ -39,11 +39,11 @@ fun AATFinishPointButtonSelector(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            // 🏁 AAT Finish Line Button
+            //  AAT Finish Line Button
             AATFinishPointTypeChip(
                 type = AATFinishPointType.AAT_FINISH_LINE,
                 icon = Icons.Default.LinearScale, // Line icon
-                emoji = "🏁",
+                emoji = "",
                 selected = selectedType == AATFinishPointType.AAT_FINISH_LINE,
                 onClick = { onTypeSelected(AATFinishPointType.AAT_FINISH_LINE) },
                 modifier = Modifier.weight(1f)
@@ -51,11 +51,11 @@ fun AATFinishPointButtonSelector(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // 🎯 AAT Finish Cylinder Button
+            //  AAT Finish Cylinder Button
             AATFinishPointTypeChip(
                 type = AATFinishPointType.AAT_FINISH_CYLINDER,
                 icon = Icons.Default.RadioButtonUnchecked, // Circle icon
-                emoji = "🎯",
+                emoji = "",
                 selected = selectedType == AATFinishPointType.AAT_FINISH_CYLINDER,
                 onClick = { onTypeSelected(AATFinishPointType.AAT_FINISH_CYLINDER) },
                 modifier = Modifier.weight(1f)

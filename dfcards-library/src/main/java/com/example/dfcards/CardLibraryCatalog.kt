@@ -167,7 +167,7 @@ private val navigationCards = listOf(
         description = "Ground track direction",
         category = CardCategory.NAVIGATION,
         icon = Icons.Filled.LocationOn,
-        unit = "°",
+        unit = "",
         primaryFontSize = 14,
         unitFontSize = 8
     ),
@@ -187,7 +187,7 @@ private val navigationCards = listOf(
         description = "Bearing to next waypoint",
         category = CardCategory.NAVIGATION,
         icon = Icons.AutoMirrored.Filled.Send,
-        unit = "°",
+        unit = "",
         primaryFontSize = 14,
         unitFontSize = 8
     ),
@@ -226,7 +226,7 @@ private val performanceCards = listOf(
     CardDefinition(
         id = "thermal_tc_avg",
         title = "TC AVG",
-        description = "Current circle climb rate (≈10 s window)",
+        description = "Current circle climb rate (10 s window)",
         category = CardCategory.PERFORMANCE,
         icon = Icons.Filled.Timeline,
         unit = "m/s",
@@ -312,7 +312,7 @@ private val timeWeatherCards = listOf(
         description = "Wind direction",
         category = CardCategory.TIME_WEATHER,
         icon = Icons.Filled.LocationOn,
-        unit = "°",
+        unit = "",
         primaryFontSize = 13,
         unitFontSize = 8
     ),

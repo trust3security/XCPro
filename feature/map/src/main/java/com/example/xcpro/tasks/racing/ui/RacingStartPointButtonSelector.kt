@@ -19,7 +19,7 @@ import com.example.xcpro.tasks.racing.models.RacingStartPointType
  * Replaces dropdown-based selection with horizontal buttons for better UX.
  *
  * Features:
- * - Single-tap selection (vs dropdown → tap → select)
+ * - Single-tap selection (vs dropdown  tap  select)
  * - Visual icons for each start point type
  * - Immediate visual feedback
  * - Better space utilization in bottom sheet
@@ -46,11 +46,11 @@ fun RacingStartPointButtonSelector(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            // 📍 Line Button
+            //  Line Button
             StartPointTypeButton(
                 type = RacingStartPointType.START_LINE,
                 icon = Icons.Default.LinearScale, // Line icon
-                emoji = "📍",
+                emoji = "",
                 selected = selectedType == RacingStartPointType.START_LINE,
                 onClick = { onTypeChange(RacingStartPointType.START_LINE) },
                 modifier = Modifier.weight(1f)
@@ -58,11 +58,11 @@ fun RacingStartPointButtonSelector(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // 🔵 Cylinder Button
+            //  Cylinder Button
             StartPointTypeButton(
                 type = RacingStartPointType.START_CYLINDER,
                 icon = Icons.Default.RadioButtonUnchecked, // Circle icon
-                emoji = "🔵",
+                emoji = "",
                 selected = selectedType == RacingStartPointType.START_CYLINDER,
                 onClick = { onTypeChange(RacingStartPointType.START_CYLINDER) },
                 modifier = Modifier.weight(1f)
@@ -70,11 +70,11 @@ fun RacingStartPointButtonSelector(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // 🔶 FAI Sector Button
+            //  FAI Sector Button
             StartPointTypeButton(
                 type = RacingStartPointType.FAI_START_SECTOR,
                 icon = Icons.Default.ChangeHistory, // Triangle icon for sector
-                emoji = "🔶",
+                emoji = "",
                 selected = selectedType == RacingStartPointType.FAI_START_SECTOR,
                 onClick = { onTypeChange(RacingStartPointType.FAI_START_SECTOR) },
                 modifier = Modifier.weight(1f)

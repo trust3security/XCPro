@@ -101,7 +101,8 @@ internal fun VariometerPanel(
     val displayNumericVario by flightDataManager.displayVarioFlow.collectAsStateWithLifecycle()
     val needleVario by flightDataManager.needleVarioFlow.collectAsStateWithLifecycle()
     val fastNeedleVario by flightDataManager.fastNeedleVarioFlow.collectAsStateWithLifecycle()
-    val xcSoarDisplayVario by flightDataManager.xcSoarDisplayVarioFlow.collectAsStateWithLifecycle()
+    val audioNeedleVario by flightDataManager.audioNeedleVarioFlow.collectAsStateWithLifecycle()
+    val baselineDisplayVario by flightDataManager.baselineDisplayVarioFlow.collectAsStateWithLifecycle()
     val unitsPreferences = flightDataManager.unitsPreferences
     val displayVarioUnits by remember(displayNumericVario, unitsPreferences) {
         derivedStateOf {
@@ -152,10 +153,10 @@ internal fun VariometerPanel(
             )
         }
     }
-    val xcSoarFormatted by remember(xcSoarDisplayVario, unitsPreferences) {
+    val baselineFormatted by remember(baselineDisplayVario, unitsPreferences) {
         derivedStateOf {
             UnitsFormatter.verticalSpeed(
-                VerticalSpeedMs(xcSoarDisplayVario.toDouble()),
+                VerticalSpeedMs(baselineDisplayVario.toDouble()),
                 unitsPreferences
             )
         }
@@ -165,9 +166,10 @@ internal fun VariometerPanel(
         variometerState = variometerUiState,
         needleValue = needleVario,
         fastNeedleValue = fastNeedleVario,
+        audioNeedleValue = audioNeedleVario,
         displayValue = displayVarioUnits.toFloat(),
         displayLabel = stripUnit(varioFormatted),
-        secondaryLabel = stripUnit(xcSoarFormatted),
+        secondaryLabel = stripUnit(baselineFormatted),
         dialConfig = dialConfig,
         windDirectionScreenDeg = windArrowState.directionScreenDeg,
         windIsValid = windArrowState.isValid,

@@ -93,7 +93,7 @@ internal class RacingGeometryCoordinator(
         return when (waypoint.turnPointType) {
             RacingTurnPointType.TURN_POINT_CYLINDER -> {
                 val radiusMeters = waypoint.gateWidth * 1000.0
-                println("🔍 CYLINDER DEBUG: Waypoint ${waypoint.title} - gateWidth: ${waypoint.gateWidth}km, radius: ${radiusMeters}m")
+                println(" CYLINDER DEBUG: Waypoint ${waypoint.title} - gateWidth: ${waypoint.gateWidth}km, radius: ${radiusMeters}m")
                 generateCylinder(waypoint, radiusMeters, "turnpoint") // Convert km to meters
             }
             RacingTurnPointType.FAI_QUADRANT -> {
@@ -146,7 +146,7 @@ internal class RacingGeometryCoordinator(
      * Generate keyhole geometry
      */
     private fun generateKeyhole(index: Int, waypoint: RacingWaypoint, allWaypoints: List<RacingWaypoint>): String {
-        // Use KeyholeDisplay to generate proper keyhole shape (cylinder + 90° sector)
+        // Use KeyholeDisplay to generate proper keyhole shape (cylinder + 90 sector)
         val context = TaskContext(
             waypointIndex = index,
             allWaypoints = allWaypoints,

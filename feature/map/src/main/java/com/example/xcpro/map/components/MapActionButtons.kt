@@ -42,6 +42,7 @@ fun MapActionButtons(
     onVarioDemoReferenceClick: () -> Unit,
     onVarioDemoSimClick: () -> Unit,
     onVarioDemoSim2Click: () -> Unit,
+    onVarioDemoSim3Click: () -> Unit,
     showRacingReplayFab: Boolean,
     onRacingReplayClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -56,7 +57,8 @@ fun MapActionButtons(
     val demoSpacing = 12.6.dp // ~2mm gap between FAB edges
     val demoSimBottomPadding = 16.dp
     val demoSim2BottomPadding = demoSimBottomPadding + demoFabSize + demoSpacing
-    val demoRefBottomPadding = demoSim2BottomPadding + demoFabSize + demoSpacing
+    val demoSim3BottomPadding = demoSim2BottomPadding + demoFabSize + demoSpacing
+    val demoRefBottomPadding = demoSim3BottomPadding + demoFabSize + demoSpacing
     val demoTaskBottomPadding = if (showVarioDemoFab) {
         demoRefBottomPadding + demoFabSize + demoSpacing
     } else {
@@ -69,7 +71,7 @@ fun MapActionButtons(
         modifier = modifier
             .fillMaxSize()
             .padding(top = topInset, bottom = bottomInset)
-            // ❌ REMOVED: .zIndex(50f) was blocking hamburger menu at zIndex(4f)
+            //  REMOVED: .zIndex(50f) was blocking hamburger menu at zIndex(4f)
             // Individual buttons have their own z-index values as needed
     ) {
         // Recenter Button
@@ -129,6 +131,15 @@ fun MapActionButtons(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(end = 16.dp, bottom = demoSim2BottomPadding)
+            )
+            VarioDemoButton(
+                onClick = onVarioDemoSim3Click,
+                badgeText = "SIM3",
+                badgeColor = MaterialTheme.colorScheme.secondary,
+                contentDescription = "Run vario demo replay (sim3)",
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 16.dp, bottom = demoSim3BottomPadding)
             )
             VarioDemoButton(
                 onClick = onVarioDemoSimClick,

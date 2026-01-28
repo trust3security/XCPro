@@ -1,4 +1,4 @@
-﻿package com.example.xcpro.orientation
+package com.example.xcpro.orientation
 
 import com.example.dfcards.FlightModeSelection
 import com.example.xcpro.MapOrientationSettings

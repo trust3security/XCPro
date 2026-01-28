@@ -12,7 +12,7 @@ import com.example.xcpro.tasks.aat.AATManageBTTab
 
 /**
  * Router component for task-type-specific ManageBTTab implementations
- * ✅ SEPARATION COMPLIANT: Routes to task-specific components without shared logic
+ *  SEPARATION COMPLIANT: Routes to task-specific components without shared logic
  */
 @Composable
 fun ManageBTTabRouter(
@@ -28,7 +28,7 @@ fun ManageBTTabRouter(
     currentQNH: String? = null,
     taskType: TaskType
 ) {
-    // ✅ PURE ROUTING: No shared calculation logic, no task-specific imports mixed
+    //  PURE ROUTING: No shared calculation logic, no task-specific imports mixed
     when (taskType) {
         TaskType.RACING -> {
             RacingManageBTTab(

@@ -21,7 +21,7 @@ data class HeadingResolverInput(
 )
 
 /**
- * Reconstructs a heading suitable for HEAD_UP mode using the same fallbacks as XCSoar:
+ * Reconstructs a heading suitable for HEAD_UP mode using the same legacy fallbacks:
  * 1) Trust the primary heading when it is reliable.
  * 2) Otherwise derive the aircraft axis from ground track + wind.
  * 3) Otherwise fall back to GPS track if we're moving fast enough.

@@ -132,9 +132,9 @@ enum class AudioMode {
 data class VarioAudioSettings(
     val enabled: Boolean = true,
     val volume: Float = 0.8f,  // 0.0 to 1.0
-    val liftThreshold: Double = 0.1,  // m/s (XCSoar default)
+    val liftThreshold: Double = 0.1,  // m/s (default)
     val sinkSilenceThreshold: Double = 0.0,  // m/s (<=0 keeps sink audible)
-    val dutyCycle: Double = 2.0 / 3.0,  // matches XCSoar tone (66% beep)
+    val dutyCycle: Double = 2.0 / 3.0,  // default tone duty cycle (66% beep)
     val deadbandMin: Double = -0.3,   // m/s
     val deadbandMax: Double = 0.1    // m/s
 )

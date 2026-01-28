@@ -13,7 +13,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -26,7 +26,7 @@ import com.example.xcpro.glider.GliderRepository
 fun AircraftSelectCard() {
     val context = LocalContext.current
     val repo = remember(context) { GliderRepository.getInstance(context) }
-    val selected by repo.selectedModel.collectAsState(initial = null)
+    val selected by repo.selectedModel.collectAsStateWithLifecycle(initialValue = null)
     val models = repo.listModels()
 
     Card(

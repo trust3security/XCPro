@@ -1,6 +1,7 @@
 package com.example.xcpro.weather.wind
 
 import com.example.xcpro.flightdata.FlightDataRepository
+import com.example.xcpro.core.time.FakeClock
 import com.example.xcpro.sensors.CirclingDetector
 import com.example.xcpro.sensors.FlightStateSource
 import com.example.xcpro.weather.wind.data.WindOverrideSource
@@ -28,6 +29,7 @@ import kotlin.math.sin
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -50,6 +52,7 @@ class WindSensorFusionRepositoryTest {
             flightStateSource = FakeFlightStateSource(),
             windOverrideSource = FakeWindOverrideSource(),
             windSelectionUseCase = WindSelectionUseCase(),
+            clock = FakeClock(),
             dispatcher = dispatcher
         )
         flightRepo.setActiveSource(FlightDataRepository.Source.LIVE)
@@ -84,6 +87,7 @@ class WindSensorFusionRepositoryTest {
             flightStateSource = FakeFlightStateSource(),
             windOverrideSource = FakeWindOverrideSource(),
             windSelectionUseCase = WindSelectionUseCase(),
+            clock = FakeClock(),
             dispatcher = dispatcher
         )
         flightRepo.setActiveSource(FlightDataRepository.Source.LIVE)
@@ -126,6 +130,7 @@ class WindSensorFusionRepositoryTest {
             flightStateSource = FakeFlightStateSource(),
             windOverrideSource = FakeWindOverrideSource(),
             windSelectionUseCase = WindSelectionUseCase(),
+            clock = FakeClock(),
             dispatcher = dispatcher
         )
         flightRepo.setActiveSource(FlightDataRepository.Source.LIVE)
@@ -175,6 +180,50 @@ class WindSensorFusionRepositoryTest {
 
         assertEquals(expected.east, vector.east, 0.5)
         assertEquals(expected.north, vector.north, 0.5)
+    }
+
+    @Test
+    fun `replay to live hold respects monotonic clock`() = runTest {
+        val inputs = TestWindInputs()
+        val flightRepo = FlightDataRepository()
+        val dispatcher = UnconfinedTestDispatcher(testScheduler)
+        val clock = FakeClock(monoMs = 1_000L, wallMs = 5_000L)
+        val repo = WindSensorFusionRepository(
+            liveInputs = inputs.inputs,
+            replayInputs = inputs.inputs,
+            flightDataRepository = flightRepo,
+            flightStateSource = FakeFlightStateSource(),
+            windOverrideSource = FakeWindOverrideSource(),
+            windSelectionUseCase = WindSelectionUseCase(),
+            clock = clock,
+            dispatcher = dispatcher
+        )
+        flightRepo.setActiveSource(FlightDataRepository.Source.REPLAY)
+
+        generateCirclingSamples().forEach { sample ->
+            inputs.gps.value = sample
+            inputs.heading.value = HeadingSample(
+                headingDeg = Math.toDegrees(sample.trackRad),
+                timestampMillis = sample.timestampMillis,
+                clockMillis = sample.clockMillis
+            )
+            runCurrent()
+        }
+
+        val stateBefore = repo.windState.value
+        assertTrue(stateBefore.vector != null)
+
+        flightRepo.setActiveSource(FlightDataRepository.Source.LIVE)
+        runCurrent()
+
+        inputs.gps.value = null
+        runCurrent()
+        assertEquals(stateBefore.vector, repo.windState.value.vector)
+
+        clock.advanceMonoMs(REPLAY_HOLD_MS)
+        advanceTimeBy(REPLAY_HOLD_MS)
+        runCurrent()
+        assertTrue(repo.windState.value.vector == null)
     }
 
     private fun generateCirclingSamples(
@@ -316,5 +365,6 @@ class WindSensorFusionRepositoryTest {
         private const val TAS = 30.0
         private const val TEST_WIND_EAST = 5.0
         private const val TEST_WIND_NORTH = -2.0
+        private const val REPLAY_HOLD_MS = 10_000L
     }
 }

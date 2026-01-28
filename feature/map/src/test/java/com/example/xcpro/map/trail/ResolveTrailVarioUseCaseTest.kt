@@ -12,8 +12,8 @@ class ResolveTrailVarioUseCaseTest {
     fun replay_prefers_real_igc_vario() {
         val data = buildCompleteFlightData(
             realIgcVarioMs = 5.0,
-            xcSoarDisplayVarioMs = 2.0,
-            xcSoarVarioValid = true,
+            baselineDisplayVarioMs = 2.0,
+            baselineVarioValid = true,
             displayNettoMs = 1.0,
             nettoValid = true
         )
@@ -24,11 +24,11 @@ class ResolveTrailVarioUseCaseTest {
     }
 
     @Test
-    fun replay_falls_back_to_xcsoar_display_vario() {
+    fun replay_falls_back_to_baseline_display_vario() {
         val data = buildCompleteFlightData(
             realIgcVarioMs = null,
-            xcSoarDisplayVarioMs = 2.5,
-            xcSoarVarioValid = true,
+            baselineDisplayVarioMs = 2.5,
+            baselineVarioValid = true,
             displayNettoMs = 1.0,
             nettoValid = true
         )
@@ -42,8 +42,8 @@ class ResolveTrailVarioUseCaseTest {
     fun replay_falls_back_to_display_netto() {
         val data = buildCompleteFlightData(
             realIgcVarioMs = null,
-            xcSoarDisplayVarioMs = 2.5,
-            xcSoarVarioValid = false,
+            baselineDisplayVarioMs = 2.5,
+            baselineVarioValid = false,
             displayNettoMs = 1.2,
             nettoValid = true
         )
@@ -93,4 +93,3 @@ class ResolveTrailVarioUseCaseTest {
         assertEquals(0.4, result, 1e-6)
     }
 }
-

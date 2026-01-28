@@ -11,7 +11,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.xcpro"
+        applicationId = "com.example.openxcpro"
         minSdk = 30
         targetSdk = 35
         versionCode = 1
@@ -28,7 +28,6 @@ android {
         debug {
             isDebuggable = true
             isMinifyEnabled = false
-            applicationIdSuffix = ".debug"
         }
         release {
             isMinifyEnabled = true
@@ -62,6 +61,8 @@ android {
 dependencies {
     implementation(project(":dfcards-library"))
     implementation(project(":core:common"))
+    implementation(project(":core:geometry"))
+    implementation(project(":core:time"))
     implementation(project(":core:ui"))
     implementation(project(":feature:profile"))
     implementation(project(":feature:map"))
@@ -104,6 +105,7 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.robolectric)
     testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.ui.test.junit4)
     testImplementation(libs.androidx.junit)
     testImplementation("org.mockito:mockito-core:5.2.0")
     testImplementation("org.mockito:mockito-inline:5.2.0")

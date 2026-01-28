@@ -16,9 +16,9 @@ private const val TAG = "RacingTaskPointTypeSelector"
  * Racing-specific task point type selector (Main Router)
  *
  * Routes to appropriate selector based on waypoint role:
- * - Start → RacingStartPointSelector
- * - Finish → RacingFinishPointSelector
- * - Turn Point → RacingTurnPointSelector
+ * - Start  RacingStartPointSelector
+ * - Finish  RacingFinishPointSelector
+ * - Turn Point  RacingTurnPointSelector
  *
  * Extracted from shared TaskPointTypeSelector to achieve 100% task separation compliance.
  * Uses only Racing types and models - zero dependencies on AAT/shared components.
@@ -46,7 +46,7 @@ fun RacingTaskPointTypeSelector(
     onKeyholeAngleChange: (String) -> Unit,
     onFAIQuadrantOuterRadiusChange: (String) -> Unit,
 ) {
-    Log.d(TAG, "🔧 RacingTaskPointTypeSelector rendering - Role: $role, Waypoint: ${waypoint.title}")
+    Log.d(TAG, " RacingTaskPointTypeSelector rendering - Role: $role, Waypoint: ${waypoint.title}")
 
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         when (role) {

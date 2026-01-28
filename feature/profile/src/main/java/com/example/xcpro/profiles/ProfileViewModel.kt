@@ -19,7 +19,7 @@ data class ProfileUiState(
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
-    private val repository: ProfileRepository
+    private val useCase: ProfileUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState())
@@ -27,15 +27,15 @@ class ProfileViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            repository.profiles.collect { profiles ->
+            useCase.profiles.collect { profiles ->
                 _uiState.value = _uiState.value.copy(
                     profiles = profiles,
-                    activeProfile = repository.activeProfile.value ?: _uiState.value.activeProfile
+                    activeProfile = useCase.activeProfile.value ?: _uiState.value.activeProfile
                 )
             }
         }
         viewModelScope.launch {
-            repository.activeProfile.collect { activeProfile ->
+            useCase.activeProfile.collect { activeProfile ->
                 _uiState.value = _uiState.value.copy(activeProfile = activeProfile)
             }
         }
@@ -44,7 +44,7 @@ class ProfileViewModel @Inject constructor(
     fun selectProfile(profile: UserProfile) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            repository.setActiveProfile(profile)
+            useCase.setActiveProfile(profile)
                 .onSuccess {
                     _uiState.value = _uiState.value.copy(isLoading = false)
                 }
@@ -60,7 +60,7 @@ class ProfileViewModel @Inject constructor(
     fun createProfile(request: ProfileCreationRequest) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            repository.createProfile(request)
+            useCase.createProfile(request)
                 .onSuccess { newProfile ->
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
@@ -80,7 +80,7 @@ class ProfileViewModel @Inject constructor(
     fun updateProfile(profile: UserProfile) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            repository.updateProfile(profile)
+            useCase.updateProfile(profile)
                 .onSuccess {
                     _uiState.value = _uiState.value.copy(isLoading = false)
                 }
@@ -96,7 +96,7 @@ class ProfileViewModel @Inject constructor(
     fun deleteProfile(profileId: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            repository.deleteProfile(profileId)
+            useCase.deleteProfile(profileId)
                 .onSuccess {
                     _uiState.value = _uiState.value.copy(isLoading = false)
                 }

@@ -6,7 +6,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 
-// ✅ Predefined Color Themes
+//  Predefined Color Themes
 enum class AppColorTheme(
     val id: String,
     val displayName: String,
@@ -86,7 +86,7 @@ enum class AppColorTheme(
     )
 }
 
-// ✅ Create Material3 Color Schemes
+//  Create Material3 Color Schemes
 fun AppColorTheme.toLightColorScheme(): ColorScheme {
     return lightColorScheme(
         primary = primaryColor,
@@ -159,7 +159,7 @@ fun AppColorTheme.toDarkColorScheme(): ColorScheme {
     )
 }
 
-// ✅ Custom color data class for saving
+//  Custom color data class for saving
 data class CustomColorScheme(
     val primaryColor: String,
     val secondaryColor: String
@@ -168,10 +168,10 @@ data class CustomColorScheme(
         val argbValue = try {
             primaryColor.toLong(16).toInt()
         } catch (e: NumberFormatException) {
-            android.util.Log.w("ColorThemes", "⚠️ Failed to parse primary color hex '$primaryColor', using default")
+            android.util.Log.w("ColorThemes", " Failed to parse primary color hex '$primaryColor', using default")
             0xFF2196F3.toInt()
         }
-        android.util.Log.d("ColorThemes", "🎨 Converting primary hex '$primaryColor' to ARGB: $argbValue")
+        android.util.Log.d("ColorThemes", " Converting primary hex '$primaryColor' to ARGB: $argbValue")
         return Color(argbValue)
     }
     
@@ -179,10 +179,10 @@ data class CustomColorScheme(
         val argbValue = try {
             secondaryColor.toLong(16).toInt()
         } catch (e: NumberFormatException) {
-            android.util.Log.w("ColorThemes", "⚠️ Failed to parse secondary color hex '$secondaryColor', using default")
+            android.util.Log.w("ColorThemes", " Failed to parse secondary color hex '$secondaryColor', using default")
             0xFF03A9F4.toInt()
         }
-        android.util.Log.d("ColorThemes", "🎨 Converting secondary hex '$secondaryColor' to ARGB: $argbValue")
+        android.util.Log.d("ColorThemes", " Converting secondary hex '$secondaryColor' to ARGB: $argbValue")
         return Color(argbValue)
     }
     
@@ -199,9 +199,9 @@ data class CustomColorScheme(
             val primaryHex = String.format("%08X", primaryArgb)
             val secondaryHex = String.format("%08X", secondaryArgb)
             
-            android.util.Log.d("ColorThemes", "🎨 Converting colors to hex:")
-            android.util.Log.d("ColorThemes", "🎨 Primary: $primaryArgb -> $primaryHex")
-            android.util.Log.d("ColorThemes", "🎨 Secondary: $secondaryArgb -> $secondaryHex")
+            android.util.Log.d("ColorThemes", " Converting colors to hex:")
+            android.util.Log.d("ColorThemes", " Primary: $primaryArgb -> $primaryHex")
+            android.util.Log.d("ColorThemes", " Secondary: $secondaryArgb -> $secondaryHex")
             
             return CustomColorScheme(
                 primaryColor = primaryHex,

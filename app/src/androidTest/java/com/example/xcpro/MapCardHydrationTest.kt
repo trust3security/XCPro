@@ -21,8 +21,8 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.Density
+import com.example.xcpro.core.common.geometry.DensityScale
+import com.example.xcpro.core.common.geometry.IntSizePx
 import kotlin.math.roundToInt
 
 @RunWith(AndroidJUnit4::class)
@@ -42,11 +42,11 @@ class MapCardHydrationTest {
         val flightDataManager = FlightDataManager(context, cardPreferences, testScope)
         val flightDataViewModel = FlightDataViewModel()
 
-        val density = Density(
+        val density = DensityScale(
             context.resources.displayMetrics.density,
             context.resources.configuration.fontScale
         )
-        val containerSize = IntSize(1080, 1920)
+        val containerSize = IntSizePx(1080, 1920)
 
         withContext(Dispatchers.Main) {
             flightDataViewModel.initializeCardPreferences(cardPreferences)

@@ -18,7 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -120,6 +120,7 @@ internal fun MapScreenContent(
     onVarioDemoReferenceClick: () -> Unit,
     onVarioDemoSimClick: () -> Unit,
     onVarioDemoSim2Click: () -> Unit,
+    onVarioDemoSim3Click: () -> Unit,
     showRacingReplayFab: Boolean,
     onRacingReplayClick: () -> Unit
 ) {
@@ -224,6 +225,7 @@ internal fun MapScreenContent(
             onVarioDemoReferenceClick = onVarioDemoReferenceClick,
             onVarioDemoSimClick = onVarioDemoSimClick,
             onVarioDemoSim2Click = onVarioDemoSim2Click,
+            onVarioDemoSim3Click = onVarioDemoSim3Click,
             onRacingReplayClick = onRacingReplayClick
         )
 
@@ -274,7 +276,7 @@ private fun ReplayDiagnosticsLogger(
 ) {
     if (!com.example.xcpro.map.BuildConfig.DEBUG) return
 
-    val replaySession by replayState.collectAsState()
+    val replaySession by replayState.collectAsStateWithLifecycle()
 
     LaunchedEffect(replaySession.status, unitsPreferences) {
         Log.d("REPLAY_UI", "status=${replaySession.status} speed=${replaySession.speedMultiplier}")
@@ -300,7 +302,7 @@ private fun ReplayDiagnosticsLogger(
                 "REPLAY_UI",
                 "displayMs=${"%.3f".format(displayMs)} displayUi=${"%.3f".format(displayUnits)} " +
                     "label=$label units=${unitsPreferences.verticalSpeed} " +
-                    "valid=${live?.varioValid} src=${live?.varioSource} xcDisp=${live?.xcSoarDisplayVario}"
+                    "valid=${live?.varioValid} src=${live?.varioSource} baseDisp=${live?.baselineDisplayVario}"
             )
             delay(1_000L)
         }
@@ -341,6 +343,7 @@ private fun MapActionButtonsLayer(
     onVarioDemoReferenceClick: () -> Unit,
     onVarioDemoSimClick: () -> Unit,
     onVarioDemoSim2Click: () -> Unit,
+    onVarioDemoSim3Click: () -> Unit,
     onRacingReplayClick: () -> Unit,
     modifier: Modifier = Modifier.fillMaxSize()
 ) {
@@ -361,6 +364,7 @@ private fun MapActionButtonsLayer(
         onVarioDemoReferenceClick = onVarioDemoReferenceClick,
         onVarioDemoSimClick = onVarioDemoSimClick,
         onVarioDemoSim2Click = onVarioDemoSim2Click,
+        onVarioDemoSim3Click = onVarioDemoSim3Click,
         onRacingReplayClick = onRacingReplayClick,
         modifier = modifier
     )

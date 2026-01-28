@@ -9,7 +9,7 @@ import kotlin.math.*
  *
  * Implements the CORRECT FAI sector orientation algorithm.
  * FAI sectors are finite 90-degree quadrants oriented on the angle bisector
- * (XCSoar default radius: 10km).
+ * (default radius: 10 km).
  * between inbound and outbound legs.
  */
 class FAIQuadrantCalculator : TurnPointCalculator {
@@ -31,15 +31,15 @@ class FAIQuadrantCalculator : TurnPointCalculator {
         // Calculate sector orientation per FAI Sporting Code Section 3 Annex A
         val sectorBisector = calculateFAISectorBisector(waypoint, previousWaypoint, nextWaypoint)
 
-        println("🧭 FAI QUADRANT ORIENTATION [OFFICIAL FAI RULES]:")
+        println("FAI QUADRANT ORIENTATION [OFFICIAL FAI RULES]:")
         println("   Previous: ${if (previousWaypoint != null) "(${previousWaypoint.lat}, ${previousWaypoint.lon})" else "None"}")
         println("   Current: (${waypoint.lat}, ${waypoint.lon})")
         println("   Next: (${nextWaypoint.lat}, ${nextWaypoint.lon})")
-        println("   FAI Sector Bisector: ${sectorBisector.toInt()}°")
-        println("   ✅ FAI Rule: 90° sector (±45°), perpendicular to track bisector, oriented OUTWARD")
-        println("   ✅ Finite radius sector (default 10km) starting AT waypoint")
+        println("   FAI Sector Bisector: ${sectorBisector.toInt()} deg")
+        println("   FAI Rule: 90 deg sector (+/-45 deg), perpendicular to track bisector, oriented OUTWARD")
+        println("   Finite radius sector (default 10 km) starting at waypoint")
 
-        // FAI quadrants originate at waypoint → optimal touch point is always the waypoint itself
+        // FAI quadrants originate at waypoint -> optimal touch point is always the waypoint itself
         return Pair(waypoint.lat, waypoint.lon)
     }
 
@@ -48,7 +48,7 @@ class FAIQuadrantCalculator : TurnPointCalculator {
     }
 
     /**
-     * Check whether a position is inside the FAI quadrant (±45° around bisector).
+     * Check whether a position is inside the FAI quadrant (+/-45 deg around bisector).
      * Uses official FAI sector orientation rules.
      */
     override fun isWithinObservationZone(position: Pair<Double, Double>, waypoint: RacingWaypoint): Boolean {

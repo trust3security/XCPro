@@ -1,4 +1,4 @@
-﻿package com.example.xcpro.orientation
+package com.example.xcpro.orientation
 
 import android.util.Log
 import com.example.xcpro.OrientationDataSource

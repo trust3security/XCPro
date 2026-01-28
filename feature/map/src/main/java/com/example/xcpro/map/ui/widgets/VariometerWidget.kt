@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import com.example.ui1.UIVariometer
 import com.example.ui1.VarioDialConfig
 import com.example.xcpro.map.MapOverlayGestureTarget
+import com.example.xcpro.map.ui.toComposeOffset
 import com.example.xcpro.map.ui.widgets.common.editModeBorder
 import com.example.xcpro.map.ui.widgets.common.updateWidgetGestureRegion
 import com.example.xcpro.variometer.layout.VariometerUiState
@@ -77,13 +78,13 @@ internal fun VariometerWidgetContent(
     }
 
     val density = LocalDensity.current
-    val displayOffset = remember { mutableStateOf(variometerState.offset) }
+    val displayOffset = remember { mutableStateOf(variometerState.offset.toComposeOffset()) }
     val displaySize = remember { mutableStateOf(variometerState.sizePx) }
     var isUserInteracting by remember { mutableStateOf(false) }
 
     LaunchedEffect(variometerState.offset, variometerState.sizePx, isUserInteracting) {
         if (!isUserInteracting) {
-            displayOffset.value = variometerState.offset
+            displayOffset.value = variometerState.offset.toComposeOffset()
             displaySize.value = variometerState.sizePx
             Log.d(
                 "VARIO_GESTURE",

@@ -177,8 +177,8 @@ class AATTaskValidator {
         task.assignedAreas.forEach { area ->
             val areaSizeKm2 = areaBoundaryCalculator.calculateAreaSizeKm2(area)
             when {
-                areaSizeKm2 < 10.0 -> warnings.add("Area '${area.name}' is very small (${String.format("%.1f", areaSizeKm2)} km²)")
-                areaSizeKm2 > 5000.0 -> warnings.add("Area '${area.name}' is very large (${String.format("%.1f", areaSizeKm2)} km²)")
+                areaSizeKm2 < 10.0 -> warnings.add("Area '${area.name}' is very small (${String.format("%.1f", areaSizeKm2)} km)")
+                areaSizeKm2 > 5000.0 -> warnings.add("Area '${area.name}' is very large (${String.format("%.1f", areaSizeKm2)} km)")
             }
         }
     }
@@ -207,10 +207,10 @@ class AATTaskValidator {
                 
                 val angularSpan = geometry.getAngularSpan()
                 if (angularSpan < 10.0) {
-                    warnings.add("Sector angular span is very narrow (${String.format("%.1f", angularSpan)}°)")
+                    warnings.add("Sector angular span is very narrow (${String.format("%.1f", angularSpan)})")
                 }
                 if (angularSpan > 300.0) {
-                    warnings.add("Sector angular span is very wide (${String.format("%.1f", angularSpan)}°)")
+                    warnings.add("Sector angular span is very wide (${String.format("%.1f", angularSpan)})")
                 }
                 
                 geometry.innerRadius?.let { inner ->

@@ -65,7 +65,7 @@ fun SettingsScreen(
         containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
         topBar = {
-            // ✅ Match Look & Feel header style exactly
+            //  Match Look & Feel header style exactly
             SettingsTopAppBar(
                 title = "General",
                 onNavigateUp = {

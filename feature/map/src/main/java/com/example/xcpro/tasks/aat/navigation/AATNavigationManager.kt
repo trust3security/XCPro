@@ -30,7 +30,7 @@ class AATNavigationManager {
      */
     fun setCurrentLeg(leg: Int) {
         _currentLeg = leg
-        println("🔜 AAT NAVIGATION: Current leg set to: $_currentLeg")
+        println(" AAT NAVIGATION: Current leg set to: $_currentLeg")
     }
 
     /**
@@ -44,9 +44,9 @@ class AATNavigationManager {
     fun goToPreviousLeg(task: SimpleAATTask) {
         if (_currentLeg > 0) {
             _currentLeg--
-            println("🔙 AAT NAVIGATION: Moved to previous leg: $_currentLeg")
+            println(" AAT NAVIGATION: Moved to previous leg: $_currentLeg")
         } else {
-            println("🔙 AAT NAVIGATION: Already at first leg")
+            println(" AAT NAVIGATION: Already at first leg")
         }
     }
 
@@ -61,9 +61,9 @@ class AATNavigationManager {
     fun advanceToNextLeg(task: SimpleAATTask) {
         if (_currentLeg < task.waypoints.size - 1) {
             _currentLeg++
-            println("🔜 AAT NAVIGATION: Advanced to next leg: $_currentLeg")
+            println(" AAT NAVIGATION: Advanced to next leg: $_currentLeg")
         } else {
-            println("🔜 AAT NAVIGATION: Already at last leg")
+            println(" AAT NAVIGATION: Already at last leg")
         }
     }
 
@@ -74,7 +74,7 @@ class AATNavigationManager {
      */
     fun resetToStart() {
         _currentLeg = 0
-        println("🔄 AAT NAVIGATION: Reset to start (leg 0)")
+        println(" AAT NAVIGATION: Reset to start (leg 0)")
     }
 
     /**

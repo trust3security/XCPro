@@ -23,21 +23,21 @@ fun TaskMapOverlay(
 
     // Plot task on map when task changes, task type switches, OR map becomes available
     LaunchedEffect(currentTask, currentTaskType, mapLibreMap) {
-        println("🎯 GENERIC TASK DEBUG: TaskMapOverlay LaunchedEffect triggered")
-        println("🎯 GENERIC TASK DEBUG: Task Type: ${currentTaskType.name}, Waypoints: ${currentTask.waypoints.size}, Map available: ${mapLibreMap != null}")
+        println(" GENERIC TASK DEBUG: TaskMapOverlay LaunchedEffect triggered")
+        println(" GENERIC TASK DEBUG: Task Type: ${currentTaskType.name}, Waypoints: ${currentTask.waypoints.size}, Map available: ${mapLibreMap != null}")
 
         // CRITICAL FIX: Clear ALL task visuals before plotting new ones
         // This ensures complete separation and prevents color contamination
         if (mapLibreMap != null) {
-            println("🧹 GENERIC TASK DEBUG: Clearing ALL task visuals to prevent color contamination")
+            println(" GENERIC TASK DEBUG: Clearing ALL task visuals to prevent color contamination")
 
             // FORCE clear ALL Racing visuals - even when switching to AAT
             taskManager.getRacingTaskManager().clearRacingFromMap(mapLibreMap)
-            println("🧹 GENERIC TASK DEBUG: Racing visuals cleared")
+            println(" GENERIC TASK DEBUG: Racing visuals cleared")
 
             // FORCE clear ALL AAT visuals - even when switching to Racing
             taskManager.getAATTaskManager().clearAATFromMap(mapLibreMap)
-            println("🧹 GENERIC TASK DEBUG: AAT visuals cleared")
+            println(" GENERIC TASK DEBUG: AAT visuals cleared")
 
             // Additional safety: Clear any remaining task-related layers that might be orphaned
             mapLibreMap.getStyle { style ->
@@ -64,7 +64,7 @@ fun TaskMapOverlay(
                     try {
                         if (style.getLayer(layerId) != null) {
                             style.removeLayer(layerId)
-                            println("🧹 GENERIC TASK DEBUG: Removed orphaned layer: $layerId")
+                            println(" GENERIC TASK DEBUG: Removed orphaned layer: $layerId")
                         }
                     } catch (e: Exception) { /* Layer doesn't exist */ }
                 }
@@ -74,21 +74,21 @@ fun TaskMapOverlay(
                     try {
                         if (style.getSource(sourceId) != null) {
                             style.removeSource(sourceId)
-                            println("🧹 GENERIC TASK DEBUG: Removed orphaned source: $sourceId")
+                            println(" GENERIC TASK DEBUG: Removed orphaned source: $sourceId")
                         }
                     } catch (e: Exception) { /* Source doesn't exist */ }
                 }
             }
 
-            println("✅ GENERIC TASK DEBUG: Complete task visual cleanup completed - no color contamination possible")
+            println(" GENERIC TASK DEBUG: Complete task visual cleanup completed - no color contamination possible")
         }
 
         if (currentTask.waypoints.isNotEmpty()) {
-            println("🎯 GENERIC TASK DEBUG: Plotting ${currentTaskType.name} task - waypoints: ${currentTask.waypoints.size}")
+            println(" GENERIC TASK DEBUG: Plotting ${currentTaskType.name} task - waypoints: ${currentTask.waypoints.size}")
             taskManager.plotOnMap(mapLibreMap)
-            println("✅ GENERIC TASK DEBUG: ${currentTaskType.name} task plotted successfully")
+            println(" GENERIC TASK DEBUG: ${currentTaskType.name} task plotted successfully")
         } else {
-            println("🎯 GENERIC TASK DEBUG: No waypoints to plot for ${currentTaskType.name} task")
+            println(" GENERIC TASK DEBUG: No waypoints to plot for ${currentTaskType.name} task")
         }
     }
 

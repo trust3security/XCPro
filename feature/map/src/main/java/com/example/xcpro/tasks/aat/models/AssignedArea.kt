@@ -21,7 +21,7 @@ data class AssignedArea(
             is AreaGeometry.Circle -> 
                 "$name: Circle (${String.format("%.1f", geometry.radius / 1000)}km radius)"
             is AreaGeometry.Sector -> 
-                "$name: Sector (${String.format("%.1f", geometry.innerRadius?.let { it / 1000 } ?: 0.0)}-${String.format("%.1f", geometry.outerRadius / 1000)}km, ${String.format("%.0f", geometry.startBearing)}°-${String.format("%.0f", geometry.endBearing)}°)"
+                "$name: Sector (${String.format("%.1f", geometry.innerRadius?.let { it / 1000 } ?: 0.0)}-${String.format("%.1f", geometry.outerRadius / 1000)}km, ${String.format("%.0f", geometry.startBearing)}-${String.format("%.0f", geometry.endBearing)})"
         }
     }
     

@@ -43,20 +43,21 @@ class VarioBeepController(
     /**
      * Start the beep controller
      */
-    fun start() {
+    fun start(): Boolean {
         if (isRunning) {
             Log.w(TAG, "Already running")
-            return
+            return true
         }
 
         if (!toneGenerator.isReady()) {
             Log.w(TAG, "ToneGenerator not ready")
-            return
+            return false
         }
 
         isRunning = true
         startBeepLoop()
         Log.i(TAG, "Beep controller started")
+        return true
     }
 
     /**

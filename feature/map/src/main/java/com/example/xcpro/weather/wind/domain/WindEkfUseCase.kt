@@ -168,7 +168,7 @@ class WindEkfUseCase(
     }
 
     companion object {
-        // XCSoar fallback until polar VTakeoff wiring exists.
+        // Fallback until polar VTakeoff wiring exists.
         private const val DEFAULT_TAKEOFF_SPEED_MS = 10.0
         private const val UNSET_TIMESTAMP = Long.MIN_VALUE
         private const val SAMPLE_STRIDE = 10

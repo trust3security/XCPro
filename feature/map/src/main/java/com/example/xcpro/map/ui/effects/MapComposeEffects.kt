@@ -10,6 +10,8 @@ import androidx.compose.ui.unit.IntSize
 import com.example.dfcards.CardPreferences
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.dfcards.FlightDataViewModel
+import com.example.dfcards.dfcards.toDensityScale
+import com.example.dfcards.dfcards.toIntSizePx
 import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.common.flight.FlightMode
@@ -91,8 +93,8 @@ object MapComposeEffects {
             flightViewModel.prepareCardsForProfile(
                 profileId = uiState.activeProfile?.id,
                 flightMode = currentFlightModeSelection,
-                containerSize = safeContainerSize,
-                density = density
+                containerSize = safeContainerSize.toIntSizePx(),
+                density = density.toDensityScale()
             )
         }
     }

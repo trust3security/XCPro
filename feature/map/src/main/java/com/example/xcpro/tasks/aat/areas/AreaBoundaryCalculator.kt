@@ -21,19 +21,19 @@ class AreaBoundaryCalculator {
         try {
             return when (area.geometry) {
                 is AreaGeometry.Circle -> {
-                    // ✅ CRASH PREVENTION: Validate circle geometry
+                    //  CRASH PREVENTION: Validate circle geometry
                     if (area.geometry.radius <= 0) {
-                        println("❌ AAT ERROR: Invalid circle radius ${area.geometry.radius} in area '${area.name}'")
+                        println(" AAT ERROR: Invalid circle radius ${area.geometry.radius} in area '${area.name}'")
                         return false
                     }
                     circleCalculator.isInsideArea(point, area.centerPoint, area.geometry.radius)
                 }
                 is AreaGeometry.Sector -> {
-                    // ✅ CRASH PREVENTION: Validate sector geometry
+                    //  CRASH PREVENTION: Validate sector geometry
                     val innerRadius = area.geometry.innerRadius ?: 0.0
                     if (area.geometry.outerRadius <= 0 || innerRadius < 0 ||
                         innerRadius >= area.geometry.outerRadius) {
-                        println("❌ AAT ERROR: Invalid sector radii (inner=$innerRadius, outer=${area.geometry.outerRadius}) in area '${area.name}'")
+                        println(" AAT ERROR: Invalid sector radii (inner=$innerRadius, outer=${area.geometry.outerRadius}) in area '${area.name}'")
                         return false
                     }
                     sectorCalculator.isInsideArea(
@@ -44,7 +44,7 @@ class AreaBoundaryCalculator {
                 }
             }
         } catch (e: Exception) {
-            println("❌ AAT ERROR: Exception checking if point is inside area '${area.name}': ${e.message}")
+            println(" AAT ERROR: Exception checking if point is inside area '${area.name}': ${e.message}")
             return false
         }
     }

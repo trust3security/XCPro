@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import com.example.ui1.UIVariometer
 import com.example.ui1.VarioDialConfig
 import com.example.xcpro.map.MapOverlayGestureTarget
+import com.example.xcpro.map.ui.toComposeOffset
 import com.example.xcpro.variometer.layout.VariometerUiState
 import kotlin.math.roundToInt
 
@@ -46,6 +47,7 @@ internal fun VariometerWidgetImpl(
     variometerState: VariometerUiState,
     needleValue: Float,
     fastNeedleValue: Float,
+    audioNeedleValue: Float,
     displayValue: Float,
     displayLabel: String = String.format("%+.1f", displayValue),
     secondaryLabel: String? = null,
@@ -74,13 +76,13 @@ internal fun VariometerWidgetImpl(
     }
 
     val density = LocalDensity.current
-    val displayOffset = remember { mutableStateOf(variometerState.offset) }
+    val displayOffset = remember { mutableStateOf(variometerState.offset.toComposeOffset()) }
     val displaySize = remember { mutableStateOf(variometerState.sizePx) }
     var isUserInteracting by remember { mutableStateOf(false) }
 
     LaunchedEffect(variometerState.offset, variometerState.sizePx, isUserInteracting) {
         if (!isUserInteracting) {
-            displayOffset.value = variometerState.offset
+            displayOffset.value = variometerState.offset.toComposeOffset()
             displaySize.value = variometerState.sizePx
             Log.d(
                 "VARIO_GESTURE",
@@ -155,6 +157,7 @@ internal fun VariometerWidgetImpl(
             UIVariometer(
                 needleValue = needleValue,
                 fastNeedleValue = fastNeedleValue,
+                averageNeedleValue = audioNeedleValue,
                 displayValue = displayValue,
                 valueLabel = displayLabel,
                 secondaryLabel = secondaryLabel,

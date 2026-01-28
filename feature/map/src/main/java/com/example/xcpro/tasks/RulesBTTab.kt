@@ -102,7 +102,7 @@ fun RulesBTTab(
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Text(
-                                    text = "✅ ${customizedWaypoints.size} waypoint${if (customizedWaypoints.size > 1) "s" else ""} with custom settings will be preserved",
+                                    text = " ${customizedWaypoints.size} waypoint${if (customizedWaypoints.size > 1) "s" else ""} with custom settings will be preserved",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -122,7 +122,7 @@ fun RulesBTTab(
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Text(
-                                    text = "🔄 ${standardizedWaypoints} waypoint${if (standardizedWaypoints > 1) "s" else ""} will use new task type defaults",
+                                    text = " ${standardizedWaypoints} waypoint${if (standardizedWaypoints > 1) "s" else ""} will use new task type defaults",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -330,7 +330,7 @@ private fun RacingTaskParameters() {
         )
         ParameterItem(
             label = "Scoring",
-            value = "Speed: Distance ÷ Time"
+            value = "Speed: Distance  Time"
         )
     }
 }

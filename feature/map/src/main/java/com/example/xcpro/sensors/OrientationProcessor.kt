@@ -1,12 +1,13 @@
 package com.example.xcpro.sensors
 
 import android.hardware.SensorManager
-import android.os.SystemClock
+import com.example.xcpro.core.time.Clock
 
 /**
  * Projects linear acceleration readings into the earth frame using the device rotation vector.
  */
 class OrientationProcessor(
+    private val clock: Clock,
     private val freshnessWindowMillis: Long = DEFAULT_FRESHNESS_WINDOW_MS
 ) {
 
@@ -20,11 +21,11 @@ class OrientationProcessor(
         SensorManager.getRotationMatrixFromVector(tempRotationMatrix, values)
         System.arraycopy(tempRotationMatrix, 0, rotationMatrix, 0, rotationMatrix.size)
         hasRotationMatrix = true
-        lastRotationUpdateMillis = SystemClock.elapsedRealtime()
+        lastRotationUpdateMillis = clock.nowMonoMs()
     }
 
     fun projectVerticalAcceleration(linearAcceleration: FloatArray): AccelSample {
-        val now = SystemClock.elapsedRealtime()
+        val now = clock.nowMonoMs()
         val orientationFresh = hasRotationMatrix && (now - lastRotationUpdateMillis) <= freshnessWindowMillis
 
         val ax = linearAcceleration[0].toDouble()
@@ -49,7 +50,7 @@ class OrientationProcessor(
         val azimuthDeg = Math.toDegrees(eulerAngles[0].toDouble())
         val pitchDeg = Math.toDegrees(eulerAngles[1].toDouble())
         val rollDeg = Math.toDegrees(eulerAngles[2].toDouble())
-        val freshness = SystemClock.elapsedRealtime() - lastRotationUpdateMillis
+        val freshness = clock.nowMonoMs() - lastRotationUpdateMillis
         val reliable = freshness <= freshnessWindowMillis
         return AttitudeSample(
             headingDeg = (azimuthDeg + 360.0) % 360.0,

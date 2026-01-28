@@ -19,12 +19,12 @@ import java.net.URL
  * API: https://open-meteo.com/en/docs/elevation-api
  *
  * ADVANTAGES:
- * - ✅ Free, no API key required
- * - ✅ Global coverage (SRTM30 based, 90m resolution)
- * - ✅ Simple HTTP GET request
- * - ✅ No authentication needed
- * - ✅ Reliable open-source project
- * - ✅ Safety checks (permission + network state)
+ * -  Free, no API key required
+ * -  Global coverage (SRTM30 based, 90m resolution)
+ * -  Simple HTTP GET request
+ * -  No authentication needed
+ * -  Reliable open-source project
+ * -  Safety checks (permission + network state)
  *
  * USAGE:
  * ```kotlin
@@ -47,7 +47,7 @@ class OpenMeteoElevationApi(private val context: Context) {
         val hasPermission = context.checkSelfPermission(android.Manifest.permission.INTERNET) ==
                 PackageManager.PERMISSION_GRANTED
         if (!hasPermission) {
-            Log.e(TAG, "❌ INTERNET permission not granted")
+            Log.e(TAG, " INTERNET permission not granted")
         }
         return hasPermission
     }
@@ -58,20 +58,20 @@ class OpenMeteoElevationApi(private val context: Context) {
     private fun isNetworkAvailable(): Boolean {
         val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
         if (connectivityManager == null) {
-            Log.e(TAG, "❌ ConnectivityManager not available")
+            Log.e(TAG, " ConnectivityManager not available")
             return false
         }
 
         val network = connectivityManager.activeNetwork
         if (network == null) {
-            Log.w(TAG, "⚠️ No active network")
+            Log.w(TAG, " No active network")
             return false
         }
 
         val capabilities = connectivityManager.getNetworkCapabilities(network)
         val isConnected = capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
         if (!isConnected) {
-            Log.w(TAG, "⚠️ Network has no internet capability")
+            Log.w(TAG, " Network has no internet capability")
         }
         return isConnected
     }
@@ -138,15 +138,15 @@ class OpenMeteoElevationApi(private val context: Context) {
 
             if (elevationArray.length() > 0) {
                 val elevation = elevationArray.getDouble(0)
-                Log.d(TAG, "✅ Elevation: ${elevation.toInt()}m at ($lat, $lon)")
+                Log.d(TAG, " Elevation: ${elevation.toInt()}m at ($lat, $lon)")
                 elevation
             } else {
-                Log.e(TAG, "❌ No elevation data in response")
+                Log.e(TAG, " No elevation data in response")
                 null
             }
 
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Failed to fetch elevation: ${e.message}", e)
+            Log.e(TAG, " Failed to fetch elevation: ${e.message}", e)
             null
         }
     }

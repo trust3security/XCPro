@@ -77,7 +77,7 @@ fun TaskMapView(
     AndroidView(
         factory = { ctx ->
             MapView(ctx).apply {
-                Log.d(TAG, "🏗️ Creating MapView for Task screen")
+                Log.d(TAG, " Creating MapView for Task screen")
                 getMapAsync { map ->
                     mapLibreMap = map
                     onMapReady(map)
@@ -117,7 +117,7 @@ fun TaskMapView(
                         loadAndApplyWaypoints(ctx, map, selectedWaypointFiles, waypointCheckedStates)
                     }
 
-                    Log.d(TAG, "✅ MapView initialized successfully")
+                    Log.d(TAG, " MapView initialized successfully")
                 }
             }
         },

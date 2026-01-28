@@ -36,6 +36,8 @@ android {
 dependencies {
     implementation(project(":dfcards-library"))
     implementation(project(":core:common"))
+    implementation(project(":core:geometry"))
+    implementation(project(":core:time"))
     implementation(project(":core:ui"))
     implementation(project(":feature:profile"))
     implementation(project(":feature:variometer"))

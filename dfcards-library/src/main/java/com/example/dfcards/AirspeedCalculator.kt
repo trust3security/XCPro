@@ -13,9 +13,9 @@ object AirspeedCalculator {
     // Standard atmosphere constants
     private const val SEA_LEVEL_PRESSURE_HPA = 1013.25
     private const val SEA_LEVEL_TEMP_CELSIUS = 15.0
-    private const val TEMP_LAPSE_RATE_C_PER_M = -0.0065  // Temperature decreases 6.5°C per 1000m
-    private const val GAS_CONSTANT = 287.05  // Specific gas constant for dry air (J/kg·K)
-    private const val GRAVITY = 9.80665  // Standard gravity (m/s²)
+    private const val TEMP_LAPSE_RATE_C_PER_M = -0.0065  // Temperature decreases 6.5C per 1000m
+    private const val GAS_CONSTANT = 287.05  // Specific gas constant for dry air (J/kgK)
+    private const val GRAVITY = 9.80665  // Standard gravity (m/s)
 
     /**
      * Calculate True Airspeed (TAS) from ground speed and wind
@@ -57,7 +57,7 @@ object AirspeedCalculator {
 
     /**
      * Calculate Indicated Airspeed (IAS) from True Airspeed (TAS)
-     * IAS = TAS * sqrt(ρ/ρ₀) where ρ is air density at altitude
+     * IAS = TAS * sqrt(/) where  is air density at altitude
      *
      * @param tasKt True airspeed in knots
      * @param altitudeFt Altitude in feet
@@ -85,14 +85,14 @@ object AirspeedCalculator {
         val pressureRatio = calculatePressureRatio(altitudeM, qnhHPa)
         val pressureAtAlt = qnhHPa * pressureRatio
 
-        // Calculate air density at altitude (ρ = P / (R * T))
+        // Calculate air density at altitude ( = P / (R * T))
         val densityAtAlt = (pressureAtAlt * 100) / (GAS_CONSTANT * tempKelvin)  // Convert hPa to Pa
 
         // Calculate sea level air density (ISA conditions)
         val seaLevelTempK = SEA_LEVEL_TEMP_CELSIUS + 273.15
         val seaLevelDensity = (SEA_LEVEL_PRESSURE_HPA * 100) / (GAS_CONSTANT * seaLevelTempK)
 
-        // IAS = TAS * sqrt(ρ/ρ₀)
+        // IAS = TAS * sqrt(/)
         val densityRatio = densityAtAlt / seaLevelDensity
         val ias = tasKt * sqrt(densityRatio)
 
@@ -148,7 +148,7 @@ object AirspeedCalculator {
         groundSpeedKt: Double,
         altitudeFt: Double
     ): Double {
-        // Without wind data, assume TAS ≈ GS (only valid in calm conditions)
+        // Without wind data, assume TAS  GS (only valid in calm conditions)
         // Then apply altitude correction
 
         // Rule of thumb: TAS increases ~2% per 1000ft

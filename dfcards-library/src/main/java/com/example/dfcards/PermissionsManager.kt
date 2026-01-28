@@ -20,7 +20,7 @@ import androidx.core.content.PermissionChecker
 
 @Composable
 fun PermissionManager(
-    onPermissionsGranted: () -> Unit, // ✅ FIXED: Removed @Composable annotation
+    onPermissionsGranted: () -> Unit, //  FIXED: Removed @Composable annotation
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
@@ -38,11 +38,11 @@ fun PermissionManager(
     ) { permissions ->
         hasLocationPermission = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true
         if (hasLocationPermission) {
-            onPermissionsGranted() // ✅ NOW SAFE: Can call non-composable function
+            onPermissionsGranted() //  NOW SAFE: Can call non-composable function
         }
     }
 
-    // ✅ ALSO CALL onPermissionsGranted when permission is already granted
+    //  ALSO CALL onPermissionsGranted when permission is already granted
     LaunchedEffect(hasLocationPermission) {
         if (hasLocationPermission) {
             onPermissionsGranted()

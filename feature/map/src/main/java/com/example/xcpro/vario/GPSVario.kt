@@ -28,13 +28,8 @@ class GPSVario : IVarioCalculator {
         gpsSpeed: Double,
         gpsAltitude: Double
     ): Double {
-        // Best-effort fallback: this interface doesn't provide GPS fix timestamps.
-        // Guard the sample cadence to avoid accidentally differentiating cached GPS altitudes
-        // from a high-rate loop.
-        return updateFromGpsFix(
-            gpsAltitudeMeters = gpsAltitude,
-            gpsTimestampMillis = System.currentTimeMillis()
-        )
+        // No-op: GPS vario updates are driven by updateFromGpsFix with real fix timestamps.
+        return currentVerticalSpeed
     }
 
     fun updateFromGpsFix(gpsAltitudeMeters: Double, gpsTimestampMillis: Long): Double {

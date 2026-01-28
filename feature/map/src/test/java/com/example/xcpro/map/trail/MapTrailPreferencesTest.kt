@@ -28,7 +28,7 @@ class MapTrailPreferencesTest {
     }
 
     @Test
-    fun defaultsMatchXcsoar() {
+    fun defaultsMatchBaseline() {
         val subject = MapTrailPreferences(appContext)
 
         assertEquals(

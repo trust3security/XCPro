@@ -1,4 +1,4 @@
-﻿package com.example.xcpro.tasks.aat.calculations
+package com.example.xcpro.tasks.aat.calculations
 
 import com.example.xcpro.tasks.aat.areas.AreaBoundaryCalculator
 import com.example.xcpro.tasks.aat.models.*

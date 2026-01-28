@@ -9,5 +9,5 @@ package com.example.xcpro.tasks.aat.models
 enum class AATStartPointType(val displayName: String, val description: String) {
     AAT_START_LINE("Start Line", "Perpendicular line to first AAT area"),
     AAT_START_CYLINDER("Start Cylinder", "Cylinder around start waypoint"),
-    AAT_START_SECTOR("AAT Start Sector", "180° sector facing away from first area")
+    AAT_START_SECTOR("AAT Start Sector", "180 sector facing away from first area")
 }

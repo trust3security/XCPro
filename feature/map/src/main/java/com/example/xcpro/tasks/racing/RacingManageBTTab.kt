@@ -31,7 +31,7 @@ import org.maplibre.android.maps.MapLibreMap
 
 /**
  * Racing-specific task management UI
- * ✅ SEPARATION COMPLIANT: Only Racing task imports and logic
+ *  SEPARATION COMPLIANT: Only Racing task imports and logic
  */
 @Composable
 fun RacingManageBTTab(

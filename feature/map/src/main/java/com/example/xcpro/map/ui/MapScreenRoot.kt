@@ -24,11 +24,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-// G£à REMOVED DataQuality - no longer used
+// G REMOVED DataQuality - no longer used
 import com.example.xcpro.screens.navdrawer.lookandfeel.LookAndFeelPreferences
 
 /**
- * G£à PHASE 2: Convert CompleteFlightData (from FlightDataCalculator) to RealTimeFlightData (for cards)
+ * G PHASE 2: Convert CompleteFlightData (from FlightDataCalculator) to RealTimeFlightData (for cards)
  *
  * This adapter function maintains backward compatibility with existing card system
  * while migrating to the new unified sensor architecture.
@@ -63,17 +63,17 @@ internal fun MapScreenRoot(
     val mapState = remember { MapScreenState() }
     val mapStateReader = mapViewModel.mapState
 
-    // GAœAÿ Map Orientation Manager
+    // GAA Map Orientation Manager
     val orientationManager = mapViewModel.orientationManager
     val orientationData by orientationManager.orientationFlow.collectAsStateWithLifecycle()
     val windArrowState by mapViewModel.windArrowState.collectAsStateWithLifecycle()
     val taskManager = mapViewModel.taskManager
 
-    // GAœAÿ SIMPLIFIED: Remove permission dialog variables, always enable everything
+    // GAA SIMPLIFIED: Remove permission dialog variables, always enable everything
     val safeContainerSizeState = remember { mutableStateOf(IntSize.Zero) }
     var safeContainerSize by safeContainerSizeState
 
-    // GAœAÿ DEBUG: Track container size changes
+    // GAA DEBUG: Track container size changes
     trackSafeContainerSize(safeContainerSize) { size ->
         mapViewModel.updateSafeContainerSize(
             MapStateStore.MapSize(
@@ -83,18 +83,18 @@ internal fun MapScreenRoot(
         )
     }
 
-    // GAœAÿ Flight Cards ViewModel
+    // GAA Flight Cards ViewModel
     val flightViewModel: FlightDataViewModel = viewModel()
-    // GAœAÿ REFACTORED: No longer collect cardStates here - CardContainer handles it directly
+    // GAA REFACTORED: No longer collect cardStates here - CardContainer handles it directly
     val profileModeCards by flightViewModel.profileModeCards.collectAsStateWithLifecycle()
     val profileModeTemplates by flightViewModel.profileModeTemplates.collectAsStateWithLifecycle()
     val activeTemplateId by flightViewModel.activeTemplateId.collectAsStateWithLifecycle()
     val cardPreferences = mapViewModel.cardPreferences
 
-    // GAœAÿ Initialize FlightDataManager
+    // GAA Initialize FlightDataManager
     val flightDataManager = mapViewModel.flightDataManager
 
-    // GAœAÿ Profile ViewModel
+    // GAA Profile ViewModel
     val profileViewModel: com.example.xcpro.profiles.ProfileViewModel = hiltViewModel()
     val profileUiState by profileViewModel.uiState.collectAsStateWithLifecycle()
     val activeProfileId = profileUiState.activeProfile?.id ?: "default"
@@ -142,10 +142,10 @@ internal fun MapScreenRoot(
     val trailSettings = bindings.trailSettings
     val trailUpdateResult = bindings.trailUpdateResult
 
-    // G£à AAT Edit Mode State - Track when AAT pin editing is active
+    // G AAT Edit Mode State - Track when AAT pin editing is active
     val isAATEditMode = bindings.isAATEditMode
     
-    // G?? Map FlightMode to FlightModeSelection using FlightDataManager
+    // Map FlightMode to FlightModeSelection using FlightDataManager
     val currentFlightModeSelection = flightDataManager.currentFlightMode
     MapScreenRuntimeEffects(
         taskManager = taskManager,
@@ -164,13 +164,13 @@ internal fun MapScreenRoot(
     val showDistanceCircles = bindings.showDistanceCircles
     val cardHydrationReady = bindings.cardHydrationReady
 
-    // G£à Location Permission Launcher through LocationManager
+    // G Location Permission Launcher through LocationManager
     val locationPermissionLauncher = rememberLocationPermissionLauncher(locationManager)
 
 
-    // G£à Variometer test state for debug effects
-    // G£à CENTRALIZED EFFECTS - Replace all individual LaunchedEffect blocks
-    // G£à REFACTORED: Removed cardStates parameter - no longer needed
+    // G Variometer test state for debug effects
+    // G CENTRALIZED EFFECTS - Replace all individual LaunchedEffect blocks
+    // G REFACTORED: Removed cardStates parameter - no longer needed
         MapComposeEffects.AllMapEffects(
             locationManager = locationManager,
             locationPermissionLauncher = locationPermissionLauncher,
@@ -196,7 +196,7 @@ internal fun MapScreenRoot(
             allowSensorStart = allowSensorStart
         )
 
-    // G£à CENTRALIZED LIFECYCLE EFFECTS - Replace individual DisposableEffect blocks
+    // G CENTRALIZED LIFECYCLE EFFECTS - Replace individual DisposableEffect blocks
     MapLifecycleEffects.LifecycleObserverEffect(lifecycleManager)
     DisposableEffect(lifecycleManager) {
         onDispose { lifecycleManager.cleanup() }

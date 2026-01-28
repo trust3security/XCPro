@@ -107,6 +107,7 @@ internal data class MapScreenScaffoldInputs(
     val onVarioDemoReferenceClick: () -> Unit,
     val onVarioDemoSimClick: () -> Unit,
     val onVarioDemoSim2Click: () -> Unit,
+    val onVarioDemoSim3Click: () -> Unit,
     val showRacingReplayFab: Boolean,
     val onRacingReplayClick: () -> Unit
 )
@@ -204,7 +205,7 @@ internal fun rememberMapScreenScaffoldInputs(
         maxVariometerSizePx = maxVariometerSizePx,
         onVariometerOffsetChange = { offset ->
             mapViewModel.onVariometerOffsetCommitted(
-                offset = offset,
+                offset = offset.toOffsetPx(),
                 screenWidthPx = screenWidthPx,
                 screenHeightPx = screenHeightPx
             )
@@ -240,6 +241,7 @@ internal fun rememberMapScreenScaffoldInputs(
         onVarioDemoReferenceClick = mapViewModel::onVarioDemoReplay,
         onVarioDemoSimClick = mapViewModel::onVarioDemoReplaySim,
         onVarioDemoSim2Click = mapViewModel::onVarioDemoReplaySimLive,
+        onVarioDemoSim3Click = mapViewModel::onVarioDemoReplaySim3,
         showRacingReplayFab = mapViewModel.showRacingReplayFab,
         onRacingReplayClick = mapViewModel::onRacingTaskReplay
     )

@@ -1,9 +1,9 @@
 package com.example.xcpro.tasks.aat.models
 
 /**
- * 🚨 COMPETITION-CRITICAL: SINGLE SOURCE OF TRUTH FOR AAT RADII
+ *  COMPETITION-CRITICAL: SINGLE SOURCE OF TRUTH FOR AAT RADII
  *
- * ✅ AAT-SPECIFIC ONLY - ZERO Racing contamination
+ *  AAT-SPECIFIC ONLY - ZERO Racing contamination
  * This authority handles ONLY AAT task types (Cylinder, Sector, Keyhole)
  *
  * This is the ONLY place that defines AAT radius values.
@@ -72,7 +72,7 @@ object AATRadiusAuthority {
 
     fun getAATSectorDefaults(): AATSectorParams = AATSectorParams(
         outerRadius = 20.0,  // 20km outer radius
-        angle = 90.0         // 90° sector angle
+        angle = 90.0         // 90 sector angle
     )
 
     /**
@@ -88,13 +88,13 @@ object AATRadiusAuthority {
     fun getAATKeyholeDefaults(): AATKeyholeParams = AATKeyholeParams(
         innerRadius = 0.5,   // 500m inner cylinder
         outerRadius = 20.0,  // 20km sector outer radius
-        angle = 90.0         // 90° sector angle
+        angle = 90.0         // 90 sector angle
     )
 
     // ==================== AAT-SPECIFIC VALIDATION ====================
 
     /**
-     * ✅ SSOT FIX: Simplified validation - no more dual source checks!
+     *  SSOT FIX: Simplified validation - no more dual source checks!
      *
      * Validates that AAT waypoint has reasonable radius values in assignedArea.
      * No need to check sync between properties since there's only one source now.
@@ -108,7 +108,7 @@ object AATRadiusAuthority {
         // Check radius is within reasonable bounds (0.1km to 100km)
         if (radiusKm < 0.1 || radiusKm > 100.0) {
             throw IllegalStateException(
-                "🚨 COMPETITION SAFETY: AAT Radius out of bounds!\n" +
+                " COMPETITION SAFETY: AAT Radius out of bounds!\n" +
                 "Waypoint: ${waypoint.title} (${waypoint.role}, ${waypoint.turnPointType.displayName})\n" +
                 "Radius: ${radiusKm}km (must be between 0.1km and 100km)\n" +
                 "This could cause navigation errors in competition!"
@@ -123,23 +123,23 @@ object AATRadiusAuthority {
 
                 if (innerRadiusKm >= outerRadiusKm) {
                     throw IllegalStateException(
-                        "🚨 AAT Keyhole error: Inner radius (${innerRadiusKm}km) must be < outer radius (${outerRadiusKm}km)"
+                        " AAT Keyhole error: Inner radius (${innerRadiusKm}km) must be < outer radius (${outerRadiusKm}km)"
                     )
                 }
-                println("✅ AAT: Keyhole geometry valid - outer: ${outerRadiusKm}km, inner: ${innerRadiusKm}km")
+                println(" AAT: Keyhole geometry valid - outer: ${outerRadiusKm}km, inner: ${innerRadiusKm}km")
             }
             AATTurnPointType.AAT_SECTOR -> {
                 val outerRadiusKm = waypoint.assignedArea.outerRadiusMeters / 1000.0
-                println("✅ AAT: Sector geometry valid - outer: ${outerRadiusKm}km")
+                println(" AAT: Sector geometry valid - outer: ${outerRadiusKm}km")
             }
             else -> {
-                println("✅ AAT: Cylinder geometry valid - radius: ${radiusKm}km")
+                println(" AAT: Cylinder geometry valid - radius: ${radiusKm}km")
             }
         }
     }
 
     /**
-     * 🚨 COMPETITION-CRITICAL: Get the authoritative radius for a waypoint
+     *  COMPETITION-CRITICAL: Get the authoritative radius for a waypoint
      *
      * THIS IS THE ONLY CORRECT WAY TO GET RADIUS FOR RENDERING.
      * Returns the ACTUAL radius stored in waypoint data, NOT hardcoded defaults.
@@ -147,7 +147,7 @@ object AATRadiusAuthority {
      * @return Radius in kilometers (what MUST be shown in UI and drawn on map)
      */
     fun getRadiusForWaypoint(waypoint: AATWaypoint): Double {
-        // ✅ SSOT FIX: ALWAYS read from assignedArea (single source of truth)
+        //  SSOT FIX: ALWAYS read from assignedArea (single source of truth)
         // The waypoint.assignedArea contains the SSOT for all geometry that is actually rendered.
         // NO dual sources - gateWidth/sectorOuterRadius/keyholeInnerRadius have been removed!
 
@@ -158,15 +158,15 @@ object AATRadiusAuthority {
 
             // For TURNPOINT: use assignedArea based on geometry type
             waypoint.turnPointType == AATTurnPointType.AAT_CYLINDER -> {
-                // ✅ SSOT: Cylinder uses radiusMeters from assignedArea
+                //  SSOT: Cylinder uses radiusMeters from assignedArea
                 waypoint.assignedArea.radiusMeters / 1000.0
             }
             waypoint.turnPointType == AATTurnPointType.AAT_SECTOR -> {
-                // ✅ SSOT: Sector uses outerRadiusMeters from assignedArea
+                //  SSOT: Sector uses outerRadiusMeters from assignedArea
                 waypoint.assignedArea.outerRadiusMeters / 1000.0
             }
             waypoint.turnPointType == AATTurnPointType.AAT_KEYHOLE -> {
-                // ✅ SSOT: Keyhole uses outerRadiusMeters from assignedArea
+                //  SSOT: Keyhole uses outerRadiusMeters from assignedArea
                 waypoint.assignedArea.outerRadiusMeters / 1000.0
             }
             else -> {
@@ -180,27 +180,27 @@ object AATRadiusAuthority {
 /**
  * Extension function: Get authoritative radius for this waypoint
  *
- * 🚨 COMPETITION-CRITICAL: This function enforces visual-calculation consistency.
- * MANDATORY for ALL rendering code to prevent "what you see ≠ what you get" bugs.
+ *  COMPETITION-CRITICAL: This function enforces visual-calculation consistency.
+ * MANDATORY for ALL rendering code to prevent "what you see  what you get" bugs.
  *
  * USAGE IN RENDERER:
  * ```
- * val radiusKm = waypoint.getAuthorityRadius()  // ✅ ALWAYS CORRECT
+ * val radiusKm = waypoint.getAuthorityRadius()  //  ALWAYS CORRECT
  * ```
  *
- * ✅ SSOT FIX: No dual sources - gateWidth/sectorOuterRadius removed!
+ *  SSOT FIX: No dual sources - gateWidth/sectorOuterRadius removed!
  * This extension function ALWAYS reads from assignedArea (single source of truth).
  *
  * DO NOT USE:
  * ```
- * val radiusKm = getAATCylinderRadius()  // ❌ WRONG - returns hardcoded default, not actual value!
- * val radiusKm = waypoint.assignedArea.radiusMeters / 1000.0  // ❌ WRONG - doesn't handle sectors/keyholes correctly!
+ * val radiusKm = getAATCylinderRadius()  //  WRONG - returns hardcoded default, not actual value!
+ * val radiusKm = waypoint.assignedArea.radiusMeters / 1000.0  //  WRONG - doesn't handle sectors/keyholes correctly!
  * ```
  */
 fun AATWaypoint.getAuthorityRadius(): Double {
     val authorityRadius = AATRadiusAuthority.getRadiusForWaypoint(this)
 
-    // 🚨 CRITICAL VALIDATION: Ensure authority returns ACTUAL data from assignedArea (what renderer uses)
+    //  CRITICAL VALIDATION: Ensure authority returns ACTUAL data from assignedArea (what renderer uses)
     // This catches the bug where waypoint properties were returned instead of assignedArea geometry
     if (this.role == AATWaypointRole.TURNPOINT) {
         val actualRadiusKm = when (this.turnPointType) {
@@ -212,8 +212,8 @@ fun AATWaypoint.getAuthorityRadius(): Double {
         if (kotlin.math.abs(authorityRadius - actualRadiusKm) > 0.001) {
             throw IllegalStateException(
                 """
-                🚨 COMPETITION SAFETY VIOLATION DETECTED!
-                SSOT Priority #1 Failure: Visual ≠ Calculation
+                 COMPETITION SAFETY VIOLATION DETECTED!
+                SSOT Priority #1 Failure: Visual  Calculation
 
                 Waypoint: ${this.title} (${this.turnPointType.displayName})
                 Actual radius in assignedArea: ${actualRadiusKm}km (what renderer uses)
@@ -236,7 +236,7 @@ fun AATWaypoint.getAuthorityRadius(): Double {
 
 /**
  * Extension function: Get authoritative radius in meters
- * ✅ SSOT FIX: Reads from assignedArea via authority, not from hardcoded role defaults
+ *  SSOT FIX: Reads from assignedArea via authority, not from hardcoded role defaults
  */
 fun AATWaypoint.getAuthorityRadiusMeters(): Double {
     return this.getAuthorityRadius() * 1000.0  // Convert km to meters

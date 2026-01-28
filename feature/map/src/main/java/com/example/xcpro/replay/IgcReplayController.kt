@@ -3,19 +3,13 @@ package com.example.xcpro.replay
 import android.content.Context
 import android.net.Uri
 import com.example.xcpro.core.common.logging.AppLogger
-import com.example.xcpro.common.di.DefaultDispatcher
 import com.example.xcpro.flightdata.FlightDataRepository
-import com.example.xcpro.glider.StillAirSinkProvider
-import com.example.xcpro.sensors.FlightStateSource
-import com.example.xcpro.vario.VarioServiceManager
 import com.example.xcpro.weather.wind.data.ReplayAirspeedRepository
-import com.example.xcpro.weather.wind.data.WindSensorFusionRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -40,13 +34,9 @@ import kotlin.coroutines.coroutineContext
 class IgcReplayController @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val flightDataRepository: FlightDataRepository,
-    private val varioServiceManager: VarioServiceManager,
-    private val sinkProvider: StillAirSinkProvider,
-    private val windRepository: WindSensorFusionRepository,
-    private val flightStateSource: FlightStateSource,
     private val replaySensorSource: ReplaySensorSource,
     private val replayAirspeedRepository: ReplayAirspeedRepository,
-    @DefaultDispatcher private val dispatcher: CoroutineDispatcher
+    private val replayPipelineFactory: ReplayPipelineFactory
 ) {
     private var replayJob: Job? = null
     private var seekJob: Job? = null
@@ -68,15 +58,7 @@ class IgcReplayController @Inject constructor(
     private val _events = MutableSharedFlow<ReplayEvent>(extraBufferCapacity = 1)
     val events: SharedFlow<ReplayEvent> = _events.asSharedFlow()
 
-    private val pipeline = ReplayPipeline(
-        appContext = appContext,
-        flightDataRepository = flightDataRepository,
-        varioServiceManager = varioServiceManager,
-        sinkProvider = sinkProvider,
-        windRepository = windRepository,
-        flightStateSource = flightStateSource,
-        replaySensorSource = replaySensorSource,
-        dispatcher = dispatcher,
+    private val pipeline = replayPipelineFactory.create(
         sessionState = _session.asStateFlow(),
         tag = TAG
     )

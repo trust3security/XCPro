@@ -23,7 +23,7 @@ data class CirclingWindResult(
 )
 
 /**
- * Kotlin port of XCSoar's CirclingWind estimator (Cumulus origin).
+ * Kotlin port of the CirclingWind estimator (Cumulus origin).
  */
 class CirclingWind(
     private val maxSamples: Int = 50,

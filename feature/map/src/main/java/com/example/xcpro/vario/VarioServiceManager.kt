@@ -1,15 +1,11 @@
 package com.example.xcpro.vario
 
-import android.content.Context
 import android.util.Log
+import com.example.xcpro.audio.AudioFocusManager
 import com.example.xcpro.flightdata.FlightDataRepository
-import com.example.xcpro.glider.StillAirSinkProvider
-import com.example.xcpro.sensors.FlightDataCalculator
 import com.example.xcpro.sensors.FlightStateSource
 import com.example.xcpro.sensors.SensorFusionRepository
 import com.example.xcpro.sensors.UnifiedSensorManager
-import com.example.xcpro.weather.wind.data.WindSensorFusionRepository
-import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
@@ -28,13 +24,12 @@ import kotlinx.coroutines.withContext
  */
 @Singleton
 open class VarioServiceManager @Inject constructor(
-    @ApplicationContext private val context: Context,
+    val audioFocusManager: AudioFocusManager,
     val unifiedSensorManager: UnifiedSensorManager,
-    private val sinkProvider: StillAirSinkProvider,
+    val sensorFusionRepository: SensorFusionRepository,
     private val flightDataRepository: FlightDataRepository,
     private val levoVarioPreferencesRepository: LevoVarioPreferencesRepository,
-    val flightStateSource: FlightStateSource,
-    private val windRepository: WindSensorFusionRepository
+    val flightStateSource: FlightStateSource
 ) {
 
     companion object {
@@ -45,16 +40,6 @@ open class VarioServiceManager @Inject constructor(
     }
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-
-    val sensorFusionRepository: SensorFusionRepository =
-        FlightDataCalculator(
-            context = context,
-            sensorDataSource = unifiedSensorManager,
-            scope = serviceScope,
-            sinkProvider = sinkProvider,
-            windStateFlow = windRepository.windState,
-            flightStateSource = flightStateSource
-        )
 
     private var running = false
     private var collectionJob: Job? = null

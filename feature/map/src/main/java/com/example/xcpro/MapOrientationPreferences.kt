@@ -35,7 +35,7 @@ class MapOrientationPreferences(context: Context) {
         private const val LEGACY_MIN_SPEED_THRESHOLD_KT = 2.0 // Old default (pre-2026-01-09)
         private val LEGACY_MIN_SPEED_THRESHOLD_MS =
             UnitsConverter.knotsToMs(LEGACY_MIN_SPEED_THRESHOLD_KT)
-        private const val DEFAULT_MIN_SPEED_THRESHOLD_MS = 2.0 // XCSoar parity (2 m/s)
+        private const val DEFAULT_MIN_SPEED_THRESHOLD_MS = 2.0 // Default threshold (2 m/s)
         private const val DEFAULT_GLIDER_SCREEN_PERCENT = 35 // Approx current 65% from top
         private const val DEFAULT_BEARING_SMOOTHING = true
         private const val DEFAULT_MAP_SHIFT_BIAS_MODE = "NONE"

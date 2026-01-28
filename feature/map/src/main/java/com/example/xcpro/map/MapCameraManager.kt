@@ -118,7 +118,7 @@ class MapCameraManager(
                     newBearing
                 }
 
-                // Clamp rotation step to smooth jitter (XCSoar-like)
+                // Clamp rotation step to smooth jitter.
                 val delta = shortestDeltaDegrees(lastCameraBearing, targetBearing)
                 val limitedBearing = if (kotlin.math.abs(delta) > MAX_BEARING_STEP_DEG) {
                     lastCameraBearing + sign(delta) * MAX_BEARING_STEP_DEG

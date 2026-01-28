@@ -2,7 +2,7 @@ package com.example.xcpro.tasks.aat.models
 
 /**
  * AAT-specific waypoint model - COMPLETELY INDEPENDENT from shared models
- * ✅ SSOT FIX: Removed kotlin.math.* import (no longer needed after removing duplicate haversine)
+ *  SSOT FIX: Removed kotlin.math.* import (no longer needed after removing duplicate haversine)
  * Part of the task separation architecture to prevent cross-contamination
  *
  * This model is specific to AAT tasks and should NEVER be used by Racing or DHT modules
@@ -25,7 +25,7 @@ data class AATWaypoint(
     val targetPoint: AATLatLng = AATLatLng(lat, lon), // Default to area center
     val isTargetPointCustomized: Boolean = false
 
-    // ✅ SSOT FIX: Removed duplicate radius properties (gateWidth, keyholeInnerRadius, sectorOuterRadius)
+    //  SSOT FIX: Removed duplicate radius properties (gateWidth, keyholeInnerRadius, sectorOuterRadius)
     // All radius values now read from assignedArea via AATRadiusAuthority.getRadiusForWaypoint()
 ) {
     /**
@@ -49,7 +49,7 @@ data class AATWaypoint(
 
     /**
      * Get distance from area center to target point
-     * ✅ SSOT FIX: Use centralized AATMathUtils instead of duplicate haversine
+     *  SSOT FIX: Use centralized AATMathUtils instead of duplicate haversine
      */
     val targetPointOffset: Double get() =
         com.example.xcpro.tasks.aat.calculations.AATMathUtils.calculateDistanceKm(
@@ -73,7 +73,7 @@ data class AATWaypoint(
         AATAreaShape.LINE -> assignedArea.lineWidthMeters / 2.0
     }
 
-    // ✅ SSOT FIX: Removed duplicate haversineDistance function
+    //  SSOT FIX: Removed duplicate haversineDistance function
     // All distance calculations now use AATMathUtils.calculateDistanceKm()
 }
 

@@ -16,7 +16,7 @@ import kotlin.math.*
 class FAIQuadrantDisplay : TurnPointDisplay {
     
     companion object {
-        private const val DEFAULT_DISPLAY_RADIUS_METERS = 10000.0 // 10km default (XCSoar parity)
+        private const val DEFAULT_DISPLAY_RADIUS_METERS = 10000.0 // 10 km default
     }
     
     override fun generateVisualGeometry(waypoint: RacingWaypoint, context: TaskContext): String {
@@ -26,7 +26,7 @@ class FAIQuadrantDisplay : TurnPointDisplay {
 
             // Validate input coordinates first
             if (!waypoint.lat.isFinite() || !waypoint.lon.isFinite()) {
-                println("❌ FAI QUADRANT: Invalid input coordinates, using fallback")
+                println("FAI QUADRANT: Invalid input coordinates, using fallback")
                 return createFallbackGeometry(waypoint, context)
             }
 
@@ -35,7 +35,7 @@ class FAIQuadrantDisplay : TurnPointDisplay {
 
             // CRASH FIX: Validate radius
             if (!displayRadiusMeters.isFinite() || displayRadiusMeters <= 0) {
-                println("❌ FAI QUADRANT: Invalid radius ${displayRadiusMeters}m, using default")
+                println("FAI QUADRANT: Invalid radius ${displayRadiusMeters}m, using default")
                 val fallbackRadius = DEFAULT_DISPLAY_RADIUS_METERS
                 return generateSafeGeometry(waypoint, context, fallbackRadius)
             }
@@ -45,7 +45,7 @@ class FAIQuadrantDisplay : TurnPointDisplay {
 
             // CRASH FIX: Validate bearing calculation
             if (!bisectorBearing.isFinite()) {
-                println("❌ FAI QUADRANT: Invalid bisector bearing, using fallback")
+                println("FAI QUADRANT: Invalid bisector bearing, using fallback")
                 return createFallbackGeometry(waypoint, context)
             }
 
@@ -56,7 +56,7 @@ class FAIQuadrantDisplay : TurnPointDisplay {
             return generateSafeGeometry(waypoint, context, displayRadiusMeters, startAngle, endAngle, bisectorBearing)
 
         } catch (e: Exception) {
-            println("❌ FAI QUADRANT: Exception in generateVisualGeometry: ${e.message}")
+            println("FAI QUADRANT: Exception in generateVisualGeometry: ${e.message}")
             return createFallbackGeometry(waypoint, context)
         }
     }
@@ -80,7 +80,7 @@ class FAIQuadrantDisplay : TurnPointDisplay {
 
             // Validate generated coordinates before creating GeoJSON
             if (sectorCoordinates.isEmpty() || sectorCoordinates == "[]") {
-                println("⚠️ FAI QUADRANT: Empty sector coordinates generated, trying fallback")
+                println("FAI QUADRANT: Empty sector coordinates generated, trying fallback")
                 return createFallbackGeometry(waypoint, context)
             }
 
@@ -103,11 +103,11 @@ class FAIQuadrantDisplay : TurnPointDisplay {
             """.trimIndent()
 
             // Log geometry generation success and return
-            println("✅ FAI QUADRANT: Generated GeoJSON for ${waypoint.title} with radius ${displayRadiusMeters}m")
+            println("FAI QUADRANT: Generated GeoJSON for ${waypoint.title} with radius ${displayRadiusMeters}m")
             return geoJson
 
         } catch (e: Exception) {
-            println("❌ FAI QUADRANT: Exception in generateSafeGeometry: ${e.message}")
+            println("FAI QUADRANT: Exception in generateSafeGeometry: ${e.message}")
             return createFallbackGeometry(waypoint, context)
         }
     }
@@ -253,19 +253,19 @@ class FAIQuadrantDisplay : TurnPointDisplay {
             // CRASH FIX: Validate all input parameters
             if (!centerLat.isFinite() || !centerLon.isFinite() ||
                 !radiusMeters.isFinite() || !startAngle.isFinite() || !endAngle.isFinite()) {
-                println("❌ SECTOR COORDINATES: Invalid input parameters - lat:$centerLat, lon:$centerLon, radius:$radiusMeters, start:$startAngle, end:$endAngle")
+                println(" SECTOR COORDINATES: Invalid input parameters - lat:$centerLat, lon:$centerLon, radius:$radiusMeters, start:$startAngle, end:$endAngle")
                 return "[]" // Return empty coordinate array
             }
 
             // CRASH FIX: Validate coordinate bounds
             if (centerLat < -90.0 || centerLat > 90.0 || centerLon < -180.0 || centerLon > 180.0) {
-                println("❌ SECTOR COORDINATES: Center coordinates out of bounds - lat:$centerLat, lon:$centerLon")
+                println(" SECTOR COORDINATES: Center coordinates out of bounds - lat:$centerLat, lon:$centerLon")
                 return "[]"
             }
 
             // CRASH FIX: Validate radius
             if (radiusMeters <= 0 || radiusMeters > 100000000) { // Max 100,000km radius
-                println("❌ SECTOR COORDINATES: Invalid radius: $radiusMeters meters")
+                println(" SECTOR COORDINATES: Invalid radius: $radiusMeters meters")
                 return "[]"
             }
 
@@ -284,25 +284,25 @@ class FAIQuadrantDisplay : TurnPointDisplay {
                 try {
                     val t = i.toDouble() / points
 
-                    // Handle angle interpolation correctly for sectors crossing 0°
+                    // Handle angle interpolation correctly for sectors crossing 0
                     val currentAngle = if (normalizedEnd > normalizedStart) {
-                        // Normal case: no crossing of 0°
+                        // Normal case: no crossing of 0
                         normalizedStart + (normalizedEnd - normalizedStart) * t
                     } else {
-                        // Crossing 0°: go the "short way" around the circle
+                        // Crossing 0: go the "short way" around the circle
                         val angle = normalizedStart + ((normalizedEnd + 360.0) - normalizedStart) * t
                         angle % 360.0
                     }
 
                     // CRASH FIX: Validate current angle before trigonometric calculations
                     if (!currentAngle.isFinite()) {
-                        println("❌ SECTOR COORDINATES: Invalid angle at point $i: $currentAngle")
+                        println(" SECTOR COORDINATES: Invalid angle at point $i: $currentAngle")
                         continue // Skip this point
                     }
 
                     // CRASH FIX: Validate bearing before great circle calculation
                     if (!currentAngle.isFinite()) {
-                        println("❌ SECTOR COORDINATES: Invalid bearing angle at point $i: $currentAngle")
+                        println(" SECTOR COORDINATES: Invalid bearing angle at point $i: $currentAngle")
                         continue // Skip this point
                     }
 
@@ -319,18 +319,18 @@ class FAIQuadrantDisplay : TurnPointDisplay {
                         lon >= -180.0 && lon <= 180.0) {
                         coordinates.add(listOf(lon, lat))
                     } else {
-                        println("❌ SECTOR COORDINATES: Invalid calculated point at $i - lat:$lat, lon:$lon")
+                        println(" SECTOR COORDINATES: Invalid calculated point at $i - lat:$lat, lon:$lon")
                     }
 
                 } catch (e: Exception) {
-                    println("❌ SECTOR COORDINATES: Exception calculating point $i: ${e.message}")
+                    println(" SECTOR COORDINATES: Exception calculating point $i: ${e.message}")
                     continue // Skip this point and continue with next
                 }
             }
 
             // CRASH FIX: Ensure we have minimum required coordinates for a polygon
             if (coordinates.size < 3) {
-                println("❌ SECTOR COORDINATES: Insufficient valid coordinates: ${coordinates.size}")
+                println(" SECTOR COORDINATES: Insufficient valid coordinates: ${coordinates.size}")
                 return "[]"
             }
 
@@ -339,11 +339,11 @@ class FAIQuadrantDisplay : TurnPointDisplay {
             }
 
             val result = coordinates.joinToString(",") { "[${it[0]},${it[1]}]" }
-            println("✅ SECTOR COORDINATES: Generated ${coordinates.size} valid coordinates")
+            println(" SECTOR COORDINATES: Generated ${coordinates.size} valid coordinates")
             return result
 
         } catch (e: Exception) {
-            println("❌ SECTOR COORDINATES: Fatal exception in generateSectorCoordinates: ${e.message}")
+            println(" SECTOR COORDINATES: Fatal exception in generateSectorCoordinates: ${e.message}")
             return "[]" // Return empty coordinates to prevent crash
         }
     }

@@ -45,10 +45,10 @@ data class AATValidationResult(
         val issueCount = criticalErrors.size + warnings.size + infoSuggestions.size
 
         return when (status) {
-            ValidationStatus.SUCCESS -> "✅ Task valid - Competition ready"
-            ValidationStatus.INFO -> "ℹ️ Task valid - $issueCount suggestions"
-            ValidationStatus.WARNING -> "⚠️ Task flyable - ${warnings.size} warnings"
-            ValidationStatus.CRITICAL -> "❌ Task invalid - ${criticalErrors.size} critical errors"
+            ValidationStatus.SUCCESS -> " Task valid - Competition ready"
+            ValidationStatus.INFO -> " Task valid - $issueCount suggestions"
+            ValidationStatus.WARNING -> " Task flyable - ${warnings.size} warnings"
+            ValidationStatus.CRITICAL -> " Task invalid - ${criticalErrors.size} critical errors"
         }
     }
 
@@ -109,9 +109,9 @@ data class AATValidationIssue(
      */
     fun getFormattedMessage(): String {
         val icon = when (severity) {
-            ValidationSeverity.CRITICAL -> "❌"
-            ValidationSeverity.WARNING -> "⚠️"
-            ValidationSeverity.INFO -> "ℹ️"
+            ValidationSeverity.CRITICAL -> ""
+            ValidationSeverity.WARNING -> ""
+            ValidationSeverity.INFO -> ""
         }
         return "$icon $message"
     }

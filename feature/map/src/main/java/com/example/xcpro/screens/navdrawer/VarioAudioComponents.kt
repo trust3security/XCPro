@@ -157,7 +157,7 @@ internal fun VarioAudioThresholdCard(
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
-                text = "Silence starts below this vario (matches XCSoar default -0.3 m/s).",
+                text = "Silence starts below this vario (default -0.3 m/s).",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 16.dp)
@@ -179,7 +179,7 @@ internal fun VarioAudioThresholdCard(
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
-                text = "Climb beeps begin once vario exceeds this value (XCSoar default +0.1 m/s).",
+                text = "Climb beeps begin once vario exceeds this value (default +0.1 m/s).",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 16.dp)
@@ -198,7 +198,7 @@ internal fun VarioAudioThresholdCard(
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
-                text = "Set to 0.0 m/s for XCSoar parity (tone for all sink). Lower values mute weak sink.",
+                text = "Set to 0.0 m/s for full sink tone. Lower values mute weak sink.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

@@ -1,20 +1,24 @@
 package com.example.dfcards
 
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.IntSize
 import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.xcpro.common.units.AltitudeUnit
 import com.example.xcpro.common.units.VerticalSpeedUnit
 import com.example.xcpro.common.units.UnitsPreferences
+import com.example.xcpro.core.common.geometry.DensityScale
+import com.example.xcpro.core.common.geometry.IntSizePx
+import com.example.xcpro.core.time.FakeClock
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class FlightDataViewModelUnitsTest {
+    private fun buildViewModel(clock: FakeClock = FakeClock(monoMs = 1_000L)): FlightDataViewModel {
+        return FlightDataViewModel(clock = clock)
+    }
 
     @Test
     fun updateUnitsPreferences_reformatsExistingCardValues() {
-        val viewModel = FlightDataViewModel()
+        val viewModel = buildViewModel()
         val template = FlightTemplate(
             id = "units-test",
             name = "Units Test",
@@ -25,8 +29,8 @@ class FlightDataViewModelUnitsTest {
         runBlocking {
             viewModel.applyTemplate(
                 template = template,
-                containerSize = IntSize(800, 600),
-                density = Density(1f)
+                containerSize = IntSizePx(800, 600),
+                density = DensityScale(1f)
             )
         }
 
@@ -50,7 +54,7 @@ class FlightDataViewModelUnitsTest {
 
     @Test
     fun updateUnitsPreferences_reformatsVerticalSpeedToKnots() {
-        val viewModel = FlightDataViewModel()
+        val viewModel = buildViewModel()
         val template = FlightTemplate(
             id = "vario-test",
             name = "Vario Test",
@@ -61,8 +65,8 @@ class FlightDataViewModelUnitsTest {
         runBlocking {
             viewModel.applyTemplate(
                 template = template,
-                containerSize = IntSize(800, 600),
-                density = Density(1f)
+                containerSize = IntSizePx(800, 600),
+                density = DensityScale(1f)
             )
         }
 
@@ -85,7 +89,7 @@ class FlightDataViewModelUnitsTest {
 
     @Test
     fun setProfileCards_updatesActiveSelection() {
-        val viewModel = FlightDataViewModel()
+        val viewModel = buildViewModel()
         val profileId = "profile-1"
 
         viewModel.setActiveProfile(profileId)
@@ -100,7 +104,7 @@ class FlightDataViewModelUnitsTest {
 
     @Test
     fun switchingProfiles_updatesActiveCardIds() {
-        val viewModel = FlightDataViewModel()
+        val viewModel = buildViewModel()
         val profileA = "pilot-a"
         val profileB = "pilot-b"
 
@@ -123,7 +127,7 @@ class FlightDataViewModelUnitsTest {
 
     @Test
     fun setProfileTemplate_persistsMapping() {
-        val viewModel = FlightDataViewModel()
+        val viewModel = buildViewModel()
         val profileId = "profile-template"
 
         viewModel.setProfileTemplate(profileId, FlightModeSelection.THERMAL, "thermal-template")
@@ -136,7 +140,7 @@ class FlightDataViewModelUnitsTest {
 
     @Test
     fun clearProfile_resetsMappings() {
-        val viewModel = FlightDataViewModel()
+        val viewModel = buildViewModel()
         val profileId = "clear-me"
 
         viewModel.setActiveProfile(profileId)

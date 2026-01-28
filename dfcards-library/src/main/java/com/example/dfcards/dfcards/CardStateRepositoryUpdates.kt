@@ -8,6 +8,10 @@ import com.example.dfcards.dfcards.FlightData
 import com.example.xcpro.common.units.UnitsPreferences
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 private enum class UpdateTier {
     FAST,
@@ -15,9 +19,17 @@ private enum class UpdateTier {
     BACKGROUND
 }
 
-// Match XCSoar infobox palette: bright red/green for sink/lift.
+// Match infobox palette: bright red/green for sink/lift.
 private val NEGATIVE_VARIO_COLOR = Color(0xFFFF0000)
 private val POSITIVE_VARIO_COLOR = Color(0xFF0D8A16) // darker green for readability
+private val LOCAL_TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
+private val LOCAL_SECONDS_FORMATTER = DateTimeFormatter.ofPattern("ss", Locale.getDefault())
+
+private fun formatLocalTime(epochMillis: Long): Pair<String, String> {
+    if (epochMillis <= 0L) return "--:--" to "--"
+    val zoned = Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault())
+    return LOCAL_TIME_FORMATTER.format(zoned) to LOCAL_SECONDS_FORMATTER.format(zoned)
+}
 
 internal fun CardStateRepository.updateCardsWithLiveData(
     liveData: RealTimeFlightData,
@@ -32,7 +44,7 @@ internal fun CardStateRepository.updateCardsWithLiveData(
         return
     }
 
-    val currentTime = System.currentTimeMillis()
+    val currentTime = clock.nowMonoMs()
     val fastDue = currentTime - lastFastUpdateTime >= fastUpdateIntervalMs
     val primaryDue = currentTime - lastPrimaryUpdateTime >= primaryUpdateIntervalMs
     val backgroundDue = currentTime - lastBackgroundUpdateTime >= backgroundUpdateIntervalMs
@@ -82,12 +94,8 @@ internal fun CardStateRepository.startIndependentClockTimer() {
         while (true) {
             cardStateFlowsMap["local_time"]?.let { timeCardFlow ->
                 val currentState = timeCardFlow.value
-                val currentTime = System.currentTimeMillis()
-
-                val time = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
-                    .format(java.util.Date(currentTime))
-                val seconds = java.text.SimpleDateFormat("ss", java.util.Locale.getDefault())
-                    .format(java.util.Date(currentTime))
+                val currentTime = clock.nowWallMs()
+                val (time, seconds) = formatLocalTime(currentTime)
 
                 val updatedFlightData = currentState.flightData.copy(
                     primaryValue = time,

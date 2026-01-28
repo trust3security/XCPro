@@ -86,7 +86,7 @@ fun SwipeableTaskBottomSheet(
     LaunchedEffect(mapLibreMap) { taskViewModel.setMap(mapLibreMap) }
     val uiState by taskViewModel.uiState.collectAsStateWithLifecycle()
 
-    // ✅ SSOT FIX: Make task reactive so distance/UI updates when radius changes
+    //  SSOT FIX: Make task reactive so distance/UI updates when radius changes
     // CRITICAL: Without derivedStateOf, task captures once and never updates!
     val task by remember { derivedStateOf { uiState.task } }
     var taskType by remember { mutableStateOf(uiState.taskType) }

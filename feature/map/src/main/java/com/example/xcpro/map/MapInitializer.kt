@@ -56,7 +56,7 @@ class MapInitializer(
 
     suspend fun initializeMap(map: MapLibreMap): MapLibreMap {
         return try {
-            Log.d(TAG, "?? Starting map initialization")
+            Log.d(TAG, "Starting map initialization")
             mapState.mapLibreMap = map
             setupMapStyle(map)
             setupInitialPosition(map)
@@ -64,11 +64,11 @@ class MapInitializer(
             setupListeners(map)
             // CRITICAL FIX: Set map instance in TaskManagerCoordinator for cleanup operations
             taskManager.setMapInstance(map)
-            Log.d(TAG, "?? Set map instance in TaskManagerCoordinator for task switching cleanup")
-            Log.d(TAG, "? Map initialization completed successfully")
+            Log.d(TAG, "Set map instance in TaskManagerCoordinator for task switching cleanup")
+            Log.d(TAG, "Map initialization completed successfully")
             map
         } catch (e: Exception) {
-            Log.e(TAG, "? Fatal error in map initialization: ${e.message}", e)
+            Log.e(TAG, "Fatal error in map initialization: ${e.message}", e)
             map
         }
     }
@@ -116,20 +116,20 @@ class MapInitializer(
             mapState.blueLocationOverlay?.bringToFront()
 
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Error loading map data: ${e.message}", e)
+            Log.e(TAG, " Error loading map data: ${e.message}", e)
         }
     }
 
     private fun plotSavedTask(map: MapLibreMap) {
         try {
             if (taskManager.currentTask.waypoints.isNotEmpty()) {
-                Log.d(TAG, "🎯 Plotting saved task with ${taskManager.currentTask.waypoints.size} waypoints")
+                Log.d(TAG, " Plotting saved task with ${taskManager.currentTask.waypoints.size} waypoints")
                 taskManager.plotOnMap(map)
             } else {
-                Log.d(TAG, "🎯 No saved task to plot")
+                Log.d(TAG, " No saved task to plot")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Error plotting saved task: ${e.message}", e)
+            Log.e(TAG, " Error plotting saved task: ${e.message}", e)
         }
     }
 
@@ -140,7 +140,7 @@ class MapInitializer(
             mapState.blueLocationOverlay?.initialize()
             snailTrailManager.initialize(map)
             setupScaleBar(map)
-            Log.d(TAG, "🔵 Blue location overlay initialized")
+            Log.d(TAG, " Blue location overlay initialized")
 
             // DISABLED: Map-based distance circles replaced with DistanceCirclesCanvas
             // The circles are now drawn as a fixed screen overlay in MapScreen.kt
@@ -148,10 +148,10 @@ class MapInitializer(
             // mapState.distanceCirclesOverlay = DistanceCirclesOverlay(context, map)
             // mapState.distanceCirclesOverlay?.initialize()
             // mapState.distanceCirclesOverlay?.setVisible(mapState.showDistanceCircles)
-            Log.d(TAG, "⭕ Distance circles using Canvas overlay (map-based circles disabled)")
+            Log.d(TAG, " Distance circles using Canvas overlay (map-based circles disabled)")
 
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Error setting up overlays: ${e.message}", e)
+            Log.e(TAG, " Error setting up overlays: ${e.message}", e)
         }
     }
 
@@ -310,14 +310,14 @@ class MapInitializer(
         map.uiSettings.isTiltGesturesEnabled = false
         map.uiSettings.isScrollGesturesEnabled = false
         map.uiSettings.isQuickZoomGesturesEnabled = false
-        Log.d(TAG, "✅ MapLibre standard gestures disabled for custom system")
+        Log.d(TAG, " MapLibre standard gestures disabled for custom system")
     }
 
     private fun setupListeners(map: MapLibreMap) {
         // Move listener for pan detection
         map.addOnMoveListener(object : MapLibreMap.OnMoveListener {
             override fun onMoveBegin(detector: MoveGestureDetector) {
-                Log.d(TAG, "🖐️ Map movement detected - fingers: ${detector.pointersCount}")
+                Log.d(TAG, " Map movement detected - fingers: ${detector.pointersCount}")
                 handleMapMovement(map)
             }
 
@@ -336,7 +336,7 @@ class MapInitializer(
         // Rotation listener for orientation override
         map.addOnRotateListener(object : MapLibreMap.OnRotateListener {
             override fun onRotateBegin(detector: org.maplibre.android.gestures.RotateGestureDetector) {
-                Log.d(TAG, "🔄 Map rotation started")
+                Log.d(TAG, " Map rotation started")
                 orientationManager.onUserInteraction()
             }
 
@@ -345,7 +345,7 @@ class MapInitializer(
             }
 
             override fun onRotateEnd(detector: org.maplibre.android.gestures.RotateGestureDetector) {
-                Log.d(TAG, "🔄 Map rotation ended")
+                Log.d(TAG, " Map rotation ended")
             }
         })
 
@@ -383,7 +383,7 @@ class MapInitializer(
         // Show return button on user interaction
         stateActions.setShowReturnButton(true)
         stateActions.updateLastUserPanTime(System.currentTimeMillis())
-        Log.d(TAG, "?. User interaction detected - return button shown")
+        Log.d(TAG, "User interaction detected - return button shown")
     }
 
     private fun refreshWaypoints(map: MapLibreMap) {
@@ -393,7 +393,7 @@ class MapInitializer(
                 loadAndApplyWaypoints(context, map, waypointFiles, waypointChecks)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Error refreshing waypoints: ${e.message}", e)
+            Log.e(TAG, " Error refreshing waypoints: ${e.message}", e)
         }
     }
 

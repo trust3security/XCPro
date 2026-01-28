@@ -61,7 +61,7 @@ class VarioToneGenerator {
                 AudioFormat.ENCODING_PCM_16BIT
             )
 
-            if (bufferSize == AudioTrack.ERROR_BAD_VALUE || bufferSize == AudioTrack.ERROR) {
+            if (bufferSize == AudioTrack.ERROR_BAD_VALUE || bufferSize == AudioTrack.ERROR || bufferSize <= 0) {
                 Log.e(TAG, "Invalid buffer size: $bufferSize")
                 return false
             }
@@ -87,7 +87,14 @@ class VarioToneGenerator {
                 .setTransferMode(AudioTrack.MODE_STREAM)
                 .build()
 
-            audioTrack?.play()
+            val track = audioTrack
+            if (track == null || track.state != AudioTrack.STATE_INITIALIZED) {
+                Log.e(TAG, "AudioTrack not initialized (state=${track?.state})")
+                resetAudioTrack("init_state")
+                return false
+            }
+
+            track.play()
             isInitialized = true
 
             Log.i(TAG, "AudioTrack initialized (buffer: $optimalBufferSize bytes, sample rate: $SAMPLE_RATE Hz)")
@@ -124,6 +131,10 @@ class VarioToneGenerator {
         }
 
         val track = audioTrack ?: return
+        if (track.state != AudioTrack.STATE_INITIALIZED) {
+            resetAudioTrack("invalid_state_playTone")
+            return
+        }
 
         try {
             // Calculate number of samples for duration
@@ -173,10 +184,12 @@ class VarioToneGenerator {
 
             if (written < 0) {
                 Log.e(TAG, "Error writing samples: $written")
+                resetAudioTrack("write_error_playTone", written)
             }
 
         } catch (e: Exception) {
             Log.e(TAG, "Error playing tone at ${frequencyHz}Hz", e)
+            resetAudioTrack("exception_playTone")
         }
     }
 
@@ -188,6 +201,10 @@ class VarioToneGenerator {
         if (!isInitialized) return
 
         val track = audioTrack ?: return
+        if (track.state != AudioTrack.STATE_INITIALIZED) {
+            resetAudioTrack("invalid_state_playSilence")
+            return
+        }
 
         try {
             val totalSamples = ((durationMs * SAMPLE_RATE) / 1000L).toInt()
@@ -205,6 +222,7 @@ class VarioToneGenerator {
                 val written = track.write(silenceBuffer, 0, chunk)
                 if (written < 0) {
                     Log.e(TAG, "Error writing silence samples: $written")
+                    resetAudioTrack("write_error_playSilence", written)
                     break
                 }
                 if (written == 0) {
@@ -214,6 +232,7 @@ class VarioToneGenerator {
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error playing silence", e)
+            resetAudioTrack("exception_playSilence")
         }
     }
 
@@ -259,10 +278,7 @@ class VarioToneGenerator {
      */
     fun release() {
         try {
-            audioTrack?.stop()
-            audioTrack?.release()
-            audioTrack = null
-            isInitialized = false
+            resetAudioTrack("release")
             Log.i(TAG, "AudioTrack released")
         } catch (e: Exception) {
             Log.e(TAG, "Error releasing AudioTrack", e)
@@ -272,12 +288,30 @@ class VarioToneGenerator {
     /**
      * Check if audio system is ready
      */
-    fun isReady(): Boolean = isInitialized && audioTrack != null
+    fun isReady(): Boolean {
+        val track = audioTrack ?: return false
+        return isInitialized && track.state == AudioTrack.STATE_INITIALIZED
+    }
 
     /**
      * Get current playback state
      */
     fun getPlaybackState(): Int {
         return audioTrack?.playState ?: AudioTrack.PLAYSTATE_STOPPED
+    }
+
+    private fun resetAudioTrack(reason: String, errorCode: Int? = null) {
+        val suffix = errorCode?.let { " code=$it" } ?: ""
+        Log.w(TAG, "Resetting AudioTrack ($reason)$suffix")
+        try {
+            audioTrack?.stop()
+        } catch (_: Exception) {
+        }
+        try {
+            audioTrack?.release()
+        } catch (_: Exception) {
+        }
+        audioTrack = null
+        isInitialized = false
     }
 }

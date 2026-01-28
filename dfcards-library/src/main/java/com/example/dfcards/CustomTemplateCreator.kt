@@ -19,7 +19,7 @@ import androidx.compose.ui.window.Dialog
 @Composable
 fun CustomTemplateCreator(
     selectedCardIds: Set<String>,
-    existingTemplate: FlightTemplate? = null, // ✅ CHANGED: Use FlightTemplate instead of CustomTemplate
+    existingTemplate: FlightTemplate? = null, //  CHANGED: Use FlightTemplate instead of CustomTemplate
     onCreateTemplate: (String, List<String>) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -219,4 +219,4 @@ private fun CardSelectionItem(
     }
 }
 
-// ❌ REMOVED: CustomTemplate data class - redundant with FlightTemplate
+//  REMOVED: CustomTemplate data class - redundant with FlightTemplate

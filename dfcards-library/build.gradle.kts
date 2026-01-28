@@ -43,6 +43,8 @@ dependencies {
     // Core Android
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.datastore.preferences)
+    api(project(":core:geometry"))
+    api(project(":core:time"))
 
     // MapLibre for terrain elevation
     implementation(libs.maplibre.android)

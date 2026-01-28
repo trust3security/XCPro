@@ -15,7 +15,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -29,7 +29,7 @@ import com.example.xcpro.glider.GliderRepository
 fun ThreePointPolarCard() {
     val context = LocalContext.current
     val repo = remember(context) { GliderRepository.getInstance(context) }
-    val cfg by repo.config.collectAsState()
+    val cfg by repo.config.collectAsStateWithLifecycle()
     val tpp = cfg.threePointPolar ?: ThreePointPolar()
 
     Card(

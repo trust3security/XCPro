@@ -43,8 +43,8 @@ internal fun SingleColorPicker(
     onCancel: () -> Unit
 ) {
     val colorTypeLabel = selectedColorType.replaceFirstChar { it.uppercase() }
-    Log.d("ColorsScreen", "🎨 SingleColorPicker opened for theme: $themeDisplayName, colorType: $selectedColorType")
-    Log.d("ColorsScreen", "🎨 Initial color: $selectedColor")
+    Log.d("ColorsScreen", " SingleColorPicker opened for theme: $themeDisplayName, colorType: $selectedColorType")
+    Log.d("ColorsScreen", " Initial color: $selectedColor")
 
     Column(
         modifier = Modifier
@@ -104,8 +104,8 @@ internal fun CustomColorPicker(
     onReset: () -> Unit,
     onCancel: () -> Unit
 ) {
-    Log.d("ColorsScreen", "🎨 CustomColorPicker opened for theme: $themeDisplayName")
-    Log.d("ColorsScreen", "🎨 Initial primary color: $primaryColor")
+    Log.d("ColorsScreen", " CustomColorPicker opened for theme: $themeDisplayName")
+    Log.d("ColorsScreen", " Initial primary color: $primaryColor")
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -230,7 +230,7 @@ internal fun ColorPickerRow(
                         )
                         .clip(CircleShape)
                         .clickable {
-                            Log.d("ColorsScreen", "🎯 Preset color clicked: $presetColor")
+                            Log.d("ColorsScreen", " Preset color clicked: $presetColor")
                             onColorChanged(presetColor)
                         }
                 )
@@ -275,7 +275,7 @@ internal fun ColorPickerRow(
                 ModernColorPicker(
                     initialColor = color,
                     onColorChanged = { newColor ->
-                        Log.d("ColorsScreen", "🎨 ModernColorPicker color changed: $newColor")
+                        Log.d("ColorsScreen", " ModernColorPicker color changed: $newColor")
                         onColorChanged(newColor)
                     },
                     modifier = Modifier.fillMaxWidth()

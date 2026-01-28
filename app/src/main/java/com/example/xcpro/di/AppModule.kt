@@ -3,6 +3,7 @@ package com.example.xcpro.di
 import android.content.Context
 import com.example.dfcards.CardPreferences
 import com.example.xcpro.common.units.UnitsRepository
+import com.example.xcpro.core.time.Clock
 import com.example.xcpro.map.QnhPreferencesRepository
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.profiles.ProfileStorage
@@ -28,8 +29,9 @@ object AppModule {
     @Provides
     @Singleton
     fun provideCardPreferences(
-        @ApplicationContext context: Context
-    ): CardPreferences = CardPreferences(context)
+        @ApplicationContext context: Context,
+        clock: Clock
+    ): CardPreferences = CardPreferences(context, clock)
 
     @Provides
     @Singleton

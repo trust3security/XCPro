@@ -12,7 +12,7 @@ internal fun FlightDataCalculatorEngine.updateVarioFilter(baro: BaroData?, accel
         return
     }
 
-    val wallTime = System.currentTimeMillis()
+    val wallTime = clock.nowWallMs()
 
     val calcTime = if (isReplayMode) {
         baro.timestamp
@@ -26,6 +26,7 @@ internal fun FlightDataCalculatorEngine.updateVarioFilter(baro: BaroData?, accel
     lastBaroSampleTime = calcTime
 
     val outputTime = if (isReplayMode) calcTime else wallTime
+    val wallTimeForMetrics = if (isReplayMode) outputTime else wallTime
 
     // In replay mode, downstream estimators (wind, circling, etc.) use the sensor timestamps as
     // the "simulation clock". Keep the vario validity clock in the same time base.
@@ -68,12 +69,12 @@ internal fun FlightDataCalculatorEngine.updateVarioFilter(baro: BaroData?, accel
             if (isReplayMode) {
                 AppLogger.w(
                     FlightDataCalculatorEngine.TAG,
-                    "Replay QNH jump detected ??${qnhLabel} hPa / ??${altitudeLabel} m - ignoring reset to keep vario stable"
+                    "Replay QNH jump detected delta=${qnhLabel} hPa / delta=${altitudeLabel} m - ignoring reset to keep vario stable"
                 )
             } else {
                 AppLogger.w(
                     FlightDataCalculatorEngine.TAG,
-                    "QNH jump detected ??${qnhLabel} hPa / ??${altitudeLabel} m - resetting vario filters"
+                    "QNH jump detected delta=${qnhLabel} hPa / delta=${altitudeLabel} m - resetting vario filters"
                 )
                 varioSuite.resetAll()
                 filters.baroFilter.reset()
@@ -138,7 +139,13 @@ internal fun FlightDataCalculatorEngine.updateVarioFilter(baro: BaroData?, accel
     }
     val validityWindowMs = maxOf(FlightDataCalculatorEngine.VARIO_VALIDITY_MS, replayWindowMs, FlightDataCalculatorEngine.VARIO_VALIDITY_FLOOR_MS)
     emissionState.varioValidUntil = currentTime + validityWindowMs
-    audioController.update(emissionState.latestTeVario, varioResult.verticalSpeed, currentTime, emissionState.varioValidUntil)
+    val audioSelected = audioController.update(
+        emissionState.latestTeVario,
+        varioResult.verticalSpeed,
+        currentTime,
+        emissionState.varioValidUntil
+    )
+    emissionState.latestAudioVario = audioSelected?.takeIf { it.isFinite() } ?: 0.0
 
     cachedVarioResult = varioResult
     cachedBaroResult = baroResult
@@ -158,6 +165,7 @@ internal fun FlightDataCalculatorEngine.updateVarioFilter(baro: BaroData?, accel
                 gps = gps,
                 compass = cachedCompassData,
                 currentTime = currentTime,
+                wallTimeMillis = wallTimeForMetrics,
                 outputTimestampMillis = outputTime,
                 deltaTime = emitDeltaTime,
                 varioResultInput = varioResult,
@@ -207,7 +215,7 @@ internal fun FlightDataCalculatorEngine.updateGPSData(gps: GPSData?, compass: Co
         return
     }
 
-    val wallTime = System.currentTimeMillis()
+    val wallTime = clock.nowWallMs()
     // Use GPS timestamps as the "simulation clock" in replay mode so time-based metrics (wind,
     // thermal windows, circling detection) advance with the IGC log instead of wall clock.
     val calcTime = if (isReplayMode) {
@@ -217,6 +225,7 @@ internal fun FlightDataCalculatorEngine.updateGPSData(gps: GPSData?, compass: Co
     }
     val currentTime = calcTime
     val outputTime = if (isReplayMode) calcTime else wallTime
+    val wallTimeForMetrics = if (isReplayMode) outputTime else wallTime
     if (isReplayMode && wallTime - lastReplayGpsLogTime >= 1_000L) {
         lastReplayGpsLogTime = wallTime
         logReplayGpsSample(FlightDataCalculatorEngine.TAG, gps.position.latitude, gps.position.longitude, gps.altitude.value, gps.speed.value, gps.bearing.toDouble(), gps.timestamp)
@@ -264,6 +273,7 @@ internal fun FlightDataCalculatorEngine.updateGPSData(gps: GPSData?, compass: Co
             gps = gps,
             compass = compass,
             currentTime = currentTime,
+            wallTimeMillis = wallTimeForMetrics,
             outputTimestampMillis = outputTime,
             deltaTime = deltaTime,
             varioResultInput = varioResultInput,

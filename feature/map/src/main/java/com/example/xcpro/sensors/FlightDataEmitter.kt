@@ -32,6 +32,7 @@ internal class FlightDataEmitter(
         gps: GPSData,
         compass: CompassData?,
         currentTime: Long,
+        wallTimeMillis: Long,
         outputTimestampMillis: Long,
         deltaTime: Double,
         varioResultInput: ModernVarioResult,
@@ -45,8 +46,6 @@ internal class FlightDataEmitter(
         macCreadySetting: Double,
         macCreadyRisk: Double
     ) {
-        val wallTime = System.currentTimeMillis()
-
         val replayIgcVario = if (isReplayMode && replayRealVarioTimestamp != 0L) {
             val ageMs = currentTime - replayRealVarioTimestamp
             if (ageMs in 0..FlightDataConstants.REPLAY_VARIO_MAX_AGE_MS) replayRealVarioMs else null
@@ -70,7 +69,7 @@ internal class FlightDataEmitter(
             FlightMetricsRequest(
                 gps = gps,
                 currentTimeMillis = currentTime,
-                wallTimeMillis = wallTime,
+                wallTimeMillis = wallTimeMillis,
                 gpsTimestampMillis = gps.timeForCalculationsMillis,
                 deltaTimeSeconds = deltaTime,
                 varioResult = varioResultForMetrics,
@@ -105,6 +104,7 @@ internal class FlightDataEmitter(
             aglMeters = flightHelpers.currentAGL,
             varioResults = varioResults,
             replayIgcVario = replayIgcVario,
+            audioVario = state.latestAudioVario,
             dataQuality = dataQuality,
             // Wall time for live UI, IGC time for replay UI.
             timestamp = outputTimestampMillis,
@@ -113,7 +113,7 @@ internal class FlightDataEmitter(
         )
         val flightData = flightDisplayMapper.map(snapshot)
 
-        if (isReplayMode && wallTime % 1_000L < 50L) {
+        if (isReplayMode && wallTimeMillis % 1_000L < 50L) {
             Log.d(
                 tag,
                 "REPLAY_CHOICE replayIgc=${replayIgcVario ?: Double.NaN} " +
@@ -148,7 +148,7 @@ internal class FlightDataEmitter(
                     "GPSalt=${gps.altitude.value.toInt()}m BaroAlt=${metrics.baroAltitude.toInt()}m " +
                     "RawBaro=${String.format(Locale.US, "%.2f", varioResultInput.verticalSpeed)} " +
                     "Levo=${String.format(Locale.US, "%.2f", metrics.verticalSpeed)}(src=${metrics.varioSource},val=${metrics.varioValid}) " +
-                    "XC=${String.format(Locale.US, "%.2f", metrics.xcSoarVario)}(val=${metrics.xcSoarVarioValid}) " +
+                    "BASE=${String.format(Locale.US, "%.2f", metrics.baselineVario)}(val=${metrics.baselineVarioValid}) " +
                     "GPSv=${gpsVarioMs?.let { String.format(Locale.US, "%.2f", it) } ?: "--"} " +
                     "PressV=${pressureVarioMs?.let { String.format(Locale.US, "%.2f", it) } ?: "--"} " +
                     "Spd=${String.format(Locale.US, "%.1f", gps.speed.value)} " +
@@ -164,12 +164,14 @@ internal class FlightDataEmissionState {
     var lastUpdateTime: Long = 0L
     var lastThermalLogTime: Long = 0L
     var latestTeVario: Double? = null
+    var latestAudioVario: Double = 0.0
     var varioValidUntil: Long = 0L
 
     fun reset() {
         lastUpdateTime = 0L
         lastThermalLogTime = 0L
         latestTeVario = null
+        latestAudioVario = 0.0
         varioValidUntil = 0L
     }
 }

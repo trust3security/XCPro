@@ -38,7 +38,7 @@ fun NavigationDrawer(
     onMapStyleSelected: (String) -> Unit = {},
     content: @Composable () -> Unit
 ) {
-    Log.d(TAG, "🚪 NavigationDrawer composable started")
+    Log.d(TAG, " NavigationDrawer composable started")
     val profileViewModel: ProfileViewModel = hiltViewModel()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -51,7 +51,7 @@ fun NavigationDrawer(
         Log.d(TAG, "Map style updated: $style")
     }
 
-    Log.d(TAG, "🚪 DismissibleNavigationDrawer rendering with state: ${drawerState.currentValue}")
+    Log.d(TAG, " DismissibleNavigationDrawer rendering with state: ${drawerState.currentValue}")
     DismissibleNavigationDrawer(
         drawerState = drawerState,
         gesturesEnabled = false,
@@ -128,7 +128,7 @@ fun NavigationDrawer(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     // Settings Section
-                    Log.d(TAG, "🔧 Rendering Settings section: expanded=${settingsExpanded.value}")
+                    Log.d(TAG, " Rendering Settings section: expanded=${settingsExpanded.value}")
                     SettingsSection(
                         isExpanded = settingsExpanded.value,
                         onToggle = {

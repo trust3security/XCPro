@@ -5,7 +5,7 @@ import org.maplibre.android.geometry.LatLng
 import kotlin.math.*
 
 /**
- * Lightweight pose smoother inspired by XCSoar:
+ * Lightweight pose smoother inspired by a legacy glide computer:
  * - Dead-reckons forward between GPS fixes (up to a short limit)
  * - Low-passes position and heading with short time constants
  * - Scales smoothing with reported accuracy to damp noisy fixes

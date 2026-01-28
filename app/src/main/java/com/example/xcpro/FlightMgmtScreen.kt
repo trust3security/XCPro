@@ -87,7 +87,7 @@ fun FlightMgmt(
         cardPreferences.saveFlightModeTemplate("CRUISE", "essential")
         cardPreferences.saveFlightModeTemplate("THERMAL", "thermal")
         cardPreferences.saveFlightModeTemplate("FINAL_GLIDE", "cross_country")
-        Log.d(TAG, "ƒo. Default mappings set up")
+        Log.d(TAG, "o. Default mappings set up")
         uniqueAirspaceClasses = updateUniqueAirspaceClasses(
             context,
             selectedAirspaceFiles,
@@ -106,7 +106,7 @@ fun FlightMgmt(
                 }
                 selectedTemplate = template
             } catch (e: Exception) {
-                Log.e(TAG, "ƒ?O Error loading template: ${e.message}")
+                Log.e(TAG, "?O Error loading template: ${e.message}")
                 selectedTemplate = null
             }
         }

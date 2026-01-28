@@ -1,4 +1,4 @@
-﻿package com.example.xcpro.map
+package com.example.xcpro.map
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -142,7 +142,7 @@ class BlueLocationOverlay(
             source.setGeoJson(feature)
 
             // Update icon rotation based on orientation mode
-            // XCSoar-style: icon rotation is heading relative to screen angle (map bearing).
+            // Icon rotation is heading relative to screen angle (map bearing).
             val iconRotation = normalizeAngle(headingDeg - mapBearing).toFloat()
             layer.setProperties(iconRotate(iconRotation))
 

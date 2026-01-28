@@ -50,7 +50,7 @@ class AATEditModeManager {
         task.waypoints.forEachIndexed { index, waypoint ->
             val distance = AATEditGeometry.haversineDistance(lat, lon, waypoint.lat, waypoint.lon)
 
-            // ✅ FIX: Check area based on shape type
+            //  FIX: Check area based on shape type
             val isInArea = when (waypoint.assignedArea.shape) {
                 com.example.xcpro.tasks.aat.models.AATAreaShape.CIRCLE -> {
                     // Simple circle check
@@ -99,7 +99,7 @@ class AATEditModeManager {
             }
 
             if (isInArea) {
-                println("🎯 AAT EDIT MODE: Tap detected in ${waypoint.title} area (${String.format("%.2f", distance)}km from center, shape: ${waypoint.assignedArea.shape})")
+                println(" AAT EDIT MODE: Tap detected in ${waypoint.title} area (${String.format("%.2f", distance)}km from center, shape: ${waypoint.assignedArea.shape})")
                 return Pair(index, waypoint)
             }
         }
@@ -149,7 +149,7 @@ class AATEditModeManager {
      */
     fun updateTargetPoint(task: SimpleAATTask, index: Int, lat: Double, lon: Double): AATWaypoint? {
         if (index >= task.waypoints.size) {
-            println("❌ AAT EDIT MODE: Invalid waypoint index for target update: $index")
+            println(" AAT EDIT MODE: Invalid waypoint index for target update: $index")
             return null
         }
 
@@ -159,7 +159,7 @@ class AATEditModeManager {
         // Update target point with boundary validation
         val updatedWaypoint = movablePointManager.moveTargetPoint(waypoint, lat, lon)
 
-        println("🎯 AAT EDIT MODE: Target point updated for ${waypoint.title} - Lat: $lat, Lon: $lon")
+        println(" AAT EDIT MODE: Target point updated for ${waypoint.title} - Lat: $lat, Lon: $lon")
         return updatedWaypoint
     }
 
@@ -184,11 +184,11 @@ class AATEditModeManager {
             if (features.isNotEmpty()) {
                 val feature = features[0]
                 val index = feature.getNumberProperty("index")?.toInt()
-                println("🎯 AAT EDIT MODE: Target point hit detected at index $index")
+                println(" AAT EDIT MODE: Target point hit detected at index $index")
                 return index
             }
         } catch (e: Exception) {
-            println("❌ AAT EDIT MODE: Error checking target point hit: ${e.message}")
+            println(" AAT EDIT MODE: Error checking target point hit: ${e.message}")
         }
         return null
     }

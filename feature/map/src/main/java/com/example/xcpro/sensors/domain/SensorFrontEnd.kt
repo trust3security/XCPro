@@ -12,7 +12,7 @@ private const val MAX_DERIVATIVE_DT_SECONDS = 5.0
 
 /**
  * Centralized front-end for sensor-derived fundamentals (nav altitude, IAS/TAS, TE altitude).
- * Mirrors XCSoar's BasicComputer responsibilities so downstream code consumes a single snapshot.
+ * Mirrors legacy flight-computer responsibilities so downstream code consumes a single snapshot.
  */
 internal class SensorFrontEnd(
     private val fusionBlackboard: FusionBlackboard
@@ -33,8 +33,8 @@ internal class SensorFrontEnd(
         val bruttoVario: Double,
         val varioSource: String,
         val varioValid: Boolean,
-        val xcSoarVario: Double,
-        val xcSoarVarioValid: Boolean
+        val baselineVario: Double,
+        val baselineVarioValid: Boolean
     )
 
     fun buildSnapshot(
@@ -101,13 +101,13 @@ internal class SensorFrontEnd(
         }
         val varioValid = bruttoVario.isFinite()
 
-        val xcSoarVario = when {
+        val baselineVario = when {
             pressureVario.isFinite() -> pressureVario
             baroVario.isFinite() -> baroVario
             gpsVario.isFinite() -> gpsVario
             else -> Double.NaN
         }.guardVario()
-        val xcSoarVarioValid = xcSoarVario.isFinite()
+        val baselineVarioValid = baselineVario.isFinite()
 
         return SensorSnapshot(
             navAltitude = navAltitude,
@@ -123,8 +123,8 @@ internal class SensorFrontEnd(
             bruttoVario = bruttoVario,
             varioSource = varioSource,
             varioValid = varioValid,
-            xcSoarVario = xcSoarVario,
-            xcSoarVarioValid = xcSoarVarioValid
+            baselineVario = baselineVario,
+            baselineVarioValid = baselineVarioValid
         )
     }
 
@@ -246,7 +246,7 @@ internal class SensorFrontEnd(
 
     /**
      * Keep output finite and realistic:
-     * - Drop only non‑finite inputs.
+     * - Drop only nonfinite inputs.
      * - Clamp extreme spikes to a plausible full-scale instead of emitting NaN (prevents UI freeze).
      */
     private fun Double.guardVario(): Double {

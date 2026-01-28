@@ -100,7 +100,7 @@ internal fun RacingTurnPointSelector(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "🔑 Configurable Keyhole Parameters",
+                        text = "Configurable Keyhole Parameters",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.primary
@@ -171,7 +171,7 @@ internal fun RacingTurnPointSelector(
                                 }
                             },
                         singleLine = true,
-                        supportingText = { Text("Sector angle in degrees (default: 90°)") },
+                        supportingText = { Text("Sector angle in degrees (default: 90 deg)") },
                         shape = RoundedCornerShape(20.dp)
                     )
                 }
@@ -190,7 +190,7 @@ internal fun RacingTurnPointSelector(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "🔶 Configurable FAI Quadrant Parameters",
+                        text = "Configurable FAI Quadrant Parameters",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.primary
@@ -218,7 +218,7 @@ internal fun RacingTurnPointSelector(
                             },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
-                        supportingText = { Text("Sector radius for FAI quadrant (default: 10km, XCSoar parity).") },
+                        supportingText = { Text("Sector radius for FAI quadrant (default: 10 km).") },
                         shape = RoundedCornerShape(20.dp)
                     )
                 }

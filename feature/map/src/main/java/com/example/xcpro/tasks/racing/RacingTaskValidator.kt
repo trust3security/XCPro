@@ -1,6 +1,6 @@
 package com.example.xcpro.tasks.racing
 
-// ✅ RACING TASK SEPARATION: Only Racing-specific imports - NO shared dependencies
+// RACING TASK SEPARATION: Only Racing-specific imports - NO shared dependencies
 import com.example.xcpro.tasks.racing.models.RacingWaypoint
 import com.example.xcpro.tasks.racing.models.RacingWaypointRole
 import com.example.xcpro.tasks.racing.models.RacingStartPointType
@@ -25,7 +25,7 @@ class RacingTaskValidator {
     /**
      * Verify that course line touches all turn points within tolerance
      * Returns validation result with details for debugging
-     * ✅ RACING TASK SEPARATION: Uses only Racing-specific waypoint types
+     * RACING TASK SEPARATION: Uses only Racing-specific waypoint types
      */
     fun validateCourseLineTouchesWaypoints(waypoints: List<RacingWaypoint>): CourseLineValidation {
         if (waypoints.size < 2) {
@@ -63,14 +63,14 @@ class RacingTaskValidator {
             }
 
             // Log detailed verification
-            println("🔍 COURSE LINE VERIFICATION:")
+            println("COURSE LINE VERIFICATION:")
             println("   Waypoint: ${waypoint.title} (${waypoint.role})")
             println("   Type: ${waypoint.currentPointType}")
             println("   Center: (${waypoint.lat}, ${waypoint.lon})")
             println("   Course Point: (${courseLinePoint.first}, ${courseLinePoint.second})")
             println("   Distance from center: ${result.distanceFromCenter}m")
             println("   Expected radius: ${waypoint.gateWidth * 1000}m")
-            println("   ✅ Valid: ${result.isValid} - ${result.message}")
+            println("   Valid: ${result.isValid} - ${result.message}")
         }
 
         return CourseLineValidation(
@@ -83,7 +83,7 @@ class RacingTaskValidator {
     
     /**
      * Validate that a specific course line point touches the waypoint correctly
-     * ✅ RACING TASK SEPARATION: Uses only Racing-specific waypoint types
+     * RACING TASK SEPARATION: Uses only Racing-specific waypoint types
      */
     private fun validateWaypointTouchPoint(
         waypoint: RacingWaypoint,
@@ -137,7 +137,7 @@ class RacingTaskValidator {
             }
 
             RacingStartPointType.FAI_START_SECTOR -> {
-                // Should be on FAI sector boundary (90° D-shaped sector)
+                // Should be on FAI sector boundary (90 deg D-shaped sector)
                 TouchPointResult(
                     isValid = true, // FAI sector validation is complex (angle + radius), assume valid for now
                     distanceFromCenter = distanceFromCenter,
@@ -163,7 +163,7 @@ class RacingTaskValidator {
             }
 
             RacingTurnPointType.FAI_QUADRANT -> {
-                // FAI quadrant uses a finite sector radius (XCSoar default 10km)
+                // FAI quadrant uses a finite sector radius (default 10km)
                 val maxRadius = waypoint.faiQuadrantOuterRadius * 1000.0
                 val isValid = distanceFromCenter <= maxRadius + TOLERANCE_METERS
                 TouchPointResult(
@@ -218,7 +218,7 @@ class RacingTaskValidator {
         }
     }
 
-    // ✅ RACING TASK SEPARATION: No conversion functions needed - uses Racing-specific types only
+    // RACING TASK SEPARATION: No conversion functions needed - uses Racing-specific types only
 }
 
 // Note: CourseLineValidation and TouchPointResult are defined in RacingTaskManager.kt

@@ -9,7 +9,7 @@ import com.example.xcpro.vario.RawBaroVario
 
 /**
  * Encapsulates the fleet of vario implementations so FlightDataCalculator
- * stays under the 500 LOC guardrail and mirrors XCSoar-style glide computer setup.
+ * stays under the 500 LOC guardrail and mirrors legacy glide computer setup.
  */
 internal class VarioSuite {
     private val lock = Any()

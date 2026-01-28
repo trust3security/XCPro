@@ -42,7 +42,7 @@ internal fun RacingStartPointSelector(
     onStartTypeChange: (RacingStartPointType) -> Unit,
     onGateWidthChange: (String) -> Unit
 ) {
-    Log.d(TAG, "🚀 Rendering Racing Start Point selector - selectedStartType: ${selectedStartType.displayName}")
+    Log.d(TAG, " Rendering Racing Start Point selector - selectedStartType: ${selectedStartType.displayName}")
 
     Text(
         text = "Racing Start Point Configuration",

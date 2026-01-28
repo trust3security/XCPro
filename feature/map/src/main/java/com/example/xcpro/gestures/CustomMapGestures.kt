@@ -22,7 +22,7 @@ import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.maps.MapLibreMap
 
 private const val MODE_SWITCH_THRESHOLD_PX = 250f
-private const val SINGLE_FINGER_ZOOM_FACTOR = 0.008
+private const val SINGLE_FINGER_ZOOM_FACTOR = 0.003
 private const val SINGLE_FINGER_DRAG_MIN_PX = 2f
 
 @Composable

@@ -17,21 +17,21 @@ object RacingGeometryUtils {
     fun generateCircleCoordinates(lat: Double, lon: Double, radiusMeters: Double): String {
         // CRASH FIX: Validate inputs before generating coordinates
         if (!lat.isFinite() || !lon.isFinite() || !radiusMeters.isFinite()) {
-            println("❌ CIRCLE COORDS: Invalid inputs - lat:$lat, lon:$lon, radius:$radiusMeters")
+            println(" CIRCLE COORDS: Invalid inputs - lat:$lat, lon:$lon, radius:$radiusMeters")
             return "[]" // Return empty coordinate array
         }
 
         if (lat < -90.0 || lat > 90.0 || lon < -180.0 || lon > 180.0) {
-            println("❌ CIRCLE COORDS: Coordinates out of bounds - lat:$lat, lon:$lon")
+            println(" CIRCLE COORDS: Coordinates out of bounds - lat:$lat, lon:$lon")
             return "[]"
         }
 
         if (radiusMeters <= 0 || radiusMeters > 100000000) { // Max 100,000km
-            println("❌ CIRCLE COORDS: Invalid radius: $radiusMeters meters")
+            println(" CIRCLE COORDS: Invalid radius: $radiusMeters meters")
             return "[]"
         }
 
-        println("🔍 CIRCLE COORDS: Generating circle at ($lat, $lon) with radius ${radiusMeters}m")
+        println(" CIRCLE COORDS: Generating circle at ($lat, $lon) with radius ${radiusMeters}m")
 
         val points = mutableListOf<String>()
 
@@ -47,19 +47,19 @@ object RacingGeometryUtils {
                     newLon >= -180.0 && newLon <= 180.0) {
                     points.add("[$newLon, $newLat]")
                 } else {
-                    println("⚠️ CIRCLE COORDS: Skipping invalid point at bearing $i° - lat:$newLat, lon:$newLon")
+                    println(" CIRCLE COORDS: Skipping invalid point at bearing $i - lat:$newLat, lon:$newLon")
                 }
             } catch (e: Exception) {
-                println("❌ CIRCLE COORDS: Exception at bearing $i°: ${e.message}")
+                println(" CIRCLE COORDS: Exception at bearing $i: ${e.message}")
             }
         }
 
         if (points.isEmpty()) {
-            println("❌ CIRCLE COORDS: No valid points generated for circle")
+            println(" CIRCLE COORDS: No valid points generated for circle")
             return "[]"
         }
 
-        println("✅ CIRCLE COORDS: Generated ${points.size} valid points for circle")
+        println(" CIRCLE COORDS: Generated ${points.size} valid points for circle")
         return points.joinToString(", ")
     }
 
@@ -80,17 +80,17 @@ object RacingGeometryUtils {
     ): List<List<Double>> {
         // Validate inputs
         if (!lat.isFinite() || !lon.isFinite() || !radiusMeters.isFinite()) {
-            println("❌ CIRCLE ARRAY: Invalid inputs - lat:$lat, lon:$lon, radius:$radiusMeters")
+            println(" CIRCLE ARRAY: Invalid inputs - lat:$lat, lon:$lon, radius:$radiusMeters")
             return emptyList()
         }
 
         if (lat < -90.0 || lat > 90.0 || lon < -180.0 || lon > 180.0) {
-            println("❌ CIRCLE ARRAY: Coordinates out of bounds - lat:$lat, lon:$lon")
+            println(" CIRCLE ARRAY: Coordinates out of bounds - lat:$lat, lon:$lon")
             return emptyList()
         }
 
         if (radiusMeters <= 0 || radiusMeters > 100000000) {
-            println("❌ CIRCLE ARRAY: Invalid radius: $radiusMeters meters")
+            println(" CIRCLE ARRAY: Invalid radius: $radiusMeters meters")
             return emptyList()
         }
 
@@ -231,7 +231,7 @@ object RacingGeometryUtils {
 
     /**
      * Calculate angle bisector between two bearings
-     * Handles proper wrapping at 0°/360° boundary
+     * Handles proper wrapping at 0/360 boundary
      */
     fun calculateAngleBisector(bearing1: Double, bearing2: Double): Double {
         val b1 = (bearing1 + 360.0) % 360.0

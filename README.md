@@ -3,7 +3,7 @@
 XC Pro is an **Android-based soaring instrument** focused on real-time Total Energy (TE) variometer performance,
 sensor fusion, and deterministic replay/simulation using phone sensors and external GNSS.
 
-It is designed for **experimental, training, and development use** — not as a certified flight instrument.
+It is designed for **experimental, training, and development use** -- not as a certified flight instrument.
 
 ---
 
@@ -21,6 +21,29 @@ It is designed for **experimental, training, and development use** — not as a 
 ## Documentation
 
 See `CONTRIBUTING.md` for required reading order and contributor workflow.
+
+---
+
+## Compliance status (audit 2026-01-27)
+
+This repo is not fully compliant with ARCHITECTURE.md and CODING_RULES.md.
+See `KNOWN_DEVIATIONS.md` for the current list of exceptions and owner/expiry.
+Refactor checklist: `docs/refactor/Agent-Execution-Contract-LevoCompliance.md`.
+
+CI rule enforcement (local):
+```
+pwsh scripts/ci/enforce_rules.ps1
+```
+
+Gradle task (local):
+```
+gradlew enforceRules
+```
+
+Preflight (rules + build + unit tests):
+```
+preflight.bat
+```
 
 ---
 
@@ -118,10 +141,10 @@ Key files:
 
 High-level module map (edit to match your repo):
 
-- `app/` — Android entrypoints, navigation shell, DI wiring
-- `data/` — sensor sources, repositories, persistence
-- `domain/` — use-cases, pure models, TE/filter math
-- `ui/` — Compose screens, ViewModels, UI state models
+- `app/` -- Android entrypoints, navigation shell, DI wiring
+- `data/` -- sensor sources, repositories, persistence
+- `domain/` -- use-cases, pure models, TE/filter math
+- `ui/` -- Compose screens, ViewModels, UI state models
 - (add your actual modules here: `core/`, `feature/`, `dfcards-library/`, etc.)
 
 Where to start for new work:
@@ -147,7 +170,7 @@ Where to start for new work:
 
 - Not a certified flight instrument; do not rely on it as the sole source of flight-critical information.
 - Emulator sensor behaviour is not representative; use a physical device for validation.
-- (Add 1–3 current limitations here: performance, device-specific sensor quirks, missing features, etc.)
+- (Add 1-3 current limitations here: performance, device-specific sensor quirks, missing features, etc.)
 
 ---
 

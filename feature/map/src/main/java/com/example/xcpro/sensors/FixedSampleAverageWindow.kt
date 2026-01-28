@@ -1,7 +1,7 @@
 package com.example.xcpro.sensors
 
 /**
- * Circular buffer that mirrors XCSoar's WindowFilter<30> semantics.
+ * Circular buffer that mirrors the 30-sample window filter semantics.
  * Keeps a fixed number of samples and overwrites the oldest entry
  * once the buffer is full, exposing the arithmetic mean of the window.
  */

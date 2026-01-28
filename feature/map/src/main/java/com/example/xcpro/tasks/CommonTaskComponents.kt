@@ -1,4 +1,4 @@
-﻿package com.example.xcpro.tasks
+package com.example.xcpro.tasks
 
 
 import androidx.compose.foundation.clickable
@@ -30,7 +30,7 @@ import com.example.xcpro.tasks.domain.logic.TaskAdvanceState
 
 /**
  * Common UI components shared between task types.
- * âœ… SEPARATION COMPLIANT: No task-specific imports or logic
+ *  SEPARATION COMPLIANT: No task-specific imports or logic
  */
 
 @Composable

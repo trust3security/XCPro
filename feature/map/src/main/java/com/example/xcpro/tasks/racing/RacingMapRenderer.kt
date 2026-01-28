@@ -81,12 +81,12 @@ internal class RacingMapRenderer {
             if (RacingGeoJSONValidator.validateGeoJSON(feature, "Racing waypoint marker")) {
                 validMarkerFeatures.add(feature)
             } else {
-                println("⚠️ RACING MARKERS: Skipping invalid marker feature")
+                println(" RACING MARKERS: Skipping invalid marker feature")
             }
         }
 
         if (validMarkerFeatures.isEmpty()) {
-            println("❌ RACING MARKERS: No valid marker features, skipping marker display")
+            println(" RACING MARKERS: No valid marker features, skipping marker display")
             return
         }
 
@@ -99,7 +99,7 @@ internal class RacingMapRenderer {
 
         // CRASH FIX: Validate complete FeatureCollection before adding to MapLibre
         if (!RacingGeoJSONValidator.validateGeoJSON(markerGeoJson, "Racing waypoint markers FeatureCollection")) {
-            println("❌ RACING MARKERS: Invalid marker FeatureCollection, skipping marker display")
+            println(" RACING MARKERS: Invalid marker FeatureCollection, skipping marker display")
             return
         }
 
@@ -122,9 +122,9 @@ internal class RacingMapRenderer {
                         PropertyFactory.circleStrokeWidth(2f)
                     )
             )
-            println("🏁 RACING TASK: Added ${validMarkerFeatures.size} validated waypoint markers")
+            println(" RACING TASK: Added ${validMarkerFeatures.size} validated waypoint markers")
         } catch (e: Exception) {
-            println("❌ RACING TASK: MapLibre error drawing waypoint markers: ${e.message}")
+            println(" RACING TASK: MapLibre error drawing waypoint markers: ${e.message}")
             e.printStackTrace() // Include stack trace for debugging MapLibre native crashes
         }
     }
@@ -155,16 +155,16 @@ internal class RacingMapRenderer {
 
                 // CRASH FIX: Validate each geometry feature before adding
                 geometryFeature?.let { feature ->
-                    println("🗺️ MAP RENDER DEBUG: Generated feature for ${waypoint.role} waypoint")
+                    println(" MAP RENDER DEBUG: Generated feature for ${waypoint.role} waypoint")
                     if (RacingGeoJSONValidator.validateGeoJSON(feature, "Racing ${waypoint.role} geometry")) {
                         geometryFeatures.add(feature)
-                        println("🗺️ MAP RENDER DEBUG: ✅ Added ${waypoint.role} feature to geometry list")
+                        println(" MAP RENDER DEBUG:  Added ${waypoint.role} feature to geometry list")
                     } else {
-                        println("⚠️ RACING GEOMETRY: Skipping invalid geometry for ${waypoint.title}")
+                        println(" RACING GEOMETRY: Skipping invalid geometry for ${waypoint.title}")
                     }
                 }
             } catch (e: Exception) {
-                println("❌ RACING GEOMETRY: Exception generating geometry for ${waypoint.title}: ${e.message}")
+                println(" RACING GEOMETRY: Exception generating geometry for ${waypoint.title}: ${e.message}")
             }
         }
 
@@ -178,7 +178,7 @@ internal class RacingMapRenderer {
 
             // CRASH FIX: Validate complete geometry FeatureCollection before adding to MapLibre
             if (!RacingGeoJSONValidator.validateGeoJSON(geometryGeoJson, "Racing turnpoint geometry FeatureCollection")) {
-                println("❌ RACING GEOMETRY: Invalid geometry FeatureCollection, skipping geometry display")
+                println(" RACING GEOMETRY: Invalid geometry FeatureCollection, skipping geometry display")
                 return
             }
 
@@ -220,9 +220,9 @@ internal class RacingMapRenderer {
                         )
                 )
 
-                println("🏁 RACING TASK: Added turnpoint geometry")
+                println(" RACING TASK: Added turnpoint geometry")
             } catch (e: Exception) {
-                println("🏁 RACING TASK: Error drawing turnpoint geometry: ${e.message}")
+                println(" RACING TASK: Error drawing turnpoint geometry: ${e.message}")
             }
         }
     }
@@ -255,17 +255,17 @@ internal class RacingMapRenderer {
                     lon >= -180.0 && lon <= 180.0) {
                     validCoordinates.add("[${lon}, ${lat}]")
                 } else {
-                    println("⚠️ RACING COURSE LINE: Skipping invalid coordinate: lat=$lat, lon=$lon")
+                    println(" RACING COURSE LINE: Skipping invalid coordinate: lat=$lat, lon=$lon")
                 }
             }
 
             if (validCoordinates.isEmpty()) {
-                println("❌ RACING COURSE LINE: No valid coordinates in optimal path, skipping course line")
+                println(" RACING COURSE LINE: No valid coordinates in optimal path, skipping course line")
                 return
             }
 
-            println("🏁 RACING COURSE LINE: Drawing optimal path with ${validCoordinates.size}/${optimalPath.size} valid points")
-            println("🏁 RACING COURSE LINE: Waypoint types: ${waypoints.map { it.turnPointType }}")
+            println(" RACING COURSE LINE: Drawing optimal path with ${validCoordinates.size}/${optimalPath.size} valid points")
+            println(" RACING COURSE LINE: Waypoint types: ${waypoints.map { it.turnPointType }}")
 
             val geoJson = """
                 {
@@ -279,7 +279,7 @@ internal class RacingMapRenderer {
 
             // CRASH FIX: Validate course line GeoJSON before adding to MapLibre
             if (!RacingGeoJSONValidator.validateGeoJSON(geoJson, "Racing course line")) {
-                println("❌ RACING COURSE LINE: Invalid course line GeoJSON, skipping course line display")
+                println(" RACING COURSE LINE: Invalid course line GeoJSON, skipping course line display")
                 return
             }
 
@@ -292,12 +292,12 @@ internal class RacingMapRenderer {
                         PropertyFactory.lineOpacity(0.8f)
                     )
             )
-            println("🏁 RACING TASK: Successfully added validated course line with ${validCoordinates.size} coordinates")
+            println(" RACING TASK: Successfully added validated course line with ${validCoordinates.size} coordinates")
         } catch (e: Exception) {
-            println("❌ RACING TASK: MapLibre error drawing course line: ${e.message}")
+            println(" RACING TASK: MapLibre error drawing course line: ${e.message}")
             e.printStackTrace() // Include stack trace for debugging MapLibre native crashes
         } catch (e: Exception) {
-            println("❌ RACING COURSE LINE: Fatal exception in drawRacingCourseLine: ${e.message}")
+            println(" RACING COURSE LINE: Fatal exception in drawRacingCourseLine: ${e.message}")
             e.printStackTrace()
         }
     }

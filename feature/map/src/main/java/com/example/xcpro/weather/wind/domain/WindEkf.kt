@@ -1,10 +1,10 @@
-﻿package com.example.xcpro.weather.wind.domain
+package com.example.xcpro.weather.wind.domain
 
 import com.example.xcpro.weather.wind.model.WindVector
 import kotlin.math.hypot
 
 /**
- * Kotlin port of XCSoar's WindEKF (src/Computer/Wind/WindEKF.cpp).
+ * Kotlin port of the WindEKF estimator (src/Computer/Wind/WindEKF.cpp).
  */
 class WindEkf {
 

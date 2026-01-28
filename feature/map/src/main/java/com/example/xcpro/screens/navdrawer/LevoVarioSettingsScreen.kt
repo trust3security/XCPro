@@ -19,7 +19,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -38,7 +38,7 @@ fun LevoVarioSettingsScreen(
 ) {
     val scroll = rememberScrollState()
     val scope = rememberCoroutineScope()
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val audioSettings = uiState.audioSettings
 
     Scaffold(
@@ -92,9 +92,9 @@ fun LevoVarioSettingsScreen(
                         text = "Why MacCready matters",
                         style = MaterialTheme.typography.titleSmall
                     )
-                    BulletText("XCSoar and Levo now share this setting; adjust it whenever you change tactics.")
+                    BulletText("This setting is shared with your glide computer; adjust it whenever you change tactics.")
                     BulletText("TC Avg and T Avg cards turn red when their value falls below your risk MacCready.")
-                    BulletText("Set the same value here and in XCSoar to keep audio, colors, and polar math aligned.")
+                    BulletText("Set the same value here and in your glide computer to keep audio, colors, and polar math aligned.")
                 }
             }
 
@@ -202,7 +202,7 @@ private fun MacCreadyRiskCard(
                 steps = 20
             )
             Text(
-                text = "Controls when thermal cards turn red. Match XCSoar’s risk slider for identical colouring.",
+                text = "Controls when thermal cards turn red. Match your glide computer's risk slider for identical coloring.",
                 style = MaterialTheme.typography.bodySmall
             )
         }

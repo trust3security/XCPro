@@ -25,23 +25,23 @@ class FinishLineDisplay : TurnPointDisplay {
         if (context.previousWaypoint != null) {
             Log.d("FinishLineDisplay", "Previous waypoint: ${context.previousWaypoint.title} at (${context.previousWaypoint.lat}, ${context.previousWaypoint.lon})")
         } else {
-            Log.w("FinishLineDisplay", "No previous waypoint found - using default bearing 0°")
+            Log.w("FinishLineDisplay", "No previous waypoint found - using default bearing 0")
         }
 
         // Calculate direction from previous waypoint (final task leg)
         val bearing = if (context.previousWaypoint != null) {
             val calculatedBearing = RacingGeometryUtils.calculateBearing(context.previousWaypoint.lat, context.previousWaypoint.lon, waypoint.lat, waypoint.lon)
-            Log.d("FinishLineDisplay", "Final task leg bearing: ${String.format("%.2f", calculatedBearing)}° (from previous to finish)")
+            Log.d("FinishLineDisplay", "Final task leg bearing: ${String.format("%.2f", calculatedBearing)} (from previous to finish)")
             calculatedBearing
         } else {
-            Log.w("FinishLineDisplay", "Using default bearing: 0° (no previous waypoint)")
+            Log.w("FinishLineDisplay", "Using default bearing: 0 (no previous waypoint)")
             0.0 // Default direction if no previous waypoint
         }
 
         // Finish line is perpendicular to the bearing (FAI Rule: perpendicular to final task leg)
         val perpBearing = (bearing + 90.0) % 360.0
-        Log.d("FinishLineDisplay", "Perpendicular bearing: ${String.format("%.2f", perpBearing)}° (${String.format("%.2f", bearing)} + 90°)")
-        Log.d("FinishLineDisplay", "FAI Compliance: ✓ Finish line perpendicular to final task leg")
+        Log.d("FinishLineDisplay", "Perpendicular bearing: ${String.format("%.2f", perpBearing)} (${String.format("%.2f", bearing)} + 90)")
+        Log.d("FinishLineDisplay", "FAI Compliance:  Finish line perpendicular to final task leg")
 
         val halfWidth = gateWidthMeters / 2.0
         Log.d("FinishLineDisplay", "Half width: ${halfWidth}m")
@@ -58,7 +58,7 @@ class FinishLineDisplay : TurnPointDisplay {
         Log.d("FinishLineDisplay", "Calculated line length: ${String.format("%.2f", calculatedLength)}m (expected: ${gateWidthMeters}m)")
 
         if (Math.abs(calculatedLength - gateWidthMeters) < 1.0) {
-            Log.d("FinishLineDisplay", "FAI Compliance: ✓ Line length matches gate width")
+            Log.d("FinishLineDisplay", "FAI Compliance:  Line length matches gate width")
         } else {
             Log.w("FinishLineDisplay", "FAI Warning: Line length mismatch - difference: ${String.format("%.2f", Math.abs(calculatedLength - gateWidthMeters))}m")
         }

@@ -1,7 +1,9 @@
 package com.example.xcpro.sensors
 
 import android.content.Context
+import com.example.xcpro.audio.AudioFocusManager
 import com.example.xcpro.audio.VarioAudioSettings
+import com.example.xcpro.core.time.Clock
 import com.example.xcpro.glider.StillAirSinkProvider
 import com.example.xcpro.weather.wind.model.WindState
 import kotlinx.coroutines.CoroutineScope
@@ -17,6 +19,8 @@ class FlightDataCalculator(
     sinkProvider: StillAirSinkProvider,
     windStateFlow: StateFlow<WindState>,
     flightStateSource: FlightStateSource,
+    audioFocusManager: AudioFocusManager,
+    clock: Clock,
     enableAudio: Boolean = true,
     isReplayMode: Boolean = false
 ) : SensorFusionRepository {
@@ -28,6 +32,8 @@ class FlightDataCalculator(
         sinkProvider = sinkProvider,
         windStateFlow = windStateFlow,
         flightStateSource = flightStateSource,
+        audioFocusManager = audioFocusManager,
+        clock = clock,
         enableAudio = enableAudio,
         isReplayMode = isReplayMode
     )

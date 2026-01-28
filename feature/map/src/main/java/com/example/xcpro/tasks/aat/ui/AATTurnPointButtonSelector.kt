@@ -39,11 +39,11 @@ fun AATTurnPointButtonSelector(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            // 🔵 AAT Cylinder Button
+            //  AAT Cylinder Button
             AATTurnPointTypeChip(
                 type = AATTurnPointType.AAT_CYLINDER,
                 icon = Icons.Default.RadioButtonUnchecked, // Circle icon
-                emoji = "🔵",
+                emoji = "",
                 selected = selectedType == AATTurnPointType.AAT_CYLINDER,
                 onClick = { onTypeSelected(AATTurnPointType.AAT_CYLINDER) },
                 modifier = Modifier.weight(1f)
@@ -51,11 +51,11 @@ fun AATTurnPointButtonSelector(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // 🔶 AAT Sector Button
+            //  AAT Sector Button
             AATTurnPointTypeChip(
                 type = AATTurnPointType.AAT_SECTOR,
                 icon = Icons.Default.ChangeHistory, // Triangle icon for sector
-                emoji = "🔶",
+                emoji = "",
                 selected = selectedType == AATTurnPointType.AAT_SECTOR,
                 onClick = { onTypeSelected(AATTurnPointType.AAT_SECTOR) },
                 modifier = Modifier.weight(1f)
@@ -63,11 +63,11 @@ fun AATTurnPointButtonSelector(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // 🔑 AAT Keyhole Button
+            //  AAT Keyhole Button
             AATTurnPointTypeChip(
                 type = AATTurnPointType.AAT_KEYHOLE,
                 icon = Icons.Default.Lock, // Key/lock icon for keyhole
-                emoji = "🔑",
+                emoji = "",
                 selected = selectedType == AATTurnPointType.AAT_KEYHOLE,
                 onClick = { onTypeSelected(AATTurnPointType.AAT_KEYHOLE) },
                 modifier = Modifier.weight(1f)

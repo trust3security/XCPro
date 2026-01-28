@@ -11,7 +11,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -19,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.xcpro.glider.GliderRepository
 import com.example.xcpro.glider.PolarCalculator
 
@@ -26,8 +26,8 @@ import com.example.xcpro.glider.PolarCalculator
 fun PreviewCard() {
     val context = LocalContext.current
     val repo = remember(context) { GliderRepository.getInstance(context) }
-    val model by repo.selectedModel.collectAsState(initial = null)
-    val cfg by repo.config.collectAsState()
+    val model by repo.selectedModel.collectAsStateWithLifecycle(initialValue = null)
+    val cfg by repo.config.collectAsStateWithLifecycle()
 
     val speedKmh = remember { mutableStateOf(100f) }
     val sink = model?.let { m -> PolarCalculator.sinkMs(speedKmh.value.toDouble() / 3.6, m, cfg) }

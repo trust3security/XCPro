@@ -103,7 +103,7 @@ fun ManageAccount(navController: NavHostController, drawerState: DrawerState) {
                     item { HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp)) }
                     item { CatAccItem(title = "Sign Out", icon = Icons.Outlined.PowerSettingsNew, onClick = { /* TODO: Handle sign out */ }) }
                     item { HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp)) }
-                    item { AppVersion(versionText = "Version 1.0.0", copyrights = "© 2024 Your Company", onClick = { /* TODO Add easter egg after 8 times is clicked */ }) }
+                    item { AppVersion(versionText = "Version 1.0.0", copyrights = " 2024 Your Company", onClick = { /* TODO Add easter egg after 8 times is clicked */ }) }
                 }
             }
         }

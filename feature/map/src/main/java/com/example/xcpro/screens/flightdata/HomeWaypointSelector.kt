@@ -57,11 +57,11 @@ fun HomeWaypointSelector(
     // Handle auto-focus
     LaunchedEffect(autoFocus) {
         if (autoFocus) {
-            Log.d(TAG, "🎯 AUTO-FOCUS TRIGGERED! Focusing home waypoint input...")
+            Log.d(TAG, " AUTO-FOCUS TRIGGERED! Focusing home waypoint input...")
             kotlinx.coroutines.delay(100)
             focusRequester.requestFocus()
             showHomeWaypointDropdown = true
-            Log.d(TAG, "🎯 FOCUS REQUESTED AND DROPDOWN OPENED")
+            Log.d(TAG, " FOCUS REQUESTED AND DROPDOWN OPENED")
             onAutoFocusConsumed()
         }
     }
@@ -118,7 +118,7 @@ fun HomeWaypointSelector(
                     selectedHomeWaypoint = null
                     homeWaypointQuery = ""
                     saveHomeWaypoint(context, null)
-                    Log.d(TAG, "🗑️ Home waypoint deleted")
+                    Log.d(TAG, " Home waypoint deleted")
                 }
             )
         } else {
@@ -138,7 +138,7 @@ fun HomeWaypointSelector(
                     showHomeWaypointDropdown = false
                     saveHomeWaypoint(context, selectedWaypoint)
                     focusManager.clearFocus()
-                    Log.d(TAG, "🏠 Home waypoint set to: ${selectedWaypoint.name}")
+                    Log.d(TAG, " Home waypoint set to: ${selectedWaypoint.name}")
                 },
                 focusRequester = focusRequester,
                 focusManager = focusManager,
@@ -183,7 +183,7 @@ private fun SelectedHomeWaypointDisplay(
                 color = Color.Black
             )
             Text(
-                text = "${waypoint.getStyleDescription()} • ${waypoint.elevation}",
+                text = "${waypoint.getStyleDescription()}  ${waypoint.elevation}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.Black.copy(alpha = 0.7f)
             )
@@ -387,7 +387,7 @@ private fun HomeWaypointItem(
                     }
                 }
                 Text(
-                    text = "${waypoint.getStyleDescription()} • ${waypoint.elevation}",
+                    text = "${waypoint.getStyleDescription()}  ${waypoint.elevation}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

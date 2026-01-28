@@ -8,10 +8,10 @@ import com.example.dfcards.filters.VarioFilterDiagnostics
  *
  * Algorithm: 3-State Kalman Filter with optimized noise parameters
  * - R_altitude = 0.5m (down from 2.0m)
- * - R_accel = 0.3 m/s² (down from 0.5 m/s²)
+ * - R_accel = 0.3 m/s (down from 0.5 m/s)
  *
  * Benefits:
- * - 30-50% faster thermal detection (500ms → 250ms lag)
+ * - 30-50% faster thermal detection (500ms  250ms lag)
  * - 2-3x better sensitivity (detects 0.1-0.2 m/s changes)
  * - More responsive audio feedback
  *

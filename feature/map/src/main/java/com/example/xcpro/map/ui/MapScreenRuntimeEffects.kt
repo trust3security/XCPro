@@ -33,15 +33,15 @@ internal fun MapScreenRuntimeEffects(
     currentFlightModeSelection: FlightModeSelection,
     orientationManager: MapOrientationManager
 ) {
-    // GAœAÿ CRITICAL FIX: Reset AAT edit mode when task type changes
+    // GAA CRITICAL FIX: Reset AAT edit mode when task type changes
     LaunchedEffect(taskManager.taskType, isAATEditMode) {
         if (taskManager.taskType != TaskType.AAT && isAATEditMode) {
-            Log.d(MapScreenRootTag, "=’'AA§ Task type changed to ${taskManager.taskType} - resetting AAT edit mode")
+            Log.d(MapScreenRootTag, "='AA Task type changed to ${taskManager.taskType} - resetting AAT edit mode")
             onExitAATEditMode()
         }
     }
 
-    // GAœAÿ Control drawer gestures based on task type and edit mode
+    // GAA Control drawer gestures based on task type and edit mode
     // Uses MapTaskIntegration to determine if drawer should be blocked
     LaunchedEffect(isAATEditMode, taskManager.taskType) {
         val shouldBlock = MapTaskIntegration.shouldBlockDrawerGestures(
@@ -54,9 +54,9 @@ internal fun MapScreenRuntimeEffects(
             if (drawerState.isOpen) {
                 drawerState.close()
             }
-            Log.d(MapScreenRootTag, "=’'AoA« Task-specific drawer blocking active (${taskManager.taskType})")
+            Log.d(MapScreenRootTag, "='AoA Task-specific drawer blocking active (${taskManager.taskType})")
         } else {
-            Log.d(MapScreenRootTag, "GAœAÿ Drawer gestures enabled")
+            Log.d(MapScreenRootTag, "GAA Drawer gestures enabled")
         }
     }
 
@@ -117,7 +117,7 @@ internal fun MapScreenRuntimeEffects(
         }
     }
 
-    // GAœAÿ Map FlightMode to FlightModeSelection using FlightDataManager
+    // GAA Map FlightMode to FlightModeSelection using FlightDataManager
     LaunchedEffect(currentFlightModeSelection) {
         orientationManager.setFlightMode(currentFlightModeSelection)
     }

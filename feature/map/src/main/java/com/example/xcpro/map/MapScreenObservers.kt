@@ -3,19 +3,19 @@ package com.example.xcpro.map
 import android.util.Log
 import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.convertToRealTimeFlightData
-import com.example.xcpro.weather.wind.data.WindSensorFusionRepository
 import com.example.xcpro.weather.wind.model.WindState
 import com.example.xcpro.replay.IgcReplayController
 import com.example.xcpro.replay.ReplayEvent
-import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.map.trail.domain.TrailProcessor
 import com.example.xcpro.map.trail.domain.TrailUpdateInput
 import com.example.xcpro.map.trail.domain.TrailUpdateResult
-import com.example.xcpro.sensors.FlightStateSource
+import com.example.xcpro.sensors.CompleteFlightData
+import com.example.xcpro.sensors.domain.FlyingState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -26,9 +26,9 @@ import kotlinx.coroutines.flow.combine
  */
 internal class MapScreenObservers(
     private val scope: CoroutineScope,
-    private val flightDataRepository: FlightDataRepository,
-    private val windRepository: WindSensorFusionRepository,
-    private val flightStateSource: FlightStateSource,
+    private val flightDataFlow: StateFlow<CompleteFlightData?>,
+    private val windStateFlow: StateFlow<WindState>,
+    private val flightStateFlow: StateFlow<FlyingState>,
     private val flightDataManager: FlightDataManager,
     private val mapStateStore: MapStateReader,
     private val liveDataReady: MutableStateFlow<Boolean>,
@@ -50,9 +50,9 @@ internal class MapScreenObservers(
 
     private fun observeFlightDataRepository() {
         combine(
-            flightDataRepository.flightData,
-            windRepository.windState,
-            flightStateSource.flightState,
+            flightDataFlow,
+            windStateFlow,
+            flightStateFlow,
             igcReplayController.session.map { it.selection != null }
         ) { data, wind, flightState, isReplay -> Quadruple(data, wind, flightState, isReplay) }
             .onEach { (data, wind, flightState, isReplay) ->
@@ -74,10 +74,10 @@ internal class MapScreenObservers(
                     val liveData = convertToRealTimeFlightData(
                         completeData = data,
                         windState = wind,
-                        isFlying = flightState.isFlying
-                    )
-                        .copy(flightTime = formattedFlightTime)
-                        .applyWindState(wind)
+                        isFlying = flightState.isFlying,
+                        flightTime = formattedFlightTime,
+                        lastUpdateTimeMillis = sampleClockMillis
+                    ).applyWindState(wind)
                     flightDataManager.updateLiveFlightData(liveData)
 
                     val trailResult = trailProcessor.update(

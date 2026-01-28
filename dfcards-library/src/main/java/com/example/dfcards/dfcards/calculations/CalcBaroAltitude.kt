@@ -116,10 +116,10 @@ class BarometricAltitudeCalculator {
      * Manual QNH setting (for pilot input)
      * This is the proper way to update QNH during flight
      */
-    fun setQNH(qnhHPa: Double) {
+    fun setQNH(qnhHPa: Double, calibratedAtMillis: Long) {
         this.qnh = qnhHPa
         this.isQNHCalibrated = true
-        this.lastCalibrationTime = System.currentTimeMillis()
+        this.lastCalibrationTime = calibratedAtMillis.coerceAtLeast(0L)
         Log.i(TAG, "Manual QNH set to: ${qnhHPa.roundToInt()} hPa (by pilot)")
     }
 

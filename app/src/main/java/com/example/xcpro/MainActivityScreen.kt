@@ -57,9 +57,9 @@ fun MainActivityScreen(
     val context = LocalContext.current
     val profileViewModel: ProfileViewModel = hiltViewModel()
     
-    // ✅ Status bar is automatically transparent (#00000000) on this device
-    // ✅ This allows map to show behind status bar as requested by user
-    // ✅ The applyUserStatusBarStyle function ensures dark icons for visibility
+    //  Status bar is automatically transparent (#00000000) on this device
+    //  This allows map to show behind status bar as requested by user
+    //  The applyUserStatusBarStyle function ensures dark icons for visibility
     val configRepository = remember(context) { ConfigurationRepository(context) }
     val config by produceState<org.json.JSONObject?>(initialValue = null, context) {
         value = configRepository.readConfig()
@@ -91,13 +91,13 @@ fun MainActivityScreen(
     
     // Apply saved status bar style when profile changes
     LaunchedEffect(profileUiState.activeProfile?.id) {
-        Log.d("MainActivity", "📱 LaunchedEffect triggered for profile: ${profileUiState.activeProfile?.id} (${profileUiState.activeProfile?.name})")
+        Log.d("MainActivity", " LaunchedEffect triggered for profile: ${profileUiState.activeProfile?.id} (${profileUiState.activeProfile?.name})")
         val activity = context as? MainActivity
         if (activity != null) {
-            Log.d("MainActivity", "✅ MainActivity reference obtained, calling applyUserStatusBarStyle")
+            Log.d("MainActivity", " MainActivity reference obtained, calling applyUserStatusBarStyle")
             activity.applyUserStatusBarStyle(profileUiState.activeProfile?.id)
         } else {
-            Log.e("MainActivity", "❌ Failed to get MainActivity reference from context")
+            Log.e("MainActivity", " Failed to get MainActivity reference from context")
         }
     }
 

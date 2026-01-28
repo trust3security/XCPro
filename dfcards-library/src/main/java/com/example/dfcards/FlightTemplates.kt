@@ -11,7 +11,7 @@ data class FlightTemplate(
     val cardIds: List<String>,
     val icon: ImageVector = Icons.Default.Star,
     val isPreset: Boolean = false, // NEW: Track if it's a built-in template
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = 0L
 )
 
 enum class LayoutMode(

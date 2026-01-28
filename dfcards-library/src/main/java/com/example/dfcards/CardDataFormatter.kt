@@ -9,6 +9,10 @@ import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.units.VerticalSpeedMs
 import com.example.xcpro.common.units.VerticalSpeedUnit
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -18,6 +22,8 @@ internal object CardDataFormatter {
     private const val VARIO_ZERO_THRESHOLD = 0.05
     private const val VARIO_DECIMALS = 1
     private const val ALT_DECIMALS = 0
+    private val LOCAL_TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
+    private val LOCAL_SECONDS_FORMATTER = DateTimeFormatter.ofPattern("ss", Locale.getDefault())
 
     fun mapLiveDataToCard(
         cardId: String,
@@ -36,7 +42,7 @@ internal object CardDataFormatter {
                 "-- ${UnitsFormatter.altitude(AltitudeM(0.0), units).unitLabel}"
             "ground_speed", "wind_spd", "wind_arrow", "task_spd", "ias", "tas" ->
                 "-- ${UnitsFormatter.speed(SpeedMs(0.0), units).unitLabel}"
-            "wind_dir" -> "--\u00B0"
+            "wind_dir" -> "--deg"
             "wpt_dist", "task_dist" ->
                 "-- ${UnitsFormatter.distance(DistanceM(0.0), units).unitLabel}"
             else -> "--"
@@ -129,23 +135,21 @@ internal object CardDataFormatter {
             }
 
             "ias" -> {
-                // Match XCSoar-style gating: only show IAS when we have a real airspeed estimate
-                // (not the GPS ground-speed fallback).
-                val indicatedMs = liveData.indicatedAirspeed.takeIf {
-                    it.isFinite() && it > 0.1 && liveData.tasValid
-                }
+                val indicatedMs = liveData.indicatedAirspeed.takeIf { it.isFinite() && it > 0.1 }
                 if (indicatedMs != null) {
                     val formatted = UnitsFormatter.speed(SpeedMs(indicatedMs), units)
-                    return Pair(formatted.text, "LIVE")
+                    val label = if (liveData.tasValid) "EST" else "GPS"
+                    return Pair(formatted.text, label)
                 }
                 Pair(placeholderFor(cardId), "NO DATA")
             }
 
             "tas" -> {
-                val tasMs = liveData.trueAirspeed.takeIf { it.isFinite() && it > 0.1 && liveData.tasValid }
+                val tasMs = liveData.trueAirspeed.takeIf { it.isFinite() && it > 0.1 }
                 if (tasMs != null) {
                     val formatted = UnitsFormatter.speed(SpeedMs(tasMs), units)
-                    return Pair(formatted.text, null)
+                    val label = if (liveData.tasValid) "EST" else "GPS"
+                    return Pair(formatted.text, label)
                 }
                 Pair(placeholderFor(cardId), "NO DATA")
             }
@@ -159,14 +163,14 @@ internal object CardDataFormatter {
                 val minSpeedMs = UnitsConverter.knotsToMs(2.0)
                 if (liveData.groundSpeed > minSpeedMs) {
                     val trackDeg = liveData.track.roundToInt()
-                    Pair("${trackDeg}?", "MAG")
+                    Pair("${trackDeg}deg", "MAG")
                 } else {
-                    Pair("--?", "STATIC")
+                    Pair("--deg", "STATIC")
                 }
             }
 
             "wpt_dist" -> Pair(placeholderFor(cardId), "NO WPT")
-            "wpt_brg" -> Pair("---¦", "NO WPT")
+            "wpt_brg" -> Pair("---|", "NO WPT")
             "final_gld" -> Pair("--:1", "NO WPT")
             "wpt_eta" -> Pair("--:--", "NO WPT")
 
@@ -179,7 +183,7 @@ internal object CardDataFormatter {
             }
 
             "thermal_avg" -> {
-                // Parity with XCSoar TC 30s: primary shows the 30 s average, secondary shows current vario
+                // Match 30 s TC: primary shows the 30 s average, secondary shows current vario
                 val avgValue: Double = liveData.thermalAverage.toDouble()
                 val primary = if (avgValue.isFinite()) {
                     formatThermalVario(avgValue, units)
@@ -249,11 +253,8 @@ internal object CardDataFormatter {
             "wind_arrow" -> formatWindArrow(liveData, units, placeholderFor(cardId))
 
             "local_time" -> {
-                val currentTime = System.currentTimeMillis()
-                val time = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
-                    .format(java.util.Date(currentTime))
-                val seconds = java.text.SimpleDateFormat("ss", java.util.Locale.getDefault())
-                    .format(java.util.Date(currentTime))
+                val timeMillis = liveData.lastUpdateTime.takeIf { it > 0L } ?: liveData.timestamp
+                val (time, seconds) = formatLocalTime(timeMillis)
                 Pair(time, seconds)
             }
 
@@ -328,16 +329,11 @@ internal object CardDataFormatter {
     ): Pair<String, String?> {
         val hasWind = liveData.windQuality > 0 && liveData.windSpeed > 0.5f
         if (!hasWind) {
-            val placeholderWithDegree = if (placeholder.contains("?")) {
-                placeholder.replace("?", "-\u00B0")
-            } else {
-                placeholder
-            }
-            return Pair(placeholderWithDegree, "NO WIND")
+            return Pair(placeholder, "NO WIND")
         }
         val windDir = ((liveData.windDirection.roundToInt() % 360) + 360) % 360
         val speed = UnitsFormatter.speed(SpeedMs(liveData.windSpeed.toDouble()), units).text
-        return Pair("$windDir\u00B0", speed)
+        return Pair("${windDir}deg", speed)
     }
 
     private fun formatWindArrow(
@@ -433,7 +429,7 @@ internal object CardDataFormatter {
     }
 
     private fun formatVarioValue(value: Double, units: UnitsPreferences): String {
-        // Match XCSoar formatting: 0 decimals for fpm, 1 for other vertical speed units.
+        // Format: 0 decimals for fpm, 1 for other vertical speed units.
         val v = UnitsFormatter.verticalSpeed(
             VerticalSpeedMs(value),
             units,
@@ -462,6 +458,12 @@ internal object CardDataFormatter {
             decimals = ALT_DECIMALS
         )
         return formatted.text
+    }
+
+    private fun formatLocalTime(epochMillis: Long): Pair<String, String> {
+        if (epochMillis <= 0L) return "--:--" to "--"
+        val zoned = Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault())
+        return LOCAL_TIME_FORMATTER.format(zoned) to LOCAL_SECONDS_FORMATTER.format(zoned)
     }
 
     private fun combineSecondary(vararg labels: String?): String? {

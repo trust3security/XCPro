@@ -21,10 +21,10 @@ import kotlin.math.pow
  */
 class TaskSheetViewModel(
     private val taskManager: TaskManagerCoordinator,
-    private val repository: TaskRepository = TaskRepository()
+    private val useCase: TaskSheetUseCase = TaskSheetUseCase()
 ) : ViewModel() {
 
-    val uiState: StateFlow<TaskUiState> = repository.state
+    val uiState: StateFlow<TaskUiState> = useCase.state
 
     private var map: MapLibreMap? = null
 
@@ -33,7 +33,7 @@ class TaskSheetViewModel(
             onProximityEvent(entered, close)
         }
         taskManager.addLegChangeListener { _ ->
-            repository.armAdvance(false) // manual leg change disarms auto-advance
+            useCase.armAdvance(false) // manual leg change disarms auto-advance
             sync()
         }
         sync()
@@ -61,32 +61,32 @@ class TaskSheetViewModel(
     }
 
     fun onSetTargetParam(index: Int, param: Double) {
-        repository.setTargetParam(index, param)
+        useCase.setTargetParam(index, param)
         // Relay to legacy manager so map overlays stay in sync.
-        repository.state.value.targets.getOrNull(index)?.target?.let { target ->
+        useCase.state.value.targets.getOrNull(index)?.target?.let { target ->
             taskManager.updateAATTargetPoint(index, target.lat, target.lon)
             taskManager.plotOnMap(map)
         }
     }
 
     fun onToggleTargetLock(index: Int) {
-        repository.toggleTargetLock(index)
-        repository.state.value.targets.getOrNull(index)?.target?.let { target ->
+        useCase.toggleTargetLock(index)
+        useCase.state.value.targets.getOrNull(index)?.target?.let { target ->
             taskManager.updateAATTargetPoint(index, target.lat, target.lon)
             taskManager.plotOnMap(map)
         }
     }
 
     fun onAdvanceMode(mode: TaskAdvanceState.Mode) {
-        repository.setAdvanceMode(mode)
+        useCase.setAdvanceMode(mode)
     }
 
     fun onAdvanceArmToggle() {
-        repository.toggleAdvanceArm()
+        useCase.toggleAdvanceArm()
     }
 
     fun onProximityEvent(hasEnteredOZ: Boolean, closeToTarget: Boolean) = mutate {
-        if (repository.shouldAutoAdvance(hasEnteredOZ, closeToTarget)) {
+        if (useCase.shouldAutoAdvance(hasEnteredOZ, closeToTarget)) {
             taskManager.advanceToNextLeg()
         }
     }
@@ -142,8 +142,8 @@ class TaskSheetViewModel(
         // apply targets after waypoints are present
         if (persisted.taskType == TaskType.AAT) {
             targets.forEach { t ->
-                repository.setTargetParam(t.index, t.targetParam)
-                repository.setTargetLock(t.index, t.isLocked)
+                useCase.setTargetParam(t.index, t.targetParam)
+                useCase.setTargetLock(t.index, t.isLocked)
                 t.target?.let { target -> taskManager.updateAATTargetPoint(t.index, target.lat, target.lon) }
             }
         }
@@ -248,7 +248,7 @@ class TaskSheetViewModel(
     }
 
     private fun sync() {
-        repository.updateFrom(
+        useCase.updateFrom(
             task = taskManager.currentTask,
             taskType = taskManager.taskType,
             activeIndex = taskManager.currentLeg

@@ -1,6 +1,6 @@
-# CONTRIBUTING.md — XC Pro (Android/Kotlin)
+# CONTRIBUTING.md -- XC Pro (Android/Kotlin)
 
-This repo uses **Kotlin + Jetpack Compose**, **MVVM + UDF**, **Hilt**, **Coroutines + Flow**, and a **multi‑module** layout.
+This repo uses **Kotlin + Jetpack Compose**, **MVVM + UDF**, **Hilt**, **Coroutines + Flow**, and a **multi-module** layout.
 All code must follow **CODING_RULES.md** and must not violate **ARCHITECTURE.md**.
 
 ---
@@ -24,27 +24,28 @@ AI/agents: read the three files in order before edits.
 ---
 
 ## 2) How We Work
-- **Default branch:** `main` (protected). Feature work happens on short‑lived branches.
+- **Default branch:** `main` (protected). Feature work happens on short-lived branches.
 - **Branch names:** `feat/<scope>-<short>`, `fix/<scope>-<short>`, `chore/<scope>-<short>`, `docs/<scope>-<short>`.
 - **Conventional Commits:**
   - `feat(map): add overlay hit registry`
   - `fix(variometer): reduce TE filter lag at low IAS`
   - `chore(ci): enable detekt baseline`
   - `docs(policy): clarify AI-NOTE usage`
-- **PR size:** Aim ≤ 400 LOC changed. Split if larger.
+- **PR size:** Aim <= 400 LOC changed. Split if larger.
 
 ---
 
 ## 3) Definition of Done
 A change is ready when:
 - [ ] Code adheres to **CODING_RULES.md** (SSOT, UDF, clean layering).
+- [ ] `./gradlew enforceRules` passes (architecture/coding rule enforcement).
 - [ ] **Rationale comments** are present for non-obvious decisions (`// AI-NOTE:` markers encouraged).
 - [ ] Levo pipeline changes are documented in `docs/LevoVario/levo.md` and any
       related architecture/time-base rules are updated.
 - [ ] Unit tests cover use cases; UI/instrumentation tests for gesture/event flow.
 - [ ] **Lint/detekt** pass; **Compose previews** compile.
 - [ ] No deprecated APIs; no global mutable state.
-- [ ] Performance budget respected in hot paths (TE→audio ≤ 50 ms typical).
+- [ ] Performance budget respected in hot paths (TE->audio <= 50 ms typical).
 
 ---
 
@@ -81,8 +82,8 @@ A change is ready when:
 
 ## 6) Testing Guidance
 - **Domain**: Pure JVM tests for TE math, filters, unit conversions.
-- **Integration**: Stream replay (IGC → repository → use case → ViewModel) with deterministic seeds.
-- **UI**: Compose tests for state rendering; gesture tests for hamburger/variometer (tap vs long‑press); regression for map event consumption.
+- **Integration**: Stream replay (IGC -> repository -> use case -> ViewModel) with deterministic seeds.
+- **UI**: Compose tests for state rendering; gesture tests for hamburger/variometer (tap vs long-press); regression for map event consumption.
 - **Golden**: Snapshot important UI states.
 
 ---
@@ -90,8 +91,8 @@ A change is ready when:
 ## 7) Documentation Rules
 - Keep files ASCII or UTF-8 only; see CODING_RULES.md -> File Encoding Rules.
 - Add/update **KDoc** for public APIs.
-- Add top‑of‑file header describing role and invariants.
-- Use `// AI-NOTE:` before intent‑critical rationale so future AI tools preserve design.
+- Add top-of-file header describing role and invariants.
+- Use `// AI-NOTE:` before intent-critical rationale so future AI tools preserve design.
 
 Example:
 ```kotlin
@@ -102,7 +103,7 @@ Example:
 
 ## 8) AI & Automation Policy
 - AI may generate code **only** within this policy.
-- AI commits must include: a short “why” paragraph in the PR description and inline `AI-NOTE` comments where intent matters.
+- AI commits must include: a short "why" paragraph in the PR description and inline `AI-NOTE` comments where intent matters.
 - AI must not choose the fastest shortcut if it violates **CODING_RULES.md** or **ARCHITECTURE.md**.
   Prefer correct layering and SSOT compliance over minimal plumbing.
 - No committing secret keys or personal data. Redact GPS traces unless explicitly enabled in debug config.

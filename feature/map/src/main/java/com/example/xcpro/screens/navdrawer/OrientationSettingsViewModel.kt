@@ -1,8 +1,7 @@
-﻿package com.example.xcpro.screens.navdrawer
+package com.example.xcpro.screens.navdrawer
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.xcpro.MapOrientationSettingsRepository
 import com.example.xcpro.common.orientation.MapOrientationMode
 import com.example.xcpro.map.domain.MapShiftBiasMode
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -23,9 +22,9 @@ data class OrientationSettingsUiState(
 
 @HiltViewModel
 class OrientationSettingsViewModel @Inject constructor(
-    private val repository: MapOrientationSettingsRepository
+    private val useCase: OrientationSettingsUseCase
 ) : ViewModel() {
-    val uiState: StateFlow<OrientationSettingsUiState> = repository.settingsFlow
+    val uiState: StateFlow<OrientationSettingsUiState> = useCase.settingsFlow
         .map { settings ->
             OrientationSettingsUiState(
                 cruiseMode = settings.cruiseMode,
@@ -42,22 +41,22 @@ class OrientationSettingsViewModel @Inject constructor(
         )
 
     fun setCruiseMode(mode: MapOrientationMode) {
-        repository.setCruiseOrientationMode(mode)
+        useCase.setCruiseMode(mode)
     }
 
     fun setCirclingMode(mode: MapOrientationMode) {
-        repository.setCirclingOrientationMode(mode)
+        useCase.setCirclingMode(mode)
     }
 
     fun setGliderScreenPercent(percentFromBottom: Int) {
-        repository.setGliderScreenPercent(percentFromBottom)
+        useCase.setGliderScreenPercent(percentFromBottom)
     }
 
     fun setMapShiftBiasMode(mode: MapShiftBiasMode) {
-        repository.setMapShiftBiasMode(mode)
+        useCase.setMapShiftBiasMode(mode)
     }
 
     fun setMapShiftBiasStrength(strength: Double) {
-        repository.setMapShiftBiasStrength(strength)
+        useCase.setMapShiftBiasStrength(strength)
     }
 }

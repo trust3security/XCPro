@@ -1,4 +1,4 @@
-﻿package com.example.xcpro
+package com.example.xcpro
 
 import android.util.Log
 import com.example.dfcards.FlightModeSelection

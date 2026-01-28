@@ -1,4 +1,4 @@
-﻿package com.example.xcpro.map
+package com.example.xcpro.map
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,7 +29,7 @@ fun AircraftIconOverlay(
         val centerY = size.height * 0.65f
 
         val effectiveHeading = if (headingDeg.isFinite()) headingDeg else gpsTrack
-        // XCSoar-style: icon rotation is heading relative to screen angle (map bearing).
+        // Icon rotation is heading relative to screen angle (map bearing).
         val rotation = when {
             (effectiveHeading - mapBearing) > 180f -> effectiveHeading - mapBearing - 360f
             (effectiveHeading - mapBearing) < -180f -> effectiveHeading - mapBearing + 360f

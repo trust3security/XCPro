@@ -84,7 +84,7 @@ class AATMapInteractionHandler(
     fun attachToMap(map: MapLibreMap?) {
         mapLibreMap = map
         coordinateConverter = map?.let { AATMapCoordinateConverterFactory.create(it) }
-        println("🎯 AAT: Interaction handler attached to map")
+        println(" AAT: Interaction handler attached to map")
     }
 
     /**
@@ -92,7 +92,7 @@ class AATMapInteractionHandler(
      */
     fun updateWaypoints(newWaypoints: List<AATWaypoint>) {
         aatWaypoints = newWaypoints
-        println("🎯 AAT: Updated waypoints list (${newWaypoints.size} waypoints)")
+        println(" AAT: Updated waypoints list (${newWaypoints.size} waypoints)")
     }
 
     /**
@@ -132,7 +132,7 @@ class AATMapInteractionHandler(
             screenX, screenY, converter
         ) ?: return
 
-        println("🎯 AAT: Tap detected at ${tapDetails.mapCoordinates.latitude}, ${tapDetails.mapCoordinates.longitude}")
+        println(" AAT: Tap detected at ${tapDetails.mapCoordinates.latitude}, ${tapDetails.mapCoordinates.longitude}")
 
         // Find which AAT area was tapped
         val tappedArea = findTappedAATArea(
@@ -151,7 +151,7 @@ class AATMapInteractionHandler(
      * Handle single tap on AAT area - zoom in and enter edit mode
      */
     private fun handleAreaTap(areaIndex: Int, waypoint: AATWaypoint) {
-        println("🎯 AAT: Tap on area $areaIndex (${waypoint.title})")
+        println(" AAT: Tap on area $areaIndex (${waypoint.title})")
 
         // Notify callbacks
         callbacks.onAreaTapped(areaIndex, waypoint)
@@ -169,7 +169,7 @@ class AATMapInteractionHandler(
         if (success) {
             callbacks.onEditModeEntered(areaIndex, waypoint)
             callbacks.onZoomToArea(waypoint, 3.0f)
-            println("🎯 AAT: Edit mode entered and zoomed in - map gestures disabled for pin dragging")
+            println(" AAT: Edit mode entered and zoomed in - map gestures disabled for pin dragging")
         }
     }
 
@@ -177,7 +177,7 @@ class AATMapInteractionHandler(
      * Handle tap outside AAT areas - exit edit mode
      */
     private fun handleOutsideTap() {
-        println("🎯 AAT: Tap outside AAT areas")
+        println(" AAT: Tap outside AAT areas")
 
         if (editModeManager.currentSession.isEditingArea) {
             // Re-enable map gestures before exiting edit mode
@@ -189,7 +189,7 @@ class AATMapInteractionHandler(
             callbacks.onEditModeExited()
             callbacks.onZoomToOverview(1.0f)
 
-            println("🎯 AAT: Exited edit mode after ${previousSession.sessionDurationMs}ms - map gestures restored")
+            println(" AAT: Exited edit mode after ${previousSession.sessionDurationMs}ms - map gestures restored")
         }
     }
 
@@ -213,7 +213,7 @@ class AATMapInteractionHandler(
                 val startLatLng = converter.screenToMap(screenX, screenY)
                 if (startLatLng != null) {
                     dragStartPoint = AATLatLng(startLatLng.latitude, startLatLng.longitude)
-                    println("🎯 AAT: Started dragging pin $hitPointIndex from ${startLatLng.latitude}, ${startLatLng.longitude}")
+                    println(" AAT: Started dragging pin $hitPointIndex from ${startLatLng.latitude}, ${startLatLng.longitude}")
                 }
             }
         }
@@ -221,7 +221,7 @@ class AATMapInteractionHandler(
 
     /**
      * Handle drag movement - update pin position during drag
-     * ✅ FIX: Use AATMovablePointManager for proper boundary validation (no artificial constraints)
+     *  FIX: Use AATMovablePointManager for proper boundary validation (no artificial constraints)
      */
     private fun handleDragMove(screenX: Float, screenY: Float) {
         if (!isDragging || draggedPointIndex == null) {
@@ -233,7 +233,7 @@ class AATMapInteractionHandler(
 
         val newPosition = AATLatLng(currentLatLng.latitude, currentLatLng.longitude)
 
-        // ✅ FIX: Let AATMovablePointManager handle validation properly
+        //  FIX: Let AATMovablePointManager handle validation properly
         // It knows about all geometry types (cylinder, sector, keyhole)
         val waypoint = aatWaypoints.getOrNull(draggedPointIndex!!) ?: return
         val movablePointManager = AATMovablePointManager()
@@ -246,7 +246,7 @@ class AATMapInteractionHandler(
         // Update pin position with validated result
         callbacks.onTargetPointMoved(draggedPointIndex!!, validatedWaypoint.targetPoint)
 
-        println("🎯 AAT: Dragging pin ${draggedPointIndex} to ${validatedWaypoint.targetPoint.latitude}, ${validatedWaypoint.targetPoint.longitude}")
+        println(" AAT: Dragging pin ${draggedPointIndex} to ${validatedWaypoint.targetPoint.latitude}, ${validatedWaypoint.targetPoint.longitude}")
     }
 
     /**
@@ -254,7 +254,7 @@ class AATMapInteractionHandler(
      */
     private fun handleDragEnd() {
         if (isDragging && draggedPointIndex != null) {
-            println("🎯 AAT: Finished dragging pin ${draggedPointIndex}")
+            println(" AAT: Finished dragging pin ${draggedPointIndex}")
 
             // Final position is already set by handleDragMove
             // Just clean up state
@@ -264,7 +264,7 @@ class AATMapInteractionHandler(
         }
     }
 
-    // ❌ REMOVED: applyAreaBoundaryConstraints() - Was causing the restriction bug!
+    //  REMOVED: applyAreaBoundaryConstraints() - Was causing the restriction bug!
     // This function snapped pins to center when outside bounds, creating artificial restrictions.
     // Now using AATMovablePointManager.moveTargetPoint() which handles all geometry types correctly.
 
@@ -292,24 +292,24 @@ class AATMapInteractionHandler(
         val normalizedEnd = (endAngle + 360.0) % 360.0
 
         return if (normalizedEnd >= normalizedStart) {
-            // Normal case: sector doesn't cross 0°
+            // Normal case: sector doesn't cross 0
             normalizedAngle >= normalizedStart && normalizedAngle <= normalizedEnd
         } else {
-            // Sector crosses 0° (e.g., 350° to 10°)
+            // Sector crosses 0 (e.g., 350 to 10)
             normalizedAngle >= normalizedStart || normalizedAngle <= normalizedEnd
         }
     }
 
     /**
      * Find which AAT area contains the given coordinates
-     * ✅ FIX: Proper geometry-aware checking for all turnpoint types (Circle, Sector, Keyhole)
+     *  FIX: Proper geometry-aware checking for all turnpoint types (Circle, Sector, Keyhole)
      * @return Pair of (areaIndex, waypoint) or null if not found
      */
     private fun findTappedAATArea(lat: Double, lon: Double): Pair<Int, AATWaypoint>? {
         aatWaypoints.forEachIndexed { index, waypoint ->
             val distance = AATMathUtils.calculateDistanceKm(lat, lon, waypoint.lat, waypoint.lon)
 
-            // ✅ FIX: Check area based on actual geometry shape
+            //  FIX: Check area based on actual geometry shape
             val isInArea = when (waypoint.assignedArea.shape) {
                 com.example.xcpro.tasks.aat.models.AATAreaShape.CIRCLE -> {
                     // Simple circle check
@@ -350,7 +350,7 @@ class AATMapInteractionHandler(
             }
 
             if (isInArea) {
-                println("🎯 AAT: Double-click detected in ${waypoint.title} area (${String.format("%.2f", distance)}km from center, shape: ${waypoint.assignedArea.shape})")
+                println(" AAT: Double-click detected in ${waypoint.title} area (${String.format("%.2f", distance)}km from center, shape: ${waypoint.assignedArea.shape})")
                 return Pair(index, waypoint)
             }
         }
@@ -416,7 +416,7 @@ class AATMapInteractionHandler(
     private fun disableMapGestures() {
         mapLibreMap?.uiSettings?.let { uiSettings ->
             uiSettings.setAllGesturesEnabled(false)
-            println("🎯 AAT: Map gestures disabled for edit mode")
+            println(" AAT: Map gestures disabled for edit mode")
         }
     }
 
@@ -426,7 +426,7 @@ class AATMapInteractionHandler(
     private fun enableMapGestures() {
         mapLibreMap?.uiSettings?.let { uiSettings ->
             uiSettings.setAllGesturesEnabled(true)
-            println("🎯 AAT: Map gestures re-enabled after edit mode")
+            println(" AAT: Map gestures re-enabled after edit mode")
         }
     }
 }

@@ -29,31 +29,31 @@ class RacingTaskStorage(private val context: Context) {
         val taskJson = gson.toJson(task)
         editor.putString("current_racing_task", taskJson)
         editor.apply()
-        println("🏁 RACING STORAGE: Saved to preferences - ${task.waypoints.size} waypoints")
-        println("🏁 RACING STORAGE: JSON length: ${taskJson.length} chars")
+        println(" RACING STORAGE: Saved to preferences - ${task.waypoints.size} waypoints")
+        println(" RACING STORAGE: JSON length: ${taskJson.length} chars")
     }
 
     /**
      * Load Racing task from preferences
      */
     fun loadRacingTask(): SimpleRacingTask? {
-        println("🏁 RACING STORAGE: ==> LOAD FUNCTION CALLED <==")
-        println("🏁 RACING STORAGE: Attempting to load from preferences...")
+        println(" RACING STORAGE: ==> LOAD FUNCTION CALLED <==")
+        println(" RACING STORAGE: Attempting to load from preferences...")
 
         val taskJson = prefs.getString("current_racing_task", null)
-        println("🏁 RACING STORAGE: Retrieved JSON from preferences: ${if (taskJson != null) "Found (${taskJson.length} chars)" else "NULL"}")
+        println(" RACING STORAGE: Retrieved JSON from preferences: ${if (taskJson != null) "Found (${taskJson.length} chars)" else "NULL"}")
 
         return if (taskJson != null) {
             try {
                 val task = gson.fromJson(taskJson, SimpleRacingTask::class.java)
-                println("🏁 RACING STORAGE: Loaded from preferences with ${task.waypoints.size} waypoints")
+                println(" RACING STORAGE: Loaded from preferences with ${task.waypoints.size} waypoints")
                 task
             } catch (e: Exception) {
-                println("🏁 RACING STORAGE: Failed to load from preferences: ${e.message}")
+                println(" RACING STORAGE: Failed to load from preferences: ${e.message}")
                 null
             }
         } else {
-            println("🏁 RACING STORAGE: No saved task found in preferences")
+            println(" RACING STORAGE: No saved task found in preferences")
             null
         }
     }
@@ -72,7 +72,7 @@ class RacingTaskStorage(private val context: Context) {
                 ?.sorted()
                 ?: emptyList()
         } catch (e: Exception) {
-            println("🏁 RACING STORAGE: Error getting saved tasks: ${e.message}")
+            println(" RACING STORAGE: Error getting saved tasks: ${e.message}")
             emptyList()
         }
     }
@@ -93,10 +93,10 @@ class RacingTaskStorage(private val context: Context) {
             val cupContent = racingTaskToCUP(task, taskName)
             file.writeText(cupContent)
 
-            println("🏁 RACING STORAGE: Saved to file: ${file.absolutePath}")
+            println(" RACING STORAGE: Saved to file: ${file.absolutePath}")
             true
         } catch (e: Exception) {
-            println("🏁 RACING STORAGE: Error saving task: ${e.message}")
+            println(" RACING STORAGE: Error saving task: ${e.message}")
             false
         }
     }
@@ -113,18 +113,18 @@ class RacingTaskStorage(private val context: Context) {
                 val cupContent = file.readText()
                 val task = parseCUPToRacingTask(cupContent)
                 if (task != null) {
-                    println("🏁 RACING STORAGE: Loaded from file: ${file.absolutePath}")
+                    println(" RACING STORAGE: Loaded from file: ${file.absolutePath}")
                     task
                 } else {
-                    println("🏁 RACING STORAGE: Failed to parse CUP file: $fileName")
+                    println(" RACING STORAGE: Failed to parse CUP file: $fileName")
                     null
                 }
             } else {
-                println("🏁 RACING STORAGE: File not found: ${file.absolutePath}")
+                println(" RACING STORAGE: File not found: ${file.absolutePath}")
                 null
             }
         } catch (e: Exception) {
-            println("🏁 RACING STORAGE: Error loading task from file: ${e.message}")
+            println(" RACING STORAGE: Error loading task from file: ${e.message}")
             null
         }
     }
@@ -139,14 +139,14 @@ class RacingTaskStorage(private val context: Context) {
 
             if (file.exists()) {
                 val deleted = file.delete()
-                println("🏁 RACING STORAGE: Deleted file: ${file.absolutePath} - Success: $deleted")
+                println(" RACING STORAGE: Deleted file: ${file.absolutePath} - Success: $deleted")
                 deleted
             } else {
-                println("🏁 RACING STORAGE: File not found for deletion: ${file.absolutePath}")
+                println(" RACING STORAGE: File not found for deletion: ${file.absolutePath}")
                 false
             }
         } catch (e: Exception) {
-            println("🏁 RACING STORAGE: Error deleting task: ${e.message}")
+            println(" RACING STORAGE: Error deleting task: ${e.message}")
             false
         }
     }
@@ -234,7 +234,7 @@ class RacingTaskStorage(private val context: Context) {
                 null
             }
         } catch (e: Exception) {
-            println("🏁 RACING STORAGE: Error parsing CUP file: ${e.message}")
+            println(" RACING STORAGE: Error parsing CUP file: ${e.message}")
             null
         }
     }

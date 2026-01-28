@@ -3,6 +3,7 @@ package com.example.xcpro.sensors
 import android.content.Context
 import android.hardware.SensorManager
 import android.location.LocationManager
+import com.example.xcpro.core.time.Clock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,7 +16,10 @@ import kotlinx.coroutines.delay
  * Public facade exposing raw sensor flows.
  * Delegates registration and updates to [SensorRegistry].
  */
-class UnifiedSensorManager(private val context: Context) : SensorDataSource {
+class UnifiedSensorManager(
+    private val context: Context,
+    private val clock: Clock
+) : SensorDataSource {
 
     private val scope = CoroutineScope(Dispatchers.Default)
 
@@ -36,23 +40,26 @@ class UnifiedSensorManager(private val context: Context) : SensorDataSource {
 
     private val gpsStatusMonitor = GpsStatusMonitor(GpsStatus.Searching)
     val gpsStatusFlow: StateFlow<GpsStatus> = gpsStatusMonitor.status
-    private var lastFixTimestamp: Long? = null
+    private var lastFixMonotonicMs: Long? = null
+    private var lastFixWallMs: Long? = null
     private var lastAccuracy: Float? = null
     private var statusTickerJob: kotlinx.coroutines.Job? = null
 
     private val _attitudeFlow = MutableStateFlow<AttitudeData?>(null)
     override val attitudeFlow: StateFlow<AttitudeData?> = _attitudeFlow.asStateFlow()
 
-    private val orientationProcessor = OrientationProcessor()
+    private val orientationProcessor = OrientationProcessor(clock)
 
     private val registry = SensorRegistry(
         context = context,
         locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager,
         sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager,
         orientationProcessor = orientationProcessor,
+        clock = clock,
         updateGps = { gps ->
             _gpsFlow.value = gps
-            lastFixTimestamp = gps.timestamp
+            lastFixMonotonicMs = gps.monotonicTimestampMillis.takeIf { it > 0L }
+            lastFixWallMs = gps.timestamp.takeIf { it > 0L }
             lastAccuracy = gps.accuracy
             updateGpsStatus()
         },
@@ -102,8 +109,13 @@ class UnifiedSensorManager(private val context: Context) : SensorDataSource {
     private fun updateGpsStatus() {
         scope.launch {
             val status = registry.status()
-            val now = System.currentTimeMillis()
-            val age = lastFixTimestamp?.let { now - it }
+            val nowMono = clock.nowMonoMs()
+            val nowWall = clock.nowWallMs()
+            val age = when {
+                lastFixMonotonicMs != null -> nowMono - lastFixMonotonicMs!!
+                lastFixWallMs != null -> nowWall - lastFixWallMs!!
+                else -> null
+            }?.coerceAtLeast(0L)
 
             val derived = when {
                 !status.hasLocationPermissions -> GpsStatus.NoPermission

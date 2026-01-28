@@ -149,7 +149,7 @@ class IgcReplayViewModel @Inject constructor(
                         statusMessage = when {
                             selection == null -> "Select an IGC file to begin replay."
                             session.status == SessionStatus.PLAYING ->
-                                "Replaying… use the map controls to pause or scrub."
+                                "Replaying use the map controls to pause or scrub."
                             else -> "Replay loaded. Control playback from the map overlay."
                         },
                         errorMessage = current.errorMessage

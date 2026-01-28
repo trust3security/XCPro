@@ -277,8 +277,8 @@ fun UIVariometer(
         windDirectionScreenDeg?.let { rawDirection ->
             val direction = ((rawDirection % 360f) + 360f) % 360f
             val arrowColor = if (windIsValid) Color(0xFF22C55E) else Color(0xFFEF4444)
-            val arrowHeight = (radius * 0.12f).coerceIn(8.dp.toPx(), 18.dp.toPx())
-            val arrowWidth = (arrowHeight * 0.9f).coerceIn(6.dp.toPx(), 16.dp.toPx())
+            val arrowHeight = (radius * 0.16f).coerceIn(10.dp.toPx(), 24.dp.toPx())
+            val arrowWidth = (arrowHeight * 1.05f).coerceIn(8.dp.toPx(), 22.dp.toPx())
             val ringStroke = 6.dp.toPx()
             val baseRadius = radius - ringStroke * 0.5f
             val tipRadius = (baseRadius - arrowHeight).coerceAtLeast(radius * 0.4f)
@@ -293,6 +293,13 @@ fun UIVariometer(
             }
             rotate(direction, center) {
                 drawPath(arrowPath, color = arrowColor)
+                if (windIsValid) {
+                    drawPath(
+                        arrowPath,
+                        color = Color(0xFFEF4444),
+                        style = Stroke(width = 1.5.dp.toPx())
+                    )
+                }
             }
         }
 

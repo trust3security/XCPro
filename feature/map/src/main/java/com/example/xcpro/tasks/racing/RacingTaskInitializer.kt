@@ -1,4 +1,4 @@
-﻿package com.example.xcpro.tasks.racing
+package com.example.xcpro.tasks.racing
 
 import com.example.xcpro.common.waypoint.SearchWaypoint
 import com.example.xcpro.tasks.core.TaskWaypoint
@@ -47,7 +47,7 @@ class RacingTaskInitializer {
             waypoints = racingWaypoints
         )
 
-        println("ðŸ RACING TASK: Initialized with ${racingWaypoints.size} waypoints")
+        println(" RACING TASK: Initialized with ${racingWaypoints.size} waypoints")
         return task
     }
 
@@ -121,9 +121,9 @@ class RacingTaskInitializer {
 
         val customizedCount = genericWaypoints.count { it.hasCustomizations }
         if (customizedCount > 0) {
-            println("ðŸ”„ RACING TASK: Initialized from generic waypoints - preserved ${customizedCount} customizations, applied standardized defaults to ${racingWaypoints.size - customizedCount} waypoints")
+            println(" RACING TASK: Initialized from generic waypoints - preserved ${customizedCount} customizations, applied standardized defaults to ${racingWaypoints.size - customizedCount} waypoints")
         } else {
-            println("ðŸ”„ RACING TASK: Initialized from generic waypoints - applied standardized defaults (10km start, 3km finish) to ${racingWaypoints.size} waypoints")
+            println(" RACING TASK: Initialized from generic waypoints - applied standardized defaults (10km start, 3km finish) to ${racingWaypoints.size} waypoints")
         }
 
         return task

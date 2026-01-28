@@ -8,7 +8,7 @@ import kotlin.math.sqrt
  *
  * Algorithm: 3-State Kalman Filter with ORIGINAL noise parameters
  * - R_altitude = 2.0m (old conservative value)
- * - R_accel = 0.5 m/s² (old value)
+ * - R_accel = 0.5 m/s (old value)
  *
  * Purpose:
  * - Baseline for comparison with optimized version
@@ -22,7 +22,7 @@ class LegacyKalmanVario : IVarioCalculator {
     override val name = "Legacy Kalman"
     override val description = "3-State Kalman (R=2.0m) - Original parameters"
 
-    // State vector: [altitude(m), velocity(m/s), acceleration(m/s²)]
+    // State vector: [altitude(m), velocity(m/s), acceleration(m/s)]
     private val state = Array(3) { 0.0 }
 
     // Error covariance matrix (3x3)
@@ -33,11 +33,9 @@ class LegacyKalmanVario : IVarioCalculator {
 
     // Measurement noise - LEGACY VALUES (conservative)
     private var R_altitude = 2.0      // Barometer noise (m) - OLD VALUE
-    private var R_accel = 0.5         // Accelerometer noise (m/s²) - OLD VALUE
+    private var R_accel = 0.5         // Accelerometer noise (m/s) - OLD VALUE
 
     private var isInitialized = false
-    private var lastUpdateTime = 0L
-
     init {
         // Initialize error covariance
         P[0][0] = 10.0   // altitude uncertainty
@@ -55,15 +53,12 @@ class LegacyKalmanVario : IVarioCalculator {
         gpsSpeed: Double,
         gpsAltitude: Double
     ): Double {
-        val currentTime = System.currentTimeMillis()
-
         if (!isInitialized) {
             // Initialize with first measurements
             state[0] = baroAltitude
             state[1] = 0.0
             state[2] = verticalAccel
             isInitialized = true
-            lastUpdateTime = currentTime
             return 0.0
         }
 
@@ -147,8 +142,6 @@ class LegacyKalmanVario : IVarioCalculator {
                          (K1[i] * P_predicted[0][j] + K2[i] * P_predicted[2][j])
             }
         }
-
-        lastUpdateTime = currentTime
 
         return state[1]  // Return vertical speed
     }

@@ -28,7 +28,7 @@ class Modern3StateKalmanFilter(
     private val config: AdaptiveVarioConfig = AdaptiveVarioConfig()
 ) {
 
-    // State vector: [altitude(m), velocity(m/s), acceleration(m/s²)]
+    // State vector: [altitude(m), velocity(m/s), acceleration(m/s)]
     private val state = Array(3) { 0.0 }
 
     // Error covariance matrix (3x3)
@@ -41,7 +41,7 @@ class Modern3StateKalmanFilter(
     // Research: BMP280 has 0.21m RMS noise, BMP390 has 0.08m RMS noise
     // Old value 2.0m was 10-25x too conservative, causing slow response
     private var R_altitude = 0.5      // Barometer noise (m) - optimized for BMP280
-    private var R_accel = 0.3         // Accelerometer noise (m/s²) - more realistic
+    private var R_accel = 0.3         // Accelerometer noise (m/s) - more realistic
 
     private val baroVarianceTracker = AdaptiveVarianceTracker(config.baroVarianceWindowSize)
     private val accelHighPassFilter = HighPassFilter(config.accelHighPassTauSeconds)
@@ -50,8 +50,8 @@ class Modern3StateKalmanFilter(
     private var hasSmoothedVelocity = false
 
     private var isInitialized = false
-    private var lastUpdateTime = 0L
     private var consecutiveAltitudeClamps = 0
+    private var elapsedTimeMs = 0L
 
     // Diagnostics collector (Priority 7: VARIO_IMPROVEMENTS.md)
     val diagnosticsCollector = VarioFilterDiagnosticsCollector()
@@ -70,7 +70,7 @@ class Modern3StateKalmanFilter(
      * Update filter with measurements
      *
      * @param baroAltitude Barometric altitude (m)
-     * @param verticalAccel Vertical acceleration from IMU (m/s²)
+     * @param verticalAccel Vertical acceleration from IMU (m/s)
      * @param deltaTime Time since last update (s)
      * @param gpsSpeed GPS horizontal speed (m/s) - for motion detection
      * @return Filtered altitude, velocity (vario), acceleration
@@ -82,16 +82,18 @@ class Modern3StateKalmanFilter(
         gpsSpeed: Double = 0.0
     ): ModernVarioResult {
 
-        val currentTime = System.currentTimeMillis()
-
         if (!isInitialized) {
             // Initialize with first measurements
             state[0] = baroAltitude
             state[1] = 0.0
             state[2] = verticalAccel
             isInitialized = true
-            lastUpdateTime = currentTime
             return ModernVarioResult(baroAltitude, 0.0, verticalAccel, 0.5)
+        }
+
+        val deltaMs = (deltaTime * 1000.0).toLong()
+        if (deltaMs > 0L) {
+            elapsedTimeMs += deltaMs
         }
 
         val dtSeconds = deltaTime.coerceAtLeast(1e-3)
@@ -121,15 +123,15 @@ class Modern3StateKalmanFilter(
         val tauEff = (config.tauBaseSeconds / (1.0 + sqrt(sigma2Baro)))
             .coerceIn(config.tauMinSeconds, config.tauMaxSeconds)
 
-        // ═══════════════════════════════════════════════════
+        // 
         // PREDICTION STEP (Time Update)
-        // ═══════════════════════════════════════════════════
+        // 
 
         val dt = deltaTime
         val dt2 = dt * dt
 
         // State transition: x(k+1) = F * x(k)
-        // F = [1  dt  0.5*dt²]
+        // F = [1  dt  0.5*dt]
         //     [0  1   dt     ]
         //     [0  0   1      ]
 
@@ -157,9 +159,9 @@ class Modern3StateKalmanFilter(
         val P_predicted = matrixMultiply(matrixMultiply(F, P), transpose(F))
         addMatrix(P_predicted, Q)
 
-        // ═══════════════════════════════════════════════════
+        // 
         // MEASUREMENT UPDATE (Correction Step)
-        // ═══════════════════════════════════════════════════
+        // 
 
         // We have TWO measurements:
         // z1 = altitude (from barometer)
@@ -173,20 +175,19 @@ class Modern3StateKalmanFilter(
         var y1 = baroAltitude - predictedAltitude
         val y2 = verticalAccel - predictedAccel
 
-        // ✅ FIX: SPIKE REJECTION - Prevent barometer jumps from causing false lift
+        //  FIX: SPIKE REJECTION - Prevent barometer jumps from causing false lift
         // Limits impact of QNH recalibration, GPS-baro blend jumps, sensor glitches
         val MAX_BARO_INNOVATION = 5.0  // meters (reasonable limit for 50Hz updates)
         if (abs(y1) > MAX_BARO_INNOVATION) {
-            android.util.Log.w("KalmanFilter", "⚠️ BARO SPIKE DETECTED: Innovation=${String.format("%.2f", y1)}m - LIMITED to ±${MAX_BARO_INNOVATION}m")
+            android.util.Log.w("KalmanFilter", " BARO SPIKE DETECTED: Innovation=${String.format("%.2f", y1)}m - LIMITED to ${MAX_BARO_INNOVATION}m")
             y1 = if (y1 > 0) MAX_BARO_INNOVATION else -MAX_BARO_INNOVATION
             consecutiveAltitudeClamps++
             if (consecutiveAltitudeClamps >= 3) {
-                android.util.Log.w("KalmanFilter", "⚠️ Reinitializing Kalman filter after repeated baro spikes")
+                android.util.Log.w("KalmanFilter", " Reinitializing Kalman filter after repeated baro spikes")
                 reset()
                 state[0] = baroAltitude
                 state[1] = 0.0
                 state[2] = verticalAccel
-                lastUpdateTime = currentTime
                 consecutiveAltitudeClamps = 0
                 return ModernVarioResult(
                     altitude = baroAltitude,
@@ -250,16 +251,14 @@ class Modern3StateKalmanFilter(
         }
 
         // Record diagnostics (Priority 7: VARIO_IMPROVEMENTS.md)
-        diagnosticsCollector.recordBaroUpdate(y1, K1[0])
-        diagnosticsCollector.recordIMUUpdate(y2, K2[2])
+        diagnosticsCollector.recordBaroUpdate(y1, K1[0], elapsedTimeMs)
+        diagnosticsCollector.recordIMUUpdate(y2, K2[2], elapsedTimeMs)
         diagnosticsCollector.recordAdaptiveStats(
             sigmaBaro = sigma2Baro,
             measurementNoise = R_altitude,
             processNoise = processNoise,
             tauSeconds = tauEff
         )
-
-        lastUpdateTime = currentTime
 
         return ModernVarioResult(
             altitude = state[0],
@@ -309,7 +308,8 @@ class Modern3StateKalmanFilter(
             confidence = 0.8,  // Placeholder - would use last calculated confidence
             filterMode = filterMode,
             gpsAccuracy = gpsAccuracy,
-            gpsSatelliteCount = gpsSatelliteCount
+            gpsSatelliteCount = gpsSatelliteCount,
+            timestampMillis = elapsedTimeMs
         )
     }
 
@@ -332,6 +332,7 @@ class Modern3StateKalmanFilter(
         P[1][1] = 5.0
         P[2][2] = 2.0
         consecutiveAltitudeClamps = 0
+        elapsedTimeMs = 0L
     }
 
     // Helper matrix operations
@@ -377,6 +378,6 @@ class Modern3StateKalmanFilter(
 data class ModernVarioResult(
     val altitude: Double,        // m
     val verticalSpeed: Double,   // m/s (THIS IS THE VARIO!)
-    val acceleration: Double,    // m/s²
+    val acceleration: Double,    // m/s
     val confidence: Double       // 0-1
 )

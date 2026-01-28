@@ -25,7 +25,7 @@ internal data class LocationWithTime(
 )
 
 /**
- * Thermal climb information mirroring XCSoar's OneClimbInfo
+ * Thermal climb information mirroring OneClimbInfo behavior
  */
 internal data class ThermalClimbInfo(
     var startTime: Long = 0L,

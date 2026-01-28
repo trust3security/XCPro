@@ -3,8 +3,6 @@ package com.example.xcpro.screens.navdrawer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.xcpro.audio.VarioAudioSettings
-import com.example.xcpro.vario.LevoVarioPreferencesRepository
-import com.example.xcpro.vario.VarioServiceManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
@@ -22,12 +20,11 @@ data class LevoVarioUiState(
 
 @HiltViewModel
 class LevoVarioSettingsViewModel @Inject constructor(
-    private val preferencesRepository: LevoVarioPreferencesRepository,
-    private val varioServiceManager: VarioServiceManager
+    private val useCase: LevoVarioSettingsUseCase
 ) : ViewModel() {
 
-    private val configFlow = preferencesRepository.config
-    private val audioFlow = varioServiceManager.sensorFusionRepository.audioSettings
+    private val configFlow = useCase.configFlow
+    private val audioFlow = useCase.audioSettingsFlow
 
     val uiState: StateFlow<LevoVarioUiState> = combine(configFlow, audioFlow) { config, audio ->
         LevoVarioUiState(
@@ -44,20 +41,18 @@ class LevoVarioSettingsViewModel @Inject constructor(
 
     fun setMacCready(value: Double) {
         viewModelScope.launch {
-            preferencesRepository.setMacCready(value)
+            useCase.setMacCready(value)
         }
     }
 
     fun setMacCreadyRisk(value: Double) {
         viewModelScope.launch {
-            preferencesRepository.setMacCreadyRisk(value)
+            useCase.setMacCreadyRisk(value)
         }
     }
 
     private fun updateAudioSettings(transform: (VarioAudioSettings) -> VarioAudioSettings) {
-        val current = uiState.value.audioSettings
-        val updated = transform(current)
-        varioServiceManager.sensorFusionRepository.updateAudioSettings(updated)
+        useCase.updateAudioSettings(transform)
     }
 
     fun setAudioEnabled(enabled: Boolean) = updateAudioSettings { it.copy(enabled = enabled) }

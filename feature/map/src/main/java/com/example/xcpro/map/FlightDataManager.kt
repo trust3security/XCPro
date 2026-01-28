@@ -42,7 +42,7 @@ class FlightDataManager(
         private const val WIND_SPEED_BUCKET_KT = 1f
         private const val WIND_DIR_BUCKET_DEG = 5f
         private const val LD_BUCKET = 0.1f
-        private const val WIND_VALID_MIN_SPEED_MS = 0.5f
+        private const val WIND_VALID_MIN_SPEED_MS = 0.2f
     }
 
     private val _liveFlightData = MutableStateFlow<RealTimeFlightData?>(null)
@@ -98,9 +98,22 @@ class FlightDataManager(
                 initialValue = 0f
             )
 
-    val xcSoarDisplayVarioFlow: StateFlow<Float> =
+    val audioNeedleVarioFlow: StateFlow<Float> =
         liveFlightDataFlow
-            .map { (it?.xcSoarDisplayVario ?: 0.0).toFloat().bucket(VARIO_BUCKET_MS) }
+            .map { data ->
+                (data?.audioVario ?: 0.0).toFloat()
+            }
+            .distinctUntilChanged()
+            .throttleFrame(UI_NEEDLE_FRAME_MS)
+            .stateIn(
+                scope = coroutineScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = 0f
+            )
+
+    val baselineDisplayVarioFlow: StateFlow<Float> =
+        liveFlightDataFlow
+            .map { (it?.baselineDisplayVario ?: 0.0).toFloat().bucket(VARIO_BUCKET_MS) }
             .distinctUntilChanged()
             .throttleFrame(UI_NUMERIC_FRAME_MS)
             .stateIn(
@@ -303,7 +316,7 @@ class FlightDataManager(
     private fun RealTimeFlightData.toDisplayBucket(): RealTimeFlightData =
         copy(
             displayVario = displayVario.takeIf { it.isFinite() }?.bucket(VARIO_BUCKET_MS.toDouble()) ?: 0.0,
-            xcSoarDisplayVario = xcSoarDisplayVario.takeIf { it.isFinite() }?.bucket(VARIO_BUCKET_MS.toDouble()) ?: 0.0,
+            baselineDisplayVario = baselineDisplayVario.takeIf { it.isFinite() }?.bucket(VARIO_BUCKET_MS.toDouble()) ?: 0.0,
             netto = netto.takeIf { it.isFinite() }?.bucket(VARIO_BUCKET_MS) ?: 0f,
             displayNetto = displayNetto.takeIf { it.isFinite() }?.bucket(VARIO_BUCKET_MS.toDouble()) ?: 0.0,
             baroAltitude = baroAltitude.takeIf { it.isFinite() }?.bucket(ALTITUDE_BUCKET_M) ?: 0.0,

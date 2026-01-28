@@ -38,7 +38,7 @@ object MapTaskScreenUi {
         onGoto: (WaypointData) -> Unit,
         modifier: Modifier = Modifier
     ) {
-        // SEARCHBAR FEATURE REMOVED – keep hook for future reinstatement.
+        // SEARCHBAR FEATURE REMOVED  keep hook for future reinstatement.
         // No-op for now.
     }
 

@@ -16,7 +16,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -35,6 +34,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 /**
  * Hosts all dashboard cards inside the nav drawer and exposes their bounds/size upstream so
@@ -57,9 +57,9 @@ fun CardContainer(
     var autoResizeEnabled by remember { mutableStateOf(false) }
     var showEditOptions by remember { mutableStateOf(false) }
 
-    val selectedCardIds by viewModel.selectedCardIds.collectAsState()
+    val selectedCardIds by viewModel.selectedCardIds.collectAsStateWithLifecycle()
     // Recompose when cards are created so we re-read the backing flow map.
-    val activeCards by viewModel.activeCards.collectAsState()
+    val activeCards by viewModel.activeCards.collectAsStateWithLifecycle()
     val cardStateFlows = remember(selectedCardIds, activeCards) { viewModel.cardStateFlows }
 
     val navigationBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -78,7 +78,7 @@ fun CardContainer(
 
     LaunchedEffect(safeContainerSize) {
         if (safeContainerSize != IntSize.Zero && cardStateFlows.isEmpty()) {
-            viewModel.initializeCards(safeContainerSize, density)
+            viewModel.initializeCards(safeContainerSize.toIntSizePx(), density.toDensityScale())
         }
     }
 
@@ -112,7 +112,7 @@ fun CardContainer(
         ) {
             cardStateFlows.forEach { (cardId, stateFlow) ->
                 if (cardId !in selectedCardIds) return@forEach
-                val cardState by stateFlow.collectAsState()
+                val cardState by stateFlow.collectAsStateWithLifecycle()
 
                 key(cardId) {
                     Box(modifier = Modifier.zIndex(if (isEditMode) 10f else 2f)) {

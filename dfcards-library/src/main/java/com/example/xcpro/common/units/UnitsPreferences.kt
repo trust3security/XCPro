@@ -115,8 +115,8 @@ enum class TemperatureUnit(
     val label: String,
     val abbreviation: String
 ) {
-    CELSIUS("°C", "°C"),
-    FAHRENHEIT("°F", "°F");
+    CELSIUS("C", "C"),
+    FAHRENHEIT("F", "F");
 
     fun fromSi(temperature: TemperatureC): Double = when (this) {
         CELSIUS -> temperature.value

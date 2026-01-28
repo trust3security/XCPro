@@ -21,7 +21,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,9 +47,9 @@ fun LayoutScreen(
     val scope = rememberCoroutineScope()
     val cardPreferences = remember { CardPreferences(context) }
     val storedCardsAcross by cardPreferences.getCardsAcrossPortrait()
-        .collectAsState(initial = CardPreferences.DEFAULT_CARDS_ACROSS_PORTRAIT)
+        .collectAsStateWithLifecycle(initialValue = CardPreferences.DEFAULT_CARDS_ACROSS_PORTRAIT)
     val storedAnchor by cardPreferences.getCardsAnchorPortrait()
-        .collectAsState(initial = CardPreferences.DEFAULT_ANCHOR_PORTRAIT)
+        .collectAsStateWithLifecycle(initialValue = CardPreferences.DEFAULT_ANCHOR_PORTRAIT)
     var sliderValue by remember { mutableStateOf(storedCardsAcross.toFloat()) }
     var anchor by remember { mutableStateOf(storedAnchor) }
 

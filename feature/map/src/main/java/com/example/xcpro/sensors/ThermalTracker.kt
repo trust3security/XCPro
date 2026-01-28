@@ -42,7 +42,7 @@ internal class ThermalTracker {
 
         if (timestampMillis < lastThermalTimestamp) reset()
 
-        // Detect circling edge and reset like XCSoar
+        // Detect circling edge and reset on transition
         if (isCircling != lastCircling) {
             if (lastCircling) {
                 // exiting circling: finalize and store last thermal
@@ -88,7 +88,7 @@ internal class ThermalTracker {
             lastThermalGain = currentThermalInfo.gain
             thermalGainValid = true
         } else {
-            // show last thermal like XCSoar when not circling
+            // Show last thermal when not circling.
             thermalGainCurrent = lastThermalGain
             thermalGainValid = lastThermalInfo.isDefined()
             thermalAverageCurrent = lastThermalLiftRate.toFloat()

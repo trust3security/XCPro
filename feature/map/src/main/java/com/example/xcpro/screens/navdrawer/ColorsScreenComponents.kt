@@ -200,7 +200,7 @@ internal fun SelectableColorPreviewCircle(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.clickable {
-            Log.d("ColorsScreen", "🎯 Color selected: $colorType")
+            Log.d("ColorsScreen", " Color selected: $colorType")
             onColorSelected(colorType)
         }
     ) {

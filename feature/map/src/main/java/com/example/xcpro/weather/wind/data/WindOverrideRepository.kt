@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.xcpro.common.di.DefaultDispatcher
+import com.example.xcpro.core.time.Clock
 import com.example.xcpro.weather.wind.model.WindOverride
 import com.example.xcpro.weather.wind.model.WindSource
 import com.example.xcpro.weather.wind.model.WindVector
@@ -34,6 +35,7 @@ private val KEY_WIND_TIMESTAMP_MS = longPreferencesKey("manual_wind_timestamp_ms
 @Singleton
 class WindOverrideRepository @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val clock: Clock,
     @DefaultDispatcher dispatcher: CoroutineDispatcher
 ) : WindOverrideSource {
 
@@ -64,8 +66,13 @@ class WindOverrideRepository @Inject constructor(
 
     suspend fun setManualWind(
         speedMs: Double,
+        directionFromDeg: Double
+    ): Boolean = setManualWind(speedMs, directionFromDeg, clock.nowWallMs())
+
+    suspend fun setManualWind(
+        speedMs: Double,
         directionFromDeg: Double,
-        timestampMillis: Long = System.currentTimeMillis()
+        timestampMillis: Long
     ): Boolean {
         val override = toOverride(speedMs, directionFromDeg, timestampMillis, WindSource.MANUAL)
             ?: return false
@@ -87,8 +94,13 @@ class WindOverrideRepository @Inject constructor(
 
     fun updateExternalWind(
         speedMs: Double,
+        directionFromDeg: Double
+    ): Boolean = updateExternalWind(speedMs, directionFromDeg, clock.nowWallMs())
+
+    fun updateExternalWind(
+        speedMs: Double,
         directionFromDeg: Double,
-        timestampMillis: Long = System.currentTimeMillis()
+        timestampMillis: Long
     ): Boolean {
         val override = toOverride(speedMs, directionFromDeg, timestampMillis, WindSource.EXTERNAL)
             ?: return false
@@ -96,9 +108,13 @@ class WindOverrideRepository @Inject constructor(
         return true
     }
 
+    fun updateExternalWindVector(vector: WindVector) {
+        updateExternalWindVector(vector, clock.nowWallMs())
+    }
+
     fun updateExternalWindVector(
         vector: WindVector,
-        timestampMillis: Long = System.currentTimeMillis()
+        timestampMillis: Long
     ) {
         _externalWind.value = WindOverride(
             vector = vector,

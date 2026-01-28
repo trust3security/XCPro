@@ -107,7 +107,7 @@ internal fun CompactCardItem(
         onClick = onToggle,
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
-            .height(85.dp), // ✅ NEW: Fixed height for all cards
+            .height(85.dp), //  NEW: Fixed height for all cards
         color = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(12.dp),
         shadowElevation = 2.dp,
@@ -125,7 +125,7 @@ internal fun CompactCardItem(
                     .fillMaxSize()
                     .padding(8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceBetween // ✅ CHANGED: Space between elements
+                verticalArrangement = Arrangement.SpaceBetween //  CHANGED: Space between elements
             ) {
                 Text(
                     text = card.title,
@@ -146,14 +146,14 @@ internal fun CompactCardItem(
                     maxLines = 1
                 )
 
-                // ✅ NEW: Always show secondary line (even if empty) for consistent sizing
+                //  NEW: Always show secondary line (even if empty) for consistent sizing
                 Text(
-                    text = displayData.secondaryValue ?: " ", // ✅ Use space if no secondary value
+                    text = displayData.secondaryValue ?: " ", //  Use space if no secondary value
                     style = secondaryStyle,
                     color = Color.Black,
                     textAlign = TextAlign.Center,
                     maxLines = 1,
-                    modifier = Modifier.height(16.dp) // ✅ Fixed height for secondary line
+                    modifier = Modifier.height(16.dp) //  Fixed height for secondary line
                 )
             }
 
@@ -218,16 +218,16 @@ internal fun CategoryTabs(
 }
 
 private fun mapCardToModalDisplay(
-    card: CardDefinition, // ✅ Correct parameter name
+    card: CardDefinition, //  Correct parameter name
     liveData: RealTimeFlightData
 ): ModalDisplayData {
-    // ✅ SIMPLIFIED: Just use centralized card library mapping
+    //  SIMPLIFIED: Just use centralized card library mapping
     val (primaryValue, secondaryValue) = CardLibrary.mapLiveDataToCard(card.id, liveData)
 
     return ModalDisplayData(
         primaryValue = primaryValue,
         secondaryValue = secondaryValue,
-        isLive = true  // ✅ Always true - no filtering
+        isLive = true  //  Always true - no filtering
     )
 }
 

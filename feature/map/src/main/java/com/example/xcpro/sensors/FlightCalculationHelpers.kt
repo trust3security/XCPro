@@ -72,10 +72,10 @@ internal class FlightCalculationHelpers(
      * Uses barometric altitude (stable) instead of GPS altitude (jumpy)
      * Cache lookups are instant (<1ms), only first API call takes time
      *
-     * ✅ NON-BLOCKING: Launches async fetch, doesn't freeze GPS loop
+     *  NON-BLOCKING: Launches async fetch, doesn't freeze GPS loop
      */
     fun updateAGL(baroAltitude: Double, gps: GPSData, speed: Double) {
-        // ✅ FIXED: Launch async coroutine instead of runBlocking
+        //  FIXED: Launch async coroutine instead of runBlocking
         // GPS loop continues immediately, AGL updates when fetch completes
         scope.launch {
             val newAGL = aglCalculator.calculateAgl(
@@ -97,12 +97,12 @@ internal class FlightCalculationHelpers(
      * Calculate wind speed and direction from GPS track history
      * Ported from FlightDataManager.kt lines 375-415
      */
-    fun recordLocationSample(gps: GPSData) {
+    fun recordLocationSample(gps: GPSData, timestampMillis: Long) {
         val location = Location("").apply {
             latitude = gps.position.latitude
             longitude = gps.position.longitude
         }
-        addLocationToHistory(location, gps.speed.value.toFloat(), gps.bearing.toFloat())
+        addLocationToHistory(location, timestampMillis, gps.speed.value.toFloat(), gps.bearing.toFloat())
     }
 
     fun updateThermalState(
@@ -118,8 +118,8 @@ internal class FlightCalculationHelpers(
      * Calculate L/D ratio (glide ratio)
      * Ported from FlightDataManager.kt lines 460-494
      */
-    fun calculateCurrentLD(gps: GPSData, currentAltitude: Double): Float {
-        val currentTime = System.currentTimeMillis()
+    fun calculateCurrentLD(gps: GPSData, currentAltitude: Double, timestampMillis: Long): Float {
+        val currentTime = timestampMillis
 
         if (currentTime - lastLDCalculationTime < LD_CALCULATION_INTERVAL) {
             return currentLD
@@ -166,7 +166,7 @@ internal class FlightCalculationHelpers(
      * - Raw vario shows FALSE LIFT
      * - TE vario shows ZERO (correct - no air mass movement)
      *
-     * Formula: TE = Raw Vario + Δ(Kinetic Energy) / Δt
+     * Formula: TE = Raw Vario + (Kinetic Energy) / t
      *
      * @param rawVario Raw vertical speed from Kalman filter (m/s)
      * @param currentSpeed Current GPS ground speed (m/s)
@@ -186,12 +186,12 @@ internal class FlightCalculationHelpers(
         }
 
         // Constants
-        val g = 9.81  // m/s² (gravity)
+        val g = 9.81  // m/s (gravity)
 
         // Calculate change in kinetic energy per unit mass
-        // KE = 0.5 * m * v²
-        // Δ(KE/m) = 0.5 * (v_current² - v_previous²)
-        // Height equivalent: Δh = Δ(KE/m) / g = (v_current² - v_previous²) / (2g)
+        // KE = 0.5 * m * v
+        // (KE/m) = 0.5 * (v_current - v_previous)
+        // Height equivalent: h = (KE/m) / g = (v_current - v_previous) / (2g)
         val deltaKineticEnergyHeight = (currentSpeed * currentSpeed - previousSpeed * previousSpeed) / (2.0 * g)
 
         // Rate of kinetic energy change (m/s)
@@ -212,9 +212,10 @@ internal class FlightCalculationHelpers(
     fun calculateNetto(
         currentVerticalSpeed: Double,
         trueAirspeed: Double?,
-        fallbackGroundSpeed: Double
+        fallbackGroundSpeed: Double,
+        timestampMillis: Long
     ): NettoComputation {
-        val now = System.currentTimeMillis()
+        val now = timestampMillis
         val tasCandidate = trueAirspeed?.takeIf { it.isFinite() && it > MIN_MOVING_SPEED_MS }
         if (tasCandidate != null) {
             lastValidTAS = tasCandidate
@@ -252,8 +253,8 @@ internal class FlightCalculationHelpers(
     /**
      * Add location to history for wind and L/D calculations
      */
-    private fun addLocationToHistory(location: Location, groundSpeed: Float, track: Float) {
-        locationHistory.add(LocationWithTime(location, System.currentTimeMillis(), groundSpeed, track))
+    private fun addLocationToHistory(location: Location, timestampMillis: Long, groundSpeed: Float, track: Float) {
+        locationHistory.add(LocationWithTime(location, timestampMillis, groundSpeed, track))
 
         while (locationHistory.size > MAX_LOCATION_HISTORY) {
             locationHistory.removeAt(0)

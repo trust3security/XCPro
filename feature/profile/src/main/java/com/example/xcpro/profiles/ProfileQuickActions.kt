@@ -153,7 +153,7 @@ fun ProfileQuickSwitcher(
                             if (isCurrentlyActive) {
                                 Spacer(modifier = Modifier.weight(1f))
                                 Text(
-                                    text = "•",
+                                    text = "",
                                     color = MaterialTheme.colorScheme.primary,
                                     style = MaterialTheme.typography.titleLarge
                                 )

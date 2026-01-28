@@ -9,7 +9,7 @@ import androidx.compose.material3.DrawerState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,7 +34,7 @@ fun LookAndFeelScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val profileViewModel: ProfileViewModel = hiltViewModel()
-    val profileUiState by profileViewModel.uiState.collectAsState()
+    val profileUiState by profileViewModel.uiState.collectAsStateWithLifecycle()
     val profileId = profileUiState.activeProfile?.id ?: "default"
 
     val preferences = remember { LookAndFeelPreferences(context) }

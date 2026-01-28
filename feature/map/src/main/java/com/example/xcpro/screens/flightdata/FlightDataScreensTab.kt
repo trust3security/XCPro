@@ -5,13 +5,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.dfcards.CardCategory
 import com.example.dfcards.CategoryTabsSection
 import com.example.dfcards.CardsGridSection
@@ -42,13 +42,15 @@ fun FlightDataScreensTab(
     val unitsRepository = remember(context.applicationContext) {
         UnitsRepository(context.applicationContext)
     }
-    val unitsPreferences by unitsRepository.unitsFlow.collectAsState(initial = UnitsPreferences())
+    val unitsPreferences by unitsRepository.unitsFlow.collectAsStateWithLifecycle(
+        initialValue = UnitsPreferences()
+    )
     val scope = rememberCoroutineScope()
 
-    val availableTemplates by flightViewModel.availableTemplates.collectAsState()
-    val profileModeTemplates by flightViewModel.profileModeTemplates.collectAsState()
-    val profileModeCards by flightViewModel.profileModeCards.collectAsState()
-    val profileModeVisibilities by flightViewModel.profileModeVisibilities.collectAsState()
+    val availableTemplates by flightViewModel.availableTemplates.collectAsStateWithLifecycle()
+    val profileModeTemplates by flightViewModel.profileModeTemplates.collectAsStateWithLifecycle()
+    val profileModeCards by flightViewModel.profileModeCards.collectAsStateWithLifecycle()
+    val profileModeVisibilities by flightViewModel.profileModeVisibilities.collectAsStateWithLifecycle()
     val profileId = activeProfile?.id
 
     val modeVisibilities = remember(profileModeVisibilities, profileId) {

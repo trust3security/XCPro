@@ -1,4 +1,4 @@
-﻿package com.example.xcpro.ui.theme
+package com.example.xcpro.ui.theme
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.lightColorScheme

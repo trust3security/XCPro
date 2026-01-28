@@ -6,6 +6,7 @@ import com.example.xcpro.di.ReplaySource
 import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.sensors.FlightStateSource
 import com.example.xcpro.sensors.CirclingDetector
+import com.example.xcpro.core.time.Clock
 import com.example.xcpro.weather.wind.domain.CirclingWind
 import com.example.xcpro.weather.wind.domain.CirclingWindSample
 import com.example.xcpro.weather.wind.domain.WindCandidate
@@ -27,7 +28,9 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -44,6 +47,7 @@ class WindSensorFusionRepository @Inject constructor(
     private val flightStateSource: FlightStateSource,
     private val windOverrideSource: WindOverrideSource,
     private val windSelectionUseCase: WindSelectionUseCase,
+    private val clock: Clock,
     @DefaultDispatcher dispatcher: CoroutineDispatcher
 ) {
 
@@ -70,11 +74,14 @@ class WindSensorFusionRepository @Inject constructor(
     private var lastCirclingClockMillis = Long.MIN_VALUE
     private var lastGpsClockMillis = Long.MIN_VALUE
     private var lastUpdatedClockMillis = Long.MIN_VALUE
+    private var lastActiveSource: FlightDataRepository.Source? = null
+    private var pendingResetJob: Job? = null
+    private var windHoldUntilElapsedMs: Long = 0L
 
     init {
         scope.launch {
             flightDataRepository.activeSource
-                .onEach { resetForSourceSwitch() }
+                .onEach { source -> handleSourceSwitch(source) }
                 .flatMapLatest { source ->
                     val inputs = if (source == FlightDataRepository.Source.REPLAY) {
                         replayInputs
@@ -128,11 +135,39 @@ class WindSensorFusionRepository @Inject constructor(
         lastGpsClockMillis = Long.MIN_VALUE
         lastUpdatedClockMillis = Long.MIN_VALUE
         _windState.value = WindState()
+        windHoldUntilElapsedMs = 0L
+        pendingResetJob?.cancel()
+        pendingResetJob = null
     }
 
     private fun handleNoData() {
+        if (isHoldActive()) return
         resetForSourceSwitch()
     }
+
+    private fun handleSourceSwitch(source: FlightDataRepository.Source) {
+        pendingResetJob?.cancel()
+        pendingResetJob = null
+        val previous = lastActiveSource
+        lastActiveSource = source
+        if (previous == FlightDataRepository.Source.REPLAY &&
+            source == FlightDataRepository.Source.LIVE
+        ) {
+            val holdMs = REPLAY_WIND_HOLD_MS
+            windHoldUntilElapsedMs = clock.nowMonoMs() + holdMs
+            pendingResetJob = scope.launch {
+                delay(holdMs)
+                if (!isHoldActive()) {
+                    resetForSourceSwitch()
+                }
+            }
+        } else {
+            resetForSourceSwitch()
+        }
+    }
+
+    private fun isHoldActive(): Boolean =
+        windHoldUntilElapsedMs > 0L && clock.nowMonoMs() < windHoldUntilElapsedMs
 
     private fun processSample(input: WindFusionInput) {
         val gps = input.gps ?: return
@@ -192,7 +227,7 @@ class WindSensorFusionRepository @Inject constructor(
         val canUseEkf = lastCirclingClockMillis == Long.MIN_VALUE ||
             ((ekfResult?.clockMillis?.minus(lastCirclingClockMillis)) ?: Long.MAX_VALUE) > CIRCLING_SUPPRESSION_MS
 
-        // AI-NOTE: EKF direct-use mirrors XCSoar behavior: publish the freshest straight-flight wind
+        // AI-NOTE: EKF direct-use mirrors legacy behavior: publish the freshest straight-flight wind
         // when real airspeed is available, while still storing the measurement for history/weighting.
         // Override selection still applies (AUTO newer-than-manual -> EXTERNAL -> MANUAL).
         var ekfCandidateClockMillis: Long? = null
@@ -330,6 +365,9 @@ class WindSensorFusionRepository @Inject constructor(
             lastUpdatedMillis = timestamp,
             stale = stale
         )
+        pendingResetJob?.cancel()
+        pendingResetJob = null
+        windHoldUntilElapsedMs = 0L
     }
 
     private fun WindOverride.toCandidate(): WindCandidate = WindCandidate(
@@ -347,5 +385,6 @@ class WindSensorFusionRepository @Inject constructor(
         private const val MAX_MEASUREMENT_QUALITY = 5
         private const val CIRCLING_SUPPRESSION_MS = 5_000L
         private const val STALE_MS = 3_600_000L // 1 hour (soaring-scale glides between wind updates)
+        private const val REPLAY_WIND_HOLD_MS = 10_000L
     }
 }

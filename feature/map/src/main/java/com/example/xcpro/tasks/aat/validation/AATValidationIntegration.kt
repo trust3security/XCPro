@@ -172,11 +172,11 @@ data class TaskValidationSummary(
 ) {
     fun getStatusIcon(): String {
         return when {
-            !valid -> "❌"
-            competitionReady -> "✅"
-            issueCount == 0 -> "✅"
-            issueCount <= 2 -> "⚠️"
-            else -> "❌"
+            !valid -> ""
+            competitionReady -> ""
+            issueCount == 0 -> ""
+            issueCount <= 2 -> ""
+            else -> ""
         }
     }
 

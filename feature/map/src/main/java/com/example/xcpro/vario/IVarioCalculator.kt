@@ -29,7 +29,7 @@ interface IVarioCalculator {
      * Update vario with new sensor data
      *
      * @param baroAltitude Barometric altitude (m)
-     * @param verticalAccel Vertical acceleration from IMU (m/s²) - optional
+     * @param verticalAccel Vertical acceleration from IMU (m/s) - optional
      * @param deltaTime Time since last update (s)
      * @param gpsSpeed GPS horizontal speed (m/s) - for motion detection
      * @param gpsAltitude GPS altitude (m) - optional, for GPS-based varios

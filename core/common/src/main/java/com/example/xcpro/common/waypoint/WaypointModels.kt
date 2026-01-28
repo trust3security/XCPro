@@ -42,14 +42,14 @@ data class WaypointData(
     }
 
     fun getTypeIcon(): String = when (style) {
-        2, 4, 5 -> "✈️"
-        3 -> "🛬"
-        6, 7 -> "⛰️"
-        9, 10 -> "📡"
-        12 -> "🏞️"
-        15 -> "⚡"
-        16 -> "🏰"
-        else -> "📍"
+        2, 4, 5 -> ""
+        3 -> ""
+        6, 7 -> ""
+        9, 10 -> ""
+        12 -> ""
+        15 -> ""
+        16 -> ""
+        else -> ""
     }
 
     fun getFormattedCoordinates(): String =

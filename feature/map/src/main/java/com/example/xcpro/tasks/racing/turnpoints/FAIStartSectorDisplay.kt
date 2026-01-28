@@ -13,9 +13,9 @@ import kotlin.math.*
  * which face toward the bisector of incoming/outgoing legs.
  *
  * START SECTOR ORIENTATION:
- * - 90° D-shaped sector
+ * - 90 D-shaped sector
  * - Faces AWAY from the first leg (opposite direction)
- * - Arc connects the two 45° lines extending from the start point
+ * - Arc connects the two 45 lines extending from the start point
  */
 class FAIStartSectorDisplay : TurnPointDisplay {
 
@@ -27,7 +27,7 @@ class FAIStartSectorDisplay : TurnPointDisplay {
     override fun generateVisualGeometry(waypoint: RacingWaypoint, context: TaskContext): String {
         val nextWaypoint = context.nextWaypoint
         if (nextWaypoint == null) {
-            println("⚠️ FAI START SECTOR: No next waypoint found, creating fallback circle")
+            println(" FAI START SECTOR: No next waypoint found, creating fallback circle")
             return createFallbackCircle(waypoint)
         }
 
@@ -53,14 +53,14 @@ class FAIStartSectorDisplay : TurnPointDisplay {
 
             // CRASH FIX: Validate bearing
             if (!firstLegBearing.isFinite()) {
-                println("❌ FAI START SECTOR: Invalid bearing calculation")
+                println(" FAI START SECTOR: Invalid bearing calculation")
                 return createFallbackCircle(startWaypoint)
             }
 
             // FAI Start Sector opens TOWARD first leg direction (toward TP1)
             val sectorCenterBearing = firstLegBearing
 
-            // Create FAI Start Sector: 90° sector opening toward first leg
+            // Create FAI Start Sector: 90 sector opening toward first leg
             val halfSectorAngle = SECTOR_ANGLE_DEGREES / 2.0
             val leftBearing = normalizeAngle(sectorCenterBearing - halfSectorAngle)
             val rightBearing = normalizeAngle(sectorCenterBearing + halfSectorAngle)
@@ -107,14 +107,14 @@ class FAIStartSectorDisplay : TurnPointDisplay {
 
             // Validate the GeoJSON feature
             if (!RacingGeoJSONValidator.validateGeoJSON(geoJsonFeature, "FAI Start Sector")) {
-                println("❌ FAI START SECTOR: Generated invalid geometry, using fallback")
+                println(" FAI START SECTOR: Generated invalid geometry, using fallback")
                 return createFallbackCircle(startWaypoint)
             }
 
             return geoJsonFeature
 
         } catch (e: Exception) {
-            println("❌ FAI START SECTOR generation failed: ${e.message}")
+            println(" FAI START SECTOR generation failed: ${e.message}")
             return createFallbackCircle(startWaypoint)
         }
     }

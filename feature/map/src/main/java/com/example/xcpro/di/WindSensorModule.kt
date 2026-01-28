@@ -1,6 +1,7 @@
 package com.example.xcpro.di
 
 import android.content.Context
+import com.example.xcpro.core.time.Clock
 import com.example.xcpro.replay.ReplaySensorSource
 import com.example.xcpro.sensors.FlightStateRepository
 import com.example.xcpro.sensors.FlightStateSource
@@ -28,8 +29,9 @@ object WindSensorModule {
     @Provides
     @Singleton
     fun provideUnifiedSensorManager(
-        @ApplicationContext context: Context
-    ): UnifiedSensorManager = UnifiedSensorManager(context)
+        @ApplicationContext context: Context,
+        clock: Clock
+    ): UnifiedSensorManager = UnifiedSensorManager(context, clock)
 
     @Provides
     @Singleton

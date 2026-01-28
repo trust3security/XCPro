@@ -43,14 +43,14 @@ class CalculateFlightMetricsUseCaseTest {
             on { sinkAtSpeed(any()) }.thenReturn(0.0)
         }
         val helpers = mock<FlightCalculationHelpers>()
-        whenever(helpers.calculateNetto(any(), anyOrNull(), any())).thenReturn(
+        whenever(helpers.calculateNetto(any(), anyOrNull(), any(), any())).thenReturn(
             FlightCalculationHelpers.NettoComputation(0.0, true)
         )
         whenever(helpers.calculateTotalEnergy(any(), any(), any(), any())).thenAnswer(teAnswer)
-        whenever(helpers.calculateCurrentLD(any(), any())).thenReturn(0f)
+        whenever(helpers.calculateCurrentLD(any(), any(), any())).thenReturn(0f)
         whenever(helpers.updateThermalState(any(), any(), any(), any())).thenAnswer { }
         whenever(helpers.updateAGL(any(), any(), any())).thenAnswer { }
-        whenever(helpers.recordLocationSample(any())).thenAnswer { }
+        whenever(helpers.recordLocationSample(any(), any())).thenAnswer { }
         whenever(helpers.thermalAverageCurrent).thenReturn(0f)
         whenever(helpers.thermalAverageTotal).thenReturn(0f)
         whenever(helpers.thermalGainCurrent).thenReturn(0.0)
@@ -126,6 +126,43 @@ class CalculateFlightMetricsUseCaseTest {
         )
         // TC30s should still reflect ~2 m/s average, not jump
         assertTrue(kotlin.math.abs(res.bruttoAverage30s - 2.0) < 1.0)
+    }
+
+    @Test
+    fun qnhCalibrationAgeUsesWallTime() {
+        val useCase = newUseCase()
+        val currentTime = 1_000L
+        val wallTime = 10_000L
+        val calibrationTime = 7_000L
+        val altitude = 1200.0
+
+        val result = useCase.execute(
+            FlightMetricsRequest(
+                gps = gpsSample(currentTime),
+                currentTimeMillis = currentTime,
+                wallTimeMillis = wallTime,
+                gpsTimestampMillis = currentTime,
+                deltaTimeSeconds = 1.0,
+                varioResult = varioSample(0.5, altitude),
+                varioGpsValue = 0.5,
+                baroResult = BarometricAltitudeData(
+                    altitudeMeters = altitude,
+                    qnh = 1013.25,
+                    isCalibrated = true,
+                    pressureHPa = 1013.25,
+                    temperatureCompensated = true,
+                    confidenceLevel = ConfidenceLevel.MEDIUM,
+                    pressureAltitudeMeters = altitude,
+                    gpsDeltaMeters = 0.0,
+                    lastCalibrationTime = calibrationTime
+                ),
+                windState = null,
+                varioValidUntil = currentTime + 500,
+                isFlying = true
+            )
+        )
+
+        assertEquals(3L, result.qnhCalibrationAgeSeconds)
     }
 
     @Test

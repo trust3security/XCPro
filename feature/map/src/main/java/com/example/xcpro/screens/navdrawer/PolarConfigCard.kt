@@ -17,7 +17,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,6 +27,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.xcpro.glider.GliderRepository
 import kotlin.math.roundToInt
 
@@ -35,7 +35,7 @@ import kotlin.math.roundToInt
 fun ConfigCard() {
     val context = LocalContext.current
     val repo = remember(context) { GliderRepository.getInstance(context) }
-    val cfg by repo.config.collectAsState()
+    val cfg by repo.config.collectAsStateWithLifecycle()
 
     var pilotInput by remember(cfg.pilotAndGearKg) {
         mutableStateOf(cfg.pilotAndGearKg.roundToInt().toString())

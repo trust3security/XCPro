@@ -1,8 +1,5 @@
 package com.example.dfcards.dfcards
 
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.dp
 import com.example.dfcards.CardDefinition
 import com.example.dfcards.CardLibrary
 import com.example.dfcards.CardPreferences
@@ -12,6 +9,9 @@ import com.example.dfcards.FlightTemplate
 import com.example.dfcards.FlightTemplates
 import com.example.dfcards.dfcards.CardState
 import com.example.dfcards.dfcards.FlightData
+import com.example.xcpro.core.common.geometry.DensityScale
+import com.example.xcpro.core.common.geometry.IntSizePx
+import com.example.xcpro.core.common.geometry.dpToPx
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.firstOrNull
@@ -19,12 +19,12 @@ import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.math.ceil
 
-private val DEFAULT_CARD_WIDTH_DP = 120.dp
-private val DEFAULT_CARD_HEIGHT_DP = 80.dp
-private val LAYOUT_PADDING_DP = 0.dp
-private val LAYOUT_SPACING_DP = 0.dp
-private val MIN_CARD_WIDTH_DP = 24.dp
-private val MIN_CARD_HEIGHT_DP = 48.dp
+private const val DEFAULT_CARD_WIDTH_DP = 120f
+private const val DEFAULT_CARD_HEIGHT_DP = 80f
+private const val LAYOUT_PADDING_DP = 0f
+private const val LAYOUT_SPACING_DP = 0f
+private const val MIN_CARD_WIDTH_DP = 24f
+private const val MIN_CARD_HEIGHT_DP = 48f
 private const val CARD_ASPECT_RATIO = 2f / 3f
 
 private data class CardLayoutSpec(
@@ -36,41 +36,40 @@ private data class CardLayoutSpec(
     val anchor: CardAnchor
 )
 
-private fun CardStateRepository.rememberLayoutContext(containerSize: IntSize, density: Density) {
+private fun CardStateRepository.rememberLayoutContext(containerSize: IntSizePx, density: DensityScale) {
     lastContainerSize = containerSize
     lastDensity = density
 }
 
-private fun CardStateRepository.layoutSpec(containerSize: IntSize, density: Density): CardLayoutSpec =
-    with(density) {
-        val cols = cardsAcrossPortrait.coerceIn(
-            CardPreferences.MIN_CARDS_ACROSS_PORTRAIT,
-            CardPreferences.MAX_CARDS_ACROSS_PORTRAIT
-        )
-        val paddingPx = LAYOUT_PADDING_DP.toPx()
-        val spacingPx = LAYOUT_SPACING_DP.toPx()
-        val availableWidth = (containerSize.width - paddingPx * 2)
-        val baseWidth = if (availableWidth > 0 && cols > 0) {
-            (availableWidth - spacingPx * (cols - 1)) / cols
-        } else {
-            DEFAULT_CARD_WIDTH_DP.toPx()
-        }
-        val cardWidth = if (baseWidth > 0f) baseWidth else MIN_CARD_WIDTH_DP.toPx()
-        val cardHeight = max(cardWidth * CARD_ASPECT_RATIO, MIN_CARD_HEIGHT_DP.toPx())
-        CardLayoutSpec(
-            cols = max(cols, 1),
-            cardWidth = cardWidth,
-            cardHeight = cardHeight,
-            spacing = spacingPx,
-            padding = paddingPx,
-            anchor = cardsAnchorPortrait
-        )
+private fun CardStateRepository.layoutSpec(containerSize: IntSizePx, density: DensityScale): CardLayoutSpec {
+    val cols = cardsAcrossPortrait.coerceIn(
+        CardPreferences.MIN_CARDS_ACROSS_PORTRAIT,
+        CardPreferences.MAX_CARDS_ACROSS_PORTRAIT
+    )
+    val paddingPx = density.dpToPx(LAYOUT_PADDING_DP)
+    val spacingPx = density.dpToPx(LAYOUT_SPACING_DP)
+    val availableWidth = (containerSize.width - paddingPx * 2)
+    val baseWidth = if (availableWidth > 0 && cols > 0) {
+        (availableWidth - spacingPx * (cols - 1)) / cols
+    } else {
+        density.dpToPx(DEFAULT_CARD_WIDTH_DP)
     }
+    val cardWidth = if (baseWidth > 0f) baseWidth else density.dpToPx(MIN_CARD_WIDTH_DP)
+    val cardHeight = max(cardWidth * CARD_ASPECT_RATIO, density.dpToPx(MIN_CARD_HEIGHT_DP))
+    return CardLayoutSpec(
+        cols = max(cols, 1),
+        cardWidth = cardWidth,
+        cardHeight = cardHeight,
+        spacing = spacingPx,
+        padding = paddingPx,
+        anchor = cardsAnchorPortrait
+    )
+}
 
 private fun yOriginForRow(
     row: Int,
     totalRows: Int,
-    containerSize: IntSize,
+    containerSize: IntSizePx,
     layout: CardLayoutSpec
 ): Float {
     val rowsHeight = totalRows * layout.cardHeight + (totalRows - 1) * layout.spacing
@@ -114,7 +113,7 @@ internal fun CardStateRepository.maybeRelayoutExistingCards() {
     }
 }
 
-internal fun CardStateRepository.initializeCards(containerSize: IntSize, density: Density) {
+internal fun CardStateRepository.initializeCards(containerSize: IntSizePx, density: DensityScale) {
     rememberLayoutContext(containerSize, density)
     if (hasInitialized || isInitializing) return
     hasInitialized = true
@@ -122,8 +121,8 @@ internal fun CardStateRepository.initializeCards(containerSize: IntSize, density
 }
 
 internal suspend fun CardStateRepository.loadEssentialCardsOnStartup(
-    containerSize: IntSize,
-    density: Density,
+    containerSize: IntSizePx,
+    density: DensityScale,
     currentFlightMode: FlightModeSelection?
 ) {
     rememberLayoutContext(containerSize, density)
@@ -144,9 +143,9 @@ internal suspend fun CardStateRepository.loadEssentialCardsOnStartup(
 }
 
 private fun CardStateRepository.createEssentialCardsManually(
-    containerSize: IntSize,
-    density: Density
-) = with(density) {
+    containerSize: IntSizePx,
+    density: DensityScale
+) {
     rememberLayoutContext(containerSize, density)
     val layout = layoutSpec(containerSize, density)
     val totalRows = ceil(essentialCardIds.size / layout.cols.toFloat()).toInt().coerceAtLeast(1)
@@ -177,10 +176,9 @@ private fun CardStateRepository.createEssentialCardsManually(
                 height = layout.cardHeight,
                 flightData = flightData
             )
-
-    cardStateFlowsMap[cardState.id] = MutableStateFlow(cardState)
-    restorePersistedPositions(setOf(cardState.id))
-}
+            cardStateFlowsMap[cardState.id] = MutableStateFlow(cardState)
+            restorePersistedPositions(setOf(cardState.id))
+        }
     }
 
     setSelectedCardIds(essentialCardIds.toSet())
@@ -208,8 +206,8 @@ internal fun CardStateRepository.updateCardState(cardState: CardState) {
 
 internal fun CardStateRepository.toggleCardFromLibrary(
     cardDefinition: CardDefinition,
-    containerSize: IntSize,
-    density: Density
+    containerSize: IntSizePx,
+    density: DensityScale
 ) {
     if (cardStateFlowsMap.containsKey(cardDefinition.id)) {
         removeCard(cardDefinition.id)
@@ -221,9 +219,9 @@ internal fun CardStateRepository.toggleCardFromLibrary(
 
 private fun CardStateRepository.addCard(
     cardDefinition: CardDefinition,
-    containerSize: IntSize,
-    density: Density
-) = with(density) {
+    containerSize: IntSizePx,
+    density: DensityScale
+) {
     rememberLayoutContext(containerSize, density)
     val layout = layoutSpec(containerSize, density)
     val position = findNextAvailablePosition(containerSize, layout)
@@ -276,16 +274,16 @@ internal fun CardStateRepository.restorePersistedPositions(cardIds: Set<String>?
 
 internal suspend fun CardStateRepository.applyTemplate(
     template: FlightTemplate,
-    containerSize: IntSize,
-    density: Density
+    containerSize: IntSizePx,
+    density: DensityScale
 ) {
     applyTemplateInternal(template, containerSize, density, isAutoLoad = false)
 }
 
 private suspend fun CardStateRepository.applyTemplateInternal(
     template: FlightTemplate,
-    containerSize: IntSize,
-    density: Density,
+    containerSize: IntSizePx,
+    density: DensityScale,
     isAutoLoad: Boolean
 ) {
     rememberLayoutContext(containerSize, density)
@@ -309,14 +307,14 @@ private suspend fun CardStateRepository.applyTemplateInternal(
 
 private suspend fun CardStateRepository.createCardsFromTemplate(
     template: FlightTemplate,
-    containerSize: IntSize,
-    density: Density
-): List<CardState> = with(density) {
+    containerSize: IntSizePx,
+    density: DensityScale
+): List<CardState> {
     rememberLayoutContext(containerSize, density)
     val layout = layoutSpec(containerSize, density)
     val totalRows = ceil(template.cardIds.size / layout.cols.toFloat()).toInt().coerceAtLeast(1)
 
-    template.cardIds.mapIndexedNotNull { index, cardId ->
+    return template.cardIds.mapIndexedNotNull { index, cardId ->
         val cardDefinition = CardLibrary.allCards.find { it.id == cardId }
         if (cardDefinition != null) {
             val row = index / layout.cols
@@ -366,7 +364,7 @@ private suspend fun CardStateRepository.loadSavedCardPosition(cardState: CardSta
 }
 
 private fun CardStateRepository.findNextAvailablePosition(
-    containerSize: IntSize,
+    containerSize: IntSizePx,
     layout: CardLayoutSpec
 ): Pair<Float, Float> {
     val currentCards = cardStateFlowsMap.values.map { it.value }

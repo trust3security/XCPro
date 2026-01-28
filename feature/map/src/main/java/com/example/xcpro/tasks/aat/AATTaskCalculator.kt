@@ -208,17 +208,17 @@ class AATTaskCalculator {
     fun updateAreaRadius(task: AATTask, areaIndex: Int, newRadiusMeters: Double): AATTask {
         // Validation
         if (areaIndex < 0 || areaIndex >= task.assignedAreas.size) {
-            println("❌ AAT ERROR: Invalid area index $areaIndex (task has ${task.assignedAreas.size} areas)")
+            println(" AAT ERROR: Invalid area index $areaIndex (task has ${task.assignedAreas.size} areas)")
             return task
         }
 
         if (newRadiusMeters <= 0) {
-            println("❌ AAT ERROR: Invalid radius $newRadiusMeters meters (must be > 0)")
+            println(" AAT ERROR: Invalid radius $newRadiusMeters meters (must be > 0)")
             return task
         }
 
         if (newRadiusMeters > 100000) { // 100km max
-            println("❌ AAT ERROR: Radius $newRadiusMeters meters too large (max 100km)")
+            println(" AAT ERROR: Radius $newRadiusMeters meters too large (max 100km)")
             return task
         }
 
@@ -238,7 +238,7 @@ class AATTaskCalculator {
 
         val updatedTask = task.copy(assignedAreas = updatedAreas)
 
-        println("✅ AAT: Updated area '${area.name}' radius to ${newRadiusMeters}m")
+        println(" AAT: Updated area '${area.name}' radius to ${newRadiusMeters}m")
         return updatedTask
     }
 

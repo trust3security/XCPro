@@ -11,8 +11,8 @@ internal class ResolveTrailVarioUseCase {
         if (isReplay) {
             val igc = data.realIgcVario?.value
             if (igc != null && igc.isFinite()) return igc
-            val xcSoar = data.xcSoarDisplayVario.value
-            if (data.xcSoarVarioValid && xcSoar.isFinite()) return xcSoar
+            val baseline = data.baselineDisplayVario.value
+            if (data.baselineVarioValid && baseline.isFinite()) return baseline
             val displayNetto = data.displayNetto.value
             if (data.nettoValid && displayNetto.isFinite()) return displayNetto
         }

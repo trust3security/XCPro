@@ -2,34 +2,41 @@
 echo Starting automated build and test cycle...
 echo.
 
-echo [1/5] Cleaning project...
+echo [0/6] Running rule enforcement...
+call gradlew enforceRules
+if %ERRORLEVEL% neq 0 (
+    echo ERROR: Rule enforcement failed
+    exit /b 1
+)
+
+echo [1/6] Cleaning project...
 call gradlew clean
 if %ERRORLEVEL% neq 0 (
     echo ERROR: Clean failed
     exit /b 1
 )
 
-echo [2/5] Building debug version...
+echo [2/6] Building debug version...
 call gradlew assembleDebug
 if %ERRORLEVEL% neq 0 (
     echo ERROR: Build failed
     exit /b 1
 )
 
-echo [3/5] Running lint checks...
+echo [3/6] Running lint checks...
 call gradlew lint
 if %ERRORLEVEL% neq 0 (
     echo WARNING: Lint issues found - check reports
 )
 
-echo [4/5] Running unit tests...
+echo [4/6] Running unit tests...
 call gradlew test
 if %ERRORLEVEL% neq 0 (
     echo ERROR: Unit tests failed
     exit /b 1
 )
 
-echo [5/5] Running instrumented tests (requires connected device)...
+echo [5/6] Running instrumented tests (requires connected device)...
 call gradlew connectedAndroidTest
 if %ERRORLEVEL% neq 0 (
     echo WARNING: Instrumented tests failed or no device connected

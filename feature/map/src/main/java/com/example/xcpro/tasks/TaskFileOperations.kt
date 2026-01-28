@@ -58,8 +58,8 @@ object TaskFileOperations {
             4. Tap a file to import it
 
             Supported formats:
-            • CUP format (.cup) - waypoints only
-            • XCPro JSON (.xcp.json) - preserves task type, OZ, targets
+             CUP format (.cup) - waypoints only
+             XCPro JSON (.xcp.json) - preserves task type, OZ, targets
         """.trimIndent()
 
         android.app.AlertDialog.Builder(context)

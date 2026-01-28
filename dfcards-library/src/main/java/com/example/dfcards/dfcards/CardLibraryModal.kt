@@ -36,7 +36,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
-// ✅ NEW: Flight Mode enum to match your existing FlightMode
+//  NEW: Flight Mode enum to match your existing FlightMode
 enum class FlightModeSelection(
     val displayName: String,
     val icon: ImageVector,
@@ -76,7 +76,7 @@ fun CardLibraryModal(
     var selectedFlightMode by remember(currentFlightMode) { mutableStateOf(currentFlightMode) }
     var selectedTemplate by remember { mutableStateOf<FlightTemplate?>(null) }
 
-    // ✅ Load saved template when modal opens or flight mode changes
+    //  Load saved template when modal opens or flight mode changes
     LaunchedEffect(selectedFlightMode, allTemplates) {
         if (allTemplates.isNotEmpty()) {
             cardPreferences.getFlightModeTemplate(selectedFlightMode.name).collect { savedTemplateId ->
@@ -92,7 +92,7 @@ fun CardLibraryModal(
         }
     }
 
-    // ✅ NEW: Auto-save when template selection changes
+    //  NEW: Auto-save when template selection changes
     LaunchedEffect(selectedTemplate, selectedFlightMode) {
         selectedTemplate?.let { template ->
             coroutineScope.launch {
@@ -100,7 +100,7 @@ fun CardLibraryModal(
                     flightMode = selectedFlightMode.name,
                     templateId = template.id
                 )
-                println("DEBUG: Auto-saved ${selectedFlightMode.name} → ${template.name}")
+                println("DEBUG: Auto-saved ${selectedFlightMode.name}  ${template.name}")
             }
         }
     }
@@ -133,12 +133,12 @@ fun CardLibraryModal(
                         )
                     )
 
-                    // ✅ UPDATED: Header with immediate apply and better messaging
+                    //  UPDATED: Header with immediate apply and better messaging
                     FlightModeSelectionHeader(
                         selectedFlightMode = selectedFlightMode,
                         selectedTemplate = selectedTemplate,
                         onConfirm = {
-                            // ✅ CHANGED: Just apply template and dismiss (already saved)
+                            //  CHANGED: Just apply template and dismiss (already saved)
                             selectedTemplate?.let { template ->
                                 onTemplateApply(template)
                                 onDismiss()
@@ -150,7 +150,7 @@ fun CardLibraryModal(
                     FlightModeSelectionSection(
                         selectedFlightMode = selectedFlightMode,
                         onFlightModeSelected = { mode ->
-                            // ✅ FIXED: Don't do anything if same mode selected
+                            //  FIXED: Don't do anything if same mode selected
                             if (mode == selectedFlightMode) {
                                 println("DEBUG: Same flight mode selected, no action needed")
                                 return@FlightModeSelectionSection
@@ -168,7 +168,7 @@ fun CardLibraryModal(
                         selectedTemplate = selectedTemplate,
                         selectedFlightMode = selectedFlightMode,
                         onTemplateSelected = { template ->
-                            // ✅ CHANGED: Auto-save happens via LaunchedEffect
+                            //  CHANGED: Auto-save happens via LaunchedEffect
                             selectedTemplate = template
                             println("DEBUG: User selected template: ${template.name}")
                         },
@@ -202,7 +202,7 @@ fun CardLibraryModal(
                                     selectedTemplate!!.cardIds - cardId
                                 }
 
-                                // ✅ CHANGED: Update template and auto-save via onEditTemplate
+                                //  CHANGED: Update template and auto-save via onEditTemplate
                                 onEditTemplate(selectedTemplate!!, selectedTemplate!!.name, updatedCardIds)
 
                                 // Update local state

@@ -59,10 +59,10 @@ fun FlightDataWaypointsTab(
     // Auto-focus home waypoint when parameter is true
     LaunchedEffect(autoFocusHome) {
         if (autoFocusHome) {
-            Log.d(TAG, "🎯 AUTO-FOCUS HOME PARAMETER RECEIVED: $autoFocusHome")
+            Log.d(TAG, " AUTO-FOCUS HOME PARAMETER RECEIVED: $autoFocusHome")
             kotlinx.coroutines.delay(300)
             triggerHomeFocus = true
-            Log.d(TAG, "🎯 TRIGGER HOME FOCUS SET TO TRUE")
+            Log.d(TAG, " TRIGGER HOME FOCUS SET TO TRUE")
         }
     }
 
@@ -102,7 +102,7 @@ fun FlightDataWaypointsTab(
                             selectedWaypointFiles,
                             waypointCheckedStates.toMap()
                         )
-                        Log.d(TAG, "✅ Added waypoint file: $fileName")
+                        Log.d(TAG, " Added waypoint file: $fileName")
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error copying waypoint file: ${e.message}")
@@ -144,7 +144,7 @@ fun FlightDataWaypointsTab(
         // Add File Button
         item {
             addFileButton("waypoints") {
-                Log.d(TAG, "📁 Opening waypoint file picker...")
+                Log.d(TAG, " Opening waypoint file picker...")
                 waypointFilePickerLauncher.launch("application/octet-stream")
             }
         }

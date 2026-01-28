@@ -17,14 +17,14 @@ import kotlin.math.sqrt
 data class VarioFilterDiagnostics(
     // Kalman filter internals
     val innovationBaro: Double,        // m - How much baro differs from prediction
-    val innovationAccel: Double,       // m/s² - How much accel differs from prediction
+    val innovationAccel: Double,       // m/s - How much accel differs from prediction
     val kalmanGainBaro: Double,        // 0-1 - How much filter trusts barometer
     val kalmanGainAccel: Double,       // 0-1 - How much filter trusts accelerometer
 
     // Filter outputs
     val filteredAltitude: Double,      // m
     val filteredVerticalSpeed: Double, // m/s
-    val filteredAcceleration: Double,  // m/s²
+    val filteredAcceleration: Double,  // m/s
     val confidence: Double,            // 0-1 - Overall confidence
 
     // Performance metrics
@@ -38,7 +38,7 @@ data class VarioFilterDiagnostics(
 
     // Noise estimates (runtime)
     val estimatedBaroNoise: Double,    // m - Estimated from innovation variance
-    val estimatedAccelNoise: Double,   // m/s² - Estimated from innovation variance
+    val estimatedAccelNoise: Double,   // m/s - Estimated from innovation variance
     val adaptiveSigmaBaro: Double,     // (m/s)^2 variance driving adaptive R
     val adaptiveMeasurementNoise: Double, // m - runtime R_altitude
     val adaptiveProcessNoise: Double,  // process noise Q[2][2]
@@ -78,8 +78,8 @@ class VarioFilterDiagnosticsCollector {
     /**
      * Record barometer update
      */
-    fun recordBaroUpdate(innovation: Double, kalmanGain: Double) {
-        baroUpdateTimes.add(System.currentTimeMillis())
+    fun recordBaroUpdate(innovation: Double, kalmanGain: Double, timestampMillis: Long) {
+        baroUpdateTimes.add(timestampMillis)
         baroInnovations.add(innovation)
         lastBaroInnovation = innovation
         lastKalmanGainBaro = kalmanGain
@@ -93,8 +93,8 @@ class VarioFilterDiagnosticsCollector {
     /**
      * Record IMU update
      */
-    fun recordIMUUpdate(innovation: Double, kalmanGain: Double) {
-        imuUpdateTimes.add(System.currentTimeMillis())
+    fun recordIMUUpdate(innovation: Double, kalmanGain: Double, timestampMillis: Long) {
+        imuUpdateTimes.add(timestampMillis)
         accelInnovations.add(innovation)
         lastAccelInnovation = innovation
         lastKalmanGainAccel = kalmanGain
@@ -185,7 +185,8 @@ class VarioFilterDiagnosticsCollector {
         confidence: Double,
         filterMode: String,
         gpsAccuracy: Double,
-        gpsSatelliteCount: Int
+        gpsSatelliteCount: Int,
+        timestampMillis: Long
     ): VarioFilterDiagnostics {
 
         val baroSampleRate = calculateSampleRate(baroUpdateTimes)
@@ -195,7 +196,7 @@ class VarioFilterDiagnosticsCollector {
         val estimatedAccelNoise = estimateNoise(accelInnovations)
 
         val baroHealthScore = calculateHealthScore(baroInnovations, 0.5)  // Expected 0.5m noise
-        val imuHealthScore = calculateHealthScore(accelInnovations, 0.3)  // Expected 0.3 m/s² noise
+        val imuHealthScore = calculateHealthScore(accelInnovations, 0.3)  // Expected 0.3 m/s noise
         val gpsHealthScore = when {
             gpsSatelliteCount >= 8 && gpsAccuracy < 5.0 -> 1.0
             gpsSatelliteCount >= 6 && gpsAccuracy < 10.0 -> 0.8
@@ -209,9 +210,8 @@ class VarioFilterDiagnosticsCollector {
                          estimatedAccelNoise < 0.5 &&
                          baroInnovations.size >= 20
 
-        val currentTime = System.currentTimeMillis()
         val responseTime = if (baroUpdateTimes.isNotEmpty()) {
-            currentTime - baroUpdateTimes.last()
+            (timestampMillis - baroUpdateTimes.last()).coerceAtLeast(0L)
         } else {
             999L
         }
@@ -239,7 +239,7 @@ class VarioFilterDiagnosticsCollector {
             baroHealthScore = baroHealthScore,
             imuHealthScore = imuHealthScore,
             gpsHealthScore = gpsHealthScore,
-            timestamp = currentTime
+            timestamp = timestampMillis
         )
     }
 
@@ -251,7 +251,7 @@ class VarioFilterDiagnosticsCollector {
             append("Baro: ${calculateSampleRate(baroUpdateTimes).toInt()}Hz, ")
             append("IMU: ${calculateSampleRate(imuUpdateTimes).toInt()}Hz, ")
             append("Baro noise: ${String.format("%.3f", estimateNoise(baroInnovations))}m, ")
-            append("IMU noise: ${String.format("%.3f", estimateNoise(accelInnovations))}m/s²")
+            append("IMU noise: ${String.format("%.3f", estimateNoise(accelInnovations))}m/s")
         }
     }
 }

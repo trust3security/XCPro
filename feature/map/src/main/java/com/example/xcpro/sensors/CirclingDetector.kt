@@ -4,7 +4,7 @@ import kotlin.math.PI
 import kotlin.math.abs
 
 /**
- * Mirrors XCSoar's circling detector heuristics (turn-rate threshold with
+ * Mirrors legacy circling detector heuristics (turn-rate threshold with
  * enter/exit timers) so calculations that depend on circling mode (thermal
  * averages, wind, etc.) can share a single source of truth.
  */

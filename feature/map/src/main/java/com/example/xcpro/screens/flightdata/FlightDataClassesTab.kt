@@ -1,4 +1,4 @@
-﻿package com.example.ui1.screens.flightmgmt
+package com.example.ui1.screens.flightmgmt
 
 import android.util.Log
 import androidx.compose.foundation.layout.Arrangement

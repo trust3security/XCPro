@@ -36,8 +36,8 @@ internal fun buildCompleteFlightData(
     nettoMs: Double = 0.0,
     displayNettoMs: Double = 0.0,
     nettoValid: Boolean = false,
-    xcSoarDisplayVarioMs: Double = 0.0,
-    xcSoarVarioValid: Boolean = false,
+    baselineDisplayVarioMs: Double = 0.0,
+    baselineVarioValid: Boolean = false,
     realIgcVarioMs: Double? = null,
     isCircling: Boolean = false,
     currentThermalValid: Boolean = false,
@@ -56,9 +56,9 @@ internal fun buildCompleteFlightData(
         displayNeedleVario = VerticalSpeedMs(0.0),
         displayNeedleVarioFast = VerticalSpeedMs(0.0),
         audioVario = VerticalSpeedMs(0.0),
-        xcSoarVario = VerticalSpeedMs(0.0),
-        xcSoarDisplayVario = VerticalSpeedMs(xcSoarDisplayVarioMs),
-        xcSoarVarioValid = xcSoarVarioValid,
+        baselineVario = VerticalSpeedMs(0.0),
+        baselineDisplayVario = VerticalSpeedMs(baselineDisplayVarioMs),
+        baselineVarioValid = baselineVarioValid,
         bruttoVario = VerticalSpeedMs(0.0),
         bruttoAverage30s = VerticalSpeedMs(0.0),
         bruttoAverage30sValid = false,
@@ -100,4 +100,3 @@ internal fun buildCompleteFlightData(
         dataQuality = "TEST"
     )
 }
-

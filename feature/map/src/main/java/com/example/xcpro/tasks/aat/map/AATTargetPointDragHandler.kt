@@ -117,7 +117,7 @@ class AATTargetPointDragHandler(
      * Handle drag start
      */
     private fun handleDragStart(startOffset: Offset) {
-        println("🎯 AAT: Starting target point drag at $startOffset")
+        println(" AAT: Starting target point drag at $startOffset")
 
         dragState = DragState(
             isDragging = true,
@@ -169,9 +169,9 @@ class AATTargetPointDragHandler(
     private fun handleDragEnd() {
         if (!dragState.isDragging) return
 
-        println("🎯 AAT: Ending target point drag (distance: ${dragState.totalDragDistance}px)")
+        println(" AAT: Ending target point drag (distance: ${dragState.totalDragDistance}px)")
 
-        // ✅ FIX: Always use last valid position - no clamping
+        //  FIX: Always use last valid position - no clamping
         // If user dragged outside bounds, pin stays at last valid inside position
         val finalPosition = lastValidPosition
 

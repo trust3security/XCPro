@@ -1,4 +1,4 @@
-﻿package com.example.xcpro
+package com.example.xcpro
 
 import android.hardware.SensorManager
 import android.os.SystemClock
@@ -73,8 +73,8 @@ class OrientationDataSource(
     }
 
     init {
-        Log.d(TAG, "ðŸ“¡ OrientationDataSource initializing with UnifiedSensorManager")
-        Log.d(TAG, "ðŸ”§ Sensor availability: ${getSensorInfo()}")
+        Log.d(TAG, " OrientationDataSource initializing with UnifiedSensorManager")
+        Log.d(TAG, " Sensor availability: ${getSensorInfo()}")
     }
 
     override fun updateFromFlightData(flightData: RealTimeFlightData) {
@@ -88,11 +88,11 @@ class OrientationDataSource(
 
     override fun start() {
         if (isStarted) {
-            Log.d(TAG, "âš ï¸ OrientationDataSource already started")
+            Log.d(TAG, " OrientationDataSource already started")
             return
         }
         isStarted = true
-        Log.d(TAG, "â–¶ï¸ Starting OrientationDataSource (Unified)")
+        Log.d(TAG, " Starting OrientationDataSource (Unified)")
 
         sensorJob = scope.launch {
             launch {
@@ -115,15 +115,15 @@ class OrientationDataSource(
 
     override fun stop() {
         if (!isStarted) {
-            Log.d(TAG, "âš ï¸ OrientationDataSource already stopped")
+            Log.d(TAG, " OrientationDataSource already stopped")
             return
         }
         isStarted = false
-        Log.d(TAG, "â¹ï¸ Stopping OrientationDataSource (Unified)")
+        Log.d(TAG, " Stopping OrientationDataSource (Unified)")
         sensorJob?.cancel()
         sensorJob = null
         resetHeadingState()
-        Log.d(TAG, "âœ… OrientationDataSource stopped")
+        Log.d(TAG, " OrientationDataSource stopped")
     }
 
     private fun handleCompassUpdate(compass: CompassData) {
@@ -264,9 +264,9 @@ class OrientationDataSource(
         if (nowWall % 3000 < 100) {
             Log.d(
                 TAG,
-                "ðŸ“Š Orientation update: " +
-                    "track=${orientationData.track}Â°, " +
-                    "magHeading=${orientationData.magneticHeading.toInt()}Â°, " +
+                " Orientation update: " +
+                    "track=${orientationData.track}, " +
+                    "magHeading=${orientationData.magneticHeading.toInt()}, " +
                     "speed=${orientationData.groundSpeed}kt, " +
                     "gpsValid=${orientationData.isGPSValid}, " +
                     "headingValid=${orientationData.hasValidHeading}"

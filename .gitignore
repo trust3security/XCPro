@@ -56,3 +56,4 @@ nul
 /.gradle-user-home/
 .gradle-home/
 /.idea/firebender/
+.gradle_user/

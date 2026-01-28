@@ -44,7 +44,7 @@ object MapTaskIntegration {
         onExitEditMode: () -> Unit,
         modifier: Modifier = Modifier
     ) {
-        // ✅ Task-type guard: Only show for AAT tasks
+        //  Task-type guard: Only show for AAT tasks
         if (!isAATEditMode || taskManager.taskType != TaskType.AAT) {
             return
         }
@@ -53,9 +53,9 @@ object MapTaskIntegration {
             onClick = {
                 onExitEditMode()
                 taskManager.exitAATEditMode()
-                // ✅ Restore camera position (zoom out to overview) - same as double-click exit
+                //  Restore camera position (zoom out to overview) - same as double-click exit
                 cameraManager.restoreAATCameraPosition()
-                Log.d(TAG, "🎯 FAB: Exited AAT edit mode and restored camera zoom")
+                Log.d(TAG, " FAB: Exited AAT edit mode and restored camera zoom")
             },
             containerColor = MaterialTheme.colorScheme.error,
             modifier = modifier

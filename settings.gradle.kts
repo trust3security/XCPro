@@ -23,6 +23,8 @@ rootProject.name = "XCPro"
 include(":app")
 include(":dfcards-library")
 include(":core:common")
+include(":core:geometry")
+include(":core:time")
 include(":core:ui")
 include(":feature:map")
 include(":feature:profile")

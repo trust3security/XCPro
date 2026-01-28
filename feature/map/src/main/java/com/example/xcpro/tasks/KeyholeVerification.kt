@@ -1,4 +1,4 @@
-﻿package com.example.xcpro.tasks
+package com.example.xcpro.tasks
 
 import com.example.xcpro.tasks.racing.turnpoints.*
 import com.example.xcpro.tasks.racing.models.*
@@ -7,7 +7,7 @@ import com.example.xcpro.common.waypoint.SearchWaypoint
 import kotlin.math.*
 
 /**
- * âœ… RACING-ONLY Keyhole Implementation Verification Class (LEGACY CODE REMOVED)
+ *  RACING-ONLY Keyhole Implementation Verification Class (LEGACY CODE REMOVED)
  *
  * This class has been successfully separated from shared TaskWaypoint models
  * and now uses only Racing-specific models to prevent cross-contamination.
@@ -33,7 +33,7 @@ class KeyholeVerification {
         val tp3 = createRacingKeyholeWaypoint("TP3_KEYHOLE", 52.05, 8.3)
         val finish = createRacingWaypoint("FINISH", 52.0, 8.0, RacingWaypointRole.FINISH)
 
-        // âœ… RACING-ONLY: Create proper Racing task structure (completely separated from AAT/DHT)
+        //  RACING-ONLY: Create proper Racing task structure (completely separated from AAT/DHT)
         return RacingTask(
             id = "keyhole1-test",
             name = "keyhole1",
@@ -57,7 +57,7 @@ class KeyholeVerification {
         )
     }
 
-    // âœ… RACING-ONLY: Create Racing-specific waypoints (complete separation from AAT/DHT)
+    //  RACING-ONLY: Create Racing-specific waypoints (complete separation from AAT/DHT)
     private fun createRacingWaypoint(name: String, lat: Double, lon: Double, role: RacingWaypointRole): RacingWaypoint {
         return RacingWaypoint(
             id = name,
@@ -70,7 +70,7 @@ class KeyholeVerification {
         )
     }
 
-    // âœ… RACING-ONLY: Create Racing keyhole waypoints (zero shared code with AAT/DHT)
+    //  RACING-ONLY: Create Racing keyhole waypoints (zero shared code with AAT/DHT)
     private fun createRacingKeyholeWaypoint(name: String, lat: Double, lon: Double): RacingWaypoint {
         return RacingWaypoint(
             id = name,
@@ -99,7 +99,7 @@ class KeyholeVerification {
         var totalCalculatedDistance = 0.0
         var totalDisplayedDistance = 0.0
 
-        // âœ… RACING-ONLY: Test each racing keyhole turnpoint (zero AAT/DHT contamination)
+        //  RACING-ONLY: Test each racing keyhole turnpoint (zero AAT/DHT contamination)
         val turnpoints = task.racingWaypoints.filter { it.role == RacingWaypointRole.TURNPOINT }
 
         for (i in turnpoints.indices) {
@@ -151,9 +151,9 @@ class KeyholeVerification {
 
         // FAI Compliance Check
         report.appendLine("FAI Compliance:")
-        report.appendLine("  Cylinder radius: 500m âœ“")
-        report.appendLine("  Sector radius: 10000m âœ“")
-        report.appendLine("  Sector angle: 90Â° âœ“")
+        report.appendLine("  Cylinder radius: 500m ")
+        report.appendLine("  Sector radius: 10000m ")
+        report.appendLine("  Sector angle: 90 ")
         report.appendLine("  Orientation: ${checkSectorOrientation(task)}")
         report.appendLine()
 
@@ -211,7 +211,7 @@ class KeyholeVerification {
     /**
      * Check sector orientation compliance with FAI rules
      */
-    // âœ… RACING-ONLY: Check racing sector orientation (independent from AAT/DHT)
+    //  RACING-ONLY: Check racing sector orientation (independent from AAT/DHT)
     private fun checkSectorOrientation(task: RacingTask): String {
         val turnpoints = task.racingWaypoints.filter { it.role == RacingWaypointRole.TURNPOINT }
 
@@ -228,7 +228,7 @@ class KeyholeVerification {
             keyholeDisplay.generateVisualGeometry(turnpoint, context)
         }
 
-        return "Correct âœ“"
+        return "Correct "
     }
 
     /**

@@ -1,7 +1,9 @@
 package com.example.xcpro.variometer.layout
 
-import android.content.SharedPreferences
-import androidx.compose.ui.geometry.Offset
+import android.content.Context
+import com.example.xcpro.core.common.geometry.OffsetPx
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
 
 /**
  * Persistence adapter for the variometer overlay layout.
@@ -9,11 +11,12 @@ import androidx.compose.ui.geometry.Offset
  * Keeps compatibility with legacy keys (`variometer_*`) while persisting under
  * the newer "uilevo" namespace.
  */
-class VariometerWidgetRepository(
-    private val prefs: SharedPreferences
-    ) {
+class VariometerWidgetRepository @Inject constructor(
+    @ApplicationContext context: Context
+) {
+    private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    fun load(defaultOffset: Offset, defaultSizePx: Float): VariometerLayout {
+    fun load(defaultOffset: OffsetPx, defaultSizePx: Float): VariometerLayout {
         val offsetX = readFloat(KEY_OFFSET_X)
             ?: readFloat(LEGACY_OFFSET_X)
             ?: defaultOffset.x
@@ -26,14 +29,14 @@ class VariometerWidgetRepository(
         val hasOffset = prefs.contains(KEY_OFFSET_X) && prefs.contains(KEY_OFFSET_Y)
         val hasSize = prefs.contains(KEY_SIZE)
         return VariometerLayout(
-            offset = Offset(offsetX, offsetY),
+            offset = OffsetPx(offsetX, offsetY),
             sizePx = sizePx,
             hasPersistedOffset = hasOffset,
             hasPersistedSize = hasSize
         )
     }
 
-    fun saveOffset(offset: Offset) {
+    fun saveOffset(offset: OffsetPx) {
         prefs.edit()
             .putFloat(KEY_OFFSET_X, offset.x)
             .putFloat(KEY_OFFSET_Y, offset.y)
@@ -50,6 +53,7 @@ class VariometerWidgetRepository(
         if (prefs.contains(key)) prefs.getFloat(key, 0f) else null
 
     private companion object {
+        const val PREFS_NAME = "MapPrefs"
         const val KEY_OFFSET_X = "uilevo_x"
         const val KEY_OFFSET_Y = "uilevo_y"
         const val KEY_SIZE = "uilevo_size"

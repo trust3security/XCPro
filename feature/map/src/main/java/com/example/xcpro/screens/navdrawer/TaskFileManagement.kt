@@ -64,7 +64,7 @@ fun rememberAirspaceFilePicker(
                         airspaceRepository.saveSelectedClasses(selectedClasses.value)
                         loadAndApplyAirspace(context, mapLibreMap, airspaceRepository)
                         onError(null)
-                        Log.d(TAG, "✅ Airspace file added: $fileName")
+                        Log.d(TAG, " Airspace file added: $fileName")
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error copying file: ${e.message}")
@@ -111,7 +111,7 @@ fun rememberWaypointFilePicker(
                             selectedWaypointFiles,
                             waypointCheckedStates.value
                         )
-                        Log.d(TAG, "✅ Waypoint file added and saved: $fileName")
+                        Log.d(TAG, " Waypoint file added and saved: $fileName")
                     } else {
                         onError("File already selected: $fileName")
                         Log.d(TAG, "Duplicate waypoint file ignored: $fileName")

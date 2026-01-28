@@ -1,4 +1,4 @@
-﻿package com.example.xcpro.map.ui
+package com.example.xcpro.map.ui
 
 import android.util.Log
 import androidx.compose.runtime.Composable
@@ -108,7 +108,7 @@ internal fun trackSafeContainerSize(
     onSizeReady: (IntSize) -> Unit
 ) {
     LaunchedEffect(safeContainerSize) {
-        Log.d("MapScreen", "=ƒöì CONTAINER SIZE CHANGED: $safeContainerSize")
+        Log.d("MapScreen", "= CONTAINER SIZE CHANGED: $safeContainerSize")
         if (safeContainerSize.width > 0 && safeContainerSize.height > 0) {
             onSizeReady(safeContainerSize)
         }

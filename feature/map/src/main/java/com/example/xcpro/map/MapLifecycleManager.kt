@@ -40,7 +40,7 @@ class MapLifecycleManager(
             Lifecycle.Event.ON_RESUME -> {
                 mapState.mapView?.onResume()
 
-                // ✅ Restart sensors if needed after sleep mode
+                //  Restart sensors if needed after sleep mode
                 // This ensures GPS and other sensors resume after screen-off
                 val replaySession = igcReplayController.session.value
                 val allowRestart = replaySession.selection == null ||

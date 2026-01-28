@@ -1,10 +1,6 @@
 package com.example.dfcards.dfcards
 
 import android.util.Log
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.dfcards.CardDefinition
@@ -14,6 +10,10 @@ import com.example.dfcards.FlightTemplate
 import com.example.dfcards.FlightTemplates
 import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.common.units.UnitsPreferences
+import com.example.xcpro.core.common.geometry.DensityScale
+import com.example.xcpro.core.common.geometry.IntSizePx
+import com.example.xcpro.core.time.Clock
+import com.example.xcpro.core.time.DefaultClockProvider
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -33,12 +33,13 @@ import java.util.UUID
  * via [CardPreferences], and the UI observes a consistent state regardless of which screen modifies it.
  */
 class FlightDataViewModel(
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val clock: Clock = DefaultClockProvider(),
+    cardsUseCaseOverride: FlightCardsUseCase? = null
 ) : ViewModel() {
 
-    private val repository = CardStateRepository(viewModelScope)
+    private val cardsUseCase = cardsUseCaseOverride ?: FlightCardsUseCase(viewModelScope, clock)
     private var ingest: FlightDataIngest? = null
-    private val derivations = FlightDataDerivations(repository)
 
     private val _cardPreferences = MutableStateFlow<CardPreferences?>(null)
 
@@ -77,15 +78,15 @@ class FlightDataViewModel(
     )
 
     val cardStateFlows: Map<String, StateFlow<CardState>>
-        get() = derivations.cardStateFlows
+        get() = cardsUseCase.cardStateFlows
 
     @Deprecated(
         message = "Use cardStateFlows instead for better performance",
         replaceWith = ReplaceWith("cardStateFlows")
     )
-    val cardStates: StateFlow<List<CardState>> = derivations.legacyCardStates
+    val cardStates: StateFlow<List<CardState>> = cardsUseCase.legacyCardStates
 
-    val selectedCardIds: StateFlow<Set<String>> = derivations.selectedCardIds
+    val selectedCardIds: StateFlow<Set<String>> = cardsUseCase.selectedCardIds
 
     val activeCardIds: StateFlow<List<String>> =
         combine(_profileModeCards, _activeProfileId, _currentFlightMode) { cardsMap, profileId, mode ->
@@ -97,7 +98,7 @@ class FlightDataViewModel(
         )
 
     val activeCards: StateFlow<List<CardState>> =
-        combine(activeCardIds, repository.legacyCardStates) { desiredIds, allStates ->
+        combine(activeCardIds, cardsUseCase.legacyCardStates) { desiredIds, allStates ->
             if (desiredIds.isEmpty()) {
                 emptyList()
             } else {
@@ -125,7 +126,7 @@ class FlightDataViewModel(
         if (_cardPreferences.value === preferences) return
         _cardPreferences.value = preferences
         ingest = FlightDataIngest(preferences, ioDispatcher)
-        derivations.setPreferences(preferences)
+        cardsUseCase.setPreferences(preferences)
         templatesJob?.cancel()
         templatesJob = viewModelScope.launch(ioDispatcher) {
             preferences.getAllTemplates().collect { templates ->
@@ -146,80 +147,80 @@ class FlightDataViewModel(
         setFlightMode(flightMode)
     }
 
-    fun initializeCards(containerSize: IntSize, density: Density) {
-        repository.initializeCards(containerSize, density)
+    fun initializeCards(containerSize: IntSizePx, density: DensityScale) {
+        cardsUseCase.initializeCards(containerSize, density)
     }
 
     suspend fun loadEssentialCardsOnStartup(
-        containerSize: IntSize,
-        density: Density,
+        containerSize: IntSizePx,
+        density: DensityScale,
         flightMode: FlightModeSelection? = null
     ) {
-        repository.loadEssentialCardsOnStartup(containerSize, density, flightMode)
+        cardsUseCase.loadEssentialCardsOnStartup(containerSize, density, flightMode)
     }
 
     fun updateCardState(cardState: CardState) {
-        repository.updateCardState(cardState)
+        cardsUseCase.updateCardState(cardState)
         syncSelectedIdsWithRepository()
     }
 
     fun toggleCardFromLibrary(
         cardDefinition: CardDefinition,
-        containerSize: IntSize,
-        density: Density
+        containerSize: IntSizePx,
+        density: DensityScale
     ) {
-        repository.toggleCardFromLibrary(cardDefinition, containerSize, density)
+        cardsUseCase.toggleCardFromLibrary(cardDefinition, containerSize, density)
         syncSelectedIdsWithRepository()
         persistActiveCards()
     }
 
     suspend fun applyTemplate(
         template: FlightTemplate,
-        containerSize: IntSize,
-        density: Density
+        containerSize: IntSizePx,
+        density: DensityScale
     ) {
-        repository.applyTemplate(template, containerSize, density)
+        cardsUseCase.applyTemplate(template, containerSize, density)
         syncSelectedIdsWithRepository()
         persistTemplateSelection(template.id)
     }
 
     fun updateCardsWithLiveData(liveData: RealTimeFlightData) {
-        repository.updateCardsWithLiveData(liveData)
+        cardsUseCase.updateCardsWithLiveData(liveData)
     }
 
     fun startIndependentClockTimer() {
-        repository.startIndependentClockTimer()
+        cardsUseCase.startIndependentClockTimer()
     }
 
     fun stopIndependentClockTimer() {
-        repository.stopIndependentClockTimer()
+        cardsUseCase.stopIndependentClockTimer()
     }
 
     fun saveCurrentLayoutToTemplate() {
-        repository.saveCurrentLayoutToTemplate()
+        cardsUseCase.saveCurrentLayoutToTemplate()
         persistActiveCards()
     }
 
     fun clearAllCards() {
-        repository.clearAllCards()
+        cardsUseCase.clearAllCards()
         syncSelectedIdsWithRepository()
         persistActiveCards()
     }
 
     fun resumeLiveDataUpdates() {
-        repository.resumeLiveUpdates()
+        cardsUseCase.resumeLiveUpdates()
     }
 
-    fun getAllCardStates(): List<CardState> = repository.getAllCardStates()
+    fun getAllCardStates(): List<CardState> = cardsUseCase.getAllCardStates()
 
-    fun getCardState(cardId: String): CardState? = repository.getCardState(cardId)
+    fun getCardState(cardId: String): CardState? = cardsUseCase.getCardState(cardId)
 
-    fun hasCard(cardId: String): Boolean = repository.hasCard(cardId)
+    fun hasCard(cardId: String): Boolean = cardsUseCase.hasCard(cardId)
 
-    fun getCardCount(): Int = repository.getCardCount()
+    fun getCardCount(): Int = cardsUseCase.getCardCount()
 
     fun updateUnitsPreferences(preferences: UnitsPreferences) {
-        repository.updateUnitsPreferences(preferences)
+        cardsUseCase.updateUnitsPreferences(preferences)
     }
 
     fun setActiveProfile(profileId: ProfileId?) {
@@ -232,7 +233,7 @@ class FlightDataViewModel(
     fun setFlightMode(mode: FlightModeSelection) {
         if (_currentFlightMode.value == mode) return
         _currentFlightMode.value = mode
-        repository.updateFlightMode(mode)
+        cardsUseCase.updateFlightMode(mode)
         syncSelectedIdsWithRepository()
     }
 
@@ -249,7 +250,7 @@ class FlightDataViewModel(
             this[targetProfileId] = existing
         }
         if (FlightVisibility.normalizeProfileId(_activeProfileId.value) == targetProfileId && _currentFlightMode.value == flightMode) {
-            derivations.setSelected(sanitized.toSet())
+            cardsUseCase.setSelected(sanitized.toSet())
         }
         profileStore.ensureVisibilityEntry(targetProfileId)
         persistProfileCards(targetProfileId, flightMode, sanitized)
@@ -322,7 +323,7 @@ class FlightDataViewModel(
         }
         if (_activeProfileId.value == profileId) {
             _activeProfileId.value = null
-            derivations.setSelected(emptySet())
+            cardsUseCase.setSelected(emptySet())
         }
         viewModelScope.launch(ioDispatcher) {
             _cardPreferences.value?.clearProfile(profileId)
@@ -330,7 +331,7 @@ class FlightDataViewModel(
     }
 
     override fun onCleared() {
-        repository.onCleared()
+        cardsUseCase.onCleared()
         templatesJob?.cancel()
         super.onCleared()
     }
@@ -338,8 +339,8 @@ class FlightDataViewModel(
     suspend fun prepareCardsForProfile(
         profileId: ProfileId?,
         flightMode: FlightModeSelection,
-        containerSize: IntSize,
-        density: Density
+        containerSize: IntSizePx,
+        density: DensityScale
     ) {
         Log.d("CARD_VM", "prepareCardsForProfile(profile=$profileId, mode=$flightMode, size=${containerSize.width}x${containerSize.height})")
         setFlightMode(flightMode)
@@ -351,7 +352,7 @@ class FlightDataViewModel(
             applyTemplate(template, containerSize, density)
             setProfileCards(profileId, flightMode, template.cardIds)
         } else {
-            repository.loadEssentialCardsOnStartup(containerSize, density, flightMode)
+            cardsUseCase.loadEssentialCardsOnStartup(containerSize, density, flightMode)
         }
     }
 
@@ -362,7 +363,6 @@ class FlightDataViewModel(
             name = name,
             description = "Custom template",
             cardIds = cardIds,
-            icon = Icons.Default.Star,
             isPreset = false
         )
         val updated = _availableTemplates.value + newTemplate
@@ -418,9 +418,9 @@ class FlightDataViewModel(
         val mode = _currentFlightMode.value
         val desiredIds = _profileModeCards.value[profileId]?.get(mode)
         if (desiredIds != null) {
-            derivations.setSelected(desiredIds.toSet())
+            cardsUseCase.setSelected(desiredIds.toSet())
         } else {
-            val states = derivations.getAllStates()
+            val states = cardsUseCase.getAllStates()
             val ids = states.map { it.id }
             if (ids.isNotEmpty()) {
                 setProfileCards(profileId, mode, ids)
@@ -431,7 +431,7 @@ class FlightDataViewModel(
     private fun persistActiveCards() {
         val profileId = FlightVisibility.normalizeProfileId(_activeProfileId.value)
         val mode = _currentFlightMode.value
-        val ids = derivations.selectedCardIds.value.toList()
+        val ids = cardsUseCase.selectedCardIds.value.toList()
         setProfileCards(profileId, mode, ids)
     }
 

@@ -38,7 +38,7 @@ import com.example.xcpro.map.domain.MapWaypointError
 import com.example.xcpro.map.config.MapFeatureFlags
 import com.example.xcpro.map.replay.RacingReplayLogBuilder
 import com.example.xcpro.orientation.HeadingResolver
-import com.example.xcpro.orientation.SystemOrientationClock
+import com.example.xcpro.orientation.OrientationClock
 import com.example.xcpro.replay.IgcReplayController
 import com.example.xcpro.replay.ReplayEvent
 import com.example.xcpro.replay.SessionState
@@ -49,6 +49,10 @@ import com.example.xcpro.tasks.TaskNavigationController
 import com.example.xcpro.tasks.racing.navigation.RacingAdvanceState
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationEngine
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationStateStore
+import com.example.xcpro.variometer.layout.VariometerLayoutUseCase
+import com.example.xcpro.variometer.layout.VariometerWidgetRepository
+import com.example.xcpro.map.ballast.BallastControllerFactory
+import com.example.xcpro.core.time.FakeClock
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -73,6 +77,11 @@ class MapScreenViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private val context: Context = ApplicationProvider.getApplicationContext()
+    private val testClock = FakeClock(monoMs = 0L, wallMs = 0L)
+    private val orientationClock = object : OrientationClock {
+        override fun nowMonoMs(): Long = testClock.nowMonoMs()
+        override fun nowWallMs(): Long = testClock.nowWallMs()
+    }
     private val taskManager = com.example.xcpro.tasks.TaskManagerCoordinator(context)
     private val taskNavigationController = TaskNavigationController(
         taskManager = taskManager,
@@ -81,12 +90,17 @@ class MapScreenViewModelTest {
         engine = RacingNavigationEngine(),
         featureFlags = TaskFeatureFlags
     )
-    private val cardPreferences = CardPreferences(context)
+    private val cardPreferences = CardPreferences(context, testClock)
     private val mapStyleRepository = MapStyleRepository(context)
+    private val mapStyleUseCase = MapStyleUseCase(mapStyleRepository)
     private val unitsRepository = UnitsRepository(context)
+    private val unitsUseCase = UnitsPreferencesUseCase(unitsRepository)
     private val qnhRepository = FakeQnhRepository()
+    private val qnhUseCase = QnhUseCase(qnhRepository)
     private val calibrateQnhUseCase = Mockito.mock(CalibrateQnhUseCase::class.java)
     private val trailSettingsUseCase = MapTrailSettingsUseCase(MapTrailPreferences(context))
+    private val variometerLayoutUseCase =
+        VariometerLayoutUseCase(VariometerWidgetRepository(context))
     private val varioServiceManager = Mockito.mock(VarioServiceManager::class.java)
     private val unifiedSensorManager = Mockito.mock(UnifiedSensorManager::class.java)
     private val flightStateFlow = MutableStateFlow(FlyingState())
@@ -101,15 +115,18 @@ class MapScreenViewModelTest {
             flightStateSource = flightStateSource
         ),
         settingsRepository = orientationSettingsRepository,
-        clock = SystemOrientationClock()
+        clock = orientationClock
     )
     private val flightDataRepository = FlightDataRepository()
+    private val flightDataUseCase = FlightDataUseCase(flightDataRepository)
     private val windRepository = Mockito.mock(WindSensorFusionRepository::class.java)
+    private lateinit var windStateUseCase: WindStateUseCase
     private val windStateFlow = MutableStateFlow(com.example.xcpro.weather.wind.model.WindState())
     private val replayController = Mockito.mock(IgcReplayController::class.java)
     private val replaySessionFlow = MutableStateFlow(SessionState())
     private val replayEventsFlow = MutableSharedFlow<ReplayEvent>()
     private val gliderRepository = Mockito.mock(GliderRepository::class.java)
+    private lateinit var gliderConfigUseCase: GliderConfigUseCase
     private val gliderConfigFlow = MutableStateFlow(GliderConfig())
     private val gliderModelFlow = MutableStateFlow<GliderModel?>(null)
     private val gpsStatusFlow = MutableStateFlow<GpsStatus>(GpsStatus.Searching)
@@ -128,6 +145,8 @@ class MapScreenViewModelTest {
         rotationStarted = false,
         hasLocationPermissions = false
     )
+    private val ballastControllerFactory =
+        BallastControllerFactory(gliderRepository, mainDispatcherRule.dispatcher)
 
     @After
     fun tearDown() {
@@ -149,6 +168,8 @@ class MapScreenViewModelTest {
         Mockito.`when`(windRepository.windState).thenReturn(windStateFlow)
         Mockito.`when`(gliderRepository.config).thenReturn(gliderConfigFlow)
         Mockito.`when`(gliderRepository.selectedModel).thenReturn(gliderModelFlow)
+        windStateUseCase = WindStateUseCase(windRepository)
+        gliderConfigUseCase = GliderConfigUseCase(gliderRepository)
     }
 
     @Ignore("GliderRepository + TaskManager persistence hangs under Robolectric until injected abstractions are provided")
@@ -176,20 +197,21 @@ class MapScreenViewModelTest {
             taskManager = taskManager,
             taskNavigationController = taskNavigationController,
             cardPreferences = cardPreferences,
-            mapStyleRepository = mapStyleRepository,
-            unitsRepository = unitsRepository,
+            mapStyleUseCase = mapStyleUseCase,
+            unitsUseCase = unitsUseCase,
             waypointLoader = loader,
-            gliderRepository = GliderRepository.getInstance(context),
+            gliderConfigUseCase = gliderConfigUseCase,
             varioServiceManager = varioServiceManager,
-            flightDataRepository = flightDataRepository,
-            windRepository = windRepository,
+            flightDataUseCase = flightDataUseCase,
+            windStateUseCase = windStateUseCase,
             igcReplayController = replayController,
             racingReplayLogBuilder = RacingReplayLogBuilder(),
             orientationManagerFactory = orientationManagerFactory,
-            defaultDispatcher = mainDispatcherRule.dispatcher,
-            qnhRepository = qnhRepository,
+            qnhUseCase = qnhUseCase,
             trailSettingsUseCase = trailSettingsUseCase,
-            calibrateQnhUseCase = calibrateQnhUseCase
+            calibrateQnhUseCase = calibrateQnhUseCase,
+            variometerLayoutUseCase = variometerLayoutUseCase,
+            ballastControllerFactory = ballastControllerFactory
         )
 
         drainMain()
@@ -210,20 +232,21 @@ class MapScreenViewModelTest {
             taskManager = taskManager,
             taskNavigationController = taskNavigationController,
             cardPreferences = cardPreferences,
-            mapStyleRepository = mapStyleRepository,
-            unitsRepository = unitsRepository,
+            mapStyleUseCase = mapStyleUseCase,
+            unitsUseCase = unitsUseCase,
             waypointLoader = loader,
-            gliderRepository = GliderRepository.getInstance(context),
+            gliderConfigUseCase = gliderConfigUseCase,
             varioServiceManager = varioServiceManager,
-            flightDataRepository = flightDataRepository,
-            windRepository = windRepository,
+            flightDataUseCase = flightDataUseCase,
+            windStateUseCase = windStateUseCase,
             igcReplayController = replayController,
             racingReplayLogBuilder = RacingReplayLogBuilder(),
             orientationManagerFactory = orientationManagerFactory,
-            defaultDispatcher = mainDispatcherRule.dispatcher,
-            qnhRepository = qnhRepository,
+            qnhUseCase = qnhUseCase,
             trailSettingsUseCase = trailSettingsUseCase,
-            calibrateQnhUseCase = calibrateQnhUseCase
+            calibrateQnhUseCase = calibrateQnhUseCase,
+            variometerLayoutUseCase = variometerLayoutUseCase,
+            ballastControllerFactory = ballastControllerFactory
         )
 
         drainMain()
@@ -336,20 +359,21 @@ class MapScreenViewModelTest {
             taskManager = localTaskManager,
             taskNavigationController = localTaskNavigationController,
             cardPreferences = cardPreferences,
-            mapStyleRepository = mapStyleRepository,
-            unitsRepository = unitsRepository,
+            mapStyleUseCase = mapStyleUseCase,
+            unitsUseCase = unitsUseCase,
             waypointLoader = waypointLoader,
-            gliderRepository = gliderRepository,
+            gliderConfigUseCase = gliderConfigUseCase,
             varioServiceManager = varioServiceManager,
-            flightDataRepository = flightDataRepository,
-            windRepository = windRepository,
+            flightDataUseCase = flightDataUseCase,
+            windStateUseCase = windStateUseCase,
             igcReplayController = replayController,
             racingReplayLogBuilder = RacingReplayLogBuilder(),
             orientationManagerFactory = orientationManagerFactory,
-            defaultDispatcher = mainDispatcherRule.dispatcher,
-            qnhRepository = qnhRepository,
+            qnhUseCase = qnhUseCase,
             trailSettingsUseCase = trailSettingsUseCase,
-            calibrateQnhUseCase = calibrateQnhUseCase
+            calibrateQnhUseCase = calibrateQnhUseCase,
+            variometerLayoutUseCase = variometerLayoutUseCase,
+            ballastControllerFactory = ballastControllerFactory
         )
     }
 

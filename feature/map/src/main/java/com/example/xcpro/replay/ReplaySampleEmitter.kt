@@ -1,4 +1,4 @@
-﻿package com.example.xcpro.replay
+package com.example.xcpro.replay
 
 import android.util.Log
 import com.example.xcpro.sensors.SensorFusionRepository

@@ -8,7 +8,7 @@ import kotlin.math.roundToInt
  *
  * KISS PRINCIPLE:
  * - Simple map-based caching
- * - 1km grid resolution (0.01° ~= 1.1km at equator)
+ * - 1km grid resolution (0.01 ~= 1.1km at equator)
  * - No persistence (in-memory only for simplicity)
  *
  * PERFORMANCE:
@@ -47,10 +47,10 @@ class ElevationCache {
 
         if (elevation != null) {
             hits++
-            Log.d(TAG, "✅ Cache HIT: ${elevation.toInt()}m at ($lat, $lon) [hit rate: ${getHitRate()}%]")
+            Log.d(TAG, " Cache HIT: ${elevation.toInt()}m at ($lat, $lon) [hit rate: ${getHitRate()}%]")
         } else {
             misses++
-            Log.d(TAG, "❌ Cache MISS at ($lat, $lon) [hit rate: ${getHitRate()}%]")
+            Log.d(TAG, " Cache MISS at ($lat, $lon) [hit rate: ${getHitRate()}%]")
         }
 
         return elevation
@@ -66,17 +66,17 @@ class ElevationCache {
     fun store(lat: Double, lon: Double, elevation: Double) {
         val key = getCacheKey(lat, lon)
         cache[key] = elevation
-        Log.d(TAG, "💾 Cached: ${elevation.toInt()}m at ($lat, $lon) [total: ${cache.size} locations]")
+        Log.d(TAG, " Cached: ${elevation.toInt()}m at ($lat, $lon) [total: ${cache.size} locations]")
     }
 
     /**
      * Generate cache key from coordinates
      *
-     * Uses floor() to snap to GRID_RESOLUTION (0.01°) grid cells
+     * Uses floor() to snap to GRID_RESOLUTION (0.01) grid cells
      * This ensures consistent grid boundaries (no rounding ambiguity at edges)
      *
      * KISS FIX: floor() instead of roundToInt() prevents duplicate API calls
-     * at grid boundaries (e.g., 47.525° always maps to 47.52, not 47.52 or 47.53)
+     * at grid boundaries (e.g., 47.525 always maps to 47.52, not 47.52 or 47.53)
      *
      * Examples:
      * - (47.5234, 13.4567) -> "47.52,13.45"
@@ -97,7 +97,7 @@ class ElevationCache {
         cache.clear()
         hits = 0
         misses = 0
-        Log.d(TAG, "🧹 Cache cleared ($size locations removed)")
+        Log.d(TAG, " Cache cleared ($size locations removed)")
     }
 
     /**

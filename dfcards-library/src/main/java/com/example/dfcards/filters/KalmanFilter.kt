@@ -1,4 +1,4 @@
-﻿package com.example.dfcards.filters
+package com.example.dfcards.filters
 
 import kotlin.math.abs
 import kotlin.math.sqrt
@@ -18,7 +18,6 @@ class BarometricKalmanFilter {
     private var measurementNoise = 2.5 // Increased - more sensor smoothing
     
     private var isInitialized = false
-    private var lastUpdate = 0L
     
     init {
         // Initialize error covariance matrix
@@ -36,14 +35,11 @@ class BarometricKalmanFilter {
      * @return Filtered altitude and vertical speed
      */
     fun update(measuredAltitude: Double, deltaTime: Double, confidence: Double = 1.0): FilteredResult {
-        val currentTime = System.currentTimeMillis()
-        
         if (!isInitialized) {
             // Initialize with first measurement
             stateVector[0] = measuredAltitude
             stateVector[1] = 0.0
             isInitialized = true
-            lastUpdate = currentTime
             return FilteredResult(measuredAltitude, 0.0, 0.5)
         }
         
@@ -97,8 +93,6 @@ class BarometricKalmanFilter {
         
         // Calculate confidence based on innovation and gain
         val confidenceLevel = calculateConfidence(abs(innovation), kalmanGain[0])
-        
-        lastUpdate = currentTime
         
         return FilteredResult(
             altitude = stateVector[0],
@@ -250,14 +244,10 @@ class AdvancedBarometricFilter {
         rawBaroAltitude: Double,
         gpsAltitude: Double? = null,
         gpsAccuracy: Double? = null,
-        timestampMillis: Long? = null
+        timestampMillis: Long
     ): FilteredBarometricData {
 
-        val resolvedTime = if (timestampMillis != null && timestampMillis > 0L) {
-            timestampMillis
-        } else {
-            System.currentTimeMillis()
-        }
+        val resolvedTime = if (timestampMillis > 0L) timestampMillis else lastUpdateTime
         val deltaTime = if (lastUpdateTime > 0L) {
             val deltaMs = resolvedTime - lastUpdateTime
             if (deltaMs <= 0L) 0.1 else deltaMs / 1000.0

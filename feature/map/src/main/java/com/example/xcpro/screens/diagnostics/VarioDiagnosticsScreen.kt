@@ -1,4 +1,4 @@
-﻿package com.example.xcpro.screens.diagnostics
+package com.example.xcpro.screens.diagnostics
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement

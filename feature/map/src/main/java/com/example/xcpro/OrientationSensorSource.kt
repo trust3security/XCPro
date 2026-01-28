@@ -1,4 +1,4 @@
-﻿package com.example.xcpro
+package com.example.xcpro
 
 import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.common.orientation.OrientationSensorData

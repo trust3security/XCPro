@@ -10,7 +10,7 @@ These rules exist to:
 - Make refactors safe
 - Make simulator and replay modes trivial
 
-If code violates this file, it is wrong — even if it “works”.
+If code violates this file, it is wrong -- even if it "works".
 
 ---
 
@@ -21,6 +21,36 @@ If code violates this file, it is wrong — even if it “works”.
 - Architecture beats convenience
 
 ---
+
+## 1A. Enforcement (CI)
+
+The following checks must fail the build when violated:
+- Timebase: no System.currentTimeMillis, SystemClock, Date(), or Instant.now in domain or fusion logic.
+- DI: core pipeline components must be injected, not constructed inside managers.
+- ViewModel purity: no SharedPreferences and no androidx.compose.ui.* types in ViewModels.
+- Compose lifecycle: use collectAsStateWithLifecycle for UI state collection.
+- Vendor strings: no "xcsoar" or "XCSoar" literals in production Kotlin source.
+- Encoding: no non-ASCII characters in production Kotlin source.
+
+---
+
+## 1B. Exception Process
+
+Exceptions require:
+- An issue ID
+- A named owner
+- An expiry date
+- A brief rationale
+
+Exceptions must be listed in `KNOWN_DEVIATIONS.md` and reviewed before expiry.
+
+---
+
+## 1C. Test Gates
+
+Required tests:
+- Determinism: replay the same IGC twice and assert identical outputs.
+- Timebase: unit tests fail if wall time affects replay logic.
 
 ## 2. Package Structure Rules
 
@@ -125,7 +155,7 @@ Allowed:
 - State transformation
 - Intent handling
 - Combining flows
-- Mapping domain → UI models
+- Mapping domain -> UI models
 
 Forbidden:
 - File I/O
@@ -197,7 +227,7 @@ Foreground services:
 Forbidden:
 - Acting as SSOT
 - Holding mutable domain state
-- Becoming a “manager” god object
+- Becoming a "manager" god object
 
 ---
 
@@ -233,7 +263,7 @@ Must be testable without Android:
 - UseCases
 - ViewModels
 
-No “hard to test” exceptions.
+No "hard to test" exceptions.
 
 ---
 

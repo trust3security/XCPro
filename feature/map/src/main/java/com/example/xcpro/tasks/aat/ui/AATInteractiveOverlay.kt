@@ -71,7 +71,7 @@ fun AATInteractiveOverlay(
         aatWaypoints = aatWaypoints,
         callbacks = AATInteractionCallbacks(
             onAreaTapped = { index, waypoint ->
-                println("🎯 AAT: Area $index tapped (${waypoint.title})")
+                println(" AAT: Area $index tapped (${waypoint.title})")
             },
             onEditModeEntered = { index, waypoint ->
                 callbacks.onEditModeChanged(true, index)
@@ -155,12 +155,12 @@ fun AATInteractiveOverlay(
                     if (updatedWaypoint != null) {
                         val index = editSession.focusedAreaIndex
                         callbacks.onTargetPointUpdated(index, updatedWaypoint.targetPoint)
-                        println("💾 AAT: Saved changes for waypoint ${updatedWaypoint.title}")
+                        println(" AAT: Saved changes for waypoint ${updatedWaypoint.title}")
                     }
                 },
                 onDiscardChanges = {
                     interactionHandler.discardEditChanges()
-                    println("↩️ AAT: Discarded changes")
+                    println(" AAT: Discarded changes")
                 },
                 onResetToCenter = {
                     val waypoint = editSession.focusedWaypoint
@@ -168,7 +168,7 @@ fun AATInteractiveOverlay(
                         val centerPoint = AATLatLng(waypoint.lat, waypoint.lon)
                         interactionHandler.updateTargetPoint(centerPoint)
                         callbacks.onTargetPointUpdated(editSession.focusedAreaIndex, centerPoint)
-                        println("🎯 AAT: Reset target point to center")
+                        println(" AAT: Reset target point to center")
                     }
                 },
                 onExitEditMode = {

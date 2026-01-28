@@ -2,29 +2,24 @@ package com.example.xcpro.map
 
 import android.content.Context
 import android.util.Log
-import androidx.compose.ui.geometry.Offset
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.dfcards.CardPreferences
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.MapOrientationManagerFactory
-import com.example.xcpro.common.di.DefaultDispatcher
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.flow.inVm
+import com.example.xcpro.core.common.geometry.OffsetPx
 import com.example.xcpro.common.units.UnitsPreferences
-import com.example.xcpro.common.units.UnitsRepository
 import com.example.xcpro.common.waypoint.WaypointLoader
-import com.example.xcpro.flightdata.FlightDataRepository
-import com.example.xcpro.glider.GliderRepository
 import com.example.xcpro.vario.VarioServiceManager
-import com.example.xcpro.weather.wind.data.WindSensorFusionRepository
 import com.example.xcpro.weather.wind.model.WindState
 import com.example.xcpro.map.replay.RacingReplayLogBuilder
 import com.example.xcpro.replay.IgcReplayController
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.replay.SessionStatus
 import com.example.xcpro.map.ballast.BallastCommand
-import com.example.xcpro.map.ballast.BallastController
+import com.example.xcpro.map.ballast.BallastControllerFactory
 import com.example.xcpro.map.ballast.BallastUiState
 import com.example.xcpro.map.config.MapFeatureFlags
 import com.example.xcpro.map.domain.MapWaypointError
@@ -34,15 +29,14 @@ import com.example.xcpro.map.trail.domain.TrailProcessor
 import com.example.xcpro.map.trail.domain.TrailUpdateResult
 import com.example.xcpro.qnh.CalibrateQnhUseCase
 import com.example.xcpro.qnh.QnhCalibrationFailureReason
-import com.example.xcpro.qnh.QnhRepository
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.tasks.TaskNavigationController
 import com.example.xcpro.variometer.layout.VariometerUiState
+import com.example.xcpro.variometer.layout.VariometerLayoutUseCase
 import com.example.xcpro.sensors.GPSData
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -68,32 +62,29 @@ class MapScreenViewModel @Inject constructor(
     val taskManager: TaskManagerCoordinator,
     private val taskNavigationController: TaskNavigationController,
     val cardPreferences: CardPreferences,
-    private val mapStyleRepository: MapStyleRepository,
-    private val unitsRepository: UnitsRepository,
+    private val mapStyleUseCase: MapStyleUseCase,
+    private val unitsUseCase: UnitsPreferencesUseCase,
     private val waypointLoader: WaypointLoader,
-    private val gliderRepository: GliderRepository,
+    private val gliderConfigUseCase: GliderConfigUseCase,
     val varioServiceManager: VarioServiceManager,
-    private val flightDataRepository: FlightDataRepository,
-    private val windRepository: WindSensorFusionRepository,
+    private val flightDataUseCase: FlightDataUseCase,
+    private val windStateUseCase: WindStateUseCase,
     val igcReplayController: IgcReplayController,
     private val racingReplayLogBuilder: RacingReplayLogBuilder,
     private val orientationManagerFactory: MapOrientationManagerFactory,
-    @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
-    private val qnhRepository: QnhRepository,
+    private val qnhUseCase: QnhUseCase,
     private val trailSettingsUseCase: MapTrailSettingsUseCase,
-    private val calibrateQnhUseCase: CalibrateQnhUseCase
+    private val calibrateQnhUseCase: CalibrateQnhUseCase,
+    private val variometerLayoutUseCase: VariometerLayoutUseCase,
+    private val ballastControllerFactory: BallastControllerFactory
 ) : ViewModel() {
 
-    private val initialStyleName = mapStyleRepository.initialStyle()
+    private val initialStyleName = mapStyleUseCase.initialStyle()
     private val mapStateStore: MapStateStore = MapStateStore(initialStyleName)
     val mapState: MapStateReader = mapStateStore
     val mapStateActions: MapStateActions = MapStateActionsDelegate(mapStateStore)
 
-    private val ballastController = BallastController(
-        repository = gliderRepository,
-        scope = viewModelScope,
-        dispatcher = defaultDispatcher
-    )
+    private val ballastController = ballastControllerFactory.create(viewModelScope)
 
     val flightDataManager: FlightDataManager =
         FlightDataManager(appContext, cardPreferences, viewModelScope)
@@ -117,8 +108,7 @@ class MapScreenViewModel @Inject constructor(
             initialValue = WindArrowUiState()
         )
     val ballastUiState: StateFlow<BallastUiState> = ballastController.state
-    val sharedFlightDataRepository: FlightDataRepository = flightDataRepository
-    val windState: StateFlow<WindState> = windRepository.windState
+    val windState: StateFlow<WindState> = windStateUseCase.windState
     val replaySessionState: StateFlow<SessionState> = igcReplayController.session
     val showVarioDemoFab: Boolean = MapFeatureFlags.showVarioDemoFab
     val showRacingReplayFab: Boolean = MapFeatureFlags.showRacingReplayFab
@@ -141,16 +131,14 @@ class MapScreenViewModel @Inject constructor(
                 initialValue = replaySessionState.value.selection == null ||
                     replaySessionState.value.status == SessionStatus.IDLE
             )
-    // AI-NOTE: Map location is derived from FlightDataRepository (SSOT) so the ViewModel does not
+    // AI-NOTE: Map location is derived from FlightDataUseCase (SSOT) so the ViewModel does not
     // read sensor flows directly and replay/live source gating is honored by the repository.
     val mapLocation: StateFlow<GPSData?> =
-        flightDataRepository.flightData
+        flightDataUseCase.flightData
             .map { it?.gps }
             .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    private val sharedPrefs = appContext.getSharedPreferences("MapPrefs", Context.MODE_PRIVATE)
-    private val variometerLayoutController = VariometerLayoutController(sharedPrefs)
-    val variometerUiState: StateFlow<VariometerUiState> = variometerLayoutController.state
+    val variometerUiState: StateFlow<VariometerUiState> = variometerLayoutUseCase.state
 
     private val _uiState = MutableStateFlow(MapUiState())
     val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
@@ -169,9 +157,9 @@ class MapScreenViewModel @Inject constructor(
 
     private val observers = MapScreenObservers(
         scope = viewModelScope,
-        flightDataRepository = flightDataRepository,
-        windRepository = windRepository,
-        flightStateSource = varioServiceManager.flightStateSource,
+        flightDataFlow = flightDataUseCase.flightData,
+        windStateFlow = windStateUseCase.windState,
+        flightStateFlow = varioServiceManager.flightStateSource.flightState,
         flightDataManager = flightDataManager,
         mapStateStore = mapStateStore,
         liveDataReady = _liveDataReady,
@@ -185,7 +173,7 @@ class MapScreenViewModel @Inject constructor(
     private val replayCoordinator = MapScreenReplayCoordinator(
         taskManager = taskManager,
         taskNavigationController = taskNavigationController,
-        flightDataRepository = flightDataRepository,
+        flightDataFlow = flightDataUseCase.flightData,
         igcReplayController = igcReplayController,
         racingReplayLogBuilder = racingReplayLogBuilder,
         mapStateStore = mapStateStore,
@@ -210,7 +198,7 @@ class MapScreenViewModel @Inject constructor(
 
     private val _isAATEditMode = MutableStateFlow(false)
     val isAATEditMode: StateFlow<Boolean> = _isAATEditMode.asStateFlow()
-    private val unitsState = unitsRepository.unitsFlow.inVm(
+    private val unitsState = unitsUseCase.unitsFlow.inVm(
         scope = viewModelScope,
         initial = UnitsPreferences()
     )
@@ -289,7 +277,7 @@ class MapScreenViewModel @Inject constructor(
     }
 
     private fun observeGliderConfig() {
-        gliderRepository.config
+        gliderConfigUseCase.config
             .onEach { config ->
                 _uiState.update { it.copy(hideBallastPill = config.hideBallastPill) }
             }
@@ -297,7 +285,7 @@ class MapScreenViewModel @Inject constructor(
     }
 
     private fun observeQnhCalibration() {
-        qnhRepository.calibrationState
+        qnhUseCase.calibrationState
             .onEach { state ->
                 _uiState.update { it.copy(qnhCalibrationState = state) }
             }
@@ -350,7 +338,7 @@ class MapScreenViewModel @Inject constructor(
         minSizePx: Float,
         maxSizePx: Float
     ) {
-        variometerLayoutController.ensureLayout(
+        variometerLayoutUseCase.ensureLayout(
             screenWidthPx = screenWidthPx,
             screenHeightPx = screenHeightPx,
             defaultSizePx = defaultSizePx,
@@ -360,11 +348,11 @@ class MapScreenViewModel @Inject constructor(
     }
 
     fun onVariometerOffsetCommitted(
-        offset: Offset,
+        offset: OffsetPx,
         screenWidthPx: Float,
         screenHeightPx: Float
     ) {
-        variometerLayoutController.onOffsetCommitted(offset, screenWidthPx, screenHeightPx)
+        variometerLayoutUseCase.onOffsetCommitted(offset, screenWidthPx, screenHeightPx)
     }
 
     fun onVariometerSizeCommitted(
@@ -374,7 +362,7 @@ class MapScreenViewModel @Inject constructor(
         minSizePx: Float,
         maxSizePx: Float
     ) {
-        variometerLayoutController.onSizeCommitted(
+        variometerLayoutUseCase.onSizeCommitted(
             sizePx = sizePx,
             screenWidthPx = screenWidthPx,
             screenHeightPx = screenHeightPx,
@@ -410,7 +398,7 @@ class MapScreenViewModel @Inject constructor(
 
     fun onSetManualQnh(hpa: Double) {
         viewModelScope.launch {
-            qnhRepository.setManualQnh(hpa)
+            qnhUseCase.setManualQnh(hpa)
             val label = String.format(Locale.US, "%.1f", hpa)
             _uiEffects.emit(MapUiEffect.ShowToast("QNH set to $label hPa"))
         }

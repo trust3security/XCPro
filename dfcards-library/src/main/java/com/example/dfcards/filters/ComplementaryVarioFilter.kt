@@ -35,10 +35,10 @@ class ComplementaryVarioFilter(
     private var baroVerticalSpeed = 0.0       // m/s from barometer differentiation
     private var accelVerticalSpeed = 0.0      // m/s from accelerometer integration
     private var lastBaroAltitude = 0.0        // m
-    private var lastUpdateTime = 0L           // ms
+    private var isInitialized = false
 
     // High-pass filter state for accelerometer (remove DC bias)
-    private var accelBias = 0.0               // m/s²
+    private var accelBias = 0.0               // m/s
     private val BIAS_TIME_CONSTANT = 5.0      // seconds
 
     // Smoothing for barometer vertical speed
@@ -50,7 +50,7 @@ class ComplementaryVarioFilter(
      * Update filter with new sensor readings
      *
      * @param baroAltitude Current barometric altitude (m)
-     * @param verticalAccel Vertical acceleration from IMU (m/s²)
+     * @param verticalAccel Vertical acceleration from IMU (m/s)
      * @param deltaTime Time since last update (s)
      * @return Fused vertical speed (m/s)
      */
@@ -60,12 +60,10 @@ class ComplementaryVarioFilter(
         deltaTime: Double
     ): ComplementaryVarioResult {
 
-        val currentTime = System.currentTimeMillis()
-
         // Initialize on first call
-        if (lastUpdateTime == 0L) {
+        if (!isInitialized) {
             lastBaroAltitude = baroAltitude
-            lastUpdateTime = currentTime
+            isInitialized = true
             accelBias = verticalAccel
             lastBaroVSpeed = 0.0
             return ComplementaryVarioResult(0.0, 0.0, 0.0)
@@ -80,9 +78,9 @@ class ComplementaryVarioFilter(
             )
         }
 
-        // ═══════════════════════════════════════════════════
+        // 
         // BAROMETER PATH (Low-pass filter)
-        // ═══════════════════════════════════════════════════
+        // 
 
         // Differentiate barometer altitude to get vertical speed
         val rawBaroVSpeed = (baroAltitude - lastBaroAltitude) / deltaTime
@@ -95,9 +93,9 @@ class ComplementaryVarioFilter(
         lastBaroVSpeed = baroVerticalSpeed
         baroVarianceTracker.add(baroVerticalSpeed)
 
-        // ═══════════════════════════════════════════════════
+        // 
         // ACCELEROMETER PATH (High-pass filter)
-        // ═══════════════════════════════════════════════════
+        // 
 
         // Update accelerometer bias estimate (slow drift correction)
         val biasAlpha = deltaTime / BIAS_TIME_CONSTANT
@@ -114,9 +112,9 @@ class ComplementaryVarioFilter(
         val accelHPF = 0.98  // High-pass coefficient (close to 1.0 = more drift allowed)
         accelVerticalSpeed = accelHPF * (accelVerticalSpeed + accelDeltaV)
 
-        // ═══════════════════════════════════════════════════
+        // 
         // COMPLEMENTARY FUSION
-        // ═══════════════════════════════════════════════════
+        // 
 
         val sigma2Baro = baroVarianceTracker.variance()
         val tauEff = (config.tauBaseSeconds / (1.0 + sqrt(sigma2Baro)))
@@ -131,7 +129,6 @@ class ComplementaryVarioFilter(
         val deadband = 0.02  // m/s (4 fpm - same as Kalman filter)
         val finalVerticalSpeed = if (abs(fusedVerticalSpeed) < deadband) 0.0 else fusedVerticalSpeed
 
-        lastUpdateTime = currentTime
         lastFusedVerticalSpeed = finalVerticalSpeed
 
         return ComplementaryVarioResult(
@@ -148,7 +145,7 @@ class ComplementaryVarioFilter(
         baroVerticalSpeed = 0.0
         accelVerticalSpeed = 0.0
         lastBaroAltitude = 0.0
-        lastUpdateTime = 0L
+        isInitialized = false
         accelBias = 0.0
         lastBaroVSpeed = 0.0
         lastFusedVerticalSpeed = 0.0
@@ -170,7 +167,7 @@ class ComplementaryVarioFilter(
         return "Comp: V/S=${String.format("%.2f", vSpeed)}m/s, " +
                "Baro=${String.format("%.2f", baroVerticalSpeed)}m/s, " +
                "Accel=${String.format("%.2f", accelVerticalSpeed)}m/s, " +
-               "Bias=${String.format("%.3f", accelBias)}m/s²"
+               "Bias=${String.format("%.3f", accelBias)}m/s"
     }
 }
 

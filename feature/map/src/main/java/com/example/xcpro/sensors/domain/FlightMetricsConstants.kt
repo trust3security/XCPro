@@ -5,6 +5,7 @@ internal object FlightMetricsConstants {
     const val AVERAGE_WINDOW_SECONDS = 30
     const val NETTO_DISPLAY_WINDOW_MS = 5_000L
     const val DISPLAY_VAR_CLAMP = 7.0
+    const val NEEDLE_VAR_CLAMP = 5.0
     const val DISPLAY_SMOOTH_TIME_S = 0.4
     const val DISPLAY_DECAY_FACTOR = 0.9
     const val NEEDLE_T95_SECONDS = 0.6

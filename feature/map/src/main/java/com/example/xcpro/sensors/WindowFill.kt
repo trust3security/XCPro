@@ -5,7 +5,7 @@ package com.example.xcpro.sensors
  *
  * Seeds the window when we have no previous timestamp or the clock moved backwards.
  * Otherwise, writes the current sample once for every rounded elapsed second.
- * Treat large forward jumps as time warps and reset like XCSoar.
+ * Treat large forward jumps as time warps and reset the window.
  *
  * @return the latest timestamp that was written (or currentTime when seeded)
  */

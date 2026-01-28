@@ -37,7 +37,7 @@ fun ProfileSection(
     drawerState: DrawerState,
     scope: CoroutineScope
 ) {
-    val uiState by profileViewModel.uiState.collectAsState()
+    val uiState by profileViewModel.uiState.collectAsStateWithLifecycle()
     val activeProfile = uiState.activeProfile
     val profileTitle = activeProfile?.let { "${it.name} (${it.aircraftType.displayName})" } ?: "No Profile Selected"
 
@@ -190,10 +190,10 @@ fun TaskSection(
             icon = Icons.Outlined.Add,
             indentLevel = 1,
             onClick = {
-                android.util.Log.d("TaskSection", "🎯 Add Task clicked!")
+                android.util.Log.d("TaskSection", " Add Task clicked!")
                 scope.launch {
                     drawerState.close()
-                    android.util.Log.d("TaskSection", "🎯 Calling onItemSelected with 'add_task'")
+                    android.util.Log.d("TaskSection", " Calling onItemSelected with 'add_task'")
                     onItemSelected("add_task")
                 }
             }

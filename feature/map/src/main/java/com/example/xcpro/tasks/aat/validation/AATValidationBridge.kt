@@ -161,7 +161,7 @@ class AATValidationBridge {
                     startWaypoint?.lon ?: 0.0
                 ),
                 type = AATStartType.LINE,
-                // ✅ SSOT FIX: Use authority radius instead of removed gateWidth property
+                //  SSOT FIX: Use authority radius instead of removed gateWidth property
                 lineLength = startWaypoint?.getAuthorityRadius()?.let { it * 1000.0 } ?: 5000.0 // Convert km to m
             ),
             assignedAreas = assignedAreas,
@@ -171,7 +171,7 @@ class AATValidationBridge {
                     finishWaypoint?.lon ?: 0.0
                 ),
                 type = AATFinishType.CIRCLE,
-                // ✅ SSOT FIX: Use authority radius instead of removed gateWidth property
+                //  SSOT FIX: Use authority radius instead of removed gateWidth property
                 radius = finishWaypoint?.getAuthorityRadius()?.let { (it / 2.0) * 1000.0 } ?: 3000.0 // Convert km to m
             )
         )

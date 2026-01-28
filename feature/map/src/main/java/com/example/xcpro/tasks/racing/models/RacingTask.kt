@@ -65,7 +65,7 @@ data class RacingTask(
     }
 
     /**
-     * ✅ COMPATIBILITY: Get all waypoints as RacingWaypoint objects for legacy verification code
+     * COMPATIBILITY: Get all waypoints as RacingWaypoint objects for legacy verification code
      * This enables complete separation while maintaining backward compatibility
      */
     val racingWaypoints: List<RacingWaypoint> get() {
@@ -129,7 +129,7 @@ data class RacingTask(
     }
 
     /**
-     * ✅ LEGACY COMPATIBILITY: Support for isComplete property
+     * LEGACY COMPATIBILITY: Support for isComplete property
      */
     val isComplete: Boolean get() = turnpoints.isNotEmpty()
 
@@ -239,7 +239,7 @@ data class RacingTurnpoint(
                 require(cylinderRadius != null && cylinderRadius > 0) { "Cylinder turnpoint requires positive radius" }
             }
             RacingTurnPointType.FAI_QUADRANT -> {
-                // FAI quadrant uses a finite sector radius (XCSoar default 10km)
+                // FAI quadrant uses a finite sector radius (default 10km)
                 // No cylinder radius requirement
             }
             RacingTurnPointType.KEYHOLE -> {
@@ -307,7 +307,7 @@ data class RacingFinishPoint(
 enum class RacingStartType {
     START_LINE,         // Start line perpendicular to first leg
     START_CYLINDER,     // Start cylinder around start point
-    FAI_START_SECTOR    // FAI 90° start sector (D-shaped) facing away from first leg
+    FAI_START_SECTOR    // FAI 90 start sector (D-shaped) facing away from first leg
 }
 
 /**

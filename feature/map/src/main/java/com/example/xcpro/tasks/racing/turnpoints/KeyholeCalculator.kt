@@ -10,7 +10,7 @@ import kotlin.math.*
  * Configurable Keyhole specification:
  * - Outer radius: user sets via gateWidth (sector outer radius)
  * - Inner radius: user sets via keyholeInnerRadius (cylinder radius)
- * - Angle: user sets via keyholeAngle (sector angle, default 90°)
+ * - Angle: user sets via keyholeAngle (sector angle, default 90)
  * - For racing optimization, evaluate both parts to find optimal touch point
  * - Much more flexible than fixed FAI implementation
  */
@@ -24,7 +24,7 @@ class KeyholeCalculator : TurnPointCalculator {
         val previousWaypoint = context.previousWaypoint
         val nextWaypoint = context.nextWaypoint ?: return Pair(waypoint.lat, waypoint.lon)
         
-        // ✅ CONFIGURABLE: Use new flexible keyhole parameters
+        //  CONFIGURABLE: Use new flexible keyhole parameters
         val cylinderRadiusKm = waypoint.keyholeInnerRadius // Inner cylinder radius
         val sectorRadiusKm = waypoint.gateWidth // Outer sector radius
         // Clamp tiny floating error (89.9999...) to a clean degree value
@@ -32,10 +32,10 @@ class KeyholeCalculator : TurnPointCalculator {
             if (abs(angle - 90.0) < 1e-3) 90.0 else angle
         }
 
-        println("🔑 CONFIGURABLE KEYHOLE:")
+        println(" CONFIGURABLE KEYHOLE:")
         println("   Inner radius: ${cylinderRadiusKm}km (cylinder)")
         println("   Outer radius: ${sectorRadiusKm}km (sector)")
-        println("   Angle: ${sectorAngleDegrees}° (was fixed 90°)")
+        println("   Angle: ${sectorAngleDegrees} (was fixed 90)")
         
         // Calculate optimal touch point for cylinder part
         val optimalCylinder = calculateOptimalCylinderTouchPoint(waypoint, previousWaypoint, nextWaypoint, cylinderRadiusKm)
@@ -48,10 +48,10 @@ class KeyholeCalculator : TurnPointCalculator {
         val sectorDistance = calculateTotalDistance(optimalSector, previousWaypoint, nextWaypoint)
         
         return if (cylinderDistance <= sectorDistance) {
-            println("🔑 KEYHOLE: Using cylinder touch point (${String.format("%.2f", cylinderDistance)}km)")
+            println(" KEYHOLE: Using cylinder touch point (${String.format("%.2f", cylinderDistance)}km)")
             optimalCylinder
         } else {
-            println("🔑 KEYHOLE: Using sector touch point (${String.format("%.2f", sectorDistance)}km)")  
+            println(" KEYHOLE: Using sector touch point (${String.format("%.2f", sectorDistance)}km)")  
             optimalSector
         }
     }
@@ -156,10 +156,10 @@ class KeyholeCalculator : TurnPointCalculator {
         val endAngle = (sectorBisector + sectorSpan) % 360.0
         
         // Debug logging for configurable sector
-        println("🔑 CONFIGURABLE SECTOR:")
-        println("   Angle: ${sectorAngleDegrees}° (±${sectorSpan}° from bisector)")
-        println("   Start: ${startAngle.toInt()}°, End: ${endAngle.toInt()}°")
-        println("   Bisector: ${sectorBisector.toInt()}°")
+        println(" CONFIGURABLE SECTOR:")
+        println("   Angle: ${sectorAngleDegrees} (${sectorSpan} from bisector)")
+        println("   Start: ${startAngle.toInt()}, End: ${endAngle.toInt()}")
+        println("   Bisector: ${sectorBisector.toInt()}")
 
         // Test 21 points along sector edge (handle wrap-around correctly)
         val steps = 20

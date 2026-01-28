@@ -1,4 +1,4 @@
-﻿package com.example.xcpro.tasks.racing
+package com.example.xcpro.tasks.racing
 
 import com.example.xcpro.common.waypoint.SearchWaypoint
 import com.example.xcpro.tasks.racing.models.RacingWaypoint
@@ -20,7 +20,7 @@ class RacingWaypointManager {
      */
     fun addWaypoint(currentTask: SimpleRacingTask, searchWaypoint: SearchWaypoint): SimpleRacingTask {
         val currentWaypoints = currentTask.waypoints.toMutableList()
-        println("ðŸ RACING TASK: Adding waypoint '${searchWaypoint.title}', current size: ${currentWaypoints.size}")
+        println(" RACING TASK: Adding waypoint '${searchWaypoint.title}', current size: ${currentWaypoints.size}")
 
         // Determine the role for the new waypoint (will be TURNPOINT initially)
         val newRole = RacingWaypointRole.TURNPOINT
@@ -35,7 +35,7 @@ class RacingWaypointManager {
             turnPointType = RacingTurnPointType.TURN_POINT_CYLINDER
         )
 
-        println("ðŸš¨ DEBUG: Created waypoint '${newWaypoint.title}' with role=${newWaypoint.role}, gateWidth=${newWaypoint.gateWidth}km")
+        println(" DEBUG: Created waypoint '${newWaypoint.title}' with role=${newWaypoint.role}, gateWidth=${newWaypoint.gateWidth}km")
 
         // For racing tasks, add waypoints in order (at the end)
         currentWaypoints.add(newWaypoint)
@@ -50,7 +50,7 @@ class RacingWaypointManager {
 
             // If the role changed, recreate the waypoint with correct defaults
             if (wp.role != updatedRole) {
-                println("ðŸš¨ DEBUG: Role change for '${wp.title}': ${wp.role} â†’ ${updatedRole}, old gateWidth=${wp.gateWidth}km")
+                println(" DEBUG: Role change for '${wp.title}': ${wp.role}  ${updatedRole}, old gateWidth=${wp.gateWidth}km")
 
                 currentWaypoints[index] = RacingWaypoint.createWithStandardizedDefaults(
                     id = wp.id,
@@ -68,11 +68,11 @@ class RacingWaypointManager {
                     faiQuadrantOuterRadius = wp.faiQuadrantOuterRadius
                 )
 
-                println("ðŸš¨ DEBUG: After role change '${currentWaypoints[index].title}': role=${currentWaypoints[index].role}, gateWidth=${currentWaypoints[index].gateWidth}km")
+                println(" DEBUG: After role change '${currentWaypoints[index].title}': role=${currentWaypoints[index].role}, gateWidth=${currentWaypoints[index].gateWidth}km")
             }
         }
 
-        println("ðŸ RACING TASK: Added waypoint '${searchWaypoint.title}', new size: ${currentWaypoints.size}")
+        println(" RACING TASK: Added waypoint '${searchWaypoint.title}', new size: ${currentWaypoints.size}")
         return currentTask.copy(waypoints = currentWaypoints)
     }
 
@@ -81,7 +81,7 @@ class RacingWaypointManager {
      */
     fun removeWaypoint(currentTask: SimpleRacingTask, index: Int): SimpleRacingTask {
         val currentWaypoints = currentTask.waypoints.toMutableList()
-        println("ðŸ RACING TASK: Removing waypoint at index $index, current size: ${currentWaypoints.size}")
+        println(" RACING TASK: Removing waypoint at index $index, current size: ${currentWaypoints.size}")
 
         if (index in currentWaypoints.indices) {
             val removedWaypoint = currentWaypoints[index]
@@ -99,10 +99,10 @@ class RacingWaypointManager {
                 )
             }
 
-            println("ðŸ RACING TASK: Removed waypoint '${removedWaypoint.title}', new size: ${currentWaypoints.size}")
+            println(" RACING TASK: Removed waypoint '${removedWaypoint.title}', new size: ${currentWaypoints.size}")
             return currentTask.copy(waypoints = currentWaypoints)
         } else {
-            println("ðŸ RACING TASK: Cannot remove waypoint - invalid index ($index not in range 0..${currentWaypoints.size-1})")
+            println(" RACING TASK: Cannot remove waypoint - invalid index ($index not in range 0..${currentWaypoints.size-1})")
             return currentTask
         }
     }
@@ -130,14 +130,14 @@ class RacingWaypointManager {
                 RacingWaypointRole.TURNPOINT -> waypoint.turnPointType.displayName
             }
 
-            // ðŸš¨ DEBUG: Track waypoint update process
-            println("ðŸš¨ STATE DEBUG: BEFORE UPDATE - waypoint[$index] startPointType = ${waypoint.startPointType}")
-            println("ðŸš¨ STATE DEBUG: UPDATE REQUEST - startType parameter = $startType")
+            //  DEBUG: Track waypoint update process
+            println(" STATE DEBUG: BEFORE UPDATE - waypoint[$index] startPointType = ${waypoint.startPointType}")
+            println(" STATE DEBUG: UPDATE REQUEST - startType parameter = $startType")
 
             // Apply type-specific defaults when switching turnpoint types
-            println("ðŸ” KEYHOLE DEBUG: turnType=$turnType, waypoint.turnPointType=${waypoint.turnPointType}")
-            println("ðŸ” KEYHOLE DEBUG: gateWidth parameter=$gateWidth")
-            println("ðŸ” KEYHOLE DEBUG: type changing? ${turnType != null && turnType != waypoint.turnPointType}")
+            println(" KEYHOLE DEBUG: turnType=$turnType, waypoint.turnPointType=${waypoint.turnPointType}")
+            println(" KEYHOLE DEBUG: gateWidth parameter=$gateWidth")
+            println(" KEYHOLE DEBUG: type changing? ${turnType != null && turnType != waypoint.turnPointType}")
 
             val finalGateWidth = gateWidth ?: run {
                 // If turnpoint type is changing and no gateWidth provided, use type-specific defaults
@@ -146,14 +146,14 @@ class RacingWaypointManager {
                         RacingTurnPointType.KEYHOLE -> 10.0  // 10km keyhole outer radius default
                         RacingTurnPointType.TURN_POINT_CYLINDER, RacingTurnPointType.FAI_QUADRANT -> 0.5  // 0.5km default
                     }
-                    println("ðŸ” KEYHOLE DEBUG: Applying type-specific default: $defaultValue")
+                    println(" KEYHOLE DEBUG: Applying type-specific default: $defaultValue")
                     defaultValue
                 } else {
-                    println("ðŸ” KEYHOLE DEBUG: Keeping existing gateWidth: ${waypoint.gateWidth}")
+                    println(" KEYHOLE DEBUG: Keeping existing gateWidth: ${waypoint.gateWidth}")
                     waypoint.gateWidth  // Keep existing value if not changing type
                 }
             }
-            println("ðŸ” KEYHOLE DEBUG: finalGateWidth=$finalGateWidth")
+            println(" KEYHOLE DEBUG: finalGateWidth=$finalGateWidth")
 
             val finalFaiQuadrantOuterRadius = when {
                 faiQuadrantOuterRadius != null -> faiQuadrantOuterRadius
@@ -172,19 +172,19 @@ class RacingWaypointManager {
             )
 
             val newWaypoint = currentWaypoints[index]
-            println("ðŸ” KEYHOLE DEBUG: FINAL waypoint gateWidth = ${newWaypoint.gateWidth}")
-            println("ðŸš¨ STATE DEBUG: AFTER UPDATE - waypoint[$index] startPointType = ${newWaypoint.startPointType}")
+            println(" KEYHOLE DEBUG: FINAL waypoint gateWidth = ${newWaypoint.gateWidth}")
+            println(" STATE DEBUG: AFTER UPDATE - waypoint[$index] startPointType = ${newWaypoint.startPointType}")
             val newType = when (newWaypoint.role) {
                 RacingWaypointRole.START -> newWaypoint.startPointType.displayName
                 RacingWaypointRole.FINISH -> newWaypoint.finishPointType.displayName
                 RacingWaypointRole.TURNPOINT -> newWaypoint.turnPointType.displayName
             }
 
-            println("ðŸ RACING TASK: Updated waypoint $index '${waypoint.title}' type: $oldType â†’ $newType")
-            println("ðŸ RACING TASK: Updated waypoint details: ${currentWaypoints[index]}")
+            println(" RACING TASK: Updated waypoint $index '${waypoint.title}' type: $oldType  $newType")
+            println(" RACING TASK: Updated waypoint details: ${currentWaypoints[index]}")
             return currentTask.copy(waypoints = currentWaypoints)
         } else {
-            println("ðŸ RACING TASK: Cannot update waypoint type - invalid index: $index")
+            println(" RACING TASK: Cannot update waypoint type - invalid index: $index")
             return currentTask
         }
     }

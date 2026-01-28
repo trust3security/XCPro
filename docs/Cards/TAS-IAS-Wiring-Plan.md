@@ -15,13 +15,27 @@ rules as XCSoar. Phone-only TAS estimates must not be used as EKF input.
 - Airspeed validity expires after a timeout (30 s) and airspeed_real is cleared.
 - IGC replay feeds IAS/TAS when present (B-record extensions).
 
+## Status (Jan 2026)
+Implemented:
+- Replay IAS/TAS parsing and emission to ReplayAirspeedRepository.
+- Wind EKF updated-sample gating (rejects duplicate timestamps/time warps).
+- EKF minTrueAirspeed fallback uses 10 m/s.
+
+Not yet implemented:
+- Live airspeed ingest path feeding ExternalAirspeedRepository.
+- IAS/TAS conversion/normalization for live ingest.
+- Airspeed staleness timeout (e.g., 30 s) for live samples.
+- Polar-based VTakeoff wiring (still fallback only).
+- Tests for airspeed conversion + EKF gates + replay parsing.
+
 ## XCPro current state
 - Airspeed flow exists: AirspeedSample(trueMs, indicatedMs, timestampMillis, clockMillis, valid)
   with ExternalAirspeedRepository (live) and ReplayAirspeedRepository (replay).
 - clockMillis must be monotonic (or replay clock); if unknown, set 0 so EKF drops updates.
-- No live source feeds ExternalAirspeedRepository; replay parser ignores IAS/TAS.
-- Wind EKF gates on AirspeedSample.valid but has no updated-sample check and uses
-  a fixed minTrueAirspeed (4.5 m/s) instead of VTakeoff.
+- Live source does not feed ExternalAirspeedRepository yet.
+- Replay parser reads IAS/TAS B-record extensions and ReplaySampleEmitter emits airspeed.
+- Wind EKF gates on AirspeedSample.valid, rejects duplicate timestamps/time warps, and uses
+  the 10 m/s minTrueAirspeed fallback.
 
 ## Implementation steps (proposed)
 ### 1) Live airspeed ingest (real source)
@@ -66,11 +80,10 @@ Suggested files:
 - feature/map/.../weather/wind/domain/WindEkfUseCase.kt
 - feature/map/.../glider (add VTakeoff accessor or config)
 
-### 5) Replay IAS/TAS wiring
-- Extend IgcParser to read B-record extensions for IAS/TAS if present.
-  - Store in IgcPoint (iasMs/tasMs)
-- ReplaySampleEmitter should emit AirspeedSample into ReplayAirspeedRepository.
-- Reset airspeed repo on replay stop/seek.
+### 5) Replay IAS/TAS wiring (done)
+- IgcParser reads B-record extensions for IAS/TAS if present.
+- ReplaySampleEmitter emits AirspeedSample into ReplayAirspeedRepository.
+- Reset airspeed repo on replay stop/seek (already handled by replay resets).
 
 Suggested files:
 - feature/map/.../replay/IgcParser.kt

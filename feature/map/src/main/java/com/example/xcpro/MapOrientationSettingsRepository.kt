@@ -1,4 +1,4 @@
-﻿package com.example.xcpro
+package com.example.xcpro
 
 import android.content.Context
 import android.content.SharedPreferences

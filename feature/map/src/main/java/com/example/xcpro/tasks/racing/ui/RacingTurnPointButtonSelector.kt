@@ -20,7 +20,7 @@ import com.example.xcpro.tasks.racing.models.RacingTurnPointType
  * Replaces dropdown-based selection with horizontal buttons for better UX.
  *
  * Features:
- * - Single-tap selection (vs dropdown → tap → select)
+ * - Single-tap selection (vs dropdown  tap  select)
  * - Visual icons for each turnpoint type
  * - Immediate visual feedback
  * - Better space utilization in bottom sheet
@@ -47,11 +47,11 @@ fun RacingTurnPointButtonSelector(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            // 🔵 Cylinder Button
+            //  Cylinder Button
             TurnPointTypeButton(
                 type = RacingTurnPointType.TURN_POINT_CYLINDER,
                 icon = Icons.Default.RadioButtonUnchecked, // Circle icon
-                emoji = "🔵",
+                emoji = "",
                 selected = selectedType == RacingTurnPointType.TURN_POINT_CYLINDER,
                 onClick = { onTypeChange(RacingTurnPointType.TURN_POINT_CYLINDER) },
                 modifier = Modifier.weight(1f)
@@ -59,11 +59,11 @@ fun RacingTurnPointButtonSelector(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // 🔶 FAI Quadrant Button
+            //  FAI Quadrant Button
             TurnPointTypeButton(
                 type = RacingTurnPointType.FAI_QUADRANT,
                 icon = Icons.Default.ChangeHistory, // Triangle icon for sector
-                emoji = "🔶",
+                emoji = "",
                 selected = selectedType == RacingTurnPointType.FAI_QUADRANT,
                 onClick = { onTypeChange(RacingTurnPointType.FAI_QUADRANT) },
                 modifier = Modifier.weight(1f)
@@ -71,11 +71,11 @@ fun RacingTurnPointButtonSelector(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // 🔑 Keyhole Button
+            //  Keyhole Button
             TurnPointTypeButton(
                 type = RacingTurnPointType.KEYHOLE,
                 icon = Icons.Default.Lock, // Key/lock icon for keyhole
-                emoji = "🔑",
+                emoji = "",
                 selected = selectedType == RacingTurnPointType.KEYHOLE,
                 onClick = { onTypeChange(RacingTurnPointType.KEYHOLE) },
                 modifier = Modifier.weight(1f)

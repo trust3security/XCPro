@@ -182,7 +182,7 @@ private fun EditModeHeader(
                 }
 
                 Text(
-                    text = "Tap outside to exit • Drag target point to move",
+                    text = "Tap outside to exit  Drag target point to move",
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.White.copy(alpha = 0.9f)
                 )
@@ -235,7 +235,7 @@ private fun TargetPointInfoCard(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = "🎯 Target Point Position",
+                text = " Target Point Position",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Medium,
                 color = Color(0xFF388E3C)

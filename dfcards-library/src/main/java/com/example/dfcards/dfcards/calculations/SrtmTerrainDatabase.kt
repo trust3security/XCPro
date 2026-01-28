@@ -15,14 +15,14 @@ import kotlin.math.floor
  * PRINCIPLES:
  * - KISS: Simple tile download + cache, no complex logic
  * - SSOT: Local files are authoritative terrain source
- * - Global: Works worldwide (SRTM3 covers -60° to 60° latitude)
+ * - Global: Works worldwide (SRTM3 covers -60 to 60 latitude)
  * - Offline: Once cached, works without network
  *
  * SRTMGL1 Format (30m resolution):
  * - Resolution: 30m (1 arc-second at equator)
- * - Tile size: 1° x 1° (3601 x 3601 samples)
+ * - Tile size: 1 x 1 (3601 x 3601 samples)
  * - File size: ~25 MB per tile (zip), ~24.7 MB (hgt)
- * - Coverage: Global (-60° to 60° latitude)
+ * - Coverage: Global (-60 to 60 latitude)
  *
  * Data Source: USGS SRTMGL1 (free, no auth required)
  */
@@ -123,12 +123,12 @@ class SrtmTerrainDatabase(
                 val tile = SrtmTile.fromFile(cacheFile, tileName)
                 if (tile != null) {
                     loadedTiles[tileName] = tile
-                    Log.d(TAG, "✅ Tile $tileName ready")
+                    Log.d(TAG, " Tile $tileName ready")
                     return@withContext tile
                 }
             }
 
-            Log.e(TAG, "❌ Failed to load tile $tileName")
+            Log.e(TAG, " Failed to load tile $tileName")
             null
         } finally {
             synchronized(downloadingTiles) {
@@ -163,21 +163,21 @@ class SrtmTerrainDatabase(
                             FileOutputStream(outputFile).use { output ->
                                 zipInput.copyTo(output)
                             }
-                            Log.d(TAG, "✅ Downloaded and extracted ${outputFile.length() / 1024}KB")
+                            Log.d(TAG, " Downloaded and extracted ${outputFile.length() / 1024}KB")
                             return true
                         }
                         entry = zipInput.nextEntry
                     }
                 }
 
-                Log.e(TAG, "❌ No .hgt file found in ZIP")
+                Log.e(TAG, " No .hgt file found in ZIP")
                 false
             } else {
-                Log.e(TAG, "❌ HTTP ${connection.responseCode}")
+                Log.e(TAG, " HTTP ${connection.responseCode}")
                 false
             }
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Download failed: ${e.message}")
+            Log.e(TAG, " Download failed: ${e.message}")
             false
         }
     }
@@ -203,7 +203,7 @@ class SrtmTerrainDatabase(
 }
 
 /**
- * SRTM Tile - represents 1° x 1° elevation data
+ * SRTM Tile - represents 1 x 1 elevation data
  *
  * Format: .hgt file with 3601x3601 2-byte big-endian elevation samples
  */

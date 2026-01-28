@@ -10,6 +10,7 @@ import kotlinx.coroutines.CoroutineScope
  */
 class VarioAudioController(
     context: Context,
+    audioFocusManager: AudioFocusManager,
     scope: CoroutineScope,
     private val enableAudio: Boolean
 ) {
@@ -18,7 +19,7 @@ class VarioAudioController(
         private const val TAG = "VarioAudioController"
     }
 
-    val engine: VarioAudioEngine = VarioAudioEngine(context, scope)
+    val engine: VarioAudioEngine = VarioAudioEngine(context, audioFocusManager, scope)
 
     init {
         val initialized = engine.initialize()
@@ -30,15 +31,21 @@ class VarioAudioController(
         }
     }
 
-    fun update(teSample: Double?, rawVario: Double, currentTime: Long, validUntil: Long) {
+    fun update(teSample: Double?, rawVario: Double, currentTime: Long, validUntil: Long): Double? {
+        val selected = when {
+            teSample != null && currentTime <= validUntil -> teSample
+            currentTime <= validUntil -> rawVario
+            else -> null
+        }
         if (!enableAudio) {
-            return
+            return selected
         }
-        when {
-            teSample != null && currentTime <= validUntil -> engine.updateVerticalSpeed(teSample)
-            currentTime <= validUntil -> engine.updateVerticalSpeed(rawVario)
-            else -> engine.setSilence()
+        if (selected != null) {
+            engine.updateVerticalSpeed(selected)
+        } else {
+            engine.setSilence()
         }
+        return selected
     }
 
     fun stop() {

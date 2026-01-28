@@ -24,7 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -60,7 +60,7 @@ fun UnitsSettingsScreen(
     val repository = remember(context.applicationContext) {
         UnitsRepository(context.applicationContext)
     }
-    val units by repository.unitsFlow.collectAsState(initial = UnitsPreferences())
+    val units by repository.unitsFlow.collectAsStateWithLifecycle(initialValue = UnitsPreferences())
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
 

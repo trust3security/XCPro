@@ -23,7 +23,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
@@ -35,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.dfcards.CardCategory
@@ -149,8 +149,8 @@ fun FlightMgmt(
         )
     }
 
-    val currentFlightMode by flightViewModel.currentFlightMode.collectAsState()
-    val profileModeVisibilities by flightViewModel.profileModeVisibilities.collectAsState()
+    val currentFlightMode by flightViewModel.currentFlightMode.collectAsStateWithLifecycle()
+    val profileModeVisibilities by flightViewModel.profileModeVisibilities.collectAsStateWithLifecycle()
     val flightModeVisibilities = remember(profileModeVisibilities, activeProfile?.id) {
         flightViewModel.flightModeVisibilitiesFor(activeProfile?.id)
     }

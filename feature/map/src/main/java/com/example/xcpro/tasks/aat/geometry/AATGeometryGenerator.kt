@@ -180,7 +180,7 @@ class AATGeometryGenerator {
                             waypoint.lon
                         )
 
-                        // ✅ SSOT FIX: Calculate finish edge point - use authority radius
+                        //  SSOT FIX: Calculate finish edge point - use authority radius
                         val radiusKm = waypoint.getAuthorityRadius() / 2.0
                         // Task ends at cylinder edge on approach side (opposite to approach bearing)
                         val finishEdgePoint = calculateDestinationPoint(waypoint.lat, waypoint.lon, (bearing + 180.0) % 360.0, radiusKm)

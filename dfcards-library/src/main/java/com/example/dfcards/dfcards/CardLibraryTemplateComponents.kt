@@ -64,11 +64,11 @@ internal fun TemplateSelectionSection(
     onEditTemplate: (FlightTemplate) -> Unit,
     onDeleteTemplate: (FlightTemplate) -> Unit
 ) {
-    // ✅ NEW: Create scroll state for auto-scrolling
+    //  NEW: Create scroll state for auto-scrolling
     val scrollState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
 
-    // ✅ NEW: Auto-scroll to selected template when flight mode changes
+    //  NEW: Auto-scroll to selected template when flight mode changes
     LaunchedEffect(selectedTemplate, selectedFlightMode) {
         selectedTemplate?.let { template ->
             val templateIndex = templates.indexOfFirst { it.id == template.id }
@@ -93,9 +93,9 @@ internal fun TemplateSelectionSection(
             modifier = Modifier.padding(bottom = 12.dp)
         )
 
-        // ✅ CHANGED: Use the scroll state for auto-scrolling
+        //  CHANGED: Use the scroll state for auto-scrolling
         LazyRow(
-            state = scrollState, // ✅ ADD: Connect scroll state
+            state = scrollState, //  ADD: Connect scroll state
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(bottom = 16.dp)
         ) {
@@ -356,12 +356,12 @@ internal fun SelectableTemplateCard(
                 )
             }
 
-            // ✅ REMOVED: No more check icon when selected
+            //  REMOVED: No more check icon when selected
 
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(top = 4.dp, end = 4.dp) // ✅ LOWERED: Added top padding to lower 3-dots
+                    .padding(top = 4.dp, end = 4.dp) //  LOWERED: Added top padding to lower 3-dots
                     .size(24.dp)
             ) {
                 IconButton(

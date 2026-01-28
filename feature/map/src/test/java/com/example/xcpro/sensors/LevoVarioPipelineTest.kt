@@ -47,13 +47,13 @@ private fun newUseCase(): CalculateFlightMetricsUseCase {
         on { sinkAtSpeed(any()) }.thenReturn(0.0)
     }
     val helpers = mock<FlightCalculationHelpers>()
-    whenever(helpers.calculateNetto(any(), anyOrNull(), any())).thenReturn(
+    whenever(helpers.calculateNetto(any(), anyOrNull(), any(), any())).thenReturn(
         FlightCalculationHelpers.NettoComputation(0.0, true)
     )
-    whenever(helpers.calculateCurrentLD(any(), any())).thenReturn(0f)
+    whenever(helpers.calculateCurrentLD(any(), any(), any())).thenReturn(0f)
     whenever(helpers.updateThermalState(any(), any(), any(), any())).thenAnswer { }
     whenever(helpers.updateAGL(any(), any(), any())).thenAnswer { }
-    whenever(helpers.recordLocationSample(any())).thenAnswer { }
+    whenever(helpers.recordLocationSample(any(), any())).thenAnswer { }
     whenever(helpers.thermalAverageCurrent).thenReturn(0f)
     whenever(helpers.thermalAverageTotal).thenReturn(0f)
     whenever(helpers.thermalGainCurrent).thenReturn(0.0)
@@ -122,6 +122,7 @@ class LevoVarioPipelineTest {
             aglMeters = 0.0,
             varioResults = emptyMap(),
             replayIgcVario = null,
+            audioVario = 0.0,
             dataQuality = "TEST",
             timestamp = time,
             macCready = 0.0,

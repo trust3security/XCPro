@@ -10,7 +10,7 @@ import com.example.dfcards.filters.ComplementaryVarioFilter
  * - Accelerometer: High-pass filter (fast but drifts)
  * - Result: Fast response + no drift
  *
- * Status: ✅ IMPLEMENTED (Option A - Testing Framework Only)
+ * Status:  IMPLEMENTED (Option A - Testing Framework Only)
  *
  * Trade-offs vs Kalman:
  * + 10-100x faster computation (<1ms vs 10-50ms)
@@ -31,7 +31,7 @@ class ComplementaryVario : IVarioCalculator {
     override val name = "Complementary"
     override val description = "Complementary filter (10-100x faster computation, <50ms lag)"
 
-    // ✅ PRIORITY 3: Real complementary filter implementation
+    //  PRIORITY 3: Real complementary filter implementation
     private val filter = ComplementaryVarioFilter()
 
     override fun update(

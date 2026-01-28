@@ -96,7 +96,7 @@ class MapTaskScreenManager(
      * Handle waypoint goto from search
      */
     fun handleWaypointGoto() {
-        Log.d("TASK_UX", "ðŸŽ¯ Setting bottom sheet to HALF_EXPANDED for search selection")
+        Log.d("TASK_UX", " Setting bottom sheet to HALF_EXPANDED for search selection")
         showTaskBottomSheet(BottomSheetState.HALF_EXPANDED)
     }
 
@@ -104,7 +104,7 @@ class MapTaskScreenManager(
      * Handle minimized indicator click
      */
     fun handleMinimizedIndicatorClick() {
-        Log.d("TASK_UX", "ðŸŽ¯ Setting bottom sheet to FULLY_EXPANDED for minimized indicator click")
+        Log.d("TASK_UX", " Setting bottom sheet to FULLY_EXPANDED for minimized indicator click")
         showTaskBottomSheet(BottomSheetState.FULLY_EXPANDED)
     }
 
@@ -133,7 +133,7 @@ class MapTaskScreenManager(
      */
     fun handleTaskSave() {
         // TODO: Implement save functionality
-        Log.d(TAG, "ðŸŽ¯ TASK DEBUG: Save task requested")
+        Log.d(TAG, " TASK DEBUG: Save task requested")
     }
 
     /**

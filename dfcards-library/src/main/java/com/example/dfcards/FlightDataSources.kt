@@ -6,12 +6,12 @@ import androidx.compose.runtime.LaunchedEffect
 import com.example.dfcards.calculations.ConfidenceLevel
 
 /**
- * ✅ PHASE 3: FlightDataProvider - simplified interface (fallback removed)
+ * PHASE 3: FlightDataProvider - simplified interface (fallback removed)
  *
  * This composable receives a data provider lambda that emits RealTimeFlightData.
  * The conversion from CompleteFlightData (new system) happens in the app module.
  *
- * FLOW: FlightDataCalculator → CompleteFlightData → [Adapter in app module] → RealTimeFlightData → Cards
+ * FLOW: FlightDataCalculator -> CompleteFlightData -> [Adapter in app module] -> RealTimeFlightData -> Cards
  */
 @Composable
 fun FlightDataProvider(
@@ -38,6 +38,7 @@ data class RealTimeFlightData(
     val displayVario: Double = 0.0,
     val displayNeedleVario: Double = 0.0,
     val displayNeedleVarioFast: Double = 0.0,
+    val audioVario: Double = 0.0,
     val pressureAltitude: Double = 0.0,
     val baroGpsDelta: Double? = null,
     val baroConfidence: ConfidenceLevel = ConfidenceLevel.LOW,
@@ -47,7 +48,7 @@ data class RealTimeFlightData(
     val accuracy: Double = 0.0,
     val satelliteCount: Int = 0,
     val flightTime: String = "00:00",
-    val timestamp: Long = System.currentTimeMillis(),
+    val timestamp: Long = 0L,
 
     val currentPressureHPa: Double = 1013.25,
     val qnh: Double = 1013.25,
@@ -80,9 +81,9 @@ data class RealTimeFlightData(
     val varioGPS: Double = 0.0,            // GPS vertical speed
     val varioComplementary: Double = 0.0,  // Complementary filter (future)
     val realIgcVario: Double? = null,
-    val xcSoarVario: Double = 0.0,
-    val xcSoarDisplayVario: Double = 0.0,
-    val xcSoarVarioValid: Boolean = false,
+    val baselineVario: Double = 0.0,
+    val baselineDisplayVario: Double = 0.0,
+    val baselineVarioValid: Boolean = false,
     val bruttoAverage30s: Double = 0.0,
     val bruttoAverage30sValid: Boolean = false,
     val nettoAverage30s: Double = 0.0,
@@ -91,7 +92,7 @@ data class RealTimeFlightData(
     val isCircling: Boolean = false,
     val thermalAverageValid: Boolean = false,
 
-    val lastUpdateTime: Long = System.currentTimeMillis(),
+    val lastUpdateTime: Long = 0L,
     val calculationSource: String = "GPS+BARO+AGL",
     val airspeedSource: String = "UNKNOWN",
     val tasValid: Boolean = true,
@@ -105,5 +106,5 @@ data class RealTimeFlightData(
     val headingSource: String = "UNKNOWN"
 )
 
-// ✅ PHASE 3: All old calculation classes removed (FlightDataManager, WindData)
+// PHASE 3: All old calculation classes removed (FlightDataManager, WindData)
 // Now using UnifiedSensorManager + FlightDataCalculator in app module

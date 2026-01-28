@@ -3,7 +3,7 @@ package com.example.xcpro.sensors
 import kotlin.math.max
 
 /**
- * Lightweight 1D Kalman filter that mirrors XCSoar's SelfTimingKalmanFilter1d.
+ * Lightweight 1D Kalman filter that mirrors a SelfTimingKalmanFilter1d model.
  *
  * We operate directly on atmospheric pressure (hPa) so that altitude
  * conversions downstream receive a smoothed signal even when IMU data
@@ -102,7 +102,7 @@ class PressureKalmanFilter(
         private const val MIN_DELTA_MILLIS = 1L
         private const val LARGE_VARIANCE = 1e6
 
-        // Tune values mirror XCSoar constants for phone sensors.
+        // Tune values mirror legacy constants for phone sensors.
         private const val PHONE_PROCESS_VARIANCE = 0.0075
         private const val MEASUREMENT_VARIANCE = 0.25
         private const val MAX_DELTA_MILLIS = 60_000L

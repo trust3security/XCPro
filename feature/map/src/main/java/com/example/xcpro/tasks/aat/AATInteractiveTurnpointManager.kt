@@ -107,7 +107,7 @@ class AATInteractiveTurnpointManager(
             )
             mapInteractionHandler?.attachToMap(map)
 
-            println("🎯 AAT: Interactive turnpoint manager attached to map")
+            println(" AAT: Interactive turnpoint manager attached to map")
         }
     }
 
@@ -123,7 +123,7 @@ class AATInteractiveTurnpointManager(
             updateDistance()
         }
 
-        println("🎯 AAT: Updated waypoints (${newWaypoints.size} waypoints)")
+        println(" AAT: Updated waypoints (${newWaypoints.size} waypoints)")
     }
 
     /**
@@ -167,7 +167,7 @@ class AATInteractiveTurnpointManager(
         if (optimizedWaypoints.isNotEmpty()) {
             val newTargetPoint = optimizedWaypoints[0].targetPoint
             updateWaypointTargetPoint(areaIndex, newTargetPoint)
-            println("🎯 AAT: Moved waypoint $areaIndex to strategic position")
+            println(" AAT: Moved waypoint $areaIndex to strategic position")
         }
     }
 
@@ -180,7 +180,7 @@ class AATInteractiveTurnpointManager(
         val waypoint = currentWaypoints[areaIndex]
         val centerPoint = AATLatLng(waypoint.lat, waypoint.lon)
         updateWaypointTargetPoint(areaIndex, centerPoint)
-        println("🎯 AAT: Reset waypoint $areaIndex to center")
+        println(" AAT: Reset waypoint $areaIndex to center")
     }
 
     /**
@@ -201,7 +201,7 @@ class AATInteractiveTurnpointManager(
     // ========== Event Handlers ==========
 
     private fun handleAreaTapped(index: Int, waypoint: AATWaypoint) {
-        println("🎯 AAT: Area $index tapped (${waypoint.title})")
+        println(" AAT: Area $index tapped (${waypoint.title})")
         // Area tap is handled by the interaction handler
     }
 
@@ -209,14 +209,14 @@ class AATInteractiveTurnpointManager(
         isEditMode = true
         focusedAreaIndex = index
         callbacks.onEditModeChanged(true, index)
-        println("🎯 AAT: Entered edit mode for area $index (${waypoint.title})")
+        println(" AAT: Entered edit mode for area $index (${waypoint.title})")
     }
 
     private fun handleEditModeExited() {
         isEditMode = false
         focusedAreaIndex = -1
         callbacks.onEditModeChanged(false, -1)
-        println("🎯 AAT: Exited edit mode")
+        println(" AAT: Exited edit mode")
     }
 
     private fun handleTargetPointMoved(index: Int, newPoint: AATLatLng) {
@@ -273,7 +273,7 @@ class AATInteractiveTurnpointManager(
         currentDistance = distance
         callbacks.onDistanceUpdated(distance)
 
-        println("🎯 AAT: Updated task distance: ${String.format("%.2f", distance.totalDistance)} km (${distance.calculationTime}ms)")
+        println(" AAT: Updated task distance: ${String.format("%.2f", distance.totalDistance)} km (${distance.calculationTime}ms)")
     }
 }
 

@@ -134,7 +134,7 @@ class RacingTaskDisplay {
     fun plotRacingOnMap(map: MapLibreMap?, waypoints: List<RacingWaypoint>, racingTaskCalculator: RacingTaskCalculatorInterface) {
         map?.getStyle { style ->
             if (waypoints.isNotEmpty()) {
-                println("🏁 RACING TASK: Plotting ${waypoints.size} racing waypoints on map")
+                println(" RACING TASK: Plotting ${waypoints.size} racing waypoints on map")
 
                 // Draw waypoints and geometry using mapRenderer
                 mapRenderer.drawRacingWaypoints(style, map, waypoints, geometryCoordinator)
@@ -184,7 +184,7 @@ class RacingTaskDisplay {
      */
     fun clearRacingFromMap(map: MapLibreMap?) {
         map?.getStyle { style ->
-            println("🏁 RACING CLEANUP: Removing Racing-specific map layers")
+            println(" RACING CLEANUP: Removing Racing-specific map layers")
 
             // Remove Racing-specific layers only - NO shared layer names
             val racingLayers = listOf(
@@ -202,10 +202,10 @@ class RacingTaskDisplay {
                 try {
                     if (style.getLayer(layerId) != null) {
                         style.removeLayer(layerId)
-                        println("🏁 RACING CLEANUP: Removed layer: $layerId")
+                        println(" RACING CLEANUP: Removed layer: $layerId")
                     }
                 } catch (e: Exception) {
-                    println("🏁 RACING CLEANUP: Could not remove layer $layerId: ${e.message}")
+                    println(" RACING CLEANUP: Could not remove layer $layerId: ${e.message}")
                 }
             }
 
@@ -221,14 +221,14 @@ class RacingTaskDisplay {
                 try {
                     if (style.getSource(sourceId) != null) {
                         style.removeSource(sourceId)
-                        println("🏁 RACING CLEANUP: Removed source: $sourceId")
+                        println(" RACING CLEANUP: Removed source: $sourceId")
                     }
                 } catch (e: Exception) {
-                    println("🏁 RACING CLEANUP: Could not remove source $sourceId: ${e.message}")
+                    println(" RACING CLEANUP: Could not remove source $sourceId: ${e.message}")
                 }
             }
 
-            println("🏁 RACING CLEANUP: Racing map cleanup completed")
+            println(" RACING CLEANUP: Racing map cleanup completed")
         }
     }
 }

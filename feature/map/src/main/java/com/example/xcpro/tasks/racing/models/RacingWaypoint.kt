@@ -19,9 +19,9 @@ data class RacingWaypoint(
     val gateWidth: Double, // km, for start line/cylinder and finish dimensions (also outer radius for keyhole) - MUST be provided with standardized defaults
     // Keyhole-specific parameters
     val keyholeInnerRadius: Double = 0.5, // km, inner cylinder radius for keyhole (default 0.5km)
-    val keyholeAngle: Double = 90.0, // degrees, sector angle for keyhole (default 90°)
+    val keyholeAngle: Double = 90.0, // degrees, sector angle for keyhole (default 90 deg)
     // FAI Quadrant-specific parameters
-    val faiQuadrantOuterRadius: Double = 10.0 // km, sector radius for FAI quadrant (default 10km, XCSoar parity)
+    val faiQuadrantOuterRadius: Double = 10.0 // km, sector radius for FAI quadrant (default 10km)
 ) {
     /**
      * Normalized sector angle: clamp floating noise (e.g., 89.999999) to a clean 90.0 when close.
@@ -57,7 +57,7 @@ data class RacingWaypoint(
         }
         RacingWaypointRole.TURNPOINT -> when (turnPointType) {
             RacingTurnPointType.TURN_POINT_CYLINDER -> gateWidth
-            RacingTurnPointType.FAI_QUADRANT -> faiQuadrantOuterRadius // Sector radius (finite, XCSoar default 10km)
+            RacingTurnPointType.FAI_QUADRANT -> faiQuadrantOuterRadius // Sector radius (finite, default 10km)
             RacingTurnPointType.KEYHOLE -> gateWidth // Outer radius (sector part)
         }
     }
@@ -94,7 +94,7 @@ data class RacingWaypoint(
             }
 
             // DEBUG: Log the default value calculation to prove fix is working
-            println("🏁 WAYPOINT CREATION DEBUG: role=$role, turnPointType=$turnPointType, customGateWidth=$customGateWidth, standardizedGateWidth=$standardizedGateWidth")
+            println("WAYPOINT CREATION DEBUG: role=$role, turnPointType=$turnPointType, customGateWidth=$customGateWidth, standardizedGateWidth=$standardizedGateWidth")
 
             return RacingWaypoint(
                 id = id,
@@ -133,7 +133,7 @@ enum class RacingStartPointType(
 ) {
     START_LINE("Start Line", "Perpendicular line to the first leg"),
     START_CYLINDER("Start Cylinder", "Cylinder around start waypoint"),
-    FAI_START_SECTOR("FAI Start Sector", "90° D-shaped sector facing away from first leg")
+    FAI_START_SECTOR("FAI Start Sector", "90 D-shaped sector facing away from first leg")
 }
 
 /**
@@ -155,6 +155,6 @@ enum class RacingTurnPointType(
     val description: String
 ) {
     TURN_POINT_CYLINDER("Cylinder", "Simple cylinder observation zone"),
-    FAI_QUADRANT("FAI Quadrant", "90° sector with finite radius (default 10km)"),
+    FAI_QUADRANT("FAI Quadrant", "90 sector with finite radius (default 10km)"),
     KEYHOLE("Keyhole", "0.5km cylinder + 10km sector combination")
 }

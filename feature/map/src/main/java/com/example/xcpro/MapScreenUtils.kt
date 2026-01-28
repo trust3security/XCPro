@@ -55,7 +55,9 @@ fun formatBaroGpsDelta(
 fun convertToRealTimeFlightData(
     completeData: CompleteFlightData,
     windState: WindState?,
-    isFlying: Boolean
+    isFlying: Boolean,
+    flightTime: String = "00:00",
+    lastUpdateTimeMillis: Long = completeData.timestamp
 ): RealTimeFlightData {
     // AI-NOTE: Wind is sourced from WindState only; CompleteFlightData no longer carries wind.
     val gps = completeData.gps
@@ -86,13 +88,6 @@ fun convertToRealTimeFlightData(
         )
     )
 
-    // Calculate flight time (simple implementation - starts from app launch)
-    val flightTimeMs = System.currentTimeMillis() - completeData.timestamp
-    val flightTimeMinutes = flightTimeMs / 60000
-    val hours = flightTimeMinutes / 60
-    val minutes = flightTimeMinutes % 60
-    val formattedFlightTime = "${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}"
-
     return RealTimeFlightData(
         // GPS data
         latitude = gps?.position?.latitude ?: 0.0,
@@ -114,6 +109,7 @@ fun convertToRealTimeFlightData(
         displayVario = completeData.displayVario.value,
         displayNeedleVario = completeData.displayNeedleVario.value,
         displayNeedleVarioFast = completeData.displayNeedleVarioFast.value,
+        audioVario = completeData.audioVario.value,
         agl = completeData.agl.value,
         pressureAltitude = completeData.pressureAltitude.value,
         baroGpsDelta = completeData.baroGpsDelta?.value,
@@ -149,9 +145,9 @@ fun convertToRealTimeFlightData(
         varioGPS = completeData.varioGPS.value,
         varioComplementary = completeData.varioComplementary.value,
         realIgcVario = completeData.realIgcVario?.value,
-        xcSoarVario = completeData.xcSoarVario.value,
-        xcSoarDisplayVario = completeData.xcSoarDisplayVario.value,
-        xcSoarVarioValid = completeData.xcSoarVarioValid,
+        baselineVario = completeData.baselineVario.value,
+        baselineDisplayVario = completeData.baselineDisplayVario.value,
+        baselineVarioValid = completeData.baselineVarioValid,
         bruttoAverage30s = completeData.bruttoAverage30s.value,
         bruttoAverage30sValid = completeData.bruttoAverage30sValid,
         nettoAverage30s = completeData.nettoAverage30s.value,
@@ -161,9 +157,9 @@ fun convertToRealTimeFlightData(
         thermalAverageValid = completeData.thermalAverageValid,
 
         // Metadata
-        flightTime = formattedFlightTime,
+        flightTime = flightTime,
         timestamp = completeData.timestamp,
-        lastUpdateTime = System.currentTimeMillis(),
+        lastUpdateTime = lastUpdateTimeMillis,
         calculationSource = completeData.dataQuality,
         airspeedSource = completeData.airspeedSource,
         tasValid = completeData.tasValid,

@@ -378,7 +378,7 @@ class AATTaskDisplay {
     
     /**
      * Generate BGA Start Sector geometry (90-degree sector aligned with track to first turnpoint)
-     * ✅ FIXED: Use AAT sector pattern - outer arc → center → close polygon properly
+     *  FIXED: Use AAT sector pattern - outer arc  center  close polygon properly
      */
     private fun generateBGASectorGeometry(center: AATLatLng, radius: Double, task: AATTask): DisplayGeometry {
         val points = mutableListOf<AATLatLng>()
@@ -396,7 +396,7 @@ class AATTaskDisplay {
         val startAngle = (bisectorBearing - 45.0 + 360.0) % 360.0
         val endAngle = (bisectorBearing + 45.0) % 360.0
         
-        // ✅ FIXED: Generate outer arc points (following AAT sector pattern)
+        //  FIXED: Generate outer arc points (following AAT sector pattern)
         val numPoints = 32
         for (i in 0..numPoints) {
             val angle = startAngle + (endAngle - startAngle) * i / numPoints
@@ -406,7 +406,7 @@ class AATTaskDisplay {
             points.add(point)
         }
         
-        // ✅ FIXED: Add center point to close the sector polygon (like AAT sectors)
+        //  FIXED: Add center point to close the sector polygon (like AAT sectors)
         points.add(center)
         
         return DisplayGeometry.Polygon(points = points)

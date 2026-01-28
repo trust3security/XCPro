@@ -32,7 +32,7 @@ class FileWaypointRepo(
 object WaypointParser {
     private const val TAG = "WaypointParser"
 
-    // 🔹 Convert lat/long in DDMM.mmmN/S/E/W format to decimal degrees
+    //  Convert lat/long in DDMM.mmmN/S/E/W format to decimal degrees
     fun parseCoordinate(coord: String, isLat: Boolean): Double? {
         val cleanCoord = coord.trim('"').trim()
         val pattern = if (isLat) {
@@ -52,7 +52,7 @@ object WaypointParser {
         return null
     }
 
-    // 🔹 Handles CSV lines with quoted fields properly
+    //  Handles CSV lines with quoted fields properly
     fun parseCsvLine(line: String): List<String> {
         val result = mutableListOf<String>()
         var current = StringBuilder()
@@ -77,7 +77,7 @@ object WaypointParser {
         return result
     }
 
-    // 🔹 Entry point: parse full CUP file into list of WaypointData
+    //  Entry point: parse full CUP file into list of WaypointData
     fun parseWaypointFile(context: Context, uri: Uri): List<WaypointData> {
         val waypoints = mutableListOf<WaypointData>()
         try {
@@ -123,7 +123,7 @@ object WaypointParser {
         return waypoints
     }
 
-    // 🔹 Parse one CSV line into a WaypointData object
+    //  Parse one CSV line into a WaypointData object
     private fun parseWaypointLine(line: String): WaypointData? {
         if (line.isEmpty()) return null
         val fields = parseCsvLine(line)

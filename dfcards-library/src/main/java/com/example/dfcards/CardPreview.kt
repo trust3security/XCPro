@@ -33,7 +33,7 @@ fun CardPreview(
     cardDefinition: CardDefinition,
     isSelected: Boolean,
     onToggle: (CardDefinition) -> Unit,
-    liveFlightData: RealTimeFlightData? = null, // ✅ Optional live data
+    liveFlightData: RealTimeFlightData? = null, //  Optional live data
     modifier: Modifier = Modifier
 ) {
     var isPressed by remember { mutableStateOf(false) }
@@ -57,7 +57,7 @@ fun CardPreview(
         label = "border_alpha"
     )
 
-    // ✅ Use live data if available, otherwise show blanks (NO SAMPLES)
+    //  Use live data if available, otherwise show blanks (NO SAMPLES)
     val displayData = if (liveFlightData != null) {
         mapCardDefinitionToLiveData(cardDefinition, liveFlightData)
     } else {
@@ -81,13 +81,13 @@ fun CardPreview(
             defaultElevation = if (isSelected) 8.dp else 2.dp
         ),
         colors = CardDefaults.cardColors(
-            // ✅ NO GREY PADDING: Always clean white/surface background
+            //  NO GREY PADDING: Always clean white/surface background
             containerColor = MaterialTheme.colorScheme.surface
         ),
         shape = RoundedCornerShape(12.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            // ✅ ENHANCED: Perfect flight instrument layout
+            //  ENHANCED: Perfect flight instrument layout
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -108,7 +108,7 @@ fun CardPreview(
                         modifier = Modifier.size(16.dp)
                     )
 
-                    // ✅ CLEAN: Only Add/Check icon - NO green GPS dot
+                    //  CLEAN: Only Add/Check icon - NO green GPS dot
                     Icon(
                         imageVector = if (isSelected) Icons.Default.Check else Icons.Default.Add,
                         contentDescription = if (isSelected) "Selected" else "Add",
@@ -122,7 +122,7 @@ fun CardPreview(
                     )
                 }
 
-                // ✅ PERFECT FLIGHT UX: Card name + live value prominently displayed
+                //  PERFECT FLIGHT UX: Card name + live value prominently displayed
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.weight(1f),
@@ -131,7 +131,7 @@ fun CardPreview(
                     // Card title - GPS ALT, VARIO, etc.
                     Text(
                         text = cardDefinition.title,
-                        fontSize = 9.sp, // ✅ Readable size for card identification
+                        fontSize = 9.sp, //  Readable size for card identification
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
                         textAlign = TextAlign.Center,
@@ -141,7 +141,7 @@ fun CardPreview(
 
                     Spacer(modifier = Modifier.height(2.dp))
 
-                    // ✅ NEW: Use the formatted text function
+                    //  NEW: Use the formatted text function
                     FormattedValueText(
                         value = displayData.primaryValue,
                         cardDefinition = cardDefinition,
@@ -162,7 +162,7 @@ fun CardPreview(
                     }
                 }
 
-                // ✅ CLEAN: Show data status or category
+                //  CLEAN: Show data status or category
                 Text(
                     text = if (displayData.isLive)
                         "Live Data"
@@ -176,7 +176,7 @@ fun CardPreview(
                 )
             }
 
-            // ✅ CLEAN: Just colored border when selected - NO grey background
+            //  CLEAN: Just colored border when selected - NO grey background
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -188,7 +188,7 @@ fun CardPreview(
                     )
             )
 
-            // ✅ REMOVED: No more LIVE badge cluttering the interface
+            //  REMOVED: No more LIVE badge cluttering the interface
         }
     }
 
@@ -201,15 +201,15 @@ fun CardPreview(
     }
 }
 
-// ✅ Data class for card display information
+//  Data class for card display information
 private data class PreviewDisplayData(
     val primaryValue: String,
     val secondaryValue: String?,
     val isLive: Boolean
 )
 
-// ✅ Map card definition to live data - NO SAMPLES, only real data or placeholders
-// ✅ SIMPLIFIED: Use centralized mapping
+//  Map card definition to live data - NO SAMPLES, only real data or placeholders
+//  SIMPLIFIED: Use centralized mapping
 private fun mapCardDefinitionToLiveData(
     cardDefinition: CardDefinition,
     liveData: RealTimeFlightData
@@ -218,13 +218,13 @@ private fun mapCardDefinitionToLiveData(
     return PreviewDisplayData(
         primaryValue = primaryValue,
         secondaryValue = secondaryValue,
-        isLive = true  // ✅ Always true - no filtering
+        isLive = true  //  Always true - no filtering
     )
 }
 
-// ✅ REMOVE all the helper functions - they're now in CardLibrary
+//  REMOVE all the helper functions - they're now in CardLibrary
 // Remove: parseFlightTimeToHours, calculateGForce, calculateQNH
-// ✅ ADD this new function to CardPreview.kt
+//  ADD this new function to CardPreview.kt
 // In CardPreview.kt - this should already be working
 @Composable
 private fun FormattedValueText(
@@ -242,7 +242,7 @@ private fun FormattedValueText(
                     fontSize = cardDefinition.primaryFontSize.sp,
                     fontWeight = FontWeight.Bold
                 )) {
-                    append(parts[0])  // ✅ "1250" in large font
+                    append(parts[0])  //  "1250" in large font
                 }
                 append(" ")
                 // Unit part (ft, m/s, kt, etc.)
@@ -251,7 +251,7 @@ private fun FormattedValueText(
                     fontWeight = cardDefinition.unitFontWeight,
                     color = LocalContentColor.current.copy(alpha = 0.7f)
                 )) {
-                    append(parts.drop(1).joinToString(" "))  // ✅ "ft" in smaller font
+                    append(parts.drop(1).joinToString(" "))  //  "ft" in smaller font
                 }
             } else {
                 // No space found, show as-is
@@ -263,7 +263,7 @@ private fun FormattedValueText(
                 }
             }
         },
-        color = MaterialTheme.colorScheme.onSurface,  // ✅ Always same color
+        color = MaterialTheme.colorScheme.onSurface,  //  Always same color
         textAlign = TextAlign.Center,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
@@ -272,7 +272,7 @@ private fun FormattedValueText(
 }
 
 
-// ✅ Helper functions (consistent with ViewModel)
+//  Helper functions (consistent with ViewModel)
 private fun parseFlightTimeToHours(flightTime: String): Float {
     return try {
         val parts = flightTime.split(":")

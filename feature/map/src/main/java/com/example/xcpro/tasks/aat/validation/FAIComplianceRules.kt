@@ -169,9 +169,9 @@ object FAIComplianceRules {
                 issues.add(AATValidationIssue.warning(
                     "AREA_TOO_SMALL",
                     ValidationCategory.AREA_GEOMETRY,
-                    "Area '${area.name}' (${String.format("%.1f", areaSizeKm2)} km²) is very small for competitive AAT",
+                    "Area '${area.name}' (${String.format("%.1f", areaSizeKm2)} km) is very small for competitive AAT",
                     "FAI 3.2.3",
-                    "Consider increasing area size to at least ${CoreRequirements.MINIMUM_AREA_SIZE_KM2} km²",
+                    "Consider increasing area size to at least ${CoreRequirements.MINIMUM_AREA_SIZE_KM2} km",
                     "Area ${index + 1}"
                 ))
             }
@@ -180,9 +180,9 @@ object FAIComplianceRules {
                 issues.add(AATValidationIssue.warning(
                     "AREA_TOO_LARGE",
                     ValidationCategory.AREA_GEOMETRY,
-                    "Area '${area.name}' (${String.format("%.1f", areaSizeKm2)} km²) is very large",
+                    "Area '${area.name}' (${String.format("%.1f", areaSizeKm2)} km) is very large",
                     "FAI 3.2.3",
-                    "Consider reducing area size to under ${CoreRequirements.MAXIMUM_AREA_SIZE_KM2} km²",
+                    "Consider reducing area size to under ${CoreRequirements.MAXIMUM_AREA_SIZE_KM2} km",
                     "Area ${index + 1}"
                 ))
             }

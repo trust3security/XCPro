@@ -1,4 +1,4 @@
-﻿package com.example.xcpro.di
+package com.example.xcpro.di
 
 import com.example.xcpro.orientation.OrientationClock
 import com.example.xcpro.orientation.SystemOrientationClock

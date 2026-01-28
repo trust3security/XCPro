@@ -17,7 +17,7 @@ If something is not defined here, it must be discussed and added **before** impl
 ## Architecture Overview
 
 This project uses:
-- **MVVM (Model–View–ViewModel)**
+- **MVVM (Model-View-ViewModel)**
 - **UDF (Unidirectional Data Flow)**
 - **SSOT (Single Source of Truth)**
 - **Dependency Injection (Hilt)**
@@ -27,14 +27,73 @@ No deviations without explicit agreement.
 
 ---
 
+## Compliance Guardrails
+
+Architecture rules are enforced by CI and review.
+Any deviation must be recorded in `KNOWN_DEVIATIONS.md` with issue ID, owner,
+and expiry date before code is merged.
+
+---
+
+## Timebase and Clocks
+
+All domain and fusion logic must use injected clocks.
+
+Rules:
+- Use a Clock or TimeSource interface with nowMonoMs() and nowWallMs().
+- Domain and fusion code must not call System.currentTimeMillis,
+  SystemClock, Date(), or Instant.now() directly.
+- Fusion timing uses monotonic time. Replay uses IGC timestamps.
+- Wall time is UI/output only (labels, persistence, manual input).
+- Never compare or subtract across time bases.
+
+---
+
+## Dependency Direction
+
+Allowed dependency flow:
+UI -> domain -> data
+
+Rules:
+- UI must not depend on data repositories.
+- Domain must not depend on Android or UI types.
+- Core pipeline components are provided by DI, never constructed inside managers.
+
+---
+
+## ViewModel Contract
+
+Rules:
+- ViewModels depend on use-cases only.
+- No SharedPreferences or persistence inside ViewModels.
+- No UI framework types (androidx.compose.ui.*) inside ViewModels.
+
+---
+
+## Lifecycle Collection Standard
+
+Rules:
+- All UI flow collection must be lifecycle-aware.
+- Compose uses collectAsStateWithLifecycle.
+- Non-Compose uses repeatOnLifecycle or equivalent.
+- Exceptions are only for previews/tests with explicit comments.
+
+---
+
+## Vendor Neutrality and Encoding
+
+Rules:
+- No vendor names in production strings or public APIs.
+- Production Kotlin source must be ASCII only.
+
 ## 1. MVVM + UDF (State Flow Rules)
 
 ### Structure
 ```
 UI (Compose)
-  ↓ intents
+  -> intents
 ViewModel
-  ↓ state
+  -> state
 UI
 ```
 
@@ -54,15 +113,15 @@ UI
 
 ---
 
-## 2. SSOT – Single Source of Truth
+## 2. SSOT - Single Source of Truth
 
 ### Definition
 Each piece of data has **exactly one authoritative owner**.
 
 ### Ownership
-- Raw sensor data → Repository
-- Derived domain values (TE, vario, filtering) → UseCase
-- UI-visible state → ViewModel `StateFlow`
+- Raw sensor data -> Repository
+- Derived domain values (TE, vario, filtering) -> UseCase
+- UI-visible state -> ViewModel `StateFlow`
 
 ### Rules
 - No duplicated state
@@ -151,10 +210,10 @@ Repositories may use `MutableStateFlow` internally but MUST expose only
 ### Allowed Flow
 ```
 Sensors / Data Sources
-  → Repository (SSOT)
-    → UseCase (derive / filter)
-      → ViewModel (UI State)
-        → UI (render only)
+  -> Repository (SSOT)
+    -> UseCase (derive / filter)
+      -> ViewModel (UI State)
+        -> UI (render only)
 ```
 
 ### Simulator / Replay Mode

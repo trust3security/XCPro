@@ -1,4 +1,4 @@
-﻿package com.example.xcpro.map
+package com.example.xcpro.map
 
 import android.Manifest
 import android.content.Context
@@ -36,15 +36,15 @@ internal class LocationSensorsController(
     fun checkAndRequestLocationPermissions(
         locationPermissionLauncher: ActivityResultLauncher<Array<String>>
     ) {
-        Log.d(TAG, "🚀 Checking location permissions...")
+        Log.d(TAG, "Checking location permissions...")
 
         val fineLocationGranted = context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) ==
             android.content.pm.PackageManager.PERMISSION_GRANTED
         if (fineLocationGranted) {
-            Log.d(TAG, "✅ Location permissions already granted, starting background sensors")
+            Log.d(TAG, "Location permissions already granted, starting background sensors")
             scope.launch { ensureSensorsRunning() }
         } else {
-            Log.d(TAG, "📋 Requesting location permissions...")
+            Log.d(TAG, "Requesting location permissions...")
             locationPermissionLauncher.launch(
                 arrayOf(
                     Manifest.permission.ACCESS_FINE_LOCATION
@@ -69,7 +69,7 @@ internal class LocationSensorsController(
     fun restartSensorsIfNeeded() {
         restartJob?.cancel()
         restartJob = scope.launch {
-            Log.d(TAG, "?? Checking if sensors need restart after sleep mode...")
+            Log.d(TAG, "Checking if sensors need restart after sleep mode...")
 
             val sensorStatus = unifiedSensorManager.getSensorStatus()
 
@@ -101,7 +101,7 @@ internal class LocationSensorsController(
 
             // If GPS was started but is no longer receiving updates, restart all sensors
             if (!sensorStatus.gpsStarted && sensorStatus.hasLocationPermissions) {
-                Log.d(TAG, "?? Sensors appear to be stopped (likely due to sleep mode), restarting...")
+                Log.d(TAG, "Sensors appear to be stopped (likely due to sleep mode), restarting...")
 
                 // Stop everything first to clean up any stale listeners
                 stopSensors()
@@ -115,11 +115,11 @@ internal class LocationSensorsController(
                 // Flight data fusion starts automatically with sensor data flow
                 // No explicit start() method needed
 
-                Log.d(TAG, "? Sensors restarted successfully after sleep mode")
+                Log.d(TAG, "Sensors restarted successfully after sleep mode")
             } else if (sensorStatus.gpsStarted) {
-                Log.d(TAG, "? Sensors already running, no restart needed")
+                Log.d(TAG, "Sensors already running, no restart needed")
             } else {
-                Log.d(TAG, "?? No location permissions, cannot restart sensors")
+                Log.d(TAG, "No location permissions, cannot restart sensors")
             }
         }
     }

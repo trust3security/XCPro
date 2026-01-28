@@ -1,13 +1,15 @@
 package com.example.dfcards.dfcards
 
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.IntSize
 import com.example.dfcards.CardPreferences
 import com.example.dfcards.CardPreferences.CardAnchor
 import com.example.dfcards.RealTimeFlightData
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.dfcards.CardState
 import com.example.xcpro.common.units.UnitsPreferences
+import com.example.xcpro.core.common.geometry.DensityScale
+import com.example.xcpro.core.common.geometry.IntSizePx
+import com.example.xcpro.core.time.Clock
+import com.example.xcpro.core.time.DefaultClockProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,7 +34,8 @@ private const val PRIMARY_UPDATE_INTERVAL_MS = 250L
 private const val BACKGROUND_UPDATE_INTERVAL_MS = 1_000L
 
 internal class CardStateRepository(
-    internal val scope: CoroutineScope
+    internal val scope: CoroutineScope,
+    internal val clock: Clock = DefaultClockProvider()
 ) {
 
     internal val cardStateFlowsMap = mutableMapOf<String, MutableStateFlow<CardState>>()
@@ -64,8 +67,8 @@ internal class CardStateRepository(
 
     internal val essentialCardIds = listOf("gps_alt", "baro_alt", "agl", "vario", "ias", "ground_speed")
     internal var cardsAcrossPortrait: Int = CardPreferences.DEFAULT_CARDS_ACROSS_PORTRAIT
-    internal var lastContainerSize: IntSize? = null
-    internal var lastDensity: Density? = null
+    internal var lastContainerSize: IntSizePx? = null
+    internal var lastDensity: DensityScale? = null
     private var cardsAcrossJob: Job? = null
     internal var cardsAnchorPortrait: CardAnchor = CardPreferences.DEFAULT_ANCHOR_PORTRAIT
     private var cardsAnchorJob: Job? = null

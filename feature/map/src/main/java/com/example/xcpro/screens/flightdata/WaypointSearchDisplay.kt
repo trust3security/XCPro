@@ -190,7 +190,7 @@ fun WaypointCard(waypoint: WaypointData) {
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "${waypoint.getStyleDescription()} • ${waypoint.elevation}",
+                    text = "${waypoint.getStyleDescription()}  ${waypoint.elevation}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

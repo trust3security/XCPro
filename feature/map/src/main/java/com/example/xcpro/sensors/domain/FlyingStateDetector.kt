@@ -6,7 +6,7 @@ import kotlin.math.min
 /**
  * Determines whether the aircraft is flying based on speed, time and altitude cues.
  *
- * This mirrors XCSoar's takeoff/landing gating logic (timers, airspeed handling,
+ * This mirrors legacy takeoff/landing gating logic (timers, airspeed handling,
  * AGL override, and altitude-based takeoff-speed reduction).
  */
 class FlyingStateDetector(
@@ -250,7 +250,7 @@ class FlyingStateDetector(
     }
 
     private companion object {
-        // XCSoar fallback until polar wiring exists.
+        // Fallback until polar wiring exists.
         private const val DEFAULT_TAKEOFF_SPEED_MS = 10.0
 
         private const val MIN_UPDATE_DELTA_MS = 500L

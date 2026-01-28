@@ -9,8 +9,8 @@ import kotlin.math.roundToInt
 /**
  * Centralized gating/smoothing for aircraft location updates.
  *
- * Mirrors XCSoar's SetLocationLazy: ignore updates that move less than a pixel
- * (default 0.5 px) so both camera and icon advance together without jitter.
+ * Ignore updates that move less than a pixel (default 0.5 px) so both camera and
+ * icon advance together without jitter.
  */
 class MapLocationFilter(
     private val config: Config = Config(),

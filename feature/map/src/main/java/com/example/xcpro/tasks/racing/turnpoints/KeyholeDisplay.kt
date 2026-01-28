@@ -1,4 +1,4 @@
-﻿package com.example.xcpro.tasks.racing.turnpoints
+package com.example.xcpro.tasks.racing.turnpoints
 
 import com.example.xcpro.tasks.racing.models.RacingWaypoint
 import com.example.xcpro.tasks.racing.RacingGeometryUtils
@@ -10,7 +10,7 @@ import kotlin.math.*
  * Configurable Keyhole specification:
  * - Inner radius: user sets via keyholeInnerRadius (cylinder part)
  * - Outer radius: user sets via gateWidth (sector outer radius)
- * - Angle: user sets via keyholeAngle (sector angle, default 90°)
+ * - Angle: user sets via keyholeAngle (sector angle, default 90 deg)
  * - Sector oriented perpendicular to track bisector, pointing outward
  * - Much more flexible than fixed FAI implementation
  */
@@ -19,7 +19,7 @@ class KeyholeDisplay : TurnPointDisplay {
     
     override fun generateVisualGeometry(waypoint: RacingWaypoint, context: TaskContext): String {
         return try {
-            println("🔑 KEYHOLE DEBUG: Starting keyhole generation for waypoint ${waypoint.title}")
+            println("KEYHOLE DEBUG: Starting keyhole generation for waypoint ${waypoint.title}")
 
             // Configurable Keyhole: Use flexible parameters
             val cylinderRadiusMeters = waypoint.keyholeInnerRadius * 1000.0 // Inner cylinder radius in meters
@@ -28,7 +28,7 @@ class KeyholeDisplay : TurnPointDisplay {
                 if (abs(angle - 90.0) < 1e-3) 90.0 else angle
             } // Clean up float precision (89.9999 -> 90)
 
-            println("🔑 KEYHOLE DEBUG: Params - Inner:${cylinderRadiusMeters}m, Outer:${sectorRadiusMeters}m, Angle:${sectorAngleDegrees}°")
+            println("KEYHOLE DEBUG: Params - Inner:${cylinderRadiusMeters}m, Outer:${sectorRadiusMeters}m, Angle:${sectorAngleDegrees} deg")
 
             // Use sector calculation with configurable angle
             val bisectorBearing = KeyholeGeometry.calculateSectorBisector(waypoint, context)
@@ -36,9 +36,9 @@ class KeyholeDisplay : TurnPointDisplay {
             val startAngle = (bisectorBearing - halfAngle + 360.0) % 360.0
             val endAngle = (bisectorBearing + halfAngle) % 360.0
 
-            println("🔑 KEYHOLE DEBUG: Angles - Bisector:${bisectorBearing}°, Start:${startAngle}°, End:${endAngle}°")
+            println("KEYHOLE DEBUG: Angles - Bisector:${bisectorBearing} deg, Start:${startAngle} deg, End:${endAngle} deg")
 
-            // Build one closed ring matching XCSoar keyhole (outer arc + inner arc), no separate shapes
+            // Build one closed ring matching the keyhole shape (outer arc + inner arc), no separate shapes
             val outerArc = KeyholeGeometry.generateSectorCoordinatesArray(
                 waypoint.lat,
                 waypoint.lon,
@@ -66,7 +66,7 @@ class KeyholeDisplay : TurnPointDisplay {
 
             println("dY` KEYHOLE DEBUG: Ring pts=${ring.size} (outer=${outerArc.size} inner=${innerArc.size})")
 
-            // Single Feature Polygon (annular sector) so renderer sees one geometry like XCSoar
+            // Single Feature Polygon (annular sector) so renderer sees one geometry
             val geoJson = """
             {
               "type": "Feature",
@@ -86,11 +86,11 @@ class KeyholeDisplay : TurnPointDisplay {
             }
             """.trimIndent()
 
-            println("🔑 KEYHOLE DEBUG: Generated GeoJSON successfully")
+            println("KEYHOLE DEBUG: Generated GeoJSON successfully")
             geoJson
         } catch (e: Exception) {
-            println("🔑 KEYHOLE ERROR: ${e.message}")
-            println("🔑 KEYHOLE ERROR: Stack trace: ${e.stackTrace.contentToString()}")
+            println("KEYHOLE ERROR: ${e.message}")
+            println("KEYHOLE ERROR: Stack trace: ${e.stackTrace.contentToString()}")
             // Return a simple cylinder as fallback
             """
             {

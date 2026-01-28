@@ -24,7 +24,7 @@ internal class AATFeatureFactory(
      * Create GeoJSON feature for a start/finish line
      */
     fun createLineFeature(waypoint: AATWaypoint, coordinates: List<List<Double>>, type: String, role: String): String {
-        // ✅ SSOT FIX: Use authority instead of removed gateWidth property
+        // SSOT FIX: Use authority instead of removed gateWidth property
         val lineWidth = waypoint.getAuthorityRadius()
         return """
         {
@@ -67,7 +67,7 @@ internal class AATFeatureFactory(
 
     /**
      * Create GeoJSON feature for a sector
-     * ✅ NEW: Support for AAT sectors and keyholes
+     * NEW: Support for AAT sectors and keyholes
      */
     fun createSectorFeature(waypoint: AATWaypoint, coordinates: List<List<Double>>, type: String, role: String?): String {
         val roleProperty = role?.let { "\"role\": \"$it\"," } ?: ""
@@ -95,7 +95,7 @@ internal class AATFeatureFactory(
 
     /**
      * Generate sector/keyhole polygon coordinates
-     * ✅ FIXED: Proper keyhole shape (cylinder + sector extension)
+     * FIXED: Proper keyhole shape (cylinder + sector extension)
      */
     fun generateSectorCoordinates(
         centerLat: Double,
@@ -113,7 +113,7 @@ internal class AATFeatureFactory(
         }
 
         if (innerRadiusKm > 0.0) {
-            // Annular sector ring (outer arc start→end, inner arc end→start) like racing keyhole/XCSoar
+            // Annular sector ring (outer arc start->end, inner arc end->start) like racing keyhole
             val steps = 64
             sweepAngles(startBearingDeg, endBearingDeg, steps).forEach { ang ->
                 val p = geometryGenerator.calculateDestinationPoint(centerLat, centerLon, ang, outerRadiusKm)
@@ -125,7 +125,7 @@ internal class AATFeatureFactory(
             }
 
         } else {
-            // ✅ SECTOR: No inner radius - standard sector from center
+            // SECTOR: No inner radius - standard sector from center
             val numPoints = 48
 
             // Start from center

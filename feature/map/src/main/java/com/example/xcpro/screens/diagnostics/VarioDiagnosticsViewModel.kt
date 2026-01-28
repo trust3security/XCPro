@@ -3,7 +3,6 @@ package com.example.xcpro.screens.diagnostics
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.xcpro.sensors.VarioDiagnosticsSample
-import com.example.xcpro.vario.VarioServiceManager
 import com.example.xcpro.map.throttleFrame
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -15,7 +14,7 @@ import kotlinx.coroutines.launch
 
 @HiltViewModel
 class VarioDiagnosticsViewModel @Inject constructor(
-    private val varioServiceManager: VarioServiceManager
+    private val useCase: VarioDiagnosticsUseCase
 ) : ViewModel() {
 
     private val historyLimit = 300
@@ -26,7 +25,7 @@ class VarioDiagnosticsViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            varioServiceManager.sensorFusionRepository.diagnosticsFlow
+            useCase.diagnosticsFlow
                 .throttleFrame(chartFrameMs)
                 .collect { sample ->
                 if (sample != null) {

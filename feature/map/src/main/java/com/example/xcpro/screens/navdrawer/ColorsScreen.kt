@@ -22,6 +22,7 @@ import com.example.xcpro.profiles.ProfileViewModel
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.example.xcpro.ui.theme.AppColorTheme
 import com.example.xcpro.ui.theme.CustomColorScheme
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.json.JSONObject
 
 /**
@@ -40,7 +41,7 @@ fun ColorsScreen(
 ) {
     val context = LocalContext.current
     val profileViewModel: ProfileViewModel = hiltViewModel()
-    val profileUiState by profileViewModel.uiState.collectAsState()
+    val profileUiState by profileViewModel.uiState.collectAsStateWithLifecycle()
     val profileId = profileUiState.activeProfile?.id ?: "default"
 
     // Load current theme
@@ -64,20 +65,20 @@ fun ColorsScreen(
     LaunchedEffect(profileId, selectedTheme) {
         val customColors = loadCustomColors(context, profileId, selectedTheme.id)
         if (customColors != null) {
-            Log.d("ColorsScreen", "📱 Loading custom colors for theme ${selectedTheme.id}")
+            Log.d("ColorsScreen", " Loading custom colors for theme ${selectedTheme.id}")
             try {
                 currentPrimary = customColors.toPrimaryColor()
                 currentSecondary = customColors.toSecondaryColor()
-                Log.d("ColorsScreen", "✅ Successfully loaded custom colors")
+                Log.d("ColorsScreen", " Successfully loaded custom colors")
             } catch (e: Exception) {
-                Log.e("ColorsScreen", "❌ Error loading custom colors: ${e.message}")
+                Log.e("ColorsScreen", " Error loading custom colors: ${e.message}")
                 // Clear broken custom colors and reset to defaults
                 removeCustomColors(context, profileId, selectedTheme.id)
                 currentPrimary = selectedTheme.primaryColor
                 currentSecondary = selectedTheme.secondaryColor
             }
         } else {
-            Log.d("ColorsScreen", "📱 No custom colors found, using theme defaults")
+            Log.d("ColorsScreen", " No custom colors found, using theme defaults")
             // Reset to theme defaults
             currentPrimary = selectedTheme.primaryColor
             currentSecondary = selectedTheme.secondaryColor
@@ -136,7 +137,7 @@ fun ColorsScreen(
                     secondaryColor = currentSecondary,
                     selectedColorType = selectedColorType,
                     onColorSelected = { colorType ->
-                        Log.d("ColorsScreen", "🎯 Selected color type changed to: $colorType")
+                        Log.d("ColorsScreen", " Selected color type changed to: $colorType")
                         selectedColorType = colorType
                     },
                     onEditColors = { showColorEditor = true }
@@ -195,13 +196,13 @@ fun ColorsScreen(
                     selectedColorType = selectedColorType,
                     selectedColor = currentPrimary, // Only primary color now
                     onColorChanged = { newColor ->
-                        Log.d("ColorsScreen", "🔄 PRIMARY color changed from $currentPrimary to $newColor")
+                        Log.d("ColorsScreen", " PRIMARY color changed from $currentPrimary to $newColor")
                         currentPrimary = newColor
                         // Immediately save and apply the change
                         val customColors = CustomColorScheme.fromColors(
                             currentPrimary, selectedTheme.secondaryColor // Use theme default for secondary
                         )
-                        Log.d("ColorsScreen", "🔄 About to save ${selectedColorType.uppercase()} change for profile=$profileId, theme=${selectedTheme.id}")
+                        Log.d("ColorsScreen", " About to save ${selectedColorType.uppercase()} change for profile=$profileId, theme=${selectedTheme.id}")
                         saveCustomColors(context, profileId, customColors, selectedTheme.id)
                     },
                     onSave = {
@@ -251,9 +252,9 @@ private fun saveCustomColors(context: Context, profileId: String, colors: Custom
         put("secondaryColor", colors.secondaryColor)
     }
     val key = "profile_${profileId}_theme_${themeId}_custom_colors"
-    Log.d("ColorsScreen", "🎨 Saving custom colors for profile=$profileId, theme=$themeId")
-    Log.d("ColorsScreen", "🎨 Key: $key")
-    Log.d("ColorsScreen", "🎨 Colors: ${json.toString()}")
+    Log.d("ColorsScreen", " Saving custom colors for profile=$profileId, theme=$themeId")
+    Log.d("ColorsScreen", " Key: $key")
+    Log.d("ColorsScreen", " Colors: ${json.toString()}")
 
     sharedPrefs.edit()
         .putString(key, json.toString())
@@ -261,7 +262,7 @@ private fun saveCustomColors(context: Context, profileId: String, colors: Custom
 
     // Verify save
     val saved = sharedPrefs.getString(key, null)
-    Log.d("ColorsScreen", "🎨 Verified saved: $saved")
+    Log.d("ColorsScreen", " Verified saved: $saved")
 }
 
 /** Load custom colors for a theme */
