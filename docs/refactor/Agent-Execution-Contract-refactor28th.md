@@ -51,12 +51,12 @@ Work is complete only when:
 
 ## 1.1 Feature Summary (1-3 sentences)
 - Refactor `dfcards-library/src/main/java/com/example/dfcards/dfcards/FlightDataViewModel.kt`
-  to stay under 500 LOC without changing behavior or public API.
+  to stay under 400 LOC without changing behavior or public API.
 - Extract cohesive helper logic into new internal classes/files while preserving
   MVVM/UDF/SSOT rules and existing state/flow semantics.
 
 ## 1.2 User Stories / Use Cases
-- As a developer, I want the ViewModel to be readable and <500 LOC, so that
+- As a developer, I want the ViewModel to be readable and <400 LOC, so that
   refactors are safe and reviews are easier.
 - As a maintainer, I want behavior unchanged, so that users see identical UI
   and tests remain valid.
@@ -110,6 +110,8 @@ Gate: no functional changes; repo builds.
   - `FlightDataStateMapper.kt`
   - `FlightDataFlowBuilder.kt`
   - `FlightDataUiEventHandler.kt`
+  - `FlightDataProfileCoordinator.kt`
+  - `FlightDataTemplateManager.kt`
 - Keep ViewModel wiring only (dependency injection + delegation).
 - Add or adjust unit tests if there is no coverage for extracted logic.
 
@@ -129,7 +131,7 @@ Gate: feature works end-to-end in debug build.
 Gate: all required checks pass (Section 4).
 
 ## Phase 4 - Polish & PR Readiness
-- Ensure `FlightDataViewModel.kt` < 500 LOC.
+- Ensure `FlightDataViewModel.kt` < 400 LOC.
 - Keep diffs minimal; only structural extraction.
 - Provide PR summary and tests run.
 
@@ -141,7 +143,7 @@ Gate: Definition of Done satisfied.
 
 ## 3.1 Functional Acceptance Criteria
 - Given identical inputs, ViewModel emits identical UI state before/after refactor.
-- ViewModel file size is under 500 lines.
+- ViewModel file size is under 400 lines.
 
 ## 3.2 Edge Cases
 - Empty/initial state behaves the same as before.

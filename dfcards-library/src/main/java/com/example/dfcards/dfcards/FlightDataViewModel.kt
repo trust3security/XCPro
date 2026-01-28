@@ -14,20 +14,16 @@ import com.example.xcpro.core.common.geometry.DensityScale
 import com.example.xcpro.core.common.geometry.IntSizePx
 import com.example.xcpro.core.time.Clock
 import com.example.xcpro.core.time.DefaultClockProvider
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.collect
-import java.util.UUID
 
 private const val TAG = "FlightDataViewModel"
-
 /**
  * Single-source-of-truth owner for flight data card configuration. Persisted values are read/written
  * via [CardPreferences], and the UI observes a consistent state regardless of which screen modifies it.
@@ -37,37 +33,28 @@ class FlightDataViewModel(
     private val clock: Clock = DefaultClockProvider(),
     cardsUseCaseOverride: FlightCardsUseCase? = null
 ) : ViewModel() {
-
     private val cardsUseCase = cardsUseCaseOverride ?: FlightCardsUseCase(viewModelScope, clock)
     private var ingest: FlightDataIngest? = null
-
     private val _cardPreferences = MutableStateFlow<CardPreferences?>(null)
-
     private val _profileModeCards =
         MutableStateFlow<Map<ProfileId, Map<FlightModeSelection, List<String>>>>(emptyMap())
     val profileModeCards: StateFlow<Map<ProfileId, Map<FlightModeSelection, List<String>>>> =
         _profileModeCards.asStateFlow()
-
     private val _profileModeTemplates =
         MutableStateFlow<Map<ProfileId, Map<FlightModeSelection, String>>>(emptyMap())
     val profileModeTemplates: StateFlow<Map<ProfileId, Map<FlightModeSelection, String>>> =
         _profileModeTemplates.asStateFlow()
-
     private val _profileModeVisibilities =
         MutableStateFlow<Map<ProfileId, Map<FlightModeSelection, Boolean>>>(emptyMap())
     val profileModeVisibilities: StateFlow<Map<ProfileId, Map<FlightModeSelection, Boolean>>> =
         _profileModeVisibilities.asStateFlow()
-
     private val _activeProfileId = MutableStateFlow<ProfileId?>(null)
     val activeProfileId: StateFlow<ProfileId?> = _activeProfileId.asStateFlow()
-
     private val _currentFlightMode = MutableStateFlow(FlightModeSelection.CRUISE)
     val currentFlightMode: StateFlow<FlightModeSelection> = _currentFlightMode.asStateFlow()
-
     private val _availableTemplates =
         MutableStateFlow<List<FlightTemplate>>(FlightTemplates.getDefaultTemplates())
     val availableTemplates: StateFlow<List<FlightTemplate>> = _availableTemplates.asStateFlow()
-
     private val profileStore = FlightProfileStore(
         profileModeTemplates = _profileModeTemplates,
         profileModeCards = _profileModeCards,
@@ -76,18 +63,28 @@ class FlightDataViewModel(
         availableTemplates = _availableTemplates,
         ingestProvider = { ingest }
     )
-
-    val cardStateFlows: Map<String, StateFlow<CardState>>
-        get() = cardsUseCase.cardStateFlows
-
+    private val profileCoordinator = FlightDataProfileCoordinator(
+        profileStore = profileStore,
+        cardPreferences = _cardPreferences,
+        ioDispatcher = ioDispatcher,
+        setProfileTemplate = ::setProfileTemplate,
+        setProfileCards = ::setProfileCards,
+        setFlightMode = ::setFlightMode,
+        setActiveProfile = ::setActiveProfile,
+        initializeCards = cardsUseCase::initializeCards,
+        applyTemplate = ::applyTemplate,
+        loadEssentialCardsOnStartup = ::loadEssentialCardsOnStartup,
+        logDebug = ::logDebug
+    )
+    private val templateManager =
+        FlightDataTemplateManager(cardPreferences = _cardPreferences, availableTemplates = _availableTemplates)
+    val cardStateFlows: Map<String, StateFlow<CardState>> get() = cardsUseCase.cardStateFlows
     @Deprecated(
         message = "Use cardStateFlows instead for better performance",
         replaceWith = ReplaceWith("cardStateFlows")
     )
     val cardStates: StateFlow<List<CardState>> = cardsUseCase.legacyCardStates
-
     val selectedCardIds: StateFlow<Set<String>> = cardsUseCase.selectedCardIds
-
     val activeCardIds: StateFlow<List<String>> =
         FlightDataFlowBuilder.activeCardIds(
             profileModeCards = _profileModeCards,
@@ -95,14 +92,12 @@ class FlightDataViewModel(
             currentFlightMode = _currentFlightMode,
             scope = viewModelScope
         )
-
     val activeCards: StateFlow<List<CardState>> =
         FlightDataFlowBuilder.activeCards(
             activeCardIds = activeCardIds,
             allStates = cardsUseCase.legacyCardStates,
             scope = viewModelScope
         )
-
     val activeTemplateId: StateFlow<String?> =
         FlightDataFlowBuilder.activeTemplateId(
             profileModeTemplates = _profileModeTemplates,
@@ -110,7 +105,6 @@ class FlightDataViewModel(
             currentFlightMode = _currentFlightMode,
             scope = viewModelScope
         )
-
     private var templatesJob: Job? = null
 
     fun initializeCardPreferences(preferences: CardPreferences) {
@@ -134,21 +128,14 @@ class FlightDataViewModel(
             syncSelectedIdsWithRepository()
         }
     }
-
-    fun updateFlightMode(flightMode: FlightModeSelection) {
-        setFlightMode(flightMode)
-    }
-    fun initializeCards(containerSize: IntSizePx, density: DensityScale) {
+    fun updateFlightMode(flightMode: FlightModeSelection) = setFlightMode(flightMode)
+    fun initializeCards(containerSize: IntSizePx, density: DensityScale) =
         cardsUseCase.initializeCards(containerSize, density)
-    }
     suspend fun loadEssentialCardsOnStartup(
         containerSize: IntSizePx,
         density: DensityScale,
         flightMode: FlightModeSelection? = null
-    ) {
-        cardsUseCase.loadEssentialCardsOnStartup(containerSize, density, flightMode)
-    }
-
+    ) = cardsUseCase.loadEssentialCardsOnStartup(containerSize, density, flightMode)
     fun updateCardState(cardState: CardState) {
         cardsUseCase.updateCardState(cardState)
         syncSelectedIdsWithRepository()
@@ -162,7 +149,6 @@ class FlightDataViewModel(
         syncSelectedIdsWithRepository()
         persistActiveCards()
     }
-
     suspend fun applyTemplate(
         template: FlightTemplate,
         containerSize: IntSizePx,
@@ -172,16 +158,10 @@ class FlightDataViewModel(
         syncSelectedIdsWithRepository()
         persistTemplateSelection(template.id)
     }
-
-    fun updateCardsWithLiveData(liveData: RealTimeFlightData) {
+    fun updateCardsWithLiveData(liveData: RealTimeFlightData) =
         cardsUseCase.updateCardsWithLiveData(liveData)
-    }
-    fun startIndependentClockTimer() {
-        cardsUseCase.startIndependentClockTimer()
-    }
-    fun stopIndependentClockTimer() {
-        cardsUseCase.stopIndependentClockTimer()
-    }
+    fun startIndependentClockTimer() = cardsUseCase.startIndependentClockTimer()
+    fun stopIndependentClockTimer() = cardsUseCase.stopIndependentClockTimer()
     fun saveCurrentLayoutToTemplate() {
         cardsUseCase.saveCurrentLayoutToTemplate()
         persistActiveCards()
@@ -191,16 +171,13 @@ class FlightDataViewModel(
         syncSelectedIdsWithRepository()
         persistActiveCards()
     }
-    fun resumeLiveDataUpdates() {
-        cardsUseCase.resumeLiveUpdates()
-    }
+    fun resumeLiveDataUpdates() = cardsUseCase.resumeLiveUpdates()
     fun getAllCardStates(): List<CardState> = cardsUseCase.getAllCardStates()
     fun getCardState(cardId: String): CardState? = cardsUseCase.getCardState(cardId)
     fun hasCard(cardId: String): Boolean = cardsUseCase.hasCard(cardId)
     fun getCardCount(): Int = cardsUseCase.getCardCount()
-    fun updateUnitsPreferences(preferences: UnitsPreferences) {
+    fun updateUnitsPreferences(preferences: UnitsPreferences) =
         cardsUseCase.updateUnitsPreferences(preferences)
-    }
     fun ensureCardsExist(cardIds: Set<String>) {
         logDebug("ensureCardsExist: ids=${cardIds.size}")
         cardsUseCase.ensureCardsExist(cardIds)
@@ -213,14 +190,12 @@ class FlightDataViewModel(
         profileStore.ensureVisibilityEntry(FlightVisibility.normalizeProfileId(profileId))
         syncSelectedIdsWithRepository()
     }
-
     fun setFlightMode(mode: FlightModeSelection) {
         if (_currentFlightMode.value == mode) return
         _currentFlightMode.value = mode
         cardsUseCase.updateFlightMode(mode)
         syncSelectedIdsWithRepository()
     }
-
     fun setProfileCards(
         profileId: ProfileId?,
         flightMode: FlightModeSelection,
@@ -242,7 +217,6 @@ class FlightDataViewModel(
         profileStore.ensureVisibilityEntry(update.profileId)
         persistProfileCards(update.profileId, flightMode, update.cardIds)
     }
-
     fun setProfileTemplate(
         profileId: ProfileId?,
         flightMode: FlightModeSelection,
@@ -258,27 +232,11 @@ class FlightDataViewModel(
         profileStore.ensureVisibilityEntry(update.profileId)
         persistProfileTemplate(update.profileId, flightMode, templateId)
     }
-
     suspend fun selectProfileTemplate(
         profileId: ProfileId?,
         flightMode: FlightModeSelection,
         template: FlightTemplate
-    ) {
-        val targetProfileId = FlightVisibility.normalizeProfileId(profileId)
-        logDebug("selectProfileTemplate: profile=$targetProfileId mode=$flightMode template=${template.id}")
-        val preferences = _cardPreferences.value
-        val storedCards = if (preferences == null) {
-            null
-        } else {
-            withContext(ioDispatcher) {
-                preferences.getProfileTemplateCards(targetProfileId, template.id).first()
-            }
-        }
-        val cards = storedCards ?: template.cardIds
-        setProfileTemplate(profileId, flightMode, template.id)
-        setProfileCards(profileId, flightMode, cards)
-    }
-
+    ) = profileCoordinator.selectProfileTemplate(profileId, flightMode, template)
     fun setProfileFlightModeVisibility(
         profileId: ProfileId?,
         flightMode: FlightModeSelection,
@@ -296,36 +254,30 @@ class FlightDataViewModel(
             preferences.saveProfileFlightModeVisibility(update.profileId, flightMode.name, isVisible)
         }
     }
-
     fun toggleProfileFlightModeVisibility(profileId: ProfileId?, flightMode: FlightModeSelection) {
         if (flightMode == FlightModeSelection.CRUISE) return
         val targetProfileId = FlightVisibility.normalizeProfileId(profileId)
         val current = _profileModeVisibilities.value[targetProfileId]?.get(flightMode) ?: true
         setProfileFlightModeVisibility(profileId, flightMode, !current)
     }
-
-    fun flightModeVisibilitiesFor(profileId: ProfileId?): Map<FlightModeSelection, Boolean> {
-        return FlightDataStateMapper.flightModeVisibilitiesFor(
+    fun flightModeVisibilitiesFor(profileId: ProfileId?): Map<FlightModeSelection, Boolean> =
+        FlightDataStateMapper.flightModeVisibilitiesFor(
             profileModeVisibilities = _profileModeVisibilities.value,
             profileId = profileId
         )
-    }
-
     fun getProfileCards(profileId: ProfileId?, flightMode: FlightModeSelection): List<String> =
         FlightDataStateMapper.getProfileCards(
             profileModeCards = _profileModeCards.value,
             profileId = profileId,
             flightMode = flightMode
         )
-
     fun getProfileTemplateId(profileId: ProfileId?, flightMode: FlightModeSelection): String? =
         FlightDataStateMapper.getProfileTemplateId(
             profileModeTemplates = _profileModeTemplates.value,
             profileId = profileId,
             flightMode = flightMode
         )
-
-    fun clearProfile(profileId: ProfileId) {
+    fun clearProfile(profileId: ProfileId) =
         FlightDataUiEventHandler.clearProfile(
             profileId = profileId,
             profileModeCards = _profileModeCards,
@@ -336,82 +288,37 @@ class FlightDataViewModel(
             scope = viewModelScope,
             ioDispatcher = ioDispatcher
         )
-    }
-
     override fun onCleared() {
         cardsUseCase.onCleared()
         templatesJob?.cancel()
         super.onCleared()
     }
-
     suspend fun prepareCardsForProfile(
         profileId: ProfileId?,
         flightMode: FlightModeSelection,
         containerSize: IntSizePx,
         density: DensityScale
-    ) {
-        logDebug("prepareCardsForProfile(profile=$profileId, mode=$flightMode, size=${containerSize.width}x${containerSize.height})")
-        setFlightMode(flightMode)
-        setActiveProfile(profileId)
-        initializeCards(containerSize, density)
-
-        val template = profileStore.buildActiveTemplate(profileId, flightMode)
-        if (template != null) {
-            applyTemplate(template, containerSize, density)
-            setProfileCards(profileId, flightMode, template.cardIds)
-        } else {
-            cardsUseCase.loadEssentialCardsOnStartup(containerSize, density, flightMode)
-        }
-    }
-
-    suspend fun createTemplate(name: String, cardIds: List<String>) {
-        val preferences = _cardPreferences.value ?: return
-        val newTemplate = FlightTemplate(
-            id = UUID.randomUUID().toString(),
-            name = name,
-            description = "Custom template",
-            cardIds = cardIds,
-            isPreset = false
-        )
-        val updated = _availableTemplates.value + newTemplate
-        preferences.saveAllTemplates(updated)
-    }
-
-    suspend fun updateTemplate(templateId: String, name: String, cardIds: List<String>) {
-        val preferences = _cardPreferences.value ?: return
-        val updated = _availableTemplates.value.map { template ->
-            if (template.id == templateId) {
-                template.copy(name = name, cardIds = cardIds, isPreset = false)
-            } else template
-        }
-        preferences.saveAllTemplates(updated)
-    }
-
-    suspend fun deleteTemplate(templateId: String) {
-        val preferences = _cardPreferences.value ?: return
-        val updated = _availableTemplates.value.filterNot { it.id == templateId }
-        preferences.saveAllTemplates(updated)
-    }
-
+    ) = profileCoordinator.prepareCardsForProfile(profileId, flightMode, containerSize, density)
+    suspend fun createTemplate(name: String, cardIds: List<String>) =
+        templateManager.createTemplate(name, cardIds)
+    suspend fun updateTemplate(templateId: String, name: String, cardIds: List<String>) =
+        templateManager.updateTemplate(templateId, name, cardIds)
+    suspend fun deleteTemplate(templateId: String) = templateManager.deleteTemplate(templateId)
     fun currentTemplateFor(profileId: ProfileId?, flightMode: FlightModeSelection): FlightTemplate? =
         profileStore.buildActiveTemplate(profileId, flightMode)
-
-    fun allTemplateCardCounts(profileId: ProfileId?): Map<String, Int> {
-        return FlightDataStateMapper.allTemplateCardCounts(
+    fun allTemplateCardCounts(profileId: ProfileId?): Map<String, Int> =
+        FlightDataStateMapper.allTemplateCardCounts(
             profileModeCards = _profileModeCards.value,
             profileModeTemplates = _profileModeTemplates.value,
             profileId = profileId
         )
-    }
-
-    fun templateCardCounts(profileId: ProfileId?, flightMode: FlightModeSelection): Map<String, Int> {
-        return FlightDataStateMapper.templateCardCounts(
+    fun templateCardCounts(profileId: ProfileId?, flightMode: FlightModeSelection): Map<String, Int> =
+        FlightDataStateMapper.templateCardCounts(
             profileModeCards = _profileModeCards.value,
             profileModeTemplates = _profileModeTemplates.value,
             profileId = profileId,
             flightMode = flightMode
         )
-    }
 
     private fun syncSelectedIdsWithRepository() {
         FlightDataUiEventHandler.syncSelectedIdsWithRepository(
@@ -424,7 +331,6 @@ class FlightDataViewModel(
             }
         )
     }
-
     private fun persistActiveCards() {
         FlightDataUiEventHandler.persistActiveCards(
             activeProfileId = _activeProfileId,
@@ -435,7 +341,6 @@ class FlightDataViewModel(
             }
         )
     }
-
     private fun persistTemplateSelection(templateId: String) {
         FlightDataUiEventHandler.persistTemplateSelection(
             activeProfileId = _activeProfileId,
@@ -446,7 +351,6 @@ class FlightDataViewModel(
             templateId = templateId
         )
     }
-
     private fun persistProfileCards(
         profileId: ProfileId,
         flightMode: FlightModeSelection,
@@ -462,7 +366,6 @@ class FlightDataViewModel(
             cardIds = cardIds
         )
     }
-
     private fun persistProfileTemplate(
         profileId: ProfileId,
         flightMode: FlightModeSelection,
@@ -477,7 +380,6 @@ class FlightDataViewModel(
             templateId = templateId
         )
     }
-
     private fun getTemplateIdForPersistence(
         profileId: ProfileId,
         flightMode: FlightModeSelection
@@ -490,7 +392,6 @@ class FlightDataViewModel(
                 setProfileTemplate(targetProfileId, mode, templateId)
             }
         )
-
     private fun logDebug(message: String) {
         runCatching { Log.d(TAG, message) }
     }
