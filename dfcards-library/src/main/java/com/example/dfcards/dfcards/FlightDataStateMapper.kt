@@ -1,5 +1,6 @@
 package com.example.dfcards.dfcards
 
+import com.example.dfcards.FlightModeSelection
 import kotlinx.coroutines.flow.MutableStateFlow
 
 internal data class ProfileCardsUpdate(

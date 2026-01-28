@@ -115,7 +115,7 @@ class FlightDataViewModel(
 
     fun initializeCardPreferences(preferences: CardPreferences) {
         if (_cardPreferences.value === preferences) return
-        Log.d(TAG, "initializeCardPreferences: ${preferences.hashCode()}")
+        logDebug("initializeCardPreferences: ${preferences.hashCode()}")
         _cardPreferences.value = preferences
         ingest = FlightDataIngest(preferences, ioDispatcher)
         cardsUseCase.setPreferences(preferences)
@@ -202,13 +202,13 @@ class FlightDataViewModel(
         cardsUseCase.updateUnitsPreferences(preferences)
     }
     fun ensureCardsExist(cardIds: Set<String>) {
-        Log.d(TAG, "ensureCardsExist: ids=${cardIds.size}")
+        logDebug("ensureCardsExist: ids=${cardIds.size}")
         cardsUseCase.ensureCardsExist(cardIds)
     }
 
     fun setActiveProfile(profileId: ProfileId?) {
         if (_activeProfileId.value == profileId) return
-        Log.d(TAG, "setActiveProfile: $profileId")
+        logDebug("setActiveProfile: $profileId")
         _activeProfileId.value = profileId
         profileStore.ensureVisibilityEntry(FlightVisibility.normalizeProfileId(profileId))
         syncSelectedIdsWithRepository()
@@ -232,7 +232,7 @@ class FlightDataViewModel(
             flightMode = flightMode,
             cardIds = cardIds
         )
-        Log.d(TAG, "setProfileCards: profile=${update.profileId} mode=$flightMode cards=${update.cardIds.size}")
+        logDebug("setProfileCards: profile=${update.profileId} mode=$flightMode cards=${update.cardIds.size}")
         if (FlightVisibility.normalizeProfileId(_activeProfileId.value) == update.profileId &&
             _currentFlightMode.value == flightMode
         ) {
@@ -254,7 +254,7 @@ class FlightDataViewModel(
             flightMode = flightMode,
             templateId = templateId
         )
-        Log.d(TAG, "setProfileTemplate: profile=${update.profileId} mode=$flightMode template=$templateId")
+        logDebug("setProfileTemplate: profile=${update.profileId} mode=$flightMode template=$templateId")
         profileStore.ensureVisibilityEntry(update.profileId)
         persistProfileTemplate(update.profileId, flightMode, templateId)
     }
@@ -265,7 +265,7 @@ class FlightDataViewModel(
         template: FlightTemplate
     ) {
         val targetProfileId = FlightVisibility.normalizeProfileId(profileId)
-        Log.d(TAG, "selectProfileTemplate: profile=$targetProfileId mode=$flightMode template=${template.id}")
+        logDebug("selectProfileTemplate: profile=$targetProfileId mode=$flightMode template=${template.id}")
         val preferences = _cardPreferences.value
         val storedCards = if (preferences == null) {
             null
@@ -350,7 +350,7 @@ class FlightDataViewModel(
         containerSize: IntSizePx,
         density: DensityScale
     ) {
-        Log.d(TAG, "prepareCardsForProfile(profile=$profileId, mode=$flightMode, size=${containerSize.width}x${containerSize.height})")
+        logDebug("prepareCardsForProfile(profile=$profileId, mode=$flightMode, size=${containerSize.width}x${containerSize.height})")
         setFlightMode(flightMode)
         setActiveProfile(profileId)
         initializeCards(containerSize, density)
@@ -490,4 +490,8 @@ class FlightDataViewModel(
                 setProfileTemplate(targetProfileId, mode, templateId)
             }
         )
+
+    private fun logDebug(message: String) {
+        runCatching { Log.d(TAG, message) }
+    }
 }
