@@ -430,6 +430,16 @@ Display rules:
 - VariometerPanel converts values to user units and renders the needle.
 - Secondary label shows XCSoar-style display vario for comparison.
 
+Purple needle note (audio input):
+- The purple needle shows the audio *input* vario (TE when valid, else raw),
+  not the audio output tone. This is why it can move even when audio is silent.
+- On phone-only sensors, airspeed usually falls back to GPS ground speed, which
+  disables TE vario. In that case audio input falls back to raw/brutto vario,
+  so the purple needle tracks the blue/red needles closely.
+- Red vs blue divergence is subtle because their time constants are close
+  (0.6s vs 0.4s), and both are throttled to ~30 Hz in FlightDataManager.
+- Full details: docs/LevoVario/PurpleNeedle.md
+
 ------------------------------------------------------------------------------
 VARIOMETER WIDGET LAYOUT AND PERSISTENCE
 ------------------------------------------------------------------------------

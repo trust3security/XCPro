@@ -18,6 +18,21 @@ It is designed for **experimental, training, and development use** -- not as a c
 
 ---
 
+## Planned / Investigating
+
+### OGN live traffic (Open Glider Network)
+
+- Add a live traffic map layer for nearby gliders/aircraft to improve situational awareness.
+- OGN provides community receiver coverage with APRS data distribution and a device database
+  that helps identify aircraft; data use must follow OGN rules (ODbL, respect privacy choices,
+  no redistribution of data older than 24h).
+- Initial display plan: map markers with position, track, ground speed, altitude, and last seen age;
+  labels from the device database (CN/registration/type) when allowed; anonymized IDs when privacy
+  opts out; stale/expired styling; range filter around map center or ownship.
+- Informational only, not for collision avoidance or separation.
+
+---
+
 ## Documentation
 
 See `CONTRIBUTING.md` for required reading order and contributor workflow.
