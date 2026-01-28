@@ -138,11 +138,9 @@ class FlightDataViewModel(
     fun updateFlightMode(flightMode: FlightModeSelection) {
         setFlightMode(flightMode)
     }
-
     fun initializeCards(containerSize: IntSizePx, density: DensityScale) {
         cardsUseCase.initializeCards(containerSize, density)
     }
-
     suspend fun loadEssentialCardsOnStartup(
         containerSize: IntSizePx,
         density: DensityScale,
@@ -155,7 +153,6 @@ class FlightDataViewModel(
         cardsUseCase.updateCardState(cardState)
         syncSelectedIdsWithRepository()
     }
-
     fun toggleCardFromLibrary(
         cardDefinition: CardDefinition,
         containerSize: IntSizePx,
@@ -179,42 +176,31 @@ class FlightDataViewModel(
     fun updateCardsWithLiveData(liveData: RealTimeFlightData) {
         cardsUseCase.updateCardsWithLiveData(liveData)
     }
-
     fun startIndependentClockTimer() {
         cardsUseCase.startIndependentClockTimer()
     }
-
     fun stopIndependentClockTimer() {
         cardsUseCase.stopIndependentClockTimer()
     }
-
     fun saveCurrentLayoutToTemplate() {
         cardsUseCase.saveCurrentLayoutToTemplate()
         persistActiveCards()
     }
-
     fun clearAllCards() {
         cardsUseCase.clearAllCards()
         syncSelectedIdsWithRepository()
         persistActiveCards()
     }
-
     fun resumeLiveDataUpdates() {
         cardsUseCase.resumeLiveUpdates()
     }
-
     fun getAllCardStates(): List<CardState> = cardsUseCase.getAllCardStates()
-
     fun getCardState(cardId: String): CardState? = cardsUseCase.getCardState(cardId)
-
     fun hasCard(cardId: String): Boolean = cardsUseCase.hasCard(cardId)
-
     fun getCardCount(): Int = cardsUseCase.getCardCount()
-
     fun updateUnitsPreferences(preferences: UnitsPreferences) {
         cardsUseCase.updateUnitsPreferences(preferences)
     }
-
     fun ensureCardsExist(cardIds: Set<String>) {
         Log.d(TAG, "ensureCardsExist: ids=${cardIds.size}")
         cardsUseCase.ensureCardsExist(cardIds)
