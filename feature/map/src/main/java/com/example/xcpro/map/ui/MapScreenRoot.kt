@@ -24,6 +24,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import androidx.navigation.compose.currentBackStackEntryAsState
 // G REMOVED DataQuality - no longer used
 import com.example.xcpro.screens.navdrawer.lookandfeel.LookAndFeelPreferences
 import android.util.Log
@@ -85,7 +86,8 @@ internal fun MapScreenRoot(
     }
 
     // GAA Flight Cards ViewModel
-    val mapEntry = remember(navController) { navController.getBackStackEntry("map") }
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val mapEntry = remember(navBackStackEntry) { navController.getBackStackEntry("map") }
     val flightViewModel: FlightDataViewModel = viewModel(mapEntry)
     // GAA REFACTORED: No longer collect cardStates here - CardContainer handles it directly
     val profileModeCards by flightViewModel.profileModeCards.collectAsStateWithLifecycle()

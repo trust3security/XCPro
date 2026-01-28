@@ -38,6 +38,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.dfcards.CardCategory
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.FlightTemplate
@@ -76,7 +77,8 @@ fun FlightMgmt(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val mapEntry = remember(navController) { navController.getBackStackEntry("map") }
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val mapEntry = remember(navBackStackEntry) { navController.getBackStackEntry("map") }
     val mapViewModel: MapScreenViewModel = hiltViewModel(mapEntry)
     val cardPreferences = mapViewModel.cardPreferences
     val flightViewModel: FlightDataViewModel = viewModel(mapEntry)
