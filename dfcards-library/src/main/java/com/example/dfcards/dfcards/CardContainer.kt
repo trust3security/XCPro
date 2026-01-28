@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import android.util.Log
 
 /**
  * Hosts all dashboard cards inside the nav drawer and exposes their bounds/size upstream so
@@ -76,9 +77,17 @@ fun CardContainer(
         }
     }
 
-    LaunchedEffect(safeContainerSize) {
-        if (safeContainerSize != IntSize.Zero && cardStateFlows.isEmpty()) {
+    LaunchedEffect(safeContainerSize, selectedCardIds, activeCards) {
+        if (safeContainerSize != IntSize.Zero) {
             viewModel.initializeCards(safeContainerSize.toIntSizePx(), density.toDensityScale())
+            if (selectedCardIds.isNotEmpty()) {
+                viewModel.ensureCardsExist(selectedCardIds)
+            }
+            Log.d(
+                "CardContainer",
+                "size=${safeContainerSize.width}x${safeContainerSize.height} selected=${selectedCardIds.size} " +
+                    "active=${activeCards.size} flows=${cardStateFlows.size}"
+            )
         }
     }
 

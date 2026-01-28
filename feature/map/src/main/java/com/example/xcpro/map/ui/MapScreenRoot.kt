@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 // G REMOVED DataQuality - no longer used
 import com.example.xcpro.screens.navdrawer.lookandfeel.LookAndFeelPreferences
+import android.util.Log
 
 /**
  * G PHASE 2: Convert CompleteFlightData (from FlightDataCalculator) to RealTimeFlightData (for cards)
@@ -84,7 +85,8 @@ internal fun MapScreenRoot(
     }
 
     // GAA Flight Cards ViewModel
-    val flightViewModel: FlightDataViewModel = viewModel()
+    val mapEntry = remember(navController) { navController.getBackStackEntry("map") }
+    val flightViewModel: FlightDataViewModel = viewModel(mapEntry)
     // GAA REFACTORED: No longer collect cardStates here - CardContainer handles it directly
     val profileModeCards by flightViewModel.profileModeCards.collectAsStateWithLifecycle()
     val profileModeTemplates by flightViewModel.profileModeTemplates.collectAsStateWithLifecycle()
@@ -147,6 +149,9 @@ internal fun MapScreenRoot(
     
     // Map FlightMode to FlightModeSelection using FlightDataManager
     val currentFlightModeSelection = flightDataManager.currentFlightMode
+    LaunchedEffect(activeProfileId, currentFlightModeSelection) {
+        Log.d("MapScreenRoot", "activeProfile=$activeProfileId mode=$currentFlightModeSelection")
+    }
     MapScreenRuntimeEffects(
         taskManager = taskManager,
         drawerState = drawerState,

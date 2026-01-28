@@ -61,12 +61,13 @@ internal object SnailTrailPalette {
     )
 
     private val vario2Ramp = listOf(
-        ColorRamp(0, 0x00, 0x00, 0x80),   // navy (largest sink)
-        ColorRamp(50, 0x00, 0x00, 0xFF),  // blue
-        ColorRamp(85, 0x00, 0xFF, 0xFF),  // cyan
-        ColorRamp(100, 0xFF, 0xFF, 0x00), // yellow (zero)
-        ColorRamp(130, 0xFF, 0xA5, 0x00), // orange
-        ColorRamp(160, 0xFF, 0x00, 0x00), // red
+        ColorRamp(0, 0x00, 0x00, 0x00),   // black (worst sink)
+        ColorRamp(40, 0x00, 0x00, 0x80),  // navy
+        ColorRamp(70, 0x00, 0x00, 0xFF),  // blue
+        ColorRamp(100, 0xFF, 0xFF, 0x00), // yellow (near zero)
+        ColorRamp(130, 0x00, 0xFF, 0x00), // green
+        ColorRamp(160, 0xFF, 0xA5, 0x00), // orange
+        ColorRamp(180, 0xFF, 0x00, 0x00), // red
         ColorRamp(200, 0x80, 0x00, 0x80)  // purple (largest lift)
     )
 

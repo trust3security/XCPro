@@ -249,6 +249,41 @@ private fun CardStateRepository.addCard(
     maybeRelayoutExistingCards()
 }
 
+internal fun CardStateRepository.ensureCardsExist(cardIds: Set<String>) {
+    val container = lastContainerSize ?: return
+    val density = lastDensity ?: return
+    val layout = layoutSpec(container, density)
+    val missing = cardIds.filterNot { cardStateFlowsMap.containsKey(it) }
+    if (missing.isEmpty()) return
+
+    missing.forEach { cardId ->
+        val cardDefinition = CardLibrary.allCards.find { it.id == cardId } ?: return@forEach
+        val position = findNextAvailablePosition(container, layout)
+
+        val flightData = FlightData(
+            id = cardDefinition.id,
+            label = cardDefinition.title,
+            primaryValue = "--",
+            secondaryValue = "NEW",
+            labelFontSize = cardDefinition.labelFontSize,
+            primaryFontSize = cardDefinition.primaryFontSize,
+            secondaryFontSize = cardDefinition.secondaryFontSize
+        )
+
+        val newCard = CardState(
+            id = cardDefinition.id,
+            x = position.first,
+            y = position.second,
+            width = layout.cardWidth,
+            height = layout.cardHeight,
+            flightData = flightData
+        )
+        cardStateFlowsMap[newCard.id] = MutableStateFlow(newCard)
+    }
+
+    markLegacyStateDirty()
+}
+
 private fun CardStateRepository.removeCard(cardId: String) {
     cardStateFlowsMap.remove(cardId)
 }

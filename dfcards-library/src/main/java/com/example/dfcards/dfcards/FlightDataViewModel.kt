@@ -14,6 +14,7 @@ import com.example.xcpro.core.common.geometry.DensityScale
 import com.example.xcpro.core.common.geometry.IntSizePx
 import com.example.xcpro.core.time.Clock
 import com.example.xcpro.core.time.DefaultClockProvider
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -22,11 +23,13 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.collect
 import java.util.UUID
 
+private const val TAG = "FlightDataViewModel"
 
 /**
  * Single-source-of-truth owner for flight data card configuration. Persisted values are read/written
@@ -124,6 +127,7 @@ class FlightDataViewModel(
 
     fun initializeCardPreferences(preferences: CardPreferences) {
         if (_cardPreferences.value === preferences) return
+        Log.d(TAG, "initializeCardPreferences: ${preferences.hashCode()}")
         _cardPreferences.value = preferences
         ingest = FlightDataIngest(preferences, ioDispatcher)
         cardsUseCase.setPreferences(preferences)
@@ -223,8 +227,14 @@ class FlightDataViewModel(
         cardsUseCase.updateUnitsPreferences(preferences)
     }
 
+    fun ensureCardsExist(cardIds: Set<String>) {
+        Log.d(TAG, "ensureCardsExist: ids=${cardIds.size}")
+        cardsUseCase.ensureCardsExist(cardIds)
+    }
+
     fun setActiveProfile(profileId: ProfileId?) {
         if (_activeProfileId.value == profileId) return
+        Log.d(TAG, "setActiveProfile: $profileId")
         _activeProfileId.value = profileId
         profileStore.ensureVisibilityEntry(FlightVisibility.normalizeProfileId(profileId))
         syncSelectedIdsWithRepository()
@@ -244,6 +254,7 @@ class FlightDataViewModel(
     ) {
         val targetProfileId = FlightVisibility.normalizeProfileId(profileId)
         val sanitized = cardIds.distinct()
+        Log.d(TAG, "setProfileCards: profile=$targetProfileId mode=$flightMode cards=${sanitized.size}")
         _profileModeCards.value = _profileModeCards.value.toMutableMap().apply {
             val existing = this[targetProfileId]?.toMutableMap() ?: mutableMapOf()
             existing[flightMode] = sanitized
@@ -251,6 +262,7 @@ class FlightDataViewModel(
         }
         if (FlightVisibility.normalizeProfileId(_activeProfileId.value) == targetProfileId && _currentFlightMode.value == flightMode) {
             cardsUseCase.setSelected(sanitized.toSet())
+            cardsUseCase.ensureCardsExist(sanitized.toSet())
         }
         profileStore.ensureVisibilityEntry(targetProfileId)
         persistProfileCards(targetProfileId, flightMode, sanitized)
@@ -262,6 +274,7 @@ class FlightDataViewModel(
         templateId: String
     ) {
         val targetProfileId = FlightVisibility.normalizeProfileId(profileId)
+        Log.d(TAG, "setProfileTemplate: profile=$targetProfileId mode=$flightMode template=$templateId")
         _profileModeTemplates.value = _profileModeTemplates.value.toMutableMap().apply {
             val existing = this[targetProfileId]?.toMutableMap() ?: mutableMapOf()
             existing[flightMode] = templateId
@@ -269,6 +282,26 @@ class FlightDataViewModel(
         }
         profileStore.ensureVisibilityEntry(targetProfileId)
         persistProfileTemplate(targetProfileId, flightMode, templateId)
+    }
+
+    suspend fun selectProfileTemplate(
+        profileId: ProfileId?,
+        flightMode: FlightModeSelection,
+        template: FlightTemplate
+    ) {
+        val targetProfileId = FlightVisibility.normalizeProfileId(profileId)
+        Log.d(TAG, "selectProfileTemplate: profile=$targetProfileId mode=$flightMode template=${template.id}")
+        val preferences = _cardPreferences.value
+        val storedCards = if (preferences == null) {
+            null
+        } else {
+            withContext(ioDispatcher) {
+                preferences.getProfileTemplateCards(targetProfileId, template.id).first()
+            }
+        }
+        val cards = storedCards ?: template.cardIds
+        setProfileTemplate(profileId, flightMode, template.id)
+        setProfileCards(profileId, flightMode, cards)
     }
 
     fun setProfileFlightModeVisibility(
@@ -342,7 +375,7 @@ class FlightDataViewModel(
         containerSize: IntSizePx,
         density: DensityScale
     ) {
-        Log.d("CARD_VM", "prepareCardsForProfile(profile=$profileId, mode=$flightMode, size=${containerSize.width}x${containerSize.height})")
+        Log.d(TAG, "prepareCardsForProfile(profile=$profileId, mode=$flightMode, size=${containerSize.width}x${containerSize.height})")
         setFlightMode(flightMode)
         setActiveProfile(profileId)
         initializeCards(containerSize, density)

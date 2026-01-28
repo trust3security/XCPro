@@ -23,7 +23,8 @@ class FlightCardsUseCase(
     private val repository = CardStateRepository(scope, clock)
     private val derivations = FlightDataDerivations(repository)
 
-    val cardStateFlows: Map<String, StateFlow<CardState>> = derivations.cardStateFlows
+    val cardStateFlows: Map<String, StateFlow<CardState>>
+        get() = derivations.cardStateFlows
     val legacyCardStates: StateFlow<List<CardState>> = derivations.legacyCardStates
     val selectedCardIds: StateFlow<Set<String>> = derivations.selectedCardIds
 
@@ -107,6 +108,10 @@ class FlightCardsUseCase(
 
     fun updateUnitsPreferences(preferences: UnitsPreferences) {
         repository.updateUnitsPreferences(preferences)
+    }
+
+    fun ensureCardsExist(cardIds: Set<String>) {
+        repository.ensureCardsExist(cardIds)
     }
 
     fun onCleared() {

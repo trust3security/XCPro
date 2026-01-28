@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.withFrameNanos
+import android.util.Log
 
 object MapComposeEffects {
 
@@ -89,6 +90,11 @@ object MapComposeEffects {
                 return@LaunchedEffect
             }
 
+            Log.d(
+                "MapComposeEffects",
+                "prepareCards profile=${uiState.activeProfile?.id} mode=$currentFlightModeSelection " +
+                    "size=${safeContainerSize.width}x${safeContainerSize.height}"
+            )
             flightDataManager.updateFlightMode(currentFlightModeSelection)
             flightViewModel.prepareCardsForProfile(
                 profileId = uiState.activeProfile?.id,

@@ -133,19 +133,19 @@ fun MapActionButtons(
                     .padding(end = 16.dp, bottom = demoSim2BottomPadding)
             )
             VarioDemoButton(
-                onClick = onVarioDemoSim3Click,
-                badgeText = "SIM3",
-                badgeColor = MaterialTheme.colorScheme.secondary,
-                contentDescription = "Run vario demo replay (sim3)",
+                onClick = onVarioDemoSimClick,
+                badgeText = "SIM",
+                badgeColor = MaterialTheme.colorScheme.tertiary,
+                contentDescription = "Run vario demo replay (sim)",
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(end = 16.dp, bottom = demoSim3BottomPadding)
             )
             VarioDemoButton(
-                onClick = onVarioDemoSimClick,
-                badgeText = "SIM",
-                badgeColor = MaterialTheme.colorScheme.tertiary,
-                contentDescription = "Run vario demo replay (sim)",
+                onClick = onVarioDemoSim3Click,
+                badgeText = "SIM3",
+                badgeColor = MaterialTheme.colorScheme.secondary,
+                contentDescription = "Run vario demo replay (sim3)",
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(end = 16.dp, bottom = demoSimBottomPadding)

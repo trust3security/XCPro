@@ -36,9 +36,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.dfcards.CardCategory
-import com.example.dfcards.CardPreferences
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.FlightTemplate
 import com.example.dfcards.dfcards.FlightDataViewModel
@@ -52,6 +52,7 @@ import com.example.xcpro.loadWaypointFiles
 import com.example.xcpro.saveAirspaceFiles
 import com.example.xcpro.saveWaypointFiles
 import com.example.xcpro.map.FlightDataManager
+import com.example.xcpro.map.MapScreenViewModel
 import com.example.xcpro.profiles.UserProfile
 import com.example.xcpro.screens.flightdata.FlightDataWaypointsTab
 import kotlinx.coroutines.delay
@@ -75,8 +76,10 @@ fun FlightMgmt(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val cardPreferences = remember { CardPreferences(context) }
-    val flightViewModel: FlightDataViewModel = viewModel()
+    val mapEntry = remember(navController) { navController.getBackStackEntry("map") }
+    val mapViewModel: MapScreenViewModel = hiltViewModel(mapEntry)
+    val cardPreferences = mapViewModel.cardPreferences
+    val flightViewModel: FlightDataViewModel = viewModel(mapEntry)
     val airspaceRepository = remember(context) { AirspaceRepository(context) }
 
     LaunchedEffect(cardPreferences) {

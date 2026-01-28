@@ -25,6 +25,7 @@ import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.units.UnitsRepository
 import com.example.xcpro.profiles.UserProfile
 import kotlinx.coroutines.launch
+import android.util.Log
 
 @Composable
 fun FlightDataScreensTab(
@@ -96,8 +97,11 @@ fun FlightDataScreensTab(
                 selectedTemplate = resolvedTemplate,
                 templateCardCounts = templateCardCounts,
                 onTemplateSelected = { template ->
-                    flightViewModel.setProfileTemplate(profileId, selectedFlightMode, template.id)
-                    flightViewModel.setProfileCards(profileId, selectedFlightMode, template.cardIds)
+                    if (resolvedTemplate?.id == template.id) return@TemplatesForModeSection
+                    Log.d("FlightDataScreensTab", "templateSelected profile=${profileId ?: "null"} mode=$selectedFlightMode template=${template.id}")
+                    scope.launch {
+                        flightViewModel.selectProfileTemplate(profileId, selectedFlightMode, template)
+                    }
                 },
                 onEditTemplate = onEditTemplate,
                 onDeleteTemplate = { template ->
@@ -130,10 +134,15 @@ fun FlightDataScreensTab(
                     } else {
                         currentCardIds.filterNot { it == cardId }
                     }
-                    flightViewModel.setProfileCards(profileId, selectedFlightMode, updated)
+                    Log.d(
+                        "FlightDataScreensTab",
+                        "cardToggle profile=${profileId ?: "null"} mode=$selectedFlightMode card=$cardId " +
+                            "selected=${isSelected} total=${updated.size}"
+                    )
                     resolvedTemplate?.let { template ->
                         flightViewModel.setProfileTemplate(profileId, selectedFlightMode, template.id)
                     }
+                    flightViewModel.setProfileCards(profileId, selectedFlightMode, updated)
                 }
             )
         }

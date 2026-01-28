@@ -288,17 +288,17 @@ private val trailTypeOptions = listOf(
     TrailTypeOption(
         type = TrailType.VARIO_2,
         title = "Vario 2",
-        description = "Orange/red lift, blue sink."
+        description = "Black/blue sink, yellow near zero, green → orange → red → purple lift."
     ),
     TrailTypeOption(
         type = TrailType.VARIO_2_DOTS,
         title = "Vario 2 dots",
-        description = "Dotted sink, solid lift."
+        description = "Dotted sink with the Vario 2 palette."
     ),
     TrailTypeOption(
         type = TrailType.VARIO_DOTS_AND_LINES,
         title = "Dots + lines",
-        description = "Dots with lines for lift."
+        description = "Dots with lines using the Vario 2 palette."
     ),
     TrailTypeOption(
         type = TrailType.VARIO_EINK,
