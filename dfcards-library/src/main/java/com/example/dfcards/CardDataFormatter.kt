@@ -206,7 +206,14 @@ internal object CardDataFormatter {
                     VerticalSpeedMs(sample.toDouble()),
                     units
                 )
-                Pair(formatted.text, "TC AVG")
+                val tc30 = liveData.thermalAverage.toDouble()
+                val tc30Valid = liveData.thermalAverageValid && tc30.isFinite()
+                val secondary = if (tc30Valid) {
+                    formatThermalVario(tc30, units)
+                } else {
+                    "NO DATA"
+                }
+                Pair(formatted.text, secondary)
             }
 
             "thermal_t_avg" -> {
