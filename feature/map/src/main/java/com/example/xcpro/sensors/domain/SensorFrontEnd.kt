@@ -59,12 +59,12 @@ internal class SensorFrontEnd(
         val indicatedAirspeedMs = activeEstimate?.indicatedMs ?: 0.0
         val trueAirspeedMs = activeEstimate?.trueMs ?: 0.0
         val airspeedSource = activeEstimate?.source ?: AirspeedSource.GPS_GROUND
-        val tasValid = activeEstimate != null && airspeedSource != AirspeedSource.GPS_GROUND
+        val tasValid = activeEstimate != null && airspeedSource.energyHeightEligible
 
         // TE altitude requires an airspeed estimate (not just GPS ground speed), otherwise energy height
         // changes would inject bogus "lift/sink" into thermal tracking during turns/accels.
         val energyHeight = if (
-            airspeedSource != AirspeedSource.GPS_GROUND &&
+            airspeedSource.energyHeightEligible &&
             trueAirspeedMs.isFinite()
         ) {
             (trueAirspeedMs * trueAirspeedMs) / (2.0 * GRAVITY)
