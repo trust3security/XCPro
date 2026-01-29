@@ -1,6 +1,7 @@
 package com.example.xcpro
 
 import android.content.Context
+import android.content.ComponentName
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -17,16 +18,23 @@ import com.example.xcpro.map.ui.widgets.MapUIWidgets
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.ExternalResource
+import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 class MapOverlayWidgetGesturesTest {
 
+    private val composeRule = createComposeRule()
+
     @get:Rule
-    val composeRule = createComposeRule()
+    val ruleChain: RuleChain = RuleChain
+        .outerRule(ActivityRegistrationRule())
+        .around(composeRule)
 
     @Test
     fun hamburgerTapAndLongPressTriggerCallbacks() {
@@ -59,5 +67,18 @@ class MapOverlayWidgetGesturesTest {
         composeRule.onNodeWithTag("side_hamburger")
             .performTouchInput { longClick() }
         assertTrue("Hamburger long press should invoke callback", longPressTriggered.value)
+    }
+}
+
+private class ActivityRegistrationRule : ExternalResource() {
+    override fun before() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val shadowPackageManager = Shadows.shadowOf(context.packageManager)
+        val component = ComponentName(context, androidx.activity.ComponentActivity::class.java)
+        val activityInfo = shadowPackageManager.addActivityIfNotPresent(component)
+        activityInfo.exported = true
+        activityInfo.name = androidx.activity.ComponentActivity::class.java.name
+        activityInfo.packageName = context.packageName
+        shadowPackageManager.addOrUpdateActivity(activityInfo)
     }
 }
