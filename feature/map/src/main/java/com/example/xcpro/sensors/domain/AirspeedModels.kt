@@ -6,8 +6,12 @@ internal data class AirspeedEstimate(
     val source: AirspeedSource
 )
 
-internal enum class AirspeedSource(val label: String) {
-    WIND_VECTOR("WIND"),
-    POLAR_SINK("POLAR"),
-    GPS_GROUND("GPS")
+internal enum class AirspeedSource(
+    val label: String,
+    val energyHeightEligible: Boolean
+) {
+    EXTERNAL("SENSOR", true),
+    WIND_VECTOR("WIND", true),
+    POLAR_SINK("POLAR", false),
+    GPS_GROUND("GPS", false)
 }
