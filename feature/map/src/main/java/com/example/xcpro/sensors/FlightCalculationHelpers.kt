@@ -109,9 +109,10 @@ internal class FlightCalculationHelpers(
         timestampMillis: Long,
         teAltitudeMeters: Double,
         verticalSpeedMs: Double,
-        isCircling: Boolean
+        isCircling: Boolean,
+        isTurning: Boolean
     ) {
-        thermalTracker.update(timestampMillis, teAltitudeMeters, verticalSpeedMs, isCircling)
+        thermalTracker.update(timestampMillis, teAltitudeMeters, verticalSpeedMs, isCircling, isTurning)
     }
 
     /**

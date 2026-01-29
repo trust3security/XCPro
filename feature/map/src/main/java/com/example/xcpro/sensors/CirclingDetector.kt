@@ -10,7 +10,8 @@ import kotlin.math.abs
  */
 internal data class CirclingDecision(
     val isCircling: Boolean,
-    val turnRateRad: Double?
+    val turnRateRad: Double?,
+    val isTurning: Boolean
 )
 
 internal class CirclingDetector {
@@ -43,7 +44,7 @@ internal class CirclingDetector {
     fun update(trackDegrees: Double, timestampMillis: Long, isFlying: Boolean): CirclingDecision {
         if (!isFlying) {
             reset()
-            return CirclingDecision(isCircling = false, turnRateRad = null)
+            return CirclingDecision(isCircling = false, turnRateRad = null, isTurning = false)
         }
 
         val trackRad = Math.toRadians(trackDegrees)
@@ -54,14 +55,15 @@ internal class CirclingDetector {
             warpToleranceMs = 0L
         )
 
+        val turning = abs(turnRateSmoothedRad) >= MIN_TURN_RATE_RAD
+
         if (turningDeltaMs == null || turningDeltaMs <= 0L) {
             return CirclingDecision(
                 isCircling = isCircling,
-                turnRateRad = turnRate
+                turnRateRad = turnRate,
+                isTurning = turning
             )
         }
-
-        val turning = abs(turnRateSmoothedRad) >= MIN_TURN_RATE_RAD
 
         when (turnMode) {
             TurnMode.CRUISE -> {
@@ -101,7 +103,8 @@ internal class CirclingDetector {
 
         return CirclingDecision(
             isCircling = isCircling,
-            turnRateRad = turnRate
+            turnRateRad = turnRate,
+            isTurning = turning
         )
     }
 

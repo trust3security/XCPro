@@ -39,13 +39,15 @@ class FlightCalculationHelpersTest {
             timestampMillis = 1_000L,
             teAltitudeMeters = 100.0,
             verticalSpeedMs = 0.0,
-            isCircling = true
+            isCircling = true,
+            isTurning = true
         )
         helpers.updateThermalState(
             timestampMillis = 2_000L,
             teAltitudeMeters = 110.0,
             verticalSpeedMs = 10.0,
-            isCircling = true
+            isCircling = true,
+            isTurning = true
         )
 
         assertTrue(helpers.currentThermalValid)

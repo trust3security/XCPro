@@ -48,7 +48,7 @@ class CalculateFlightMetricsUseCaseTest {
         )
         whenever(helpers.calculateTotalEnergy(any(), any(), any(), any())).thenAnswer(teAnswer)
         whenever(helpers.calculateCurrentLD(any(), any(), any())).thenReturn(0f)
-        whenever(helpers.updateThermalState(any(), any(), any(), any())).thenAnswer { }
+        whenever(helpers.updateThermalState(any(), any(), any(), any(), any())).thenAnswer { }
         whenever(helpers.updateAGL(any(), any(), any())).thenAnswer { }
         whenever(helpers.recordLocationSample(any(), any())).thenAnswer { }
         whenever(helpers.thermalAverageCurrent).thenReturn(0f)

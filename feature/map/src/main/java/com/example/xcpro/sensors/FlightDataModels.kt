@@ -39,7 +39,7 @@ internal data class ThermalClimbInfo(
         get() = if (isDefined()) (endTime - startTime).coerceAtLeast(0L) / 1000.0 else 0.0
 
     fun isDefined(): Boolean =
-        startTime > 0L && endTime >= startTime &&
+        startTime > 0L && endTime > startTime &&
             startTeAltitude.isFinite() && endTeAltitude.isFinite()
 
     fun clear() {

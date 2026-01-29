@@ -111,7 +111,7 @@ internal class CalculateFlightMetricsUseCase(
         val teSpeed = chosenAirspeed?.trueMs
         val teVario = if (
             teSpeed != null &&
-            chosenAirspeed.source != AirspeedSource.GPS_GROUND &&
+            chosenAirspeed.source.energyHeightEligible &&
             teSpeed > TE_MIN_SPEED_MS &&
             prevTeSpeed > TE_MIN_SPEED_MS &&
             request.deltaTimeSeconds > TE_MIN_DT_SECONDS
@@ -161,6 +161,7 @@ internal class CalculateFlightMetricsUseCase(
             isFlying = request.isFlying
         )
         val isCircling = circlingDecision.isCircling
+        val isTurning = circlingDecision.isTurning
 
         // Keep helper-driven state (AGL, LD, thermal averages) up to date.
         val sampleTimeMillis = if (request.gpsTimestampMillis > 0L) {
@@ -227,11 +228,17 @@ internal class CalculateFlightMetricsUseCase(
             isValid = varioValid
         )
         if (!calibrationChanged) {
+            val thermalAltitude = if (snapshot.airspeedSource.energyHeightEligible) {
+                teAltitude
+            } else {
+                navAltitude
+            }
             flightHelpers.updateThermalState(
                 timestampMillis = currentTime,
-                teAltitudeMeters = teAltitude,
+                teAltitudeMeters = thermalAltitude,
                 verticalSpeedMs = bruttoVario,
-                isCircling = isCircling
+                isCircling = isCircling,
+                isTurning = isTurning
             )
         }
         val thermalAvgCircle = flightHelpers.thermalAverageCurrent
