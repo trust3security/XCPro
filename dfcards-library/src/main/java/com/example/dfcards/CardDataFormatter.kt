@@ -332,8 +332,8 @@ internal object CardDataFormatter {
             return Pair(placeholder, "NO WIND")
         }
         val formatted = UnitsFormatter.speed(SpeedMs(liveData.windSpeed.toDouble()), units)
-        val arrow = arrowSymbol(liveData.windDirection.toDouble())
-        return Pair(formatted.text, arrow)
+        val windDir = ((liveData.windDirection.roundToInt() % 360) + 360) % 360
+        return Pair(formatted.text, "$windDir deg")
     }
 
     private fun formatWindDirection(
