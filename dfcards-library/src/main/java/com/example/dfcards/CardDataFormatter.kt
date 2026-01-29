@@ -42,7 +42,7 @@ internal object CardDataFormatter {
                 "-- ${UnitsFormatter.altitude(AltitudeM(0.0), units).unitLabel}"
             "ground_speed", "wind_spd", "wind_arrow", "task_spd", "ias", "tas" ->
                 "-- ${UnitsFormatter.speed(SpeedMs(0.0), units).unitLabel}"
-            "wind_dir" -> "--deg"
+            "wind_dir" -> "-- deg"
             "wpt_dist", "task_dist" ->
                 "-- ${UnitsFormatter.distance(DistanceM(0.0), units).unitLabel}"
             else -> "--"
@@ -220,7 +220,14 @@ internal object CardDataFormatter {
                 val sample = liveData.thermalAverageTotal
                 if (abs(sample) <= 0.1f) return Pair(placeholderFor(cardId), "NO DATA")
                 val formatted = UnitsFormatter.verticalSpeed(VerticalSpeedMs(sample.toDouble()), units)
-                Pair(formatted.text, "T AVG")
+                val tc30 = liveData.thermalAverage.toDouble()
+                val tc30Valid = liveData.thermalAverageValid && tc30.isFinite()
+                val secondary = if (tc30Valid) {
+                    formatThermalVario(tc30, units)
+                } else {
+                    "NO DATA"
+                }
+                Pair(formatted.text, secondary)
             }
 
             "thermal_tc_gain" -> {
@@ -340,7 +347,7 @@ internal object CardDataFormatter {
         }
         val windDir = ((liveData.windDirection.roundToInt() % 360) + 360) % 360
         val speed = UnitsFormatter.speed(SpeedMs(liveData.windSpeed.toDouble()), units).text
-        return Pair("${windDir}deg", speed)
+        return Pair("$windDir deg", speed)
     }
 
     private fun formatWindArrow(
