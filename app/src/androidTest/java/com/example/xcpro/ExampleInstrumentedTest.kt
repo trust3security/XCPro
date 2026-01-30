@@ -19,9 +19,10 @@ class ExampleInstrumentedTest {
     fun useAppContext() {
         // Context of the app under test.
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertTrue(
-            "Expected debug package derived from app id, got ${appContext.packageName}",
-            appContext.packageName.startsWith("com.example.xcpro")
+        assertEquals(
+            "Expected package to match applicationId, got ${appContext.packageName}",
+            BuildConfig.APPLICATION_ID,
+            appContext.packageName
         )
     }
 }

@@ -102,3 +102,11 @@ tasks.withType<Test>().configureEach {
         )
     }
 }
+
+val hasAndroidTests = file("src/androidTest").walkTopDown().any { entry ->
+    entry.isFile && (entry.extension == "kt" || entry.extension == "java")
+}
+
+tasks.matching { it.name.startsWith("connected") && it.name.endsWith("AndroidTest") }.configureEach {
+    onlyIf("Skip connected tests when no androidTest sources are present.") { hasAndroidTests }
+}

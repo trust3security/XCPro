@@ -149,6 +149,15 @@ APRS-IS typically expects a login line similar to:
 
 Implement it, but allow config override if needed.
 
+### OGN / APRS session details (practical)
+- Direct feed: aprs.glidernet.org:14580 (APRS-IS style TCP).
+- Read-only login commonly uses passcode -1.
+- You can include filter on the login line, for example:
+  `user <CALLSIGN> pass -1 vers XCPro <VER> filter r/<lat>/<lon>/<km>`
+- Server comment / keepalive lines start with '#'; ignore them in the parser.
+- Send a periodic keepalive line starting with '#' (e.g. "# keepalive") every 30-60s if idle.
+- OGN extends APRS by adding fields in the comment section; parse only what you need.
+
 ### Filter handling
 Implement server-side filter command string:
 - Range filter example pattern: `filter r/<lat>/<lon>/<km>`
@@ -199,6 +208,7 @@ interface DdbRepository {
 - Download DDB JSON and cache it in:
   - `Room` table (best) OR
   - simple file cache in app storage + in-memory map (v1).
+- DDB download endpoint (JSON): `https://ddb.glidernet.org/download`
 - Refresh cadence:
   - at app start
   - then every 24h (configurable)

@@ -1,0 +1,37 @@
+<resources>
+    <string name="card_label_no_data">NO DATA</string>
+    <string name="card_label_no_baro">NO BARO</string>
+    <string name="card_label_no_wind">NO WIND</string>
+    <string name="card_label_no_wpt">NO WPT</string>
+    <string name="card_label_no_task">NO TASK</string>
+    <string name="card_label_no_start">NO START</string>
+    <string name="card_label_no_accel">NO ACCEL</string>
+    <string name="card_label_no_flarm">NO FLARM</string>
+    <string name="card_label_no_sats">NO SATS</string>
+    <string name="card_label_no_polar">NO POLAR</string>
+    <string name="card_label_no_mc">NO MC</string>
+    <string name="card_label_no_igc">NO IGC</string>
+    <string name="card_label_unknown">UNKNOWN</string>
+    <string name="card_label_stale">STALE</string>
+    <string name="card_label_live">LIVE</string>
+    <string name="card_label_gps">GPS</string>
+    <string name="card_label_est">EST</string>
+    <string name="card_label_mag">MAG</string>
+    <string name="card_label_static">STATIC</string>
+    <string name="card_label_netto">NETTO</string>
+    <string name="card_label_calc">CALC</string>
+    <string name="card_label_flight">FLIGHT</string>
+    <string name="card_label_qnh">QNH</string>
+    <string name="card_label_deg">deg</string>
+    <string name="card_label_real_igc">REAL IGC</string>
+    <string name="card_label_raw">RAW</string>
+    <string name="card_label_comp">COMP</string>
+    <string name="card_label_r_optimized">R=0.5</string>
+    <string name="card_label_r_legacy">R=2.0</string>
+    <string name="card_label_excellent">EXCELLENT</string>
+    <string name="card_label_good">GOOD</string>
+    <string name="card_label_ok">OK</string>
+    <string name="card_label_weak">WEAK</string>
+    <string name="card_label_poor">POOR</string>
+    <string name="card_label_te">TE</string>
+</resources>

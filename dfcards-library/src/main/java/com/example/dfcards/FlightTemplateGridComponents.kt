@@ -118,6 +118,8 @@ fun CardsGridSection(
     units: UnitsPreferences = UnitsPreferences(),
     selectedCardIds: List<String>? = null
 ) {
+    val cardStrings = rememberCardStrings()
+    val cardTimeFormatter = rememberCardTimeFormatter()
     val categoryCards = remember(selectedCategory) {
         CardLibrary.getCardsByCategory(selectedCategory)
     }
@@ -151,6 +153,8 @@ fun CardsGridSection(
                         isSelected = activeCardIds.contains(card.id),
                         liveFlightData = liveFlightData,
                         units = units,
+                        cardStrings = cardStrings,
+                        timeFormatter = cardTimeFormatter,
                         onToggle = {
                             val isCurrentlySelected = activeCardIds.contains(card.id)
                             onCardToggle(card.id, !isCurrentlySelected)
@@ -172,7 +176,9 @@ private fun CardGridItem(
     isSelected: Boolean,
     onToggle: () -> Unit,
     liveFlightData: RealTimeFlightData? = null,
-    units: UnitsPreferences = UnitsPreferences()
+    units: UnitsPreferences = UnitsPreferences(),
+    cardStrings: CardStrings,
+    timeFormatter: CardTimeFormatter
 ) {
     val titleStyle = MaterialTheme.typography.bodyMedium
     val titleFontSize = titleStyle.fontSize.takeIf { it != TextUnit.Unspecified } ?: 16.sp
@@ -182,7 +188,13 @@ private fun CardGridItem(
     )
 
     val (primaryValue, secondaryValue) = if (liveFlightData != null) {
-        CardLibrary.mapLiveDataToCard(card.id, liveFlightData, units)
+        CardLibrary.mapLiveDataToCard(
+            card.id,
+            liveFlightData,
+            units,
+            cardStrings,
+            timeFormatter
+        )
     } else {
         Pair("--", card.unit.ifEmpty { card.description.take(10) })
     }

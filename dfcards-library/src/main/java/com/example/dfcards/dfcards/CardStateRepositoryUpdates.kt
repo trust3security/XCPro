@@ -2,16 +2,14 @@ package com.example.dfcards.dfcards
 
 import androidx.compose.ui.graphics.Color
 import com.example.dfcards.CardLibrary
+import com.example.dfcards.CardStrings
 import com.example.dfcards.RealTimeFlightData
+import com.example.dfcards.CardTimeFormatter
 import com.example.dfcards.dfcards.CardState
 import com.example.dfcards.dfcards.FlightData
 import com.example.xcpro.common.units.UnitsPreferences
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 private enum class UpdateTier {
     FAST,
@@ -22,15 +20,6 @@ private enum class UpdateTier {
 // Match infobox palette: bright red/green for sink/lift.
 private val NEGATIVE_VARIO_COLOR = Color(0xFFFF0000)
 private val POSITIVE_VARIO_COLOR = Color(0xFF0D8A16) // darker green for readability
-private val LOCAL_TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
-private val LOCAL_SECONDS_FORMATTER = DateTimeFormatter.ofPattern("ss", Locale.getDefault())
-
-private fun formatLocalTime(epochMillis: Long): Pair<String, String> {
-    if (epochMillis <= 0L) return "--:--" to "--"
-    val zoned = Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault())
-    return LOCAL_TIME_FORMATTER.format(zoned) to LOCAL_SECONDS_FORMATTER.format(zoned)
-}
-
 internal fun CardStateRepository.updateCardsWithLiveData(
     liveData: RealTimeFlightData,
     forceVisible: Boolean = false
@@ -95,7 +84,7 @@ internal fun CardStateRepository.startIndependentClockTimer() {
             cardStateFlowsMap["local_time"]?.let { timeCardFlow ->
                 val currentState = timeCardFlow.value
                 val currentTime = clock.nowWallMs()
-                val (time, seconds) = formatLocalTime(currentTime)
+                val (time, seconds) = cardTimeFormatter.formatLocalTime(currentTime)
 
                 val updatedFlightData = currentState.flightData.copy(
                     primaryValue = time,
@@ -124,7 +113,9 @@ private fun CardStateRepository.mapRealDataToCard(
     val (primaryValue, secondaryValue) = CardLibrary.mapLiveDataToCard(
         cardId = currentFlightData.id,
         liveData = realData,
-        units = unitsPreferences
+        units = unitsPreferences,
+        strings = cardStrings,
+        timeFormatter = cardTimeFormatter
     )
     val (primaryNumber, primaryUnit) = splitPrimaryValue(primaryValue)
     val primaryColor = highlightColorFor(currentFlightData.id, realData)
@@ -153,6 +144,30 @@ internal fun CardStateRepository.updateUnitsPreferences(preferences: UnitsPrefer
             stateFlow.value = currentState.copy(flightData = remappedFlightData)
         }
     }
+}
+
+internal fun CardStateRepository.updateCardStrings(strings: CardStrings) {
+    if (cardStrings === strings) {
+        return
+    }
+    cardStrings = strings
+    val liveData = lastRealTimeData ?: return
+
+    cardStateFlowsMap.forEach { (cardId, stateFlow) ->
+        if (cardId == "local_time") return@forEach
+        val currentState = stateFlow.value
+        val remappedFlightData = mapRealDataToCard(currentState.flightData, liveData)
+        if (remappedFlightData != currentState.flightData) {
+            stateFlow.value = currentState.copy(flightData = remappedFlightData)
+        }
+    }
+}
+
+internal fun CardStateRepository.updateCardTimeFormatter(formatter: CardTimeFormatter) {
+    if (cardTimeFormatter === formatter) {
+        return
+    }
+    cardTimeFormatter = formatter
 }
 
 internal fun CardStateRepository.onCleared() {

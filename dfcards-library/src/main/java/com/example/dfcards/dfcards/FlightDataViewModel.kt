@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.dfcards.CardDefinition
 import com.example.dfcards.CardPreferences
+import com.example.dfcards.CardStrings
+import com.example.dfcards.CardTimeFormatter
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.FlightTemplate
 import com.example.dfcards.FlightTemplates
@@ -178,6 +180,10 @@ class FlightDataViewModel(
     fun getCardCount(): Int = cardsUseCase.getCardCount()
     fun updateUnitsPreferences(preferences: UnitsPreferences) =
         cardsUseCase.updateUnitsPreferences(preferences)
+    fun updateCardStrings(strings: CardStrings) =
+        cardsUseCase.updateCardStrings(strings)
+    fun updateCardTimeFormatter(formatter: CardTimeFormatter) =
+        cardsUseCase.updateCardTimeFormatter(formatter)
     fun ensureCardsExist(cardIds: Set<String>) {
         logDebug("ensureCardsExist: ids=${cardIds.size}")
         cardsUseCase.ensureCardsExist(cardIds)

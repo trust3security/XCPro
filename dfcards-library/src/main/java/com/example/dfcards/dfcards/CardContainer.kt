@@ -36,6 +36,8 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.util.Log
+import com.example.dfcards.rememberCardStrings
+import com.example.dfcards.rememberCardTimeFormatter
 
 /**
  * Hosts all dashboard cards inside the nav drawer and exposes their bounds/size upstream so
@@ -62,6 +64,8 @@ fun CardContainer(
     // Recompose when cards are created so we re-read the backing flow map.
     val activeCards by viewModel.activeCards.collectAsStateWithLifecycle()
     val cardStateFlows = remember(selectedCardIds, activeCards) { viewModel.cardStateFlows }
+    val cardStrings = rememberCardStrings()
+    val cardTimeFormatter = rememberCardTimeFormatter()
 
     val navigationBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val navigationBarHeightPx = with(density) { navigationBarHeight.toPx() }
@@ -89,6 +93,14 @@ fun CardContainer(
                     "active=${activeCards.size} flows=${cardStateFlows.size}"
             )
         }
+    }
+
+    LaunchedEffect(cardStrings) {
+        viewModel.updateCardStrings(cardStrings)
+    }
+
+    LaunchedEffect(cardTimeFormatter) {
+        viewModel.updateCardTimeFormatter(cardTimeFormatter)
     }
 
     LaunchedEffect(safeContainerSize) {
@@ -155,7 +167,8 @@ fun CardContainer(
                                 isEditMode = isEditMode,
                                 isLiveData = true,
                                 modifier = Modifier.fillMaxSize(),
-                                visualStyle = cardVisualStyle
+                                visualStyle = cardVisualStyle,
+                                cardStrings = cardStrings
                             )
                         }
                     }

@@ -37,6 +37,8 @@ fun CardPreview(
     modifier: Modifier = Modifier
 ) {
     var isPressed by remember { mutableStateOf(false) }
+    val cardStrings = rememberCardStrings()
+    val cardTimeFormatter = rememberCardTimeFormatter()
 
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.95f else 1f,
@@ -59,7 +61,7 @@ fun CardPreview(
 
     //  Use live data if available, otherwise show blanks (NO SAMPLES)
     val displayData = if (liveFlightData != null) {
-        mapCardDefinitionToLiveData(cardDefinition, liveFlightData)
+        mapCardDefinitionToLiveData(cardDefinition, liveFlightData, cardStrings, cardTimeFormatter)
     } else {
         PreviewDisplayData(
             primaryValue = "--",
@@ -212,9 +214,17 @@ private data class PreviewDisplayData(
 //  SIMPLIFIED: Use centralized mapping
 private fun mapCardDefinitionToLiveData(
     cardDefinition: CardDefinition,
-    liveData: RealTimeFlightData
+    liveData: RealTimeFlightData,
+    cardStrings: CardStrings,
+    timeFormatter: CardTimeFormatter
 ): PreviewDisplayData {
-    val (primaryValue, secondaryValue) = CardLibrary.mapLiveDataToCard(cardDefinition.id, liveData)
+    val (primaryValue, secondaryValue) =
+        CardLibrary.mapLiveDataToCard(
+            cardDefinition.id,
+            liveData,
+            strings = cardStrings,
+            timeFormatter = timeFormatter
+        )
     return PreviewDisplayData(
         primaryValue = primaryValue,
         secondaryValue = secondaryValue,

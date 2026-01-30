@@ -2,6 +2,8 @@ package com.example.dfcards.dfcards
 
 import com.example.dfcards.CardDefinition
 import com.example.dfcards.CardPreferences
+import com.example.dfcards.CardStrings
+import com.example.dfcards.CardTimeFormatter
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.FlightTemplate
 import com.example.dfcards.RealTimeFlightData
@@ -108,6 +110,14 @@ class FlightCardsUseCase(
 
     fun updateUnitsPreferences(preferences: UnitsPreferences) {
         repository.updateUnitsPreferences(preferences)
+    }
+
+    fun updateCardStrings(strings: CardStrings) {
+        repository.updateCardStrings(strings)
+    }
+
+    fun updateCardTimeFormatter(formatter: CardTimeFormatter) {
+        repository.updateCardTimeFormatter(formatter)
     }
 
     fun ensureCardsExist(cardIds: Set<String>) {

@@ -55,6 +55,8 @@ internal fun ResponsiveCardsGridWithLiveData(
     onTemplateCardToggle: (String, Boolean) -> Unit,
     screenWidth: androidx.compose.ui.unit.Dp
 ) {
+    val cardStrings = rememberCardStrings()
+    val cardTimeFormatter = rememberCardTimeFormatter()
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
         contentPadding = PaddingValues(16.dp),
@@ -67,6 +69,8 @@ internal fun ResponsiveCardsGridWithLiveData(
                 card = card,
                 isSelected = selectedTemplate.cardIds.contains(card.id),
                 liveFlightData = liveFlightData,
+                cardStrings = cardStrings,
+                cardTimeFormatter = cardTimeFormatter,
                 onToggle = {
                     val isCurrentlySelected = selectedTemplate.cardIds.contains(card.id)
                     onTemplateCardToggle(card.id, !isCurrentlySelected)
@@ -82,6 +86,8 @@ internal fun CompactCardItem(
     card: CardDefinition,
     isSelected: Boolean,
     liveFlightData: RealTimeFlightData? = null,
+    cardStrings: CardStrings,
+    cardTimeFormatter: CardTimeFormatter,
     onToggle: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -94,7 +100,7 @@ internal fun CompactCardItem(
     )
 
     val displayData = if (liveFlightData != null) {
-        mapCardToModalDisplay(card, liveFlightData)
+        mapCardToModalDisplay(card, liveFlightData, cardStrings, cardTimeFormatter)
     } else {
         ModalDisplayData(
             primaryValue = "--",
@@ -219,10 +225,18 @@ internal fun CategoryTabs(
 
 private fun mapCardToModalDisplay(
     card: CardDefinition, //  Correct parameter name
-    liveData: RealTimeFlightData
+    liveData: RealTimeFlightData,
+    cardStrings: CardStrings,
+    timeFormatter: CardTimeFormatter
 ): ModalDisplayData {
     //  SIMPLIFIED: Just use centralized card library mapping
-    val (primaryValue, secondaryValue) = CardLibrary.mapLiveDataToCard(card.id, liveData)
+    val (primaryValue, secondaryValue) =
+        CardLibrary.mapLiveDataToCard(
+            card.id,
+            liveData,
+            strings = cardStrings,
+            timeFormatter = timeFormatter
+        )
 
     return ModalDisplayData(
         primaryValue = primaryValue,

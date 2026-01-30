@@ -2,7 +2,11 @@ package com.example.dfcards.dfcards
 
 import com.example.dfcards.CardPreferences
 import com.example.dfcards.CardPreferences.CardAnchor
+import com.example.dfcards.CardStrings
+import com.example.dfcards.DefaultCardStrings
+import com.example.dfcards.CardTimeFormatter
 import com.example.dfcards.RealTimeFlightData
+import com.example.dfcards.SystemCardTimeFormatter
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.dfcards.CardState
 import com.example.xcpro.common.units.UnitsPreferences
@@ -56,6 +60,8 @@ internal class CardStateRepository(
     internal var manualPositioningTimeout: Job? = null
     internal val manuallyPositionedCards = mutableSetOf<String>()
     internal var unitsPreferences: UnitsPreferences = UnitsPreferences()
+    internal var cardStrings: CardStrings = DefaultCardStrings()
+    internal var cardTimeFormatter: CardTimeFormatter = SystemCardTimeFormatter()
     internal var lastRealTimeData: RealTimeFlightData? = null
     internal var lastFastUpdateTime = 0L
     internal var lastPrimaryUpdateTime = 0L

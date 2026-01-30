@@ -28,6 +28,8 @@ android {
         debug {
             isDebuggable = true
             isMinifyEnabled = false
+            // AI-NOTE: Use a distinct package for debug to avoid uninstalling the release app (and wiping user data).
+            applicationIdSuffix = ".debug"
         }
         release {
             isMinifyEnabled = true

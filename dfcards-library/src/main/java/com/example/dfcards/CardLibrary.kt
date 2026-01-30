@@ -4,6 +4,8 @@ import com.example.xcpro.common.units.UnitsPreferences
 
 object CardLibrary {
     val allCards: List<CardDefinition> = allCardDefinitions
+    private val defaultTimeFormatter = SystemCardTimeFormatter()
+    private val defaultStrings = DefaultCardStrings()
 
     fun getCardsByCategory(category: CardCategory): List<CardDefinition> =
         cardsByCategory[category].orEmpty()
@@ -17,6 +19,9 @@ object CardLibrary {
     fun mapLiveDataToCard(
         cardId: String,
         liveData: RealTimeFlightData?,
-        units: UnitsPreferences = UnitsPreferences()
-    ): Pair<String, String?> = CardDataFormatter.mapLiveDataToCard(cardId, liveData, units)
+        units: UnitsPreferences = UnitsPreferences(),
+        strings: CardStrings = defaultStrings,
+        timeFormatter: CardTimeFormatter = defaultTimeFormatter
+    ): Pair<String, String?> =
+        CardDataFormatter.mapLiveDataToCard(CardId.fromRaw(cardId), liveData, units, strings, timeFormatter)
 }

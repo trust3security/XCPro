@@ -180,7 +180,9 @@ class CardPreferences(
         return context.dataStore.data.map { preferences ->
             val key = "profile_${profileId}_template_${templateId}_cards"
             val cardsString = preferences[stringPreferencesKey(key)]
-            val cards = cardsString?.split(",")?.filter { it.isNotBlank() }
+            val cards = cardsString
+                ?.split(",")
+                ?.let { CardIdMigration.normalizeAll(it) }
             android.util.Log.d("CardPreferences", " Loading profile cards: $key = ${cards?.joinToString(",") ?: "NULL (using default)"}")
             cards
         }
@@ -248,7 +250,7 @@ class CardPreferences(
 
                     if (id != null && name != null && desc != null && cardsString != null) {
                         val cardIds = if (cardsString.isNotBlank()) {
-                            cardsString.split(",")
+                            CardIdMigration.normalizeAll(cardsString.split(","))
                         } else emptyList()
 
                         templates.add(
@@ -307,10 +309,7 @@ class CardPreferences(
                     val profilePart = name.substringAfter("profile_").substringBefore("_template_")
                     val templatePart = name.substringAfter("_template_").substringBefore("_cards")
                     val cardsString = value as? String
-                    val cards = cardsString
-                        ?.split(",")
-                        ?.mapNotNull { it.trim().takeIf(String::isNotEmpty) }
-                        .orEmpty()
+                    val cards = cardsString?.split(",")?.let { CardIdMigration.normalizeAll(it) }.orEmpty()
                     val templateMap = result.getOrPut(profilePart) { mutableMapOf() }
                     templateMap[templatePart] = cards
                 }

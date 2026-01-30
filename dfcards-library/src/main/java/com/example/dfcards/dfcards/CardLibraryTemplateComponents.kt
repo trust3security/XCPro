@@ -121,6 +121,8 @@ internal fun TemplateEditorModal(
     onSaveTemplate: (String, List<String>) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val cardStrings = rememberCardStrings()
+    val cardTimeFormatter = rememberCardTimeFormatter()
     var templateName by remember {
         mutableStateOf(existingTemplate?.name ?: "")
     }
@@ -255,6 +257,8 @@ internal fun TemplateEditorModal(
                                             card = card,
                                             isSelected = selectedCards.contains(card.id),
                                             liveFlightData = liveFlightData,
+                                            cardStrings = cardStrings,
+                                            cardTimeFormatter = cardTimeFormatter,
                                             onToggle = {
                                                 selectedCards = if (selectedCards.contains(card.id)) {
                                                     selectedCards - card.id

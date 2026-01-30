@@ -33,6 +33,8 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.min
+import com.example.dfcards.CardStrings
+import com.example.dfcards.DefaultCardStrings
 
 @Composable
 fun EnhancedFlightDataCard(
@@ -42,7 +44,8 @@ fun EnhancedFlightDataCard(
     isEditMode: Boolean = false,
     isLiveData: Boolean = false,
     modifier: Modifier = Modifier,
-    visualStyle: CardVisualStyle
+    visualStyle: CardVisualStyle,
+    cardStrings: CardStrings = DefaultCardStrings()
 ) {
     val stableFontSizes = remember(cardWidth, cardHeight) {
         calculateStableFontSizes(cardWidth, cardHeight)
@@ -180,7 +183,7 @@ fun EnhancedFlightDataCard(
 
             flightData.secondaryValue?.let { secondaryText ->
                 val secondaryMultiplier = when {
-                    flightData.id == "wind_spd" && secondaryText.equals("NO WIND", ignoreCase = true) -> 1f
+                    flightData.id == "wind_spd" && secondaryText.equals(cardStrings.noWind, ignoreCase = true) -> 1f
                     flightData.id == "wind_spd" -> 2f
                     else -> 1f
                 }
