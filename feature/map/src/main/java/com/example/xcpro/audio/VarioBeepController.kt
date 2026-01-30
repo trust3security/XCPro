@@ -24,12 +24,15 @@ class VarioBeepController(
         private const val TAG = "VarioBeepController"
         private const val UPDATE_RATE_MS = 50L  // 20Hz update rate
         private const val TRANSITION_SMOOTHING = 0.3  // Smooth frequency transitions
+        private const val TONE_ATTACK_MS = 5L
+        private const val TONE_RELEASE_MS = 5L
     }
 
     // Current audio state
     private var currentParams: AudioParams? = null
     private var targetParams: AudioParams? = null
     private var isRunning = false
+    private var lastMode: AudioMode? = null
 
     private val internalScope = CoroutineScope(scope.coroutineContext + SupervisorJob(scope.coroutineContext[Job]))
 
@@ -109,11 +112,24 @@ class VarioBeepController(
                             mode = target.mode
                         )
 
+                        val previousMode = lastMode
+                        lastMode = target.mode
+
                         // Play audio based on mode
                         when (target.mode) {
-                            AudioMode.BEEPING -> playBeepCycle()
-                            AudioMode.CONTINUOUS -> playContinuousTone()
-                            AudioMode.SILENCE -> playSilence()
+                            AudioMode.BEEPING -> {
+                                if (previousMode == AudioMode.CONTINUOUS) {
+                                    toneGenerator.resetPhase()
+                                }
+                                playBeepCycle()
+                            }
+                            AudioMode.CONTINUOUS -> playContinuousTone(applyEnvelope = previousMode != AudioMode.CONTINUOUS)
+                            AudioMode.SILENCE -> {
+                                if (previousMode == AudioMode.CONTINUOUS) {
+                                    toneGenerator.resetPhase()
+                                }
+                                playSilence()
+                            }
                         }
                     } else {
                         // No params yet, wait
@@ -170,7 +186,11 @@ class VarioBeepController(
         if (toneDuration > 0) {
             toneGenerator.playTone(
                 frequencyHz = params.frequencyHz,
-                durationMs = toneDuration
+                durationMs = toneDuration,
+                envelope = ToneEnvelope(
+                    attackMs = TONE_ATTACK_MS,
+                    releaseMs = TONE_RELEASE_MS
+                )
             )
         }
 
@@ -187,7 +207,7 @@ class VarioBeepController(
     /**
      * Play continuous tone (for sink warning)
      */
-    private suspend fun playContinuousTone() {
+    private suspend fun playContinuousTone(applyEnvelope: Boolean) {
         val params = currentParams ?: return
 
         if (!params.isActive()) {
@@ -199,7 +219,16 @@ class VarioBeepController(
         val duration = 1000L
         toneGenerator.playTone(
             frequencyHz = params.frequencyHz,
-            durationMs = duration
+            durationMs = duration,
+            envelope = if (applyEnvelope) {
+                ToneEnvelope(
+                    attackMs = TONE_ATTACK_MS,
+                    releaseMs = TONE_RELEASE_MS
+                )
+            } else {
+                ToneEnvelope()
+            },
+            preservePhase = true
         )
 
         delay(duration)

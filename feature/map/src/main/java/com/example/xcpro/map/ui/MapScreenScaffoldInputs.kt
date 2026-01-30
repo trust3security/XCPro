@@ -108,6 +108,7 @@ internal data class MapScreenScaffoldInputs(
     val onVarioDemoSimClick: () -> Unit,
     val onVarioDemoSim2Click: () -> Unit,
     val onVarioDemoSim3Click: () -> Unit,
+    val onVarioDemoCarClick: () -> Unit,
     val showRacingReplayFab: Boolean,
     val onRacingReplayClick: () -> Unit
 )
@@ -242,6 +243,7 @@ internal fun rememberMapScreenScaffoldInputs(
         onVarioDemoSimClick = mapViewModel::onVarioDemoReplaySim,
         onVarioDemoSim2Click = mapViewModel::onVarioDemoReplaySimLive,
         onVarioDemoSim3Click = mapViewModel::onVarioDemoReplaySim3,
+        onVarioDemoCarClick = mapViewModel::onVarioDemoReplayCar,
         showRacingReplayFab = mapViewModel.showRacingReplayFab,
         onRacingReplayClick = mapViewModel::onRacingTaskReplay
     )

@@ -121,6 +121,7 @@ internal fun MapScreenContent(
     onVarioDemoSimClick: () -> Unit,
     onVarioDemoSim2Click: () -> Unit,
     onVarioDemoSim3Click: () -> Unit,
+    onVarioDemoCarClick: () -> Unit,
     showRacingReplayFab: Boolean,
     onRacingReplayClick: () -> Unit
 ) {
@@ -226,6 +227,7 @@ internal fun MapScreenContent(
             onVarioDemoSimClick = onVarioDemoSimClick,
             onVarioDemoSim2Click = onVarioDemoSim2Click,
             onVarioDemoSim3Click = onVarioDemoSim3Click,
+            onVarioDemoCarClick = onVarioDemoCarClick,
             onRacingReplayClick = onRacingReplayClick
         )
 
@@ -344,6 +346,7 @@ private fun MapActionButtonsLayer(
     onVarioDemoSimClick: () -> Unit,
     onVarioDemoSim2Click: () -> Unit,
     onVarioDemoSim3Click: () -> Unit,
+    onVarioDemoCarClick: () -> Unit,
     onRacingReplayClick: () -> Unit,
     modifier: Modifier = Modifier.fillMaxSize()
 ) {
@@ -365,6 +368,7 @@ private fun MapActionButtonsLayer(
         onVarioDemoSimClick = onVarioDemoSimClick,
         onVarioDemoSim2Click = onVarioDemoSim2Click,
         onVarioDemoSim3Click = onVarioDemoSim3Click,
+        onVarioDemoCarClick = onVarioDemoCarClick,
         onRacingReplayClick = onRacingReplayClick,
         modifier = modifier
     )

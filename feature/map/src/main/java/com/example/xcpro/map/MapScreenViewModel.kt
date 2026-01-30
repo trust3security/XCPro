@@ -237,6 +237,10 @@ class MapScreenViewModel @Inject constructor(
         replayCoordinator.onVarioDemoReplaySim3()
     }
 
+    fun onVarioDemoReplayCar() {
+        replayCoordinator.onVarioDemoReplayCar()
+    }
+
     fun updateSafeContainerSize(size: MapStateStore.MapSize) {
         mapStateStore.updateSafeContainerSize(size)
     }

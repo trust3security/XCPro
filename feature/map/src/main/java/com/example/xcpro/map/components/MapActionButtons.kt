@@ -43,6 +43,7 @@ fun MapActionButtons(
     onVarioDemoSimClick: () -> Unit,
     onVarioDemoSim2Click: () -> Unit,
     onVarioDemoSim3Click: () -> Unit,
+    onVarioDemoCarClick: () -> Unit,
     showRacingReplayFab: Boolean,
     onRacingReplayClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -55,14 +56,15 @@ fun MapActionButtons(
     val distanceTopPadding = if (showQnhFab) qnhTopPadding + fabSpacing else qnhTopPadding
     val demoFabSize = 48.dp
     val demoSpacing = 12.6.dp // ~2mm gap between FAB edges
-    val demoSimBottomPadding = 16.dp
-    val demoSim2BottomPadding = demoSimBottomPadding + demoFabSize + demoSpacing
-    val demoSim3BottomPadding = demoSim2BottomPadding + demoFabSize + demoSpacing
-    val demoRefBottomPadding = demoSim3BottomPadding + demoFabSize + demoSpacing
+    val demoSim3BottomPadding = 16.dp
+    val demoSimBottomPadding = demoSim3BottomPadding + demoFabSize + demoSpacing
+    val demoCarBottomPadding = demoSimBottomPadding + demoFabSize + demoSpacing
+    val demoSim2BottomPadding = demoCarBottomPadding + demoFabSize + demoSpacing
+    val demoRefBottomPadding = demoSim2BottomPadding + demoFabSize + demoSpacing
     val demoTaskBottomPadding = if (showVarioDemoFab) {
         demoRefBottomPadding + demoFabSize + demoSpacing
     } else {
-        demoSimBottomPadding
+        demoSim3BottomPadding
     }
     val isTaskSearchVisible by taskScreenManager.showTaskScreen.collectAsStateWithLifecycle()
     val isTaskSheetVisible by taskScreenManager.showTaskBottomSheet.collectAsStateWithLifecycle()
@@ -133,13 +135,22 @@ fun MapActionButtons(
                     .padding(end = 16.dp, bottom = demoSim2BottomPadding)
             )
             VarioDemoButton(
+                onClick = onVarioDemoCarClick,
+                badgeText = "CAR",
+                badgeColor = Color(0xFF546E7A),
+                contentDescription = "Run vario demo replay (car)",
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 16.dp, bottom = demoCarBottomPadding)
+            )
+            VarioDemoButton(
                 onClick = onVarioDemoSimClick,
                 badgeText = "SIM",
                 badgeColor = MaterialTheme.colorScheme.tertiary,
                 contentDescription = "Run vario demo replay (sim)",
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 16.dp, bottom = demoSim3BottomPadding)
+                    .padding(end = 16.dp, bottom = demoSimBottomPadding)
             )
             VarioDemoButton(
                 onClick = onVarioDemoSim3Click,
@@ -148,7 +159,7 @@ fun MapActionButtons(
                 contentDescription = "Run vario demo replay (sim3)",
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 16.dp, bottom = demoSimBottomPadding)
+                    .padding(end = 16.dp, bottom = demoSim3BottomPadding)
             )
         }
 

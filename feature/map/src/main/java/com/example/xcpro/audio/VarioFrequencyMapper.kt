@@ -23,17 +23,23 @@ class VarioFrequencyMapper(
         private const val MAX_FREQ = 1500.0 // Hz
         private const val MIN_PERIOD_MS = 150.0
         private const val MAX_PERIOD_MS = 600.0
+        private const val SINK_HYSTERESIS_MS = 0.1
     }
+
+    private var sinkActive = false
 
     fun mapVerticalSpeed(verticalSpeedMs: Double): AudioParams {
         val clipped = verticalSpeedMs.coerceIn(MIN_VARIO, MAX_VARIO)
-        if (inDeadband(clipped)) {
-            return AudioParams(0.0, 0.0, 0.0, AudioMode.SILENCE)
-        }
-        return if (clipped > 0) {
-            mapLift(clipped)
-        } else {
-            mapSink(clipped)
+        return when {
+            clipped > 0 -> {
+                sinkActive = false
+                mapLift(clipped)
+            }
+            clipped < 0 -> mapSink(clipped)
+            else -> {
+                sinkActive = false
+                AudioParams(0.0, 0.0, 0.0, AudioMode.SILENCE)
+            }
         }
     }
 
@@ -47,7 +53,16 @@ class VarioFrequencyMapper(
     }
 
     private fun mapSink(vs: Double): AudioParams {
-        if (vs > settings.sinkSilenceThreshold) {
+        val effectiveThreshold = minOf(settings.sinkSilenceThreshold, settings.deadbandMin)
+        val startThreshold = effectiveThreshold - SINK_HYSTERESIS_MS
+        val stopThreshold = effectiveThreshold + SINK_HYSTERESIS_MS
+        sinkActive = when {
+            sinkActive && vs <= stopThreshold -> true
+            sinkActive && vs > stopThreshold -> false
+            !sinkActive && vs <= startThreshold -> true
+            else -> false
+        }
+        if (!sinkActive) {
             return AudioParams(0.0, 0.0, 0.0, AudioMode.SILENCE)
         }
         val frequency = varioToFrequency(vs)

@@ -35,12 +35,15 @@ class VarioToneGenerator {
         private const val TAG = "VarioToneGenerator"
         private const val SAMPLE_RATE = 44100 // Hz (CD quality)
         private const val MAX_FREQUENCY = 2000.0 // Hz (reasonable upper limit)
+        private const val SILENCE_RAMP_MS = 5L
     }
 
     // Audio track for low-latency playback
     private var audioTrack: AudioTrack? = null
     private var isInitialized = false
     private var currentVolume = 0.8f
+    private var phaseAccumulator = 0.0
+    private var lastSampleValue: Short = 0
 
     private val silenceBuffer = ShortArray(SAMPLE_RATE)
 
@@ -118,7 +121,8 @@ class VarioToneGenerator {
         durationMs: Long,
         volume: Float = currentVolume,
         envelope: ToneEnvelope = ToneEnvelope(),
-        components: List<ToneComponent> = emptyList()
+        components: List<ToneComponent> = emptyList(),
+        preservePhase: Boolean = false
     ) {
         if (!isInitialized) {
             Log.w(TAG, "Not initialized, call initialize() first")
@@ -147,10 +151,10 @@ class VarioToneGenerator {
                 .coerceAtMost(numSamples)
             val releaseSamples = ((envelope.releaseMs * SAMPLE_RATE) / 1000L)
                 .toInt()
-                .coerceAtMost(numSamples - 1)
+                .coerceAtMost(numSamples)
             val releaseStart = if (releaseSamples == 0) numSamples else maxOf(numSamples - releaseSamples, 0)
 
-            var phase = 0.0
+            var phase = if (preservePhase) phaseAccumulator else 0.0
             val componentSteps = components.map { 2.0 * PI * frequencyHz * it.ratio / SAMPLE_RATE }
             val componentPhases = DoubleArray(components.size)
 
@@ -163,17 +167,26 @@ class VarioToneGenerator {
                 phase += baseAngularStep
 
                 val envelopeFactor = when {
-                    attackSamples > 0 && i < attackSamples -> (i + 1).toDouble() / attackSamples
-                    releaseSamples > 0 && i >= releaseStart -> {
-                        val remaining = (numSamples - i).toDouble()
-                        (remaining / releaseSamples).coerceIn(0.0, 1.0)
+                    attackSamples > 1 && i < attackSamples -> {
+                        i.toDouble() / (attackSamples - 1).toDouble()
                     }
+                    attackSamples == 1 && i == 0 -> 1.0
+                    releaseSamples > 1 && i >= releaseStart -> {
+                        val remaining = (numSamples - 1 - i).toDouble()
+                        (remaining / (releaseSamples - 1).toDouble()).coerceIn(0.0, 1.0)
+                    }
+                    releaseSamples == 1 && i >= releaseStart -> 0.0
                     else -> 1.0
                 }
 
                 val clamped = (sampleValue * envelopeFactor).coerceIn(-1.0, 1.0)
                 samples[i] = (clamped * Short.MAX_VALUE * volume).toInt().toShort()
             }
+
+            if (preservePhase) {
+                phaseAccumulator = phase % (2.0 * PI)
+            }
+            lastSampleValue = samples[numSamples - 1]
 
             if (track.playState != AudioTrack.PLAYSTATE_PLAYING) {
                 track.play()
@@ -217,6 +230,29 @@ class VarioToneGenerator {
             }
 
             var remaining = totalSamples
+            if (remaining > 0 && lastSampleValue != 0.toShort()) {
+                val rampSamples = ((SILENCE_RAMP_MS * SAMPLE_RATE) / 1000L).toInt().coerceAtLeast(1)
+                val rampCount = min(remaining, rampSamples)
+                val ramp = ShortArray(rampCount)
+                if (rampCount == 1) {
+                    ramp[0] = 0
+                } else {
+                    val start = lastSampleValue.toDouble()
+                    val denom = (rampCount - 1).toDouble()
+                    for (i in 0 until rampCount) {
+                        val factor = 1.0 - (i.toDouble() / denom)
+                        ramp[i] = (start * factor).toInt().toShort()
+                    }
+                }
+                val written = track.write(ramp, 0, rampCount)
+                if (written < 0) {
+                    Log.e(TAG, "Error writing silence ramp: $written")
+                    resetAudioTrack("write_error_playSilence", written)
+                    return
+                }
+                remaining -= rampCount
+                lastSampleValue = 0
+            }
             while (remaining > 0) {
                 val chunk = min(remaining, silenceBuffer.size)
                 val written = track.write(silenceBuffer, 0, chunk)
@@ -298,6 +334,10 @@ class VarioToneGenerator {
      */
     fun getPlaybackState(): Int {
         return audioTrack?.playState ?: AudioTrack.PLAYSTATE_STOPPED
+    }
+
+    fun resetPhase() {
+        phaseAccumulator = 0.0
     }
 
     private fun resetAudioTrack(reason: String, errorCode: Int? = null) {
