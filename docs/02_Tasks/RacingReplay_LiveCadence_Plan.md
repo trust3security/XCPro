@@ -1,6 +1,6 @@
 # Racing Replay Live-Cadence Plan (100ms)  
 
-Goal: make racing replay behave like live GPS cadence (≈100ms) **without** violating IGC spec,
+Goal: make racing replay behave like live GPS cadence (per-mille^100ms) **without** violating IGC spec,
 and ensure start/finish events align with the displayed glider position.
 
 This is a **design + implementation plan** only. No behavior changes should be made outside
@@ -8,7 +8,7 @@ the steps below.
 
 ---
 
-## 0) Constraints (non‑negotiable)
+## 0) Constraints (non'negotiable)
 
 - **SSOT stays in repositories**. UI/VM must not own navigation truth.
 - **Time base:** replay uses IGC timestamps only.
@@ -20,8 +20,8 @@ the steps below.
 
 ## 1) Current Reality (facts)
 
-- Built‑in replay assets (`app/src/main/assets/replay/*.igc`) use **1s B‑record cadence**.
-- `IgcParser` reads `HHMMSS` only ⇒ **1s timestamp resolution** in file.
+- Built'in replay assets (`app/src/main/assets/replay/*.igc`) use **1s B'record cadence**.
+- `IgcParser` reads `HHMMSS` only *-> **1s timestamp resolution** in file.
 - `IgcReplayMath.densifyPoints(log.points)` inserts **1s** intermediate points (REFERENCE mode).
 - `ReplaySampleEmitter.shouldEmitGps()` emits **every point** in REFERENCE, but GPS cadence is still
   limited by the point cadence (1s).
@@ -30,9 +30,9 @@ Therefore: **editing the file alone cannot produce 100ms behavior** without pars
 
 ---
 
-## 2) Solution Overview (genius‑grade, minimal risk)
+## 2) Solution Overview (genius'grade, minimal risk)
 
-### A) Live‑cadence without changing file format
+### A) Live'cadence without changing file format
 - Keep assets intact (IGC compliant).
 - **Densify in replay** to 100ms using replay config.
 - **Emit GPS at 100ms** during replay.
@@ -43,13 +43,13 @@ Therefore: **editing the file alone cannot produce 100ms behavior** without pars
 - **Use that crossing timestamp** for event emission and state transitions.
 - **Force RAW replay pose** during replay to keep UI aligned with fix timestamps.
 
-This gives you **live‑like cadence + exact event timing** without touching IGC spec.
+This gives you **live'like cadence + exact event timing** without touching IGC spec.
 
 ---
 
 ## 3) Implementation Plan (phased)
 
-### Phase 1 — Replay cadence profile (core)
+### Phase 1 -- Replay cadence profile (core)
 
 **Add a replay cadence profile**
 1) Extend `ReplaySimConfig`:
@@ -78,12 +78,12 @@ This gives you **live‑like cadence + exact event timing** without touching IGC
 
 **Acceptance**
 - No change to IGC assets.
-- Replay produces ~10× GPS updates vs current.
+- Replay produces ~10x GPS updates vs current.
 - Unit tests pass.
 
 ---
 
-### Phase 2 — Exact crossing timestamp (navigation correctness)
+### Phase 2 -- Exact crossing timestamp (navigation correctness)
 
 **Add crossing resolver**
 1) Create `RacingCrossingResolver` (domain, no UI types).
@@ -105,11 +105,11 @@ This gives you **live‑like cadence + exact event timing** without touching IGC
 
 ---
 
-### Phase 3 — UI alignment (replay only)
+### Phase 3 -- UI alignment (replay only)
 
 **RAW pose during replay**
 1) Ensure `DisplayPoseMode.RAW_REPLAY` is forced while replay active.
-   - Use existing `MapFeatureFlags.useRawReplayPose` or a replay‑only override.
+   - Use existing `MapFeatureFlags.useRawReplayPose` or a replay'only override.
 2) Restore original mode after replay ends.
 
 **Acceptance**
@@ -147,3 +147,5 @@ This gives you **live‑like cadence + exact event timing** without touching IGC
 - Start/finish events timestamped at exact crossing.
 - UI arrow aligns with event timing during replay.
 - Tests added and green.
+
+

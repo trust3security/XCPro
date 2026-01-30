@@ -1,28 +1,28 @@
 # Flight Data Cards - SSOT Refactoring Plan
 
 **Created**: 2025-10-10
-**Status**: Superseded � see `docs/2025-11-01-flight-data-cards-ssot-remediation-plan.md`
+**Status**: Superseded - see `docs/2025-11-01-flight-data-cards-ssot-remediation-plan.md`
 **Priority**: HIGH - Critical for long-term stability
 **Estimated Time**: 2-3 hours
 
 ---
 
-## 🎯 OBJECTIVE
+## z OBJECTIVE
 
 Refactor the Flight Data Cards system to use **Single Source of Truth (SSOT)** architecture, eliminating all manual synchronization bugs and simplifying the codebase by ~350 lines.
 
 ---
 
-## 🚨 PROBLEM STATEMENT
+##  PROBLEM STATEMENT
 
 ### Current Architecture Issues
 
 **We fixed 5 synchronization bugs in one session:**
-1. ❌ Templates blocking forever (`.collect()` issue)
-2. ❌ Race condition in card application (async timing)
-3. ❌ Redundant fallback in FlightDataManager
-4. ❌ Unwanted fallback in FlightDataViewModel
-5. ❌ UI not observing state changes
+1. oe Templates blocking forever (`.collect()` issue)
+2. oe Race condition in card application (async timing)
+3. oe Redundant fallback in FlightDataManager
+4. oe Unwanted fallback in FlightDataViewModel
+5. oe UI not observing state changes
 
 **Root Cause:** Multiple sources of truth with manual synchronization:
 - `CardPreferences` (DataStore) - Persistent storage
@@ -37,51 +37,51 @@ From CLAUDE.md:
 > **EVERY piece of data MUST have exactly ONE authoritative source.**
 
 **Current violations:**
-1. ❌ **Dual Data Stores**: CardPreferences + FlightDataManager
-2. ❌ **Manual Synchronization**: TemplateChangeNotifier + templateVersion
-3. ❌ **Non-Reactive Updates**: LaunchedEffect triggers reload cycle
-4. ❌ **Complex Flow**: 10+ steps from user action to display update
+1. oe **Dual Data Stores**: CardPreferences + FlightDataManager
+2. oe **Manual Synchronization**: TemplateChangeNotifier + templateVersion
+3. oe **Non-Reactive Updates**: LaunchedEffect triggers reload cycle
+4. oe **Complex Flow**: 10+ steps from user action to display update
 
 ---
 
-## ✅ SSOT DESIGN
+## ... SSOT DESIGN
 
 ### Core Principle
 
 **FlightDataViewModel becomes the SINGLE source of truth:**
-- ✅ Stores profile + mode → cards mapping in memory
-- ✅ All UI reads from ViewModel only
-- ✅ All updates go through ViewModel only
-- ✅ DataStore used ONLY for persistence (load once, save async)
-- ✅ Zero manual synchronization
+- ... Stores profile + mode -> cards mapping in memory
+- ... All UI reads from ViewModel only
+- ... All updates go through ViewModel only
+- ... DataStore used ONLY for persistence (load once, save async)
+- ... Zero manual synchronization
 
 ### Architecture Diagram
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                   FlightDataViewModel                        │
-│                  (SINGLE SOURCE OF TRUTH)                    │
-│                                                              │
-│  _profileModeCards: Map<ProfileId, Map<Mode, List<CardId>>> │
-│  _activeProfileId: StateFlow<String?>                       │
-│  _currentFlightMode: StateFlow<FlightModeSelection>         │
-│                                                              │
-│  activeCards: StateFlow<List<CardState>> ← DERIVED          │
-│  (Automatically recomputes via combine())                    │
-└─────────────────────────────────────────────────────────────┘
-                       ↑                    ↓
-                       │                    │
-            ┌──────────┴────────┐  ┌───────┴──────────┐
-            │                   │  │                   │
-     ┌──────▼──────┐    ┌──────▼──────┐    ┌──────▼──────┐
-     │ MapScreen   │    │ FlightData  │    │ CardPrefs   │
-     │ (Observer)  │    │ Screen      │    │ (Persistence│
-     │             │    │ (Observer + │    │  only)      │
-     │ Displays    │    │  Modifier)  │    │             │
-     │ cards       │    │             │    │ Load once   │
-     │             │    │ Toggle      │    │ Save async  │
-     └─────────────┘    │ cards       │    └─────────────┘
-                        └─────────────┘
+"oe""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+"                   FlightDataViewModel                        "
+"                  (SINGLE SOURCE OF TRUTH)                    "
+"                                                              "
+"  _profileModeCards: Map<ProfileId, Map<Mode, List<CardId>>> "
+"  _activeProfileId: StateFlow<String?>                       "
+"  _currentFlightMode: StateFlow<FlightModeSelection>         "
+"                                                              "
+"  activeCards: StateFlow<List<CardState>> * DERIVED          "
+"  (Automatically recomputes via combine())                    "
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+                       ->                    *"
+                       "                    "
+            "oe"""""""""""'"""""""""  "oe""""""""'"""""""""""
+            "                   "  "                   "
+     "oe""""""-1/4"""""""    "oe""""""-1/4"""""""    "oe""""""-1/4"""""""
+     " MapScreen   "    " FlightData  "    " CardPrefs   "
+     " (Observer)  "    " Screen      "    " (Persistence"
+     "             "    " (Observer + "    "  only)      "
+     " Displays    "    "  Modifier)  "    "             "
+     " cards       "    "             "    " Load once   "
+     "             "    " Toggle      "    " Save async  "
+     """"""""""""""""    " cards       "    """"""""""""""""
+                        """"""""""""""""
 ```
 
 ### Key Design Elements
@@ -98,9 +98,9 @@ From CLAUDE.md:
        _activeProfileId,
        _currentFlightMode,
        _containerSize
-   ) { configs, profileId, mode, size →
+   ) { configs, profileId, mode, size ->
        val cardIds = profileId?.let { configs[it]?.get(mode) } ?: emptyList()
-       cardIds.map { cardId → createCardState(cardId, size) }
+       cardIds.map { cardId -> createCardState(cardId, size) }
    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
    ```
 
@@ -123,7 +123,7 @@ From CLAUDE.md:
 
 ---
 
-## 📋 IMPLEMENTATION STEPS
+## "< IMPLEMENTATION STEPS
 
 ### Phase 1: ViewModel Refactoring (Core SSOT)
 
@@ -134,15 +134,15 @@ From CLAUDE.md:
 ```kotlin
 class FlightDataViewModel : ViewModel() {
 
-    // ✅ SSOT: Profile + Mode → Card IDs configuration
+    // ... SSOT: Profile + Mode -> Card IDs configuration
     private val _profileModeCards = MutableStateFlow<Map<String, Map<FlightModeSelection, List<String>>>>(emptyMap())
 
-    // ✅ Current context
+    // ... Current context
     private val _activeProfileId = MutableStateFlow<String?>(null)
     private val _currentFlightMode = MutableStateFlow(FlightModeSelection.CRUISE)
     private val _containerSize = MutableStateFlow(IntSize.Zero)
 
-    // ✅ DERIVED STATE: Automatically computed active cards
+    // ... DERIVED STATE: Automatically computed active cards
     val activeCards: StateFlow<List<CardState>> = combine(
         _profileModeCards,
         _activeProfileId,
@@ -168,11 +168,11 @@ class FlightDataViewModel : ViewModel() {
 
 ```kotlin
 /**
- * ✅ SSOT: Single update path for card configuration
+ * ... SSOT: Single update path for card configuration
  * Updates in-memory SSOT immediately, saves to DataStore async
  */
 fun updateCards(profileId: String, mode: FlightModeSelection, cardIds: List<String>) {
-    Log.d(TAG, "🔄 updateCards: Profile '$profileId', Mode '${mode.name}', Cards: ${cardIds.joinToString(",")}")
+    Log.d(TAG, """ updateCards: Profile '$profileId', Mode '${mode.name}', Cards: ${cardIds.joinToString(",")}")
 
     // 1. Update SSOT immediately
     _profileModeCards.value = _profileModeCards.value.toMutableMap().apply {
@@ -188,34 +188,34 @@ fun updateCards(profileId: String, mode: FlightModeSelection, cardIds: List<Stri
     // 4. Save to DataStore (fire-and-forget, for persistence only)
     viewModelScope.launch {
         cardPreferences?.saveProfileTemplateCards(profileId, mode.name, cardIds)
-        Log.d(TAG, "💾 Saved to DataStore: Profile '$profileId', Mode '${mode.name}', Cards: ${cardIds.joinToString(",")}")
+        Log.d(TAG, "'3/4 Saved to DataStore: Profile '$profileId', Mode '${mode.name}', Cards: ${cardIds.joinToString(",")}")
     }
 }
 
 /**
- * ✅ SSOT: Switch active profile
+ * ... SSOT: Switch active profile
  */
 fun setActiveProfile(profileId: String?) {
-    Log.d(TAG, "👤 setActiveProfile: $profileId")
+    Log.d(TAG, "'$ setActiveProfile: $profileId")
     _activeProfileId.value = profileId
     // activeCards recomputes automatically
 }
 
 /**
- * ✅ SSOT: Switch flight mode
+ * ... SSOT: Switch flight mode
  */
 fun setFlightMode(mode: FlightModeSelection) {
-    Log.d(TAG, "✈️ setFlightMode: ${mode.name}")
+    Log.d(TAG, "^ setFlightMode: ${mode.name}")
     _currentFlightMode.value = mode
     // activeCards recomputes automatically
 }
 
 /**
- * ✅ SSOT: Update container size
+ * ... SSOT: Update container size
  */
 fun setContainerSize(size: IntSize) {
     if (_containerSize.value != size) {
-        Log.d(TAG, "📐 setContainerSize: $size")
+        Log.d(TAG, "" setContainerSize: $size")
         _containerSize.value = size
         // activeCards recomputes automatically with new positions
     }
@@ -226,11 +226,11 @@ fun setContainerSize(size: IntSize) {
 
 ```kotlin
 /**
- * ✅ SSOT: Load all profile configurations from DataStore on init
+ * ... SSOT: Load all profile configurations from DataStore on init
  * Called once when ViewModel is created
  */
 suspend fun initializeFromDataStore(profileIds: List<String>) {
-    Log.d(TAG, "🚀 initializeFromDataStore: Loading ${profileIds.size} profiles")
+    Log.d(TAG, " initializeFromDataStore: Loading ${profileIds.size} profiles")
 
     val allConfigs = mutableMapOf<String, Map<FlightModeSelection, List<String>>>()
 
@@ -241,7 +241,7 @@ suspend fun initializeFromDataStore(profileIds: List<String>) {
             val cardIds = cardPreferences?.getProfileTemplateCards(profileId, mode.name)?.first()
             if (cardIds != null) {
                 modeConfigs[mode] = cardIds
-                Log.d(TAG, "  📋 Profile '$profileId', Mode '${mode.name}': ${cardIds.size} cards")
+                Log.d(TAG, "  "< Profile '$profileId', Mode '${mode.name}': ${cardIds.size} cards")
             }
         }
 
@@ -249,7 +249,7 @@ suspend fun initializeFromDataStore(profileIds: List<String>) {
     }
 
     _profileModeCards.value = allConfigs
-    Log.d(TAG, "✅ Initialized with ${allConfigs.size} profile configurations")
+    Log.d(TAG, "... Initialized with ${allConfigs.size} profile configurations")
 }
 ```
 
@@ -312,7 +312,7 @@ onCardToggle = { cardId, isSelected ->
 **AFTER:**
 ```kotlin
 onCardToggle = { cardId, isSelected ->
-    Log.d(TAG, "🃏 Card toggle: $cardId, selected: $isSelected")
+    Log.d(TAG, "f Card toggle: $cardId, selected: $isSelected")
 
     activeProfile?.let { profile ->
         // Get current cards for this profile + mode
@@ -325,10 +325,10 @@ onCardToggle = { cardId, isSelected ->
             currentCards - cardId
         }
 
-        // ✅ SSOT: Single update call
+        // ... SSOT: Single update call
         flightViewModel.updateCards(profile.id, selectedFlightMode, updatedCards)
 
-        Log.d(TAG, "✅ Updated cards: ${updatedCards.size} cards")
+        Log.d(TAG, "... Updated cards: ${updatedCards.size} cards")
     }
 }
 ```
@@ -336,9 +336,9 @@ onCardToggle = { cardId, isSelected ->
 #### Step 2.2: Remove Template Sync Logic
 
 **DELETE these sections:**
-- ❌ `cardPreferences.saveProfileTemplateCards()` call (line 307-312)
-- ❌ `cardPreferences.saveProfileFlightModeTemplate()` call (line 315-321)
-- ❌ `TemplateChangeNotifier.notifyTemplateChanged()` call (line 324)
+- oe `cardPreferences.saveProfileTemplateCards()` call (line 307-312)
+- oe `cardPreferences.saveProfileFlightModeTemplate()` call (line 315-321)
+- oe `TemplateChangeNotifier.notifyTemplateChanged()` call (line 324)
 
 **Result:** ~30 lines deleted, replaced with 1 line `flightViewModel.updateCards()`
 
@@ -363,10 +363,10 @@ fun MapScreen(...) {
 ```kotlin
 @Composable
 fun MapScreen(
-    flightViewModel: FlightDataViewModel,  // ✅ Injected from parent
+    flightViewModel: FlightDataViewModel,  // ... Injected from parent
     // ... other params
 ) {
-    // ✅ Same instance shared with FlightDataScreen
+    // ... Same instance shared with FlightDataScreen
 }
 ```
 
@@ -382,11 +382,11 @@ CardContainer(
 
 **AFTER:**
 ```kotlin
-// ✅ Observe active cards from SSOT
+// ... Observe active cards from SSOT
 val activeCards by flightViewModel.activeCards.collectAsState()
 
 CardContainer(
-    cards = activeCards,  // ✅ Pass cards directly, not ViewModel
+    cards = activeCards,  // ... Pass cards directly, not ViewModel
     onCardUpdated = { updatedCard ->
         flightViewModel.updateCardPosition(updatedCard)
     },
@@ -429,7 +429,7 @@ LaunchedEffect(safeContainerSize) {
 ```kotlin
 @Composable
 fun MainNavigation() {
-    // ✅ Create activity-scoped ViewModel
+    // ... Create activity-scoped ViewModel
     val flightDataViewModel: FlightDataViewModel = viewModel()
 
     // Initialize from DataStore once
@@ -444,13 +444,13 @@ fun MainNavigation() {
     NavHost(...) {
         composable("map") {
             MapScreen(
-                flightViewModel = flightDataViewModel,  // ✅ Pass shared instance
+                flightViewModel = flightDataViewModel,  // ... Pass shared instance
                 // ...
             )
         }
         composable("flightdata") {
             FlightDataMgmt(
-                flightViewModel = flightDataViewModel,  // ✅ Pass shared instance
+                flightViewModel = flightDataViewModel,  // ... Pass shared instance
                 // ...
             )
         }
@@ -465,18 +465,18 @@ fun MainNavigation() {
 #### Step 5.1: Delete Files
 
 **Delete these entire files:**
-- ❌ `app/src/main/java/com/example/xcpro/map/TemplateChangeNotifier.kt`
+- oe `app/src/main/java/com/example/xcpro/map/TemplateChangeNotifier.kt`
 
 #### Step 5.2: Delete from FlightDataManager.kt
 
 **Delete these sections:**
-- ❌ `templateVersion` property (line 52-53)
-- ❌ `incrementTemplateVersion()` method (lines 302-308)
-- ❌ `loadTemplateForProfile()` method (lines 162-237)
-- ❌ `applyTemplateToProfile()` method (lines 242-290)
-- ❌ `loadAllTemplates()` method (lines 154-157)
+- oe `templateVersion` property (line 52-53)
+- oe `incrementTemplateVersion()` method (lines 302-308)
+- oe `loadTemplateForProfile()` method (lines 162-237)
+- oe `applyTemplateToProfile()` method (lines 242-290)
+- oe `loadAllTemplates()` method (lines 154-157)
 
-**Result:** FlightDataManager shrinks from 391 lines → ~150 lines
+**Result:** FlightDataManager shrinks from 391 lines -> ~150 lines
 
 #### Step 5.3: Simplify MapComposeEffects.kt
 
@@ -511,7 +511,7 @@ fun ProfileAndModeEffects(
 }
 ```
 
-**Result:** MapComposeEffects shrinks from 303 lines → ~200 lines
+**Result:** MapComposeEffects shrinks from 303 lines -> ~200 lines
 
 #### Step 5.4: Simplify CardContainer.kt
 
@@ -526,11 +526,11 @@ val cardStateFlows = remember(selectedCardIds) { viewModel.cardStateFlows }
 ```kotlin
 @Composable
 fun CardContainer(
-    cards: List<CardState>,  // ✅ Direct cards list from SSOT
+    cards: List<CardState>,  // ... Direct cards list from SSOT
     onCardUpdated: (CardState) -> Unit,
     // ... other params
 ) {
-    // ✅ Simple iteration - no complex observation needed
+    // ... Simple iteration - no complex observation needed
     cards.forEach { card ->
         EnhancedGestureCard(
             cardState = card,
@@ -543,7 +543,7 @@ fun CardContainer(
 
 ---
 
-## 📊 IMPACT ANALYSIS
+## "s IMPACT ANALYSIS
 
 ### Code Reduction
 
@@ -570,21 +570,21 @@ fun CardContainer(
 
 | Operation | Before | After | Improvement |
 |-----------|--------|-------|-------------|
-| Card toggle → display | ~500ms (reload cycle) | <16ms (recomposition) | 30x faster |
+| Card toggle -> display | ~500ms (reload cycle) | <16ms (recomposition) | 30x faster |
 | Flight mode switch | DataStore read + reload | Instant recomputation | 100x faster |
 | Profile switch | DataStore read + reload | Instant recomputation | 100x faster |
 
 ---
 
-## ✅ PRESERVED FUNCTIONALITY
+## ... PRESERVED FUNCTIONALITY
 
-### 1. Profile Awareness ✅
+### 1. Profile Awareness ...
 Each profile still has independent card configurations per flight mode.
 
 **BEFORE:**
 ```
-Profile "Competition" → CRUISE → ["track", "gps_alt"]
-Profile "Casual" → CRUISE → ["track"]
+Profile "Competition" -> CRUISE -> ["track", "gps_alt"]
+Profile "Casual" -> CRUISE -> ["track"]
 ```
 
 **AFTER:** (Same functionality)
@@ -599,14 +599,14 @@ _profileModeCards.value = {
 }
 ```
 
-### 2. Three Flight Modes ✅
+### 2. Three Flight Modes ...
 Each flight mode can have different cards.
 
 **BEFORE:**
 ```
-CRUISE → 1 card
-THERMAL → 3 cards
-FINAL_GLIDE → 5 cards
+CRUISE -> 1 card
+THERMAL -> 3 cards
+FINAL_GLIDE -> 5 cards
 ```
 
 **AFTER:** (Same functionality)
@@ -618,24 +618,24 @@ configs["profile1"] = {
 }
 ```
 
-### 3. User Customization ✅
+### 3. User Customization ...
 Toggle cards on/off in Flight Data screen still works.
 
-### 4. Flight Mode Visibility ✅
+### 4. Flight Mode Visibility ...
 Hide/show flight modes per profile still works (stored separately in CardPreferences).
 
-### 5. Live Data Updates ✅
+### 5. Live Data Updates ...
 GPS/vario/sensor data still updates cards in real-time.
 
-### 6. Manual Card Positioning ✅
+### 6. Manual Card Positioning ...
 Drag cards around map still works (saved to DataStore separately).
 
-### 7. DataStore Persistence ✅
+### 7. DataStore Persistence ...
 Still saves to DataStore for app restart persistence.
 
 ---
 
-## 🧪 TESTING STRATEGY
+## sectiona TESTING STRATEGY
 
 ### Phase 1: Unit Tests (ViewModel)
 
@@ -695,31 +695,31 @@ class FlightDataViewModelTest {
 ### Phase 2: Integration Tests
 
 **Test Scenarios:**
-1. ✅ Toggle card in Flight Data screen → Card appears on map instantly
-2. ✅ Toggle card off → Card disappears from map instantly
-3. ✅ Switch flight mode → Different cards displayed
-4. ✅ Switch profile → Different cards displayed
-5. ✅ Close app, reopen → Cards restored from DataStore
-6. ✅ Live data updates → Cards show real-time GPS/vario data
+1. ... Toggle card in Flight Data screen -> Card appears on map instantly
+2. ... Toggle card off -> Card disappears from map instantly
+3. ... Switch flight mode -> Different cards displayed
+4. ... Switch profile -> Different cards displayed
+5. ... Close app, reopen -> Cards restored from DataStore
+6. ... Live data updates -> Cards show real-time GPS/vario data
 
 ### Phase 3: Manual Testing Checklist
 
 - [ ] Create new profile
 - [ ] Toggle cards for CRUISE mode
-- [ ] Switch to map → Verify cards displayed
+- [ ] Switch to map -> Verify cards displayed
 - [ ] Toggle cards for THERMAL mode
-- [ ] Switch flight mode on map → Verify different cards
+- [ ] Switch flight mode on map -> Verify different cards
 - [ ] Create second profile
 - [ ] Configure different cards
-- [ ] Switch profiles → Verify correct cards per profile
+- [ ] Switch profiles -> Verify correct cards per profile
 - [ ] Close app completely
-- [ ] Reopen app → Verify all cards restored
-- [ ] Drag card on map → Verify position saved
-- [ ] Toggle card off → Verify card removed immediately
+- [ ] Reopen app -> Verify all cards restored
+- [ ] Drag card on map -> Verify position saved
+- [ ] Toggle card off -> Verify card removed immediately
 
 ---
 
-## 🚨 ROLLBACK PLAN
+##  ROLLBACK PLAN
 
 If SSOT implementation causes issues:
 
@@ -737,7 +737,7 @@ git checkout fix/flight-data-cards-empty-template -- app/src/main/java/com/examp
 
 ---
 
-## 📚 REFERENCES
+## " REFERENCES
 
 - **CLAUDE.md** - SSOT requirements (lines 22-130)
 - **Flight_Data_Cards.md** - Current system documentation
@@ -745,27 +745,27 @@ git checkout fix/flight-data-cards-empty-template -- app/src/main/java/com/examp
 
 ---
 
-## 🎯 SUCCESS CRITERIA
+## z SUCCESS CRITERIA
 
 **SSOT implementation is successful when:**
-1. ✅ Toggle card in Flight Data → Appears on map in <50ms
-2. ✅ Switch flight mode → Cards update instantly (no reload)
-3. ✅ Switch profile → Cards update instantly (no reload)
-4. ✅ Zero manual synchronization code
-5. ✅ Zero LaunchedEffects for card loading
-6. ✅ All 3 flight modes work independently per profile
-7. ✅ DataStore persistence still works
-8. ✅ Unit tests pass (95%+ coverage)
-9. ✅ Manual testing checklist complete
-10. ✅ Code reduced by 500+ lines
+1. ... Toggle card in Flight Data -> Appears on map in <50ms
+2. ... Switch flight mode -> Cards update instantly (no reload)
+3. ... Switch profile -> Cards update instantly (no reload)
+4. ... Zero manual synchronization code
+5. ... Zero LaunchedEffects for card loading
+6. ... All 3 flight modes work independently per profile
+7. ... DataStore persistence still works
+8. ... Unit tests pass (95%+ coverage)
+9. ... Manual testing checklist complete
+10. ... Code reduced by 500+ lines
 
 ---
 
-## 🚀 NEXT STEPS
+##  NEXT STEPS
 
 **When ready to implement:**
 1. Create new branch: `feature/ssot-refactor`
-2. Follow implementation steps in order (Phase 1 → Phase 5)
+2. Follow implementation steps in order (Phase 1 -> Phase 5)
 3. Test after each phase
 4. Run full test suite before merging
 5. Update Flight_Data_Cards.md documentation
@@ -775,3 +775,5 @@ git checkout fix/flight-data-cards-empty-template -- app/src/main/java/com/examp
 
 *Generated by Claude Code - 2025-10-10*
 *Reference this document when implementing SSOT refactoring*
+
+

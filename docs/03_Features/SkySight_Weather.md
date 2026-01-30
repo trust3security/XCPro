@@ -2,7 +2,7 @@
 
 This guide explains how to integrate the new comprehensive SkySight UI components with your existing MapScreen.
 
-## ✅ What We've Built
+## ... What We've Built
 
 ### 1. Enhanced Layer Management (`EnhancedSkysightLayersUI.kt`)
 - **Layer Categories**: Wind, Thermals, Precipitation, Satellite, Convergence, Wave
@@ -53,7 +53,7 @@ This guide explains how to integrate the new comprehensive SkySight UI component
 - **Status Overview**: Connection, region, and layer status at a glance
 - **Smart Integration**: Works alongside existing SkySight components
 
-## 🚀 Integration Steps
+##  Integration Steps
 
 ### Step 1: Add to MapScreen.kt
 
@@ -119,7 +119,7 @@ composable("skysight_settings") {
 }
 ```
 
-## 🎯 Key Features Overview
+## z Key Features Overview
 
 ### For Pilots:
 - **Comprehensive Weather Layers**: All weather data types with organized categories
@@ -140,28 +140,28 @@ composable("skysight_settings") {
 - **Weather Data Access**: Raw data files for weather analysis
 - **Regional Support**: Full coverage for competition locations worldwide
 
-## 🔧 API Integration Status
+## "section API Integration Status
 
-### ✅ Fully Implemented:
+### ... Fully Implemented:
 - Authentication (`/auth`)
 - Server Info (`/info`)
 - Regions (`/regions`)
 - Layers (`/layers`)
 - Data Last Updated (`/data/last_updated`)
 
-### 🚧 Implemented with Simulation:
+### section Implemented with Simulation:
 - Raw Data Downloads (`/data`) - UI complete, needs streaming implementation
 - Task Downloads (`/download_task`) - UI complete, needs actual file handling
 - Tile Authentication - Layer structure complete, needs auth proxy
 
-### 🎨 UI/UX Enhancements:
+### z UI/UX Enhancements:
 - **Smooth Animations**: Enter/exit animations for all panels
 - **Responsive Design**: Adapts to different screen sizes
 - **Material Design 3**: Full Material You theming support
 - **Accessibility**: Proper content descriptions and navigation
 - **Error States**: Comprehensive error handling with recovery options
 
-## 🔍 Testing with MCP HTTP Server
+## " Testing with MCP HTTP Server
 
 The new components are ready for testing with the MCP HTTP server:
 
@@ -180,18 +180,18 @@ The new components are ready for testing with the MCP HTTP server:
 - Verify JSON response parsing compatibility
 - Compare performance vs. Retrofit implementation
 
-## 📱 User Experience Flow
+## "+/- User Experience Flow
 
 ### First-Time Users:
-1. See cloud-off FAB → Tap → Navigate to settings
-2. Enter credentials → Authenticate → Select region
-3. Return to map → See cloud FAB → Tap → Explore features
+1. See cloud-off FAB -> Tap -> Navigate to settings
+2. Enter credentials -> Authenticate -> Select region
+3. Return to map -> See cloud FAB -> Tap -> Explore features
 
 ### Regular Users:
-1. Tap cloud FAB → See feature grid
-2. Select "Weather Layers" → Choose categories → Enable layers
-3. Tap "Legends" → View color scales → Understand data
-4. Tap "Time Control" → Navigate forecast → Watch animation
+1. Tap cloud FAB -> See feature grid
+2. Select "Weather Layers" -> Choose categories -> Enable layers
+3. Tap "Legends" -> View color scales -> Understand data
+4. Tap "Time Control" -> Navigate forecast -> Watch animation
 5. Access quick actions via mini FABs when main panel closed
 
 ### Power Users:
@@ -200,15 +200,16 @@ The new components are ready for testing with the MCP HTTP server:
 3. Download competition tasks for events
 4. Fine-tune layer opacities for optimal visibility
 
-## 🎉 Ready for Production
+## zper-mille Ready for Production
 
 All components are production-ready with:
-- ✅ Error handling and loading states
-- ✅ Responsive design for all screen sizes
-- ✅ Accessibility support
-- ✅ Smooth animations and transitions
-- ✅ Integration with existing SkySight backend
-- ✅ Comprehensive feature coverage of SkySight API
-- ✅ Modular architecture for easy maintenance
+- ... Error handling and loading states
+- ... Responsive design for all screen sizes
+- ... Accessibility support
+- ... Smooth animations and transitions
+- ... Integration with existing SkySight backend
+- ... Comprehensive feature coverage of SkySight API
+- ... Modular architecture for easy maintenance
 
 The enhanced SkySight UI provides a complete weather platform for gliding enthusiasts, competition organizers, and aviation professionals!
+

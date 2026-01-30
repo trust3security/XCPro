@@ -11,7 +11,7 @@ and confirm fields against the source data class in
 
 ---
 
-## 🎯 GOAL
+## z GOAL
 
 Display live sensor data in flight data cards on the map for:
 - **GPS Alt** - GPS altitude in feet
@@ -23,46 +23,46 @@ Display live sensor data in flight data cards on the map for:
 
 ---
 
-## ✅ CURRENT IMPLEMENTATION STATUS
+## ... CURRENT IMPLEMENTATION STATUS
 
 ### **Working Components**
 
-1. ✅ **GPS Data Collection** - `FlightDataManager` (FlightDataSources.kt) collects GPS + sensors
-2. ✅ **Barometric Sensor** - Pressure sensor reads ambient pressure
-3. ✅ **AGL Calculation** - `AglFetcher` queries MapTiler elevation API
-4. ✅ **Data Mapping** - `CardLibrary.mapLiveDataToCard()` converts data to card format
-5. ✅ **Update Mechanism** - Cards update every 2 seconds
-6. ✅ **Data Provider** - `FlightDataProvider` composable manages lifecycle
+1. ... **GPS Data Collection** - `FlightDataManager` (FlightDataSources.kt) collects GPS + sensors
+2. ... **Barometric Sensor** - Pressure sensor reads ambient pressure
+3. ... **AGL Calculation** - `AglFetcher` queries MapTiler elevation API
+4. ... **Data Mapping** - `CardLibrary.mapLiveDataToCard()` converts data to card format
+5. ... **Update Mechanism** - Cards update every 2 seconds
+6. ... **Data Provider** - `FlightDataProvider` composable manages lifecycle
 
 ---
 
-## 🔄 DATA FLOW ARCHITECTURE
+## "" DATA FLOW ARCHITECTURE
 
 ### High-Level Flow
 
 ```
 Android Sensors (GPS, Barometer, etc.)
-    ↓
+    *"
 FlightDataManager.updateFlightData()
-    ↓
+    *"
 RealTimeFlightData (data class)
-    ↓
+    *"
 FlightDataProvider { liveData -> }
-    ↓
+    *"
 FlightDataManager.updateLiveFlightData(liveData)
-    ↓
+    *"
 MapComposeEffects.LaunchedEffect(liveData)
-    ↓
+    *"
 FlightDataViewModel.updateCardsWithLiveData(liveData)
-    ↓
+    *"
 CardLibrary.mapLiveDataToCard(cardId, liveData)
-    ↓
+    *"
 EnhancedFlightDataCard displays values
 ```
 
 ---
 
-## 📂 KEY FILES AND RESPONSIBILITIES
+## " KEY FILES AND RESPONSIBILITIES
 
 ### 1. **FlightDataSources.kt** (dfcards-library)
 
@@ -184,19 +184,19 @@ FlightDataProvider { liveData ->
 #### `updateCardsWithLiveData()` (Lines 436-457)
 ```kotlin
 fun updateCardsWithLiveData(liveData: RealTimeFlightData) {
-    // ✅ SKIP updates during manual positioning
+    // ... SKIP updates during manual positioning
     if (isManuallyPositioning) {
         return
     }
 
-    // ✅ THROTTLE: Only update every 2 seconds
+    // ... THROTTLE: Only update every 2 seconds
     val now = System.currentTimeMillis()
     if (now - lastUpdateTime < UPDATE_THROTTLE_MS) {
         return
     }
     lastUpdateTime = now
 
-    // ✅ UPDATE: Map live data to each card
+    // ... UPDATE: Map live data to each card
     val updatedCards = _cardStates.value.map { cardState ->
         val updatedFlightData = mapRealDataToFlightData(cardState.flightData, liveData)
         cardState.copy(flightData = updatedFlightData)
@@ -362,9 +362,9 @@ fun mapLiveDataToCard(
 // Update cards and location with live flight data
 LaunchedEffect(flightDataManager.liveFlightData) {
     flightDataManager.liveFlightData?.let { liveData ->
-        flightViewModel.updateCardsWithLiveData(liveData)  // ✅ Updates cards
+        flightViewModel.updateCardsWithLiveData(liveData)  // ... Updates cards
         locationManager.updateLocationFromFlightData(liveData, orientationData.bearing)
-    } ?: Log.d(TAG, "📡 No GPS data available (liveFlightData is null)")
+    } ?: Log.d(TAG, "" No GPS data available (liveFlightData is null)")
 }
 ```
 
@@ -421,11 +421,11 @@ fun EnhancedFlightDataCard(
 
 ---
 
-## 🔧 HOW EACH CARD WORKS
+## "section HOW EACH CARD WORKS
 
 ### **GPS Altitude**
 - **Source**: `RealTimeFlightData.gpsAltitude` (from GPS location)
-- **Unit Conversion**: Meters → Feet (`* 3.28084`)
+- **Unit Conversion**: Meters -> Feet (`* 3.28084`)
 - **Validation**: Requires GPS fix + LIVE quality
 - **Display**: `"1250 ft"` / `"GPS"`
 - **Fallback**: `"-- ft"` / `"NO GPS"`
@@ -443,7 +443,7 @@ fun EnhancedFlightDataCard(
 
 ### **AGL (Height Above Ground)**
 - **Source**: `RealTimeFlightData.agl` (from MapTiler Elevation API)
-- **Calculation**: `AglFetcher.getTerrainElevation()` → `GPS Alt - Terrain Elevation`
+- **Calculation**: `AglFetcher.getTerrainElevation()` -> `GPS Alt - Terrain Elevation`
 - **Validation**: Requires GPS + AGL > 0
 - **Display**: `"500 ft"` / `"MED"`
 - **Status Indicators**:
@@ -464,7 +464,7 @@ fun EnhancedFlightDataCard(
 ### **IAS (Indicated Airspeed)**
 - **Source**: Estimated from `RealTimeFlightData.groundSpeed`
 - **Calculation**: `groundSpeed * 0.95` (rough wind correction)
-- **Unit Conversion**: km/h → knots (`* 0.539957`)
+- **Unit Conversion**: km/h -> knots (`* 0.539957`)
 - **Validation**: Requires GPS + ground speed > 1.0
 - **Display**: `"45 kt"` / `"EST"`
 - **Fallback**: `"-- kt"` / `"NO DATA"`
@@ -472,14 +472,14 @@ fun EnhancedFlightDataCard(
 
 ### **Ground Speed**
 - **Source**: `RealTimeFlightData.groundSpeed` (from GPS)
-- **Unit Conversion**: km/h → knots (already in knots from GPS)
+- **Unit Conversion**: km/h -> knots (already in knots from GPS)
 - **Validation**: Requires GPS fix
 - **Display**: `"48 kt"` / `"GPS"`
 - **Fallback**: `"-- kt"` / `"NO GPS"`
 
 ---
 
-## ⚙️ CONFIGURATION
+## (TM) CONFIGURATION
 
 ### Update Frequency
 
@@ -488,8 +488,8 @@ fun EnhancedFlightDataCard(
 // FlightDataManager.kt:151-161
 locationManager.requestLocationUpdates(
     LocationManager.GPS_PROVIDER,
-    1000L,        // ✅ 1 second minimum interval
-    0f,           // ✅ 0 meters minimum distance (all updates)
+    1000L,        // ... 1 second minimum interval
+    0f,           // ... 0 meters minimum distance (all updates)
     locationListener
 )
 ```
@@ -507,7 +507,7 @@ private const val UPDATE_THROTTLE_MS = 2000L  // 2 seconds
 
 ---
 
-## 🐛 COMMON ISSUES & SOLUTIONS
+## > COMMON ISSUES & SOLUTIONS
 
 ### Issue 1: Cards Show "NO GPS"
 
@@ -601,9 +601,9 @@ println("- isGPSFixed: ${liveData.isGPSFixed}")
 ```kotlin
 // In MapComposeEffects.kt
 LaunchedEffect(flightDataManager.liveFlightData) {
-    println("🔄 Live data changed: ${flightDataManager.liveFlightData}")
+    println(""" Live data changed: ${flightDataManager.liveFlightData}")
     flightDataManager.liveFlightData?.let { liveData ->
-        println("📡 Updating cards with live data")
+        println("" Updating cards with live data")
         flightViewModel.updateCardsWithLiveData(liveData)
     }
 }
@@ -617,7 +617,7 @@ LaunchedEffect(flightDataManager.liveFlightData) {
 
 ---
 
-## 🚀 PERFORMANCE OPTIMIZATION
+##  PERFORMANCE OPTIMIZATION
 
 ### Current Throttle (2 seconds)
 
@@ -645,11 +645,11 @@ private const val UPDATE_THROTTLE_MS = 1000L  // 1 second
 
 ---
 
-## 📝 FUTURE ENHANCEMENTS
+## " FUTURE ENHANCEMENTS
 
 ### 1. Live Data Preview in Screens Tab
 
-**Current**: Flight Data → Screens tab shows card selection without live values
+**Current**: Flight Data -> Screens tab shows card selection without live values
 
 **Enhancement**: Display live data in card selection grid
 
@@ -657,7 +657,7 @@ private const val UPDATE_THROTTLE_MS = 1000L  // 1 second
 ```kotlin
 // FlightDataScreensTab.kt
 FlightDataScreensTab(
-    liveFlightData = flightDataManager.liveFlightData,  // ✅ Pass live data
+    liveFlightData = flightDataManager.liveFlightData,  // ... Pass live data
     ...
 )
 
@@ -665,7 +665,7 @@ FlightDataScreensTab(
 CardGridItem(
     card = card,
     isSelected = isSelected,
-    liveData = liveFlightData,  // ✅ Show live preview
+    liveData = liveFlightData,  // ... Show live preview
     onToggle = { ... }
 )
 ```
@@ -686,7 +686,7 @@ data class FlightTemplate(
     val id: String,
     val name: String,
     val cardIds: List<String>,
-    val isExplicitlyEmpty: Boolean = false  // ✅ NEW
+    val isExplicitlyEmpty: Boolean = false  // ... NEW
 )
 
 // CardPreferences.kt
@@ -696,7 +696,7 @@ suspend fun saveProfileTemplateCards(profileId: String, templateId: String, card
         preferences[stringPreferencesKey(cardsKey)] = cardIds.joinToString(",")
 
         val emptyFlagKey = "profile_${profileId}_template_${templateId}_is_explicitly_empty"
-        preferences[booleanPreferencesKey(emptyFlagKey)] = (cardIds.isEmpty())  // ✅ Track empty state
+        preferences[booleanPreferencesKey(emptyFlagKey)] = (cardIds.isEmpty())  // ... Track empty state
     }
 }
 
@@ -741,7 +741,7 @@ private fun mapRealDataToFlightData(
 
 ---
 
-## 📚 REFERENCE
+## " REFERENCE
 
 ### Data Quality Enum
 
@@ -778,7 +778,7 @@ val essentialCards = listOf(
 
 ---
 
-## 🔍 TESTING CHECKLIST
+## " TESTING CHECKLIST
 
 ### GPS Altitude
 - [ ] Shows altitude in feet when GPS fix acquired
@@ -825,3 +825,5 @@ val essentialCards = listOf(
 **Maintained By**: Reference this document when making DFCards changes
 
 *Generated by Claude Code Analysis*
+
+

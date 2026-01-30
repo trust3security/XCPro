@@ -28,12 +28,12 @@ This validation system provides rigorous testing of AAT tasks to ensure complian
 
 ```
 tasks/aat/validation/
-├── ComprehensiveAATValidator.kt     # Main validation engine
-├── FAIComplianceRules.kt            # FAI rule specifications
-├── AATValidationResult.kt           # Result data models
-├── AATValidationIntegration.kt      # Integration utilities
-├── AATValidatorExamples.kt          # Usage examples
-└── README.md                        # This documentation
+""" ComprehensiveAATValidator.kt     # Main validation engine
+""" FAIComplianceRules.kt            # FAI rule specifications
+""" AATValidationResult.kt           # Result data models
+""" AATValidationIntegration.kt      # Integration utilities
+""" AATValidatorExamples.kt          # Usage examples
+"""" README.md                        # This documentation
 ```
 
 ## Validation Categories
@@ -129,10 +129,10 @@ val competitionResult = AATValidationIntegration
     .validateForCompetitionWithRecommendations(task, "STANDARD")
 
 if (competitionResult.suitable) {
-    println("✅ Task suitable for ${competitionResult.competitionClass}")
+    println("... Task suitable for ${competitionResult.competitionClass}")
     println("Compliance: ${competitionResult.compliance}%")
 } else {
-    println("❌ Task needs improvement for competition use")
+    println("oe Task needs improvement for competition use")
     competitionResult.recommendations.forEach { println("- $it") }
 }
 ```
@@ -166,7 +166,7 @@ fun getTaskGrade(): String {
 - Basic task integrity
 
 ### Area Geometry
-- Area size validation (5-2000 km²)
+- Area size validation (5-2000 km^2)
 - Separation requirements (minimum 1km)
 - Overlap detection
 - Radius/sector geometry validation

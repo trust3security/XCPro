@@ -1,7 +1,7 @@
-# AGENT.md — Autonomous Engineering Execution Template
+# AGENT.md -- Autonomous Engineering Execution Template
 
 Use this file as the **single source of truth** when asking an agent (Codex) to implement a change end-to-end.
-You (the human) fill in the “Change Request” and any project-specific notes. The agent must follow the contract below.
+You (the human) fill in the Change Request" and any project-specific notes. The agent must follow the contract below.
 
 ---
 
@@ -44,7 +44,7 @@ Work is complete only when:
 
 # 1) Change Request (HUMAN FILLS THIS IN)
 
-## 1.1 Feature Summary (1–3 sentences)
+## 1.1 Feature Summary (1-3 sentences)
 - [x] Match XCSoar "TC Avg" semantics in XCPro for both live flight and replay.
 - [x] Implement thermal validity and timing rules so the TC AVG card behaves identically to XCSoar.
 
@@ -77,7 +77,7 @@ Work is complete only when:
   - [x] Optional replay debug logs for TC AVG verification.
   - [x] No persistent data changes.
 
-## 1.6 “Behavior Parity” Checklist (if refactor or replacements)
+## 1.6 Behavior Parity" Checklist (if refactor or replacements)
 - [x] Circling detection thresholds: turn rate >= 4 deg/s, entry 15s, exit 10s.
 - [x] Flying detection: ~10 m/s for 10s or AGL >= 300m.
 - [x] TC Avg uses TE altitude gain over time in current thermal.
@@ -89,7 +89,7 @@ Work is complete only when:
 
 # 2) Execution Plan (AGENT OWNS THIS, BUT MAY EDIT FOR REALITY)
 
-## Phase 0 — Baseline & Safety Net
+## Phase 0 -- Baseline & Safety Net
 - Locate current TC AVG wiring and circling/flying gates.
 - Confirm XCSoar parity references (TC Avg, circling, flying).
 - Document XCPro defaults and edge cases in `docs/Cards/TCAVG.md`.
@@ -98,7 +98,7 @@ Work is complete only when:
 
 **Gate:** no functional changes; repo builds.
 
-## Phase 1 — Core Implementation
+## Phase 1 -- Core Implementation
 - Add XCSoar thermal validity gates (>=45s, gain>0) in `ThermalTracker`.
 - Align thermal start/end timing to turning state (pre-hysteresis).
 - Keep logic in domain layer (no Android dependencies).
@@ -106,20 +106,20 @@ Work is complete only when:
 
 **Gate:** unit tests pass; behavior matches Section 3.
 
-## Phase 2 — Integration & UI Wiring
+## Phase 2 -- Integration & UI Wiring
 - Wire validity flags into `FlightCalculationHelpers` and `CalculateFlightMetricsUseCase`.
 - Ensure `RealTimeFlightData.currentThermalValid` matches XCSoar semantics.
 - No UI redesign; only card value validity changes.
 
 **Gate:** feature works end-to-end in debug build.
 
-## Phase 3 — Hardening
+## Phase 3 -- Hardening
 - Add optional replay log fields for TC AVG verification.
 - Update docs to reflect final parity rules.
 
 **Gate:** all required checks pass (Section 4).
 
-## Phase 4 — Polish & PR Readiness
+## Phase 4 -- Polish & PR Readiness
 - Ensure minimal diff, clean formatting.
 - Provide PR summary and test results.
 
@@ -196,6 +196,7 @@ At the end of each phase, the agent outputs:
 - Next:
 
 At the end of the task, include:
-- Final “Done” checklist (Definition of Done items)
+- Final Done" checklist (Definition of Done items)
 - PR-ready summary (what/why/how)
-- How to verify manually (2–5 steps)
+- How to verify manually (2-5 steps)
+

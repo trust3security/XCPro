@@ -5,6 +5,7 @@ import com.example.xcpro.core.time.Clock
 import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.sensors.SensorFusionRepositoryFactory
 import com.example.xcpro.vario.VarioServiceManager
+import com.example.xcpro.vario.LevoVarioPreferencesRepository
 import com.example.xcpro.weather.wind.data.WindSensorFusionRepository
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
@@ -19,6 +20,7 @@ class ReplayPipelineFactory @Inject constructor(
     private val windRepository: WindSensorFusionRepository,
     private val replaySensorSource: ReplaySensorSource,
     private val sensorFusionRepositoryFactory: SensorFusionRepositoryFactory,
+    private val levoVarioPreferencesRepository: LevoVarioPreferencesRepository,
     private val clock: Clock,
     @DefaultDispatcher private val dispatcher: CoroutineDispatcher
 ) {
@@ -29,6 +31,7 @@ class ReplayPipelineFactory @Inject constructor(
             windRepository = windRepository,
             replaySensorSource = replaySensorSource,
             sensorFusionRepositoryFactory = sensorFusionRepositoryFactory,
+            levoVarioPreferencesRepository = levoVarioPreferencesRepository,
             clock = clock,
             dispatcher = dispatcher,
             sessionState = sessionState,

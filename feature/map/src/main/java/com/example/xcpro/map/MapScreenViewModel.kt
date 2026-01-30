@@ -13,6 +13,7 @@ import com.example.xcpro.core.common.geometry.OffsetPx
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.waypoint.WaypointLoader
 import com.example.xcpro.vario.VarioServiceManager
+import com.example.xcpro.vario.LevoVarioPreferencesRepository
 import com.example.xcpro.weather.wind.model.WindState
 import com.example.xcpro.map.replay.RacingReplayLogBuilder
 import com.example.xcpro.replay.IgcReplayController
@@ -76,7 +77,8 @@ class MapScreenViewModel @Inject constructor(
     private val trailSettingsUseCase: MapTrailSettingsUseCase,
     private val calibrateQnhUseCase: CalibrateQnhUseCase,
     private val variometerLayoutUseCase: VariometerLayoutUseCase,
-    private val ballastControllerFactory: BallastControllerFactory
+    private val ballastControllerFactory: BallastControllerFactory,
+    private val levoVarioPreferencesRepository: LevoVarioPreferencesRepository
 ) : ViewModel() {
 
     private val initialStyleName = mapStyleUseCase.initialStyle()
@@ -109,6 +111,14 @@ class MapScreenViewModel @Inject constructor(
         )
     val ballastUiState: StateFlow<BallastUiState> = ballastController.state
     val windState: StateFlow<WindState> = windStateUseCase.windState
+    val showWindSpeedOnVario: StateFlow<Boolean> =
+        levoVarioPreferencesRepository.config
+            .map { it.showWindSpeedOnVario }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = true
+            )
     val replaySessionState: StateFlow<SessionState> = igcReplayController.session
     val showVarioDemoFab: Boolean = MapFeatureFlags.showVarioDemoFab
     val showRacingReplayFab: Boolean = MapFeatureFlags.showRacingReplayFab

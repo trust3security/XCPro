@@ -84,9 +84,9 @@ The following must be confirmed from the manual and/or raw data capture:
 ## What LXNAV Bluetooth Actually Carries
 
 Bluetooth is **only a transport layer**. There is:
-- ❌ No proprietary Bluetooth framing
-- ❌ No binary protocol
-- ❌ No packet headers
+- oe No proprietary Bluetooth framing
+- oe No binary protocol
+- oe No packet headers
 
 The payload is standard NMEA-style text, identical to RS-232 output.
 
@@ -150,9 +150,9 @@ This logic has been exercised in real flying, competitions, and long-term use.
 
 XCSoar explicitly handles:
 
-- **Reconnects** – Bluetooth drops and power cycles are expected
-- **Partial lines** – reads may end mid-sentence
-- **Bad or missing checksums** – invalid sentences are discarded safely
+- **Reconnects** - Bluetooth drops and power cycles are expected
+- **Partial lines** - reads may end mid-sentence
+- **Bad or missing checksums** - invalid sentences are discarded safely
 
 Parsing failures never block or corrupt the main flight pipeline.
 
@@ -166,7 +166,7 @@ XCSoar merges multiple data sources using **explicit ownership**:
 - Fill missing values from secondary sources
 - Never blend or double-count the same variable
 
-This pattern directly maps to XCPro’s SSOT + UseCase architecture.
+This pattern directly maps to XCPro's SSOT + UseCase architecture.
 
 ---
 
@@ -180,7 +180,7 @@ Use this before implementing transport/parsing changes to avoid re-discovery.
 
 ## Raw Data Capture (Strongly Recommended)
 
-Before finalising parsing logic, capture **30–60 seconds of raw Bluetooth output** from the Hawk / S100.
+Before finalising parsing logic, capture **30-60 seconds of raw Bluetooth output** from the Hawk / S100.
 
 Why:
 - Confirms exact sentence set
@@ -234,3 +234,4 @@ The correct answer is:
 > "Use the S8/S80/S10/S100 manual and the live output capture; XCSoar provides the de-facto implementation reference."
 
 That ends the discussion.
+

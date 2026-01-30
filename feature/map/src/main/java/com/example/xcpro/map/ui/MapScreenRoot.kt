@@ -69,6 +69,7 @@ internal fun MapScreenRoot(
     val orientationManager = mapViewModel.orientationManager
     val orientationData by orientationManager.orientationFlow.collectAsStateWithLifecycle()
     val windArrowState by mapViewModel.windArrowState.collectAsStateWithLifecycle()
+    val showWindSpeedOnVario by mapViewModel.showWindSpeedOnVario.collectAsStateWithLifecycle()
     val taskManager = mapViewModel.taskManager
 
     // GAA SIMPLIFIED: Remove permission dialog variables, always enable everything
@@ -267,6 +268,7 @@ internal fun MapScreenRoot(
         ballastOffsetState = ballastOffsetState,
         flightViewModel = flightViewModel,
         windArrowState = windArrowState,
+        showWindSpeedOnVario = showWindSpeedOnVario,
         cardStyle = cardStyle
     )
 

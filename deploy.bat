@@ -27,6 +27,6 @@ echo [3/3] Starting app...
 adb shell am start -n com.example.xcpro/.MainActivity
 
 echo.
-echo ✅ SUCCESS: App deployed and started!
+echo ... SUCCESS: App deployed and started!
 echo.
 pause

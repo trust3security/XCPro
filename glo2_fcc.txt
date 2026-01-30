@@ -17,9 +17,9 @@ S4040 Smartphone Teardown Internal Photos Internal photo Ingram Micro Chile S.A
 #### Ingram Micro Chile S.A Smartphone
 
 1.   [FCC ID](https://fccid.io/)
- › 2.   [Ingram Micro Chile S.A](https://fccid.io/2AELA "Ingram Micro Chile S.A")
- › 3.   [S4040](https://fccid.io/2AELAS4040)
- › 4.   [Internal photo](https://fccid.io/2AELAS4040/Internal-Photos/Internal-photo-2620514)
+ o 2.   [Ingram Micro Chile S.A](https://fccid.io/2AELA "Ingram Micro Chile S.A")
+ o 3.   [S4040](https://fccid.io/2AELAS4040)
+ o 4.   [Internal photo](https://fccid.io/2AELAS4040/Internal-Photos/Internal-photo-2620514)
 
 Discover more
 
@@ -210,10 +210,10 @@ Filesize 84.23kB (1052847 bits)
 Date Submitted 2015-05-21 00:00:00
 Date Available 2015-05-23 00:00:00
 Creation Date 2015-05-13 20:06:02
-Producing Software MicrosoftÂ® Office Word 2007
+Producing Software Microsoft(R) Office Word 2007
 Document Lastmod 2015-05-13 20:06:02
 Document Title Internal photo
-Document Creator MicrosoftÂ® Office Word 2007
+Document Creator Microsoft(R) Office Word 2007
 Document Author:wyq
 
 * * *
@@ -229,14 +229,14 @@ Page Count                      : 3
 Language                        : zh-CN
 Tagged PDF                      : Yes
 Author                          : wyq
-Creator                         : Microsoft® Office Word 2007
+Creator                         : Microsoft(R) Office Word 2007
 Create Date                     : 2015:05:13 20:06:02+08:00
 Modify Date                     : 2015:05:13 20:06:02+08:00
-Producer                        : Microsoft® Office Word 2007
+Producer                        : Microsoft(R) Office Word 2007
 
 * * *
 
-[![Image 22: Facebook](https://cdn-0.fccid.io/img/fb.png)](https://www.facebook.com/FCCID.io)[![Image 23: Twitter](https://cdn-0.fccid.io/img/tw.png)](https://twitter.com/FCCIDio)[![Image 24: RSS](https://cdn-0.fccid.io/img/rss.png)](https://fccid.io/feed.rss) © FCCID.io 2025
+[![Image 22: Facebook](https://cdn-0.fccid.io/img/fb.png)](https://www.facebook.com/FCCID.io)[![Image 23: Twitter](https://cdn-0.fccid.io/img/tw.png)](https://twitter.com/FCCIDio)[![Image 24: RSS](https://cdn-0.fccid.io/img/rss.png)](https://fccid.io/feed.rss) (C) FCCID.io 2025
 
 Discover more
 
@@ -287,3 +287,4 @@ Captions
 Picture-in-Picture Fullscreen
 
 ![Image 25](https://ids.ad.gt/api/v1/halo_match?id=AU1D-0100-001760778613-ZH3ICILW-MSJ7&halo_id=060ixeijsgld59b9e9e9f66666666666666uomuweq0ky6g6m6m6o000000000000)![Image 26](https://ids4.ad.gt/api/v1/ip_match?id=AU1D-0100-001760778613-ZH3ICILW-MSJ7)![Image 27](https://secure.adnxs.com/getuid?https://ids.ad.gt/api/v1/match?id=AU1D-0100-001760778613-ZH3ICILW-MSJ7&adnxs_id=$UID&gdpr=0)![Image 28](https://u.openx.net/w/1.0/cm?id=998eaf06-9905-4eae-9e26-9fac75960c53&r=https%3A%2F%2Fids.ad.gt%2Fapi%2Fv1%2Fopenx%3Fopenx_id%3D%7BOPENX_ID%7D%26id%3DAU1D-0100-001760778613-ZH3ICILW-MSJ7%26auid%3DAU1D-0100-001760778613-ZH3ICILW-MSJ7&gdpr=0)![Image 29](https://image2.pubmatic.com/AdServer/UCookieSetPug?rd=https%3A%2F%2Fids.ad.gt%2Fapi%2Fv1%2Fpbm_match%3Fpbm%3D%23PM_USER_ID%26id%3DAU1D-0100-001760778613-ZH3ICILW-MSJ7&gdpr=0)![Image 30](https://token.rubiconproject.com/token?pid=50242&puid=AU1D-0100-001760778613-ZH3ICILW-MSJ7&gdpr=0)![Image 31](https://match.adsrvr.org/track/cmf/generic?ttd_pid=8gkxb6n&ttd_tpi=1&ttd_puid=AU1D-0100-001760778613-ZH3ICILW-MSJ7&gdpr=0)![Image 32](https://pixel.tapad.com/idsync/ex/receive?partner_id=3185&partner_device_id=AU1D-0100-001760778613-ZH3ICILW-MSJ7&partner_url=https://ids.ad.gt%2Fapi%2Fv1%2Ftapad_match%3Fid%3DAU1D-0100-001760778613-ZH3ICILW-MSJ7%26tapad_id%3D%24%7BTA_DEVICE_ID%7D&gdpr=0)![Image 33](https://cm.g.doubleclick.net/pixel?google_nid=audigent_dmp&google_hm=QVUxRC0wMTAwLTAwMTc2MDc3ODYxMy1aSDNJQ0lMVy1NU0o3&google_redir=https%3A%2F%2Fids.ad.gt%2Fapi%2Fv1%2Fg_match&id=AU1D-0100-001760778613-ZH3ICILW-MSJ7&gdpr=0)![Image 34](https://d.turn.com/r/dd/id/L2NzaWQvMS9jaWQvMTc0ODI0MTY1OC90LzA/url/https%3A%2F%2Fids.ad.gt%2Fapi%2Fv1%2Famo_match%3Fturn_id%3D%24!%7BTURN_UUID%7D%26id%3DAU1D-0100-001760778613-ZH3ICILW-MSJ7)![Image 35](https://sync.go.sonobi.com/us?https://ids.ad.gt/api/v1/son_match?id=AU1D-0100-001760778613-ZH3ICILW-MSJ7&uid=[UID]&gdpr=0)![Image 36](https://ad.360yield.com/ux?&publisher_dmp_id=15&r=https%3A%2F%2Fids.ad.gt%2Fapi%2Fv1%2Fimpr_match%3Fid%3DAU1D-0100-001760778613-ZH3ICILW-MSJ7%26impr_uid%3D%7BPUB_USER_ID%7D&gdpr=0)
+

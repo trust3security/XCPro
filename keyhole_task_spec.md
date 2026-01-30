@@ -3,7 +3,7 @@
 ## FAI Requirements Summary
 Based on FAI Sporting Code Section 3 and competition rules, a keyhole observation zone consists of:
 - **Inner cylinder**: 500m radius centered on the turnpoint
-- **FAI sector**: 90-degree sector (45° each side of bisector) with 10km radius
+- **FAI sector**: 90-degree sector (45deg each side of bisector) with 10km radius
 - **Orientation**: Sector bisector perpendicular to the line between previous and next waypoints
 - **Direction**: Sector oriented symmetrically and remote from the bisector (points outward from course)
 
@@ -19,7 +19,7 @@ Based on FAI Sporting Code Section 3 and competition rules, a keyhole observatio
 Update KeyholeCalculator.kt and KeyholeDisplay.kt to ensure:
 - 500m cylinder radius (inner zone)
 - 10km sector radius (outer zone)  
-- 90-degree sector angle (45° each side)
+- 90-degree sector angle (45deg each side)
 - Sector bisector calculation:
   - For turnpoint N, bisector is perpendicular to line from turnpoint N-1 to turnpoint N+1
   - Sector points AWAY from the inside of the course
@@ -76,10 +76,10 @@ Match: [PASS/FAIL]
 
 FAI Compliance:
 
-Cylinder radius: 500m ✓
-Sector radius: 10000m ✓
-Sector angle: 90° ✓
-Orientation: Correct ✓
+Cylinder radius: 500m "
+Sector radius: 10000m "
+Sector angle: 90deg "
+Orientation: Correct "
 
 
 ### 6. Visual Debugging Features
@@ -116,3 +116,4 @@ From racing_task_spec.md Section 12:
 - Modify files outside the racing/turnpoints directory
 
 Focus ONLY on perfecting the keyhole implementation using the "keyhole1" task.
+

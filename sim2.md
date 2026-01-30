@@ -77,7 +77,7 @@ Key files:
 
 8) **Always include newest trail point**
    - Distance filtering no longer drops the most recent point; it is appended back if needed.
-   - Prevents a long “tail‑lag” segment from the arrow to an older filtered point.
+   - Prevents a long tail'lag" segment from the arrow to an older filtered point.
 
 9) **SIM2 tail update every render frame**
    - Removed time/distance gating for replay when render-frame sync is enabled.
@@ -97,7 +97,7 @@ Key files:
 
 13) **Per-point wind drift (no retroactive repaint)**
    - Each trail point now stores wind (speed + direction) at the time it was recorded.
-   - Drift is computed per point using its own wind, so older circles no longer “snap” when wind becomes valid.
+   - Drift is computed per point using its own wind, so older circles no longer snap" when wind becomes valid.
 
 ## Known data quirks
 - The original IGC asset has a timestamp gap at the end:
@@ -138,7 +138,7 @@ Key files:
 
 2) **Tail-anchor line-to-current segment**
    - XCSoar uses a centered polygon; the line-to-current visually appears from the tail because of the icon shape.
-   - Our arrow geometry can make the line look “in front” unless we anchor to the tail.
+   - Our arrow geometry can make the line look in front" unless we anchor to the tail.
    - **Copy idea:** compute a tail anchor point from the current track + icon size and draw the line to that point instead of the center.
 
 3) **Projection-aware trail thinning**
@@ -147,26 +147,26 @@ Key files:
    - **Copy idea:** use an explicit ~3px min distance for replay trail filtering for more stable density.
 
 4) **Ensure SIM2 uses runtime-interpolated bearing everywhere**
-   - XCSoar replay uses Catmull-Rom interpolation for both position and bearing (bearing from interpolated positions at t±0.05s).
+   - XCSoar replay uses Catmull-Rom interpolation for both position and bearing (bearing from interpolated positions at t+/-0.05s).
    - XCPro already has runtime interpolation, but we should **enforce** it for: arrow rotation, tail anchor, and line-to-current.
 
 ## Implementation plan (detailed)
-**Recommendation:** do **one change at a time** (SIM2‑only flags) and validate on device after each step.
+**Recommendation:** do **one change at a time** (SIM2'only flags) and validate on device after each step.
 
-### Phase 0 — Baseline + instrumentation (no behavior change)
-- Add temporary debug logs to capture **screen‑space** deltas per frame:
+### Phase 0 -- Baseline + instrumentation (no behavior change)
+- Add temporary debug logs to capture **screen'space** deltas per frame:
   - Map camera bearing, icon rotation, trail tail anchor position (px + meters).
-  - Use a single “frame id” from `LocationManager.onRenderFrame()` to correlate camera+overlay+trail updates.
+  - Use a single frame id" from `LocationManager.onRenderFrame()` to correlate camera+overlay+trail updates.
 - Confirm on S22 Ultra the effective `pixelRatio`, `projection.getMetersPerPixelAtLatitude()`, and current zoom.
 - Validate that SIM2 is using runtime pose for **location + bearing + trail anchor**.
 
-### Phase 1 — Fix pixel‑to‑meter conversion parity (high‑impact on S22 Ultra)
-**Goal:** make trail spacing + tail offset consistent with XCSoar’s projection‑based distance.
+### Phase 1 -- Fix pixel'to'meter conversion parity (high'impact on S22 Ultra)
+**Goal:** make trail spacing + tail offset consistent with XCSoar's projection'based distance.
 1) Replace `SnailTrailMath.metersPerPixelAtLatitude(...)` with MapLibre projection:
    - Use `map.projection.getMetersPerPixelAtLatitude(lat)` and divide by `mapView.pixelRatio` (if needed).
    - Apply this for:
      - replay min distance filter,
-     - tail‑anchor meters,
+     - tail'anchor meters,
      - scaled line widths.
 2) Update any callers that currently depend on manual WebMercator math.
 3) Validate zoom levels in SIM2: trail spacing should remain stable across zoom.
@@ -175,31 +175,31 @@ Key files:
 - `feature/map/src/main/java/com/example/xcpro/map/trail/SnailTrailMath.kt`  
 - `feature/map/src/main/java/com/example/xcpro/map/trail/SnailTrailOverlay.kt`
 
-### Phase 2 — Final segment + bounds parity
-**Goal:** eliminate last‑segment dropouts and edge culling discrepancies.
-1) Remove or SIM2‑gate `MIN_CURRENT_SEGMENT_METERS` so the last segment always renders.
+### Phase 2 -- Final segment + bounds parity
+**Goal:** eliminate last'segment dropouts and edge culling discrepancies.
+1) Remove or SIM2'gate `MIN_CURRENT_SEGMENT_METERS` so the last segment always renders.
 2) Align bounds behavior with XCSoar:
    - Replace fixed `ScreenBounds` window with a symmetric **4x screen** scale (XCSoar `Scale(4)`).
-   - Keep this SIM2‑only to avoid surprising live users.
+   - Keep this SIM2'only to avoid surprising live users.
 
 **Files:**  
 - `feature/map/src/main/java/com/example/xcpro/map/trail/SnailTrailOverlay.kt`  
 - `feature/map/src/main/java/com/example/xcpro/map/trail/SnailTrailModels.kt`
 
-### Phase 3 — Replay heading parity
-**Goal:** match XCSoar’s heading derivation from track + wind when compass isn’t present.
+### Phase 3 -- Replay heading parity
+**Goal:** match XCSoar's heading derivation from track + wind when compass isn't present.
 1) If SIM2 has wind available, run `HeadingResolver` with:
    - `track`, `groundSpeed`, `windFrom`, `windSpeed`, and `isFlying`.
 2) Use that heading for icon rotation (and for camera when `HEADING_UP`).
-3) Fallback to track only when wind isn’t available.
+3) Fallback to track only when wind isn't available.
 
 **Files:**  
 - `feature/map/src/main/java/com/example/xcpro/map/LocationManager.kt`  
 - `feature/map/src/main/java/com/example/xcpro/orientation/HeadingResolver.kt`  
 - (data source for wind if needed)
 
-### Phase 4 — Circling camera bias (thermal center parity)
-**Goal:** match XCSoar’s “center between aircraft + thermal estimate” when circling.
+### Phase 4 -- Circling camera bias (thermal center parity)
+**Goal:** match XCSoar's center between aircraft + thermal estimate" when circling.
 1) When circling + thermal estimate valid:
    - Offset camera target toward thermal estimate, limited by map scale (XCSoar behavior).
 2) Keep aircraft overlay position unchanged.
@@ -209,9 +209,9 @@ Key files:
 - `feature/map/src/main/java/com/example/xcpro/map/LocationManager.kt`  
 - (thermal estimate source in XCPro if available)
 
-### Phase 5 — Atomic update of aircraft + trail (render‑frame parity)
-**Goal:** ensure both update inside the same render frame for zero “camera then overlay” lag.
-1) Build a “render frame state” object (pose + heading + map bearing + trail tail anchor).
+### Phase 5 -- Atomic update of aircraft + trail (render'frame parity)
+**Goal:** ensure both update inside the same render frame for zero camera then overlay" lag.
+1) Build a render frame state" object (pose + heading + map bearing + trail tail anchor).
 2) Push aircraft + trail GeoJSON in a single call (same frame id).
 3) Ensure MapLibre layer order is stable (trail below aircraft).
 
@@ -220,9 +220,9 @@ Key files:
 - `feature/map/src/main/java/com/example/xcpro/map/trail/SnailTrailManager.kt`  
 - `feature/map/src/main/java/com/example/xcpro/map/BlueLocationOverlay.kt`
 
-### Phase 6 — Optional: map‑shift bias parity (cruise mode)
-**Goal:** match XCSoar’s track/target bias in `UpdateProjection()`.
-1) Add a track/target‑biased offset (when not circling) to padding logic.
+### Phase 6 -- Optional: map'shift bias parity (cruise mode)
+**Goal:** match XCSoar's track/target bias in `UpdateProjection()`.
+1) Add a track/target'biased offset (when not circling) to padding logic.
 2) Smooth with existing offset history.
 3) Gate under SIM2 flag first.
 
@@ -231,14 +231,14 @@ Key files:
 - `feature/map/src/main/java/com/example/xcpro/map/helpers/GliderPaddingHelper.kt`
 
 ### Validation after each phase
-- Arrow + trail alignment: trail should “come from the tail,” no visible gap.
-- Rotation smoothness in thermals (no 5° stepping, no delayed camera rotation).
+- Arrow + trail alignment: trail should come from the tail," no visible gap.
+- Rotation smoothness in thermals (no 5deg stepping, no delayed camera rotation).
 - Consistent trail density at multiple zoom levels.
 - No regressions in **live** mode.
 
 ## Additional differences found (XCSoar vs XCPro)
 1) **Trace data thinning algorithm**
-   - XCSoar: `Trace` uses an online Douglas–Peuker style thinning with distance+time ranking, plus a “no-thin” window.
+   - XCSoar: `Trace` uses an online Douglas-Peuker style thinning with distance+time ranking, plus a no-thin" window.
      - `C:\Users\Asus\AndroidStudioProjects\XCSoar\src\Engine\Trace\Trace.hpp`
      - `C:\Users\Asus\AndroidStudioProjects\XCSoar\src\Computer\TraceComputer.cpp`
    - XCPro: `TrailStore` uses simple time gating + thinning (minDeltaMillis, maxSize).
@@ -259,7 +259,7 @@ Key files:
    - XCPro: padding smoothing uses `MapPositionController` but no bias vector (track/target) for cruise mode.
 
 5) **Replay bearing derived from interpolated positions**
-   - XCSoar: `CatmullRomInterpolator::GetVector()` uses interpolated positions at t±0.05s.
+   - XCSoar: `CatmullRomInterpolator::GetVector()` uses interpolated positions at t+/-0.05s.
      - `C:\Users\Asus\AndroidStudioProjects\XCSoar\src\Replay\CatmullRomInterpolator.hpp`
    - XCPro: runtime interpolator uses 50ms window (similar), but SIM2 must enforce it for all map pose usage.
 
@@ -296,10 +296,10 @@ Key files:
    - XCPro only exposes `NORTH_UP`, `TRACK_UP`, `HEADING_UP`.
      - `core/common/src/main/java/com/example/xcpro/common/orientation/OrientationContracts.kt`
 
-12) **Minimum segment guard to “current position”**
+12) **Minimum segment guard to current position"**
    - XCSoar always draws `canvas.DrawLine(last_point, pos)` with no explicit distance guard.
      - `C:\Users\Asus\AndroidStudioProjects\XCSoar\src\Renderer\TrailRenderer.cpp`
-   - XCPro skips drawing the final segment when it’s shorter than `MIN_CURRENT_SEGMENT_METERS` (0.5m).
+   - XCPro skips drawing the final segment when it's shorter than `MIN_CURRENT_SEGMENT_METERS` (0.5m).
      - `feature/map/src/main/java/com/example/xcpro/map/trail/SnailTrailOverlay.kt`
    - This can hide the last segment when zoomed in or during very low movement.
 
@@ -311,7 +311,7 @@ Key files:
    - Slightly different bounds can affect which segments are drawn near edges.
 
 14) **Trail length presets**
-   - XCSoar: `SHORT=10m`, `LONG=60m`, `FULL=all` (no “medium” length).
+   - XCSoar: `SHORT=10m`, `LONG=60m`, `FULL=all` (no medium" length).
      - `C:\Users\Asus\AndroidStudioProjects\XCSoar\src\MapWindow\GlueMapWindowOverlays.cpp`
    - XCPro: `SHORT=10m`, `MEDIUM=30m`, `LONG=60m`, `FULL=all`.
      - `feature/map/src/main/java/com/example/xcpro/map/trail/SnailTrailMath.kt`
@@ -345,10 +345,10 @@ The analysis reports:
 - segment length distribution,
 - lag (time + meters) between overlay location and trail tail anchor.
 
-## Next implementation plan (1–3)
-**Goal:** remove remaining jerkiness by guaranteeing frame‑synchronized pose, and minimizing heavy trail updates.
+## Next implementation plan (1-3)
+**Goal:** remove remaining jerkiness by guaranteeing frame'synchronized pose, and minimizing heavy trail updates.
 
-1) **Frame‑sync tail + overlay (single frame id)**
+1) **Frame'sync tail + overlay (single frame id)**
    - Generate a frame id in `LocationManager.onRenderFrame()` and pass it to:
      - `MapPositionController.updateOverlay(...)`
      - `SnailTrailManager.updateDisplayPose(...)`
@@ -358,11 +358,13 @@ The analysis reports:
 
 2) **Decouple trail: static + dynamic tail**
    - Update the full trail GeoJSON only when new samples arrive.
-   - Render a separate **tail segment** every frame from last sample → current pose.
-   - This eliminates heavy per‑frame trail rebuilds and prevents tail lag.
+   - Render a separate **tail segment** every frame from last sample -> current pose.
+   - This eliminates heavy per'frame trail rebuilds and prevents tail lag.
    - Implemented: added a dedicated tail source/layer; `updateDisplayPose` now updates tail only.
 
 3) **Overlay gating parity (SIM2 only)**
    - Disable or reduce overlay bearing/time gating when SIM2 is active.
    - Target: arrow rotation and position update every render frame.
-   - Implemented: camera gating bypassed when render‑frame sync + replay.
+   - Implemented: camera gating bypassed when render'frame sync + replay.
+
+

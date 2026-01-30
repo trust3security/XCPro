@@ -67,8 +67,8 @@ Changes:
   - When circling becomes false: finalize last thermal using the stored end values
     (so the last thermal excludes the 10s exit delay).
   - While circling remains true (exit hysteresis), keep **current** thermal
-    updating with the live timestamp/altitude to match XCSoar’s temporary
-    “still circling” display behavior.
+    updating with the live timestamp/altitude to match XCSoar's temporary
+    still circling" display behavior.
 
 Rationale:
 - XCSoar starts the thermal at the first turning sample and ends it at the
@@ -144,3 +144,4 @@ Note:
 
 ## Open Questions (if needed)
 - Should min duration / gain be configurable in settings? (XCSoar uses constants)
+

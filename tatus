@@ -80,7 +80,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-        val bearing = AATMathUtils.calculateBearing(fromPoint, centerPoint)[m
 [31m-[m
 [31m-        // Entry point is on the near edge of the cylinder[m
-[31m-        // Use bearing + 180° to get the point closest to the approach direction[m
+[31m-        // Use bearing + 180deg to get the point closest to the approach direction[m
 [31m-        val entryPoint = AATMathUtils.calculatePointAtBearing([m
 [31m-            centerPoint,[m
 [31m-            bearing + 180.0, // Opposite direction from approach[m
@@ -307,11 +307,11 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-[m
 [31m-## Expected Results[m
 [31m-[m
-[31m-- ✅ AAT finish cylinders now use optimal edge entry point (not center)[m
-[31m-- ✅ AAT distance calculations accurate within ~3km for 3km radius cylinders[m
-[31m-- ✅ AAT circles render with proper spherical geometry at all latitudes[m
-[31m-- ✅ AAT distance calculations match Racing's correct approach[m
-[31m-- ✅ Visual course line touches cylinder edges, not centers[m
+[31m-- ... AAT finish cylinders now use optimal edge entry point (not center)[m
+[31m-- ... AAT distance calculations accurate within ~3km for 3km radius cylinders[m
+[31m-- ... AAT circles render with proper spherical geometry at all latitudes[m
+[31m-- ... AAT distance calculations match Racing's correct approach[m
+[31m-- ... Visual course line touches cylinder edges, not centers[m
 [31m-[m
 [31m-## Verification[m
 [31m-[m
@@ -335,7 +335,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [36m@@ -1,112 +0,0 @@[m
 [31m-# AAT Task Display Fixes - Summary[m
 [31m-[m
-[31m-## ✅ PROBLEMS RESOLVED[m
+[31m-## ... PROBLEMS RESOLVED[m
 [31m-[m
 [31m-### 1. AAT Task Not Showing in TaskMinimizedIndicator (Top Navigation)[m
 [31m-**Problem**: When user switched to AAT task, the prev/next display at top of MapScreen showed nothing.[m
@@ -343,8 +343,8 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-**Root Cause**: `TaskMinimizedIndicator` function was hardcoded to only accept `RacingTask` parameter, and MapScreen was calling it with `taskManager.currentRacingTask` which only works for racing tasks.[m
 [31m-[m
 [31m-**Fixes Applied**:[m
-[31m-- ✅ **TaskMinimizedIndicator**: Changed parameter from `task: RacingTask` to `task: Task` (line 439)[m
-[31m-- ✅ **MapScreen**: Changed call from `taskManager.currentRacingTask` to `taskManager.currentTask` (line 1302)[m
+[31m-- ... **TaskMinimizedIndicator**: Changed parameter from `task: RacingTask` to `task: Task` (line 439)[m
+[31m-- ... **MapScreen**: Changed call from `taskManager.currentRacingTask` to `taskManager.currentTask` (line 1302)[m
 [31m-[m
 [31m-### 2. AAT Task Navigation Not Working[m
 [31m-**Problem**: AAT tasks couldn't navigate between waypoints using prev/next buttons.[m
@@ -352,8 +352,8 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-**Root Cause**: AAT navigation functions were missing in `AATTaskManager`.[m
 [31m-[m
 [31m-**Fixes Applied**:[m
-[31m-- ✅ **AATTaskManager**: Added `goToPreviousLeg()` and `advanceToNextLeg()` functions (lines 61-80)[m
-[31m-- ✅ **TaskManager**: Updated bridge functions to call AAT navigation instead of showing "not implemented" messages[m
+[31m-- ... **AATTaskManager**: Added `goToPreviousLeg()` and `advanceToNextLeg()` functions (lines 61-80)[m
+[31m-- ... **TaskManager**: Updated bridge functions to call AAT navigation instead of showing "not implemented" messages[m
 [31m-[m
 [31m-### 3. AAT Turnpoints Not Displaying in Manage Tab[m
 [31m-**Problem**: When user switched to AAT task, the Manage tab showed blank instead of turnpoints list.[m
@@ -364,15 +364,15 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-3. `ManageBTTab` function was completely missing[m
 [31m-[m
 [31m-**Fixes Applied**:[m
-[31m-- ✅ **SwipeableTaskBottomSheet**: Changed `val task = taskManager.currentRacingTask` to `taskManager.currentTask` (line 116)[m
-[31m-- ✅ **MinimizedContent**: Changed parameter from `task: RacingTask` to `task: Task` (line 401)[m
-[31m-- ✅ **ManageBTTab**: Created complete implementation (lines 1490-1674) with:[m
+[31m-- ... **SwipeableTaskBottomSheet**: Changed `val task = taskManager.currentRacingTask` to `taskManager.currentTask` (line 116)[m
+[31m-- ... **MinimizedContent**: Changed parameter from `task: RacingTask` to `task: Task` (line 401)[m
+[31m-- ... **ManageBTTab**: Created complete implementation (lines 1490-1674) with:[m
 [31m-  - Support for all task types (Racing, AAT, DHT)[m
 [31m-  - Waypoint list display with current leg highlighting[m
 [31m-  - Task-specific information display[m
 [31m-  - Task actions (Clear Task, Save Task)[m
 [31m-[m
-[31m-## 🎯 UNIFIED TASK ARCHITECTURE ACHIEVED[m
+[31m-## z UNIFIED TASK ARCHITECTURE ACHIEVED[m
 [31m-[m
 [31m-### Consistent Task Handling[m
 [31m-All UI components now use the unified `Task` interface instead of being hardcoded to specific task types:[m
@@ -405,44 +405,44 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-- **AAT Tasks**: Shows assigned area radius[m
 [31m-- **DHT Tasks**: Shows zone information[m
 [31m-[m
-[31m-## 🧪 TESTING STATUS[m
+[31m-## sectiona TESTING STATUS[m
 [31m-[m
-[31m-### Build Status: ✅ SUCCESSFUL[m
+[31m-### Build Status: ... SUCCESSFUL[m
 [31m-- No compilation errors[m
 [31m-- App installs successfully[m
 [31m-- All warnings are minor deprecation notices[m
 [31m-[m
 [31m-### Features Now Working:[m
-[31m-1. ✅ **TaskMinimizedIndicator**: Displays current waypoint for AAT tasks[m
-[31m-2. ✅ **AAT Navigation**: Prev/next buttons work for AAT tasks[m
-[31m-3. ✅ **Manage Tab**: Shows AAT waypoints with proper information[m
-[31m-4. ✅ **Current Leg Highlighting**: Shows which waypoint is currently active[m
-[31m-5. ✅ **Task Actions**: Clear and Save buttons work for all task types[m
+[31m-1. ... **TaskMinimizedIndicator**: Displays current waypoint for AAT tasks[m
+[31m-2. ... **AAT Navigation**: Prev/next buttons work for AAT tasks[m
+[31m-3. ... **Manage Tab**: Shows AAT waypoints with proper information[m
+[31m-4. ... **Current Leg Highlighting**: Shows which waypoint is currently active[m
+[31m-5. ... **Task Actions**: Clear and Save buttons work for all task types[m
 [31m-[m
-[31m-## 📋 USER EXPERIENCE IMPROVEMENTS[m
+[31m-## "< USER EXPERIENCE IMPROVEMENTS[m
 [31m-[m
-[31m-**Before**: User switches to AAT task → sees blank UI, navigation doesn't work[m
-[31m-**After**: User switches to AAT task → sees full task interface identical to racing tasks[m
+[31m-**Before**: User switches to AAT task *' sees blank UI, navigation doesn't work[m
+[31m-**After**: User switches to AAT task *' sees full task interface identical to racing tasks[m
 [31m-[m
 [31m-### Specific User Actions Now Working:[m
-[31m-1. Switch task type to AAT → TaskMinimizedIndicator shows current AAT waypoint[m
-[31m-2. Click prev/next buttons → AAT task navigation works properly[m
-[31m-3. Open Manage tab → See complete list of AAT waypoints[m
-[31m-4. Current leg highlighting → Visual feedback shows active waypoint[m
-[31m-5. Task management → Clear/Save actions work for AAT tasks[m
+[31m-1. Switch task type to AAT *' TaskMinimizedIndicator shows current AAT waypoint[m
+[31m-2. Click prev/next buttons *' AAT task navigation works properly[m
+[31m-3. Open Manage tab *' See complete list of AAT waypoints[m
+[31m-4. Current leg highlighting *' Visual feedback shows active waypoint[m
+[31m-5. Task management *' Clear/Save actions work for AAT tasks[m
 [31m-[m
-[31m-## 🏗️ ARCHITECTURE COMPLIANCE[m
+[31m-## -- ARCHITECTURE COMPLIANCE[m
 [31m-[m
-[31m-✅ **Zero Cross-Contamination**: Maintained complete separation between Racing/AAT/DHT task types[m
-[31m-✅ **Bridge Pattern**: TaskManager properly routes calls to appropriate task managers[m
-[31m-✅ **Unified Interface**: All UI components now work with generic Task interface[m
-[31m-✅ **Extensible Design**: Adding new task types (e.g., DHT navigation) follows same pattern[m
+[31m-... **Zero Cross-Contamination**: Maintained complete separation between Racing/AAT/DHT task types[m
+[31m-... **Bridge Pattern**: TaskManager properly routes calls to appropriate task managers[m
+[31m-... **Unified Interface**: All UI components now work with generic Task interface[m
+[31m-... **Extensible Design**: Adding new task types (e.g., DHT navigation) follows same pattern[m
 [31m-[m
-[31m-## 🔍 VALIDATION COMPLETE[m
+[31m-## " VALIDATION COMPLETE[m
 [31m-[m
 [31m-The user's specific issues have been resolved:[m
-[31m-1. **"when i changed the current racing task to a AAT it does not display the task in the prev/next display at the top of mapscreen"** → ✅ FIXED[m
-[31m-2. **"also it does not display the tps in the Manage tab"** → ✅ FIXED[m
+[31m-1. **"when i changed the current racing task to a AAT it does not display the task in the prev/next display at the top of mapscreen"** *' ... FIXED[m
+[31m-2. **"also it does not display the tps in the Manage tab"** *' ... FIXED[m
 [31m-[m
 [31m-Both TaskMinimizedIndicator and Manage tab now work consistently across all task types.[m
 \ No newline at end of file[m
@@ -474,15 +474,15 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-[m
 [31m-```[m
 [31m-                First Turnpoint[m
-[31m-                      ↑[m
+[31m-                      *'[m
 [31m-                     /|\[m
 [31m-                    / | \[m
 [31m-                   /  |  \[m
-[31m-                  /   |   \ ← 45° each side of bisector[m
+[31m-                  /   |   \ * 45deg each side of bisector[m
 [31m-                 /    |    \[m
 [31m-                /     |     \[m
-[31m-               /_____[S]_____\ ← Start point at sector vertex[m
-[31m-              ←──── 1-5km ────→[m
+[31m-               /_____[S]_____\ * Start point at sector vertex[m
+[31m-              *"""" 1-5km """"*'[m
 [31m-```[m
 [31m-[m
 [31m-## How BGA Start Sectors Work[m
@@ -490,7 +490,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-### 1. **Sector Positioning**[m
 [31m-- **Vertex**: Located exactly at the start waypoint coordinates[m
 [31m-- **Bisector**: Aligned with the bearing from start point to first turnpoint[m
-[31m-- **Opening**: 45 degrees either side of the bisector (total 90°)[m
+[31m-- **Opening**: 45 degrees either side of the bisector (total 90deg)[m
 [31m-[m
 [31m-### 2. **Start Procedure**[m
 [31m-1. **Pre-Start**: Pilots position themselves **inside** the start sector[m
@@ -509,7 +509,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-### **Tactical Benefits**[m
 [31m-- **Positioning Freedom**: Pilots can choose optimal position within the sector[m
 [31m-- **Wind Consideration**: Can position according to wind direction and thermals[m
-[31m-- **Traffic Management**: 90° spread reduces congestion compared to start lines[m
+[31m-- **Traffic Management**: 90deg spread reduces congestion compared to start lines[m
 [31m-[m
 [31m-### **Safety Benefits**[m
 [31m-- **Defined Area**: Clear boundaries reduce confusion about valid start positions[m
@@ -525,24 +525,24 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-[m
 [31m-| Start Method | Shape | Advantages | Disadvantages |[m
 [31m-|--------------|-------|------------|---------------|[m
-[31m-| **BGA Start Sector** | 90° sector | Good positioning freedom, forward-facing | Requires understanding of sector boundaries |[m
+[31m-| **BGA Start Sector** | 90deg sector | Good positioning freedom, forward-facing | Requires understanding of sector boundaries |[m
 [31m-| **Start Line** | Straight line | Simple to understand, traditional | Can create congestion, perpendicular to track |[m
 [31m-| **Start Cylinder** | Full circle | Maximum positioning freedom | Can encourage late starts, no directional guidance |[m
-[31m-| **FAI Start Quadrant** | 90° sector (infinite) | Large area, competition standard | Complex orientation rules, visual radius needed |[m
+[31m-| **FAI Start Quadrant** | 90deg sector (infinite) | Large area, competition standard | Complex orientation rules, visual radius needed |[m
 [31m-[m
 [31m-## Technical Implementation[m
 [31m-[m
 [31m-### **Calculation Requirements**[m
 [31m-```[m
-[31m-Bisector Bearing = bearing(start_point → first_turnpoint)[m
-[31m-Start Angle = (Bisector - 45°) mod 360°[m
-[31m-End Angle = (Bisector + 45°) mod 360°[m
+[31m-Bisector Bearing = bearing(start_point *' first_turnpoint)[m
+[31m-Start Angle = (Bisector - 45deg) mod 360deg[m
+[31m-End Angle = (Bisector + 45deg) mod 360deg[m
 [31m-Sector Radius = configurable (typically 1-5km)[m
 [31m-```[m
 [31m-[m
 [31m-### **Validation Logic**[m
 [31m-For a position to be valid within a BGA start sector:[m
-[31m-1. **Distance Check**: `distance_to_start ≤ sector_radius`[m
+[31m-1. **Distance Check**: `distance_to_start per-mille$ sector_radius`[m
 [31m-2. **Angle Check**: `position_bearing` within `[start_angle, end_angle]`[m
 [31m-3. **Both conditions** must be satisfied[m
 [31m-[m
@@ -588,15 +588,15 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-[m
 [31m-## Common Misconceptions[m
 [31m-[m
-[31m-### ❌ **"BGA sectors are the same as FAI quadrants"**[m
-[31m-- **BGA**: 90° sector with **finite radius**[m
-[31m-- **FAI**: 90° sector with **infinite radius** and complex orientation rules[m
+[31m-### oe **"BGA sectors are the same as FAI quadrants"**[m
+[31m-- **BGA**: 90deg sector with **finite radius**[m
+[31m-- **FAI**: 90deg sector with **infinite radius** and complex orientation rules[m
 [31m-[m
-[31m-### ❌ **"The sector opens backward"**[m
+[31m-### oe **"The sector opens backward"**[m
 [31m-- **Correct**: BGA sectors open **forward** toward the first turnpoint[m
 [31m-- **Logic**: Encourages organized departure in task direction[m
 [31m-[m
-[31m-### ❌ **"Any position near the start point is valid"**[m
+[31m-### oe **"Any position near the start point is valid"**[m
 [31m-- **Correct**: Must be **inside both** radius and angle boundaries[m
 [31m-- **Validation**: Both distance and bearing criteria must be met[m
 [31m-[m
@@ -653,7 +653,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-[m
 [31m----[m
 [31m-[m
-[31m-## 🎯 CRITICAL FINDING: WHY CARDS SHOW WHEN NONE SELECTED[m
+[31m-## z CRITICAL FINDING: WHY CARDS SHOW WHEN NONE SELECTED[m
 [31m-[m
 [31m-### Root Cause Analysis[m
 [31m-[m
@@ -675,10 +675,10 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-        viewModelScope.launch {[m
 [31m-            try {[m
 [31m-                // Wait briefly for MapScreen template loading to complete[m
-[31m-                delay(500) // ❌ PROBLEMATIC: Automatic fallback after delay[m
+[31m-                delay(500) // oe PROBLEMATIC: Automatic fallback after delay[m
 [31m-[m
 [31m-                if (_cardStates.value.isEmpty()) {[m
-[31m-                    // 🔥 THIS IS WHY CARDS APPEAR EVEN WHEN NONE SELECTED[m
+[31m-                    // "Yen THIS IS WHY CARDS APPEAR EVEN WHEN NONE SELECTED[m
 [31m-                    println("DEBUG: No cards after 2 seconds, loading Essential template as last resort fallback")[m
 [31m-                    loadEssentialCardsOnStartup(containerSize, density, currentFlightMode)[m
 [31m-                }[m
@@ -694,25 +694,25 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-[m
 [31m-### Call Stack to Card Display[m
 [31m-[m
-[31m-1. **MapScreen.kt** → Creates `CardContainer` composable[m
-[31m-2. **CardContainer.kt:64-68** → Calls `viewModel.initializeCards()` when container size becomes available[m
-[31m-3. **FlightDataViewModel.kt:67-89** → Waits 500ms, then loads fallback template[m
-[31m-4. **FlightDataViewModel.kt:128-146** → `loadEssentialCardsOnStartup()` loads appropriate template based on current flight mode:[m
-[31m-   - CRUISE → "id01" template (Track card)[m
-[31m-   - THERMAL → "id02" template (Track card)[m
-[31m-   - FINAL_GLIDE → "id03" template (GPS Alt, Final Gld, Ground Speed)[m
+[31m-1. **MapScreen.kt** *' Creates `CardContainer` composable[m
+[31m-2. **CardContainer.kt:64-68** *' Calls `viewModel.initializeCards()` when container size becomes available[m
+[31m-3. **FlightDataViewModel.kt:67-89** *' Waits 500ms, then loads fallback template[m
+[31m-4. **FlightDataViewModel.kt:128-146** *' `loadEssentialCardsOnStartup()` loads appropriate template based on current flight mode:[m
+[31m-   - CRUISE *' "id01" template (Track card)[m
+[31m-   - THERMAL *' "id02" template (Track card)[m
+[31m-   - FINAL_GLIDE *' "id03" template (GPS Alt, Final Gld, Ground Speed)[m
 [31m-[m
 [31m-### Why This Happens[m
 [31m-[m
 [31m-The system is designed with a safety fallback to **prevent empty screens**:[m
-[31m-- If profile loading fails → Load fallback template[m
-[31m-- If template is corrupted → Load fallback template[m
-[31m-- If network delay occurs → Load fallback template[m
-[31m-- **If user deselects all cards** → Load fallback template (UNWANTED BEHAVIOR)[m
+[31m-- If profile loading fails *' Load fallback template[m
+[31m-- If template is corrupted *' Load fallback template[m
+[31m-- If network delay occurs *' Load fallback template[m
+[31m-- **If user deselects all cards** *' Load fallback template (UNWANTED BEHAVIOR)[m
 [31m-[m
 [31m----[m
 [31m-[m
-[31m-## 📋 SYSTEM ARCHITECTURE[m
+[31m-## "< SYSTEM ARCHITECTURE[m
 [31m-[m
 [31m-### Core Components[m
 [31m-[m
@@ -745,25 +745,25 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-[m
 [31m----[m
 [31m-[m
-[31m-## 🔄 DATA FLOW[m
+[31m-## "" DATA FLOW[m
 [31m-[m
 [31m-### 1. Template Selection Flow[m
 [31m-[m
 [31m-```[m
 [31m-User Opens "Flight Data" in Nav Drawer[m
-[31m-    ↓[m
+[31m-    *"[m
 [31m-FlightDataMgmt.kt - Shows template selection UI[m
-[31m-    ↓[m
+[31m-    *"[m
 [31m-User Selects Flight Mode (Cruise/Thermal/Final Glide)[m
-[31m-    ↓[m
+[31m-    *"[m
 [31m-FlightDataScreensTab.kt - Loads saved template for profile+mode[m
-[31m-    ↓[m
+[31m-    *"[m
 [31m-CardPreferences.getProfileFlightModeTemplate(profileId, flightMode)[m
-[31m-    ↓[m
+[31m-    *"[m
 [31m-User Toggles Cards (check/uncheck)[m
-[31m-    ↓[m
+[31m-    *"[m
 [31m-CardPreferences.saveProfileTemplateCards(profileId, templateId, cardIds)[m
-[31m-    ↓[m
+[31m-    *"[m
 [31m-Template Configuration Saved to DataStore[m
 [31m-```[m
 [31m-[m
@@ -771,17 +771,17 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-[m
 [31m-```[m
 [31m-MapScreen.kt Initializes[m
-[31m-    ↓[m
+[31m-    *"[m
 [31m-CardContainer Created (overlay on map)[m
-[31m-    ↓[m
+[31m-    *"[m
 [31m-MapComposeEffects.FlightModeAndTemplateEffects()[m
-[31m-    ↓[m
+[31m-    *"[m
 [31m-FlightDataManager.loadTemplateForProfile()[m
-[31m-    ↓[m
+[31m-    *"[m
 [31m-Loads Profile-Specific Template Configuration[m
-[31m-    ↓[m
+[31m-    *"[m
 [31m-FlightDataViewModel.applyTemplate()[m
-[31m-    ↓[m
+[31m-    *"[m
 [31m-Cards Appear on Map[m
 [31m-```[m
 [31m-[m
@@ -789,60 +789,60 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-[m
 [31m-```[m
 [31m-FlightDataViewModel.initializeCards()[m
-[31m-    ↓[m
+[31m-    *"[m
 [31m-Wait 500ms for template loading[m
-[31m-    ↓[m
+[31m-    *"[m
 [31m-Check if cards exist: _cardStates.value.isEmpty()[m
-[31m-    ↓[m
-[31m-If EMPTY → loadEssentialCardsOnStartup()[m
-[31m-    ↓[m
+[31m-    *"[m
+[31m-If EMPTY *' loadEssentialCardsOnStartup()[m
+[31m-    *"[m
 [31m-Load Default Template Based on Flight Mode:[m
-[31m-  - CRUISE → "id01" (Track card)[m
-[31m-  - THERMAL → "id02" (Track card)[m
-[31m-  - FINAL_GLIDE → "id03" (GPS Alt, Final Gld, Ground Speed)[m
-[31m-    ↓[m
+[31m-  - CRUISE *' "id01" (Track card)[m
+[31m-  - THERMAL *' "id02" (Track card)[m
+[31m-  - FINAL_GLIDE *' "id03" (GPS Alt, Final Gld, Ground Speed)[m
+[31m-    *"[m
 [31m-Cards Displayed Even If User Deselected All[m
 [31m-```[m
 [31m-[m
 [31m----[m
 [31m-[m
-[31m-## 🗄️ DATA PERSISTENCE[m
+[31m-## --" DATA PERSISTENCE[m
 [31m-[m
 [31m-### CardPreferences DataStore Keys[m
 [31m-[m
 [31m-#### Profile-Specific Template Mapping[m
 [31m-```kotlin[m
 [31m-// Which template each flight mode uses for each profile[m
-[31m-"profile_{profileId}_flightmode_{modeName}_template" → templateId[m
-[31m-Example: "profile_profile1_flightmode_CRUISE_template" → "id01"[m
+[31m-"profile_{profileId}_flightmode_{modeName}_template" *' templateId[m
+[31m-Example: "profile_profile1_flightmode_CRUISE_template" *' "id01"[m
 [31m-```[m
 [31m-[m
 [31m-#### Profile-Specific Card Configuration[m
 [31m-```kotlin[m
 [31m-// Which cards are selected for each profile+template combination[m
-[31m-"profile_{profileId}_template_{templateId}_cards" → "card1,card2,card3"[m
-[31m-Example: "profile_profile1_template_id01_cards" → "gps_alt,track,vario"[m
+[31m-"profile_{profileId}_template_{templateId}_cards" *' "card1,card2,card3"[m
+[31m-Example: "profile_profile1_template_id01_cards" *' "gps_alt,track,vario"[m
 [31m-```[m
 [31m-[m
 [31m-#### Flight Mode Visibility[m
 [31m-```kotlin[m
 [31m-// Which flight modes are visible on map for each profile[m
-[31m-"profile_{profileId}_flightmode_{modeName}_visible" → true/false[m
-[31m-Example: "profile_profile1_flightmode_THERMAL_visible" → false[m
+[31m-"profile_{profileId}_flightmode_{modeName}_visible" *' true/false[m
+[31m-Example: "profile_profile1_flightmode_THERMAL_visible" *' false[m
 [31m-```[m
 [31m-[m
 [31m-#### Individual Card Positions[m
 [31m-```kotlin[m
 [31m-// Saved card positions for manual placement[m
-[31m-"{cardId}_x" → x coordinate[m
-[31m-"{cardId}_y" → y coordinate[m
-[31m-"{cardId}_width" → width[m
-[31m-"{cardId}_height" → height[m
+[31m-"{cardId}_x" *' x coordinate[m
+[31m-"{cardId}_y" *' y coordinate[m
+[31m-"{cardId}_width" *' width[m
+[31m-"{cardId}_height" *' height[m
 [31m-```[m
 [31m-[m
 [31m----[m
 [31m-[m
-[31m-## 🎨 TEMPLATE SYSTEM[m
+[31m-## z TEMPLATE SYSTEM[m
 [31m-[m
 [31m-### Default Templates[m
 [31m-[m
@@ -875,7 +875,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-[m
 [31m----[m
 [31m-[m
-[31m-## 🔧 PROFILE AWARENESS[m
+[31m-## "section PROFILE AWARENESS[m
 [31m-[m
 [31m-### How Profiles Affect Card Display[m
 [31m-[m
@@ -887,14 +887,14 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-**Example**:[m
 [31m-```[m
 [31m-Profile "Competition Pilot":[m
-[31m-  - CRUISE mode → "Cross Country" template → 8 cards selected[m
-[31m-  - THERMAL mode → "Thermal" template → 5 cards selected[m
-[31m-  - FINAL_GLIDE mode → "Final Glide" template → 3 cards selected[m
+[31m-  - CRUISE mode *' "Cross Country" template *' 8 cards selected[m
+[31m-  - THERMAL mode *' "Thermal" template *' 5 cards selected[m
+[31m-  - FINAL_GLIDE mode *' "Final Glide" template *' 3 cards selected[m
 [31m-[m
 [31m-Profile "Casual Pilot":[m
-[31m-  - CRUISE mode → "Cruise" template → 1 card selected[m
-[31m-  - THERMAL mode → Hidden (not visible)[m
-[31m-  - FINAL_GLIDE mode → "Final Glide" template → 2 cards selected[m
+[31m-  - CRUISE mode *' "Cruise" template *' 1 card selected[m
+[31m-  - THERMAL mode *' Hidden (not visible)[m
+[31m-  - FINAL_GLIDE mode *' "Final Glide" template *' 2 cards selected[m
 [31m-```[m
 [31m-[m
 [31m-### Profile Template Loading Logic[m
@@ -912,16 +912,16 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-) {[m
 [31m-    val templateToLoad = if (profileId != null) {[m
 [31m-        // 1. Check for saved profile-specific template[m
-[31m-        cardPreferences.getProfileFlightModeTemplate(profileId, currentFlightModeSelection.displayName).first()?.let { profileTemplateId →[m
+[31m-        cardPreferences.getProfileFlightModeTemplate(profileId, currentFlightModeSelection.displayName).first()?.let { profileTemplateId *'[m
 [31m-            val baseTemplate = allTemplates.find { it.id == profileTemplateId }[m
 [31m-            if (baseTemplate != null) {[m
 [31m-                // 2. Load profile-specific card configuration[m
 [31m-                val profileCards = cardPreferences.getProfileTemplateCards(profileId, baseTemplate.id).first()[m
 [31m-                if (profileCards != null) {[m
-[31m-                    // ✅ Use profile-specific cards (may be empty list)[m
+[31m-                    // ... Use profile-specific cards (may be empty list)[m
 [31m-                    baseTemplate.copy(cardIds = profileCards)[m
 [31m-                } else {[m
-[31m-                    // ✅ Use default template cards[m
+[31m-                    // ... Use default template cards[m
 [31m-                    baseTemplate[m
 [31m-                }[m
 [31m-            } else null[m
@@ -939,13 +939,13 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-[m
 [31m----[m
 [31m-[m
-[31m-## 🐛 KNOWN ISSUES[m
+[31m-## > KNOWN ISSUES[m
 [31m-[m
 [31m-### Issue 1: Cards Display Even When None Selected[m
 [31m-[m
-[31m-**Status**: ⚠️ CONFIRMED BUG[m
+[31m-**Status**:   CONFIRMED BUG[m
 [31m-[m
-[31m-**Description**: When user deselects all cards in Flight Data → Screens tab, cards still appear on map after 500ms delay.[m
+[31m-**Description**: When user deselects all cards in Flight Data *' Screens tab, cards still appear on map after 500ms delay.[m
 [31m-[m
 [31m-**Root Cause**: `FlightDataViewModel.initializeCards()` fallback mechanism triggers even for intentionally empty templates.[m
 [31m-[m
@@ -971,7 +971,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-[m
 [31m-### Issue 2: Template Loading Race Condition[m
 [31m-[m
-[31m-**Status**: ⚠️ EDGE CASE[m
+[31m-**Status**:   EDGE CASE[m
 [31m-[m
 [31m-**Description**: If `safeContainerSize` is `IntSize.Zero` when template loads, cards may not render correctly.[m
 [31m-[m
@@ -979,7 +979,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-[m
 [31m----[m
 [31m-[m
-[31m-## 📊 CARD CATEGORIES[m
+[31m-## "s CARD CATEGORIES[m
 [31m-[m
 [31m-**Defined in**: `CardDefinitions.kt`[m
 [31m-[m
@@ -992,7 +992,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-[m
 [31m----[m
 [31m-[m
-[31m-## 🔄 LIVE DATA UPDATES[m
+[31m-## "" LIVE DATA UPDATES[m
 [31m-[m
 [31m-### Update Throttling[m
 [31m-[m
@@ -1015,9 +1015,9 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-[m
 [31m----[m
 [31m-[m
-[31m-## 🎯 INTEGRATION POINTS[m
+[31m-## z INTEGRATION POINTS[m
 [31m-[m
-[31m-### 1. Navigation Drawer → Flight Data[m
+[31m-### 1. Navigation Drawer *' Flight Data[m
 [31m-[m
 [31m-**File**: `MainActivity.kt` (navigation)[m
 [31m-[m
@@ -1032,7 +1032,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-)[m
 [31m-```[m
 [31m-[m
-[31m-### 2. MapScreen → CardContainer[m
+[31m-### 2. MapScreen *' CardContainer[m
 [31m-[m
 [31m-**File**: `MapScreen.kt` (overlay)[m
 [31m-[m
@@ -1047,7 +1047,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-)[m
 [31m-```[m
 [31m-[m
-[31m-### 3. FlightDataManager → Template Loading[m
+[31m-### 3. FlightDataManager *' Template Loading[m
 [31m-[m
 [31m-**File**: `MapComposeEffects.kt:89-104`[m
 [31m-[m
@@ -1066,7 +1066,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-[m
 [31m----[m
 [31m-[m
-[31m-## 🔍 DEBUGGING TIPS[m
+[31m-## " DEBUGGING TIPS[m
 [31m-[m
 [31m-### Enable Debug Logging[m
 [31m-[m
@@ -1096,7 +1096,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-[m
 [31m----[m
 [31m-[m
-[31m-## 📝 RECOMMENDED FIX FOR "CARDS SHOW WHEN NONE SELECTED"[m
+[31m-## " RECOMMENDED FIX FOR "CARDS SHOW WHEN NONE SELECTED"[m
 [31m-[m
 [31m-### Approach: Add Explicit Empty Template Support[m
 [31m-[m
@@ -1110,7 +1110,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-    val icon: ImageVector = Icons.Default.Star,[m
 [31m-    val isPreset: Boolean = false,[m
 [31m-    val createdAt: Long = System.currentTimeMillis(),[m
-[31m-    val isExplicitlyEmpty: Boolean = false // ✅ NEW: User intentionally deselected all cards[m
+[31m-    val isExplicitlyEmpty: Boolean = false // ... NEW: User intentionally deselected all cards[m
 [31m-)[m
 [31m-```[m
 [31m-[m
@@ -1121,7 +1121,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-        val key = "profile_${profileId}_template_${templateId}_cards"[m
 [31m-        preferences[stringPreferencesKey(key)] = cardIds.joinToString(",")[m
 [31m-[m
-[31m-        // ✅ NEW: Mark as explicitly empty if zero cards selected[m
+[31m-        // ... NEW: Mark as explicitly empty if zero cards selected[m
 [31m-        val emptyFlagKey = "profile_${profileId}_template_${templateId}_is_explicitly_empty"[m
 [31m-        preferences[booleanPreferencesKey(emptyFlagKey)] = (cardIds.isEmpty())[m
 [31m-    }[m
@@ -1142,7 +1142,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-            try {[m
 [31m-                delay(500)[m
 [31m-[m
-[31m-                // ✅ NEW: Check if template is explicitly empty before fallback[m
+[31m-                // ... NEW: Check if template is explicitly empty before fallback[m
 [31m-                val isExplicitlyEmpty = cardPreferences?.isTemplateExplicitlyEmpty([m
 [31m-                    currentFlightMode?.name ?: "CRUISE"[m
 [31m-                )?.first() ?: false[m
@@ -1165,12 +1165,12 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-[m
 [31m----[m
 [31m-[m
-[31m-## ✅ FIXED - Cards Now Display Immediately When Toggled[m
+[31m-## ... FIXED - Cards Now Display Immediately When Toggled[m
 [31m-[m
 [31m-### **Status**: RESOLVED (2025-10-02)[m
 [31m-[m
 [31m-### Problem[m
-[31m-Cards selected in Flight Data → Screens didn't appear immediately on MapScreen. User had to switch flight modes to see changes.[m
+[31m-Cards selected in Flight Data *' Screens didn't appear immediately on MapScreen. User had to switch flight modes to see changes.[m
 [31m-[m
 [31m-### Root Cause[m
 [31m-`FlightDataMgmt` and `MapScreen` had separate template state with no communication channel. MapScreen's LaunchedEffect only triggered on flight mode/profile/container changes, NOT on card toggle.[m
@@ -1187,7 +1187,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-[m
 [31m-fun incrementTemplateVersion() {[m
 [31m-    templateVersion++[m
-[31m-    Log.d(TAG, "🔄 Template version incremented to: $templateVersion")[m
+[31m-    Log.d(TAG, """ Template version incremented to: $templateVersion")[m
 [31m-}[m
 [31m-```[m
 [31m-[m
@@ -1225,7 +1225,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-    flightDataManager.allTemplates,[m
 [31m-    uiState.activeProfile,[m
 [31m-    safeContainerSize,[m
-[31m-    flightDataManager.templateVersion // ✅ NEW: Reactive reload trigger[m
+[31m-    flightDataManager.templateVersion // ... NEW: Reactive reload trigger[m
 [31m-) {[m
 [31m-    flightDataManager.loadTemplateForProfile(...)[m
 [31m-}[m
@@ -1235,36 +1235,36 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-```kotlin[m
 [31m-cardPreferences.saveProfileTemplateCards(...)[m
 [31m-TemplateChangeNotifier.notifyTemplateChanged()[m
-[31m-Log.d(TAG, "🔄 Template change notification sent to MapScreen")[m
+[31m-Log.d(TAG, """ Template change notification sent to MapScreen")[m
 [31m-```[m
 [31m-[m
 [31m-### Data Flow After Fix:[m
 [31m-```[m
 [31m-User toggles card in Flight Data[m
-[31m-    ↓[m
-[31m-Card saved to DataStore ✅[m
-[31m-    ↓[m
-[31m-TemplateChangeNotifier.notifyTemplateChanged() ✅[m
-[31m-    ↓[m
-[31m-FlightDataManager.incrementTemplateVersion() ✅[m
-[31m-    ↓[m
-[31m-MapComposeEffects LaunchedEffect triggered ✅[m
-[31m-    ↓[m
-[31m-loadTemplateForProfile() reloads cards ✅[m
-[31m-    ↓[m
-[31m-Cards display immediately on MapScreen 🎉[m
+[31m-    *"[m
+[31m-Card saved to DataStore ...[m
+[31m-    *"[m
+[31m-TemplateChangeNotifier.notifyTemplateChanged() ...[m
+[31m-    *"[m
+[31m-FlightDataManager.incrementTemplateVersion() ...[m
+[31m-    *"[m
+[31m-MapComposeEffects LaunchedEffect triggered ...[m
+[31m-    *"[m
+[31m-loadTemplateForProfile() reloads cards ...[m
+[31m-    *"[m
+[31m-Cards display immediately on MapScreen zper-mille[m
 [31m-```[m
 [31m-[m
 [31m-### Benefits:[m
-[31m-- ✅ Cards appear instantly when toggled[m
-[31m-- ✅ No need to switch flight modes to see changes[m
-[31m-- ✅ Clean reactive architecture[m
-[31m-- ✅ No polling or delays[m
-[31m-- ✅ Works across navigation boundaries[m
+[31m-- ... Cards appear instantly when toggled[m
+[31m-- ... No need to switch flight modes to see changes[m
+[31m-- ... Clean reactive architecture[m
+[31m-- ... No polling or delays[m
+[31m-- ... Works across navigation boundaries[m
 [31m-[m
 [31m----[m
 [31m-[m
-[31m-## 🎓 CONCLUSION[m
+[31m-## z" CONCLUSION[m
 [31m-[m
 [31m-The DFCards system is a **profile-aware, template-based flight data card management system** with these key characteristics:[m
 [31m-[m
@@ -1273,13 +1273,13 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-3. **Live Data Integration**: Real-time updates from GPS, barometer, and sensors[m
 [31m-4. **Persistence**: DataStore-backed card positions, selections, and templates[m
 [31m-5. **Fallback Mechanism**: Automatic template loading to prevent empty screens (causing the reported issue)[m
-[31m-6. **✅ NEW: Reactive Template Updates**: Immediate display when cards are toggled (FIXED 2025-10-02)[m
+[31m-6. **... NEW: Reactive Template Updates**: Immediate display when cards are toggled (FIXED 2025-10-02)[m
 [31m-[m
 [31m-### Known Issues:[m
 [31m-[m
 [31m-**Issue 1**: The fallback mechanism doesn't distinguish between "no template loaded yet" and "user explicitly deselected all cards", resulting in cards appearing even when none are selected.[m
 [31m-[m
-[31m-**Status**: ⚠️ Still needs fix - See recommended solution in documentation above.[m
+[31m-**Status**:   Still needs fix - See recommended solution in documentation above.[m
 [31m-[m
 [31m----[m
 [31m-[m
@@ -1300,17 +1300,17 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-## Issues Fixed[m
 [31m-[m
 [31m-### 1. FAI Quadrant Issues Fixed:[m
-[31m-- **✅ FIXED**: Sector orientation now uses official FAI rule: bisector perpendicular to track bisector, oriented OUTWARD[m
-[31m-- **✅ FIXED**: Visual display now matches calculation algorithms exactly[m
-[31m-- **✅ FIXED**: Course line correctly uses waypoint center (infinite sector starts AT waypoint)[m
-[31m-- **✅ FIXED**: Turn direction properly determines sector orientation (left/right turn detection)[m
+[31m-- **... FIXED**: Sector orientation now uses official FAI rule: bisector perpendicular to track bisector, oriented OUTWARD[m
+[31m-- **... FIXED**: Visual display now matches calculation algorithms exactly[m
+[31m-- **... FIXED**: Course line correctly uses waypoint center (infinite sector starts AT waypoint)[m
+[31m-- **... FIXED**: Turn direction properly determines sector orientation (left/right turn detection)[m
 [31m-[m
 [31m-### 2. Keyhole Issues Fixed:[m
-[31m-- **✅ FIXED**: Now properly evaluates BOTH cylinder (500m) AND sector (10km) parts[m
-[31m-- **✅ FIXED**: Optimal touch point calculation compares cylinder vs sector distance[m
-[31m-- **✅ FIXED**: Observation zone detection checks both cylinder AND sector[m
-[31m-- **✅ FIXED**: Visual display uses same sector orientation as calculations[m
-[31m-- **✅ FIXED**: Sector part uses same FAI-compliant orientation rules[m
+[31m-- **... FIXED**: Now properly evaluates BOTH cylinder (500m) AND sector (10km) parts[m
+[31m-- **... FIXED**: Optimal touch point calculation compares cylinder vs sector distance[m
+[31m-- **... FIXED**: Observation zone detection checks both cylinder AND sector[m
+[31m-- **... FIXED**: Visual display uses same sector orientation as calculations[m
+[31m-- **... FIXED**: Sector part uses same FAI-compliant orientation rules[m
 [31m-[m
 [31m-## Files Modified[m
 [31m-[m
@@ -1371,18 +1371,18 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-[m
 [31m-### Debug Output Expected:[m
 [31m-```[m
-[31m-🧭 FAI QUADRANT ORIENTATION [OFFICIAL FAI RULES]:[m
-[31m-   FAI Sector Bisector: 125° [m
-[31m-   ✅ FAI Rule: 90° sector (±45°), perpendicular to track bisector, oriented OUTWARD[m
+[31m-section FAI QUADRANT ORIENTATION [OFFICIAL FAI RULES]:[m
+[31m-   FAI Sector Bisector: 125deg [m
+[31m-   ... FAI Rule: 90deg sector (+/-45deg), perpendicular to track bisector, oriented OUTWARD[m
 [31m-[m
-[31m-🔑 KEYHOLE SECTOR ORIENTATION [OFFICIAL FAI RULES]:[m
-[31m-   Track bisector: 115°[m
-[31m-   Turn direction: RIGHT (45°)[m
-[31m-   FAI Sector bisector: 25° [PERPENDICULAR TO TRACK, OUTWARD][m
+[31m-"' KEYHOLE SECTOR ORIENTATION [OFFICIAL FAI RULES]:[m
+[31m-   Track bisector: 115deg[m
+[31m-   Turn direction: RIGHT (45deg)[m
+[31m-   FAI Sector bisector: 25deg [PERPENDICULAR TO TRACK, OUTWARD][m
 [31m-   [m
-[31m-🔑 KEYHOLE: Using cylinder touch point (12.45km)[m
+[31m-"' KEYHOLE: Using cylinder touch point (12.45km)[m
 [31m-   or[m
-[31m-🔑 KEYHOLE: Using sector touch point (11.32km)[m
+[31m-"' KEYHOLE: Using sector touch point (11.32km)[m
 [31m-```[m
 [31m-[m
 [31m-### Visual Verification:[m
@@ -1392,7 +1392,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-[m
 [31m-## Compliance Verification[m
 [31m-[m
-[31m-**✅ FULLY COMPLIANT** with FAI Sporting Code Section 3 Annex A:[m
+[31m-**... FULLY COMPLIANT** with FAI Sporting Code Section 3 Annex A:[m
 [31m-- FAI quadrant orientation matches official rules exactly[m
 [31m-- Keyhole combines 500m cylinder + 10km sector per specification[m
 [31m-- Visual display matches mathematical calculations perfectly  [m
@@ -1417,7 +1417,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
  [m
      /**[m
       * Load all templates from preferences[m
-[32m+[m[32m     * ✅ FIXED: Use .first() instead of .collect() to prevent infinite blocking[m[41m[m
+[32m+[m[32m     * ... FIXED: Use .first() instead of .collect() to prevent infinite blocking[m[41m[m
       */[m
      suspend fun loadAllTemplates() {[m
 [31m-        cardPreferences.getAllTemplates().collect { templates ->[m
@@ -1425,7 +1425,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-            Log.d(TAG, "Loaded ${templates.size} flight templates")[m
 [31m-        }[m
 [32m+[m[32m        allTemplates = cardPreferences.getAllTemplates().first()[m[41m[m
-[32m+[m[32m        Log.d(TAG, "✅ Loaded ${allTemplates.size} flight templates")[m[41m[m
+[32m+[m[32m        Log.d(TAG, "... Loaded ${allTemplates.size} flight templates")[m[41m[m
      }[m
  [m
      /**[m
@@ -1433,13 +1433,13 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
                  }[m
              }[m
          } else {[m
-[31m-            Log.w(TAG, "⚠️ Template loading conditions not met, forcing FlightDataViewModel fallback")[m
+[31m-            Log.w(TAG, "  Template loading conditions not met, forcing FlightDataViewModel fallback")[m
 [31m-            if (safeContainerSize != IntSize.Zero) {[m
-[31m-                Log.w(TAG, "⚠️ Forcing immediate card initialization")[m
+[31m-                Log.w(TAG, "  Forcing immediate card initialization")[m
 [31m-                flightViewModel.initializeCards(safeContainerSize, density)[m
 [31m-            }[m
-[32m+[m[32m            // ✅ FIXED: Don't call initializeCards() fallback - just wait for templates to load[m[41m[m
-[32m+[m[32m            Log.w(TAG, "⚠️ Templates not loaded yet - waiting for loadAllTemplates() to complete")[m[41m[m
+[32m+[m[32m            // ... FIXED: Don't call initializeCards() fallback - just wait for templates to load[m[41m[m
+[32m+[m[32m            Log.w(TAG, "  Templates not loaded yet - waiting for loadAllTemplates() to complete")[m[41m[m
          }[m
      }[m
  [m
@@ -1451,20 +1451,20 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
              flightViewModel.initializeCardPreferences(cardPreferences)[m
          }[m
  [m
-[31m-        // ✅ REFACTORED: ViewModel now checks internally if cards exist[m
+[31m-        // ... REFACTORED: ViewModel now checks internally if cards exist[m
 [31m-        // Initialize cards when container size becomes available[m
 [31m-        LaunchedEffect(safeContainerSize) {[m
-[31m-            Log.d(TAG, "🔍 Container size effect: $safeContainerSize, Card count: ${flightViewModel.getCardCount()}")[m
+[31m-            Log.d(TAG, "" Container size effect: $safeContainerSize, Card count: ${flightViewModel.getCardCount()}")[m
 [31m-            if (safeContainerSize != IntSize.Zero) {[m
 [31m-                flightViewModel.initializeCards(safeContainerSize, density)[m
-[31m-                Log.d(TAG, "✅ After initializeCards: Card count = ${flightViewModel.getCardCount()}")[m
+[31m-                Log.d(TAG, "... After initializeCards: Card count = ${flightViewModel.getCardCount()}")[m
 [31m-            }[m
 [31m-        }[m
-[32m+[m[32m        // ✅ REMOVED: Redundant initializeCards() fallback[m[41m[m
+[32m+[m[32m        // ... REMOVED: Redundant initializeCards() fallback[m[41m[m
 [32m+[m[32m        // Template loading in ProfileAndConfigurationEffects already handles this correctly[m[41m[m
-[32m+[m[32m        // - If user selects 0 cards → displays 0 cards[m[41m[m
-[32m+[m[32m        // - If user selects X cards → displays X cards[m[41m[m
-[32m+[m[32m        // - First launch → loadTemplateForProfile() provides fallback[m[41m[m
+[32m+[m[32m        // - If user selects 0 cards *' displays 0 cards[m[41m[m
+[32m+[m[32m        // - If user selects X cards *' displays X cards[m[41m[m
+[32m+[m[32m        // - First launch *' loadTemplateForProfile() provides fallback[m[41m[m
  [m
          // Load all flight data templates[m
          LaunchedEffect(Unit) {[m
@@ -1476,14 +1476,14 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
      var autoResizeEnabled by remember { mutableStateOf(false) }[m
      var showEditOptions by remember { mutableStateOf(false) }[m
  [m
-[31m-    // ✅ REFACTORED: Observe individual card StateFlows from ViewModel[m
+[31m-    // ... REFACTORED: Observe individual card StateFlows from ViewModel[m
 [31m-    val cardStateFlows = viewModel.cardStateFlows[m
-[32m+[m[32m    // ✅ FIXED: Observe selectedCardIds to trigger recomposition when cards change[m[41m[m
+[32m+[m[32m    // ... FIXED: Observe selectedCardIds to trigger recomposition when cards change[m[41m[m
 [32m+[m[32m    val selectedCardIds by viewModel.selectedCardIds.collectAsState()[m[41m[m
      val newlyAddedCards by viewModel.newlyAddedCards.collectAsState()[m
      val removingCards by viewModel.removingCards.collectAsState()[m
  [m
-[32m+[m[32m    // ✅ Re-read cardStateFlows when selectedCardIds changes[m[41m[m
+[32m+[m[32m    // ... Re-read cardStateFlows when selectedCardIds changes[m[41m[m
 [32m+[m[32m    val cardStateFlows = remember(selectedCardIds) { viewModel.cardStateFlows }[m[41m[m
 [32m+[m[41m[m
      // Get system navigation bar height[m
@@ -1497,12 +1497,12 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
          println("DEBUG: FlightDataViewModel - Flight mode updated to: ${flightMode.displayName}")[m
      }[m
  [m
-[31m-    // ✅ Auto-load essential cards on startup[m
-[32m+[m[32m    // ✅ FIXED: Removed automatic fallback - template loading handles everything[m[41m[m
+[31m-    // ... Auto-load essential cards on startup[m
+[32m+[m[32m    // ... FIXED: Removed automatic fallback - template loading handles everything[m[41m[m
      fun initializeCards(containerSize: IntSize, density: Density) {[m
 [31m-        println("DEBUG: FlightDataViewModel - initializeCards called with containerSize: $containerSize")[m
 [31m-[m
-[31m-        // ✅ REFACTORED: Check map instead of list[m
+[31m-        // ... REFACTORED: Check map instead of list[m
 [31m-        if (_cardStateFlows.isNotEmpty()) {[m
 [31m-            println("DEBUG: Skipping initializeCards - ${_cardStateFlows.size} cards already exist")[m
 [31m-            return[m
@@ -1559,11 +1559,11 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [32m+[m[32m        println("DEBUG: Automatic fallback removed - loadTemplateForProfile() handles all card loading")[m[41m[m
 [32m+[m[32m        println("DEBUG: Current card count: ${_cardStateFlows.size}")[m[41m[m
 [32m+[m[41m[m
-[32m+[m[32m        // ✅ Keep function for backward compatibility but don't load fallback cards[m[41m[m
+[32m+[m[32m        // ... Keep function for backward compatibility but don't load fallback cards[m[41m[m
 [32m+[m[32m        // Template loading in FlightDataManager.loadTemplateForProfile() handles:[m[41m[m
-[32m+[m[32m        // - User selects 0 cards → displays 0 cards ✅[m[41m[m
-[32m+[m[32m        // - User selects X cards → displays X cards ✅[m[41m[m
-[32m+[m[32m        // - First launch → loads default template ✅[m[41m[m
+[32m+[m[32m        // - User selects 0 cards *' displays 0 cards ...[m[41m[m
+[32m+[m[32m        // - User selects X cards *' displays X cards ...[m[41m[m
+[32m+[m[32m        // - First launch *' loads default template ...[m[41m[m
      }[m
      // Add this method to FlightDataViewModel.kt[m
      private suspend fun loadSavedCardPosition(cardState: CardState): CardState {[m
@@ -1571,8 +1571,8 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
  [m
      // Update the existing applyTemplateInternal method signature and implementation[m
  [m
-[31m-    // ✅ REFACTORED: Apply template using map[m
-[32m+[m[32m    // ✅ FIXED: Apply template synchronously to prevent timing race conditions[m[41m[m
+[31m-    // ... REFACTORED: Apply template using map[m
+[32m+[m[32m    // ... FIXED: Apply template synchronously to prevent timing race conditions[m[41m[m
      private fun applyTemplateInternal([m
          template: FlightTemplate,[m
          containerSize: IntSize,[m
@@ -1583,18 +1583,18 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-        // Load cards with saved positions in coroutine[m
 [31m-        viewModelScope.launch {[m
 [31m-            val newCards = createCardsFromTemplate(template, containerSize, density)[m
-[31m-            // ✅ Add each card to the map[m
+[31m-            // ... Add each card to the map[m
 [31m-            newCards.forEach { cardState ->[m
 [31m-                _cardStateFlows[cardState.id] = MutableStateFlow(cardState)[m
 [31m-            }[m
 [31m-            _selectedCardIds.value = template.cardIds.toSet()[m
 [31m-            println("DEBUG: Applied template '${template.name}' with ${_cardStateFlows.size} cards to map")[m
-[32m+[m[32m        // ✅ FIXED: Synchronous card creation - no coroutine to prevent race condition[m[41m[m
+[32m+[m[32m        // ... FIXED: Synchronous card creation - no coroutine to prevent race condition[m[41m[m
 [32m+[m[32m        val newCards = kotlinx.coroutines.runBlocking {[m[41m[m
 [32m+[m[32m            createCardsFromTemplate(template, containerSize, density)[m[41m[m
 [32m+[m[32m        }[m[41m[m
 [32m+[m[41m[m
-[32m+[m[32m        // ✅ Add each card to the map immediately[m[41m[m
+[32m+[m[32m        // ... Add each card to the map immediately[m[41m[m
 [32m+[m[32m        newCards.forEach { cardState ->[m[41m[m
 [32m+[m[32m            _cardStateFlows[cardState.id] = MutableStateFlow(cardState)[m[41m[m
          }[m
@@ -1602,7 +1602,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [32m+[m[32m        println("DEBUG: Applied template '${template.name}' with ${_cardStateFlows.size} cards to map")[m[41m[m
      }[m
  [m
-     // ✅ Create cards from template[m
+     // ... Create cards from template[m
 [1mdiff --git a/docs/03_Features/Flight_Data_Cards.md b/docs/03_Features/Flight_Data_Cards.md[m
 [1mindex 5766c8d..299aa2e 100644[m
 [1m--- a/docs/03_Features/Flight_Data_Cards.md[m
@@ -1617,19 +1617,19 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
  [m
  ---[m
  [m
-[31m-## 🎯 CRITICAL FINDING: WHY CARDS SHOW WHEN NONE SELECTED[m
-[32m+[m[32m## 🎯 CRITICAL ISSUE: Cards Show When None Selected (UNFIXED)[m
+[31m-## z CRITICAL FINDING: WHY CARDS SHOW WHEN NONE SELECTED[m
+[32m+[m[32m## z CRITICAL ISSUE: Cards Show When None Selected (UNFIXED)[m
  [m
 [31m-### Root Cause Analysis[m
 [32m+[m[32m### Problem Statement[m
  [m
 [31m-**PROBLEM**: Cards are displayed on the map even when you've deselected all cards for each flight mode in Flight Data settings.[m
-[32m+[m[32m**USER IMPACT**: When you deselect all cards in Flight Data → Screens tab, cards still appear on the map after 500ms.[m
+[32m+[m[32m**USER IMPACT**: When you deselect all cards in Flight Data *' Screens tab, cards still appear on the map after 500ms.[m
  [m
 [31m-**ROOT CAUSE**: The `FlightDataViewModel.initializeCards()` function has a **FALLBACK MECHANISM** that automatically loads cards after a 500ms delay if no cards exist:[m
 [32m+[m[32m**ROOT CAUSE**: `FlightDataViewModel.initializeCards()` has a safety fallback mechanism that cannot distinguish between:[m
-[32m+[m[32m- ❌ "No template loaded yet" (legitimate fallback)[m
-[32m+[m[32m- ❌ "User explicitly wants zero cards" (should NOT fallback)[m
+[32m+[m[32m- oe "No template loaded yet" (legitimate fallback)[m
+[32m+[m[32m- oe "User explicitly wants zero cards" (should NOT fallback)[m
 [32m+[m
 [32m+[m[32m### Current Implementation[m
 [32m+[m
@@ -1651,13 +1651,13 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
          viewModelScope.launch {[m
              try {[m
 [31m-                // Wait briefly for MapScreen template loading to complete[m
-[31m-                delay(500) // ❌ PROBLEMATIC: Automatic fallback after delay[m
+[31m-                delay(500) // oe PROBLEMATIC: Automatic fallback after delay[m
 [32m+[m[32m                delay(500) // Wait for MapScreen template loading[m
  [m
 [31m-                if (_cardStates.value.isEmpty()) {[m
-[31m-                    // 🔥 THIS IS WHY CARDS APPEAR EVEN WHEN NONE SELECTED[m
+[31m-                    // "Yen THIS IS WHY CARDS APPEAR EVEN WHEN NONE SELECTED[m
 [31m-                    println("DEBUG: No cards after 2 seconds, loading Essential template as last resort fallback")[m
-[32m+[m[32m                // 🔥 BUG: Loads fallback even if user intentionally has zero cards[m
+[32m+[m[32m                // "Yen BUG: Loads fallback even if user intentionally has zero cards[m
 [32m+[m[32m                if (_cardStateFlows.isEmpty()) {[m
 [32m+[m[32m                    println("DEBUG: No cards after 500ms, loading Essential template as last resort fallback")[m
                      loadEssentialCardsOnStartup(containerSize, density, currentFlightMode)[m
@@ -1677,23 +1677,23 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
  [m
 [31m-### Call Stack to Card Display[m
 [31m-[m
-[31m-1. **MapScreen.kt** → Creates `CardContainer` composable[m
-[31m-2. **CardContainer.kt:64-68** → Calls `viewModel.initializeCards()` when container size becomes available[m
-[31m-3. **FlightDataViewModel.kt:67-89** → Waits 500ms, then loads fallback template[m
-[31m-4. **FlightDataViewModel.kt:128-146** → `loadEssentialCardsOnStartup()` loads appropriate template based on current flight mode:[m
-[31m-   - CRUISE → "id01" template (Track card)[m
-[31m-   - THERMAL → "id02" template (Track card)[m
-[31m-   - FINAL_GLIDE → "id03" template (GPS Alt, Final Gld, Ground Speed)[m
+[31m-1. **MapScreen.kt** *' Creates `CardContainer` composable[m
+[31m-2. **CardContainer.kt:64-68** *' Calls `viewModel.initializeCards()` when container size becomes available[m
+[31m-3. **FlightDataViewModel.kt:67-89** *' Waits 500ms, then loads fallback template[m
+[31m-4. **FlightDataViewModel.kt:128-146** *' `loadEssentialCardsOnStartup()` loads appropriate template based on current flight mode:[m
+[31m-   - CRUISE *' "id01" template (Track card)[m
+[31m-   - THERMAL *' "id02" template (Track card)[m
+[31m-   - FINAL_GLIDE *' "id03" template (GPS Alt, Final Gld, Ground Speed)[m
 [32m+[m[32m### Fallback Template Selection Logic[m
  [m
 [31m-### Why This Happens[m
 [32m+[m[32m**File**: `FlightDataViewModel.kt:137-156`[m
  [m
 [31m-The system is designed with a safety fallback to **prevent empty screens**:[m
-[31m-- If profile loading fails → Load fallback template[m
-[31m-- If template is corrupted → Load fallback template[m
-[31m-- If network delay occurs → Load fallback template[m
-[31m-- **If user deselects all cards** → Load fallback template (UNWANTED BEHAVIOR)[m
+[31m-- If profile loading fails *' Load fallback template[m
+[31m-- If template is corrupted *' Load fallback template[m
+[31m-- If network delay occurs *' Load fallback template[m
+[31m-- **If user deselects all cards** *' Load fallback template (UNWANTED BEHAVIOR)[m
 [32m+[m[32m```kotlin[m
 [32m+[m[32mprivate suspend fun loadEssentialCardsOnStartup([m
 [32m+[m[32m    containerSize: IntSize,[m
@@ -1749,22 +1749,22 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-- `FlightDataManager.kt` - Manages flight modes and template loading[m
 [32m+[m[32m- `FlightDataManager.kt` - Manages flight modes, template loading, version tracking[m
  - `MapComposeEffects.kt` - Coordinates template loading based on profile/mode[m
-[32m+[m[32m- `TemplateChangeNotifier.kt` - ✅ **NEW**: Singleton for reactive template updates[m
+[32m+[m[32m- `TemplateChangeNotifier.kt` - ... **NEW**: Singleton for reactive template updates[m
  - `MapScreen.kt` - Displays CardContainer overlay on map[m
  [m
  ---[m
 [36m@@ -116,17 +124,23 @@[m [mUser Toggles Cards (check/uncheck)[m
-     ↓[m
+     *"[m
  CardPreferences.saveProfileTemplateCards(profileId, templateId, cardIds)[m
-     ↓[m
+     *"[m
 [31m-Template Configuration Saved to DataStore[m
-[32m+[m[32m✅ NEW: TemplateChangeNotifier.notifyTemplateChanged()[m
-[32m+[m[32m    ↓[m
+[32m+[m[32m... NEW: TemplateChangeNotifier.notifyTemplateChanged()[m
+[32m+[m[32m    *"[m
 [32m+[m[32mFlightDataManager.incrementTemplateVersion()[m
-[32m+[m[32m    ↓[m
+[32m+[m[32m    *"[m
 [32m+[m[32mMapComposeEffects LaunchedEffect triggered[m
-[32m+[m[32m    ↓[m
-[32m+[m[32mCards Update Immediately on MapScreen 🎉[m
+[32m+[m[32m    *"[m
+[32m+[m[32mCards Update Immediately on MapScreen zper-mille[m
  ```[m
  [m
 [31m-### 2. Map Display Flow[m
@@ -1772,14 +1772,14 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
  [m
  ```[m
  MapScreen.kt Initializes[m
-     ↓[m
+     *"[m
  CardContainer Created (overlay on map)[m
-     ↓[m
+     *"[m
 [31m-MapComposeEffects.FlightModeAndTemplateEffects()[m
 [32m+[m[32mMapComposeEffects.ProfileAndConfigurationEffects()[m
-     ↓[m
+     *"[m
  FlightDataManager.loadTemplateForProfile()[m
-     ↓[m
+     *"[m
 [36m@@ -137,14 +151,14 @@[m [mFlightDataViewModel.applyTemplate()[m
  Cards Appear on Map[m
  ```[m
@@ -1789,20 +1789,20 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
  [m
  ```[m
  FlightDataViewModel.initializeCards()[m
-     ↓[m
+     *"[m
  Wait 500ms for template loading[m
-     ↓[m
+     *"[m
 [31m-Check if cards exist: _cardStates.value.isEmpty()[m
 [32m+[m[32mCheck if cards exist: _cardStateFlows.isEmpty()[m
-     ↓[m
- If EMPTY → loadEssentialCardsOnStartup()[m
-     ↓[m
+     *"[m
+ If EMPTY *' loadEssentialCardsOnStartup()[m
+     *"[m
 [36m@@ -153,7 +167,7 @@[m [mLoad Default Template Based on Flight Mode:[m
-   - THERMAL → "id02" (Track card)[m
-   - FINAL_GLIDE → "id03" (GPS Alt, Final Gld, Ground Speed)[m
-     ↓[m
+   - THERMAL *' "id02" (Track card)[m
+   - FINAL_GLIDE *' "id03" (GPS Alt, Final Gld, Ground Speed)[m
+     *"[m
 [31m-Cards Displayed Even If User Deselected All[m
-[32m+[m[32m🔥 Cards Displayed Even If User Deselected All[m
+[32m+[m[32m"Yen Cards Displayed Even If User Deselected All[m
  ```[m
  [m
  ---[m
@@ -1810,33 +1810,33 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
  #### Profile-Specific Template Mapping[m
  ```kotlin[m
  // Which template each flight mode uses for each profile[m
-[31m-"profile_{profileId}_flightmode_{modeName}_template" → templateId[m
-[31m-Example: "profile_profile1_flightmode_CRUISE_template" → "id01"[m
-[32m+[m[32m"profile_{profileId}_flight_mode_{modeName}_template" → templateId[m
-[32m+[m[32mExample: "profile_profile1_flight_mode_CRUISE_template" → "id01"[m
+[31m-"profile_{profileId}_flightmode_{modeName}_template" *' templateId[m
+[31m-Example: "profile_profile1_flightmode_CRUISE_template" *' "id01"[m
+[32m+[m[32m"profile_{profileId}_flight_mode_{modeName}_template" *' templateId[m
+[32m+[m[32mExample: "profile_profile1_flight_mode_CRUISE_template" *' "id01"[m
  ```[m
  [m
  #### Profile-Specific Card Configuration[m
-[36m@@ -174,13 +188,16 @@[m [mExample: "profile_profile1_flightmode_CRUISE_template" → "id01"[m
+[36m@@ -174,13 +188,16 @@[m [mExample: "profile_profile1_flightmode_CRUISE_template" *' "id01"[m
  // Which cards are selected for each profile+template combination[m
- "profile_{profileId}_template_{templateId}_cards" → "card1,card2,card3"[m
- Example: "profile_profile1_template_id01_cards" → "gps_alt,track,vario"[m
+ "profile_{profileId}_template_{templateId}_cards" *' "card1,card2,card3"[m
+ Example: "profile_profile1_template_id01_cards" *' "gps_alt,track,vario"[m
 [32m+[m
-[32m+[m[32m// ⚠️ BUG: Empty string "" saved when user deselects all cards[m
+[32m+[m[32m//   BUG: Empty string "" saved when user deselects all cards[m
 [32m+[m[32m// But fallback mechanism doesn't check this![m
  ```[m
  [m
  #### Flight Mode Visibility[m
  ```kotlin[m
  // Which flight modes are visible on map for each profile[m
-[31m-"profile_{profileId}_flightmode_{modeName}_visible" → true/false[m
-[31m-Example: "profile_profile1_flightmode_THERMAL_visible" → false[m
-[32m+[m[32m"profile_{profileId}_{modeName}_visible" → true/false[m
-[32m+[m[32mExample: "profile_profile1_THERMAL_visible" → false[m
+[31m-"profile_{profileId}_flightmode_{modeName}_visible" *' true/false[m
+[31m-Example: "profile_profile1_flightmode_THERMAL_visible" *' false[m
+[32m+[m[32m"profile_{profileId}_{modeName}_visible" *' true/false[m
+[32m+[m[32mExample: "profile_profile1_THERMAL_visible" *' false[m
  ```[m
  [m
  #### Individual Card Positions[m
-[36m@@ -200,274 +217,127 @@[m [mExample: "profile_profile1_flightmode_THERMAL_visible" → false[m
+[36m@@ -200,274 +217,127 @@[m [mExample: "profile_profile1_flightmode_THERMAL_visible" *' false[m
  [m
  **Defined in**: `FlightTemplates.kt`[m
  [m
@@ -1874,29 +1874,29 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
  [m
  ---[m
  [m
-[31m-## 🔧 PROFILE AWARENESS[m
-[32m+[m[32m## ✅ IMPLEMENTED FEATURES (Since Original Doc)[m
+[31m-## "section PROFILE AWARENESS[m
+[32m+[m[32m## ... IMPLEMENTED FEATURES (Since Original Doc)[m
  [m
 [31m-### How Profiles Affect Card Display[m
-[32m+[m[32m### 1. Reactive Template Updates - ✅ COMPLETE[m
+[32m+[m[32m### 1. Reactive Template Updates - ... COMPLETE[m
  [m
 [31m-**Each profile can have**:[m
 [31m-- Different templates for each flight mode[m
 [31m-- Different card selections within the same template[m
 [31m-- Different flight mode visibility settings[m
-[32m+[m[32m**Status**: ✅ IMPLEMENTED (2025-10-10)[m
+[32m+[m[32m**Status**: ... IMPLEMENTED (2025-10-10)[m
  [m
 [31m-**Example**:[m
 [31m-```[m
 [31m-Profile "Competition Pilot":[m
-[31m-  - CRUISE mode → "Cross Country" template → 8 cards selected[m
-[31m-  - THERMAL mode → "Thermal" template → 5 cards selected[m
-[31m-  - FINAL_GLIDE mode → "Final Glide" template → 3 cards selected[m
+[31m-  - CRUISE mode *' "Cross Country" template *' 8 cards selected[m
+[31m-  - THERMAL mode *' "Thermal" template *' 5 cards selected[m
+[31m-  - FINAL_GLIDE mode *' "Final Glide" template *' 3 cards selected[m
 [31m-[m
 [31m-Profile "Casual Pilot":[m
-[31m-  - CRUISE mode → "Cruise" template → 1 card selected[m
-[31m-  - THERMAL mode → Hidden (not visible)[m
-[31m-  - FINAL_GLIDE mode → "Final Glide" template → 2 cards selected[m
+[31m-  - CRUISE mode *' "Cruise" template *' 1 card selected[m
+[31m-  - THERMAL mode *' Hidden (not visible)[m
+[31m-  - FINAL_GLIDE mode *' "Final Glide" template *' 2 cards selected[m
 [31m-```[m
 [31m-[m
 [31m-### Profile Template Loading Logic[m
@@ -1916,16 +1916,16 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-) {[m
 [31m-    val templateToLoad = if (profileId != null) {[m
 [31m-        // 1. Check for saved profile-specific template[m
-[31m-        cardPreferences.getProfileFlightModeTemplate(profileId, currentFlightModeSelection.displayName).first()?.let { profileTemplateId →[m
+[31m-        cardPreferences.getProfileFlightModeTemplate(profileId, currentFlightModeSelection.displayName).first()?.let { profileTemplateId *'[m
 [31m-            val baseTemplate = allTemplates.find { it.id == profileTemplateId }[m
 [31m-            if (baseTemplate != null) {[m
 [31m-                // 2. Load profile-specific card configuration[m
 [31m-                val profileCards = cardPreferences.getProfileTemplateCards(profileId, baseTemplate.id).first()[m
 [31m-                if (profileCards != null) {[m
-[31m-                    // ✅ Use profile-specific cards (may be empty list)[m
+[31m-                    // ... Use profile-specific cards (may be empty list)[m
 [31m-                    baseTemplate.copy(cardIds = profileCards)[m
 [31m-                } else {[m
-[31m-                    // ✅ Use default template cards[m
+[31m-                    // ... Use default template cards[m
 [31m-                    baseTemplate[m
 [31m-                }[m
 [31m-            } else null[m
@@ -1943,13 +1943,13 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-[m
 [31m----[m
 [31m-[m
-[31m-## 🐛 KNOWN ISSUES[m
+[31m-## > KNOWN ISSUES[m
 [31m-[m
 [31m-### Issue 1: Cards Display Even When None Selected[m
 [31m-[m
-[31m-**Status**: ⚠️ CONFIRMED BUG[m
+[31m-**Status**:   CONFIRMED BUG[m
 [31m-[m
-[31m-**Description**: When user deselects all cards in Flight Data → Screens tab, cards still appear on map after 500ms delay.[m
+[31m-**Description**: When user deselects all cards in Flight Data *' Screens tab, cards still appear on map after 500ms delay.[m
 [31m-[m
 [31m-**Root Cause**: `FlightDataViewModel.initializeCards()` fallback mechanism triggers even for intentionally empty templates.[m
 [31m-[m
@@ -1982,7 +1982,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [32m+[m[32m    flightDataManager.allTemplates,[m
 [32m+[m[32m    uiState.activeProfile,[m
 [32m+[m[32m    safeContainerSize,[m
-[32m+[m[32m    flightDataManager.templateVersion // ✅ Triggers reload[m
+[32m+[m[32m    flightDataManager.templateVersion // ... Triggers reload[m
 [32m+[m[32m) {[m
 [32m+[m[32m    flightDataManager.loadTemplateForProfile(...)[m
  }[m
@@ -1990,7 +1990,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
  [m
 [31m-### Issue 2: Template Loading Race Condition[m
 [31m-[m
-[31m-**Status**: ⚠️ EDGE CASE[m
+[31m-**Status**:   EDGE CASE[m
 [31m-[m
 [31m-**Description**: If `safeContainerSize` is `IntSize.Zero` when template loads, cards may not render correctly.[m
 [31m-[m
@@ -1998,7 +1998,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-[m
 [31m----[m
 [31m-[m
-[31m-## 📊 CARD CATEGORIES[m
+[31m-## "s CARD CATEGORIES[m
 [31m-[m
 [31m-**Defined in**: `CardDefinitions.kt`[m
 [31m-[m
@@ -2011,7 +2011,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-[m
 [31m----[m
 [31m-[m
-[31m-## 🔄 LIVE DATA UPDATES[m
+[31m-## "" LIVE DATA UPDATES[m
 [31m-[m
 [31m-### Update Throttling[m
 [31m-[m
@@ -2025,19 +2025,19 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-[m
 [31m-**File**: `CardLibrary.kt:334-556`[m
 [32m+[m[32m**Benefits**:[m
-[32m+[m[32m- ✅ Cards appear instantly when toggled[m
-[32m+[m[32m- ✅ No need to switch flight modes to see changes[m
-[32m+[m[32m- ✅ Clean reactive architecture[m
-[32m+[m[32m- ✅ Works across navigation boundaries[m
+[32m+[m[32m- ... Cards appear instantly when toggled[m
+[32m+[m[32m- ... No need to switch flight modes to see changes[m
+[32m+[m[32m- ... Clean reactive architecture[m
+[32m+[m[32m- ... Works across navigation boundaries[m
  [m
 [31m-**Centralized mapping function**: `CardLibrary.mapLiveDataToCard(cardId, liveData)`[m
-[32m+[m[32m### 2. Profile-Aware Card Storage - ✅ COMPLETE[m
+[32m+[m[32m### 2. Profile-Aware Card Storage - ... COMPLETE[m
  [m
 [31m-**GPS Dependency**:[m
 [31m-- Most cards require GPS fix: `liveData.isGPSFixed && liveData.dataQuality == DataQuality.LIVE`[m
 [31m-- Barometric cards require: `liveData.currentPressureHPa > 0`[m
 [31m-- Fallback display: `"-- ft" / "NO GPS"` when data unavailable[m
-[32m+[m[32m**Status**: ✅ IMPLEMENTED[m
+[32m+[m[32m**Status**: ... IMPLEMENTED[m
  [m
 [31m----[m
 [32m+[m[32m**Key Methods**:[m
@@ -2046,17 +2046,17 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [32m+[m[32m- `saveProfileFlightModeTemplate(profileId, flightMode, templateId)` - Map mode to template[m
 [32m+[m[32m- `getProfileFlightModeTemplate(profileId, flightMode)` - Load mode mapping[m
  [m
-[31m-## 🎯 INTEGRATION POINTS[m
+[31m-## z INTEGRATION POINTS[m
 [32m+[m[32m**Data Isolation**:[m
 [32m+[m[32m- Each profile has independent card configurations[m
 [32m+[m[32m- Switching profiles loads correct template+cards[m
 [32m+[m[32m- No cross-contamination between profiles[m
  [m
-[31m-### 1. Navigation Drawer → Flight Data[m
-[32m+[m[32m### 3. Individual Card StateFlows - ✅ REFACTORED[m
+[31m-### 1. Navigation Drawer *' Flight Data[m
+[32m+[m[32m### 3. Individual Card StateFlows - ... REFACTORED[m
  [m
 [31m-**File**: `MainActivity.kt` (navigation)[m
-[32m+[m[32m**Status**: ✅ IMPLEMENTED[m
+[32m+[m[32m**Status**: ... IMPLEMENTED[m
  [m
 [32m+[m[32m**Architecture**:[m
  ```kotlin[m
@@ -2070,7 +2070,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-)[m
 [31m-```[m
 [31m-[m
-[31m-### 2. MapScreen → CardContainer[m
+[31m-### 2. MapScreen *' CardContainer[m
 [31m-[m
 [31m-**File**: `MapScreen.kt` (overlay)[m
 [32m+[m[32m// Old: Single list state - all cards recompose on ANY change[m
@@ -2090,7 +2090,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [32m+[m[32mval cardStateFlows: Map<String, StateFlow<CardState>>[m
  ```[m
  [m
-[31m-### 3. FlightDataManager → Template Loading[m
+[31m-### 3. FlightDataManager *' Template Loading[m
 [31m-[m
 [31m-**File**: `MapComposeEffects.kt:89-104`[m
 [31m-[m
@@ -2113,7 +2113,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
  [m
  ---[m
  [m
-[31m-## 🔍 DEBUGGING TIPS[m
+[31m-## " DEBUGGING TIPS[m
 [31m-[m
 [31m-### Enable Debug Logging[m
 [31m-[m
@@ -2125,7 +2125,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-- `MapComposeEffects` - Template loading triggers[m
 [31m-[m
 [31m-### Check DataStore Contents[m
-[32m+[m[32m## 🐛 KNOWN ISSUES[m
+[32m+[m[32m## > KNOWN ISSUES[m
  [m
 [31m-**Location**: `/data/data/com.example.xcpro/files/datastore/card_preferences.preferences_pb`[m
 [32m+[m[32m### Issue 1: Cards Display Even When None Selected[m
@@ -2134,10 +2134,10 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-- `profile_{profileId}_flightmode_*` - Profile flight mode mappings[m
 [31m-- `profile_{profileId}_template_*` - Profile card configurations[m
 [31m-- `{templateId}_*` - Template card positions[m
-[32m+[m[32m**Status**: ⚠️ UNFIXED - PRIMARY ISSUE[m
+[32m+[m[32m**Status**:   UNFIXED - PRIMARY ISSUE[m
  [m
 [31m-### Verify Card Display State[m
-[32m+[m[32m**Problem**: When user deselects all cards in Flight Data → Screens tab, cards still appear on map after 500ms delay.[m
+[32m+[m[32m**Problem**: When user deselects all cards in Flight Data *' Screens tab, cards still appear on map after 500ms delay.[m
  [m
 [31m-```kotlin[m
 [31m-// In FlightDataViewModel[m
@@ -2149,7 +2149,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m----[m
 [32m+[m[32m**Impact**: User cannot create "no cards" configuration for clean map view.[m
  [m
-[31m-## 📝 RECOMMENDED FIX FOR "CARDS SHOW WHEN NONE SELECTED"[m
+[31m-## " RECOMMENDED FIX FOR "CARDS SHOW WHEN NONE SELECTED"[m
 [32m+[m[32m**Why Fallback Exists**:[m
 [32m+[m[32m- Prevents empty screens on first app launch[m
 [32m+[m[32m- Recovers from corrupted profile data[m
@@ -2169,7 +2169,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-    val icon: ImageVector = Icons.Default.Star,[m
 [31m-    val isPreset: Boolean = false,[m
 [31m-    val createdAt: Long = System.currentTimeMillis(),[m
-[31m-    val isExplicitlyEmpty: Boolean = false // ✅ NEW: User intentionally deselected all cards[m
+[31m-    val isExplicitlyEmpty: Boolean = false // ... NEW: User intentionally deselected all cards[m
 [31m-)[m
 [31m-```[m
 [32m+[m[32m**Step 1**: Add flag to track intentionally empty templates[m
@@ -2208,7 +2208,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
          isInitializing = true[m
 [36m@@ -496,10 +373,11 @@[m [mfun initializeCards(containerSize: IntSize, density: Density) {[m
  [m
-                 // ✅ NEW: Check if template is explicitly empty before fallback[m
+                 // ... NEW: Check if template is explicitly empty before fallback[m
                  val isExplicitlyEmpty = cardPreferences?.isTemplateExplicitlyEmpty([m
 [31m-                    currentFlightMode?.name ?: "CRUISE"[m
 [32m+[m[32m                    activeProfile?.id ?: "default",[m
@@ -2233,14 +2233,14 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
  [m
  ---[m
  [m
-[31m-## ✅ FIXED - Cards Now Display Immediately When Toggled[m
-[32m+[m[32m## 📊 CARD CATEGORIES[m
+[31m-## ... FIXED - Cards Now Display Immediately When Toggled[m
+[32m+[m[32m## "s CARD CATEGORIES[m
  [m
 [31m-### **Status**: RESOLVED (2025-10-02)[m
 [32m+[m[32m**Defined in**: `CardDefinitions.kt`[m
  [m
 [31m-### Problem[m
-[31m-Cards selected in Flight Data → Screens didn't appear immediately on MapScreen. User had to switch flight modes to see changes.[m
+[31m-Cards selected in Flight Data *' Screens didn't appear immediately on MapScreen. User had to switch flight modes to see changes.[m
 [32m+[m[32m1. **ESSENTIAL** (Green) - GPS Alt, Baro Alt, AGL, Vario, IAS, Ground Speed[m
 [32m+[m[32m2. **NAVIGATION** (Blue) - Track, WPT Dist, WPT Brg, Final Gld, WPT ETA[m
 [32m+[m[32m3. **PERFORMANCE** (Orange) - Thermal Avg, Netto, L/D Curr, MC Speed[m
@@ -2254,7 +2254,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
  [m
 [31m-### Solution Implemented[m
 [31m-**Template Version Tracking System** - Clean reactive architecture that forces template reload when cards change.[m
-[32m+[m[32m## 🔧 PROFILE AWARENESS[m
+[32m+[m[32m## "section PROFILE AWARENESS[m
  [m
 [31m-#### Changes Made:[m
 [32m+[m[32m### How Profiles Affect Card Display[m
@@ -2270,23 +2270,23 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
  [m
 [31m-fun incrementTemplateVersion() {[m
 [31m-    templateVersion++[m
-[31m-    Log.d(TAG, "🔄 Template version incremented to: $templateVersion")[m
+[31m-    Log.d(TAG, """ Template version incremented to: $templateVersion")[m
 [31m-}[m
 [32m+[m[32m**Example**:[m
  ```[m
 [32m+[m[32mProfile "Competition Pilot":[m
-[32m+[m[32m  - CRUISE mode → "Cross Country" template → 8 cards selected[m
-[32m+[m[32m  - THERMAL mode → "Thermal" template → 5 cards selected[m
-[32m+[m[32m  - FINAL_GLIDE mode → "Final Glide" template → 3 cards selected[m
+[32m+[m[32m  - CRUISE mode *' "Cross Country" template *' 8 cards selected[m
+[32m+[m[32m  - THERMAL mode *' "Thermal" template *' 5 cards selected[m
+[32m+[m[32m  - FINAL_GLIDE mode *' "Final Glide" template *' 3 cards selected[m
  [m
 [31m-2. **TemplateChangeNotifier.kt** (NEW) - Singleton communication bridge:[m
 [31m-```kotlin[m
 [31m-object TemplateChangeNotifier {[m
 [31m-    private var onTemplateChangedCallback: (() -> Unit)? = null[m
 [32m+[m[32mProfile "Casual Pilot":[m
-[32m+[m[32m  - CRUISE mode → "Cruise" template → 1 card selected[m
-[32m+[m[32m  - THERMAL mode → Hidden (not visible)[m
-[32m+[m[32m  - FINAL_GLIDE mode → "Final Glide" template → 2 cards selected[m
+[32m+[m[32m  - CRUISE mode *' "Cruise" template *' 1 card selected[m
+[32m+[m[32m  - THERMAL mode *' Hidden (not visible)[m
+[32m+[m[32m  - FINAL_GLIDE mode *' "Final Glide" template *' 2 cards selected[m
 [32m+[m[32m```[m
  [m
 [31m-    fun registerCallback(callback: () -> Unit) {[m
@@ -2299,7 +2299,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-    }[m
 [31m-}[m
 [31m-```[m
-[32m+[m[32m## 🔍 DEBUGGING[m
+[32m+[m[32m## " DEBUGGING[m
  [m
 [31m-3. **MapScreen.kt** - Registered callback:[m
 [31m-```kotlin[m
@@ -2321,7 +2321,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-    flightDataManager.allTemplates,[m
 [31m-    uiState.activeProfile,[m
 [31m-    safeContainerSize,[m
-[31m-    flightDataManager.templateVersion // ✅ NEW: Reactive reload trigger[m
+[31m-    flightDataManager.templateVersion // ... NEW: Reactive reload trigger[m
 [31m-) {[m
 [31m-    flightDataManager.loadTemplateForProfile(...)[m
 [31m-}[m
@@ -2348,7 +2348,7 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
  ```kotlin[m
 [31m-cardPreferences.saveProfileTemplateCards(...)[m
 [31m-TemplateChangeNotifier.notifyTemplateChanged()[m
-[31m-Log.d(TAG, "🔄 Template change notification sent to MapScreen")[m
+[31m-Log.d(TAG, """ Template change notification sent to MapScreen")[m
 [31m-```[m
 [32m+[m[32m// In FlightDataManager[m
 [32m+[m[32mLog.d(TAG, "Template version: $templateVersion")[m
@@ -2357,31 +2357,31 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [32m+[m[32m// Should increment when cards toggled in Flight Data screen[m
  ```[m
 [31m-User toggles card in Flight Data[m
-[31m-    ↓[m
-[31m-Card saved to DataStore ✅[m
-[31m-    ↓[m
-[31m-TemplateChangeNotifier.notifyTemplateChanged() ✅[m
-[31m-    ↓[m
-[31m-FlightDataManager.incrementTemplateVersion() ✅[m
-[31m-    ↓[m
-[31m-MapComposeEffects LaunchedEffect triggered ✅[m
-[31m-    ↓[m
-[31m-loadTemplateForProfile() reloads cards ✅[m
-[31m-    ↓[m
-[31m-Cards display immediately on MapScreen 🎉[m
+[31m-    *"[m
+[31m-Card saved to DataStore ...[m
+[31m-    *"[m
+[31m-TemplateChangeNotifier.notifyTemplateChanged() ...[m
+[31m-    *"[m
+[31m-FlightDataManager.incrementTemplateVersion() ...[m
+[31m-    *"[m
+[31m-MapComposeEffects LaunchedEffect triggered ...[m
+[31m-    *"[m
+[31m-loadTemplateForProfile() reloads cards ...[m
+[31m-    *"[m
+[31m-Cards display immediately on MapScreen zper-mille[m
 [31m-```[m
 [31m-[m
 [31m-### Benefits:[m
-[31m-- ✅ Cards appear instantly when toggled[m
-[31m-- ✅ No need to switch flight modes to see changes[m
-[31m-- ✅ Clean reactive architecture[m
-[31m-- ✅ No polling or delays[m
-[31m-- ✅ Works across navigation boundaries[m
+[31m-- ... Cards appear instantly when toggled[m
+[31m-- ... No need to switch flight modes to see changes[m
+[31m-- ... Clean reactive architecture[m
+[31m-- ... No polling or delays[m
+[31m-- ... Works across navigation boundaries[m
  [m
  ---[m
  [m
-[31m-## 🎓 CONCLUSION[m
-[32m+[m[32m## 🎓 SUMMARY[m
+[31m-## z" CONCLUSION[m
+[32m+[m[32m## z" SUMMARY[m
  [m
 [31m-The DFCards system is a **profile-aware, template-based flight data card management system** with these key characteristics:[m
 [32m+[m[32mThe DFCards system is a **profile-aware, template-based, reactively updated** flight data card management system with:[m
@@ -2391,13 +2391,13 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-3. **Live Data Integration**: Real-time updates from GPS, barometer, and sensors[m
 [31m-4. **Persistence**: DataStore-backed card positions, selections, and templates[m
 [31m-5. **Fallback Mechanism**: Automatic template loading to prevent empty screens (causing the reported issue)[m
-[31m-6. **✅ NEW: Reactive Template Updates**: Immediate display when cards are toggled (FIXED 2025-10-02)[m
-[32m+[m[32m1. ✅ **Profile Isolation**: Each profile has unique card configurations per flight mode[m
-[32m+[m[32m2. ✅ **Template System**: Pre-defined templates with customizable cards[m
-[32m+[m[32m3. ✅ **Reactive Updates**: Cards appear immediately when toggled (TemplateChangeNotifier)[m
-[32m+[m[32m4. ✅ **Live Data Integration**: Real-time updates from GPS, barometer, sensors[m
-[32m+[m[32m5. ✅ **DataStore Persistence**: Profile-specific card positions, selections, templates[m
-[32m+[m[32m6. ⚠️ **Fallback Mechanism**: Automatic template loading to prevent empty screens (CAUSES BUG)[m
+[31m-6. **... NEW: Reactive Template Updates**: Immediate display when cards are toggled (FIXED 2025-10-02)[m
+[32m+[m[32m1. ... **Profile Isolation**: Each profile has unique card configurations per flight mode[m
+[32m+[m[32m2. ... **Template System**: Pre-defined templates with customizable cards[m
+[32m+[m[32m3. ... **Reactive Updates**: Cards appear immediately when toggled (TemplateChangeNotifier)[m
+[32m+[m[32m4. ... **Live Data Integration**: Real-time updates from GPS, barometer, sensors[m
+[32m+[m[32m5. ... **DataStore Persistence**: Profile-specific card positions, selections, templates[m
+[32m+[m[32m6.   **Fallback Mechanism**: Automatic template loading to prevent empty screens (CAUSES BUG)[m
  [m
 [31m-### Known Issues:[m
 [32m+[m[32m### Known Issue Summary[m
@@ -2405,8 +2405,8 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [31m-**Issue 1**: The fallback mechanism doesn't distinguish between "no template loaded yet" and "user explicitly deselected all cards", resulting in cards appearing even when none are selected.[m
 [32m+[m[32m**PRIMARY ISSUE**: The fallback mechanism doesn't distinguish between "no template loaded yet" and "user explicitly deselected all cards", resulting in cards appearing even when none are selected.[m
  [m
-[31m-**Status**: ⚠️ Still needs fix - See recommended solution in documentation above.[m
-[32m+[m[32m**STATUS**: ⚠️ UNFIXED - See proposed solution above.[m
+[31m-**Status**:   Still needs fix - See recommended solution in documentation above.[m
+[32m+[m[32m**STATUS**:   UNFIXED - See proposed solution above.[m
  [m
  ---[m
  [m
@@ -2415,3 +2415,4 @@ warning: in the working copy of '.claude/settings.local.json', LF will be replac
 [32m+[m[32m*Generated by Code Analysis - Claude Code*[m
 [32m+[m[32m*Last Updated: 2025-10-10*[m
  *Reference this document when making DFCards changes*[m
+

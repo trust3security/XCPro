@@ -6,9 +6,9 @@ This document describes how XCPro will evolve profile management so every user h
 
 ## 1. Goals
 
-1. **Always-available Welcome profile** – ship with a non-removable baseline so new installs and corrupted stores recover automatically.
-2. **Profile = SSOT** – each profile owns references to every configurable subsystem (flight data cards, polar data, look & feel, etc.), and switching profiles rehydrates all repositories coherently.
-3. **Versioned bundles** – exporting/importing a profile round-trips everything the user customized, enabling easy device migration.
+1. **Always-available Welcome profile** - ship with a non-removable baseline so new installs and corrupted stores recover automatically.
+2. **Profile = SSOT** - each profile owns references to every configurable subsystem (flight data cards, polar data, look & feel, etc.), and switching profiles rehydrates all repositories coherently.
+3. **Versioned bundles** - exporting/importing a profile round-trips everything the user customized, enabling easy device migration.
 
 ---
 
@@ -55,7 +55,7 @@ This document describes how XCPro will evolve profile management so every user h
 
 ## 3. Implementation Plan
 
-### Phase 1 – Default Profile & Guards
+### Phase 1 - Default Profile & Guards
 1. Add `/assets/profiles/welcome_profile_v2.json`.
 2. On app launch:
    - If `ProfileRepository` has no entries, clone the welcome profile, set `isDefault = true`, activate it.
@@ -63,22 +63,22 @@ This document describes how XCPro will evolve profile management so every user h
    - Prevent deletion of any profile with `flags.isDefault`.
 3. Provide `ProfileManager.resetDefaultProfile()` that re-applies the baseline state.
 
-### Phase 2 – ProfileManager & SSOT Wiring
+### Phase 2 - ProfileManager & SSOT Wiring
 1. Introduce `ProfileManager` (domain module):
    - `val profiles: StateFlow<List<UserProfile>>`
    - `val activeProfile: StateFlow<UserProfile>`
    - Methods: `setActiveProfile(id)`, `updateFlightDataConfig(...)`, etc.
 2. Refactor `FlightDataViewModel` to depend on `ProfileManager` instead of reading directly from `CardPreferences`. Internally it still uses `CardPreferences`, but writes flow through the manager so other consumers can see updates.
-3. Repeat for other subsystems (polar, general settings) – expose read/write APIs through the manager.
+3. Repeat for other subsystems (polar, general settings) - expose read/write APIs through the manager.
 
-### Phase 3 – Unified Persistence
+### Phase 3 - Unified Persistence
 1. Extend `ProfileStore` so each profile JSON persists:
    - Flight data template mappings (`templates`, `cardsByMode`, `visibilities`).
    - Polar parameters.
    - General settings (units, audio, gestures).
 2. During save:
    - Gather current state from each repository via the manager.
-   - Serialize to the active profile’s JSON and write to storage atomically.
+   - Serialize to the active profile's JSON and write to storage atomically.
 3. During load/switch:
    - Read the selected profile JSON, validate checksum/version.
    - Hydrate each subsystem repository.
@@ -87,10 +87,10 @@ This document describes how XCPro will evolve profile management so every user h
    - Provide a converter from legacy `CardPreferences`/`ProfileRepository` data into the new schema.
    - Store a `schemaVersion` to support future migrations.
 
-### Phase 4 – Export / Import UX
-1. Add “Export profile” action:
+### Phase 4 - Export / Import UX
+1. Add Export profile" action:
    - Writes the JSON + checksum to `/XCPro/Profiles/<profileName>-<date>.json`.
-2. Add “Import profile” action:
+2. Add Import profile" action:
    - Lets user pick a file, validates checksum & schema version.
    - If valid, adds to repository and optionally activates it.
 3. Document the directory so users can copy profiles between devices.
@@ -100,7 +100,7 @@ This document describes how XCPro will evolve profile management so every user h
 ## 4. UI Updates
 
 1. **Manage Profiles Screen**
-   - Display the Welcome profile with a lock badge and “Reset” button.
+   - Display the Welcome profile with a lock badge and Reset" button.
    - Show accurate card counts by reading `ProfileManager.flightDataConfig`.
    - Surface export/import actions.
 2. **Profile Indicator / Switcher**
@@ -140,3 +140,4 @@ This document describes how XCPro will evolve profile management so every user h
 ---
 
 By following this plan we ensure every user starts from a known-good configuration, reduce SSOT violations, and make multi-device workflows predictable. The ProfileManager becomes the gateway for every setting, so future features (e.g., per-aircraft polar libraries) plug into the same infrastructure without inventing new persistence paths.
+

@@ -7,7 +7,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -15,6 +14,7 @@ import kotlinx.coroutines.launch
 data class LevoVarioUiState(
     val macCready: Double = 0.0,
     val macCreadyRisk: Double = 0.0,
+    val showWindSpeedOnVario: Boolean = true,
     val audioSettings: VarioAudioSettings = VarioAudioSettings()
 )
 
@@ -24,13 +24,13 @@ class LevoVarioSettingsViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val configFlow = useCase.configFlow
-    private val audioFlow = useCase.audioSettingsFlow
 
-    val uiState: StateFlow<LevoVarioUiState> = combine(configFlow, audioFlow) { config, audio ->
+    val uiState: StateFlow<LevoVarioUiState> = configFlow.map { config ->
         LevoVarioUiState(
             macCready = config.macCready,
             macCreadyRisk = config.macCreadyRisk,
-            audioSettings = audio
+            showWindSpeedOnVario = config.showWindSpeedOnVario,
+            audioSettings = config.audioSettings
         )
     }
         .stateIn(
@@ -51,8 +51,16 @@ class LevoVarioSettingsViewModel @Inject constructor(
         }
     }
 
+    fun setShowWindSpeedOnVario(enabled: Boolean) {
+        viewModelScope.launch {
+            useCase.setShowWindSpeedOnVario(enabled)
+        }
+    }
+
     private fun updateAudioSettings(transform: (VarioAudioSettings) -> VarioAudioSettings) {
-        useCase.updateAudioSettings(transform)
+        viewModelScope.launch {
+            useCase.updateAudioSettings(transform)
+        }
     }
 
     fun setAudioEnabled(enabled: Boolean) = updateAudioSettings { it.copy(enabled = enabled) }

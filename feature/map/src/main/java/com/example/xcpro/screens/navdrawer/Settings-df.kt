@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.outlined.Insights
 import androidx.compose.material.icons.outlined.Style
 import androidx.compose.material3.*
 import androidx.compose.foundation.text.KeyboardOptions
@@ -181,6 +182,24 @@ fun SettingsScreen(
                                 title = "Levo Vario",
                                 icon = Icons.Default.Speed,
                                 onClick = { navController.navigate("levo_vario_settings") },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+
+                    // Row 2d: Diagnostics (single, under Levo Vario)
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Spacer(modifier = Modifier.weight(1f))
+                            CategoryItem(
+                                title = "Diagnostics",
+                                icon = Icons.Outlined.Insights,
+                                onClick = { navController.navigate("vario_diagnostics") },
                                 modifier = Modifier.weight(1f)
                             )
                         }

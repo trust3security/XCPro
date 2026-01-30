@@ -7,7 +7,7 @@
 
 ---
 
-## 📋 Executive Summary
+## "< Executive Summary
 
 Your variometer system has achieved **20-50x performance improvement** over the baseline:
 - **50Hz sample rate** (5x faster than before)
@@ -19,20 +19,20 @@ Your variometer system has achieved **20-50x performance improvement** over the 
 
 ---
 
-## 🎯 Test Objectives
+## z Test Objectives
 
 | Objective | Target | Method | Priority |
 |-----------|--------|--------|----------|
-| **Thermal detection lag** | <100ms | Audio beep timing | 🔴 Critical |
-| **Complementary vs Kalman** | <50ms lag | Response time comparison | 🔴 Critical |
-| **50Hz effectiveness** | 5x faster | Side-by-side comparison | 🔴 Critical |
-| **TE compensation** | Zero stick thermals | Maneuver testing | 🟠 High |
-| **Spike rejection** | No false beeps | Barometer jump handling | 🟡 Medium |
-| **Long-term accuracy** | ±10-15m drift | GPS reference tracking | 🟡 Medium |
+| **Thermal detection lag** | <100ms | Audio beep timing | "' Critical |
+| **Complementary vs Kalman** | <50ms lag | Response time comparison | "' Critical |
+| **50Hz effectiveness** | 5x faster | Side-by-side comparison | "' Critical |
+| **TE compensation** | Zero stick thermals | Maneuver testing |   High |
+| **Spike rejection** | No false beeps | Barometer jump handling |  Medium |
+| **Long-term accuracy** | +/-10-15m drift | GPS reference tracking |  Medium |
 
 ---
 
-## 🛠️ Pre-Flight Setup
+## >  Pre-Flight Setup
 
 ### 1. Enable Logging
 
@@ -59,7 +59,7 @@ adb logcat -s "FlightDataCalculator" -v time -d | tail -20
 
 Expected output:
 ```
-[HIGH-SPEED VARIO 50Hz] V/S=1.85m/s, Alt=1248.1m, Δt=0.020s, Opt=1.92m/s
+[HIGH-SPEED VARIO 50Hz] V/S=1.85m/s, Alt=1248.1m, "t=0.020s, Opt=1.92m/s
 [SLOW GPS 10Hz] PRIORITY2-50Hz(IMU+BARO)+TE: GPS alt=1250m, Baro alt=1248m, ...
 ```
 
@@ -74,7 +74,7 @@ This confirms all sensors are active and running at 50Hz.
 
 ---
 
-## 🧪 Ground Tests (Before Flight)
+## sectiona Ground Tests (Before Flight)
 
 ### Test G1: Static Baseline (5 minutes)
 
@@ -87,7 +87,7 @@ This confirms all sensors are active and running at 50Hz.
 4. Check logs for noise characteristics
 
 **Success Criteria:**
-- RawBaro shows ±0.5-2.0 m/s noise (this is normal!)
+- RawBaro shows +/-0.5-2.0 m/s noise (this is normal!)
 - Modern3State shows <0.05 m/s RMS
 - Complementary shows <0.05 m/s RMS
 - OptimizedKalman shows <0.05 m/s RMS
@@ -142,7 +142,7 @@ print(f"RMS noise: {statistics.stdev(values):.3f} m/s")
 3. Watch for spike rejection warnings in logs
 
 **Success Criteria:**
-- Look for log message: `⚠️ BARO SPIKE DETECTED: Innovation=XX.XXm - LIMITED to ±5.0m`
+- Look for log message: `  BARO SPIKE DETECTED: Innovation=XX.XXm - LIMITED to +/-5.0m`
 - Vario should NOT show false +10m/s climb
 - Audio should NOT beep falsely
 
@@ -150,9 +150,9 @@ print(f"RMS noise: {statistics.stdev(values):.3f} m/s")
 
 ---
 
-## ✈️ Flight Tests
+## ^ Flight Tests
 
-### Test F1: Thermal Entry Detection ⭐ CRITICAL
+### Test F1: Thermal Entry Detection  CRITICAL
 
 **Purpose:** Measure thermal detection lag (primary performance metric)
 
@@ -161,7 +161,7 @@ print(f"RMS noise: {statistics.stdev(values):.3f} m/s")
 2. Enter thermal
 3. **Pilot says "NOW" when feeling thermal** (audio recording!)
 4. Note vario beep timestamp
-5. Calculate lag: Pilot feel → Audio beep
+5. Calculate lag: Pilot feel -> Audio beep
 
 **Data Collection:**
 - Audio recording (pilot voice + vario beeps)
@@ -180,7 +180,7 @@ Thermal Detection Lag = Beep Time - "NOW" Time
 Example:
 Pilot: "NOW" at 14:32:05.200
 Vario: Beep at 14:32:05.285
-Lag: 85ms ✅ SUCCESS (target <100ms)
+Lag: 85ms ... SUCCESS (target <100ms)
 ```
 
 ---
@@ -207,8 +207,8 @@ Lag: 85ms ✅ SUCCESS (target <100ms)
 | **LegacyKalman** | Moderate (500ms) | Excellent | ~10ms |
 
 **Decision Point:**
-- If Complementary is noticeably faster AND acceptable smoothness → consider making it primary
-- If Modern3State is fast enough AND smoother → keep as primary
+- If Complementary is noticeably faster AND acceptable smoothness -> consider making it primary
+- If Modern3State is fast enough AND smoother -> keep as primary
 - Could offer user choice in settings
 
 ---
@@ -222,7 +222,7 @@ Lag: 85ms ✅ SUCCESS (target <100ms)
 2. Perform pilot maneuvers:
    - **Pull-up:** Slow from 90 km/h to 60 km/h
    - **Push-over:** Speed from 60 km/h to 90 km/h
-   - **Coordinated turn:** Bank 30° without speed change
+   - **Coordinated turn:** Bank 30deg without speed change
 3. Monitor for false vario readings
 
 **Success Criteria (TE Compensation Working):**
@@ -233,7 +233,7 @@ Lag: 85ms ✅ SUCCESS (target <100ms)
 
 **Log Check:**
 ```
-Raw V/S=1.85m/s, TE V/S=0.05m/s  ✅ TE compensation active
+Raw V/S=1.85m/s, TE V/S=0.05m/s  ... TE compensation active
 ```
 
 If you see large difference between Raw and TE during maneuvers, TE is working!
@@ -259,7 +259,7 @@ data class CompleteFlightData(
 ```
 
 **Success Criteria:**
-1. **varioRaw** - Very noisy (±0.5-2.0 m/s) - this is NORMAL
+1. **varioRaw** - Very noisy (+/-0.5-2.0 m/s) - this is NORMAL
 2. **varioGPS** - Lags by 2-5 seconds - this is EXPECTED
 3. **varioLegacy** - Smooth but slower response
 4. **varioOptimized** - Similar to Legacy but 30-50% faster
@@ -294,8 +294,8 @@ Compare current 50Hz system to old 10Hz baseline:
 
 **Validation:**
 - Check log messages show `[HIGH-SPEED VARIO 50Hz]` and `[SLOW GPS 10Hz]`
-- Verify Δt ≈ 0.020s (50Hz) in vario loop
-- Verify Δt ≈ 0.100s (10Hz) in GPS loop
+- Verify "t per-mille^ 0.020s (50Hz) in vario loop
+- Verify "t per-mille^ 0.100s (10Hz) in GPS loop
 
 **Success:** 5x faster updates = 5x faster thermal detection
 
@@ -312,15 +312,15 @@ Compare current 50Hz system to old 10Hz baseline:
 4. Calculate drift
 
 **Success Criteria:**
-- **Current (no Priority 4):** ±10-15m acceptable
-- **After Priority 4:** ±5m target
+- **Current (no Priority 4):** +/-10-15m acceptable
+- **After Priority 4:** +/-5m target
 - Drift rate: <1m per 10 minutes
 
-**Note:** Priority 4 (Thermal Drift Tracking) not yet implemented, so ±10-15m drift is expected.
+**Note:** Priority 4 (Thermal Drift Tracking) not yet implemented, so +/-10-15m drift is expected.
 
 ---
 
-## 📊 Data Analysis
+## "s Data Analysis
 
 ### Post-Flight Log Analysis
 
@@ -358,17 +358,17 @@ with open('vario_loop.txt') as f:
     avg_delta = sum(deltas) / len(deltas)
     freq = 1.0 / avg_delta if avg_delta > 0 else 0
 
-    print(f"Average Δt: {avg_delta*1000:.1f}ms")
+    print(f"Average "t: {avg_delta*1000:.1f}ms")
     print(f"Sample rate: {freq:.1f} Hz")
     print(f"Target: 50 Hz (20ms)")
 ```
 
 **Expected Output:**
 ```
-Average Δt: 20.0ms
+Average "t: 20.0ms
 Sample rate: 50.0 Hz
 Target: 50 Hz (20ms)
-✅ SUCCESS - Running at 50Hz
+... SUCCESS - Running at 50Hz
 ```
 
 #### 3. Thermal Detection Lag
@@ -408,12 +408,12 @@ for name, values in varios.items():
 
 ---
 
-## ✅ Success Criteria Summary
+## ... Success Criteria Summary
 
 ### Critical (Must Pass)
 
 - [ ] **Thermal detection <100ms** (vs 1-2s baseline)
-- [ ] **50Hz vario loop confirmed** (Δt ≈ 20ms)
+- [ ] **50Hz vario loop confirmed** ("t per-mille^ 20ms)
 - [ ] **TE compensation works** (no stick thermals)
 - [ ] **All 6 varios functional** (no crashes/errors)
 
@@ -432,23 +432,23 @@ for name, values in varios.items():
 
 ---
 
-## 🎯 Decision Matrix
+## z Decision Matrix
 
 After testing, use this matrix to decide next steps:
 
 | Test Result | Action |
 |-------------|--------|
-| **Thermal lag <100ms achieved** | ✅ Success! Priorities 1+2 validated |
+| **Thermal lag <100ms achieved** | ... Success! Priorities 1+2 validated |
 | **Complementary noticeably faster** | Consider making it primary or add user choice |
 | **Modern3State adequate** | Keep as primary (current default) |
-| **TE removes stick thermals** | ✅ Success! Competition ready |
+| **TE removes stick thermals** | ... Success! Competition ready |
 | **Drift >15m** | Consider implementing Priority 4 (thermal drift tracking) |
-| **50Hz confirmed** | ✅ Success! Priority 2 validated |
-| **Spike rejection working** | ✅ Success! Bonus feature working |
+| **50Hz confirmed** | ... Success! Priority 2 validated |
+| **Spike rejection working** | ... Success! Bonus feature working |
 
 ---
 
-## 📝 Flight Test Report Template
+## " Flight Test Report Template
 
 After flight, fill this out:
 
@@ -498,7 +498,7 @@ After flight, fill this out:
 
 ---
 
-## 🚀 Next Steps After Testing
+##  Next Steps After Testing
 
 1. **If all tests pass:**
    - System is production-ready!
@@ -519,7 +519,7 @@ After flight, fill this out:
 
 ---
 
-## 📚 References
+## " References
 
 - **VARIO_IMPROVEMENTS.md** - Technical implementation details
 - **VARIO_SYSTEM_STATUS.md** - Current system architecture
@@ -533,4 +533,6 @@ After flight, fill this out:
 **Confidence:** High (all core features implemented)
 **Risk:** Low (no breaking changes, just performance improvements)
 
-**Good luck with the flight test! 🚁**
+**Good luck with the flight test! **
+
+

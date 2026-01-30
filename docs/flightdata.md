@@ -9,7 +9,7 @@ recent fixes and debugging steps used on the Levo branch. It is intended for fut
 - **FlightCardsUseCase** wraps **CardStateRepository** and derivations. It owns the card state map
   and live update logic.
 - **CardStateRepository** owns card state flows, layout, persistence, and live updates.
-- **CardContainer** (dfcards-library) renders cards from the view model’s state flows.
+- **CardContainer** (dfcards-library) renders cards from the view model's state flows.
 - **MapScreenRoot / MapComposeEffects** (feature/map) wires the map screen, profile, mode, and
   card view model to card rendering and live data updates.
 - **FlightDataMgmt / FlightDataScreensTab** (feature/map) is the Flight Data UI where users select
@@ -108,8 +108,8 @@ If `flows=0` but `selected>0`:
 - Check `FlightCardsUseCase.cardStateFlows` is a getter (not a cached map).
 
 ## Quick validation checklist
-1) Open app → Flight Data → select template + cards.
-2) Return to map → cards should render immediately.
+1) Open app -> Flight Data -> select template + cards.
+2) Return to map -> cards should render immediately.
 3) Confirm template re-tap does not clear selected cards.
 4) Confirm selection persists after switching modes.
 
@@ -118,3 +118,5 @@ If `flows=0` but `selected>0`:
   explicit export/import.
 - `cardHydrationReady` gates live card updates; cards should still render (with placeholder values)
   as long as state flows exist.
+
+

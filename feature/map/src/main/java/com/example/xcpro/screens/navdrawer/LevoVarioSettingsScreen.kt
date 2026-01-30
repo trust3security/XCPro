@@ -17,6 +17,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -100,6 +101,17 @@ fun LevoVarioSettingsScreen(
 
             Spacer(modifier = Modifier.height(4.dp))
             Text(
+                text = "General",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            VarioDisplayOptionsCard(
+                showWindSpeedOnVario = uiState.showWindSpeedOnVario,
+                onShowWindSpeedOnVarioChange = viewModel::setShowWindSpeedOnVario
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
                 text = "Audio alerts",
                 style = MaterialTheme.typography.titleMedium
             )
@@ -129,8 +141,6 @@ fun LevoVarioSettingsScreen(
                 onSinkChange = viewModel::setSinkThreshold,
                 onSinkChangeFinished = {}
             )
-
-            VarioAudioInfoCard()
         }
     }
 }
@@ -222,5 +232,51 @@ private fun BulletText(text: String) {
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.weight(1f)
         )
+    }
+}
+
+@Composable
+private fun VarioDisplayOptionsCard(
+    showWindSpeedOnVario: Boolean,
+    onShowWindSpeedOnVarioChange: (Boolean) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Variometer overlay",
+                style = MaterialTheme.typography.titleSmall
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "Wind speed",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = "Show wind speed above the needle when wind is available",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                Switch(
+                    checked = showWindSpeedOnVario,
+                    onCheckedChange = onShowWindSpeedOnVarioChange
+                )
+            }
+        }
     }
 }

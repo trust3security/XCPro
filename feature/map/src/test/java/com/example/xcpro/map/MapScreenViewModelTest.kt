@@ -27,6 +27,7 @@ import com.example.xcpro.sensors.SensorStatus
 import com.example.xcpro.sensors.UnifiedSensorManager
 import com.example.xcpro.sensors.domain.FlyingState
 import com.example.xcpro.vario.VarioServiceManager
+import com.example.xcpro.vario.LevoVarioPreferencesRepository
 import com.example.xcpro.weather.wind.data.WindSensorFusionRepository
 import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.testing.MainDispatcherRule
@@ -147,6 +148,7 @@ class MapScreenViewModelTest {
     )
     private val ballastControllerFactory =
         BallastControllerFactory(gliderRepository, mainDispatcherRule.dispatcher)
+    private val levoVarioPreferencesRepository = LevoVarioPreferencesRepository(context)
 
     @After
     fun tearDown() {
@@ -211,7 +213,8 @@ class MapScreenViewModelTest {
             trailSettingsUseCase = trailSettingsUseCase,
             calibrateQnhUseCase = calibrateQnhUseCase,
             variometerLayoutUseCase = variometerLayoutUseCase,
-            ballastControllerFactory = ballastControllerFactory
+            ballastControllerFactory = ballastControllerFactory,
+            levoVarioPreferencesRepository = levoVarioPreferencesRepository
         )
 
         drainMain()
@@ -246,7 +249,8 @@ class MapScreenViewModelTest {
             trailSettingsUseCase = trailSettingsUseCase,
             calibrateQnhUseCase = calibrateQnhUseCase,
             variometerLayoutUseCase = variometerLayoutUseCase,
-            ballastControllerFactory = ballastControllerFactory
+            ballastControllerFactory = ballastControllerFactory,
+            levoVarioPreferencesRepository = levoVarioPreferencesRepository
         )
 
         drainMain()
@@ -373,7 +377,8 @@ class MapScreenViewModelTest {
             trailSettingsUseCase = trailSettingsUseCase,
             calibrateQnhUseCase = calibrateQnhUseCase,
             variometerLayoutUseCase = variometerLayoutUseCase,
-            ballastControllerFactory = ballastControllerFactory
+            ballastControllerFactory = ballastControllerFactory,
+            levoVarioPreferencesRepository = levoVarioPreferencesRepository
         )
     }
 

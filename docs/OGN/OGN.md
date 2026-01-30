@@ -1,4 +1,4 @@
-# OGN.md — Open Glider Network live traffic in XCPro (Android)
+# OGN.md -- Open Glider Network live traffic in XCPro (Android)
 
 Goal: Add an OGN (Open Glider Network) live-traffic map to XCPro that shows nearby gliders/aircraft in real time, enriched with OGN Device Database (DDB) details, and designed so Codex can implement end-to-end without asking you questions.
 
@@ -6,7 +6,7 @@ This plan assumes:
 - Android app (Kotlin), Jetpack Compose UI, MVVM + UDF/SSOT patterns.
 - Coroutines + Flow.
 - Map UI: Google Maps Compose (recommended) or Mapbox (swapable via an interface).
-- Phone connects directly to OGN APRS TCP feed first. (Optional “backend relay” section included.)
+- Phone connects directly to OGN APRS TCP feed first. (Optional backend relay" section included.)
 
 ---
 
@@ -22,13 +22,13 @@ This plan assumes:
    - heading/track indicator
    - stale fade/grey (e.g., >60s)
    - remove expired (e.g., >120s)
-6. Tap marker → details sheet (reg, CN, type, altitude, speed, last seen).
+6. Tap marker -> details sheet (reg, CN, type, altitude, speed, last seen).
 7. Settings:
    - radius km (default 250)
    - expiry seconds (default 120)
    - stale threshold seconds (default 60)
-   - update/throttle interval for UI (e.g., 2–5 Hz)
-   - optionally: “follow me” / “follow map center”
+   - update/throttle interval for UI (e.g., 2-5 Hz)
+   - optionally: follow me" / follow map center"
 8. Robustness:
    - auto-reconnect
    - backoff with jitter
@@ -39,8 +39,8 @@ This plan assumes:
 - Marker clustering
 - Trails (last N minutes)
 - Aircraft type icons (glider/tow/para/heli/unknown)
-- “Only gliders” filter
-- “My club area” presets
+- Only gliders" filter
+- My club area" presets
 - Offline DDB cache warm-up.
 
 ---
@@ -52,10 +52,10 @@ This plan assumes:
   - `data/`
   - `domain/`
   - `ui/`
-- Keep everything behind interfaces so you can replace “direct APRS” with “backend relay” later.
+- Keep everything behind interfaces so you can replace direct APRS" with backend relay" later.
 
 ### Data flow
-OGN socket → parsed `AircraftUpdate` → reducer updates in-memory store → `StateFlow<List<AircraftViewItem>>` → UI markers.
+OGN socket -> parsed `AircraftUpdate` -> reducer updates in-memory store -> `StateFlow<List<AircraftViewItem>>` -> UI markers.
 
 ### Single source of truth (SSOT)
 - `OgnTrafficStore` holds a `MutableStateFlow<Map<DeviceId, AircraftState>>`
@@ -161,12 +161,12 @@ Implement it, but allow config override if needed.
 ### Filter handling
 Implement server-side filter command string:
 - Range filter example pattern: `filter r/<lat>/<lon>/<km>`
-- Only update filter if center moved more than e.g. 10–20km to reduce churn.
-- Reconnect after filter update if server doesn’t support mid-session changes reliably (configurable behavior).
+- Only update filter if center moved more than e.g. 10-20km to reduce churn.
+- Reconnect after filter update if server doesn't support mid-session changes reliably (configurable behavior).
 
 ---
 
-## 4) APRS message parsing (data → domain)
+## 4) APRS message parsing (data -> domain)
 
 Create `ogn/data/aprs/AprsParser.kt`:
 
@@ -184,7 +184,7 @@ Implementation notes:
   - lat/lon (APRS format variants: compressed/uncompressed)
   - track/speed if present
   - altitude if present (often in feet in APRS; convert to meters)
-- If you can’t parse some fields, still output lat/lon + timestamp.
+- If you can't parse some fields, still output lat/lon + timestamp.
 
 **Unit tests are mandatory**:
 - Provide a `test/resources/aprs_samples.txt` with real-ish lines (sanitized).
@@ -212,7 +212,7 @@ interface DdbRepository {
 - Refresh cadence:
   - at app start
   - then every 24h (configurable)
-  - manual “Refresh DDB” button in settings.
+  - manual Refresh DDB" button in settings.
 
 ### JSON parsing
 - Use Kotlinx Serialization or Moshi.
@@ -221,7 +221,7 @@ interface DdbRepository {
 **Privacy**
 - If DDB says not tracked/identified, you may:
   - still display but hide reg/CN (show anonymized) OR
-  - respect a strict “don’t show” rule depending on your policy.
+  - respect a strict don't show" rule depending on your policy.
 Decide policy in code as a config flag:
 - `respectDdbPrivacy: Boolean = true`
 
@@ -249,7 +249,7 @@ Implement:
 - `onUpdate`: replace entry by id (keep latest).
 - `purgeExpired`: remove where `(now - lastUpdate) > expireSec`.
 
-Run purge on a ticker every 5–10 seconds while streaming.
+Run purge on a ticker every 5-10 seconds while streaming.
 
 ---
 
@@ -295,7 +295,7 @@ Add reconnect with backoff:
   - `GoogleMap(...)`
   - `Marker` per aircraft item
 - Marker rotation: use `trackDeg`
-- Stale style: change alpha, label suffix “(stale)”
+- Stale style: change alpha, label suffix (stale)"
 - Bottom sheet:
   - `ModalBottomSheet` with details.
 
@@ -330,13 +330,21 @@ Start streaming when screen enters `STARTED`, stop when `STOPPED`.
 
 Expose a simple settings UI.
 
+### General > FLARM (UI style)
+- Add a "FLARM" section under General settings.
+- UI styling: match the Polar header layout and arrow colors (copy Polar header and arrow styles).
+- Fields (user-editable):
+  - Registration (name/letters)
+  - Competition ID (alphanumeric)
+  - FLARM ID (alphanumeric/hex)
+
 ---
 
 ## 10) Testing contract (Codex must do this)
 
 ### Unit tests
 - `AprsParserTest`:
-  - parse valid line → expected lat/lon
+  - parse valid line -> expected lat/lon
   - parse altitude conversion
   - ignore irrelevant lines
 - `OgnTrafficStoreTest`:
@@ -352,7 +360,7 @@ Expose a simple settings UI.
 
 ---
 
-## 11) “Backend relay” option (recommended for production)
+## 11) Backend relay" option (recommended for production)
 
 If you want reliability + lower battery + easier parsing:
 - Run a small server (Fly.io / VPS) that:
@@ -367,30 +375,30 @@ Keep the same domain model; just swap `OgnAprsClient` implementation.
 
 ## 12) Implementation steps for Codex (do not ask questions)
 
-### Phase A — Core plumbing
+### Phase A -- Core plumbing
 1. Add `ogn/` package structure.
 2. Implement domain models.
 3. Implement `OgnTrafficStore` + tests.
 
-### Phase B — APRS client + parser
+### Phase B -- APRS client + parser
 4. Implement `OgnAprsTcpClient` (callbackFlow + reconnect wrapper).
 5. Implement `AprsParser` minimal for lat/lon + timestamp.
 6. Add parser unit tests with sample lines.
 
-### Phase C — DDB
+### Phase C -- DDB
 7. Implement `DdbRepository` with file cache + JSON parse.
 8. Add tests.
 
-### Phase D — Repository
+### Phase D -- Repository
 9. Implement `OgnTrafficRepositoryImpl` end-to-end.
 10. Add fake client integration test.
 
-### Phase E — UI
+### Phase E -- UI
 11. Add OGN Map screen with markers + bottom sheet.
 12. Add lifecycle start/stop.
 13. Add settings screen.
 
-### Phase F — Hardening
+### Phase F -- Hardening
 14. Add throttling, backoff, stale/expire visuals.
 15. Add clustering if marker count large.
 
@@ -402,7 +410,7 @@ Keep the same domain model; just swap `OgnAprsClient` implementation.
 - [ ] Markers update smoothly without jank.
 - [ ] Aircraft disappear after expiry seconds.
 - [ ] DDB enrichment shows reg/CN/type where available.
-- [ ] App doesn’t keep socket open when screen not visible.
+- [ ] App doesn't keep socket open when screen not visible.
 - [ ] All tests pass: `./gradlew testDebugUnitTest lintDebug assembleDebug`
 
 ---
@@ -424,7 +432,7 @@ Keep the same domain model; just swap `OgnAprsClient` implementation.
   - Fall back to anonymized ID label.
 - Do NOT persist, replay, or redistribute live traffic beyond permitted windows.
 - Display an in-app disclaimer:
-  > “OGN traffic is informational only and must not be used for collision avoidance or separation.”
+  > OGN traffic is informational only and must not be used for collision avoidance or separation."
 
 ---
 
@@ -438,14 +446,14 @@ Keep the same domain model; just swap `OgnAprsClient` implementation.
 - `ERROR`
 
 ### Backoff policy
-- Exponential backoff: 1s → 2s → 4s → 8s → 16s → max 60s
-- Add random jitter (±20%)
+- Exponential backoff: 1s -> 2s -> 4s -> 8s -> 16s -> max 60s
+- Add random jitter (+/-20%)
 - Reset backoff after a stable streaming period (e.g. 60s)
 
 ### Socket rules
 - Enable TCP keepalive.
 - Read timeout: 20s.
-- Treat prolonged silence as a soft failure → reconnect.
+- Treat prolonged silence as a soft failure -> reconnect.
 
 ---
 
@@ -454,7 +462,7 @@ Keep the same domain model; just swap `OgnAprsClient` implementation.
 - Only update server-side filter if:
   - Map center moved > 20 km, OR
   - Radius changed.
-- Debounce filter updates by 1–2 seconds while user pans.
+- Debounce filter updates by 1-2 seconds while user pans.
 - Follow modes:
   - `FOLLOW_DEVICE`: center = GPS position
   - `FOLLOW_MAP`: center = map camera
@@ -465,7 +473,7 @@ Keep the same domain model; just swap `OgnAprsClient` implementation.
 ## 18) Rendering & performance contract (non-negotiable)
 
 - Parse APRS at full rate.
-- UI emission rate: **max 2–5 Hz**.
+- UI emission rate: **max 2-5 Hz**.
 - Marker updates must be diff-based:
   - Update position/rotation/alpha only.
   - Do NOT recreate markers every frame.
@@ -479,11 +487,11 @@ Keep the same domain model; just swap `OgnAprsClient` implementation.
 Primary label (in priority order):
 1. Contest Number (CN)
 2. Registration
-3. Short anonymized ID (last 4–6 chars)
+3. Short anonymized ID (last 4-6 chars)
 
 Secondary label:
 - Aircraft type/model if known
-- Else “Unknown”
+- Else Unknown"
 
 Labels must be stable across updates to avoid flicker.
 
@@ -492,9 +500,9 @@ Labels must be stable across updates to avoid flicker.
 ## 20) Units & normalization rules
 
 - Altitude:
-  - APRS feet → convert to meters internally.
+  - APRS feet -> convert to meters internally.
 - Speed:
-  - Knots → convert to m/s internally.
+  - Knots -> convert to m/s internally.
 - Track:
   - Treat as true degrees unless explicitly stated otherwise.
 - All domain models use SI units internally.
@@ -509,7 +517,7 @@ Labels must be stable across updates to avoid flicker.
 - Refresh if cache age > 24h.
 - On refresh failure:
   - Keep old cache.
-  - Flag DDB status as “stale” in UI/logs.
+  - Flag DDB status as stale" in UI/logs.
 
 ---
 
@@ -521,7 +529,7 @@ For production stability:
 - One backend connection to OGN APRS.
 - Server parses + enriches + filters.
 - Android connects via WebSocket:
-  `wss://<server>/ogn?lat=…&lon=…&r=…`
+  `wss://<server>/ogn?lat=...&lon=...&r=...`
 
 Domain models and UI remain unchanged; only data source swaps.
 
@@ -535,6 +543,58 @@ Domain models and UI remain unchanged; only data source swaps.
 - [ ] Battery drain acceptable (no background socket).
 - [ ] All unit tests + lint + assemble pass.
 
+---
+
+## 24) OGN Uplink (Phone Tracking)
+
+Goal: optionally publish the user's phone position to OGN while the app is active.
+
+### 24.1 Requirements
+- Opt-in only (default OFF). Show clear UI state when transmitting.
+- Transmit only while app is visible (STARTED/RESUMED). No background socket by default.
+- Do not transmit if GPS fix is stale or accuracy is poor (define thresholds).
+- Respect privacy: allow "anonymous" mode and suppress any user identifiers if enabled.
+- De-duplication: if the pilot flies with a real FLARM device, allow a user-provided
+  "Own FLARM ID" to avoid showing duplicate aircraft (phone + FLARM).
+
+### 24.2 Data source (SSOT)
+- Use FlightDataRepository (via FlightDataUseCase) for location and track.
+- Do not read sensors directly in UI or ViewModel.
+- Use wall time only for APRS timestamp formatting (UTC). Domain logic still uses injected clocks.
+
+### 24.3 Protocol outline (APRS-IS)
+- Same TCP connection style as downlink (APRS-IS).
+- Login line includes callsign, passcode, app version (pass -1 allowed for read-only; uplink may require real passcode).
+- Send periodic keepalive lines starting with '#'.
+
+### 24.4 Packet content (minimal)
+- UTC time, latitude, longitude.
+- Track (deg), speed (knots), altitude (feet) if available.
+- OGN "idXXYYYYYY" field in the comment section (aircraft type + device ID).
+- Keep comment fields minimal; do not add vendor strings in production UI text.
+
+### 24.4A Registration / Competition ID (status messages)
+- Registration (Reg=) and Competition ID (ID=) should be sent in a low-rate APRS status
+  message, not on every position update.
+- Status format is documented by OGN and marked as "new / not fully established" and
+  subject to change, so treat it as optional and rate-limit it.
+- Recommended: send on change and then no more than every few minutes while active.
+
+### 24.5 Cadence
+- Target 5-20 seconds per position update (configurable).
+- Backoff if no fix or if the app is idle.
+
+### 24.6 Safety / UX
+- Add a clear disclaimer: informational only, not for separation.
+- Provide a visible TX indicator and a quick OFF control.
+
+### 24.7 Own FLARM ID (de-duplication)
+- Settings: "Own FLARM ID (hex)" field (e.g. ABC123).
+- Downlink: if incoming OGN ID matches Own FLARM ID, treat it as ownship and hide/merge
+  from traffic list to avoid a duplicate marker.
+- Uplink: when Own FLARM ID is set, default to suppress phone transmission unless the user
+  explicitly enables "Transmit anyway".
+
 
 ---
 
@@ -546,11 +606,11 @@ This section captures Android/XCPro-specific realities that commonly break OGN i
 - OGN APRS is a plain TCP text feed (not HTTPS).
 - Use `java.net.Socket` directly (IO dispatcher). Do NOT route this through an HTTP client stack.
 - If you later add any cleartext HTTP endpoints, ensure Android Network Security Config is set appropriately.
-- Add diagnostics to detect “connected but no data” (see debug panel).
+- Add diagnostics to detect connected but no data" (see debug panel).
 
-### 27.2 Permissions & lifecycle (don’t get killed by Android)
+### 27.2 Permissions & lifecycle (don't get killed by Android)
 - Permissions:
-  - `ACCESS_FINE_LOCATION` (only if using FOLLOW_DEVICE / “center on me”)
+  - `ACCESS_FINE_LOCATION` (only if using FOLLOW_DEVICE / center on me")
 - Lifecycle rule (default):
   - Stream only while the OGN screen is in `STARTED` (or `RESUMED`).
   - On leaving the screen, cancel collectors and close the socket.
@@ -566,11 +626,11 @@ This section captures Android/XCPro-specific realities that commonly break OGN i
 - Log the server greeting + any auth/denial messages to help troubleshoot.
 
 ### 27.4 Debug panel (mandatory for supportability)
-Add an in-app “OGN Debug” panel (hidden behind a toggle or developer setting) showing:
+Add an in-app OGN Debug" panel (hidden behind a toggle or developer setting) showing:
 - Connection state: DISCONNECTED / CONNECTING / STREAMING / BACKING_OFF / ERROR
 - Current filter string (exact)
 - Map center + radius currently applied
-- Last line received timestamp + “seconds since last packet”
+- Last line received timestamp + seconds since last packet"
 - Packets/sec (rolling average, e.g. 10s window)
 - Aircraft counts:
   - total in store
@@ -581,7 +641,7 @@ Add an in-app “OGN Debug” panel (hidden behind a toggle or developer setting
   - last refresh time + success/failure
 - Last error (exception message + stack trace in logs only)
 
-This debug screen is what you use when someone says “it shows nothing at Keepit”.
+This debug screen is what you use when someone says it shows nothing at Keepit".
 
 ### 27.5 Map rendering performance rules (Compose reality)
 - Do NOT recreate all markers every emission.
@@ -589,26 +649,28 @@ This debug screen is what you use when someone says “it shows nothing at Keepi
   - position
   - rotation (track)
   - alpha (stale)
-- Throttle UI updates to 2–5 Hz maximum (already required).
+- Throttle UI updates to 2-5 Hz maximum (already required).
 - Enable clustering when aircraft count > 50 to avoid jank.
-- Cap displayed aircraft (e.g. 500) and prefer “freshest + nearest” when capping.
+- Cap displayed aircraft (e.g. 500) and prefer freshest + nearest" when capping.
 
-### 27.6 Data alignment with XCPro (avoid incorrect “helpfulness”)
+### 27.6 Data alignment with XCPro (avoid incorrect helpfulness")
 - Optionally display **ownship** (XCPro GPS position) as a separate marker.
-- Do NOT “wind-correct” other aircraft:
+- Do NOT wind-correct" other aircraft:
   - OGN reports ground tracks/speeds; applying XCPro wind to others will make them wrong.
 - Keep OGN traffic purely situational; do not mix into glide/arrival calculations.
 
 ### 27.7 Field failure modes (handle them explicitly)
-OGN will sometimes show nothing for reasons that are not “bugs”. Your UI must differentiate:
+OGN will sometimes show nothing for reasons that are not bugs". Your UI must differentiate:
 - No nearby receivers / no traffic:
-  - Show empty state: “No traffic in range” (not an error)
+  - Show empty state: No traffic in range" (not an error)
 - No internet:
-  - Show DISCONNECTED + “No data connection”
+  - Show DISCONNECTED + No data connection"
 - Connected but silent feed:
   - After read-timeout/silence threshold, transition to BACKING_OFF and reconnect
 - DDB missing/unavailable:
-  - Show anonymized IDs; mark DDB status “stale/unavailable” in debug panel
+  - Show anonymized IDs; mark DDB status stale/unavailable" in debug panel
 - Stale snapshot:
   - If you decide to keep last-known markers, visually mark them as stale and do not present as live
+
+
 

@@ -1,4 +1,4 @@
-﻿Title: learn git worktrees in under 5 minutes
+Title: learn git worktrees in under 5 minutes
 
 URL Source: https://m.youtube.com/watch?v=8vsRb2mTBA8
 
@@ -60,7 +60,7 @@ Shopping
 
 If playback doesn't begin shortly, try restarting your device.
 
-ΓÇó
+
 
 You're signed out
 
@@ -84,17 +84,17 @@ An error occurred while retrieving sharing information. Please try again later.
 
 0:00 / 0:00 Live
 
-ΓÇóWatch full video
+Watch full video
 
-ΓÇó
+
 
 why and how to use git worktrees
 
-ΓÇó
 
-[8:14 Git's Best And Most Unknown Feature ThePrimeagen 334K views ΓÇó 4 years ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=2uEqYw-N8uE)[31:40 Git is holding us back Theo - t3ΓÇñgg 65K views ΓÇó 1 month ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=eBXyn8SXFtU)[12:42 what's in my bag as a software developer bashbunni 33K views ΓÇó 1 year ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=Nph1zU-MaB8)[5:59 escaping tutorial hell using open source projects bashbunni 36K views ΓÇó 6 months ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=4vg-kymypbs)[5:45 You need to use Git Worktrees Andrew Burgess 65K views ΓÇó 7 months ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=oI631eCAQnQ)[18:05 Standout BAD HABITS Even Senior Programmers Have Modern Software Engineering 162K views ΓÇó 5 months ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=nY6RExFP0G0)[11:09 Apple Introduces The Year Of The Linux Desktop!ThePrimeTime 794K views ΓÇó 6 days ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=GQJZ96l-XQ4)[13:11 how I code without Internet or AI bashbunni 32K views ΓÇó 2 days ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=1Jko7VqacHY)[16:27 Google's Git Killer Is INSANELY Better (and it's open source)DevOps Toolbox 269K views ΓÇó 5 months ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=cZqFaMlufDY)[14:26 I tried omarchy for a week... here's what I think (from a linux fangirl)bashbunni 75K views ΓÇó 9 days ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=rxSVfhUXRDU)[8:28 how to keep coding fun (ft. tech twitter)bashbunni 24K views ΓÇó 5 months ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=rS7vp3huPVc)[22:20 The Original Sin of Computing...that no one can fix LaurieWired 697K views ΓÇó 8 days ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=Fu3laL5VYdM)
 
-Sign in to confirm youΓÇÖre not a bot This helps protect our community. [Learn more](https://support.google.com/youtube/answer/3037019#zippy=%2Ccheck-that-youre-signed-into-youtube)
+[8:14 Git's Best And Most Unknown Feature ThePrimeagen 334K views  4 years ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=2uEqYw-N8uE)[31:40 Git is holding us back Theo - t3gg 65K views  1 month ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=eBXyn8SXFtU)[12:42 what's in my bag as a software developer bashbunni 33K views  1 year ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=Nph1zU-MaB8)[5:59 escaping tutorial hell using open source projects bashbunni 36K views  6 months ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=4vg-kymypbs)[5:45 You need to use Git Worktrees Andrew Burgess 65K views  7 months ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=oI631eCAQnQ)[18:05 Standout BAD HABITS Even Senior Programmers Have Modern Software Engineering 162K views  5 months ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=nY6RExFP0G0)[11:09 Apple Introduces The Year Of The Linux Desktop!ThePrimeTime 794K views  6 days ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=GQJZ96l-XQ4)[13:11 how I code without Internet or AI bashbunni 32K views  2 days ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=1Jko7VqacHY)[16:27 Google's Git Killer Is INSANELY Better (and it's open source)DevOps Toolbox 269K views  5 months ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=cZqFaMlufDY)[14:26 I tried omarchy for a week... here's what I think (from a linux fangirl)bashbunni 75K views  9 days ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=rxSVfhUXRDU)[8:28 how to keep coding fun (ft. tech twitter)bashbunni 24K views  5 months ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=rS7vp3huPVc)[22:20 The Original Sin of Computing...that no one can fix LaurieWired 697K views  8 days ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=Fu3laL5VYdM)
+
+Sign in to confirm youre not a bot This helps protect our community. [Learn more](https://support.google.com/youtube/answer/3037019#zippy=%2Ccheck-that-youre-signed-into-youtube)
 
 [Sign in](https://accounts.google.com/ServiceLogin?service=youtube&uilel=3&passive=true&continue=https%3A%2F%2Fwww.youtube.com%2Fsignin%3Faction_handle_signin%3Dtrue%26app%3Ddesktop%26hl%3Den%26next%3D%252Fwatch%253Fapp%253Ddesktop%2526v%253D8vsRb2mTBA8&hl=en)
 
@@ -127,11 +127,11 @@ Save
 
 60K views 3 months ago
 
- 60,590 views ΓÇó Jul 4, 2025 
+ 60,590 views  Jul 4, 2025 
 
 Show less 
 
-Git worktrees are a great way to boost your productivity and wrangle your chaotic coding habits. Git worktrees let you check out multiple branches from one repo into separate directories. Benefits include parallel work, no stashing for context switching, and easier code reviews/testing. YoΓÇª...more 
+Git worktrees are a great way to boost your productivity and wrangle your chaotic coding habits. Git worktrees let you check out multiple branches from one repo into separate directories. Benefits include parallel work, no stashing for context switching, and easier code reviews/testing. Yoa...more 
 
 ...more 
 
@@ -219,25 +219,25 @@ Show less Read more
 
 ![Image 14](https://yt3.ggpht.com/Aksxhi2HYBuUC2-z61mrlNQ899oL7lOk867Us4oWoJfmVFJPJjVLXWy0UZFdBNidhnpp1-MUFw=s88-c-k-c0x00ffffff-no-rj)
 
- Γ¥ñ by @bashbunni 
+ Yen by @bashbunni 
 
 Reply
 
 ![Image 15: bashbunni](https://yt3.ggpht.com/Aksxhi2HYBuUC2-z61mrlNQ899oL7lOk867Us4oWoJfmVFJPJjVLXWy0UZFdBNidhnpp1-MUFw=s48-c-k-c0x00ffffff-no-rj)
 
-┬╖
+
 
 6 replies
 
 ![Image 16](https://m.youtube.com/watch?v=8vsRb2mTBA8)
 
-┬╖
+
 
 6 replies
 
 ![Image 17](https://m.youtube.com/watch?v=8vsRb2mTBA8)
 
-┬╖
+
 
 6 replies
 
@@ -259,25 +259,25 @@ Show less Read more
 
 ![Image 19](https://yt3.ggpht.com/Aksxhi2HYBuUC2-z61mrlNQ899oL7lOk867Us4oWoJfmVFJPJjVLXWy0UZFdBNidhnpp1-MUFw=s88-c-k-c0x00ffffff-no-rj)
 
- Γ¥ñ by @bashbunni 
+ Yen by @bashbunni 
 
 Reply
 
 ![Image 20: bashbunni](https://yt3.ggpht.com/Aksxhi2HYBuUC2-z61mrlNQ899oL7lOk867Us4oWoJfmVFJPJjVLXWy0UZFdBNidhnpp1-MUFw=s48-c-k-c0x00ffffff-no-rj)
 
-┬╖
+
 
 2 replies
 
 ![Image 21](https://m.youtube.com/watch?v=8vsRb2mTBA8)
 
-┬╖
+
 
 2 replies
 
 ![Image 22](https://m.youtube.com/watch?v=8vsRb2mTBA8)
 
-┬╖
+
 
 2 replies
 
@@ -299,25 +299,25 @@ Show less Read more
 
 ![Image 24](https://yt3.ggpht.com/Aksxhi2HYBuUC2-z61mrlNQ899oL7lOk867Us4oWoJfmVFJPJjVLXWy0UZFdBNidhnpp1-MUFw=s88-c-k-c0x00ffffff-no-rj)
 
- Γ¥ñ by @bashbunni 
+ Yen by @bashbunni 
 
 Reply
 
 ![Image 25: bashbunni](https://yt3.ggpht.com/Aksxhi2HYBuUC2-z61mrlNQ899oL7lOk867Us4oWoJfmVFJPJjVLXWy0UZFdBNidhnpp1-MUFw=s48-c-k-c0x00ffffff-no-rj)
 
-┬╖
+
 
 2 replies
 
 ![Image 26](https://m.youtube.com/watch?v=8vsRb2mTBA8)
 
-┬╖
+
 
 2 replies
 
 ![Image 27](https://m.youtube.com/watch?v=8vsRb2mTBA8)
 
-┬╖
+
 
 2 replies
 
@@ -345,7 +345,7 @@ Reply
 
 [3 months ago](https://m.youtube.com/watch?v=8vsRb2mTBA8&lc=Ugy8yTbEXx_t-eYzoC14AaABAg)
 
-This is a great feature of git thatΓÇÖs very useful for reviewing PRs. I learned about worktree when I was context switching so much that my stash list was becoming overwhelming. My only advice is if you find you NEED git worktree, please check in with yourself because you could be on a path to burnout.
+This is a great feature of git thats very useful for reviewing PRs. I learned about worktree when I was context switching so much that my stash list was becoming overwhelming. My only advice is if you find you NEED git worktree, please check in with yourself because you could be on a path to burnout.
 
 Show less Read more
 
@@ -375,7 +375,7 @@ Show less Read more
 
 ![Image 31](https://m.youtube.com/watch?v=8vsRb2mTBA8)
 
- Γ¥ñ by @bashbunni 
+ Yen by @bashbunni 
 
 Reply
 
@@ -397,7 +397,7 @@ Show less Read more
 
 ![Image 33](https://m.youtube.com/watch?v=8vsRb2mTBA8)
 
- Γ¥ñ by @bashbunni 
+ Yen by @bashbunni 
 
 Reply
 
@@ -423,7 +423,7 @@ Reply
 
 [@bashbunni @bashbunni](https://m.youtube.com/@bashbunni)[3 months ago (edited)](https://m.youtube.com/watch?v=8vsRb2mTBA8&lc=UgxvN6sItpTmmFv82_x4AaABAg)
 
-First (btw), also posting a day early cause happy fourth of July to all the American bunnis :) Have you been operating in chaos mode and relying on stash or are you already using worktrees? Edit: IΓÇÖm terrible at mentioning it in videos, but donΓÇÖt forget to like and subscribe if you enjoy this content! That shows me that I should make more like this :) I appreciate all of you
+First (btw), also posting a day early cause happy fourth of July to all the American bunnis :) Have you been operating in chaos mode and relying on stash or are you already using worktrees? Edit: Im terrible at mentioning it in videos, but dont forget to like and subscribe if you enjoy this content! That shows me that I should make more like this :) I appreciate all of you
 
 Show less Read more
 
@@ -437,19 +437,19 @@ Reply
 
 ![Image 36](https://m.youtube.com/watch?v=8vsRb2mTBA8)
 
-┬╖
+
 
 3 replies
 
 ![Image 37](https://m.youtube.com/watch?v=8vsRb2mTBA8)
 
-┬╖
+
 
 3 replies
 
 ![Image 38](https://m.youtube.com/watch?v=8vsRb2mTBA8)
 
-┬╖
+
 
 3 replies
 
@@ -487,25 +487,25 @@ Show less Read more
 
 ![Image 41](https://m.youtube.com/watch?v=8vsRb2mTBA8)
 
- Γ¥ñ by @bashbunni 
+ Yen by @bashbunni 
 
 Reply
 
 ![Image 42](https://m.youtube.com/watch?v=8vsRb2mTBA8)
 
-┬╖
+
 
 3 replies
 
 ![Image 43](https://m.youtube.com/watch?v=8vsRb2mTBA8)
 
-┬╖
+
 
 3 replies
 
 ![Image 44](https://m.youtube.com/watch?v=8vsRb2mTBA8)
 
-┬╖
+
 
 3 replies
 
@@ -531,7 +531,7 @@ Reply
 
 [3 months ago](https://m.youtube.com/watch?v=8vsRb2mTBA8&lc=UgyNmeDPv04sApCn1oF4AaABAg&pp=0gcJCSIANpG00pGi)
 
-Work trees were recently mentioned on an episode of the abomination known as The Standup but they didnΓÇÖt go into it that much. I had never heard of them before so this was perfect timing!
+Work trees were recently mentioned on an episode of the abomination known as The Standup but they didnt go into it that much. I had never heard of them before so this was perfect timing!
 
 Show less Read more
 
@@ -649,7 +649,7 @@ Show less Read more
 
 ![Image 53](https://m.youtube.com/watch?v=8vsRb2mTBA8)
 
- Γ¥ñ by @bashbunni 
+ Yen by @bashbunni 
 
 Reply
 
@@ -659,7 +659,7 @@ Reply
 
 [3 months ago (edited)](https://m.youtube.com/watch?v=8vsRb2mTBA8&lc=Ugzukf5MvJmFzhIDMVN4AaABAg)
 
-This is sick! Would be awesome to see this workflow in action. Also, I feel fully attacked by the stashing habit ![Image 55: ≡ƒÿ¡](https://m.youtube.com/watch?v=8vsRb2mTBA8)
+This is sick! Would be awesome to see this workflow in action. Also, I feel fully attacked by the stashing habit ![Image 55: f](https://m.youtube.com/watch?v=8vsRb2mTBA8)
 
 Show less Read more
 
@@ -712,7 +712,7 @@ learn git worktrees in under 5 minutes
 
 Jul 4 2025
 
-Git worktrees are a great way to boost your productivity and wrangle your chaotic coding habits. Git worktrees let you check out multiple branches from one repo into separate directories. Benefits include parallel work, no stashing for context switching, and easier code reviews/testing. You can checkout multiple Git branches simultaneously without needing to rely on the stash command. This video will show you everything you need to know to get started. Make your git workflow efficient and flexible with Git worktrees. How to support bunni: [![Image 61](https://m.youtube.com/watch?v=8vsRb2mTBA8)/@bashbunni](https://www.youtube.com/channel/UC9H0HzpKf5JlazkADWnW1Jw/join)[https://github.com/sponsors/bashbunni/](https://www.youtube.com/redirect?event=video_description&redir_token=QUFFLUhqa01ZRkp0UGVXRzBqS0EwRXlhNDdpQUhsZTFnUXxBQ3Jtc0tucFFvLXRlLUE0Skg2bi1rRHpOVURENGI0T2NWaWo2eEpqcWt2MEhPRmF4b082LUhlVXNLdUt4aVpSb2F5R0dpMTJUdW9FMzgxSTBxckZHNVZ2azZ3TUZTMWZDVXRrZXdKcnBHdUh3Q21HQVJFcWl0MA&q=https%3A%2F%2Fgithub.com%2Fsponsors%2Fbashbunni%2F&v=8vsRb2mTBA8) Affiliate links: [https://biosteel.com/biosteelbunni](https://www.youtube.com/redirect?event=video_description&redir_token=QUFFLUhqa3A5TUp6WlU0eWlfRGJrRDNTTTBEOUZ4MFhJUXxBQ3Jtc0ttSE4wUFBfa1FseTljQ0ZDdmFwbHBFejN1ajYzUzhZbVQ1SnRvVmhvbFg5Tmcyel90SklGbmdJaVBTdmg4YzdfZU1QRG1WSWhsWmdJRVdIeG16WE51SDUyT1lRSGs2Y0luVTQzN0RyQjdzTU1hRG1Xdw&q=https%3A%2F%2Fbiosteel.com%2Fbiosteelbunni&v=8vsRb2mTBA8) My keyboard: [https://www.keychron.com/products/key...](https://www.youtube.com/redirect?event=video_description&redir_token=QUFFLUhqbGpSMnlQdmloOTJjMVRHdm92N2dlQmJtRmdiZ3xBQ3Jtc0tuQ3JEdFMzNldzREZRa0xZYjdxSll5ZThidGRheklncGdsUnVhV1I2dDR2MEZoVXQ0Wkg1VTczOFdhQ19nYm1mZnBrQzVFcDFxVEJuRVU5SEYxLWdFMzVDS1ViTVhaaTMxdjVvUy10cm4xbFRVRklVUQ&q=https%3A%2F%2Fwww.keychron.com%2Fproducts%2Fkeychron-q1-he-qmk-wireless-custom-keyboard%3Fref%3DBASHBUNNI&v=8vsRb2mTBA8) My other corners of the Internet: [![Image 62](https://m.youtube.com/watch?v=8vsRb2mTBA8)/bashbunni](https://www.youtube.com/redirect?event=video_description&redir_token=QUFFLUhqbHQ3dmJqbkVScU5TRjY2UEl2QXU0ekNsaHB0Z3xBQ3Jtc0traW5DdVdRd0drdnBZQ2tjbGMwRmRGWHpXYUNzY3dPaTdkV2pMYTF2Ujh6S1J3Y1U5Ti1yWWZVWkhQMDJ4MnpXRHZuMll2OVVPRGpqRzk2emg1Mm0zazlTTndNVllsZ0JvMjFwcWNfWTdZZGN3Rk9Ycw&q=https%3A%2F%2Ftwitch.tv%2Fbashbunni&v=8vsRb2mTBA8)[https://github.com/bashbunni](https://www.youtube.com/redirect?event=video_description&redir_token=QUFFLUhqblItSzctQml6RUM4V1JucmZMTHhjQVR2TXZ4UXxBQ3Jtc0trdjFlN0Y0elBhZzdBT3lFUG1TYW9SaUszVWJQQWF6U1Rha3dHeXhmN2V1VldVeVNtQ3VubTctWnhfWm9xZElKXzJ5MU9zTnI0NXJibFA3T19kN29zOUhrWm0zS2Z3ZnJKWnJ6bHFyU3p1RElpZXF4QQ&q=https%3A%2F%2Fgithub.com%2Fbashbunni&v=8vsRb2mTBA8)[![Image 63](https://m.youtube.com/watch?v=8vsRb2mTBA8)/discord](https://www.youtube.com/redirect?event=video_description&redir_token=QUFFLUhqbGdRS3dic25VTGdmMEJ5RE00djNnMlVNUU9lQXxBQ3Jtc0ttUjFqY0ZVSVc5LTFZX3I2SXZnemNwaGdZclBSRkdRNDFnYUJsUGZMd2dZRjRkV2NWQmZoOTdacFd5bG9rdEV1NVoyOVl6SjdkWE9sVG5GWGtTdm02LWtMdW9nMXJjcXVfZmwwY055YlZpN2xJU1hUSQ&q=https%3A%2F%2Fdiscord.com%2Finvite%2FY3vbKS4K9j&v=8vsRb2mTBA8)[https://mastodon.social/@bashbunni](https://www.youtube.com/redirect?event=video_description&redir_token=QUFFLUhqbUpsb0JNb2l4OWdTNUhXcnJpYUxibUlRbWRud3xBQ3Jtc0ttZnZZU1BxVzQ0S0FSQjIxTWhmWnp2Rmk5MlQtVjltcmRERUV1LVRKWE9iWjJlV0EtS01CMGNXVS1IeWFObEMxZkhUS183M0NrX1c3Vy1WMUF0eEowVk0tcHZqOWRQSml5M2VUdVIzWTFZdGJpcjFXcw&q=https%3A%2F%2Fmastodon.social%2F%40bashbunni&v=8vsRb2mTBA8)[![Image 64](https://m.youtube.com/watch?v=8vsRb2mTBA8)/sudobunni](https://www.youtube.com/redirect?event=video_description&redir_token=QUFFLUhqbi1hT0hja2JqSGFNY3N3LVhBWVRObXl6anBNZ3xBQ3Jtc0tuYzlGbkh3Z1duUTMtVnNhV0ZES09YNVlzMklRSFNSSVdjbW1YNVg5alB4ekl6NGFNVWg4dGRaektsQmtmTnNfRHlQZFJLM3VKVmJCMXFXREVHbU5nRFpjR1hPUEw2OGJSMzhWLU1hOU0tZmtjdnhmSQ&q=https%3A%2F%2Ftwitter.com%2Fsudobunni&v=8vsRb2mTBA8)[https://bsky.app/profile/bashbunni.dev](https://www.youtube.com/redirect?event=video_description&redir_token=QUFFLUhqbmZlUFJOU2pmUW82UG81eEVrUEpNR2V1dWNUUXxBQ3Jtc0trYjM4M1Z4MUdCZFYwbzVrRTAzZ29yZDRkVS03MndtM04zblZtQ3NGUllDc1J1bkgyaERjay1sa2RDMGxGN2VFTWJOR1FhUnRYTDhwLTFzVmpraHo2TnZzT0Zuc2VIZ2R3cjRLRldfajVWUTUzb0JJUQ&q=https%3A%2F%2Fbsky.app%2Fprofile%2Fbashbunni.dev&v=8vsRb2mTBA8) Join this channel to get access to perks: [![Image 65](https://m.youtube.com/watch?v=8vsRb2mTBA8)/@bashbunni](https://www.youtube.com/channel/UC9H0HzpKf5JlazkADWnW1Jw/join) Chapters: [0:00](https://m.youtube.com/watch?v=8vsRb2mTBA8) why and how to use git worktrees [2:27](https://m.youtube.com/watch?v=8vsRb2mTBA8&t=147s) my git worktree workflowΓÇª...more 
+Git worktrees are a great way to boost your productivity and wrangle your chaotic coding habits. Git worktrees let you check out multiple branches from one repo into separate directories. Benefits include parallel work, no stashing for context switching, and easier code reviews/testing. You can checkout multiple Git branches simultaneously without needing to rely on the stash command. This video will show you everything you need to know to get started. Make your git workflow efficient and flexible with Git worktrees. How to support bunni: [![Image 61](https://m.youtube.com/watch?v=8vsRb2mTBA8)/@bashbunni](https://www.youtube.com/channel/UC9H0HzpKf5JlazkADWnW1Jw/join)[https://github.com/sponsors/bashbunni/](https://www.youtube.com/redirect?event=video_description&redir_token=QUFFLUhqa01ZRkp0UGVXRzBqS0EwRXlhNDdpQUhsZTFnUXxBQ3Jtc0tucFFvLXRlLUE0Skg2bi1rRHpOVURENGI0T2NWaWo2eEpqcWt2MEhPRmF4b082LUhlVXNLdUt4aVpSb2F5R0dpMTJUdW9FMzgxSTBxckZHNVZ2azZ3TUZTMWZDVXRrZXdKcnBHdUh3Q21HQVJFcWl0MA&q=https%3A%2F%2Fgithub.com%2Fsponsors%2Fbashbunni%2F&v=8vsRb2mTBA8) Affiliate links: [https://biosteel.com/biosteelbunni](https://www.youtube.com/redirect?event=video_description&redir_token=QUFFLUhqa3A5TUp6WlU0eWlfRGJrRDNTTTBEOUZ4MFhJUXxBQ3Jtc0ttSE4wUFBfa1FseTljQ0ZDdmFwbHBFejN1ajYzUzhZbVQ1SnRvVmhvbFg5Tmcyel90SklGbmdJaVBTdmg4YzdfZU1QRG1WSWhsWmdJRVdIeG16WE51SDUyT1lRSGs2Y0luVTQzN0RyQjdzTU1hRG1Xdw&q=https%3A%2F%2Fbiosteel.com%2Fbiosteelbunni&v=8vsRb2mTBA8) My keyboard: [https://www.keychron.com/products/key...](https://www.youtube.com/redirect?event=video_description&redir_token=QUFFLUhqbGpSMnlQdmloOTJjMVRHdm92N2dlQmJtRmdiZ3xBQ3Jtc0tuQ3JEdFMzNldzREZRa0xZYjdxSll5ZThidGRheklncGdsUnVhV1I2dDR2MEZoVXQ0Wkg1VTczOFdhQ19nYm1mZnBrQzVFcDFxVEJuRVU5SEYxLWdFMzVDS1ViTVhaaTMxdjVvUy10cm4xbFRVRklVUQ&q=https%3A%2F%2Fwww.keychron.com%2Fproducts%2Fkeychron-q1-he-qmk-wireless-custom-keyboard%3Fref%3DBASHBUNNI&v=8vsRb2mTBA8) My other corners of the Internet: [![Image 62](https://m.youtube.com/watch?v=8vsRb2mTBA8)/bashbunni](https://www.youtube.com/redirect?event=video_description&redir_token=QUFFLUhqbHQ3dmJqbkVScU5TRjY2UEl2QXU0ekNsaHB0Z3xBQ3Jtc0traW5DdVdRd0drdnBZQ2tjbGMwRmRGWHpXYUNzY3dPaTdkV2pMYTF2Ujh6S1J3Y1U5Ti1yWWZVWkhQMDJ4MnpXRHZuMll2OVVPRGpqRzk2emg1Mm0zazlTTndNVllsZ0JvMjFwcWNfWTdZZGN3Rk9Ycw&q=https%3A%2F%2Ftwitch.tv%2Fbashbunni&v=8vsRb2mTBA8)[https://github.com/bashbunni](https://www.youtube.com/redirect?event=video_description&redir_token=QUFFLUhqblItSzctQml6RUM4V1JucmZMTHhjQVR2TXZ4UXxBQ3Jtc0trdjFlN0Y0elBhZzdBT3lFUG1TYW9SaUszVWJQQWF6U1Rha3dHeXhmN2V1VldVeVNtQ3VubTctWnhfWm9xZElKXzJ5MU9zTnI0NXJibFA3T19kN29zOUhrWm0zS2Z3ZnJKWnJ6bHFyU3p1RElpZXF4QQ&q=https%3A%2F%2Fgithub.com%2Fbashbunni&v=8vsRb2mTBA8)[![Image 63](https://m.youtube.com/watch?v=8vsRb2mTBA8)/discord](https://www.youtube.com/redirect?event=video_description&redir_token=QUFFLUhqbGdRS3dic25VTGdmMEJ5RE00djNnMlVNUU9lQXxBQ3Jtc0ttUjFqY0ZVSVc5LTFZX3I2SXZnemNwaGdZclBSRkdRNDFnYUJsUGZMd2dZRjRkV2NWQmZoOTdacFd5bG9rdEV1NVoyOVl6SjdkWE9sVG5GWGtTdm02LWtMdW9nMXJjcXVfZmwwY055YlZpN2xJU1hUSQ&q=https%3A%2F%2Fdiscord.com%2Finvite%2FY3vbKS4K9j&v=8vsRb2mTBA8)[https://mastodon.social/@bashbunni](https://www.youtube.com/redirect?event=video_description&redir_token=QUFFLUhqbUpsb0JNb2l4OWdTNUhXcnJpYUxibUlRbWRud3xBQ3Jtc0ttZnZZU1BxVzQ0S0FSQjIxTWhmWnp2Rmk5MlQtVjltcmRERUV1LVRKWE9iWjJlV0EtS01CMGNXVS1IeWFObEMxZkhUS183M0NrX1c3Vy1WMUF0eEowVk0tcHZqOWRQSml5M2VUdVIzWTFZdGJpcjFXcw&q=https%3A%2F%2Fmastodon.social%2F%40bashbunni&v=8vsRb2mTBA8)[![Image 64](https://m.youtube.com/watch?v=8vsRb2mTBA8)/sudobunni](https://www.youtube.com/redirect?event=video_description&redir_token=QUFFLUhqbi1hT0hja2JqSGFNY3N3LVhBWVRObXl6anBNZ3xBQ3Jtc0tuYzlGbkh3Z1duUTMtVnNhV0ZES09YNVlzMklRSFNSSVdjbW1YNVg5alB4ekl6NGFNVWg4dGRaektsQmtmTnNfRHlQZFJLM3VKVmJCMXFXREVHbU5nRFpjR1hPUEw2OGJSMzhWLU1hOU0tZmtjdnhmSQ&q=https%3A%2F%2Ftwitter.com%2Fsudobunni&v=8vsRb2mTBA8)[https://bsky.app/profile/bashbunni.dev](https://www.youtube.com/redirect?event=video_description&redir_token=QUFFLUhqbmZlUFJOU2pmUW82UG81eEVrUEpNR2V1dWNUUXxBQ3Jtc0trYjM4M1Z4MUdCZFYwbzVrRTAzZ29yZDRkVS03MndtM04zblZtQ3NGUllDc1J1bkgyaERjay1sa2RDMGxGN2VFTWJOR1FhUnRYTDhwLTFzVmpraHo2TnZzT0Zuc2VIZ2R3cjRLRldfajVWUTUzb0JJUQ&q=https%3A%2F%2Fbsky.app%2Fprofile%2Fbashbunni.dev&v=8vsRb2mTBA8) Join this channel to get access to perks: [![Image 65](https://m.youtube.com/watch?v=8vsRb2mTBA8)/@bashbunni](https://www.youtube.com/channel/UC9H0HzpKf5JlazkADWnW1Jw/join) Chapters: [0:00](https://m.youtube.com/watch?v=8vsRb2mTBA8) why and how to use git worktrees [2:27](https://m.youtube.com/watch?v=8vsRb2mTBA8&t=147s) my git worktree workflowa...more 
 
 ...more Show less 
 
@@ -760,7 +760,7 @@ Transcript
 
 ThePrimeagen
 
-334K views ΓÇó 4 years ago
+334K views  4 years ago
 
 [![Image 73](https://i.ytimg.com/vi/eBXyn8SXFtU/hqdefault.jpg?sqp=-oaymwEmCKgBEF5IWvKriqkDGQgBFQAAiEIYAdgBAeIBCggYEAIYBjgBQAE=&rs=AOn4CLCwTXvy3QarxHwzwtycnxsuWo-5hA) 31:40](https://m.youtube.com/watch?v=eBXyn8SXFtU)
 
@@ -768,9 +768,9 @@ ThePrimeagen
 
 ### [Git is holding us back](https://m.youtube.com/watch?v=eBXyn8SXFtU)
 
-Theo - t3ΓÇñgg
+Theo - t3gg
 
-65K views ΓÇó 1 month ago
+65K views  1 month ago
 
 [![Image 75](https://i.ytimg.com/vi/Nph1zU-MaB8/hqdefault.jpg?sqp=-oaymwFACKgBEF5IWvKriqkDMwgBFQAAiEIYAdgBAeIBCggYEAIYBjgBQAHwAQH4Af4JgALQBYoCDAgAEAEYWiBXKGUwDw==&rs=AOn4CLAHaihaIGLB5OVISQMa34ecVu9-dw) 12:42](https://m.youtube.com/watch?v=Nph1zU-MaB8)
 
@@ -780,7 +780,7 @@ Theo - t3ΓÇñgg
 
 bashbunni
 
-33K views ΓÇó 1 year ago
+33K views  1 year ago
 
 [![Image 77](https://i.ytimg.com/vi/4vg-kymypbs/hqdefault.jpg?sqp=-oaymwEmCKgBEF5IWvKriqkDGQgBFQAAiEIYAdgBAeIBCggYEAIYBjgBQAE=&rs=AOn4CLBafcoeN7zjcAjVTd5neI60SM7Eeg) 5:59](https://m.youtube.com/watch?v=4vg-kymypbs)
 
@@ -790,7 +790,7 @@ bashbunni
 
 bashbunni
 
-36K views ΓÇó 6 months ago
+36K views  6 months ago
 
 [![Image 79](https://i.ytimg.com/vi/oI631eCAQnQ/hqdefault.jpg?sqp=-oaymwEmCKgBEF5IWvKriqkDGQgBFQAAiEIYAdgBAeIBCggYEAIYBjgBQAE=&rs=AOn4CLB6My01_Gju-yB9xDqrrI_wLDn1yA) 5:45](https://m.youtube.com/watch?v=oI631eCAQnQ)
 
@@ -800,7 +800,7 @@ bashbunni
 
 Andrew Burgess
 
-65K views ΓÇó 7 months ago
+65K views  7 months ago
 
 [![Image 81](https://i.ytimg.com/vi/nY6RExFP0G0/hqdefault.jpg?sqp=-oaymwEmCKgBEF5IWvKriqkDGQgBFQAAiEIYAdgBAeIBCggYEAIYBjgBQAE=&rs=AOn4CLDPV98CCpT98ZkAwCER-_wgdKojOw) 18:05](https://m.youtube.com/watch?v=nY6RExFP0G0)
 
@@ -810,7 +810,7 @@ Andrew Burgess
 
 Modern Software Engineering
 
-162K views ΓÇó 5 months ago
+162K views  5 months ago
 
 [![Image 83](https://i.ytimg.com/vi/GQJZ96l-XQ4/hqdefault.jpg?sqp=-oaymwEmCKgBEF5IWvKriqkDGQgBFQAAiEIYAdgBAeIBCggYEAIYBjgBQAE=&rs=AOn4CLA3nNtbqJCT0TIaWFjRRVYDGlBy4w) 11:09](https://m.youtube.com/watch?v=GQJZ96l-XQ4)
 
@@ -820,7 +820,7 @@ Modern Software Engineering
 
 ThePrimeTime
 
-794K views ΓÇó 6 days ago
+794K views  6 days ago
 
 New
 
@@ -832,7 +832,7 @@ New
 
 bashbunni
 
-32K views ΓÇó 2 days ago
+32K views  2 days ago
 
 New
 
@@ -844,7 +844,7 @@ New
 
 DevOps Toolbox
 
-269K views ΓÇó 5 months ago
+269K views  5 months ago
 
 [![Image 89](https://i.ytimg.com/vi/rxSVfhUXRDU/hqdefault.jpg?sqp=-oaymwEmCKgBEF5IWvKriqkDGQgBFQAAiEIYAdgBAeIBCggYEAIYBjgBQAE=&rs=AOn4CLDxJL5hvy9Oqj4caKuTnHvYQHwFwA) 14:26](https://m.youtube.com/watch?v=rxSVfhUXRDU)
 
@@ -854,7 +854,7 @@ DevOps Toolbox
 
 bashbunni
 
-75K views ΓÇó 9 days ago
+75K views  9 days ago
 
 [![Image 91](https://i.ytimg.com/vi/rS7vp3huPVc/hqdefault.jpg?sqp=-oaymwEmCKgBEF5IWvKriqkDGQgBFQAAiEIYAdgBAeIBCggYEAIYBjgBQAE=&rs=AOn4CLCq0hv7eAhnmmuD4NqRr9Il4OS46g) 8:28](https://m.youtube.com/watch?v=rS7vp3huPVc)
 
@@ -864,7 +864,7 @@ bashbunni
 
 bashbunni
 
-24K views ΓÇó 5 months ago
+24K views  5 months ago
 
 [![Image 93](https://m.youtube.com/watch?v=8vsRb2mTBA8) 22:20](https://m.youtube.com/watch?v=Fu3laL5VYdM)
 
@@ -874,7 +874,7 @@ bashbunni
 
 LaurieWired
 
-697K views ΓÇó 8 days ago
+697K views  8 days ago
 
 [![Image 95](https://m.youtube.com/watch?v=8vsRb2mTBA8) 11:31](https://m.youtube.com/watch?v=s4BTvj1ZVLM)
 
@@ -884,7 +884,7 @@ LaurieWired
 
 GitKraken
 
-60K views ΓÇó 3 years ago
+60K views  3 years ago
 
 [![Image 97](https://m.youtube.com/watch?v=8vsRb2mTBA8) 3:41](https://m.youtube.com/watch?v=ympjraN3JyI)
 
@@ -894,7 +894,7 @@ GitKraken
 
 bashbunni
 
-105K views ΓÇó 6 months ago
+105K views  6 months ago
 
 [![Image 99](https://m.youtube.com/watch?v=8vsRb2mTBA8) 5:19](https://m.youtube.com/watch?v=ntM7utSjeVU)
 
@@ -904,7 +904,7 @@ bashbunni
 
 Philomatics
 
-272K views ΓÇó 1 year ago
+272K views  1 year ago
 
 [![Image 101](https://m.youtube.com/watch?v=8vsRb2mTBA8) 24:24](https://m.youtube.com/watch?v=C44iCr6czAo)
 
@@ -914,7 +914,7 @@ Philomatics
 
 Rob Braxman Tech
 
-250K views ΓÇó 2 days ago
+250K views  2 days ago
 
 New
 
@@ -926,7 +926,7 @@ New
 
 Vex
 
-411K views ΓÇó 6 days ago
+411K views  6 days ago
 
 New
 
@@ -938,7 +938,7 @@ New
 
 Philomatics
 
-1M views ΓÇó 1 year ago
+1M views  1 year ago
 
 [![Image 107](https://m.youtube.com/watch?v=8vsRb2mTBA8) 10:43](https://m.youtube.com/watch?v=7gEbHsHXdn0)
 
@@ -948,7 +948,7 @@ Philomatics
 
 ThePrimeagen
 
-170K views ΓÇó 3 years ago
+170K views  3 years ago
 
 [![Image 109](https://m.youtube.com/watch?v=8vsRb2mTBA8) 11:19](https://m.youtube.com/watch?v=TLNdwvIFoCg)
 
@@ -958,8 +958,9 @@ ThePrimeagen
 
 typecraft
 
-118K views ΓÇó 1 year ago
+118K views  1 year ago
 
 Show more
 
 [[](https://m.youtube.com/watch?v=8vsRb2mTBA8)](https://m.youtube.com/watch?v=8vsRb2mTBA8)
+

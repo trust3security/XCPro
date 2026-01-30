@@ -18,15 +18,15 @@ Racing tasks only. No cross-contamination with AAT/DHT modules.
    - Enter: now inside AND last outside.
    - Exit: now outside AND last inside.
 3) Line zones add a constraint:
-   - For line start/finish, both fixes must be inside the line’s semicircle.
+   - For line start/finish, both fixes must be inside the line's semicircle.
 4) Start/finish add constraints:
    - Start: exit transition + time/speed/height rules.
    - Finish: enter transition + height rules.
 
 ## Problem In XCPro Today
-Replay uses waypoint centers as “inside points” for cylinders/keyholes, so the
+Replay uses waypoint centers as inside points" for cylinders/keyholes, so the
 triangle keeps flying to the center after the nav engine already fires the
-“arrived” event at the boundary. This creates UI/logic drift.
+arrived" event at the boundary. This creates UI/logic drift.
 
 ## SSOT Strategy
 Introduce a single racing-module component responsible for:
@@ -76,7 +76,7 @@ Note: XCSoar is strict, but XCPro should guard against phone GPS noise.
 4) Outside anchor: boundary point moved outward by epsilon.
 
 ### Line Start/Finish
-1) Require both fixes inside the line’s semicircle (XCSoar constraint).
+1) Require both fixes inside the line's semicircle (XCSoar constraint).
 2) Check segment-line intersection within line endpoints.
 3) Determine enter/exit based on inside/outside relative to line sector.
 4) Anchors: offset along line normal by epsilon (in/out).
@@ -145,3 +145,4 @@ Distance-to-entry should use the same crossing planner:
 - Task transitions happen exactly when the glider crosses the boundary.
 - Replay and live display the same boundary crossing.
 - Competition-grade determinism with minimal future rewrites.
+

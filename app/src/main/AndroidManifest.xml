@@ -2,25 +2,25 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- ✅ LOCATION PERMISSIONS - HIGH ACCURACY -->
+    <!-- ... LOCATION PERMISSIONS - HIGH ACCURACY -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 
-    <!-- ✅ SENSOR PERMISSIONS -->
+    <!-- ... SENSOR PERMISSIONS -->
     <uses-permission android:name="android.permission.BODY_SENSORS" />
     
-    <!-- ✅ AUDIO PERMISSIONS for variometer tones -->
+    <!-- ... AUDIO PERMISSIONS for variometer tones -->
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.CAMERA" />
 
-    <!-- ✅ SYSTEM PERMISSIONS -->
+    <!-- ... SYSTEM PERMISSIONS -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
-    <!-- ✅ REQUIRED HARDWARE FEATURES -->
+    <!-- ... REQUIRED HARDWARE FEATURES -->
     <uses-feature android:name="android.hardware.location" android:required="true" />
     <uses-feature android:name="android.hardware.location.gps" android:required="true" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
@@ -45,7 +45,7 @@
             android:exported="false"
             android:foregroundServiceType="location" />
 
-        <!-- ✅ MAIN ACTIVITY WITH KEEP SCREEN ON -->
+        <!-- ... MAIN ACTIVITY WITH KEEP SCREEN ON -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -63,4 +63,5 @@
     </application>
 
 </manifest>
+
 

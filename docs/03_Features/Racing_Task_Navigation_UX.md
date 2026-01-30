@@ -1,12 +1,12 @@
 # Racing Task Navigation - UX Design
 
 **Created:** 2025-10-08
-**Status:** 🎨 Design Specification
+**Status:** z Design Specification
 **Based on:** User description of existing/desired UI
 
 ---
 
-## 🎯 User Expectation Summary
+## z User Expectation Summary
 
 **"At the top of the mapscreen where it shows the task - current turn point name, it also has a left and right arrows that user can move to the next turnpoint or previous"**
 
@@ -14,7 +14,7 @@ This describes a **Task Status Bar** that should be integrated with the automati
 
 ---
 
-## 📱 UI Components
+## "+/- UI Components
 
 ### 1. Task Status Bar (Top of MapScreen)
 
@@ -22,10 +22,10 @@ This describes a **Task Status Bar** that should be integrated with the automati
 
 **Layout:**
 ```
-┌──────────────────────────────────────────────────┐
-│  [<]    TP 2/5: KEYSTONE (12.3 km)    [>]       │
-│                    ACTIVE                         │
-└──────────────────────────────────────────────────┘
+"oe"""""""""""""""""""""""""""""""""""""""""""""""""""
+"  [<]    TP 2/5: KEYSTONE (12.3 km)    [>]       "
+"                    ACTIVE                         "
+"""""""""""""""""""""""""""""""""""""""""""""""""""""
 ```
 
 **Elements:**
@@ -34,50 +34,50 @@ This describes a **Task Status Bar** that should be integrated with the automati
   - "TP 2/5" - Current turnpoint / Total count
   - "KEYSTONE" - Turnpoint name
   - "(12.3 km)" - Distance to turnpoint
-- **Status Indicator:** "ACTIVE" | "COMPLETED ✓" | "PENDING"
+- **Status Indicator:** "ACTIVE" | "COMPLETED "" | "PENDING"
 - **[>] Right Arrow:** Go to next turnpoint
 
 **Visual States:**
 
 **Pending Turnpoint:**
 ```
-┌──────────────────────────────────────────────────┐
-│  [<]    TP 3/5: MOUNTAIN (25.7 km)    [>]       │
-│                   PENDING                         │
-└──────────────────────────────────────────────────┘
+"oe"""""""""""""""""""""""""""""""""""""""""""""""""""
+"  [<]    TP 3/5: MOUNTAIN (25.7 km)    [>]       "
+"                   PENDING                         "
+"""""""""""""""""""""""""""""""""""""""""""""""""""""
    Gray text, white background
 ```
 
 **Active Turnpoint:**
 ```
-┌──────────────────────────────────────────────────┐
-│  [<]    TP 2/5: KEYSTONE (12.3 km)    [>]       │
-│                    ACTIVE                         │
-└──────────────────────────────────────────────────┘
+"oe"""""""""""""""""""""""""""""""""""""""""""""""""""
+"  [<]    TP 2/5: KEYSTONE (12.3 km)    [>]       "
+"                    ACTIVE                         "
+"""""""""""""""""""""""""""""""""""""""""""""""""""""
    Blue text, highlighted background, distance updates live
 ```
 
 **Completed Turnpoint:**
 ```
-┌──────────────────────────────────────────────────┐
-│  [<]    TP 1/5: START (0.0 km)    [>]           │
-│              COMPLETED ✓ 14:23                   │
-└──────────────────────────────────────────────────┘
+"oe"""""""""""""""""""""""""""""""""""""""""""""""""""
+"  [<]    TP 1/5: START (0.0 km)    [>]           "
+"              COMPLETED " 14:23                   "
+"""""""""""""""""""""""""""""""""""""""""""""""""""""
    Green text, checkmark, timestamp shown
 ```
 
 **Skipped Turnpoint (Invalid Task):**
 ```
-┌──────────────────────────────────────────────────┐
-│  [<]    TP 3/5: SKIPPED    [>]                  │
-│              TASK INVALID ⚠                      │
-└──────────────────────────────────────────────────┘
+"oe"""""""""""""""""""""""""""""""""""""""""""""""""""
+"  [<]    TP 3/5: SKIPPED    [>]                  "
+"              TASK INVALID                        "
+"""""""""""""""""""""""""""""""""""""""""""""""""""""
    Red text, warning icon, task invalidated
 ```
 
 ---
 
-## 🎮 User Interaction Flow
+## z(R) User Interaction Flow
 
 ### Automatic Detection (Primary)
 
@@ -87,7 +87,7 @@ This describes a **Task Status Bar** that should be integrated with the automati
    [<]    TP 2/5: KEYSTONE (12.3 km)    [>]
                ACTIVE
    ```
-2. **Distance decreases:** (12.3 km → 8.5 km → 3.2 km → 0.8 km)
+2. **Distance decreases:** (12.3 km -> 8.5 km -> 3.2 km -> 0.8 km)
 3. **GPS enters zone:** Pilot crosses into observation zone
 4. **Automatic advance:**
    - BEEP! + Vibration
@@ -99,7 +99,7 @@ This describes a **Task Status Bar** that should be integrated with the automati
 5. **TP 2 now shows as completed when using left arrow:**
    ```
    [<]    TP 2/5: KEYSTONE (0.0 km)    [>]
-            COMPLETED ✓ 14:35
+            COMPLETED " 14:35
    ```
 
 ### Manual Advance (Secondary)
@@ -108,14 +108,14 @@ This describes a **Task Status Bar** that should be integrated with the automati
 1. **User taps [>] right arrow**
 2. **Confirmation dialog appears:**
    ```
-   ┌─────────────────────────────────────┐
-   │  Skip TP2: KEYSTONE?                │
-   │                                     │
-   │  This will mark the task as INVALID │
-   │  for competition scoring.           │
-   │                                     │
-   │  [Cancel]         [Skip Anyway]    │
-   └─────────────────────────────────────┘
+   "oe""""""""""""""""""""""""""""""""""""""
+   "  Skip TP2: KEYSTONE?                "
+   "                                     "
+   "  This will mark the task as INVALID "
+   "  for competition scoring.           "
+   "                                     "
+   "  [Cancel]         [Skip Anyway]    "
+   """"""""""""""""""""""""""""""""""""""""
    ```
 3. **If user confirms:**
    - TP2 marked as SKIPPED
@@ -123,7 +123,7 @@ This describes a **Task Status Bar** that should be integrated with the automati
    - Advance to TP3:
    ```
    [<]    TP 3/5: MOUNTAIN (42.1 km)    [>]
-               ACTIVE (TASK INVALID ⚠)
+               ACTIVE (TASK INVALID  )
    ```
 
 ### Manual Review (Arrows)
@@ -133,18 +133,18 @@ This describes a **Task Status Bar** that should be integrated with the automati
 2. **Task bar switches to TP1 (read-only view):**
    ```
    [<]    TP 1/5: START (0.0 km)    [>]
-            COMPLETED ✓ 14:15
+            COMPLETED " 14:15
    ```
 3. **Flight data cards still show ACTIVE turnpoint (TP2)**
 4. **User taps [>] to return to active turnpoint**
 
 ---
 
-## 🔗 Integration with Navigation System
+## "-- Integration with Navigation System
 
 ### How It Works Together
 
-**Task Bar (Manual UI)** ↔️ **RacingNavigationManager (Auto Logic)**
+**Task Bar (Manual UI)** *" **RacingNavigationManager (Auto Logic)**
 
 ```kotlin
 // RacingNavigationManager triggers UI updates
@@ -166,15 +166,15 @@ onRightArrowClick = {
 ```
 
 **Key Behaviors:**
-- ✅ Arrows ALWAYS work (manual override)
-- ✅ Auto-detection updates task bar automatically
-- ✅ Task bar shows "ACTIVE" turnpoint, not just "current view"
-- ✅ User can browse previous TPs without changing active TP
-- ✅ Flight data cards (WPT DIST, WPT BRG) always show ACTIVE TP, not viewed TP
+- ... Arrows ALWAYS work (manual override)
+- ... Auto-detection updates task bar automatically
+- ... Task bar shows "ACTIVE" turnpoint, not just "current view"
+- ... User can browse previous TPs without changing active TP
+- ... Flight data cards (WPT DIST, WPT BRG) always show ACTIVE TP, not viewed TP
 
 ---
 
-## 🎨 Visual Design Specification
+## z Visual Design Specification
 
 ### Task Bar Component
 
@@ -232,7 +232,7 @@ AlertDialog(
 
 ---
 
-## 🔊 Audio/Haptic Feedback
+## "s Audio/Haptic Feedback
 
 **Zone Entry (Automatic):**
 - Sound: Short beep (200ms, 1kHz)
@@ -251,21 +251,21 @@ AlertDialog(
 
 ---
 
-## 📊 Z-Index Layering
+## "s Z-Index Layering
 
 ```
-┌─────────────────────────────────────────────────┐
-│  Z-INDEX STACK                                  │
-├─────────────────────────────────────────────────┤
-│  1.0f   Map Base                               │
-│  2.0f   CardContainer (flight data)            │
-│  3.0f   Task Overlay (turnpoints on map)       │
-│  4.0f   Hamburger Menu                         │
-│  5.0f   Flight Mode Indicator                  │
-│  5.0f   Compass Widget                         │
-│  6.0f   ✨ Task Status Bar (NEW)               │
-│  10.0f  Dialogs (skip confirmation)            │
-└─────────────────────────────────────────────────┘
+"oe""""""""""""""""""""""""""""""""""""""""""""""""""
+"  Z-INDEX STACK                                  "
+"""""""""""""""""""""""""""""""""""""""""""""""""""$
+"  1.0f   Map Base                               "
+"  2.0f   CardContainer (flight data)            "
+"  3.0f   Task Overlay (turnpoints on map)       "
+"  4.0f   Hamburger Menu                         "
+"  5.0f   Flight Mode Indicator                  "
+"  5.0f   Compass Widget                         "
+"  6.0f    Task Status Bar (NEW)               "
+"  10.0f  Dialogs (skip confirmation)            "
+""""""""""""""""""""""""""""""""""""""""""""""""""""
 ```
 
 **Why z-index 6f:**
@@ -275,28 +275,28 @@ AlertDialog(
 
 ---
 
-## 🧪 User Scenarios
+## sectiona User Scenarios
 
 ### Scenario 1: Normal Flight (Auto-Detection)
-1. START → Auto-advance when zone entered → TP1
-2. TP1 → Auto-advance → TP2
-3. TP2 → Auto-advance → TP3
-4. TP3 → Auto-advance → FINISH
-5. Task bar shows: "TASK COMPLETED ✓"
+1. START -> Auto-advance when zone entered -> TP1
+2. TP1 -> Auto-advance -> TP2
+3. TP2 -> Auto-advance -> TP3
+4. TP3 -> Auto-advance -> FINISH
+5. Task bar shows: "TASK COMPLETED ""
 
 ### Scenario 2: Manual Skip (Weather Avoidance)
-1. START → Auto-advance → TP1
+1. START -> Auto-advance -> TP1
 2. TP1 approaching, but pilot decides weather ahead is unsafe
 3. Pilot taps [>] arrow
 4. Dialog: "Skip TP1? Task will be INVALID"
 5. Pilot confirms
-6. Task bar: "TP2 ACTIVE (TASK INVALID ⚠)"
+6. Task bar: "TP2 ACTIVE (TASK INVALID  )"
 7. Pilot continues to TP2, but task won't count for scoring
 
 ### Scenario 3: Review Previous Turnpoints
 1. Currently at TP3 (active)
 2. Pilot taps [<] twice to view TP1
-3. Task bar shows TP1 status: "COMPLETED ✓ 14:15"
+3. Task bar shows TP1 status: "COMPLETED " 14:15"
 4. Flight cards STILL show TP3 distance/bearing (active TP)
 5. Pilot taps [>] twice to return to TP3
 
@@ -311,7 +311,7 @@ AlertDialog(
 
 ---
 
-## ✅ Implementation Checklist
+## ... Implementation Checklist
 
 ### Phase 1: Basic UI (MapScreen integration)
 - [ ] Create `TaskStatusBar.kt` composable
@@ -332,7 +332,7 @@ AlertDialog(
 - [ ] Implement skip confirmation dialog
 - [ ] Add "Mark as completed" option
 - [ ] Disable arrows appropriately (first/last TP)
-- [ ] Handle review mode (viewing ≠ changing active TP)
+- [ ] Handle review mode (viewing per-mille  changing active TP)
 
 ### Phase 4: Visual Polish
 - [ ] Status color coding
@@ -348,20 +348,20 @@ AlertDialog(
 
 ---
 
-## 📏 Acceptance Criteria
+## " Acceptance Criteria
 
 **Must Have:**
-- ✅ Always shows current active turnpoint name and number
-- ✅ Left/right arrows work for manual navigation
-- ✅ Distance updates in real-time
-- ✅ Auto-detection updates task bar immediately
-- ✅ Skip confirmation dialog prevents accidental skips
+- ... Always shows current active turnpoint name and number
+- ... Left/right arrows work for manual navigation
+- ... Distance updates in real-time
+- ... Auto-detection updates task bar immediately
+- ... Skip confirmation dialog prevents accidental skips
 
 **Should Have:**
-- ✅ Status color coding (pending/active/completed)
-- ✅ Task validity warning when skipped
-- ✅ Completion timestamps shown
-- ✅ Audio beep on zone entry
+- ... Status color coding (pending/active/completed)
+- ... Task validity warning when skipped
+- ... Completion timestamps shown
+- ... Audio beep on zone entry
 
 **Nice to Have:**
 - Distance to zone edge (not just center)
@@ -374,3 +374,5 @@ AlertDialog(
 **END OF UX SPECIFICATION**
 
 *This design integrates the manual task status bar with the automatic navigation manager for a seamless Racing task experience.*
+
+

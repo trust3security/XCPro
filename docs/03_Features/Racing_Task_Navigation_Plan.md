@@ -1,12 +1,12 @@
 # Racing Task Navigation - Implementation Plan
 
 **Created:** 2025-10-08
-**Status:** 🚧 Planning
+**Status:** section Planning
 **Priority:** HIGH - Core flight functionality
 
 ---
 
-## 📋 Table of Contents
+## "< Table of Contents
 
 - [Overview](#overview)
 - [Current State Analysis](#current-state-analysis)
@@ -33,61 +33,61 @@ This document outlines the implementation plan for Racing task navigation featur
 
 ## Current State Analysis
 
-### ✅ What We Have
+### ... What We Have
 
 **Separation Architecture:**
-- ✅ Complete Racing/AAT separation via `TaskManagerCoordinator`
-- ✅ Racing-specific models: `RacingWaypoint`, `RacingTask`
-- ✅ Racing-specific managers: `RacingTaskManager`, `RacingTaskDisplay`
-- ✅ Basic leg tracking: `currentLeg` in `RacingTaskManager`
+- ... Complete Racing/AAT separation via `TaskManagerCoordinator`
+- ... Racing-specific models: `RacingWaypoint`, `RacingTask`
+- ... Racing-specific managers: `RacingTaskManager`, `RacingTaskDisplay`
+- ... Basic leg tracking: `currentLeg` in `RacingTaskManager`
 
 **Racing Task Files:**
 ```
 tasks/racing/
-├── RacingTaskManager.kt           // Main manager with basic leg tracking
-├── RacingTaskCalculator.kt        // Distance calculations
-├── RacingTaskDisplay.kt           // Map visualization
-├── RacingTaskValidator.kt         // Task validation
-├── models/
-│   ├── RacingTask.kt              // Task data model
-│   └── RacingWaypoint.kt          // Waypoint model with roles
-└── turnpoints/
-    ├── CylinderCalculator.kt      // Cylinder geometry
-    ├── FAIQuadrantCalculator.kt   // FAI sector geometry
-    ├── KeyholeCalculator.kt       // Keyhole geometry
-    └── *Display.kt                // Visual rendering
+""" RacingTaskManager.kt           // Main manager with basic leg tracking
+""" RacingTaskCalculator.kt        // Distance calculations
+""" RacingTaskDisplay.kt           // Map visualization
+""" RacingTaskValidator.kt         // Task validation
+""" models/
+"   """ RacingTask.kt              // Task data model
+"   """" RacingWaypoint.kt          // Waypoint model with roles
+"""" turnpoints/
+    """ CylinderCalculator.kt      // Cylinder geometry
+    """ FAIQuadrantCalculator.kt   // FAI sector geometry
+    """ KeyholeCalculator.kt       // Keyhole geometry
+    """" *Display.kt                // Visual rendering
 ```
 
 **Basic Navigation Methods:**
-- ✅ `advanceToNextLeg()` - Manually advance to next waypoint
-- ✅ `goToPreviousLeg()` - Go back to previous waypoint
-- ✅ `currentLeg` property - Track current waypoint index
+- ... `advanceToNextLeg()` - Manually advance to next waypoint
+- ... `goToPreviousLeg()` - Go back to previous waypoint
+- ... `currentLeg` property - Track current waypoint index
 
 **AAT Comparison (for reference only):**
 - AAT has dedicated `AATNavigationManager.kt` (we can learn from the architecture)
 - AAT navigation is separate from AAT task management (good pattern)
 
-### ❌ What's Missing for Racing Navigation
+### oe What's Missing for Racing Navigation
 
 **Core Navigation Features:**
-- ❌ No automatic turnpoint detection (GPS zone entry monitoring)
-- ❌ No turnpoint status tracking (pending/active/completed/skipped)
-- ❌ No audio/haptic feedback on zone entry
-- ❌ No task validity checking (did pilot skip turnpoint?)
-- ❌ No observation zone geometry checking (is GPS inside zone?)
-- ❌ No dedicated navigation manager (logic mixed in RacingTaskManager)
+- oe No automatic turnpoint detection (GPS zone entry monitoring)
+- oe No turnpoint status tracking (pending/active/completed/skipped)
+- oe No audio/haptic feedback on zone entry
+- oe No task validity checking (did pilot skip turnpoint?)
+- oe No observation zone geometry checking (is GPS inside zone?)
+- oe No dedicated navigation manager (logic mixed in RacingTaskManager)
 
 **UI Features:**
-- ❌ No visual turnpoint status indicators
-- ❌ No "Next TP" button on map
-- ❌ No turnpoint list screen
-- ❌ No task status indicator (Valid/Invalid)
-- ❌ No completed turnpoint markers (checkmarks)
+- oe No visual turnpoint status indicators
+- oe No "Next TP" button on map
+- oe No turnpoint list screen
+- oe No task status indicator (Valid/Invalid)
+- oe No completed turnpoint markers (checkmarks)
 
 **Configuration:**
-- ❌ No user preferences for auto-advance behavior
-- ❌ No audio alert toggle
-- ❌ No haptic feedback toggle
+- oe No user preferences for auto-advance behavior
+- oe No audio alert toggle
+- oe No haptic feedback toggle
 
 ---
 
@@ -96,7 +96,7 @@ tasks/racing/
 ### How Racing Tasks Work
 
 **Sequential Navigation:**
-- Pilot MUST visit turnpoints in strict order: START → TP1 → TP2 → ... → FINISH
+- Pilot MUST visit turnpoints in strict order: START -> TP1 -> TP2 -> ... -> FINISH
 - Skipping a turnpoint = **task invalid** (unlike AAT which is flexible)
 - Each turnpoint has an observation zone (cylinder, FAI quadrant, keyhole)
 
@@ -115,22 +115,22 @@ tasks/racing/
 **Automatic Detection (Preferred):**
 ```
 Pilot approaching TP1:
-├─ Distance: 8.5 km (decreasing)
-├─ Bearing: 045°
-├─ Status: "TP1 Active"
-└─ Visual: TP1 highlighted on map
+"" Distance: 8.5 km (decreasing)
+"" Bearing: 045deg
+"" Status: "TP1 Active"
+""" Visual: TP1 highlighted on map
 
 [GPS enters TP1 observation zone]
-├─ BEEP! + Vibration
-├─ Message: "TP1 reached"
-├─ Auto-advance to TP2
-└─ TP1 marked with ✓ checkmark
+"" BEEP! + Vibration
+"" Message: "TP1 reached"
+"" Auto-advance to TP2
+""" TP1 marked with " checkmark
 
 Now showing TP2:
-├─ Distance: 42.3 km
-├─ Bearing: 135°
-├─ Status: "TP2 Active"
-└─ TP1: ✓ 14:23 (completed at time)
+"" Distance: 42.3 km
+"" Bearing: 135deg
+"" Status: "TP2 Active"
+""" TP1: " 14:23 (completed at time)
 ```
 
 **Manual Override (Backup):**
@@ -161,7 +161,7 @@ Now showing TP2:
 **Files to Create:**
 ```
 tasks/racing/navigation/
-└── RacingNavigationManager.kt
+"""" RacingNavigationManager.kt
 ```
 
 **Features:**
@@ -185,8 +185,8 @@ tasks/racing/navigation/
 **Files to Create:**
 ```
 tasks/racing/navigation/
-├── RacingZoneDetector.kt          // GPS monitoring & zone geometry checks
-└── RacingNavigationState.kt       // State models for navigation
+""" RacingZoneDetector.kt          // GPS monitoring & zone geometry checks
+"""" RacingNavigationState.kt       // State models for navigation
 ```
 
 **Features:**
@@ -214,8 +214,8 @@ tasks/racing/navigation/
 **Files to Create:**
 ```
 tasks/racing/navigation/
-├── RacingNavigationAudio.kt       // Sound playback
-└── RacingNavigationHaptics.kt     // Vibration patterns
+""" RacingNavigationAudio.kt       // Sound playback
+"""" RacingNavigationHaptics.kt     // Vibration patterns
 ```
 
 **Features:**
@@ -280,9 +280,9 @@ MapScreen.kt                                // Status indicator
 **Files to Create:**
 ```
 tasks/racing/navigation/
-└── RacingNavigationPreferences.kt
+"""" RacingNavigationPreferences.kt
 screens/settings/
-└── RacingNavigationSettings.kt
+"""" RacingNavigationSettings.kt
 ```
 
 **Features:**
@@ -313,7 +313,7 @@ screens/settings/
 **Goal:** Integrate all components and refine UX
 
 **Tasks:**
-- Connect all components (manager → detector → audio → UI)
+- Connect all components (manager -> detector -> audio -> UI)
 - Add comprehensive logging for debugging
 - Performance optimization (battery usage)
 - Edge case handling (GPS loss, task reload)
@@ -334,45 +334,45 @@ screens/settings/
 ### Component Diagram
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                     MapScreen.kt                         │
-│  - Displays navigation status                           │
-│  - Shows turnpoint markers with status                  │
-│  - "Next TP" FAB button                                 │
-└─────────────────────┬───────────────────────────────────┘
-                      │ observes state
-                      ▼
-┌─────────────────────────────────────────────────────────┐
-│           RacingNavigationManager.kt                     │
-│  - Manages turnpoint status (PENDING/ACTIVE/COMPLETED)  │
-│  - Validates task (sequential order, no skips)          │
-│  - Emits status change events                           │
-│  - Provides current/next turnpoint info                 │
-└─────┬───────────────────────────────┬───────────────────┘
-      │ updates status                 │ triggers
-      ▼                                ▼
-┌───────────────────────┐    ┌─────────────────────────┐
-│ RacingZoneDetector.kt │    │  Audio & Haptics        │
-│ - GPS monitoring      │    │  - Zone entry beep      │
-│ - Zone geometry check │    │  - Task complete sound  │
-│ - Entry/exit events   │    │  - Warning sound        │
-└───────┬───────────────┘    │  - Vibration patterns   │
-        │ uses geometry      └─────────────────────────┘
-        ▼
-┌──────────────────────────────────────────────────────────┐
-│              Turnpoint Calculators                        │
-│  - CylinderCalculator.isWithinObservationZone()          │
-│  - FAIQuadrantCalculator.isWithinObservationZone()       │
-│  - KeyholeCalculator.isWithinObservationZone()           │
-└──────────────────────────────────────────────────────────┘
-        ▲
-        │ receives GPS
-        │
-┌───────────────────────┐
-│ FlightDataManager.kt  │
-│ - GPS position stream │
-│ - 10Hz updates        │
-└───────────────────────┘
+"oe""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+"                     MapScreen.kt                         "
+"  - Displays navigation status                           "
+"  - Shows turnpoint markers with status                  "
+"  - "Next TP" FAB button                                 "
+""""""""""""""""""""""""not""""""""""""""""""""""""""""""""""""
+                      " observes state
+                      -1/4
+"oe""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+"           RacingNavigationManager.kt                     "
+"  - Manages turnpoint status (PENDING/ACTIVE/COMPLETED)  "
+"  - Validates task (sequential order, no skips)          "
+"  - Emits status change events                           "
+"  - Provides current/next turnpoint info                 "
+""""""""not""""""""""""""""""""""""""""""""not""""""""""""""""""""
+      " updates status                 " triggers
+      -1/4                                -1/4
+"oe""""""""""""""""""""""""    "oe""""""""""""""""""""""""""
+" RacingZoneDetector.kt "    "  Audio & Haptics        "
+" - GPS monitoring      "    "  - Zone entry beep      "
+" - Zone geometry check "    "  - Task complete sound  "
+" - Entry/exit events   "    "  - Warning sound        "
+""""""""""not""""""""""""""""    "  - Vibration patterns   "
+        " uses geometry      """"""""""""""""""""""""""""
+        -1/4
+"oe"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+"              Turnpoint Calculators                        "
+"  - CylinderCalculator.isWithinObservationZone()          "
+"  - FAIQuadrantCalculator.isWithinObservationZone()       "
+"  - KeyholeCalculator.isWithinObservationZone()           "
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+        -^2
+        " receives GPS
+        "
+"oe""""""""""""""""""""""""
+" FlightDataManager.kt  "
+" - GPS position stream "
+" - 10Hz updates        "
+""""""""""""""""""""""""""
 ```
 
 ### Data Models
@@ -499,12 +499,12 @@ interface RacingZoneDetector {
 racing-task-navigation/
 
 # Sub-branches for each phase
-├── phase-1-navigation-manager
-├── phase-2-zone-detection
-├── phase-3-audio-haptic
-├── phase-4-visual-ui
-├── phase-5-manual-controls
-└── phase-6-integration
+""" phase-1-navigation-manager
+""" phase-2-zone-detection
+""" phase-3-audio-haptic
+""" phase-4-visual-ui
+""" phase-5-manual-controls
+"""" phase-6-integration
 ```
 
 **Workflow:**
@@ -516,7 +516,7 @@ racing-task-navigation/
 6. Repeat for next phase
 
 **Final Merge:**
-- Merge `racing-task-navigation` → `main` after Phase 6 complete
+- Merge `racing-task-navigation` -> `main` after Phase 6 complete
 - Tag as `v1.x-racing-navigation`
 
 ---
@@ -524,17 +524,17 @@ racing-task-navigation/
 ## Success Criteria
 
 ### Must Have (MVP)
-- ✅ Automatic turnpoint detection works reliably
-- ✅ Clear visual feedback (active/completed markers)
-- ✅ Audio beep on zone entry
-- ✅ Manual advance button always available
-- ✅ Task validity tracking and warning
+- ... Automatic turnpoint detection works reliably
+- ... Clear visual feedback (active/completed markers)
+- ... Audio beep on zone entry
+- ... Manual advance button always available
+- ... Task validity tracking and warning
 
 ### Should Have
-- ✅ Haptic feedback on zone entry
-- ✅ Turnpoint list screen
-- ✅ User preferences for auto-advance
-- ✅ Undo last advance
+- ... Haptic feedback on zone entry
+- ... Turnpoint list screen
+- ... User preferences for auto-advance
+- ... Undo last advance
 
 ### Nice to Have
 - Distance circles auto-center on active turnpoint
@@ -584,3 +584,5 @@ racing-task-navigation/
 **END OF PLAN**
 
 *This plan maintains complete separation between Racing and AAT task navigation, with Racing implemented first as the simpler, more structured task type.*
+
+

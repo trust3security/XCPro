@@ -288,7 +288,7 @@ private val trailTypeOptions = listOf(
     TrailTypeOption(
         type = TrailType.VARIO_2,
         title = "Vario 2",
-        description = "Black/blue sink, yellow near zero, green → orange → red → purple lift."
+        description = "Black/blue sink, yellow near zero, green -> orange -> red -> purple lift."
     ),
     TrailTypeOption(
         type = TrailType.VARIO_2_DOTS,
@@ -421,3 +421,4 @@ private fun ColorThemeRow(
         }
     }
 }
+

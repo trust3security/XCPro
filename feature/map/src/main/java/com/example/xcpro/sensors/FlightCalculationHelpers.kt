@@ -36,6 +36,7 @@ internal class FlightCalculationHelpers(
         private const val SPEED_HOLD_MS = 10_000L
         private const val DEFAULT_FALLBACK_SPEED_MS = 27.78 // 100 km/h
         private const val MIN_MOVING_SPEED_MS = 0.5         // ~1 kt; below this we treat as stationary
+        private const val NETTO_VALID_WARMUP_MS = 20_000L
     }
 
     private val thermalTracker = ThermalTracker()
@@ -65,6 +66,7 @@ internal class FlightCalculationHelpers(
     private var lastValidTAS: Double? = null
     private var lastValidGnd: Double? = null
     private var lastSpeedTimestamp: Long = 0L
+    private var nettoEligibleStartMs: Long = -1L
 
     /**
      * Update AGL (Above Ground Level) using SRTM terrain database
@@ -241,14 +243,23 @@ internal class FlightCalculationHelpers(
 
         if (speed == null) {
             // No evidence of movement; don't invent sink from polar. Publish brutto and flag invalid.
+            nettoEligibleStartMs = -1L
             return NettoComputation(currentVerticalSpeed, false)
         }
 
         val sinkRate = sinkProvider.sinkAtSpeed(speed)
-            ?: return NettoComputation(currentVerticalSpeed, false)
+            ?: run {
+                nettoEligibleStartMs = -1L
+                return NettoComputation(currentVerticalSpeed, false)
+            }
+
+        if (nettoEligibleStartMs < 0L || now < nettoEligibleStartMs) {
+            nettoEligibleStartMs = now
+        }
+        val warmedUp = now - nettoEligibleStartMs >= NETTO_VALID_WARMUP_MS
 
         val nettoValue = currentVerticalSpeed + sinkRate
-        return NettoComputation(nettoValue, true)
+        return NettoComputation(nettoValue, warmedUp)
     }
 
     /**
@@ -279,5 +290,6 @@ internal class FlightCalculationHelpers(
         lastValidTAS = null
         lastValidGnd = null
         lastSpeedTimestamp = 0L
+        nettoEligibleStartMs = -1L
     }
 }

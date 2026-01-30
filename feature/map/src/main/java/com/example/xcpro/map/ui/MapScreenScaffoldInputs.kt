@@ -61,6 +61,7 @@ internal data class MapScreenScaffoldInputs(
     val flightViewModel: FlightDataViewModel,
     val taskManager: TaskManagerCoordinator,
     val windArrowState: WindArrowUiState,
+    val showWindSpeedOnVario: Boolean,
     val cameraManager: MapCameraManager,
     val currentMode: FlightMode,
     val currentZoom: Float,
@@ -144,6 +145,7 @@ internal fun rememberMapScreenScaffoldInputs(
     ballastOffsetState: MutableState<Offset>,
     flightViewModel: FlightDataViewModel,
     windArrowState: WindArrowUiState,
+    showWindSpeedOnVario: Boolean,
     cardStyle: CardStyle
 ): MapScreenScaffoldInputs {
     val onDrawerItemSelected: (String) -> Unit = { item ->
@@ -182,6 +184,7 @@ internal fun rememberMapScreenScaffoldInputs(
         flightViewModel = flightViewModel,
         taskManager = mapViewModel.taskManager,
         windArrowState = windArrowState,
+        showWindSpeedOnVario = showWindSpeedOnVario,
         cameraManager = managers.cameraManager,
         currentMode = bindings.currentMode,
         currentZoom = bindings.currentZoom,

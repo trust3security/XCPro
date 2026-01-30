@@ -54,6 +54,7 @@ internal fun VariometerWidgetImpl(
     dialConfig: VarioDialConfig = VarioDialConfig(),
     windDirectionScreenDeg: Float,
     windIsValid: Boolean,
+    windSpeedLabel: String? = null,
     screenWidthPx: Float,
     screenHeightPx: Float,
     minSizePx: Float,
@@ -164,6 +165,7 @@ internal fun VariometerWidgetImpl(
                 dialConfig = dialConfig,
                 windDirectionScreenDeg = windDirectionScreenDeg,
                 windIsValid = windIsValid,
+                windSpeedLabel = windSpeedLabel,
                 modifier = Modifier.fillMaxSize()
             )
 

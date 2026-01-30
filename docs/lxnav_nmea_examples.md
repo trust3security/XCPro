@@ -13,7 +13,7 @@ All strings below are representative of what you will actually see in the field.
 
 ---
 
-## 1. `$LXWP0` — Primary Flight Data
+## 1. `$LXWP0` -- Primary Flight Data
 
 ### Canonical / very common
 ```
@@ -52,7 +52,7 @@ $LXWP0,Y,0.1,998.6,0.85,,,,,,180,360,10.0*52
 
 ---
 
-## 2. `$LXWP1` — Device / Configuration / Info
+## 2. `$LXWP1` -- Device / Configuration / Info
 
 ### Common minimal form
 ```
@@ -79,7 +79,7 @@ Source: `C:\Users\Asus\AndroidStudioProjects\XCSoar\src\Device\Driver\LX\Parser.
 
 ---
 
-## 3. `$GPRMC` — GPS Position, Speed, Track
+## 3. `$GPRMC` -- GPS Position, Speed, Track
 
 ### Typical valid fix
 ```
@@ -97,7 +97,7 @@ Notes:
 
 ---
 
-## 4. `$GPGGA` — GPS Fix Quality & Altitude
+## 4. `$GPGGA` -- GPS Fix Quality & Altitude
 
 ### Valid fix
 ```
@@ -186,3 +186,4 @@ These examples are sufficient to:
 - Write unit tests
 - Implement autonomous Codex loops
 - Match real LXNAV behavior without vendor specs
+

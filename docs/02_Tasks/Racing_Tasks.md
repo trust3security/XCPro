@@ -1,14 +1,14 @@
 # Racing Tasks - Complete Guide
 
 **Last Updated:** 2026-01-15
-**Status:** ✅ Current - Consolidated from multiple sources
+**Status:** ... Current - Consolidated from multiple sources
 **Module:** `app/src/main/java/.../tasks/racing/`
 
 > **Quick Links:** [Task Separation Rules](../01_Core/Task_Type_Separation.md) | [Default Values](./Default_Values.md) | [Racing ARCHITECTURE](../../app/src/main/java/com/example/xcpro/tasks/racing/ARCHITECTURE.md) | [Racing Task Summary](./racingtask.md) | [XCSoar-Style Navigation](./Racing_XCSoar_Navigation.md)
 
 ---
 
-## 📖 What is a Racing Task?
+## "- What is a Racing Task?
 
 Racing tasks are the **traditional** competitive gliding format:
 - Fixed turnpoints at specific coordinates
@@ -21,7 +21,7 @@ Racing tasks are the **traditional** competitive gliding format:
 
 ---
 
-## 🎯 Racing Task Specifications
+## z Racing Task Specifications
 
 ### Turnpoint Types
 
@@ -34,7 +34,7 @@ Racing tasks support multiple turnpoint geometries, each with specific FAI rules
 - **FAI reference:** SC3 Section 6.3.1
 
 #### 2. FAI Quadrant
-- **Radius:** 10km (finite 90° sector, XCSoar parity)
+- **Radius:** 10km (finite 90deg sector, XCSoar parity)
 - **Orientation:** Based on turn direction (left/right)
 - **Rule:** Bisector is perpendicular to task line bisector
 - **Use case:** FAI Triangle races, long-distance racing
@@ -42,14 +42,14 @@ Racing tasks support multiple turnpoint geometries, each with specific FAI rules
 
 #### 3. Keyhole
 - **Inner cylinder:** 500m radius (fixed)
-- **Outer sector:** 90° sector, 10km radius
+- **Outer sector:** 90deg sector, 10km radius
 - **Orientation:** Sector opens away from previous turnpoint
 - **Rule:** Must enter either cylinder OR sector
 - **Use case:** Flexible racing with safety margin
 - **FAI reference:** SC3 Annex A Section 6.3.1b
 
 #### 4. Symmetric Quadrant
-- **Radius:** Infinite (90° sector)
+- **Radius:** Infinite (90deg sector)
 - **Orientation:** Perpendicular to task line bisector (symmetric)
 - **Rule:** Bisector points directly away from task line
 - **Use case:** Specialized competitions
@@ -61,7 +61,7 @@ Racing tasks support multiple turnpoint geometries, each with specific FAI rules
 |------|----------|--------------|----------|
 | **Start Line** | Perpendicular line | 10km | Standard (most common) |
 | **Start Cylinder** | Circle around point | 10km radius | Alternative start |
-| **FAI Start Quadrant** | 90° sector | 10km radius | FAI competitions |
+| **FAI Start Quadrant** | 90deg sector | 10km radius | FAI competitions |
 
 ### Finish Types
 
@@ -72,7 +72,7 @@ Racing tasks support multiple turnpoint geometries, each with specific FAI rules
 
 ---
 
-## 📏 Default Values
+## " Default Values
 
 See [Default_Values.md](./Default_Values.md) for complete reference.
 
@@ -85,14 +85,14 @@ See [Default_Values.md](./Default_Values.md) for complete reference.
 
 ---
 
-## 🧮 Distance Calculations
+## section(R) Distance Calculations
 
 ### Critical Testing Requirement
 
-**⚠️ MUST TEST:** When changing Racing task calculations or display:
+**  MUST TEST:** When changing Racing task calculations or display:
 
 1. **Finish Cylinder Radius Test**:
-   - Change finish cylinder radius (e.g., 5km → 0.5km)
+   - Change finish cylinder radius (e.g., 5km -> 0.5km)
    - Verify total task distance changes accordingly
    - **Historical Bug:** Finish cylinder radius was ignored in FAI calculations
 
@@ -107,9 +107,9 @@ See [Default_Values.md](./Default_Values.md) for complete reference.
 ### Optimal Path Calculation
 
 Racing tasks use **FAI-compliant optimal path** for distance:
-- Start → Optimal entry to first turnpoint
-- Between turnpoints → Optimal exit to optimal entry
-- Last turnpoint → Optimal exit to finish
+- Start -> Optimal entry to first turnpoint
+- Between turnpoints -> Optimal exit to optimal entry
+- Last turnpoint -> Optimal exit to finish
 
 **Source Code:** `racing/turnpoints/FAIQuadrantCalculator.kt`, `CylinderCalculator.kt`
 
@@ -117,37 +117,37 @@ Racing tasks use **FAI-compliant optimal path** for distance:
 
 ---
 
-## 🗂️ File Organization
+## -- File Organization
 
 ### Racing Module Structure
 
 ```
 app/src/main/java/.../tasks/racing/
-│
-├── RacingTaskManager.kt          ← Main coordinator
-├── RacingTaskCalculator.kt       ← Distance/scoring calculations
-├── RacingTaskDisplay.kt          ← Map visualization
-├── RacingTaskValidator.kt        ← FAI compliance validation
-│
-├── models/
-│   ├── RacingWaypoint.kt        ← Racing-specific waypoint model
-│   ├── RacingCylinder.kt        ← Cylinder geometry
-│   └── RacingTask.kt            ← Task definition
-│
-├── calculations/
-│   └── RacingMathUtils.kt       ← Math utilities (autonomous)
-│
-├── turnpoints/
-│   ├── CylinderCalculator.kt
-│   ├── CylinderDisplay.kt
-│   ├── FAIQuadrantCalculator.kt
-│   ├── FAIQuadrantDisplay.kt
-│   ├── KeyholeCalculator.kt
-│   ├── KeyholeDisplay.kt
-│   └── SymmetricQuadrantCalculator.kt
-│
-└── ui/
-    └── RacingTaskPointTypeSelector.kt  ← Turnpoint type UI
+"
+""" RacingTaskManager.kt          * Main coordinator
+""" RacingTaskCalculator.kt       * Distance/scoring calculations
+""" RacingTaskDisplay.kt          * Map visualization
+""" RacingTaskValidator.kt        * FAI compliance validation
+"
+""" models/
+"   """ RacingWaypoint.kt        * Racing-specific waypoint model
+"   """ RacingCylinder.kt        * Cylinder geometry
+"   """" RacingTask.kt            * Task definition
+"
+""" calculations/
+"   """" RacingMathUtils.kt       * Math utilities (autonomous)
+"
+""" turnpoints/
+"   """ CylinderCalculator.kt
+"   """ CylinderDisplay.kt
+"   """ FAIQuadrantCalculator.kt
+"   """ FAIQuadrantDisplay.kt
+"   """ KeyholeCalculator.kt
+"   """ KeyholeDisplay.kt
+"   """" SymmetricQuadrantCalculator.kt
+"
+"""" ui/
+    """" RacingTaskPointTypeSelector.kt  * Turnpoint type UI
 ```
 
 ### Architecture Rules
@@ -155,14 +155,14 @@ app/src/main/java/.../tasks/racing/
 See [Task_Type_Separation.md](../01_Core/Task_Type_Separation.md) for complete rules.
 
 **Key Requirements:**
-- ✅ 100% autonomous (no AAT imports)
-- ✅ Own models, calculations, and display
-- ✅ Separate math utilities
-- ❌ NO sharing with AAT module
+- ... 100% autonomous (no AAT imports)
+- ... Own models, calculations, and display
+- ... Separate math utilities
+- oe NO sharing with AAT module
 
 ---
 
-## 🎨 UI Components
+## z UI Components
 
 ### TaskPointTypeSelector
 
@@ -197,13 +197,13 @@ Implementation details and the long-term strategy live in:
 - `docs/02_Tasks/Racing_XCSoar_Navigation.md`
 
 ---
-## ⚖️ FAI Compliance
+## - FAI Compliance
 
 ### Racing Task Validation
 
 **Rules Enforced:**
 1. Minimum 3 turnpoints for triangle tasks
-2. Turnpoint separation ≥ 500m
+2. Turnpoint separation per-milleYen 500m
 3. Valid start/finish geometry
 4. Turnpoint cylinders within reasonable bounds (< 50km)
 
@@ -222,7 +222,7 @@ Racing tasks work with standard FAI competition classes:
 
 ---
 
-## 🧪 Testing
+## sectiona Testing
 
 ### Unit Tests
 
@@ -243,11 +243,11 @@ Test complete Racing task workflows:
 - Task creation with multiple turnpoint types
 - Distance calculation end-to-end
 - Map display rendering
-- Type switching (cylinder → keyhole)
+- Type switching (cylinder -> keyhole)
 
 ---
 
-## 🔧 Common Operations
+## "section Common Operations
 
 ### Creating a Racing Task
 
@@ -296,7 +296,7 @@ if (result.isValid) {
 
 ---
 
-## 📚 Related Documentation
+## " Related Documentation
 
 ### Core Docs
 - [Task_Type_Separation.md](../01_Core/Task_Type_Separation.md) - **MUST READ** separation rules
@@ -315,7 +315,7 @@ if (result.isValid) {
 
 ---
 
-## ⚠️ Critical Reminders
+##   Critical Reminders
 
 1. **NEVER import AAT code** - See [Task_Type_Separation.md](../01_Core/Task_Type_Separation.md)
 2. **ALWAYS test finish radius changes** - Distance must update
@@ -325,4 +325,6 @@ if (result.isValid) {
 ---
 
 **Questions?** See [DOCS_INDEX.md](../../DOCS_INDEX.md) for complete documentation map.
+
+
 

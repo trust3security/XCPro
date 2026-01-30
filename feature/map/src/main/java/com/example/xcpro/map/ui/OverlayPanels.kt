@@ -20,6 +20,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.zIndex
 import android.util.Log
+import com.example.xcpro.common.units.SpeedMs
 import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.VerticalSpeedMs
 import com.example.xcpro.common.units.VerticalSpeedUnit
@@ -86,6 +87,7 @@ internal fun VariometerPanel(
     flightDataManager: FlightDataManager,
     widgetManager: MapUIWidgetManager,
     windArrowState: WindArrowUiState,
+    showWindSpeedOnVario: Boolean,
     variometerUiState: VariometerUiState,
     minVariometerSizePx: Float,
     maxVariometerSizePx: Float,
@@ -103,6 +105,7 @@ internal fun VariometerPanel(
     val fastNeedleVario by flightDataManager.fastNeedleVarioFlow.collectAsStateWithLifecycle()
     val audioNeedleVario by flightDataManager.audioNeedleVarioFlow.collectAsStateWithLifecycle()
     val baselineDisplayVario by flightDataManager.baselineDisplayVarioFlow.collectAsStateWithLifecycle()
+    val windSpeed by flightDataManager.windSpeedDisplayFlow.collectAsStateWithLifecycle()
     val unitsPreferences = flightDataManager.unitsPreferences
     val displayVarioUnits by remember(displayNumericVario, unitsPreferences) {
         derivedStateOf {
@@ -161,6 +164,18 @@ internal fun VariometerPanel(
             )
         }
     }
+    val windSpeedLabel by remember(windSpeed, unitsPreferences, windArrowState.isValid, showWindSpeedOnVario) {
+        derivedStateOf {
+            if (!windArrowState.isValid || !showWindSpeedOnVario) {
+                null
+            } else {
+                UnitsFormatter.speed(
+                    SpeedMs(windSpeed.toDouble()),
+                    unitsPreferences
+                ).text
+            }
+        }
+    }
     MapUIWidgets.VariometerWidget(
         widgetManager = widgetManager,
         variometerState = variometerUiState,
@@ -173,6 +188,7 @@ internal fun VariometerPanel(
         dialConfig = dialConfig,
         windDirectionScreenDeg = windArrowState.directionScreenDeg,
         windIsValid = windArrowState.isValid,
+        windSpeedLabel = windSpeedLabel,
         screenWidthPx = screenWidthPx,
         screenHeightPx = screenHeightPx,
         minSizePx = minVariometerSizePx,

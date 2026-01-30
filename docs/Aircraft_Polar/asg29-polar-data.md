@@ -24,7 +24,7 @@
 | Parameter | Value | Imperial |
 |-----------|-------|----------|
 | Wingspan | 18 m | 59.05 ft |
-| Wing Area | 10.5 m² | 113.0 ft² |
+| Wing Area | 10.5 m^2 | 113.0 ft^2 |
 | Aspect Ratio | 30.9 | - |
 | Empty Weight (pure) | 280 kg | 617 lbs |
 | Empty Weight (with sustainer) | 310 kg | 683 lbs |
@@ -36,7 +36,7 @@
 | Parameter | Value | Imperial |
 |-----------|-------|----------|
 | Wingspan | 15 m | 49.21 ft |
-| Wing Area | 9.3 m² | 100.1 ft² |
+| Wing Area | 9.3 m^2 | 100.1 ft^2 |
 | Aspect Ratio | 24.2 | - |
 | Empty Weight | 275 kg | 606 lbs |
 | Maximum Takeoff Weight | 525 kg | 1157 lbs |
@@ -48,14 +48,14 @@
 ## Weight and Loading
 
 ### 18-Meter Configuration
-- **Minimum Wing Loading:** 32.4 kg/m² (6.63 lb/ft²) at 340 kg
-- **Maximum Wing Loading:** 57.1 kg/m² (11.70 lb/ft²) at 600 kg
+- **Minimum Wing Loading:** 32.4 kg/m^2 (6.63 lb/ft^2) at 340 kg
+- **Maximum Wing Loading:** 57.1 kg/m^2 (11.70 lb/ft^2) at 600 kg
 - **Dry Reference Weight:** 360 kg (including standard pilot)
 - **Maximum Water Ballast:** 170-200 liters
 
 ### 15-Meter Configuration
-- **Minimum Wing Loading:** 36.6 kg/m² (7.50 lb/ft²) at 340 kg
-- **Maximum Wing Loading:** 56.5 kg/m² (11.57 lb/ft²) at 525 kg
+- **Minimum Wing Loading:** 36.6 kg/m^2 (7.50 lb/ft^2) at 340 kg
+- **Maximum Wing Loading:** 56.5 kg/m^2 (11.57 lb/ft^2) at 525 kg
 - **Dry Reference Weight:** 355 kg (including standard pilot)
 - **Maximum Water Ballast:** 170 liters
 
@@ -80,12 +80,12 @@
 ### ASG 29 Flap Positions
 | Position | Typical Use | Speed Range |
 |----------|------------|-------------|
-| L (Landing) | +25° | Landing configuration, max 130 km/h |
-| T (Thermal) | +16° | Thermalling, 90-120 km/h |
-| A (Approach) | +8° | Approach/slow cruise, 100-140 km/h |
-| 0 (Neutral) | 0° | Normal cruise, 120-180 km/h |
-| S1 (Speed 1) | -6° | Fast cruise, 160-220 km/h |
-| S2 (Speed 2) | -12° | High speed, 200-270 km/h |
+| L (Landing) | +25deg | Landing configuration, max 130 km/h |
+| T (Thermal) | +16deg | Thermalling, 90-120 km/h |
+| A (Approach) | +8deg | Approach/slow cruise, 100-140 km/h |
+| 0 (Neutral) | 0deg | Normal cruise, 120-180 km/h |
+| S1 (Speed 1) | -6deg | Fast cruise, 160-220 km/h |
+| S2 (Speed 2) | -12deg | High speed, 200-270 km/h |
 
 ---
 
@@ -96,20 +96,20 @@
 #### At Minimum Weight (360 kg)
 | Flap Setting | km/h | knots |
 |--------------|------|-------|
-| Landing (+25°) | 72 | 39 |
-| Thermal (+16°) | 75 | 40 |
-| Approach (+8°) | 78 | 42 |
-| Neutral (0°) | 82 | 44 |
-| Speed (-12°) | 88 | 48 |
+| Landing (+25deg) | 72 | 39 |
+| Thermal (+16deg) | 75 | 40 |
+| Approach (+8deg) | 78 | 42 |
+| Neutral (0deg) | 82 | 44 |
+| Speed (-12deg) | 88 | 48 |
 
 #### At Maximum Weight (600 kg)
 | Flap Setting | km/h | knots |
 |--------------|------|-------|
-| Landing (+25°) | 85 | 46 |
-| Thermal (+16°) | 88 | 48 |
-| Approach (+8°) | 92 | 50 |
-| Neutral (0°) | 96 | 52 |
-| Speed (-12°) | 102 | 55 |
+| Landing (+25deg) | 85 | 46 |
+| Thermal (+16deg) | 88 | 48 |
+| Approach (+8deg) | 92 | 50 |
+| Neutral (0deg) | 96 | 52 |
+| Speed (-12deg) | 102 | 55 |
 
 ---
 
@@ -133,7 +133,7 @@
 
 ### ASG 29 18-Meter
 
-#### Light Loading (360 kg, 34.3 kg/m²)
+#### Light Loading (360 kg, 34.3 kg/m^2)
 | Speed (km/h) | Sink Rate (m/s) | L/D |
 |--------------|-----------------|-----|
 | 85 | 0.47 | ~50 |
@@ -145,7 +145,7 @@
 | 200 | 2.20 | ~25 |
 | 230 | 3.20 | ~20 |
 
-#### Heavy Loading (600 kg, 57.1 kg/m²)
+#### Heavy Loading (600 kg, 57.1 kg/m^2)
 | Speed (km/h) | Sink Rate (m/s) | L/D |
 |--------------|-----------------|-----|
 | 100 | 0.75 | ~37 |
@@ -158,7 +158,7 @@
 
 ### ASG 29 15-Meter
 
-#### Light Loading (355 kg, 38.2 kg/m²)
+#### Light Loading (355 kg, 38.2 kg/m^2)
 | Speed (km/h) | Sink Rate (m/s) | L/D |
 |--------------|-----------------|-----|
 | 85 | 0.52 | ~45 |
@@ -168,7 +168,7 @@
 | 150 | 1.25 | ~33 |
 | 175 | 1.85 | ~26 |
 
-#### Heavy Loading (525 kg, 56.5 kg/m²)
+#### Heavy Loading (525 kg, 56.5 kg/m^2)
 | Speed (km/h) | Sink Rate (m/s) | L/D |
 |--------------|-----------------|-----|
 | 95 | 0.75 | ~35 |
@@ -192,11 +192,11 @@
 ### Inter-thermal Cruise - Flap Selection Guide
 | Flap | No Ballast (km/h) | Max Ballast (km/h) |
 |------|-------------------|-------------------|
-| T (+16°) | 85-100 | 100-120 |
-| A (+8°) | 100-130 | 120-150 |
-| 0 (0°) | 120-170 | 140-190 |
-| S1 (-6°) | 160-210 | 180-230 |
-| S2 (-12°) | 200-270 | 220-270 |
+| T (+16deg) | 85-100 | 100-120 |
+| A (+8deg) | 100-130 | 120-150 |
+| 0 (0deg) | 120-170 | 140-190 |
+| S1 (-6deg) | 160-210 | 180-230 |
+| S2 (-12deg) | 200-270 | 220-270 |
 
 ### Approach Speeds (Minimum Recommended)
 
@@ -227,7 +227,7 @@
 - Full ballast suitable for aerotow only
 
 ### Effect on Performance
-| Ballast % | Wing Loading (kg/m²) | Best L/D Speed (km/h) |
+| Ballast % | Wing Loading (kg/m^2) | Best L/D Speed (km/h) |
 |-----------|---------------------|----------------------|
 | 0% | 34.3 | 96 |
 | 25% | 39.0 | 105 |
@@ -282,7 +282,7 @@ For ASG29 18m at reference weight:
 1. **Glider Empty Weight:** 280-310 kg (depending on configuration)
 2. **Pilot Weight:** Your actual weight with equipment
 3. **Water Ballast:** 0-200 liters
-4. **Wing Area:** 10.5 m² (18m) or 9.3 m² (15m)
+4. **Wing Area:** 10.5 m^2 (18m) or 9.3 m^2 (15m)
 5. **Reference Mass:** 360 kg (dry gross weight)
 
 ### MacCready Settings

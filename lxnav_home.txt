@@ -25,8 +25,8 @@ LXNAV Gliding
     *   [Generations](https://gliding.lxnav.com/news/generations/)
     *   [Profile Collection](https://gliding.lxnav.com/news/general/profile-collection/)
     *   [Version 9](https://gliding.lxnav.com/news/new-firmware-version-9/)
-    *   [Version 8 – navigation](https://gliding.lxnav.com/news/new-firmware-version-8/)
-    *   [Version 7 – variometers](https://gliding.lxnav.com/news/firmware/new-firmware-s8x-s10x-version-7-00/)
+    *   [Version 8 - navigation](https://gliding.lxnav.com/news/new-firmware-version-8/)
+    *   [Version 7 - variometers](https://gliding.lxnav.com/news/firmware/new-firmware-s8x-s10x-version-7-00/)
     *   [Get Sponsored](https://gliding.lxnav.com/get-sponsored/)
     *   [Sponsored pilots](https://gliding.lxnav.com/news-sponsored/)
     *   [Press](https://gliding.lxnav.com/news/press/)
@@ -136,14 +136,14 @@ RENT
 
 [](https://rent.lxnav.com/ventus-3m/)
 
-What’s new
+What's new
 ----------
 
-*   [Updated manual – PowerMouse](https://gliding.lxnav.com/news/updated-manual-powermouse-42/)
-*   [Updated manual – Sxxx](https://gliding.lxnav.com/news/updated-manual-sxxx-rev-71/)
-*   [Updated manual – FlarmView](https://gliding.lxnav.com/news/updated-manual-flarmview-english-256/)
+*   [Updated manual - PowerMouse](https://gliding.lxnav.com/news/updated-manual-powermouse-42/)
+*   [Updated manual - Sxxx](https://gliding.lxnav.com/news/updated-manual-sxxx-rev-71/)
+*   [Updated manual - FlarmView](https://gliding.lxnav.com/news/updated-manual-flarmview-english-256/)
 *   [Incorrect GPS date on GEN1, GEN2, GEN3 units](https://gliding.lxnav.com/news/incorrect-gps-date-on-gen1-3-units/)
-*   [Updated manual – TrafficView](https://gliding.lxnav.com/news/updated-manual-trafficview-english-rev19/)
+*   [Updated manual - TrafficView](https://gliding.lxnav.com/news/updated-manual-trafficview-english-rev19/)
 
 ### LXNAV TUTORIALS!
 
@@ -208,8 +208,8 @@ Subscribe
 [Flight Recorders](https://gliding.lxnav.com/products/nano4/)
 -------------------------------------------------------------
 
-*   [Nano⁴](https://gliding.lxnav.com/products/nano4/)
-*   [Nano³](https://gliding.lxnav.com/products/nano3/)
+*   [Nano'](https://gliding.lxnav.com/products/nano4/)
+*   [Nano^3](https://gliding.lxnav.com/products/nano3/)
 *   [Nano](https://gliding.lxnav.com/products/nano/)
 
 [Engine Control](https://gliding.lxnav.com/products/edt-control-unit/)
@@ -240,7 +240,7 @@ Subscribe
 *   [FlarmView2](https://gliding.lxnav.com/products/flarmview2/)
 *   [FlarmMouse](https://gliding.lxnav.com/products/flarmmouse/)
 
-Copyright © 2020 LXNAV
+Copyright (C) 2020 LXNAV
 
 *   [Contact](https://gliding.lxnav.com/contact/)
 *   [Terms Of Service](https://gliding.lxnav.com/terms-of-service/)
@@ -249,3 +249,4 @@ Copyright © 2020 LXNAV
 *   [Warranty](https://gliding.lxnav.com/warranty/)
 
 [](https://gliding.lxnav.com/# "Back to top")Menu
+

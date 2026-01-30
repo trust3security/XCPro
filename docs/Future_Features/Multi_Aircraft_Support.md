@@ -9,7 +9,7 @@
 
 ---
 
-## 📋 Executive Summary
+## "< Executive Summary
 
 This PRD outlines the enhancement of the existing gliding app to support **multiple aircraft per pilot** with **independent screen configurations**. Currently, the app requires separate profiles for each aircraft, but pilots often fly multiple aircraft types and need different screen layouts for each aircraft while maintaining their pilot identity and preferences.
 
@@ -20,7 +20,7 @@ This PRD outlines the enhancement of the existing gliding app to support **multi
 - **Identity Fragmentation**: No unified pilot identity across aircraft types
 
 ### Proposed Solution
-**Hierarchical Model**: Pilot → Aircraft → Screen Configurations
+**Hierarchical Model**: Pilot -> Aircraft -> Screen Configurations
 - Single pilot identity with multiple aircraft
 - Independent flight data screens per aircraft
 - Shared pilot preferences across all aircraft
@@ -28,7 +28,7 @@ This PRD outlines the enhancement of the existing gliding app to support **multi
 
 ---
 
-## 🎯 Business Objectives
+## z Business Objectives
 
 ### Primary Goals
 1. **Simplified User Experience**: Single pilot identity with easy aircraft switching
@@ -44,7 +44,7 @@ This PRD outlines the enhancement of the existing gliding app to support **multi
 
 ---
 
-## 👥 Target Users
+## 'Yen Target Users
 
 ### Primary User: Multi-Aircraft Glider Pilots
 **Demographics:**
@@ -60,27 +60,27 @@ This PRD outlines the enhancement of the existing gliding app to support **multi
 - Losing pilot-specific settings when switching aircraft
 
 **User Journey:**
-1. **Setup**: Create pilot profile → Add multiple aircraft → Configure screens per aircraft
-2. **Daily Use**: Select aircraft for flight → Optimized screens appear → Switch aircraft mid-session if needed
-3. **Maintenance**: Add new aircraft → Inherit base configurations → Customize as needed
+1. **Setup**: Create pilot profile -> Add multiple aircraft -> Configure screens per aircraft
+2. **Daily Use**: Select aircraft for flight -> Optimized screens appear -> Switch aircraft mid-session if needed
+3. **Maintenance**: Add new aircraft -> Inherit base configurations -> Customize as needed
 
 ---
 
-## 🏗️ Current Architecture Analysis
+## -- Current Architecture Analysis
 
 ### Existing Systems (Strengths)
-#### ✅ Robust Profile System
+#### ... Robust Profile System
 - **ProfileRepository**: SharedPreferences with Gson serialization
 - **Profile Switching**: Complete state persistence and restoration
 - **Profile Export/Import**: JSON-based backup and sharing
 
-#### ✅ Advanced Screen Configuration System
+#### ... Advanced Screen Configuration System
 - **DFCards Library**: 321 flight data cards across 6 categories
 - **Flight Mode Support**: CRUISE, THERMAL, FINAL_GLIDE configurations
 - **Profile-Aware Templates**: Aircraft-specific card templates
 - **Real-Time Data**: GPS, barometric, calculated flight data integration
 
-#### ✅ Aircraft Type Framework
+#### ... Aircraft Type Framework
 ```kotlin
 enum class AircraftType {
     PARAGLIDER,    // 2 flight modes
@@ -91,7 +91,7 @@ enum class AircraftType {
 ```
 
 ### Current Limitations
-#### ❌ Single Aircraft Per Profile
+#### oe Single Aircraft Per Profile
 ```kotlin
 data class UserProfile(
     val aircraftType: AircraftType,  // One aircraft only
@@ -99,14 +99,14 @@ data class UserProfile(
 )
 ```
 
-#### ❌ Profile-Based Screen Storage
+#### oe Profile-Based Screen Storage
 - Screen configurations tied to entire profile
 - No aircraft-level granularity within profile
 - Switching aircraft requires profile change
 
 ---
 
-## 🎨 Proposed Solution Architecture
+## z Proposed Solution Architecture
 
 ### 1. Enhanced Data Model
 
@@ -167,7 +167,7 @@ data class LegacyProfile(
     val aircraftModel: String?
 )
 
-// Migration: LegacyProfile → Pilot + Aircraft
+// Migration: LegacyProfile -> Pilot + Aircraft
 fun migrateLegacyProfile(legacy: LegacyProfile): Pair<Pilot, Aircraft> {
     val pilot = Pilot(
         id = legacy.id + "_pilot",
@@ -225,19 +225,19 @@ interface ScreenConfigurationRepository {
 #### New Structure
 ```
 Profile Section
-├── Active Pilot: [John Smith] [Switch]
-├── Manage Pilots
-└── Aircraft
-    ├── Active: ASG 29 - D-KXXX [Switch]
-    ├── [Aircraft List with Quick Switch]
-    ├── Add New Aircraft
-    └── Manage Aircraft
+""" Active Pilot: [John Smith] [Switch]
+""" Manage Pilots
+"""" Aircraft
+    """ Active: ASG 29 - D-KXXX [Switch]
+    """ [Aircraft List with Quick Switch]
+    """ Add New Aircraft
+    """" Manage Aircraft
 
 Settings Section
-├── Pilot Settings [Units, Theme, Safety]
-├── Aircraft Settings [Performance, Configs]
-├── Flight Data [Screen Templates]
-└── General Settings
+""" Pilot Settings [Units, Theme, Safety]
+""" Aircraft Settings [Performance, Configs]
+""" Flight Data [Screen Templates]
+"""" General Settings
 ```
 
 #### Aircraft Quick Switch Component
@@ -289,7 +289,7 @@ fun AircraftQuickSwitch(
 
 ---
 
-## 💻 Technical Implementation Plan
+## '>> Technical Implementation Plan
 
 ### Phase 1: Data Layer Foundation (Week 1-2)
 
@@ -403,55 +403,55 @@ data class AircraftPerformance(
 
 ---
 
-## 🎨 User Experience Design
+## z User Experience Design
 
 ### 1. Onboarding Flow for Existing Users
 
 #### Migration Wizard
 ```
 Step 1: Welcome to Multi-Aircraft Support
-├── "We've detected you have multiple profiles"
-├── "Let's consolidate them under your pilot identity"
-└── [Continue] [Learn More]
+""" "We've detected you have multiple profiles"
+""" "Let's consolidate them under your pilot identity"
+"""" [Continue] [Learn More]
 
 Step 2: Profile Analysis
-├── Detected Profiles:
-│   ├── ✓ John - ASG29 → Aircraft: ASG 29
-│   ├── ✓ John - Discus → Aircraft: Discus 2c
-│   └── ✓ John - LS8 → Aircraft: LS8-18
-├── Pilot Name: [John Smith]
-└── [Merge Profiles] [Manual Setup]
+""" Detected Profiles:
+"   """ " John - ASG29 -> Aircraft: ASG 29
+"   """ " John - Discus -> Aircraft: Discus 2c
+"   """" " John - LS8 -> Aircraft: LS8-18
+""" Pilot Name: [John Smith]
+"""" [Merge Profiles] [Manual Setup]
 
 Step 3: Migration Complete
-├── ✓ Created pilot profile: John Smith
-├── ✓ Added 3 aircraft with preserved configurations
-├── ✓ Backed up original profiles to: backup_profiles.json
-└── [Start Flying] [Review Setup]
+""" " Created pilot profile: John Smith
+""" " Added 3 aircraft with preserved configurations
+""" " Backed up original profiles to: backup_profiles.json
+"""" [Start Flying] [Review Setup]
 ```
 
 ### 2. New User Onboarding
 
 ```
 Step 1: Create Your Pilot Profile
-├── Name: [_____________]
-├── Units: [Metric ▼] [Imperial ▼]
-├── Theme: [Light] [Dark] [System]
-└── [Continue]
+""" Name: [_____________]
+""" Units: [Metric -1/4] [Imperial -1/4]
+""" Theme: [Light] [Dark] [System]
+"""" [Continue]
 
 Step 2: Add Your First Aircraft
-├── Aircraft Type: [Sailplane ▼]
-├── Model: [ASG 29 ▼] [Custom...]
-├── Registration: [D-KXXX]
-├── Competition Number: [29] (optional)
-└── [Add Aircraft]
+""" Aircraft Type: [Sailplane -1/4]
+""" Model: [ASG 29 -1/4] [Custom...]
+""" Registration: [D-KXXX]
+""" Competition Number: [29] (optional)
+"""" [Add Aircraft]
 
 Step 3: Configure Flight Screens
-├── Flight Modes Available for Sailplane:
-│   ├── ☑️ Cruise (Essential navigation data)
-│   ├── ☑️ Thermal (Climb optimization)
-│   └── ☑️ Final Glide (Task completion)
-├── [Use Defaults] [Customize Now] [Customize Later]
-└── [Start Flying]
+""" Flight Modes Available for Sailplane:
+"   """ ' Cruise (Essential navigation data)
+"   """ ' Thermal (Climb optimization)
+"   """" ' Final Glide (Task completion)
+""" [Use Defaults] [Customize Now] [Customize Later]
+"""" [Start Flying]
 ```
 
 ### 3. Daily Use Workflow
@@ -459,50 +459,50 @@ Step 3: Configure Flight Screens
 #### Aircraft Switching During Flight Planning
 ```
 Pre-Flight Planning:
-├── Open App → Current Pilot: John Smith
-├── Aircraft Selector: [ASG 29 ▼] → [Switch to Discus 2c]
-├── Screen Configurations Automatically Load for Discus
-├── Flight Data Cards: Thermal-optimized layout
-└── Ready for Flight
+""" Open App -> Current Pilot: John Smith
+""" Aircraft Selector: [ASG 29 -1/4] -> [Switch to Discus 2c]
+""" Screen Configurations Automatically Load for Discus
+""" Flight Data Cards: Thermal-optimized layout
+"""" Ready for Flight
 ```
 
 #### Mid-Session Aircraft Change
 ```
 During Flight Session:
-├── Hamburger Menu → Aircraft → Quick Switch
-├── [ASG 29] [Discus 2c] [LS8] ← Horizontal scrolling
-├── Tap [Discus 2c] → Configurations instantly switch
-├── Flight continues with Discus-specific screen layout
-└── No data loss, seamless transition
+""" Hamburger Menu -> Aircraft -> Quick Switch
+""" [ASG 29] [Discus 2c] [LS8] * Horizontal scrolling
+""" Tap [Discus 2c] -> Configurations instantly switch
+""" Flight continues with Discus-specific screen layout
+"""" No data loss, seamless transition
 ```
 
 ---
 
-## 📊 Data Storage Strategy
+## "s Data Storage Strategy
 
 ### 1. Storage Architecture
 
 #### SharedPreferences Structure
 ```
 Pilot Storage:
-├── pilot_active_id → String (current pilot)
-├── pilot_{id}_data → JSON (pilot preferences)
-├── pilot_{id}_aircraft_ids → String (comma-separated aircraft IDs)
+""" pilot_active_id -> String (current pilot)
+""" pilot_{id}_data -> JSON (pilot preferences)
+""" pilot_{id}_aircraft_ids -> String (comma-separated aircraft IDs)
 
 Aircraft Storage:
-├── aircraft_{pilot_id}_active → String (active aircraft for pilot)
-├── aircraft_{id}_data → JSON (aircraft metadata)
-├── aircraft_{id}_performance → JSON (performance data)
+""" aircraft_{pilot_id}_active -> String (active aircraft for pilot)
+""" aircraft_{id}_data -> JSON (aircraft metadata)
+""" aircraft_{id}_performance -> JSON (performance data)
 
 Screen Configuration Storage:
-├── aircraft_{id}_{flight_mode}_template → String (template ID)
-├── aircraft_{id}_{template_id}_cards → String (card IDs)
-├── aircraft_{id}_{flight_mode}_{card_id}_position → String (x,y coordinates)
-├── aircraft_{id}_{flight_mode}_visible → Boolean
+""" aircraft_{id}_{flight_mode}_template -> String (template ID)
+""" aircraft_{id}_{template_id}_cards -> String (card IDs)
+""" aircraft_{id}_{flight_mode}_{card_id}_position -> String (x,y coordinates)
+""" aircraft_{id}_{flight_mode}_visible -> Boolean
 
 Legacy Compatibility:
-├── profile_migrated → Boolean (migration status)
-├── profile_backup_path → String (backup location)
+""" profile_migrated -> Boolean (migration status)
+""" profile_backup_path -> String (backup location)
 ```
 
 ### 2. Data Migration Strategy
@@ -535,7 +535,7 @@ Legacy Compatibility:
 
 ---
 
-## 🧪 Testing Strategy
+## sectiona Testing Strategy
 
 ### 1. Unit Testing
 
@@ -584,10 +584,10 @@ class MigrationTest {
 ### 2. Integration Testing
 
 #### End-to-End User Flows
-- **New User Setup**: Pilot creation → Aircraft addition → Screen configuration
-- **Migration Flow**: Profile detection → Migration → Configuration verification
-- **Aircraft Switching**: Aircraft selection → Configuration loading → Screen rendering
-- **Configuration Management**: Template creation → Card positioning → Persistence
+- **New User Setup**: Pilot creation -> Aircraft addition -> Screen configuration
+- **Migration Flow**: Profile detection -> Migration -> Configuration verification
+- **Aircraft Switching**: Aircraft selection -> Configuration loading -> Screen rendering
+- **Configuration Management**: Template creation -> Card positioning -> Persistence
 
 #### Data Persistence Tests
 - Configuration survival across app restarts
@@ -614,14 +614,14 @@ class MigrationTest {
    - Customize screen configurations
 
 #### Success Criteria
-- ✅ 95% configuration migration accuracy
-- ✅ <2 seconds aircraft switching time
-- ✅ 0% data loss during migration
-- ✅ 100% backward compatibility for 30 days
+- ... 95% configuration migration accuracy
+- ... <2 seconds aircraft switching time
+- ... 0% data loss during migration
+- ... 100% backward compatibility for 30 days
 
 ---
 
-## ⚠️ Risk Analysis & Mitigation
+##   Risk Analysis & Mitigation
 
 ### 1. Technical Risks
 
@@ -680,7 +680,7 @@ class MigrationTest {
 
 ---
 
-## 📈 Success Metrics & KPIs
+## "^ Success Metrics & KPIs
 
 ### 1. Feature Adoption Metrics
 
@@ -738,7 +738,7 @@ class MigrationTest {
 
 ---
 
-## 🚀 Release Plan
+##  Release Plan
 
 ### Phase 1: Foundation (Weeks 1-2)
 **Scope**: Data layer implementation and migration system
@@ -802,7 +802,7 @@ class MigrationTest {
 
 ---
 
-## 📋 Acceptance Criteria
+## "< Acceptance Criteria
 
 ### Must-Have Features (MVP)
 
@@ -860,7 +860,7 @@ class MigrationTest {
 
 ---
 
-## 🔧 Implementation Notes
+## "section Implementation Notes
 
 ### Development Environment Setup
 - Minimum Android API level: 24 (Android 7.0)
@@ -893,7 +893,7 @@ testImplementation "io.mockk:mockk:1.13.8" // Mocking framework
 
 ---
 
-## 📞 Support & Documentation
+## " Support & Documentation
 
 ### User Documentation
 - Migration guide with screenshots
@@ -915,7 +915,7 @@ testImplementation "io.mockk:mockk:1.13.8" // Mocking framework
 
 ---
 
-## 🎯 Conclusion
+## z Conclusion
 
 This multi-aircraft support enhancement transforms the app from a profile-per-aircraft model to a hierarchical pilot-aircraft model, providing:
 
@@ -931,3 +931,4 @@ The implementation leverages the existing robust profile and screen configuratio
 ---
 
 *This PRD represents a comprehensive analysis of the current gliding app architecture and a detailed plan for implementing multi-aircraft support while preserving all existing functionality and ensuring a smooth user transition.*
+

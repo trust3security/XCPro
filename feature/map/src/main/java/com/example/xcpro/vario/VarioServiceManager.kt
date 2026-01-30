@@ -107,6 +107,7 @@ open class VarioServiceManager @Inject constructor(
             levoVarioPreferencesRepository.config.collectLatest { config ->
                 sensorFusionRepository.setMacCreadySetting(config.macCready)
                 sensorFusionRepository.setMacCreadyRisk(config.macCreadyRisk)
+                sensorFusionRepository.updateAudioSettings(config.audioSettings)
             }
         }
     }

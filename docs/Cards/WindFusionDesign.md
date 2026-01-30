@@ -82,7 +82,7 @@ SensorDataSource (raw flows)
 - **WindStore**
   - Slot measurements with altitude/time/quality weighting (1 km altitude band, ~1 h time decay, override rule).
   - Provide freshest non-stale estimate or return empty if stale.
-  - Recompute only when updated or |Δalt| > 100 m; discard samples if time/alt diff >= 1.
+  - Recompute only when updated or |"alt| > 100 m; discard samples if time/alt diff >= 1.
   - Weighting factors match XCSoar (quality 100 / altitude 100 / time 200) with 1 h time window.
   - Reject estimated wind magnitude >= 30 m/s; quality 6 reserved for overrides (manual/external).
 
@@ -163,4 +163,5 @@ Remaining migration work:
 5) Consumers: switch `FlightDataCalculator` and UI/ViewModels to `windState`; stop using wind fields from `CompleteFlightData`.
 6) Tests: unit (circling/EKF/store/selector) + integration (live/replay fake streams); verify deterministic replay and staleness.
 7) Cleanup: remove legacy `WindRepository` and any wind derivation from flight data consumers; delete redundant wind fields if unused to restore single-SSOT.
+
 

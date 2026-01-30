@@ -1,14 +1,14 @@
 # AAT (Assigned Area Tasks) - Complete Guide
 
 **Last Updated:** 2025-01-08
-**Status:** ✅ Current - Consolidated from multiple sources
+**Status:** ... Current - Consolidated from multiple sources
 **Module:** `app/src/main/java/.../tasks/aat/`
 
 > **Quick Links:** [Task_Separation Rules](../01_Core/Task_Type_Separation.md) | [Default Values](./Default_Values.md) | [AAT ARCHITECTURE](../../app/src/main/java/com/example/xcpro/tasks/aat/ARCHITECTURE.md)
 
 ---
 
-## 📖 What is an AAT?
+## "- What is an AAT?
 
 Assigned Area Task (AAT) is a **strategic** competitive gliding format:
 - Pilots fly through **large areas**, not fixed points
@@ -21,7 +21,7 @@ Assigned Area Task (AAT) is a **strategic** competitive gliding format:
 
 ---
 
-## 🎯 AAT Task Specifications
+## z AAT Task Specifications
 
 ### Area Geometry Types
 
@@ -39,8 +39,8 @@ AAT tasks use assigned areas instead of fixed points:
 - **Parameters:**
   - Inner radius (optional, often 0)
   - Outer radius (e.g., 20km)
-  - Start bearing (e.g., 45°)
-  - End bearing (e.g., 135°)
+  - Start bearing (e.g., 45deg)
+  - End bearing (e.g., 135deg)
 - **Orientation:** Perpendicular to task line bisector, outward from turn
 - **Rule:** Pilot must enter the sector
 - **Use case:** Directional constraints, wind optimization
@@ -48,7 +48,7 @@ AAT tasks use assigned areas instead of fixed points:
 
 #### 3. Keyhole (AAT Version)
 - **Inner cylinder:** Variable radius (e.g., 0.5km)
-- **Outer sector:** 90° sector with variable radius (e.g., 20km)
+- **Outer sector:** 90deg sector with variable radius (e.g., 20km)
 - **Orientation:** Sector opens away from previous waypoint (same as Racing keyhole logic)
 - **Rule:** Must enter either cylinder OR sector
 - **Use case:** Flexible routing with safety margin near waypoint
@@ -60,7 +60,7 @@ AAT tasks use assigned areas instead of fixed points:
 |------|----------|--------------|----------|
 | **AAT Start Line** | Perpendicular to first area | 10km | Standard |
 | **AAT Start Cylinder** | Circle around start | 10km radius | Alternative |
-| **AAT Start Sector** | 180° sector | Faces away from first area | Competition |
+| **AAT Start Sector** | 180deg sector | Faces away from first area | Competition |
 
 ### Finish Types
 
@@ -71,7 +71,7 @@ AAT tasks use assigned areas instead of fixed points:
 
 ---
 
-## ⏱️ Time Requirements
+## +/- Time Requirements
 
 ### Minimum Task Time
 
@@ -94,7 +94,7 @@ Some competitions set maximum task time:
 
 ---
 
-## 📏 Default Values
+## " Default Values
 
 See [Default_Values.md](./Default_Values.md) for complete reference.
 
@@ -107,7 +107,7 @@ See [Default_Values.md](./Default_Values.md) for complete reference.
 
 ---
 
-## 🎯 Movable Target Points
+## z Movable Target Points
 
 ### Strategic Positioning
 
@@ -129,7 +129,7 @@ AAT's **key feature**: Pilots can move target points within areas during flight.
 
 ---
 
-## 🧮 Distance Calculations
+## section(R) Distance Calculations
 
 ### AAT Distance Types
 
@@ -153,55 +153,55 @@ Unlike Racing (one optimal distance), AAT has **multiple distance values**:
 
 ---
 
-## 🗂️ File Organization
+## -- File Organization
 
 ### AAT Module Structure
 
 ```
 app/src/main/java/.../tasks/aat/
-│
-├── AATTaskManager.kt            ← Main coordinator
-├── AATTaskCalculator.kt         ← Distance/speed calculations
-├── AATTaskDisplay.kt            ← Map visualization
-├── AATTaskValidator.kt          ← FAI compliance validation
-│
-├── models/
-│   ├── AATWaypoint.kt          ← AAT-specific waypoint model
-│   ├── AATArea.kt              ← Area geometry
-│   ├── AATTask.kt              ← Task definition
-│   └── AATResult.kt            ← Post-flight scoring
-│
-├── calculations/
-│   ├── AATMathUtils.kt         ← Math utilities (autonomous)
-│   ├── AATDistanceCalculator.kt ← Distance calculations
-│   └── AATSpeedCalculator.kt   ← AAT speed formula
-│
-├── areas/
-│   ├── CircleAreaCalculator.kt
-│   ├── SectorAreaCalculator.kt
-│   └── AreaBoundaryCalculator.kt
-│
-├── validation/
-│   ├── ComprehensiveAATValidator.kt
-│   ├── FAIComplianceRules.kt
-│   └── README.md               ← Validation system docs
-│
-├── map/
-│   ├── AATMovablePointManager.kt
-│   ├── AATMapInteractionHandler.kt
-│   └── AATTargetPointDragHandler.kt
-│
-├── geometry/
-│   └── AATGeometryGenerator.kt
-│
-└── ui/
-    ├── AATTaskPointTypeSelector.kt
-    └── AATEditModeOverlay.kt
+"
+""" AATTaskManager.kt            * Main coordinator
+""" AATTaskCalculator.kt         * Distance/speed calculations
+""" AATTaskDisplay.kt            * Map visualization
+""" AATTaskValidator.kt          * FAI compliance validation
+"
+""" models/
+"   """ AATWaypoint.kt          * AAT-specific waypoint model
+"   """ AATArea.kt              * Area geometry
+"   """ AATTask.kt              * Task definition
+"   """" AATResult.kt            * Post-flight scoring
+"
+""" calculations/
+"   """ AATMathUtils.kt         * Math utilities (autonomous)
+"   """ AATDistanceCalculator.kt * Distance calculations
+"   """" AATSpeedCalculator.kt   * AAT speed formula
+"
+""" areas/
+"   """ CircleAreaCalculator.kt
+"   """ SectorAreaCalculator.kt
+"   """" AreaBoundaryCalculator.kt
+"
+""" validation/
+"   """ ComprehensiveAATValidator.kt
+"   """ FAIComplianceRules.kt
+"   """" README.md               * Validation system docs
+"
+""" map/
+"   """ AATMovablePointManager.kt
+"   """ AATMapInteractionHandler.kt
+"   """" AATTargetPointDragHandler.kt
+"
+""" geometry/
+"   """" AATGeometryGenerator.kt
+"
+"""" ui/
+    """ AATTaskPointTypeSelector.kt
+    """" AATEditModeOverlay.kt
 ```
 
 ### Refactoring Status
 
-**✅ Complete (Stages 1-6):**
+**... Complete (Stages 1-6):**
 - Stage 1: Geometry generation extracted
 - Stage 2: File I/O separated
 - Stage 3: Navigation management isolated
@@ -209,7 +209,7 @@ app/src/main/java/.../tasks/aat/
 - Stage 5: Validation bridge created
 - Stage 6: Rendering extracted
 
-**✅ Code Cleanup (Jan 2025):**
+**... Code Cleanup (Jan 2025):**
 - Removed 1,220 lines of dead code
 - Zero debug statements
 - Production-ready
@@ -218,13 +218,13 @@ See [aat/ARCHITECTURE.md](../../app/src/main/java/.../tasks/aat/ARCHITECTURE.md)
 
 ---
 
-## ⚖️ FAI Compliance
+## - FAI Compliance
 
 ### AAT Validation
 
 **Rules Enforced (FAI Section 6.3.2):**
-1. Minimum task time ≥ 30 minutes
-2. Areas separated by ≥ 1km
+1. Minimum task time per-milleYen 30 minutes
+2. Areas separated by per-milleYen 1km
 3. Valid area geometry (radius bounds)
 4. Minimum distance reasonable for minimum time
 5. Areas achieved in sequence
@@ -246,7 +246,7 @@ AAT validation supports specific competition classes:
 
 ---
 
-## 🎨 UI Components
+## z UI Components
 
 ### AATTaskPointTypeSelector
 
@@ -272,7 +272,7 @@ AAT tasks display:
 
 ---
 
-## 🧪 Testing
+## sectiona Testing
 
 ### Unit Tests
 
@@ -300,7 +300,7 @@ Comprehensive validation test suite:
 
 ---
 
-## 🔧 Common Operations
+## "section Common Operations
 
 ### Creating an AAT Task
 
@@ -360,7 +360,7 @@ println("Grade: ${result.validationScore.letterGrade}")
 
 ---
 
-## 🎮 Strategic Use
+## z(R) Strategic Use
 
 ### Real-Time Optimization
 
@@ -384,7 +384,7 @@ AAT pilots continuously optimize during flight:
 
 ---
 
-## 📚 Related Documentation
+## " Related Documentation
 
 ### Core Docs
 - [Task_Type_Separation.md](../01_Core/Task_Type_Separation.md) - **MUST READ** separation rules
@@ -402,13 +402,14 @@ AAT pilots continuously optimize during flight:
 
 ---
 
-## ⚠️ Critical Reminders
+##   Critical Reminders
 
 1. **NEVER import Racing code** - See [Task_Type_Separation.md](../01_Core/Task_Type_Separation.md)
 2. **ALWAYS use AATMathUtils** - Not shared utilities
 3. **Green task lines only** - AAT = #4CAF50, Racing = #0066FF
-4. **Validate minimum time** - Must be ≥ 30 minutes
+4. **Validate minimum time** - Must be per-milleYen 30 minutes
 
 ---
 
 **Questions?** See [DOCS_INDEX.md](../../DOCS_INDEX.md) for complete documentation map.
+

@@ -1,14 +1,14 @@
 # Task Type Separation - Complete Guide
 
 **Last Updated:** 2025-01-08
-**Status:** ✅ Current - Single Source of Truth
-**Priority:** 🔴 CRITICAL - Read before ANY task-related development
+**Status:** ... Current - Single Source of Truth
+**Priority:** "' CRITICAL - Read before ANY task-related development
 
-> **⚠️ ABSOLUTE REQUIREMENT:** Racing and AAT task types MUST maintain ZERO cross-contamination. This is a **safety-critical** architectural requirement.
+> **  ABSOLUTE REQUIREMENT:** Racing and AAT task types MUST maintain ZERO cross-contamination. This is a **safety-critical** architectural requirement.
 
 ---
 
-## 📖 Table of Contents
+## "- Table of Contents
 
 - [The Ironclad Rule](#the-ironclad-rule)
 - [Why This Matters](#why-this-matters)
@@ -28,12 +28,12 @@
 **Definition:** Racing and AAT task types must be **completely isolated** with ZERO shared code, models, or calculation logic.
 
 ```
-✅ ALLOWED:
+... ALLOWED:
 - Each task type has its own complete implementation
 - Each task type imports only from its own directory
 - TaskManagerCoordinator routes between task types (routing ONLY, no logic)
 
-❌ FORBIDDEN:
+oe FORBIDDEN:
 - Racing code importing AAT classes
 - AAT code importing Racing classes
 - Shared calculation functions between task types
@@ -69,21 +69,21 @@
 ### Prevention Through Separation
 
 With **ZERO cross-contamination**:
-- ✅ Racing bug fix = Racing-only impact
-- ✅ AAT feature = AAT-only impact
-- ✅ No cascading failures
-- ✅ Independent testing
-- ✅ Parallel development possible
-- ✅ Clear debugging (bug is in one place)
+- ... Racing bug fix = Racing-only impact
+- ... AAT feature = AAT-only impact
+- ... No cascading failures
+- ... Independent testing
+- ... Parallel development possible
+- ... Clear debugging (bug is in one place)
 
 ---
 
-## 🚫 Forbidden Patterns
+## << Forbidden Patterns
 
-### ❌ Pattern 1: Cross-Task Imports
+### oe Pattern 1: Cross-Task Imports
 
 ```kotlin
-// ❌ FORBIDDEN - In AAT code
+// oe FORBIDDEN - In AAT code
 package com.example.xcpro.tasks.aat
 
 import com.example.xcpro.tasks.racing.RacingCalculator  // NO!
@@ -95,7 +95,7 @@ fun calculateAAT() {
 ```
 
 ```kotlin
-// ❌ FORBIDDEN - In Racing code
+// oe FORBIDDEN - In Racing code
 package com.example.xcpro.tasks.racing
 
 import com.example.xcpro.tasks.aat.AATCalculator  // NO!
@@ -106,10 +106,10 @@ fun calculateRacing() {
 }
 ```
 
-### ❌ Pattern 2: Shared Calculation Functions
+### oe Pattern 2: Shared Calculation Functions
 
 ```kotlin
-// ❌ FORBIDDEN - Shared utilities
+// oe FORBIDDEN - Shared utilities
 package com.example.xcpro.tasks.shared  // NO "shared" directory!
 
 object SharedMathUtils {  // NO!
@@ -119,10 +119,10 @@ object SharedMathUtils {  // NO!
 // Used by both Racing and AAT = VIOLATION
 ```
 
-### ❌ Pattern 3: Task Type Switching in Logic
+### oe Pattern 3: Task Type Switching in Logic
 
 ```kotlin
-// ❌ FORBIDDEN - Type switching in calculations
+// oe FORBIDDEN - Type switching in calculations
 fun updateRadius(taskType: TaskType, radius: Double) {
     when (taskType) {
         TaskType.RACING -> {
@@ -136,10 +136,10 @@ fun updateRadius(taskType: TaskType, radius: Double) {
 }
 ```
 
-### ❌ Pattern 4: Shared Models
+### oe Pattern 4: Shared Models
 
 ```kotlin
-// ❌ FORBIDDEN - Shared task models
+// oe FORBIDDEN - Shared task models
 data class TaskArea(...)  // Used by both Racing and AAT = VIOLATION
 
 // Racing uses RacingCylinder
@@ -147,10 +147,10 @@ data class TaskArea(...)  // Used by both Racing and AAT = VIOLATION
 // Completely different models!
 ```
 
-### ❌ Pattern 5: Mixed Geometry Classes
+### oe Pattern 5: Mixed Geometry Classes
 
 ```kotlin
-// ❌ FORBIDDEN - Shared geometry
+// oe FORBIDDEN - Shared geometry
 class CylinderGeometry {  // Used by both = VIOLATION
     fun calculateIntersection(...) { ... }
 }
@@ -162,12 +162,12 @@ class CylinderGeometry {  // Used by both = VIOLATION
 
 ---
 
-## ✅ Required Separation
+## ... Required Separation
 
 ### Proper Architecture
 
 ```kotlin
-// ✅ CORRECT - AAT code uses AAT utilities
+// ... CORRECT - AAT code uses AAT utilities
 package com.example.xcpro.tasks.aat
 
 import com.example.xcpro.tasks.aat.calculations.AATMathUtils
@@ -176,13 +176,13 @@ import com.example.xcpro.tasks.aat.areas.CircleAreaCalculator
 
 class AATTaskCalculator {
     fun calculateDistance() {
-        val distance = AATMathUtils.calculateDistanceKm(...)  // ✅ AAT's own
+        val distance = AATMathUtils.calculateDistanceKm(...)  // ... AAT's own
     }
 }
 ```
 
 ```kotlin
-// ✅ CORRECT - Racing code uses Racing utilities
+// ... CORRECT - Racing code uses Racing utilities
 package com.example.xcpro.tasks.racing
 
 import com.example.xcpro.tasks.racing.calculations.RacingMathUtils
@@ -191,13 +191,13 @@ import com.example.xcpro.tasks.racing.turnpoints.CylinderCalculator
 
 class RacingTaskCalculator {
     fun calculateDistance() {
-        val distance = RacingMathUtils.calculateDistance(...)  // ✅ Racing's own
+        val distance = RacingMathUtils.calculateDistance(...)  // ... Racing's own
     }
 }
 ```
 
 ```kotlin
-// ✅ CORRECT - TaskManagerCoordinator routes ONLY
+// ... CORRECT - TaskManagerCoordinator routes ONLY
 package com.example.xcpro.tasks
 
 class TaskManagerCoordinator {
@@ -229,56 +229,56 @@ class TaskManagerCoordinator {
 
 ---
 
-## 📁 Directory Structure
+## " Directory Structure
 
 ### Enforced File Organization
 
 ```
 app/src/main/java/.../tasks/
-│
-├── TaskManagerCoordinator.kt    ← ROUTER ONLY (no calculation logic)
-│
-├── racing/                      ← RACING MODULE (100% autonomous)
-│   ├── RacingTaskManager.kt
-│   ├── RacingTaskCalculator.kt
-│   ├── RacingTaskDisplay.kt
-│   ├── RacingTaskValidator.kt
-│   ├── models/
-│   │   ├── RacingWaypoint.kt
-│   │   ├── RacingCylinder.kt
-│   │   └── RacingTask.kt
-│   ├── calculations/
-│   │   └── RacingMathUtils.kt
-│   └── turnpoints/
-│       ├── CylinderCalculator.kt
-│       ├── FAIQuadrantCalculator.kt
-│       └── KeyholeCalculator.kt
-│
-└── aat/                         ← AAT MODULE (100% autonomous)
-    ├── AATTaskManager.kt
-    ├── AATTaskCalculator.kt
-    ├── AATTaskDisplay.kt
-    ├── AATTaskValidator.kt
-    ├── models/
-    │   ├── AATWaypoint.kt
-    │   ├── AATArea.kt
-    │   └── AATTask.kt
-    ├── calculations/
-    │   └── AATMathUtils.kt
-    └── areas/
-        ├── CircleAreaCalculator.kt
-        └── SectorAreaCalculator.kt
+"
+""" TaskManagerCoordinator.kt    * ROUTER ONLY (no calculation logic)
+"
+""" racing/                      * RACING MODULE (100% autonomous)
+"   """ RacingTaskManager.kt
+"   """ RacingTaskCalculator.kt
+"   """ RacingTaskDisplay.kt
+"   """ RacingTaskValidator.kt
+"   """ models/
+"   "   """ RacingWaypoint.kt
+"   "   """ RacingCylinder.kt
+"   "   """" RacingTask.kt
+"   """ calculations/
+"   "   """" RacingMathUtils.kt
+"   """" turnpoints/
+"       """ CylinderCalculator.kt
+"       """ FAIQuadrantCalculator.kt
+"       """" KeyholeCalculator.kt
+"
+"""" aat/                         * AAT MODULE (100% autonomous)
+    """ AATTaskManager.kt
+    """ AATTaskCalculator.kt
+    """ AATTaskDisplay.kt
+    """ AATTaskValidator.kt
+    """ models/
+    "   """ AATWaypoint.kt
+    "   """ AATArea.kt
+    "   """" AATTask.kt
+    """ calculations/
+    "   """" AATMathUtils.kt
+    """" areas/
+        """ CircleAreaCalculator.kt
+        """" SectorAreaCalculator.kt
 ```
 
 **Critical Rules:**
-- ❌ NO files in `tasks/shared/`
-- ❌ NO imports from `racing/` in `aat/` files
-- ❌ NO imports from `aat/` in `racing/` files
-- ✅ Each module is completely self-contained
+- oe NO files in `tasks/shared/`
+- oe NO imports from `racing/` in `aat/` files
+- oe NO imports from `aat/` in `racing/` files
+- ... Each module is completely self-contained
 
 ---
 
-## 🔍 Enforcement Checklist
+## " Enforcement Checklist
 
 ### Before Every Commit - Run These Checks
 
@@ -325,7 +325,7 @@ jobs:
 
 ---
 
-## 🔧 Common Violations & Fixes
+## "section Common Violations & Fixes
 
 ### Violation 1: Duplicate Math Functions
 
@@ -340,10 +340,10 @@ fun calculateDistance(...) { haversine formula }
 ```
 
 **Why Allowed:**
-- ✅ Each module is autonomous
-- ✅ Can be tested independently
-- ✅ Changes to Racing won't break AAT
-- ✅ Slightly different formulas may be needed (atan2 vs asin)
+- ... Each module is autonomous
+- ... Can be tested independently
+- ... Changes to Racing won't break AAT
+- ... Slightly different formulas may be needed (atan2 vs asin)
 
 **DO NOT consolidate into shared utility!**
 
@@ -351,13 +351,13 @@ fun calculateDistance(...) { haversine formula }
 
 **Problem:**
 ```kotlin
-// ❌ FORBIDDEN
+// oe FORBIDDEN
 fun calculateAAT(racingWaypoint: RacingWaypoint) { ... }  // NO!
 ```
 
 **Fix:**
 ```kotlin
-// ✅ CORRECT
+// ... CORRECT
 fun calculateAAT(aatWaypoint: AATWaypoint) { ... }  // YES!
 ```
 
@@ -366,23 +366,23 @@ fun calculateAAT(aatWaypoint: AATWaypoint) { ... }  // YES!
 **Problem:**
 ```kotlin
 // In AATTaskManager.kt
-val cylinder = RacingCylinder(...)  // ❌ Using Racing model in AAT!
+val cylinder = RacingCylinder(...)  // oe Using Racing model in AAT!
 ```
 
 **Fix:**
 ```kotlin
 // In AATTaskManager.kt
-val area = AATArea(...)  // ✅ Using AAT's own model
+val area = AATArea(...)  // ... Using AAT's own model
 ```
 
 ---
 
-## 🧪 Testing Separation
+## sectiona Testing Separation
 
 ### Unit Test Independence
 
 ```kotlin
-// ✅ CORRECT - Racing tests don't import AAT
+// ... CORRECT - Racing tests don't import AAT
 class RacingTaskCalculatorTest {
     @Test
     fun `racing distance calculation`() {
@@ -393,7 +393,7 @@ class RacingTaskCalculatorTest {
 ```
 
 ```kotlin
-// ✅ CORRECT - AAT tests don't import Racing
+// ... CORRECT - AAT tests don't import Racing
 class AATTaskCalculatorTest {
     @Test
     fun `aat distance calculation`() {
@@ -406,7 +406,7 @@ class AATTaskCalculatorTest {
 ### Integration Test Pattern
 
 ```kotlin
-// ✅ CORRECT - Integration tests can test routing
+// ... CORRECT - Integration tests can test routing
 class TaskManagerCoordinatorTest {
     @Test
     fun `coordinator routes to correct task type`() {
@@ -427,29 +427,29 @@ class TaskManagerCoordinatorTest {
 
 ---
 
-## 📊 Separation Success Metrics
+## "s Separation Success Metrics
 
 ### Healthy Separation Indicators
 
-- ✅ Each task type builds independently
-- ✅ Zero imports between Racing and AAT
-- ✅ Bug fixes are isolated to one task type
-- ✅ New features don't require changes to other task types
-- ✅ Testing focuses on one task type at a time
-- ✅ Grep checks return ZERO cross-contamination
+- ... Each task type builds independently
+- ... Zero imports between Racing and AAT
+- ... Bug fixes are isolated to one task type
+- ... New features don't require changes to other task types
+- ... Testing focuses on one task type at a time
+- ... Grep checks return ZERO cross-contamination
 
 ### Red Flags
 
-- 🚫 `grep "import.*racing"` in AAT files returns results
-- 🚫 `grep "import.*aat"` in Racing files returns results
-- 🚫 Shared calculation functions between task types
-- 🚫 `when (taskType)` in calculation logic
-- 🚫 Bug fix in Racing breaks AAT tests
-- 🚫 New Racing feature causes AAT compilation errors
+- << `grep "import.*racing"` in AAT files returns results
+- << `grep "import.*aat"` in Racing files returns results
+- << Shared calculation functions between task types
+- << `when (taskType)` in calculation logic
+- << Bug fix in Racing breaks AAT tests
+- << New Racing feature causes AAT compilation errors
 
 ---
 
-## 🆘 Emergency: Separation Violation Found
+## * Emergency: Separation Violation Found
 
 ### If You Discover a Violation
 
@@ -480,7 +480,7 @@ fun calculateBearing(...) { ... }  // AAT's own copy
 
 ---
 
-## 📚 Related Documentation
+## " Related Documentation
 
 - [QUICK_REFERENCE.md](../../QUICK_REFERENCE.md) - Daily cheat sheet
 - [Racing_Tasks.md](../02_Tasks/Racing_Tasks.md) - Racing implementation
@@ -490,18 +490,19 @@ fun calculateBearing(...) { ... }  // AAT's own copy
 
 ---
 
-## ✅ Summary
+## ... Summary
 
 **The Golden Rule:** Racing and AAT are **completely separate universes** that communicate only through TaskManagerCoordinator routing.
 
 **Remember:**
-- 🚫 ZERO imports between task types
-- ✅ Duplication is GOOD when it maintains separation
-- 🧪 Test independently
-- 🔍 Check before every commit
+- << ZERO imports between task types
+- ... Duplication is GOOD when it maintains separation
+- sectiona Test independently
+- " Check before every commit
 
 **One contaminated function can break the entire separation architecture!**
 
 ---
 
 **Questions?** See [DOCS_INDEX.md](../../DOCS_INDEX.md) or [QUICK_REFERENCE.md](../../QUICK_REFERENCE.md)
+

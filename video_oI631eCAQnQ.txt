@@ -1,4 +1,4 @@
-﻿Title: You need to use Git Worktrees
+Title: You need to use Git Worktrees
 
 URL Source: https://www.youtube.com/watch?v=oI631eCAQnQ
 
@@ -60,7 +60,7 @@ Shopping
 
 If playback doesn't begin shortly, try restarting your device.
 
-ΓÇó
+
 
 You're signed out
 
@@ -84,15 +84,15 @@ An error occurred while retrieving sharing information. Please try again later.
 
 0:00 / 0:00 Live
 
-ΓÇóWatch full video
+Watch full video
 
-ΓÇó
 
-ΓÇó
 
-[13:29 99% of Developers Don't Get Git Rebase The Coding Gopher 50K views ΓÇó 2 months ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=yTFC_MvwJvQ)[8:14 Git's Best And Most Unknown Feature ThePrimeagen 334K views ΓÇó 4 years ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=2uEqYw-N8uE)[16:27 Google's Git Killer Is INSANELY Better (and it's open source)DevOps Toolbox 269K views ΓÇó 5 months ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=cZqFaMlufDY)[8:16 Why everyone hates git submodules Philomatics 52K views ΓÇó 5 months ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=JESI498HSMA)[3:55 How to Read Git Diff Output Ray Chavez 1.5K views ΓÇó 2 years ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=OWS_ETgpLFQ)[3:18 learn git worktrees in under 5 minutes bashbunni 60K views ΓÇó 3 months ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=8vsRb2mTBA8)[5:55 What is a bare Git repo and why you need them Engineer Man 72K views ΓÇó 6 years ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=8aZW9mYOxhc)[12:05 will i never understand this? unknown.Andrew Burgess 4.9K views ΓÇó 1 year ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=zmvznP1lv3E)[9:50 git diff: everything you need to know Andrew Burgess 11K views ΓÇó 1 year ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=F1van9nShjA)[11:31 Git Tutorial #39: How to Use Git Worktree to Manage Multiple Branches | Learn Git GitKraken 60K views ΓÇó 3 years ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=s4BTvj1ZVLM)[11:19 I'm never using Git the same way again typecraft 118K views ΓÇó 1 year ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=TLNdwvIFoCg)[14:03 Configure your Git codingjerk 76K views ΓÇó 5 months ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=G3NJzFX6XhY)
 
-Sign in to confirm youΓÇÖre not a bot This helps protect our community. [Learn more](https://support.google.com/youtube/answer/3037019#zippy=%2Ccheck-that-youre-signed-into-youtube)
+
+[13:29 99% of Developers Don't Get Git Rebase The Coding Gopher 50K views  2 months ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=yTFC_MvwJvQ)[8:14 Git's Best And Most Unknown Feature ThePrimeagen 334K views  4 years ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=2uEqYw-N8uE)[16:27 Google's Git Killer Is INSANELY Better (and it's open source)DevOps Toolbox 269K views  5 months ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=cZqFaMlufDY)[8:16 Why everyone hates git submodules Philomatics 52K views  5 months ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=JESI498HSMA)[3:55 How to Read Git Diff Output Ray Chavez 1.5K views  2 years ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=OWS_ETgpLFQ)[3:18 learn git worktrees in under 5 minutes bashbunni 60K views  3 months ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=8vsRb2mTBA8)[5:55 What is a bare Git repo and why you need them Engineer Man 72K views  6 years ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=8aZW9mYOxhc)[12:05 will i never understand this? unknown.Andrew Burgess 4.9K views  1 year ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=zmvznP1lv3E)[9:50 git diff: everything you need to know Andrew Burgess 11K views  1 year ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=F1van9nShjA)[11:31 Git Tutorial #39: How to Use Git Worktree to Manage Multiple Branches | Learn Git GitKraken 60K views  3 years ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=s4BTvj1ZVLM)[11:19 I'm never using Git the same way again typecraft 118K views  1 year ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=TLNdwvIFoCg)[14:03 Configure your Git codingjerk 76K views  5 months ago Live Playlist ()Mix (50+)](https://www.youtube.com/watch?v=G3NJzFX6XhY)
+
+Sign in to confirm youre not a bot This helps protect our community. [Learn more](https://support.google.com/youtube/answer/3037019#zippy=%2Ccheck-that-youre-signed-into-youtube)
 
 [Sign in](https://accounts.google.com/ServiceLogin?service=youtube&uilel=3&passive=true&continue=https%3A%2F%2Fwww.youtube.com%2Fsignin%3Faction_handle_signin%3Dtrue%26app%3Ddesktop%26hl%3Den%26next%3D%252Fwatch%253Fv%253DoI631eCAQnQ&hl=en)
 
@@ -121,11 +121,11 @@ Download
 
 65K views 7 months ago
 
- 65,921 views ΓÇó Feb 22, 2025 
+ 65,921 views  Feb 22, 2025 
 
 Show less 
 
-If you haven't used git worktrees, you're missing it! they make it simple to easily work on multiple efforts in a single repo at once. ΓÇª...more 
+If you haven't used git worktrees, you're missing it! they make it simple to easily work on multiple efforts in a single repo at once. a...more 
 
 ...more 
 
@@ -500,7 +500,7 @@ Reply
 
 [4 months ago](https://www.youtube.com/watch?v=oI631eCAQnQ&lc=Ugw09v3VHOtzz738-kJ4AaABAg)
 
-Extremely helpful tip to work with ai agents running changes on the same repo as you in parallel ![Image 27: ≡ƒæì](https://www.youtube.com/watch?v=oI631eCAQnQ)
+Extremely helpful tip to work with ai agents running changes on the same repo as you in parallel ![Image 27: f](https://www.youtube.com/watch?v=oI631eCAQnQ)
 
 Show less Read more
 
@@ -584,7 +584,7 @@ You need to use Git Worktrees
 
 Feb 22 2025
 
-If you haven't used git worktrees, you're missing it! they make it simple to easily work on multiple efforts in a single repo at once. [https://shaky.sh](https://www.youtube.com/redirect?event=video_description&redir_token=QUFFLUhqbWFzdGs2RUY2WHRJVnJuc1doaEpYTy04X3BtQXxBQ3Jtc0tsN3Q1ZndrS25wSUh2NjNwSEJjcGgyc01jNnpBaEl3SW5CWV9xVXk0Y3JuYzF2cHhLMWVVQ19mVUFRQzBuYjZTUmktaU9sWmpZaDIwbW8ydEhoODNJMTJHQVNlX3F6QVFCNlBfcl9vMXg5SnNScl95UQ&q=https%3A%2F%2Fshaky.sh%2F&v=oI631eCAQnQ)ΓÇª...more 
+If you haven't used git worktrees, you're missing it! they make it simple to easily work on multiple efforts in a single repo at once. [https://shaky.sh](https://www.youtube.com/redirect?event=video_description&redir_token=QUFFLUhqbWFzdGs2RUY2WHRJVnJuc1doaEpYTy04X3BtQXxBQ3Jtc0tsN3Q1ZndrS25wSUh2NjNwSEJjcGgyc01jNnpBaEl3SW5CWV9xVXk0Y3JuYzF2cHhLMWVVQ19mVUFRQzBuYjZTUmktaU9sWmpZaDIwbW8ydEhoODNJMTJHQVNlX3F6QVFCNlBfcl9vMXg5SnNScl95UQ&q=https%3A%2F%2Fshaky.sh%2F&v=oI631eCAQnQ)a...more 
 
 ...more Show less 
 
@@ -621,7 +621,7 @@ Transcript
 
 The Coding Gopher
 
-50K views ΓÇó 2 months ago
+50K views  2 months ago
 
 [![Image 37](https://i.ytimg.com/vi/2uEqYw-N8uE/hqdefault.jpg?sqp=-oaymwEmCKgBEF5IWvKriqkDGQgBFQAAiEIYAdgBAeIBCggYEAIYBjgBQAE=&rs=AOn4CLAWY1DMPcny_M6mw4_xkDBGYwfeJw) 8:14](https://www.youtube.com/watch?v=2uEqYw-N8uE&pp=0gcJCfwJAYcqIYzv)
 
@@ -631,7 +631,7 @@ The Coding Gopher
 
 ThePrimeagen
 
-334K views ΓÇó 4 years ago
+334K views  4 years ago
 
 [![Image 39](https://i.ytimg.com/vi/cZqFaMlufDY/hqdefault.jpg?sqp=-oaymwEmCKgBEF5IWvKriqkDGQgBFQAAiEIYAdgBAeIBCggYEAIYBjgBQAE=&rs=AOn4CLBd--JzPbdRxYIAb-uiq47JDNlBrg) 16:27](https://www.youtube.com/watch?v=cZqFaMlufDY)
 
@@ -641,7 +641,7 @@ ThePrimeagen
 
 DevOps Toolbox
 
-269K views ΓÇó 5 months ago
+269K views  5 months ago
 
 [![Image 41](https://i.ytimg.com/vi/JESI498HSMA/hqdefault.jpg?sqp=-oaymwEmCKgBEF5IWvKriqkDGQgBFQAAiEIYAdgBAeIBCggYEAIYBjgBQAE=&rs=AOn4CLD343bpfA6kAJZugToCnDyEIc-s7A) 8:16](https://www.youtube.com/watch?v=JESI498HSMA)
 
@@ -651,7 +651,7 @@ DevOps Toolbox
 
 Philomatics
 
-52K views ΓÇó 5 months ago
+52K views  5 months ago
 
 [![Image 43](https://i.ytimg.com/vi/OWS_ETgpLFQ/hqdefault.jpg?sqp=-oaymwEmCKgBEF5IWvKriqkDGQgBFQAAiEIYAdgBAeIBCggYEAIYBjgBQAE=&rs=AOn4CLCo9UqoSB1ib1tSNm_bBfLGIHeBrw) 3:55](https://www.youtube.com/watch?v=OWS_ETgpLFQ)
 
@@ -661,7 +661,7 @@ Philomatics
 
 Ray Chavez
 
-1.5K views ΓÇó 2 years ago
+1.5K views  2 years ago
 
 [![Image 45](https://i.ytimg.com/vi/8vsRb2mTBA8/hqdefault.jpg?sqp=-oaymwEmCKgBEF5IWvKriqkDGQgBFQAAiEIYAdgBAeIBCggYEAIYBjgBQAE=&rs=AOn4CLDuq7Nu8I0jQ7XPP6J1JzrJzoHqfA) 3:18](https://www.youtube.com/watch?v=8vsRb2mTBA8)
 
@@ -671,7 +671,7 @@ Ray Chavez
 
 bashbunni
 
-60K views ΓÇó 3 months ago
+60K views  3 months ago
 
 [![Image 47](https://i.ytimg.com/vi/8aZW9mYOxhc/hqdefault.jpg?sqp=-oaymwEmCKgBEF5IWvKriqkDGQgBFQAAiEIYAdgBAeIBCggYEAIYBjgBQAE=&rs=AOn4CLDGFgJTfOZvKPknA0ODbEBznAc5oA) 5:55](https://www.youtube.com/watch?v=8aZW9mYOxhc)
 
@@ -681,7 +681,7 @@ bashbunni
 
 Engineer Man
 
-72K views ΓÇó 6 years ago
+72K views  6 years ago
 
 [![Image 49](https://i.ytimg.com/vi/zmvznP1lv3E/hqdefault.jpg?sqp=-oaymwEmCKgBEF5IWvKriqkDGQgBFQAAiEIYAdgBAeIBCggYEAIYBjgBQAE=&rs=AOn4CLA5Azzkevm8nXRqMQWYLwmXMuMMJw) 12:05](https://www.youtube.com/watch?v=zmvznP1lv3E)
 
@@ -691,7 +691,7 @@ Engineer Man
 
 Andrew Burgess
 
-4.9K views ΓÇó 1 year ago
+4.9K views  1 year ago
 
 [![Image 51](https://i.ytimg.com/vi/F1van9nShjA/hqdefault.jpg?sqp=-oaymwEmCKgBEF5IWvKriqkDGQgBFQAAiEIYAdgBAeIBCggYEAIYBjgBQAE=&rs=AOn4CLBj1bzxdU_et-uHei0-jLVe3Dw2bg) 9:50](https://www.youtube.com/watch?v=F1van9nShjA)
 
@@ -701,7 +701,7 @@ Andrew Burgess
 
 Andrew Burgess
 
-11K views ΓÇó 1 year ago
+11K views  1 year ago
 
 [![Image 53](https://i.ytimg.com/vi/s4BTvj1ZVLM/hqdefault.jpg?sqp=-oaymwFACKgBEF5IWvKriqkDMwgBFQAAiEIYAdgBAeIBCggYEAIYBjgBQAHwAQH4Af4JgALQBYoCDAgAEAEYPCBHKHIwDw==&rs=AOn4CLCqEvtIqph_218N8bTcviE7XQl0iQ) 11:31](https://www.youtube.com/watch?v=s4BTvj1ZVLM)
 
@@ -711,7 +711,7 @@ Andrew Burgess
 
 GitKraken
 
-60K views ΓÇó 3 years ago
+60K views  3 years ago
 
 [![Image 55](https://i.ytimg.com/vi/TLNdwvIFoCg/hqdefault.jpg?sqp=-oaymwEmCKgBEF5IWvKriqkDGQgBFQAAiEIYAdgBAeIBCggYEAIYBjgBQAE=&rs=AOn4CLBrupCMZtly9mttx56GP83WLmGeFg) 11:19](https://www.youtube.com/watch?v=TLNdwvIFoCg)
 
@@ -721,7 +721,7 @@ GitKraken
 
 typecraft
 
-118K views ΓÇó 1 year ago
+118K views  1 year ago
 
 [![Image 57](https://www.youtube.com/watch?v=oI631eCAQnQ) 14:03](https://www.youtube.com/watch?v=G3NJzFX6XhY&pp=0gcJCfwJAYcqIYzv)
 
@@ -731,7 +731,7 @@ typecraft
 
 codingjerk
 
-76K views ΓÇó 5 months ago
+76K views  5 months ago
 
 [![Image 59](https://www.youtube.com/watch?v=oI631eCAQnQ) 5:19](https://www.youtube.com/watch?v=ntM7utSjeVU)
 
@@ -741,7 +741,7 @@ codingjerk
 
 Philomatics
 
-272K views ΓÇó 1 year ago
+272K views  1 year ago
 
 [![Image 61](https://www.youtube.com/watch?v=oI631eCAQnQ) 10:28](https://www.youtube.com/watch?v=6D7XOGXbyfs&pp=0gcJCfwJAYcqIYzv)
 
@@ -751,7 +751,7 @@ Philomatics
 
 Andrew Burgess
 
-13K views ΓÇó 1 year ago
+13K views  1 year ago
 
 [![Image 63](https://www.youtube.com/watch?v=oI631eCAQnQ) 4:02](https://www.youtube.com/watch?v=xN1-2p06Urc&pp=0gcJCfwJAYcqIYzv)
 
@@ -761,7 +761,7 @@ Andrew Burgess
 
 Philomatics
 
-1M views ΓÇó 1 year ago
+1M views  1 year ago
 
 [![Image 65](https://www.youtube.com/watch?v=oI631eCAQnQ) 8:44](https://www.youtube.com/watch?v=NcQB3ZxOwQw)
 
@@ -771,7 +771,7 @@ Philomatics
 
 The Coding Gopher
 
-41K views ΓÇó 8 months ago
+41K views  8 months ago
 
 [![Image 67](https://www.youtube.com/watch?v=oI631eCAQnQ) 16:01](https://www.youtube.com/watch?v=RxHJdapz2p0)
 
@@ -781,7 +781,7 @@ The Coding Gopher
 
 Tech With Nikola
 
-236K views ΓÇó 2 years ago
+236K views  2 years ago
 
 [![Image 69](https://www.youtube.com/watch?v=oI631eCAQnQ) 20:43](https://www.youtube.com/watch?v=sC1sfoCo5qY)
 
@@ -791,7 +791,7 @@ Tech With Nikola
 
 Dan Gitschooldude
 
-48K views ΓÇó 6 years ago
+48K views  6 years ago
 
 [![Image 71](https://www.youtube.com/watch?v=oI631eCAQnQ) 11:04](https://www.youtube.com/watch?v=cGZD_0RODh4)
 
@@ -801,7 +801,7 @@ Dan Gitschooldude
 
 Andrew Burgess
 
-2.5K views ΓÇó 1 year ago
+2.5K views  1 year ago
 
 [![Image 73](https://www.youtube.com/watch?v=oI631eCAQnQ) 19:00](https://www.youtube.com/watch?v=viAZQjs5lHk)
 
@@ -811,8 +811,9 @@ Andrew Burgess
 
 ArjanCodes
 
-43K views ΓÇó 6 months ago
+43K views  6 months ago
 
 Show more
 
 [[](https://www.youtube.com/watch?v=oI631eCAQnQ)](https://www.youtube.com/watch?v=oI631eCAQnQ)
+

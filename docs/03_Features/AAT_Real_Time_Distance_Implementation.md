@@ -1,14 +1,14 @@
 # AAT Real-Time Distance Implementation Plan
 
-**Status**: 📋 PLANNED
+**Status**: "< PLANNED
 **Created**: 2025-10-09
-**Related**: Racing real-time distance (✅ COMPLETED 2025-10-09)
+**Related**: Racing real-time distance (... COMPLETED 2025-10-09)
 
-## 🎯 Objective
+## z Objective
 
 Implement real-time GPS distance updates for AAT (Assigned Area Task) tasks in the TaskMinimizedIndicator, showing the pilot live distance to the current AAT target point as they fly.
 
-## 📖 Background
+## "- Background
 
 ### What Was Done for Racing Tasks (Already Completed)
 
@@ -30,7 +30,7 @@ Racing task real-time distance was implemented with these changes:
 4. **BottomSheetState.kt** - Modified `TaskMinimizedIndicator` component
    - Added optional `currentGPSLocation` parameter
    - Replaced static leg distance with real-time GPS calculation
-   - Display updates live: "12.3 km" → "11.8 km" → "11.2 km"
+   - Display updates live: "12.3 km" -> "11.8 km" -> "11.2 km"
 
 5. **MapTaskScreenManager.kt** - Updated to provide GPS location
    - Extracts GPS from `flightDataManager.liveFlightData`
@@ -47,7 +47,7 @@ Racing task real-time distance was implemented with these changes:
 
 **Solution**: Use the SAME calculators that generate visual display for distance calculations.
 
-## 🔄 AAT vs Racing: Key Differences
+## "" AAT vs Racing: Key Differences
 
 ### Racing Task Distance
 - **Target**: Optimal entry point of observation zone
@@ -71,8 +71,8 @@ Racing task real-time distance was implemented with these changes:
 AAT tasks use **assigned areas** (circles, sectors, lines) with **movable target points**:
 ```
 Assigned Area (10km radius circle)
-    ├─ Area center: (51.234, -0.567) - FIXED
-    └─ Target point: (51.240, -0.560) - MOVABLE by pilot
+    "" Area center: (51.234, -0.567) - FIXED
+    """ Target point: (51.240, -0.560) - MOVABLE by pilot
 ```
 
 Distance calculation MUST use **target point**, not area center, because:
@@ -81,7 +81,7 @@ Distance calculation MUST use **target point**, not area center, because:
 3. Task scoring uses target point positions
 4. Strategic planning depends on accurate target distances
 
-## 📋 Implementation Plan
+## "< Implementation Plan
 
 ### Phase 1: AATTaskCalculator Enhancement
 
@@ -183,7 +183,7 @@ fun calculateDistanceToCurrentWaypoint(currentLat: Double, currentLon: Double): 
             racingTaskManager.calculateDistanceToCurrentWaypointEntry(currentLat, currentLon)
         }
         TaskType.AAT -> {
-            // ✅ ENHANCED: Calculate distance to TARGET POINT (not area center!)
+            // ... ENHANCED: Calculate distance to TARGET POINT (not area center!)
             // CRITICAL: This matches the visual course line connecting target points
             aatTaskManager.calculateDistanceToCurrentTargetPoint(currentLat, currentLon)
         }
@@ -199,13 +199,13 @@ fun calculateDistanceToCurrentWaypoint(currentLat: Double, currentLon: Double): 
 ### Phase 4: No Changes Needed
 
 **Files That Don't Need Modification**:
-- ✅ `BottomSheetState.kt` - Already accepts GPS location and calls `taskManager.calculateDistanceToCurrentWaypoint()`
-- ✅ `MapTaskScreenManager.kt` - Already extracts GPS and passes to TaskMinimizedIndicator
-- ✅ UI components - Already wired up for real-time updates
+- ... `BottomSheetState.kt` - Already accepts GPS location and calls `taskManager.calculateDistanceToCurrentWaypoint()`
+- ... `MapTaskScreenManager.kt` - Already extracts GPS and passes to TaskMinimizedIndicator
+- ... UI components - Already wired up for real-time updates
 
 **Why?** The coordinator routing handles task type differences transparently. Once `calculateDistanceToCurrentWaypoint()` returns AAT target point distance, the existing UI automatically displays it.
 
-## 🧪 Testing Plan
+## sectiona Testing Plan
 
 ### Test 1: AAT Target Point Distance Accuracy
 
@@ -279,15 +279,15 @@ fun calculateDistanceToCurrentWaypoint(currentLat: Double, currentLon: Double): 
 - Waypoint name and distance both update together
 - No stale distance from previous waypoint
 
-## 🚨 Critical Implementation Notes
+##  Critical Implementation Notes
 
 ### 1. Use AATGeometryUtils, Not RacingGeometryUtils
 
 ```kotlin
-// ✅ CORRECT - AAT task separation
+// ... CORRECT - AAT task separation
 return AATGeometryUtils.haversineDistance(gpsLat, gpsLon, targetLat, targetLon)
 
-// ❌ FORBIDDEN - cross-contamination violation
+// oe FORBIDDEN - cross-contamination violation
 return RacingGeometryUtils.haversineDistance(gpsLat, gpsLon, targetLat, targetLon)
 ```
 
@@ -296,11 +296,11 @@ return RacingGeometryUtils.haversineDistance(gpsLat, gpsLon, targetLat, targetLo
 ### 2. Target Point, Not Area Center
 
 ```kotlin
-// ✅ CORRECT - uses target point
+// ... CORRECT - uses target point
 val targetLat = currentWaypoint.targetPoint.lat
 val targetLon = currentWaypoint.targetPoint.lon
 
-// ❌ WRONG - uses area center (old behavior)
+// oe WRONG - uses area center (old behavior)
 val targetLat = currentWaypoint.lat  // This is area center!
 val targetLon = currentWaypoint.lon
 ```
@@ -310,7 +310,7 @@ val targetLon = currentWaypoint.lon
 ### 3. Null Safety for GPS Data
 
 ```kotlin
-// ✅ CORRECT - graceful degradation
+// ... CORRECT - graceful degradation
 val currentGPSLocation = taskScreenManager.mapState.flightDataManager?.liveFlightData?.let {
     Pair(it.latitude, it.longitude)
 }
@@ -334,7 +334,7 @@ data class AATWaypoint(
     val title: String,
     val lat: Double,  // Area center latitude
     val lon: Double,  // Area center longitude
-    val targetPoint: TargetPoint,  // ✅ This is what we need!
+    val targetPoint: TargetPoint,  // ... This is what we need!
     val assignedArea: AssignedArea
     // ... other fields
 )
@@ -355,7 +355,7 @@ data class TargetPoint(
 - Compose recomposition handles updates efficiently
 - No performance concerns expected
 
-## 📝 Implementation Checklist
+## " Implementation Checklist
 
 Use this checklist when implementing:
 
@@ -367,12 +367,12 @@ Use this checklist when implementing:
 - [ ] Add CRITICAL safety comments about target point vs area center
 - [ ] Test with real AAT task and moved target points
 - [ ] Verify distance matches visual course line display
-- [ ] Test task type switching (AAT ↔ Racing)
+- [ ] Test task type switching (AAT *" Racing)
 - [ ] Test edit mode target point dragging with live distance updates
 - [ ] Verify ZERO cross-contamination (no Racing imports in AAT files)
-- [ ] Update this document status to ✅ COMPLETED when done
+- [ ] Update this document status to ... COMPLETED when done
 
-## 🎓 Key Learnings from Racing Implementation
+## z" Key Learnings from Racing Implementation
 
 ### What Went Well
 1. **Separation architecture worked perfectly** - Racing changes didn't affect AAT
@@ -386,7 +386,7 @@ Use this checklist when implementing:
 3. **Don't skip safety comments** - Critical for future maintainers
 4. **Don't forget null checks** - GPS data may be unavailable
 
-## 📚 Related Files
+## " Related Files
 
 **AAT Task Files** (modify these):
 - `app/src/main/java/com/example/xcpro/tasks/aat/AATTaskCalculator.kt` - Add distance calculation
@@ -401,27 +401,27 @@ Use this checklist when implementing:
 - `app/src/main/java/com/example/xcpro/tasks/BottomSheetState.kt` - Already handles GPS (lines 106-122)
 - `app/src/main/java/com/example/xcpro/map/MapTaskScreenManager.kt` - Already provides GPS (lines 265-289)
 
-## 🔗 Architecture Diagram
+## "-- Architecture Diagram
 
 ```
 GPS Location (from FlightDataManager)
-    │
-    ├─ MapTaskScreenManager extracts GPS ✅ (already done)
-    │
-    └─ TaskMinimizedIndicator receives GPS ✅ (already done)
-           │
-           └─ Calls taskManager.calculateDistanceToCurrentWaypoint(lat, lon) ✅ (already done)
-                  │
-                  └─ TaskManagerCoordinator routes by task type ⚠️ (needs enhancement)
-                         │
-                         ├─ Racing: racingTaskManager.calculateDistanceToCurrentWaypointEntry() ✅ (already done)
-                         │     └─ Uses optimal entry point (cylinder edge, sector boundary)
-                         │
-                         └─ AAT: aatTaskManager.calculateDistanceToCurrentTargetPoint() 📋 (TODO - implement)
-                               └─ Uses target point (movable pin inside assigned area)
+    "
+    "" MapTaskScreenManager extracts GPS ... (already done)
+    "
+    """ TaskMinimizedIndicator receives GPS ... (already done)
+           "
+           """ Calls taskManager.calculateDistanceToCurrentWaypoint(lat, lon) ... (already done)
+                  "
+                  """ TaskManagerCoordinator routes by task type   (needs enhancement)
+                         "
+                         "" Racing: racingTaskManager.calculateDistanceToCurrentWaypointEntry() ... (already done)
+                         "     """ Uses optimal entry point (cylinder edge, sector boundary)
+                         "
+                         """ AAT: aatTaskManager.calculateDistanceToCurrentTargetPoint() "< (TODO - implement)
+                               """ Uses target point (movable pin inside assigned area)
 ```
 
-## 🚀 Estimated Effort
+##  Estimated Effort
 
 - **AATTaskCalculator method**: 15-20 lines of code, 10 minutes
 - **AATTaskManager method**: 10-15 lines of code, 5 minutes
@@ -431,21 +431,23 @@ GPS Location (from FlightDataManager)
 
 **Risk Level**: LOW (following proven Racing implementation pattern)
 
-## ✅ Success Criteria
+## ... Success Criteria
 
 Implementation is successful when:
 
-1. ✅ AAT tasks show real-time distance to target point (not area center)
-2. ✅ Distance updates every ~1 second as pilot flies
-3. ✅ Distance matches visual course line display exactly
-4. ✅ Moving target point immediately updates displayed distance
-5. ✅ Task type switching works (Racing ↔ AAT) without errors
-6. ✅ Edit mode shows live distance updates during target point drag
-7. ✅ No Racing/AAT cross-contamination in imports or utilities
-8. ✅ All 5 test scenarios pass
-9. ✅ No UI changes (same layout, only distance value updates)
-10. ✅ No performance degradation
+1. ... AAT tasks show real-time distance to target point (not area center)
+2. ... Distance updates every ~1 second as pilot flies
+3. ... Distance matches visual course line display exactly
+4. ... Moving target point immediately updates displayed distance
+5. ... Task type switching works (Racing *" AAT) without errors
+6. ... Edit mode shows live distance updates during target point drag
+7. ... No Racing/AAT cross-contamination in imports or utilities
+8. ... All 5 test scenarios pass
+9. ... No UI changes (same layout, only distance value updates)
+10. ... No performance degradation
 
 ---
 
 **END OF IMPLEMENTATION PLAN**
+
+

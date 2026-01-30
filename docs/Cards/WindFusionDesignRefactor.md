@@ -103,7 +103,7 @@ Green build:
 
 ## XCSoar Parity Follow-ups (post-refactor)
 These are intentionally out-of-scope for the refactor, but should be evaluated for
-release-grade parity against XCSoar’s wind stack.
+release-grade parity against XCSoar's wind stack.
 
 ### Reference (XCSoar implementation)
 - `src/Computer/Wind/Computer.cpp` (auto/selection logic, EKF direct-use)
@@ -123,7 +123,7 @@ release-grade parity against XCSoar’s wind stack.
      else external, else manual.
    - XCPro has `WindSource.EXTERNAL/MANUAL` enums but no inputs or selection policy.
    - Action: add optional external/manual wind feeds and a selection layer that
-     mirrors XCSoar’s timestamp-based precedence.
+     mirrors XCSoar's timestamp-based precedence.
 
 3) **g-load gating for EKF** (XCSoar gate)
    - XCSoar blocks EKF if `|g_load - 1| > 0.3` (plus turn-rate gate) and
@@ -148,3 +148,4 @@ release-grade parity against XCSoar’s wind stack.
 - Turn-rate gate aligned to ~20 deg/s.
 - EKF sample stride aligned to 10 samples.
 - EKF quality ramp aligned to 30/120/600.
+

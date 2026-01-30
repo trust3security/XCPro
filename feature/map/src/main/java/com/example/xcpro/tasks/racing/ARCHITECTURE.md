@@ -1,11 +1,11 @@
 # Racing Task Module - Architecture Documentation
 
 **Last Updated:** 2025-10-01
-**Module Status:** ✅ Well-Organized & Production-Ready
+**Module Status:** ... Well-Organized & Production-Ready
 
 ---
 
-## 📋 Quick Reference
+## "< Quick Reference
 
 **Working on Racing tasks?** Read this first to understand the module structure and avoid breaking changes.
 
@@ -13,47 +13,47 @@
 
 ```
 tasks/racing/
-├── ARCHITECTURE.md                    ← YOU ARE HERE
-│
-├── RacingTaskManager.kt               (377 lines) - Main coordinator
-├── RacingTaskCalculator.kt            - Distance calculations (COORDINATOR ONLY)
-├── RacingTaskDisplay.kt               (636 lines) - Map rendering coordinator
-├── RacingTaskValidator.kt             (218 lines) - Task validation
-├── RacingTaskInitializer.kt           - Task initialization
-├── RacingTaskPersistence.kt           - SharedPreferences operations
-├── RacingTaskStorage.kt               (262 lines) - File I/O (CUP format)
-├── RacingWaypointManager.kt           (271 lines) - Waypoint CRUD
-├── RacingTaskMapOverlay.kt            - Map overlay integration
-├── RacingManageBTTab.kt               (471 lines) - Bottom tab UI
-├── RacingGeometryUtils.kt             (241 lines) - Geometry utilities
-├── RacingGeoJSONValidator.kt          (246 lines) - GeoJSON validation
-│
-├── models/
-│   ├── RacingTask.kt                  (451 lines) - Task data model
-│   └── RacingWaypoint.kt              - Waypoint data model
-│
-├── turnpoints/                        ← TURNPOINT TYPE SEPARATION
-│   ├── CylinderCalculator.kt          - Cylinder geometry calculations
-│   ├── CylinderDisplay.kt             - Cylinder map rendering
-│   ├── FAIQuadrantCalculator.kt       - FAI 90° sector calculations
-│   ├── FAIQuadrantDisplay.kt          (446 lines) - FAI sector rendering
-│   ├── FAIStartSectorDisplay.kt       (195 lines) - Start sector rendering
-│   ├── KeyholeCalculator.kt           (228 lines) - Keyhole calculations
-│   ├── KeyholeDisplay.kt              (763 lines) - Keyhole rendering
-│   ├── StartLineCalculator.kt         (155 lines) - Start line calculations
-│   ├── FinishLineDisplay.kt           (158 lines) - Finish line rendering
-│   └── SymmetricQuadrantCalculator.kt - Symmetric quadrant calculations
-│
-└── ui/
-    ├── RacingTaskPointTypeSelector.kt (621 lines) - Point type UI
-    ├── RacingStartPointButtonSelector.kt (181 lines) - Start type picker
-    ├── RacingFinishPointButtonSelector.kt (169 lines) - Finish type picker
-    └── RacingTurnPointButtonSelector.kt (182 lines) - Turn type picker
+""" ARCHITECTURE.md                    * YOU ARE HERE
+"
+""" RacingTaskManager.kt               (377 lines) - Main coordinator
+""" RacingTaskCalculator.kt            - Distance calculations (COORDINATOR ONLY)
+""" RacingTaskDisplay.kt               (636 lines) - Map rendering coordinator
+""" RacingTaskValidator.kt             (218 lines) - Task validation
+""" RacingTaskInitializer.kt           - Task initialization
+""" RacingTaskPersistence.kt           - SharedPreferences operations
+""" RacingTaskStorage.kt               (262 lines) - File I/O (CUP format)
+""" RacingWaypointManager.kt           (271 lines) - Waypoint CRUD
+""" RacingTaskMapOverlay.kt            - Map overlay integration
+""" RacingManageBTTab.kt               (471 lines) - Bottom tab UI
+""" RacingGeometryUtils.kt             (241 lines) - Geometry utilities
+""" RacingGeoJSONValidator.kt          (246 lines) - GeoJSON validation
+"
+""" models/
+"   """ RacingTask.kt                  (451 lines) - Task data model
+"   """" RacingWaypoint.kt              - Waypoint data model
+"
+""" turnpoints/                        * TURNPOINT TYPE SEPARATION
+"   """ CylinderCalculator.kt          - Cylinder geometry calculations
+"   """ CylinderDisplay.kt             - Cylinder map rendering
+"   """ FAIQuadrantCalculator.kt       - FAI 90deg sector calculations
+"   """ FAIQuadrantDisplay.kt          (446 lines) - FAI sector rendering
+"   """ FAIStartSectorDisplay.kt       (195 lines) - Start sector rendering
+"   """ KeyholeCalculator.kt           (228 lines) - Keyhole calculations
+"   """ KeyholeDisplay.kt              (763 lines) - Keyhole rendering
+"   """ StartLineCalculator.kt         (155 lines) - Start line calculations
+"   """ FinishLineDisplay.kt           (158 lines) - Finish line rendering
+"   """" SymmetricQuadrantCalculator.kt - Symmetric quadrant calculations
+"
+"""" ui/
+    """ RacingTaskPointTypeSelector.kt (621 lines) - Point type UI
+    """ RacingStartPointButtonSelector.kt (181 lines) - Start type picker
+    """ RacingFinishPointButtonSelector.kt (169 lines) - Finish type picker
+    """" RacingTurnPointButtonSelector.kt (182 lines) - Turn type picker
 ```
 
 ---
 
-## 🎯 Design Principles
+## z Design Principles
 
 ### 1. **Zero Cross-Contamination with AAT Tasks**
 - **CRITICAL:** Racing and AAT task types must NEVER share code
@@ -66,7 +66,7 @@ tasks/racing/
 - **NO shared switches:** Avoid `when (turnpointType)` in calculations
 - **Single Algorithm Principle:** Visual display and math use SAME geometry engine
 - **Examples:**
-  - FAI Quadrant: Finite radius 90° sector (10km default, XCSoar parity), turn direction-based orientation
+  - FAI Quadrant: Finite radius 90deg sector (10km default, XCSoar parity), turn direction-based orientation
   - Cylinder: Fixed radius, simple circular geometry
   - Keyhole: Combined 500m cylinder + 10km sector, dual validation
 
@@ -78,9 +78,9 @@ tasks/racing/
 
 ---
 
-## 📦 Module Reference Guide
+## "| Module Reference Guide
 
-### 🏁 Racing Task Manager (`RacingTaskManager.kt`)
+###  Racing Task Manager (`RacingTaskManager.kt`)
 
 **Purpose:** Main entry point and coordinator for racing tasks
 
@@ -110,7 +110,7 @@ tasks/racing/
 
 ---
 
-### 📐 Racing Task Calculator (`RacingTaskCalculator.kt`)
+### " Racing Task Calculator (`RacingTaskCalculator.kt`)
 
 **Purpose:** COORDINATOR for distance calculations (routes to turnpoint calculators)
 
@@ -143,7 +143,7 @@ fun calculateDistance(waypoint: RacingWaypoint): Double {
 
 ---
 
-### 🎨 Racing Task Display (`RacingTaskDisplay.kt`)
+### z Racing Task Display (`RacingTaskDisplay.kt`)
 
 **Purpose:** COORDINATOR for map rendering (routes to turnpoint displays)
 
@@ -179,7 +179,7 @@ fun plotTurnpoint(waypoint: RacingWaypoint) {
 
 ---
 
-### ✅ Racing Task Validator (`RacingTaskValidator.kt`)
+### ... Racing Task Validator (`RacingTaskValidator.kt`)
 
 **Purpose:** Validate racing tasks for FAI compliance and competition rules
 
@@ -207,7 +207,7 @@ fun plotTurnpoint(waypoint: RacingWaypoint) {
 
 ---
 
-### 💾 Racing Task Storage (`RacingTaskStorage.kt`)
+### '3/4 Racing Task Storage (`RacingTaskStorage.kt`)
 
 **Purpose:** File I/O operations (CUP format import/export)
 
@@ -237,7 +237,7 @@ fun plotTurnpoint(waypoint: RacingWaypoint) {
 
 ---
 
-### 📍 Racing Waypoint Manager (`RacingWaypointManager.kt`)
+### " Racing Waypoint Manager (`RacingWaypointManager.kt`)
 
 **Purpose:** Waypoint CRUD operations
 
@@ -266,9 +266,9 @@ fun plotTurnpoint(waypoint: RacingWaypoint) {
 
 ---
 
-## 🔧 Turnpoint Type Modules
+## "section Turnpoint Type Modules
 
-### 🔵 Cylinder (`turnpoints/CylinderCalculator.kt` & `CylinderDisplay.kt`)
+### "u Cylinder (`turnpoints/CylinderCalculator.kt` & `CylinderDisplay.kt`)
 
 **Geometry:** Fixed radius circle centered on waypoint
 
@@ -299,14 +299,14 @@ val entryPoint = cylinderCalc.calculateOptimalEntryPoint(
 
 ---
 
-### 📐 FAI Quadrant (`turnpoints/FAIQuadrantCalculator.kt` & `FAIQuadrantDisplay.kt`)
+### " FAI Quadrant (`turnpoints/FAIQuadrantCalculator.kt` & `FAIQuadrantDisplay.kt`)
 
-**Geometry:** 90° sector with finite 10km radius, turn direction-based orientation
+**Geometry:** 90deg sector with finite 10km radius, turn direction-based orientation
 
 **Calculations:**
 - Finite radius (10km default)
-- 90° sector angle
-- Orientation based on: previous waypoint → current → next waypoint
+- 90deg sector angle
+- Orientation based on: previous waypoint -> current -> next waypoint
 - Turn direction determines which quadrant (left/right turn)
 - Complex bisector calculations
 
@@ -334,24 +334,24 @@ val sector = faiCalc.calculateSectorGeometry(
     previousWaypoint,
     nextWaypoint
 )
-// Returns 90° sector with correct orientation
+// Returns 90deg sector with correct orientation
 ```
 
 ---
 
-### 🔑 Keyhole (`turnpoints/KeyholeCalculator.kt` & `KeyholeDisplay.kt`)
+### "' Keyhole (`turnpoints/KeyholeCalculator.kt` & `KeyholeDisplay.kt`)
 
-**Geometry:** Combined 500m cylinder + 90° sector (10km radius)
+**Geometry:** Combined 500m cylinder + 90deg sector (10km radius)
 
 **Calculations:**
 - Two-part validation: cylinder OR sector
 - 500m radius cylinder at waypoint center
-- 90° sector extending from cylinder
+- 90deg sector extending from cylinder
 - Pilot can touch either part to validate turnpoint
 
 **Display:**
 - Small 500m cylinder (green fill)
-- Large 90° sector extending outward
+- Large 90deg sector extending outward
 - Composite geometry rendering
 - Most complex display (763 lines)
 
@@ -372,12 +372,12 @@ val isInKeyhole = keyholeCalc.isPointInObservationZone(
 
 ---
 
-### 📏 Start Line (`turnpoints/StartLineCalculator.kt`)
+### " Start Line (`turnpoints/StartLineCalculator.kt`)
 
 **Geometry:** Perpendicular line to first leg, configurable width
 
 **Calculations:**
-- Line perpendicular to start → first turnpoint bearing
+- Line perpendicular to start -> first turnpoint bearing
 - Configurable width (typically 2-5km)
 - Midpoint at start waypoint coordinates
 
@@ -393,12 +393,12 @@ val isInKeyhole = keyholeCalc.isPointInObservationZone(
 
 ---
 
-### 🏁 Finish Line (`turnpoints/FinishLineDisplay.kt`)
+###  Finish Line (`turnpoints/FinishLineDisplay.kt`)
 
 **Geometry:** Perpendicular line to final leg, configurable width
 
 **Calculations:**
-- Line perpendicular to last turnpoint → finish bearing
+- Line perpendicular to last turnpoint -> finish bearing
 - Configurable width (typically 0.5-2km)
 - Midpoint at finish waypoint coordinates
 
@@ -414,15 +414,15 @@ val isInKeyhole = keyholeCalc.isPointInObservationZone(
 
 ---
 
-## 🚨 Common Pitfalls
+##  Common Pitfalls
 
-### ❌ DON'T: Import AAT Code
+### DON'T: Import AAT Code
 ```kotlin
 // FORBIDDEN:
 import com.example.xcpro.tasks.aat.*
 ```
 
-### ❌ DON'T: Mix Turnpoint Calculations
+### DON'T: Mix Turnpoint Calculations
 ```kotlin
 // FORBIDDEN: Calculation logic in coordinator
 fun calculateDistance(waypoint: RacingWaypoint): Double {
@@ -433,7 +433,7 @@ fun calculateDistance(waypoint: RacingWaypoint): Double {
 }
 ```
 
-### ❌ DON'T: Share Display Logic
+### DON'T: Share Display Logic
 ```kotlin
 // FORBIDDEN: Shared rendering in coordinator
 fun renderTurnpoint(waypoint: RacingWaypoint) {
@@ -444,14 +444,14 @@ fun renderTurnpoint(waypoint: RacingWaypoint) {
 }
 ```
 
-### ✅ DO: Use Dedicated Calculator
+### ... DO: Use Dedicated Calculator
 ```kotlin
 // CORRECT: Delegate to turnpoint calculator
 val cylinderCalc = CylinderCalculator()
 val distance = cylinderCalc.calculateOptimalDistance(waypoint, prev, next)
 ```
 
-### ✅ DO: Use Dedicated Display
+### ... DO: Use Dedicated Display
 ```kotlin
 // CORRECT: Delegate to turnpoint display
 val faiDisplay = FAIQuadrantDisplay()
@@ -459,20 +459,20 @@ val geometry = faiDisplay.generateSectorGeometry(waypoint, prev, next)
 addLayerToMap(geometry)
 ```
 
-### ✅ DO: Keep Turnpoint Types Independent
+### ... DO: Keep Turnpoint Types Independent
 ```kotlin
 // CORRECT: Each turnpoint type has own modules
 turnpoints/
-├── CylinderCalculator.kt      // Independent
-├── CylinderDisplay.kt          // Independent
-├── FAIQuadrantCalculator.kt    // Independent
-├── FAIQuadrantDisplay.kt       // Independent
+""" CylinderCalculator.kt      // Independent
+""" CylinderDisplay.kt          // Independent
+""" FAIQuadrantCalculator.kt    // Independent
+""" FAIQuadrantDisplay.kt       // Independent
 // No shared code between them!
 ```
 
 ---
 
-## 📏 Code Standards
+## " Code Standards
 
 ### File Size Limits
 - **Target:** < 500 lines per file
@@ -492,13 +492,13 @@ turnpoints/
 
 ---
 
-## 🔍 Testing Strategy
+## " Testing Strategy
 
 ### Unit Tests
 - Test each turnpoint calculator independently
 - Mock waypoint data
 - Verify distance calculations
-- Check edge cases (co-linear points, 180° turns, etc.)
+- Check edge cases (co-linear points, 180deg turns, etc.)
 
 ### Integration Tests
 - Test coordinator routing logic
@@ -512,7 +512,7 @@ turnpoints/
 
 ---
 
-## 🐛 Known Issues
+## > Known Issues
 
 ### FAI Quadrant Orientation Discrepancy
 **Problem:** Visual display orientation sometimes differs from mathematical calculations
@@ -529,7 +529,7 @@ turnpoints/
 
 ---
 
-## 📚 Additional Resources
+## " Additional Resources
 
 - **Main Project Rules:** `/CLAUDE.md` (root)
 - **Task Separation Report:** `../TaskSeparationEnforcementReport.md`
@@ -537,7 +537,7 @@ turnpoints/
 
 ---
 
-## 🎓 For New Developers
+## z" For New Developers
 
 **Start Here:**
 1. Read this `ARCHITECTURE.md` file (you're here!)
@@ -547,11 +547,11 @@ turnpoints/
 5. Test changes with `./gradlew assembleDebug`
 
 **Before Making Changes:**
-- ✅ Understand coordinator vs calculator vs display roles
-- ✅ Check for cross-contamination (no AAT imports!)
-- ✅ Keep turnpoint types independent
-- ✅ Update BOTH calculator AND display if changing geometry
-- ✅ Verify build passes
+- ... Understand coordinator vs calculator vs display roles
+- ... Check for cross-contamination (no AAT imports!)
+- ... Keep turnpoint types independent
+- ... Update BOTH calculator AND display if changing geometry
+- ... Verify build passes
 
 **Adding New Turnpoint Type:**
 1. Create `NewTypeCalculator.kt` in `turnpoints/`
@@ -563,7 +563,7 @@ turnpoints/
 
 ---
 
-## 📊 Module Statistics
+## "s Module Statistics
 
 **Total Lines:** ~7,312 lines
 **Main Files:** 14 files
@@ -580,25 +580,25 @@ turnpoints/
 - `FAIQuadrantDisplay.kt` (446 lines) - FAI sector rendering
 
 **Well-Organized:**
-- Clear module separation ✅
-- Turnpoint type independence ✅
-- Coordinator pattern implemented ✅
-- No excessive file sizes ✅
+- Clear module separation ...
+- Turnpoint type independence ...
+- Coordinator pattern implemented ...
+- No excessive file sizes ...
 
 ---
 
-## ✨ Architecture Strengths
+##  Architecture Strengths
 
-- ✅ **Turnpoint Type Separation:** Each type has dedicated calculator & display
-- ✅ **Coordinator Pattern:** Clear delegation, minimal logic in coordinators
-- ✅ **Independent Modules:** Waypoint manager, storage, validator all separate
-- ✅ **Clean Directory Structure:** Models, turnpoints, UI organized logically
-- ✅ **Zero AAT Cross-Contamination:** Complete task type isolation
-- ✅ **Ready for Extensions:** Easy to add new turnpoint types
+- ... **Turnpoint Type Separation:** Each type has dedicated calculator & display
+- ... **Coordinator Pattern:** Clear delegation, minimal logic in coordinators
+- ... **Independent Modules:** Waypoint manager, storage, validator all separate
+- ... **Clean Directory Structure:** Models, turnpoints, UI organized logically
+- ... **Zero AAT Cross-Contamination:** Complete task type isolation
+- ... **Ready for Extensions:** Easy to add new turnpoint types
 
 ---
 
-## 🎯 Future Improvements
+## z Future Improvements
 
 ### Priority 1: Fix FAI Quadrant Orientation
 - Use single algorithm for visual and mathematical calculations
@@ -622,3 +622,4 @@ turnpoints/
 **Making Changes?** Review this document first, understand the coordinator pattern, then check the specific turnpoint module you need.
 
 **Adding Turnpoint Types?** Follow the existing pattern - create both Calculator and Display classes, update coordinators.
+

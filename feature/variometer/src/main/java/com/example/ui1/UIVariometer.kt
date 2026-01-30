@@ -94,6 +94,7 @@ fun UIVariometer(
     dialConfig: VarioDialConfig = VarioDialConfig(),
     windDirectionScreenDeg: Float? = null,
     windIsValid: Boolean = false,
+    windSpeedLabel: String? = null,
     modifier: Modifier = Modifier
 ) {
     var isFlashing by remember { mutableStateOf(false) }
@@ -274,32 +275,48 @@ fun UIVariometer(
             }
         }
 
-        windDirectionScreenDeg?.let { rawDirection ->
-            val direction = ((rawDirection % 360f) + 360f) % 360f
-            val arrowColor = if (windIsValid) Color(0xFF22C55E) else Color(0xFFEF4444)
-            val arrowHeight = (radius * 0.16f).coerceIn(10.dp.toPx(), 24.dp.toPx())
-            val arrowWidth = (arrowHeight * 1.05f).coerceIn(8.dp.toPx(), 22.dp.toPx())
-            val ringStroke = 6.dp.toPx()
-            val baseRadius = radius - ringStroke * 0.5f
-            val tipRadius = (baseRadius - arrowHeight).coerceAtLeast(radius * 0.4f)
-            val baseY = center.y - baseRadius
-            val tipY = center.y - tipRadius
-            val halfWidth = arrowWidth / 2f
-            val arrowPath = Path().apply {
-                moveTo(center.x - halfWidth, baseY)
-                lineTo(center.x + halfWidth, baseY)
-                lineTo(center.x, tipY)
-                close()
-            }
-            rotate(direction, center) {
-                drawPath(arrowPath, color = arrowColor)
-                if (windIsValid) {
+        if (windIsValid) {
+            windDirectionScreenDeg?.let { rawDirection ->
+                val direction = ((rawDirection % 360f) + 360f) % 360f
+                val arrowColor = Color(0xFF22C55E)
+                val arrowHeight = (radius * 0.16f).coerceIn(10.dp.toPx(), 24.dp.toPx())
+                val arrowWidth = (arrowHeight * 1.05f).coerceIn(8.dp.toPx(), 22.dp.toPx())
+                val ringStroke = 6.dp.toPx()
+                val baseRadius = radius - ringStroke * 0.5f
+                val tipRadius = (baseRadius - arrowHeight).coerceAtLeast(radius * 0.4f)
+                val baseY = center.y - baseRadius
+                val tipY = center.y - tipRadius
+                val halfWidth = arrowWidth / 2f
+                val arrowPath = Path().apply {
+                    moveTo(center.x - halfWidth, baseY)
+                    lineTo(center.x + halfWidth, baseY)
+                    lineTo(center.x, tipY)
+                    close()
+                }
+                rotate(direction, center) {
+                    drawPath(arrowPath, color = arrowColor)
                     drawPath(
                         arrowPath,
                         color = Color(0xFFEF4444),
                         style = Stroke(width = 1.5.dp.toPx())
                     )
                 }
+            }
+            val windLabel = windSpeedLabel?.trim().orEmpty()
+            if (windLabel.isNotEmpty()) {
+                val windPaint = android.graphics.Paint().apply {
+                    color = android.graphics.Color.BLACK
+                    textSize = 14.sp.toPx()
+                    textAlign = android.graphics.Paint.Align.CENTER
+                    isAntiAlias = true
+                    isFakeBoldText = true
+                }
+                drawContext.canvas.nativeCanvas.drawText(
+                    windLabel,
+                    center.x,
+                    center.y - radius * 0.35f,
+                    windPaint
+                )
             }
         }
 

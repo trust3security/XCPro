@@ -25,7 +25,7 @@
 | Parameter | Value | Imperial |
 |-----------|-------|----------|
 | Wingspan | 18 m | 59.05 ft |
-| Wing Area | 10.96 m² | 118.0 ft² |
+| Wing Area | 10.96 m^2 | 118.0 ft^2 |
 | Aspect Ratio | 29.6 | - |
 | Empty Weight (Sport) | 285 kg | 628 lbs |
 | Empty Weight (Performance) | 295 kg | 650 lbs |
@@ -38,7 +38,7 @@
 | Parameter | Value | Imperial |
 |-----------|-------|----------|
 | Wingspan | 15 m | 49.21 ft |
-| Wing Area | 9.66 m² | 104.0 ft² |
+| Wing Area | 9.66 m^2 | 104.0 ft^2 |
 | Aspect Ratio | 23.3 | - |
 | Empty Weight (Sport) | 275 kg | 606 lbs |
 | Empty Weight (Performance) | 285 kg | 628 lbs |
@@ -51,14 +51,14 @@
 ## Weight and Loading
 
 ### 18-Meter Configuration
-- **Minimum Wing Loading:** 31.0 kg/m² (6.35 lb/ft²) at 340 kg
-- **Maximum Wing Loading:** 54.7 kg/m² (11.20 lb/ft²) at 600 kg
+- **Minimum Wing Loading:** 31.0 kg/m^2 (6.35 lb/ft^2) at 340 kg
+- **Maximum Wing Loading:** 54.7 kg/m^2 (11.20 lb/ft^2) at 600 kg
 - **Reference Weight:** 365 kg (with standard pilot)
 - **Maximum Water Ballast:** 178 liters (wing) + 7.8 liters (fin)
 
 ### 15-Meter Configuration
-- **Minimum Wing Loading:** 35.2 kg/m² (7.21 lb/ft²) at 340 kg
-- **Maximum Wing Loading:** 54.3 kg/m² (11.12 lb/ft²) at 525 kg
+- **Minimum Wing Loading:** 35.2 kg/m^2 (7.21 lb/ft^2) at 340 kg
+- **Maximum Wing Loading:** 54.3 kg/m^2 (11.12 lb/ft^2) at 525 kg
 - **Reference Weight:** 360 kg (with standard pilot)
 - **Maximum Water Ballast:** 178 liters
 
@@ -83,13 +83,13 @@
 ### Ventus 3 Flap Positions
 | Position | Deflection | Typical Use |
 |----------|------------|-------------|
-| L (Landing) | +20° | Landing, max 140 km/h |
-| 2 | +15° | Thermalling tight, 85-100 km/h |
-| 1 | +10° | Thermalling normal, 95-115 km/h |
-| 0 | +5° | Slow cruise, 110-130 km/h |
-| -1 | 0° | Normal cruise, 120-160 km/h |
-| -2 | -5° | Fast cruise, 150-200 km/h |
-| -3 | -10° | High speed, 190-270 km/h |
+| L (Landing) | +20deg | Landing, max 140 km/h |
+| 2 | +15deg | Thermalling tight, 85-100 km/h |
+| 1 | +10deg | Thermalling normal, 95-115 km/h |
+| 0 | +5deg | Slow cruise, 110-130 km/h |
+| -1 | 0deg | Normal cruise, 120-160 km/h |
+| -2 | -5deg | Fast cruise, 150-200 km/h |
+| -3 | -10deg | High speed, 190-270 km/h |
 
 ---
 
@@ -137,7 +137,7 @@
 
 ### Ventus 3 18-Meter
 
-#### Light Loading (365 kg, 33.3 kg/m²)
+#### Light Loading (365 kg, 33.3 kg/m^2)
 | Speed (km/h) | Sink Rate (m/s) | L/D |
 |--------------|-----------------|-----|
 | 82 | 0.48 | ~47 |
@@ -148,7 +148,7 @@
 | 180 | 1.75 | ~29 |
 | 210 | 2.50 | ~23 |
 
-#### Heavy Loading (600 kg, 54.7 kg/m²)
+#### Heavy Loading (600 kg, 54.7 kg/m^2)
 | Speed (km/h) | Sink Rate (m/s) | L/D |
 |--------------|-----------------|-----|
 | 95 | 0.70 | ~38 |
@@ -161,7 +161,7 @@
 
 ### Ventus 3 15-Meter
 
-#### Light Loading (360 kg, 37.3 kg/m²)
+#### Light Loading (360 kg, 37.3 kg/m^2)
 | Speed (km/h) | Sink Rate (m/s) | L/D |
 |--------------|-----------------|-----|
 | 82 | 0.52 | ~44 |
@@ -171,7 +171,7 @@
 | 150 | 1.22 | ~34 |
 | 175 | 1.80 | ~27 |
 
-#### Heavy Loading (525 kg, 54.3 kg/m²)
+#### Heavy Loading (525 kg, 54.3 kg/m^2)
 | Speed (km/h) | Sink Rate (m/s) | L/D |
 |--------------|-----------------|-----|
 | 90 | 0.72 | ~35 |
@@ -196,12 +196,12 @@
 ### Inter-thermal Cruise - Flap Selection Guide
 | Flap | No Ballast (km/h) | Max Ballast (km/h) |
 |------|-------------------|-------------------|
-| 2 (+15°) | 85-100 | 95-115 |
-| 1 (+10°) | 95-115 | 110-130 |
-| 0 (+5°) | 110-130 | 125-145 |
-| -1 (0°) | 120-160 | 140-180 |
-| -2 (-5°) | 150-200 | 170-220 |
-| -3 (-10°) | 190-270 | 210-270 |
+| 2 (+15deg) | 85-100 | 95-115 |
+| 1 (+10deg) | 95-115 | 110-130 |
+| 0 (+5deg) | 110-130 | 125-145 |
+| -1 (0deg) | 120-160 | 140-180 |
+| -2 (-5deg) | 150-200 | 170-220 |
+| -3 (-10deg) | 190-270 | 210-270 |
 
 ### Approach Speeds (Minimum Recommended)
 
@@ -307,7 +307,7 @@ V3: 170 km/h  W3: 1.55 m/s
 1. **Glider Empty Weight:** 285-315 kg (depending on configuration)
 2. **Pilot Weight:** Your actual weight with equipment
 3. **Water Ballast:** 0-186 liters
-4. **Wing Area:** 10.96 m² (18m) or 9.66 m² (15m)
+4. **Wing Area:** 10.96 m^2 (18m) or 9.66 m^2 (15m)
 5. **Bugs Factor:** 0-20% degradation
 
 ### MacCready Settings
@@ -333,7 +333,7 @@ V3: 170 km/h  W3: 1.55 m/s
 
 ### Notable Achievements
 - **2017 European Championships:** 1st, 2nd, 3rd in 18m Class
-- **2018 World Championships Hosín:** 1st place with Ventus 3T
+- **2018 World Championships Hosn:** 1st place with Ventus 3T
 - **Multiple national championships** worldwide
 - Over 250 units built since 2016
 

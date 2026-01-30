@@ -1,11 +1,13 @@
 package com.example.xcpro.replay
 
+import com.example.xcpro.audio.VarioAudioSettings
 import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.core.time.Clock
 import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.sensors.SensorFusionRepository
 import com.example.xcpro.sensors.SensorFusionRepositoryFactory
 import com.example.xcpro.vario.VarioServiceManager
+import com.example.xcpro.vario.LevoVarioPreferencesRepository
 import com.example.xcpro.weather.wind.data.WindSensorFusionRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -21,6 +23,7 @@ class ReplayPipeline(
     private val windRepository: WindSensorFusionRepository,
     private val replaySensorSource: ReplaySensorSource,
     private val sensorFusionRepositoryFactory: SensorFusionRepositoryFactory,
+    private val levoVarioPreferencesRepository: LevoVarioPreferencesRepository,
     private val clock: Clock,
     private val dispatcher: CoroutineDispatcher,
     private val sessionState: StateFlow<SessionState>,
@@ -33,8 +36,10 @@ class ReplayPipeline(
         private set
 
     private var forwardJob: Job? = null
+    private var audioSettingsJob: Job? = null
     private var lastForwardLogTime = 0L
     private var sensorsSuspended = false
+    private var latestAudioSettings: VarioAudioSettings = VarioAudioSettings()
 
     fun ensureScope(onScopeReset: () -> Unit) {
         if (scope.isActive) return
@@ -42,6 +47,7 @@ class ReplayPipeline(
         scope = createScope()
         forwardJob = null
         replayFusionRepository = null
+        audioSettingsJob = null
         onScopeReset()
     }
 
@@ -49,7 +55,9 @@ class ReplayPipeline(
         ensureScope(onScopeReset)
         if (replayFusionRepository == null) {
             replayFusionRepository = createFusionRepository()
+            replayFusionRepository?.updateAudioSettings(latestAudioSettings)
         }
+        ensureAudioSettingsObserver()
         if (forwardJob?.isActive != true) {
             startForwardingFlightData()
         }
@@ -83,6 +91,16 @@ class ReplayPipeline(
             enableAudio = true,
             isReplayMode = true
         )
+
+    private fun ensureAudioSettingsObserver() {
+        if (audioSettingsJob?.isActive == true) return
+        audioSettingsJob = scope.launch {
+            levoVarioPreferencesRepository.config.collect { config ->
+                latestAudioSettings = config.audioSettings
+                replayFusionRepository?.updateAudioSettings(config.audioSettings)
+            }
+        }
+    }
 
     private fun startForwardingFlightData() {
         val repo = replayFusionRepository ?: return

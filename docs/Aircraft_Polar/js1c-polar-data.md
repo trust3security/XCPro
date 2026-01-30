@@ -24,7 +24,7 @@
 | Parameter | Value | Imperial |
 |-----------|-------|----------|
 | Wingspan | 18 m | 59.06 ft |
-| Wing Area | 11.19 m² | 120.45 ft² |
+| Wing Area | 11.19 m^2 | 120.45 ft^2 |
 | Aspect Ratio | 28.8 | - |
 | Empty Weight (JS1-C) | 330 kg | 728 lbs |
 | Maximum Takeoff Weight | 600 kg | 1323 lbs |
@@ -35,7 +35,7 @@
 | Parameter | Value | Imperial |
 |-----------|-------|----------|
 | Wingspan | 21 m | 68.88 ft |
-| Wing Area | 12.25 m² | 131.86 ft² |
+| Wing Area | 12.25 m^2 | 131.86 ft^2 |
 | Aspect Ratio | 35.9 | - |
 | Empty Weight | 330 kg | 728 lbs |
 | Maximum Takeoff Weight | 720 kg | 1587 lbs |
@@ -47,13 +47,13 @@
 ## Weight and Loading
 
 ### 18-Meter Configuration
-- **Minimum Wing Loading:** 34.1 kg/m² (6.98 lb/ft²)
-- **Maximum Wing Loading:** 53.6 kg/m² (10.98 lb/ft²)
+- **Minimum Wing Loading:** 34.1 kg/m^2 (6.98 lb/ft^2)
+- **Maximum Wing Loading:** 53.6 kg/m^2 (10.98 lb/ft^2)
 - **Cockpit Load Range:** 70-115 kg (154-253 lbs)
 
 ### 21-Meter Configuration
-- **Minimum Wing Loading:** 32.6 kg/m² (6.68 lb/ft²)
-- **Maximum Wing Loading:** 58.7 kg/m² (12.02 lb/ft²)
+- **Minimum Wing Loading:** 32.6 kg/m^2 (6.68 lb/ft^2)
+- **Maximum Wing Loading:** 58.7 kg/m^2 (12.02 lb/ft^2)
 - **Cockpit Load Range:** 70-115 kg (154-253 lbs)
 
 ---
@@ -86,22 +86,22 @@
 ### 18-Meter Configuration
 | Position | Deflection | Max Speed (km/h) | Max Speed (kts) |
 |----------|------------|------------------|-----------------|
-| 1 | -3° | 290 | 157 |
-| 2 | 0° | 290 | 157 |
-| 3 | +5° | 230 | 124 |
-| 4 | +13.5° | 170 | 92 |
-| 5 | +16.6° | 170 | 92 |
-| L | +20° | 160 | 86 |
+| 1 | -3deg | 290 | 157 |
+| 2 | 0deg | 290 | 157 |
+| 3 | +5deg | 230 | 124 |
+| 4 | +13.5deg | 170 | 92 |
+| 5 | +16.6deg | 170 | 92 |
+| L | +20deg | 160 | 86 |
 
 ### 21-Meter Configuration
 | Position | Deflection | Max Speed (km/h) | Max Speed (kts) |
 |----------|------------|------------------|-----------------|
-| 1 | -3° | 270 | 146 |
-| 2 | 0° | 270 | 146 |
-| 3 | +5° | 230 | 124 |
-| 4 | +13.5° | 170 | 92 |
-| 5 | +16.6° | 170 | 92 |
-| L | +20° | 160 | 86 |
+| 1 | -3deg | 270 | 146 |
+| 2 | 0deg | 270 | 146 |
+| 3 | +5deg | 230 | 124 |
+| 4 | +13.5deg | 170 | 92 |
+| 5 | +16.6deg | 170 | 92 |
+| L | +20deg | 160 | 86 |
 
 ---
 
@@ -112,36 +112,36 @@
 #### At 430 kg (948 lbs) - Mid/Rear CG
 | Flap Setting | km/h | knots |
 |--------------|------|-------|
-| L (+20°) | 71 | 38 |
-| 5 (+16.6°) | 75 | 40 |
-| 3 (+5°) | 79 | 43 |
-| 1 (-3°) | 85 | 46 |
+| L (+20deg) | 71 | 38 |
+| 5 (+16.6deg) | 75 | 40 |
+| 3 (+5deg) | 79 | 43 |
+| 1 (-3deg) | 85 | 46 |
 
 #### At 600 kg (1323 lbs) - Mid/Rear CG
 | Flap Setting | km/h | knots |
 |--------------|------|-------|
-| L (+20°) | 82 | 44 |
-| 5 (+16.6°) | 84 | 45 |
-| 3 (+5°) | 86 | 46 |
-| 1 (-3°) | 99 | 53 |
+| L (+20deg) | 82 | 44 |
+| 5 (+16.6deg) | 84 | 45 |
+| 3 (+5deg) | 86 | 46 |
+| 1 (-3deg) | 99 | 53 |
 
 ### 21-Meter Configuration (IAS)
 
 #### At 500 kg (1103 lbs) - Forward CG
 | Flap Setting | km/h | knots |
 |--------------|------|-------|
-| L (+20°) | 70 | 38 |
-| 5 (+16.6°) | 75 | 40 |
-| 3 (+5°) | 82 | 44 |
-| 1 (-3°) | 86 | 46 |
+| L (+20deg) | 70 | 38 |
+| 5 (+16.6deg) | 75 | 40 |
+| 3 (+5deg) | 82 | 44 |
+| 1 (-3deg) | 86 | 46 |
 
 #### At 720 kg (1587 lbs) - Forward CG
 | Flap Setting | km/h | knots |
 |--------------|------|-------|
-| L (+20°) | 87 | 47 |
-| 5 (+16.6°) | 88 | 48 |
-| 3 (+5°) | 94 | 51 |
-| 1 (-3°) | 101 | 55 |
+| L (+20deg) | 87 | 47 |
+| 5 (+16.6deg) | 88 | 48 |
+| 3 (+5deg) | 94 | 51 |
+| 1 (-3deg) | 101 | 55 |
 
 ---
 
@@ -165,7 +165,7 @@
 
 ### JS1 C 18-Meter
 
-#### Light Loading (450 kg, ~40 kg/m²)
+#### Light Loading (450 kg, ~40 kg/m^2)
 | Speed (km/h) | Sink Rate (m/s) | L/D |
 |--------------|-----------------|-----|
 | 80 | 0.60 | ~37 |
@@ -175,7 +175,7 @@
 | 180 | 2.20 | ~23 |
 | 200 | 3.00 | ~19 |
 
-#### Heavy Loading (600 kg, ~53.6 kg/m²)
+#### Heavy Loading (600 kg, ~53.6 kg/m^2)
 | Speed (km/h) | Sink Rate (m/s) | L/D |
 |--------------|-----------------|-----|
 | 90 | 0.75 | ~33 |
@@ -187,7 +187,7 @@
 
 ### JS1 C 21-Meter
 
-#### Light Loading (500 kg, ~40.8 kg/m²)
+#### Light Loading (500 kg, ~40.8 kg/m^2)
 | Speed (km/h) | Sink Rate (m/s) | L/D |
 |--------------|-----------------|-----|
 | 75 | 0.55 | ~38 |
@@ -197,7 +197,7 @@
 | 150 | 1.20 | ~35 |
 | 180 | 1.90 | ~26 |
 
-#### Heavy Loading (720 kg, ~58.7 kg/m²)
+#### Heavy Loading (720 kg, ~58.7 kg/m^2)
 | Speed (km/h) | Sink Rate (m/s) | L/D |
 |--------------|-----------------|-----|
 | 90 | 0.70 | ~36 |
@@ -222,10 +222,10 @@
 ### Inter-thermal Cruise - Flap Selection Guide
 | Flap | No Ballast (km/h) | Max Ballast (km/h) |
 |------|-------------------|-------------------|
-| 4 (+13.5°) | 90-110 | 105-125 |
-| 3 (+5°) | 110-120 | 125-140 |
-| 2 (0°) | 120-180 | 140-200 |
-| 1 (-3°) | 180-VNE | 200-VNE |
+| 4 (+13.5deg) | 90-110 | 105-125 |
+| 3 (+5deg) | 110-120 | 125-140 |
+| 2 (0deg) | 120-180 | 140-200 |
+| 1 (-3deg) | 180-VNE | 200-VNE |
 
 ### Approach Speeds (Minimum Recommended)
 
@@ -253,7 +253,7 @@
 ### 18-Meter Configuration
 | Tank | Capacity (liters) |
 |------|------------------|
-| Main wings (2×90L) | 180 |
+| Main wings (2x90L) | 180 |
 | Expendable tail tank | 7.5 |
 | Non-expendable tail tank | 4.5 |
 | **Total** | **192** |
@@ -261,8 +261,8 @@
 ### 21-Meter Configuration
 | Tank | Capacity (liters) |
 |------|------------------|
-| Main wings (2×90L) | 180 |
-| Wing tips (2×17L) | 34 |
+| Main wings (2x90L) | 180 |
+| Wing tips (2x17L) | 34 |
 | Expendable tail tank | 7.5 |
 | Non-expendable tail tank | 4.5 |
 | Optional fuselage tanks | 42 |
@@ -320,7 +320,7 @@ V3: 170 km/h  W3: 1.35 m/s
 ```
 
 ### Method 2: Polar Coefficients
-The polar equation: **w = a + b×V + c×V²**
+The polar equation: **w = a + bxV + cxV^2**
 
 Typical coefficients (adjust based on actual weight):
 - Calculate from polar points using regression analysis
@@ -330,7 +330,7 @@ Typical coefficients (adjust based on actual weight):
 1. **Glider Empty Weight:** 330 kg
 2. **Pilot Weight:** Your actual weight with equipment
 3. **Water Ballast:** Current amount in liters
-4. **Wing Area:** 11.19 m² (18m) or 12.25 m² (21m)
+4. **Wing Area:** 11.19 m^2 (18m) or 12.25 m^2 (21m)
 5. **Bugs Factor:** 0-20% degradation
 
 ### MacCready Settings
@@ -405,7 +405,7 @@ Typical coefficients (adjust based on actual weight):
 
 ## Important Warnings
 
-1. **Water Ballast Temperature:** Dump all water if OAT < 0°C
+1. **Water Ballast Temperature:** Dump all water if OAT < 0degC
 2. **Asymmetric Water:** Land immediately if asymmetry detected
 3. **21m Tips:** Must be filled if main tanks have any water
 4. **Spin Limitations:** No intentional spins in 21m or with water

@@ -8,8 +8,9 @@ Markdown Content:
 You seem to be lost.
 --------------------
 
-Taking you to Support Center in 5 seconds…
+Taking you to Support Center in 5 seconds...
 
 You can go there immediately by clicking the button below.
 
 [Support Center](https://support.garmin.com/)
+

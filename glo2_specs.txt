@@ -5,7 +5,7 @@ URL Source: https://www.manua.ls/garmin/glo-2/specifications
 Markdown Content:
 Discover more
 
-GLO™ 2-GLONASS
+GLO(TM) 2-GLONASS
 
 GPS y
 
@@ -23,96 +23,96 @@ Garmin GLO 2 Bluetooth GPS Receiver
 
 GLO 2
 
-GLO™ 2
+GLO(TM) 2
 
 ### August 2018 190-02468-91_0A  Printed in Taiwan
 
 GLO
 
-™
+(TM)
 
-2 GLONASS and GPS Sensor Instructions �����������������������������������������������������������2
+2 GLONASS and GPS Sensor Instructions 1/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/22
 
 Instructions pour le capteur GLONASS et GPS GLO
 -----------------------------------------------
 
-™
+(TM)
 
-2 �������������������������������������������������7
+2 1/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/27
 ----------------------------------------------------
 
 Istruzioni del sensore GLO
 --------------------------
 
-™
+(TM)
 
-2 GLONASS e GPS ����������������������������������������������������������13
+2 GLONASS e GPS 1/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/213
 
 GLO
 
-™
+(TM)
 
-2-GLONASS- und GPS-Sensor – Anweisungen �������������������������������������������������18
+2-GLONASS- und GPS-Sensor - Anweisungen 1/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/218
 
 Instrucciones del sensor de GPS y GLONASS GLO
 ---------------------------------------------
 
-™
+(TM)
 
-2 ������������������������������������������������23
+2 1/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/223
 ----------------------------------------------------
 
-Instruções do GLO
+Instrusectionues do GLO
 -----------------
 
-™
+(TM)
 
-2 GLONASS e do Sensor GPS �����������������������������������������������������28
+2 GLONASS e do Sensor GPS 1/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/228
 
 Instructies voor GLO
 --------------------
 
-™
+(TM)
 
-2 GLONASS en GPS-sensor �����������������������������������������������������33
+2 GLONASS en GPS-sensor 1/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/233
 
 Vejledning til GLO
 ------------------
 
-™
+(TM)
 
-2 GLONASS og GPS-sensor ����������������������������������������������������������38
+2 GLONASS og GPS-sensor 1/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/238
 
 GLO
 
-™
+(TM)
 
-2- GLONASS- ja GPS-antureiden ohjeet �������������������������������������������������������������42
+2- GLONASS- ja GPS-antureiden ohjeet 1/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/242
 
 Instruksjoner for GLO
 ---------------------
 
-™
+(TM)
 
-2 GLONASS- og GPS-sensor ���������������������������������������������������47
+2 GLONASS- og GPS-sensor 1/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/247
 
 GLO
 
-™
+(TM)
 
-2 GLONASS- och GPS-sensorinstruktioner ��������������������������������������������������������51
+2 GLONASS- och GPS-sensorinstruktioner 1/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/251
 
-Instrukcja obsługi czujnika GLO
+Instrukcja obsugi czujnika GLO
 -------------------------------
 
-™
+(TM)
 
-2 GLONASS i GPS ���������������������������������������������������56
+2 GLONASS i GPS 1/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/21/256
 ---------------------------------------------------------------------
 
-™
+(TM)
 
-2 для систем ГЛОНАСС и GPS ����������61
+2 '>> u1/4 ">  GPS 1/21/21/21/21/21/21/21/21/21/261
 
 [](https://www.manua.ls/garmin/glo-2/manual?p=2)[](https://www.manua.ls/garmin/glo-2/manual?p=7)[](https://www.manua.ls/garmin/glo-2/manual?p=13)[](https://www.manua.ls/garmin/glo-2/manual?p=18)[](https://www.manua.ls/garmin/glo-2/manual?p=23)[](https://www.manua.ls/garmin/glo-2/manual?p=28)[](https://www.manua.ls/garmin/glo-2/manual?p=33)[](https://www.manua.ls/garmin/glo-2/manual?p=38)[](https://www.manua.ls/garmin/glo-2/manual?p=42)[](https://www.manua.ls/garmin/glo-2/manual?p=47)[](https://www.manua.ls/garmin/glo-2/manual?p=51)[](https://www.manua.ls/garmin/glo-2/manual?p=56)[](https://www.manua.ls/garmin/glo-2/manual?p=61)
 
@@ -130,7 +130,7 @@ Global Positioning System
 
 Garmin GLO 2
 
-GLO™ 2 GLONASS
+GLO(TM) 2 GLONASS
 
 GARMIN
 
@@ -149,19 +149,19 @@ View the manual for the Garmin GLO 2 here, for free. This manual comes under the
 
 ### Index
 
-*   [GLO™ 2 GLONASS and GPS Sensor Instructions](https://www.manua.ls/garmin/glo-2/manual?p=2)
-*   [Instructions pour le capteur GLONASS et GPS GLO™ 2](https://www.manua.ls/garmin/glo-2/manual?p=7)
-*   [Istruzioni del sensore GLO™ 2 GLONASS e GPS](https://www.manua.ls/garmin/glo-2/manual?p=13)
-*   [GLO™ 2-GLONASS- und GPS-Sensor– Anweisungen](https://www.manua.ls/garmin/glo-2/manual?p=18)
-*   [Instrucciones del sensor de GPS y GLONASS GLO™ 2](https://www.manua.ls/garmin/glo-2/manual?p=23)
-*   [Instruções do GLO™ 2 GLONASS e do Sensor GPS](https://www.manua.ls/garmin/glo-2/manual?p=28)
-*   [Instructies voor GLO™ 2 GLONASS en GPS-sensor](https://www.manua.ls/garmin/glo-2/manual?p=33)
-*   [Vejledning til GLO™ 2 GLONASS og GPS-sensor](https://www.manua.ls/garmin/glo-2/manual?p=38)
-*   [GLO™ 2- GLONASS- ja GPS-antureiden ohjeet](https://www.manua.ls/garmin/glo-2/manual?p=42)
-*   [Instruksjoner for GLO™ 2 GLONASS- og GPS-sensor](https://www.manua.ls/garmin/glo-2/manual?p=47)
-*   [GLO™ 2 GLONASS- och GPS-sensorinstruktioner](https://www.manua.ls/garmin/glo-2/manual?p=51)
-*   [Instrukcja obsługi czujnika GLO™ 2 GLONASS i GPS](https://www.manua.ls/garmin/glo-2/manual?p=56)
-*   [Инструкция по эксплуатации датчика GLO™ 2 для систем ГЛОНАСС и GPS](https://www.manua.ls/garmin/glo-2/manual?p=61)
+*   [GLO(TM) 2 GLONASS and GPS Sensor Instructions](https://www.manua.ls/garmin/glo-2/manual?p=2)
+*   [Instructions pour le capteur GLONASS et GPS GLO(TM) 2](https://www.manua.ls/garmin/glo-2/manual?p=7)
+*   [Istruzioni del sensore GLO(TM) 2 GLONASS e GPS](https://www.manua.ls/garmin/glo-2/manual?p=13)
+*   [GLO(TM) 2-GLONASS- und GPS-Sensor- Anweisungen](https://www.manua.ls/garmin/glo-2/manual?p=18)
+*   [Instrucciones del sensor de GPS y GLONASS GLO(TM) 2](https://www.manua.ls/garmin/glo-2/manual?p=23)
+*   [Instrusectionues do GLO(TM) 2 GLONASS e do Sensor GPS](https://www.manua.ls/garmin/glo-2/manual?p=28)
+*   [Instructies voor GLO(TM) 2 GLONASS en GPS-sensor](https://www.manua.ls/garmin/glo-2/manual?p=33)
+*   [Vejledning til GLO(TM) 2 GLONASS og GPS-sensor](https://www.manua.ls/garmin/glo-2/manual?p=38)
+*   [GLO(TM) 2- GLONASS- ja GPS-antureiden ohjeet](https://www.manua.ls/garmin/glo-2/manual?p=42)
+*   [Instruksjoner for GLO(TM) 2 GLONASS- og GPS-sensor](https://www.manua.ls/garmin/glo-2/manual?p=47)
+*   [GLO(TM) 2 GLONASS- och GPS-sensorinstruktioner](https://www.manua.ls/garmin/glo-2/manual?p=51)
+*   [Instrukcja obsugi czujnika GLO(TM) 2 GLONASS i GPS](https://www.manua.ls/garmin/glo-2/manual?p=56)
+*   [1/2fo* 3/4 o>>fdegdeg* 'deg**odeg GLO(TM) 2 '>> u1/4 ">  GPS](https://www.manua.ls/garmin/glo-2/manual?p=61)
 
 ### Product Images (6)
 
@@ -204,7 +204,7 @@ Update rate
 
 Operating temperature (T-T)
 
--20 - 60 °C
+-20 - 60 degC
 
 Weight
 
@@ -245,8 +245,8 @@ Channels quantity- channels
 
 ##### Operational conditions
 
-Operating temperature (T-T)-20 - 60 °C
-Storage temperature (T-T)-20 - 50 °C
+Operating temperature (T-T)-20 - 60 degC
+Storage temperature (T-T)-20 - 50 degC
 
 ##### Weight & dimensions
 
@@ -332,3 +332,4 @@ The Garmin GLO 2 has a depth of 77.2 mm.
 Yes, the manual of the Garmin GLO 2 is available in English .
 
 Is your question not listed? [Ask your question here](https://www.manua.ls/garmin/glo-2/specifications#)
+

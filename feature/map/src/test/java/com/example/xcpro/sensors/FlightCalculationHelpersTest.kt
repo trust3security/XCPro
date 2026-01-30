@@ -58,5 +58,43 @@ class FlightCalculationHelpersTest {
         assertFalse(helpers.currentThermalValid)
         assertEquals(0.0f, helpers.thermalAverageCurrent, 1e-6f)
     }
+
+    @Test
+    fun netto_validity_requires_warmup() {
+        val sinkProvider = object : StillAirSinkProvider {
+            override fun sinkAtSpeed(airspeedMs: Double): Double? = -0.5
+        }
+
+        val helpers = FlightCalculationHelpers(
+            scope = CoroutineScope(UnconfinedTestDispatcher()),
+            aglCalculator = SimpleAglCalculator(context),
+            locationHistory = mutableListOf(),
+            sinkProvider = sinkProvider
+        )
+
+        val first = helpers.calculateNetto(
+            currentVerticalSpeed = 1.0,
+            trueAirspeed = 10.0,
+            fallbackGroundSpeed = 10.0,
+            timestampMillis = 0L
+        )
+        assertFalse(first.valid)
+
+        val beforeWarmup = helpers.calculateNetto(
+            currentVerticalSpeed = 1.0,
+            trueAirspeed = 10.0,
+            fallbackGroundSpeed = 10.0,
+            timestampMillis = 19_999L
+        )
+        assertFalse(beforeWarmup.valid)
+
+        val afterWarmup = helpers.calculateNetto(
+            currentVerticalSpeed = 1.0,
+            trueAirspeed = 10.0,
+            fallbackGroundSpeed = 10.0,
+            timestampMillis = 20_000L
+        )
+        assertTrue(afterWarmup.valid)
+    }
 }
 

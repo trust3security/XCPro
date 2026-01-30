@@ -1,12 +1,12 @@
 # Racing Task Navigation - Existing UI Analysis
 
 **Created:** 2025-10-08
-**Status:** 📍 Current Implementation Documentation
+**Status:** " Current Implementation Documentation
 **Purpose:** Document existing task UI before adding navigation features
 
 ---
 
-## 🔍 Current Task UI Components
+## " Current Task UI Components
 
 ### 1. Task Bottom Sheet (Input)
 **File:** `SwipeableTaskBottomSheet.kt`
@@ -14,7 +14,7 @@
 **Purpose:** User adds/manages task via "Manage" tab
 
 **Flow:**
-1. User opens Navigation Drawer → "Add Task"
+1. User opens Navigation Drawer -> "Add Task"
 2. Bottom sheet appears with tabs: **MANAGE | RULES | FILES | ...**
 3. In **MANAGE tab**, user adds turnpoints
 4. Routes to task-specific UI:
@@ -68,10 +68,10 @@ fun TaskMinimizedIndicatorOverlay(
 
 **What It Shows (Currently):**
 ```
-┌──────────────────────────────────────┐
-│  [Circle: 5]  RACING Task            │
-│               5 waypoints            │
-└──────────────────────────────────────┘
+"oe"""""""""""""""""""""""""""""""""""""""
+"  [Circle: 5]  RACING Task            "
+"               5 waypoints            "
+"""""""""""""""""""""""""""""""""""""""""
 ```
 - Circle with waypoint count
 - Task type text
@@ -139,27 +139,27 @@ fun TaskMinimizedIndicator(
 
 ---
 
-## 🎯 What's Missing for Navigation
+## z What's Missing for Navigation
 
 ### Current Limitations:
-❌ **No current turnpoint shown** - Only shows total count
-❌ **No turnpoint name** - User can't see which TP is active
-❌ **No distance to next TP** - No real-time navigation data
-❌ **No left/right arrows** - Can't manually browse TPs
-❌ **No status indicator** - Can't see if TP is pending/active/completed
-❌ **No currentLeg tracking** - Only shows total waypoints, not which one is active
+oe **No current turnpoint shown** - Only shows total count
+oe **No turnpoint name** - User can't see which TP is active
+oe **No distance to next TP** - No real-time navigation data
+oe **No left/right arrows** - Can't manually browse TPs
+oe **No status indicator** - Can't see if TP is pending/active/completed
+oe **No currentLeg tracking** - Only shows total waypoints, not which one is active
 
 ### What It SHOULD Show:
 ```
-┌──────────────────────────────────────────────────┐
-│  [<]    TP 2/5: KEYSTONE (12.3 km)    [>]       │
-│                    ACTIVE                         │
-└──────────────────────────────────────────────────┘
+"oe"""""""""""""""""""""""""""""""""""""""""""""""""""
+"  [<]    TP 2/5: KEYSTONE (12.3 km)    [>]       "
+"                    ACTIVE                         "
+"""""""""""""""""""""""""""""""""""""""""""""""""""""
 ```
 
 ---
 
-## 🔧 Integration Plan for Navigation
+## "section Integration Plan for Navigation
 
 ### Option 1: Enhance Existing TaskMinimizedIndicator
 **Modify:** `MapTaskScreenManager.kt:257-284`
@@ -203,9 +203,9 @@ if (task has waypoints) {
 
 ---
 
-## 📋 Recommended Approach
+## "< Recommended Approach
 
-### ✅ Option 1 (Replace) - RECOMMENDED
+### ... Option 1 (Replace) - RECOMMENDED
 
 **Reasons:**
 - Cleaner - one component instead of two
@@ -223,27 +223,27 @@ if (task has waypoints) {
 **Files to Modify:**
 ```
 Phase 4 (Visual UI):
-├── Create: tasks/racing/ui/TaskStatusBar.kt
-├── Modify: map/MapTaskScreenManager.kt (lines 257-284)
-└── Modify: tasks/TaskBottomSheetComponents.kt (optional cleanup)
+""" Create: tasks/racing/ui/TaskStatusBar.kt
+""" Modify: map/MapTaskScreenManager.kt (lines 257-284)
+"""" Modify: tasks/TaskBottomSheetComponents.kt (optional cleanup)
 ```
 
 ---
 
-## 🎨 Current Visual Layout
+## z Current Visual Layout
 
 **MapScreen Z-Index Stack:**
 ```
-┌─────────────────────────────────────────────────┐
-│  1.0f   Map Base                               │
-│  2.0f   CardContainer (flight data cards)      │
-│  3.0f   Task Overlay (turnpoints on map)       │
-│  4.0f   Hamburger Menu                         │
-│  5.0f   Flight Mode Indicator                  │
-│  5.0f   Compass Widget                         │
-│  20.0f  TaskMinimizedIndicator (Top Center) ← HERE
-│  25.0f  SwipeableTaskBottomSheet (Bottom)      │
-└─────────────────────────────────────────────────┘
+"oe""""""""""""""""""""""""""""""""""""""""""""""""""
+"  1.0f   Map Base                               "
+"  2.0f   CardContainer (flight data cards)      "
+"  3.0f   Task Overlay (turnpoints on map)       "
+"  4.0f   Hamburger Menu                         "
+"  5.0f   Flight Mode Indicator                  "
+"  5.0f   Compass Widget                         "
+"  20.0f  TaskMinimizedIndicator (Top Center) * HERE
+"  25.0f  SwipeableTaskBottomSheet (Bottom)      "
+""""""""""""""""""""""""""""""""""""""""""""""""""""
 ```
 
 **Current Position:**
@@ -259,35 +259,35 @@ Phase 4 (Visual UI):
 
 ---
 
-## 🔗 Data Flow
+## "-- Data Flow
 
 ### Current (Minimal):
 ```
 TaskManagerCoordinator.currentTask
-    ↓
+    *"
 MapTaskScreenManager (checks waypoint count)
-    ↓
+    *"
 TaskMinimizedIndicatorOverlay (visibility logic)
-    ↓
+    *"
 TaskMinimizedIndicator (displays count only)
 ```
 
 ### Needed for Navigation:
 ```
 RacingNavigationManager.navigationState
-    ↓ (current leg, status, distance)
+    *" (current leg, status, distance)
 TaskStatusBar
-    ↓
+    *"
 Display: "TP 2/5: KEYSTONE (12.3 km) - ACTIVE"
          [<] arrows [>]
 ```
 
 ---
 
-## 📝 Implementation Checklist
+## " Implementation Checklist
 
 ### Phase 4 (Visual UI) - TaskStatusBar Creation
-- [ ] Find existing TaskMinimizedIndicator usage (✅ DONE - MapTaskScreenManager.kt:272)
+- [ ] Find existing TaskMinimizedIndicator usage (... DONE - MapTaskScreenManager.kt:272)
 - [ ] Create TaskStatusBar.kt component
 - [ ] Add left/right arrow buttons
 - [ ] Connect to RacingNavigationManager.navigationState
@@ -299,25 +299,25 @@ Display: "TP 2/5: KEYSTONE (12.3 km) - ACTIVE"
 - [ ] Test visibility logic (show when bottom sheet hidden)
 
 ### Phase 5 (Manual Controls) - Arrow Functionality
-- [ ] Wire up left arrow → navigationManager.goToPrevious()
-- [ ] Wire up right arrow → navigationManager.advanceToNext()
+- [ ] Wire up left arrow -> navigationManager.goToPrevious()
+- [ ] Wire up right arrow -> navigationManager.advanceToNext()
 - [ ] Add skip confirmation dialog
 - [ ] Implement review mode (browse without changing active)
 - [ ] Show task validity indicator
 
 ---
 
-## 🎯 Key Insights
+## z Key Insights
 
 **What User Described:**
 > "At the top of the mapscreen where it shows the task - current turn point name, it also has a left and right arrows that user can move to the next turnpoint or previous"
 
 **What Currently Exists:**
-- ✅ Task display at top of MapScreen
-- ✅ Shows task type and waypoint count
-- ❌ NO turnpoint name
-- ❌ NO arrows
-- ❌ NO navigation functionality
+- ... Task display at top of MapScreen
+- ... Shows task type and waypoint count
+- oe NO turnpoint name
+- oe NO arrows
+- oe NO navigation functionality
 
 **What Needs to Be Added:**
 - Current turnpoint name (e.g., "KEYSTONE")
@@ -332,3 +332,5 @@ Display: "TP 2/5: KEYSTONE (12.3 km) - ACTIVE"
 **END OF ANALYSIS**
 
 *This document captures the existing task UI infrastructure that will be enhanced with Racing task navigation features.*
+
+

@@ -182,12 +182,7 @@ fun EnhancedFlightDataCard(
             )
 
             flightData.secondaryValue?.let { secondaryText ->
-                val secondaryMultiplier = when {
-                    flightData.id == "wind_spd" && secondaryText.equals(cardStrings.noWind, ignoreCase = true) -> 1f
-                    flightData.id == "wind_spd" -> 2f
-                    else -> 1f
-                }
-                val secondarySize = (stableFontSizes.secondarySize * secondaryMultiplier).sp
+                val secondarySize = stableFontSizes.secondarySize.sp
                 Text(
                     text = secondaryText,
                     fontSize = secondarySize,

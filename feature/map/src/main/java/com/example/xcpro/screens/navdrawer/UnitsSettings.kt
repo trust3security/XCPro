@@ -32,22 +32,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.example.xcpro.common.units.AltitudeM
 import com.example.xcpro.common.units.AltitudeUnit
-import com.example.xcpro.common.units.DistanceM
 import com.example.xcpro.common.units.DistanceUnit
-import com.example.xcpro.common.units.PressureHpa
 import com.example.xcpro.common.units.PressureUnit
-import com.example.xcpro.common.units.SpeedMs
 import com.example.xcpro.common.units.SpeedUnit
-import com.example.xcpro.common.units.TemperatureC
 import com.example.xcpro.common.units.TemperatureUnit
-import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.units.UnitsRepository
-import com.example.xcpro.common.units.VerticalSpeedMs
 import com.example.xcpro.common.units.VerticalSpeedUnit
 import kotlinx.coroutines.launch
 
@@ -119,7 +111,6 @@ fun UnitsSettingsScreen(
                 description = "Used for barometric altitude, AGL, and task heights.",
                 options = AltitudeUnit.values().toList(),
                 selected = units.altitude,
-                example = UnitsFormatter.altitude(AltitudeM(1234.0), units).text,
                 onSelected = { unit ->
                     scope.launch { repository.setAltitude(unit) }
                 },
@@ -131,7 +122,6 @@ fun UnitsSettingsScreen(
                 description = "Applies to variometer readings, audio cues, TE/Netto, and climb averages.",
                 options = VerticalSpeedUnit.values().toList(),
                 selected = units.verticalSpeed,
-                example = UnitsFormatter.verticalSpeed(VerticalSpeedMs(2.3), units).text,
                 onSelected = { unit ->
                     scope.launch { repository.setVerticalSpeed(unit) }
                 },
@@ -143,7 +133,6 @@ fun UnitsSettingsScreen(
                 description = "Displayed in navboxes, glide calculators, and profile summaries.",
                 options = SpeedUnit.values().toList(),
                 selected = units.speed,
-                example = UnitsFormatter.speed(SpeedMs(27.8), units).text,
                 onSelected = { unit ->
                     scope.launch { repository.setSpeed(unit) }
                 },
@@ -155,7 +144,6 @@ fun UnitsSettingsScreen(
                 description = "Used for leg lengths, task distances, and glides.",
                 options = DistanceUnit.values().toList(),
                 selected = units.distance,
-                example = UnitsFormatter.distance(DistanceM(5000.0), units).text,
                 onSelected = { unit ->
                     scope.launch { repository.setDistance(unit) }
                 },
@@ -167,7 +155,6 @@ fun UnitsSettingsScreen(
                 description = "Impacts QNH entry and barometric readouts.",
                 options = PressureUnit.values().toList(),
                 selected = units.pressure,
-                example = UnitsFormatter.pressure(PressureHpa(1013.25), units).text,
                 onSelected = { unit ->
                     scope.launch { repository.setPressure(unit) }
                 },
@@ -179,7 +166,6 @@ fun UnitsSettingsScreen(
                 description = "Used in weather overlays and card summaries.",
                 options = TemperatureUnit.values().toList(),
                 selected = units.temperature,
-                example = UnitsFormatter.temperature(TemperatureC(18.0), units).text,
                 onSelected = { unit ->
                     scope.launch { repository.setTemperature(unit) }
                 },
@@ -197,7 +183,6 @@ private fun <T> UnitSelectionCard(
     description: String,
     options: List<T>,
     selected: T,
-    example: String,
     onSelected: (T) -> Unit,
     label: (T) -> String
 ) {
@@ -231,12 +216,6 @@ private fun <T> UnitSelectionCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-
-            Text(
-                text = "Example: $example",
-                style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
 
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),

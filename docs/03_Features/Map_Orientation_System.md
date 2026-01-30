@@ -1,12 +1,12 @@
 # Map Orientation System - Technical Reference
 
 **Last Updated:** 2026-01-04
-**Status:** ✅ Production
+**Status:** ... Production
 **Critical:** Read this BEFORE modifying orientation code
 
 ---
 
-## 📋 Table of Contents
+## "< Table of Contents
 
 - [Overview](#overview)
 - [The Three Orientation Modes](#the-three-orientation-modes)
@@ -46,7 +46,7 @@ The map orientation system controls how the map rotates relative to the aircraft
 - No rotation applied to map
 
 **Data Source**:
-- None required (0° rotation always)
+- None required (0deg rotation always)
 
 **When To Use**:
 - Ground operations
@@ -57,7 +57,7 @@ The map orientation system controls how the map rotates relative to the aircraft
 - Hidden by default in this mode
 - Can be shown for mode switching
 
-**Rotation Value**: `0.0°` (constant)
+**Rotation Value**: `0.0deg` (constant)
 
 ---
 
@@ -102,7 +102,7 @@ The map orientation system controls how the map rotates relative to the aircraft
 - Falls back to GPS track if magnetometer unavailable
 
 **When To Use**:
-- Thermal soaring (pointing ≠ moving direction)
+- Thermal soaring (pointing per-mille  moving direction)
 - Circling/orbiting
 - When you want to see "where I'm pointing"
 
@@ -135,7 +135,7 @@ bearing = 0.0  // Always
 ### TRACK_UP Data Requirements
 ```kotlin
 // Requires GPS data from RealTimeFlightData
-track: Double           // GPS track angle (0-360°)
+track: Double           // GPS track angle (0-360deg)
 groundSpeed: Double     // Speed in knots
 isGPSFixed: Boolean     // GPS has valid fix
 
@@ -146,7 +146,7 @@ isValid = isGPSFixed && groundSpeed >= 2.0
 ### HEADING_UP Data Requirements
 ```kotlin
 // Primary: Magnetometer + Accelerometer
-magneticHeading: Double     // From sensor fusion (0-360°)
+magneticHeading: Double     // From sensor fusion (0-360deg)
 hasValidHeading: Boolean    // Sensors working correctly
 
 // Fallback: GPS track
@@ -178,15 +178,15 @@ val cameraBearing = when (orientation.mode) {
 mapView.mapLibreMap?.cameraState?.let { camera ->
     newCameraPosition = CameraPosition(
         target = gpsPosition,
-        bearing = cameraBearing,  // ← This rotates the MAP
+        bearing = cameraBearing,  // * This rotates the MAP
         zoom = camera.zoom
     )
 }
 ```
 
 **Why Negative Bearing?**
-- GPS says "heading 90° East"
-- To make East point "up" on screen, rotate map -90° (counter-clockwise)
+- GPS says "heading 90deg East"
+- To make East point "up" on screen, rotate map -90deg (counter-clockwise)
 - Aircraft icon stays pointing up visually
 
 ### Update Frequencies
@@ -216,7 +216,7 @@ geomagnetic[i] = ALPHA * geomagnetic[i] + (1 - ALPHA) * newValue[i]
 
 **Bearing Transition Smoothing**:
 ```kotlin
-// Handles 360°/0° boundary crossing
+// Handles 360deg/0deg boundary crossing
 fun smoothBearingTransition(oldBearing, newBearing):
     diff = handleBoundary(newBearing - oldBearing)  // -180 to +180
     smoothedDiff = diff * 0.3  // 30% weight to new value
@@ -230,11 +230,11 @@ fun smoothBearingTransition(oldBearing, newBearing):
 ### CRITICAL: Icon is NOT a Map Element
 
 **The aircraft icon MUST be:**
-- ✅ Fixed at screen coordinates (center or 65% down)
-- ✅ Drawn as Compose overlay, NOT MapLibre SymbolLayer
-- ✅ Only rotation changes based on mode
-- ❌ NEVER positioned by lat/lng on map
-- ❌ NEVER moves around screen
+- ... Fixed at screen coordinates (center or 65% down)
+- ... Drawn as Compose overlay, NOT MapLibre SymbolLayer
+- ... Only rotation changes based on mode
+- oe NEVER positioned by lat/lng on map
+- oe NEVER moves around screen
 
 **Current Implementation Issue**:
 - Icon positioned at camera center via GeoJSON
@@ -264,12 +264,12 @@ iconRotation = when (mode) {
 // MapScreen.kt - LocationManager effect
 LaunchedEffect(gpsPosition, orientation.bearing, orientation.mode) {
     // Update EVERY mode, not just specific ones
-    mapView.mapLibreMap?.moveCamera(  // ← moveCamera, NOT animateCamera
+    mapView.mapLibreMap?.moveCamera(  // * moveCamera, NOT animateCamera
         CameraUpdateFactory.newCameraPosition(
             CameraPosition(
-                target = gpsPosition,       // ← GPS position
-                bearing = cameraBearing,     // ← Mode-specific rotation
-                zoom = currentZoom           // ← User-controlled
+                target = gpsPosition,       // * GPS position
+                bearing = cameraBearing,     // * Mode-specific rotation
+                zoom = currentZoom           // * User-controlled
             )
         )
     )
@@ -279,18 +279,18 @@ LaunchedEffect(gpsPosition, orientation.bearing, orientation.mode) {
 **Update Frequency**: `100ms` (10Hz) via LaunchedEffect
 
 **Critical Requirements**:
-- ✅ Use `moveCamera()` for instant updates (smooth 10Hz tracking)
-- ❌ NEVER use `animateCamera()` (causes lag and stuttering)
-- ✅ Preserve user's zoom level
-- ❌ NEVER auto-zoom
+- ... Use `moveCamera()` for instant updates (smooth 10Hz tracking)
+- oe NEVER use `animateCamera()` (causes lag and stuttering)
+- ... Preserve user's zoom level
+- oe NEVER auto-zoom
 
 ### User Panning Behavior
 
 **After user pans map:**
-1. ✅ Show "Return to Center" button
-2. ✅ Stop automatic camera updates
-3. ✅ User manually taps button to return
-4. ❌ NEVER auto-return after timeout
+1. ... Show "Return to Center" button
+2. ... Stop automatic camera updates
+3. ... User manually taps button to return
+4. oe NEVER auto-return after timeout
 
 **Pan Detection**:
 ```kotlin
@@ -374,17 +374,17 @@ BEARING_CHANGE_THRESHOLD = 5.0  // Degrees - minimum change to update
 
 **TRACK_UP Mode**:
 ```
-1. Is GPS fixed? NO → Keep last bearing
-2. Speed >= 2 m/s? NO → Keep last bearing
-3. Speed >= 2 m/s? YES → Use GPS track ✓
+1. Is GPS fixed? NO -> Keep last bearing
+2. Speed >= 2 m/s? NO -> Keep last bearing
+3. Speed >= 2 m/s? YES -> Use GPS track "
 ```
 
 **HEADING_UP Mode**:
 ```
-1. Magnetometer available? YES → Use magnetic heading ✓
-2. Magnetometer available? NO → Check GPS
-   3a. GPS fixed AND speed >= 2 m/s? YES → Use GPS track ✓
-   3b. GPS fixed AND speed >= 2 m/s? NO → Keep last bearing
+1. Magnetometer available? YES -> Use magnetic heading "
+2. Magnetometer available? NO -> Check GPS
+   3a. GPS fixed AND speed >= 2 m/s? YES -> Use GPS track "
+   3b. GPS fixed AND speed >= 2 m/s? NO -> Keep last bearing
 ```
 
 ### Last Valid Bearing Hold
@@ -411,10 +411,10 @@ val finalBearing = if (isValid) bearing else lastValidBearing
 
 ## Common Mistakes - DO NOT DO THESE
 
-### ❌ MISTAKE 1: Auto-Return After Pan
+### oe MISTAKE 1: Auto-Return After Pan
 
 ```kotlin
-// ❌ FORBIDDEN - Causes auto-return bug
+// oe FORBIDDEN - Causes auto-return bug
 LaunchedEffect(lastUserPanTime) {
     delay(5000)  // Wait 5 seconds
     if (showReturnButton) {
@@ -426,17 +426,17 @@ LaunchedEffect(lastUserPanTime) {
 
 **Why Wrong**: Pilots pan to view task areas. Auto-return removes their control.
 
-**✅ CORRECT**: Only manual return via button press.
+**... CORRECT**: Only manual return via button press.
 
 ---
 
-### ❌ MISTAKE 2: Confusing Map Rotation with Icon Rotation
+### oe MISTAKE 2: Confusing Map Rotation with Icon Rotation
 
 ```kotlin
-// ❌ WRONG - Rotating icon instead of map
+// oe WRONG - Rotating icon instead of map
 aircraftIcon.rotation = -orientation.bearing
 
-// ✅ CORRECT - Rotate map, icon stays fixed
+// ... CORRECT - Rotate map, icon stays fixed
 cameraPosition.bearing = -orientation.bearing
 ```
 
@@ -444,13 +444,13 @@ cameraPosition.bearing = -orientation.bearing
 
 ---
 
-### ❌ MISTAKE 3: Using animateCamera()
+### oe MISTAKE 3: Using animateCamera()
 
 ```kotlin
-// ❌ WRONG - Causes lag and stuttering
+// oe WRONG - Causes lag and stuttering
 map.animateCamera(newPosition, 1000)  // 1 second animation
 
-// ✅ CORRECT - Instant updates for smooth tracking
+// ... CORRECT - Instant updates for smooth tracking
 map.moveCamera(newPosition)  // No animation, butter-smooth at 10Hz
 ```
 
@@ -458,15 +458,15 @@ map.moveCamera(newPosition)  // No animation, butter-smooth at 10Hz
 
 ---
 
-### ❌ MISTAKE 4: Auto-Zoom
+### oe MISTAKE 4: Auto-Zoom
 
 ```kotlin
-// ❌ WRONG - Surprising zoom changes
+// oe WRONG - Surprising zoom changes
 if (speedIncreased) {
     zoom = 13.0  // Zoom out automatically - USER LOSES CONTROL
 }
 
-// ✅ CORRECT - Only user controls zoom
+// ... CORRECT - Only user controls zoom
 // Never change zoom programmatically after initial setup
 ```
 
@@ -474,15 +474,15 @@ if (speedIncreased) {
 
 ---
 
-### ❌ MISTAKE 5: Wrong Data Source
+### oe MISTAKE 5: Wrong Data Source
 
 ```kotlin
-// ❌ WRONG - Using magnetometer for TRACK_UP
+// oe WRONG - Using magnetometer for TRACK_UP
 when (mode) {
     TRACK_UP -> magneticHeading  // NO! Should be GPS track
 }
 
-// ✅ CORRECT - Mode-specific data sources
+// ... CORRECT - Mode-specific data sources
 when (mode) {
     NORTH_UP -> 0.0
     TRACK_UP -> gpsTrack
@@ -494,13 +494,13 @@ when (mode) {
 
 ---
 
-### ❌ MISTAKE 6: Not Handling Sensor Unavailability
+### oe MISTAKE 6: Not Handling Sensor Unavailability
 
 ```kotlin
-// ❌ WRONG - Crashes if magnetometer missing
+// oe WRONG - Crashes if magnetometer missing
 val bearing = sensorData.magneticHeading  // NPE if sensor unavailable
 
-// ✅ CORRECT - Fallback to GPS
+// ... CORRECT - Fallback to GPS
 val bearing = if (sensorData.hasValidHeading) {
     sensorData.magneticHeading
 } else if (sensorData.groundSpeed >= 2.0) {
@@ -514,13 +514,13 @@ val bearing = if (sensorData.hasValidHeading) {
 
 ---
 
-### ❌ MISTAKE 7: Ignoring Speed Threshold
+### oe MISTAKE 7: Ignoring Speed Threshold
 
 ```kotlin
-// ❌ WRONG - Using GPS track at 0kts
+// oe WRONG - Using GPS track at 0kts
 bearing = gpsTrack  // Will spin randomly when stationary
 
-// ✅ CORRECT - Validate speed first
+// ... CORRECT - Validate speed first
 bearing = if (groundSpeed >= 2.0) {
     gpsTrack
 } else {
@@ -532,14 +532,14 @@ bearing = if (groundSpeed >= 2.0) {
 
 ---
 
-### ❌ MISTAKE 8: Excessive Update Rate
+### oe MISTAKE 8: Excessive Update Rate
 
 ```kotlin
-// ❌ WRONG - Updating every 10ms (100Hz)
+// oe WRONG - Updating every 10ms (100Hz)
 delay(10)
 updateMapRotation()  // Battery drain, unnecessary CPU load
 
-// ✅ CORRECT - Throttled updates
+// ... CORRECT - Throttled updates
 .sample(66)  // 15Hz is plenty for smooth rotation
 ```
 
@@ -630,7 +630,7 @@ orientation: FloatArray(3)    // 12 bytes
 - [ ] Pan map: Return button appears
 - [ ] Camera stops auto-centering
 - [ ] Tap return: Camera centers on GPS
-- [ ] ❌ NO auto-return after timeout
+- [ ] oe NO auto-return after timeout
 
 **Performance**:
 - [ ] Smooth rotation (no stuttering)
@@ -676,45 +676,45 @@ orientation: FloatArray(3)    // 12 bytes
 ## Architecture Diagram
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        MapScreen.kt                          │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │  LaunchedEffect(orientation)                         │   │
-│  │  - Reads orientation.bearing                         │   │
-│  │  - Applies to camera.bearing                         │   │
-│  │  - Centers camera on GPS position                    │   │
-│  └──────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-                            ▲
-                            │ OrientationData flow
-                            │
-┌─────────────────────────────────────────────────────────────┐
-│                  MapOrientationManager.kt                    │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │  calculateBearing(sensorData, mode)                  │   │
-│  │  - NORTH_UP: return 0.0                              │   │
-│  │  - TRACK_UP: return GPS track (if speed >= 2 m/s)     │   │
-│  │  - HEADING_UP: return mag heading (or GPS fallback)  │   │
-│  └──────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-                            ▲
-                            │ OrientationSensorData flow
-                            │
-┌─────────────────────────────────────────────────────────────┐
-│                 OrientationDataSource.kt                     │
-│  ┌─────────────────────┐      ┌─────────────────────────┐   │
-│  │  Magnetometer       │      │  FlightDataManager      │   │
-│  │  + Accelerometer    │      │  (GPS)                  │   │
-│  │  ↓                  │      │  ↓                      │   │
-│  │  SensorManager      │      │  RealTimeFlightData     │   │
-│  │  ↓                  │      │  - track                │   │
-│  │  getRotationMatrix()│      │  - groundSpeed          │   │
-│  │  ↓                  │      │  - isGPSFixed           │   │
-│  │  getOrientation()   │      │                         │   │
-│  │  ↓                  │      │                         │   │
-│  │  magneticHeading ───┼──────┼─→ OrientationSensorData │   │
-│  └─────────────────────┘      └─────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
+"oe""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+"                        MapScreen.kt                          "
+"  "oe"""""""""""""""""""""""""""""""""""""""""""""""""""""""   "
+"  "  LaunchedEffect(orientation)                         "   "
+"  "  - Reads orientation.bearing                         "   "
+"  "  - Applies to camera.bearing                         "   "
+"  "  - Centers camera on GPS position                    "   "
+"  """""""""""""""""""""""""""""""""""""""""""""""""""""""""   "
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+                            -^2
+                            " OrientationData flow
+                            "
+"oe""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+"                  MapOrientationManager.kt                    "
+"  "oe"""""""""""""""""""""""""""""""""""""""""""""""""""""""   "
+"  "  calculateBearing(sensorData, mode)                  "   "
+"  "  - NORTH_UP: return 0.0                              "   "
+"  "  - TRACK_UP: return GPS track (if speed >= 2 m/s)     "   "
+"  "  - HEADING_UP: return mag heading (or GPS fallback)  "   "
+"  """""""""""""""""""""""""""""""""""""""""""""""""""""""""   "
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+                            -^2
+                            " OrientationSensorData flow
+                            "
+"oe""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+"                 OrientationDataSource.kt                     "
+"  "oe""""""""""""""""""""""      "oe""""""""""""""""""""""""""   "
+"  "  Magnetometer       "      "  FlightDataManager      "   "
+"  "  + Accelerometer    "      "  (GPS)                  "   "
+"  "  *"                  "      "  *"                      "   "
+"  "  SensorManager      "      "  RealTimeFlightData     "   "
+"  "  *"                  "      "  - track                "   "
+"  "  getRotationMatrix()"      "  - groundSpeed          "   "
+"  "  *"                  "      "  - isGPSFixed           "   "
+"  "  getOrientation()   "      "                         "   "
+"  "  *"                  "      "                         "   "
+"  "  magneticHeading """"1/4"""""""1/4"-> OrientationSensorData "   "
+"  """"""""""""""""""""""""      """"""""""""""""""""""""""""   "
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 ```
 
 ---
@@ -725,7 +725,7 @@ orientation: FloatArray(3)    // 12 bytes
 
 | Mode | Use Case | Data Source | Rotation |
 |------|----------|-------------|----------|
-| **NORTH_UP** | Ground planning, traditional map reading | None | 0° (fixed) |
+| **NORTH_UP** | Ground planning, traditional map reading | None | 0deg (fixed) |
 | **TRACK_UP** | Cross-country navigation, following route | GPS track | -GPS bearing |
 | **HEADING_UP** | Thermal soaring, orientation awareness | Magnetometer | -Mag heading |
 
@@ -752,3 +752,5 @@ ALPHA = 0.8f                           // Low-pass filter constant
 **END OF DOCUMENT**
 
 *This reference should prevent common orientation mistakes. Read it before modifying any orientation code.*
+
+
