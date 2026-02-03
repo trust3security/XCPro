@@ -11,6 +11,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -23,7 +24,6 @@ import com.example.xcpro.profiles.ProfileViewModel
 import kotlinx.coroutines.launch
 import com.example.xcpro.screens.navdrawer.lookandfeel.StatusBarStyleApplier
 import com.example.xcpro.screens.navdrawer.SettingsTopAppBar
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,21 +34,29 @@ fun LookAndFeelScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val profileViewModel: ProfileViewModel = hiltViewModel()
+    val lookAndFeelViewModel: LookAndFeelViewModel = hiltViewModel()
     val profileUiState by profileViewModel.uiState.collectAsStateWithLifecycle()
     val profileId = profileUiState.activeProfile?.id ?: "default"
 
-    val preferences = remember { LookAndFeelPreferences(context) }
     val snailTrailViewModel: SnailTrailSettingsViewModel = hiltViewModel()
     val trailSettings by snailTrailViewModel.settings.collectAsStateWithLifecycle()
 
-    var statusBarStyle = remember(profileId) {
-        mutableStateOf(preferences.getStatusBarStyle(profileId))
+    LaunchedEffect(profileId) {
+        lookAndFeelViewModel.setProfileId(profileId)
     }
-    var cardStyle = remember(profileId) {
-        mutableStateOf(preferences.getCardStyle(profileId))
+    val lookAndFeelUiState by lookAndFeelViewModel.uiState.collectAsStateWithLifecycle()
+    val statusBarStyle = remember(lookAndFeelUiState.statusBarStyleId) {
+        StatusBarStyle.values().find { it.id == lookAndFeelUiState.statusBarStyleId }
+            ?: StatusBarStyle.default
     }
-    var colorTheme = remember(profileId) {
-        mutableStateOf(preferences.getColorTheme(profileId))
+    val cardStyle = remember(lookAndFeelUiState.cardStyleId) {
+        CardStyle.values().find { it.id == lookAndFeelUiState.cardStyleId }
+            ?: CardStyle.default
+    }
+    val colorTheme = remember(lookAndFeelUiState.colorThemeId) {
+        com.example.xcpro.ui.theme.AppColorTheme.values()
+            .find { it.id == lookAndFeelUiState.colorThemeId }
+            ?: com.example.xcpro.ui.theme.AppColorTheme.DEFAULT
     }
 
     val showStatusSheet = remember { mutableStateOf(false) }
@@ -56,10 +64,10 @@ fun LookAndFeelScreen(
     val showColorSheet = remember { mutableStateOf(false) }
     val showSnailTrailSheet = remember { mutableStateOf(false) }
 
-    val menuOptions = remember(statusBarStyle.value, cardStyle.value, trailSettings) {
+    val menuOptions = remember(statusBarStyle, cardStyle, trailSettings) {
         LookAndFeelMenuDefaults.defaultMenuOptions(
-            statusBarStyle = statusBarStyle.value,
-            cardStyle = cardStyle.value,
+            statusBarStyle = statusBarStyle,
+            cardStyle = cardStyle,
             snailTrailSummary = trailSummary(trailSettings)
         )
     }
@@ -110,29 +118,26 @@ fun LookAndFeelScreen(
 
     StatusBarStyleSheet(
         showSheet = showStatusSheet,
-        currentStyle = statusBarStyle.value,
+        currentStyle = statusBarStyle,
         onStyleSelected = { style ->
-            statusBarStyle.value = style
-            preferences.setStatusBarStyle(profileId, style)
+            lookAndFeelViewModel.setStatusBarStyleId(style.id)
             (context as? StatusBarStyleApplier)?.applyUserStatusBarStyle(profileId)
         }
     )
 
     CardStyleSheet(
         showSheet = showCardSheet,
-        currentStyle = cardStyle.value,
+        currentStyle = cardStyle,
         onStyleSelected = { style ->
-            cardStyle.value = style
-            preferences.setCardStyle(profileId, style)
+            lookAndFeelViewModel.setCardStyleId(style.id)
         }
     )
 
     ColorThemeSheet(
         showSheet = showColorSheet,
-        currentTheme = colorTheme.value,
+        currentTheme = colorTheme,
         onThemeSelected = { theme ->
-            colorTheme.value = theme
-            preferences.setColorTheme(profileId, theme)
+            lookAndFeelViewModel.setColorThemeId(theme.id)
         },
         onNavigateToColors = {
             navController.navigate("colors")

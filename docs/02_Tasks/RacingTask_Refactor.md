@@ -84,7 +84,7 @@ State invariants:
 3) Ownership and data flow (SSOT)
 
 Source of GPS:
-- FlightDataRepository (SSOT) -> MapScreenObservers (bridge).
+- FlightDataRepository (SSOT) -> FlightDataUiAdapter (MapScreenObservers; bridge).
 
 Navigation state owner:
 - Racing navigation state is owned in Racing module.

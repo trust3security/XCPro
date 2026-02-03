@@ -2,7 +2,9 @@ package com.example.xcpro.di
 
 import android.content.Context
 import com.example.dfcards.CardPreferences
+import com.example.xcpro.AirspaceRepository
 import com.example.xcpro.common.units.UnitsRepository
+import com.example.xcpro.common.waypoint.HomeWaypointRepository
 import com.example.xcpro.core.time.Clock
 import com.example.xcpro.map.QnhPreferencesRepository
 import com.example.xcpro.tasks.TaskManagerCoordinator
@@ -50,6 +52,18 @@ object AppModule {
     fun provideLevoVarioPreferencesRepository(
         @ApplicationContext context: Context
     ): LevoVarioPreferencesRepository = LevoVarioPreferencesRepository(context)
+
+    @Provides
+    @Singleton
+    fun provideAirspaceRepository(
+        @ApplicationContext context: Context
+    ): AirspaceRepository = AirspaceRepository(context)
+
+    @Provides
+    @Singleton
+    fun provideHomeWaypointRepository(
+        @ApplicationContext context: Context
+    ): HomeWaypointRepository = HomeWaypointRepository(context)
 
     @Provides
     @Singleton

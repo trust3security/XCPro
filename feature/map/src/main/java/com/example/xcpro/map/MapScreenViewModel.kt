@@ -26,7 +26,6 @@ import com.example.xcpro.map.config.MapFeatureFlags
 import com.example.xcpro.map.domain.MapWaypointError
 import com.example.xcpro.map.domain.toUserMessage
 import com.example.xcpro.map.trail.MapTrailSettingsUseCase
-import com.example.xcpro.map.trail.domain.TrailProcessor
 import com.example.xcpro.map.trail.domain.TrailUpdateResult
 import com.example.xcpro.qnh.CalibrateQnhUseCase
 import com.example.xcpro.qnh.QnhCalibrationFailureReason
@@ -69,6 +68,7 @@ class MapScreenViewModel @Inject constructor(
     private val gliderConfigUseCase: GliderConfigUseCase,
     val varioServiceManager: VarioServiceManager,
     private val flightDataUseCase: FlightDataUseCase,
+    private val flightDataManagerFactory: FlightDataManagerFactory,
     private val windStateUseCase: WindStateUseCase,
     val igcReplayController: IgcReplayController,
     private val racingReplayLogBuilder: RacingReplayLogBuilder,
@@ -89,7 +89,7 @@ class MapScreenViewModel @Inject constructor(
     private val ballastController = ballastControllerFactory.create(viewModelScope)
 
     val flightDataManager: FlightDataManager =
-        FlightDataManager(appContext, cardPreferences, viewModelScope)
+        flightDataManagerFactory.create(viewModelScope)
     val unifiedSensorManager = varioServiceManager.unifiedSensorManager
     val orientationManager: MapOrientationManager =
         orientationManagerFactory.create(viewModelScope)
@@ -152,7 +152,6 @@ class MapScreenViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(MapUiState())
     val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
-    private val trailProcessor = TrailProcessor()
     private val _trailUpdates = MutableStateFlow<TrailUpdateResult?>(null)
     internal val trailUpdates: StateFlow<TrailUpdateResult?> = _trailUpdates.asStateFlow()
     private val _uiEffects = MutableSharedFlow<MapUiEffect>(extraBufferCapacity = 1)
@@ -165,7 +164,7 @@ class MapScreenViewModel @Inject constructor(
         combine(_containerReady, _liveDataReady) { container, data -> container && data }
             .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
-    private val observers = MapScreenObservers(
+    private val flightDataUiAdapter = FlightDataUiAdapter(
         scope = viewModelScope,
         flightDataFlow = flightDataUseCase.flightData,
         windStateFlow = windStateUseCase.windState,
@@ -176,7 +175,6 @@ class MapScreenViewModel @Inject constructor(
         containerReady = _containerReady,
         uiEffects = _uiEffects,
         igcReplayController = igcReplayController,
-        trailProcessor = trailProcessor,
         trailUpdates = _trailUpdates
     )
 
@@ -202,7 +200,7 @@ class MapScreenViewModel @Inject constructor(
         mapStateStore.setTrailSettings(trailSettingsUseCase.getSettings())
         mapStateStore.setDisplaySmoothingProfile(MapFeatureFlags.defaultDisplaySmoothingProfile)
         observeTrailSettings()
-        observers.start()
+        flightDataUiAdapter.start()
         replayCoordinator.start()
     }
 
@@ -212,6 +210,22 @@ class MapScreenViewModel @Inject constructor(
         scope = viewModelScope,
         initial = UnitsPreferences()
     )
+    val unitsPreferencesFlow: StateFlow<UnitsPreferences> = unitsState
+    val cardIngestionCoordinator: CardIngestionCoordinator by lazy {
+        CardIngestionCoordinator(
+            scope = viewModelScope,
+            cardHydrationReady = cardHydrationReady,
+            cardFlightDataFlow = flightDataManager.cardFlightDataFlow,
+            consumeBufferedCardSample = { flightDataManager.consumeBufferedCardSample() },
+            unitsPreferencesFlow = unitsPreferencesFlow,
+            initializeCardPreferences = { flightViewModel ->
+                flightViewModel.initializeCardPreferences(cardPreferences)
+            },
+            startIndependentClock = { flightViewModel ->
+                flightViewModel.startIndependentClockTimer()
+            }
+        )
+    }
 
     init {
         if (MapFeatureFlags.loadSavedTasksOnInit) {
@@ -261,6 +275,12 @@ class MapScreenViewModel @Inject constructor(
         }
     }
 
+    fun persistMapStyle(styleName: String) {
+        viewModelScope.launch {
+            mapStyleUseCase.saveStyle(styleName)
+        }
+    }
+
     fun setFlightMode(newMode: FlightMode) {
         mapStateStore.setCurrentMode(newMode)
         val selection = when (newMode) {
@@ -270,6 +290,7 @@ class MapScreenViewModel @Inject constructor(
         }
         mapStateStore.setCurrentFlightMode(selection)
         flightDataManager.updateFlightModeFromEnum(newMode)
+        varioServiceManager.setFlightMode(newMode)
     }
 
     fun onEvent(event: MapUiEvent) {

@@ -252,6 +252,22 @@ internal object CardFormatSpecs {
                 Pair(formatted.text, label)
             }
 
+            KnownCardId.LEVO_NETTO -> {
+                val hasWind = liveData.levoNettoHasWind
+                val hasPolar = liveData.levoNettoHasPolar
+                when {
+                    !hasWind -> Pair(placeholderFor(cardId, units, strings), strings.noWind)
+                    !hasPolar -> Pair(placeholderFor(cardId, units, strings), strings.noPolar)
+                    else -> {
+                        val formatted = UnitsFormatter.verticalSpeed(
+                            VerticalSpeedMs(liveData.levoNetto),
+                            units
+                        )
+                        Pair(formatted.text, strings.netto)
+                    }
+                }
+            }
+
             KnownCardId.NETTO_AVG30 -> {
                 val formatted = UnitsFormatter.verticalSpeed(
                     VerticalSpeedMs(liveData.nettoAverage30s),
@@ -260,7 +276,25 @@ internal object CardFormatSpecs {
                 Pair(formatted.text, strings.netto)
             }
 
-            KnownCardId.MC_SPEED -> Pair(placeholderFor(cardId, units, strings), strings.noMc)
+            KnownCardId.MC_SPEED -> {
+                if (!liveData.speedToFlyHasPolar) {
+                    Pair(placeholderFor(cardId, units, strings), strings.noPolar)
+                } else if (liveData.speedToFlyValid) {
+                    val formatted = UnitsFormatter.speed(SpeedMs(liveData.speedToFlyIas), units)
+                    val deltaKt = UnitsConverter.msToKnots(liveData.speedToFlyDelta)
+                    val deltaRounded = deltaKt.roundToInt()
+                    val deltaLabel = if (abs(deltaKt) < 0.5) {
+                        "0 kt"
+                    } else {
+                        val sign = if (deltaRounded > 0) "+" else ""
+                        "$sign$deltaRounded kt"
+                    }
+                    val modeLabel = if (liveData.speedToFlyMcSourceAuto) "AUTO" else "MAN"
+                    Pair(formatted.text, "$modeLabel $deltaLabel")
+                } else {
+                    Pair(placeholderFor(cardId, units, strings), strings.noMc)
+                }
+            }
 
             KnownCardId.FLIGHT_TIME -> Pair(liveData.flightTime, strings.flight)
 
@@ -345,7 +379,8 @@ internal fun placeholderFor(
         KnownCardId.THERMAL_TC_AVG,
         KnownCardId.THERMAL_T_AVG,
         KnownCardId.NETTO_AVG30,
-        KnownCardId.NETTO ->
+        KnownCardId.NETTO,
+        KnownCardId.LEVO_NETTO ->
             "-- ${UnitsFormatter.verticalSpeed(VerticalSpeedMs(0.0), units).unitLabel}"
         KnownCardId.THERMAL_TC_GAIN ->
             "-- ${UnitsFormatter.altitude(AltitudeM(0.0), units).unitLabel}"

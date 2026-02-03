@@ -3,6 +3,7 @@ package com.example.xcpro.sensors
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.example.dfcards.dfcards.calculations.SimpleAglCalculator
+import com.example.xcpro.glider.SpeedBoundsMs
 import com.example.xcpro.glider.StillAirSinkProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -26,6 +27,7 @@ class FlightCalculationHelpersTest {
     fun resetAll_clearsThermalTracking() {
         val sinkProvider = object : StillAirSinkProvider {
             override fun sinkAtSpeed(airspeedMs: Double): Double? = null
+            override fun iasBoundsMs(): SpeedBoundsMs? = null
         }
 
         val helpers = FlightCalculationHelpers(
@@ -63,6 +65,7 @@ class FlightCalculationHelpersTest {
     fun netto_validity_requires_warmup() {
         val sinkProvider = object : StillAirSinkProvider {
             override fun sinkAtSpeed(airspeedMs: Double): Double? = -0.5
+            override fun iasBoundsMs(): SpeedBoundsMs? = null
         }
 
         val helpers = FlightCalculationHelpers(
@@ -74,7 +77,7 @@ class FlightCalculationHelpersTest {
 
         val first = helpers.calculateNetto(
             currentVerticalSpeed = 1.0,
-            trueAirspeed = 10.0,
+            indicatedAirspeed = 10.0,
             fallbackGroundSpeed = 10.0,
             timestampMillis = 0L
         )
@@ -82,7 +85,7 @@ class FlightCalculationHelpersTest {
 
         val beforeWarmup = helpers.calculateNetto(
             currentVerticalSpeed = 1.0,
-            trueAirspeed = 10.0,
+            indicatedAirspeed = 10.0,
             fallbackGroundSpeed = 10.0,
             timestampMillis = 19_999L
         )
@@ -90,7 +93,7 @@ class FlightCalculationHelpersTest {
 
         val afterWarmup = helpers.calculateNetto(
             currentVerticalSpeed = 1.0,
-            trueAirspeed = 10.0,
+            indicatedAirspeed = 10.0,
             fallbackGroundSpeed = 10.0,
             timestampMillis = 20_000L
         )

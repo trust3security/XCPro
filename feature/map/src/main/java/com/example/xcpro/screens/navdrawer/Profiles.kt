@@ -13,7 +13,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.launch
@@ -26,7 +25,7 @@ import com.example.xcpro.profiles.ProfileImportDialog
 import com.example.xcpro.screens.navdrawer.SettingsTopAppBar
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.xcpro.ConfigurationRepository
+import com.example.xcpro.profiles.ProfilesConfigViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,13 +36,11 @@ fun ProfilesScreen(
     onSaveConfig: () -> Unit = {}
 ) {
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
-    val configRepository = remember(context) { ConfigurationRepository(context) }
     val profileViewModel: ProfileViewModel = hiltViewModel()
+    val configViewModel: ProfilesConfigViewModel = hiltViewModel()
     val uiState by profileViewModel.uiState.collectAsStateWithLifecycle()
+    val configUiState by configViewModel.uiState.collectAsStateWithLifecycle()
     
-    var configContent by remember { mutableStateOf<String?>(null) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
     var showExportDialog by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
     var exportMessage by remember { mutableStateOf<String?>(null) }
@@ -51,24 +48,8 @@ fun ProfilesScreen(
     val navBarInsets = WindowInsets.navigationBars.asPaddingValues()
     val hasNavBar = navBarInsets.calculateBottomPadding() > 0.dp
 
-    suspend fun loadConfigFile() {
-        try {
-            val config = configRepository.readConfig()
-            if (config != null) {
-                configContent = config.toString(2)
-                errorMessage = null
-            } else {
-                errorMessage = "configuration.json not found in internal storage"
-                configContent = null
-            }
-        } catch (e: Exception) {
-            errorMessage = "Error loading configuration.json: ${e.message}"
-            configContent = null
-        }
-    }
-
     LaunchedEffect(Unit) {
-        loadConfigFile()
+        configViewModel.loadConfig()
     }
 
     Scaffold(
@@ -97,13 +78,13 @@ fun ProfilesScreen(
                 ) {
                     Button(onClick = {
                         onLoadConfig()
-                        scope.launch { loadConfigFile() }
+                        configViewModel.loadConfig()
                     }) {
                         Text("Load")
                     }
                     Button(onClick = {
                         onSaveConfig()
-                        scope.launch { loadConfigFile() }
+                        configViewModel.loadConfig()
                     }) {
                         Text("Save")
                     }
@@ -248,7 +229,7 @@ fun ProfilesScreen(
                 }
                 
                 // Legacy Config Section (if needed)
-                if (configContent != null || errorMessage != null) {
+                if (configUiState.configContent != null || configUiState.errorMessage != null) {
                     item {
                         Card(
                             shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
@@ -270,15 +251,15 @@ fun ProfilesScreen(
                                     modifier = Modifier.padding(bottom = 8.dp)
                                 )
                                 
-                                if (errorMessage != null) {
+                                if (configUiState.errorMessage != null) {
                                     Text(
-                                        text = errorMessage!!,
+                                        text = configUiState.errorMessage!!,
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.error
                                     )
-                                } else if (configContent != null) {
+                                } else if (configUiState.configContent != null) {
                                     Text(
-                                        text = configContent!!,
+                                        text = configUiState.configContent!!,
                                         style = MaterialTheme.typography.bodySmall,
                                         maxLines = 10
                                     )
@@ -297,13 +278,13 @@ fun ProfilesScreen(
                         ) {
                             Button(onClick = {
                                 onLoadConfig()
-                                scope.launch { loadConfigFile() }
+                                configViewModel.loadConfig()
                             }) {
                                 Text("Load")
                             }
                             Button(onClick = {
                                 onSaveConfig()
-                                scope.launch { loadConfigFile() }
+                                configViewModel.loadConfig()
                             }) {
                                 Text("Save")
                             }

@@ -10,6 +10,7 @@ import com.example.xcpro.sensors.SensorFusionRepository
 import com.example.xcpro.sensors.UnifiedSensorManager
 import com.example.xcpro.sensors.VarioDiagnosticsSample
 import com.example.xcpro.sensors.domain.FlyingState
+import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.testing.MainDispatcherRule
 import com.example.xcpro.audio.VarioAudioSettings
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -81,6 +82,8 @@ class VarioServiceManagerConstructionTest {
         override fun resetQnhToStandard() = Unit
         override fun setMacCreadySetting(value: Double) = Unit
         override fun setMacCreadyRisk(value: Double) = Unit
+        override fun setAutoMcEnabled(enabled: Boolean) = Unit
+        override fun setFlightMode(mode: FlightMode) = Unit
         override fun updateReplayRealVario(realVarioMs: Double?, timestampMillis: Long) = Unit
 
         override fun stop() {

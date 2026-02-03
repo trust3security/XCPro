@@ -20,6 +20,8 @@ class HomeWaypointRepository(
         return current ?: loadHomeWaypoint(appContext)?.name
     }
 
+    fun getHomeWaypoint(): WaypointData? = loadHomeWaypoint(appContext)
+
     fun observeHomeWaypointName(): Flow<String?> = callbackFlow {
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             if (key == HOME_WAYPOINT_KEY) {
@@ -30,6 +32,21 @@ class HomeWaypointRepository(
         prefs.registerOnSharedPreferenceChangeListener(listener)
         awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
     }.distinctUntilChanged()
+
+    fun observeHomeWaypoint(): Flow<WaypointData?> = callbackFlow {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == HOME_WAYPOINT_KEY) {
+                trySend(loadHomeWaypoint(appContext))
+            }
+        }
+        trySend(loadHomeWaypoint(appContext))
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }.distinctUntilChanged()
+
+    fun setHomeWaypoint(waypoint: WaypointData?) {
+        saveHomeWaypoint(appContext, waypoint)
+    }
 
     private companion object {
         private const val HOME_WAYPOINT_PREFS = "HomeWaypointPrefs"

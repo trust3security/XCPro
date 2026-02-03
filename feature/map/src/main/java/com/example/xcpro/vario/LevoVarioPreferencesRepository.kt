@@ -19,6 +19,7 @@ private const val DATASTORE_NAME = "levo_vario_preferences"
 private val Context.levoVarioDataStore: DataStore<Preferences> by preferencesDataStore(name = DATASTORE_NAME)
 private val KEY_MACCREADY = doublePreferencesKey("maccready_value")
 private val KEY_MACCREADY_RISK = doublePreferencesKey("maccready_risk_value")
+private val KEY_AUTO_MC_ENABLED = booleanPreferencesKey("auto_mc_enabled")
 private val KEY_SHOW_WIND_SPEED_ON_VARIO = booleanPreferencesKey("show_wind_speed_on_vario")
 private val KEY_AUDIO_ENABLED = booleanPreferencesKey("audio_enabled")
 private val KEY_AUDIO_VOLUME = floatPreferencesKey("audio_volume")
@@ -31,6 +32,7 @@ private val KEY_AUDIO_DEADBAND_MAX = doublePreferencesKey("audio_deadband_max")
 data class LevoVarioConfig(
     val macCready: Double = 0.0,
     val macCreadyRisk: Double = 0.0,
+    val autoMcEnabled: Boolean = true,
     val showWindSpeedOnVario: Boolean = true,
     val audioSettings: VarioAudioSettings = VarioAudioSettings()
 )
@@ -45,6 +47,7 @@ class LevoVarioPreferencesRepository @Inject constructor(
         LevoVarioConfig(
             macCready = mac,
             macCreadyRisk = prefs[KEY_MACCREADY_RISK] ?: mac,
+            autoMcEnabled = prefs[KEY_AUTO_MC_ENABLED] ?: true,
             showWindSpeedOnVario = prefs[KEY_SHOW_WIND_SPEED_ON_VARIO] ?: true,
             audioSettings = audioSettings
         )
@@ -59,6 +62,12 @@ class LevoVarioPreferencesRepository @Inject constructor(
     suspend fun setMacCreadyRisk(value: Double) {
         context.levoVarioDataStore.edit { prefs ->
             prefs[KEY_MACCREADY_RISK] = value
+        }
+    }
+
+    suspend fun setAutoMcEnabled(enabled: Boolean) {
+        context.levoVarioDataStore.edit { prefs ->
+            prefs[KEY_AUTO_MC_ENABLED] = enabled
         }
     }
 

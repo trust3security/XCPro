@@ -121,7 +121,6 @@ internal fun SideHamburgerMenuContent(
                         },
                         onDragEnd = {
                             Log.d("MapUIWidgetManager", "Hamburger drag ended at ${displayOffset.value}")
-                            widgetManager.saveWidgetPosition("side_hamburger", displayOffset.value)
                             onOffsetChange(displayOffset.value)
                         }
                     )

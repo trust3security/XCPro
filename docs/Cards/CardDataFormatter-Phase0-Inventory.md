@@ -10,7 +10,7 @@ Scope: Discovery and alignment for CardDataFormatter refactor.
 - dfcards-library/src/main/java/com/example/dfcards/dfcards/CardStateRepository.kt
 - dfcards-library/src/main/java/com/example/dfcards/dfcards/CardStateRepositoryUpdates.kt
 - feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt
-- feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt
+- feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt (wrapped by FlightDataUiAdapter)
 - feature/map/src/main/java/com/example/xcpro/sensors/FlightDataEmitter.kt
 - feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt
 - feature/map/src/main/java/com/example/xcpro/sensors/SensorRegistry.kt
@@ -56,7 +56,7 @@ Legend:
 | wind_dir | Time/Weather | - | Yes | Needs windQuality > 0 and windSpeed > 0.5 |
 | wind_arrow | Time/Weather | - | Yes | Uses headingValid to render relative arrow |
 | local_time | Time/Weather | - | Yes | Clock update in CardStateRepositoryUpdates |
-| flight_time | Time/Weather | Comp | Yes | From MapScreenObservers elapsed time |
+| flight_time | Time/Weather | Comp | Yes | From FlightDataUiAdapter/MapScreenObservers elapsed time |
 | task_spd | Competition | Comp | Yes | Placeholder only (NO TASK) |
 | task_dist | Competition | Comp | Yes | Placeholder only (NO TASK) |
 | start_alt | Competition | Comp | Yes | Placeholder only (NO START) |
@@ -79,7 +79,7 @@ Findings from the sensor and mapping pipeline:
 - FlightDataEmitter sets CompleteFlightData.timestamp to outputTimestampMillis:
   - Live: wall time
   - Replay: IGC time
-- MapScreenObservers chooses sampleClockMillis = gps.timestamp if present, else CompleteFlightData.timestamp.
+- FlightDataUiAdapter/MapScreenObservers chooses sampleClockMillis = gps.timestamp if present, else CompleteFlightData.timestamp.
 - convertToRealTimeFlightData sets:
   - RealTimeFlightData.timestamp = CompleteFlightData.timestamp
   - RealTimeFlightData.lastUpdateTime = sampleClockMillis

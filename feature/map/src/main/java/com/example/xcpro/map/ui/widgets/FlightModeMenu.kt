@@ -137,7 +137,6 @@ internal fun FlightModeMenuContent(
                         },
                         onDragEnd = {
                             Log.d(tag, "Drag ended at ${displayOffset.value}")
-                            widgetManager.saveWidgetPosition("flight_mode_menu", displayOffset.value)
                             onOffsetChange(displayOffset.value)
                         }
                     )

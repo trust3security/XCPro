@@ -54,6 +54,7 @@ import com.example.xcpro.variometer.layout.VariometerLayoutUseCase
 import com.example.xcpro.variometer.layout.VariometerWidgetRepository
 import com.example.xcpro.map.ballast.BallastControllerFactory
 import com.example.xcpro.core.time.FakeClock
+import com.example.xcpro.ConfigurationRepository
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -92,7 +93,9 @@ class MapScreenViewModelTest {
         featureFlags = TaskFeatureFlags
     )
     private val cardPreferences = CardPreferences(context, testClock)
-    private val mapStyleRepository = MapStyleRepository(context)
+    private val flightDataManagerFactory = FlightDataManagerFactory(context, cardPreferences)
+    private val configurationRepository = ConfigurationRepository(context)
+    private val mapStyleRepository = MapStyleRepository(configurationRepository)
     private val mapStyleUseCase = MapStyleUseCase(mapStyleRepository)
     private val unitsRepository = UnitsRepository(context)
     private val unitsUseCase = UnitsPreferencesUseCase(unitsRepository)
@@ -205,6 +208,7 @@ class MapScreenViewModelTest {
             gliderConfigUseCase = gliderConfigUseCase,
             varioServiceManager = varioServiceManager,
             flightDataUseCase = flightDataUseCase,
+            flightDataManagerFactory = flightDataManagerFactory,
             windStateUseCase = windStateUseCase,
             igcReplayController = replayController,
             racingReplayLogBuilder = RacingReplayLogBuilder(),
@@ -241,6 +245,7 @@ class MapScreenViewModelTest {
             gliderConfigUseCase = gliderConfigUseCase,
             varioServiceManager = varioServiceManager,
             flightDataUseCase = flightDataUseCase,
+            flightDataManagerFactory = flightDataManagerFactory,
             windStateUseCase = windStateUseCase,
             igcReplayController = replayController,
             racingReplayLogBuilder = RacingReplayLogBuilder(),
@@ -369,6 +374,7 @@ class MapScreenViewModelTest {
             gliderConfigUseCase = gliderConfigUseCase,
             varioServiceManager = varioServiceManager,
             flightDataUseCase = flightDataUseCase,
+            flightDataManagerFactory = flightDataManagerFactory,
             windStateUseCase = windStateUseCase,
             igcReplayController = replayController,
             racingReplayLogBuilder = RacingReplayLogBuilder(),

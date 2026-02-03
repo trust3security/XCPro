@@ -4,8 +4,7 @@ import android.content.Context
 import com.example.xcpro.common.di.IoDispatcher
 import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.common.waypoint.WaypointLoader
-import com.example.xcpro.WaypointParser
-import com.example.xcpro.loadWaypointFiles
+import com.example.xcpro.flightdata.WaypointFilesUseCase
 import dagger.hilt.android.scopes.ViewModelScoped
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
@@ -13,13 +12,11 @@ import kotlinx.coroutines.withContext
 
 @ViewModelScoped
 class RealWaypointLoader @Inject constructor(
+    private val waypointFilesUseCase: WaypointFilesUseCase,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : WaypointLoader {
     override suspend fun load(context: Context): List<WaypointData> = withContext(ioDispatcher) {
-        val (waypointFiles, _) = loadWaypointFiles(context)
-        waypointFiles.flatMap { uri ->
-            runCatching { WaypointParser.parseWaypointFile(context, uri) }
-                .getOrElse { emptyList() }
-        }
+        val (waypointFiles, checks) = waypointFilesUseCase.loadWaypointFiles()
+        waypointFilesUseCase.loadAllWaypoints(waypointFiles, checks)
     }
 }

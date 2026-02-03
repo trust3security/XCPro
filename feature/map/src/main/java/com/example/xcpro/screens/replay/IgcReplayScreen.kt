@@ -1,7 +1,5 @@
 package com.example.xcpro.screens.replay
 
-import android.content.Context
-import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -38,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.example.xcpro.map.ui.documentRefForUri
 import com.example.xcpro.replay.IgcReplayUiState
 import com.example.xcpro.replay.IgcReplayViewModel
 
@@ -67,10 +66,9 @@ fun IgcReplayScreen(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
         if (uri != null) {
-            val name = resolveDisplayName(context, uri)
-            viewModel.onFileSelected(uri, name)
+            viewModel.onFileSelected(documentRefForUri(context, uri))
         } else {
-            viewModel.onFileSelected(null, null)
+            viewModel.onFileSelected(null)
         }
     }
 
@@ -111,7 +109,7 @@ fun IgcReplayScreen(
             ) {
                 Button(
                     onClick = viewModel::startReplay,
-                    enabled = uiState.selectedUri != null,
+                    enabled = uiState.selectedDocument != null,
                     modifier = Modifier.weight(1f)
                 ) {
                     Text("Start Replay")
@@ -199,7 +197,7 @@ private fun TimelineCard(
                 value = localProgress,
                 onValueChange = { localProgress = it.coerceIn(0f, 1f) },
                 onValueChangeFinished = { onSeek(localProgress) },
-                enabled = uiState.selectedUri != null
+                enabled = uiState.selectedDocument != null
             )
         }
     }
@@ -230,17 +228,6 @@ private fun StatusCard(uiState: IgcReplayUiState) {
                     fontWeight = FontWeight.Bold
                 )
             }
-        }
-    }
-}
-
-private fun resolveDisplayName(context: Context, uri: Uri): String? {
-    return context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-        val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
-        if (cursor.moveToFirst() && nameIndex >= 0) {
-            cursor.getString(nameIndex)
-        } else {
-            null
         }
     }
 }

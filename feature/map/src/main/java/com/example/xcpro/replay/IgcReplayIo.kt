@@ -28,7 +28,7 @@ internal fun logReplaySessionPrep(
     val durationSec = (endMillis - startMillis) / 1000
     Log.i(
         tag,
-        "Prepared replay '${selection.displayName ?: selection.uri}' " +
+        "Prepared replay '${selection.document.displayName ?: selection.document.uri}' " +
             "points=$pointCount duration=${durationSec}s start=$startIso end=$endIso qnh=${"%.1f".format(qnh)}"
     )
 }

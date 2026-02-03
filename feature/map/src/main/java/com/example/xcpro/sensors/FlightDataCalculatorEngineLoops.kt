@@ -177,7 +177,9 @@ internal fun FlightDataCalculatorEngine.updateVarioFilter(baro: BaroData?, accel
                 replayRealVarioMs = replayRealVarioMs,
                 replayRealVarioTimestamp = replayRealVarioTimestamp,
                 macCreadySetting = macCreadySetting,
-                macCreadyRisk = macCreadyRisk
+                macCreadyRisk = macCreadyRisk,
+                autoMcEnabled = autoMcEnabled,
+                flightMode = flightMode
             )
         }
     }
@@ -285,7 +287,9 @@ internal fun FlightDataCalculatorEngine.updateGPSData(gps: GPSData?, compass: Co
             replayRealVarioMs = replayRealVarioMs,
             replayRealVarioTimestamp = replayRealVarioTimestamp,
             macCreadySetting = macCreadySetting,
-            macCreadyRisk = macCreadyRisk
+            macCreadyRisk = macCreadyRisk,
+            autoMcEnabled = autoMcEnabled,
+            flightMode = flightMode
         )
     }
 }

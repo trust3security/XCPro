@@ -76,7 +76,7 @@ class WindSensorFusionRepositoryTest {
     }
 
     @Test
-    fun `repository publishes straight flight wind via ekf`() = runTest {
+    fun `repository does not publish straight flight wind without circling`() = runTest {
         val inputs = TestWindInputs()
         val flightRepo = FlightDataRepository()
         val dispatcher = UnconfinedTestDispatcher(testScheduler)
@@ -110,12 +110,7 @@ class WindSensorFusionRepositoryTest {
         }
 
         val state = repo.windState.value
-        assertTrue("Wind state should be available after straight-flight samples", state.isAvailable)
-        assertEquals(WindSource.EKF, state.source)
-        val vector = state.vector
-        assertNotNull("Wind vector should not be null", vector)
-        assertTrue("Wind vector magnitude should be non-zero", vector!!.speed > 0.5)
-        assertTrue("EKF quality should be at least medium", state.quality >= 3)
+        assertTrue("Wind state should not be available without circling", state.vector == null)
     }
 
     @Test

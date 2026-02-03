@@ -70,7 +70,7 @@
 
   <!-- UI pipeline -->
   <rect x="100" y="560" width="1000" height="70" rx="6" class="box"/>
-  <text x="600" y="586" class="box-title" text-anchor="middle">MapScreenObservers -> FlightDataManager</text>
+  <text x="600" y="586" class="box-title" text-anchor="middle">FlightDataUiAdapter -> FlightDataManager</text>
   <text x="600" y="606" class="box-small" text-anchor="middle">Variometer UI (Map overlay + UIVariometer)</text>
 
   <!-- Live arrows -->

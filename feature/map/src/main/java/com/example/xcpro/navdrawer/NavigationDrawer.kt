@@ -8,7 +8,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
@@ -40,8 +39,8 @@ fun NavigationDrawer(
 ) {
     Log.d(TAG, " NavigationDrawer composable started")
     val profileViewModel: ProfileViewModel = hiltViewModel()
+    val navDrawerViewModel: NavDrawerViewModel = hiltViewModel()
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
 
     var selectedMapStyle by remember { mutableStateOf(initialMapStyle) }
 
@@ -79,14 +78,11 @@ fun NavigationDrawer(
                         isExpanded = profileExpanded.value,
                         onToggle = {
                             profileExpanded.value = !profileExpanded.value
-                            scope.launch {
-                                saveNavDrawerConfig(
-                                    context,
-                                    profileExpanded.value,
-                                    mapStyleExpanded.value,
-                                    settingsExpanded.value
-                                )
-                            }
+                            navDrawerViewModel.saveNavDrawerConfig(
+                                profileExpanded.value,
+                                mapStyleExpanded.value,
+                                settingsExpanded.value
+                            )
                         },
                         navController = navController,
                         drawerState = drawerState,
@@ -112,14 +108,11 @@ fun NavigationDrawer(
                         isExpanded = mapStyleExpanded.value,
                         onToggle = {
                             mapStyleExpanded.value = !mapStyleExpanded.value
-                            scope.launch {
-                                saveNavDrawerConfig(
-                                    context,
-                                    profileExpanded.value,
-                                    mapStyleExpanded.value,
-                                    settingsExpanded.value
-                                )
-                            }
+                            navDrawerViewModel.saveNavDrawerConfig(
+                                profileExpanded.value,
+                                mapStyleExpanded.value,
+                                settingsExpanded.value
+                            )
                         },
                         selectedMapStyle = selectedMapStyle,
                         onMapStyleSelected = mapStyleSelectedCallback
@@ -133,14 +126,11 @@ fun NavigationDrawer(
                         isExpanded = settingsExpanded.value,
                         onToggle = {
                             settingsExpanded.value = !settingsExpanded.value
-                            scope.launch {
-                                saveNavDrawerConfig(
-                                    context,
-                                    profileExpanded.value,
-                                    mapStyleExpanded.value,
-                                    settingsExpanded.value
-                                )
-                            }
+                            navDrawerViewModel.saveNavDrawerConfig(
+                                profileExpanded.value,
+                                mapStyleExpanded.value,
+                                settingsExpanded.value
+                            )
                         },
                         navController = navController,
                         drawerState = drawerState,

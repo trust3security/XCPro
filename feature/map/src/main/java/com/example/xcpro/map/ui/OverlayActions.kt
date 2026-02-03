@@ -39,6 +39,7 @@ internal fun BoxScope.HamburgerMenu(
     screenHeightPx: Float,
     onHamburgerTap: () -> Unit,
     onHamburgerLongPress: () -> Unit,
+    onOffsetChange: (Offset) -> Unit,
     isUiEditMode: Boolean
 ) {
     MapUIWidgets.SideHamburgerMenu(
@@ -48,7 +49,7 @@ internal fun BoxScope.HamburgerMenu(
         screenHeightPx = screenHeightPx,
         onHamburgerTap = onHamburgerTap,
         onHamburgerLongPress = onHamburgerLongPress,
-        onOffsetChange = { offset -> hamburgerOffset.value = offset },
+        onOffsetChange = onOffsetChange,
         isEditMode = isUiEditMode,
         modifier = Modifier
             .align(Alignment.TopStart)

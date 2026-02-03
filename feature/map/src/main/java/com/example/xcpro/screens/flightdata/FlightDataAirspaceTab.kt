@@ -1,7 +1,5 @@
 package com.example.ui1.screens.flightmgmt
 
-import android.content.Context
-import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -24,124 +22,48 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.snapshots.SnapshotStateList
-import androidx.compose.runtime.snapshots.SnapshotStateMap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.ui1.screens.AirspaceClassItem
 import com.example.ui1.screens.FileItem
-import com.example.xcpro.copyFileToInternalStorage
-import com.example.xcpro.saveAirspaceFiles
-import com.example.xcpro.saveSelectedClasses
-import com.example.xcpro.validateOpenAirFile
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.File
-
-private const val MAX_AIRSPACE_FILE_SIZE_MB = 5
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.xcpro.airspace.AirspaceViewModel
+import com.example.xcpro.map.ui.documentRefForUri
 
 @Composable
 fun FlightDataAirspaceTab(
-    selectedAirspaceFiles: SnapshotStateList<Uri>,
-    airspaceCheckedStates: SnapshotStateMap<String, Boolean>,
-    airspaceClassStates: SnapshotStateMap<String, Boolean>,
     onShowDeleteDialog: (String) -> Unit,
     onErrorMessage: (String) -> Unit,
-    scope: CoroutineScope,
     addFileButton: @Composable (String, () -> Unit) -> Unit,
     sectionHeader: @Composable (String, String) -> Unit,
     fileItemCard: @Composable (FileItem, String, (String) -> Unit, (String) -> Unit) -> Unit,
     airspaceClassCard: @Composable (AirspaceClassItem, (String) -> Unit) -> Unit
 ) {
     val context = LocalContext.current
+    val viewModel: AirspaceViewModel = hiltViewModel()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    val uiState by produceState(
-        initialValue = AirspaceTabDerivedState(emptyList(), emptyList(), emptyList()),
-        selectedAirspaceFiles.toList(),
-        airspaceCheckedStates.toMap(),
-        airspaceClassStates.toMap()
-    ) {
-        val filesSnapshot = selectedAirspaceFiles.toList()
-        val checkedSnapshot = airspaceCheckedStates.toMap()
-        val classStatesSnapshot = airspaceClassStates.toMap()
-
-        val fileItems = buildAirspaceFileItems(context, filesSnapshot, checkedSnapshot)
-        val enabledFiles = fileItems.filter { it.enabled }.map { it.uri }
-        val classItems = buildAirspaceClassItems(context, enabledFiles, classStatesSnapshot)
-        value = AirspaceTabDerivedState(fileItems, enabledFiles, classItems)
+    LaunchedEffect(uiState.errorMessage) {
+        uiState.errorMessage?.let { onErrorMessage(it) }
     }
 
-    LaunchedEffect(selectedAirspaceFiles.size, airspaceCheckedStates.size) {
-        refreshAvailableAirspaceClasses(
-            context = context,
-            selectedFiles = selectedAirspaceFiles,
-            checkedStates = airspaceCheckedStates,
-            classStates = airspaceClassStates,
-            scope = scope
-        )
+    val toggleFile: (String) -> Unit = remember(viewModel) {
+        { fileName -> viewModel.toggleFile(fileName) }
     }
 
-    val toggleFile: (String) -> Unit = remember(context, selectedAirspaceFiles, airspaceCheckedStates) {
-        { fileName ->
-            val newValue = !(airspaceCheckedStates[fileName] ?: false)
-            airspaceCheckedStates[fileName] = newValue
-            scope.launch {
-                withContext(Dispatchers.IO) {
-                    saveAirspaceFiles(context, selectedAirspaceFiles, airspaceCheckedStates.toMap())
-                }
-                refreshAvailableAirspaceClasses(
-                    context,
-                    selectedAirspaceFiles,
-                    airspaceCheckedStates,
-                    airspaceClassStates,
-                    scope
-                )
-            }
-        }
-    }
-
-    val toggleClass: (String) -> Unit = remember(context, airspaceClassStates) {
-        { className ->
-            val newValue = !(airspaceClassStates[className] ?: true)
-            airspaceClassStates[className] = newValue
-            scope.launch(Dispatchers.IO) {
-                saveSelectedClasses(context, airspaceClassStates.toMap())
-            }
-        }
+    val toggleClass: (String) -> Unit = remember(viewModel) {
+        { className -> viewModel.toggleClass(className) }
     }
 
     val airspaceFilePickerLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri ->
         uri ?: return@rememberLauncherForActivityResult
-        scope.launch {
-            when (val result = importAirspaceFile(context, uri)) {
-                is AirspaceImportResult.Success -> {
-                    if (selectedAirspaceFiles.none { it.namePart() == result.fileName }) {
-                        selectedAirspaceFiles.add(Uri.fromFile(File(context.filesDir, result.fileName)))
-                    }
-                    airspaceCheckedStates[result.fileName] = true
-                    withContext(Dispatchers.IO) {
-                        saveAirspaceFiles(context, selectedAirspaceFiles, airspaceCheckedStates.toMap())
-                    }
-                    refreshAvailableAirspaceClasses(
-                        context,
-                        selectedAirspaceFiles,
-                        airspaceCheckedStates,
-                        airspaceClassStates,
-                        scope
-                    )
-                }
-
-                is AirspaceImportResult.Failure -> onErrorMessage(result.reason)
-            }
-        }
+        viewModel.importFile(documentRefForUri(context, uri))
     }
 
     val launchPicker = remember { { airspaceFilePickerLauncher.launch("text/plain") } }
@@ -210,54 +132,6 @@ fun FlightDataAirspaceTab(
         }
     }
 }
-
-private suspend fun importAirspaceFile(
-    context: Context,
-    uri: Uri
-): AirspaceImportResult = withContext(Dispatchers.IO) {
-    runCatching {
-        val fileName = copyFileToInternalStorage(context, uri)
-        val file = File(context.filesDir, fileName)
-        val sizeInMb = file.length() / (1024 * 1024)
-        if (sizeInMb > MAX_AIRSPACE_FILE_SIZE_MB) {
-            file.delete()
-            return@runCatching AirspaceImportResult.Failure(
-                "File too large (${sizeInMb}MB). Maximum size is ${MAX_AIRSPACE_FILE_SIZE_MB}MB."
-            )
-        }
-
-        if (!fileName.endsWith(".txt", ignoreCase = true)) {
-            file.delete()
-            return@runCatching AirspaceImportResult.Failure(
-                "Only .txt files are supported for airspace files."
-            )
-        }
-
-        val (isValid, message) = validateOpenAirFile(file.readText())
-        if (!isValid) {
-            file.delete()
-            return@runCatching AirspaceImportResult.Failure("Invalid file format: $message")
-        }
-
-        AirspaceImportResult.Success(fileName)
-    }.getOrElse { error ->
-        AirspaceImportResult.Failure(error.message ?: "Unknown error while processing file.")
-    }
-}
-
-private data class AirspaceTabDerivedState(
-    val fileItems: List<FileItem>,
-    val enabledFiles: List<Uri>,
-    val classItems: List<AirspaceClassItem>
-)
-
-private sealed interface AirspaceImportResult {
-    data class Success(val fileName: String) : AirspaceImportResult
-    data class Failure(val reason: String) : AirspaceImportResult
-}
-
-private fun Uri.namePart(): String =
-    lastPathSegment?.substringAfterLast("/") ?: "Unknown"
 
 @Composable
 private fun AirspaceEmptyState(onAddFile: () -> Unit) {

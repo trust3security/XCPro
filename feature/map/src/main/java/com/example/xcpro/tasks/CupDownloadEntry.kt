@@ -1,9 +1,9 @@
 package com.example.xcpro.tasks
 
-import android.net.Uri
+import com.example.xcpro.common.documents.DocumentRef
 
 data class CupDownloadEntry(
-    val uri: Uri,
+    val document: DocumentRef,
     val displayName: String,
     val sizeBytes: Long,
     val lastModifiedEpochMillis: Long

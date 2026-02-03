@@ -3,11 +3,8 @@ package com.example.xcpro.map.ui.effects
 import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
-import com.example.dfcards.CardPreferences
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.dfcards.dfcards.toDensityScale
@@ -15,7 +12,6 @@ import com.example.dfcards.dfcards.toIntSizePx
 import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.common.flight.FlightMode
-import com.example.xcpro.ConfigurationRepository
 import com.example.xcpro.map.LocationManager
 import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.profiles.ProfileUiState
@@ -84,7 +80,8 @@ object MapComposeEffects {
             uiState.activeProfile?.id,
             safeContainerSize,
             profileModeCards,
-            profileModeTemplates
+            profileModeTemplates,
+            activeTemplateId
         ) {
             if (safeContainerSize == IntSize.Zero) {
                 return@LaunchedEffect
@@ -107,41 +104,14 @@ object MapComposeEffects {
 
     @Composable
     fun FlightDataAndCardEffects(
-        flightViewModel: FlightDataViewModel,
-        cardPreferences: CardPreferences,
-        safeContainerSize: IntSize,
-        density: androidx.compose.ui.unit.Density,
         flightDataManager: FlightDataManager,
         locationManager: LocationManager,
         orientationData: OrientationData,
         orientationManager: MapOrientationManager,
-        cardsReady: Boolean,
         suppressLiveGps: Boolean
     ) {
-        val cardsReadyState = rememberUpdatedState(cardsReady)
         val orientationState = rememberUpdatedState(orientationData)
         val suppressLiveGpsState = rememberUpdatedState(suppressLiveGps)
-
-        LaunchedEffect(Unit) {
-            flightViewModel.initializeCardPreferences(cardPreferences)
-            flightViewModel.startIndependentClockTimer()
-        }
-
-        LaunchedEffect(cardsReady) {
-            if (cardsReady) {
-                flightDataManager.consumeBufferedCardSample()?.let { buffered ->
-                    flightViewModel.updateCardsWithLiveData(buffered)
-                }
-            }
-        }
-
-        LaunchedEffect(Unit) {
-            flightDataManager.cardFlightDataFlow.collectLatest { displaySample ->
-                if (displaySample != null && cardsReadyState.value) {
-                    flightViewModel.updateCardsWithLiveData(displaySample)
-                }
-            }
-        }
 
         LaunchedEffect(Unit) {
             flightDataManager.liveFlightDataFlow.collectLatest { liveData ->
@@ -158,10 +128,6 @@ object MapComposeEffects {
                     }
                 }
             }
-        }
-
-        LaunchedEffect(flightDataManager.unitsPreferences) {
-            flightViewModel.updateUnitsPreferences(flightDataManager.unitsPreferences)
         }
     }
 
@@ -191,18 +157,8 @@ object MapComposeEffects {
         initialMapStyle: String,
         onStyleResolved: (String) -> Unit
     ) {
-        val context = LocalContext.current
-        val configRepository = remember(context) { ConfigurationRepository(context) }
-        LaunchedEffect(Unit) {
-            runCatching { configRepository.readConfig() }
-                .mapCatching { config ->
-                    config?.optJSONObject("app")?.optString("mapStyle")
-                }
-                .onSuccess { stored ->
-                    val style = stored ?: initialMapStyle
-                    onStyleResolved(style)
-                }
-                .onFailure { _ -> }
+        LaunchedEffect(initialMapStyle) {
+            onStyleResolved(initialMapStyle)
         }
     }
 
@@ -227,13 +183,11 @@ object MapComposeEffects {
         currentFlightModeSelection: FlightModeSelection,
         safeContainerSize: IntSize,
         flightViewModel: FlightDataViewModel,
-        cardPreferences: CardPreferences,
         profileModeCards: Map<String, Map<FlightModeSelection, List<String>>>,
         profileModeTemplates: Map<String, Map<FlightModeSelection, String>>,
         activeTemplateId: String?,
         initialMapStyle: String,
         onMapStyleResolved: (String) -> Unit,
-        cardsReady: Boolean,
         replaySessionState: SessionState,
         suppressLiveGps: Boolean = false,
         allowSensorStart: Boolean = true
@@ -264,15 +218,10 @@ object MapComposeEffects {
         )
 
         FlightDataAndCardEffects(
-            flightViewModel = flightViewModel,
-            cardPreferences = cardPreferences,
-            safeContainerSize = safeContainerSize,
-            density = density,
             flightDataManager = flightDataManager,
             locationManager = locationManager,
             orientationData = orientationData,
             orientationManager = orientationManager,
-            cardsReady = cardsReady,
             suppressLiveGps = suppressLiveGps
         )
 

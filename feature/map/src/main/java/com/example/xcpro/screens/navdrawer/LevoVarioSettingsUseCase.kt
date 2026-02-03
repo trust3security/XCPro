@@ -19,6 +19,10 @@ class LevoVarioSettingsUseCase @Inject constructor(
         preferencesRepository.setMacCreadyRisk(value)
     }
 
+    suspend fun setAutoMcEnabled(enabled: Boolean) {
+        preferencesRepository.setAutoMcEnabled(enabled)
+    }
+
     suspend fun setShowWindSpeedOnVario(enabled: Boolean) {
         preferencesRepository.setShowWindSpeedOnVario(enabled)
     }

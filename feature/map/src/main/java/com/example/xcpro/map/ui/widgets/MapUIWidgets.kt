@@ -3,6 +3,7 @@ package com.example.xcpro.map.ui.widgets
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import com.example.ui1.VarioDialConfig
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.map.ballast.BallastCommand
@@ -25,6 +26,7 @@ object MapUIWidgets {
         displayValue: Float,
         displayLabel: String = String.format("%+.1f", displayValue),
         secondaryLabel: String? = null,
+        secondaryLabelColor: Color? = null,
         dialConfig: VarioDialConfig = VarioDialConfig(),
         windDirectionScreenDeg: Float,
         windIsValid: Boolean,
@@ -48,6 +50,7 @@ object MapUIWidgets {
         displayValue = displayValue,
         displayLabel = displayLabel,
         secondaryLabel = secondaryLabel,
+        secondaryLabelColor = secondaryLabelColor,
         dialConfig = dialConfig,
         windDirectionScreenDeg = windDirectionScreenDeg,
         windIsValid = windIsValid,

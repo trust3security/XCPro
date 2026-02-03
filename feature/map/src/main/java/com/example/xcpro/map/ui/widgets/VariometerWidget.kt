@@ -55,6 +55,7 @@ internal fun VariometerWidgetContent(
     displayValue: Float,
     displayLabel: String = String.format("%+.1f", displayValue),
     secondaryLabel: String? = null,
+    secondaryLabelColor: Color? = null,
     dialConfig: VarioDialConfig = VarioDialConfig(),
     screenWidthPx: Float,
     screenHeightPx: Float,
@@ -170,6 +171,7 @@ internal fun VariometerWidgetContent(
             displayValue = displayValue,
             valueLabel = displayLabel,
             secondaryLabel = secondaryLabel,
+            secondaryLabelColor = secondaryLabelColor,
             dialConfig = dialConfig,
             modifier = Modifier.fillMaxSize()
         )

@@ -7,7 +7,9 @@ data class WindState(
     val headwind: Double = 0.0,
     val crosswind: Double = 0.0,
     val lastUpdatedMillis: Long = 0L,
-    val stale: Boolean = false
+    val stale: Boolean = false,
+    val confidence: Double = 0.0,
+    val lastCirclingClockMillis: Long = 0L
 ) {
     val isAvailable: Boolean = vector != null && quality > 0 && !stale
 }

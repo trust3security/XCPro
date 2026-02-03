@@ -1,80 +1,11 @@
 package com.example.xcpro.map.ui
 
-import android.content.SharedPreferences
-import android.util.Log
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.dp
 import com.example.xcpro.map.MapGestureRegion
 import com.example.xcpro.map.MapOverlayGestureTarget
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlin.math.max
-
-/** Stores and retrieves persisted widget layout data for the map overlays. */
-class MapWidgetLayoutStore(
-    private val prefs: SharedPreferences,
-    private val logger: (String) -> Unit = { Log.d(TAG, it) }
-) {
-    fun loadPositions(
-        screenWidthPx: Float,
-        screenHeightPx: Float,
-        density: Density
-    ): WidgetPositions {
-        val hamburgerOffset = Offset(
-            prefs.getFloat("side_hamburger_x", HAMBURGER_DEFAULT_X),
-            prefs.getFloat("side_hamburger_y", hamburgerDefaultY(screenHeightPx, density)).coerceAtLeast(0f)
-        )
-        val flightModeOffset = Offset(
-            prefs.getFloat("flight_mode_menu_x", FLIGHT_MODE_DEFAULT_X),
-            prefs.getFloat("flight_mode_menu_y", flightModeDefaultY(density))
-        )
-        val ballastOffset = Offset(
-            prefs.getFloat("ballast_pill_x", ballastDefaultX(screenWidthPx, density)),
-            prefs.getFloat("ballast_pill_y", ballastDefaultY(density))
-        )
-
-        return WidgetPositions(
-            sideHamburgerOffset = hamburgerOffset,
-            flightModeOffset = flightModeOffset,
-            ballastOffset = ballastOffset
-        )
-    }
-
-    fun savePosition(key: String, offset: Offset) {
-        with(prefs.edit()) {
-            putFloat("${key}_x", offset.x)
-            putFloat("${key}_y", offset.y)
-            apply()
-        }
-        logger("$key position saved: x=${offset.x}, y=${offset.y}")
-    }
-
-    private fun hamburgerDefaultY(screenHeightPx: Float, density: Density): Float =
-        max(0f, screenHeightPx / 2f - density.run { 32.dp.toPx() })
-
-    private fun flightModeDefaultY(density: Density): Float = density.run { 80.dp.toPx() }
-
-    private fun ballastDefaultX(screenWidthPx: Float, density: Density): Float {
-        val pillWidthPx = density.run { BALLAST_WIDTH_DP.dp.toPx() }
-        val paddingPx = density.run { BALLAST_PADDING_END_DP.dp.toPx() }
-        return (screenWidthPx - paddingPx - pillWidthPx).coerceAtLeast(0f)
-    }
-
-    private fun ballastDefaultY(density: Density): Float =
-        density.run { BALLAST_PADDING_TOP_DP.dp.toPx() }
-
-    companion object {
-        private const val TAG = "MapWidgetLayoutStore"
-        private const val HAMBURGER_DEFAULT_X = 16f
-        private const val FLIGHT_MODE_DEFAULT_X = 16f
-        private const val BALLAST_WIDTH_DP = 40f
-        private const val BALLAST_PADDING_END_DP = 16f
-        private const val BALLAST_PADDING_TOP_DP = 140f
-    }
-}
 
 /** Maintains gesture regions published by overlay widgets. */
 class MapGestureRegistry {
@@ -106,10 +37,3 @@ class MapGestureRegistry {
         MapOverlayGestureTarget.BALLAST -> 2
     }
 }
-
-/** Aggregated widget offsets and sizes used by the manager + UI layer. */
-data class WidgetPositions(
-    val sideHamburgerOffset: Offset,
-    val flightModeOffset: Offset,
-    val ballastOffset: Offset
-)

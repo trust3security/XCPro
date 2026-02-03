@@ -1,6 +1,5 @@
 package com.example.xcpro.screens.navdrawer.tasks
 
-import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.compose.foundation.background
@@ -10,12 +9,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.BottomAppBar
 import androidx.compose.material.ExperimentalMaterialApi
@@ -25,31 +22,29 @@ import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import org.maplibre.android.maps.MapLibreMap
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.xcpro.airspace.AirspaceViewModel
+import com.example.xcpro.flightdata.WaypointsViewModel
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun TaskFilesBottomSheetContent(
     selectedItem: String?,
     onSelectItem: (String) -> Unit,
-    context: Context,
-    mapLibreMap: MapLibreMap?,
     airspaceFilePickerLauncher: ManagedActivityResultLauncher<String, Uri?>,
     waypointFilePickerLauncher: ManagedActivityResultLauncher<String, Uri?>,
-    errorMessage: String?,
-    onErrorMessage: (String?) -> Unit,
-    selectedAirspaceFiles: MutableList<Uri>,
-    airspaceCheckedStates: MutableState<MutableMap<String, Boolean>>,
-    selectedWaypointFiles: MutableList<Uri>,
-    waypointCheckedStates: MutableState<MutableMap<String, Boolean>>,
-    selectedClasses: MutableState<MutableMap<String, Boolean>>,
+    airspaceViewModel: AirspaceViewModel,
+    waypointsViewModel: WaypointsViewModel,
     modifier: Modifier = Modifier
 ) {
+    val airspaceState by airspaceViewModel.uiState.collectAsStateWithLifecycle()
+    val waypointsState by waypointsViewModel.uiState.collectAsStateWithLifecycle()
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -66,30 +61,22 @@ fun TaskFilesBottomSheetContent(
         ) {
             when (selectedItem) {
                 "Airspace" -> AirspaceSection(
-                    context = context,
-                    mapLibreMap = mapLibreMap,
                     airspaceFilePickerLauncher = airspaceFilePickerLauncher,
-                    errorMessage = errorMessage,
-                    onErrorMessage = onErrorMessage,
-                    selectedAirspaceFiles = selectedAirspaceFiles,
-                    airspaceCheckedStates = airspaceCheckedStates
+                    uiState = airspaceState,
+                    onDeleteFile = { fileName -> airspaceViewModel.deleteFile(fileName) },
+                    onClearError = { airspaceViewModel.clearError() }
                 )
 
                 "Waypoints" -> WaypointSection(
-                    context = context,
-                    mapLibreMap = mapLibreMap,
                     waypointFilePickerLauncher = waypointFilePickerLauncher,
-                    errorMessage = errorMessage,
-                    onErrorMessage = onErrorMessage,
-                    selectedWaypointFiles = selectedWaypointFiles,
-                    waypointCheckedStates = waypointCheckedStates
+                    uiState = waypointsState,
+                    onDeleteFile = { fileName -> waypointsViewModel.deleteFile(fileName) },
+                    onClearError = { waypointsViewModel.clearError() }
                 )
 
                 "Classes" -> AirspaceClassesSection(
-                    context = context,
-                    mapLibreMap = mapLibreMap,
-                    airspaceFiles = selectedAirspaceFiles,
-                    selectedClasses = selectedClasses
+                    uiState = airspaceState,
+                    onToggle = { className -> airspaceViewModel.toggleClass(className) }
                 )
 
                 else -> Text(

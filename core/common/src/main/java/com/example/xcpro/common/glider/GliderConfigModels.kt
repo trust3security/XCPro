@@ -20,6 +20,8 @@ data class GliderConfig(
     val waterBallastKg: Double = 0.0,
     val bugsPercent: Int = 0,
     val referenceWeightKg: Double? = null,
+    val iasMinKmh: Double? = null,
+    val iasMaxKmh: Double? = null,
     val threePointPolar: ThreePointPolar? = null,
     val userCoefficients: UserPolarCoefficients? = null,
     val ballastDrainMinutes: Double = 5.0,

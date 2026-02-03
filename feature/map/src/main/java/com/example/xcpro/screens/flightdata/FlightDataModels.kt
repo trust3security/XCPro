@@ -1,13 +1,13 @@
 package com.example.ui1.screens
 
-import android.net.Uri
+import com.example.xcpro.common.documents.DocumentRef
 
 data class FileItem(
     val name: String,
     val enabled: Boolean,
     val count: Int,
     val status: String,
-    val uri: Uri
+    val document: DocumentRef
 )
 
 data class AirspaceClassItem(

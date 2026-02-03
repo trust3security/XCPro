@@ -168,7 +168,19 @@ fun convertToRealTimeFlightData(
         macCreadyRisk = completeData.macCreadyRisk,
         headingDeg = headingSolution.bearingDeg,
         headingValid = headingSolution.isValid,
-        headingSource = headingSolution.source.name
+        headingSource = headingSolution.source.name,
+        levoNetto = completeData.levoNetto.value,
+        levoNettoValid = completeData.levoNettoValid,
+        levoNettoHasWind = completeData.levoNettoHasWind,
+        levoNettoHasPolar = completeData.levoNettoHasPolar,
+        levoNettoConfidence = completeData.levoNettoConfidence,
+        autoMacCready = completeData.autoMacCready,
+        autoMacCreadyValid = completeData.autoMacCreadyValid,
+        speedToFlyIas = completeData.speedToFlyIas.value,
+        speedToFlyDelta = completeData.speedToFlyDelta.value,
+        speedToFlyValid = completeData.speedToFlyValid,
+        speedToFlyMcSourceAuto = completeData.speedToFlyMcSourceAuto,
+        speedToFlyHasPolar = completeData.speedToFlyHasPolar
     )
 }
 

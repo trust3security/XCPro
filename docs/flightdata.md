@@ -3,7 +3,7 @@
 This document summarizes how flight data cards are configured, persisted, and rendered, plus the
 recent fixes and debugging steps used on the Levo branch. It is intended for future Codex agents.
 
-## High-level flow
+## High-level flow (current)
 - **FlightDataViewModel** (dfcards-library) is the SSOT for card selection, templates, and live data
   mapping. It persists profile/template selections via **CardPreferences**.
 - **FlightCardsUseCase** wraps **CardStateRepository** and derivations. It owns the card state map
@@ -11,9 +11,15 @@ recent fixes and debugging steps used on the Levo branch. It is intended for fut
 - **CardStateRepository** owns card state flows, layout, persistence, and live updates.
 - **CardContainer** (dfcards-library) renders cards from the view model's state flows.
 - **MapScreenRoot / MapComposeEffects** (feature/map) wires the map screen, profile, mode, and
-  card view model to card rendering and live data updates.
+  card view model; it prepares cards for profile/mode/size changes.
+- **FlightDataUiAdapter** (feature/map) wraps MapScreenObservers; converts SSOT to UI-facing
+  RealTimeFlightData and updates FlightDataManager + trail state.
+- **CardIngestionCoordinator** (feature/map) is the single ingestion owner for live card updates
+  and units propagation.
 - **FlightDataMgmt / FlightDataScreensTab** (feature/map) is the Flight Data UI where users select
   templates and cards.
+- **FlightDataMgmt previews** read `FlightDataManager.liveFlightDataFlow` (read-only) to render
+  card values in the grid/editor; there is no second ingestion path.
 - **FlightDataManager** (feature/map) is a UI-facing bridge for live data samples, mode selection,
   and card data flow (used by map and Flight Data UI).
 
@@ -50,13 +56,20 @@ recent fixes and debugging steps used on the Levo branch. It is intended for fut
 - Uses `onSizeChanged/onGloballyPositioned` to report safe container size.
 - Ensures layout + missing card state creation once it has a size.
 
-### MapScreenRoot / MapComposeEffects (feature/map)
+### MapScreenRoot / MapComposeEffects (feature/map) - current
 - `FlightDataViewModel` must be scoped to the **map backstack entry** to share state across screens:
   - `val mapEntry = navController.getBackStackEntry("map")`
   - `val flightViewModel: FlightDataViewModel = viewModel(mapEntry)`
 - Map effects call:
   - `prepareCardsForProfile(...)` on mode/profile changes or container size updates.
-  - `updateCardsWithLiveData(...)` on `cardFlightDataFlow` updates (gated by `cardHydrationReady`).
+  - bind `CardIngestionCoordinator` so UI does not own ingestion.
+
+### CardIngestionCoordinator (feature/map)
+- Owns ingestion from `FlightDataManager.cardFlightDataFlow`.
+- Applies `cardHydrationReady` gating and buffered sample handling.
+- Initializes `CardPreferences` once and starts the independent clock timer.
+- Pushes `UnitsPreferences` updates into dfcards.
+- Ensures only one ingestion path calls `updateCardsWithLiveData(...)`.
 
 ### FlightDataScreensTab (feature/map)
 - Template selection:

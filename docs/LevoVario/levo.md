@@ -48,7 +48,7 @@ Android sensors
   -> UnifiedSensorManager (StateFlow for each sensor)
   -> FlightDataCalculatorEngine (fusion, filters, metrics, audio)
   -> FlightDataRepository (SSOT for UI, LIVE source)
-  -> MapScreenObservers (convert to RealTimeFlightData)
+  -> FlightDataUiAdapter (MapScreenObservers; convert to RealTimeFlightData)
   -> FlightDataManager (UI smoothing/throttle/bucket)
   -> Map UI (VariometerPanel -> VariometerWidget -> UIVariometer)
 
@@ -365,7 +365,7 @@ feature/map/src/main/java/com/example/xcpro/weather/wind/data/WindSensorInputAda
 
 Wind state is consumed by:
 - FlightDataCalculatorEngine (for metrics and UI labels)
-- MapScreenObservers (to add wind data to RealTimeFlightData)
+- FlightDataUiAdapter / MapScreenObservers (to add wind data to RealTimeFlightData)
 
 Airspeed:
 - Live airspeed comes from ExternalAirspeedRepository (if present).
@@ -404,7 +404,7 @@ UI PIPELINE (VARIO DISPLAY)
 Flow from fused data to UI:
 
 FlightDataRepository (CompleteFlightData)
-  -> MapScreenObservers converts to RealTimeFlightData
+  -> FlightDataUiAdapter / MapScreenObservers converts to RealTimeFlightData
      (MapScreenUtils.convertToRealTimeFlightData)
   -> FlightDataManager exposes displayVarioFlow and xcSoarDisplayVarioFlow
      with bucketing and throttle
@@ -413,7 +413,7 @@ FlightDataRepository (CompleteFlightData)
 
 Key files:
 - feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt
-- feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt
+- feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt (wrapped by FlightDataUiAdapter)
 - feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt
 - feature/map/src/main/java/com/example/xcpro/map/FlightDataManager.kt
 - feature/map/src/main/java/com/example/xcpro/map/ui/OverlayPanels.kt

@@ -22,6 +22,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.ui1.screens.*
 import com.example.xcpro.screens.navdrawer.lookandfeel.LookAndFeelScreen
+import com.example.xcpro.screens.navdrawer.LayoutScreen
 import com.example.xcpro.map.MapScreenViewModel
 import com.example.xcpro.map.ui.MapScreen
 import com.example.xcpro.profiles.ProfileSelectionScreen

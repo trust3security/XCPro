@@ -1,11 +1,8 @@
 package com.example.xcpro
 
 import android.content.Context
-import android.net.Uri
 import android.util.Log
-import androidx.compose.runtime.MutableState
-import androidx.compose.ui.geometry.Offset
-import com.example.xcpro.common.flight.FlightMode
+import com.example.xcpro.common.documents.DocumentRef
 import com.example.xcpro.map.BlueLocationOverlay
 import com.example.xcpro.map.MapCameraManager
 import org.json.JSONArray
@@ -97,7 +94,7 @@ fun parseCupToGeoJson(cupText: String): String {
 suspend fun loadAndApplyWaypoints(
     context: Context,
     map: MapLibreMap?,
-    waypointFiles: List<Uri>,
+    waypointFiles: List<DocumentRef>,
     checkedStates: Map<String, Boolean>,
     repository: WaypointOverlayRepository = WaypointOverlayRepository(context)
 ) {
@@ -167,94 +164,5 @@ suspend fun loadAndApplyWaypoints(
         }
     } catch (e: Exception) {
         Log.e(TAG, "Error loading waypoint files: ${e.message}", e)
-    }
-}
-
-suspend fun saveConfig(
-    context: Context,
-    style: String,
-    cardStatesByMode: Map<FlightMode, List<MutableState<Pair<Offset, Pair<Float, Float>>>>>,
-    profileExpanded: Boolean,
-    mapStyleExpanded: Boolean
-) {
-    try {
-        val repository = ConfigurationRepository(context)
-        repository.updateConfig { jsonObject ->
-            val appObject = jsonObject.optJSONObject("app") ?: JSONObject()
-            appObject.put("mapStyle", style)
-            jsonObject.put("app", appObject)
-
-            cardStatesByMode.forEach { (mode, cards) ->
-                val modeObject = JSONObject()
-                modeObject.put("card_count", cards.size)
-                cards.forEachIndexed { index, state ->
-                    val cardObject = JSONObject()
-                    cardObject.put("x", state.value.first.x)
-                    cardObject.put("y", state.value.first.y)
-                    cardObject.put("width", state.value.second.first)
-                    cardObject.put("height", state.value.second.second)
-                    modeObject.put("card_$index", cardObject)
-                }
-                jsonObject.put(mode.name.lowercase(), modeObject)
-            }
-
-            val navDrawerObject = jsonObject.optJSONObject("navDrawer") ?: JSONObject()
-            navDrawerObject.put("profileExpanded", profileExpanded)
-            navDrawerObject.put("mapStyleExpanded", mapStyleExpanded)
-            jsonObject.put("navDrawer", navDrawerObject)
-        }
-        Log.d(
-            TAG,
-            "Saved config to configuration.json: mapStyle=$style, cards=$cardStatesByMode, profileExpanded=$profileExpanded, mapStyleExpanded=$mapStyleExpanded"
-        )
-    } catch (e: Exception) {
-        Log.e(TAG, "Error saving config to configuration.json: ${e.message}")
-    }
-}
-
-suspend fun loadConfig(context: Context): JSONObject? {
-    return try {
-        ConfigurationRepository(context).readConfig()
-    } catch (e: Exception) {
-        Log.e(TAG, "Error loading config from configuration.json: ${e.message}")
-        null
-    }
-}
-
-suspend fun loadWaypointFiles(context: Context): Pair<List<Uri>, MutableMap<String, Boolean>> {
-    return try {
-        ConfigurationRepository(context).loadWaypointFiles()
-    } catch (e: Exception) {
-        Log.e(TAG, "Error loading waypoint files: ${e.message}")
-        Pair(emptyList(), mutableMapOf())
-    }
-}
-
-suspend fun saveWaypointFiles(context: Context, files: List<Uri>, checkedStates: Map<String, Boolean>) {
-    try {
-        ConfigurationRepository(context).saveWaypointFiles(files, checkedStates)
-        Log.d(TAG, "Saved waypoint files: $checkedStates")
-    } catch (e: Exception) {
-        Log.e(TAG, "Error saving waypoint files: ${e.message}")
-    }
-}
-
-// Add these functions to your existing DFUtils.kt file or any utility file
-
-suspend fun saveSelectedTemplates(context: Context, selectedTemplates: Map<String, Boolean>) {
-    try {
-        ConfigurationRepository(context).saveSelectedTemplates(selectedTemplates)
-        Log.d("Templates", "Saved selected templates: $selectedTemplates")
-    } catch (e: Exception) {
-        Log.e("Templates", "Error saving selected templates: ${e.message}")
-    }
-}
-
-suspend fun loadSelectedTemplates(context: Context): MutableMap<String, Boolean>? {
-    return try {
-        ConfigurationRepository(context).loadSelectedTemplates()
-    } catch (e: Exception) {
-        Log.e("Templates", "Error loading selected templates: ${e.message}")
-        null
     }
 }

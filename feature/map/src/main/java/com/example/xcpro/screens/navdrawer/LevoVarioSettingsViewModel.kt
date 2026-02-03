@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 data class LevoVarioUiState(
     val macCready: Double = 0.0,
     val macCreadyRisk: Double = 0.0,
+    val autoMcEnabled: Boolean = true,
     val showWindSpeedOnVario: Boolean = true,
     val audioSettings: VarioAudioSettings = VarioAudioSettings()
 )
@@ -29,6 +30,7 @@ class LevoVarioSettingsViewModel @Inject constructor(
         LevoVarioUiState(
             macCready = config.macCready,
             macCreadyRisk = config.macCreadyRisk,
+            autoMcEnabled = config.autoMcEnabled,
             showWindSpeedOnVario = config.showWindSpeedOnVario,
             audioSettings = config.audioSettings
         )
@@ -48,6 +50,12 @@ class LevoVarioSettingsViewModel @Inject constructor(
     fun setMacCreadyRisk(value: Double) {
         viewModelScope.launch {
             useCase.setMacCreadyRisk(value)
+        }
+    }
+
+    fun setAutoMcEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            useCase.setAutoMcEnabled(enabled)
         }
     }
 

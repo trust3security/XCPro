@@ -12,7 +12,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
@@ -20,7 +19,8 @@ import com.example.ui1.icons.ActivityLog
 import com.example.ui1.icons.Hangglider
 import com.example.ui1.icons.Task
 import com.example.xcpro.common.orientation.MapOrientationMode
-import com.example.xcpro.common.waypoint.HomeWaypointRepository
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.example.xcpro.screens.flightdata.HomeWaypointViewModel
 import com.example.xcpro.profiles.ProfileViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -136,11 +136,9 @@ fun TaskSection(
     scope: CoroutineScope,
     onItemSelected: (String) -> Unit = {}
 ) {
-    val context = LocalContext.current
-
-    val homeWaypointRepository = remember(context) { HomeWaypointRepository(context) }
-    val homeWaypointName by homeWaypointRepository.observeHomeWaypointName()
-        .collectAsStateWithLifecycle(initialValue = homeWaypointRepository.getHomeWaypointName())
+    val homeWaypointViewModel: HomeWaypointViewModel = hiltViewModel()
+    val homeWaypointName by homeWaypointViewModel.homeWaypointName
+        .collectAsStateWithLifecycle()
 
     val infiniteTransition = rememberInfiniteTransition(label = "home_pulse")
 

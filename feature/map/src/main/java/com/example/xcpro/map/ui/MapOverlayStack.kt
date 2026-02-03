@@ -74,6 +74,9 @@ internal fun MapOverlayStack(
     hamburgerOffset: MutableState<Offset>,
     flightModeOffset: MutableState<Offset>,
     ballastOffset: MutableState<Offset>,
+    onHamburgerOffsetChange: (Offset) -> Unit,
+    onFlightModeOffsetChange: (Offset) -> Unit,
+    onBallastOffsetChange: (Offset) -> Unit,
     widgetManager: MapUIWidgetManager,
     screenWidthPx: Float,
     screenHeightPx: Float,
@@ -161,7 +164,7 @@ internal fun MapOverlayStack(
             flightModeOffset = flightModeOffset.value,
             screenWidthPx = screenWidthPx,
             screenHeightPx = screenHeightPx,
-            onOffsetChange = { offset -> flightModeOffset.value = offset },
+            onOffsetChange = onFlightModeOffsetChange,
             isEditMode = isUiEditMode,
             modifier = Modifier
                 .align(Alignment.TopStart)
@@ -175,6 +178,7 @@ internal fun MapOverlayStack(
             ballastOffset = ballastOffset,
             screenWidthPx = screenWidthPx,
             screenHeightPx = screenHeightPx,
+            onOffsetChange = onBallastOffsetChange,
             onBallastCommand = onBallastCommand,
             isUiEditMode = isUiEditMode,
             modifier = Modifier
@@ -221,6 +225,7 @@ internal fun MapOverlayStack(
             screenHeightPx = screenHeightPx,
             onHamburgerTap = onHamburgerTap,
             onHamburgerLongPress = onHamburgerLongPress,
+            onOffsetChange = onHamburgerOffsetChange,
             isUiEditMode = isUiEditMode
         )
 

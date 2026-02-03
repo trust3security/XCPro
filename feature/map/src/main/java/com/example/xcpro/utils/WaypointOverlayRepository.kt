@@ -1,7 +1,7 @@
 package com.example.xcpro
 
 import android.content.Context
-import android.net.Uri
+import com.example.xcpro.common.documents.DocumentRef
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -25,11 +25,11 @@ class WaypointOverlayRepository(
         private val cacheLock = Any()
     }
 
-    suspend fun buildGeoJson(files: List<Uri>, checkedStates: Map<String, Boolean>): String =
+    suspend fun buildGeoJson(files: List<DocumentRef>, checkedStates: Map<String, Boolean>): String =
         withContext(ioDispatcher) {
             val features = JSONArray()
-            files.forEach { uri ->
-                val fileName = uri.lastPathSegment?.substringAfterLast("/") ?: return@forEach
+            files.forEach { document ->
+                val fileName = document.fileName()
                 if (checkedStates[fileName] != true) return@forEach
                 val file = File(appContext.filesDir, fileName)
                 if (!file.exists()) return@forEach

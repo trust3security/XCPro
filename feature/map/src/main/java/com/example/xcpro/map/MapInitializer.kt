@@ -7,7 +7,6 @@ import android.view.ViewGroup
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.screens.overlays.getMapStyleUrl
 import com.example.xcpro.map.BlueLocationOverlay
-import com.example.xcpro.map.DistanceCirclesOverlay
 import com.example.xcpro.map.trail.SnailTrailManager
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import kotlin.math.max
@@ -17,9 +16,9 @@ import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.plugins.scalebar.ScaleBarOptions
 import org.maplibre.android.plugins.scalebar.ScaleBarPlugin
-import com.example.xcpro.AirspaceRepository
+import com.example.xcpro.airspace.AirspaceUseCase
+import com.example.xcpro.flightdata.WaypointFilesUseCase
 import com.example.xcpro.loadAndApplyAirspace
-import com.example.xcpro.loadWaypointFiles
 import com.example.xcpro.loadAndApplyWaypoints
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -32,7 +31,9 @@ class MapInitializer(
     private val orientationManager: MapOrientationManager,
     private val taskManager: TaskManagerCoordinator,
     private val snailTrailManager: SnailTrailManager,
-    private val coroutineScope: CoroutineScope
+    private val coroutineScope: CoroutineScope,
+    private val airspaceUseCase: AirspaceUseCase,
+    private val waypointFilesUseCase: WaypointFilesUseCase
 ) {
     companion object {
         private const val TAG = "MapInitializer"
@@ -48,7 +49,6 @@ class MapInitializer(
         private const val SCALE_BAR_DISTANCE_EPSILON = 1e-6
     }
 
-    private val airspaceRepository = AirspaceRepository(context)
     private var scaleBarLayoutListenerInstalled = false
     private var lastScaleBarWidth = 0
     private var lastScaleBarHeight = 0
@@ -102,12 +102,12 @@ class MapInitializer(
         try {
             // Load airspace data
             coroutineScope.launch {
-                loadAndApplyAirspace(context, map, airspaceRepository)
+                loadAndApplyAirspace(map, airspaceUseCase)
             }
 
             // Load waypoints
             coroutineScope.launch {
-                val (waypointFiles, waypointChecks) = loadWaypointFiles(context)
+                val (waypointFiles, waypointChecks) = waypointFilesUseCase.loadWaypointFiles()
                 loadAndApplyWaypoints(context, map, waypointFiles, waypointChecks)
             }
 
@@ -389,7 +389,7 @@ class MapInitializer(
     private fun refreshWaypoints(map: MapLibreMap) {
         try {
             coroutineScope.launch {
-                val (waypointFiles, waypointChecks) = loadWaypointFiles(context)
+                val (waypointFiles, waypointChecks) = waypointFilesUseCase.loadWaypointFiles()
                 loadAndApplyWaypoints(context, map, waypointFiles, waypointChecks)
             }
         } catch (e: Exception) {

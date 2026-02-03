@@ -2,6 +2,11 @@ package com.example.xcpro
 
 import android.content.Context
 import android.net.Uri
+import com.example.xcpro.common.documents.DocumentRef
+import com.example.xcpro.common.di.IoDispatcher
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -12,9 +17,10 @@ import java.io.File
 
 private const val CONFIG_FILE_NAME = "configuration.json"
 
-class ConfigurationRepository(
-    context: Context,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+@Singleton
+class ConfigurationRepository @Inject constructor(
+    @ApplicationContext context: Context,
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
     private val appContext = context.applicationContext
     private val configFile = File(appContext.filesDir, CONFIG_FILE_NAME)
@@ -51,31 +57,31 @@ class ConfigurationRepository(
         }
     }
 
-    suspend fun loadWaypointFiles(): Pair<List<Uri>, MutableMap<String, Boolean>> =
+    suspend fun loadWaypointFiles(): Pair<List<DocumentRef>, MutableMap<String, Boolean>> =
         withContext(ioDispatcher) {
             val json = readConfigInternal() ?: return@withContext Pair(emptyList(), mutableMapOf())
             val waypointFiles = json.optJSONObject("waypoint_files")
                 ?.optJSONObject("selected_files")
                 ?: return@withContext Pair(emptyList(), mutableMapOf())
 
-            val files = mutableListOf<Uri>()
+            val files = mutableListOf<DocumentRef>()
             val checkedStates = mutableMapOf<String, Boolean>()
             waypointFiles.keys().forEach { fileName ->
                 val file = File(appContext.filesDir, fileName)
                 if (file.exists()) {
-                    files.add(Uri.fromFile(file))
+                    files.add(DocumentRef(uri = Uri.fromFile(file).toString(), displayName = fileName))
                     checkedStates[fileName] = waypointFiles.getBoolean(fileName)
                 }
             }
             Pair(files, checkedStates)
         }
 
-    suspend fun saveWaypointFiles(files: List<Uri>, checkedStates: Map<String, Boolean>) {
+    suspend fun saveWaypointFiles(files: List<DocumentRef>, checkedStates: Map<String, Boolean>) {
         updateConfig { json ->
             val waypointFiles = JSONObject()
             val filesArray = JSONObject()
-            files.forEach { uri ->
-                val fileName = uri.lastPathSegment?.substringAfterLast("/") ?: return@forEach
+            files.forEach { document ->
+                val fileName = document.fileName()
                 filesArray.put(fileName, checkedStates[fileName] ?: false)
             }
             waypointFiles.put("selected_files", filesArray)

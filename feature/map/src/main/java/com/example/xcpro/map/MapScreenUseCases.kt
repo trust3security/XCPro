@@ -1,9 +1,9 @@
 package com.example.xcpro.map
 
+import com.example.xcpro.common.glider.GliderConfigRepository
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.units.UnitsRepository
 import com.example.xcpro.flightdata.FlightDataRepository
-import com.example.xcpro.glider.GliderRepository
 import com.example.xcpro.qnh.QnhRepository
 import com.example.xcpro.sensors.CompleteFlightData
 import com.example.xcpro.weather.wind.data.WindSensorFusionRepository
@@ -16,6 +16,10 @@ class MapStyleUseCase @Inject constructor(
     private val repository: MapStyleRepository
 ) {
     fun initialStyle(): String = repository.initialStyle()
+
+    suspend fun saveStyle(style: String) {
+        repository.saveStyle(style)
+    }
 }
 
 class UnitsPreferencesUseCase @Inject constructor(
@@ -25,7 +29,7 @@ class UnitsPreferencesUseCase @Inject constructor(
 }
 
 class GliderConfigUseCase @Inject constructor(
-    private val repository: GliderRepository
+    private val repository: GliderConfigRepository
 ) {
     val config = repository.config
 }

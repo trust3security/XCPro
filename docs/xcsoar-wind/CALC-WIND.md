@@ -18,7 +18,7 @@ Related code (primary):
 - feature/map/src/main/java/com/example/xcpro/weather/wind/domain/WindMeasurementList.kt
 - feature/map/src/main/java/com/example/xcpro/weather/wind/model/WindVector.kt
 - feature/map/src/main/java/com/example/xcpro/sensors/CirclingDetector.kt
-- feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt
+- feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt (wrapped by FlightDataUiAdapter)
 - feature/map/src/main/java/com/example/xcpro/map/FlightDataManager.kt
 - feature/map/src/main/java/com/example/xcpro/map/WindIndicatorState.kt
 - feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt
@@ -171,7 +171,7 @@ Heading source:
 
 ## UI outputs
 
-MapScreenObservers applies wind state to RealTimeFlightData:
+FlightDataUiAdapter / MapScreenObservers applies wind state to RealTimeFlightData:
 - windSpeed: vector.speed (m/s)
 - windDirection: directionFromDeg normalized to [0, 360)
 - windQuality: quality (1-5)

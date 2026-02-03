@@ -9,7 +9,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.dfcards.CardCategory
@@ -22,7 +22,7 @@ import com.example.dfcards.RealTimeFlightData
 import com.example.dfcards.TemplatesForModeSection
 import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.xcpro.common.units.UnitsPreferences
-import com.example.xcpro.common.units.UnitsRepository
+import com.example.xcpro.screens.navdrawer.UnitsSettingsViewModel
 import com.example.xcpro.profiles.UserProfile
 import kotlinx.coroutines.launch
 import android.util.Log
@@ -39,11 +39,8 @@ fun FlightDataScreensTab(
     onDeleteTemplate: (FlightTemplate) -> Unit,
     liveFlightData: RealTimeFlightData? = null
 ) {
-    val context = LocalContext.current
-    val unitsRepository = remember(context.applicationContext) {
-        UnitsRepository(context.applicationContext)
-    }
-    val unitsPreferences by unitsRepository.unitsFlow.collectAsStateWithLifecycle(
+    val unitsViewModel: UnitsSettingsViewModel = hiltViewModel()
+    val unitsPreferences by unitsViewModel.units.collectAsStateWithLifecycle(
         initialValue = UnitsPreferences()
     )
     val scope = rememberCoroutineScope()

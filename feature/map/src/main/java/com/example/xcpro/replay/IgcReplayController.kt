@@ -3,6 +3,7 @@ package com.example.xcpro.replay
 import android.content.Context
 import android.net.Uri
 import com.example.xcpro.core.common.logging.AppLogger
+import com.example.xcpro.common.documents.DocumentRef
 import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.weather.wind.data.ReplayAirspeedRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -80,16 +81,26 @@ class IgcReplayController @Inject constructor(
         }
     }
 
+    suspend fun loadDocument(document: DocumentRef) {
+        val uri = Uri.parse(document.uri)
+        loadFile(uri, document.displayName)
+    }
+
     suspend fun loadFile(uri: Uri, displayName: String?) {
         ensureReplayPipelineActive()
         var failure: Throwable? = null
+        val document = DocumentRef(uri = uri.toString(), displayName = displayName)
         withContext(scope.coroutineContext) {
             try {
                 val log = appContext.loadIgcLog(uri)
-                AppLogger.i(TAG, "REPLY_LOAD Loaded IGC file ${displayName ?: uri} with ${log.points.size} raw points (qnh=${log.metadata.qnhHpa})")
+                AppLogger.i(
+                    TAG,
+                    "REPLY_LOAD Loaded IGC file ${document.displayName ?: document.uri} " +
+                        "with ${log.points.size} raw points (qnh=${log.metadata.qnhHpa})"
+                )
                 prepareSession(
                     log = log,
-                    selection = Selection(uri, displayName)
+                    selection = Selection(document)
                 )
             } catch (c: CancellationException) {
                 throw c
@@ -98,7 +109,7 @@ class IgcReplayController @Inject constructor(
             }
         }
         failure?.let { t ->
-            AppLogger.e(TAG, "Failed to load IGC file ${displayName ?: uri}", t)
+            AppLogger.e(TAG, "Failed to load IGC file ${document.displayName ?: document.uri}", t)
             _events.tryEmit(ReplayEvent.Failed(t))
             throw t
         }
@@ -112,10 +123,11 @@ class IgcReplayController @Inject constructor(
                 val log = appContext.loadIgcAssetLog(assetPath)
                 val name = displayName ?: assetPath.substringAfterLast('/')
                 val uri = Uri.parse("$ASSET_URI_PREFIX$assetPath")
+                val document = DocumentRef(uri = uri.toString(), displayName = name)
                 AppLogger.i(TAG, "REPLY_LOAD Loaded IGC asset $assetPath with ${log.points.size} raw points (qnh=${log.metadata.qnhHpa})")
                 prepareSession(
                     log = log,
-                    selection = Selection(uri, name)
+                    selection = Selection(document)
                 )
             } catch (c: CancellationException) {
                 throw c
@@ -137,10 +149,11 @@ class IgcReplayController @Inject constructor(
             try {
                 val name = displayName ?: "Replay log"
                 val uri = Uri.parse("memory://replay/${name.replace(' ', '_')}")
+                val document = DocumentRef(uri = uri.toString(), displayName = name)
                 AppLogger.i(TAG, "REPLY_LOAD Loaded synthetic IGC log with ${log.points.size} raw points (qnh=${log.metadata.qnhHpa})")
                 prepareSession(
                     log = log,
-                    selection = Selection(uri, name)
+                    selection = Selection(document)
                 )
             } catch (c: CancellationException) {
                 throw c

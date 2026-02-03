@@ -60,8 +60,8 @@
 
   <!-- Shared map data layer -->
   <rect x="110" y="510" width="1180" height="60" rx="6" class="box"/>
-  <text x="700" y="532" class="box-title" text-anchor="middle">MapScreenObservers</text>
-  <text x="700" y="552" class="box-small" text-anchor="middle">combine FlightDataRepository + WindState + FlightState -> RealTimeFlightData</text>
+  <text x="700" y="532" class="box-title" text-anchor="middle">FlightDataUiAdapter</text>
+  <text x="700" y="552" class="box-small" text-anchor="middle">wraps MapScreenObservers; combine FlightDataRepository + WindState + FlightState -> RealTimeFlightData</text>
 
   <rect x="110" y="590" width="1180" height="50" rx="6" class="box"/>
   <text x="700" y="612" class="box-title" text-anchor="middle">FlightDataManager.liveFlightDataFlow</text>

@@ -70,9 +70,14 @@ fun LevoVarioSettingsScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            AutoMcCard(
+                enabled = uiState.autoMcEnabled,
+                onEnabledChange = viewModel::setAutoMcEnabled
+            )
             MacCreadyCard(
                 macCready = uiState.macCready,
-                onMacCreadyChange = viewModel::setMacCready
+                onMacCreadyChange = viewModel::setMacCready,
+                enabled = !uiState.autoMcEnabled
             )
             MacCreadyRiskCard(
                 macCreadyRisk = uiState.macCreadyRisk,
@@ -148,7 +153,8 @@ fun LevoVarioSettingsScreen(
 @Composable
 private fun MacCreadyCard(
     macCready: Double,
-    onMacCreadyChange: (Double) -> Unit
+    onMacCreadyChange: (Double) -> Unit,
+    enabled: Boolean
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -173,9 +179,16 @@ private fun MacCreadyCard(
                 onValueChange = { value ->
                     onMacCreadyChange(value.toDouble())
                 },
+                enabled = enabled,
                 valueRange = 0f..5f,
                 steps = 20
             )
+            if (!enabled) {
+                Text(
+                    text = "Auto MC is enabled. Disable it to edit manual MacCready.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
         }
     }
 }
@@ -275,6 +288,52 @@ private fun VarioDisplayOptionsCard(
                 Switch(
                     checked = showWindSpeedOnVario,
                     onCheckedChange = onShowWindSpeedOnVarioChange
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AutoMcCard(
+    enabled: Boolean,
+    onEnabledChange: (Boolean) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Auto MacCready",
+                style = MaterialTheme.typography.titleMedium
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = if (enabled) "Using Auto MC" else "Using Manual MC",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = "Auto MC updates at thermal exit based on recent climbs.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                Switch(
+                    checked = enabled,
+                    onCheckedChange = onEnabledChange
                 )
             }
         }

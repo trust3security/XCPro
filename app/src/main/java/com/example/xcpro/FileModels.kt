@@ -1,6 +1,6 @@
 package com.example.xcpro
 
-import android.net.Uri
+import com.example.xcpro.common.documents.DocumentRef
 
 // Models and static mappings for the flight management UI.
 
@@ -9,7 +9,7 @@ data class FileItem(
     val enabled: Boolean,
     val count: Int,
     val status: String,
-    val uri: Uri
+    val document: DocumentRef
 )
 
 data class AirspaceClassItem(

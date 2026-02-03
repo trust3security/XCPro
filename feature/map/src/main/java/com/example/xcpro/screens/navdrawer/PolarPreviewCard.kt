@@ -15,19 +15,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.xcpro.glider.GliderRepository
+import com.example.xcpro.glider.GliderViewModel
 import com.example.xcpro.glider.PolarCalculator
 
 @Composable
 fun PreviewCard() {
-    val context = LocalContext.current
-    val repo = remember(context) { GliderRepository.getInstance(context) }
-    val model by repo.selectedModel.collectAsStateWithLifecycle(initialValue = null)
-    val cfg by repo.config.collectAsStateWithLifecycle()
+    val viewModel: GliderViewModel = hiltViewModel()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val model = uiState.selectedModel
+    val cfg = uiState.config
 
     val speedKmh = remember { mutableStateOf(100f) }
     val sink = model?.let { m -> PolarCalculator.sinkMs(speedKmh.value.toDouble() / 3.6, m, cfg) }
@@ -53,7 +53,7 @@ fun PreviewCard() {
                 text = if (model == null) {
                     "Select an aircraft to preview polar"
                 } else {
-                    "Model: ${model!!.name} - ${speedKmh.value.toInt()} km/h"
+                    "Model: ${model.name} - ${speedKmh.value.toInt()} km/h"
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant

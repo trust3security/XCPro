@@ -24,7 +24,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -54,17 +53,18 @@ fun MainActivityScreen(
     navController: NavHostController = rememberNavController(),
     drawerState: DrawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 ) {
-    val context = LocalContext.current
     val profileViewModel: ProfileViewModel = hiltViewModel()
+    val configViewModel: AppConfigViewModel = hiltViewModel()
+    val context = LocalContext.current
     
     //  Status bar is automatically transparent (#00000000) on this device
     //  This allows map to show behind status bar as requested by user
     //  The applyUserStatusBarStyle function ensures dark icons for visibility
-    val configRepository = remember(context) { ConfigurationRepository(context) }
-    val config by produceState<org.json.JSONObject?>(initialValue = null, context) {
-        value = configRepository.readConfig()
+    val configUiState by configViewModel.uiState.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) {
+        configViewModel.loadConfig()
     }
-    val initialMapStyle = config?.optJSONObject("app")?.optString("mapStyle") ?: "Topo"
+    val initialMapStyle = configUiState.config?.optJSONObject("app")?.optString("mapStyle") ?: "Topo"
     var navigationBarHeight by remember { mutableStateOf(56.dp) }
     val density = LocalDensity.current
     val currentRoute by navController.currentBackStackEntryAsState()
@@ -118,7 +118,7 @@ fun MainActivityScreen(
                 navController = navController,
                 drawerState = drawerState,
                 initialMapStyle = initialMapStyle,
-                config = config,
+                config = configUiState.config,
                 profileUiState = profileUiState,
                 getSelectedNavItem = { selectedNavItem },
                 setSelectedNavItem = { selectedNavItem = it },

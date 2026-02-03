@@ -10,7 +10,6 @@ import com.example.xcpro.sensors.CirclingDetector
 import com.example.xcpro.sensors.FlightCalculationHelpers
 import com.example.xcpro.sensors.GPSData
 import com.example.xcpro.weather.wind.model.WindState
-import com.example.xcpro.weather.wind.model.WindVector
 import com.example.xcpro.sensors.domain.AirspeedEstimate
 import com.example.xcpro.sensors.domain.AirspeedSource
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.DISPLAY_DECAY_FACTOR
@@ -19,11 +18,10 @@ import com.example.xcpro.sensors.domain.FlightMetricsConstants.DISPLAY_VAR_CLAMP
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.FAST_NEEDLE_T95_SECONDS
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.NEEDLE_VAR_CLAMP
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.NEEDLE_T95_SECONDS
-import com.example.xcpro.sensors.domain.FlightMetricsConstants.GRAVITY
-import com.example.xcpro.sensors.domain.FlightMetricsConstants.SPEED_HOLD_MS
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.DEFAULT_QNH_HPA
 import com.example.xcpro.sensors.domain.WindEstimator
 import com.example.xcpro.sensors.domain.SensorFrontEnd.SensorSnapshot
+import com.example.xcpro.common.flight.FlightMode
 import kotlin.math.abs
 
 
@@ -42,6 +40,9 @@ internal class CalculateFlightMetricsUseCase(
     private val circlingDetector = CirclingDetector()
     private val fusionBlackboard = FusionBlackboard()
     private val sensorFrontEnd = SensorFrontEnd(fusionBlackboard)
+    private val levoNettoCalculator = LevoNettoCalculator(sinkProvider)
+    private val autoMcCalculator = AutoMcCalculator()
+    private val speedToFlyCalculator = SpeedToFlyCalculator(sinkProvider)
 
     private val displaySmoother = DisplayVarioSmoother(
         smoothTimeSeconds = DISPLAY_SMOOTH_TIME_S,
@@ -175,7 +176,7 @@ internal class CalculateFlightMetricsUseCase(
 
         val nettoResult = flightHelpers.calculateNetto(
             currentVerticalSpeed = bruttoVario,
-            trueAirspeed = airspeedFromWind?.trueMs,
+            indicatedAirspeed = indicatedAirspeedMs,
             fallbackGroundSpeed = gps.speed.value,
             timestampMillis = sampleTimeMillis
         )
@@ -250,6 +251,55 @@ internal class CalculateFlightMetricsUseCase(
         val currentThermalLift = flightHelpers.currentThermalLiftRate
         val currentThermalValid = flightHelpers.currentThermalValid
 
+        val windConfidence = windState?.confidence ?: 0.0
+        val hasWindForLevo = windState?.isAvailable == true && windConfidence >= LEVO_WIND_CONF_MIN
+        val iasBounds = sinkProvider.iasBoundsMs()
+        val hasPolar = iasBounds != null
+
+        val levoNettoResult = levoNettoCalculator.update(
+            LevoNettoInput(
+                wMeasMs = snapshot.baselineVario,
+                iasMs = indicatedAirspeedMs,
+                tasMs = trueAirspeedMs.takeIf { it.isFinite() && it > 0.1 },
+                deltaTimeSeconds = request.deltaTimeSeconds,
+                isFlying = request.isFlying,
+                isCircling = isCircling,
+                isTurning = isTurning,
+                hasWind = hasWindForLevo,
+                windConfidence = windConfidence,
+                hasPolar = hasPolar
+            )
+        )
+
+        val autoMcResult = autoMcCalculator.update(
+            AutoMcInput(
+                currentTimeMillis = currentTime,
+                isCircling = isCircling,
+                currentThermalLiftRate = currentThermalLift,
+                currentThermalValid = currentThermalValid
+            )
+        )
+        val mcBase = if (request.autoMcEnabled && autoMcResult.valid) {
+            autoMcResult.valueMs
+        } else {
+            request.macCreadySetting
+        }
+        val mcSourceAuto = request.autoMcEnabled && autoMcResult.valid
+
+        val stfResult = speedToFlyCalculator.update(
+            SpeedToFlyInput(
+                currentTimeMillis = currentTime,
+                currentIasMs = indicatedAirspeedMs,
+                mcBaseMs = mcBase,
+                mcSourceAuto = mcSourceAuto,
+                glideNettoMs = levoNettoResult.valueMs,
+                glideNettoValid = levoNettoResult.valid,
+                windConfidence = windConfidence,
+                flightMode = request.flightMode,
+                iasBounds = iasBounds
+            )
+        )
+
         return FlightMetricsResult(
             baroAltitude = baroAltitude,
             qnh = qnh,
@@ -290,7 +340,19 @@ internal class CalculateFlightMetricsUseCase(
             calculatedLD = calculatedLD,
             teAltitude = teAltitude,
             isCircling = isCircling,
-            thermalAverage30sValid = thermalAvg30sValid
+            thermalAverage30sValid = thermalAvg30sValid,
+            levoNettoMs = levoNettoResult.valueMs,
+            levoNettoValid = levoNettoResult.valid,
+            levoNettoHasWind = levoNettoResult.hasWind,
+            levoNettoHasPolar = levoNettoResult.hasPolar,
+            levoNettoConfidence = levoNettoResult.confidence,
+            autoMcMs = autoMcResult.valueMs,
+            autoMcValid = autoMcResult.valid,
+            speedToFlyIasMs = stfResult.targetIasMs,
+            speedToFlyDeltaMs = stfResult.deltaIasMs,
+            speedToFlyValid = stfResult.valid,
+            speedToFlyMcSourceAuto = stfResult.mcSourceAuto,
+            speedToFlyHasPolar = hasPolar
         )
     }
 
@@ -301,6 +363,9 @@ internal class CalculateFlightMetricsUseCase(
         fastNeedleDynamics.reset()
         circlingDetector.reset()
         sensorFrontEnd.resetDerivatives()
+        levoNettoCalculator.reset()
+        autoMcCalculator.reset()
+        speedToFlyCalculator.reset()
         prevTeSpeed = 0.0
         groundZeroAccumulatedSeconds = 0.0
     }
@@ -337,29 +402,13 @@ internal class CalculateFlightMetricsUseCase(
     }
 
     companion object {
-        private const val DEFAULT_QNH_HPA = 1013.25
-        private const val AVERAGE_WINDOW_SECONDS = 30
-        private const val NETTO_DISPLAY_WINDOW_MS = 5_000L
-        private const val DISPLAY_VAR_CLAMP = 7.0
-        private const val DISPLAY_SMOOTH_TIME_S = 0.4
-        private const val DISPLAY_DECAY_FACTOR = 0.9
-        private const val MIN_SINK_FOR_IAS_MS = 0.15
-        private const val IAS_SCAN_MIN_MS = 8.0
-        private const val IAS_SCAN_MAX_MS = 80.0
-        private const val IAS_SCAN_STEP_MS = 0.5
-        private const val SEA_LEVEL_PRESSURE_HPA = 1013.25
-        private const val SEA_LEVEL_TEMP_CELSIUS = 15.0
-        private const val TEMP_LAPSE_RATE_C_PER_M = -0.0065
-        private const val GAS_CONSTANT = 287.05
-        private const val GRAVITY = 9.80665
-        private const val SPEED_HOLD_MS = 10_000L
-        private const val QNH_JUMP_THRESHOLD_HPA = 0.5
         private const val MIN_FALLBACK_GPS_SPEED_MS = 0.5
         private const val TE_MIN_SPEED_MS = 5.0
         private const val TE_MIN_DT_SECONDS = 0.05
         private const val GROUND_ZERO_THRESHOLD_MS = 0.05
         private const val GROUND_ZERO_SPEED_MS = 0.5
         private const val GROUND_ZERO_SETTLE_SECONDS = 3.0
+        private const val LEVO_WIND_CONF_MIN = 0.1
     }
 }
 
@@ -374,7 +423,10 @@ data class FlightMetricsRequest(
     val baroResult: BarometricAltitudeData?,
     val windState: WindState?,
     val varioValidUntil: Long,
-    val isFlying: Boolean
+    val isFlying: Boolean,
+    val macCreadySetting: Double,
+    val autoMcEnabled: Boolean,
+    val flightMode: FlightMode
 )
 
 data class FlightMetricsResult(
@@ -417,5 +469,17 @@ data class FlightMetricsResult(
     val calculatedLD: Float,
     val teAltitude: Double,
     val isCircling: Boolean,
-    val thermalAverage30sValid: Boolean
+    val thermalAverage30sValid: Boolean,
+    val levoNettoMs: Double,
+    val levoNettoValid: Boolean,
+    val levoNettoHasWind: Boolean,
+    val levoNettoHasPolar: Boolean,
+    val levoNettoConfidence: Double,
+    val autoMcMs: Double,
+    val autoMcValid: Boolean,
+    val speedToFlyIasMs: Double,
+    val speedToFlyDeltaMs: Double,
+    val speedToFlyValid: Boolean,
+    val speedToFlyMcSourceAuto: Boolean,
+    val speedToFlyHasPolar: Boolean
 )

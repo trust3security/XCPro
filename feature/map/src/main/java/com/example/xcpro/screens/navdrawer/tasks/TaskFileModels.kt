@@ -1,10 +1,10 @@
 package com.example.xcpro.screens.navdrawer.tasks
 
-import android.net.Uri
 import com.example.ui1.screens.AirspaceClassItem
+import com.example.xcpro.common.documents.DocumentRef
 
 data class TaskFileEntry(
-    val uri: Uri,
+    val document: DocumentRef,
     val displayName: String
 )
 

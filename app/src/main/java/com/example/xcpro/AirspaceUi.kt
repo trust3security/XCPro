@@ -1,7 +1,5 @@
 package com.example.xcpro
 
-import android.content.Context
-import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -37,29 +35,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.graphics.toColorInt
 
 // Airspace UI helpers for the flight management screen.
-
-internal suspend fun updateUniqueAirspaceClasses(
-    context: Context,
-    files: List<Uri>,
-    checkedStates: Map<String, Boolean>,
-    onError: (String) -> Unit
-): List<String> {
-    val enabledFiles = files.filter { uri ->
-        val name = uri.lastPathSegment ?: return@filter false
-        checkedStates[name] == true
-    }
-
-    return try {
-        if (enabledFiles.isEmpty()) {
-            emptyList()
-        } else {
-            AirspaceRepository(context).parseClasses(enabledFiles)
-        }
-    } catch (e: Exception) {
-        onError("Error extracting airspace classes: ${e.message}")
-        emptyList()
-    }
-}
 
 @Composable
 internal fun SectionHeader(

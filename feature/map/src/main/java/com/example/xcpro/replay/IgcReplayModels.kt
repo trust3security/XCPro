@@ -1,6 +1,6 @@
 package com.example.xcpro.replay
 
-import android.net.Uri
+import com.example.xcpro.common.documents.DocumentRef
 
 internal const val DEFAULT_SPEED = 1.0
 internal const val DEFAULT_QNH_HPA = 1013.3
@@ -20,7 +20,7 @@ data class SessionState(
         get() = if (durationMillis <= 0L) 0f else (elapsedMillis.toFloat() / durationMillis).coerceIn(0f, 1f)
 }
 
-data class Selection(val uri: Uri, val displayName: String?)
+data class Selection(val document: DocumentRef)
 
 enum class SessionStatus { IDLE, PAUSED, PLAYING }
 

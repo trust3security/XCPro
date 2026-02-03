@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
@@ -90,6 +91,7 @@ fun UIVariometer(
     displayValue: Float,
     valueLabel: String = String.format("%+.1f", displayValue),
     secondaryLabel: String? = null,
+    secondaryLabelColor: Color? = null,
     averageNeedleValue: Float? = null,
     dialConfig: VarioDialConfig = VarioDialConfig(),
     windDirectionScreenDeg: Float? = null,
@@ -336,7 +338,7 @@ fun UIVariometer(
 
         secondaryLabel?.let { label ->
             val secondaryPaint = android.graphics.Paint().apply {
-                color = android.graphics.Color.DKGRAY
+                color = secondaryLabelColor?.toArgb() ?: android.graphics.Color.DKGRAY
                 textSize = 16.sp.toPx()
                 textAlign = android.graphics.Paint.Align.CENTER
                 isAntiAlias = true

@@ -4,6 +4,7 @@ import com.example.dfcards.calculations.BarometricAltitudeData
 import com.example.dfcards.calculations.ConfidenceLevel
 import com.example.dfcards.filters.ModernVarioResult
 import com.example.xcpro.common.geo.GeoPoint
+import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.units.AltitudeM
 import com.example.xcpro.common.units.SpeedMs
 import com.example.xcpro.glider.StillAirSinkProvider
@@ -41,6 +42,7 @@ class CalculateFlightMetricsUseCaseTest {
     ): CalculateFlightMetricsUseCase {
         val sink = mock<StillAirSinkProvider> {
             on { sinkAtSpeed(any()) }.thenReturn(0.0)
+            on { iasBoundsMs() }.thenReturn(null)
         }
         val helpers = mock<FlightCalculationHelpers>()
         whenever(helpers.calculateNetto(any(), anyOrNull(), any(), any())).thenReturn(
@@ -92,7 +94,7 @@ class CalculateFlightMetricsUseCaseTest {
                     ),
                     windState = null,
                     varioValidUntil = time + 500,
-                    isFlying = true
+                    isFlying = true, macCreadySetting = 0.0, autoMcEnabled = false, flightMode = FlightMode.CRUISE
                 )
             )
             time += 1000
@@ -121,7 +123,7 @@ class CalculateFlightMetricsUseCaseTest {
                     ),
                     windState = null,
                     varioValidUntil = time + 500,
-                    isFlying = true
+                    isFlying = true, macCreadySetting = 0.0, autoMcEnabled = false, flightMode = FlightMode.CRUISE
                 )
         )
         // TC30s should still reflect ~2 m/s average, not jump
@@ -158,7 +160,7 @@ class CalculateFlightMetricsUseCaseTest {
                 ),
                 windState = null,
                 varioValidUntil = currentTime + 500,
-                isFlying = true
+                isFlying = true, macCreadySetting = 0.0, autoMcEnabled = false, flightMode = FlightMode.CRUISE
             )
         )
 
@@ -194,7 +196,7 @@ class CalculateFlightMetricsUseCaseTest {
                 ),
                 windState = null, // no wind vector -> forces GPS fallback
                 varioValidUntil = time + 500,
-                isFlying = true
+                isFlying = true, macCreadySetting = 0.0, autoMcEnabled = false, flightMode = FlightMode.CRUISE
             )
         )
 
@@ -220,7 +222,7 @@ class CalculateFlightMetricsUseCaseTest {
                     baroResult = null,
                     windState = null,
                     varioValidUntil = time + 500,
-                    isFlying = true
+                    isFlying = true, macCreadySetting = 0.0, autoMcEnabled = false, flightMode = FlightMode.CRUISE
                 )
             )
             time += 1000; altitude += 0.5
@@ -238,7 +240,7 @@ class CalculateFlightMetricsUseCaseTest {
                 baroResult = null,
                 windState = null,
                 varioValidUntil = time + 500,
-                isFlying = true
+                isFlying = true, macCreadySetting = 0.0, autoMcEnabled = false, flightMode = FlightMode.CRUISE
             )
         )
         val res = useCase.execute(
@@ -253,7 +255,7 @@ class CalculateFlightMetricsUseCaseTest {
                 baroResult = null,
                 windState = null,
                 varioValidUntil = time + 1500,
-                isFlying = true
+                isFlying = true, macCreadySetting = 0.0, autoMcEnabled = false, flightMode = FlightMode.CRUISE
             )
         )
         // average should remain close to steady 0.5 m/s despite spike
@@ -279,7 +281,7 @@ class CalculateFlightMetricsUseCaseTest {
                     baroResult = null,
                     windState = null,
                     varioValidUntil = time + 500,
-                    isFlying = true
+                    isFlying = true, macCreadySetting = 0.0, autoMcEnabled = false, flightMode = FlightMode.CRUISE
                 )
             )
             time += 1_000
@@ -298,7 +300,7 @@ class CalculateFlightMetricsUseCaseTest {
                 baroResult = null,
                 windState = null,
                 varioValidUntil = time + 500,
-                isFlying = true
+                isFlying = true, macCreadySetting = 0.0, autoMcEnabled = false, flightMode = FlightMode.CRUISE
             )
         )
 
@@ -323,7 +325,7 @@ class CalculateFlightMetricsUseCaseTest {
                 baroResult = null,
                 windState = null,
                 varioValidUntil = t0 + 500,
-                isFlying = true
+                isFlying = true, macCreadySetting = 0.0, autoMcEnabled = false, flightMode = FlightMode.CRUISE
             )
         )
 
@@ -341,7 +343,7 @@ class CalculateFlightMetricsUseCaseTest {
                 baroResult = null,
                 windState = null,
                 varioValidUntil = t1 + 500,
-                isFlying = true
+                isFlying = true, macCreadySetting = 0.0, autoMcEnabled = false, flightMode = FlightMode.CRUISE
             )
         )
         assertEquals(res1.bruttoAverage30s, res2.bruttoAverage30s, 1e-6)
@@ -360,7 +362,7 @@ class CalculateFlightMetricsUseCaseTest {
                 baroResult = null,
                 windState = null,
                 varioValidUntil = t2 + 500,
-                isFlying = true
+                isFlying = true, macCreadySetting = 0.0, autoMcEnabled = false, flightMode = FlightMode.CRUISE
             )
         )
         assertTrue(res3.bruttoAverage30s > res2.bruttoAverage30s + 0.1)

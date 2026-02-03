@@ -2,7 +2,6 @@ package com.example.xcpro.screens.navdrawer.tasks
 
 import android.net.Uri
 import androidx.activity.compose.ManagedActivityResultLauncher
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,38 +10,26 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme as Material3Theme
 import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme as Material3Theme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.example.ui1.screens.AirspaceClassItem
-import org.maplibre.android.maps.MapLibreMap
-import com.example.xcpro.AirspaceRepository
-import com.example.xcpro.loadAndApplyAirspace
-import com.example.xcpro.loadAndApplyWaypoints
-import com.example.xcpro.saveWaypointFiles
-import com.example.xcpro.screens.navdrawer.tasks.rememberAirspaceClasses
-import kotlinx.coroutines.launch
+import com.example.xcpro.airspace.AirspaceUiState
+import com.example.xcpro.flightdata.WaypointsUiState
 
 @Composable
 fun WaypointSection(
-    context: android.content.Context,
-    mapLibreMap: MapLibreMap?,
     waypointFilePickerLauncher: ManagedActivityResultLauncher<String, Uri?>,
-    errorMessage: String?,
-    onErrorMessage: (String?) -> Unit,
-    selectedWaypointFiles: MutableList<Uri>,
-    waypointCheckedStates: androidx.compose.runtime.MutableState<MutableMap<String, Boolean>>
+    uiState: WaypointsUiState,
+    onDeleteFile: (String) -> Unit,
+    onClearError: () -> Unit
 ) {
-    val coroutineScope = rememberCoroutineScope()
     SectionHeader(
         title = "Waypoint Files",
         description = "Import CUP files and toggle them on the map",
@@ -50,34 +37,23 @@ fun WaypointSection(
         onAction = { waypointFilePickerLauncher.launch("*/*") }
     )
 
-    errorMessage?.let {
-        ErrorBanner(message = it, onDismiss = { onErrorMessage(null) })
+    uiState.errorMessage?.let {
+        ErrorBanner(message = it, onDismiss = onClearError)
     }
 
     TaskSelectedFileList(
-        files = selectedWaypointFiles,
-        onRemove = { uri ->
-            selectedWaypointFiles.remove(uri)
-            coroutineScope.launch {
-                saveWaypointFiles(context, selectedWaypointFiles, waypointCheckedStates.value)
-                loadAndApplyWaypoints(context, mapLibreMap, selectedWaypointFiles, waypointCheckedStates.value)
-            }
-        }
+        files = uiState.files,
+        onRemove = { document -> onDeleteFile(document.fileName()) }
     )
 }
 
 @Composable
 fun AirspaceSection(
-    context: android.content.Context,
-    mapLibreMap: MapLibreMap?,
     airspaceFilePickerLauncher: ManagedActivityResultLauncher<String, Uri?>,
-    errorMessage: String?,
-    onErrorMessage: (String?) -> Unit,
-    selectedAirspaceFiles: MutableList<Uri>,
-    airspaceCheckedStates: androidx.compose.runtime.MutableState<MutableMap<String, Boolean>>
+    uiState: AirspaceUiState,
+    onDeleteFile: (String) -> Unit,
+    onClearError: () -> Unit
 ) {
-    val coroutineScope = rememberCoroutineScope()
-    val airspaceRepository = remember(context) { AirspaceRepository(context) }
     SectionHeader(
         title = "Airspace Files",
         description = "Import TXT files and toggle them on the map",
@@ -85,41 +61,26 @@ fun AirspaceSection(
         onAction = { airspaceFilePickerLauncher.launch("*/*") }
     )
 
-    errorMessage?.let {
-        ErrorBanner(message = it, onDismiss = { onErrorMessage(null) })
+    uiState.errorMessage?.let {
+        ErrorBanner(message = it, onDismiss = onClearError)
     }
 
     TaskSelectedFileList(
-        files = selectedAirspaceFiles,
-        onRemove = { uri ->
-            selectedAirspaceFiles.remove(uri)
-            coroutineScope.launch {
-                airspaceRepository.saveAirspaceFiles(selectedAirspaceFiles, airspaceCheckedStates.value)
-                loadAndApplyAirspace(context, mapLibreMap, airspaceRepository)
-            }
-        }
+        files = uiState.files,
+        onRemove = { document -> onDeleteFile(document.fileName()) }
     )
 }
 
 @Composable
 fun AirspaceClassesSection(
-    context: android.content.Context,
-    mapLibreMap: MapLibreMap?,
-    airspaceFiles: List<Uri>,
-    selectedClasses: androidx.compose.runtime.MutableState<MutableMap<String, Boolean>>
+    uiState: AirspaceUiState,
+    onToggle: (String) -> Unit
 ) {
-    val coroutineScope = rememberCoroutineScope()
-    val airspaceRepository = remember(context) { AirspaceRepository(context) }
     SectionHeader(
         title = "Airspace Classes",
         description = "Toggle which airspace classes are visible on the map"
     )
 
-    val airspaceClassItems = rememberAirspaceClasses(
-        context = context,
-        files = airspaceFiles,
-        selectedStates = selectedClasses.value
-    )
     val listState = rememberLazyListState()
     val isScrollable = listState.canScrollForward || listState.canScrollBackward
 
@@ -147,18 +108,10 @@ fun AirspaceClassesSection(
                 }
             }
     ) {
-        items(airspaceClassItems, key = { it.className }) { airspaceClass ->
+        items(uiState.classItems, key = { it.className }) { airspaceClass ->
             TaskAirspaceClassCard(
                 airspaceClass = airspaceClass,
-                onToggle = { className ->
-                    selectedClasses.value = selectedClasses.value.toMutableMap().apply {
-                        put(className, !(get(className) ?: false))
-                    }
-                    coroutineScope.launch {
-                        airspaceRepository.saveSelectedClasses(selectedClasses.value)
-                        loadAndApplyAirspace(context, mapLibreMap, airspaceRepository)
-                    }
-                }
+                onToggle = onToggle
             )
         }
     }

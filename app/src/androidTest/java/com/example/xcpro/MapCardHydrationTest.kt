@@ -7,6 +7,7 @@ import com.example.dfcards.CardPreferences
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.RealTimeFlightData
 import com.example.dfcards.dfcards.FlightDataViewModel
+import com.example.xcpro.map.CardIngestionCoordinator
 import com.example.xcpro.map.FlightDataManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -16,6 +17,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.After
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -41,6 +43,21 @@ class MapCardHydrationTest {
         val cardPreferences = CardPreferences(context)
         val flightDataManager = FlightDataManager(context, cardPreferences, testScope)
         val flightDataViewModel = FlightDataViewModel()
+        val cardHydrationReady = MutableStateFlow(false)
+        val unitsPreferencesFlow = MutableStateFlow(flightDataManager.unitsPreferences)
+        val ingestionCoordinator = CardIngestionCoordinator(
+            scope = testScope,
+            cardHydrationReady = cardHydrationReady,
+            cardFlightDataFlow = flightDataManager.cardFlightDataFlow,
+            consumeBufferedCardSample = { flightDataManager.consumeBufferedCardSample() },
+            unitsPreferencesFlow = unitsPreferencesFlow,
+            initializeCardPreferences = { viewModel ->
+                viewModel.initializeCardPreferences(cardPreferences)
+            },
+            startIndependentClock = { viewModel ->
+                viewModel.startIndependentClockTimer()
+            }
+        )
 
         val density = DensityScale(
             context.resources.displayMetrics.density,
@@ -49,8 +66,8 @@ class MapCardHydrationTest {
         val containerSize = IntSizePx(1080, 1920)
 
         withContext(Dispatchers.Main) {
-            flightDataViewModel.initializeCardPreferences(cardPreferences)
-            flightDataViewModel.updateUnitsPreferences(flightDataManager.unitsPreferences)
+            ingestionCoordinator.bindCards(flightDataViewModel)
+            yield()
             flightDataViewModel.initializeCards(containerSize, density)
             flightDataViewModel.prepareCardsForProfile(
                 profileId = null,
@@ -86,11 +103,11 @@ class MapCardHydrationTest {
         )
 
         flightDataManager.updateLiveFlightData(incomingSample)
+        cardHydrationReady.value = true
         val smoothedSample = flightDataManager.liveFlightData
         assertNotNull("Live flight data should be available after update", smoothedSample)
 
         withContext(Dispatchers.Main) {
-            flightDataViewModel.updateCardsWithLiveData(smoothedSample!!)
             repeat(50) {
                 val hydrated = flightDataViewModel.getCardState("vario")
                 if (hydrated != null && !hydrated.flightData.primaryValue.startsWith("--")) {

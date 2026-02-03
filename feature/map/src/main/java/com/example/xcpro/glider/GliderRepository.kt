@@ -9,11 +9,17 @@ import com.example.xcpro.common.glider.ThreePointPolar
 import com.example.xcpro.common.glider.UserPolarCoefficients
 import com.example.xcpro.common.glider.defaultGliderModels
 import com.google.gson.Gson
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class GliderRepository private constructor(private val context: Context) : GliderConfigRepository {
+@Singleton
+class GliderRepository @Inject constructor(
+    @ApplicationContext private val context: Context
+) : GliderConfigRepository {
     private val prefs: SharedPreferences = context.getSharedPreferences("glider_prefs", Context.MODE_PRIVATE)
     private val gson = Gson()
 
@@ -55,6 +61,14 @@ class GliderRepository private constructor(private val context: Context) : Glide
         updateConfig { it.copy(userCoefficients = coeff) }
     }
 
+    fun setIasMinKmh(value: Double?) {
+        updateConfig { it.copy(iasMinKmh = value) }
+    }
+
+    fun setIasMaxKmh(value: Double?) {
+        updateConfig { it.copy(iasMaxKmh = value) }
+    }
+
     private fun load() {
         val id = prefs.getString(KEY_SELECTED_ID, null)
         val json = prefs.getString(KEY_CONFIG_JSON, null)
@@ -76,20 +90,16 @@ class GliderRepository private constructor(private val context: Context) : Glide
     }
 
     private fun sanitizeConfig(config: GliderConfig): GliderConfig {
+        val minKmh = config.iasMinKmh?.takeIf { it.isFinite() && it > 0.0 }
+        val maxKmh = config.iasMaxKmh?.takeIf { it.isFinite() && it > 0.0 }
         if (config.waterBallastKg > 0.0 && config.hideBallastPill) {
-            return config.copy(hideBallastPill = false)
+            return config.copy(hideBallastPill = false, iasMinKmh = minKmh, iasMaxKmh = maxKmh)
         }
-        return config
+        return config.copy(iasMinKmh = minKmh, iasMaxKmh = maxKmh)
     }
 
     companion object {
         private const val KEY_SELECTED_ID = "selected_model_id"
         private const val KEY_CONFIG_JSON = "glider_config_json"
-
-        @Volatile private var INSTANCE: GliderRepository? = null
-        fun getInstance(context: Context): GliderRepository =
-            INSTANCE ?: synchronized(this) {
-                INSTANCE ?: GliderRepository(context.applicationContext).also { INSTANCE = it }
-            }
     }
 }

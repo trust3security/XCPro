@@ -4,6 +4,7 @@ import android.util.Log
 import com.example.dfcards.calculations.BarometricAltitudeCalculator
 import com.example.dfcards.dfcards.calculations.SimpleAglCalculator
 import com.example.xcpro.core.time.Clock
+import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.audio.AudioFocusManager
 import com.example.xcpro.audio.VarioAudioController
 import com.example.xcpro.audio.VarioAudioSettings
@@ -121,6 +122,8 @@ internal class FlightDataCalculatorEngine(
      internal var smoothedVerticalAccel: Double? = null
     internal var macCreadySetting = DEFAULT_MACCREADY
     internal var macCreadyRisk = DEFAULT_MACCREADY
+    internal var autoMcEnabled: Boolean = true
+    internal var flightMode: FlightMode = FlightMode.CRUISE
     init {
         scope.launch { windStateFlow.collect { latestWindState = it } }
         scope.launch { flightStateSource.flightState.collect { latestFlightState = it } }
@@ -214,6 +217,12 @@ internal class FlightDataCalculatorEngine(
     }
     override fun setMacCreadyRisk(value: Double) {
         macCreadyRisk = value
+    }
+    override fun setAutoMcEnabled(enabled: Boolean) {
+        autoMcEnabled = enabled
+    }
+    override fun setFlightMode(mode: FlightMode) {
+        flightMode = mode
     }
     override fun updateReplayRealVario(realVarioMs: Double?, timestampMillis: Long) {
         if (!isReplayMode) return

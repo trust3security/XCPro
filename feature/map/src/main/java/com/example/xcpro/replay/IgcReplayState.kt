@@ -1,9 +1,9 @@
 package com.example.xcpro.replay
 
-import android.net.Uri
+import com.example.xcpro.common.documents.DocumentRef
 
 data class IgcReplayUiState(
-    val selectedUri: Uri? = null,
+    val selectedDocument: DocumentRef? = null,
     val selectedFileName: String? = null,
     val statusMessage: String = "Select an IGC file to begin replay.",
     val isPlaying: Boolean = false,

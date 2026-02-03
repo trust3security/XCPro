@@ -72,14 +72,14 @@ Last updated: 2026-01-30
      - feature/map/src/main/java/com/example/xcpro/vario/VarioServiceManager.kt
      - feature/map/src/main/java/com/example/xcpro/flightdata/FlightDataRepository.kt
 
-2) MapScreenObservers converts CompleteFlightData to RealTimeFlightData
-   - File: feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt
+2) FlightDataUiAdapter / MapScreenObservers converts CompleteFlightData to RealTimeFlightData
+   - File: feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt (wrapped by FlightDataUiAdapter)
 
 3) FlightDataManager buffers and buckets data for cards
    - File: feature/map/src/main/java/com/example/xcpro/map/FlightDataManager.kt
 
-4) MapComposeEffects pushes card data into FlightDataViewModel
-   - File: feature/map/src/main/java/com/example/xcpro/map/ui/effects/MapComposeEffects.kt
+4) CardIngestionCoordinator pushes card data into FlightDataViewModel
+   - File: feature/map/src/main/java/com/example/xcpro/map/CardIngestionCoordinator.kt
 
 5) Card formatting
    - CardDataFormatter and CardFormatSpec
@@ -111,7 +111,7 @@ Last updated: 2026-01-30
   - CompleteFlightData.nettoAverage30s
   - RealTimeFlightData.nettoAverage30s
 - Confirm cards are updating:
-  - MapComposeEffects -> FlightDataViewModel.updateCardsWithLiveData()
+  - CardIngestionCoordinator -> FlightDataViewModel.updateCardsWithLiveData()
 
 ## Related fields (avoid mixing)
 - NETTO 30S: RealTimeFlightData.nettoAverage30s -> card id "netto_avg30"

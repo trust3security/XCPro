@@ -75,7 +75,19 @@ class FlightDisplayMapper {
             isCircling = metrics.isCircling,
             thermalAverageValid = metrics.thermalAverage30sValid,
             timestamp = snapshot.timestamp,
-            dataQuality = snapshot.dataQuality
+            dataQuality = snapshot.dataQuality,
+            levoNetto = VerticalSpeedMs(metrics.levoNettoMs),
+            levoNettoValid = metrics.levoNettoValid,
+            levoNettoHasWind = metrics.levoNettoHasWind,
+            levoNettoHasPolar = metrics.levoNettoHasPolar,
+            levoNettoConfidence = metrics.levoNettoConfidence,
+            autoMacCready = metrics.autoMcMs,
+            autoMacCreadyValid = metrics.autoMcValid,
+            speedToFlyIas = SpeedMs(metrics.speedToFlyIasMs),
+            speedToFlyDelta = SpeedMs(metrics.speedToFlyDeltaMs),
+            speedToFlyValid = metrics.speedToFlyValid,
+            speedToFlyMcSourceAuto = metrics.speedToFlyMcSourceAuto,
+            speedToFlyHasPolar = metrics.speedToFlyHasPolar
         )
     }
 }

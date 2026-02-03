@@ -23,19 +23,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.xcpro.glider.GliderRepository
+import com.example.xcpro.glider.GliderViewModel
 import kotlin.math.roundToInt
 
 @Composable
 fun ConfigCard() {
-    val context = LocalContext.current
-    val repo = remember(context) { GliderRepository.getInstance(context) }
-    val cfg by repo.config.collectAsStateWithLifecycle()
+    val viewModel: GliderViewModel = hiltViewModel()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val cfg = uiState.config
 
     var pilotInput by remember(cfg.pilotAndGearKg) {
         mutableStateOf(cfg.pilotAndGearKg.roundToInt().toString())
@@ -51,6 +51,12 @@ fun ConfigCard() {
     }
     var refWeightInput by remember(cfg.referenceWeightKg) {
         mutableStateOf(cfg.referenceWeightKg?.toInt()?.toString() ?: "")
+    }
+    var iasMinInput by remember(cfg.iasMinKmh) {
+        mutableStateOf(cfg.iasMinKmh?.toInt()?.toString() ?: "")
+    }
+    var iasMaxInput by remember(cfg.iasMaxKmh) {
+        mutableStateOf(cfg.iasMaxKmh?.toInt()?.toString() ?: "")
     }
     val ballastActive = cfg.waterBallastKg > 0.0
 
@@ -81,9 +87,9 @@ fun ConfigCard() {
                         val sanitized = text.filter { it.isDigit() }
                         pilotInput = sanitized
                         when {
-                            sanitized.isBlank() -> repo.updateConfig { it.copy(pilotAndGearKg = 0.0) }
+                            sanitized.isBlank() -> viewModel.setPilotAndGearKg(0.0)
                             else -> sanitized.toIntOrNull()?.let { value ->
-                                repo.updateConfig { it.copy(pilotAndGearKg = value.toDouble().coerceAtLeast(0.0)) }
+                                viewModel.setPilotAndGearKg(value.toDouble())
                             }
                         }
                     },
@@ -99,9 +105,9 @@ fun ConfigCard() {
                         val sanitized = text.filter { it.isDigit() }
                         ballastInput = sanitized
                         when {
-                            sanitized.isBlank() -> repo.updateConfig { it.copy(waterBallastKg = 0.0) }
+                            sanitized.isBlank() -> viewModel.setWaterBallastKg(0.0)
                             else -> sanitized.toIntOrNull()?.let { value ->
-                                repo.updateConfig { it.copy(waterBallastKg = value.toDouble().coerceAtLeast(0.0)) }
+                                viewModel.setWaterBallastKg(value.toDouble())
                             }
                         }
                     },
@@ -116,7 +122,7 @@ fun ConfigCard() {
                     value = cfg.bugsPercent.toString(),
                     onValueChange = { text ->
                         text.toIntOrNull()?.let { value ->
-                            repo.updateConfig { it.copy(bugsPercent = value.coerceIn(0, 50)) }
+                            viewModel.setBugsPercent(value)
                         }
                     },
                     label = { Text("Bugs (%)") },
@@ -131,13 +137,9 @@ fun ConfigCard() {
                         val sanitized = text.filter { it.isDigit() || it == '.' }
                         drainMinutesInput = sanitized
                         when {
-                            sanitized.isBlank() -> repo.updateConfig { it.copy(ballastDrainMinutes = 0.0) }
+                            sanitized.isBlank() -> viewModel.setBallastDrainMinutes(null)
                             else -> sanitized.toDoubleOrNull()?.let { value ->
-                                repo.updateConfig {
-                                    it.copy(
-                                        ballastDrainMinutes = value.coerceIn(0.5, 60.0)
-                                    )
-                                }
+                                viewModel.setBallastDrainMinutes(value)
                             }
                         }
                     },
@@ -153,9 +155,9 @@ fun ConfigCard() {
                     val sanitized = text.filter { it.isDigit() }
                     refWeightInput = sanitized
                     when {
-                        sanitized.isBlank() -> repo.setReferenceWeightKg(null)
+                        sanitized.isBlank() -> viewModel.setReferenceWeightKg(null)
                         else -> sanitized.toIntOrNull()?.let { value ->
-                            repo.setReferenceWeightKg(value.toDouble())
+                            viewModel.setReferenceWeightKg(value.toDouble())
                         }
                     }
                 },
@@ -164,6 +166,44 @@ fun ConfigCard() {
                 singleLine = true,
                 keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number)
             )
+
+            Row(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = iasMinInput,
+                    onValueChange = { text ->
+                        val sanitized = text.filter { it.isDigit() }
+                        iasMinInput = sanitized
+                        when {
+                            sanitized.isBlank() -> viewModel.setIasMinKmh(null)
+                            else -> sanitized.toIntOrNull()?.let { value ->
+                                viewModel.setIasMinKmh(value.toDouble())
+                            }
+                        }
+                    },
+                    label = { Text("IAS Min (km/h)") },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                OutlinedTextField(
+                    value = iasMaxInput,
+                    onValueChange = { text ->
+                        val sanitized = text.filter { it.isDigit() }
+                        iasMaxInput = sanitized
+                        when {
+                            sanitized.isBlank() -> viewModel.setIasMaxKmh(null)
+                            else -> sanitized.toIntOrNull()?.let { value ->
+                                viewModel.setIasMaxKmh(value.toDouble())
+                            }
+                        }
+                    },
+                    label = { Text("IAS Max (km/h)") },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number)
+                )
+            }
 
             Row(
                 modifier = Modifier
@@ -198,7 +238,7 @@ fun ConfigCard() {
                 Switch(
                     checked = cfg.hideBallastPill,
                     onCheckedChange = { enabled ->
-                        repo.updateConfig { it.copy(hideBallastPill = enabled) }
+                        viewModel.setHideBallastPill(enabled)
                     },
                     enabled = !ballastActive
                 )

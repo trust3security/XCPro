@@ -3,10 +3,10 @@ package com.example.xcpro.ui.theme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -38,18 +38,16 @@ fun Baseui1Theme(
     darkTheme: Boolean = false, // Force light mode only
     content: @Composable () -> Unit
 ) {
-    val context = LocalContext.current
     val profileViewModel: ProfileViewModel = hiltViewModel()
+    val themeViewModel: ThemeViewModel = hiltViewModel()
     val profileUiState = profileViewModel.uiState.collectAsStateWithLifecycle()
     val profileId = profileUiState.value.activeProfile?.id ?: "default"
-
-    val themePrefs = remember(context) { ThemePreferencesRepository(context) }
-
-    val themeId by themePrefs.observeThemeId(profileId)
-        .collectAsStateWithLifecycle(initialValue = themePrefs.getThemeId(profileId))
-
-    val customColorsJson by themePrefs.observeCustomColorsJson(profileId, themeId)
-        .collectAsStateWithLifecycle(initialValue = themePrefs.getCustomColorsJson(profileId, themeId))
+    LaunchedEffect(profileId) {
+        themeViewModel.setProfileId(profileId)
+    }
+    val themeUiState by themeViewModel.uiState.collectAsStateWithLifecycle()
+    val themeId = themeUiState.themeId
+    val customColorsJson = themeUiState.customColorsJson
 
     val effectiveDarkTheme = false
 

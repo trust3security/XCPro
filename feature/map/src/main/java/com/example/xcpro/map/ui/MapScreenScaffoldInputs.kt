@@ -1,6 +1,5 @@
 package com.example.xcpro.map.ui
 
-import android.content.Context
 import android.util.Log
 import androidx.compose.material3.DrawerState
 import androidx.compose.runtime.Composable
@@ -30,7 +29,6 @@ import com.example.xcpro.map.ballast.BallastUiState
 import com.example.xcpro.map.ui.widgets.MapUIWidgetManager
 import com.example.xcpro.qnh.QnhCalibrationState
 import com.example.xcpro.replay.SessionState
-import com.example.xcpro.saveConfig
 import com.example.xcpro.sensors.GPSData
 import com.example.xcpro.sensors.GpsStatus
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
@@ -91,6 +89,9 @@ internal data class MapScreenScaffoldInputs(
     val hamburgerOffset: MutableState<Offset>,
     val flightModeOffset: MutableState<Offset>,
     val ballastOffset: MutableState<Offset>,
+    val onHamburgerOffsetChange: (Offset) -> Unit,
+    val onFlightModeOffsetChange: (Offset) -> Unit,
+    val onBallastOffsetChange: (Offset) -> Unit,
     val taskScreenManager: MapTaskScreenManager,
     val waypointData: List<WaypointData>,
     val unitsPreferences: UnitsPreferences,
@@ -118,7 +119,6 @@ private const val MapScreenScaffoldInputsTag = "MapScreen"
 
 @Composable
 internal fun rememberMapScreenScaffoldInputs(
-    context: Context,
     coroutineScope: CoroutineScope,
     navController: NavHostController,
     drawerState: DrawerState,
@@ -143,6 +143,9 @@ internal fun rememberMapScreenScaffoldInputs(
     hamburgerOffsetState: MutableState<Offset>,
     flightModeOffsetState: MutableState<Offset>,
     ballastOffsetState: MutableState<Offset>,
+    onHamburgerOffsetChange: (Offset) -> Unit,
+    onFlightModeOffsetChange: (Offset) -> Unit,
+    onBallastOffsetChange: (Offset) -> Unit,
     flightViewModel: FlightDataViewModel,
     windArrowState: WindArrowUiState,
     showWindSpeedOnVario: Boolean,
@@ -158,7 +161,7 @@ internal fun rememberMapScreenScaffoldInputs(
     val onResolvedMapStyleSelected: (String) -> Unit = { style ->
         mapViewModel.setMapStyle(style)
         coroutineScope.launch {
-            saveConfig(context, style, emptyMap(), profileExpanded.value, mapStyleExpanded.value)
+            mapViewModel.persistMapStyle(style)
         }
         Log.d(MapScreenScaffoldInputsTag, "Map style selected: $style")
         onMapStyleSelected(style)
@@ -228,6 +231,9 @@ internal fun rememberMapScreenScaffoldInputs(
         hamburgerOffset = hamburgerOffsetState,
         flightModeOffset = flightModeOffsetState,
         ballastOffset = ballastOffsetState,
+        onHamburgerOffsetChange = onHamburgerOffsetChange,
+        onFlightModeOffsetChange = onFlightModeOffsetChange,
+        onBallastOffsetChange = onBallastOffsetChange,
         taskScreenManager = managers.taskScreenManager,
         waypointData = mapUiState.waypoints,
         unitsPreferences = mapUiState.unitsPreferences,

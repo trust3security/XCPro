@@ -54,6 +54,10 @@ class FlightDataCalculator(
 
     override fun setMacCreadyRisk(value: Double) = engine.setMacCreadyRisk(value)
 
+    override fun setAutoMcEnabled(enabled: Boolean) = engine.setAutoMcEnabled(enabled)
+
+    override fun setFlightMode(mode: com.example.xcpro.common.flight.FlightMode) = engine.setFlightMode(mode)
+
     override fun updateReplayRealVario(realVarioMs: Double?, timestampMillis: Long) =
         engine.updateReplayRealVario(realVarioMs, timestampMillis)
 

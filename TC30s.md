@@ -74,9 +74,9 @@ This document traces the "TC 30s" value from sensors to UI and documents why the
 - `MapScreenObservers` converts it and updates `FlightDataManager`.
   - File: `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt`
 
-- `FlightDataManager.cardFlightDataFlow` is collected in `MapComposeEffects`, which drives card updates:
+- `FlightDataManager.cardFlightDataFlow` is collected by `CardIngestionCoordinator`, which drives card updates:
   - `flightViewModel.updateCardsWithLiveData(displaySample)`
-  - File: `feature/map/src/main/java/com/example/xcpro/map/ui/effects/MapComposeEffects.kt`
+  - File: `feature/map/src/main/java/com/example/xcpro/map/CardIngestionCoordinator.kt`
 
 ### 6) Card mapping
 
@@ -122,7 +122,7 @@ Important: The TC 30s card only shows a value when `RealTimeFlightData` reaches 
 1) No live data reaching cards
    - Cards update only after `cardHydrationReady == true` (container size + first live sample).
    - If the map container never reports size, or the flight data flow is null, TC 30s stays `--`.
-   - Path to check: `MapScreenObservers` -> `FlightDataManager` -> `MapComposeEffects`.
+   - Path to check: `MapScreenObservers` -> `FlightDataManager` -> `CardIngestionCoordinator`.
 
 2) Active source gating (replay vs live)
    - `FlightDataRepository` ignores updates from non-active sources.

@@ -1,9 +1,9 @@
 package com.example.xcpro.replay
 
-import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.xcpro.common.documents.DocumentRef
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -32,11 +32,11 @@ class IgcReplayViewModel @Inject constructor(
         observeReplayEvents()
     }
 
-    fun onFileSelected(uri: Uri?, displayName: String?) {
-        if (uri == null) {
+    fun onFileSelected(document: DocumentRef?) {
+        if (document == null) {
             _uiState.update {
                 it.copy(
-                    selectedUri = null,
+                    selectedDocument = null,
                     selectedFileName = null,
                     errorMessage = null,
                     statusMessage = "Select an IGC file to begin replay.",
@@ -48,10 +48,10 @@ class IgcReplayViewModel @Inject constructor(
             }
             return
         }
-        val name = displayName ?: uri.lastPathSegment
+        val name = document.fileName()
         _uiState.update {
             it.copy(
-                selectedUri = uri,
+                selectedDocument = document,
                 selectedFileName = name,
                 errorMessage = null,
                 statusMessage = "Loading replay...",
@@ -63,7 +63,7 @@ class IgcReplayViewModel @Inject constructor(
         }
         viewModelScope.launch {
             runCatching {
-                replayController.loadFile(uri, name)
+                replayController.loadDocument(document)
             }.onSuccess {
                 _uiState.update {
                     it.copy(
@@ -89,7 +89,7 @@ class IgcReplayViewModel @Inject constructor(
     }
 
     fun startReplay() {
-        val uri = _uiState.value.selectedUri ?: run {
+        val document = _uiState.value.selectedDocument ?: run {
             _uiState.update { it.copy(errorMessage = "Please select an IGC file first.") }
             return
         }
@@ -97,10 +97,10 @@ class IgcReplayViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 // If already loaded the same file, skip reload
-                val alreadyLoaded = replayController.session.value.selection?.uri == uri
+                val alreadyLoaded = replayController.session.value.selection?.document?.uri == document.uri
                 if (!alreadyLoaded) {
                     _uiState.update { it.copy(statusMessage = "Loading replay...", errorMessage = null) }
-                    replayController.loadFile(uri, name)
+                    replayController.loadDocument(document)
                 }
                 replayController.play()
                 _events.emit(IgcReplayUiEvent.NavigateBackToMap)
@@ -121,16 +121,16 @@ class IgcReplayViewModel @Inject constructor(
 
     fun seekTo(fraction: Float) {
         val selection = replayController.session.value.selection
-        val uri = _uiState.value.selectedUri
+        val document = _uiState.value.selectedDocument
         Log.d(
             "IgcReplayViewModel",
-            "REPLY_VM_SEEK fraction=$fraction selectionNull=${selection == null} uriNull=${uri == null}"
+            "REPLY_VM_SEEK fraction=$fraction selectionNull=${selection == null} docNull=${document == null}"
         )
         if (selection != null) {
             replayController.seekTo(fraction)
-        } else if (uri != null) {
+        } else if (document != null) {
             viewModelScope.launch {
-                runCatching { replayController.loadFile(uri, _uiState.value.selectedFileName) }
+                runCatching { replayController.loadDocument(document) }
                     .onSuccess { replayController.seekTo(fraction) }
                     .onFailure { Log.e("IgcReplayViewModel", "REPLY_VM_SEEK load on demand failed", it) }
             }
@@ -156,8 +156,8 @@ class IgcReplayViewModel @Inject constructor(
                     )
                     if (selection != null) {
                         base.copy(
-                            selectedUri = selection.uri,
-                            selectedFileName = selection.displayName ?: selection.uri.lastPathSegment ?: base.selectedFileName
+                            selectedDocument = selection.document,
+                            selectedFileName = selection.document.fileName()
                         )
                     } else base
                 }

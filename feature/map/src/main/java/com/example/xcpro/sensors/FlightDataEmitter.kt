@@ -8,6 +8,7 @@ import com.example.xcpro.flightdata.FlightDisplaySnapshot
 import com.example.xcpro.sensors.domain.CalculateFlightMetricsUseCase
 import com.example.xcpro.sensors.domain.FlightMetricsRequest
 import com.example.xcpro.weather.wind.model.WindState
+import com.example.xcpro.common.flight.FlightMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.util.Locale
 
@@ -44,7 +45,9 @@ internal class FlightDataEmitter(
         replayRealVarioMs: Double?,
         replayRealVarioTimestamp: Long,
         macCreadySetting: Double,
-        macCreadyRisk: Double
+        macCreadyRisk: Double,
+        autoMcEnabled: Boolean,
+        flightMode: FlightMode
     ) {
         val replayIgcVario = if (isReplayMode && replayRealVarioTimestamp != 0L) {
             val ageMs = currentTime - replayRealVarioTimestamp
@@ -77,7 +80,10 @@ internal class FlightDataEmitter(
                 baroResult = baroResult,
                 windState = windState,
                 varioValidUntil = state.varioValidUntil,
-                isFlying = isFlying
+                isFlying = isFlying,
+                macCreadySetting = macCreadySetting,
+                autoMcEnabled = autoMcEnabled,
+                flightMode = flightMode
             )
         )
 

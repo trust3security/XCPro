@@ -26,34 +26,26 @@ import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.example.xcpro.common.units.AltitudeUnit
 import com.example.xcpro.common.units.DistanceUnit
 import com.example.xcpro.common.units.PressureUnit
 import com.example.xcpro.common.units.SpeedUnit
 import com.example.xcpro.common.units.TemperatureUnit
 import com.example.xcpro.common.units.UnitsPreferences
-import com.example.xcpro.common.units.UnitsRepository
 import com.example.xcpro.common.units.VerticalSpeedUnit
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UnitsSettingsScreen(
     navController: NavHostController
 ) {
-    val context = LocalContext.current
-    val repository = remember(context.applicationContext) {
-        UnitsRepository(context.applicationContext)
-    }
-    val units by repository.unitsFlow.collectAsStateWithLifecycle(initialValue = UnitsPreferences())
-    val scope = rememberCoroutineScope()
+    val viewModel: UnitsSettingsViewModel = hiltViewModel()
+    val units by viewModel.units.collectAsStateWithLifecycle(initialValue = UnitsPreferences())
     val scrollState = rememberScrollState()
 
     Scaffold(
@@ -111,9 +103,7 @@ fun UnitsSettingsScreen(
                 description = "Used for barometric altitude, AGL, and task heights.",
                 options = AltitudeUnit.values().toList(),
                 selected = units.altitude,
-                onSelected = { unit ->
-                    scope.launch { repository.setAltitude(unit) }
-                },
+                onSelected = { unit -> viewModel.setAltitude(unit) },
                 label = { "${it.label} (${it.abbreviation})" }
             )
 
@@ -122,9 +112,7 @@ fun UnitsSettingsScreen(
                 description = "Applies to variometer readings, audio cues, TE/Netto, and climb averages.",
                 options = VerticalSpeedUnit.values().toList(),
                 selected = units.verticalSpeed,
-                onSelected = { unit ->
-                    scope.launch { repository.setVerticalSpeed(unit) }
-                },
+                onSelected = { unit -> viewModel.setVerticalSpeed(unit) },
                 label = { "${it.label}" }
             )
 
@@ -133,9 +121,7 @@ fun UnitsSettingsScreen(
                 description = "Displayed in navboxes, glide calculators, and profile summaries.",
                 options = SpeedUnit.values().toList(),
                 selected = units.speed,
-                onSelected = { unit ->
-                    scope.launch { repository.setSpeed(unit) }
-                },
+                onSelected = { unit -> viewModel.setSpeed(unit) },
                 label = { "${it.label}" }
             )
 
@@ -144,9 +130,7 @@ fun UnitsSettingsScreen(
                 description = "Used for leg lengths, task distances, and glides.",
                 options = DistanceUnit.values().toList(),
                 selected = units.distance,
-                onSelected = { unit ->
-                    scope.launch { repository.setDistance(unit) }
-                },
+                onSelected = { unit -> viewModel.setDistance(unit) },
                 label = { "${it.label}" }
             )
 
@@ -155,9 +139,7 @@ fun UnitsSettingsScreen(
                 description = "Impacts QNH entry and barometric readouts.",
                 options = PressureUnit.values().toList(),
                 selected = units.pressure,
-                onSelected = { unit ->
-                    scope.launch { repository.setPressure(unit) }
-                },
+                onSelected = { unit -> viewModel.setPressure(unit) },
                 label = { "${it.label}" }
             )
 
@@ -166,9 +148,7 @@ fun UnitsSettingsScreen(
                 description = "Used in weather overlays and card summaries.",
                 options = TemperatureUnit.values().toList(),
                 selected = units.temperature,
-                onSelected = { unit ->
-                    scope.launch { repository.setTemperature(unit) }
-                },
+                onSelected = { unit -> viewModel.setTemperature(unit) },
                 label = { "${it.label}" }
             )
 

@@ -17,19 +17,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.example.xcpro.common.glider.ThreePointPolar
-import com.example.xcpro.glider.GliderRepository
+import com.example.xcpro.glider.GliderViewModel
 
 @Composable
 fun ThreePointPolarCard() {
-    val context = LocalContext.current
-    val repo = remember(context) { GliderRepository.getInstance(context) }
-    val cfg by repo.config.collectAsStateWithLifecycle()
+    val viewModel: GliderViewModel = hiltViewModel()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val cfg = uiState.config
     val tpp = cfg.threePointPolar ?: ThreePointPolar()
 
     Card(
@@ -56,7 +55,7 @@ fun ThreePointPolarCard() {
                 OutlinedTextField(
                     value = tpp.lowKmh.toString(),
                     onValueChange = { value ->
-                        value.toDoubleOrNull()?.let { repo.setThreePointPolar(tpp.copy(lowKmh = it)) }
+                        value.toDoubleOrNull()?.let { viewModel.setThreePointPolar(tpp.copy(lowKmh = it)) }
                     },
                     label = { Text("Low Speed (km/h)") },
                     modifier = Modifier.weight(1f),
@@ -66,7 +65,7 @@ fun ThreePointPolarCard() {
                 OutlinedTextField(
                     value = tpp.lowSinkMs.toString(),
                     onValueChange = { value ->
-                        value.toDoubleOrNull()?.let { repo.setThreePointPolar(tpp.copy(lowSinkMs = it)) }
+                        value.toDoubleOrNull()?.let { viewModel.setThreePointPolar(tpp.copy(lowSinkMs = it)) }
                     },
                     label = { Text("Low Sink (m/s)") },
                     modifier = Modifier.weight(1f),
@@ -77,7 +76,7 @@ fun ThreePointPolarCard() {
                 OutlinedTextField(
                     value = tpp.midKmh.toString(),
                     onValueChange = { value ->
-                        value.toDoubleOrNull()?.let { repo.setThreePointPolar(tpp.copy(midKmh = it)) }
+                        value.toDoubleOrNull()?.let { viewModel.setThreePointPolar(tpp.copy(midKmh = it)) }
                     },
                     label = { Text("Mid Speed (km/h)") },
                     modifier = Modifier.weight(1f),
@@ -87,7 +86,7 @@ fun ThreePointPolarCard() {
                 OutlinedTextField(
                     value = tpp.midSinkMs.toString(),
                     onValueChange = { value ->
-                        value.toDoubleOrNull()?.let { repo.setThreePointPolar(tpp.copy(midSinkMs = it)) }
+                        value.toDoubleOrNull()?.let { viewModel.setThreePointPolar(tpp.copy(midSinkMs = it)) }
                     },
                     label = { Text("Mid Sink (m/s)") },
                     modifier = Modifier.weight(1f),
@@ -98,7 +97,7 @@ fun ThreePointPolarCard() {
                 OutlinedTextField(
                     value = tpp.highKmh.toString(),
                     onValueChange = { value ->
-                        value.toDoubleOrNull()?.let { repo.setThreePointPolar(tpp.copy(highKmh = it)) }
+                        value.toDoubleOrNull()?.let { viewModel.setThreePointPolar(tpp.copy(highKmh = it)) }
                     },
                     label = { Text("High Speed (km/h)") },
                     modifier = Modifier.weight(1f),
@@ -108,7 +107,7 @@ fun ThreePointPolarCard() {
                 OutlinedTextField(
                     value = tpp.highSinkMs.toString(),
                     onValueChange = { value ->
-                        value.toDoubleOrNull()?.let { repo.setThreePointPolar(tpp.copy(highSinkMs = it)) }
+                        value.toDoubleOrNull()?.let { viewModel.setThreePointPolar(tpp.copy(highSinkMs = it)) }
                     },
                     label = { Text("High Sink (m/s)") },
                     modifier = Modifier.weight(1f),

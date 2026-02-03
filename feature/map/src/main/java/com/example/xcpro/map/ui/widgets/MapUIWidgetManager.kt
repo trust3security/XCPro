@@ -1,15 +1,11 @@
 package com.example.xcpro.map.ui.widgets
 
-import android.content.SharedPreferences
 import android.util.Log
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import com.example.xcpro.map.MapGestureRegion
 import com.example.xcpro.map.MapOverlayGestureTarget
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.ui.MapGestureRegistry
-import com.example.xcpro.map.ui.MapWidgetLayoutStore
-import com.example.xcpro.map.ui.WidgetPositions
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -17,34 +13,14 @@ import kotlinx.coroutines.flow.StateFlow
  * Handles draggable components, edit mode, and widget positioning/sizing
  */
 class MapUIWidgetManager(
-    internal val mapState: MapScreenState,
-    private val sharedPrefs: SharedPreferences
+    internal val mapState: MapScreenState
 ) {
     companion object {
         private const val TAG = "MapUIWidgetManager"
     }
 
-    private val layoutStore = MapWidgetLayoutStore(sharedPrefs) { message ->
-        Log.d(TAG, message)
-    }
     private val gestureRegistry = MapGestureRegistry()
     val gestureRegions: StateFlow<List<MapGestureRegion>> = gestureRegistry.regions
-
-    /**
-     * Load saved widget positions and sizes from SharedPreferences
-     */
-    fun loadWidgetPositions(
-        screenWidthPx: Float,
-        screenHeightPx: Float,
-        density: androidx.compose.ui.unit.Density
-    ): WidgetPositions = layoutStore.loadPositions(screenWidthPx, screenHeightPx, density)
-
-    /**
-     * Save widget position to SharedPreferences
-     */
-    fun saveWidgetPosition(key: String, offset: Offset) {
-        layoutStore.savePosition(key, offset)
-    }
 
     /**
      * Register or update a gesture region so the map can short-circuit pointer handling.

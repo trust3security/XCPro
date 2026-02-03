@@ -17,7 +17,7 @@ import com.example.xcpro.map.MapCameraEffects
 import com.example.xcpro.map.MapCameraManager
 import com.example.xcpro.map.MapOverlayManager
 import com.example.xcpro.map.MapScreenViewModel
-import com.example.xcpro.map.ui.widgets.MapUIWidgetManager
+import com.example.xcpro.map.widgets.MapWidgetOffsets
 import com.example.xcpro.variometer.layout.VariometerUiState
 import kotlinx.coroutines.flow.collect
 import kotlin.math.min
@@ -37,17 +37,21 @@ internal data class VariometerLayoutState(
 
 @Composable
 internal fun rememberMapWidgetOffsets(
-    widgetManager: MapUIWidgetManager,
-    screenWidthPx: Float,
-    screenHeightPx: Float,
-    density: Density
+    widgetOffsets: MapWidgetOffsets
 ): MapWidgetOffsetStates {
-    val widgetPositions = remember(screenWidthPx, screenHeightPx) {
-        widgetManager.loadWidgetPositions(screenWidthPx, screenHeightPx, density)
+    val hamburgerOffsetState = remember { mutableStateOf(widgetOffsets.sideHamburger.toComposeOffset()) }
+    val flightModeOffsetState = remember { mutableStateOf(widgetOffsets.flightMode.toComposeOffset()) }
+    val ballastOffsetState = remember { mutableStateOf(widgetOffsets.ballast.toComposeOffset()) }
+
+    LaunchedEffect(widgetOffsets.sideHamburger) {
+        hamburgerOffsetState.value = widgetOffsets.sideHamburger.toComposeOffset()
     }
-    val hamburgerOffsetState = remember { mutableStateOf(widgetPositions.sideHamburgerOffset) }
-    val flightModeOffsetState = remember { mutableStateOf(widgetPositions.flightModeOffset) }
-    val ballastOffsetState = remember { mutableStateOf(widgetPositions.ballastOffset) }
+    LaunchedEffect(widgetOffsets.flightMode) {
+        flightModeOffsetState.value = widgetOffsets.flightMode.toComposeOffset()
+    }
+    LaunchedEffect(widgetOffsets.ballast) {
+        ballastOffsetState.value = widgetOffsets.ballast.toComposeOffset()
+    }
 
     return MapWidgetOffsetStates(
         hamburgerOffset = hamburgerOffsetState,

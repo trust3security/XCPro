@@ -2,6 +2,9 @@ package com.example.xcpro.ui.theme
 
 import android.content.Context
 import android.content.SharedPreferences
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -9,8 +12,9 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 
 private const val COLOR_THEME_PREFS = "ColorThemePrefs"
 
-class ThemePreferencesRepository(
-    context: Context
+@Singleton
+class ThemePreferencesRepository @Inject constructor(
+    @ApplicationContext context: Context
 ) {
     private val prefs by lazy {
         context.getSharedPreferences(COLOR_THEME_PREFS, Context.MODE_PRIVATE)
@@ -24,12 +28,28 @@ class ThemePreferencesRepository(
         return stringFlow(themeKey(profileId), AppColorTheme.DEFAULT.id)
     }
 
+    fun setThemeId(profileId: String, themeId: String) {
+        prefs.edit()
+            .putString(themeKey(profileId), themeId)
+            .apply()
+    }
+
     fun getCustomColorsJson(profileId: String, themeId: String): String? {
         return prefs.getString(customColorsKey(profileId, themeId), null)
     }
 
     fun observeCustomColorsJson(profileId: String, themeId: String): Flow<String?> {
         return nullableStringFlow(customColorsKey(profileId, themeId))
+    }
+
+    fun setCustomColorsJson(profileId: String, themeId: String, json: String?) {
+        prefs.edit().apply {
+            if (json == null) {
+                remove(customColorsKey(profileId, themeId))
+            } else {
+                putString(customColorsKey(profileId, themeId), json)
+            }
+        }.apply()
     }
 
     private fun themeKey(profileId: String): String = "profile_${profileId}_color_theme"

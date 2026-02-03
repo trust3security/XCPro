@@ -105,7 +105,6 @@ internal fun BallastWidgetImpl(
                     )
                 },
                 onDragEnd = {
-                    widgetManager.saveWidgetPosition("ballast_pill", displayOffset.value)
                     onOffsetChange(displayOffset.value)
                 }
             )

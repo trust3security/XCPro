@@ -8,7 +8,7 @@ import kotlin.math.max
 
 object PolarCalculator {
     /**
-     * Computes still-air sink rate (m/s) for a given true airspeed (m/s).
+     * Computes still-air sink rate (m/s) for a given indicated airspeed (m/s).
      * Uses parabolic coefficients when available. Applies simple bug/ballast adjustments (placeholder).
      */
     fun sinkMs(airspeedMs: Double, model: GliderModel, config: GliderConfig): Double {

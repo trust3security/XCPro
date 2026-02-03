@@ -106,7 +106,6 @@ object MapModalUI {
                     elevation = CardDefaults.cardElevation(8.dp)
                 ) {
                     AirspaceSettingsContent(
-                        mapLibreMap = modalManager.mapState.mapLibreMap,
                         onDismiss = { modalManager.hideAirspaceSettingsModal() }
                     )
                 }

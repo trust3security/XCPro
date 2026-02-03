@@ -25,9 +25,18 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import com.example.xcpro.airspace.AirspaceViewModel
+import com.example.xcpro.di.MapUseCaseEntryPoint
 // G REMOVED DataQuality - no longer used
-import com.example.xcpro.screens.navdrawer.lookandfeel.LookAndFeelPreferences
+import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
+import com.example.xcpro.screens.navdrawer.lookandfeel.LookAndFeelViewModel
 import android.util.Log
+import com.example.xcpro.core.common.geometry.DensityScale
+import com.example.xcpro.core.common.geometry.OffsetPx
+import com.example.xcpro.map.widgets.MapWidgetId
+import com.example.xcpro.map.widgets.MapWidgetLayoutViewModel
+import com.example.xcpro.map.widgets.MapWidgetOffsets
+import dagger.hilt.android.EntryPointAccessors
 
 /**
  * G PHASE 2: Convert CompleteFlightData (from FlightDataCalculator) to RealTimeFlightData (for cards)
@@ -52,6 +61,11 @@ internal fun MapScreenRoot(
     val mapUiState by mapViewModel.uiState.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
+    val entryPoint = remember(context) {
+        EntryPointAccessors.fromApplication(context, MapUseCaseEntryPoint::class.java)
+    }
+    val airspaceUseCase = remember(entryPoint) { entryPoint.airspaceUseCase() }
+    val waypointFilesUseCase = remember(entryPoint) { entryPoint.waypointFilesUseCase() }
     MapScreenSideEffects(
         uiEffects = mapViewModel.uiEffects,
         drawerState = drawerState,
@@ -94,22 +108,28 @@ internal fun MapScreenRoot(
     val profileModeCards by flightViewModel.profileModeCards.collectAsStateWithLifecycle()
     val profileModeTemplates by flightViewModel.profileModeTemplates.collectAsStateWithLifecycle()
     val activeTemplateId by flightViewModel.activeTemplateId.collectAsStateWithLifecycle()
-    val cardPreferences = mapViewModel.cardPreferences
+    LaunchedEffect(flightViewModel) {
+        mapViewModel.cardIngestionCoordinator.bindCards(flightViewModel)
+    }
 
     // GAA Initialize FlightDataManager
     val flightDataManager = mapViewModel.flightDataManager
 
     // GAA Profile ViewModel
     val profileViewModel: com.example.xcpro.profiles.ProfileViewModel = hiltViewModel()
+    val lookAndFeelViewModel: LookAndFeelViewModel = hiltViewModel()
     val profileUiState by profileViewModel.uiState.collectAsStateWithLifecycle()
     val activeProfileId = profileUiState.activeProfile?.id ?: "default"
-    val lookAndFeelPreferences = remember(context) { LookAndFeelPreferences(context) }
-    val cardStyleFlow = remember(activeProfileId) {
-        lookAndFeelPreferences.observeCardStyle(activeProfileId)
+    LaunchedEffect(activeProfileId) {
+        lookAndFeelViewModel.setProfileId(activeProfileId)
     }
-    val cardStyle by cardStyleFlow.collectAsStateWithLifecycle(
-        initialValue = lookAndFeelPreferences.getCardStyle(activeProfileId)
-    )
+    val lookAndFeelUiState by lookAndFeelViewModel.uiState.collectAsStateWithLifecycle()
+    val cardStyle = remember(lookAndFeelUiState.cardStyleId) {
+        CardStyle.values().find { it.id == lookAndFeelUiState.cardStyleId }
+            ?: CardStyle.default
+    }
+    val airspaceViewModel: AirspaceViewModel = hiltViewModel()
+    val airspaceState by airspaceViewModel.uiState.collectAsStateWithLifecycle()
 
     val managers = rememberMapScreenManagers(
         context = context,
@@ -120,7 +140,9 @@ internal fun MapScreenRoot(
         orientationManager = orientationManager,
         varioServiceManager = mapViewModel.varioServiceManager,
         igcReplayController = mapViewModel.igcReplayController,
-        coroutineScope = coroutineScope
+        coroutineScope = coroutineScope,
+        airspaceUseCase = airspaceUseCase,
+        waypointFilesUseCase = waypointFilesUseCase
     )
     val snailTrailManager = managers.snailTrailManager
     val overlayManager = managers.overlayManager
@@ -131,6 +153,10 @@ internal fun MapScreenRoot(
     val lifecycleManager = managers.lifecycleManager
     val modalManager = managers.modalManager
     val mapInitializer = managers.mapInitializer
+
+    LaunchedEffect(mapState.mapLibreMap, airspaceState.enabledFiles, airspaceState.classStates) {
+        overlayManager.refreshAirspace(mapState.mapLibreMap)
+    }
     val bindings = rememberMapScreenBindings(
         mapViewModel = mapViewModel,
         mapStateReader = mapStateReader
@@ -170,8 +196,6 @@ internal fun MapScreenRoot(
         orientationManager = orientationManager
     )
     val showDistanceCircles = bindings.showDistanceCircles
-    val cardHydrationReady = bindings.cardHydrationReady
-
     // G Location Permission Launcher through LocationManager
     val locationPermissionLauncher = rememberLocationPermissionLauncher(locationManager)
 
@@ -192,13 +216,11 @@ internal fun MapScreenRoot(
             currentFlightModeSelection = currentFlightModeSelection,
             safeContainerSize = safeContainerSize,
             flightViewModel = flightViewModel,
-            cardPreferences = cardPreferences,
             profileModeCards = profileModeCards,
             profileModeTemplates = profileModeTemplates,
             activeTemplateId = activeTemplateId,
             initialMapStyle = initialMapStyle,
             onMapStyleResolved = mapViewModel::setMapStyle,
-            cardsReady = cardHydrationReady,
             replaySessionState = replaySession,
             suppressLiveGps = suppressLiveGps,
             allowSensorStart = allowSensorStart
@@ -210,12 +232,35 @@ internal fun MapScreenRoot(
         onDispose { lifecycleManager.cleanup() }
     }
 
-    // Load widget positions using existing widgetManager and density
+    // Load widget positions from ViewModel-backed layout preferences (SSOT).
     val screenWidthPx = with(density) { LocalConfiguration.current.screenWidthDp.dp.toPx() }
     val screenHeightPx = with(density) { LocalConfiguration.current.screenHeightDp.dp.toPx() }
 
-    val (hamburgerOffsetState, flightModeOffsetState, ballastOffsetState) = 
-        rememberMapWidgetOffsets(widgetManager, screenWidthPx, screenHeightPx, density)
+    val widgetLayoutViewModel: MapWidgetLayoutViewModel = hiltViewModel()
+    val densityScale = remember(density) { DensityScale(density = density.density, fontScale = density.fontScale) }
+    val widgetOffsets by widgetLayoutViewModel.offsets.collectAsStateWithLifecycle()
+    LaunchedEffect(screenWidthPx, screenHeightPx, densityScale) {
+        widgetLayoutViewModel.loadLayout(screenWidthPx, screenHeightPx, densityScale)
+    }
+    val resolvedWidgetOffsets = widgetOffsets ?: MapWidgetOffsets(
+        sideHamburger = OffsetPx.Zero,
+        flightMode = OffsetPx.Zero,
+        ballast = OffsetPx.Zero
+    )
+    val (hamburgerOffsetState, flightModeOffsetState, ballastOffsetState) =
+        rememberMapWidgetOffsets(resolvedWidgetOffsets)
+    val onHamburgerOffsetChange: (androidx.compose.ui.geometry.Offset) -> Unit = { offset ->
+        hamburgerOffsetState.value = offset
+        widgetLayoutViewModel.updateOffset(MapWidgetId.SIDE_HAMBURGER, offset.toOffsetPx())
+    }
+    val onFlightModeOffsetChange: (androidx.compose.ui.geometry.Offset) -> Unit = { offset ->
+        flightModeOffsetState.value = offset
+        widgetLayoutViewModel.updateOffset(MapWidgetId.FLIGHT_MODE, offset.toOffsetPx())
+    }
+    val onBallastOffsetChange: (androidx.compose.ui.geometry.Offset) -> Unit = { offset ->
+        ballastOffsetState.value = offset
+        widgetLayoutViewModel.updateOffset(MapWidgetId.BALLAST, offset.toOffsetPx())
+    }
 
     // If the card layer hasn't reported its safe bounds yet, seed the size from the screen metrics
     // so MapScreenViewModel can mark cardHydrationReady once flight data arrives. The card grid
@@ -241,7 +286,6 @@ internal fun MapScreenRoot(
     )
 
     val scaffoldInputs = rememberMapScreenScaffoldInputs(
-        context = context,
         coroutineScope = coroutineScope,
         navController = navController,
         drawerState = drawerState,
@@ -266,6 +310,9 @@ internal fun MapScreenRoot(
         hamburgerOffsetState = hamburgerOffsetState,
         flightModeOffsetState = flightModeOffsetState,
         ballastOffsetState = ballastOffsetState,
+        onHamburgerOffsetChange = onHamburgerOffsetChange,
+        onFlightModeOffsetChange = onFlightModeOffsetChange,
+        onBallastOffsetChange = onBallastOffsetChange,
         flightViewModel = flightViewModel,
         windArrowState = windArrowState,
         showWindSpeedOnVario = showWindSpeedOnVario,

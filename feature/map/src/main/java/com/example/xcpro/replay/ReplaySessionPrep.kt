@@ -56,7 +56,7 @@ internal fun prepareReplaySession(
         qnh = qnh,
         tag = tag
     )
-    AppLogger.i(tag, "REPLAY_SESSION selection=${selection.displayName ?: selection.uri} durationMs=$duration start=$start")
+    AppLogger.i(tag, "REPLAY_SESSION selection=${selection.document.displayName ?: selection.document.uri} durationMs=$duration start=$start")
     return PreparedReplaySession(
         points = densified,
         qnhHpa = qnh,

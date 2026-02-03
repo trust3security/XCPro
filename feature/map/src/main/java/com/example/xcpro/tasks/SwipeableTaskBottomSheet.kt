@@ -326,9 +326,7 @@ private fun ExpandedContent(
             }
             TaskCategory.FILES -> {
                 FilesBTTab(
-                    taskManager = taskManager,
-                    taskViewModel = taskViewModel,
-                    currentQNH = currentQNH
+                    taskViewModel = taskViewModel
                 )
             }
             else -> {

@@ -190,12 +190,11 @@ class FlightDataManager(
             )
 
     /**
-     * Throttled, bucketed snapshot for UI/cards; raw flow remains unthrottled for map/audio.
+     * Bucketed snapshot for UI/cards; cadence is owned by dfcards tiers.
      */
     val cardFlightDataFlow: StateFlow<RealTimeFlightData?> =
         liveFlightDataFlow
             .map { it?.toDisplayBucket() }
-            .throttleFrame(UI_NUMERIC_FRAME_MS)
             .stateIn(
                 scope = coroutineScope,
                 started = SharingStarted.WhileSubscribed(5_000),

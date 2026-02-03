@@ -2,11 +2,11 @@ package com.example.xcpro.map
 
 import android.content.Context
 import android.util.Log
-import com.example.xcpro.AirspaceRepository
+import com.example.xcpro.airspace.AirspaceUseCase
+import com.example.xcpro.flightdata.WaypointFilesUseCase
 import com.example.xcpro.map.BuildConfig
 import com.example.xcpro.loadAndApplyAirspace
 import com.example.xcpro.loadAndApplyWaypoints
-import com.example.xcpro.loadWaypointFiles
 import com.example.xcpro.map.trail.SnailTrailManager
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import kotlinx.coroutines.CoroutineScope
@@ -24,13 +24,13 @@ class MapOverlayManager(
     private val taskManager: TaskManagerCoordinator,
     private val stateActions: MapStateActions,
     private val snailTrailManager: SnailTrailManager,
-    private val coroutineScope: CoroutineScope
+    private val coroutineScope: CoroutineScope,
+    private val airspaceUseCase: AirspaceUseCase,
+    private val waypointFilesUseCase: WaypointFilesUseCase
 ) {
     companion object {
         private const val TAG = "MapOverlayManager"
     }
-
-    private val airspaceRepository = AirspaceRepository(context)
 
     fun toggleDistanceCircles() {
         stateActions.toggleDistanceCircles()
@@ -46,7 +46,7 @@ class MapOverlayManager(
     fun refreshAirspace(map: MapLibreMap?) {
         try {
             coroutineScope.launch {
-                loadAndApplyAirspace(context, map, airspaceRepository)
+                loadAndApplyAirspace(map, airspaceUseCase)
             }
             if (BuildConfig.DEBUG) {
                 Log.d(TAG, "Airspace overlays refreshed")
@@ -59,7 +59,7 @@ class MapOverlayManager(
     fun refreshWaypoints(map: MapLibreMap?) {
         try {
             coroutineScope.launch {
-                val (files, checks) = loadWaypointFiles(context)
+                val (files, checks) = waypointFilesUseCase.loadWaypointFiles()
                 loadAndApplyWaypoints(context, map, files, checks)
             }
             if (BuildConfig.DEBUG) {

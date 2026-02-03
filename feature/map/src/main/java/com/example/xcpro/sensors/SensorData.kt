@@ -183,7 +183,21 @@ data class CompleteFlightData(
 
     // Metadata
     val timestamp: Long,
-    val dataQuality: String     // "GPS+BARO+COMPASS", "GPS_ONLY", etc.
+    val dataQuality: String,     // "GPS+BARO+COMPASS", "GPS_ONLY", etc.
+    // Levo glide-netto (separate from legacy netto)
+    val levoNetto: VerticalSpeedMs = VerticalSpeedMs(0.0),
+    val levoNettoValid: Boolean = false,
+    val levoNettoHasWind: Boolean = false,
+    val levoNettoHasPolar: Boolean = false,
+    val levoNettoConfidence: Double = 0.0,
+    // Auto-MC and speed-to-fly outputs
+    val autoMacCready: Double = 0.0,
+    val autoMacCreadyValid: Boolean = false,
+    val speedToFlyIas: SpeedMs = SpeedMs(0.0),
+    val speedToFlyDelta: SpeedMs = SpeedMs(0.0),
+    val speedToFlyValid: Boolean = false,
+    val speedToFlyMcSourceAuto: Boolean = false,
+    val speedToFlyHasPolar: Boolean = false
 ) {
     /**
      * Check if all sensors are available

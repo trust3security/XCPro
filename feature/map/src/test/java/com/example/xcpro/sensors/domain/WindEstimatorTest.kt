@@ -1,5 +1,6 @@
 package com.example.xcpro.sensors.domain
 
+import com.example.xcpro.glider.SpeedBoundsMs
 import com.example.xcpro.glider.StillAirSinkProvider
 import com.example.xcpro.weather.wind.model.WindVector
 import org.junit.Assert.assertEquals
@@ -62,6 +63,7 @@ class WindEstimatorTest {
             on { sinkAtSpeed(10.0) }.thenReturn(1.0)
             on { sinkAtSpeed(10.5) }.thenReturn(1.05)
             on { sinkAtSpeed(11.0) }.thenReturn(1.1)
+            on { iasBoundsMs() }.thenReturn(null)
         }
         val estimator = WindEstimator(sinkProvider)
         val result = estimator.fromPolarSink(

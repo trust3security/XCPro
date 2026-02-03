@@ -274,6 +274,16 @@ private val performanceCards = listOf(
         unitFontSize = 9
     ),
     CardDefinition(
+        id = "levo_netto",
+        title = "LEVO NETTO",
+        description = "Glide-netto (straight flight, distance window)",
+        category = CardCategory.PERFORMANCE,
+        icon = Icons.Filled.Air,
+        unit = "m/s",
+        primaryFontSize = 14,
+        unitFontSize = 9
+    ),
+    CardDefinition(
         id = "ld_curr",
         title = "L/D CURR",
         description = "Current lift to drag ratio",

@@ -8,12 +8,18 @@ import com.example.dfcards.calculations.ConfidenceLevel
 /**
  * PHASE 3: FlightDataProvider - simplified interface (fallback removed)
  *
+ * Legacy in XCPro: cards ingest via CardIngestionCoordinator + FlightDataViewModel.
+ *
  * This composable receives a data provider lambda that emits RealTimeFlightData.
  * The conversion from CompleteFlightData (new system) happens in the app module.
  *
  * FLOW: FlightDataCalculator -> CompleteFlightData -> [Adapter in app module] -> RealTimeFlightData -> Cards
  */
 @Composable
+@Deprecated(
+    "Legacy: XCPro uses CardIngestionCoordinator + FlightDataViewModel.updateCardsWithLiveData",
+    level = DeprecationLevel.WARNING
+)
 fun FlightDataProvider(
     dataProvider: suspend ((RealTimeFlightData) -> Unit) -> Unit,
     onDataReceived: (RealTimeFlightData) -> Unit
@@ -103,7 +109,21 @@ data class RealTimeFlightData(
     // Aircraft heading (degrees, 0 = North). Used to render wind-relative UI (e.g., arrow vs nose).
     val headingDeg: Double = 0.0,
     val headingValid: Boolean = false,
-    val headingSource: String = "UNKNOWN"
+    val headingSource: String = "UNKNOWN",
+    // Levo glide-netto (separate from legacy netto)
+    val levoNetto: Double = 0.0,
+    val levoNettoValid: Boolean = false,
+    val levoNettoHasWind: Boolean = false,
+    val levoNettoHasPolar: Boolean = false,
+    val levoNettoConfidence: Double = 0.0,
+    // Auto-MC and speed-to-fly outputs
+    val autoMacCready: Double = 0.0,
+    val autoMacCreadyValid: Boolean = false,
+    val speedToFlyIas: Double = 0.0,
+    val speedToFlyDelta: Double = 0.0,
+    val speedToFlyValid: Boolean = false,
+    val speedToFlyMcSourceAuto: Boolean = false,
+    val speedToFlyHasPolar: Boolean = false
 )
 
 // PHASE 3: All old calculation classes removed (FlightDataManager, WindData)

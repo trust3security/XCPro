@@ -5,6 +5,7 @@ import com.example.xcpro.audio.AudioFocusManager
 import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.sensors.FlightStateSource
 import com.example.xcpro.sensors.SensorFusionRepository
+import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.sensors.UnifiedSensorManager
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -107,9 +108,14 @@ open class VarioServiceManager @Inject constructor(
             levoVarioPreferencesRepository.config.collectLatest { config ->
                 sensorFusionRepository.setMacCreadySetting(config.macCready)
                 sensorFusionRepository.setMacCreadyRisk(config.macCreadyRisk)
+                sensorFusionRepository.setAutoMcEnabled(config.autoMcEnabled)
                 sensorFusionRepository.updateAudioSettings(config.audioSettings)
             }
         }
+    }
+
+    fun setFlightMode(mode: FlightMode) {
+        sensorFusionRepository.setFlightMode(mode)
     }
 
     private fun observeGpsCadence() {

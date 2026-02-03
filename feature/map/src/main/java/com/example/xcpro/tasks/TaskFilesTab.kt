@@ -1,11 +1,7 @@
 package com.example.xcpro.tasks
 
-import android.content.ContentUris
-import android.content.Context
-import android.net.Uri
-import android.provider.MediaStore
+import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,10 +16,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FolderOpen
@@ -31,6 +25,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -38,6 +33,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -50,41 +46,66 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.collectLatest
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+private const val IMPORT_HELP_MESSAGE = """
+To import tasks:
+
+1. Copy .cup files to Downloads folder
+2. (Optional) Copy .xcp.json files for full-fidelity tasks (OZ + targets)
+3. Files will appear in the Files tab
+4. Tap a file to import it
+
+Supported formats:
+ CUP format (.cup) - waypoints only
+ XCPro JSON (.xcp.json) - preserves task type, OZ, targets
+"""
+
 @Composable
 fun FilesBTTab(
-    taskManager: TaskManagerCoordinator,
     taskViewModel: TaskSheetViewModel,
-    currentQNH: String?,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    var cupFiles by remember { mutableStateOf<List<CupDownloadEntry>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
-    var loadError by remember { mutableStateOf<String?>(null) }
+    val filesViewModel: TaskFilesViewModel = hiltViewModel()
+    val uiState by filesViewModel.uiState.collectAsStateWithLifecycle()
+    var showImportInfo by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        isLoading = true
-        loadError = null
-        val result = runCatching {
-            withContext(Dispatchers.IO) {
-                queryCupDownloads(context)
+    LaunchedEffect(filesViewModel) {
+        filesViewModel.events.collectLatest { event ->
+            when (event) {
+                is TaskFilesEvent.ShowMessage -> {
+                    Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
+                }
+                is TaskFilesEvent.ApplyJson -> {
+                    taskViewModel.importPersistedTask(event.json)
+                }
+                is TaskFilesEvent.Share -> {
+                    shareRequest(context, event.request)
+                }
             }
         }
-        if (result.isSuccess) {
-            cupFiles = result.getOrDefault(emptyList())
-        } else {
-            loadError = result.exceptionOrNull()?.message
-            cupFiles = emptyList()
-        }
-        isLoading = false
+    }
+
+    if (showImportInfo) {
+        AlertDialog(
+            onDismissRequest = { showImportInfo = false },
+            title = { Text("Import Tasks") },
+            text = { Text(IMPORT_HELP_MESSAGE.trimIndent()) },
+            confirmButton = {
+                TextButton(onClick = { showImportInfo = false }) {
+                    Text("OK")
+                }
+            }
+        )
     }
 
     Column(
@@ -100,7 +121,7 @@ fun FilesBTTab(
         )
 
         when {
-            isLoading -> {
+            uiState.isLoading -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -108,28 +129,22 @@ fun FilesBTTab(
                     CircularProgressIndicator()
                 }
             }
-            loadError != null -> ErrorState(loadError ?: "Unable to load Downloads")
-            cupFiles.isEmpty() -> EmptyState(context)
+            uiState.errorMessage != null -> ErrorState(uiState.errorMessage ?: "Unable to load Downloads")
+            uiState.files.isEmpty() -> EmptyState(onShowImportInfo = { showImportInfo = true })
             else -> {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(
-                        items = cupFiles,
-                        key = { it.uri.toString() }
+                        items = uiState.files,
+                        key = { it.document.uri }
                     ) { entry ->
-                    CupTaskFileCard(
-                        entry = entry,
-                        onImport = { selected ->
-                            val imported = TaskFileOperations.importTaskFile(context, selected.uri, taskManager, taskViewModel)
-                            android.widget.Toast.makeText(
-                                context,
-                                if (imported) "Imported ${selected.displayName}" else "Import failed for ${selected.displayName}",
-                                android.widget.Toast.LENGTH_SHORT
-                            ).show()
-                        }
-                    )
+                        CupTaskFileCard(
+                            entry = entry,
+                            onImport = { selected -> filesViewModel.importTaskFile(selected.document) },
+                            onShare = { selected -> filesViewModel.shareFile(selected.document, selected.displayName) }
+                        )
+                    }
                 }
             }
-        }
         }
     }
 }
@@ -154,13 +169,13 @@ private fun ErrorState(message: String) {
             text = message,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.error,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            textAlign = TextAlign.Center
         )
     }
 }
 
 @Composable
-private fun EmptyState(context: Context) {
+private fun EmptyState(onShowImportInfo: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -187,12 +202,12 @@ private fun EmptyState(context: Context) {
             text = "Copy .cup files to Downloads folder",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            textAlign = TextAlign.Center
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        OutlinedButton(onClick = { TaskFileOperations.showImportInfo(context) }) {
+        OutlinedButton(onClick = onShowImportInfo) {
             Icon(Icons.Default.Info, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
             Text("Import Help")
@@ -203,9 +218,9 @@ private fun EmptyState(context: Context) {
 @Composable
 private fun CupTaskFileCard(
     entry: CupDownloadEntry,
-    onImport: (CupDownloadEntry) -> Unit
+    onImport: (CupDownloadEntry) -> Unit,
+    onShare: (CupDownloadEntry) -> Unit
 ) {
-    val context = LocalContext.current
     var showActions by remember { mutableStateOf(false) }
 
     Card(
@@ -274,7 +289,7 @@ private fun CupTaskFileCard(
                     }
 
                     OutlinedButton(
-                        onClick = { TaskFileOperations.shareTask(context, entry.uri, entry.displayName) },
+                        onClick = { onShare(entry) },
                         modifier = Modifier.weight(1f)
                     ) {
                         Icon(Icons.Default.Share, contentDescription = null)
@@ -296,42 +311,4 @@ private fun formatFileSize(bytes: Long): String {
         val megaBytes = kiloBytes / 1024.0
         "Size: ${String.format(Locale.getDefault(), "%.2f MB", megaBytes)}"
     }
-}
-
-private fun queryCupDownloads(context: Context): List<CupDownloadEntry> {
-    val resolver = context.contentResolver
-    val collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI
-    val projection = arrayOf(
-        MediaStore.Downloads._ID,
-        MediaStore.Downloads.DISPLAY_NAME,
-        MediaStore.Downloads.SIZE,
-        MediaStore.Downloads.DATE_MODIFIED
-    )
-    val selection = "${MediaStore.Downloads.DISPLAY_NAME} LIKE ? OR ${MediaStore.Downloads.DISPLAY_NAME} LIKE ?"
-    val selectionArgs = arrayOf("%.cup", "%.xcp.json")
-    val sortOrder = "${MediaStore.Downloads.DATE_MODIFIED} DESC"
-
-    val entries = mutableListOf<CupDownloadEntry>()
-    resolver.query(collection, projection, selection, selectionArgs, sortOrder)?.use { cursor ->
-        val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Downloads._ID)
-        val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Downloads.DISPLAY_NAME)
-        val sizeColumn = cursor.getColumnIndexOrThrow(MediaStore.Downloads.SIZE)
-        val modifiedColumn = cursor.getColumnIndexOrThrow(MediaStore.Downloads.DATE_MODIFIED)
-
-        while (cursor.moveToNext()) {
-            val name = cursor.getString(nameColumn) ?: continue
-            val id = cursor.getLong(idColumn)
-            val size = cursor.getLong(sizeColumn).coerceAtLeast(0L)
-            val modifiedSeconds = cursor.getLong(modifiedColumn).coerceAtLeast(0L)
-
-            entries += CupDownloadEntry(
-                uri = ContentUris.withAppendedId(collection, id),
-                displayName = name,
-                sizeBytes = size,
-                lastModifiedEpochMillis = if (modifiedSeconds > 0) modifiedSeconds * 1000 else 0L
-            )
-        }
-    }
-
-    return entries
 }

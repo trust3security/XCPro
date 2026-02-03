@@ -30,8 +30,7 @@ internal data class MapScreenBindings(
     val savedZoom: Double?,
     val savedBearing: Double?,
     val hasInitiallyCentered: Boolean,
-    val showDistanceCircles: Boolean,
-    val cardHydrationReady: Boolean
+    val showDistanceCircles: Boolean
 )
 
 @Composable
@@ -56,7 +55,6 @@ internal fun rememberMapScreenBindings(
     val savedBearing by mapStateReader.savedBearing.collectAsStateWithLifecycle()
     val hasInitiallyCentered by mapStateReader.hasInitiallyCentered.collectAsStateWithLifecycle()
     val showDistanceCircles by mapStateReader.showDistanceCircles.collectAsStateWithLifecycle()
-    val cardHydrationReady by mapViewModel.cardHydrationReady.collectAsStateWithLifecycle()
 
     return MapScreenBindings(
         gpsStatus = gpsStatus,
@@ -75,7 +73,6 @@ internal fun rememberMapScreenBindings(
         savedZoom = savedZoom,
         savedBearing = savedBearing,
         hasInitiallyCentered = hasInitiallyCentered,
-        showDistanceCircles = showDistanceCircles,
-        cardHydrationReady = cardHydrationReady
+        showDistanceCircles = showDistanceCircles
     )
 }

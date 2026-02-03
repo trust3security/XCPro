@@ -18,6 +18,7 @@ import com.example.xcpro.common.geo.GeoPoint
 import com.example.xcpro.sensors.domain.CalculateFlightMetricsUseCase
 import com.example.xcpro.sensors.domain.FlightMetricsRequest
 import com.example.xcpro.sensors.domain.WindEstimator
+import com.example.xcpro.common.flight.FlightMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -45,6 +46,7 @@ private fun varioSample(vs: Double, alt: Double) = ModernVarioResult(
 private fun newUseCase(): CalculateFlightMetricsUseCase {
     val sink = mock<StillAirSinkProvider> {
         on { sinkAtSpeed(any()) }.thenReturn(0.0)
+        on { iasBoundsMs() }.thenReturn(null)
     }
     val helpers = mock<FlightCalculationHelpers>()
     whenever(helpers.calculateNetto(any(), anyOrNull(), any(), any())).thenReturn(
@@ -89,7 +91,10 @@ class LevoVarioPipelineTest {
                 baroResult = null,
                 windState = null,
                 varioValidUntil = time + 500,
-                isFlying = true
+                isFlying = true,
+                macCreadySetting = 0.0,
+                autoMcEnabled = false,
+                flightMode = FlightMode.CRUISE
             )
         )
 
@@ -107,7 +112,10 @@ class LevoVarioPipelineTest {
                     baroResult = null,
                     windState = null,
                     varioValidUntil = time + 500,
-                    isFlying = true
+                    isFlying = true,
+                    macCreadySetting = 0.0,
+                    autoMcEnabled = false,
+                    flightMode = FlightMode.CRUISE
                 )
             )
             time += 1_000

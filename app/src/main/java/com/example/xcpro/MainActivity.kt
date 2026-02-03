@@ -2,7 +2,6 @@ package com.example.xcpro
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.content.Context
 import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
@@ -24,9 +23,11 @@ import androidx.lifecycle.lifecycleScope
 import android.widget.Toast
 import com.example.xcpro.screens.navdrawer.lookandfeel.StatusBarStyle
 import com.example.xcpro.screens.navdrawer.lookandfeel.StatusBarStyleApplier
+import com.example.xcpro.screens.navdrawer.lookandfeel.LookAndFeelPreferences
 import com.example.xcpro.ui.theme.Baseui1Theme
 import com.example.xcpro.service.VarioForegroundService
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
@@ -37,6 +38,9 @@ private const val SPLASH_HOLD_DURATION_MS = 2_000L
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity(), StatusBarStyleApplier {
+
+    @Inject
+    lateinit var lookAndFeelPreferences: LookAndFeelPreferences
 
     private var currentProfileId: String? = null
     private var hasStartedVarioService = false
@@ -111,9 +115,8 @@ class MainActivity : ComponentActivity(), StatusBarStyleApplier {
         Log.d(TAG, "applyUserStatusBarStyle: profile=$profileId")
 
         try {
-            val sharedPrefs = getSharedPreferences("LookAndFeelPrefs", Context.MODE_PRIVATE)
             val styleId = profileId?.let {
-                sharedPrefs.getString("profile_${it}_status_bar_style", StatusBarStyle.TRANSPARENT.id)
+                lookAndFeelPreferences.getStatusBarStyleId(it)
             } ?: StatusBarStyle.TRANSPARENT.id
 
             val selectedStyle = StatusBarStyle.values().find { it.id == styleId } ?: StatusBarStyle.TRANSPARENT

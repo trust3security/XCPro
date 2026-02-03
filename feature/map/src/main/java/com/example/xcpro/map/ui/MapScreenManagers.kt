@@ -16,6 +16,8 @@ import com.example.xcpro.map.MapTaskScreenManager
 import com.example.xcpro.map.trail.SnailTrailManager
 import com.example.xcpro.map.ui.widgets.MapUIWidgetManager
 import com.example.xcpro.replay.IgcReplayController
+import com.example.xcpro.airspace.AirspaceUseCase
+import com.example.xcpro.flightdata.WaypointFilesUseCase
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.vario.VarioServiceManager
 import com.example.xcpro.MapOrientationManager
@@ -43,7 +45,9 @@ internal fun rememberMapScreenManagers(
     orientationManager: MapOrientationManager,
     varioServiceManager: VarioServiceManager,
     igcReplayController: IgcReplayController,
-    coroutineScope: CoroutineScope
+    coroutineScope: CoroutineScope,
+    airspaceUseCase: AirspaceUseCase,
+    waypointFilesUseCase: WaypointFilesUseCase
 ): MapScreenManagers {
     val snailTrailManager = remember(mapState, context) {
         SnailTrailManager(context, mapState)
@@ -56,7 +60,9 @@ internal fun rememberMapScreenManagers(
         mapStateReader,
         mapStateActions,
         snailTrailManager,
-        coroutineScope
+        coroutineScope,
+        airspaceUseCase,
+        waypointFilesUseCase
     ) {
         MapOverlayManager(
             context,
@@ -65,15 +71,14 @@ internal fun rememberMapScreenManagers(
             taskManager,
             mapStateActions,
             snailTrailManager,
-            coroutineScope
+            coroutineScope,
+            airspaceUseCase,
+            waypointFilesUseCase
         )
     }
 
-    val widgetPrefs = remember(context) {
-        context.getSharedPreferences(MAP_PREFS_NAME, Context.MODE_PRIVATE)
-    }
-    val widgetManager = remember(mapState, widgetPrefs) {
-        MapUIWidgetManager(mapState, widgetPrefs)
+    val widgetManager = remember(mapState) {
+        MapUIWidgetManager(mapState)
     }
 
     val taskScreenManager = remember(mapState, taskManager) {
@@ -124,7 +129,9 @@ internal fun rememberMapScreenManagers(
         taskManager,
         context,
         coroutineScope,
-        snailTrailManager
+        snailTrailManager,
+        airspaceUseCase,
+        waypointFilesUseCase
     ) {
         MapInitializer(
             context = context,
@@ -134,7 +141,9 @@ internal fun rememberMapScreenManagers(
             orientationManager = orientationManager,
             taskManager = taskManager,
             snailTrailManager = snailTrailManager,
-            coroutineScope = coroutineScope
+            coroutineScope = coroutineScope,
+            airspaceUseCase = airspaceUseCase,
+            waypointFilesUseCase = waypointFilesUseCase
         )
     }
 
@@ -150,5 +159,3 @@ internal fun rememberMapScreenManagers(
         mapInitializer = mapInitializer
     )
 }
-
-private const val MAP_PREFS_NAME = "MapPrefs"

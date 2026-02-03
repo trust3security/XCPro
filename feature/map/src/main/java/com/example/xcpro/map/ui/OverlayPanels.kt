@@ -20,6 +20,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.zIndex
 import android.util.Log
+import androidx.compose.material3.MaterialTheme
 import com.example.xcpro.common.units.SpeedMs
 import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.VerticalSpeedMs
@@ -51,6 +52,7 @@ internal fun BallastPanel(
     ballastOffset: androidx.compose.runtime.MutableState<Offset>,
     screenWidthPx: Float,
     screenHeightPx: Float,
+    onOffsetChange: (Offset) -> Unit,
     onBallastCommand: (BallastCommand) -> Unit,
     isUiEditMode: Boolean,
     modifier: Modifier = Modifier
@@ -76,7 +78,7 @@ internal fun BallastPanel(
             ballastOffset = ballastOffset.value,
             screenWidthPx = screenWidthPx,
             screenHeightPx = screenHeightPx,
-            onOffsetChange = { offset -> ballastOffset.value = offset },
+            onOffsetChange = onOffsetChange,
             isEditMode = isUiEditMode
         )
     }
@@ -104,7 +106,7 @@ internal fun VariometerPanel(
     val needleVario by flightDataManager.needleVarioFlow.collectAsStateWithLifecycle()
     val fastNeedleVario by flightDataManager.fastNeedleVarioFlow.collectAsStateWithLifecycle()
     val audioNeedleVario by flightDataManager.audioNeedleVarioFlow.collectAsStateWithLifecycle()
-    val baselineDisplayVario by flightDataManager.baselineDisplayVarioFlow.collectAsStateWithLifecycle()
+    val liveFlightData by flightDataManager.liveFlightDataFlow.collectAsStateWithLifecycle()
     val windSpeed by flightDataManager.windSpeedDisplayFlow.collectAsStateWithLifecycle()
     val unitsPreferences = flightDataManager.unitsPreferences
     val displayVarioUnits by remember(displayNumericVario, unitsPreferences) {
@@ -156,12 +158,36 @@ internal fun VariometerPanel(
             )
         }
     }
-    val baselineFormatted by remember(baselineDisplayVario, unitsPreferences) {
+    val levoNettoLabel by remember(liveFlightData, unitsPreferences) {
         derivedStateOf {
-            UnitsFormatter.verticalSpeed(
-                VerticalSpeedMs(baselineDisplayVario.toDouble()),
-                unitsPreferences
-            )
+            val sample = liveFlightData
+            val hasWind = sample?.levoNettoHasWind == true
+            val hasPolar = sample?.levoNettoHasPolar == true
+            when {
+                !hasWind -> "NO WIND"
+                !hasPolar -> "NO POLAR"
+                sample == null -> "--"
+                else -> {
+                    val formatted = UnitsFormatter.verticalSpeed(
+                        VerticalSpeedMs(sample.levoNetto),
+                        unitsPreferences
+                    )
+                    stripUnit(formatted)
+                }
+            }
+        }
+    }
+    val errorColor = MaterialTheme.colorScheme.error
+    val levoNettoLabelColor by remember(liveFlightData, errorColor) {
+        derivedStateOf {
+            val sample = liveFlightData
+            val hasWind = sample?.levoNettoHasWind == true
+            val hasPolar = sample?.levoNettoHasPolar == true
+            if (!hasWind || !hasPolar) {
+                errorColor
+            } else {
+                null
+            }
         }
     }
     val windSpeedLabel by remember(windSpeed, unitsPreferences, windArrowState.isValid, showWindSpeedOnVario) {
@@ -184,7 +210,8 @@ internal fun VariometerPanel(
         audioNeedleValue = audioNeedleVario,
         displayValue = displayVarioUnits.toFloat(),
         displayLabel = stripUnit(varioFormatted),
-        secondaryLabel = stripUnit(baselineFormatted),
+        secondaryLabel = levoNettoLabel,
+        secondaryLabelColor = levoNettoLabelColor,
         dialConfig = dialConfig,
         windDirectionScreenDeg = windArrowState.directionScreenDeg,
         windIsValid = windArrowState.isValid,

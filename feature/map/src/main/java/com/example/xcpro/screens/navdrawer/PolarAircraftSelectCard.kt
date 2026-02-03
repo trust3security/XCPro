@@ -15,19 +15,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.xcpro.glider.GliderRepository
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.example.xcpro.glider.GliderViewModel
 
 @Composable
 fun AircraftSelectCard() {
-    val context = LocalContext.current
-    val repo = remember(context) { GliderRepository.getInstance(context) }
-    val selected by repo.selectedModel.collectAsStateWithLifecycle(initialValue = null)
-    val models = repo.listModels()
+    val viewModel: GliderViewModel = hiltViewModel()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val selected = uiState.selectedModel
+    val models = uiState.models
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -59,7 +58,7 @@ fun AircraftSelectCard() {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { repo.selectModelById(model.id) }
+                            .clickable { viewModel.selectModel(model.id) }
                             .padding(vertical = 8.dp)
                     ) {
                         Text(

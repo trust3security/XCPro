@@ -1,6 +1,5 @@
 package com.example.xcpro.screens.navdrawer
 
-import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,7 +13,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
@@ -39,19 +37,17 @@ import org.json.JSONObject
 fun ColorsScreen(
     navController: NavHostController
 ) {
-    val context = LocalContext.current
     val profileViewModel: ProfileViewModel = hiltViewModel()
+    val colorsViewModel: ColorsViewModel = hiltViewModel()
     val profileUiState by profileViewModel.uiState.collectAsStateWithLifecycle()
     val profileId = profileUiState.activeProfile?.id ?: "default"
+    LaunchedEffect(profileId) {
+        colorsViewModel.setProfileId(profileId)
+    }
 
-    // Load current theme
-    val sharedPrefs = remember { context.getSharedPreferences("ColorThemePrefs", Context.MODE_PRIVATE) }
-    var selectedTheme by remember(profileId) {
-        mutableStateOf(
-            AppColorTheme.values().find {
-                it.id == sharedPrefs.getString("profile_${profileId}_color_theme", AppColorTheme.DEFAULT.id)
-            } ?: AppColorTheme.DEFAULT
-        )
+    val colorsUiState by colorsViewModel.uiState.collectAsStateWithLifecycle()
+    val selectedTheme = remember(colorsUiState.themeId) {
+        AppColorTheme.values().find { it.id == colorsUiState.themeId } ?: AppColorTheme.DEFAULT
     }
 
     var showColorEditor by remember(profileId) { mutableStateOf(false) } // Keep state across theme changes
@@ -62,8 +58,8 @@ fun ColorsScreen(
     var currentSecondary by remember { mutableStateOf(selectedTheme.secondaryColor) }
 
     // Load custom colors for the selected theme
-    LaunchedEffect(profileId, selectedTheme) {
-        val customColors = loadCustomColors(context, profileId, selectedTheme.id)
+    LaunchedEffect(profileId, selectedTheme, colorsUiState.customColorsJson) {
+        val customColors = parseCustomColors(colorsUiState.customColorsJson)
         if (customColors != null) {
             Log.d("ColorsScreen", " Loading custom colors for theme ${selectedTheme.id}")
             try {
@@ -73,7 +69,7 @@ fun ColorsScreen(
             } catch (e: Exception) {
                 Log.e("ColorsScreen", " Error loading custom colors: ${e.message}")
                 // Clear broken custom colors and reset to defaults
-                removeCustomColors(context, profileId, selectedTheme.id)
+                colorsViewModel.setCustomColorsJson(selectedTheme.id, null)
                 currentPrimary = selectedTheme.primaryColor
                 currentSecondary = selectedTheme.secondaryColor
             }
@@ -164,8 +160,7 @@ fun ColorsScreen(
                             theme = theme,
                             isSelected = selectedTheme == theme,
                             onClick = {
-                                selectedTheme = theme
-                                saveColorTheme(context, profileId, theme)
+                                colorsViewModel.setThemeId(theme.id)
                                 // DON'T close the bottom sheet - keep it open for more selections
                             }
                         )
@@ -184,7 +179,7 @@ fun ColorsScreen(
                 val customColors = CustomColorScheme.fromColors(
                     currentPrimary, selectedTheme.secondaryColor
                 )
-                saveCustomColors(context, profileId, customColors, selectedTheme.id)
+                colorsViewModel.setCustomColorsJson(selectedTheme.id, customColorsToJson(customColors))
             }
         ) {
             // Add top padding to avoid overlapping with the top bar
@@ -203,14 +198,14 @@ fun ColorsScreen(
                             currentPrimary, selectedTheme.secondaryColor // Use theme default for secondary
                         )
                         Log.d("ColorsScreen", " About to save ${selectedColorType.uppercase()} change for profile=$profileId, theme=${selectedTheme.id}")
-                        saveCustomColors(context, profileId, customColors, selectedTheme.id)
+                        colorsViewModel.setCustomColorsJson(selectedTheme.id, customColorsToJson(customColors))
                     },
                     onSave = {
                         // Manual close button - close the sheet
                         val customColors = CustomColorScheme.fromColors(
                             currentPrimary, selectedTheme.secondaryColor
                         )
-                        saveCustomColors(context, profileId, customColors, selectedTheme.id)
+                        colorsViewModel.setCustomColorsJson(selectedTheme.id, customColorsToJson(customColors))
                         showColorEditor = false
                     },
                     onReset = {
@@ -218,7 +213,7 @@ fun ColorsScreen(
                     },
                     onCancel = {
                         // Reload original colors
-                        val customColors = loadCustomColors(context, profileId, selectedTheme.id)
+                        val customColors = parseCustomColors(colorsUiState.customColorsJson)
                         if (customColors != null) {
                             currentPrimary = customColors.toPrimaryColor()
                             currentSecondary = customColors.toSecondaryColor()
@@ -234,41 +229,9 @@ fun ColorsScreen(
     }
 }
 
-// ==================== PERSISTENCE FUNCTIONS ====================
+// ==================== JSON HELPERS ====================
 
-/** Save selected color theme to preferences */
-private fun saveColorTheme(context: Context, profileId: String, theme: AppColorTheme) {
-    val sharedPrefs = context.getSharedPreferences("ColorThemePrefs", Context.MODE_PRIVATE)
-    sharedPrefs.edit()
-        .putString("profile_${profileId}_color_theme", theme.id)
-        .apply()
-}
-
-/** Save custom colors for a theme */
-private fun saveCustomColors(context: Context, profileId: String, colors: CustomColorScheme, themeId: String) {
-    val sharedPrefs = context.getSharedPreferences("ColorThemePrefs", Context.MODE_PRIVATE)
-    val json = JSONObject().apply {
-        put("primaryColor", colors.primaryColor)
-        put("secondaryColor", colors.secondaryColor)
-    }
-    val key = "profile_${profileId}_theme_${themeId}_custom_colors"
-    Log.d("ColorsScreen", " Saving custom colors for profile=$profileId, theme=$themeId")
-    Log.d("ColorsScreen", " Key: $key")
-    Log.d("ColorsScreen", " Colors: ${json.toString()}")
-
-    sharedPrefs.edit()
-        .putString(key, json.toString())
-        .apply()
-
-    // Verify save
-    val saved = sharedPrefs.getString(key, null)
-    Log.d("ColorsScreen", " Verified saved: $saved")
-}
-
-/** Load custom colors for a theme */
-private fun loadCustomColors(context: Context, profileId: String, themeId: String): CustomColorScheme? {
-    val sharedPrefs = context.getSharedPreferences("ColorThemePrefs", Context.MODE_PRIVATE)
-    val jsonString = sharedPrefs.getString("profile_${profileId}_theme_${themeId}_custom_colors", null)
+private fun parseCustomColors(jsonString: String?): CustomColorScheme? {
     return jsonString?.let {
         try {
             val json = JSONObject(it)
@@ -282,10 +245,10 @@ private fun loadCustomColors(context: Context, profileId: String, themeId: Strin
     }
 }
 
-/** Remove custom colors for a theme */
-private fun removeCustomColors(context: Context, profileId: String, themeId: String) {
-    val sharedPrefs = context.getSharedPreferences("ColorThemePrefs", Context.MODE_PRIVATE)
-    sharedPrefs.edit()
-        .remove("profile_${profileId}_theme_${themeId}_custom_colors")
-        .apply()
+private fun customColorsToJson(colors: CustomColorScheme): String {
+    val json = JSONObject().apply {
+        put("primaryColor", colors.primaryColor)
+        put("secondaryColor", colors.secondaryColor)
+    }
+    return json.toString()
 }

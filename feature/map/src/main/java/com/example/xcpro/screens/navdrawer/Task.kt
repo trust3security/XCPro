@@ -1,47 +1,37 @@
 package com.example.ui1.screens
 
-import android.net.Uri
 import com.example.xcpro.core.common.logging.AppLogger
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material3.DrawerState
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import com.example.xcpro.airspace.AirspaceViewModel
 import com.example.xcpro.common.flight.FlightMode
-import com.example.xcpro.AirspaceRepository
-import com.example.xcpro.copyFileToInternalStorage
+import com.example.xcpro.flightdata.WaypointsViewModel
 import com.example.xcpro.loadAndApplyAirspace
 import com.example.xcpro.loadAndApplyWaypoints
-import com.example.xcpro.loadWaypointFiles
-import com.example.xcpro.saveWaypointFiles
-import com.example.xcpro.screens.navdrawer.tasks.TaskAirspaceClassCard
 import com.example.xcpro.screens.navdrawer.tasks.TaskFilesBottomBar
 import com.example.xcpro.screens.navdrawer.tasks.TaskFilesBottomSheetContent
+import com.example.xcpro.map.ui.documentRefForUri
+import com.example.xcpro.di.MapUseCaseEntryPoint
 import com.example.ui1.icons.Reply_all
+import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.launch
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -50,18 +40,8 @@ import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.gestures.MoveGestureDetector
 import org.maplibre.android.gestures.StandardScaleGestureDetector
-import java.io.File
 
-import androidx.compose.foundation.border
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
 
 private const val TAG = "TaskScreen"
 private const val SWIPE_COOLDOWN_MS = 300L
@@ -85,13 +65,14 @@ fun Task(
     val scope = rememberCoroutineScope()
     var selectedItem by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
-    val airspaceRepository = remember(context) { AirspaceRepository(context) }
-    val selectedAirspaceFiles = remember { mutableStateListOf<Uri>() }
-    val airspaceCheckedStates = remember { mutableStateOf(mutableMapOf<String, Boolean>()) }
-    val selectedWaypointFiles = remember { mutableStateListOf<Uri>() }
-    val waypointCheckedStates = remember { mutableStateOf(mutableMapOf<String, Boolean>()) }
-    val selectedClasses = remember { mutableStateOf(mutableMapOf<String, Boolean>()) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    val airspaceViewModel: AirspaceViewModel = hiltViewModel()
+    val waypointsViewModel: WaypointsViewModel = hiltViewModel()
+    val airspaceState by airspaceViewModel.uiState.collectAsStateWithLifecycle()
+    val waypointsState by waypointsViewModel.uiState.collectAsStateWithLifecycle()
+    val entryPoint = remember(context) {
+        EntryPointAccessors.fromApplication(context, MapUseCaseEntryPoint::class.java)
+    }
+    val airspaceUseCase = remember(entryPoint) { entryPoint.airspaceUseCase() }
     var mapLibreMap by remember { mutableStateOf<MapLibreMap?>(null) }
     var currentMode by remember { mutableStateOf(FlightMode.CRUISE) }
     val modes = FlightMode.values()
@@ -100,79 +81,12 @@ fun Task(
     var targetZoom by remember { mutableStateOf<Float?>(null) }
     var targetLatLng by remember { mutableStateOf<LatLng?>(null) }
 
-    LaunchedEffect(Unit) {
-        val (airspaceFiles, airspaceChecks) = airspaceRepository.loadAirspaceFiles()
-        val (waypointFiles, waypointChecks) = loadWaypointFiles(context)
-        selectedAirspaceFiles.clear()
-        selectedAirspaceFiles.addAll(airspaceFiles)
-        airspaceCheckedStates.value = airspaceChecks
-        selectedWaypointFiles.clear()
-        selectedWaypointFiles.addAll(waypointFiles)
-        waypointCheckedStates.value = waypointChecks
-        selectedClasses.value = airspaceRepository.loadSelectedClasses() ?: mutableMapOf()
-    }
-
     val airspaceFilePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        uri?.let {
-            scope.launch {
-                try {
-                    val fileName = copyFileToInternalStorage(context, it)
-                    if (!fileName.endsWith(".txt", ignoreCase = true)) {
-                        errorMessage = "Only .txt files are supported for airspace files."
-                        AppLogger.e(TAG, "Selected file is not a .txt file: $fileName")
-                        return@launch
-                    }
-                    if (!selectedAirspaceFiles.any { file -> file.lastPathSegment?.substringAfterLast("/") == fileName }) {
-                        selectedAirspaceFiles.add(Uri.fromFile(File(context.filesDir, fileName)))
-                        airspaceCheckedStates.value = airspaceCheckedStates.value.toMutableMap().apply {
-                            put(fileName, false)
-                        }
-                        airspaceRepository.saveAirspaceFiles(selectedAirspaceFiles, airspaceCheckedStates.value)
-                        val newClasses = airspaceRepository.parseClasses(selectedAirspaceFiles)
-                        selectedClasses.value = selectedClasses.value.toMutableMap().apply {
-                            newClasses.forEach { put(it, it == "R" || it == "D") }
-                        }
-                        airspaceRepository.saveSelectedClasses(selectedClasses.value)
-                        loadAndApplyAirspace(context, mapLibreMap, airspaceRepository)
-                        errorMessage = null
-                    }
-                } catch (e: Exception) {
-                    AppLogger.e(TAG, "Error copying file: ${e.message}")
-                    errorMessage = "Error copying file: ${e.message}"
-                }
-            }
-        }
+        uri?.let { airspaceViewModel.importFile(documentRefForUri(context, it)) }
     }
 
     val waypointFilePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        uri?.let {
-            scope.launch {
-                try {
-                    val fileName = copyFileToInternalStorage(context, it)
-                    if (!fileName.endsWith(".cup", ignoreCase = true)) {
-                        errorMessage = "Only .cup files are supported for waypoint files."
-                        AppLogger.e(TAG, "Selected file is not a .cup file: $fileName")
-                        return@launch
-                    }
-                    if (!selectedWaypointFiles.any { file -> file.lastPathSegment?.substringAfterLast("/") == fileName }) {
-                        selectedWaypointFiles.add(Uri.fromFile(File(context.filesDir, fileName)))
-                        waypointCheckedStates.value = waypointCheckedStates.value.toMutableMap().apply {
-                            put(fileName, true) // Default to checked
-                        }
-                        saveWaypointFiles(context, selectedWaypointFiles, waypointCheckedStates.value)
-                        errorMessage = null
-                        loadAndApplyWaypoints(context, mapLibreMap, selectedWaypointFiles, waypointCheckedStates.value)
-                        AppLogger.d(TAG, "Waypoint file added and saved: $fileName")
-                    } else {
-                        errorMessage = "File already selected: $fileName"
-                        AppLogger.d(TAG, "Duplicate waypoint file ignored: $fileName")
-                    }
-                } catch (e: Exception) {
-                    AppLogger.e(TAG, "Error copying waypoint file: ${e.message}")
-                    errorMessage = "Error copying file: ${e.message}"
-                }
-            }
-        }
+        uri?.let { waypointsViewModel.importFile(documentRefForUri(context, it)) }
     }
 
     val animatedZoom by animateFloatAsState(
@@ -192,6 +106,18 @@ fun Task(
         }
     }
 
+    LaunchedEffect(mapLibreMap, airspaceState.enabledFiles, airspaceState.classStates) {
+        if (mapLibreMap != null) {
+            loadAndApplyAirspace(mapLibreMap, airspaceUseCase)
+        }
+    }
+
+    LaunchedEffect(mapLibreMap, waypointsState.files, waypointsState.checkedStates) {
+        if (mapLibreMap != null) {
+            loadAndApplyWaypoints(context, mapLibreMap, waypointsState.files, waypointsState.checkedStates)
+        }
+    }
+
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
         sheetPeekHeight = if (selectedNavItem == "Files") 0.dp else 0.dp,
@@ -200,17 +126,10 @@ fun Task(
                 TaskFilesBottomSheetContent(
                     selectedItem = selectedItem,
                     onSelectItem = { selectedItem = it },
-                    context = context,
-                    mapLibreMap = mapLibreMap,
                     airspaceFilePickerLauncher = airspaceFilePickerLauncher,
                     waypointFilePickerLauncher = waypointFilePickerLauncher,
-                    errorMessage = errorMessage,
-                    onErrorMessage = { errorMessage = it },
-                    selectedAirspaceFiles = selectedAirspaceFiles,
-                    airspaceCheckedStates = airspaceCheckedStates,
-                    selectedWaypointFiles = selectedWaypointFiles,
-                    waypointCheckedStates = waypointCheckedStates,
-                    selectedClasses = selectedClasses
+                    airspaceViewModel = airspaceViewModel,
+                    waypointsViewModel = waypointsViewModel
                 )
             } else {
                 Box {}
@@ -307,10 +226,10 @@ fun Task(
                                     .zoom(8.0)
                                     .build()
                                 scope.launch {
-                                    loadAndApplyAirspace(ctx, map, airspaceRepository)
+                                    loadAndApplyAirspace(map, airspaceUseCase)
                                 }
                                 scope.launch {
-                                    loadAndApplyWaypoints(ctx, map, selectedWaypointFiles, waypointCheckedStates.value)
+                                    loadAndApplyWaypoints(ctx, map, waypointsState.files, waypointsState.checkedStates)
                                 }
                                 AppLogger.d(TAG, "MapLibre gestures configured: scroll=${map.uiSettings.isScrollGesturesEnabled}, zoom=${map.uiSettings.isZoomGesturesEnabled}")
                             }

@@ -3,6 +3,7 @@ package com.example.xcpro.map.ui
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
+import com.example.xcpro.common.documents.DocumentRef
 
 /**
  * Resolve the display name for a SAF Uri, if present.
@@ -13,3 +14,6 @@ internal fun resolveDisplayName(context: Context, uri: Uri): String? {
         if (nameIndex >= 0 && cursor.moveToFirst()) cursor.getString(nameIndex) else null
     }
 }
+
+internal fun documentRefForUri(context: Context, uri: Uri): DocumentRef =
+    DocumentRef(uri = uri.toString(), displayName = resolveDisplayName(context, uri))

@@ -1,6 +1,5 @@
 package com.example.xcpro.screens.flightdata
 
-import android.content.Context
 import android.util.Log
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
@@ -30,6 +29,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.example.xcpro.common.waypoint.WaypointData
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 private const val TAG = "HomeWaypointSelector"
 
@@ -43,11 +44,12 @@ private const val TAG = "HomeWaypointSelector"
 @Composable
 fun HomeWaypointSelector(
     availableWaypoints: List<WaypointData>,
-    context: Context,
     autoFocus: Boolean = false,
     onAutoFocusConsumed: () -> Unit = {},
     onSearchFocused: () -> Unit = {}
 ) {
+    val homeWaypointViewModel: HomeWaypointViewModel = hiltViewModel()
+    val storedHomeWaypoint by homeWaypointViewModel.homeWaypoint.collectAsStateWithLifecycle()
     var homeWaypointQuery by remember { mutableStateOf("") }
     var selectedHomeWaypoint by remember { mutableStateOf<WaypointData?>(null) }
     var showHomeWaypointDropdown by remember { mutableStateOf(false) }
@@ -67,9 +69,8 @@ fun HomeWaypointSelector(
     }
 
     // Load saved home waypoint on first composition
-    LaunchedEffect(Unit) {
-        val savedHome = loadHomeWaypoint(context)
-        selectedHomeWaypoint = savedHome
+    LaunchedEffect(storedHomeWaypoint) {
+        selectedHomeWaypoint = storedHomeWaypoint
     }
 
     // Filter waypoints - show first 5 alphabetically when empty
@@ -117,7 +118,7 @@ fun HomeWaypointSelector(
                 onDelete = {
                     selectedHomeWaypoint = null
                     homeWaypointQuery = ""
-                    saveHomeWaypoint(context, null)
+                    homeWaypointViewModel.setHomeWaypoint(null)
                     Log.d(TAG, " Home waypoint deleted")
                 }
             )
@@ -136,7 +137,7 @@ fun HomeWaypointSelector(
                     selectedHomeWaypoint = selectedWaypoint
                     homeWaypointQuery = ""
                     showHomeWaypointDropdown = false
-                    saveHomeWaypoint(context, selectedWaypoint)
+                    homeWaypointViewModel.setHomeWaypoint(selectedWaypoint)
                     focusManager.clearFocus()
                     Log.d(TAG, " Home waypoint set to: ${selectedWaypoint.name}")
                 },

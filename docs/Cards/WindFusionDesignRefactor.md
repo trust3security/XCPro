@@ -8,7 +8,7 @@ This plan is incremental and keeps the build green after each step.
 ## Scope
 - Remove wind fields from `CompleteFlightData` and its mappers.
 - Stop reading wind from `CompleteFlightData` in UI and helpers.
-- Ensure UI uses `WindState` exclusively (via `MapScreenObservers.applyWindState`).
+- Ensure UI uses `WindState` exclusively (via `FlightDataUiAdapter`/`MapScreenObservers.applyWindState`).
 
 ## Non-Goals (for this refactor)
 - Full `WindSensorFusionRepository` implementation.
@@ -32,7 +32,7 @@ Steps:
 1) Inventory all reads/writes of wind fields on `CompleteFlightData`.
 2) Inventory all wind mappings in `FlightMetricsResult` and `FlightDisplayMapper`.
 3) Inventory UI consumers reading wind from `CompleteFlightData`.
-4) Identify replacements via `WindState` and `MapScreenObservers.applyWindState`.
+4) Identify replacements via `WindState` and `FlightDataUiAdapter`/`MapScreenObservers.applyWindState`.
 
 Green build:
 - Not required (no code changes).
@@ -40,7 +40,7 @@ Green build:
 ### IM1 - UI Reads Wind Only From WindState (keep old fields temporarily)
 Steps:
 1) Update `convertToRealTimeFlightData` to stop reading wind from `CompleteFlightData`.
-2) Ensure wind values are set only by `MapScreenObservers.applyWindState`.
+2) Ensure wind values are set only by `FlightDataUiAdapter`/`MapScreenObservers.applyWindState`.
 3) Move any heading calculation that depended on `CompleteFlightData` wind to a place
    that has `WindState` available (likely after `applyWindState`).
 
@@ -71,7 +71,7 @@ Green build:
 ### IM4 - Cleanup and Docs
 Steps:
 1) Remove any dead utility methods that only existed for `CompleteFlightData` wind.
-2) Confirm `MapScreenObservers` is the sole wind-to-UI adapter.
+2) Confirm `FlightDataUiAdapter`/`MapScreenObservers` is the sole wind-to-UI adapter.
 3) Update `WindFusionDesign.md` (or a follow-up note) to confirm wind SSOT is now only `WindState`.
 
 Green build:
@@ -87,7 +87,7 @@ Green build:
 
 ## Current Implementation Status (as of 2026-01-06)
 - Wind SSOT is live: `WindSensorFusionRepository` is wired and consumes raw sensor primitives via `WindSensorInputAdapter`.
-- Wind is no longer carried on `CompleteFlightData`; UI derives wind from `WindState` only (via `MapScreenObservers.applyWindState`).
+- Wind is no longer carried on `CompleteFlightData`; UI derives wind from `WindState` only (via `FlightDataUiAdapter`/`MapScreenObservers.applyWindState`).
 - G-load gating (Option B) is implemented using raw accelerometer magnitude with smoothing and EKF blackout.
 - Replay/live source switching resets wind buffers and uses replay timestamps for determinism.
 - Wind domain pieces exist (circling estimator, EKF, store, weighted list) with EKF direct-use; EKF only produces output when TAS is supplied.

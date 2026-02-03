@@ -214,14 +214,14 @@ internal class FlightCalculationHelpers(
      */
     fun calculateNetto(
         currentVerticalSpeed: Double,
-        trueAirspeed: Double?,
+        indicatedAirspeed: Double?,
         fallbackGroundSpeed: Double,
         timestampMillis: Long
     ): NettoComputation {
         val now = timestampMillis
-        val tasCandidate = trueAirspeed?.takeIf { it.isFinite() && it > MIN_MOVING_SPEED_MS }
-        if (tasCandidate != null) {
-            lastValidTAS = tasCandidate
+        val iasCandidate = indicatedAirspeed?.takeIf { it.isFinite() && it > MIN_MOVING_SPEED_MS }
+        if (iasCandidate != null) {
+            lastValidTAS = iasCandidate
             lastSpeedTimestamp = now
         }
 
@@ -233,9 +233,9 @@ internal class FlightCalculationHelpers(
 
         val recentTas = lastValidTAS?.takeIf { now - lastSpeedTimestamp <= SPEED_HOLD_MS && it > MIN_MOVING_SPEED_MS }
         val recentGnd = lastValidGnd?.takeIf { now - lastSpeedTimestamp <= SPEED_HOLD_MS && it > MIN_MOVING_SPEED_MS }
-        val hasRecentMotion = tasCandidate != null || gndCandidate != null || recentTas != null || recentGnd != null
+        val hasRecentMotion = iasCandidate != null || gndCandidate != null || recentTas != null || recentGnd != null
 
-        val speed = tasCandidate
+        val speed = iasCandidate
             ?: recentTas
             ?: gndCandidate
             ?: recentGnd

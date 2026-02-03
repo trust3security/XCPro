@@ -1,6 +1,5 @@
 package com.example.xcpro.tasks
 
-import android.content.Context
 import androidx.compose.animation.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -16,18 +15,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.xcpro.common.waypoint.SearchWaypoint
 import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.common.waypoint.toSearchWaypoint
 import com.example.xcpro.tasks.TaskManagerCoordinator
-import org.json.JSONArray
-import org.json.JSONObject
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,19 +35,18 @@ fun TaskSearchBarsOverlay(
     onClose: () -> Unit,
     onGoto: (SearchWaypoint) -> Unit
 ) {
-    val context = LocalContext.current
+    val viewModel: TaskSearchViewModel = hiltViewModel()
 
     var query by remember { mutableStateOf(TextFieldValue()) }
     var results by remember { mutableStateOf<List<SearchWaypoint>>(emptyList()) }
-    var recentWaypoints by remember { mutableStateOf<List<SearchWaypoint>>(emptyList()) }
+    val recentWaypoints by viewModel.recentWaypoints.collectAsStateWithLifecycle()
 
     // focus + keyboard handling
     val focusRequester = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
     var refocusKey by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(Unit) {
-        recentWaypoints = loadRecentWaypoints(context)
+    LaunchedEffect(recentWaypoints) {
         results = recentWaypoints
     }
 
@@ -178,8 +175,7 @@ fun TaskSearchBarsOverlay(
                                     .clickable {
                                         val newRecentWaypoints =
                                             (listOf(wp) + recentWaypoints.filter { it.id != wp.id }).take(5)
-                                        recentWaypoints = newRecentWaypoints
-                                        saveRecentWaypoints(context, newRecentWaypoints)
+                                        viewModel.recordRecent(wp)
 
                                         taskManager.addWaypoint(wp)
                                         onGoto(wp)
@@ -198,51 +194,6 @@ fun TaskSearchBarsOverlay(
 
         Spacer(modifier = Modifier.weight(1f))
 
-    }
-}
-
-private fun saveRecentWaypoints(context: Context, waypoints: List<SearchWaypoint>) {
-    try {
-        val sharedPrefs = context.getSharedPreferences("RecentWaypoints", Context.MODE_PRIVATE)
-        val json = JSONArray()
-        waypoints.forEach { waypoint ->
-            val waypointJson = JSONObject().apply {
-                put("id", waypoint.id)
-                put("title", waypoint.title)
-                put("subtitle", waypoint.subtitle)
-                put("lat", waypoint.lat)
-                put("lon", waypoint.lon)
-            }
-            json.put(waypointJson)
-        }
-        sharedPrefs.edit()
-            .putString("recent_waypoints", json.toString())
-            .apply()
-    } catch (e: Exception) {
-        println("Error saving recent waypoints: ${e.message}")
-    }
-}
-
-private fun loadRecentWaypoints(context: Context): List<SearchWaypoint> {
-    return try {
-        val sharedPrefs = context.getSharedPreferences("RecentWaypoints", Context.MODE_PRIVATE)
-        val jsonString = sharedPrefs.getString("recent_waypoints", null) ?: return emptyList()
-        val json = JSONArray(jsonString)
-        val waypoints = mutableListOf<SearchWaypoint>()
-        for (i in 0 until json.length()) {
-            val waypointJson = json.getJSONObject(i)
-            val waypoint = SearchWaypoint(
-                id = waypointJson.getString("id"),
-                title = waypointJson.getString("title"),
-                subtitle = waypointJson.getString("subtitle"),
-                lat = waypointJson.getDouble("lat"),
-                lon = waypointJson.getDouble("lon")
-            )
-            waypoints.add(waypoint)
-        }
-        waypoints
-    } catch (e: Exception) {
-        emptyList()
     }
 }
 

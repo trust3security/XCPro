@@ -31,6 +31,7 @@ internal enum class KnownCardId(val raw: String) {
     THERMAL_TC_GAIN("thermal_tc_gain"),
     NETTO("netto"),
     NETTO_AVG30("netto_avg30"),
+    LEVO_NETTO("levo_netto"),
     LD_CURR("ld_curr"),
     MC_SPEED("mc_speed"),
     WIND_SPD("wind_spd"),

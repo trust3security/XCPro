@@ -1,4 +1,4 @@
-package com.example.ui1.screens
+package com.example.xcpro.screens.navdrawer
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,11 +29,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import com.example.dfcards.CardPreferences
 import com.example.dfcards.CardPreferences.CardAnchor
 import com.example.xcpro.screens.navdrawer.SettingsTopAppBar
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -43,21 +43,17 @@ fun LayoutScreen(
     navController: NavHostController,
     drawerState: DrawerState
 ) {
-    val context = LocalContext.current
+    val viewModel: LayoutViewModel = hiltViewModel()
     val scope = rememberCoroutineScope()
-    val cardPreferences = remember { CardPreferences(context) }
-    val storedCardsAcross by cardPreferences.getCardsAcrossPortrait()
-        .collectAsStateWithLifecycle(initialValue = CardPreferences.DEFAULT_CARDS_ACROSS_PORTRAIT)
-    val storedAnchor by cardPreferences.getCardsAnchorPortrait()
-        .collectAsStateWithLifecycle(initialValue = CardPreferences.DEFAULT_ANCHOR_PORTRAIT)
-    var sliderValue by remember { mutableStateOf(storedCardsAcross.toFloat()) }
-    var anchor by remember { mutableStateOf(storedAnchor) }
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var sliderValue by remember { mutableStateOf(uiState.cardsAcrossPortrait.toFloat()) }
+    var anchor by remember { mutableStateOf(uiState.anchorPortrait) }
 
-    LaunchedEffect(storedCardsAcross) {
-        sliderValue = storedCardsAcross.toFloat()
+    LaunchedEffect(uiState.cardsAcrossPortrait) {
+        sliderValue = uiState.cardsAcrossPortrait.toFloat()
     }
-    LaunchedEffect(storedAnchor) {
-        anchor = storedAnchor
+    LaunchedEffect(uiState.anchorPortrait) {
+        anchor = uiState.anchorPortrait
     }
 
     Scaffold(
@@ -119,10 +115,8 @@ fun LayoutScreen(
                                 CardPreferences.MAX_CARDS_ACROSS_PORTRAIT
                             )
                             sliderValue = snapped.toFloat()
-                            if (snapped != storedCardsAcross) {
-                                scope.launch {
-                                    cardPreferences.setCardsAcrossPortrait(snapped)
-                                }
+                            if (snapped != uiState.cardsAcrossPortrait) {
+                                viewModel.setCardsAcrossPortrait(snapped)
                             }
                         },
                         valueRange = CardPreferences.MIN_CARDS_ACROSS_PORTRAIT.toFloat()..
@@ -152,7 +146,7 @@ fun LayoutScreen(
                             selected = anchor == CardAnchor.TOP,
                             onClick = {
                                 anchor = CardAnchor.TOP
-                                scope.launch { cardPreferences.setCardsAnchorPortrait(CardAnchor.TOP) }
+                                viewModel.setAnchorPortrait(CardAnchor.TOP)
                             },
                             modifier = Modifier.weight(1f)
                         )
@@ -162,7 +156,7 @@ fun LayoutScreen(
                             selected = anchor == CardAnchor.BOTTOM,
                             onClick = {
                                 anchor = CardAnchor.BOTTOM
-                                scope.launch { cardPreferences.setCardsAnchorPortrait(CardAnchor.BOTTOM) }
+                                viewModel.setAnchorPortrait(CardAnchor.BOTTOM)
                             },
                             modifier = Modifier.weight(1f)
                         )

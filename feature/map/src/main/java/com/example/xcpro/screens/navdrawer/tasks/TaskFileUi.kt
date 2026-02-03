@@ -1,6 +1,5 @@
 package com.example.xcpro.screens.navdrawer.tasks
 
-import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -16,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.clickable
+import com.example.xcpro.common.documents.DocumentRef
 
 @Composable
 fun ErrorBanner(
@@ -49,8 +49,8 @@ fun ErrorBanner(
 
 @Composable
 fun TaskSelectedFileList(
-    files: MutableList<Uri>,
-    onRemove: (Uri) -> Unit
+    files: List<DocumentRef>,
+    onRemove: (DocumentRef) -> Unit
 ) {
     if (files.isEmpty()) return
 
@@ -60,8 +60,8 @@ fun TaskSelectedFileList(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        files.forEach { fileUri ->
-            val fileName = fileUri.lastPathSegment ?: "Unknown file"
+        files.forEach { document ->
+            val fileName = document.fileName()
             androidx.compose.material.Surface(
                 shape = RoundedCornerShape(10.dp),
                 elevation = 1.dp,
@@ -79,7 +79,7 @@ fun TaskSelectedFileList(
                         text = "Remove",
                         style = MaterialTheme.typography.caption,
                         color = Color.Red,
-                        modifier = Modifier.clickable { onRemove(fileUri) }
+                        modifier = Modifier.clickable { onRemove(document) }
                     )
                 }
             }
