@@ -1,6 +1,7 @@
 package com.example.xcpro.qnh
 
 import com.example.xcpro.common.di.DefaultDispatcher
+import com.example.xcpro.core.time.Clock
 import com.example.xcpro.map.QnhPreferencesRepository
 import com.example.xcpro.vario.VarioServiceManager
 import javax.inject.Inject
@@ -18,7 +19,8 @@ import kotlinx.coroutines.launch
 class QnhRepositoryImpl @Inject constructor(
     private val qnhPreferencesRepository: QnhPreferencesRepository,
     private val varioServiceManager: VarioServiceManager,
-    @DefaultDispatcher private val dispatcher: CoroutineDispatcher
+    @DefaultDispatcher private val dispatcher: CoroutineDispatcher,
+    private val clock: Clock
 ) : QnhRepository {
 
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
@@ -74,7 +76,7 @@ class QnhRepositoryImpl @Inject constructor(
         _qnhState.value = QnhValue(
             hpa = hpa,
             source = QnhSource.MANUAL,
-            calibratedAtMillis = System.currentTimeMillis(),
+            calibratedAtMillis = clock.nowWallMs(),
             confidence = QnhConfidence.HIGH
         )
         _calibrationState.value = QnhCalibrationState.Idle
@@ -88,7 +90,7 @@ class QnhRepositoryImpl @Inject constructor(
         _qnhState.value = QnhValue(
             hpa = DEFAULT_QNH_HPA,
             source = QnhSource.STANDARD,
-            calibratedAtMillis = System.currentTimeMillis(),
+            calibratedAtMillis = clock.nowWallMs(),
             confidence = QnhConfidence.LOW
         )
         _calibrationState.value = QnhCalibrationState.Idle

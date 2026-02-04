@@ -1,13 +1,13 @@
 package com.example.xcpro
 
 import android.hardware.SensorManager
-import android.os.SystemClock
 import android.util.Log
 import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.common.orientation.OrientationSensorData
 import com.example.xcpro.map.config.MapFeatureFlags
 import com.example.xcpro.orientation.HeadingResolver
 import com.example.xcpro.orientation.HeadingResolverInput
+import com.example.xcpro.orientation.OrientationClock
 import com.example.xcpro.sensors.AttitudeData
 import com.example.xcpro.sensors.CompassData
 import com.example.xcpro.sensors.FlightStateSource
@@ -23,7 +23,8 @@ class OrientationDataSource(
     private val unifiedSensorManager: UnifiedSensorManager,
     private val scope: CoroutineScope,
     private val headingResolver: HeadingResolver,
-    private val flightStateSource: FlightStateSource? = null
+    private val flightStateSource: FlightStateSource? = null,
+    private val clock: OrientationClock
 ) : OrientationSensorSource {
 
     private val _orientationFlow = MutableStateFlow(OrientationSensorData())
@@ -133,7 +134,7 @@ class OrientationDataSource(
         lastCompassTime = if (compass.monotonicTimestampMillis > 0L) {
             compass.monotonicTimestampMillis
         } else {
-            SystemClock.elapsedRealtime()
+            clock.nowMonoMs()
         }
         lastCompassReliable = reliable
         lastHeadingInputSource = "COMPASS"
@@ -146,7 +147,7 @@ class OrientationDataSource(
         lastAttitudeTime = if (attitude.monotonicTimestampMillis > 0L) {
             attitude.monotonicTimestampMillis
         } else {
-            SystemClock.elapsedRealtime()
+            clock.nowMonoMs()
         }
         lastAttitudeReliable = attitude.isReliable
         lastHeadingInputSource = "ATTITUDE"
@@ -155,7 +156,7 @@ class OrientationDataSource(
     }
 
     private fun updateCompassHeading(newHeading: Double, reliable: Boolean) {
-        val now = SystemClock.elapsedRealtime()
+        val now = clock.nowMonoMs()
 
         if (hasCompassHeading && now - lastCompassUpdateTime < HEADING_UPDATE_INTERVAL_MS) {
             updateCompassReliability(now, reliable)
@@ -176,7 +177,7 @@ class OrientationDataSource(
     }
 
     private fun updateAttitudeHeading(newHeading: Double, reliable: Boolean) {
-        val now = SystemClock.elapsedRealtime()
+        val now = clock.nowMonoMs()
 
         if (hasAttitudeHeading && now - lastAttitudeUpdateTime < HEADING_UPDATE_INTERVAL_MS) {
             updateAttitudeReliability(now, reliable)
@@ -197,8 +198,8 @@ class OrientationDataSource(
     }
 
     private fun updateOrientationData() {
-        val nowMono = SystemClock.elapsedRealtime()
-        val nowWall = System.currentTimeMillis()
+        val nowMono = clock.nowMonoMs()
+        val nowWall = clock.nowWallMs()
         val allowDeviceHeading = MapFeatureFlags.allowHeadingWhileStationary ||
             isFlying ||
             currentFlightData.groundSpeed >= minSpeedThresholdMs

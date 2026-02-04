@@ -176,14 +176,15 @@ object AATMapCoordinateConverterFactory {
     fun createTapDetails(
         screenX: Float,
         screenY: Float,
-        converter: AATMapCoordinateConverter
+        converter: AATMapCoordinateConverter,
+        timestampMs: Long = android.os.SystemClock.elapsedRealtime()
     ): AATMapTapDetails? {
         val mapCoords = converter.screenToMap(screenX, screenY) ?: return null
 
         return AATMapTapDetails(
             screenCoordinates = PointF(screenX, screenY),
             mapCoordinates = mapCoords,
-            timestamp = System.currentTimeMillis(),
+            timestamp = timestampMs,
             zoomLevel = converter.getCurrentZoom(),
             metersPerPixel = converter.getMetersPerPixel()
         )

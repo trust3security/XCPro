@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="800" viewBox="0 0 1400 800">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L10,3 L0,6 Z" fill="#333333"/>
+    </marker>
+    <style>
+      .box { fill: #f7f7f7; stroke: #333333; stroke-width: 2; }
+      .dashed { fill: none; stroke: #333333; stroke-width: 2; stroke-dasharray: 6 4; }
+      .label { font-family: Arial, sans-serif; font-size: 16px; fill: #111111; }
+      .small { font-size: 14px; }
+      .title { font-size: 18px; font-weight: bold; }
+      .line { stroke: #333333; stroke-width: 2; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <!-- Top row -->
+  <rect class="box" x="50" y="40" width="260" height="70"/>
+  <text class="label title" x="70" y="70">Sensors</text>
+  <text class="label small" x="70" y="92">baro, IMU, GNSS</text>
+
+  <rect class="box" x="350" y="40" width="380" height="70"/>
+  <text class="label title" x="370" y="70">SensorRegistry</text>
+  <text class="label small" x="370" y="92">UnifiedSensorManager</text>
+
+  <rect class="box" x="770" y="40" width="260" height="70"/>
+  <text class="label title" x="790" y="70">ReplaySensorSource</text>
+  <text class="label small" x="790" y="92">IGC timebase</text>
+
+  <line class="line" x1="310" y1="75" x2="350" y2="75"/>
+  <line class="line" x1="770" y1="75" x2="730" y2="75"/>
+
+  <!-- Left pipeline: Existing TE (unchanged) -->
+  <rect class="box" x="120" y="180" width="320" height="60"/>
+  <text class="label title" x="140" y="215">Existing TE Pipeline</text>
+  <text class="label small" x="140" y="235">(unchanged)</text>
+
+  <rect class="box" x="120" y="280" width="320" height="60"/>
+  <text class="label title" x="140" y="315">FlightDataRepository</text>
+  <text class="label small" x="140" y="335">(SSOT)</text>
+
+  <rect class="box" x="120" y="380" width="320" height="60"/>
+  <text class="label title" x="140" y="415">UI + Audio</text>
+  <text class="label small" x="140" y="435">TE default</text>
+
+  <line class="line" x1="540" y1="110" x2="280" y2="180"/>
+  <line class="line" x1="280" y1="240" x2="280" y2="280"/>
+  <line class="line" x1="280" y1="340" x2="280" y2="380"/>
+
+  <!-- Right pipeline: HAWK (separate) -->
+  <rect class="dashed" x="620" y="150" width="700" height="340"/>
+  <text class="label title" x="640" y="175">HAWK Pipeline (separate and removable)</text>
+
+  <rect class="box" x="660" y="200" width="260" height="60"/>
+  <text class="label title" x="680" y="235">HawkSensorAdapter</text>
+  <text class="label small" x="680" y="255">SensorDataSource</text>
+
+  <rect class="box" x="960" y="200" width="300" height="60"/>
+  <text class="label title" x="980" y="235">Hawk QC + Vertical EKF</text>
+  <text class="label small" x="980" y="255">adaptive R + gating</text>
+
+  <rect class="box" x="660" y="300" width="260" height="60"/>
+  <text class="label title" x="680" y="335">HawkRepository</text>
+  <text class="label small" x="680" y="355">(SSOT)</text>
+
+  <rect class="box" x="960" y="300" width="300" height="60"/>
+  <text class="label title" x="980" y="335">HawkUseCase + ViewModel</text>
+
+  <rect class="box" x="810" y="400" width="300" height="60"/>
+  <text class="label title" x="830" y="435">UI + Audio (optional)</text>
+  <text class="label small" x="830" y="455">feature flag gated</text>
+
+  <line class="line" x1="540" y1="110" x2="780" y2="200"/>
+  <line class="line" x1="920" y1="230" x2="960" y2="230"/>
+  <line class="line" x1="790" y1="260" x2="790" y2="300"/>
+  <line class="line" x1="1110" y1="260" x2="1110" y2="300"/>
+  <line class="line" x1="920" y1="330" x2="810" y2="400"/>
+
+  <!-- Feature flag -->
+  <rect class="box" x="1140" y="400" width="160" height="60"/>
+  <text class="label title" x="1160" y="435">Feature Flag</text>
+  <text class="label small" x="1160" y="455">HAWK enable</text>
+  <line class="line" x1="1140" y1="430" x2="1110" y2="430"/>
+
+  <!-- Footer note -->
+  <text class="label small" x="50" y="760">
+    Note: HAWK consumes the same sensor pipeline but performs independent calculations.
+  </text>
+</svg>
+

@@ -8,7 +8,7 @@ import com.example.xcpro.tasks.aat.models.AATLatLng
 data class AATInteractiveTaskDistance(
     val totalDistance: Double, // km
     val segments: List<AATInteractiveDistanceSegment>,
-    val calculationTime: Long = System.currentTimeMillis()
+    val calculationTime: Long = 0L
 ) {
     val isValid: Boolean get() = totalDistance > 0.0 && segments.isNotEmpty()
     val segmentCount: Int get() = segments.size

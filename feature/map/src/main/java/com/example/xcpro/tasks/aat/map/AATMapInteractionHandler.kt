@@ -189,7 +189,11 @@ class AATMapInteractionHandler(
             callbacks.onEditModeExited()
             callbacks.onZoomToOverview(1.0f)
 
-            println(" AAT: Exited edit mode after ${previousSession.sessionDurationMs}ms - map gestures restored")
+            println(
+                " AAT: Exited edit mode after " +
+                    "${previousSession.sessionDurationMs(android.os.SystemClock.elapsedRealtime())}ms - " +
+                    "map gestures restored"
+            )
         }
     }
 

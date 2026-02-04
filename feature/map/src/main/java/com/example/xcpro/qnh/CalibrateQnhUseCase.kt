@@ -1,6 +1,7 @@
 package com.example.xcpro.qnh
 
 import com.example.xcpro.common.di.DefaultDispatcher
+import com.example.xcpro.core.time.Clock
 import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.sensors.SensorDataSource
 import com.example.xcpro.sensors.GPSData
@@ -25,6 +26,7 @@ class CalibrateQnhUseCase @Inject constructor(
     private val qnhRepository: QnhRepository,
     private val flightDataRepository: FlightDataRepository,
     @DefaultDispatcher private val dispatcher: CoroutineDispatcher,
+    private val clock: Clock,
     private val config: QnhCalibrationConfig = QnhCalibrationConfig()
 ) {
 
@@ -127,7 +129,7 @@ class CalibrateQnhUseCase @Inject constructor(
             val value = QnhValue(
                 hpa = aggregated,
                 source = source,
-                calibratedAtMillis = System.currentTimeMillis(),
+                calibratedAtMillis = clock.nowWallMs(),
                 confidence = confidence
             )
 

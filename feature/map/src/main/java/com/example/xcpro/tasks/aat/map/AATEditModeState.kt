@@ -36,14 +36,14 @@ data class AATEditSession(
     val originalTargetPoint: AATLatLng? = null,
     val currentTargetPoint: AATLatLng? = null,
     val zoomLevel: Float = 1.0f,
-    val sessionStartTime: Long = System.currentTimeMillis(),
+    val sessionStartTime: Long = 0L,
     val hasUnsavedChanges: Boolean = false
 ) {
     val isEditingArea: Boolean get() = state == AATEditState.AREA_EDIT
     val isInViewMode: Boolean get() = state == AATEditState.VIEW_MODE
     val isTransitioning: Boolean get() = state == AATEditState.TRANSITIONING
 
-    val sessionDurationMs: Long get() = System.currentTimeMillis() - sessionStartTime
+    fun sessionDurationMs(nowMs: Long): Long = (nowMs - sessionStartTime).coerceAtLeast(0L)
 
     /**
      * Check if target point has been moved from original position
@@ -64,16 +64,18 @@ data class AATEditSession(
  */
 @Composable
 fun rememberAATEditModeState(
-    initialState: AATEditState = AATEditState.VIEW_MODE
+    initialState: AATEditState = AATEditState.VIEW_MODE,
+    nowMs: () -> Long = { android.os.SystemClock.elapsedRealtime() }
 ): AATEditModeStateManager {
-    return remember { AATEditModeStateManager(initialState) }
+    return remember { AATEditModeStateManager(initialState, nowMs) }
 }
 
 class AATEditModeStateManager(
-    initialState: AATEditState = AATEditState.VIEW_MODE
+    initialState: AATEditState = AATEditState.VIEW_MODE,
+    private val nowMs: () -> Long = { android.os.SystemClock.elapsedRealtime() }
 ) {
     private var _currentSession by mutableStateOf(
-        AATEditSession(state = initialState)
+        AATEditSession(state = initialState, sessionStartTime = nowMs())
     )
 
     val currentSession: AATEditSession get() = _currentSession
@@ -100,7 +102,7 @@ class AATEditModeStateManager(
             originalTargetPoint = waypoint.targetPoint,
             currentTargetPoint = waypoint.targetPoint,
             zoomLevel = targetZoom,
-            sessionStartTime = System.currentTimeMillis()
+            sessionStartTime = nowMs()
         )
 
         return true
@@ -112,11 +114,12 @@ class AATEditModeStateManager(
     fun exitEditMode(overviewZoom: Float = 1.0f): AATEditSession {
         val previousSession = _currentSession
 
-        println(" AAT: Exiting edit mode (session duration: ${previousSession.sessionDurationMs}ms)")
+        println(" AAT: Exiting edit mode (session duration: ${previousSession.sessionDurationMs(nowMs())}ms)")
 
         _currentSession = AATEditSession(
             state = AATEditState.VIEW_MODE,
-            zoomLevel = overviewZoom
+            zoomLevel = overviewZoom,
+            sessionStartTime = nowMs()
         )
 
         return previousSession

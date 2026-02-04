@@ -299,8 +299,6 @@ class AATDistanceCalculator {
      * This method supports movable target points within AAT areas.
      */
     fun calculateInteractiveTaskDistance(waypoints: List<AATWaypoint>): AATInteractiveTaskDistance {
-        val startTime = System.currentTimeMillis()
-
         if (waypoints.isEmpty()) {
             return AATInteractiveTaskDistance(0.0, emptyList())
         }
@@ -328,12 +326,10 @@ class AATDistanceCalculator {
             totalDistance += segment.distance
         }
 
-        val calculationTime = System.currentTimeMillis() - startTime
-
         return AATInteractiveTaskDistance(
             totalDistance = totalDistance,
             segments = segments,
-            calculationTime = calculationTime
+            calculationTime = 0L
         )
     }
 

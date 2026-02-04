@@ -7,7 +7,41 @@ Each entry must include an issue ID, owner, and expiry date.
 
 ## Current deviations
 
-None.
+1) MapScreenViewModel uses platform APIs/managers instead of use-cases
+- Rule: ViewModels depend on use-cases only; no platform APIs or I/O in ViewModels.
+- Issue: RULES-20260204-01
+- Owner: XCPro Team
+- Expiry: 2026-03-04
+- Notes: Uses Context + WaypointLoader for file I/O; depends on TaskManagerCoordinator,
+  VarioServiceManager, LevoVarioPreferencesRepository, CardPreferences, and MapOrientationManagerFactory.
+
+2) TaskSheetViewModel holds UI map handle and constructs dependencies
+- Rule: ViewModels must not reference UI types; dependencies must be injected; use-cases only.
+- Issue: RULES-20260204-02
+- Owner: XCPro Team
+- Expiry: 2026-03-04
+- Notes: Holds MapLibreMap; depends on TaskManagerCoordinator; constructs TaskSheetUseCase.
+
+3) IgcReplayViewModel depends on controller and platform logging
+- Rule: ViewModels depend on use-cases only; no platform APIs in ViewModels.
+- Issue: RULES-20260204-03
+- Owner: XCPro Team
+- Expiry: 2026-03-04
+- Notes: Injects IgcReplayController directly and logs via android.util.Log.
+
+4) FlightDataViewModel constructs Clock/use-case internally
+- Rule: Dependencies must be injected; ViewModels should not construct use-cases or clocks.
+- Issue: RULES-20260204-04
+- Owner: XCPro Team
+- Expiry: 2026-03-04
+- Notes: Uses DefaultClockProvider and constructs FlightCardsUseCase when no override provided.
+
+5) TaskFilesUseCase uses wall time directly
+- Rule: Domain/use-case logic must use injected Clock; no Date/System time direct calls.
+- Issue: RULES-20260204-05
+- Owner: XCPro Team
+- Expiry: 2026-03-04
+- Notes: Uses Date() for filename timestamps in TaskFilesUseCase.
 
 ## Verification
 

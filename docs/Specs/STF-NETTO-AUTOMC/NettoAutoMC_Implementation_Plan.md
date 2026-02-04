@@ -150,4 +150,46 @@ Replay tests:
 - Speed-to-fly is stable, respects IAS_min/IAS_max, and uses MC_base.
 - All tests in Section 6 pass.
 
+## 9) Follow-up Plan: XCSoar-style always-visible Levo Netto + wind footer (Planned)
+Goal: match XCSoar behavior so Levo Netto always shows a numeric value, even with no wind or polar,
+while preserving `levoNettoValid` for glide-netto gating. Add a wind speed/direction footer on the card.
+
+Implementation steps:
+1) Domain fallback (LevoNettoCalculator)
+   - File: feature/map/src/main/java/com/example/xcpro/sensors/domain/LevoNettoCalculator.kt
+   - When wind or polar is missing, return a fallback value instead of freezing or blanking:
+     - sink = sinkAtSpeed(IAS) if polar and IAS valid; else sink = 0.
+     - value = w_meas - sink (w_meas is baseline vario).
+   - Keep `valid=false` unless straight flight + wind confidence + polar + speed gates pass.
+   - Preserve distance-window smoothing only for valid glide-netto updates.
+
+2) Flight metrics wiring
+   - File: feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt
+   - Keep `levoNettoHasWind` / `levoNettoHasPolar` as availability flags.
+   - Ensure `levoNettoMs` is set from the (possibly fallback) calculator output,
+     but `levoNettoValid` remains true only for glide-netto.
+
+3) Card formatting (primary always numeric, footer is wind)
+   - File: dfcards-library/src/main/java/com/example/dfcards/CardFormatSpec.kt
+   - LEVO_NETTO primary value always uses `liveData.levoNetto`.
+   - Secondary value shows wind footer when available:
+     - Format: "<speed><unit>/<dir>Deg" (example: "8kt/287Deg").
+     - Use UnitsFormatter.speed and normalize direction 0..359.
+   - If polar missing -> show "NO POLAR" in footer (takes precedence).
+   - If wind missing -> show "NO WIND" in footer.
+
+4) Levo Vario UI (secondary line remains numeric)
+   - File: feature/map/src/main/java/com/example/xcpro/map/ui/OverlayPanels.kt
+   - Keep numeric Levo Netto on the secondary line regardless of validity.
+   - Keep red error tint when wind or polar is missing.
+
+5) Tests
+   - feature/map/src/test/java/com/example/xcpro/sensors/domain/LevoNettoCalculatorTest.kt
+     - Add cases for no wind / no polar -> value uses w_meas - sink (sink=0 if polar missing), valid=false.
+   - dfcards-library/src/test/java/com/example/dfcards/CardFormatSpecTest.kt
+     - Add LEVO_NETTO cases for footer formatting and NO WIND/NO POLAR fallbacks.
+
+6) Docs
+   - Add docs/Cards/LevoNetto.md (end-to-end flow + UI display rules).
+
 

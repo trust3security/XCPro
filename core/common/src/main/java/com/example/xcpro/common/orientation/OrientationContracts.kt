@@ -31,7 +31,7 @@ data class OrientationData(
     val headingDeg: Double = 0.0,
     val headingValid: Boolean = false,
     val headingSource: BearingSource = BearingSource.NONE,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = 0L
 )
 
 data class OrientationSensorData(
@@ -44,7 +44,7 @@ data class OrientationSensorData(
     val windDirectionFrom: Double = 0.0,
     val windSpeed: Double = 0.0,
     val headingSolution: HeadingSolution = HeadingSolution(),
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = 0L
 )
 
 interface OrientationController {
