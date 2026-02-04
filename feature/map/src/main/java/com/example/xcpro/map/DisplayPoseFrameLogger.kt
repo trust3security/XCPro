@@ -9,8 +9,9 @@ class DisplayPoseFrameLogger(
     private val tag: String,
     private val defaultIntervalMs: Long,
     private val timeBaseProvider: () -> DisplayClock.TimeBase?,
+    private val featureFlags: MapFeatureFlags,
     private val nowElapsedMs: () -> Long = { SystemClock.elapsedRealtime() },
-    private val intervalProvider: () -> Long = { MapFeatureFlags.sim2FrameLogIntervalMs }
+    private val intervalProvider: () -> Long = { featureFlags.sim2FrameLogIntervalMs }
 ) {
     private var lastFrameLogMs: Long = 0L
 

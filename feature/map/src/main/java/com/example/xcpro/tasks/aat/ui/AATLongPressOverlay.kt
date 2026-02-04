@@ -51,7 +51,6 @@ fun AATLongPressOverlay(
                             editModeIndex = waypointIndex
                             isDragging = true
                             onLongPressWaypoint(waypointIndex)
-                            println(" AAT: Started drag on waypoint $waypointIndex")
                         }
                     },
                     onDrag = { change, _ ->
@@ -62,13 +61,11 @@ fun AATLongPressOverlay(
                             if (newLatLng != null) {
                                 val newPosition = AATLatLng(newLatLng.latitude, newLatLng.longitude)
                                 onPinDrag(editModeIndex, newPosition)
-                                println(" AAT: Dragging pin $editModeIndex to ${newPosition.latitude}, ${newPosition.longitude}")
                             }
                         }
                     },
                     onDragEnd = {
                         isDragging = false
-                        println(" AAT: Drag ended, staying in edit mode")
                         // Keep edit mode active until explicit exit
                     }
                 )
@@ -80,12 +77,10 @@ fun AATLongPressOverlay(
                         if (waypointIndex != null) {
                             editModeIndex = waypointIndex
                             onLongPressWaypoint(waypointIndex)
-                            println(" AAT: Long press detected on waypoint $waypointIndex")
                         } else if (editModeIndex != -1) {
                             // Long press outside - exit edit mode
                             editModeIndex = -1
                             onExitEditMode()
-                            println(" AAT: Long press outside - exiting edit mode")
                         }
                     },
                     onTap = { offset ->
@@ -95,7 +90,6 @@ fun AATLongPressOverlay(
                                 // Tap outside - exit edit mode
                                 editModeIndex = -1
                                 onExitEditMode()
-                                println(" AAT: Tap outside - exiting edit mode")
                             }
                         }
                     }
@@ -125,7 +119,6 @@ private fun checkWaypointHit(
         val areaRadiusKm = waypoint.assignedArea.radiusMeters / 1000.0
 
         if (distance <= areaRadiusKm) {
-            println(" AAT: Hit detected in ${waypoint.title} area (${String.format("%.2f", distance)}km from center)")
             return index
         }
     }

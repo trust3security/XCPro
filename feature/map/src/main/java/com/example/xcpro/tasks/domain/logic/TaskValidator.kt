@@ -3,13 +3,14 @@ package com.example.xcpro.tasks.domain.logic
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.WaypointRole
 import com.example.xcpro.tasks.domain.model.*
+import javax.inject.Inject
 
 /**
  * Validates task structure and OZ shapes for Racing and AAT modes.
  * AI-NOTE: This mirrors XC behaviour at a high level; detailed distance
  * envelopes will be layered on later.
  */
-class TaskValidator {
+class TaskValidator @Inject constructor() {
 
     data class ValidationSummary(
         val hasTargets: Boolean,

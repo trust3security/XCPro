@@ -16,7 +16,7 @@ import com.example.xcpro.map.LocationManager
 import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.profiles.ProfileUiState
 import com.example.xcpro.replay.SessionState
-import com.example.xcpro.sensors.GPSData
+import com.example.xcpro.map.model.MapLocationUiModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
 import androidx.compose.runtime.rememberUpdatedState
@@ -29,7 +29,7 @@ object MapComposeEffects {
     fun LocationAndPermissionEffects(
         locationManager: LocationManager,
         locationPermissionLauncher: ActivityResultLauncher<Array<String>>,
-        currentLocation: GPSData?,
+        currentLocation: MapLocationUiModel?,
         orientationData: OrientationData,
         suppressLiveGps: Boolean = false,
         allowSensorStart: Boolean = true
@@ -173,7 +173,7 @@ object MapComposeEffects {
     fun AllMapEffects(
         locationManager: LocationManager,
         locationPermissionLauncher: ActivityResultLauncher<Array<String>>,
-        currentLocation: GPSData?,
+        currentLocation: MapLocationUiModel?,
         orientationData: OrientationData,
         orientationManager: MapOrientationManager,
         uiState: ProfileUiState,

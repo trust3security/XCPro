@@ -33,7 +33,8 @@ object TaskNavigationModule {
     fun provideTaskNavigationController(
         taskManager: TaskManagerCoordinator,
         crossingPlanner: RacingBoundaryCrossingPlanner,
-        epsilonPolicy: RacingBoundaryEpsilonPolicy
+        epsilonPolicy: RacingBoundaryEpsilonPolicy,
+        featureFlags: TaskFeatureFlags
     ): TaskNavigationController = TaskNavigationController(
         taskManager = taskManager,
         stateStore = RacingNavigationStateStore(),
@@ -42,6 +43,6 @@ object TaskNavigationModule {
             crossingPlanner = crossingPlanner,
             epsilonPolicy = epsilonPolicy
         ),
-        featureFlags = TaskFeatureFlags
+        featureFlags = featureFlags
     )
 }

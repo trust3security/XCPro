@@ -47,6 +47,7 @@ import com.example.xcpro.tasks.aat.models.AATLatLng
 @Composable
 fun AATEditModeOverlay(
     editSession: AATEditSession,
+    nowMs: Long,
     onSaveChanges: () -> Unit,
     onDiscardChanges: () -> Unit,
     onResetToCenter: () -> Unit,
@@ -79,7 +80,7 @@ fun AATEditModeOverlay(
                 currentTargetPoint = editSession.currentTargetPoint!!,
                 originalTargetPoint = editSession.originalTargetPoint!!,
                 hasUnsavedChanges = editSession.hasUnsavedChanges,
-                sessionDuration = editSession.sessionDurationMs(android.os.SystemClock.elapsedRealtime()),
+                sessionDuration = editSession.sessionDurationMs(nowMs),
                 onSaveChanges = onSaveChanges,
                 onDiscardChanges = onDiscardChanges,
                 onResetToCenter = onResetToCenter,

@@ -79,7 +79,6 @@ internal fun TemplateSelectionSection(
                         index = templateIndex,
                         scrollOffset = -100 // Offset to center it better
                     )
-                    println("DEBUG: Auto-scrolled to template '${template.name}' at index $templateIndex")
                 }
             }
         }

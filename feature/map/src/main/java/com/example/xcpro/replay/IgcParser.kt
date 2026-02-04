@@ -1,11 +1,14 @@
 package com.example.xcpro.replay
 
+import com.example.xcpro.core.time.Clock
 import java.io.BufferedReader
 import java.io.InputStream
 import java.time.Duration
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneOffset
+import javax.inject.Inject
 
 data class IgcPoint(
     val timestampMillis: Long,
@@ -26,16 +29,15 @@ data class IgcLog(
     val points: List<IgcPoint>
 )
 
-object IgcParser {
+class IgcParser @Inject constructor(
+    private val clock: Clock
+) {
 
-    fun parse(stream: InputStream): IgcLog {
-        stream.bufferedReader().use { reader ->
-            return parse(reader)
-        }
-    }
+    fun parse(stream: InputStream): IgcLog =
+        stream.bufferedReader().use { reader -> parse(reader) }
 
     private fun parse(reader: BufferedReader): IgcLog {
-        var currentDate = LocalDate.now(ZoneOffset.UTC)
+        var currentDate = defaultDateUtc()
         val points = mutableListOf<IgcPoint>()
         var qnhHpa: Double? = null
         var lastTimestampMillis: Long? = null
@@ -90,6 +92,11 @@ object IgcParser {
             points = points
         )
     }
+
+    private fun defaultDateUtc(): LocalDate =
+        Instant.ofEpochMilli(clock.nowWallMs())
+            .atZone(ZoneOffset.UTC)
+            .toLocalDate()
 
     private fun parseDate(value: String): LocalDate? {
         return try {
@@ -223,6 +230,8 @@ object IgcParser {
         return raw.toIntOrNull()
     }
 
-    private const val MIN_EXTENSION_START = 8
-    private const val EXTENSION_VALUE_DIGITS = 3
+    private companion object {
+        private const val MIN_EXTENSION_START = 8
+        private const val EXTENSION_VALUE_DIGITS = 3
+    }
 }

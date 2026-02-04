@@ -1,6 +1,5 @@
 package com.example.xcpro.replay
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.xcpro.common.documents.DocumentRef
@@ -18,7 +17,7 @@ import kotlinx.coroutines.launch
 
 @HiltViewModel
 class IgcReplayViewModel @Inject constructor(
-    private val replayController: IgcReplayController
+    private val replayUseCase: IgcReplayUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(IgcReplayUiState())
@@ -63,7 +62,7 @@ class IgcReplayViewModel @Inject constructor(
         }
         viewModelScope.launch {
             runCatching {
-                replayController.loadDocument(document)
+                replayUseCase.loadDocument(document)
             }.onSuccess {
                 _uiState.update {
                     it.copy(
@@ -85,7 +84,7 @@ class IgcReplayViewModel @Inject constructor(
     }
 
     fun setSpeed(multiplier: Double) {
-        replayController.setSpeed(multiplier)
+        replayUseCase.setSpeed(multiplier)
     }
 
     fun startReplay() {
@@ -97,12 +96,12 @@ class IgcReplayViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 // If already loaded the same file, skip reload
-                val alreadyLoaded = replayController.session.value.selection?.document?.uri == document.uri
+                val alreadyLoaded = replayUseCase.session.value.selection?.document?.uri == document.uri
                 if (!alreadyLoaded) {
                     _uiState.update { it.copy(statusMessage = "Loading replay...", errorMessage = null) }
-                    replayController.loadDocument(document)
+                    replayUseCase.loadDocument(document)
                 }
-                replayController.play()
+                replayUseCase.play()
                 _events.emit(IgcReplayUiEvent.NavigateBackToMap)
             } catch (t: Throwable) {
                 _uiState.update {
@@ -116,30 +115,25 @@ class IgcReplayViewModel @Inject constructor(
     }
 
     fun stopReplay() {
-        replayController.stop()
+        replayUseCase.stop()
     }
 
     fun seekTo(fraction: Float) {
-        val selection = replayController.session.value.selection
+        val selection = replayUseCase.session.value.selection
         val document = _uiState.value.selectedDocument
-        Log.d(
-            "IgcReplayViewModel",
-            "REPLY_VM_SEEK fraction=$fraction selectionNull=${selection == null} docNull=${document == null}"
-        )
         if (selection != null) {
-            replayController.seekTo(fraction)
+            replayUseCase.seekTo(fraction)
         } else if (document != null) {
             viewModelScope.launch {
-                runCatching { replayController.loadDocument(document) }
-                    .onSuccess { replayController.seekTo(fraction) }
-                    .onFailure { Log.e("IgcReplayViewModel", "REPLY_VM_SEEK load on demand failed", it) }
+                runCatching { replayUseCase.loadDocument(document) }
+                    .onSuccess { replayUseCase.seekTo(fraction) }
             }
         }
     }
 
     private fun observeSession() {
         viewModelScope.launch {
-            replayController.session.collect { session ->
+            replayUseCase.session.collect { session ->
                 val selection = session.selection
                 _uiState.update { current ->
                     val base = current.copy(
@@ -167,7 +161,7 @@ class IgcReplayViewModel @Inject constructor(
 
     private fun observeReplayEvents() {
         viewModelScope.launch {
-            replayController.events.collect { event ->
+            replayUseCase.events.collect { event ->
                 when (event) {
                     is ReplayEvent.Completed -> _uiState.update {
                         it.copy(

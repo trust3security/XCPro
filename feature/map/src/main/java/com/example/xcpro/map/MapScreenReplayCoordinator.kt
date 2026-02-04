@@ -34,6 +34,7 @@ internal class MapScreenReplayCoordinator(
     private val flightDataFlow: StateFlow<CompleteFlightData?>,
     private val igcReplayController: IgcReplayController,
     private val racingReplayLogBuilder: RacingReplayLogBuilder,
+    private val featureFlags: MapFeatureFlags,
     private val mapStateStore: MapStateStore,
     private val mapStateActions: MapStateActions,
     private val uiEffects: MutableSharedFlow<MapUiEffect>,
@@ -145,12 +146,12 @@ internal class MapScreenReplayCoordinator(
                 captureDemoReplayRuntimeHeadingSnapshot()
                 captureDemoReplayRenderFrameSyncSnapshot()
                 captureDemoReplayFrameLogIntervalSnapshot()
-                MapFeatureFlags.forceReplayTrackHeading = true
-                MapFeatureFlags.maxTrackBearingStepDeg = SIM2_BASELINE_BEARING_STEP_DEG
-                MapFeatureFlags.useIconHeadingSmoothing = false
-                MapFeatureFlags.useRuntimeReplayHeading = true
-                MapFeatureFlags.useRenderFrameSync = true
-                MapFeatureFlags.sim2FrameLogIntervalMs = 0L
+                featureFlags.forceReplayTrackHeading = true
+                featureFlags.maxTrackBearingStepDeg = SIM2_BASELINE_BEARING_STEP_DEG
+                featureFlags.useIconHeadingSmoothing = false
+                featureFlags.useRuntimeReplayHeading = true
+                featureFlags.useRenderFrameSync = true
+                featureFlags.sim2FrameLogIntervalMs = 0L
                 val cadenceMs = SIM2_BASELINE_STEP_MS
                 val accuracyM = SIM2_BASELINE_ACCURACY_M
                 igcReplayController.setSpeed(SIM2_REPLAY_SPEED_MULTIPLIER)
@@ -314,7 +315,7 @@ internal class MapScreenReplayCoordinator(
         replaySessionState
             .onEach { session ->
                 val overrideMode = demoDisplayPoseOverride
-                val useRawReplay = MapFeatureFlags.useRawReplayPose &&
+                val useRawReplay = featureFlags.useRawReplayPose &&
                     session.selection != null &&
                     session.status != SessionStatus.IDLE
                 val mode = overrideMode ?: if (useRawReplay) {
@@ -407,7 +408,7 @@ internal class MapScreenReplayCoordinator(
 
     private fun captureDemoReplayTrackHeadingSnapshot() {
         if (demoReplayTrackHeadingSnapshot != null) return
-        demoReplayTrackHeadingSnapshot = MapFeatureFlags.forceReplayTrackHeading
+        demoReplayTrackHeadingSnapshot = featureFlags.forceReplayTrackHeading
     }
 
     private fun captureDemoReplayInterpolationSnapshot() {
@@ -417,27 +418,27 @@ internal class MapScreenReplayCoordinator(
 
     private fun captureDemoReplayBearingClampSnapshot() {
         if (demoReplayBearingClampSnapshot != null) return
-        demoReplayBearingClampSnapshot = MapFeatureFlags.maxTrackBearingStepDeg
+        demoReplayBearingClampSnapshot = featureFlags.maxTrackBearingStepDeg
     }
 
     private fun captureDemoReplayIconHeadingSmoothingSnapshot() {
         if (demoReplayIconHeadingSmoothingSnapshot != null) return
-        demoReplayIconHeadingSmoothingSnapshot = MapFeatureFlags.useIconHeadingSmoothing
+        demoReplayIconHeadingSmoothingSnapshot = featureFlags.useIconHeadingSmoothing
     }
 
     private fun captureDemoReplayRuntimeHeadingSnapshot() {
         if (demoReplayRuntimeHeadingSnapshot != null) return
-        demoReplayRuntimeHeadingSnapshot = MapFeatureFlags.useRuntimeReplayHeading
+        demoReplayRuntimeHeadingSnapshot = featureFlags.useRuntimeReplayHeading
     }
 
     private fun captureDemoReplayRenderFrameSyncSnapshot() {
         if (demoReplayRenderFrameSyncSnapshot != null) return
-        demoReplayRenderFrameSyncSnapshot = MapFeatureFlags.useRenderFrameSync
+        demoReplayRenderFrameSyncSnapshot = featureFlags.useRenderFrameSync
     }
 
     private fun captureDemoReplayFrameLogIntervalSnapshot() {
         if (demoReplayFrameLogIntervalSnapshot != null) return
-        demoReplayFrameLogIntervalSnapshot = MapFeatureFlags.sim2FrameLogIntervalMs
+        demoReplayFrameLogIntervalSnapshot = featureFlags.sim2FrameLogIntervalMs
     }
 
     private fun restoreRacingReplayCadenceSnapshot() {
@@ -488,17 +489,17 @@ internal class MapScreenReplayCoordinator(
         val snapshot = demoReplaySnapshot ?: return
         demoReplaySnapshot = null
         demoDisplayPoseOverride = null
-        demoReplayTrackHeadingSnapshot?.let { MapFeatureFlags.forceReplayTrackHeading = it }
+        demoReplayTrackHeadingSnapshot?.let { featureFlags.forceReplayTrackHeading = it }
         demoReplayTrackHeadingSnapshot = null
-        demoReplayBearingClampSnapshot?.let { MapFeatureFlags.maxTrackBearingStepDeg = it }
+        demoReplayBearingClampSnapshot?.let { featureFlags.maxTrackBearingStepDeg = it }
         demoReplayBearingClampSnapshot = null
-        demoReplayIconHeadingSmoothingSnapshot?.let { MapFeatureFlags.useIconHeadingSmoothing = it }
+        demoReplayIconHeadingSmoothingSnapshot?.let { featureFlags.useIconHeadingSmoothing = it }
         demoReplayIconHeadingSmoothingSnapshot = null
-        demoReplayRuntimeHeadingSnapshot?.let { MapFeatureFlags.useRuntimeReplayHeading = it }
+        demoReplayRuntimeHeadingSnapshot?.let { featureFlags.useRuntimeReplayHeading = it }
         demoReplayRuntimeHeadingSnapshot = null
-        demoReplayRenderFrameSyncSnapshot?.let { MapFeatureFlags.useRenderFrameSync = it }
+        demoReplayRenderFrameSyncSnapshot?.let { featureFlags.useRenderFrameSync = it }
         demoReplayRenderFrameSyncSnapshot = null
-        demoReplayFrameLogIntervalSnapshot?.let { MapFeatureFlags.sim2FrameLogIntervalMs = it }
+        demoReplayFrameLogIntervalSnapshot?.let { featureFlags.sim2FrameLogIntervalMs = it }
         demoReplayFrameLogIntervalSnapshot = null
         demoReplayCadenceSnapshot?.let { igcReplayController.setReplayCadence(it) }
         demoReplayCadenceSnapshot = null

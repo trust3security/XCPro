@@ -11,7 +11,8 @@ import org.maplibre.android.maps.MapLibreMap
 
 class SnailTrailManager(
     private val context: Context,
-    private val mapState: MapScreenState
+    private val mapState: MapScreenState,
+    private val featureFlags: MapFeatureFlags
 ) {
     private var lastSettings: TrailSettings = TrailSettings()
     private var lastContext: RenderContext? = null
@@ -23,7 +24,7 @@ class SnailTrailManager(
     private var lastRenderPoseFrameId: Long? = null
 
     fun initialize(map: MapLibreMap) {
-        val overlay = SnailTrailOverlay(context, map, mapState.mapView)
+        val overlay = SnailTrailOverlay(context, map, mapState.mapView, featureFlags)
         overlay.initialize()
         mapState.snailTrailOverlay = overlay
         mapState.blueLocationOverlay?.bringToFront()
@@ -113,12 +114,12 @@ class SnailTrailManager(
         if (frameId != null && lastRenderPoseFrameId == frameId) return
 
         val prevLocation = lastRenderPoseLocation
-        val minStepMs = if (MapFeatureFlags.useRenderFrameSync && lastIsReplay == true) {
+        val minStepMs = if (featureFlags.useRenderFrameSync && lastIsReplay == true) {
             0L
         } else {
             DISPLAY_RENDER_MIN_STEP_MS
         }
-        val minDistanceM = if (MapFeatureFlags.useRenderFrameSync && lastIsReplay == true) {
+        val minDistanceM = if (featureFlags.useRenderFrameSync && lastIsReplay == true) {
             0.0
         } else {
             DISPLAY_RENDER_MIN_DISTANCE_M

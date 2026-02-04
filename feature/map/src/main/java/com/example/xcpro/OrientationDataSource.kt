@@ -24,7 +24,8 @@ class OrientationDataSource(
     private val scope: CoroutineScope,
     private val headingResolver: HeadingResolver,
     private val flightStateSource: FlightStateSource? = null,
-    private val clock: OrientationClock
+    private val clock: OrientationClock,
+    private val featureFlags: MapFeatureFlags
 ) : OrientationSensorSource {
 
     private val _orientationFlow = MutableStateFlow(OrientationSensorData())
@@ -200,7 +201,7 @@ class OrientationDataSource(
     private fun updateOrientationData() {
         val nowMono = clock.nowMonoMs()
         val nowWall = clock.nowWallMs()
-        val allowDeviceHeading = MapFeatureFlags.allowHeadingWhileStationary ||
+        val allowDeviceHeading = featureFlags.allowHeadingWhileStationary ||
             isFlying ||
             currentFlightData.groundSpeed >= minSpeedThresholdMs
         val attitudeFresh = allowDeviceHeading &&

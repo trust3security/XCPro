@@ -5,14 +5,14 @@ import android.net.Uri
 import android.util.Log
 import java.time.Instant
 
-internal fun Context.loadIgcLog(fileUri: Uri): IgcLog =
+internal fun Context.loadIgcLog(fileUri: Uri, parser: IgcParser): IgcLog =
     contentResolver.openInputStream(fileUri)?.use { stream ->
-        IgcParser.parse(stream)
+        parser.parse(stream)
     } ?: throw IllegalArgumentException("Unable to open IGC file")
 
-internal fun Context.loadIgcAssetLog(assetPath: String): IgcLog =
+internal fun Context.loadIgcAssetLog(assetPath: String, parser: IgcParser): IgcLog =
     assets.open(assetPath).use { stream ->
-        IgcParser.parse(stream)
+        parser.parse(stream)
     }
 
 internal fun logReplaySessionPrep(

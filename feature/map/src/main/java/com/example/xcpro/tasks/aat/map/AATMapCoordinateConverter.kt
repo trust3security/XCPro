@@ -36,7 +36,6 @@ class AATMapCoordinateConverter(
         return try {
             mapLibreMap?.projection?.fromScreenLocation(PointF(screenX, screenY))
         } catch (e: Exception) {
-            println(" AAT: Screen to map conversion failed: ${e.message}")
             null
         }
     }
@@ -50,7 +49,6 @@ class AATMapCoordinateConverter(
         return try {
             mapLibreMap?.projection?.toScreenLocation(latLng)
         } catch (e: Exception) {
-            println(" AAT: Map to screen conversion failed: ${e.message}")
             null
         }
     }
@@ -63,7 +61,6 @@ class AATMapCoordinateConverter(
             val visibleRegion = mapLibreMap?.projection?.visibleRegion
             visibleRegion?.latLngBounds?.contains(latLng) ?: false
         } catch (e: Exception) {
-            println(" AAT: Visibility check failed: ${e.message}")
             false
         }
     }
@@ -177,7 +174,7 @@ object AATMapCoordinateConverterFactory {
         screenX: Float,
         screenY: Float,
         converter: AATMapCoordinateConverter,
-        timestampMs: Long = android.os.SystemClock.elapsedRealtime()
+        timestampMs: Long
     ): AATMapTapDetails? {
         val mapCoords = converter.screenToMap(screenX, screenY) ?: return null
 

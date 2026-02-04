@@ -1,13 +1,16 @@
 package com.example.xcpro.map.config
 
 import com.example.xcpro.map.BuildConfig
+import javax.inject.Inject
+import javax.inject.Singleton
+
 /**
  * Centralized switches for map feature behavior that needs to differ between
- * production and tests. Keep mutable flags here (rather than spread across
- * call sites) so instrumentation and unit tests can safely override behavior
- * without touching production code paths.
+ * production and tests. This is an injected state holder so tests can override
+ * behavior without relying on hidden global singletons.
  */
-object MapFeatureFlags {
+@Singleton
+class MapFeatureFlags @Inject constructor() {
     /**
      * Controls whether [MapScreenViewModel] should call
      * [com.example.xcpro.tasks.TaskManagerCoordinator.loadSavedTasks] during init.

@@ -43,7 +43,6 @@ class AATTaskFileIO(private val context: Context) {
         val taskJson = gson.toJson(task)
         editor.putString("current_aat_task", taskJson)
         editor.apply()
-        println(" AAT FILE I/O: Saved task to preferences (${task.waypoints.size} waypoints)")
     }
 
     /**
@@ -58,10 +57,8 @@ class AATTaskFileIO(private val context: Context) {
         return if (taskJson != null) {
             try {
                 val task = gson.fromJson(taskJson, SimpleAATTask::class.java)
-                println(" AAT FILE I/O: Loaded task from preferences (${task.waypoints.size} waypoints)")
                 task
             } catch (e: Exception) {
-                println(" AAT FILE I/O: Failed to load from preferences: ${e.message}")
                 null
             }
         } else null
@@ -87,7 +84,6 @@ class AATTaskFileIO(private val context: Context) {
                 ?.sorted()
                 ?: emptyList()
         } catch (e: Exception) {
-            println(" AAT FILE I/O: Error getting saved tasks: ${e.message}")
             emptyList()
         }
     }
@@ -116,10 +112,8 @@ class AATTaskFileIO(private val context: Context) {
             val cupContent = taskToCUP(task, aatTaskName)
             file.writeText(cupContent)
 
-            println(" AAT FILE I/O: Saved to file: ${file.absolutePath}")
             true
         } catch (e: Exception) {
-            println(" AAT FILE I/O: Error saving task: ${e.message}")
             false
         }
     }
@@ -147,18 +141,14 @@ class AATTaskFileIO(private val context: Context) {
                         minimumTime = Duration.ofHours(3),
                         maximumTime = Duration.ofHours(6)
                     )
-                    println(" AAT FILE I/O: Loaded from file: ${file.absolutePath} (${waypoints.size} waypoints)")
                     task
                 } else {
-                    println(" AAT FILE I/O: No waypoints found in file")
                     null
                 }
             } else {
-                println(" AAT FILE I/O: File not found: ${file.absolutePath}")
                 null
             }
         } catch (e: Exception) {
-            println(" AAT FILE I/O: Error loading task from file: ${e.message}")
             null
         }
     }
@@ -178,14 +168,11 @@ class AATTaskFileIO(private val context: Context) {
 
             if (file.exists()) {
                 val deleted = file.delete()
-                println(" AAT FILE I/O: Deleted file: ${file.absolutePath} - Success: $deleted")
                 deleted
             } else {
-                println(" AAT FILE I/O: File not found for deletion: ${file.absolutePath}")
                 false
             }
         } catch (e: Exception) {
-            println(" AAT FILE I/O: Error deleting task: ${e.message}")
             false
         }
     }
@@ -267,7 +254,6 @@ class AATTaskFileIO(private val context: Context) {
                         //  COMPETITION-CRITICAL: Use AATRadiusAuthority for all AAT radii
                         val radiusKm = AATRadiusAuthority.getRadiusForRole(role)
                         val radiusMeters = radiusKm * 1000.0
-                        println(" AAT FILE I/O: Creating waypoint ${title} (${role}) - using AUTHORITY ${radiusKm}km radius")
 
                         waypoints.add(AATWaypoint(
                             id = UUID.randomUUID().toString(),
@@ -285,7 +271,6 @@ class AATTaskFileIO(private val context: Context) {
                 }
             }
         } catch (e: Exception) {
-            println(" AAT FILE I/O: Error parsing CUP: ${e.message}")
         }
         return waypoints
     }

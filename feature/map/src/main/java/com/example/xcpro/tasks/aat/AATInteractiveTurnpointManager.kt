@@ -1,6 +1,7 @@
 package com.example.xcpro.tasks.aat
 
 import androidx.compose.runtime.*
+import com.example.xcpro.core.time.Clock
 import com.example.xcpro.tasks.aat.calculations.AATDistanceCalculator
 import com.example.xcpro.tasks.aat.calculations.AATInteractiveTaskDistance
 import com.example.xcpro.tasks.aat.map.*
@@ -24,6 +25,7 @@ import org.maplibre.android.maps.MapLibreMap
  * ```kotlin
  * val aatManager = rememberAATInteractiveTurnpointManager(
  *     aatWaypoints = aatWaypoints,
+ *     clock = clock,
  *     onWaypointUpdated = { index, updatedWaypoint ->
  *         // Update AAT task with new waypoint
  *     }
@@ -46,17 +48,19 @@ data class AATManagerCallbacks(
 @Composable
 fun rememberAATInteractiveTurnpointManager(
     aatWaypoints: List<AATWaypoint>,
+    clock: Clock,
     callbacks: AATManagerCallbacks = AATManagerCallbacks()
 ): AATInteractiveTurnpointManager {
-    return remember {
-        AATInteractiveTurnpointManager(callbacks)
+    return remember(clock) {
+        AATInteractiveTurnpointManager(callbacks, clock)
     }.apply {
         updateWaypoints(aatWaypoints)
     }
 }
 
 class AATInteractiveTurnpointManager(
-    private val callbacks: AATManagerCallbacks
+    private val callbacks: AATManagerCallbacks,
+    private val clock: Clock
 ) {
     // Core components
     private val distanceCalculator = AATDistanceCalculator()
@@ -103,11 +107,11 @@ class AATInteractiveTurnpointManager(
                     onZoomToOverview = { zoom ->
                         handleZoomToOverview(zoom)
                     }
-                )
+                ),
+                clock = clock
             )
             mapInteractionHandler?.attachToMap(map)
 
-            println(" AAT: Interactive turnpoint manager attached to map")
         }
     }
 
@@ -123,7 +127,6 @@ class AATInteractiveTurnpointManager(
             updateDistance()
         }
 
-        println(" AAT: Updated waypoints (${newWaypoints.size} waypoints)")
     }
 
     /**
@@ -167,7 +170,6 @@ class AATInteractiveTurnpointManager(
         if (optimizedWaypoints.isNotEmpty()) {
             val newTargetPoint = optimizedWaypoints[0].targetPoint
             updateWaypointTargetPoint(areaIndex, newTargetPoint)
-            println(" AAT: Moved waypoint $areaIndex to strategic position")
         }
     }
 
@@ -180,7 +182,6 @@ class AATInteractiveTurnpointManager(
         val waypoint = currentWaypoints[areaIndex]
         val centerPoint = AATLatLng(waypoint.lat, waypoint.lon)
         updateWaypointTargetPoint(areaIndex, centerPoint)
-        println(" AAT: Reset waypoint $areaIndex to center")
     }
 
     /**
@@ -201,7 +202,6 @@ class AATInteractiveTurnpointManager(
     // ========== Event Handlers ==========
 
     private fun handleAreaTapped(index: Int, waypoint: AATWaypoint) {
-        println(" AAT: Area $index tapped (${waypoint.title})")
         // Area tap is handled by the interaction handler
     }
 
@@ -209,14 +209,12 @@ class AATInteractiveTurnpointManager(
         isEditMode = true
         focusedAreaIndex = index
         callbacks.onEditModeChanged(true, index)
-        println(" AAT: Entered edit mode for area $index (${waypoint.title})")
     }
 
     private fun handleEditModeExited() {
         isEditMode = false
         focusedAreaIndex = -1
         callbacks.onEditModeChanged(false, -1)
-        println(" AAT: Exited edit mode")
     }
 
     private fun handleTargetPointMoved(index: Int, newPoint: AATLatLng) {
@@ -260,7 +258,6 @@ class AATInteractiveTurnpointManager(
         callbacks.onWaypointUpdated(index, clampedWaypoint)
 
         val tp = clampedWaypoint.targetPoint
-        println("AAT: Updated waypoint $index target point to ${String.format("%.6f", tp.latitude)}, ${String.format("%.6f", tp.longitude)}")
     }
 
     private fun updateDistance() {
@@ -273,7 +270,6 @@ class AATInteractiveTurnpointManager(
         currentDistance = distance
         callbacks.onDistanceUpdated(distance)
 
-        println(" AAT: Updated task distance: ${String.format("%.2f", distance.totalDistance)} km (${distance.calculationTime}ms)")
     }
 }
 
@@ -284,6 +280,7 @@ class AATInteractiveTurnpointManager(
 fun AATInteractiveTurnpointIntegration(
     aatWaypoints: List<AATWaypoint>,
     mapLibreMap: MapLibreMap?,
+    clock: Clock,
     onWaypointUpdated: (Int, AATWaypoint) -> Unit,
     onDistanceUpdated: (AATInteractiveTaskDistance) -> Unit = {},
     onEditModeChanged: (Boolean, Int) -> Unit = { _, _ -> },
@@ -293,6 +290,7 @@ fun AATInteractiveTurnpointIntegration(
 ) {
     val manager = rememberAATInteractiveTurnpointManager(
         aatWaypoints = aatWaypoints,
+        clock = clock,
         callbacks = AATManagerCallbacks(
             onWaypointUpdated = onWaypointUpdated,
             onDistanceUpdated = onDistanceUpdated,
@@ -317,6 +315,7 @@ fun AATInteractiveTurnpointIntegration(
         com.example.xcpro.tasks.aat.ui.AATOverlayFactory.CreateInteractiveOverlay(
             aatWaypoints = aatWaypoints,
             mapLibreMap = mapLibreMap,
+            clock = clock,
             onTargetPointUpdated = { index: Int, newTargetPoint: AATLatLng ->
                 // Convert AATLatLng update to AATWaypoint update
                 if (index < aatWaypoints.size) {
@@ -343,21 +342,24 @@ object AATInteractiveTurnpointManagerFactory {
      * Create manager for full interactive mode
      */
     fun createInteractiveManager(
-        callbacks: AATManagerCallbacks
+        callbacks: AATManagerCallbacks,
+        clock: Clock
     ): AATInteractiveTurnpointManager {
-        return AATInteractiveTurnpointManager(callbacks)
+        return AATInteractiveTurnpointManager(callbacks, clock)
     }
 
     /**
      * Create manager for read-only display mode
      */
     fun createDisplayManager(
+        clock: Clock,
         onDistanceUpdated: (AATInteractiveTaskDistance) -> Unit = {}
     ): AATInteractiveTurnpointManager {
         return AATInteractiveTurnpointManager(
             AATManagerCallbacks(
                 onDistanceUpdated = onDistanceUpdated
-            )
+            ),
+            clock
         )
     }
 }

@@ -1,6 +1,5 @@
 package com.example.dfcards.dfcards
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.dfcards.CardDefinition
@@ -11,13 +10,13 @@ import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.FlightTemplate
 import com.example.dfcards.FlightTemplates
 import com.example.dfcards.RealTimeFlightData
+import com.example.dfcards.dfcards.di.DfCardsIoDispatcher
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.core.common.geometry.DensityScale
 import com.example.xcpro.core.common.geometry.IntSizePx
-import com.example.xcpro.core.time.Clock
-import com.example.xcpro.core.time.DefaultClockProvider
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,12 +29,12 @@ private const val TAG = "FlightDataViewModel"
  * Single-source-of-truth owner for flight data card configuration. Persisted values are read/written
  * via [CardPreferences], and the UI observes a consistent state regardless of which screen modifies it.
  */
-class FlightDataViewModel(
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val clock: Clock = DefaultClockProvider(),
-    cardsUseCaseOverride: FlightCardsUseCase? = null
+@HiltViewModel
+class FlightDataViewModel @Inject constructor(
+    @DfCardsIoDispatcher private val ioDispatcher: CoroutineDispatcher,
+    private val cardsUseCaseFactory: FlightCardsUseCaseFactory
 ) : ViewModel() {
-    private val cardsUseCase = cardsUseCaseOverride ?: FlightCardsUseCase(viewModelScope, clock)
+    private val cardsUseCase = cardsUseCaseFactory.create(viewModelScope)
     private var ingest: FlightDataIngest? = null
     private val _cardPreferences = MutableStateFlow<CardPreferences?>(null)
     private val _profileModeCards =
@@ -398,7 +397,5 @@ class FlightDataViewModel(
                 setProfileTemplate(targetProfileId, mode, templateId)
             }
         )
-    private fun logDebug(message: String) {
-        runCatching { Log.d(TAG, message) }
-    }
+    private fun logDebug(@Suppress("UNUSED_PARAMETER") message: String) {}
 }

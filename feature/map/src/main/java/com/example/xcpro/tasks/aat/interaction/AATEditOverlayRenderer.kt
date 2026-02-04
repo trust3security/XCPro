@@ -20,13 +20,10 @@ internal class AATEditOverlayRenderer(
 
     fun plotEditOverlay(mapLibreMap: MapLibreMap, task: SimpleAATTask, waypointIndex: Int) {
         try {
-            println("AAT EDIT MODE: plotEditOverlay called for waypoint $waypointIndex")
 
             // Map style may not be ready yet; retry once it's loaded.
             if (mapLibreMap.style == null) {
-                println("AAT EDIT MODE: Map style is null - cannot plot edit overlay yet")
                 mapLibreMap.getStyle { style ->
-                    println("AAT EDIT MODE: Map style loaded - retrying edit overlay plot")
                     plotEditOverlayWithStyle(style, task, waypointIndex)
                 }
                 return
@@ -34,24 +31,19 @@ internal class AATEditOverlayRenderer(
 
             plotEditOverlayWithStyle(mapLibreMap.style!!, task, waypointIndex)
         } catch (e: Exception) {
-            println("AAT EDIT MODE: Error in plotEditOverlay: ${e.message}")
             e.printStackTrace()
         }
     }
 
     fun clearEditOverlay(mapLibreMap: MapLibreMap) {
         try {
-            println("AAT EDIT MODE: clearEditOverlay called")
             val style = mapLibreMap.style
             if (style == null) {
-                println("AAT EDIT MODE: Map style is null - cannot clear overlay")
                 return
             }
 
             clearEditOverlayInternal(style)
-            println("AAT EDIT MODE: Edit overlay cleared successfully")
         } catch (e: Exception) {
-            println("AAT EDIT MODE: Error clearing edit overlay: ${e.message}")
             e.printStackTrace()
         }
     }
@@ -59,18 +51,14 @@ internal class AATEditOverlayRenderer(
     private fun plotEditOverlayWithStyle(style: Style, task: SimpleAATTask, waypointIndex: Int) {
         try {
             if (waypointIndex >= task.waypoints.size) {
-                println("AAT EDIT MODE: Invalid waypoint index for edit overlay: $waypointIndex")
                 return
             }
 
             val waypoint = task.waypoints[waypointIndex]
-            println("AAT EDIT MODE: Highlighting ${waypoint.title} at index $waypointIndex")
-            println("AAT EDIT MODE: Waypoint shape: ${waypoint.assignedArea.shape}")
 
             val highlightedGeometry = when (waypoint.assignedArea.shape) {
                 AATAreaShape.CIRCLE -> {
                     val radiusKm = waypoint.assignedArea.radiusMeters / 1000.0
-                    println("AAT EDIT MODE: Generating circle highlight (${radiusKm}km)")
                     geometry.generateCircleCoordinates(waypoint.lat, waypoint.lon, radiusKm)
                 }
                 AATAreaShape.SECTOR -> {
@@ -80,12 +68,7 @@ internal class AATEditOverlayRenderer(
                     val endAngle = waypoint.assignedArea.endAngleDegrees
 
                     if (innerRadiusKm > 0.0) {
-                        println(
-                            "AAT EDIT MODE: Generating keyhole highlight (inner:${innerRadiusKm}km, " +
-                                "outer:${outerRadiusKm}km, ${startAngle}deg-${endAngle}deg)"
-                        )
                     } else {
-                        println("AAT EDIT MODE: Generating sector highlight (${outerRadiusKm}km, ${startAngle}deg-${endAngle}deg)")
                     }
 
                     geometry.generateSectorCoordinates(
@@ -96,7 +79,6 @@ internal class AATEditOverlayRenderer(
                 }
                 AATAreaShape.LINE -> {
                     val radiusKm = waypoint.assignedArea.radiusMeters / 1000.0
-                    println("AAT EDIT MODE: Generating circle highlight for LINE type (${radiusKm}km)")
                     geometry.generateCircleCoordinates(waypoint.lat, waypoint.lon, radiusKm)
                 }
             }
@@ -124,10 +106,8 @@ internal class AATEditOverlayRenderer(
             // Clear old overlay first to prevent stale highlights.
             clearEditOverlayInternal(style)
 
-            println("AAT EDIT MODE: Adding edit overlay source")
             style.addSource(GeoJsonSource("aat-edit-overlay", editOverlayGeoJson))
 
-            println("AAT EDIT MODE: Adding highlight fill layer")
             style.addLayer(
                 FillLayer("aat-edit-highlight", "aat-edit-overlay")
                     .withProperties(
@@ -137,7 +117,6 @@ internal class AATEditOverlayRenderer(
                     )
             )
 
-            println("AAT EDIT MODE: Adding highlight border layer")
             style.addLayer(
                 LineLayer("aat-edit-border", "aat-edit-overlay")
                     .withProperties(
@@ -147,9 +126,7 @@ internal class AATEditOverlayRenderer(
                     )
             )
 
-            println("AAT EDIT MODE: Edit overlay successfully plotted for ${waypoint.title}")
         } catch (e: Exception) {
-            println("AAT EDIT MODE: Error in plotEditOverlayWithStyle: ${e.message}")
             e.printStackTrace()
         }
     }
@@ -166,7 +143,6 @@ internal class AATEditOverlayRenderer(
                 style.removeSource("aat-edit-overlay")
             }
         } catch (e: Exception) {
-            println("AAT EDIT MODE: Error clearing edit overlay: ${e.message}")
         }
     }
 }

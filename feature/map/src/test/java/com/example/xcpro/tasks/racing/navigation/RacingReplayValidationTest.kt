@@ -1,5 +1,6 @@
 package com.example.xcpro.tasks.racing.navigation
 
+import com.example.xcpro.core.time.FakeClock
 import com.example.xcpro.replay.IgcParser
 import com.example.xcpro.tasks.racing.SimpleRacingTask
 import com.example.xcpro.tasks.racing.models.RacingFinishPointType
@@ -20,7 +21,8 @@ class RacingReplayValidationTest {
         val task = buildSimpleTask()
         val resource = javaClass.classLoader?.getResourceAsStream(REPLAY_RESOURCE)
             ?: error("Missing replay fixture: $REPLAY_RESOURCE")
-        val log = IgcParser.parse(resource)
+        val parser = IgcParser(FakeClock(wallMs = 0L))
+        val log = parser.parse(resource)
         assertTrue("Expected IGC points", log.points.isNotEmpty())
 
         val events = mutableListOf<RacingNavigationEvent>()

@@ -47,7 +47,6 @@ class RacingTaskInitializer {
             waypoints = racingWaypoints
         )
 
-        println(" RACING TASK: Initialized with ${racingWaypoints.size} waypoints")
         return task
     }
 
@@ -121,9 +120,7 @@ class RacingTaskInitializer {
 
         val customizedCount = genericWaypoints.count { it.hasCustomizations }
         if (customizedCount > 0) {
-            println(" RACING TASK: Initialized from generic waypoints - preserved ${customizedCount} customizations, applied standardized defaults to ${racingWaypoints.size - customizedCount} waypoints")
         } else {
-            println(" RACING TASK: Initialized from generic waypoints - applied standardized defaults (10km start, 3km finish) to ${racingWaypoints.size} waypoints")
         }
 
         return task

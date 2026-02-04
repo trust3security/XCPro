@@ -1,79 +1,73 @@
 package com.example.xcpro.tasks
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewModelScope
 import com.example.xcpro.common.waypoint.SearchWaypoint
-import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.domain.logic.TaskAdvanceState
 import com.example.xcpro.tasks.domain.model.GeoPoint
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
-import org.maplibre.android.maps.MapLibreMap
 import kotlin.math.pow
 
 /**
- * Bridges UI intents to TaskManagerCoordinator while maintaining
+ * Bridges UI intents to task use-cases while maintaining
  * a domain TaskRepository for validation/stats.
- * AI-NOTE: This keeps existing TaskManager-driven flows intact while we
- * migrate logic into the domain layer.
  */
-class TaskSheetViewModel(
-    private val taskManager: TaskManagerCoordinator,
-    private val useCase: TaskSheetUseCase = TaskSheetUseCase()
+@HiltViewModel
+class TaskSheetViewModel @Inject constructor(
+    private val taskCoordinator: TaskSheetCoordinatorUseCase,
+    private val useCase: TaskSheetUseCase
 ) : ViewModel() {
 
     val uiState: StateFlow<TaskUiState> = useCase.state
 
-    private var map: MapLibreMap? = null
-
-    init {
-        taskManager.setProximityHandler { entered, close ->
-            onProximityEvent(entered, close)
-        }
-        taskManager.addLegChangeListener { _ ->
-            useCase.armAdvance(false) // manual leg change disarms auto-advance
-            sync()
-        }
+    private val legChangeListener: (Int) -> Unit = {
+        useCase.armAdvance(false) // manual leg change disarms auto-advance
         sync()
     }
 
-    fun setMap(map: MapLibreMap?) {
-        this.map = map
-        taskManager.setMapInstance(map)
+    init {
+        taskCoordinator.setProximityHandler { entered, close ->
+            onProximityEvent(entered, close)
+        }
+        taskCoordinator.addLegChangeListener(legChangeListener)
+        sync()
+    }
+
+    override fun onCleared() {
+        taskCoordinator.removeLegChangeListener(legChangeListener)
+        super.onCleared()
     }
 
     fun onAddWaypoint(wp: SearchWaypoint) = mutate {
-        taskManager.addWaypoint(wp)
+        taskCoordinator.addWaypoint(wp)
     }
 
     fun onRemoveWaypoint(index: Int) = mutate {
-        taskManager.removeWaypoint(index)
+        taskCoordinator.removeWaypoint(index)
     }
 
     fun onReorderWaypoint(from: Int, to: Int) = mutate {
-        taskManager.reorderWaypoints(from, to)
+        taskCoordinator.reorderWaypoints(from, to)
     }
 
     fun onReplaceWaypoint(index: Int, wp: SearchWaypoint) = mutate {
-        taskManager.replaceWaypoint(index, wp)
+        taskCoordinator.replaceWaypoint(index, wp)
     }
 
     fun onSetTargetParam(index: Int, param: Double) {
         useCase.setTargetParam(index, param)
         // Relay to legacy manager so map overlays stay in sync.
         useCase.state.value.targets.getOrNull(index)?.target?.let { target ->
-            taskManager.updateAATTargetPoint(index, target.lat, target.lon)
-            taskManager.plotOnMap(map)
+            taskCoordinator.updateAATTargetPoint(index, target.lat, target.lon)
         }
     }
 
     fun onToggleTargetLock(index: Int) {
         useCase.toggleTargetLock(index)
         useCase.state.value.targets.getOrNull(index)?.target?.let { target ->
-            taskManager.updateAATTargetPoint(index, target.lat, target.lon)
-            taskManager.plotOnMap(map)
+            taskCoordinator.updateAATTargetPoint(index, target.lat, target.lon)
         }
     }
 
@@ -87,18 +81,18 @@ class TaskSheetViewModel(
 
     fun onProximityEvent(hasEnteredOZ: Boolean, closeToTarget: Boolean) = mutate {
         if (useCase.shouldAutoAdvance(hasEnteredOZ, closeToTarget)) {
-            taskManager.advanceToNextLeg()
+            taskCoordinator.advanceToNextLeg()
         }
     }
 
     fun onLocationUpdate(lat: Double, lon: Double) {
         val state = uiState.value
-        val leg = taskManager.currentLeg
+        val leg = taskCoordinator.currentLeg
         val waypoint = state.task.waypoints.getOrNull(leg) ?: return
         val target = state.targets.getOrNull(leg)?.target
         val activePoint = target?.let { GeoPoint(it.lat, it.lon) } ?: GeoPoint(waypoint.lat, waypoint.lon)
         val distance = haversineMeters(lat, lon, activePoint.lat, activePoint.lon)
-        val radius = effectiveRadius(taskManager.taskType, waypoint.role)
+        val radius = effectiveRadius(taskCoordinator.taskType, waypoint.role)
         val hasEntered = distance <= radius + 30.0 // 30 m buffer
         val closeToTarget = distance <= 200.0
         onProximityEvent(hasEntered, closeToTarget)
@@ -126,8 +120,8 @@ class TaskSheetViewModel(
     fun importPersistedTask(json: String) = mutate {
         val persisted = TaskPersistSerializer.deserialize(json)
         val (importedTask, targets) = TaskPersistSerializer.toTask(persisted)
-        taskManager.setTaskType(persisted.taskType)
-        taskManager.clearTask()
+        taskCoordinator.setTaskType(persisted.taskType)
+        taskCoordinator.clearTask()
         importedTask.waypoints.forEach { wp ->
             onAddWaypoint(
                 SearchWaypoint(
@@ -144,33 +138,33 @@ class TaskSheetViewModel(
             targets.forEach { t ->
                 useCase.setTargetParam(t.index, t.targetParam)
                 useCase.setTargetLock(t.index, t.isLocked)
-                t.target?.let { target -> taskManager.updateAATTargetPoint(t.index, target.lat, target.lon) }
+                t.target?.let { target -> taskCoordinator.updateAATTargetPoint(t.index, target.lat, target.lon) }
             }
         }
         // apply OZ params where present (basic radius support)
         persisted.waypoints.forEachIndexed { index, wp ->
             val radius = wp.ozParams["radiusMeters"] ?: wp.ozParams["outerRadiusMeters"]
             if (radius != null && persisted.taskType == TaskType.AAT) {
-                taskManager.updateAATArea(index, radius)
+                taskCoordinator.updateAATArea(index, radius)
             }
-        if (persisted.taskType == TaskType.AAT) {
-            val keyholeInnerKm = wp.ozParams["innerRadiusMeters"]?.div(1000.0)
-            val angleDeg = wp.ozParams["angleDeg"]
-            val sectorOuterKm = wp.ozParams["outerRadiusMeters"]?.div(1000.0)
-            taskManager.updateAATWaypointPointType(
-                index = index,
-                startType = null,
-                finishType = null,
-                turnType = null,
-                gateWidth = radius?.div(1000.0),
-                keyholeInnerRadius = keyholeInnerKm,
-                keyholeAngle = angleDeg,
-                sectorOuterRadius = sectorOuterKm
-            )
-        }
+            if (persisted.taskType == TaskType.AAT) {
+                val keyholeInnerKm = wp.ozParams["innerRadiusMeters"]?.div(1000.0)
+                val angleDeg = wp.ozParams["angleDeg"]
+                val sectorOuterKm = wp.ozParams["outerRadiusMeters"]?.div(1000.0)
+                taskCoordinator.updateAATWaypointPointType(
+                    index = index,
+                    startType = null,
+                    finishType = null,
+                    turnType = null,
+                    gateWidth = radius?.div(1000.0),
+                    keyholeInnerRadius = keyholeInnerKm,
+                    keyholeAngle = angleDeg,
+                    sectorOuterRadius = sectorOuterKm
+                )
+            }
             if (radius != null && persisted.taskType == TaskType.RACING && index > 0 && index < importedTask.waypoints.lastIndex) {
                 // best-effort: use gateWidth for turnpoints (km)
-                taskManager.updateWaypointPointType(
+                taskCoordinator.updateWaypointPointType(
                     index = index,
                     startType = null,
                     finishType = null,
@@ -182,7 +176,7 @@ class TaskSheetViewModel(
                 )
             }
         }
-        taskManager.setActiveLeg(0)
+        taskCoordinator.setActiveLeg(0)
     }
 
     fun onUpdateWaypointPointType(
@@ -195,7 +189,7 @@ class TaskSheetViewModel(
         keyholeAngle: Double?,
         faiQuadrantOuterRadius: Double?
     ) = mutate {
-        taskManager.updateWaypointPointType(
+        taskCoordinator.updateWaypointPointType(
             index = index,
             startType = startType,
             finishType = finishType,
@@ -208,7 +202,7 @@ class TaskSheetViewModel(
     }
 
     fun onUpdateAATArea(index: Int, radiusMeters: Double) = mutate {
-        taskManager.updateAATArea(index, radiusMeters)
+        taskCoordinator.updateAATArea(index, radiusMeters)
     }
 
     fun onUpdateAATWaypointPointType(
@@ -221,7 +215,7 @@ class TaskSheetViewModel(
         keyholeAngle: Double?,
         sectorOuterRadius: Double?
     ) = mutate {
-        taskManager.updateAATWaypointPointType(
+        taskCoordinator.updateAATWaypointPointType(
             index = index,
             startType = startType,
             finishType = finishType,
@@ -234,34 +228,23 @@ class TaskSheetViewModel(
     }
 
     fun onSetTaskType(taskType: TaskType) = mutate {
-        taskManager.setTaskType(taskType)
+        taskCoordinator.setTaskType(taskType)
     }
 
     fun onClearTask() = mutate {
-        taskManager.clearTask()
+        taskCoordinator.clearTask()
     }
 
     private fun mutate(block: () -> Unit) {
         block()
-        taskManager.plotOnMap(map)
         sync()
     }
 
     private fun sync() {
         useCase.updateFrom(
-            task = taskManager.currentTask,
-            taskType = taskManager.taskType,
-            activeIndex = taskManager.currentLeg
+            task = taskCoordinator.currentTask,
+            taskType = taskCoordinator.taskType,
+            activeIndex = taskCoordinator.currentLeg
         )
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    companion object {
-        fun factory(taskManager: TaskManagerCoordinator): ViewModelProvider.Factory =
-            object : ViewModelProvider.Factory {
-                override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return TaskSheetViewModel(taskManager) as T
-                }
-            }
     }
 }

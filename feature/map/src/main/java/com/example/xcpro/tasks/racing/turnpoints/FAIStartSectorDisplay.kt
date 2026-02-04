@@ -27,7 +27,6 @@ class FAIStartSectorDisplay : TurnPointDisplay {
     override fun generateVisualGeometry(waypoint: RacingWaypoint, context: TaskContext): String {
         val nextWaypoint = context.nextWaypoint
         if (nextWaypoint == null) {
-            println(" FAI START SECTOR: No next waypoint found, creating fallback circle")
             return createFallbackCircle(waypoint)
         }
 
@@ -53,7 +52,6 @@ class FAIStartSectorDisplay : TurnPointDisplay {
 
             // CRASH FIX: Validate bearing
             if (!firstLegBearing.isFinite()) {
-                println(" FAI START SECTOR: Invalid bearing calculation")
                 return createFallbackCircle(startWaypoint)
             }
 
@@ -107,14 +105,12 @@ class FAIStartSectorDisplay : TurnPointDisplay {
 
             // Validate the GeoJSON feature
             if (!RacingGeoJSONValidator.validateGeoJSON(geoJsonFeature, "FAI Start Sector")) {
-                println(" FAI START SECTOR: Generated invalid geometry, using fallback")
                 return createFallbackCircle(startWaypoint)
             }
 
             return geoJsonFeature
 
         } catch (e: Exception) {
-            println(" FAI START SECTOR generation failed: ${e.message}")
             return createFallbackCircle(startWaypoint)
         }
     }

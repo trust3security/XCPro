@@ -19,7 +19,6 @@ class KeyholeDisplay : TurnPointDisplay {
     
     override fun generateVisualGeometry(waypoint: RacingWaypoint, context: TaskContext): String {
         return try {
-            println("KEYHOLE DEBUG: Starting keyhole generation for waypoint ${waypoint.title}")
 
             // Configurable Keyhole: Use flexible parameters
             val cylinderRadiusMeters = waypoint.keyholeInnerRadius * 1000.0 // Inner cylinder radius in meters
@@ -28,7 +27,6 @@ class KeyholeDisplay : TurnPointDisplay {
                 if (abs(angle - 90.0) < 1e-3) 90.0 else angle
             } // Clean up float precision (89.9999 -> 90)
 
-            println("KEYHOLE DEBUG: Params - Inner:${cylinderRadiusMeters}m, Outer:${sectorRadiusMeters}m, Angle:${sectorAngleDegrees} deg")
 
             // Use sector calculation with configurable angle
             val bisectorBearing = KeyholeGeometry.calculateSectorBisector(waypoint, context)
@@ -36,7 +34,6 @@ class KeyholeDisplay : TurnPointDisplay {
             val startAngle = (bisectorBearing - halfAngle + 360.0) % 360.0
             val endAngle = (bisectorBearing + halfAngle) % 360.0
 
-            println("KEYHOLE DEBUG: Angles - Bisector:${bisectorBearing} deg, Start:${startAngle} deg, End:${endAngle} deg")
 
             // Build one closed ring matching the keyhole shape (outer arc + inner arc), no separate shapes
             val outerArc = KeyholeGeometry.generateSectorCoordinatesArray(
@@ -64,7 +61,6 @@ class KeyholeDisplay : TurnPointDisplay {
             val gson = com.google.gson.Gson()
             val ringJson = gson.toJson(listOf(ring))
 
-            println("dY` KEYHOLE DEBUG: Ring pts=${ring.size} (outer=${outerArc.size} inner=${innerArc.size})")
 
             // Single Feature Polygon (annular sector) so renderer sees one geometry
             val geoJson = """
@@ -86,11 +82,8 @@ class KeyholeDisplay : TurnPointDisplay {
             }
             """.trimIndent()
 
-            println("KEYHOLE DEBUG: Generated GeoJSON successfully")
             geoJson
         } catch (e: Exception) {
-            println("KEYHOLE ERROR: ${e.message}")
-            println("KEYHOLE ERROR: Stack trace: ${e.stackTrace.contentToString()}")
             // Return a simple cylinder as fallback
             """
             {

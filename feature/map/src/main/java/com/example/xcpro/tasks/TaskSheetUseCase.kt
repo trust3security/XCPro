@@ -3,10 +3,11 @@ package com.example.xcpro.tasks
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.domain.logic.TaskAdvanceState
+import javax.inject.Inject
 import kotlinx.coroutines.flow.StateFlow
 
-class TaskSheetUseCase(
-    private val repository: TaskRepository = TaskRepository()
+class TaskSheetUseCase @Inject constructor(
+    private val repository: TaskRepository
 ) {
     val state: StateFlow<TaskUiState> = repository.state
 

@@ -51,6 +51,7 @@ fun AATMapVisualIndicators(
     mapWidth: Float,
     mapHeight: Float,
     coordinateToPixel: (AATLatLng) -> Offset?,
+    nowMs: Long,
     modifier: Modifier = Modifier
 ) {
     if (!editSession.isEditingArea || editSession.focusedWaypoint == null) {
@@ -84,7 +85,7 @@ fun AATMapVisualIndicators(
         )
 
         // Draw distance rings (optional)
-        if (editSession.sessionDurationMs(android.os.SystemClock.elapsedRealtime()) > 2000) { // Show after 2 seconds
+        if (editSession.sessionDurationMs(nowMs) > 2000) { // Show after 2 seconds
             drawDistanceRings(
                 waypoint = waypoint,
                 coordinateToPixel = coordinateToPixel

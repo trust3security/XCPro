@@ -2,7 +2,7 @@ package com.example.xcpro.map
 
 import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.common.orientation.OrientationData
-import com.example.xcpro.sensors.GPSData
+import com.example.xcpro.map.model.MapLocationUiModel
 
 class LocationFeedAdapter {
 
@@ -11,24 +11,24 @@ class LocationFeedAdapter {
         val timeBase: DisplayClock.TimeBase
     )
 
-    fun fromGps(location: GPSData, orientation: OrientationData): RawFixEnvelope {
-        val timeBase = if (location.monotonicTimestampMillis > 0L) {
+    fun fromGps(location: MapLocationUiModel, orientation: OrientationData): RawFixEnvelope {
+        val timeBase = if (location.monotonicTimestampMs > 0L) {
             DisplayClock.TimeBase.MONOTONIC
         } else {
             DisplayClock.TimeBase.WALL
         }
         val timestampMs = if (timeBase == DisplayClock.TimeBase.MONOTONIC) {
-            location.monotonicTimestampMillis
+            location.monotonicTimestampMs
         } else {
-            location.timestamp
+            location.timestampMs
         }
         val fix = DisplayPoseSmoother.RawFix(
             latitude = location.latitude,
             longitude = location.longitude,
-            speedMs = location.speed.value,
-            trackDeg = location.bearing,
+            speedMs = location.speedMs,
+            trackDeg = location.bearingDeg,
             headingDeg = orientation.headingDeg,
-            accuracyM = location.accuracy.toDouble(),
+            accuracyM = location.accuracyMeters,
             bearingAccuracyDeg = location.bearingAccuracyDeg,
             speedAccuracyMs = location.speedAccuracyMs,
             timestampMs = timestampMs,
@@ -53,4 +53,3 @@ class LocationFeedAdapter {
         return RawFixEnvelope(fix, DisplayClock.TimeBase.REPLAY)
     }
 }
-

@@ -50,7 +50,6 @@ internal class AATMapRenderer {
                 aatLayers.forEach { layerId ->
                     try {
                         s.removeLayer(layerId)
-                        println(" AAT RENDERER: Removed layer: $layerId")
                     } catch (e: Exception) {
                         // Layer doesn't exist, ignore
                     }
@@ -60,15 +59,12 @@ internal class AATMapRenderer {
                 aatSources.forEach { sourceId ->
                     try {
                         s.removeSource(sourceId)
-                        println(" AAT RENDERER: Removed source: $sourceId")
                     } catch (e: Exception) {
                         // Source doesn't exist, ignore
                     }
                 }
 
-                println(" AAT RENDERER: Cleared all AAT map layers and sources in correct order")
             } catch (e: Exception) {
-                println(" AAT RENDERER: Error clearing AAT layers: ${e.message}")
                 e.printStackTrace()
             }
         }
@@ -112,19 +108,15 @@ internal class AATMapRenderer {
                     // Only add source if it doesn't already exist
                     if (style.getSource("aat-waypoints") == null) {
                         style.addSource(GeoJsonSource("aat-waypoints", geoJson))
-                        println(" AAT RENDERER: Added aat-waypoints source")
                     } else {
                         // Source exists, update its data instead
                         val existingSource = style.getSourceAs<GeoJsonSource>("aat-waypoints")
                         existingSource?.setGeoJson(geoJson)
-                        println(" AAT RENDERER: Updated existing aat-waypoints source")
                     }
                 } catch (e: Exception) {
-                    println(" AAT RENDERER: Error adding waypoints source: ${e.message}")
                     return
                 }
             } else {
-                println(" AAT RENDERER: Skipping invalid waypoints GeoJSON")
                 return
             }
 
@@ -147,17 +139,12 @@ internal class AATMapRenderer {
                                 PropertyFactory.circleStrokeColor("#FFFFFF")
                             )
                     )
-                    println(" AAT RENDERER: Added aat-waypoints layer")
                 } else {
-                    println(" AAT RENDERER: aat-waypoints layer already exists")
                 }
             } catch (e: Exception) {
-                println(" AAT RENDERER: Error adding waypoints layer: ${e.message}")
             }
 
-            println(" AAT RENDERER: Added ${features.size} waypoint markers")
         } catch (e: Exception) {
-            println(" AAT RENDERER: Error plotting waypoints: ${e.message}")
         }
     }
 
@@ -176,11 +163,9 @@ internal class AATMapRenderer {
             try {
                 if (style.getSource("aat-areas") == null) {
                     style.addSource(GeoJsonSource("aat-areas", areasGeoJson))
-                    println(" AAT RENDERER: Added aat-areas source")
                 } else {
                     val existingSource = style.getSourceAs<GeoJsonSource>("aat-areas")
                     existingSource?.setGeoJson(areasGeoJson)
-                    println(" AAT RENDERER: Updated existing aat-areas source")
                 }
 
                 if (style.getLayer("aat-areas-layer") == null) {
@@ -214,13 +199,9 @@ internal class AATMapRenderer {
                                     PropertyFactory.lineOpacity(0.9f)
                                 )
                         )
-                        println(" AAT RENDERER: Added aat-borders-layer")
                     }
-                    println(" AAT RENDERER: Added aat-areas-layer")
                 }
-                println(" AAT RENDERER: Processed ${areaFeatures.size} area features")
             } catch (e: Exception) {
-                println(" AAT RENDERER: Error adding area features: ${e.message}")
             }
         }
     }
@@ -240,11 +221,9 @@ internal class AATMapRenderer {
             try {
                 if (style.getSource("aat-lines") == null) {
                     style.addSource(GeoJsonSource("aat-lines", linesGeoJson))
-                    println(" AAT RENDERER: Added aat-lines source")
                 } else {
                     val existingSource = style.getSourceAs<GeoJsonSource>("aat-lines")
                     existingSource?.setGeoJson(linesGeoJson)
-                    println(" AAT RENDERER: Updated existing aat-lines source")
                 }
 
                 if (style.getLayer("aat-lines-layer") == null) {
@@ -262,11 +241,8 @@ internal class AATMapRenderer {
                                 PropertyFactory.lineOpacity(0.8f)
                             )
                     )
-                    println(" AAT RENDERER: Added aat-lines-layer")
                 }
-                println(" AAT RENDERER: Processed ${lineFeatures.size} line features")
             } catch (e: Exception) {
-                println(" AAT RENDERER: Error adding line features: ${e.message}")
                 e.printStackTrace()
             }
         }
@@ -300,7 +276,6 @@ internal class AATMapRenderer {
             if (geoJsonString.contains("\"coordinates\"") && coordinates.isNotEmpty()) {
                 style.addSource(GeoJsonSource("aat-task-line", geoJsonString))
             } else {
-                println(" AAT RENDERER: Skipping invalid task line GeoJSON")
                 return
             }
 
@@ -312,9 +287,7 @@ internal class AATMapRenderer {
             )
             style.addLayer(layer)
 
-            println(" AAT RENDERER: Added task line connecting ${coordinates.size} target points")
         } catch (e: Exception) {
-            println(" AAT RENDERER: Error plotting task line: ${e.message}")
         }
     }
 
@@ -357,11 +330,9 @@ internal class AATMapRenderer {
 
             if (style.getSource("aat-target-points") == null) {
                 style.addSource(GeoJsonSource("aat-target-points", geoJson))
-                println(" AAT RENDERER: Added target points source")
             } else {
                 val existingSource = style.getSourceAs<GeoJsonSource>("aat-target-points")
                 existingSource?.setGeoJson(geoJson)
-                println(" AAT RENDERER: Updated target points source")
             }
 
             // Always recreate layer to apply edit mode color and size changes
@@ -405,10 +376,8 @@ internal class AATMapRenderer {
                         PropertyFactory.circleOpacity(0.9f)
                     )
             )
-            println(" AAT RENDERER: Added target points layer with ${features.size} draggable pins (edit mode aware)")
 
         } catch (e: Exception) {
-            println(" AAT RENDERER: Error plotting target point pins: ${e.message}")
         }
     }
 }

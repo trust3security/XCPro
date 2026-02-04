@@ -113,7 +113,6 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
     fun initializeRacingTask(waypoints: List<SearchWaypoint>) {
         _currentRacingTask = racingTaskInitializer.initializeRacingTask(waypoints)
         _currentLeg = 0
-        println(" RACING TASK: Initialized with ${_currentRacingTask.waypoints.size} waypoints, currentLeg set to $_currentLeg")
     }
 
     /**
@@ -182,7 +181,6 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
         // Update current leg if waypoint was actually removed
         if (waypointCountAfter < waypointCountBefore) {
             _currentLeg = waypointManager.calculateLegAfterRemoval(_currentLeg, index, waypointCountAfter)
-            println(" RACING TASK: Updated currentLeg to $_currentLeg after removal")
         }
 
         saveRacingTask()
@@ -213,7 +211,6 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
             faiQuadrantOuterRadius
         )
         saveRacingTask()
-        println(" RACING TASK: New distance: ${calculateRacingDistance()} km")
     }
 
     /**
@@ -313,11 +310,9 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
      * Clear Racing task
      */
     fun clearRacingTask() {
-        println(" RACING TASK: Clearing racing task (${_currentRacingTask.waypoints.size} waypoints)")
         _currentRacingTask = SimpleRacingTask()
         _currentLeg = 0
         saveRacingTask()
-        println(" RACING TASK: Task cleared - ${_currentRacingTask.waypoints.size} waypoints remaining")
     }
 
     /**
@@ -327,9 +322,7 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
         val task = _currentRacingTask
         if (task.waypoints.isNotEmpty() && _currentLeg < task.waypoints.size - 1) {
             _currentLeg++
-            println(" RACING TASK: Advanced to leg $_currentLeg")
         } else {
-            println(" RACING TASK: Cannot advance - already at last waypoint")
         }
     }
 
@@ -339,9 +332,7 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
     fun goToPreviousLeg() {
         if (_currentLeg > 0) {
             _currentLeg--
-            println(" RACING TASK: Went back to leg $_currentLeg")
         } else {
-            println(" RACING TASK: Cannot go back - already at first waypoint")
         }
     }
 
@@ -349,7 +340,6 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
         if (_currentRacingTask.waypoints.isEmpty()) return
         val clamped = index.coerceIn(0, _currentRacingTask.waypoints.lastIndex)
         _currentLeg = clamped
-        println("RACING TASK: Active leg set to $clamped")
         if (map != null) {
             plotRacingOnMap(map)
         }
@@ -364,7 +354,6 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
      */
     fun saveRacingTask() {
         racingTaskPersistence?.saveRacingTask(_currentRacingTask) ?: run {
-            println(" RACING TASK: Cannot save - no persistence available")
         }
     }
 
@@ -376,9 +365,7 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
             _currentRacingTask = task
             // Update current leg after loading - start at beginning
             _currentLeg = 0
-            println(" RACING TASK: Loaded task with ${task.waypoints.size} waypoints, currentLeg: $_currentLeg")
         } ?: run {
-            println(" RACING TASK: Persistence not available")
             null
         }
     }

@@ -1,41 +1,28 @@
 package com.example.xcpro.map
 
-import android.content.Context
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.dfcards.CardPreferences
 import com.example.xcpro.MapOrientationManager
-import com.example.xcpro.MapOrientationManagerFactory
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.flow.inVm
 import com.example.xcpro.core.common.geometry.OffsetPx
 import com.example.xcpro.common.units.UnitsPreferences
-import com.example.xcpro.common.waypoint.WaypointLoader
-import com.example.xcpro.vario.VarioServiceManager
-import com.example.xcpro.vario.LevoVarioPreferencesRepository
 import com.example.xcpro.weather.wind.model.WindState
-import com.example.xcpro.map.replay.RacingReplayLogBuilder
-import com.example.xcpro.replay.IgcReplayController
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.replay.SessionStatus
 import com.example.xcpro.map.ballast.BallastCommand
-import com.example.xcpro.map.ballast.BallastControllerFactory
 import com.example.xcpro.map.ballast.BallastUiState
-import com.example.xcpro.map.config.MapFeatureFlags
 import com.example.xcpro.map.domain.MapWaypointError
 import com.example.xcpro.map.domain.toUserMessage
+import com.example.xcpro.map.model.GpsStatusUiModel
+import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.map.trail.MapTrailSettingsUseCase
 import com.example.xcpro.map.trail.domain.TrailUpdateResult
 import com.example.xcpro.qnh.CalibrateQnhUseCase
 import com.example.xcpro.qnh.QnhCalibrationFailureReason
-import com.example.xcpro.tasks.TaskManagerCoordinator
-import com.example.xcpro.tasks.TaskNavigationController
 import com.example.xcpro.variometer.layout.VariometerUiState
 import com.example.xcpro.variometer.layout.VariometerLayoutUseCase
-import com.example.xcpro.sensors.GPSData
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -58,41 +45,42 @@ import java.util.Locale
  */
 @HiltViewModel
 class MapScreenViewModel @Inject constructor(
-    @ApplicationContext private val appContext: Context,
-    val taskManager: TaskManagerCoordinator,
-    private val taskNavigationController: TaskNavigationController,
-    val cardPreferences: CardPreferences,
     private val mapStyleUseCase: MapStyleUseCase,
     private val unitsUseCase: UnitsPreferencesUseCase,
-    private val waypointLoader: WaypointLoader,
+    private val mapWaypointsUseCase: MapWaypointsUseCase,
     private val gliderConfigUseCase: GliderConfigUseCase,
-    val varioServiceManager: VarioServiceManager,
+    private val sensorsUseCase: MapSensorsUseCase,
     private val flightDataUseCase: FlightDataUseCase,
-    private val flightDataManagerFactory: FlightDataManagerFactory,
+    private val mapUiControllersUseCase: MapUiControllersUseCase,
     private val windStateUseCase: WindStateUseCase,
-    val igcReplayController: IgcReplayController,
-    private val racingReplayLogBuilder: RacingReplayLogBuilder,
-    private val orientationManagerFactory: MapOrientationManagerFactory,
+    private val mapReplayUseCase: MapReplayUseCase,
+    private val mapTasksUseCase: MapTasksUseCase,
+    private val mapFeatureFlagsUseCase: MapFeatureFlagsUseCase,
+    private val mapCardPreferencesUseCase: MapCardPreferencesUseCase,
     private val qnhUseCase: QnhUseCase,
     private val trailSettingsUseCase: MapTrailSettingsUseCase,
     private val calibrateQnhUseCase: CalibrateQnhUseCase,
     private val variometerLayoutUseCase: VariometerLayoutUseCase,
-    private val ballastControllerFactory: BallastControllerFactory,
-    private val levoVarioPreferencesRepository: LevoVarioPreferencesRepository
+    private val mapVarioPreferencesUseCase: MapVarioPreferencesUseCase
 ) : ViewModel() {
 
     private val initialStyleName = mapStyleUseCase.initialStyle()
     private val mapStateStore: MapStateStore = MapStateStore(initialStyleName)
     val mapState: MapStateReader = mapStateStore
     val mapStateActions: MapStateActions = MapStateActionsDelegate(mapStateStore)
+    private val featureFlags = mapFeatureFlagsUseCase.featureFlags
+    val mapFeatureFlags = featureFlags
+    val taskManager = mapTasksUseCase.taskManager
+    private val taskNavigationController = mapTasksUseCase.taskNavigationController
+    val varioServiceManager = sensorsUseCase.serviceManager
+    val cardPreferences = mapCardPreferencesUseCase.cardPreferences
+    val igcReplayController = mapReplayUseCase.controller
+    private val racingReplayLogBuilder = mapReplayUseCase.racingReplayLogBuilder
 
-    private val ballastController = ballastControllerFactory.create(viewModelScope)
-
-    val flightDataManager: FlightDataManager =
-        flightDataManagerFactory.create(viewModelScope)
-    val unifiedSensorManager = varioServiceManager.unifiedSensorManager
-    val orientationManager: MapOrientationManager =
-        orientationManagerFactory.create(viewModelScope)
+    private val uiControllers = mapUiControllersUseCase.create(viewModelScope)
+    private val ballastController = uiControllers.ballastController
+    val flightDataManager: FlightDataManager = uiControllers.flightDataManager
+    val orientationManager: MapOrientationManager = uiControllers.orientationManager
     val windArrowState: StateFlow<WindArrowUiState> =
         combine(
             flightDataManager.windIndicatorStateFlow,
@@ -112,18 +100,23 @@ class MapScreenViewModel @Inject constructor(
     val ballastUiState: StateFlow<BallastUiState> = ballastController.state
     val windState: StateFlow<WindState> = windStateUseCase.windState
     val showWindSpeedOnVario: StateFlow<Boolean> =
-        levoVarioPreferencesRepository.config
-            .map { it.showWindSpeedOnVario }
+        mapVarioPreferencesUseCase.showWindSpeedOnVario
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.Eagerly,
                 initialValue = true
             )
     val replaySessionState: StateFlow<SessionState> = igcReplayController.session
-    val showVarioDemoFab: Boolean = MapFeatureFlags.showVarioDemoFab
-    val showRacingReplayFab: Boolean = MapFeatureFlags.showRacingReplayFab
-    val gpsStatusFlow: StateFlow<com.example.xcpro.sensors.GpsStatus> =
-        unifiedSensorManager.gpsStatusFlow
+    val showVarioDemoFab: Boolean = featureFlags.showVarioDemoFab
+    val showRacingReplayFab: Boolean = featureFlags.showRacingReplayFab
+    val gpsStatusFlow: StateFlow<GpsStatusUiModel> =
+        sensorsUseCase.gpsStatusFlow
+            .map { it.toUiModel() }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = GpsStatusUiModel.Searching
+            )
     val suppressLiveGps: StateFlow<Boolean> =
         replaySessionState
             .map { it.selection != null }
@@ -143,9 +136,9 @@ class MapScreenViewModel @Inject constructor(
             )
     // AI-NOTE: Map location is derived from FlightDataUseCase (SSOT) so the ViewModel does not
     // read sensor flows directly and replay/live source gating is honored by the repository.
-    val mapLocation: StateFlow<GPSData?> =
+    val mapLocation: StateFlow<MapLocationUiModel?> =
         flightDataUseCase.flightData
-            .map { it?.gps }
+            .map { it?.gps?.toUiModel() }
             .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     val variometerUiState: StateFlow<VariometerUiState> = variometerLayoutUseCase.state
@@ -168,7 +161,7 @@ class MapScreenViewModel @Inject constructor(
         scope = viewModelScope,
         flightDataFlow = flightDataUseCase.flightData,
         windStateFlow = windStateUseCase.windState,
-        flightStateFlow = varioServiceManager.flightStateSource.flightState,
+        flightStateFlow = sensorsUseCase.flightStateFlow,
         flightDataManager = flightDataManager,
         mapStateStore = mapStateStore,
         liveDataReady = _liveDataReady,
@@ -184,6 +177,7 @@ class MapScreenViewModel @Inject constructor(
         flightDataFlow = flightDataUseCase.flightData,
         igcReplayController = igcReplayController,
         racingReplayLogBuilder = racingReplayLogBuilder,
+        featureFlags = featureFlags,
         mapStateStore = mapStateStore,
         mapStateActions = mapStateActions,
         uiEffects = _uiEffects,
@@ -198,7 +192,7 @@ class MapScreenViewModel @Inject constructor(
 
     init {
         mapStateStore.setTrailSettings(trailSettingsUseCase.getSettings())
-        mapStateStore.setDisplaySmoothingProfile(MapFeatureFlags.defaultDisplaySmoothingProfile)
+        mapStateStore.setDisplaySmoothingProfile(featureFlags.defaultDisplaySmoothingProfile)
         observeTrailSettings()
         flightDataUiAdapter.start()
         replayCoordinator.start()
@@ -228,8 +222,8 @@ class MapScreenViewModel @Inject constructor(
     }
 
     init {
-        if (MapFeatureFlags.loadSavedTasksOnInit) {
-            taskManager.loadSavedTasks()
+        if (featureFlags.loadSavedTasksOnInit) {
+            mapTasksUseCase.loadSavedTasks()
         }
         observeUnits()
         observeGliderConfig()
@@ -286,7 +280,7 @@ class MapScreenViewModel @Inject constructor(
         }
         mapStateStore.setCurrentFlightMode(selection)
         flightDataManager.updateFlightModeFromEnum(newMode)
-        varioServiceManager.setFlightMode(newMode)
+        sensorsUseCase.setFlightMode(newMode)
     }
 
     fun onEvent(event: MapUiEvent) {
@@ -332,7 +326,7 @@ class MapScreenViewModel @Inject constructor(
     private fun loadWaypoints() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingWaypoints = true, waypointError = null) }
-            val result = runCatching { waypointLoader.load(appContext) }
+            val result = runCatching { mapWaypointsUseCase.loadWaypoints() }
             result
                 .onSuccess { waypoints ->
                     _uiState.update {
@@ -352,7 +346,6 @@ class MapScreenViewModel @Inject constructor(
                             waypointError = failure
                         )
                     }
-                    Log.e("MapScreenViewModel", "Failed to load waypoints", error)
                     _uiEffects.tryEmit(
                         MapUiEffect.ShowToast(
                             failure.toUserMessage("Failed to load waypoints")
@@ -439,10 +432,6 @@ class MapScreenViewModel @Inject constructor(
         ballastController.dispose()
         super.onCleared()
     }
-
-    private companion object {
-        private const val TAG = "MapScreenViewModel"
-    }
 }
 
 private fun QnhCalibrationFailureReason.toUserMessage(): String = when (this) {
@@ -453,5 +442,29 @@ private fun QnhCalibrationFailureReason.toUserMessage(): String = when (this) {
     QnhCalibrationFailureReason.MISSING_SENSORS -> "Auto calibration needs GPS and baro"
     QnhCalibrationFailureReason.UNKNOWN -> "Auto calibration failed"
 }
+
+private fun com.example.xcpro.sensors.GpsStatus.toUiModel(): GpsStatusUiModel = when (this) {
+    com.example.xcpro.sensors.GpsStatus.NoPermission -> GpsStatusUiModel.NoPermission
+    com.example.xcpro.sensors.GpsStatus.Disabled -> GpsStatusUiModel.Disabled
+    com.example.xcpro.sensors.GpsStatus.Searching -> GpsStatusUiModel.Searching
+    is com.example.xcpro.sensors.GpsStatus.LostFix -> GpsStatusUiModel.LostFix(ageMs = ageMs)
+    is com.example.xcpro.sensors.GpsStatus.Ok -> GpsStatusUiModel.Ok(
+        ageMs = ageMs,
+        accuracyMeters = accuracyMeters
+    )
+}
+
+private fun com.example.xcpro.sensors.GPSData.toUiModel(): MapLocationUiModel =
+    MapLocationUiModel(
+        latitude = position.latitude,
+        longitude = position.longitude,
+        speedMs = speed.value,
+        bearingDeg = bearing,
+        accuracyMeters = accuracy.toDouble(),
+        bearingAccuracyDeg = bearingAccuracyDeg,
+        speedAccuracyMs = speedAccuracyMs,
+        timestampMs = timestamp,
+        monotonicTimestampMs = monotonicTimestampMillis
+    )
 
 

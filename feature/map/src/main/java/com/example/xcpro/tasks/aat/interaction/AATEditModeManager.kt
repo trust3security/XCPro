@@ -99,7 +99,6 @@ class AATEditModeManager {
             }
 
             if (isInArea) {
-                println(" AAT EDIT MODE: Tap detected in ${waypoint.title} area (${String.format("%.2f", distance)}km from center, shape: ${waypoint.assignedArea.shape})")
                 return Pair(index, waypoint)
             }
         }
@@ -123,7 +122,6 @@ class AATEditModeManager {
             isDragging = false
         )
 
-        println("dYZ_ AAT EDIT MODE: Edit mode ${if (enabled) "enabled" else "disabled"} for waypoint $waypointIndex")
     }
 
     /**
@@ -149,7 +147,6 @@ class AATEditModeManager {
      */
     fun updateTargetPoint(task: SimpleAATTask, index: Int, lat: Double, lon: Double): AATWaypoint? {
         if (index >= task.waypoints.size) {
-            println(" AAT EDIT MODE: Invalid waypoint index for target update: $index")
             return null
         }
 
@@ -159,7 +156,6 @@ class AATEditModeManager {
         // Update target point with boundary validation
         val updatedWaypoint = movablePointManager.moveTargetPoint(waypoint, lat, lon)
 
-        println(" AAT EDIT MODE: Target point updated for ${waypoint.title} - Lat: $lat, Lon: $lon")
         return updatedWaypoint
     }
 
@@ -184,11 +180,9 @@ class AATEditModeManager {
             if (features.isNotEmpty()) {
                 val feature = features[0]
                 val index = feature.getNumberProperty("index")?.toInt()
-                println(" AAT EDIT MODE: Target point hit detected at index $index")
                 return index
             }
         } catch (e: Exception) {
-            println(" AAT EDIT MODE: Error checking target point hit: ${e.message}")
         }
         return null
     }

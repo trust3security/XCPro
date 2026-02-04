@@ -36,7 +36,7 @@ import com.example.xcpro.map.WindArrowUiState
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.variometer.layout.VariometerUiState
-import com.example.xcpro.sensors.GPSData
+import com.example.xcpro.map.model.MapLocationUiModel
 import kotlinx.coroutines.flow.StateFlow
 
 @Composable
@@ -55,7 +55,7 @@ internal fun MapOverlayStack(
     currentMode: FlightMode,
     currentZoom: Float,
     onModeChange: (FlightMode) -> Unit,
-    currentLocation: GPSData?,
+    currentLocation: MapLocationUiModel?,
     showReturnButton: Boolean,
     showDistanceCircles: Boolean,
     isAATEditMode: Boolean,

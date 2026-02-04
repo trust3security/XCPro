@@ -13,10 +13,11 @@ class MapTrackingCameraControllerTest {
 
     @Test
     fun updateCamera_initialCentering_setsZoomPadding_andMarksCentered() {
-        val snapshot = snapshotFlags()
+        val featureFlags = MapFeatureFlags()
+        val snapshot = snapshotFlags(featureFlags)
         try {
-            MapFeatureFlags.useRenderFrameSync = false
-            MapFeatureFlags.useRuntimeReplayHeading = false
+            featureFlags.useRenderFrameSync = false
+            featureFlags.useRuntimeReplayHeading = false
 
             val mapState = MapScreenState()
             val store = MapStateStore(initialStyleName = "Topo")
@@ -29,7 +30,7 @@ class MapTrackingCameraControllerTest {
                     tilt = 0.0
                 )
             )
-            val deps = buildDeps(mapState, store, actions, cameraController)
+            val deps = buildDeps(mapState, store, actions, cameraController, featureFlags)
 
             val result = deps.controller.updateCamera(
                 MapTrackingCameraController.FrameInput(
@@ -49,16 +50,17 @@ class MapTrackingCameraControllerTest {
             assertEquals(10.0, cameraController.cameraPosition.zoom, 0.0)
             assertTrue(cameraController.lastPadding?.contentEquals(PADDING) == true)
         } finally {
-            restoreFlags(snapshot)
+            restoreFlags(featureFlags, snapshot)
         }
     }
 
     @Test
     fun onTimeBaseChanged_resetsGate_and_allows_update() {
-        val snapshot = snapshotFlags()
+        val featureFlags = MapFeatureFlags()
+        val snapshot = snapshotFlags(featureFlags)
         try {
-            MapFeatureFlags.useRenderFrameSync = false
-            MapFeatureFlags.useRuntimeReplayHeading = false
+            featureFlags.useRenderFrameSync = false
+            featureFlags.useRuntimeReplayHeading = false
 
             val mapState = MapScreenState()
             val store = MapStateStore(initialStyleName = "Topo")
@@ -72,7 +74,7 @@ class MapTrackingCameraControllerTest {
                     tilt = 0.0
                 )
             )
-            val deps = buildDeps(mapState, store, actions, cameraController)
+            val deps = buildDeps(mapState, store, actions, cameraController, featureFlags)
             deps.gate.acceptEnabled = false
 
             deps.controller.updateCamera(
@@ -109,7 +111,7 @@ class MapTrackingCameraControllerTest {
             assertEquals(1, cameraController.animateCount)
             assertEquals(15.0, cameraController.cameraPosition.bearing, 0.0)
         } finally {
-            restoreFlags(snapshot)
+            restoreFlags(featureFlags, snapshot)
         }
     }
 
@@ -123,7 +125,8 @@ class MapTrackingCameraControllerTest {
         mapState: MapScreenState,
         store: MapStateStore,
         actions: MapStateActions,
-        cameraController: FakeCameraController
+        cameraController: FakeCameraController,
+        featureFlags: MapFeatureFlags
     ): ControllerDeps {
         val biasCalculator = MapShiftBiasCalculator()
         val positionController = MapPositionController(mapState = mapState)
@@ -154,6 +157,7 @@ class MapTrackingCameraControllerTest {
             cameraUpdateGate = gate,
             biasResetter = biasResetter,
             cameraControllerProvider = { cameraController },
+            featureFlags = featureFlags,
             initialZoomLevel = 10.0,
             minUpdateIntervalMs = 80L,
             bearingEpsDeg = 2.0,
@@ -167,14 +171,14 @@ class MapTrackingCameraControllerTest {
         val useRuntimeReplayHeading: Boolean
     )
 
-    private fun snapshotFlags(): FlagSnapshot = FlagSnapshot(
-        useRenderFrameSync = MapFeatureFlags.useRenderFrameSync,
-        useRuntimeReplayHeading = MapFeatureFlags.useRuntimeReplayHeading
+    private fun snapshotFlags(featureFlags: MapFeatureFlags): FlagSnapshot = FlagSnapshot(
+        useRenderFrameSync = featureFlags.useRenderFrameSync,
+        useRuntimeReplayHeading = featureFlags.useRuntimeReplayHeading
     )
 
-    private fun restoreFlags(snapshot: FlagSnapshot) {
-        MapFeatureFlags.useRenderFrameSync = snapshot.useRenderFrameSync
-        MapFeatureFlags.useRuntimeReplayHeading = snapshot.useRuntimeReplayHeading
+    private fun restoreFlags(featureFlags: MapFeatureFlags, snapshot: FlagSnapshot) {
+        featureFlags.useRenderFrameSync = snapshot.useRenderFrameSync
+        featureFlags.useRuntimeReplayHeading = snapshot.useRuntimeReplayHeading
     }
 
     private class FakePreferenceReader : MapCameraPreferenceReader {

@@ -13,7 +13,6 @@ import com.example.xcpro.map.MapStateStore
 import com.example.dfcards.dfcards.FlightDataViewModel
 import android.annotation.SuppressLint
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -103,7 +102,7 @@ internal fun MapScreenRoot(
     // GAA Flight Cards ViewModel
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val mapEntry = remember(navBackStackEntry) { navController.getBackStackEntry("map") }
-    val flightViewModel: FlightDataViewModel = viewModel(mapEntry)
+    val flightViewModel: FlightDataViewModel = hiltViewModel(mapEntry)
     // GAA REFACTORED: No longer collect cardStates here - CardContainer handles it directly
     val profileModeCards by flightViewModel.profileModeCards.collectAsStateWithLifecycle()
     val profileModeTemplates by flightViewModel.profileModeTemplates.collectAsStateWithLifecycle()
@@ -140,6 +139,7 @@ internal fun MapScreenRoot(
         orientationManager = orientationManager,
         varioServiceManager = mapViewModel.varioServiceManager,
         igcReplayController = mapViewModel.igcReplayController,
+        featureFlags = mapViewModel.mapFeatureFlags,
         coroutineScope = coroutineScope,
         airspaceUseCase = airspaceUseCase,
         waypointFilesUseCase = waypointFilesUseCase
@@ -188,6 +188,7 @@ internal fun MapScreenRoot(
         onExitAATEditMode = mapViewModel::exitAATEditMode,
         snailTrailManager = snailTrailManager,
         locationManager = locationManager,
+        featureFlags = mapViewModel.mapFeatureFlags,
         trailUpdateResult = trailUpdateResult,
         trailSettings = trailSettings,
         currentZoom = currentZoom,

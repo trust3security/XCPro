@@ -48,12 +48,6 @@ internal class AATPointTypeConfigurator {
         keyholeAngle: Double?,
         sectorOuterRadius: Double?
     ): AATWaypoint {
-        println(" AAT CONFIGURATOR: Updating point type for ${waypoint.title}")
-        println("   - TurnType: ${turnType?.displayName}")
-        println("   - GateWidth: $gateWidth")
-        println("   - KeyholeInnerRadius: $keyholeInnerRadius")
-        println("   - KeyholeAngle: $keyholeAngle")
-        println("   - SectorOuterRadius: $sectorOuterRadius")
 
         //  SSOT FIX: Read current values from assignedArea (single source of truth)
         val currentGateWidth = when (waypoint.assignedArea.shape) {
@@ -80,7 +74,6 @@ internal class AATPointTypeConfigurator {
             when (turnType) {
                 com.example.xcpro.tasks.aat.models.AATTurnPointType.AAT_CYLINDER -> {
                     // Cylinder: Use gateWidth as radius
-                    println(" AAT CONFIGURATOR: Creating CYLINDER geometry with radius ${newGateWidth}km")
                     AATAssignedArea(
                         shape = AATAreaShape.CIRCLE,
                         radiusMeters = newGateWidth * 1000.0
@@ -95,12 +88,6 @@ internal class AATPointTypeConfigurator {
                     val startBearing = (sectorBearing - halfAngle + 360.0) % 360.0
                     val endBearing = (sectorBearing + halfAngle) % 360.0
 
-                    println(" AAT CONFIGURATOR: Creating SECTOR geometry:")
-                    println("   - Outer radius: ${newSectorOuterRadius}km")
-                    println("   - Sector angle: ${newKeyholeAngle}")
-                    println("   - Bisector: ${sectorBearing}")
-                    println("   - Start bearing: ${startBearing}")
-                    println("   - End bearing: ${endBearing}")
 
                     AATAssignedArea(
                         shape = AATAreaShape.SECTOR,
@@ -120,13 +107,6 @@ internal class AATPointTypeConfigurator {
                     val startBearing = (sectorBearing - halfAngle + 360.0) % 360.0
                     val endBearing = (sectorBearing + halfAngle) % 360.0
 
-                    println(" AAT CONFIGURATOR: Creating KEYHOLE geometry:")
-                    println("   - Inner radius: ${newKeyholeInnerRadius}km")
-                    println("   - Outer radius: ${newSectorOuterRadius}km")
-                    println("   - Sector angle: ${newKeyholeAngle}")
-                    println("   - Bisector: ${sectorBearing}")
-                    println("   - Start bearing: ${startBearing}")
-                    println("   - End bearing: ${endBearing}")
 
                     AATAssignedArea(
                         shape = AATAreaShape.SECTOR,
@@ -150,9 +130,6 @@ internal class AATPointTypeConfigurator {
                 }
                 AATAreaShape.SECTOR -> {
                     // Sector/Keyhole: Update outerRadiusMeters, innerRadiusMeters
-                    println(" AAT CONFIGURATOR: Updating SECTOR geometry parameters")
-                    println("   - Current outer: ${waypoint.assignedArea.outerRadiusMeters/1000.0}km  New: ${newSectorOuterRadius}km")
-                    println("   - Current inner: ${waypoint.assignedArea.innerRadiusMeters/1000.0}km  New: ${newKeyholeInnerRadius}km")
 
                     waypoint.assignedArea.copy(
                         radiusMeters = newSectorOuterRadius * 1000.0,  // Update primary radius
@@ -172,7 +149,6 @@ internal class AATPointTypeConfigurator {
         //  RESET target point to center when turnpoint type changes (like creating new turnpoint)
         val resetTargetPoint = if (waypoint.role == AATWaypointRole.TURNPOINT && turnType != null && turnType != waypoint.turnPointType) {
             // Type changed - reset to center like a new turnpoint
-            println(" AAT CONFIGURATOR: Turnpoint type changed, resetting target point to center")
             AATLatLng(waypoint.lat, waypoint.lon)
         } else {
             // Type didn't change - keep existing target point
@@ -189,9 +165,6 @@ internal class AATPointTypeConfigurator {
             targetPoint = resetTargetPoint
         )
 
-        println(" AAT CONFIGURATOR: Updated waypoint (${waypoint.title})")
-        println("   - Turn type: ${updatedWaypoint.turnPointType.displayName}")
-        println("   - Assigned area shape: ${updatedWaypoint.assignedArea.shape}")
 
         return updatedWaypoint
     }

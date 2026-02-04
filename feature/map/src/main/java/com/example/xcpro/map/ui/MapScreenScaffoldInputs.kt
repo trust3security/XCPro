@@ -29,8 +29,8 @@ import com.example.xcpro.map.ballast.BallastUiState
 import com.example.xcpro.map.ui.widgets.MapUIWidgetManager
 import com.example.xcpro.qnh.QnhCalibrationState
 import com.example.xcpro.replay.SessionState
-import com.example.xcpro.sensors.GPSData
-import com.example.xcpro.sensors.GpsStatus
+import com.example.xcpro.map.model.MapLocationUiModel
+import com.example.xcpro.map.model.GpsStatusUiModel
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.variometer.layout.VariometerUiState
@@ -48,7 +48,7 @@ internal data class MapScreenScaffoldInputs(
     val initialMapStyle: String,
     val onDrawerItemSelected: (String) -> Unit,
     val onMapStyleSelected: (String) -> Unit,
-    val gpsStatus: GpsStatus,
+    val gpsStatus: GpsStatusUiModel,
     val isLoadingWaypoints: Boolean,
     val density: Density,
     val mapState: MapScreenState,
@@ -64,7 +64,7 @@ internal data class MapScreenScaffoldInputs(
     val currentMode: FlightMode,
     val currentZoom: Float,
     val onModeChange: (FlightMode) -> Unit,
-    val currentLocation: GPSData?,
+    val currentLocation: MapLocationUiModel?,
     val showRecenterButton: Boolean,
     val showReturnButton: Boolean,
     val showDistanceCircles: Boolean,

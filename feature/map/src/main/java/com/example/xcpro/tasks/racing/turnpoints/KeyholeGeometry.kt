@@ -51,18 +51,6 @@ internal object KeyholeGeometry {
             (trackBisector + 90.0) % 360.0
         }
 
-        println("? CONFIGURABLE KEYHOLE SECTOR:")
-        println("   Waypoint: ${waypoint.title}")
-        println("   Inner Cylinder: ${(waypoint.keyholeInnerRadius * 1000.0).toInt()}m (user configured)")
-        println("   Outer Sector: ${(waypoint.gateWidth * 1000.0).toInt()}m (user configured)")
-        println("   Angle: ${waypoint.keyholeAngle}? (user configured)")
-        println("   Inbound bearing: ${inboundBearing.toInt()}? (prev?wp)")
-        println("   Outbound bearing: ${outboundBearing.toInt()}? (wp?next)")
-        println("   Track bisector: ${trackBisector.toInt()}?")
-        println("   Turn direction: ${if (turnDirection > 0) "RIGHT" else "LEFT"} (${turnDirection.toInt()}?)")
-        println("   Sector bisector: ${sectorBisector.toInt()}? [PERPENDICULAR TO TRACK, OUTWARD]")
-        println("   ? Configurable keyhole: ${(waypoint.keyholeInnerRadius * 1000.0).toInt()}m cylinder + ${waypoint.keyholeAngle}? sector (${(waypoint.gateWidth * 1000.0).toInt()}m radius)")
-        println("   ? Enhanced flexibility beyond FAI implementation")
 
         return sectorBisector
     }

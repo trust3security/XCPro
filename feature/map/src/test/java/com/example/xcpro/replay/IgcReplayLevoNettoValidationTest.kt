@@ -1,6 +1,7 @@
 package com.example.xcpro.replay
 
 import com.example.dfcards.filters.ModernVarioResult
+import com.example.xcpro.core.time.FakeClock
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.geo.GeoPoint
 import com.example.xcpro.common.units.AltitudeM
@@ -30,7 +31,8 @@ class IgcReplayLevoNettoValidationTest {
     fun replayDemoIgcProducesBoundedLevoNetto() {
         val resource = javaClass.classLoader?.getResourceAsStream(REPLAY_RESOURCE)
             ?: error("Missing replay fixture: $REPLAY_RESOURCE")
-        val log = IgcParser.parse(resource)
+        val parser = IgcParser(FakeClock(wallMs = 0L))
+        val log = parser.parse(resource)
         assertTrue("Expected IGC points", log.points.isNotEmpty())
 
         val sinkProvider = object : StillAirSinkProvider {

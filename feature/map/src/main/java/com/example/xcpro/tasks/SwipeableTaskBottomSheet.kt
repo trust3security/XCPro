@@ -14,7 +14,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
@@ -59,6 +59,7 @@ fun SwipeableTaskBottomSheet(
     onSaveTask: () -> Unit,
     onDismiss: () -> Unit,
     mapLibreMap: MapLibreMap?,
+    taskViewModel: TaskSheetViewModel? = null,
     allWaypoints: List<WaypointData> = emptyList(),
     isSearchActive: Boolean = false,
     currentQNH: String? = null,
@@ -82,9 +83,8 @@ fun SwipeableTaskBottomSheet(
     val searchOffset = if (isSearchActive) WAYPOINT_ITEM_HEIGHT else 0.dp
 
     // ViewModel wiring (placed near data consumers to avoid scope confusion)
-    val taskViewModel: TaskSheetViewModel = viewModel(factory = TaskSheetViewModel.factory(taskManager))
-    LaunchedEffect(mapLibreMap) { taskViewModel.setMap(mapLibreMap) }
-    val uiState by taskViewModel.uiState.collectAsStateWithLifecycle()
+    val resolvedTaskViewModel = taskViewModel ?: hiltViewModel()
+    val uiState by resolvedTaskViewModel.uiState.collectAsStateWithLifecycle()
 
     //  SSOT FIX: Make task reactive so distance/UI updates when radius changes
     // CRITICAL: Without derivedStateOf, task captures once and never updates!
@@ -214,7 +214,7 @@ fun SwipeableTaskBottomSheet(
                         uiState = uiState,
                         task = task,
                         taskManager = taskManager,
-                        taskViewModel = taskViewModel,
+                        taskViewModel = resolvedTaskViewModel,
                         selectedCategory = selectedCategory,
                         onCategorySelect = { selectedCategory = it },
                         currentQNH = currentQNH,
@@ -231,7 +231,7 @@ fun SwipeableTaskBottomSheet(
                         uiState = uiState,
                         task = task,
                         taskManager = taskManager,
-                        taskViewModel = taskViewModel,
+                        taskViewModel = resolvedTaskViewModel,
                         selectedCategory = selectedCategory,
                         onCategorySelect = { selectedCategory = it },
                         currentQNH = currentQNH,
@@ -264,7 +264,7 @@ private fun ExpandedContent(
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         // Category selector
-        ScrollableTabRow(
+        PrimaryScrollableTabRow(
             selectedTabIndex = TaskCategory.values().indexOf(selectedCategory),
             modifier = Modifier.fillMaxWidth(),
             edgePadding = 0.dp

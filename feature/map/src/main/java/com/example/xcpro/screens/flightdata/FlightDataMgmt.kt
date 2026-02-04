@@ -29,7 +29,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -63,7 +62,7 @@ fun FlightMgmt(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val mapEntry = remember(navBackStackEntry) { navController.getBackStackEntry("map") }
     val mapViewModel: MapScreenViewModel = hiltViewModel(mapEntry)
-    val flightViewModel: FlightDataViewModel = viewModel(mapEntry)
+    val flightViewModel: FlightDataViewModel = hiltViewModel(mapEntry)
     val waypointsViewModel: WaypointsViewModel = hiltViewModel()
     val airspaceViewModel: AirspaceViewModel = hiltViewModel()
     val prefsViewModel: FlightMgmtPreferencesViewModel = hiltViewModel()

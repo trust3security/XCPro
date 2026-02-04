@@ -187,9 +187,9 @@ class MapInitializer(
         lastScaleBarDistancePerPixel = distancePerPixel
         applyMaxZoomPreference(map)
 
-        val metrics = mapView.resources.displayMetrics
-        val density = metrics.density
-        val scaledDensity = metrics.scaledDensity
+        val resources = mapView.resources
+        val density = resources.displayMetrics.density
+        val scaledDensity = density * resources.configuration.fontScale
 
         val textSizePx = SCALE_BAR_TEXT_SIZE_SP * scaledDensity
         val barHeightPx = SCALE_BAR_BAR_HEIGHT_DP * density

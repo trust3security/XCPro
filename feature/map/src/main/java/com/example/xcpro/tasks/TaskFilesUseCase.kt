@@ -1,6 +1,7 @@
 package com.example.xcpro.tasks
 
 import com.example.xcpro.common.documents.DocumentRef
+import com.example.xcpro.core.time.Clock
 import com.example.xcpro.tasks.core.Task
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -9,7 +10,8 @@ import javax.inject.Inject
 
 class TaskFilesUseCase @Inject constructor(
     private val repository: TaskFilesRepository,
-    private val taskManager: TaskManagerCoordinator
+    private val taskManager: TaskManagerCoordinator,
+    private val clock: Clock
 ) {
     suspend fun loadDownloads(): List<CupDownloadEntry> = repository.queryDownloads()
 
@@ -41,7 +43,8 @@ class TaskFilesUseCase @Inject constructor(
     }
 
     fun exportTaskToDownloads(task: Task): TaskExportResult {
-        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault())
+            .format(Date(clock.nowWallMs()))
         val cupName = "task_${timestamp}.cup"
         val jsonName = "task_${timestamp}.xcp.json"
 
@@ -67,7 +70,8 @@ class TaskFilesUseCase @Inject constructor(
     }
 
     fun shareTask(task: Task): List<ShareRequest> {
-        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault())
+            .format(Date(clock.nowWallMs()))
         val cupName = "task_${timestamp}.cup"
         val jsonName = "task_${timestamp}.xcp.json"
 

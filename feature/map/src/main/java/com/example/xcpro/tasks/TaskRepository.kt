@@ -8,6 +8,7 @@ import com.example.xcpro.tasks.domain.logic.AATTargetOptimizer
 import com.example.xcpro.tasks.domain.logic.TaskAdvanceState
 import com.example.xcpro.tasks.domain.logic.TaskValidator
 import com.example.xcpro.tasks.domain.model.*
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,9 +18,9 @@ import kotlin.math.*
  * SSOT for task state and validation; bridges legacy TaskManager data into
  * the new domain layer.
  */
-class TaskRepository(
-    private val validator: TaskValidator = TaskValidator()
- ) {
+class TaskRepository @Inject constructor(
+    private val validator: TaskValidator
+) {
 
     private val _state = MutableStateFlow(TaskUiState())
     val state: StateFlow<TaskUiState> = _state.asStateFlow()

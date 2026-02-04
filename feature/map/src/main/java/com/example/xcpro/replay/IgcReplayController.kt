@@ -37,7 +37,8 @@ class IgcReplayController @Inject constructor(
     private val flightDataRepository: FlightDataRepository,
     private val replaySensorSource: ReplaySensorSource,
     private val replayAirspeedRepository: ReplayAirspeedRepository,
-    private val replayPipelineFactory: ReplayPipelineFactory
+    private val replayPipelineFactory: ReplayPipelineFactory,
+    private val igcParser: IgcParser
 ) {
     private var replayJob: Job? = null
     private var seekJob: Job? = null
@@ -92,7 +93,7 @@ class IgcReplayController @Inject constructor(
         val document = DocumentRef(uri = uri.toString(), displayName = displayName)
         withContext(scope.coroutineContext) {
             try {
-                val log = appContext.loadIgcLog(uri)
+                val log = appContext.loadIgcLog(uri, igcParser)
                 AppLogger.i(
                     TAG,
                     "REPLY_LOAD Loaded IGC file ${document.displayName ?: document.uri} " +
@@ -120,7 +121,7 @@ class IgcReplayController @Inject constructor(
         var failure: Throwable? = null
         withContext(scope.coroutineContext) {
             try {
-                val log = appContext.loadIgcAssetLog(assetPath)
+                val log = appContext.loadIgcAssetLog(assetPath, igcParser)
                 val name = displayName ?: assetPath.substringAfterLast('/')
                 val uri = Uri.parse("$ASSET_URI_PREFIX$assetPath")
                 val document = DocumentRef(uri = uri.toString(), displayName = name)

@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.map.MapTaskScreenManager
-import com.example.xcpro.sensors.GPSData
+import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.tasks.SwipeableTaskBottomSheet
 import com.example.xcpro.tasks.TaskMinimizedIndicator
 
@@ -88,7 +88,7 @@ object MapTaskScreenUi {
         indicatorContent: (@Composable BoxScope.() -> Unit)? = null,
         showBottomSheetOverride: Boolean? = null,
         currentTaskOverride: com.example.xcpro.tasks.core.Task? = null,
-        currentLocation: GPSData? = null
+        currentLocation: MapLocationUiModel? = null
     ) {
         val showBottomSheet by taskScreenManager.showTaskBottomSheet.collectAsStateWithLifecycle()
         val currentTask = currentTaskOverride ?: taskScreenManager.taskManager.currentTask
@@ -97,7 +97,7 @@ object MapTaskScreenUi {
             val currentGpsLocation =
                 if (indicatorContent == null) {
                     currentLocation?.let { location ->
-                        Pair(location.position.latitude, location.position.longitude)
+                        Pair(location.latitude, location.longitude)
                     }
                 } else {
                     null
@@ -133,7 +133,7 @@ object MapTaskScreenUi {
         currentQNH: String,
         onWaypointGoto: (WaypointData) -> Unit,
         modifier: Modifier = Modifier,
-        currentLocation: GPSData? = null
+        currentLocation: MapLocationUiModel? = null
     ) {
         TaskSearchOverlay(
             taskScreenManager = taskScreenManager,

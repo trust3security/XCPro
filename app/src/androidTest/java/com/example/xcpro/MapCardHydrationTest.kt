@@ -6,9 +6,11 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.example.dfcards.CardPreferences
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.RealTimeFlightData
+import com.example.dfcards.dfcards.FlightCardsUseCaseFactory
 import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.xcpro.map.CardIngestionCoordinator
 import com.example.xcpro.map.FlightDataManager
+import com.example.xcpro.core.time.SystemClockProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -42,7 +44,11 @@ class MapCardHydrationTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val cardPreferences = CardPreferences(context)
         val flightDataManager = FlightDataManager(context, cardPreferences, testScope)
-        val flightDataViewModel = FlightDataViewModel()
+        val cardsUseCaseFactory = FlightCardsUseCaseFactory(SystemClockProvider())
+        val flightDataViewModel = FlightDataViewModel(
+            ioDispatcher = Dispatchers.IO,
+            cardsUseCaseFactory = cardsUseCaseFactory
+        )
         val cardHydrationReady = MutableStateFlow(false)
         val unitsPreferencesFlow = MutableStateFlow(flightDataManager.unitsPreferences)
         val ingestionCoordinator = CardIngestionCoordinator(

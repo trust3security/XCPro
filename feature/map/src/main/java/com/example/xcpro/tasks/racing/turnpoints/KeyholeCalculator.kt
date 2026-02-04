@@ -32,10 +32,6 @@ class KeyholeCalculator : TurnPointCalculator {
             if (abs(angle - 90.0) < 1e-3) 90.0 else angle
         }
 
-        println(" CONFIGURABLE KEYHOLE:")
-        println("   Inner radius: ${cylinderRadiusKm}km (cylinder)")
-        println("   Outer radius: ${sectorRadiusKm}km (sector)")
-        println("   Angle: ${sectorAngleDegrees} (was fixed 90)")
         
         // Calculate optimal touch point for cylinder part
         val optimalCylinder = calculateOptimalCylinderTouchPoint(waypoint, previousWaypoint, nextWaypoint, cylinderRadiusKm)
@@ -48,10 +44,8 @@ class KeyholeCalculator : TurnPointCalculator {
         val sectorDistance = calculateTotalDistance(optimalSector, previousWaypoint, nextWaypoint)
         
         return if (cylinderDistance <= sectorDistance) {
-            println(" KEYHOLE: Using cylinder touch point (${String.format("%.2f", cylinderDistance)}km)")
             optimalCylinder
         } else {
-            println(" KEYHOLE: Using sector touch point (${String.format("%.2f", sectorDistance)}km)")  
             optimalSector
         }
     }
@@ -156,10 +150,6 @@ class KeyholeCalculator : TurnPointCalculator {
         val endAngle = (sectorBisector + sectorSpan) % 360.0
         
         // Debug logging for configurable sector
-        println(" CONFIGURABLE SECTOR:")
-        println("   Angle: ${sectorAngleDegrees} (${sectorSpan} from bisector)")
-        println("   Start: ${startAngle.toInt()}, End: ${endAngle.toInt()}")
-        println("   Bisector: ${sectorBisector.toInt()}")
 
         // Test 21 points along sector edge (handle wrap-around correctly)
         val steps = 20

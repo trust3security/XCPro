@@ -126,14 +126,11 @@ object AATRadiusAuthority {
                         " AAT Keyhole error: Inner radius (${innerRadiusKm}km) must be < outer radius (${outerRadiusKm}km)"
                     )
                 }
-                println(" AAT: Keyhole geometry valid - outer: ${outerRadiusKm}km, inner: ${innerRadiusKm}km")
             }
             AATTurnPointType.AAT_SECTOR -> {
                 val outerRadiusKm = waypoint.assignedArea.outerRadiusMeters / 1000.0
-                println(" AAT: Sector geometry valid - outer: ${outerRadiusKm}km")
             }
             else -> {
-                println(" AAT: Cylinder geometry valid - radius: ${radiusKm}km")
             }
         }
     }

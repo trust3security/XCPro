@@ -7,6 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.geometry.Offset
 import android.graphics.PointF
+import com.example.xcpro.core.time.Clock
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.geometry.LatLng
 import com.example.xcpro.tasks.aat.models.AATWaypoint
@@ -53,25 +54,28 @@ data class AATInteractionCallbacks(
 @Composable
 fun rememberAATMapInteractionHandler(
     aatWaypoints: List<AATWaypoint>,
-    callbacks: AATInteractionCallbacks = AATInteractionCallbacks()
+    callbacks: AATInteractionCallbacks = AATInteractionCallbacks(),
+    clock: Clock
 ): AATMapInteractionHandler {
-    return remember(aatWaypoints) {
+    return remember(aatWaypoints, clock) {
         AATMapInteractionHandler(
             aatWaypoints = aatWaypoints,
-            callbacks = callbacks
+            callbacks = callbacks,
+            clock = clock
         )
     }
 }
 
 class AATMapInteractionHandler(
     private var aatWaypoints: List<AATWaypoint>,
-    private val callbacks: AATInteractionCallbacks
+    private val callbacks: AATInteractionCallbacks,
+    private val clock: Clock
 ) {
     private var mapLibreMap: MapLibreMap? = null
     private var coordinateConverter: AATMapCoordinateConverter? = null
 
     // Edit mode state
-    private val editModeManager = AATEditModeStateManager()
+    private val editModeManager = AATEditModeStateManager(clock)
 
     // Drag state tracking
     private var isDragging = false
@@ -84,7 +88,6 @@ class AATMapInteractionHandler(
     fun attachToMap(map: MapLibreMap?) {
         mapLibreMap = map
         coordinateConverter = map?.let { AATMapCoordinateConverterFactory.create(it) }
-        println(" AAT: Interaction handler attached to map")
     }
 
     /**
@@ -92,7 +95,6 @@ class AATMapInteractionHandler(
      */
     fun updateWaypoints(newWaypoints: List<AATWaypoint>) {
         aatWaypoints = newWaypoints
-        println(" AAT: Updated waypoints list (${newWaypoints.size} waypoints)")
     }
 
     /**
@@ -129,10 +131,12 @@ class AATMapInteractionHandler(
 
         // Create tap details
         val tapDetails = AATMapCoordinateConverterFactory.createTapDetails(
-            screenX, screenY, converter
+            screenX = screenX,
+            screenY = screenY,
+            converter = converter,
+            timestampMs = clock.nowMonoMs()
         ) ?: return
 
-        println(" AAT: Tap detected at ${tapDetails.mapCoordinates.latitude}, ${tapDetails.mapCoordinates.longitude}")
 
         // Find which AAT area was tapped
         val tappedArea = findTappedAATArea(
@@ -151,7 +155,6 @@ class AATMapInteractionHandler(
      * Handle single tap on AAT area - zoom in and enter edit mode
      */
     private fun handleAreaTap(areaIndex: Int, waypoint: AATWaypoint) {
-        println(" AAT: Tap on area $areaIndex (${waypoint.title})")
 
         // Notify callbacks
         callbacks.onAreaTapped(areaIndex, waypoint)
@@ -169,7 +172,6 @@ class AATMapInteractionHandler(
         if (success) {
             callbacks.onEditModeEntered(areaIndex, waypoint)
             callbacks.onZoomToArea(waypoint, 3.0f)
-            println(" AAT: Edit mode entered and zoomed in - map gestures disabled for pin dragging")
         }
     }
 
@@ -177,7 +179,6 @@ class AATMapInteractionHandler(
      * Handle tap outside AAT areas - exit edit mode
      */
     private fun handleOutsideTap() {
-        println(" AAT: Tap outside AAT areas")
 
         if (editModeManager.currentSession.isEditingArea) {
             // Re-enable map gestures before exiting edit mode
@@ -189,11 +190,6 @@ class AATMapInteractionHandler(
             callbacks.onEditModeExited()
             callbacks.onZoomToOverview(1.0f)
 
-            println(
-                " AAT: Exited edit mode after " +
-                    "${previousSession.sessionDurationMs(android.os.SystemClock.elapsedRealtime())}ms - " +
-                    "map gestures restored"
-            )
         }
     }
 
@@ -217,7 +213,6 @@ class AATMapInteractionHandler(
                 val startLatLng = converter.screenToMap(screenX, screenY)
                 if (startLatLng != null) {
                     dragStartPoint = AATLatLng(startLatLng.latitude, startLatLng.longitude)
-                    println(" AAT: Started dragging pin $hitPointIndex from ${startLatLng.latitude}, ${startLatLng.longitude}")
                 }
             }
         }
@@ -250,7 +245,6 @@ class AATMapInteractionHandler(
         // Update pin position with validated result
         callbacks.onTargetPointMoved(draggedPointIndex!!, validatedWaypoint.targetPoint)
 
-        println(" AAT: Dragging pin ${draggedPointIndex} to ${validatedWaypoint.targetPoint.latitude}, ${validatedWaypoint.targetPoint.longitude}")
     }
 
     /**
@@ -258,7 +252,6 @@ class AATMapInteractionHandler(
      */
     private fun handleDragEnd() {
         if (isDragging && draggedPointIndex != null) {
-            println(" AAT: Finished dragging pin ${draggedPointIndex}")
 
             // Final position is already set by handleDragMove
             // Just clean up state
@@ -354,7 +347,6 @@ class AATMapInteractionHandler(
             }
 
             if (isInArea) {
-                println(" AAT: Double-click detected in ${waypoint.title} area (${String.format("%.2f", distance)}km from center, shape: ${waypoint.assignedArea.shape})")
                 return Pair(index, waypoint)
             }
         }
@@ -420,7 +412,6 @@ class AATMapInteractionHandler(
     private fun disableMapGestures() {
         mapLibreMap?.uiSettings?.let { uiSettings ->
             uiSettings.setAllGesturesEnabled(false)
-            println(" AAT: Map gestures disabled for edit mode")
         }
     }
 
@@ -430,7 +421,6 @@ class AATMapInteractionHandler(
     private fun enableMapGestures() {
         mapLibreMap?.uiSettings?.let { uiSettings ->
             uiSettings.setAllGesturesEnabled(true)
-            println(" AAT: Map gestures re-enabled after edit mode")
         }
     }
 }

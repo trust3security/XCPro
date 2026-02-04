@@ -36,7 +36,7 @@ import com.example.xcpro.map.ui.widgets.MapUIWidgets
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.replay.SessionStatus
 import com.example.xcpro.variometer.layout.VariometerUiState
-import com.example.xcpro.sensors.GPSData
+import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.ui1.VarioDialConfig
 import com.example.ui1.VarioDialLabel
 import kotlinx.coroutines.flow.StateFlow
@@ -265,7 +265,7 @@ private fun formatVarioLabel(value: Double): String =
 internal fun DistanceCirclesLayer(
     mapState: MapScreenState,
     currentZoom: Float,
-    currentLocation: GPSData?,
+    currentLocation: MapLocationUiModel?,
     showDistanceCircles: Boolean
 ) {
     val zoom = currentZoom
@@ -273,7 +273,7 @@ internal fun DistanceCirclesLayer(
     val mapView = mapState.mapView
     val map = mapState.mapLibreMap
     val latitude = map?.cameraPosition?.target?.latitude
-        ?: currentLocation?.position?.latitude
+        ?: currentLocation?.latitude
         ?: 0.0
     val pixelRatio = mapView?.pixelRatio?.takeIf { it > 0f } ?: density.density
     val metersPerPixel = map?.projection?.getMetersPerPixelAtLatitude(latitude)

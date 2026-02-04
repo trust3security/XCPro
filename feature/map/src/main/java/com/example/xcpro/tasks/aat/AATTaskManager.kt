@@ -241,7 +241,6 @@ class AATTaskManager(val context: Context? = null) {
             _currentAATTask = _currentAATTask.copy(waypoints = currentWaypoints)
             saveAATTask()
         } else {
-            println("AAT: Invalid waypoint index $index for point type update (valid range: 0-${currentWaypoints.size - 1})")
         }
     }
 

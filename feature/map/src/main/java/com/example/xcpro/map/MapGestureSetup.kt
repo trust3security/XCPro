@@ -14,7 +14,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.gestures.CustomMapGestureHandler
 import com.example.xcpro.gestures.TaskGestureCallbacks
-import com.example.xcpro.sensors.GPSData
+import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.tasks.TaskManagerCoordinator
 
 /**
@@ -43,7 +43,7 @@ object MapGestureSetup {
         cameraManager: MapCameraManager,
         currentMode: FlightMode,
         onModeChange: (FlightMode) -> Unit,
-        currentLocation: GPSData?,
+        currentLocation: MapLocationUiModel?,
         showReturnButton: Boolean,
         isAATEditMode: Boolean,
         onAATEditModeChange: (Boolean) -> Unit,

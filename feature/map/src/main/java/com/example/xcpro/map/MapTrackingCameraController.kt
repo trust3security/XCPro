@@ -15,6 +15,7 @@ class MapTrackingCameraController(
     private val cameraUpdateGate: MapCameraUpdateGate,
     private val biasResetter: MapShiftBiasResetter,
     private val cameraControllerProvider: () -> MapCameraController?,
+    private val featureFlags: MapFeatureFlags,
     private val initialZoomLevel: Double,
     private val minUpdateIntervalMs: Long,
     private val bearingEpsDeg: Double,
@@ -67,7 +68,7 @@ class MapTrackingCameraController(
             val shouldUpdate = cameraPolicy.shouldUpdateCamera(
                 input = MapCameraPolicy.CameraUpdateInput(
                     timeBase = input.timeBase,
-                    useRenderFrameSync = MapFeatureFlags.useRenderFrameSync,
+                    useRenderFrameSync = featureFlags.useRenderFrameSync,
                     cameraBearing = cameraController.cameraPosition.bearing,
                     targetBearing = input.cameraTargetBearing,
                     nowMs = input.nowMs,
@@ -79,7 +80,7 @@ class MapTrackingCameraController(
                 cameraUpdateGate.accept(input.location)
             }
             if (shouldUpdate) {
-                val animationMs = if (MapFeatureFlags.useRuntimeReplayHeading &&
+                val animationMs = if (featureFlags.useRuntimeReplayHeading &&
                     input.timeBase == DisplayClock.TimeBase.REPLAY
                 ) {
                     0
@@ -148,10 +149,10 @@ class MapTrackingCameraController(
             flightMode = mapStateReader.currentFlightMode.value,
             biasMode = preferenceReader.getMapShiftBiasMode(),
             biasStrength = preferenceReader.getMapShiftBiasStrength(),
-            minSpeedMs = MapFeatureFlags.mapShiftBiasMinSpeedMs,
-            historySize = MapFeatureFlags.mapShiftBiasHistorySize,
-            maxOffsetFraction = MapFeatureFlags.mapShiftBiasMaxOffsetFraction,
-            holdOnInvalid = MapFeatureFlags.mapShiftBiasHoldOnInvalid,
+            minSpeedMs = featureFlags.mapShiftBiasMinSpeedMs,
+            historySize = featureFlags.mapShiftBiasHistorySize,
+            maxOffsetFraction = featureFlags.mapShiftBiasMaxOffsetFraction,
+            holdOnInvalid = featureFlags.mapShiftBiasHoldOnInvalid,
             screenWidthPx = mapSize.widthPx,
             screenHeightPx = mapSize.heightPx,
             gliderScreenPercent = preferenceReader.getGliderScreenPercent()

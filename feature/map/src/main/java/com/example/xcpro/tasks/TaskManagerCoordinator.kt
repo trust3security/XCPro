@@ -55,7 +55,7 @@ class TaskManagerCoordinator(val context: Context? = null) {
         aatBlock: AATTaskManager.() -> T
     ): T = if (type == TaskType.RACING) racingTaskManager.racingBlock() else aatTaskManager.aatBlock()
 
-    private fun log(message: String) = println("TaskManagerCoordinator: $message")
+    private fun log(@Suppress("UNUSED_PARAMETER") message: String) {}
 
     private fun currentDelegate(): TaskTypeCoordinatorDelegate = if (_taskType.value == TaskType.RACING) racingDelegate else aatDelegate
 

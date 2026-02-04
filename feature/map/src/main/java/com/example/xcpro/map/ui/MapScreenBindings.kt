@@ -10,11 +10,11 @@ import com.example.xcpro.map.MapStateStore
 import com.example.xcpro.map.trail.TrailSettings
 import com.example.xcpro.map.trail.domain.TrailUpdateResult
 import com.example.xcpro.replay.SessionState
-import com.example.xcpro.sensors.GPSData
-import com.example.xcpro.sensors.GpsStatus
+import com.example.xcpro.map.model.MapLocationUiModel
+import com.example.xcpro.map.model.GpsStatusUiModel
 
 internal data class MapScreenBindings(
-    val gpsStatus: GpsStatus,
+    val gpsStatus: GpsStatusUiModel,
     val showRecenterButton: Boolean,
     val showReturnButton: Boolean,
     val currentMode: FlightMode,
@@ -22,7 +22,7 @@ internal data class MapScreenBindings(
     val replaySession: SessionState,
     val suppressLiveGps: Boolean,
     val allowSensorStart: Boolean,
-    val locationForUi: GPSData?,
+    val locationForUi: MapLocationUiModel?,
     val trailSettings: TrailSettings,
     val trailUpdateResult: TrailUpdateResult?,
     val isAATEditMode: Boolean,

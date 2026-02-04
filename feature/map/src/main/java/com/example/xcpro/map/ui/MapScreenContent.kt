@@ -47,7 +47,7 @@ import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.map.WindArrowUiState
-import com.example.xcpro.sensors.GPSData
+import com.example.xcpro.map.model.MapLocationUiModel
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -79,7 +79,7 @@ internal fun MapScreenContent(
     currentMode: FlightMode,
     currentZoom: Float,
     onModeChange: (FlightMode) -> Unit,
-    currentLocation: GPSData?,
+    currentLocation: MapLocationUiModel?,
     showRecenterButton: Boolean,
     showReturnButton: Boolean,
     showDistanceCircles: Boolean,
@@ -321,7 +321,7 @@ private fun ReplayDiagnosticsLogger(
 private fun MapTaskManagerLayer(
     taskScreenManager: MapTaskScreenManager,
     waypointData: List<WaypointData>,
-    currentLocation: GPSData?,
+    currentLocation: MapLocationUiModel?,
     onWaypointGoto: (WaypointData) -> Unit
 ) {
     MapTaskScreenUi.AllTaskScreenComponents(
@@ -336,7 +336,7 @@ private fun MapTaskManagerLayer(
 @Composable
 private fun MapActionButtonsLayer(
     taskScreenManager: MapTaskScreenManager,
-    currentLocation: GPSData?,
+    currentLocation: MapLocationUiModel?,
     showRecenterButton: Boolean,
     showReturnButton: Boolean,
     showDistanceCircles: Boolean,

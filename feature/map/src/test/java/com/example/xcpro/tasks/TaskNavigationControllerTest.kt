@@ -40,12 +40,11 @@ class TaskNavigationControllerTest {
 
     @Test
     fun controllerDoesNotAdvanceWhenAutoAdvanceDisabled() = runTest {
-        val previous = TaskFeatureFlags.enableRacingAutoAdvance
-        TaskFeatureFlags.enableRacingAutoAdvance = false
+        val featureFlags = TaskFeatureFlags().apply { enableRacingAutoAdvance = false }
         try {
             val coordinator = TaskManagerCoordinator(context = null)
             coordinator.getRacingTaskManager().initializeRacingTask(sampleWaypoints())
-            val controller = createController(coordinator)
+            val controller = createController(coordinator, featureFlags)
             controller.setAdvanceArmed(true)
 
             val fixes = MutableSharedFlow<RacingNavigationFix>(extraBufferCapacity = 2)
@@ -61,7 +60,6 @@ class TaskNavigationControllerTest {
                 job.cancel()
             }
         } finally {
-            TaskFeatureFlags.enableRacingAutoAdvance = previous
         }
     }
 
@@ -98,12 +96,13 @@ class TaskNavigationControllerTest {
     )
 
     private fun createController(
-        coordinator: TaskManagerCoordinator
+        coordinator: TaskManagerCoordinator,
+        featureFlags: TaskFeatureFlags = TaskFeatureFlags()
     ): TaskNavigationController = TaskNavigationController(
         taskManager = coordinator,
         stateStore = RacingNavigationStateStore(),
         advanceState = RacingAdvanceState(),
         engine = RacingNavigationEngine(),
-        featureFlags = TaskFeatureFlags
+        featureFlags = featureFlags
     )
 }

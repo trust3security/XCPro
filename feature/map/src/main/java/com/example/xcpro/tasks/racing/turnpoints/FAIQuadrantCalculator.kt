@@ -31,13 +31,6 @@ class FAIQuadrantCalculator : TurnPointCalculator {
         // Calculate sector orientation per FAI Sporting Code Section 3 Annex A
         val sectorBisector = calculateFAISectorBisector(waypoint, previousWaypoint, nextWaypoint)
 
-        println("FAI QUADRANT ORIENTATION [OFFICIAL FAI RULES]:")
-        println("   Previous: ${if (previousWaypoint != null) "(${previousWaypoint.lat}, ${previousWaypoint.lon})" else "None"}")
-        println("   Current: (${waypoint.lat}, ${waypoint.lon})")
-        println("   Next: (${nextWaypoint.lat}, ${nextWaypoint.lon})")
-        println("   FAI Sector Bisector: ${sectorBisector.toInt()} deg")
-        println("   FAI Rule: 90 deg sector (+/-45 deg), perpendicular to track bisector, oriented OUTWARD")
-        println("   Finite radius sector (default 10 km) starting at waypoint")
 
         // FAI quadrants originate at waypoint -> optimal touch point is always the waypoint itself
         return Pair(waypoint.lat, waypoint.lon)

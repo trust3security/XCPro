@@ -19,8 +19,6 @@ class MapLocationFilterTest {
                 this.x = x
                 this.y = y
             }
-            val desc = "($x,$y)"
-            println("FakeProjector call=$call point=$desc")
             call++
             return p
         }

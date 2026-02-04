@@ -94,7 +94,6 @@ data class RacingWaypoint(
             }
 
             // DEBUG: Log the default value calculation to prove fix is working
-            println("WAYPOINT CREATION DEBUG: role=$role, turnPointType=$turnPointType, customGateWidth=$customGateWidth, standardizedGateWidth=$standardizedGateWidth")
 
             return RacingWaypoint(
                 id = id,

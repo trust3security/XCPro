@@ -1,5 +1,6 @@
 package com.example.xcpro.replay
 
+import com.example.xcpro.core.time.FakeClock
 import java.io.ByteArrayInputStream
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -15,7 +16,8 @@ class IgcParserTest {
             B0000013745123N12230123EA0123401234
         """.trimIndent()
 
-        val log = IgcParser.parse(ByteArrayInputStream(igc.toByteArray()))
+        val parser = IgcParser(FakeClock(wallMs = 0L))
+        val log = parser.parse(ByteArrayInputStream(igc.toByteArray()))
 
         assertEquals(2, log.points.size)
         val first = log.points[0].timestampMillis
@@ -32,7 +34,8 @@ class IgcParserTest {
             B1200003745123N12230123EA0123401234123145
         """.trimIndent()
 
-        val log = IgcParser.parse(ByteArrayInputStream(igc.toByteArray()))
+        val parser = IgcParser(FakeClock(wallMs = 0L))
+        val log = parser.parse(ByteArrayInputStream(igc.toByteArray()))
 
         assertEquals(1, log.points.size)
         val point = log.points.first()
@@ -40,4 +43,3 @@ class IgcParserTest {
         assertEquals(145.0, point.trueAirspeedKmh ?: Double.NaN, 0.001)
     }
 }
-

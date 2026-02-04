@@ -21,6 +21,7 @@ import com.example.xcpro.flightdata.WaypointFilesUseCase
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.vario.VarioServiceManager
 import com.example.xcpro.MapOrientationManager
+import com.example.xcpro.map.config.MapFeatureFlags
 import kotlinx.coroutines.CoroutineScope
 
 internal data class MapScreenManagers(
@@ -45,12 +46,13 @@ internal fun rememberMapScreenManagers(
     orientationManager: MapOrientationManager,
     varioServiceManager: VarioServiceManager,
     igcReplayController: IgcReplayController,
+    featureFlags: MapFeatureFlags,
     coroutineScope: CoroutineScope,
     airspaceUseCase: AirspaceUseCase,
     waypointFilesUseCase: WaypointFilesUseCase
 ): MapScreenManagers {
-    val snailTrailManager = remember(mapState, context) {
-        SnailTrailManager(context, mapState)
+    val snailTrailManager = remember(mapState, context, featureFlags) {
+        SnailTrailManager(context, mapState, featureFlags)
     }
 
     val overlayManager = remember(
@@ -94,6 +96,7 @@ internal fun rememberMapScreenManagers(
         mapStateReader,
         varioServiceManager,
         context,
+        featureFlags,
         igcReplayController
     ) {
         LocationManager(
@@ -103,6 +106,7 @@ internal fun rememberMapScreenManagers(
             stateActions = mapStateActions,
             coroutineScope = coroutineScope,
             varioServiceManager = varioServiceManager,
+            featureFlags = featureFlags,
             replayHeadingProvider = igcReplayController::getInterpolatedReplayHeadingDeg,
             replayFixProvider = igcReplayController::getInterpolatedReplayPose
         )

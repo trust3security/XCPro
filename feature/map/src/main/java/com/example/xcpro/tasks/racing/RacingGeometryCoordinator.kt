@@ -93,7 +93,6 @@ internal class RacingGeometryCoordinator(
         return when (waypoint.turnPointType) {
             RacingTurnPointType.TURN_POINT_CYLINDER -> {
                 val radiusMeters = waypoint.gateWidth * 1000.0
-                println(" CYLINDER DEBUG: Waypoint ${waypoint.title} - gateWidth: ${waypoint.gateWidth}km, radius: ${radiusMeters}m")
                 generateCylinder(waypoint, radiusMeters, "turnpoint") // Convert km to meters
             }
             RacingTurnPointType.FAI_QUADRANT -> {

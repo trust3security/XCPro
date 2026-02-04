@@ -9,6 +9,7 @@ import com.example.xcpro.tasks.aat.models.AATLatLng
 import com.example.xcpro.tasks.aat.models.AATTurnPointType
 import com.example.xcpro.tasks.aat.models.AATWaypoint
 import com.example.xcpro.tasks.aat.models.AATWaypointRole
+import com.example.xcpro.core.time.FakeClock
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertFalse
@@ -22,7 +23,7 @@ class AATInteractiveTurnpointManagerValidationTest {
 
     @Before
     fun setup() {
-        manager = AATInteractiveTurnpointManager(AATManagerCallbacks())
+        manager = AATInteractiveTurnpointManager(AATManagerCallbacks(), FakeClock())
 
         keyholeWaypoint = AATWaypoint(
             id = "wp1",

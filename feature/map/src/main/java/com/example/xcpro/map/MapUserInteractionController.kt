@@ -1,7 +1,7 @@
 package com.example.xcpro.map
 
 import android.util.Log
-import com.example.xcpro.sensors.GPSData
+import com.example.xcpro.map.model.MapLocationUiModel
 import org.maplibre.android.geometry.LatLng
 
 class MapUserInteractionController(
@@ -59,9 +59,9 @@ class MapUserInteractionController(
         )
     }
 
-    fun saveLocationFromGPS(location: GPSData?, zoom: Double, bearing: Double) {
+    fun saveLocationFromGPS(location: MapLocationUiModel?, zoom: Double, bearing: Double) {
         location?.let {
-            saveLocation(it.toLatLng(), zoom, bearing)
+            saveLocation(LatLng(it.latitude, it.longitude), zoom, bearing)
         }
     }
 
@@ -129,9 +129,9 @@ class MapUserInteractionController(
         Log.d(logTag, "Recentered to current location")
     }
 
-    fun handleUserInteraction(currentLocation: GPSData?, currentZoom: Double, currentBearing: Double) {
+    fun handleUserInteraction(currentLocation: MapLocationUiModel?, currentZoom: Double, currentBearing: Double) {
         if (!showReturnButton) {
-            val locationToSave = currentLocation?.toLatLng() ?: savedLocation
+            val locationToSave = currentLocation?.let { LatLng(it.latitude, it.longitude) } ?: savedLocation
             if (locationToSave != null) {
                 saveLocation(locationToSave, currentZoom, currentBearing)
             }

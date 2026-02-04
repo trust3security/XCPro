@@ -63,14 +63,6 @@ class RacingTaskValidator {
             }
 
             // Log detailed verification
-            println("COURSE LINE VERIFICATION:")
-            println("   Waypoint: ${waypoint.title} (${waypoint.role})")
-            println("   Type: ${waypoint.currentPointType}")
-            println("   Center: (${waypoint.lat}, ${waypoint.lon})")
-            println("   Course Point: (${courseLinePoint.first}, ${courseLinePoint.second})")
-            println("   Distance from center: ${result.distanceFromCenter}m")
-            println("   Expected radius: ${waypoint.gateWidth * 1000}m")
-            println("   Valid: ${result.isValid} - ${result.message}")
         }
 
         return CourseLineValidation(

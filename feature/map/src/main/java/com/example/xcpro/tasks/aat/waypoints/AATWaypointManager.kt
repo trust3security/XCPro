@@ -61,7 +61,6 @@ class AATWaypointManager {
             )
         }
 
-        println(" AAT WAYPOINT MANAGER: Initialized task with ${aatWaypoints.size} waypoints")
 
         return SimpleAATTask(
             id = UUID.randomUUID().toString(),
@@ -97,7 +96,6 @@ class AATWaypointManager {
             // Racing uses 0.5km turnpoints, AAT uses 10km areas - don't preserve Racing radii!
             val radiusKm = com.example.xcpro.tasks.aat.models.AATRadiusAuthority.getRadiusForRole(aatRole)
             val radiusMeters = radiusKm * 1000.0 // Convert km to meters for AAT
-            println(" AAT WAYPOINT MANAGER: Converting ${genericWaypoint.title} (${aatRole}) - using AUTHORITY ${radiusKm}km radius (${radiusMeters}m)")
 
             // Convert shapes intelligently - default to CIRCLE for simplicity
             val aatShape = when (genericWaypoint.customPointType) {
@@ -135,9 +133,7 @@ class AATWaypointManager {
 
         val customizedCount = genericWaypoints.count { it.hasCustomizations }
         if (customizedCount > 0) {
-            println(" AAT WAYPOINT MANAGER: Initialized from generic waypoints - preserved ${customizedCount} customizations, applied standardized defaults to ${aatWaypoints.size - customizedCount} waypoints")
         } else {
-            println(" AAT WAYPOINT MANAGER: Initialized from generic waypoints - applied standardized defaults (10km start, 3km finish, 10km areas) to ${aatWaypoints.size} waypoints")
         }
 
         return SimpleAATTask(
@@ -181,7 +177,6 @@ class AATWaypointManager {
                     )
                 )
                 currentWaypoints.add(startWaypoint)
-                println(" AAT WAYPOINT MANAGER: Added first waypoint as START: ${searchWaypoint.title}")
             }
             1 -> {
                 // Second waypoint becomes FINISH
@@ -198,7 +193,6 @@ class AATWaypointManager {
                     )
                 )
                 currentWaypoints.add(finishWaypoint)
-                println(" AAT WAYPOINT MANAGER: Added second waypoint as FINISH: ${searchWaypoint.title}")
             }
             else -> {
                 // FIXED: New waypoint becomes FINISH, previous FINISH becomes TURNPOINT
@@ -215,7 +209,6 @@ class AATWaypointManager {
                         radiusMeters = newRadiusKm * 1000.0
                     )
                 )
-                println(" AAT WAYPOINT MANAGER: Converted previous FINISH '${previousFinish.title}' to TURNPOINT (AUTHORITY radius: ${newRadiusKm}km)")
 
                 // Add new waypoint as FINISH at the end
                 val newFinishWaypoint = AATWaypoint(
@@ -231,7 +224,6 @@ class AATWaypointManager {
                     )
                 )
                 currentWaypoints.add(newFinishWaypoint)
-                println(" AAT WAYPOINT MANAGER: Added new waypoint as FINISH: ${searchWaypoint.title}")
             }
         }
 
@@ -253,7 +245,6 @@ class AATWaypointManager {
      */
     fun removeWaypoint(currentTask: SimpleAATTask, currentLeg: Int, index: Int): Pair<SimpleAATTask, Int> {
         val currentWaypoints = currentTask.waypoints.toMutableList()
-        println(" AAT WAYPOINT MANAGER: Removing waypoint at index $index, current size: ${currentWaypoints.size}")
 
         if (index !in currentWaypoints.indices) {
             return Pair(currentTask, currentLeg)
@@ -299,7 +290,6 @@ class AATWaypointManager {
             0
         }
 
-        println(" AAT WAYPOINT MANAGER: Removed waypoint '${removedWaypoint.title}'. New size: ${currentWaypoints.size}, new current leg: $newCurrentLeg")
 
         return Pair(currentTask.copy(waypoints = currentWaypoints), newCurrentLeg)
     }
@@ -316,21 +306,13 @@ class AATWaypointManager {
      * @return Updated task with new area
      */
     fun updateArea(currentTask: SimpleAATTask, index: Int, newArea: AATAssignedArea): SimpleAATTask {
-        println(" AAT WAYPOINT MANAGER: Starting updateArea")
-        println("   - Index: $index")
-        println("   - New area radius: ${newArea.radiusMeters}m (${newArea.radiusMeters/1000.0}km)")
 
         val currentWaypoints = currentTask.waypoints.toMutableList()
         if (index !in currentWaypoints.indices) {
-            println("   -  ERROR: Index $index out of range (waypoints size: ${currentWaypoints.size})")
             return currentTask
         }
 
         val currentWaypoint = currentWaypoints[index]
-        println("   - Current waypoint details:")
-        println("     - Title: ${currentWaypoint.title}")
-        println("     - Role: ${currentWaypoint.role}")
-        println("     - Current assignedArea.radiusMeters: ${currentWaypoint.assignedArea.radiusMeters}m")
 
         //  SSOT FIX: Update assignedArea only (no gateWidth sync needed - property deleted)
         currentWaypoints[index] = currentWaypoints[index].copy(
@@ -338,9 +320,6 @@ class AATWaypointManager {
         )
 
         val updatedWaypoint = currentWaypoints[index]
-        println("   - Updated waypoint details:")
-        println("     - New assignedArea.radiusMeters: ${updatedWaypoint.assignedArea.radiusMeters}m")
-        println("   -  SUCCESS: assignedArea updated (SSOT)!")
 
         return currentTask.copy(waypoints = currentWaypoints)
     }
@@ -379,7 +358,6 @@ class AATWaypointManager {
         val waypoint = currentWaypoints.removeAt(fromIndex)
         currentWaypoints.add(toIndex, waypoint)
 
-        println(" AAT WAYPOINT MANAGER: Reordered waypoint from $fromIndex to $toIndex")
 
         //  CRITICAL: Reassign roles based on new positions
         currentWaypoints.forEachIndexed { index, wp ->
@@ -404,7 +382,6 @@ class AATWaypointManager {
                         radiusMeters = newRadiusKm * 1000.0
                     )
                 )
-                println("    AAT: Reassigned '${wp.title}' from ${wp.role} to $correctRole (radius: ${newRadiusKm}km)")
             }
         }
 
@@ -438,7 +415,6 @@ class AATWaypointManager {
             assignedArea = existingWaypoint.assignedArea
         )
 
-        println(" AAT WAYPOINT MANAGER: Replaced waypoint at index $index with ${newWaypoint.title}")
         return currentTask.copy(waypoints = currentWaypoints)
     }
 }

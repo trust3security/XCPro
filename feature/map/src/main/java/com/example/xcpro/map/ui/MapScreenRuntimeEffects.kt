@@ -26,6 +26,7 @@ internal fun MapScreenRuntimeEffects(
     onExitAATEditMode: () -> Unit,
     snailTrailManager: SnailTrailManager,
     locationManager: LocationManager,
+    featureFlags: MapFeatureFlags,
     trailUpdateResult: TrailUpdateResult?,
     trailSettings: TrailSettings,
     currentZoom: Float,
@@ -89,7 +90,7 @@ internal fun MapScreenRuntimeEffects(
     }
 
     LaunchedEffect(suppressLiveGps) {
-        if (!suppressLiveGps || MapFeatureFlags.useRenderFrameSync) return@LaunchedEffect
+        if (!suppressLiveGps || featureFlags.useRenderFrameSync) return@LaunchedEffect
         while (isActive) {
             withFrameNanos { }
             val snapshot = locationManager.getDisplayPoseSnapshot()
@@ -102,7 +103,7 @@ internal fun MapScreenRuntimeEffects(
     }
 
     DisposableEffect(suppressLiveGps) {
-        if (!suppressLiveGps || !MapFeatureFlags.useRenderFrameSync) {
+        if (!suppressLiveGps || !featureFlags.useRenderFrameSync) {
             onDispose { locationManager.setDisplayPoseFrameListener(null) }
         } else {
             val listener: (LocationManager.DisplayPoseSnapshot) -> Unit = { snapshot ->

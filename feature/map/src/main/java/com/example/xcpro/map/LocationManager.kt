@@ -5,7 +5,7 @@ import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
 import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.sensors.UnifiedSensorManager
-import com.example.xcpro.sensors.GPSData
+import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.MapOrientationPreferences
 import com.example.xcpro.common.units.UnitsConverter
@@ -29,6 +29,7 @@ class LocationManager(
     private val stateActions: MapStateActions,
     private val coroutineScope: CoroutineScope,
     private val varioServiceManager: VarioServiceManager,
+    private val featureFlags: MapFeatureFlags,
     private val replayHeadingProvider: ((Long) -> Double?)? = null,
     private val replayFixProvider: ((Long) -> ReplayDisplayPose?)? = null
 ) {
@@ -48,7 +49,7 @@ class LocationManager(
     private val userCameraControllerProvider: MapCameraControllerProvider =
         MapLibreCameraControllerProvider(mapState)
     private val mapViewSizeProvider: MapViewSizeProvider = MapScreenSizeProvider(mapState)
-    private val iconRotationConfig = if (MapFeatureFlags.allowHeadingWhileStationary) {
+    private val iconRotationConfig = if (featureFlags.allowHeadingWhileStationary) {
         IconRotationConfig.fromMinSpeedThreshold(0.0)
     } else {
         IconRotationConfig.fromPreferences(orientationPreferences)
@@ -60,8 +61,8 @@ class LocationManager(
     )
     private val cameraUpdateGateFilter = MapLocationFilter(
         MapLocationFilter.Config(
-            thresholdPx = MapFeatureFlags.locationJitterThresholdPx,
-            historySize = MapFeatureFlags.locationOffsetHistorySize
+            thresholdPx = featureFlags.locationJitterThresholdPx,
+            historySize = featureFlags.locationOffsetHistorySize
         ),
         MapLibreProjector()
     )
@@ -71,9 +72,9 @@ class LocationManager(
     )
     private val positionController = MapPositionController(
         mapState = mapState,
-        maxBearingStepDegProvider = { MapFeatureFlags.maxTrackBearingStepDeg },
-        headingSmoothingEnabledProvider = { MapFeatureFlags.useIconHeadingSmoothing },
-        offsetHistorySize = MapFeatureFlags.locationOffsetHistorySize,
+        maxBearingStepDegProvider = { featureFlags.maxTrackBearingStepDeg },
+        headingSmoothingEnabledProvider = { featureFlags.useIconHeadingSmoothing },
+        offsetHistorySize = featureFlags.locationOffsetHistorySize,
         iconRotationConfig = iconRotationConfig
     )
     private val mapShiftBiasCalculator = MapShiftBiasCalculator()
@@ -103,7 +104,7 @@ class LocationManager(
         pipeline = DisplayPosePipelineAdapter(
             DisplayPosePipeline(
                 minSpeedProvider = { orientationPreferences.getMinSpeedThreshold() },
-                adaptiveSmoothingEnabled = MapFeatureFlags.useAdaptiveDisplaySmoothing
+                adaptiveSmoothingEnabled = featureFlags.useAdaptiveDisplaySmoothing
             )
         )
     )
@@ -127,6 +128,7 @@ class LocationManager(
         cameraControllerProvider = {
             userCameraControllerProvider.controllerOrNull()
         },
+        featureFlags = featureFlags,
         initialZoomLevel = INITIAL_ZOOM_LEVEL,
         minUpdateIntervalMs = CAMERA_MIN_UPDATE_INTERVAL_MS,
         bearingEpsDeg = CAMERA_BEARING_EPS_DEG,
@@ -141,10 +143,11 @@ class LocationManager(
     private val frameLogger = DisplayPoseFrameLogger(
         tag = TAG,
         defaultIntervalMs = FRAME_LOG_INTERVAL_MS,
-        timeBaseProvider = { poseCoordinator.timeBase }
+        timeBaseProvider = { poseCoordinator.timeBase },
+        featureFlags = featureFlags
     )
     private val renderFrameSync = RenderFrameSync(
-        isEnabled = { MapFeatureFlags.useRenderFrameSync },
+        isEnabled = { featureFlags.useRenderFrameSync },
         onRenderFrame = { onRenderFrame() }
     )
 
@@ -186,7 +189,7 @@ class LocationManager(
 
 
     fun updateLocationFromGPS(
-        location: GPSData,
+        location: MapLocationUiModel,
         orientation: OrientationData
     ) {
         latestOrientation = orientation
@@ -211,7 +214,7 @@ class LocationManager(
     }
 
     fun onDisplayFrame() {
-        if (MapFeatureFlags.useRenderFrameSync) {
+        if (featureFlags.useRenderFrameSync) {
             userCameraControllerProvider.controllerOrNull()?.triggerRepaint()
             return
         }
@@ -219,7 +222,7 @@ class LocationManager(
     }
 
     fun onRenderFrame() {
-        if (!MapFeatureFlags.useRenderFrameSync) {
+        if (!featureFlags.useRenderFrameSync) {
             return
         }
         renderDisplayFrame()
@@ -256,15 +259,15 @@ class LocationManager(
         val pose = poseCoordinator.selectPose(nowMs, mode, smoothingProfile) ?: return
         if (mapState.mapLibreMap == null) return
         val orientation = latestOrientation
-        val forceTrackHeading = MapFeatureFlags.forceReplayTrackHeading &&
+        val forceTrackHeading = featureFlags.forceReplayTrackHeading &&
             poseCoordinator.timeBase == DisplayClock.TimeBase.REPLAY
-        val runtimeFix = if (forceTrackHeading && MapFeatureFlags.useRuntimeReplayHeading) {
+        val runtimeFix = if (forceTrackHeading && featureFlags.useRuntimeReplayHeading) {
             replayFixProvider?.invoke(nowMs)
         } else {
             null
         }
         val runtimeBearing = runtimeFix?.bearingDeg
-            ?: if (forceTrackHeading && MapFeatureFlags.useRuntimeReplayHeading) {
+            ?: if (forceTrackHeading && featureFlags.useRuntimeReplayHeading) {
                 replayHeadingProvider?.invoke(nowMs)
             } else {
                 null
@@ -293,7 +296,7 @@ class LocationManager(
         lastDisplayPoseFrameId = displayFrameCounter
         lastDisplayPoseLocation = poseLocation
         lastDisplayPoseTimestampMs = poseTimestampMs
-        if (MapFeatureFlags.useRenderFrameSync) {
+        if (featureFlags.useRenderFrameSync) {
             frameLogger.logIfDue(
                 frameId = lastDisplayPoseFrameId,
                 poseTimestampMs = poseTimestampMs,
@@ -303,7 +306,7 @@ class LocationManager(
                 cameraTargetBearing = cameraTargetBearing
             )
         }
-        if (MapFeatureFlags.useRenderFrameSync) {
+        if (featureFlags.useRenderFrameSync) {
             displayPoseFrameListener?.invoke(
                 DisplayPoseSnapshot(
                     location = poseLocation,
@@ -412,9 +415,9 @@ class LocationManager(
         }
     }
 
-    fun saveLocationFromGPS(location: GPSData?, zoom: Double, bearing: Double) {
+    fun saveLocationFromGPS(location: MapLocationUiModel?, zoom: Double, bearing: Double) {
         location?.let {
-            saveLocation(it.toLatLng(), zoom, bearing)
+            saveLocation(LatLng(it.latitude, it.longitude), zoom, bearing)
         }
     }
 
@@ -428,7 +431,7 @@ class LocationManager(
         userInteractionController.recenterOnCurrentLocation()
     }
 
-    fun handleUserInteraction(currentLocation: GPSData?, currentZoom: Double, currentBearing: Double) {
+    fun handleUserInteraction(currentLocation: MapLocationUiModel?, currentZoom: Double, currentBearing: Double) {
         userInteractionController.handleUserInteraction(currentLocation, currentZoom, currentBearing)
     }
 

@@ -26,7 +26,8 @@ import org.maplibre.geojson.FeatureCollection
 class SnailTrailOverlay(
     private val context: Context,
     private val map: MapLibreMap,
-    private val mapView: MapView?
+    private val mapView: MapView?,
+    private val featureFlags: MapFeatureFlags
 ) {
     companion object {
         private const val TAG = "SnailTrailOverlay"
@@ -186,7 +187,7 @@ class SnailTrailOverlay(
                 isCircling = isCircling,
                 currentZoom = currentZoom,
                 isReplay = isReplay,
-                useRenderFrameSync = MapFeatureFlags.useRenderFrameSync,
+                useRenderFrameSync = featureFlags.useRenderFrameSync,
                 density = density
             )
         )

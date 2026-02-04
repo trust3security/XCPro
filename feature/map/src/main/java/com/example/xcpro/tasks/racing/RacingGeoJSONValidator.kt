@@ -19,19 +19,16 @@ object RacingGeoJSONValidator {
     fun validateGeoJSON(geoJsonString: String, context: String = "Racing GeoJSON"): Boolean {
         try {
             if (geoJsonString.isBlank()) {
-                println(" RACING GEOJSON VALIDATION: Empty GeoJSON string in $context")
                 return false
             }
 
             // Basic JSON structure validation
             if (!geoJsonString.trim().startsWith("{") || !geoJsonString.trim().endsWith("}")) {
-                println(" RACING GEOJSON VALIDATION: Invalid JSON structure in $context")
                 return false
             }
 
             // Check for required GeoJSON properties
             if (!geoJsonString.contains("\"type\"") || !geoJsonString.contains("\"geometry\"")) {
-                println(" RACING GEOJSON VALIDATION: Missing required GeoJSON properties in $context")
                 return false
             }
 
@@ -40,11 +37,9 @@ object RacingGeoJSONValidator {
                 return false
             }
 
-            println(" RACING GEOJSON VALIDATION: Valid GeoJSON for $context")
             return true
 
         } catch (e: Exception) {
-            println(" RACING GEOJSON VALIDATION: Exception validating $context: ${e.message}")
             return false
         }
     }
@@ -55,7 +50,6 @@ object RacingGeoJSONValidator {
     private fun validateCoordinates(geoJsonString: String, context: String): Boolean {
         try {
             // DEBUG: Print the GeoJSON string to see coordinate format
-            println(" DEBUG GeoJSON for $context: ${geoJsonString.take(200)}...")
 
             // Extract coordinate arrays using regex - handle various number formats
             val coordinatePattern = Regex("""\[(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\]""")
@@ -68,7 +62,6 @@ object RacingGeoJSONValidator {
                 val lat = match.groupValues[2].toDoubleOrNull()
 
                 if (lon == null || lat == null) {
-                    println(" RACING GEOJSON VALIDATION: Invalid coordinate format in $context: [${match.groupValues[1]}, ${match.groupValues[2]}]")
                     return false
                 }
 
@@ -79,15 +72,12 @@ object RacingGeoJSONValidator {
             }
 
             if (coordinateCount == 0) {
-                println(" RACING GEOJSON VALIDATION: No coordinates found in $context")
                 return false
             }
 
-            println(" RACING GEOJSON VALIDATION: Validated $coordinateCount coordinates in $context")
             return true
 
         } catch (e: Exception) {
-            println(" RACING GEOJSON VALIDATION: Exception validating coordinates in $context: ${e.message}")
             return false
         }
     }
@@ -98,19 +88,16 @@ object RacingGeoJSONValidator {
     private fun isValidCoordinate(lat: Double, lon: Double, context: String): Boolean {
         // Check for NaN and Infinity
         if (!lat.isFinite() || !lon.isFinite()) {
-            println(" RACING GEOJSON VALIDATION: Invalid coordinate values in $context: lat=$lat, lon=$lon (NaN/Infinity)")
             return false
         }
 
         // Check latitude bounds (-90 to 90)
         if (lat < -90.0 || lat > 90.0) {
-            println(" RACING GEOJSON VALIDATION: Invalid latitude in $context: $lat (must be -90 to 90)")
             return false
         }
 
         // Check longitude bounds (-180 to 180)
         if (lon < -180.0 || lon > 180.0) {
-            println(" RACING GEOJSON VALIDATION: Invalid longitude in $context: $lon (must be -180 to 180)")
             return false
         }
 
@@ -179,7 +166,6 @@ object RacingGeoJSONValidator {
             }
 
         } catch (e: Exception) {
-            println(" RACING GEOJSON VALIDATION: Exception creating validated GeoJSON for $type: ${e.message}")
             return createFallbackGeoJSON(type)
         }
     }
@@ -217,12 +203,10 @@ object RacingGeoJSONValidator {
                 if (validateGeoJSON(feature, "$context feature")) {
                     validFeatures.add(feature)
                 } else {
-                    println(" RACING GEOJSON VALIDATION: Skipping invalid feature in $context")
                 }
             }
 
             if (validFeatures.isEmpty()) {
-                println(" RACING GEOJSON VALIDATION: No valid features in $context")
                 return null
             }
 
@@ -240,7 +224,6 @@ object RacingGeoJSONValidator {
             }
 
         } catch (e: Exception) {
-            println(" RACING GEOJSON VALIDATION: Exception creating FeatureCollection for $context: ${e.message}")
             return null
         }
     }

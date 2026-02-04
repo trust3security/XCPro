@@ -43,7 +43,6 @@ class AATTaskRenderer(private val geometryGenerator: AATGeometryGenerator = AATG
     fun plotTaskOnMap(map: MapLibreMap?, task: SimpleAATTask, editModeWaypointIndex: Int? = null) {
         map?.getStyle { style ->
             if (task.waypoints.isNotEmpty()) {
-                println(" AAT RENDERER: Plotting ${task.waypoints.size} AAT waypoints on map")
 
                 try {
                     // Clear existing AAT sources and layers
@@ -61,13 +60,10 @@ class AATTaskRenderer(private val geometryGenerator: AATGeometryGenerator = AATG
                     // Plot movable target point pins at line intersections (with edit mode coloring)
                     mapRenderer.plotTargetPointPins(style, task.waypoints, editModeWaypointIndex)
 
-                    println(" AAT RENDERER: Successfully plotted AAT task on map")
                 } catch (e: Exception) {
-                    println(" AAT RENDERER: Error plotting AAT task: ${e.message}")
                     e.printStackTrace()
                 }
             } else {
-                println(" AAT RENDERER: No waypoints to plot")
                 // Clear AAT layers when no waypoints
                 mapRenderer.clearLayers(map.style)
             }
@@ -84,7 +80,6 @@ class AATTaskRenderer(private val geometryGenerator: AATGeometryGenerator = AATG
      */
     fun clearTaskFromMap(map: MapLibreMap?) {
         map?.getStyle { style ->
-            println(" AAT RENDERER: Removing AAT-specific map layers")
 
             // Remove AAT-specific layers only - NO shared layer names
             val aatLayers = listOf(
@@ -105,10 +100,8 @@ class AATTaskRenderer(private val geometryGenerator: AATGeometryGenerator = AATG
                 try {
                     if (style.getLayer(layerId) != null) {
                         style.removeLayer(layerId)
-                        println(" AAT RENDERER: Removed layer: $layerId")
                     }
                 } catch (e: Exception) {
-                    println(" AAT RENDERER: Could not remove layer $layerId: ${e.message}")
                 }
             }
 
@@ -127,14 +120,11 @@ class AATTaskRenderer(private val geometryGenerator: AATGeometryGenerator = AATG
                 try {
                     if (style.getSource(sourceId) != null) {
                         style.removeSource(sourceId)
-                        println(" AAT RENDERER: Removed source: $sourceId")
                     }
                 } catch (e: Exception) {
-                    println(" AAT RENDERER: Could not remove source $sourceId: ${e.message}")
                 }
             }
 
-            println(" AAT RENDERER: AAT map cleanup completed")
         }
     }
 
@@ -149,7 +139,6 @@ class AATTaskRenderer(private val geometryGenerator: AATGeometryGenerator = AATG
         try {
             if (waypoints.isEmpty()) return
 
-            println(" AAT RENDERER: Plotting areas and start/finish lines for ${waypoints.size} waypoints")
 
             // Separate areas and lines
             val areaFeatures = mutableListOf<String>()
@@ -165,14 +154,12 @@ class AATTaskRenderer(private val geometryGenerator: AATGeometryGenerator = AATG
                                 val lineWidth = waypoint.getAuthorityRadius()
                                 val lineCoordinates = geometryGenerator.generateStartLine(waypoint, nextWaypoint, lineWidth)
                                 lineFeatures.add(featureFactory.createLineFeature(waypoint, lineCoordinates, "aat_start_line", "START"))
-                                println(" AAT RENDERER: Generated start line for ${waypoint.title} (${lineWidth}km wide)")
                             }
                             com.example.xcpro.tasks.aat.models.AATStartPointType.AAT_START_CYLINDER -> {
                                 //  SSOT FIX: Use authority instead of removed gateWidth property
                                 val radiusKm = waypoint.getAuthorityRadius() / 2.0
                                 val circleCoordinates = geometryGenerator.generateCircleCoordinates(waypoint.lat, waypoint.lon, radiusKm)
                                 areaFeatures.add(featureFactory.createCircleFeature(waypoint, circleCoordinates, radiusKm, "aat_start_cylinder", "START"))
-                                println(" AAT RENDERER: Generated start cylinder for ${waypoint.title} (${radiusKm}km radius)")
                             }
                             else -> {
                                 //  SSOT FIX: Use authority instead of removed gateWidth property
@@ -190,7 +177,6 @@ class AATTaskRenderer(private val geometryGenerator: AATGeometryGenerator = AATG
                                 val lineWidth = waypoint.getAuthorityRadius()
                                 val lineCoordinates = geometryGenerator.generateFinishLine(waypoint, prevWaypoint, lineWidth)
                                 lineFeatures.add(featureFactory.createLineFeature(waypoint, lineCoordinates, "aat_finish_line", "FINISH"))
-                                println(" AAT RENDERER: Generated finish line for ${waypoint.title} (${lineWidth}km wide)")
                             }
                             else -> {
                                 //  SSOT FIX: Use authority instead of removed gateWidth property
@@ -208,7 +194,6 @@ class AATTaskRenderer(private val geometryGenerator: AATGeometryGenerator = AATG
                                 val radiusKm = waypoint.getAuthorityRadius()
                                 val circleCoordinates = geometryGenerator.generateCircleCoordinates(waypoint.lat, waypoint.lon, radiusKm)
                                 areaFeatures.add(featureFactory.createCircleFeature(waypoint, circleCoordinates, radiusKm, "aat_area", "TURNPOINT"))
-                                println(" AAT RENDERER: Generated CIRCLE for ${waypoint.title} (${radiusKm}km radius - AUTHORITY)")
                             }
                             com.example.xcpro.tasks.aat.models.AATAreaShape.SECTOR -> {
                                 // Sector/Keyhole: Generate sector boundary points
@@ -220,9 +205,6 @@ class AATTaskRenderer(private val geometryGenerator: AATGeometryGenerator = AATG
                                     waypoint.assignedArea.endAngleDegrees
                                 )
                                 areaFeatures.add(featureFactory.createSectorFeature(waypoint, sectorCoordinates, "aat_sector", "TURNPOINT"))
-                                println(" AAT RENDERER: Generated SECTOR for ${waypoint.title}")
-                                println("   - Inner: ${waypoint.assignedArea.innerRadiusMeters/1000.0}km, Outer: ${waypoint.assignedArea.outerRadiusMeters/1000.0}km")
-                                println("   - Angles: ${waypoint.assignedArea.startAngleDegrees} to ${waypoint.assignedArea.endAngleDegrees}")
                             }
                             com.example.xcpro.tasks.aat.models.AATAreaShape.LINE -> {
                                 // Line (shouldn't happen for turnpoints, but handle gracefully)
@@ -245,7 +227,6 @@ class AATTaskRenderer(private val geometryGenerator: AATGeometryGenerator = AATG
                 mapRenderer.addLineFeatures(style, lineFeatures)
             }
         } catch (e: Exception) {
-            println(" AAT RENDERER: Error plotting areas: ${e.message}")
         }
     }
 }

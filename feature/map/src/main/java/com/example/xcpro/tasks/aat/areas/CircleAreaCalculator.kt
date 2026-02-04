@@ -24,7 +24,6 @@ class CircleAreaCalculator {
     fun isInsideArea(point: AATLatLng, center: AATLatLng, radius: Double): Boolean {
         //  CRASH PREVENTION: Validate input parameters
         if (radius <= 0) {
-            println(" AAT ERROR: Invalid radius $radius for circle area check")
             return false
         }
 
@@ -32,7 +31,6 @@ class CircleAreaCalculator {
             val distance = AATMathUtils.calculateDistance(point, center)
             return distance <= radius
         } catch (e: Exception) {
-            println(" AAT ERROR: Exception in circle area check: ${e.message}")
             return false
         }
     }
@@ -62,7 +60,6 @@ class CircleAreaCalculator {
     fun nearestPointOnBoundary(from: AATLatLng, center: AATLatLng, radius: Double): AATLatLng {
         //  CRASH PREVENTION: Validate radius
         if (radius <= 0) {
-            println(" AAT ERROR: Invalid radius $radius for boundary calculation")
             return center // Return center as fallback
         }
 
@@ -77,7 +74,6 @@ class CircleAreaCalculator {
             val bearing = AATMathUtils.calculateBearing(center, from)
             return AATMathUtils.calculatePointAtBearing(center, bearing, radius)
         } catch (e: Exception) {
-            println(" AAT ERROR: Exception in boundary calculation: ${e.message}")
             return center // Return center as safe fallback
         }
     }
@@ -250,7 +246,6 @@ class CircleAreaCalculator {
     fun calculateAreaSizeKm2(radius: Double): Double {
         //  CRASH PREVENTION: Validate radius
         if (radius <= 0) {
-            println(" AAT ERROR: Invalid radius $radius for area calculation")
             return 0.0
         }
 
@@ -258,7 +253,6 @@ class CircleAreaCalculator {
             val radiusKm = radius / 1000.0
             return PI * radiusKm * radiusKm
         } catch (e: Exception) {
-            println(" AAT ERROR: Exception in area calculation: ${e.message}")
             return 0.0
         }
     }

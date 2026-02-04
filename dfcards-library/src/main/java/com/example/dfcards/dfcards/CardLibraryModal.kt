@@ -87,7 +87,6 @@ fun CardLibraryModal(
                 }
 
                 selectedTemplate = template
-                println("DEBUG: Auto-selected template '${template?.name}' for ${selectedFlightMode.name} mode")
             }
         }
     }
@@ -100,7 +99,6 @@ fun CardLibraryModal(
                     flightMode = selectedFlightMode.name,
                     templateId = template.id
                 )
-                println("DEBUG: Auto-saved ${selectedFlightMode.name}  ${template.name}")
             }
         }
     }
@@ -152,14 +150,12 @@ fun CardLibraryModal(
                         onFlightModeSelected = { mode ->
                             //  FIXED: Don't do anything if same mode selected
                             if (mode == selectedFlightMode) {
-                                println("DEBUG: Same flight mode selected, no action needed")
                                 return@FlightModeSelectionSection
                             }
 
                             selectedFlightMode = mode
                             selectedTemplate = null // This triggers LaunchedEffect to load new template
                             onFlightModeChanged(mode)
-                            println("DEBUG: Flight mode changed to ${mode.name}")
                         }
                     )
 
@@ -170,7 +166,6 @@ fun CardLibraryModal(
                         onTemplateSelected = { template ->
                             //  CHANGED: Auto-save happens via LaunchedEffect
                             selectedTemplate = template
-                            println("DEBUG: User selected template: ${template.name}")
                         },
                         onEditTemplate = { template ->
                             editingTemplate = template

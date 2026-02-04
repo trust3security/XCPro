@@ -84,14 +84,6 @@ class MapScreenViewModelTest {
         override fun nowMonoMs(): Long = testClock.nowMonoMs()
         override fun nowWallMs(): Long = testClock.nowWallMs()
     }
-    private val taskManager = com.example.xcpro.tasks.TaskManagerCoordinator(context)
-    private val taskNavigationController = TaskNavigationController(
-        taskManager = taskManager,
-        stateStore = RacingNavigationStateStore(),
-        advanceState = RacingAdvanceState(),
-        engine = RacingNavigationEngine(),
-        featureFlags = TaskFeatureFlags
-    )
     private val cardPreferences = CardPreferences(context, testClock)
     private val flightDataManagerFactory = FlightDataManagerFactory(context, cardPreferences)
     private val configurationRepository = ConfigurationRepository(context)
@@ -112,12 +104,14 @@ class MapScreenViewModelTest {
         override val flightState = flightStateFlow
     }
     private val orientationSettingsRepository = MapOrientationSettingsRepository(context)
+    private val mapFeatureFlags = MapFeatureFlags()
     private val orientationManagerFactory = MapOrientationManagerFactory(
         orientationDataSourceFactory = OrientationDataSourceFactory(
             unifiedSensorManager = unifiedSensorManager,
             headingResolver = HeadingResolver(),
             flightStateSource = flightStateSource,
-            clock = orientationClock
+            clock = orientationClock,
+            featureFlags = mapFeatureFlags
         ),
         settingsRepository = orientationSettingsRepository,
         clock = orientationClock
@@ -156,13 +150,11 @@ class MapScreenViewModelTest {
 
     @After
     fun tearDown() {
-        MapFeatureFlags.loadSavedTasksOnInit = true
         // Clean up DataStore artifacts created by the test run.
         context.filesDir.resolve("datastore")?.takeIf { it.exists() }?.deleteRecursively()
     }
 
     init {
-        MapFeatureFlags.loadSavedTasksOnInit = false
         Mockito.`when`(replayController.session).thenReturn(replaySessionFlow)
         Mockito.`when`(replayController.events).thenReturn(replayEventsFlow)
         Mockito.`when`(varioServiceManager.unifiedSensorManager).thenReturn(unifiedSensorManager)
@@ -198,29 +190,7 @@ class MapScreenViewModelTest {
         )
         val loader = SuccessfulWaypointLoader(expected)
 
-        val viewModel = MapScreenViewModel(
-            appContext = context,
-            taskManager = taskManager,
-            taskNavigationController = taskNavigationController,
-            cardPreferences = cardPreferences,
-            mapStyleUseCase = mapStyleUseCase,
-            unitsUseCase = unitsUseCase,
-            waypointLoader = loader,
-            gliderConfigUseCase = gliderConfigUseCase,
-            varioServiceManager = varioServiceManager,
-            flightDataUseCase = flightDataUseCase,
-            flightDataManagerFactory = flightDataManagerFactory,
-            windStateUseCase = windStateUseCase,
-            igcReplayController = replayController,
-            racingReplayLogBuilder = RacingReplayLogBuilder(),
-            orientationManagerFactory = orientationManagerFactory,
-            qnhUseCase = qnhUseCase,
-            trailSettingsUseCase = trailSettingsUseCase,
-            calibrateQnhUseCase = calibrateQnhUseCase,
-            variometerLayoutUseCase = variometerLayoutUseCase,
-            ballastControllerFactory = ballastControllerFactory,
-            levoVarioPreferencesRepository = levoVarioPreferencesRepository
-        )
+        val viewModel = createViewModel(waypointLoader = loader)
 
         drainMain()
 
@@ -235,29 +205,7 @@ class MapScreenViewModelTest {
     fun refreshWaypoints_failure_setsError() = runBlocking {
         val loader = FailingWaypointLoader(IllegalStateException("Failed to read waypoints"))
 
-        val viewModel = MapScreenViewModel(
-            appContext = context,
-            taskManager = taskManager,
-            taskNavigationController = taskNavigationController,
-            cardPreferences = cardPreferences,
-            mapStyleUseCase = mapStyleUseCase,
-            unitsUseCase = unitsUseCase,
-            waypointLoader = loader,
-            gliderConfigUseCase = gliderConfigUseCase,
-            varioServiceManager = varioServiceManager,
-            flightDataUseCase = flightDataUseCase,
-            flightDataManagerFactory = flightDataManagerFactory,
-            windStateUseCase = windStateUseCase,
-            igcReplayController = replayController,
-            racingReplayLogBuilder = RacingReplayLogBuilder(),
-            orientationManagerFactory = orientationManagerFactory,
-            qnhUseCase = qnhUseCase,
-            trailSettingsUseCase = trailSettingsUseCase,
-            calibrateQnhUseCase = calibrateQnhUseCase,
-            variometerLayoutUseCase = variometerLayoutUseCase,
-            ballastControllerFactory = ballastControllerFactory,
-            levoVarioPreferencesRepository = levoVarioPreferencesRepository
-        )
+        val viewModel = createViewModel(waypointLoader = loader)
 
         drainMain()
 
@@ -357,35 +305,46 @@ class MapScreenViewModelTest {
         waypointLoader: WaypointLoader = SuccessfulWaypointLoader(emptyList())
     ): MapScreenViewModel {
         val localTaskManager = com.example.xcpro.tasks.TaskManagerCoordinator(null)
+        val localTaskFeatureFlags = TaskFeatureFlags()
         val localTaskNavigationController = TaskNavigationController(
             taskManager = localTaskManager,
             stateStore = RacingNavigationStateStore(),
             advanceState = RacingAdvanceState(),
             engine = RacingNavigationEngine(),
-            featureFlags = TaskFeatureFlags
+            featureFlags = localTaskFeatureFlags
         )
+        val mapWaypointsUseCase = MapWaypointsUseCase(context, waypointLoader)
+        val mapSensorsUseCase = MapSensorsUseCase(varioServiceManager)
+        val mapUiControllersUseCase = MapUiControllersUseCase(
+            flightDataManagerFactory = flightDataManagerFactory,
+            orientationManagerFactory = orientationManagerFactory,
+            ballastControllerFactory = ballastControllerFactory
+        )
+        val mapReplayUseCase = MapReplayUseCase(replayController, RacingReplayLogBuilder())
+        val mapTasksUseCase = MapTasksUseCase(localTaskManager, localTaskNavigationController)
+        mapFeatureFlags.loadSavedTasksOnInit = false
+        val mapFeatureFlagsUseCase = MapFeatureFlagsUseCase(mapFeatureFlags)
+        val mapCardPreferencesUseCase = MapCardPreferencesUseCase(cardPreferences)
+        val mapVarioPreferencesUseCase = MapVarioPreferencesUseCase(levoVarioPreferencesRepository)
+
         return MapScreenViewModel(
-            appContext = context,
-            taskManager = localTaskManager,
-            taskNavigationController = localTaskNavigationController,
-            cardPreferences = cardPreferences,
             mapStyleUseCase = mapStyleUseCase,
             unitsUseCase = unitsUseCase,
-            waypointLoader = waypointLoader,
+            mapWaypointsUseCase = mapWaypointsUseCase,
             gliderConfigUseCase = gliderConfigUseCase,
-            varioServiceManager = varioServiceManager,
+            sensorsUseCase = mapSensorsUseCase,
             flightDataUseCase = flightDataUseCase,
-            flightDataManagerFactory = flightDataManagerFactory,
+            mapUiControllersUseCase = mapUiControllersUseCase,
             windStateUseCase = windStateUseCase,
-            igcReplayController = replayController,
-            racingReplayLogBuilder = RacingReplayLogBuilder(),
-            orientationManagerFactory = orientationManagerFactory,
+            mapReplayUseCase = mapReplayUseCase,
+            mapTasksUseCase = mapTasksUseCase,
+            mapFeatureFlagsUseCase = mapFeatureFlagsUseCase,
+            mapCardPreferencesUseCase = mapCardPreferencesUseCase,
             qnhUseCase = qnhUseCase,
             trailSettingsUseCase = trailSettingsUseCase,
             calibrateQnhUseCase = calibrateQnhUseCase,
             variometerLayoutUseCase = variometerLayoutUseCase,
-            ballastControllerFactory = ballastControllerFactory,
-            levoVarioPreferencesRepository = levoVarioPreferencesRepository
+            mapVarioPreferencesUseCase = mapVarioPreferencesUseCase
         )
     }
 

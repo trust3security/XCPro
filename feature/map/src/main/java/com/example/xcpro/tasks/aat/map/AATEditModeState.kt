@@ -1,6 +1,7 @@
 package com.example.xcpro.tasks.aat.map
 
 import androidx.compose.runtime.*
+import com.example.xcpro.core.time.Clock
 import com.example.xcpro.tasks.aat.models.AATLatLng
 import com.example.xcpro.tasks.aat.models.AATWaypoint
 import com.example.xcpro.tasks.aat.calculations.AATMathUtils
@@ -64,16 +65,17 @@ data class AATEditSession(
  */
 @Composable
 fun rememberAATEditModeState(
-    initialState: AATEditState = AATEditState.VIEW_MODE,
-    nowMs: () -> Long = { android.os.SystemClock.elapsedRealtime() }
+    clock: Clock,
+    initialState: AATEditState = AATEditState.VIEW_MODE
 ): AATEditModeStateManager {
-    return remember { AATEditModeStateManager(initialState, nowMs) }
+    return remember(clock, initialState) { AATEditModeStateManager(clock, initialState) }
 }
 
 class AATEditModeStateManager(
-    initialState: AATEditState = AATEditState.VIEW_MODE,
-    private val nowMs: () -> Long = { android.os.SystemClock.elapsedRealtime() }
+    private val clock: Clock,
+    initialState: AATEditState = AATEditState.VIEW_MODE
 ) {
+    private val nowMs: () -> Long = clock::nowMonoMs
     private var _currentSession by mutableStateOf(
         AATEditSession(state = initialState, sessionStartTime = nowMs())
     )
@@ -89,11 +91,9 @@ class AATEditModeStateManager(
         targetZoom: Float = 3.0f
     ): Boolean {
         if (_currentSession.state == AATEditState.AREA_EDIT) {
-            println(" AAT: Already in edit mode for area ${_currentSession.focusedAreaIndex}")
             return false
         }
 
-        println(" AAT: Entering edit mode for area $areaIndex (${waypoint.title})")
 
         _currentSession = AATEditSession(
             state = AATEditState.AREA_EDIT,
@@ -114,7 +114,6 @@ class AATEditModeStateManager(
     fun exitEditMode(overviewZoom: Float = 1.0f): AATEditSession {
         val previousSession = _currentSession
 
-        println(" AAT: Exiting edit mode (session duration: ${previousSession.sessionDurationMs(nowMs())}ms)")
 
         _currentSession = AATEditSession(
             state = AATEditState.VIEW_MODE,
@@ -130,13 +129,11 @@ class AATEditModeStateManager(
      */
     fun updateTargetPoint(newPosition: AATLatLng): Boolean {
         if (_currentSession.state != AATEditState.AREA_EDIT) {
-            println(" AAT: Cannot update target point - not in edit mode")
             return false
         }
 
         val waypoint = _currentSession.focusedWaypoint
         if (waypoint == null) {
-            println(" AAT: Cannot update target point - no focused waypoint")
             return false
         }
 
@@ -149,7 +146,6 @@ class AATEditModeStateManager(
         val maxDistance = waypoint.assignedArea.radiusMeters / 1000.0
 
         if (distance > maxDistance) {
-            println(" AAT: Target point outside area bounds (${String.format("%.2f", distance)}km > ${String.format("%.2f", maxDistance)}km)")
             return false
         }
 
@@ -158,7 +154,6 @@ class AATEditModeStateManager(
             hasUnsavedChanges = true
         )
 
-        println(" AAT: Updated target point to ${String.format("%.6f", newPosition.latitude)}, ${String.format("%.6f", newPosition.longitude)}")
         return true
     }
 
@@ -184,7 +179,6 @@ class AATEditModeStateManager(
 
         _currentSession = _currentSession.copy(hasUnsavedChanges = false)
 
-        println(" AAT: Saved changes to ${waypoint.title}")
         return updatedWaypoint
     }
 
@@ -197,7 +191,6 @@ class AATEditModeStateManager(
                 currentTargetPoint = _currentSession.originalTargetPoint,
                 hasUnsavedChanges = false
             )
-            println(" AAT: Discarded changes, reverted to original position")
         }
     }
 

@@ -16,7 +16,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.map.MapGestureRegion
 import com.example.xcpro.map.MapZoomConstraints
-import com.example.xcpro.sensors.GPSData
+import com.example.xcpro.map.model.MapLocationUiModel
 import kotlin.math.abs
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.maps.MapLibreMap
@@ -32,8 +32,8 @@ fun CustomMapGestureHandler(
     onModeChange: (FlightMode) -> Unit,
     showReturnButton: Boolean,
     onShowReturnButton: (Boolean) -> Unit,
-    currentLocation: GPSData?,
-    onSaveLocation: (GPSData?, Double, Double) -> Unit,
+    currentLocation: MapLocationUiModel?,
+    onSaveLocation: (MapLocationUiModel?, Double, Double) -> Unit,
     bottomSheetHeight: Float = 0f,
     visibleModes: List<FlightMode> = FlightMode.values().toList(),
     taskGestureHandler: TaskGestureHandler? = null,

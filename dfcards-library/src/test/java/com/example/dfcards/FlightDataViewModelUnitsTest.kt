@@ -1,5 +1,6 @@
 package com.example.dfcards
 
+import com.example.dfcards.dfcards.FlightCardsUseCaseFactory
 import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.xcpro.common.units.AltitudeUnit
 import com.example.xcpro.common.units.VerticalSpeedUnit
@@ -7,13 +8,18 @@ import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.core.common.geometry.DensityScale
 import com.example.xcpro.core.common.geometry.IntSizePx
 import com.example.xcpro.core.time.FakeClock
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class FlightDataViewModelUnitsTest {
     private fun buildViewModel(clock: FakeClock = FakeClock(monoMs = 1_000L)): FlightDataViewModel {
-        return FlightDataViewModel(clock = clock)
+        val factory = FlightCardsUseCaseFactory(clock)
+        return FlightDataViewModel(
+            ioDispatcher = Dispatchers.Unconfined,
+            cardsUseCaseFactory = factory
+        )
     }
 
     @Test

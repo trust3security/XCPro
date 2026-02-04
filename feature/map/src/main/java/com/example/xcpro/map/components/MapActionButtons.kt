@@ -21,14 +21,14 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-import com.example.xcpro.sensors.GPSData
+import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.map.MapTaskScreenManager
 import com.example.ui1.icons.LocationSailplane
 
 @Composable
 fun MapActionButtons(
     taskScreenManager: MapTaskScreenManager,
-    currentLocation: GPSData?,
+    currentLocation: MapLocationUiModel?,
     showRecenterButton: Boolean,
     showReturnButton: Boolean,
     showDistanceCircles: Boolean,

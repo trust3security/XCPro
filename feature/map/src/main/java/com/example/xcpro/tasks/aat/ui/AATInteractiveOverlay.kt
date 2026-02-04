@@ -6,6 +6,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import com.example.xcpro.core.time.Clock
 import com.example.xcpro.tasks.aat.map.*
 import com.example.xcpro.tasks.aat.models.AATWaypoint
 import com.example.xcpro.tasks.aat.models.AATLatLng
@@ -57,11 +58,10 @@ data class AATInteractiveCallbacks(
 fun AATInteractiveOverlay(
     aatWaypoints: List<AATWaypoint>,
     mapLibreMap: org.maplibre.android.maps.MapLibreMap?,
+    clock: Clock,
     callbacks: AATInteractiveCallbacks = AATInteractiveCallbacks(),
     modifier: Modifier = Modifier
 ) {
-    // State management
-    val editModeManager = rememberAATEditModeState()
     val coordinateConverter = remember(mapLibreMap) {
         mapLibreMap?.let { AATMapCoordinateConverterFactory.create(it) }
     }
@@ -71,7 +71,6 @@ fun AATInteractiveOverlay(
         aatWaypoints = aatWaypoints,
         callbacks = AATInteractionCallbacks(
             onAreaTapped = { index, waypoint ->
-                println(" AAT: Area $index tapped (${waypoint.title})")
             },
             onEditModeEntered = { index, waypoint ->
                 callbacks.onEditModeChanged(true, index)
@@ -87,7 +86,8 @@ fun AATInteractiveOverlay(
             onCheckTargetPointHit = { screenX, screenY ->
                 callbacks.onCheckTargetPointHit(screenX, screenY)
             }
-        )
+        ),
+        clock = clock
     )
 
     // Attach interaction handler to map
@@ -118,6 +118,7 @@ fun AATInteractiveOverlay(
                             org.maplibre.android.geometry.LatLng(latLng.latitude, latLng.longitude)
                         )?.let { androidx.compose.ui.geometry.Offset(it.x, it.y) }
                     },
+                    nowMs = clock.nowMonoMs(),
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -150,17 +151,16 @@ fun AATInteractiveOverlay(
 
             AATEditModeOverlay(
                 editSession = editSession,
+                nowMs = clock.nowMonoMs(),
                 onSaveChanges = {
                     val updatedWaypoint = interactionHandler.saveEditChanges()
                     if (updatedWaypoint != null) {
                         val index = editSession.focusedAreaIndex
                         callbacks.onTargetPointUpdated(index, updatedWaypoint.targetPoint)
-                        println(" AAT: Saved changes for waypoint ${updatedWaypoint.title}")
                     }
                 },
                 onDiscardChanges = {
                     interactionHandler.discardEditChanges()
-                    println(" AAT: Discarded changes")
                 },
                 onResetToCenter = {
                     val waypoint = editSession.focusedWaypoint
@@ -168,7 +168,6 @@ fun AATInteractiveOverlay(
                         val centerPoint = AATLatLng(waypoint.lat, waypoint.lon)
                         interactionHandler.updateTargetPoint(centerPoint)
                         callbacks.onTargetPointUpdated(editSession.focusedAreaIndex, centerPoint)
-                        println(" AAT: Reset target point to center")
                     }
                 },
                 onExitEditMode = {
@@ -247,6 +246,7 @@ object AATOverlayFactory {
     fun CreateInteractiveOverlay(
         aatWaypoints: List<AATWaypoint>,
         mapLibreMap: org.maplibre.android.maps.MapLibreMap?,
+        clock: Clock,
         onTargetPointUpdated: (Int, AATLatLng) -> Unit,
         onEditModeChanged: (Boolean, Int) -> Unit = { _, _ -> },
         onCheckTargetPointHit: (Float, Float) -> Int? = { _, _ -> null },
@@ -255,6 +255,7 @@ object AATOverlayFactory {
         AATInteractiveOverlay(
             aatWaypoints = aatWaypoints,
             mapLibreMap = mapLibreMap,
+            clock = clock,
             callbacks = AATInteractiveCallbacks(
                 onTargetPointUpdated = onTargetPointUpdated,
                 onEditModeChanged = onEditModeChanged,

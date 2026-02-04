@@ -40,8 +40,8 @@ import com.example.xcpro.map.ballast.BallastCommand
 import com.example.xcpro.map.ballast.BallastUiState
 import com.example.xcpro.navdrawer.NavigationDrawer
 import com.example.xcpro.replay.SessionState
-import com.example.xcpro.sensors.GPSData
-import com.example.xcpro.sensors.GpsStatus
+import com.example.xcpro.map.model.MapLocationUiModel
+import com.example.xcpro.map.model.GpsStatusUiModel
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.variometer.layout.VariometerUiState
@@ -139,7 +139,7 @@ internal fun MapScreenScaffold(
     initialMapStyle: String,
     onDrawerItemSelected: (String) -> Unit,
     onMapStyleSelected: (String) -> Unit,
-    gpsStatus: GpsStatus,
+    gpsStatus: GpsStatusUiModel,
     isLoadingWaypoints: Boolean,
     density: Density,
     mapState: MapScreenState,
@@ -155,7 +155,7 @@ internal fun MapScreenScaffold(
     currentMode: FlightMode,
     currentZoom: Float,
     onModeChange: (FlightMode) -> Unit,
-    currentLocation: GPSData?,
+    currentLocation: MapLocationUiModel?,
     showRecenterButton: Boolean,
     showReturnButton: Boolean,
     showDistanceCircles: Boolean,
@@ -303,13 +303,13 @@ internal fun MapScreenScaffold(
 }
 
 @Composable
-private fun GpsStatusBanner(status: GpsStatus, modifier: Modifier = Modifier) {
+private fun GpsStatusBanner(status: GpsStatusUiModel, modifier: Modifier = Modifier) {
     val (text, color) = when (status) {
-        GpsStatus.NoPermission -> "Location permission needed" to Color(0xFFB00020)
-        GpsStatus.Disabled -> "GPS is off" to Color(0xFFB00020)
-        is GpsStatus.LostFix -> "Waiting for GPS" to Color(0xFFCA8A04)
-        GpsStatus.Searching -> "Searching for GPS" to Color(0xFFCA8A04)
-        is GpsStatus.Ok -> return
+        GpsStatusUiModel.NoPermission -> "Location permission needed" to Color(0xFFB00020)
+        GpsStatusUiModel.Disabled -> "GPS is off" to Color(0xFFB00020)
+        is GpsStatusUiModel.LostFix -> "Waiting for GPS" to Color(0xFFCA8A04)
+        GpsStatusUiModel.Searching -> "Searching for GPS" to Color(0xFFCA8A04)
+        is GpsStatusUiModel.Ok -> return
     }
     Surface(
         color = color.copy(alpha = 0.85f),
