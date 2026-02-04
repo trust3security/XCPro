@@ -43,6 +43,14 @@ Each entry must include an issue ID, owner, and expiry date.
 - Expiry: 2026-03-04
 - Notes: Uses Date() for filename timestamps in TaskFilesUseCase.
 
+6) AAT map editing uses SystemClock directly
+- Rule: Domain/use-case logic must use injected Clock; no SystemClock/System.currentTimeMillis direct calls.
+- Issue: RULES-20260204-06
+- Owner: XCPro Team
+- Expiry: 2026-03-04
+- Notes: Uses SystemClock.elapsedRealtime() in AAT edit session timing and tap timestamps
+  (AATEditModeState, AATMapCoordinateConverter, AATMapInteractionHandler). Needs injected Clock/nowMs.
+
 ## Verification
 
 Last verified: 2026-01-28 (unit tests re-run after MapOverlayWidgetGesturesTest moved to Robolectric)
