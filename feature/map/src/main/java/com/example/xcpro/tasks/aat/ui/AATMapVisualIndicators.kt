@@ -84,7 +84,7 @@ fun AATMapVisualIndicators(
         )
 
         // Draw distance rings (optional)
-        if (editSession.sessionDurationMs > 2000) { // Show after 2 seconds
+        if (editSession.sessionDurationMs(android.os.SystemClock.elapsedRealtime()) > 2000) { // Show after 2 seconds
             drawDistanceRings(
                 waypoint = waypoint,
                 coordinateToPixel = coordinateToPixel

@@ -79,7 +79,7 @@ fun AATEditModeOverlay(
                 currentTargetPoint = editSession.currentTargetPoint!!,
                 originalTargetPoint = editSession.originalTargetPoint!!,
                 hasUnsavedChanges = editSession.hasUnsavedChanges,
-                sessionDuration = editSession.sessionDurationMs,
+                sessionDuration = editSession.sessionDurationMs(android.os.SystemClock.elapsedRealtime()),
                 onSaveChanges = onSaveChanges,
                 onDiscardChanges = onDiscardChanges,
                 onResetToCenter = onResetToCenter,

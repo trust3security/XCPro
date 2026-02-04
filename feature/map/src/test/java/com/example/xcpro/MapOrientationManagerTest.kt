@@ -78,7 +78,7 @@ class MapOrientationManagerTest {
         fakeSource.emit(
             OrientationSensorData(
                 track = 180.0,
-                groundSpeed = 5.0,
+                groundSpeed = 6.0,
                 isGPSValid = true
             )
         )

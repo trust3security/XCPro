@@ -27,7 +27,7 @@ import kotlin.math.max
 class IgcReplayLevoNettoValidationTest {
 
     @Test
-    fun replayCarIgcProducesBoundedLevoNetto() {
+    fun replayDemoIgcProducesBoundedLevoNetto() {
         val resource = javaClass.classLoader?.getResourceAsStream(REPLAY_RESOURCE)
             ?: error("Missing replay fixture: $REPLAY_RESOURCE")
         val log = IgcParser.parse(resource)
@@ -129,13 +129,13 @@ class IgcReplayLevoNettoValidationTest {
 
         assertTrue("Expected valid levo netto samples", validCount > 0)
         assertTrue(
-            "Levo netto should stay bounded for the replay sample",
+            "Levo netto should stay bounded for the replay sample (maxAbs=$maxAbs)",
             maxAbs <= MAX_ABS_LEVO_MS
         )
     }
 
     companion object {
-        private const val REPLAY_RESOURCE = "replay/vario-demo-car-hills-2km-80s.igc"
+        private const val REPLAY_RESOURCE = "replay/vario-demo-0-10-0-120s.igc"
         private const val MAX_ABS_LEVO_MS = 3.0
     }
 }

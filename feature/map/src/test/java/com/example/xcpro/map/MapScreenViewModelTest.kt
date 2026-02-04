@@ -116,7 +116,8 @@ class MapScreenViewModelTest {
         orientationDataSourceFactory = OrientationDataSourceFactory(
             unifiedSensorManager = unifiedSensorManager,
             headingResolver = HeadingResolver(),
-            flightStateSource = flightStateSource
+            flightStateSource = flightStateSource,
+            clock = orientationClock
         ),
         settingsRepository = orientationSettingsRepository,
         clock = orientationClock

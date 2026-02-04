@@ -233,51 +233,6 @@ internal class MapScreenReplayCoordinator(
         }
     }
 
-    fun onVarioDemoReplayCar() {
-        scope.launch {
-            try {
-                captureDemoReplaySnapshot()
-                captureDemoReplayCadenceSnapshot()
-                captureDemoReplaySpeedSnapshot()
-                captureDemoReplayBaroStepSnapshot()
-                captureDemoReplayNoiseSnapshot()
-                captureDemoReplayGpsAccuracySnapshot()
-                captureDemoReplayInterpolationSnapshot()
-                igcReplayController.setSpeed(CAR_REPLAY_SPEED_MULTIPLIER)
-                igcReplayController.setAutoStopAfterFinish(true)
-                Log.i(TAG, "VARIO_DEMO_CAR start asset=$VARIO_DEMO_CAR_ASSET_PATH")
-                igcReplayController.stopAndWait(emitCancelledEvent = false)
-                igcReplayController.setReplayMode(ReplayMode.REALTIME_SIM, resetAfterSession = true)
-                igcReplayController.setReplayCadence(
-                    ReplayCadenceProfile(
-                        referenceStepMs = CAR_REFERENCE_STEP_MS,
-                        gpsStepMs = CAR_GPS_STEP_MS
-                    )
-                )
-                igcReplayController.setReplayBaroStepMs(CAR_BARO_STEP_MS)
-                igcReplayController.setReplayNoiseProfile(
-                    ReplayNoiseProfile(
-                        pressureNoiseSigmaHpa = CAR_BARO_NOISE_SIGMA_HPA,
-                        gpsAltitudeNoiseSigmaM = CAR_GPS_NOISE_SIGMA_M,
-                        jitterMs = CAR_JITTER_MS
-                    )
-                )
-                igcReplayController.setReplayGpsAccuracyMeters(CAR_GPS_ACCURACY_M)
-                igcReplayController.setReplayInterpolation(ReplayInterpolation.LINEAR)
-                igcReplayController.loadAsset(VARIO_DEMO_CAR_ASSET_PATH, "Vario demo (car)")
-                mapStateActions.setHasInitiallyCentered(false)
-                mapStateActions.setShowReturnButton(false)
-                mapStateActions.setTrackingLocation(true)
-                igcReplayController.play()
-                uiEffects.emit(MapUiEffect.ShowToast("Vario demo (car) replay started"))
-            } catch (t: Throwable) {
-                restoreDemoReplaySnapshot()
-                Log.e(TAG, "Failed to start vario demo replay (car)", t)
-                uiEffects.emit(MapUiEffect.ShowToast("Vario demo (car) replay failed"))
-            }
-        }
-    }
-
     fun onRacingTaskReplay() {
         scope.launch {
             racingReplayActive = true
@@ -569,7 +524,6 @@ internal class MapScreenReplayCoordinator(
         private const val VARIO_DEMO_ASSET_PATH = "replay/vario-demo-0-10-0-60s.igc"
         private const val VARIO_DEMO_SIM2_ASSET_PATH = "replay/vario-demo-0-10-0-120s.igc"
         private const val VARIO_DEMO_SIM3_ASSET_PATH = "replay/vario-demo-const-120s.igc"
-        private const val VARIO_DEMO_CAR_ASSET_PATH = "replay/vario-demo-car-hills-2km-80s.igc"
         private const val RACING_REPLAY_SPEED_MULTIPLIER = 1.0
         private val RACING_REPLAY_CADENCE_PROFILE = ReplayCadenceProfile.LIVE_100MS
         private const val SIM2_FALLBACK_GPS_STEP_MS = 1_000L
@@ -581,14 +535,6 @@ internal class MapScreenReplayCoordinator(
         private const val SIM3_STEP_MS = 1_000L
         private const val SIM3_ACCURACY_M = 1f
         private const val SIM3_REPLAY_SPEED_MULTIPLIER = 1.0
-        private const val CAR_REFERENCE_STEP_MS = 1_000L
-        private const val CAR_GPS_STEP_MS = 200L
-        private const val CAR_BARO_STEP_MS = 20L
-        private const val CAR_JITTER_MS = 12L
-        private const val CAR_BARO_NOISE_SIGMA_HPA = 0.12
-        private const val CAR_GPS_NOISE_SIGMA_M = 2.0
-        private const val CAR_GPS_ACCURACY_M = 3f
-        private const val CAR_REPLAY_SPEED_MULTIPLIER = 1.0
     }
 }
 
