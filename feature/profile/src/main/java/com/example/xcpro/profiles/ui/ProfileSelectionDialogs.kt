@@ -54,7 +54,7 @@ fun CreateProfileDialog(
                         label = aircraft.displayName,
                         icon = {
                             Icon(
-                                imageVector = aircraft.icon,
+                                imageVector = aircraft.icon(),
                                 contentDescription = null,
                                 modifier = Modifier.width(24.dp)
                             )

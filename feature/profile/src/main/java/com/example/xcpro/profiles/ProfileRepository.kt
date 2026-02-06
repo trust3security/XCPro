@@ -1,7 +1,5 @@
 package com.example.xcpro.profiles
 
-import com.google.gson.ExclusionStrategy
-import com.google.gson.FieldAttributes
 import com.google.gson.GsonBuilder
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -18,15 +16,7 @@ class ProfileRepository @Inject constructor(
     private val storage: ProfileStorage
 ) {
 
-    private val gson = GsonBuilder()
-        .setExclusionStrategies(object : ExclusionStrategy {
-            override fun shouldSkipField(f: FieldAttributes?): Boolean =
-                f?.declaredClass == androidx.compose.ui.graphics.vector.ImageVector::class.java
-
-            override fun shouldSkipClass(clazz: Class<*>?): Boolean =
-                clazz == androidx.compose.ui.graphics.vector.ImageVector::class.java
-        })
-        .create()
+    private val gson = GsonBuilder().create()
 
     private val internalScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 

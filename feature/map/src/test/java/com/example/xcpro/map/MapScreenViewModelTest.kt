@@ -55,6 +55,8 @@ import com.example.xcpro.variometer.layout.VariometerWidgetRepository
 import com.example.xcpro.map.ballast.BallastControllerFactory
 import com.example.xcpro.core.time.FakeClock
 import com.example.xcpro.ConfigurationRepository
+import com.example.xcpro.hawk.HawkVarioUiState
+import com.example.xcpro.hawk.HawkVarioUseCase
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -147,6 +149,8 @@ class MapScreenViewModelTest {
     private val ballastControllerFactory =
         BallastControllerFactory(gliderRepository, mainDispatcherRule.dispatcher)
     private val levoVarioPreferencesRepository = LevoVarioPreferencesRepository(context)
+    private val hawkVarioUseCase = Mockito.mock(HawkVarioUseCase::class.java)
+    private val hawkVarioUiStateFlow = MutableStateFlow(HawkVarioUiState())
 
     @After
     fun tearDown() {
@@ -166,6 +170,7 @@ class MapScreenViewModelTest {
         Mockito.`when`(windRepository.windState).thenReturn(windStateFlow)
         Mockito.`when`(gliderRepository.config).thenReturn(gliderConfigFlow)
         Mockito.`when`(gliderRepository.selectedModel).thenReturn(gliderModelFlow)
+        Mockito.`when`(hawkVarioUseCase.hawkVarioUiState).thenReturn(hawkVarioUiStateFlow)
         windStateUseCase = WindStateUseCase(windRepository)
         gliderConfigUseCase = GliderConfigUseCase(gliderRepository)
     }
@@ -287,13 +292,13 @@ class MapScreenViewModelTest {
     private class SuccessfulWaypointLoader(
         private val waypoints: List<WaypointData>
     ) : WaypointLoader {
-        override suspend fun load(context: Context): List<WaypointData> = waypoints
+        override suspend fun load(): List<WaypointData> = waypoints
     }
 
     private class FailingWaypointLoader(
         private val throwable: Throwable
     ) : WaypointLoader {
-        override suspend fun load(context: Context): List<WaypointData> = throw throwable
+        override suspend fun load(): List<WaypointData> = throw throwable
     }
 
 
@@ -313,7 +318,7 @@ class MapScreenViewModelTest {
             engine = RacingNavigationEngine(),
             featureFlags = localTaskFeatureFlags
         )
-        val mapWaypointsUseCase = MapWaypointsUseCase(context, waypointLoader)
+        val mapWaypointsUseCase = MapWaypointsUseCase(waypointLoader)
         val mapSensorsUseCase = MapSensorsUseCase(varioServiceManager)
         val mapUiControllersUseCase = MapUiControllersUseCase(
             flightDataManagerFactory = flightDataManagerFactory,
@@ -344,7 +349,8 @@ class MapScreenViewModelTest {
             trailSettingsUseCase = trailSettingsUseCase,
             calibrateQnhUseCase = calibrateQnhUseCase,
             variometerLayoutUseCase = variometerLayoutUseCase,
-            mapVarioPreferencesUseCase = mapVarioPreferencesUseCase
+            mapVarioPreferencesUseCase = mapVarioPreferencesUseCase,
+            hawkVarioUseCase = hawkVarioUseCase
         )
     }
 

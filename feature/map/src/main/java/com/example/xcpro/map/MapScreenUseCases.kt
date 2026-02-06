@@ -29,8 +29,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.CoroutineScope
-import dagger.hilt.android.qualifiers.ApplicationContext
-import android.content.Context
 
 class MapStyleUseCase @Inject constructor(
     private val repository: MapStyleRepository
@@ -78,10 +76,9 @@ class QnhUseCase @Inject constructor(
 }
 
 class MapWaypointsUseCase @Inject constructor(
-    @ApplicationContext private val appContext: Context,
     private val waypointLoader: WaypointLoader
 ) {
-    suspend fun loadWaypoints(): List<WaypointData> = waypointLoader.load(appContext)
+    suspend fun loadWaypoints(): List<WaypointData> = waypointLoader.load()
 }
 
 class MapSensorsUseCase @Inject constructor(
@@ -100,6 +97,7 @@ class MapVarioPreferencesUseCase @Inject constructor(
     private val repository: LevoVarioPreferencesRepository
 ) {
     val showWindSpeedOnVario: Flow<Boolean> = repository.config.map { it.showWindSpeedOnVario }
+    val showHawkCard: Flow<Boolean> = repository.config.map { it.showHawkCard }
 }
 
 class MapTasksUseCase @Inject constructor(

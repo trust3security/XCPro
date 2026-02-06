@@ -1,6 +1,5 @@
 package com.example.dfcards.dfcards
 
-import androidx.compose.ui.graphics.Color
 import com.example.dfcards.CardLibrary
 import com.example.dfcards.CardStrings
 import com.example.dfcards.RealTimeFlightData
@@ -18,8 +17,8 @@ private enum class UpdateTier {
 }
 
 // Match infobox palette: bright red/green for sink/lift.
-private val NEGATIVE_VARIO_COLOR = Color(0xFFFF0000)
-private val POSITIVE_VARIO_COLOR = Color(0xFF0D8A16) // darker green for readability
+private const val NEGATIVE_VARIO_COLOR = 0xFFFF0000L
+private const val POSITIVE_VARIO_COLOR = 0xFF0D8A16L // darker green for readability
 internal fun CardStateRepository.updateCardsWithLiveData(
     liveData: RealTimeFlightData,
     forceVisible: Boolean = false
@@ -191,7 +190,7 @@ private fun splitPrimaryValue(primaryValue: String): Pair<String?, String?> {
     }
 }
 
-private fun highlightColorFor(cardId: String, realData: RealTimeFlightData): Color? {
+private fun highlightColorFor(cardId: String, realData: RealTimeFlightData): Long? {
     val risk = realData.macCreadyRisk
     // Primary colouring for vario cards: sign-based, fall back to risk highlighting.
     return when (cardId) {

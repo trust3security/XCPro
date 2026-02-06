@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.example.xcpro.profiles.ui.icon
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -175,7 +176,7 @@ fun ProfileBasicSettings(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(
-                    imageVector = profile.aircraftType.icon,
+                    imageVector = profile.aircraftType.icon(),
                     contentDescription = null,
                     modifier = Modifier.size(32.dp)
                 )

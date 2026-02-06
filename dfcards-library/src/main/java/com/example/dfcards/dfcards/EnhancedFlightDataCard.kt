@@ -109,7 +109,7 @@ fun EnhancedFlightDataCard(
         val labelNudge = with(LocalDensity.current) { (-3).dp.toPx() }
         val footerNudge = with(LocalDensity.current) { 3.dp.toPx() }
 
-        val primaryColor = flightData.primaryColorOverride ?: visualStyle.primaryColor
+        val primaryColor = flightData.primaryColorOverride?.let { Color(it) } ?: visualStyle.primaryColor
         val primarySize = stableFontSizes.primarySize * 0.8f
 
         Box(

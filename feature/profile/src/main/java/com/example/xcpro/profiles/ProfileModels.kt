@@ -1,36 +1,26 @@
 package com.example.xcpro.profiles
 
-import androidx.compose.ui.graphics.vector.ImageVector
-import com.example.ui1.icons.Glider
-import com.example.ui1.icons.Paraglider
-import com.example.ui1.icons.Sailplane
-import com.example.ui1.icons.Hangglider
 import com.example.xcpro.common.flight.FlightMode
 import java.util.UUID
 
 enum class AircraftType(
     val displayName: String,
-    val icon: ImageVector,
     val defaultModes: List<FlightMode>
 ) {
     PARAGLIDER(
         displayName = "Paraglider",
-        icon = Paraglider,
         defaultModes = listOf(FlightMode.CRUISE, FlightMode.THERMAL)
     ),
     HANG_GLIDER(
-        displayName = "Hang Glider", 
-        icon = Hangglider,
+        displayName = "Hang Glider",
         defaultModes = listOf(FlightMode.CRUISE, FlightMode.THERMAL)
     ),
     SAILPLANE(
         displayName = "Sailplane",
-        icon = Sailplane,
         defaultModes = listOf(FlightMode.CRUISE, FlightMode.THERMAL, FlightMode.FINAL_GLIDE)
     ),
     GLIDER(
         displayName = "Glider",
-        icon = Glider,
         defaultModes = listOf(FlightMode.CRUISE, FlightMode.THERMAL, FlightMode.FINAL_GLIDE)
     )
 }

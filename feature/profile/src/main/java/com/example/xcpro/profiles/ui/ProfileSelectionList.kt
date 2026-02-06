@@ -93,7 +93,7 @@ private fun ProfileListItem(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = profile.aircraftType.icon,
+                        imageVector = profile.aircraftType.icon(),
                         contentDescription = null,
                         tint = if (isActive) {
                             MaterialTheme.colorScheme.onPrimaryContainer

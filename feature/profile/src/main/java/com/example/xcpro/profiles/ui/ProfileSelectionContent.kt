@@ -200,7 +200,7 @@ private fun SelectedProfileCard(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(
-                imageVector = profile.aircraftType.icon,
+                imageVector = profile.aircraftType.icon(),
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onPrimaryContainer
             )

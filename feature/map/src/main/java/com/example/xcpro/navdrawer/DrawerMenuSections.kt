@@ -22,6 +22,7 @@ import com.example.xcpro.common.orientation.MapOrientationMode
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.example.xcpro.screens.flightdata.HomeWaypointViewModel
 import com.example.xcpro.profiles.ProfileViewModel
+import com.example.xcpro.profiles.ui.icon
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -46,7 +47,7 @@ fun ProfileSection(
 
     ModernExpandableSection(
         title = profileTitle,
-        icon = activeProfile?.aircraftType?.icon ?: Icons.Outlined.Person,
+        icon = activeProfile?.aircraftType?.icon() ?: Icons.Outlined.Person,
         isExpanded = isExpanded,
         onToggle = onToggle
     ) {

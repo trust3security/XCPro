@@ -26,6 +26,7 @@ import com.example.xcpro.screens.navdrawer.SettingsTopAppBar
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.xcpro.profiles.ProfilesConfigViewModel
+import com.example.xcpro.profiles.ui.icon
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -130,7 +131,7 @@ fun ProfilesScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
-                                    imageVector = activeProfile.aircraftType.icon,
+                                    imageVector = activeProfile.aircraftType.icon(),
                                     contentDescription = null,
                                     modifier = Modifier.size(40.dp),
                                     tint = MaterialTheme.colorScheme.onPrimaryContainer
@@ -201,7 +202,7 @@ fun ProfilesScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                imageVector = profile.aircraftType.icon,
+                                imageVector = profile.aircraftType.icon(),
                                 contentDescription = null,
                                 modifier = Modifier.size(32.dp)
                             )

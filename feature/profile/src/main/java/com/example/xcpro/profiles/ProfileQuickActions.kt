@@ -21,6 +21,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.dfcards.FlightModeSelection
 import com.example.xcpro.common.flight.FlightMode
+import com.example.xcpro.profiles.ui.icon
 
 fun getFlightModeColor(mode: FlightMode): Color {
     return when (mode) {
@@ -57,7 +58,7 @@ fun ProfileIndicator(
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Icon(
-                imageVector = activeProfile?.aircraftType?.icon ?: Icons.Default.Person,
+                imageVector = activeProfile?.aircraftType?.icon() ?: Icons.Default.Person,
                 contentDescription = null,
                 modifier = Modifier.size(20.dp),
                 tint = if (activeProfile != null) {
@@ -133,7 +134,7 @@ fun ProfileQuickSwitcher(
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Icon(
-                                imageVector = profile.aircraftType.icon,
+                                imageVector = profile.aircraftType.icon(),
                                 contentDescription = null,
                                 modifier = Modifier.size(20.dp)
                             )
