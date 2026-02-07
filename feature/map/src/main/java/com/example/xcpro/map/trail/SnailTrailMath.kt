@@ -14,6 +14,10 @@ internal object SnailTrailMath {
     private const val TRAIL_WIDTH_SCALE = 0.5f
     private const val MIN_WIDTH_FACTOR = 0.8f
     private const val MAX_WIDTH_FACTOR = 0.42f
+    private const val KTS_TO_MS = 0.514444
+    private const val MAX_VARIO_KTS = 12.0
+    private const val MAX_VARIO_MS = MAX_VARIO_KTS * KTS_TO_MS
+    private const val MIN_VARIO_MS = -MAX_VARIO_MS
 
     fun minTimeMillis(length: TrailLength, nowMillis: Long): Long? = when (length) {
         TrailLength.FULL -> null
@@ -93,16 +97,10 @@ internal object SnailTrailMath {
         return filtered
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun varioRange(points: List<RenderPoint>): Pair<Double, Double> {
-        var minVal = -2.0
-        var maxVal = 0.75
-        for (point in points) {
-            minVal = min(minVal, point.varioMs)
-            maxVal = max(maxVal, point.varioMs)
-        }
-        maxVal = min(7.5, maxVal)
-        minVal = max(-5.0, minVal)
-        return minVal to maxVal
+        // Fixed scale: 0 = yellow, 12+ kts = top (purple), -12 kts = bottom (navy).
+        return MIN_VARIO_MS to MAX_VARIO_MS
     }
 
     fun altitudeRange(points: List<RenderPoint>): Pair<Double, Double> {

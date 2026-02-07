@@ -4,7 +4,7 @@ import android.graphics.Color
 import org.maplibre.android.style.expressions.Expression
 
 internal object SnailTrailPalette {
-    const val NUM_COLORS = 15
+    const val NUM_COLORS = 19
 
     fun colorExpression(type: TrailType): Expression {
         val stops = ArrayList<Expression.Stop>(NUM_COLORS)
@@ -23,11 +23,12 @@ internal object SnailTrailPalette {
         val rampValue = index * 200 / (NUM_COLORS - 1)
         return when (type) {
             TrailType.ALTITUDE -> colorRampLookup(rampValue, altitudeRamp)
-            TrailType.VARIO_2, TrailType.VARIO_2_DOTS, TrailType.VARIO_DOTS_AND_LINES -> {
-                colorRampLookup(rampValue, vario2Ramp)
-            }
-            TrailType.VARIO_EINK -> colorRampLookup(rampValue, varioEinkRamp)
-            else -> colorRampLookup(rampValue, vario1Ramp)
+            TrailType.VARIO_2,
+            TrailType.VARIO_2_DOTS,
+            TrailType.VARIO_DOTS_AND_LINES,
+            TrailType.VARIO_EINK,
+            TrailType.VARIO_1,
+            TrailType.VARIO_1_DOTS -> varioColors[index.coerceIn(0, varioColors.lastIndex)]
         }
     }
 
@@ -54,26 +55,26 @@ internal object SnailTrailPalette {
         return Color.rgb(r, g, b)
     }
 
-    private val vario1Ramp = listOf(
-        ColorRamp(0, 0xC4, 0x80, 0x1E),
-        ColorRamp(100, 0xA0, 0xA0, 0xA0),
-        ColorRamp(200, 0x1E, 0xF1, 0x73)
-    )
-
-    private val vario2Ramp = listOf(
-        ColorRamp(0, 0x00, 0x00, 0x00),   // black (worst sink)
-        ColorRamp(40, 0x00, 0x00, 0x80),  // navy
-        ColorRamp(70, 0x00, 0x00, 0xFF),  // blue
-        ColorRamp(100, 0xFF, 0xFF, 0x00), // yellow (near zero)
-        ColorRamp(130, 0x00, 0xFF, 0x00), // green
-        ColorRamp(160, 0xFF, 0xA5, 0x00), // orange
-        ColorRamp(180, 0xFF, 0x00, 0x00), // red
-        ColorRamp(200, 0x80, 0x00, 0x80)  // purple (largest lift)
-    )
-
-    private val varioEinkRamp = listOf(
-        ColorRamp(0, 0x00, 0x00, 0x00),
-        ColorRamp(200, 0x80, 0x80, 0x80)
+    private val varioColors = intArrayOf(
+        Color.rgb(0x0B, 0x10, 0x26), // deep navy (max sink)
+        Color.rgb(0x12, 0x26, 0x4A),
+        Color.rgb(0x15, 0x3C, 0x66),
+        Color.rgb(0x1B, 0x53, 0x82),
+        Color.rgb(0x20, 0x6A, 0x9E),
+        Color.rgb(0x2A, 0x81, 0xB9),
+        Color.rgb(0x3A, 0x96, 0xCB),
+        Color.rgb(0x56, 0xA9, 0xD6),
+        Color.rgb(0x7C, 0xC0, 0xE2),
+        Color.rgb(0xFF, 0xF4, 0xB0), // zero lift
+        Color.rgb(0xFF, 0xE7, 0x81),
+        Color.rgb(0xFF, 0xD2, 0x4F),
+        Color.rgb(0xFF, 0xB5, 0x32),
+        Color.rgb(0xFF, 0x98, 0x28),
+        Color.rgb(0xFF, 0x7A, 0x1E),
+        Color.rgb(0xF8, 0x5B, 0x2B),
+        Color.rgb(0xE3, 0x3B, 0x4E),
+        Color.rgb(0xB1, 0x2C, 0x82),
+        Color.rgb(0x6D, 0x1A, 0x9C) // strong lift (12+ kts)
     )
 
     private val altitudeRamp = listOf(
