@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # racingtask.md
 
 **Purpose**: Single source of truth for how XCPro creates and runs Racing tasks, how the UI maps to the Racing task model, and how that model aligns with FAI Racing task rules.
@@ -170,3 +172,4 @@ This is a multi-phase plan that keeps UX improving while the core stays correct.
 - Start/finish limits (time/height/speed).
 - FAI triangle rules, min separation, class constraints.
 - Validation reporting integrated into UI.
+

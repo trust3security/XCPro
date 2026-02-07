@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # OpenSky.md -- GA ADS-B traffic around the user (XCPro / Android)
 
 Goal: In XCPro, display **up to 30 GA aircraft** within **20 km** of the user's current location using **OpenSky Network** (internet polling). This document tells Codex exactly what to build: request format, polling, caching, rate-limit-safe behavior, and UI rules.
@@ -385,6 +387,7 @@ interface GaProviderClient {
 ```
 
 So you can later add `AdsbLolProviderClient` without rewriting repositories/UI.
+
 
 
 

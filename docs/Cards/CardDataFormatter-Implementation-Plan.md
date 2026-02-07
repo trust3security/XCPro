@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # CardDataFormatter Implementation Plan
 
 Date: 2026-01-29
@@ -164,3 +166,4 @@ Tasks:
 - All card IDs are typed and validated at compile time.
 - Unit test coverage for all card outputs and edge cases.
 - No violations of ARCHITECTURE.md or CODING_RULES.md.
+

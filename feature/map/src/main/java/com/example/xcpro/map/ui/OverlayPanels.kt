@@ -106,6 +106,7 @@ internal fun VariometerPanel(
     val needleVario by flightDataManager.needleVarioFlow.collectAsStateWithLifecycle()
     val fastNeedleVario by flightDataManager.fastNeedleVarioFlow.collectAsStateWithLifecycle()
     val audioNeedleVario by flightDataManager.audioNeedleVarioFlow.collectAsStateWithLifecycle()
+    val teArcVario by flightDataManager.teArcVarioFlow.collectAsStateWithLifecycle()
     val liveFlightData by flightDataManager.liveFlightDataFlow.collectAsStateWithLifecycle()
     val windSpeed by flightDataManager.windSpeedDisplayFlow.collectAsStateWithLifecycle()
     val unitsPreferences = flightDataManager.unitsPreferences
@@ -208,6 +209,7 @@ internal fun VariometerPanel(
         needleValue = needleVario,
         fastNeedleValue = fastNeedleVario,
         audioNeedleValue = audioNeedleVario,
+        outerArcValue = teArcVario,
         displayValue = displayVarioUnits.toFloat(),
         displayLabel = stripUnit(varioFormatted),
         secondaryLabel = levoNettoLabel,

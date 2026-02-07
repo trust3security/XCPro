@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # Levo Replay Notes
 
 This document captures replay-specific behavior, pitfalls, and debugging
@@ -36,3 +38,4 @@ DEBUGGING CHECKLIST
 - Verify replay timestamp monotonic progression (IGC time).
 - Confirm FlightDataRepository Source.REPLAY gating works.
 - Compare replay vario with expected IGC climb/sink segments.
+

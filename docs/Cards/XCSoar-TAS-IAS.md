@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # XCSoar TAS/IAS and Wind EKF Notes
 
 This note documents how XCSoar handles TAS/IAS and wind EKF gating, based on
@@ -65,4 +67,5 @@ read the files listed below in that repo.
 - Airspeed derived from wind/GPS is available for calculations but is NOT
   marked real and does not unlock EKF.
 - Airspeed data becomes stale after 30 seconds and loses the "real" flag.
+
 

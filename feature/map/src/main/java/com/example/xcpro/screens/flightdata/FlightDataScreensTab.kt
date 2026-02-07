@@ -37,7 +37,8 @@ fun FlightDataScreensTab(
     flightViewModel: FlightDataViewModel,
     onEditTemplate: (FlightTemplate) -> Unit,
     onDeleteTemplate: (FlightTemplate) -> Unit,
-    liveFlightData: RealTimeFlightData? = null
+    liveFlightData: RealTimeFlightData? = null,
+    hiddenCardIds: Set<String> = emptySet()
 ) {
     val unitsViewModel: UnitsSettingsViewModel = hiltViewModel()
     val unitsPreferences by unitsViewModel.units.collectAsStateWithLifecycle(
@@ -125,6 +126,7 @@ fun FlightDataScreensTab(
                 liveFlightData = liveFlightData,
                 units = unitsPreferences,
                 selectedCardIds = currentCardIds,
+                hiddenCardIds = hiddenCardIds,
                 onCardToggle = { cardId, isSelected ->
                     val updated = if (isSelected) {
                         if (cardId in currentCardIds) currentCardIds else currentCardIds + cardId

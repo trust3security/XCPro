@@ -36,6 +36,7 @@ import com.example.xcpro.map.widgets.MapWidgetId
 import com.example.xcpro.map.widgets.MapWidgetLayoutViewModel
 import com.example.xcpro.map.widgets.MapWidgetOffsets
 import dagger.hilt.android.EntryPointAccessors
+import com.example.xcpro.hawk.HAWK_VARIO_CARD_ID
 
 /**
  * G PHASE 2: Convert CompleteFlightData (from FlightDataCalculator) to RealTimeFlightData (for cards)
@@ -83,7 +84,11 @@ internal fun MapScreenRoot(
     val orientationData by orientationManager.orientationFlow.collectAsStateWithLifecycle()
     val windArrowState by mapViewModel.windArrowState.collectAsStateWithLifecycle()
     val showWindSpeedOnVario by mapViewModel.showWindSpeedOnVario.collectAsStateWithLifecycle()
+    val showHawkCard by mapViewModel.showHawkCard.collectAsStateWithLifecycle()
     val taskManager = mapViewModel.taskManager
+    val hiddenCardIds = remember(showHawkCard) {
+        if (showHawkCard) emptySet() else setOf(HAWK_VARIO_CARD_ID)
+    }
 
     // GAA SIMPLIFIED: Remove permission dialog variables, always enable everything
     val safeContainerSizeState = remember { mutableStateOf(IntSize.Zero) }
@@ -317,7 +322,8 @@ internal fun MapScreenRoot(
         flightViewModel = flightViewModel,
         windArrowState = windArrowState,
         showWindSpeedOnVario = showWindSpeedOnVario,
-        cardStyle = cardStyle
+        cardStyle = cardStyle,
+        hiddenCardIds = hiddenCardIds
     )
 
     MapScreenScaffold(scaffoldInputs)

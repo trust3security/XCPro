@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # Wind Fusion Refactor (Option A: Remove Wind From CompleteFlightData)
 
 Goal: eliminate duplicate wind state by removing wind fields from `CompleteFlightData` and
@@ -148,4 +150,5 @@ release-grade parity against XCSoar's wind stack.
 - Turn-rate gate aligned to ~20 deg/s.
 - EKF sample stride aligned to 10 samples.
 - EKF quality ramp aligned to 30/120/600.
+
 

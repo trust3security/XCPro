@@ -3,6 +3,8 @@ package com.example.xcpro.vario
 import android.util.Log
 import com.example.xcpro.audio.AudioFocusManager
 import com.example.xcpro.flightdata.FlightDataRepository
+import com.example.xcpro.hawk.HawkConfigRepository
+import com.example.xcpro.hawk.HawkVarioRepository
 import com.example.xcpro.sensors.FlightStateSource
 import com.example.xcpro.sensors.SensorFusionRepository
 import com.example.xcpro.common.flight.FlightMode
@@ -30,6 +32,8 @@ open class VarioServiceManager @Inject constructor(
     val sensorFusionRepository: SensorFusionRepository,
     private val flightDataRepository: FlightDataRepository,
     private val levoVarioPreferencesRepository: LevoVarioPreferencesRepository,
+    private val hawkConfigRepository: HawkConfigRepository,
+    private val hawkVarioRepository: HawkVarioRepository,
     val flightStateSource: FlightStateSource
 ) {
 
@@ -63,6 +67,7 @@ open class VarioServiceManager @Inject constructor(
             Log.d(TAG, "Starting sensors + flight data collection")
             observeLevoPreferences()
             startCollection()
+            hawkVarioRepository.start()
             observeGpsCadence()
         }
 
@@ -83,6 +88,7 @@ open class VarioServiceManager @Inject constructor(
         cancelSensorRetry()
         unifiedSensorManager.stopAllSensors()
         sensorFusionRepository.stop()
+        hawkVarioRepository.stop()
         configJob?.cancel()
         configJob = null
         gpsCadenceJob?.cancel()
@@ -110,6 +116,8 @@ open class VarioServiceManager @Inject constructor(
                 sensorFusionRepository.setMacCreadyRisk(config.macCreadyRisk)
                 sensorFusionRepository.setAutoMcEnabled(config.autoMcEnabled)
                 sensorFusionRepository.updateAudioSettings(config.audioSettings)
+                sensorFusionRepository.setHawkAudioEnabled(config.enableHawkUi)
+                hawkConfigRepository.setEnabled(config.showHawkCard || config.enableHawkUi)
             }
         }
     }

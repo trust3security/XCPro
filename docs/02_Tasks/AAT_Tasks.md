@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # AAT (Assigned Area Tasks) - Complete Guide
 
 **Last Updated:** 2025-01-08
@@ -412,4 +414,5 @@ AAT pilots continuously optimize during flight:
 ---
 
 **Questions?** See [DOCS_INDEX.md](../../DOCS_INDEX.md) for complete documentation map.
+
 

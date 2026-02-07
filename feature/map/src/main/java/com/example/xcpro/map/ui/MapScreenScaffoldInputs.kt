@@ -104,6 +104,7 @@ internal data class MapScreenScaffoldInputs(
     val onHamburgerTap: () -> Unit,
     val onHamburgerLongPress: () -> Unit,
     val cardStyle: CardStyle,
+    val hiddenCardIds: Set<String>,
     val replayState: StateFlow<SessionState>,
     val showVarioDemoFab: Boolean,
     val onVarioDemoReferenceClick: () -> Unit,
@@ -148,7 +149,8 @@ internal fun rememberMapScreenScaffoldInputs(
     flightViewModel: FlightDataViewModel,
     windArrowState: WindArrowUiState,
     showWindSpeedOnVario: Boolean,
-    cardStyle: CardStyle
+    cardStyle: CardStyle,
+    hiddenCardIds: Set<String>
 ): MapScreenScaffoldInputs {
     val onDrawerItemSelected: (String) -> Unit = { item ->
         Log.d(MapScreenScaffoldInputsTag, "Navigation drawer item selected: $item")
@@ -245,6 +247,7 @@ internal fun rememberMapScreenScaffoldInputs(
         onHamburgerTap = { mapViewModel.onEvent(MapUiEvent.ToggleDrawer) },
         onHamburgerLongPress = { mapViewModel.onEvent(MapUiEvent.ToggleUiEditMode) },
         cardStyle = cardStyle,
+        hiddenCardIds = hiddenCardIds,
         replayState = mapViewModel.replaySessionState,
         showVarioDemoFab = mapViewModel.showVarioDemoFab,
         onVarioDemoReferenceClick = mapViewModel::onVarioDemoReplay,

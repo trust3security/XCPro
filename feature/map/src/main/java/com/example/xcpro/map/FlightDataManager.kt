@@ -111,6 +111,17 @@ class FlightDataManager(
                 initialValue = 0f
             )
 
+    val teArcVarioFlow: StateFlow<Float?> =
+        liveFlightDataFlow
+            .map { data -> data?.teVario?.toFloat() }
+            .distinctUntilChanged()
+            .throttleFrame(UI_NEEDLE_FRAME_MS)
+            .stateIn(
+                scope = coroutineScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = null
+            )
+
     val baselineDisplayVarioFlow: StateFlow<Float> =
         liveFlightDataFlow
             .map { (it?.baselineDisplayVario ?: 0.0).toFloat().bucket(VARIO_BUCKET_MS) }

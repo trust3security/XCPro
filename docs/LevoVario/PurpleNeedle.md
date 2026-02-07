@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # Purple Needle (Audio Input Needle)
 
 ## Summary
@@ -59,3 +61,4 @@ Options:
 1) Ensure TE vario is valid more often (airspeed sensor or reliable wind estimation).
 2) Drive the purple needle from a different input (ex: netto vario or a filtered signal).
 3) Apply the same audio deadband + clamp to the needle so it visually matches output behavior.
+

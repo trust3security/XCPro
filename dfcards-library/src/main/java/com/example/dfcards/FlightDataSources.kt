@@ -103,6 +103,7 @@ data class RealTimeFlightData(
     val airspeedSource: String = "UNKNOWN",
     val tasValid: Boolean = true,
     val teAltitude: Double = 0.0,
+    val teVario: Double? = null,
     val macCready: Double = 0.0,
     val macCreadyRisk: Double = 0.0,
 
@@ -123,7 +124,13 @@ data class RealTimeFlightData(
     val speedToFlyDelta: Double = 0.0,
     val speedToFlyValid: Boolean = false,
     val speedToFlyMcSourceAuto: Boolean = false,
-    val speedToFlyHasPolar: Boolean = false
+    val speedToFlyHasPolar: Boolean = false,
+    // HAWK vario (display only).
+    val hawkVarioSmoothedMps: Double? = null,
+    val hawkVarioRawMps: Double? = null,
+    val hawkAccelOk: Boolean = false,
+    val hawkBaroOk: Boolean = false,
+    val hawkConfidenceCode: Int = 0
 )
 
 // PHASE 3: All old calculation classes removed (FlightDataManager, WindData)

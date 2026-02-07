@@ -45,7 +45,8 @@ fun MapMainLayers(
     cardSafeTopOffsetPx: Float = 0f,
     modifier: Modifier = Modifier,
     onCardLayerPositioned: (Rect) -> Unit = {},
-    cardStyle: CardStyle
+    cardStyle: CardStyle,
+    hiddenCardIds: Set<String> = emptySet()
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         MapViewHost(
@@ -64,7 +65,8 @@ fun MapMainLayers(
             onContainerSizeChanged = onContainerSizeChanged,
             cardSafeTopOffsetPx = cardSafeTopOffsetPx,
             onCardLayerPositioned = onCardLayerPositioned,
-            cardStyle = cardStyle
+            cardStyle = cardStyle,
+            hiddenCardIds = hiddenCardIds
         )
 
         Box(
@@ -233,6 +235,7 @@ private fun CardGridLayer(
     cardSafeTopOffsetPx: Float,
     onCardLayerPositioned: (Rect) -> Unit,
     cardStyle: CardStyle,
+    hiddenCardIds: Set<String>,
 ) {
     Box(
         modifier = Modifier
@@ -284,6 +287,7 @@ private fun CardGridLayer(
             onFlightTemplateClick = { flightDataManager.showCardLibrary() },
             isEditMode = isUiEditMode,
             onEditModeChanged = onEditModeChange,
+            hiddenCardIds = hiddenCardIds,
             viewModel = flightViewModel,
             modifier = Modifier.fillMaxSize(),
             cardVisualStyle = cardVisualStyle

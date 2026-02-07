@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # TAS (Phone-Only) Implementation Plan
 
 ## Goal
@@ -102,6 +104,7 @@ Provide a **pilot-facing TAS card** and a **stable TAS estimate** using **phone 
   - displays a stable numeric TAS when valid
   - shows placeholder when TAS truly can't be estimated (e.g., before any wind has been computed)
 - Unit tests cover TAS vector math and prevent regressions.
+
 
 
 

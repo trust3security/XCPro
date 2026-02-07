@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # Agent-Execution-Contract-LevoCompliance.md
 
 Status: Completed (2026-01-28)
@@ -49,3 +51,4 @@ matching entry in KNOWN_DEVIATIONS.md should be updated or removed.
 - PASS: ./gradlew assembleDebug
 - PASS: powershell -File scripts/ci/enforce_rules.ps1
 - PASS: preflight.bat
+

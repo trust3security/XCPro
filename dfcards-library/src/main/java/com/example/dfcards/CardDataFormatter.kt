@@ -24,6 +24,9 @@ internal object CardDataFormatter {
     ): Pair<String, String?> {
         val knownId = KnownCardId.fromRaw(cardId)
         if (liveData == null) {
+            if (knownId == KnownCardId.HAWK_VARIO) {
+                return Pair("--.- m/s", "ACCEL UNREL BARO DEG CONF --")
+            }
             return Pair(placeholderFor(knownId, units, strings), strings.noData)
         }
         if (knownId == null) {

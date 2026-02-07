@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # Schleicher ASG 29 - Complete Performance Data
 ## 15-Meter and 18-Meter Configurations
 
@@ -361,3 +363,4 @@ Data compiled from:
 
 *Note: For actual flight operations, always refer to the official flight manual and current supplements*
 *Performance data may vary with individual aircraft and conditions*
+

@@ -21,6 +21,7 @@ class FlightDataCalculator(
     flightStateSource: FlightStateSource,
     audioFocusManager: AudioFocusManager,
     clock: Clock,
+    hawkVarioRepository: com.example.xcpro.hawk.HawkVarioRepository,
     enableAudio: Boolean = true,
     isReplayMode: Boolean = false
 ) : SensorFusionRepository {
@@ -34,6 +35,7 @@ class FlightDataCalculator(
         flightStateSource = flightStateSource,
         audioFocusManager = audioFocusManager,
         clock = clock,
+        hawkVarioRepository = hawkVarioRepository,
         enableAudio = enableAudio,
         isReplayMode = isReplayMode
     )
@@ -45,6 +47,7 @@ class FlightDataCalculator(
     override val audioSettings: StateFlow<VarioAudioSettings> = engine.audioSettings
 
     override fun updateAudioSettings(settings: VarioAudioSettings) = engine.updateAudioSettings(settings)
+    override fun setHawkAudioEnabled(enabled: Boolean) = engine.setHawkAudioEnabled(enabled)
 
     override fun setManualQnh(qnhHPa: Double) = engine.setManualQnh(qnhHPa)
 

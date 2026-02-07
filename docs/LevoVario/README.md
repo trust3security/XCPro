@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # Levo Vario Docs Index
 
 This folder documents the Levo variometer pipeline (live and replay).
@@ -28,3 +30,4 @@ When to update:
   update `levo.md`.
 - If you change time base logic or sensor cadence rules, update
   `CODING_RULES.md`.
+

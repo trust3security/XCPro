@@ -27,6 +27,10 @@ class LevoVarioSettingsUseCase @Inject constructor(
         preferencesRepository.setShowWindSpeedOnVario(enabled)
     }
 
+    suspend fun setShowHawkCard(enabled: Boolean) {
+        preferencesRepository.setShowHawkCard(enabled)
+    }
+
     suspend fun updateAudioSettings(transform: (VarioAudioSettings) -> VarioAudioSettings) {
         preferencesRepository.updateAudioSettings(transform)
     }

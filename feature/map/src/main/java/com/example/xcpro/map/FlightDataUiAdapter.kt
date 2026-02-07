@@ -6,6 +6,7 @@ import com.example.xcpro.replay.IgcReplayController
 import com.example.xcpro.sensors.CompleteFlightData
 import com.example.xcpro.sensors.domain.FlyingState
 import com.example.xcpro.weather.wind.model.WindState
+import com.example.xcpro.hawk.HawkVarioUiState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +21,7 @@ internal class FlightDataUiAdapter(
     flightDataFlow: StateFlow<CompleteFlightData?>,
     windStateFlow: StateFlow<WindState>,
     flightStateFlow: StateFlow<FlyingState>,
+    hawkVarioUiStateFlow: StateFlow<HawkVarioUiState>,
     flightDataManager: FlightDataManager,
     mapStateStore: MapStateReader,
     liveDataReady: MutableStateFlow<Boolean>,
@@ -33,6 +35,7 @@ internal class FlightDataUiAdapter(
         flightDataFlow = flightDataFlow,
         windStateFlow = windStateFlow,
         flightStateFlow = flightStateFlow,
+        hawkVarioUiStateFlow = hawkVarioUiStateFlow,
         flightDataManager = flightDataManager,
         mapStateStore = mapStateStore,
         liveDataReady = liveDataReady,

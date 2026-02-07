@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # Racing Task Boundary Crossing - Implementation Plan (XCSoar-Aligned)
 
 ## Purpose
@@ -145,4 +147,5 @@ Distance-to-entry should use the same crossing planner:
 - Task transitions happen exactly when the glider crosses the boundary.
 - Replay and live display the same boundary crossing.
 - Competition-grade determinism with minimal future rewrites.
+
 

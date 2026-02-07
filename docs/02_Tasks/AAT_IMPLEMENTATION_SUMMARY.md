@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # AAT (Area Assignment Task) Implementation Summary
 
 ## zper-mille Implementation Complete
@@ -161,3 +163,4 @@ The AAT system is complete and ready for integration. Key integration points:
 **Total Implementation**: 14 files, ~4,500 lines of code, fully autonomous AAT system
 
 The AAT system is now ready for production use and provides a complete, autonomous solution for Area Assignment Tasks in the gliding application.
+

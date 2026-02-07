@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # Track Up Orientation (MapScreen)
 
 This document explains how map orientation works in XCPro with a focus on Track Up. It is intended for future developers who need to tune or extend the behavior (smoothing, validity gates, UI settings, or new modes).
@@ -307,3 +309,4 @@ From `MapCameraManager` and `MapPositionController`:
 ## Summary for future tuning
 
 If Track Up is still jumpy in live mode, the primary remaining issue is the lack of camera bearing smoothing/clamping while tracking. Track Up now uses `orientationData.bearing` and updates bearing even when the position gate rejects a sample, so focus future tuning on camera smoothing and GPS noise handling. The position jitter gate can still cause target jumps; consider adjusting its threshold or adding bearing smoothing if needed.
+

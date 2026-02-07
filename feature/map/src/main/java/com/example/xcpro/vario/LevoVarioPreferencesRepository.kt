@@ -21,6 +21,8 @@ private val KEY_MACCREADY = doublePreferencesKey("maccready_value")
 private val KEY_MACCREADY_RISK = doublePreferencesKey("maccready_risk_value")
 private val KEY_AUTO_MC_ENABLED = booleanPreferencesKey("auto_mc_enabled")
 private val KEY_SHOW_WIND_SPEED_ON_VARIO = booleanPreferencesKey("show_wind_speed_on_vario")
+private val KEY_SHOW_HAWK_CARD = booleanPreferencesKey("show_hawk_card")
+private val KEY_ENABLE_HAWK_UI = booleanPreferencesKey("enable_hawk_ui")
 private val KEY_AUDIO_ENABLED = booleanPreferencesKey("audio_enabled")
 private val KEY_AUDIO_VOLUME = floatPreferencesKey("audio_volume")
 private val KEY_AUDIO_LIFT_THRESHOLD = doublePreferencesKey("audio_lift_threshold")
@@ -28,13 +30,25 @@ private val KEY_AUDIO_SINK_SILENCE_THRESHOLD = doublePreferencesKey("audio_sink_
 private val KEY_AUDIO_DUTY_CYCLE = doublePreferencesKey("audio_duty_cycle")
 private val KEY_AUDIO_DEADBAND_MIN = doublePreferencesKey("audio_deadband_min")
 private val KEY_AUDIO_DEADBAND_MAX = doublePreferencesKey("audio_deadband_max")
+private val KEY_HAWK_NEEDLE_OMEGA_MIN_HZ = doublePreferencesKey("hawk_needle_omega_min_hz")
+private val KEY_HAWK_NEEDLE_OMEGA_MAX_HZ = doublePreferencesKey("hawk_needle_omega_max_hz")
+private val KEY_HAWK_NEEDLE_TARGET_TAU_SEC = doublePreferencesKey("hawk_needle_target_tau_sec")
+private val KEY_HAWK_NEEDLE_DRIFT_TAU_MIN_SEC = doublePreferencesKey("hawk_needle_drift_tau_min_sec")
+private val KEY_HAWK_NEEDLE_DRIFT_TAU_MAX_SEC = doublePreferencesKey("hawk_needle_drift_tau_max_sec")
 
 data class LevoVarioConfig(
     val macCready: Double = 0.0,
     val macCreadyRisk: Double = 0.0,
     val autoMcEnabled: Boolean = true,
     val showWindSpeedOnVario: Boolean = true,
-    val audioSettings: VarioAudioSettings = VarioAudioSettings()
+    val showHawkCard: Boolean = false,
+    val enableHawkUi: Boolean = false,
+    val audioSettings: VarioAudioSettings = VarioAudioSettings(),
+    val hawkNeedleOmegaMinHz: Double = 0.9,
+    val hawkNeedleOmegaMaxHz: Double = 2.0,
+    val hawkNeedleTargetTauSec: Double = 0.8,
+    val hawkNeedleDriftTauMinSec: Double = 3.5,
+    val hawkNeedleDriftTauMaxSec: Double = 8.0
 )
 
 @Singleton
@@ -49,7 +63,14 @@ class LevoVarioPreferencesRepository @Inject constructor(
             macCreadyRisk = prefs[KEY_MACCREADY_RISK] ?: mac,
             autoMcEnabled = prefs[KEY_AUTO_MC_ENABLED] ?: true,
             showWindSpeedOnVario = prefs[KEY_SHOW_WIND_SPEED_ON_VARIO] ?: true,
-            audioSettings = audioSettings
+            showHawkCard = prefs[KEY_SHOW_HAWK_CARD] ?: false,
+            enableHawkUi = prefs[KEY_ENABLE_HAWK_UI] ?: false,
+            audioSettings = audioSettings,
+            hawkNeedleOmegaMinHz = prefs[KEY_HAWK_NEEDLE_OMEGA_MIN_HZ] ?: 0.9,
+            hawkNeedleOmegaMaxHz = prefs[KEY_HAWK_NEEDLE_OMEGA_MAX_HZ] ?: 2.0,
+            hawkNeedleTargetTauSec = prefs[KEY_HAWK_NEEDLE_TARGET_TAU_SEC] ?: 0.8,
+            hawkNeedleDriftTauMinSec = prefs[KEY_HAWK_NEEDLE_DRIFT_TAU_MIN_SEC] ?: 3.5,
+            hawkNeedleDriftTauMaxSec = prefs[KEY_HAWK_NEEDLE_DRIFT_TAU_MAX_SEC] ?: 8.0
         )
     }
 
@@ -77,6 +98,18 @@ class LevoVarioPreferencesRepository @Inject constructor(
         }
     }
 
+    suspend fun setShowHawkCard(enabled: Boolean) {
+        context.levoVarioDataStore.edit { prefs ->
+            prefs[KEY_SHOW_HAWK_CARD] = enabled
+        }
+    }
+
+    suspend fun setEnableHawkUi(enabled: Boolean) {
+        context.levoVarioDataStore.edit { prefs ->
+            prefs[KEY_ENABLE_HAWK_UI] = enabled
+        }
+    }
+
     suspend fun updateAudioSettings(transform: (VarioAudioSettings) -> VarioAudioSettings) {
         context.levoVarioDataStore.edit { prefs ->
             val current = readAudioSettings(prefs)
@@ -88,6 +121,36 @@ class LevoVarioPreferencesRepository @Inject constructor(
             prefs[KEY_AUDIO_DUTY_CYCLE] = updated.dutyCycle
             prefs[KEY_AUDIO_DEADBAND_MIN] = updated.deadbandMin
             prefs[KEY_AUDIO_DEADBAND_MAX] = updated.deadbandMax
+        }
+    }
+
+    suspend fun setHawkNeedleOmegaMinHz(value: Double) {
+        context.levoVarioDataStore.edit { prefs ->
+            prefs[KEY_HAWK_NEEDLE_OMEGA_MIN_HZ] = value
+        }
+    }
+
+    suspend fun setHawkNeedleOmegaMaxHz(value: Double) {
+        context.levoVarioDataStore.edit { prefs ->
+            prefs[KEY_HAWK_NEEDLE_OMEGA_MAX_HZ] = value
+        }
+    }
+
+    suspend fun setHawkNeedleTargetTauSec(value: Double) {
+        context.levoVarioDataStore.edit { prefs ->
+            prefs[KEY_HAWK_NEEDLE_TARGET_TAU_SEC] = value
+        }
+    }
+
+    suspend fun setHawkNeedleDriftTauMinSec(value: Double) {
+        context.levoVarioDataStore.edit { prefs ->
+            prefs[KEY_HAWK_NEEDLE_DRIFT_TAU_MIN_SEC] = value
+        }
+    }
+
+    suspend fun setHawkNeedleDriftTauMaxSec(value: Double) {
+        context.levoVarioDataStore.edit { prefs ->
+            prefs[KEY_HAWK_NEEDLE_DRIFT_TAU_MAX_SEC] = value
         }
     }
 

@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # AGENT.md -- Autonomous Engineering Execution Template
 
 Use this file as the **single source of truth** when asking an agent (Codex) to implement a change end-to-end.
@@ -90,14 +92,14 @@ Work is complete only when:
 
 ## Phase Gate Protocol (MANDATORY)
 For every phase below:
-1) Implement only that phase’s scope.
-2) Run the phase’s checks (see “Gate”).
+1) Implement only that phaseâ€™s scope.
+2) Run the phaseâ€™s checks (see â€œGateâ€).
 3) **If any check fails, fix and re-run until green.**
 4) Only then proceed to the next phase.
 
 Quality ladder:
-- Phase 0–1: `./gradlew testDebugUnitTest`
-- Phase 2–3: `./gradlew testDebugUnitTest` + `./gradlew lintDebug`
+- Phase 0â€“1: `./gradlew testDebugUnitTest`
+- Phase 2â€“3: `./gradlew testDebugUnitTest` + `./gradlew lintDebug`
 - Phase 4 (final): `./gradlew testDebugUnitTest` + `./gradlew lintDebug` + `./gradlew assembleDebug`
 
 ## Phase 0 -- Baseline & Safety Net
@@ -259,4 +261,5 @@ At the end of the task, include:
 - Final Done" checklist (Definition of Done items)
 - PR-ready summary (what/why/how)
 - How to verify manually (2-5 steps)
+
 

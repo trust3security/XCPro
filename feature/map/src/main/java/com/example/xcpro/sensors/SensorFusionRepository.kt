@@ -13,6 +13,7 @@ interface SensorFusionRepository {
     val audioSettings: StateFlow<VarioAudioSettings>
 
     fun updateAudioSettings(settings: VarioAudioSettings)
+    fun setHawkAudioEnabled(enabled: Boolean)
     fun setManualQnh(qnhHPa: Double)
     fun resetQnhToStandard()
     fun setMacCreadySetting(value: Double)

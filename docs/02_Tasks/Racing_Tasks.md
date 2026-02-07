@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # Racing Tasks - Complete Guide
 
 **Last Updated:** 2026-01-15
@@ -325,6 +327,7 @@ if (result.isValid) {
 ---
 
 **Questions?** See [DOCS_INDEX.md](../../DOCS_INDEX.md) for complete documentation map.
+
 
 
 

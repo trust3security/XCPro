@@ -87,6 +87,7 @@ internal fun MapOverlayStack(
     onHamburgerTap: () -> Unit,
     onHamburgerLongPress: () -> Unit,
     cardStyle: CardStyle,
+    hiddenCardIds: Set<String>,
     replayState: StateFlow<SessionState>
 ) {
     val gestureRegions by widgetManager.gestureRegions.collectAsStateWithLifecycle()
@@ -135,7 +136,8 @@ internal fun MapOverlayStack(
                     )
                 }
             },
-            cardStyle = cardStyle
+            cardStyle = cardStyle,
+            hiddenCardIds = hiddenCardIds
         )
 
         if (!isUiEditMode) {

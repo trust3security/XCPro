@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # Wind Sensor Fusion Design (XCPro)
 
 _This design must comply with our guardrails: see `ARCHITECTURE.md` (SSOT/UDF/DI rules), `CODING_RULES.md` (layering, flows, naming), and `CONTRIBUTING.md` (Definition of Done, testing, AI-NOTE intent). Keep this doc in sync when those files change._
@@ -163,5 +165,6 @@ Remaining migration work:
 5) Consumers: switch `FlightDataCalculator` and UI/ViewModels to `windState`; stop using wind fields from `CompleteFlightData`.
 6) Tests: unit (circling/EKF/store/selector) + integration (live/replay fake streams); verify deterministic replay and staleness.
 7) Cleanup: remove legacy `WindRepository` and any wind derivation from flight data consumers; delete redundant wind fields if unused to restore single-SSOT.
+
 
 

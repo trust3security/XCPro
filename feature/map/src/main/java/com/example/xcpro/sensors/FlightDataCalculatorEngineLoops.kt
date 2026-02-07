@@ -139,12 +139,31 @@ internal fun FlightDataCalculatorEngine.updateVarioFilter(baro: BaroData?, accel
     }
     val validityWindowMs = maxOf(FlightDataCalculatorEngine.VARIO_VALIDITY_MS, replayWindowMs, FlightDataCalculatorEngine.VARIO_VALIDITY_FLOOR_MS)
     emissionState.varioValidUntil = currentTime + validityWindowMs
-    val audioSelected = audioController.update(
-        emissionState.latestTeVario,
-        varioResult.verticalSpeed,
-        currentTime,
-        emissionState.varioValidUntil
-    )
+    val audioSelected = if (hawkAudioEnabled) {
+        val hawkSample = hawkAudioVarioMps?.takeIf { it.isFinite() }
+        if (hawkSample != null) {
+            audioController.update(
+                teSample = null,
+                rawVario = hawkSample,
+                currentTime = currentTime,
+                validUntil = Long.MAX_VALUE
+            )
+        } else {
+            audioController.update(
+                teSample = null,
+                rawVario = 0.0,
+                currentTime = currentTime,
+                validUntil = 0L
+            )
+        }
+    } else {
+        audioController.update(
+            emissionState.latestTeVario,
+            varioResult.verticalSpeed,
+            currentTime,
+            emissionState.varioValidUntil
+        )
+    }
     emissionState.latestAudioVario = audioSelected?.takeIf { it.isFinite() } ?: 0.0
 
     cachedVarioResult = varioResult

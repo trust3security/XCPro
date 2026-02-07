@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # Product Requirements Document (PRD)
 ## Multi-Aircraft Support for Gliding App
 
@@ -931,4 +933,5 @@ The implementation leverages the existing robust profile and screen configuratio
 ---
 
 *This PRD represents a comprehensive analysis of the current gliding app architecture and a detailed plan for implementing multi-aircraft support while preserving all existing functionality and ensuring a smooth user transition.*
+
 

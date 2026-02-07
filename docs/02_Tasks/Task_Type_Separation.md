@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # Task Type Separation - Complete Guide
 
 **Last Updated:** 2025-01-08
@@ -505,4 +507,5 @@ fun calculateBearing(...) { ... }  // AAT's own copy
 ---
 
 **Questions?** See [DOCS_INDEX.md](../../DOCS_INDEX.md) or [QUICK_REFERENCE.md](../../QUICK_REFERENCE.md)
+
 

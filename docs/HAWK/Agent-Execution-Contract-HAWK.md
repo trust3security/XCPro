@@ -1,4 +1,6 @@
-﻿# Agent-Execution-Contract-HAWK.md
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
+# Agent-Execution-Contract-HAWK.md
 
 Purpose: single source of truth and single plan for implementing the HAWK
 pipeline in XCPro.
@@ -9,10 +11,7 @@ References (read before coding):
 - docs/RULES/ARCHITECTURE.md
 - docs/RULES/CODING_RULES.md
 - docs/RULES/PIPELINE.md
-- docs/HAWK/deep-research-reportPhonePlan.md
-- docs/HAWK/deep-research-reportHAWK on Android.md
-- docs/HAWK/deep-research-report-LXHAWK.md
-- docs/HAWK/deep-research-report-LXHAWK-ONPhone.md
+
 
 Single Plan Rule:
 - This file is the ONLY plan for HAWK work.
@@ -65,7 +64,7 @@ Work is complete only when:
 - Architecture: MVVM + UDF + SSOT; DI via Hilt. UI -> domain -> data only.
 - Domain/fusion must use injected clocks; no System.currentTimeMillis or
   SystemClock in domain or fusion.
-- Live fusion uses monotonic time; replay uses IGC time.
+- Live fusion uses monotonic time.
 - Repositories are SSOT owners; services are lifecycle hosts only.
 - ViewModels depend on use-cases only; no Android or persistence in ViewModels.
 - UI renders state only and collects flows with lifecycle-aware APIs.
@@ -77,49 +76,53 @@ Work is complete only when:
 # 1) Change Request (PRE-FILLED FOR HAWK)
 
 ## 1.1 Feature Summary (1-3 sentences)
-- Build a HAWK-inspired variometer pipeline that is fully separate from existing
+- Build a HAWK-like variometer pipeline that is fully separate from existing
   TE/flight calculations and can be removed later with minimal churn.
-- The HAWK pipeline consumes the existing sensor inputs (baro, IMU, GNSS, and
-  optional rotation vector) but performs its own calculations and outputs.
+- HAWK is real-time only on phone sensors (barometer + IMU + GNSS as available).
+  No IGC replay and no replay IMU in v1.
 
 ## 1.2 User Stories / Use Cases
 - As a pilot, I want an optional HAWK-style vario output with low latency and
-  fewer false lift spikes caused by phone pressure artifacts.
-- As a developer, I want HAWK to be isolated from the TE pipeline so it can be
-  added or removed without touching existing calculations.
-- As a tester, I want HAWK to work in both live sensors and replay mode with
-  deterministic timing.
+  fewer false lift spikes caused by phone pressure and handling artifacts.
+- As a developer, I want HAWK isolated from the TE pipeline so it can be added
+  or removed without touching existing calculations.
+- As a tester, I want logging and tunable config so the HAWK feel can be
+  validated without guessing.
 
 ## 1.3 Non-Goals (explicitly out of scope)
-- No attempt to replicate true HAWK instantaneous 3D wind estimation (phone has
-  no dynamic pressure / TAS).
+- No IGC replay support for HAWK in v1.
+- No replay IMU or synthetic IMU generation.
+- No raw gyro dependency in v1 (only if future evidence requires it).
 - No changes to existing TE vario calculations or their outputs.
-- No claims of full HAWK gust immunity; only phone-appropriate artifact rejection.
+- No claims of true HAWK 3D wind or TAS; optional wind is out of scope.
 
 ## 1.4 Constraints
 Platforms / modules:
 - Android app, following existing feature/map architecture.
 - HAWK code must be isolated (separate package or module) and removable.
+Behavior constraints:
+- Baro-clocked, baro-gated fusion: update only on new baro samples.
+- Accel is a helper input that cannot create lift without baro support.
+- QNH is for display altitude only; vario physics uses pressure altitude or QNE.
 Performance / battery:
-- Design for 100-200 Hz IMU and baro cadence; avoid heavy allocations.
-Backwards compatibility:
-- Existing settings and TE behavior must remain unchanged by default.
+- Design for baro cadence and 100-200 Hz IMU; avoid heavy allocations.
+Lifecycle:
+- HAWK must run under VarioServiceManager (foreground service lifecycle).
 Safety / compliance:
 - Follow ARCHITECTURE.md and CODING_RULES.md without exceptions.
 
 ## 1.5 Inputs / Outputs
 Inputs:
-- Barometer (pressure), accelerometer, gyroscope, optional rotation vector.
-- GNSS for optional wind estimate and logging.
-- Monotonic timestamps from SensorEvent and Location.
+- Barometer pressure + monotonic timestamp.
+- Earth-frame vertical acceleration + monotonic timestamp + reliability flag.
+- Optional GNSS vertical speed for validation only (not as primary vario).
 Outputs:
-- HAWK vario outputs (instant, display, avg), QC flags, confidence.
-- Optional circling wind estimate (averaged) with confidence gating.
-- Debug-only logs if enabled (no release logging of location).
+- HAWK vario outputs: v_raw, v_audio (smoothed), confidence.
+- QC and debug metrics: innovation, accel variance, gating decisions.
 
 ## 1.6 Behavior Parity Checklist (refactor or replacements)
 - Existing TE outputs and audio must not change when HAWK is disabled.
-- Replay behavior and time base rules remain unchanged.
+- Replay behavior and time base rules remain unchanged for TE.
 - No UI regression when HAWK feature is not enabled.
 
 ---
@@ -137,21 +140,26 @@ Gate: no functional changes; repo builds.
 
 ## Phase 1 -- Core Implementation (Pure Kotlin)
 - Implement HAWK core as a separate package/module:
-  - Pressure QC (median or Hampel filtering, dp/dt gates).
-  - Vertical-channel EKF or complementary filter (state: h, v, ba).
-  - Adaptive baro measurement noise (R) and innovation gating.
-- Use monotonic timestamps for dt and integrate only on new samples.
-- Provide output model: HawkOutput (varioInstant, varioDisplay, varioAvg,
-  qcFlags, confidence).
+  - Baro QC (median or Hampel filtering, dp/dt gates, innovation gating).
+  - Adaptive accel trust from a short rolling accel variance/RMS window.
+  - 2-state filter (h, v) with baro-gated steps only.
+  - QNH decoupling: use pressure altitude/QNE in physics channel.
+  - Output smoothing for v_audio with deadband/hysteresis.
+- Use monotonic timestamps for dt and integrate only on new baro samples.
+- Provide output model: HawkOutput (v_raw, v_audio, confidence, qcFlags, debug).
 - Unit tests for filter stability, gating, and edge cases.
 
 Gate: unit tests pass; core logic deterministic.
 
 ## Phase 2 -- Integration (Sensors + DI)
-- Create a HAWK sensor adapter that consumes SensorDataSource or UnifiedSensorManager.
+- Create a HAWK sensor adapter that consumes SensorDataSource or
+  UnifiedSensorManager.
 - Add a HAWK repository as SSOT for HawkOutput (parallel to FlightDataRepository).
-- Wire via DI, mirroring the WindSensorFusionRepository pattern for live/replay.
-- Add settings or feature flag to enable HAWK without impacting TE pipeline.
+- Wire via DI; keep HAWK separate from TE and fully removable.
+- Add feature flag HAWK_ENABLED and tunable HawkConfig.
+- Fallback modes:
+  - accel unreliable or stale -> baro-only behavior.
+  - baro missing -> hold output and decay confidence (no IMU-only stepping).
 
 Gate: HAWK updates in debug build; TE unchanged.
 
@@ -160,14 +168,15 @@ Gate: HAWK updates in debug build; TE unchanged.
 - UI shows HAWK vario only when enabled; otherwise uses existing TE output.
 - Audio: if enabled, use a separate HAWK audio path or a toggle in
   VarioAudioController without altering default TE behavior.
-- Add regression tests for UI state transitions.
+- Add regression tests for enable/disable state transitions.
 
 Gate: feature works end-to-end when enabled; defaults unchanged.
 
 ## Phase 4 -- Hardening + Docs
 - Handle missing sensors and background restrictions gracefully.
 - Ensure foreground service usage is sufficient for continuous sensing.
-- Add logging behind debug flags only.
+- Add logging behind debug flags only (no release location logging).
+- Add optional log capture format for tuning (baro + accel + reliability).
 - Update docs/HAWK/Agent-Execution-Contract-HAWK.md and the diagram if wiring changes.
 
 Gate: required checks pass; docs updated.
@@ -179,17 +188,18 @@ Gate: required checks pass; docs updated.
 ## 3.1 Functional
 - Given HAWK disabled, existing TE outputs and audio are unchanged.
 - Given HAWK enabled and baro+IMU present, HawkOutput updates on baro cadence.
-- Given replay mode, HAWK uses IGC time for dt and produces deterministic output.
-- Given missing baro, HAWK outputs are invalid/paused but do not affect TE output.
+- Given accel unreliable/stale, HAWK falls back to baro-only behavior.
+- Given missing baro, HAWK outputs are paused/invalid but do not affect TE.
+- Given QNH changes, HAWK does not create false climb/sink spikes.
 
 ## 3.2 Edge Cases
 - No permissions or sensors: HAWK fails closed (no output) without crashes.
-- Background: HAWK respects foreground service constraints (no stale loops).
-- Sensor jitter: adaptive R and gating prevent pressure spikes from producing
-  large false climbs.
+- Handling/rotation: no false lift spikes without baro support.
+- Sensor jitter: adaptive accel trust and baro gating prevent pressure spikes
+  from producing large false climbs.
 
 ## 3.3 Test Coverage Required
-- Unit tests for QC filters and EKF/complementary filter behavior.
+- Unit tests for QC filters, adaptive accel trust, and 2-state filter behavior.
 - Use-case tests for repository updates and confidence gating.
 - VM tests for HAWK enable/disable state transitions (if UI wiring added).
 
@@ -223,15 +233,24 @@ Agent must report:
   TE behavior untouched and simplify removal.
   Impact: parallel pipeline and repository wiring required.
 
-- Decision: HAWK uses vertical-channel EKF with baro + IMU and adaptive gating.
+- Decision: HAWK uses baro-gated fusion with adaptive accel trust and baro QC.
   Alternatives: baro-only differentiation. Rejected due to latency and
   susceptibility to pressure artifacts.
-  Impact: requires attitude estimation and QC.
+  Impact: requires accel variance tracking and innovation gating.
 
-- Decision: No claims of true HAWK 3D wind or TAS. Optional wind estimate is
-  circling drift only, clearly labeled as averaged.
-  Alternatives: attempt full wind triangle. Rejected due to missing airspeed.
-  Impact: UI must label wind estimate with confidence.
+- Decision: No raw gyro dependency in v1. Use existing earth-frame vertical
+  acceleration with reliability flag. Add gyro only if field evidence demands.
+  Alternatives: add gyro now. Rejected due to plumbing/testing blast radius.
+  Impact: simpler sensor contract, faster delivery.
+
+- Decision: No IGC replay or replay IMU in v1.
+  Alternatives: synthetic IMU for replay. Rejected due to misleading tuning.
+  Impact: HAWK is real-time only; optional live log capture for tuning.
+
+- Decision: QNH is display-only; vario physics uses pressure altitude/QNE.
+  Alternatives: feed QNH-adjusted altitude into filter. Rejected due to
+  step artifacts and false climb spikes.
+  Impact: add step detection only if a QNH-coupled stream is unavoidable.
 
 ---
 
@@ -241,8 +260,11 @@ Suggested package/module layout to keep HAWK removable:
 
 - feature/map/src/main/java/com/example/xcpro/hawk/
   - HawkSensorAdapter.kt
-  - HawkEngine.kt
-  - HawkFilters.kt
+  - HawkVarioEngine.kt
+  - HawkConfig.kt
+  - HawkDebug.kt
+  - BaroQc.kt
+  - AdaptiveAccelNoise.kt
   - HawkRepository.kt
   - HawkUseCase.kt
   - HawkOutput.kt

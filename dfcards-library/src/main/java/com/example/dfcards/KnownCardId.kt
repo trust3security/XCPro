@@ -19,6 +19,7 @@ internal enum class KnownCardId(val raw: String) {
     VARIO_RAW("vario_raw"),
     VARIO_GPS("vario_gps"),
     VARIO_COMPLEMENTARY("vario_complementary"),
+    HAWK_VARIO("hawk_vario"),
     REAL_IGC_VARIO("real_igc_vario"),
     TRACK("track"),
     WPT_DIST("wpt_dist"),

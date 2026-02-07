@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # RacingTask_Refactor.md
 
 Purpose: Plan the multi-phase refactor to implement Racing task navigation
@@ -393,3 +395,4 @@ Reject changes if any are true:
 - Wall time is used for navigation decisions or timestamps.
 - Navigation state is owned by more than one layer.
 - State machines are implied rather than explicit in docs.
+

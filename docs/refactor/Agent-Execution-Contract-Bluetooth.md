@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # AGENT.md - Bluetooth Execution Contract (LXNAV Hawk/S100)
 
 This document is the single source of truth for implementing Bluetooth Classic SPP connectivity
@@ -464,4 +466,5 @@ When connected:
 - Missing checksum
 - Bad checksum
 - Device disconnect / reconnect while app is running
+
 

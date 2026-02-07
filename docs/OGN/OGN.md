@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # OGN.md -- Open Glider Network live traffic in XCPro (Android)
 
 Goal: Add an OGN (Open Glider Network) live-traffic map to XCPro that shows nearby gliders/aircraft in real time, enriched with OGN Device Database (DDB) details, and designed so Codex can implement end-to-end without asking you questions.
@@ -671,6 +673,7 @@ OGN will sometimes show nothing for reasons that are not bugs". Your UI must dif
   - Show anonymized IDs; mark DDB status stale/unavailable" in debug panel
 - Stale snapshot:
   - If you decide to keep last-known markers, visually mark them as stale and do not present as live
+
 
 
 

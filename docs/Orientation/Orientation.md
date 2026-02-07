@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # Orientation (MapScreen)
 
 This is the master reference for map orientation in XCPro. It covers the architecture, data flow, and shared behavior across all orientation modes. Mode-specific details live in:
@@ -218,4 +220,5 @@ Use the mode-specific docs for Track Up and Heading Up. For new modes:
 - Wire UI (settings + compass cycle).
 
 Do not bypass architecture rules in `ARCHITECTURE.md` or `CODING_RULES.md`.
+
 

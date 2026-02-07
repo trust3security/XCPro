@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # AAT Pin Dragging Implementation Guide
 
 ## z **CURRENT IMPLEMENTATION (2025-01-XX)**
@@ -250,4 +252,5 @@ adb logcat -s "AAT" "MapScreen" "CustomMapGestures" -v time
 ---
 
 **Last Updated**: 2025-10-02 - Added intelligent adaptive zoom with circle-size-based padding. Larger circles (10km+) now get MORE relative padding than small circles (5km) to prevent cramped feel. Accounts for bottom sheet covering map area. Fixes issue where 10km turnpoints were too zoomed in while 5km looked good.
+
 

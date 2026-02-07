@@ -106,7 +106,14 @@ class MapOverlayManager(
             refreshAirspace(map)
             refreshWaypoints(map)
             plotSavedTask(map)
+            if (mapState.blueLocationOverlay == null && map != null) {
+                Log.d(TAG, "Blue location overlay missing after style change; creating now")
+                mapState.blueLocationOverlay = BlueLocationOverlay(context, map)
+            }
             mapState.blueLocationOverlay?.initialize()
+            mapState.blueLocationOverlay?.let {
+                Log.d(TAG, "Blue location overlay initialized via style change")
+            }
             snailTrailManager.onMapStyleChanged(map)
             mapState.blueLocationOverlay?.bringToFront()
             if (BuildConfig.DEBUG) {

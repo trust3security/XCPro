@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # TAS/IAS Wiring Plan (Wind EKF Parity)
 
 ## Goal
@@ -104,3 +106,4 @@ Suggested files:
 ## Non-goals for this plan
 - Phone-only TAS estimation (already covered in docs/TASImplementation.md)
 - UI changes to cards/templates unless needed for source visibility
+

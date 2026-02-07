@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # MapOrientationManager Refactor Plan
 
 
@@ -176,3 +178,4 @@ Exit Criteria:
 ## Open Questions
 - Location for OrientationEngine (core/domain vs feature/map/domain).
 - Whether to keep MapOrientationManager in feature/map or move to core/map.
+

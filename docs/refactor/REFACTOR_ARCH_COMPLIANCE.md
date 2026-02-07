@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # REFACTOR_ARCH_COMPLIANCE.md
 
 Owner: DFA
@@ -154,3 +156,4 @@ Gate: `./gradlew testDebugUnitTest` + `./gradlew lintDebug` + `./gradlew assembl
 ## Notes
 - Preserve behavior parity; refactor for compliance, not feature change.
 - If a change risks user-visible behavior, add a unit test first to lock it.
+

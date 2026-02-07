@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # Refactor Plan: SnailTrailManager
 
 Owner: agent (Codex)
@@ -61,4 +63,5 @@ Assumptions
 - Trail time base for live uses GPS monotonic time when available.
 - Trail time base for replay uses IGC timestamps from CompleteFlightData.timestamp.
 - RealTimeFlightData remains for card/UI use outside trail.
+
 

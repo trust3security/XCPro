@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # TC30s - XCSoar (phone sensors) vs XCPro
 
 This note captures the concrete reasons TC30s behaves differently between XCSoar
@@ -171,3 +173,4 @@ Options to consider (remaining)
 - Revisit circling toggle resets if they cause frequent TC30s jumps.
 
 Note: GPS-tick gating is now implemented; the items above remain optional.
+

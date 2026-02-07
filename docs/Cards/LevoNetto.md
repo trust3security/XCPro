@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # Levo Netto (LEVO NETTO) - end to end flow, display, and XCSoar parity notes
 
 Last updated: 2026-02-04
@@ -112,3 +114,4 @@ This uses EnhancedFlightDataCard's secondary line (bottom-aligned small text).
 - CardFormatSpec: dfcards-library/src/main/java/com/example/dfcards/CardFormatSpec.kt
 - EnhancedFlightDataCard: dfcards-library/src/main/java/com/example/dfcards/dfcards/EnhancedFlightDataCard.kt
 - Wind formatting helpers: dfcards-library/src/main/java/com/example/dfcards/CardFormatSpec.kt
+

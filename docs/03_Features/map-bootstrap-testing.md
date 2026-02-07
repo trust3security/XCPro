@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 Map Bootstrap Verification
 ==========================
 
@@ -8,3 +10,4 @@ Use this checklist after touching the map initialization or overlay-loading flow
 - Toggle a SkySight or airspace layer and verify overlays render without visible jank (cache hit) and that the logcat shows the cached waypoint load path (no file IO repeat).
 - Pan/zoom repeatedly; watcher logs should *not* mention re-reading waypoint files, and the coroutine scope should stay at `Main`.
 - From the task drawer, switch task types and ensure task overlays clear/reload without re-triggering map bootstrap logs.
+

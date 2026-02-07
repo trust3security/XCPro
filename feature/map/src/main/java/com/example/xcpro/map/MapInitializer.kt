@@ -10,6 +10,7 @@ import com.example.xcpro.map.BlueLocationOverlay
 import com.example.xcpro.map.trail.SnailTrailManager
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import kotlin.math.max
+import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.gestures.MoveGestureDetector
 import org.maplibre.android.maps.MapLibreMap
@@ -87,15 +88,38 @@ class MapInitializer(
     }
 
     private fun setupInitialPosition(map: MapLibreMap) {
-        map.moveCamera(
-            CameraUpdateFactory.newLatLngZoom(
-                org.maplibre.android.geometry.LatLng(INITIAL_LATITUDE, INITIAL_LONGITUDE),
+        val cameraSnapshot = mapStateReader.lastCameraSnapshot.value
+        val fallbackLocation = mapStateReader.currentUserLocation.value
+            ?: mapStateReader.savedLocation.value
+        val target = cameraSnapshot?.target ?: fallbackLocation
+        val targetLatLng = target?.let {
+            org.maplibre.android.geometry.LatLng(it.latitude, it.longitude)
+        } ?: org.maplibre.android.geometry.LatLng(INITIAL_LATITUDE, INITIAL_LONGITUDE)
+        val zoomToUse = cameraSnapshot?.zoom ?: run {
+            val currentZoom = mapStateReader.currentZoom.value.toDouble()
+            if (mapStateReader.hasInitiallyCentered.value && currentZoom.isFinite() && currentZoom > 0.0) {
+                currentZoom
+            } else {
                 INITIAL_ZOOM
-            )
+            }
+        }
+        val bearingToUse = cameraSnapshot?.bearing ?: 0.0
+
+        val cameraPosition = CameraPosition.Builder()
+            .target(targetLatLng)
+            .zoom(zoomToUse)
+            .bearing(bearingToUse)
+            .build()
+
+        map.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition))
+        // Keep Compose overlays (distance circles) in sync from the first frame.
+        stateActions.updateCurrentZoom(zoomToUse.toFloat())
+        stateActions.updateCameraSnapshot(
+            target = MapStateStore.MapPoint(targetLatLng.latitude, targetLatLng.longitude),
+            zoom = zoomToUse,
+            bearing = bearingToUse
         )
-        // Keep Compose overlays (distance circles) in sync from the first frame
-        stateActions.updateCurrentZoom(INITIAL_ZOOM.toFloat())
-        Log.d(TAG, "Initial map position set")
+        Log.d(TAG, "Initial map position set (restored=${cameraSnapshot != null}, zoom=$zoomToUse)")
     }
 
     private fun loadMapData(map: MapLibreMap) {
@@ -352,8 +376,17 @@ class MapInitializer(
         // Camera change listener for zoom-adaptive distance circles
         map.addOnCameraIdleListener {
             try {
-                val currentZoom = map.cameraPosition.zoom
+                val cameraPosition = map.cameraPosition
+                val currentZoom = cameraPosition.zoom
                 stateActions.updateCurrentZoom(currentZoom.toFloat())
+                val target = cameraPosition.target
+                if (target != null) {
+                    stateActions.updateCameraSnapshot(
+                        target = MapStateStore.MapPoint(target.latitude, target.longitude),
+                        zoom = currentZoom,
+                        bearing = cameraPosition.bearing
+                    )
+                }
                 updateScaleBar(map)
                 // Canvas overlay listens to MapStateStore.currentZoom for zoom-adaptive effects.
                 Log.d(TAG, "Camera idle, zoom: $currentZoom")

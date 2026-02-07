@@ -18,7 +18,8 @@ class SensorFusionRepositoryFactory @Inject constructor(
     private val windRepository: WindSensorFusionRepository,
     private val flightStateSource: FlightStateSource,
     private val audioFocusManager: AudioFocusManager,
-    private val clock: Clock
+    private val clock: Clock,
+    private val hawkVarioRepository: com.example.xcpro.hawk.HawkVarioRepository
 ) {
     fun create(
         sensorDataSource: SensorDataSource,
@@ -35,6 +36,7 @@ class SensorFusionRepositoryFactory @Inject constructor(
             flightStateSource = flightStateSource,
             audioFocusManager = audioFocusManager,
             clock = clock,
+            hawkVarioRepository = hawkVarioRepository,
             enableAudio = enableAudio,
             isReplayMode = isReplayMode
         )

@@ -45,6 +45,7 @@ import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.map.MapScreenViewModel
 import com.example.xcpro.profiles.UserProfile
 import com.example.xcpro.screens.flightdata.FlightDataWaypointsTab
+import com.example.xcpro.hawk.HAWK_VARIO_CARD_ID
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -88,6 +89,10 @@ fun FlightMgmt(
         flightViewModel.flightModeVisibilitiesFor(activeProfile?.id)
     }
     val visibleFlightModesCount = flightModeVisibilities.values.count { it }.coerceAtLeast(1)
+    val showHawkCard by mapViewModel.showHawkCard.collectAsStateWithLifecycle()
+    val hiddenCardIds = remember(showHawkCard) {
+        if (showHawkCard) emptySet() else setOf(HAWK_VARIO_CARD_ID)
+    }
 
     LaunchedEffect(initialTab) {
         prefsViewModel.setActiveTab(initialTab)
@@ -107,6 +112,7 @@ fun FlightMgmt(
             selectedCardIds = editingTemplate!!.cardIds.toSet(),
             existingTemplate = editingTemplate,
             liveFlightData = liveFlightData,
+            hiddenCardIds = hiddenCardIds,
             onSaveTemplate = { name, cards ->
                 scope.launch {
                     if (editingTemplate == null) {
@@ -187,7 +193,8 @@ fun FlightMgmt(
                             onDeleteTemplate = { template ->
                                 errorMessage = "\"${template.name}\" deleted"
                             },
-                            liveFlightData = liveFlightData
+                            liveFlightData = liveFlightData,
+                            hiddenCardIds = hiddenCardIds
                         )
                     }
 

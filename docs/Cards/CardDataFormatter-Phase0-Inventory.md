@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # CardDataFormatter Phase 0 Inventory
 
 Date: 2026-01-29
@@ -98,3 +100,4 @@ Open questions to resolve before refactor:
 - Card ID inventory and default template coverage recorded (this doc).
 - Timebase semantics traced to source files (this doc).
 - Candidate mismatches and placeholder-only cards identified (this doc).
+

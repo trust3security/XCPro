@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # AGENT.md -- Autonomous Engineering Execution Template
 
 Use this file as the **single source of truth** when asking an agent (Codex) to implement a change end-to-end.
@@ -199,4 +201,5 @@ At the end of the task, include:
 - Final Done" checklist (Definition of Done items)
 - PR-ready summary (what/why/how)
 - How to verify manually (2-5 steps)
+
 

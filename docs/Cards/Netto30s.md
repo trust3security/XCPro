@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # Netto 30s (NETTO 30S) - end to end flow and display notes
 
 Last updated: 2026-01-30
@@ -116,3 +118,4 @@ Last updated: 2026-01-30
 ## Related fields (avoid mixing)
 - NETTO 30S: RealTimeFlightData.nettoAverage30s -> card id "netto_avg30"
 - NETTO (live): RealTimeFlightData.displayNetto + nettoValid -> card id "netto"
+

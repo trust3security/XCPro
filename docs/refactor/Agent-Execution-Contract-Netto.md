@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # Agent-Execution-Contract-Netto.md
 
 This document is the execution plan and contract for implementing the phone-only
@@ -332,3 +334,4 @@ At the end of the task:
 - Done checklist
 - PR-ready summary (what/why/how)
 - Manual verification steps (2-5)
+

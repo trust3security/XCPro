@@ -187,7 +187,7 @@ fun SettingsScreen(
                         }
                     }
 
-                    // Row 2d: Diagnostics (single, under Levo Vario)
+                    // Row 2d: HAWK Vario | Diagnostics
                     item {
                         Row(
                             modifier = Modifier
@@ -195,7 +195,12 @@ fun SettingsScreen(
                                 .padding(horizontal = 8.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Spacer(modifier = Modifier.weight(1f))
+                            CategoryItem(
+                                title = "HAWK Vario",
+                                icon = Icons.Default.Speed,
+                                onClick = { navController.navigate("hawk_vario_settings") },
+                                modifier = Modifier.weight(1f)
+                            )
                             CategoryItem(
                                 title = "Diagnostics",
                                 icon = Icons.Outlined.Insights,

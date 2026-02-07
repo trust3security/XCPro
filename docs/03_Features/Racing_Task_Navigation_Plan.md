@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # Racing Task Navigation - Implementation Plan
 
 **Created:** 2025-10-08
@@ -584,5 +586,6 @@ racing-task-navigation/
 **END OF PLAN**
 
 *This plan maintains complete separation between Racing and AAT task navigation, with Racing implemented first as the simpler, more structured task type.*
+
 
 

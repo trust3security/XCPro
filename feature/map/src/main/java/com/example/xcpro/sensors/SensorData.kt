@@ -130,6 +130,7 @@ data class CompleteFlightData(
     val baselineDisplayVario: VerticalSpeedMs = VerticalSpeedMs(0.0),
     val baselineVarioValid: Boolean = false,
     val bruttoVario: VerticalSpeedMs = VerticalSpeedMs(0.0), // m/s (TE if available else GPS)
+    val teVario: VerticalSpeedMs? = null, // m/s (total energy vario when available)
     val bruttoAverage30s: VerticalSpeedMs = VerticalSpeedMs(0.0),
     val bruttoAverage30sValid: Boolean = false,
     val nettoAverage30s: VerticalSpeedMs = VerticalSpeedMs(0.0),

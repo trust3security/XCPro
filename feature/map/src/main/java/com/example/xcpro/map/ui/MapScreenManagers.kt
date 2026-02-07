@@ -116,9 +116,10 @@ internal fun rememberMapScreenManagers(
         mapState,
         orientationManager,
         locationManager,
-        igcReplayController
+        igcReplayController,
+        mapStateActions
     ) {
-        MapLifecycleManager(mapState, orientationManager, locationManager, igcReplayController)
+        MapLifecycleManager(mapState, orientationManager, locationManager, igcReplayController, mapStateActions)
     }
 
     val modalManager = remember(mapState) {

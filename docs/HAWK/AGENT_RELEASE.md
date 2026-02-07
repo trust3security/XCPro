@@ -1,4 +1,6 @@
-﻿# AGENT_RELEASE.md - Autonomous Engineering Execution Contract (HAWK)
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
+# AGENT_RELEASE.md - Autonomous Engineering Execution Contract (HAWK)
 
 This file is a BINDING EXECUTION CONTRACT.
 If a rule is violated, the work is INVALID.
@@ -60,4 +62,5 @@ The ONLY plan for this work is:
 - docs/HAWK/Agent-Execution-Contract-HAWK.md
 
 Do not create new plans or duplicate its contents elsewhere.
+
 

@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # SkySight Enhanced UI Integration Guide
 
 This guide explains how to integrate the new comprehensive SkySight UI components with your existing MapScreen.
@@ -212,4 +214,5 @@ All components are production-ready with:
 - ... Modular architecture for easy maintenance
 
 The enhanced SkySight UI provides a complete weather platform for gliding enthusiasts, competition organizers, and aviation professionals!
+
 

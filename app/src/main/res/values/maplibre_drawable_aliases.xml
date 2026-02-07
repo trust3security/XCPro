@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="maplibre_user_stroke_icon" type="drawable">@drawable/maplibre_user_icon</item>
+    <item name="maplibre_user_bearing_icon" type="drawable">@drawable/maplibre_user_icon</item>
+    <item name="maplibre_user_puck_icon" type="drawable">@drawable/maplibre_user_icon</item>
+</resources>

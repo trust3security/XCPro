@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # Racing Task Navigation - UX Design
 
 **Created:** 2025-10-08
@@ -374,5 +376,6 @@ AlertDialog(
 **END OF UX SPECIFICATION**
 
 *This design integrates the manual task status bar with the automatic navigation manager for a seamless Racing task experience.*
+
 
 

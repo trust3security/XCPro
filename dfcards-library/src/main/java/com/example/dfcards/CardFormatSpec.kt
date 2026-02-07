@@ -12,6 +12,7 @@ import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.units.VerticalSpeedMs
 import com.example.xcpro.common.units.VerticalSpeedUnit
+import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -112,6 +113,11 @@ internal object CardFormatSpecs {
             KnownCardId.VARIO_COMPLEMENTARY -> Pair(
                 UnitsFormatter.verticalSpeed(VerticalSpeedMs(liveData.varioComplementary), units).text,
                 strings.comp
+            )
+
+            KnownCardId.HAWK_VARIO -> Pair(
+                formatHawkVario(liveData.hawkVarioSmoothedMps),
+                hawkStatusText(liveData)
             )
 
             KnownCardId.REAL_IGC_VARIO -> {
@@ -363,6 +369,7 @@ internal fun placeholderFor(
     strings: CardStrings = DefaultCardStrings()
 ): String {
     return when (cardId) {
+        KnownCardId.HAWK_VARIO -> "--.- m/s"
         KnownCardId.GPS_ALT,
         KnownCardId.BARO_ALT,
         KnownCardId.AGL,
@@ -520,4 +527,25 @@ private fun RealTimeFlightData.primaryVarioValue(): Double {
     ).firstOrNull()
 
     return fallback ?: finiteDisplay ?: verticalSpeed.takeIf { it.isFinite() } ?: 0.0
+}
+
+private fun formatHawkVario(value: Double?): String {
+    if (value == null || !value.isFinite()) return "--.- m/s"
+    val clamped = if (abs(value) < VARIO_ZERO_THRESHOLD) 0.0 else value
+    return String.format(Locale.US, "%+.1f m/s", clamped)
+}
+
+private fun hawkStatusText(liveData: RealTimeFlightData): String {
+    val accelText = if (liveData.hawkAccelOk) "ACCEL OK" else "ACCEL UNREL"
+    val baroText = if (liveData.hawkBaroOk) "BARO OK" else "BARO DEG"
+    val confText = when (liveData.hawkConfidenceCode) {
+        6 -> "CONF 6"
+        5 -> "CONF 5"
+        4 -> "CONF 4"
+        3 -> "CONF 3"
+        2 -> "CONF 2"
+        1 -> "CONF 1"
+        else -> "CONF --"
+    }
+    return "$accelText $baroText $confText"
 }

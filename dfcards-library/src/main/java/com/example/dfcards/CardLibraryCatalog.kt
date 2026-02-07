@@ -149,6 +149,16 @@ private val varioCards = listOf(
         unitFontSize = 9
     ),
     CardDefinition(
+        id = "hawk_vario",
+        title = "HAWK Vario",
+        description = "HAWK-style baro-gated vario (display only)",
+        category = CardCategory.VARIO,
+        icon = Icons.AutoMirrored.Filled.TrendingUp,
+        unit = "m/s",
+        primaryFontSize = 15,
+        unitFontSize = 9
+    ),
+    CardDefinition(
         id = "real_igc_vario",
         title = "REAL IGC",
         description = "Raw lift/sink directly from the active IGC replay sample",

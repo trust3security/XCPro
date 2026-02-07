@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # Refactor Plan + Compliance Report (2026-02-04)
 
 Scope: bring current codebase into compliance with `docs/RULES/ARCHITECTURE.md`
@@ -394,3 +396,4 @@ PR 3: FlightDataViewModel + TaskFilesUseCase
 - All required checks pass.
 - No ViewModel depends on platform APIs, UI types, or repositories directly.
 - All time sources in use-cases are injected.
+

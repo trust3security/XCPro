@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # TC AVG Parity Plan (XCSoar -> XCPro)
 
 Goal: Make XCPro's "TC AVG" card match XCSoar behavior in **live** and **replay**.
@@ -144,4 +146,5 @@ Note:
 
 ## Open Questions (if needed)
 - Should min duration / gain be configurable in settings? (XCSoar uses constants)
+
 

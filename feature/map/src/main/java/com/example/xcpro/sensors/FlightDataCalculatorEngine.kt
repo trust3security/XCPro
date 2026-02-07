@@ -37,6 +37,7 @@ internal class FlightDataCalculatorEngine(
     private val flightStateSource: FlightStateSource,
     private val audioFocusManager: AudioFocusManager,
     internal val clock: Clock,
+    private val hawkVarioRepository: com.example.xcpro.hawk.HawkVarioRepository,
     internal val enableAudio: Boolean = true,
     internal val isReplayMode: Boolean = false
 ): SensorFusionRepository {
@@ -99,6 +100,8 @@ internal class FlightDataCalculatorEngine(
     internal var lastReplayBaroTimestamp: Long = 0L
     internal var lastReplayBaroLogTime: Long = 0L
     internal var lastReplayGpsLogTime: Long = 0L
+    @Volatile internal var hawkAudioEnabled: Boolean = false
+    @Volatile internal var hawkAudioVarioMps: Double? = null
     // Tracking for delta-time calculations
     internal var lastVarioUpdateTime = 0L
     internal var lastBaroSampleTime = 0L
@@ -127,6 +130,12 @@ internal class FlightDataCalculatorEngine(
     init {
         scope.launch { windStateFlow.collect { latestWindState = it } }
         scope.launch { flightStateSource.flightState.collect { latestFlightState = it } }
+        scope.launch {
+            hawkVarioRepository.output.collect { output ->
+                val sample = output?.vAudioMps?.takeIf { it.isFinite() }
+                hawkAudioVarioMps = sample
+            }
+        }
 
         // Decoupled sample rates: high-speed baro+IMU loop and slower GPS loop.
         // HIGH-SPEED VARIO LOOP: Barometer + IMU (50Hz - unleashed!)
@@ -165,6 +174,9 @@ internal class FlightDataCalculatorEngine(
 
     override fun updateAudioSettings(settings: VarioAudioSettings) {
         audioController.engine.updateSettings(settings)
+    }
+    override fun setHawkAudioEnabled(enabled: Boolean) {
+        hawkAudioEnabled = enabled
     }
     override fun stop() {
         if (isReplayMode) {

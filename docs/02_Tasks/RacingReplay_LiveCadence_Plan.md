@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # Racing Replay Live-Cadence Plan (100ms)  
 
 Goal: make racing replay behave like live GPS cadence (per-mille^100ms) **without** violating IGC spec,
@@ -147,5 +149,6 @@ This gives you **live'like cadence + exact event timing** without touching IGC s
 - Start/finish events timestamped at exact crossing.
 - UI arrow aligns with event timing during replay.
 - Tests added and green.
+
 
 

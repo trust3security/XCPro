@@ -22,6 +22,12 @@ class MapStateStore(
         }
     }
 
+    data class CameraSnapshot(
+        val target: MapPoint,
+        val zoom: Double,
+        val bearing: Double
+    )
+
     private val _safeContainerSize = MutableStateFlow(MapSize.Zero)
     override val safeContainerSize: StateFlow<MapSize> = _safeContainerSize.asStateFlow()
 
@@ -54,6 +60,9 @@ class MapStateStore(
 
     private val _savedBearing = MutableStateFlow<Double?>(null)
     override val savedBearing: StateFlow<Double?> = _savedBearing.asStateFlow()
+
+    private val _lastCameraSnapshot = MutableStateFlow<CameraSnapshot?>(null)
+    override val lastCameraSnapshot: StateFlow<CameraSnapshot?> = _lastCameraSnapshot.asStateFlow()
 
     private val _currentMode = MutableStateFlow(FlightMode.CRUISE)
     override val currentMode: StateFlow<FlightMode> = _currentMode.asStateFlow()
@@ -136,6 +145,15 @@ class MapStateStore(
         _savedLocation.value = location
         _savedZoom.value = zoom
         _savedBearing.value = bearing
+    }
+
+    fun updateCameraSnapshot(target: MapPoint?, zoom: Double?, bearing: Double?) {
+        if (target == null || zoom == null || bearing == null) return
+        if (!zoom.isFinite() || !bearing.isFinite()) return
+        val snapshot = CameraSnapshot(target = target, zoom = zoom, bearing = bearing)
+        if (_lastCameraSnapshot.value != snapshot) {
+            _lastCameraSnapshot.value = snapshot
+        }
     }
 
     fun setCurrentMode(mode: FlightMode) {

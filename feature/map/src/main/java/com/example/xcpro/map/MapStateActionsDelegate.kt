@@ -49,6 +49,10 @@ internal class MapStateActionsDelegate(
         mapStateStore.saveLocation(location, zoom, bearing)
     }
 
+    override fun updateCameraSnapshot(target: MapStateStore.MapPoint?, zoom: Double?, bearing: Double?) {
+        mapStateStore.updateCameraSnapshot(target, zoom, bearing)
+    }
+
     override fun setDisplayPoseMode(mode: DisplayPoseMode) {
         mapStateStore.setDisplayPoseMode(mode)
     }

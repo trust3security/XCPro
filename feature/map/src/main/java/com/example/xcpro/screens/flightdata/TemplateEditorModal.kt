@@ -20,6 +20,7 @@ fun TemplateEditorModal(
     selectedCardIds: Set<String>,
     existingTemplate: FlightTemplate? = null,
     liveFlightData: RealTimeFlightData? = null,
+    hiddenCardIds: Set<String> = emptySet(),
     onSaveTemplate: (String, List<String>) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -119,7 +120,7 @@ fun TemplateEditorModal(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     CardCategory.values().forEach { category ->
-                        val categoryCards = CardLibrary.getCardsByCategory(category)
+                        val categoryCards = CardLibrary.getCardsByCategory(category, hiddenCardIds)
                         if (categoryCards.isNotEmpty()) {
                             item {
                                 Text(

@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # Racing Task Navigation - Existing UI Analysis
 
 **Created:** 2025-10-08
@@ -332,5 +334,6 @@ Display: "TP 2/5: KEYSTONE (12.3 km) - ACTIVE"
 **END OF ANALYSIS**
 
 *This document captures the existing task UI infrastructure that will be enhanced with Racing task navigation features.*
+
 
 

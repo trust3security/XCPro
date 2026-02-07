@@ -63,7 +63,8 @@ fun CardLibraryModal(
     onCreateNewTemplate: (String, List<String>) -> Unit,
     onDeleteTemplate: (FlightTemplate) -> Unit,
     onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    hiddenCardIds: Set<String> = emptySet()
 ) {
     val context = LocalContext.current
     val cardPreferences = remember { CardPreferences(context) }
@@ -106,8 +107,8 @@ fun CardLibraryModal(
     val configuration = LocalConfiguration.current
     val screenWidth = configuration.screenWidthDp.dp
 
-    val categoryCards = remember(selectedCategory) {
-        CardLibrary.getCardsByCategory(selectedCategory)
+    val categoryCards = remember(selectedCategory, hiddenCardIds) {
+        CardLibrary.getCardsByCategory(selectedCategory, hiddenCardIds)
     }
 
     androidx.compose.animation.AnimatedVisibility(
@@ -259,6 +260,7 @@ fun CardLibraryModal(
                     selectedCardIds = emptySet(),
                     existingTemplate = editingTemplate,
                     liveFlightData = liveFlightData,
+                    hiddenCardIds = hiddenCardIds,
                     onSaveTemplate = { name, cardIds ->
                         if (editingTemplate != null) {
                             onEditTemplate(editingTemplate!!, name, cardIds)

@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.example.xcpro.audio.AudioFocusManager
 import com.example.xcpro.flightdata.FlightDataRepository
+import com.example.xcpro.hawk.HawkConfigRepository
+import com.example.xcpro.hawk.HawkVarioRepository
 import com.example.xcpro.sensors.CompleteFlightData
 import com.example.xcpro.sensors.FlightStateSource
 import com.example.xcpro.sensors.SensorFusionRepository
@@ -46,6 +48,8 @@ class VarioServiceManagerConstructionTest {
         val flightDataRepository = FlightDataRepository()
         val levoRepo = mock<LevoVarioPreferencesRepository>()
         whenever(levoRepo.config).thenReturn(MutableStateFlow(LevoVarioConfig()))
+        val hawkConfigRepository = HawkConfigRepository()
+        val hawkVarioRepository = mock<HawkVarioRepository>()
 
         val flightStateSource = object : FlightStateSource {
             override val flightState = MutableStateFlow(FlyingState())
@@ -58,6 +62,8 @@ class VarioServiceManagerConstructionTest {
             sensorFusionRepository = fakeRepository,
             flightDataRepository = flightDataRepository,
             levoVarioPreferencesRepository = levoRepo,
+            hawkConfigRepository = hawkConfigRepository,
+            hawkVarioRepository = hawkVarioRepository,
             flightStateSource = flightStateSource
         )
 
@@ -67,6 +73,8 @@ class VarioServiceManagerConstructionTest {
         manager.stop()
 
         verify(unifiedSensorManager).startAllSensors()
+        verify(hawkVarioRepository).start()
+        verify(hawkVarioRepository).stop()
         assertEquals(1, fakeRepository.stopCalls)
     }
 
@@ -78,6 +86,7 @@ class VarioServiceManagerConstructionTest {
         var stopCalls = 0
 
         override fun updateAudioSettings(settings: VarioAudioSettings) = Unit
+        override fun setHawkAudioEnabled(enabled: Boolean) = Unit
         override fun setManualQnh(qnhHPa: Double) = Unit
         override fun resetQnhToStandard() = Unit
         override fun setMacCreadySetting(value: Double) = Unit

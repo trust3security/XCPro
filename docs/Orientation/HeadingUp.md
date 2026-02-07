@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # Heading Up Orientation (MapScreen)
 
 This document explains how map orientation works in XCPro with a focus on Heading Up. It is intended for future developers who need to tune or extend the behavior (sensor inputs, validity gates, smoothing, UI settings, or new modes).
@@ -400,3 +402,4 @@ Tip: while tuning Heading Up, compare these signals:
 ## Summary for future tuning
 
 Heading Up is only as good as the heading source. The current implementation is functional but can be wrong when the device is tilted and can jitter when compass and rotation vector sources disagree. If Heading Up feels unstable in live use, prioritize a tilt-compensated heading source and a single authoritative heading stream before adding camera smoothing.
+

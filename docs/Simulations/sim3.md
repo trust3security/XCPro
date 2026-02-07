@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # Sim3 replay
 
 ## Overview
@@ -108,3 +110,4 @@ flows from the IGC asset to the MapScreen UI.
   then replay is cleaned up and control returns to live sensors.
 - Source: `feature/map/src/main/java/com/example/xcpro/replay/ReplayFinishRamp.kt`,
   `feature/map/src/main/java/com/example/xcpro/replay/IgcReplayController.kt`
+

@@ -24,7 +24,7 @@
 
   <rect class="box" x="770" y="40" width="260" height="70"/>
   <text class="label title" x="790" y="70">ReplaySensorSource</text>
-  <text class="label small" x="790" y="92">IGC timebase</text>
+  <text class="label small" x="790" y="92">TE replay only</text>
 
   <line class="line" x1="310" y1="75" x2="350" y2="75"/>
   <line class="line" x1="770" y1="75" x2="730" y2="75"/>
@@ -49,14 +49,15 @@
   <!-- Right pipeline: HAWK (separate) -->
   <rect class="dashed" x="620" y="150" width="700" height="340"/>
   <text class="label title" x="640" y="175">HAWK Pipeline (separate and removable)</text>
+  <text class="label small" x="640" y="195">Real-time only (no replay in v1)</text>
 
   <rect class="box" x="660" y="200" width="260" height="60"/>
   <text class="label title" x="680" y="235">HawkSensorAdapter</text>
   <text class="label small" x="680" y="255">SensorDataSource</text>
 
   <rect class="box" x="960" y="200" width="300" height="60"/>
-  <text class="label title" x="980" y="235">Hawk QC + Vertical EKF</text>
-  <text class="label small" x="980" y="255">adaptive R + gating</text>
+  <text class="label title" x="980" y="235">Hawk QC + Baro-Gated Filter</text>
+  <text class="label small" x="980" y="255">adaptive accel trust</text>
 
   <rect class="box" x="660" y="300" width="260" height="60"/>
   <text class="label title" x="680" y="335">HawkRepository</text>
@@ -86,4 +87,3 @@
     Note: HAWK consumes the same sensor pipeline but performs independent calculations.
   </text>
 </svg>
-

@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # Map Orientation System - Technical Reference
 
 **Last Updated:** 2026-01-04
@@ -752,5 +754,6 @@ ALPHA = 0.8f                           // Low-pass filter constant
 **END OF DOCUMENT**
 
 *This reference should prevent common orientation mistakes. Read it before modifying any orientation code.*
+
 
 

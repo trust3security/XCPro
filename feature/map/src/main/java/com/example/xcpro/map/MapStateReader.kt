@@ -25,6 +25,7 @@ interface MapStateReader {
     val savedLocation: StateFlow<MapStateStore.MapPoint?>
     val savedZoom: StateFlow<Double?>
     val savedBearing: StateFlow<Double?>
+    val lastCameraSnapshot: StateFlow<MapStateStore.CameraSnapshot?>
     val currentMode: StateFlow<FlightMode>
     val currentFlightMode: StateFlow<FlightModeSelection>
     val currentZoom: StateFlow<Float>

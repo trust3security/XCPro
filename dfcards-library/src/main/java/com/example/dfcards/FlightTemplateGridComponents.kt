@@ -116,12 +116,13 @@ fun CardsGridSection(
     modifier: Modifier = Modifier,
     liveFlightData: RealTimeFlightData? = null,
     units: UnitsPreferences = UnitsPreferences(),
-    selectedCardIds: List<String>? = null
+    selectedCardIds: List<String>? = null,
+    hiddenCardIds: Set<String> = emptySet()
 ) {
     val cardStrings = rememberCardStrings()
     val cardTimeFormatter = rememberCardTimeFormatter()
-    val categoryCards = remember(selectedCategory) {
-        CardLibrary.getCardsByCategory(selectedCategory)
+    val categoryCards = remember(selectedCategory, hiddenCardIds) {
+        CardLibrary.getCardsByCategory(selectedCategory, hiddenCardIds)
     }
 
     Column(modifier = modifier) {

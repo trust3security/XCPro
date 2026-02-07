@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # Heading Up Refactor Plan (Temporary)
 
 This is a temporary refactor plan to address Heading Up jitter without breaking
@@ -107,3 +109,4 @@ Mitigate by keeping the existing wind/track fallbacks intact.
 
 If behavior regresses, revert the source selection/hysteresis changes in
 `OrientationDataSource` and keep only the JITTER logging for future analysis.
+

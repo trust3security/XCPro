@@ -8,6 +8,7 @@ import com.example.xcpro.common.units.PressureUnit
 import com.example.xcpro.common.units.UnitsConverter
 import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.UnitsPreferences
+import com.example.xcpro.hawk.HawkVarioUiState
 import com.example.xcpro.orientation.HeadingResolver
 import com.example.xcpro.orientation.HeadingResolverInput
 import com.example.xcpro.sensors.CompleteFlightData
@@ -56,6 +57,7 @@ fun convertToRealTimeFlightData(
     completeData: CompleteFlightData,
     windState: WindState?,
     isFlying: Boolean,
+    hawkVarioUiState: HawkVarioUiState = HawkVarioUiState(),
     flightTime: String = "00:00",
     lastUpdateTimeMillis: Long = completeData.timestamp
 ): RealTimeFlightData {
@@ -164,6 +166,7 @@ fun convertToRealTimeFlightData(
         airspeedSource = completeData.airspeedSource,
         tasValid = completeData.tasValid,
         teAltitude = completeData.teAltitude.value,
+        teVario = completeData.teVario?.value,
         macCready = completeData.macCready,
         macCreadyRisk = completeData.macCreadyRisk,
         headingDeg = headingSolution.bearingDeg,
@@ -180,7 +183,12 @@ fun convertToRealTimeFlightData(
         speedToFlyDelta = completeData.speedToFlyDelta.value,
         speedToFlyValid = completeData.speedToFlyValid,
         speedToFlyMcSourceAuto = completeData.speedToFlyMcSourceAuto,
-        speedToFlyHasPolar = completeData.speedToFlyHasPolar
+        speedToFlyHasPolar = completeData.speedToFlyHasPolar,
+        hawkVarioSmoothedMps = hawkVarioUiState.varioSmoothedMps?.toDouble(),
+        hawkVarioRawMps = hawkVarioUiState.varioRawMps?.toDouble(),
+        hawkAccelOk = hawkVarioUiState.accelOk,
+        hawkBaroOk = hawkVarioUiState.baroOk,
+        hawkConfidenceCode = hawkVarioUiState.confidence.code
     )
 }
 

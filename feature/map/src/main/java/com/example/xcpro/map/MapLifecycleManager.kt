@@ -17,7 +17,8 @@ class MapLifecycleManager(
     internal val mapState: MapScreenState,
     private val orientationManager: MapOrientationManager,
     internal val locationManager: LocationManager,
-    private val igcReplayController: IgcReplayController
+    private val igcReplayController: IgcReplayController,
+    private val stateActions: MapStateActions
 ) {
     companion object {
         private const val TAG = "MapLifecycleManager"
@@ -76,6 +77,7 @@ class MapLifecycleManager(
      */
     fun cleanup() {
         try {
+            captureCameraSnapshot()
             orientationManager.stop()
             locationManager.stopLocationTracking()
             locationManager.unbindRenderFrameListener()
@@ -83,6 +85,23 @@ class MapLifecycleManager(
             Log.d(TAG, "Cleanup completed: orientation manager stopped, location tracking stopped, map view destroyed")
         } catch (e: Exception) {
             Log.e(TAG, "Error during cleanup: ${e.message}", e)
+        }
+    }
+
+    private fun captureCameraSnapshot() {
+        try {
+            val map = mapState.mapLibreMap ?: return
+            val cameraPosition = map.cameraPosition
+            val target = cameraPosition.target ?: return
+            stateActions.updateCurrentZoom(cameraPosition.zoom.toFloat())
+            stateActions.updateCameraSnapshot(
+                target = MapStateStore.MapPoint(target.latitude, target.longitude),
+                zoom = cameraPosition.zoom,
+                bearing = cameraPosition.bearing
+            )
+            Log.d(TAG, "Captured camera snapshot for restore")
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to capture camera snapshot: ${e.message}", e)
         }
     }
 

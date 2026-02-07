@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # Racing_XCSoar_Navigation.md
 
 **Purpose**: Define how XCPro will implement Racing task navigation using the same transition-driven model as XCSoar.
@@ -184,3 +186,4 @@ onGpsUpdate(now, last):
 - UI shows current TP, distance, completion
 
 ---
+

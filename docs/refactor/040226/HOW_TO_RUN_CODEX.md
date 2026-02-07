@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # How to Run Codex in This Repo
 
 This repo uses a strict two-file execution model.
@@ -24,3 +26,4 @@ Run until completion.
 - One agent law
 - One task spec
 - Plans referenced, not duplicated
+

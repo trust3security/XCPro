@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # Levo Vario Architecture and Data Flow
 
 This document is a detailed map of the Levo variometer pipeline in XCPro.
@@ -582,3 +584,4 @@ TE: Total energy compensated vario (removes speed changes).
 Vario validity window: Time window for which a vario sample is considered fresh.
 
 End of document.
+

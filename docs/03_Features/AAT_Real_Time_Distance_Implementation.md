@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # AAT Real-Time Distance Implementation Plan
 
 **Status**: "< PLANNED
@@ -449,5 +451,6 @@ Implementation is successful when:
 ---
 
 **END OF IMPLEMENTATION PLAN**
+
 
 

@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # Schempp-Hirth Ventus 3 - Complete Performance Data
 ## 15-Meter and 18-Meter Configurations
 
@@ -414,3 +416,4 @@ Data compiled from:
 *Note: For actual flight operations, always refer to the official flight manual*
 *Performance figures are theoretical and may vary with individual aircraft*
 *Ventus 3 polar data is estimated from Ventus 2 and competition results*
+

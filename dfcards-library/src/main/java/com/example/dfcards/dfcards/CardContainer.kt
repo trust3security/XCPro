@@ -51,6 +51,7 @@ fun CardContainer(
     onFlightTemplateClick: () -> Unit = {},
     isEditMode: Boolean = false,
     onEditModeChanged: (Boolean) -> Unit = {},
+    hiddenCardIds: Set<String> = emptySet(),
     modifier: Modifier = Modifier,
     cardVisualStyle: CardVisualStyle,
     viewModel: com.example.dfcards.dfcards.FlightDataViewModel = viewModel()
@@ -61,6 +62,13 @@ fun CardContainer(
     var showEditOptions by remember { mutableStateOf(false) }
 
     val selectedCardIds by viewModel.selectedCardIds.collectAsStateWithLifecycle()
+    val visibleCardIds = remember(selectedCardIds, hiddenCardIds) {
+        if (hiddenCardIds.isEmpty()) {
+            selectedCardIds
+        } else {
+            selectedCardIds.filterNot { it in hiddenCardIds }.toSet()
+        }
+    }
     // Recompose when cards are created so we re-read the backing flow map.
     val activeCards by viewModel.activeCards.collectAsStateWithLifecycle()
     val cardStateFlows = remember(selectedCardIds, activeCards) { viewModel.cardStateFlows }
@@ -81,15 +89,15 @@ fun CardContainer(
         }
     }
 
-    LaunchedEffect(safeContainerSize, selectedCardIds, activeCards) {
+    LaunchedEffect(safeContainerSize, visibleCardIds, activeCards) {
         if (safeContainerSize != IntSize.Zero) {
             viewModel.initializeCards(safeContainerSize.toIntSizePx(), density.toDensityScale())
-            if (selectedCardIds.isNotEmpty()) {
-                viewModel.ensureCardsExist(selectedCardIds)
+            if (visibleCardIds.isNotEmpty()) {
+                viewModel.ensureCardsExist(visibleCardIds)
             }
             Log.d(
                 "CardContainer",
-                "size=${safeContainerSize.width}x${safeContainerSize.height} selected=${selectedCardIds.size} " +
+                "size=${safeContainerSize.width}x${safeContainerSize.height} selected=${visibleCardIds.size} " +
                     "active=${activeCards.size} flows=${cardStateFlows.size}"
             )
         }
@@ -132,7 +140,7 @@ fun CardContainer(
                 }
         ) {
             cardStateFlows.forEach { (cardId, stateFlow) ->
-                if (cardId !in selectedCardIds) return@forEach
+                if (cardId !in visibleCardIds) return@forEach
                 val cardState by stateFlow.collectAsStateWithLifecycle()
 
                 key(cardId) {

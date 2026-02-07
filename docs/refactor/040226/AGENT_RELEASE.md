@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # AGENT_RELEASE.md -- Autonomous Engineering Execution Contract (Release Grade)
 
 This file is a BINDING EXECUTION CONTRACT.
@@ -59,3 +61,4 @@ At end:
 - Final checklist
 - PR-ready summary
 - Manual verification steps
+

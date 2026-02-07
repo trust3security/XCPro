@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # QNH Auto Calibration (Release-Grade Design)
 
 This document defines how QNH auto-calibration should work in XC Pro.
@@ -133,4 +135,5 @@ Use ISA constants and lapse rate as in BarometricAltitudeCalculator.
 - sensors: apply QNH in FlightDataCalculatorEngine
 - ui: MapScreenViewModel intent and state mapping
 - ui: Manual QNH dialog shows calibration status
+
 

@@ -3,6 +3,7 @@ package com.example.xcpro.map
 import android.util.Log
 import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.convertToRealTimeFlightData
+import com.example.xcpro.hawk.HawkVarioUiState
 import com.example.xcpro.weather.wind.model.WindState
 import com.example.xcpro.replay.IgcReplayController
 import com.example.xcpro.replay.ReplayEvent
@@ -29,6 +30,7 @@ internal class MapScreenObservers(
     private val flightDataFlow: StateFlow<CompleteFlightData?>,
     private val windStateFlow: StateFlow<WindState>,
     private val flightStateFlow: StateFlow<FlyingState>,
+    private val hawkVarioUiStateFlow: StateFlow<HawkVarioUiState>,
     private val flightDataManager: FlightDataManager,
     private val mapStateStore: MapStateReader,
     private val liveDataReady: MutableStateFlow<Boolean>,
@@ -53,9 +55,12 @@ internal class MapScreenObservers(
             flightDataFlow,
             windStateFlow,
             flightStateFlow,
+            hawkVarioUiStateFlow,
             igcReplayController.session.map { it.selection != null }
-        ) { data, wind, flightState, isReplay -> Quadruple(data, wind, flightState, isReplay) }
-            .onEach { (data, wind, flightState, isReplay) ->
+        ) { data, wind, flightState, hawkState, isReplay ->
+            Quintuple(data, wind, flightState, hawkState, isReplay)
+        }
+            .onEach { (data, wind, flightState, hawkState, isReplay) ->
                 if (data != null) {
                     if (!liveDataReady.value) {
                         liveDataReady.value = true
@@ -71,10 +76,12 @@ internal class MapScreenObservers(
                     val minutes = elapsedMinutes % 60L
                     val formattedFlightTime = "${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}"
 
+                    val hawkUiState = if (isReplay) HawkVarioUiState() else hawkState
                     val liveData = convertToRealTimeFlightData(
                         completeData = data,
                         windState = wind,
                         isFlying = flightState.isFlying,
+                        hawkVarioUiState = hawkUiState,
                         flightTime = formattedFlightTime,
                         lastUpdateTimeMillis = sampleClockMillis
                     ).applyWindState(wind)
@@ -170,9 +177,10 @@ internal class MapScreenObservers(
     }
 }
 
-private data class Quadruple<A, B, C, D>(
+private data class Quintuple<A, B, C, D, E>(
     val first: A,
     val second: B,
     val third: C,
-    val fourth: D
+    val fourth: D,
+    val fifth: E
 )

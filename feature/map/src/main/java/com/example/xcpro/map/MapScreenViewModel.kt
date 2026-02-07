@@ -16,6 +16,8 @@ import com.example.xcpro.map.domain.MapWaypointError
 import com.example.xcpro.map.domain.toUserMessage
 import com.example.xcpro.map.model.GpsStatusUiModel
 import com.example.xcpro.map.model.MapLocationUiModel
+import com.example.xcpro.hawk.HawkVarioUiState
+import com.example.xcpro.hawk.HawkVarioUseCase
 import com.example.xcpro.map.trail.MapTrailSettingsUseCase
 import com.example.xcpro.map.trail.domain.TrailUpdateResult
 import com.example.xcpro.qnh.CalibrateQnhUseCase
@@ -61,7 +63,8 @@ class MapScreenViewModel @Inject constructor(
     private val trailSettingsUseCase: MapTrailSettingsUseCase,
     private val calibrateQnhUseCase: CalibrateQnhUseCase,
     private val variometerLayoutUseCase: VariometerLayoutUseCase,
-    private val mapVarioPreferencesUseCase: MapVarioPreferencesUseCase
+    private val mapVarioPreferencesUseCase: MapVarioPreferencesUseCase,
+    private val hawkVarioUseCase: HawkVarioUseCase
 ) : ViewModel() {
 
     private val initialStyleName = mapStyleUseCase.initialStyle()
@@ -105,6 +108,20 @@ class MapScreenViewModel @Inject constructor(
                 scope = viewModelScope,
                 started = SharingStarted.Eagerly,
                 initialValue = true
+            )
+    val showHawkCard: StateFlow<Boolean> =
+        mapVarioPreferencesUseCase.showHawkCard
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = false
+            )
+    val hawkVarioUiState: StateFlow<HawkVarioUiState> =
+        hawkVarioUseCase.hawkVarioUiState
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = HawkVarioUiState()
             )
     val replaySessionState: StateFlow<SessionState> = igcReplayController.session
     val showVarioDemoFab: Boolean = featureFlags.showVarioDemoFab
@@ -162,6 +179,7 @@ class MapScreenViewModel @Inject constructor(
         flightDataFlow = flightDataUseCase.flightData,
         windStateFlow = windStateUseCase.windState,
         flightStateFlow = sensorsUseCase.flightStateFlow,
+        hawkVarioUiStateFlow = hawkVarioUiState,
         flightDataManager = flightDataManager,
         mapStateStore = mapStateStore,
         liveDataReady = _liveDataReady,

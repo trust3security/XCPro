@@ -32,6 +32,7 @@ internal value class CardId(val raw: String) {
         const val VARIO_RAW = "vario_raw"
         const val VARIO_GPS = "vario_gps"
         const val VARIO_COMPLEMENTARY = "vario_complementary"
+        const val HAWK_VARIO = "hawk_vario"
         const val REAL_IGC_VARIO = "real_igc_vario"
 
         const val TRACK = "track"
@@ -80,6 +81,7 @@ internal value class CardId(val raw: String) {
             VARIO_RAW,
             VARIO_GPS,
             VARIO_COMPLEMENTARY,
+            HAWK_VARIO,
             REAL_IGC_VARIO,
             TRACK,
             WPT_DIST,

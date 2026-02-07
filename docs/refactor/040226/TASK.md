@@ -1,3 +1,5 @@
+﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
+
 # TASK.md -- Autonomous Execution Task
 
 ## Objective
@@ -24,3 +26,4 @@ Non-authoritative (ignore for execution):
 
 ## Stop Condition
 STOP only when all phases are complete and all checks pass.
+

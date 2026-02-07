@@ -48,6 +48,7 @@ internal fun VariometerWidgetImpl(
     needleValue: Float,
     fastNeedleValue: Float,
     audioNeedleValue: Float,
+    outerArcValue: Float? = null,
     displayValue: Float,
     displayLabel: String = String.format("%+.1f", displayValue),
     secondaryLabel: String? = null,
@@ -159,7 +160,9 @@ internal fun VariometerWidgetImpl(
             UIVariometer(
                 needleValue = needleValue,
                 fastNeedleValue = fastNeedleValue,
-                averageNeedleValue = audioNeedleValue,
+                averageNeedleValue = null,
+                audioNeedleValue = audioNeedleValue,
+                outerArcValue = outerArcValue,
                 displayValue = displayValue,
                 valueLabel = displayLabel,
                 secondaryLabel = secondaryLabel,
