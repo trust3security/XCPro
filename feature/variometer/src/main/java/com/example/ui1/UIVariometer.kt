@@ -93,6 +93,11 @@ fun UIVariometer(
     secondaryLabel: String? = null,
     secondaryLabelColor: Color? = null,
     averageNeedleValue: Float? = null,
+    audioNeedleValue: Float? = null,
+    dampedNeedleValue: Float? = null,
+    outerArcValue: Float? = null,
+    showPrimaryNeedle: Boolean = true,
+    microArcEnabled: Boolean = true,
     dialConfig: VarioDialConfig = VarioDialConfig(),
     windDirectionScreenDeg: Float? = null,
     windIsValid: Boolean = false,
@@ -118,14 +123,25 @@ fun UIVariometer(
 
         val rawNeedleValue = needleValue
         val microRange = dialConfig.microRangeSi.coerceAtLeast(0.1f)
-        val microArcValue = (rawNeedleValue / microRange).coerceIn(-1f, 1f)
+        val microArcValueRaw = (rawNeedleValue / microRange).coerceIn(-1f, 1f)
+        val microArcValue = if (microArcEnabled) microArcValueRaw else 0f
         val microArcAngle = microArcValue * 135f
+
+        val outerArcValueRaw = outerArcValue?.let { (it / microRange).coerceIn(-1f, 1f) } ?: 0f
+        val outerArcAngle = outerArcValueRaw * 135f
+        val outerArcVisible = outerArcValue != null
 
         val microBandOuter = radius * 0.78f
         val microBandInner = radius * 0.6f
-        val microBandWidth = microBandOuter - microBandInner
-        val microBandRectSize = Size(microBandOuter * 2f, microBandOuter * 2f)
-        val microBandTopLeft = Offset(center.x - microBandOuter, center.y - microBandOuter)
+        val microBandTotal = microBandOuter - microBandInner
+        val microBandGap = microBandTotal * 0.12f
+        val innerBandWidth = (microBandTotal - microBandGap) / 2f
+        val innerBandOuter = microBandInner + innerBandWidth
+        val outerBandInner = innerBandOuter + microBandGap
+        val innerBandRectSize = Size(innerBandOuter * 2f, innerBandOuter * 2f)
+        val innerBandTopLeft = Offset(center.x - innerBandOuter, center.y - innerBandOuter)
+        val outerBandRectSize = Size(microBandOuter * 2f, microBandOuter * 2f)
+        val outerBandTopLeft = Offset(center.x - microBandOuter, center.y - microBandOuter)
 
         drawCircle(
             color = Color.Black.copy(alpha = 0.2f),
@@ -146,9 +162,18 @@ fun UIVariometer(
             startAngle = -225f,
             sweepAngle = 270f,
             useCenter = false,
-            topLeft = microBandTopLeft,
-            size = microBandRectSize,
-            style = Stroke(width = microBandWidth, cap = StrokeCap.Round)
+            topLeft = innerBandTopLeft,
+            size = innerBandRectSize,
+            style = Stroke(width = innerBandWidth, cap = StrokeCap.Round)
+        )
+        drawArc(
+            color = Color.Black.copy(alpha = 0.08f),
+            startAngle = -225f,
+            sweepAngle = 270f,
+            useCenter = false,
+            topLeft = outerBandTopLeft,
+            size = outerBandRectSize,
+            style = Stroke(width = microBandOuter - outerBandInner, cap = StrokeCap.Round)
         )
 
         if (microArcValue > 0f) {
@@ -158,9 +183,9 @@ fun UIVariometer(
                 startAngle = -90f,
                 sweepAngle = microArcAngle,
                 useCenter = false,
-                topLeft = microBandTopLeft,
-                size = microBandRectSize,
-                style = Stroke(width = microBandWidth, cap = StrokeCap.Round)
+                topLeft = innerBandTopLeft,
+                size = innerBandRectSize,
+                style = Stroke(width = innerBandWidth, cap = StrokeCap.Round)
             )
         } else if (microArcValue < 0f) {
             val sinkColor = if (microArcValue < -0.3f) Color(0xFFF87171) else Color(0xFFFECACA)
@@ -169,10 +194,36 @@ fun UIVariometer(
                 startAngle = -90f + microArcAngle,
                 sweepAngle = -microArcAngle,
                 useCenter = false,
-                topLeft = microBandTopLeft,
-                size = microBandRectSize,
-                style = Stroke(width = microBandWidth, cap = StrokeCap.Round)
+                topLeft = innerBandTopLeft,
+                size = innerBandRectSize,
+                style = Stroke(width = innerBandWidth, cap = StrokeCap.Round)
             )
+        }
+
+        if (outerArcVisible) {
+            if (outerArcValueRaw > 0f) {
+                val liftColor = Color(0xFF16A34A)
+                drawArc(
+                    color = liftColor.copy(alpha = 0.45f),
+                    startAngle = -90f,
+                    sweepAngle = outerArcAngle,
+                    useCenter = false,
+                    topLeft = outerBandTopLeft,
+                    size = outerBandRectSize,
+                    style = Stroke(width = microBandOuter - outerBandInner, cap = StrokeCap.Round)
+                )
+            } else if (outerArcValueRaw < 0f) {
+                val sinkColor = Color(0xFFDC2626)
+                drawArc(
+                    color = sinkColor.copy(alpha = 0.85f),
+                    startAngle = -90f + outerArcAngle,
+                    sweepAngle = -outerArcAngle,
+                    useCenter = false,
+                    topLeft = outerBandTopLeft,
+                    size = outerBandRectSize,
+                    style = Stroke(width = microBandOuter - outerBandInner, cap = StrokeCap.Round)
+                )
+            }
         }
 
         dialConfig.microTicks.forEach { tick ->
@@ -241,14 +292,16 @@ fun UIVariometer(
         val needleAngle = dialAngle(rawNeedleValue, dialConfig)
         val needleLength = radius * 0.7f
 
-        rotate(needleAngle, center) {
-            drawLine(
-                color = Color(0xFF60A5FA),
-                start = center,
-                end = Offset(center.x + needleLength, center.y),
-                strokeWidth = 6.dp.toPx(),
-                cap = StrokeCap.Round
-            )
+        if (showPrimaryNeedle) {
+            rotate(needleAngle, center) {
+                drawLine(
+                    color = Color(0xFF60A5FA),
+                    start = center,
+                    end = Offset(center.x + needleLength, center.y),
+                    strokeWidth = 6.dp.toPx(),
+                    cap = StrokeCap.Round
+                )
+            }
         }
 
         fastNeedleValue?.let { fast ->
@@ -264,11 +317,37 @@ fun UIVariometer(
             }
         }
 
+        dampedNeedleValue?.let { damped ->
+            val dampedAngle = dialAngle(damped, dialConfig)
+            rotate(dampedAngle, center) {
+                drawLine(
+                    color = Color(0xFF22C55E),
+                    start = center,
+                    end = Offset(center.x + needleLength, center.y),
+                    strokeWidth = 4.dp.toPx(),
+                    cap = StrokeCap.Round
+                )
+            }
+        }
+
         averageNeedleValue?.let { average ->
             val averageAngle = dialAngle(average, dialConfig)
             rotate(averageAngle, center) {
                 drawLine(
                     color = Color(0xFF7C3AED),
+                    start = center,
+                    end = Offset(center.x + needleLength, center.y),
+                    strokeWidth = 4.dp.toPx(),
+                    cap = StrokeCap.Round
+                )
+            }
+        }
+
+        audioNeedleValue?.let { audio ->
+            val audioAngle = dialAngle(audio, dialConfig)
+            rotate(audioAngle, center) {
+                drawLine(
+                    color = Color(0xFFF97316),
                     start = center,
                     end = Offset(center.x + needleLength, center.y),
                     strokeWidth = 4.dp.toPx(),
