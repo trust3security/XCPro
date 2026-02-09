@@ -55,7 +55,13 @@ class OgnTrafficRepositoryImpl @Inject constructor(
         OgnTrafficSnapshot(
             targets = emptyList(),
             connectionState = OgnConnectionState.DISCONNECTED,
-            lastError = null
+            lastError = null,
+            subscriptionCenterLat = null,
+            subscriptionCenterLon = null,
+            receiveRadiusKm = RECEIVE_RADIUS_KM.toInt(),
+            ddbCacheAgeMs = null,
+            reconnectBackoffMs = null,
+            lastReconnectWallMs = null
         )
     )
     override val snapshot: StateFlow<OgnTrafficSnapshot> = _snapshot.asStateFlow()
@@ -77,6 +83,12 @@ class OgnTrafficRepositoryImpl @Inject constructor(
 
     @Volatile
     private var lastDdbRefreshAttemptWallMs: Long = 0L
+
+    @Volatile
+    private var reconnectBackoffMs: Long? = null
+
+    @Volatile
+    private var lastReconnectWallMs: Long? = null
 
     override fun start() {
         setEnabled(true)
@@ -133,6 +145,7 @@ class OgnTrafficRepositoryImpl @Inject constructor(
             try {
                 connectAndRead(centerAtConnect)
                 backoffMs = RECONNECT_BACKOFF_START_MS
+                reconnectBackoffMs = null
             } catch (t: Throwable) {
                 connectionState = OgnConnectionState.ERROR
                 lastError = sanitizeError(t)
@@ -142,10 +155,14 @@ class OgnTrafficRepositoryImpl @Inject constructor(
 
             sweepStaleTargets(clock.nowMonoMs())
             if (!_isEnabled.value) break
+            reconnectBackoffMs = backoffMs
+            lastReconnectWallMs = clock.nowWallMs()
+            publishSnapshot()
             delay(backoffMs)
             backoffMs = (backoffMs * 2L).coerceAtMost(RECONNECT_BACKOFF_MAX_MS)
         }
         connectionState = OgnConnectionState.DISCONNECTED
+        reconnectBackoffMs = null
         publishSnapshot()
     }
 
@@ -300,10 +317,24 @@ class OgnTrafficRepositoryImpl @Inject constructor(
     }
 
     private fun publishSnapshot() {
+        val activeCenter = center
+        val nowWallMs = clock.nowWallMs()
+        val ddbUpdatedAt = ddbRepository.lastUpdateWallMs()
+        val ddbAge = if (ddbUpdatedAt > 0L && nowWallMs >= ddbUpdatedAt) {
+            nowWallMs - ddbUpdatedAt
+        } else {
+            null
+        }
         _snapshot.value = OgnTrafficSnapshot(
             targets = _targets.value,
             connectionState = connectionState,
-            lastError = lastError
+            lastError = lastError,
+            subscriptionCenterLat = activeCenter?.latitude,
+            subscriptionCenterLon = activeCenter?.longitude,
+            receiveRadiusKm = RECEIVE_RADIUS_KM.toInt(),
+            ddbCacheAgeMs = ddbAge,
+            reconnectBackoffMs = reconnectBackoffMs,
+            lastReconnectWallMs = lastReconnectWallMs
         )
     }
 

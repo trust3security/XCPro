@@ -9,6 +9,7 @@ import com.example.xcpro.map.MapStateReader
 import com.example.xcpro.map.MapStateStore
 import com.example.xcpro.map.trail.TrailSettings
 import com.example.xcpro.map.trail.domain.TrailUpdateResult
+import com.example.xcpro.ogn.OgnTrafficSnapshot
 import com.example.xcpro.ogn.OgnTrafficTarget
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.map.model.MapLocationUiModel
@@ -27,6 +28,7 @@ internal data class MapScreenBindings(
     val trailSettings: TrailSettings,
     val trailUpdateResult: TrailUpdateResult?,
     val ognTargets: List<OgnTrafficTarget>,
+    val ognSnapshot: OgnTrafficSnapshot,
     val ognOverlayEnabled: Boolean,
     val isAATEditMode: Boolean,
     val savedLocation: MapStateStore.MapPoint?,
@@ -53,6 +55,7 @@ internal fun rememberMapScreenBindings(
     val trailSettings by mapStateReader.trailSettings.collectAsStateWithLifecycle()
     val trailUpdateResult by mapViewModel.trailUpdates.collectAsStateWithLifecycle()
     val ognTargets by mapViewModel.ognTargets.collectAsStateWithLifecycle()
+    val ognSnapshot by mapViewModel.ognSnapshot.collectAsStateWithLifecycle()
     val ognOverlayEnabled by mapViewModel.ognOverlayEnabled.collectAsStateWithLifecycle()
     val isAATEditMode by mapViewModel.isAATEditMode.collectAsStateWithLifecycle()
     val savedLocation by mapStateReader.savedLocation.collectAsStateWithLifecycle()
@@ -74,6 +77,7 @@ internal fun rememberMapScreenBindings(
         trailSettings = trailSettings,
         trailUpdateResult = trailUpdateResult,
         ognTargets = ognTargets,
+        ognSnapshot = ognSnapshot,
         ognOverlayEnabled = ognOverlayEnabled,
         isAATEditMode = isAATEditMode,
         savedLocation = savedLocation,

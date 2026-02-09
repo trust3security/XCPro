@@ -162,6 +162,8 @@ class MapInitializer(
             // Initialize blue location overlay
             mapState.blueLocationOverlay = BlueLocationOverlay(context, map)
             mapState.blueLocationOverlay?.initialize()
+            mapState.ognTrafficOverlay = OgnTrafficOverlay(map)
+            mapState.ognTrafficOverlay?.initialize()
             snailTrailManager.initialize(map)
             setupScaleBar(map)
             Log.d(TAG, " Blue location overlay initialized")

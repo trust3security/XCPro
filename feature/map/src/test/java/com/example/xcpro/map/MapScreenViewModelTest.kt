@@ -342,7 +342,13 @@ class MapScreenViewModelTest {
                 OgnTrafficSnapshot(
                     targets = emptyList(),
                     connectionState = OgnConnectionState.DISCONNECTED,
-                    lastError = null
+                    lastError = null,
+                    subscriptionCenterLat = null,
+                    subscriptionCenterLon = null,
+                    receiveRadiusKm = 300,
+                    ddbCacheAgeMs = null,
+                    reconnectBackoffMs = null,
+                    lastReconnectWallMs = null
                 )
             )
             override val isEnabled = MutableStateFlow(false)

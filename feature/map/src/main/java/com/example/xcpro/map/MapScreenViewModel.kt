@@ -21,6 +21,7 @@ import com.example.xcpro.hawk.HawkVarioUseCase
 import com.example.xcpro.map.trail.MapTrailSettingsUseCase
 import com.example.xcpro.map.trail.domain.TrailUpdateResult
 import com.example.xcpro.ogn.OgnTrafficTarget
+import com.example.xcpro.ogn.OgnTrafficSnapshot
 import com.example.xcpro.qnh.CalibrateQnhUseCase
 import com.example.xcpro.qnh.QnhCalibrationFailureReason
 import com.example.xcpro.variometer.layout.VariometerUiState
@@ -163,6 +164,7 @@ class MapScreenViewModel @Inject constructor(
             .map { it?.gps?.toUiModel() }
             .stateIn(viewModelScope, SharingStarted.Eagerly, null)
     val ognTargets: StateFlow<List<OgnTrafficTarget>> = ognTrafficUseCase.targets
+    val ognSnapshot: StateFlow<OgnTrafficSnapshot> = ognTrafficUseCase.snapshot
     val ognOverlayEnabled: StateFlow<Boolean> =
         ognTrafficUseCase.overlayEnabled
             .stateIn(

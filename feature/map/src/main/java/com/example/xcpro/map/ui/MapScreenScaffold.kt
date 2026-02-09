@@ -42,6 +42,7 @@ import com.example.xcpro.navdrawer.NavigationDrawer
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.map.model.GpsStatusUiModel
+import com.example.xcpro.ogn.OgnTrafficSnapshot
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.variometer.layout.VariometerUiState
@@ -82,6 +83,7 @@ internal fun MapScreenScaffold(inputs: MapScreenScaffoldInputs) {
         showRecenterButton = inputs.showRecenterButton,
         showReturnButton = inputs.showReturnButton,
         showDistanceCircles = inputs.showDistanceCircles,
+        ognSnapshot = inputs.ognSnapshot,
         ognOverlayEnabled = inputs.ognOverlayEnabled,
         isUiEditMode = inputs.isUiEditMode,
         onEditModeChange = inputs.onEditModeChange,
@@ -162,6 +164,7 @@ internal fun MapScreenScaffold(
     showRecenterButton: Boolean,
     showReturnButton: Boolean,
     showDistanceCircles: Boolean,
+    ognSnapshot: OgnTrafficSnapshot,
     ognOverlayEnabled: Boolean,
     isUiEditMode: Boolean,
     onEditModeChange: (Boolean) -> Unit,
@@ -247,6 +250,7 @@ internal fun MapScreenScaffold(
                     showRecenterButton = showRecenterButton,
                     showReturnButton = showReturnButton,
                     showDistanceCircles = showDistanceCircles,
+                    ognSnapshot = ognSnapshot,
                     ognOverlayEnabled = ognOverlayEnabled,
                     isUiEditMode = isUiEditMode,
                     onEditModeChange = onEditModeChange,

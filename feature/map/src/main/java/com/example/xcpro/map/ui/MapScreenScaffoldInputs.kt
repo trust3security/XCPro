@@ -31,6 +31,7 @@ import com.example.xcpro.qnh.QnhCalibrationState
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.map.model.GpsStatusUiModel
+import com.example.xcpro.ogn.OgnTrafficSnapshot
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.variometer.layout.VariometerUiState
@@ -68,6 +69,7 @@ internal data class MapScreenScaffoldInputs(
     val showRecenterButton: Boolean,
     val showReturnButton: Boolean,
     val showDistanceCircles: Boolean,
+    val ognSnapshot: OgnTrafficSnapshot,
     val ognOverlayEnabled: Boolean,
     val isUiEditMode: Boolean,
     val onEditModeChange: (Boolean) -> Unit,
@@ -203,6 +205,7 @@ internal fun rememberMapScreenScaffoldInputs(
         showRecenterButton = bindings.showRecenterButton,
         showReturnButton = bindings.showReturnButton,
         showDistanceCircles = bindings.showDistanceCircles,
+        ognSnapshot = bindings.ognSnapshot,
         ognOverlayEnabled = bindings.ognOverlayEnabled,
         isUiEditMode = mapUiState.isUiEditMode,
         onEditModeChange = { enabled -> mapViewModel.onEvent(MapUiEvent.SetUiEditMode(enabled)) },

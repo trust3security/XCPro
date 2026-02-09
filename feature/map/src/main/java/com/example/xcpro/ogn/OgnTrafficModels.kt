@@ -19,7 +19,13 @@ enum class OgnConnectionState {
 data class OgnTrafficSnapshot(
     val targets: List<OgnTrafficTarget>,
     val connectionState: OgnConnectionState,
-    val lastError: String?
+    val lastError: String?,
+    val subscriptionCenterLat: Double?,
+    val subscriptionCenterLon: Double?,
+    val receiveRadiusKm: Int,
+    val ddbCacheAgeMs: Long?,
+    val reconnectBackoffMs: Long?,
+    val lastReconnectWallMs: Long?
 )
 
 data class OgnTrafficTarget(

@@ -11,7 +11,10 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -20,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -30,6 +34,7 @@ import com.example.dfcards.RealTimeFlightData
 import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.units.UnitsPreferences
+import com.example.xcpro.map.BuildConfig
 import com.example.xcpro.map.components.MapActionButtons
 import com.example.xcpro.map.MapCameraManager
 import com.example.xcpro.map.MapModalManager
@@ -48,6 +53,8 @@ import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.map.WindArrowUiState
 import com.example.xcpro.map.model.MapLocationUiModel
+import com.example.xcpro.ogn.OgnConnectionState
+import com.example.xcpro.ogn.OgnTrafficSnapshot
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -83,6 +90,7 @@ internal fun MapScreenContent(
     showRecenterButton: Boolean,
     showReturnButton: Boolean,
     showDistanceCircles: Boolean,
+    ognSnapshot: OgnTrafficSnapshot,
     ognOverlayEnabled: Boolean,
     isUiEditMode: Boolean,
     onEditModeChange: (Boolean) -> Unit,
@@ -243,6 +251,14 @@ internal fun MapScreenContent(
             onRacingReplayClick = onRacingReplayClick
         )
 
+        OgnDebugPanel(
+            visible = BuildConfig.DEBUG && ognOverlayEnabled,
+            snapshot = ognSnapshot,
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(start = 16.dp, bottom = 24.dp)
+        )
+
         QnhDialogHost(
             visible = showQnhDialog,
             qnhInput = qnhInput,
@@ -280,6 +296,91 @@ internal fun MapScreenContent(
         flightDataManager = flightDataManager,
         unitsPreferences = unitsPreferences
     )
+}
+
+@Composable
+private fun OgnDebugPanel(
+    visible: Boolean,
+    snapshot: OgnTrafficSnapshot,
+    modifier: Modifier = Modifier
+) {
+    if (!visible) return
+    Surface(
+        modifier = modifier,
+        color = Color(0xCC111827),
+        tonalElevation = 4.dp,
+        shadowElevation = 4.dp,
+        shape = MaterialTheme.shapes.small
+    ) {
+        androidx.compose.foundation.layout.Column(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+        ) {
+            Text(
+                text = "OGN ${snapshot.connectionState.toDebugLabel()}",
+                color = Color(0xFFE5E7EB),
+                style = MaterialTheme.typography.labelMedium
+            )
+            Text(
+                text = "Targets: ${snapshot.targets.size}",
+                color = Color(0xFFD1D5DB),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = "Center: ${formatCoord(snapshot.subscriptionCenterLat)}, ${formatCoord(snapshot.subscriptionCenterLon)}",
+                color = Color(0xFFD1D5DB),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = "Radius: ${snapshot.receiveRadiusKm} km",
+                color = Color(0xFFD1D5DB),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = "DDB age: ${formatAge(snapshot.ddbCacheAgeMs)}",
+                color = Color(0xFFD1D5DB),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = "Backoff: ${formatBackoff(snapshot.reconnectBackoffMs)}",
+                color = Color(0xFFD1D5DB),
+                style = MaterialTheme.typography.bodySmall
+            )
+            snapshot.lastError?.takeIf { it.isNotBlank() }?.let { error ->
+                Text(
+                    text = "Error: $error",
+                    color = Color(0xFFFCA5A5),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        }
+    }
+}
+
+private fun OgnConnectionState.toDebugLabel(): String = when (this) {
+    OgnConnectionState.DISCONNECTED -> "DISCONNECTED"
+    OgnConnectionState.CONNECTING -> "CONNECTING"
+    OgnConnectionState.CONNECTED -> "CONNECTED"
+    OgnConnectionState.ERROR -> "ERROR"
+}
+
+private fun formatCoord(value: Double?): String {
+    if (value == null || !value.isFinite()) return "--"
+    return String.format(java.util.Locale.US, "%.4f", value)
+}
+
+private fun formatAge(ageMs: Long?): String {
+    if (ageMs == null || ageMs < 0L) return "--"
+    val seconds = ageMs / 1000L
+    return when {
+        seconds < 60L -> "${seconds}s"
+        seconds < 3600L -> "${seconds / 60L}m"
+        else -> "${seconds / 3600L}h"
+    }
+}
+
+private fun formatBackoff(backoffMs: Long?): String {
+    if (backoffMs == null || backoffMs <= 0L) return "--"
+    return "${backoffMs / 1000L}s"
 }
 
 @Composable

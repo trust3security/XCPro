@@ -64,6 +64,8 @@ class MapLifecycleManager(
                 Log.d(TAG, "Map view onStop, orientation manager stopped")
             }
             Lifecycle.Event.ON_DESTROY -> {
+                mapState.ognTrafficOverlay?.cleanup()
+                mapState.ognTrafficOverlay = null
                 mapState.mapView?.onDestroy()
                 locationManager.unbindRenderFrameListener()
                 Log.d(TAG, "Map view onDestroy")
@@ -81,6 +83,8 @@ class MapLifecycleManager(
             orientationManager.stop()
             locationManager.stopLocationTracking()
             locationManager.unbindRenderFrameListener()
+            mapState.ognTrafficOverlay?.cleanup()
+            mapState.ognTrafficOverlay = null
             mapState.mapView?.onDestroy()
             Log.d(TAG, "Cleanup completed: orientation manager stopped, location tracking stopped, map view destroyed")
         } catch (e: Exception) {

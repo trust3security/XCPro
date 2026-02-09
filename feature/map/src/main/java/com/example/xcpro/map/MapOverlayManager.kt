@@ -5,6 +5,7 @@ import android.util.Log
 import com.example.xcpro.airspace.AirspaceUseCase
 import com.example.xcpro.flightdata.WaypointFilesUseCase
 import com.example.xcpro.map.BuildConfig
+import com.example.xcpro.ogn.OgnTrafficTarget
 import com.example.xcpro.loadAndApplyAirspace
 import com.example.xcpro.loadAndApplyWaypoints
 import com.example.xcpro.map.trail.SnailTrailManager
@@ -31,6 +32,8 @@ class MapOverlayManager(
     companion object {
         private const val TAG = "MapOverlayManager"
     }
+
+    private var latestOgnTargets: List<OgnTrafficTarget> = emptyList()
 
     fun toggleDistanceCircles() {
         stateActions.toggleDistanceCircles()
@@ -114,6 +117,12 @@ class MapOverlayManager(
             mapState.blueLocationOverlay?.let {
                 Log.d(TAG, "Blue location overlay initialized via style change")
             }
+            if (map != null) {
+                mapState.ognTrafficOverlay?.cleanup()
+                mapState.ognTrafficOverlay = OgnTrafficOverlay(map)
+                mapState.ognTrafficOverlay?.initialize()
+                mapState.ognTrafficOverlay?.render(latestOgnTargets)
+            }
             snailTrailManager.onMapStyleChanged(map)
             mapState.blueLocationOverlay?.bringToFront()
             if (BuildConfig.DEBUG) {
@@ -132,12 +141,26 @@ class MapOverlayManager(
             refreshAirspace(map)
             refreshWaypoints(map)
             plotSavedTask(map)
+            if (map != null) {
+                mapState.ognTrafficOverlay = OgnTrafficOverlay(map)
+                mapState.ognTrafficOverlay?.initialize()
+                mapState.ognTrafficOverlay?.render(latestOgnTargets)
+            }
             if (BuildConfig.DEBUG) {
                 Log.d(TAG, "Map overlays initialized successfully")
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error initializing overlays: ${e.message}", e)
         }
+    }
+
+    fun updateOgnTrafficTargets(targets: List<OgnTrafficTarget>) {
+        latestOgnTargets = targets
+        val map = mapState.mapLibreMap ?: return
+        if (mapState.ognTrafficOverlay == null) {
+            mapState.ognTrafficOverlay = OgnTrafficOverlay(map)
+        }
+        mapState.ognTrafficOverlay?.render(targets)
     }
 
     fun onZoomChanged(map: MapLibreMap?) {
@@ -165,6 +188,12 @@ class MapOverlayManager(
                     if (mapState.blueLocationOverlay != null) "Initialized" else "Not Initialized"
                 }\n"
             )
+            append(
+                "- OGN Traffic Overlay: ${
+                    if (mapState.ognTrafficOverlay != null) "Initialized" else "Not Initialized"
+                }\n"
+            )
+            append("- OGN Targets: ${latestOgnTargets.size}\n")
             append("- Task Waypoints: ${taskManager.currentTask.waypoints.size}\n")
         }
     }
