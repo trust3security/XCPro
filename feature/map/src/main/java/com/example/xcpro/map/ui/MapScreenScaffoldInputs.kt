@@ -68,6 +68,7 @@ internal data class MapScreenScaffoldInputs(
     val showRecenterButton: Boolean,
     val showReturnButton: Boolean,
     val showDistanceCircles: Boolean,
+    val ognOverlayEnabled: Boolean,
     val isUiEditMode: Boolean,
     val onEditModeChange: (Boolean) -> Unit,
     val isAATEditMode: Boolean,
@@ -98,6 +99,7 @@ internal data class MapScreenScaffoldInputs(
     val qnhCalibrationState: QnhCalibrationState,
     val onAutoCalibrateQnh: () -> Unit,
     val onSetManualQnh: (Double) -> Unit,
+    val onToggleOgnTraffic: () -> Unit,
     val ballastUiState: StateFlow<BallastUiState>,
     val isBallastPillHidden: Boolean,
     val onBallastCommand: (BallastCommand) -> Unit,
@@ -167,6 +169,10 @@ internal fun rememberMapScreenScaffoldInputs(
         Log.d(MapScreenScaffoldInputsTag, "Map style selected: $style")
         onMapStyleSelected(style)
     }
+    val onMapReady: (MapLibreMap) -> Unit = { map ->
+        mapRuntimeController.onMapReady(map)
+        managers.overlayManager.updateOgnTrafficTargets(bindings.ognTargets)
+    }
 
     return MapScreenScaffoldInputs(
         drawerState = drawerState,
@@ -182,7 +188,7 @@ internal fun rememberMapScreenScaffoldInputs(
         density = density,
         mapState = mapState,
         mapInitializer = managers.mapInitializer,
-        onMapReady = mapRuntimeController::onMapReady,
+        onMapReady = onMapReady,
         locationManager = managers.locationManager,
         flightDataManager = mapViewModel.flightDataManager,
         flightViewModel = flightViewModel,
@@ -197,6 +203,7 @@ internal fun rememberMapScreenScaffoldInputs(
         showRecenterButton = bindings.showRecenterButton,
         showReturnButton = bindings.showReturnButton,
         showDistanceCircles = bindings.showDistanceCircles,
+        ognOverlayEnabled = bindings.ognOverlayEnabled,
         isUiEditMode = mapUiState.isUiEditMode,
         onEditModeChange = { enabled -> mapViewModel.onEvent(MapUiEvent.SetUiEditMode(enabled)) },
         isAATEditMode = bindings.isAATEditMode,
@@ -241,6 +248,7 @@ internal fun rememberMapScreenScaffoldInputs(
         qnhCalibrationState = mapUiState.qnhCalibrationState,
         onAutoCalibrateQnh = mapViewModel::onAutoCalibrateQnh,
         onSetManualQnh = mapViewModel::onSetManualQnh,
+        onToggleOgnTraffic = mapViewModel::onToggleOgnTraffic,
         ballastUiState = mapViewModel.ballastUiState,
         isBallastPillHidden = mapUiState.hideBallastPill,
         onBallastCommand = mapViewModel::submitBallastCommand,

@@ -20,6 +20,7 @@ import com.example.xcpro.hawk.HawkVarioUiState
 import com.example.xcpro.hawk.HawkVarioUseCase
 import com.example.xcpro.map.trail.MapTrailSettingsUseCase
 import com.example.xcpro.map.trail.domain.TrailUpdateResult
+import com.example.xcpro.ogn.OgnTrafficTarget
 import com.example.xcpro.qnh.CalibrateQnhUseCase
 import com.example.xcpro.qnh.QnhCalibrationFailureReason
 import com.example.xcpro.variometer.layout.VariometerUiState
@@ -33,6 +34,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -40,6 +43,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.FlowPreview
 import java.util.Locale
 
 /**
@@ -64,7 +68,8 @@ class MapScreenViewModel @Inject constructor(
     private val calibrateQnhUseCase: CalibrateQnhUseCase,
     private val variometerLayoutUseCase: VariometerLayoutUseCase,
     private val mapVarioPreferencesUseCase: MapVarioPreferencesUseCase,
-    private val hawkVarioUseCase: HawkVarioUseCase
+    private val hawkVarioUseCase: HawkVarioUseCase,
+    private val ognTrafficUseCase: OgnTrafficUseCase
 ) : ViewModel() {
 
     private val initialStyleName = mapStyleUseCase.initialStyle()
@@ -157,6 +162,14 @@ class MapScreenViewModel @Inject constructor(
         flightDataUseCase.flightData
             .map { it?.gps?.toUiModel() }
             .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    val ognTargets: StateFlow<List<OgnTrafficTarget>> = ognTrafficUseCase.targets
+    val ognOverlayEnabled: StateFlow<Boolean> =
+        ognTrafficUseCase.overlayEnabled
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = false
+            )
 
     val variometerUiState: StateFlow<VariometerUiState> = variometerLayoutUseCase.state
 
@@ -170,6 +183,7 @@ class MapScreenViewModel @Inject constructor(
     val mapCommands: SharedFlow<MapCommand> = _mapCommands.asSharedFlow()
     private val _containerReady = MutableStateFlow(false)
     private val _liveDataReady = MutableStateFlow(false)
+    private val _isMapVisible = MutableStateFlow(false)
     val cardHydrationReady: StateFlow<Boolean> =
         combine(_containerReady, _liveDataReady) { container, data -> container && data }
             .stateIn(viewModelScope, SharingStarted.Eagerly, false)
@@ -212,6 +226,7 @@ class MapScreenViewModel @Inject constructor(
         mapStateStore.setTrailSettings(trailSettingsUseCase.getSettings())
         mapStateStore.setDisplaySmoothingProfile(featureFlags.defaultDisplaySmoothingProfile)
         observeTrailSettings()
+        observeOgnTraffic()
         flightDataUiAdapter.start()
         replayCoordinator.start()
     }
@@ -341,6 +356,43 @@ class MapScreenViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
+    @OptIn(FlowPreview::class)
+    private fun observeOgnTraffic() {
+        combine(
+            allowSensorStart,
+            _isMapVisible,
+            ognOverlayEnabled
+        ) { sensorAllowed, mapVisible, overlayEnabled ->
+            sensorAllowed && mapVisible && overlayEnabled
+        }
+            .onEach { shouldStream ->
+                ognTrafficUseCase.setStreamingEnabled(shouldStream)
+            }
+            .launchIn(viewModelScope)
+
+        mapState.lastCameraSnapshot
+            .filterNotNull()
+            .debounce(1_500L)
+            .onEach { cameraSnapshot ->
+                ognTrafficUseCase.updateCenter(
+                    latitude = cameraSnapshot.target.latitude,
+                    longitude = cameraSnapshot.target.longitude
+                )
+            }
+            .launchIn(viewModelScope)
+    }
+
+    fun setMapVisible(isVisible: Boolean) {
+        if (_isMapVisible.value == isVisible) return
+        _isMapVisible.value = isVisible
+    }
+
+    fun onToggleOgnTraffic() {
+        viewModelScope.launch {
+            ognTrafficUseCase.setOverlayEnabled(!ognOverlayEnabled.value)
+        }
+    }
+
     private fun loadWaypoints() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingWaypoints = true, waypointError = null) }
@@ -447,6 +499,7 @@ class MapScreenViewModel @Inject constructor(
     }
 
     override fun onCleared() {
+        ognTrafficUseCase.stop()
         ballastController.dispose()
         super.onCleared()
     }

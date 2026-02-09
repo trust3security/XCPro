@@ -24,6 +24,7 @@ import androidx.compose.ui.zIndex
 import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.map.MapTaskScreenManager
 import com.example.ui1.icons.LocationSailplane
+import com.example.ui1.icons.Glider
 
 @Composable
 fun MapActionButtons(
@@ -32,8 +33,10 @@ fun MapActionButtons(
     showRecenterButton: Boolean,
     showReturnButton: Boolean,
     showDistanceCircles: Boolean,
+    showOgnTraffic: Boolean,
     onRecenter: () -> Unit,
     onToggleDistanceCircles: () -> Unit,
+    onToggleOgnTraffic: () -> Unit,
     onReturn: () -> Unit,
     onShowQnhDialog: () -> Unit,
     showQnhFab: Boolean,
@@ -53,6 +56,7 @@ fun MapActionButtons(
     val qnhTopPadding = 130.dp
     val fabSpacing = 64.dp
     val distanceTopPadding = if (showQnhFab) qnhTopPadding + fabSpacing else qnhTopPadding
+    val ognTopPadding = distanceTopPadding + fabSpacing
     val demoFabSize = 48.dp
     val demoSpacing = 12.6.dp // ~2mm gap between FAB edges
     val demoSim3BottomPadding = 16.dp
@@ -101,6 +105,14 @@ fun MapActionButtons(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(top = distanceTopPadding, end = 16.dp)
+        )
+
+        OgnTrafficButton(
+            isEnabled = showOgnTraffic,
+            onToggle = onToggleOgnTraffic,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = ognTopPadding, end = 16.dp)
         )
 
         if (showQnhFab) {
@@ -306,6 +318,37 @@ private fun QnhButton(
                     modifier = Modifier.size(10.dp)
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun OgnTrafficButton(
+    isEnabled: Boolean,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .size(48.dp)
+            .zIndex(50f)
+    ) {
+        FloatingActionButton(
+            onClick = onToggle,
+            modifier = Modifier.matchParentSize(),
+            containerColor = if (isEnabled) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            },
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp)
+        ) {
+            Icon(
+                imageVector = Glider,
+                contentDescription = "Toggle glider traffic",
+                modifier = Modifier.size(22.dp)
+            )
         }
     }
 }

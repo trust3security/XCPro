@@ -16,7 +16,10 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -177,9 +180,14 @@ internal fun MapScreenRoot(
     val locationForUi = bindings.locationForUi
     val trailSettings = bindings.trailSettings
     val trailUpdateResult = bindings.trailUpdateResult
+    val ognTargets = bindings.ognTargets
 
     // G AAT Edit Mode State - Track when AAT pin editing is active
     val isAATEditMode = bindings.isAATEditMode
+
+    LaunchedEffect(ognTargets) {
+        overlayManager.updateOgnTrafficTargets(ognTargets)
+    }
     
     // Map FlightMode to FlightModeSelection using FlightDataManager
     val currentFlightModeSelection = flightDataManager.currentFlightMode
@@ -290,6 +298,24 @@ internal fun MapScreenRoot(
         orientationData = orientationData,
         isReplayPlaying = replaySession.status == com.example.xcpro.replay.SessionStatus.PLAYING
     )
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, mapViewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_START,
+                Lifecycle.Event.ON_RESUME -> mapViewModel.setMapVisible(true)
+                Lifecycle.Event.ON_PAUSE,
+                Lifecycle.Event.ON_STOP -> mapViewModel.setMapVisible(false)
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            mapViewModel.setMapVisible(false)
+        }
+    }
 
     val scaffoldInputs = rememberMapScreenScaffoldInputs(
         coroutineScope = coroutineScope,

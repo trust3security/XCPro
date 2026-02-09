@@ -57,6 +57,11 @@ import com.example.xcpro.core.time.FakeClock
 import com.example.xcpro.ConfigurationRepository
 import com.example.xcpro.hawk.HawkVarioUiState
 import com.example.xcpro.hawk.HawkVarioUseCase
+import com.example.xcpro.ogn.OgnConnectionState
+import com.example.xcpro.ogn.OgnTrafficPreferencesRepository
+import com.example.xcpro.ogn.OgnTrafficRepository
+import com.example.xcpro.ogn.OgnTrafficSnapshot
+import com.example.xcpro.ogn.OgnTrafficTarget
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -331,6 +336,36 @@ class MapScreenViewModelTest {
         val mapFeatureFlagsUseCase = MapFeatureFlagsUseCase(mapFeatureFlags)
         val mapCardPreferencesUseCase = MapCardPreferencesUseCase(cardPreferences)
         val mapVarioPreferencesUseCase = MapVarioPreferencesUseCase(levoVarioPreferencesRepository)
+        val ognTrafficRepository = object : OgnTrafficRepository {
+            override val targets = MutableStateFlow<List<OgnTrafficTarget>>(emptyList())
+            override val snapshot = MutableStateFlow(
+                OgnTrafficSnapshot(
+                    targets = emptyList(),
+                    connectionState = OgnConnectionState.DISCONNECTED,
+                    lastError = null
+                )
+            )
+            override val isEnabled = MutableStateFlow(false)
+
+            override fun setEnabled(enabled: Boolean) {
+                isEnabled.value = enabled
+            }
+
+            override fun updateCenter(latitude: Double, longitude: Double) = Unit
+
+            override fun start() {
+                setEnabled(true)
+            }
+
+            override fun stop() {
+                setEnabled(false)
+            }
+        }
+        val ognTrafficPreferencesRepository = OgnTrafficPreferencesRepository(context)
+        val ognTrafficUseCase = OgnTrafficUseCase(
+            repository = ognTrafficRepository,
+            preferencesRepository = ognTrafficPreferencesRepository
+        )
 
         return MapScreenViewModel(
             mapStyleUseCase = mapStyleUseCase,
@@ -350,7 +385,8 @@ class MapScreenViewModelTest {
             calibrateQnhUseCase = calibrateQnhUseCase,
             variometerLayoutUseCase = variometerLayoutUseCase,
             mapVarioPreferencesUseCase = mapVarioPreferencesUseCase,
-            hawkVarioUseCase = hawkVarioUseCase
+            hawkVarioUseCase = hawkVarioUseCase,
+            ognTrafficUseCase = ognTrafficUseCase
         )
     }
 

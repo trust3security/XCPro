@@ -4,6 +4,10 @@ import com.example.xcpro.common.glider.GliderConfigRepository
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.units.UnitsRepository
 import com.example.xcpro.flightdata.FlightDataRepository
+import com.example.xcpro.ogn.OgnTrafficRepository
+import com.example.xcpro.ogn.OgnTrafficPreferencesRepository
+import com.example.xcpro.ogn.OgnTrafficSnapshot
+import com.example.xcpro.ogn.OgnTrafficTarget
 import com.example.xcpro.qnh.QnhRepository
 import com.example.xcpro.sensors.CompleteFlightData
 import com.example.xcpro.weather.wind.data.WindSensorFusionRepository
@@ -140,3 +144,29 @@ class MapCardPreferencesUseCase @Inject constructor(
 class MapFeatureFlagsUseCase @Inject constructor(
     val featureFlags: MapFeatureFlags
 )
+
+class OgnTrafficUseCase @Inject constructor(
+    private val repository: OgnTrafficRepository,
+    private val preferencesRepository: OgnTrafficPreferencesRepository
+) {
+    val targets: StateFlow<List<OgnTrafficTarget>> = repository.targets
+    val snapshot: StateFlow<OgnTrafficSnapshot> = repository.snapshot
+    val isStreamingEnabled: StateFlow<Boolean> = repository.isEnabled
+    val overlayEnabled: Flow<Boolean> = preferencesRepository.enabledFlow
+
+    fun setStreamingEnabled(enabled: Boolean) {
+        repository.setEnabled(enabled)
+    }
+
+    fun updateCenter(latitude: Double, longitude: Double) {
+        repository.updateCenter(latitude, longitude)
+    }
+
+    suspend fun setOverlayEnabled(enabled: Boolean) {
+        preferencesRepository.setEnabled(enabled)
+    }
+
+    fun stop() {
+        repository.stop()
+    }
+}

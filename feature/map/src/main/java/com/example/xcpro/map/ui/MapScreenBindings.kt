@@ -9,6 +9,7 @@ import com.example.xcpro.map.MapStateReader
 import com.example.xcpro.map.MapStateStore
 import com.example.xcpro.map.trail.TrailSettings
 import com.example.xcpro.map.trail.domain.TrailUpdateResult
+import com.example.xcpro.ogn.OgnTrafficTarget
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.map.model.GpsStatusUiModel
@@ -25,6 +26,8 @@ internal data class MapScreenBindings(
     val locationForUi: MapLocationUiModel?,
     val trailSettings: TrailSettings,
     val trailUpdateResult: TrailUpdateResult?,
+    val ognTargets: List<OgnTrafficTarget>,
+    val ognOverlayEnabled: Boolean,
     val isAATEditMode: Boolean,
     val savedLocation: MapStateStore.MapPoint?,
     val savedZoom: Double?,
@@ -49,6 +52,8 @@ internal fun rememberMapScreenBindings(
     val locationForUi by mapViewModel.mapLocation.collectAsStateWithLifecycle()
     val trailSettings by mapStateReader.trailSettings.collectAsStateWithLifecycle()
     val trailUpdateResult by mapViewModel.trailUpdates.collectAsStateWithLifecycle()
+    val ognTargets by mapViewModel.ognTargets.collectAsStateWithLifecycle()
+    val ognOverlayEnabled by mapViewModel.ognOverlayEnabled.collectAsStateWithLifecycle()
     val isAATEditMode by mapViewModel.isAATEditMode.collectAsStateWithLifecycle()
     val savedLocation by mapStateReader.savedLocation.collectAsStateWithLifecycle()
     val savedZoom by mapStateReader.savedZoom.collectAsStateWithLifecycle()
@@ -68,6 +73,8 @@ internal fun rememberMapScreenBindings(
         locationForUi = locationForUi,
         trailSettings = trailSettings,
         trailUpdateResult = trailUpdateResult,
+        ognTargets = ognTargets,
+        ognOverlayEnabled = ognOverlayEnabled,
         isAATEditMode = isAATEditMode,
         savedLocation = savedLocation,
         savedZoom = savedZoom,
