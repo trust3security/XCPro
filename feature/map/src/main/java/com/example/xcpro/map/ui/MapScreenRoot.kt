@@ -305,6 +305,9 @@ internal fun MapScreenRoot(
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner, mapViewModel) {
+        mapViewModel.setMapVisible(
+            lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
+        )
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_START,
