@@ -2,6 +2,12 @@ package com.example.xcpro.di
 
 import com.example.xcpro.common.waypoint.WaypointLoader
 import com.example.xcpro.common.glider.GliderConfigRepository
+import com.example.xcpro.adsb.AdsbProviderClient
+import com.example.xcpro.adsb.AdsbTrafficRepository
+import com.example.xcpro.adsb.AdsbTrafficRepositoryImpl
+import com.example.xcpro.adsb.OpenSkyProviderClient
+import com.example.xcpro.adsb.OpenSkyTokenRepository
+import com.example.xcpro.adsb.OpenSkyTokenRepositoryImpl
 import com.example.xcpro.glider.GliderRepository
 import com.example.xcpro.map.RealWaypointLoader
 import com.example.xcpro.ogn.OgnTrafficRepository
@@ -32,4 +38,17 @@ abstract class GliderRepositoryModule {
 abstract class OgnBindingsModule {
     @Binds
     abstract fun bindOgnTrafficRepository(impl: OgnTrafficRepositoryImpl): OgnTrafficRepository
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+abstract class AdsbBindingsModule {
+    @Binds
+    abstract fun bindAdsbProviderClient(impl: OpenSkyProviderClient): AdsbProviderClient
+
+    @Binds
+    abstract fun bindOpenSkyTokenRepository(impl: OpenSkyTokenRepositoryImpl): OpenSkyTokenRepository
+
+    @Binds
+    abstract fun bindAdsbTrafficRepository(impl: AdsbTrafficRepositoryImpl): AdsbTrafficRepository
 }

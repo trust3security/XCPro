@@ -181,12 +181,16 @@ internal fun MapScreenRoot(
     val trailSettings = bindings.trailSettings
     val trailUpdateResult = bindings.trailUpdateResult
     val ognTargets = bindings.ognTargets
+    val adsbTargets = bindings.adsbTargets
 
     // G AAT Edit Mode State - Track when AAT pin editing is active
     val isAATEditMode = bindings.isAATEditMode
 
     LaunchedEffect(ognTargets) {
         overlayManager.updateOgnTrafficTargets(ognTargets)
+    }
+    LaunchedEffect(adsbTargets) {
+        overlayManager.updateAdsbTrafficTargets(adsbTargets)
     }
     
     // Map FlightMode to FlightModeSelection using FlightDataManager

@@ -3,6 +3,7 @@ package com.example.xcpro.map
 import android.content.Context
 import android.util.Log
 import com.example.xcpro.airspace.AirspaceUseCase
+import com.example.xcpro.adsb.AdsbTrafficUiModel
 import com.example.xcpro.flightdata.WaypointFilesUseCase
 import com.example.xcpro.map.BuildConfig
 import com.example.xcpro.ogn.OgnTrafficTarget
@@ -12,6 +13,7 @@ import com.example.xcpro.map.trail.SnailTrailManager
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 
 /**
@@ -34,6 +36,7 @@ class MapOverlayManager(
     }
 
     private var latestOgnTargets: List<OgnTrafficTarget> = emptyList()
+    private var latestAdsbTargets: List<AdsbTrafficUiModel> = emptyList()
 
     fun toggleDistanceCircles() {
         stateActions.toggleDistanceCircles()
@@ -122,6 +125,11 @@ class MapOverlayManager(
                 mapState.ognTrafficOverlay = OgnTrafficOverlay(map)
                 mapState.ognTrafficOverlay?.initialize()
                 mapState.ognTrafficOverlay?.render(latestOgnTargets)
+
+                mapState.adsbTrafficOverlay?.cleanup()
+                mapState.adsbTrafficOverlay = AdsbTrafficOverlay(map)
+                mapState.adsbTrafficOverlay?.initialize()
+                mapState.adsbTrafficOverlay?.render(latestAdsbTargets)
             }
             snailTrailManager.onMapStyleChanged(map)
             mapState.blueLocationOverlay?.bringToFront()
@@ -145,6 +153,10 @@ class MapOverlayManager(
                 mapState.ognTrafficOverlay = OgnTrafficOverlay(map)
                 mapState.ognTrafficOverlay?.initialize()
                 mapState.ognTrafficOverlay?.render(latestOgnTargets)
+
+                mapState.adsbTrafficOverlay = AdsbTrafficOverlay(map)
+                mapState.adsbTrafficOverlay?.initialize()
+                mapState.adsbTrafficOverlay?.render(latestAdsbTargets)
             }
             if (BuildConfig.DEBUG) {
                 Log.d(TAG, "Map overlays initialized successfully")
@@ -161,6 +173,20 @@ class MapOverlayManager(
             mapState.ognTrafficOverlay = OgnTrafficOverlay(map)
         }
         mapState.ognTrafficOverlay?.render(targets)
+    }
+
+    fun updateAdsbTrafficTargets(targets: List<AdsbTrafficUiModel>) {
+        latestAdsbTargets = targets
+        val map = mapState.mapLibreMap ?: return
+        if (mapState.adsbTrafficOverlay == null) {
+            mapState.adsbTrafficOverlay = AdsbTrafficOverlay(map)
+        }
+        mapState.adsbTrafficOverlay?.render(targets)
+    }
+
+    fun findAdsbTargetAt(tap: LatLng): AdsbTrafficUiModel? {
+        val byId = latestAdsbTargets.associateBy { it.id.raw }
+        return mapState.adsbTrafficOverlay?.findTargetAt(tap, byId)
     }
 
     fun onZoomChanged(map: MapLibreMap?) {
@@ -194,6 +220,12 @@ class MapOverlayManager(
                 }\n"
             )
             append("- OGN Targets: ${latestOgnTargets.size}\n")
+            append(
+                "- ADS-B Traffic Overlay: ${
+                    if (mapState.adsbTrafficOverlay != null) "Initialized" else "Not Initialized"
+                }\n"
+            )
+            append("- ADS-B Targets: ${latestAdsbTargets.size}\n")
             append("- Task Waypoints: ${taskManager.currentTask.waypoints.size}\n")
         }
     }

@@ -31,6 +31,8 @@ import com.example.xcpro.qnh.QnhCalibrationState
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.map.model.GpsStatusUiModel
+import com.example.xcpro.adsb.AdsbTrafficSnapshot
+import com.example.xcpro.adsb.AdsbTrafficUiModel
 import com.example.xcpro.ogn.OgnTrafficSnapshot
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
 import com.example.xcpro.tasks.TaskManagerCoordinator
@@ -71,6 +73,9 @@ internal data class MapScreenScaffoldInputs(
     val showDistanceCircles: Boolean,
     val ognSnapshot: OgnTrafficSnapshot,
     val ognOverlayEnabled: Boolean,
+    val adsbSnapshot: AdsbTrafficSnapshot,
+    val adsbOverlayEnabled: Boolean,
+    val selectedAdsbTarget: AdsbTrafficUiModel?,
     val isUiEditMode: Boolean,
     val onEditModeChange: (Boolean) -> Unit,
     val isAATEditMode: Boolean,
@@ -102,6 +107,8 @@ internal data class MapScreenScaffoldInputs(
     val onAutoCalibrateQnh: () -> Unit,
     val onSetManualQnh: (Double) -> Unit,
     val onToggleOgnTraffic: () -> Unit,
+    val onToggleAdsbTraffic: () -> Unit,
+    val onDismissAdsbTargetDetails: () -> Unit,
     val ballastUiState: StateFlow<BallastUiState>,
     val isBallastPillHidden: Boolean,
     val onBallastCommand: (BallastCommand) -> Unit,
@@ -174,6 +181,16 @@ internal fun rememberMapScreenScaffoldInputs(
     val onMapReady: (MapLibreMap) -> Unit = { map ->
         mapRuntimeController.onMapReady(map)
         managers.overlayManager.updateOgnTrafficTargets(bindings.ognTargets)
+        managers.overlayManager.updateAdsbTrafficTargets(bindings.adsbTargets)
+        map.addOnMapClickListener { tap ->
+            val tappedTarget = managers.overlayManager.findAdsbTargetAt(tap)
+            if (tappedTarget != null) {
+                mapViewModel.onAdsbTargetSelected(tappedTarget)
+                true
+            } else {
+                false
+            }
+        }
     }
 
     return MapScreenScaffoldInputs(
@@ -207,6 +224,9 @@ internal fun rememberMapScreenScaffoldInputs(
         showDistanceCircles = bindings.showDistanceCircles,
         ognSnapshot = bindings.ognSnapshot,
         ognOverlayEnabled = bindings.ognOverlayEnabled,
+        adsbSnapshot = bindings.adsbSnapshot,
+        adsbOverlayEnabled = bindings.adsbOverlayEnabled,
+        selectedAdsbTarget = bindings.selectedAdsbTarget,
         isUiEditMode = mapUiState.isUiEditMode,
         onEditModeChange = { enabled -> mapViewModel.onEvent(MapUiEvent.SetUiEditMode(enabled)) },
         isAATEditMode = bindings.isAATEditMode,
@@ -252,6 +272,8 @@ internal fun rememberMapScreenScaffoldInputs(
         onAutoCalibrateQnh = mapViewModel::onAutoCalibrateQnh,
         onSetManualQnh = mapViewModel::onSetManualQnh,
         onToggleOgnTraffic = mapViewModel::onToggleOgnTraffic,
+        onToggleAdsbTraffic = mapViewModel::onToggleAdsbTraffic,
+        onDismissAdsbTargetDetails = mapViewModel::dismissSelectedAdsbTarget,
         ballastUiState = mapViewModel.ballastUiState,
         isBallastPillHidden = mapUiState.hideBallastPill,
         onBallastCommand = mapViewModel::submitBallastCommand,

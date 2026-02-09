@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Flight
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.PlayArrow
@@ -34,9 +35,11 @@ fun MapActionButtons(
     showReturnButton: Boolean,
     showDistanceCircles: Boolean,
     showOgnTraffic: Boolean,
+    showAdsbTraffic: Boolean,
     onRecenter: () -> Unit,
     onToggleDistanceCircles: () -> Unit,
     onToggleOgnTraffic: () -> Unit,
+    onToggleAdsbTraffic: () -> Unit,
     onReturn: () -> Unit,
     onShowQnhDialog: () -> Unit,
     showQnhFab: Boolean,
@@ -57,6 +60,7 @@ fun MapActionButtons(
     val fabSpacing = 64.dp
     val distanceTopPadding = if (showQnhFab) qnhTopPadding + fabSpacing else qnhTopPadding
     val ognTopPadding = distanceTopPadding + fabSpacing
+    val adsbTopPadding = ognTopPadding + fabSpacing
     val demoFabSize = 48.dp
     val demoSpacing = 12.6.dp // ~2mm gap between FAB edges
     val demoSim3BottomPadding = 16.dp
@@ -113,6 +117,14 @@ fun MapActionButtons(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(top = ognTopPadding, end = 16.dp)
+        )
+
+        AdsbTrafficButton(
+            isEnabled = showAdsbTraffic,
+            onToggle = onToggleAdsbTraffic,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = adsbTopPadding, end = 16.dp)
         )
 
         if (showQnhFab) {
@@ -347,6 +359,37 @@ private fun OgnTrafficButton(
             Icon(
                 imageVector = Glider,
                 contentDescription = "Toggle glider traffic",
+                modifier = Modifier.size(22.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun AdsbTrafficButton(
+    isEnabled: Boolean,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .size(48.dp)
+            .zIndex(50f)
+    ) {
+        FloatingActionButton(
+            onClick = onToggle,
+            modifier = Modifier.matchParentSize(),
+            containerColor = if (isEnabled) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            },
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Flight,
+                contentDescription = "Toggle ADS-B traffic",
                 modifier = Modifier.size(22.dp)
             )
         }

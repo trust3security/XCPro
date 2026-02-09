@@ -42,6 +42,8 @@ import com.example.xcpro.navdrawer.NavigationDrawer
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.map.model.GpsStatusUiModel
+import com.example.xcpro.adsb.AdsbTrafficSnapshot
+import com.example.xcpro.adsb.AdsbTrafficUiModel
 import com.example.xcpro.ogn.OgnTrafficSnapshot
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
 import com.example.xcpro.tasks.TaskManagerCoordinator
@@ -85,6 +87,9 @@ internal fun MapScreenScaffold(inputs: MapScreenScaffoldInputs) {
         showDistanceCircles = inputs.showDistanceCircles,
         ognSnapshot = inputs.ognSnapshot,
         ognOverlayEnabled = inputs.ognOverlayEnabled,
+        adsbSnapshot = inputs.adsbSnapshot,
+        adsbOverlayEnabled = inputs.adsbOverlayEnabled,
+        selectedAdsbTarget = inputs.selectedAdsbTarget,
         isUiEditMode = inputs.isUiEditMode,
         onEditModeChange = inputs.onEditModeChange,
         isAATEditMode = inputs.isAATEditMode,
@@ -116,6 +121,8 @@ internal fun MapScreenScaffold(inputs: MapScreenScaffoldInputs) {
         onAutoCalibrateQnh = inputs.onAutoCalibrateQnh,
         onSetManualQnh = inputs.onSetManualQnh,
         onToggleOgnTraffic = inputs.onToggleOgnTraffic,
+        onToggleAdsbTraffic = inputs.onToggleAdsbTraffic,
+        onDismissAdsbTargetDetails = inputs.onDismissAdsbTargetDetails,
         ballastUiState = inputs.ballastUiState,
         isBallastPillHidden = inputs.isBallastPillHidden,
         onBallastCommand = inputs.onBallastCommand,
@@ -166,6 +173,9 @@ internal fun MapScreenScaffold(
     showDistanceCircles: Boolean,
     ognSnapshot: OgnTrafficSnapshot,
     ognOverlayEnabled: Boolean,
+    adsbSnapshot: AdsbTrafficSnapshot,
+    adsbOverlayEnabled: Boolean,
+    selectedAdsbTarget: AdsbTrafficUiModel?,
     isUiEditMode: Boolean,
     onEditModeChange: (Boolean) -> Unit,
     isAATEditMode: Boolean,
@@ -197,6 +207,8 @@ internal fun MapScreenScaffold(
     onAutoCalibrateQnh: () -> Unit,
     onSetManualQnh: (Double) -> Unit,
     onToggleOgnTraffic: () -> Unit,
+    onToggleAdsbTraffic: () -> Unit,
+    onDismissAdsbTargetDetails: () -> Unit,
     ballastUiState: StateFlow<BallastUiState>,
     isBallastPillHidden: Boolean,
     onBallastCommand: (BallastCommand) -> Unit,
@@ -252,6 +264,9 @@ internal fun MapScreenScaffold(
                     showDistanceCircles = showDistanceCircles,
                     ognSnapshot = ognSnapshot,
                     ognOverlayEnabled = ognOverlayEnabled,
+                    adsbSnapshot = adsbSnapshot,
+                    adsbOverlayEnabled = adsbOverlayEnabled,
+                    selectedAdsbTarget = selectedAdsbTarget,
                     isUiEditMode = isUiEditMode,
                     onEditModeChange = onEditModeChange,
                     isAATEditMode = isAATEditMode,
@@ -283,6 +298,8 @@ internal fun MapScreenScaffold(
                     onAutoCalibrateQnh = onAutoCalibrateQnh,
                     onSetManualQnh = onSetManualQnh,
                     onToggleOgnTraffic = onToggleOgnTraffic,
+                    onToggleAdsbTraffic = onToggleAdsbTraffic,
+                    onDismissAdsbTargetDetails = onDismissAdsbTargetDetails,
                     ballastUiState = ballastUiState,
                     isBallastPillHidden = isBallastPillHidden,
                     onBallastCommand = onBallastCommand,

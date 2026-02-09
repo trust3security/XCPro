@@ -3,6 +3,10 @@ package com.example.xcpro.map
 import com.example.xcpro.common.glider.GliderConfigRepository
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.units.UnitsRepository
+import com.example.xcpro.adsb.AdsbTrafficPreferencesRepository
+import com.example.xcpro.adsb.AdsbTrafficRepository
+import com.example.xcpro.adsb.AdsbTrafficSnapshot
+import com.example.xcpro.adsb.AdsbTrafficUiModel
 import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.ogn.OgnTrafficRepository
 import com.example.xcpro.ogn.OgnTrafficPreferencesRepository
@@ -151,6 +155,32 @@ class OgnTrafficUseCase @Inject constructor(
 ) {
     val targets: StateFlow<List<OgnTrafficTarget>> = repository.targets
     val snapshot: StateFlow<OgnTrafficSnapshot> = repository.snapshot
+    val isStreamingEnabled: StateFlow<Boolean> = repository.isEnabled
+    val overlayEnabled: Flow<Boolean> = preferencesRepository.enabledFlow
+
+    fun setStreamingEnabled(enabled: Boolean) {
+        repository.setEnabled(enabled)
+    }
+
+    fun updateCenter(latitude: Double, longitude: Double) {
+        repository.updateCenter(latitude, longitude)
+    }
+
+    suspend fun setOverlayEnabled(enabled: Boolean) {
+        preferencesRepository.setEnabled(enabled)
+    }
+
+    fun stop() {
+        repository.stop()
+    }
+}
+
+class AdsbTrafficUseCase @Inject constructor(
+    private val repository: AdsbTrafficRepository,
+    private val preferencesRepository: AdsbTrafficPreferencesRepository
+) {
+    val targets: StateFlow<List<AdsbTrafficUiModel>> = repository.targets
+    val snapshot: StateFlow<AdsbTrafficSnapshot> = repository.snapshot
     val isStreamingEnabled: StateFlow<Boolean> = repository.isEnabled
     val overlayEnabled: Flow<Boolean> = preferencesRepository.enabledFlow
 

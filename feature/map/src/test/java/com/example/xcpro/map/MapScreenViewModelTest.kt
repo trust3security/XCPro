@@ -57,6 +57,11 @@ import com.example.xcpro.core.time.FakeClock
 import com.example.xcpro.ConfigurationRepository
 import com.example.xcpro.hawk.HawkVarioUiState
 import com.example.xcpro.hawk.HawkVarioUseCase
+import com.example.xcpro.adsb.AdsbConnectionState
+import com.example.xcpro.adsb.AdsbTrafficPreferencesRepository
+import com.example.xcpro.adsb.AdsbTrafficRepository
+import com.example.xcpro.adsb.AdsbTrafficSnapshot
+import com.example.xcpro.adsb.AdsbTrafficUiModel
 import com.example.xcpro.ogn.OgnConnectionState
 import com.example.xcpro.ogn.OgnTrafficPreferencesRepository
 import com.example.xcpro.ogn.OgnTrafficRepository
@@ -372,6 +377,46 @@ class MapScreenViewModelTest {
             repository = ognTrafficRepository,
             preferencesRepository = ognTrafficPreferencesRepository
         )
+        val adsbTrafficRepository = object : AdsbTrafficRepository {
+            override val targets = MutableStateFlow<List<AdsbTrafficUiModel>>(emptyList())
+            override val snapshot = MutableStateFlow(
+                AdsbTrafficSnapshot(
+                    targets = emptyList(),
+                    connectionState = AdsbConnectionState.Disabled,
+                    centerLat = null,
+                    centerLon = null,
+                    receiveRadiusKm = 20,
+                    fetchedCount = 0,
+                    withinRadiusCount = 0,
+                    displayedCount = 0,
+                    lastHttpStatus = null,
+                    remainingCredits = null,
+                    lastPollMonoMs = null,
+                    lastSuccessMonoMs = null,
+                    lastError = null
+                )
+            )
+            override val isEnabled = MutableStateFlow(false)
+
+            override fun setEnabled(enabled: Boolean) {
+                isEnabled.value = enabled
+            }
+
+            override fun updateCenter(latitude: Double, longitude: Double) = Unit
+
+            override fun start() {
+                setEnabled(true)
+            }
+
+            override fun stop() {
+                setEnabled(false)
+            }
+        }
+        val adsbTrafficPreferencesRepository = AdsbTrafficPreferencesRepository(context)
+        val adsbTrafficUseCase = AdsbTrafficUseCase(
+            repository = adsbTrafficRepository,
+            preferencesRepository = adsbTrafficPreferencesRepository
+        )
 
         return MapScreenViewModel(
             mapStyleUseCase = mapStyleUseCase,
@@ -392,7 +437,8 @@ class MapScreenViewModelTest {
             variometerLayoutUseCase = variometerLayoutUseCase,
             mapVarioPreferencesUseCase = mapVarioPreferencesUseCase,
             hawkVarioUseCase = hawkVarioUseCase,
-            ognTrafficUseCase = ognTrafficUseCase
+            ognTrafficUseCase = ognTrafficUseCase,
+            adsbTrafficUseCase = adsbTrafficUseCase
         )
     }
 

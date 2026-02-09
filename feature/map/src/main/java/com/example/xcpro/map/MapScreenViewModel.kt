@@ -7,6 +7,8 @@ import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.flow.inVm
 import com.example.xcpro.core.common.geometry.OffsetPx
 import com.example.xcpro.common.units.UnitsPreferences
+import com.example.xcpro.adsb.AdsbTrafficSnapshot
+import com.example.xcpro.adsb.AdsbTrafficUiModel
 import com.example.xcpro.weather.wind.model.WindState
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.replay.SessionStatus
@@ -70,7 +72,8 @@ class MapScreenViewModel @Inject constructor(
     private val variometerLayoutUseCase: VariometerLayoutUseCase,
     private val mapVarioPreferencesUseCase: MapVarioPreferencesUseCase,
     private val hawkVarioUseCase: HawkVarioUseCase,
-    private val ognTrafficUseCase: OgnTrafficUseCase
+    private val ognTrafficUseCase: OgnTrafficUseCase,
+    private val adsbTrafficUseCase: AdsbTrafficUseCase
 ) : ViewModel() {
 
     private val initialStyleName = mapStyleUseCase.initialStyle()
@@ -172,6 +175,15 @@ class MapScreenViewModel @Inject constructor(
                 started = SharingStarted.Eagerly,
                 initialValue = false
             )
+    val adsbTargets: StateFlow<List<AdsbTrafficUiModel>> = adsbTrafficUseCase.targets
+    val adsbSnapshot: StateFlow<AdsbTrafficSnapshot> = adsbTrafficUseCase.snapshot
+    val adsbOverlayEnabled: StateFlow<Boolean> =
+        adsbTrafficUseCase.overlayEnabled
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = false
+            )
 
     val variometerUiState: StateFlow<VariometerUiState> = variometerLayoutUseCase.state
 
@@ -183,6 +195,8 @@ class MapScreenViewModel @Inject constructor(
     val uiEffects: SharedFlow<MapUiEffect> = _uiEffects.asSharedFlow()
     private val _mapCommands = MutableSharedFlow<MapCommand>(extraBufferCapacity = 1)
     val mapCommands: SharedFlow<MapCommand> = _mapCommands.asSharedFlow()
+    private val _selectedAdsbTarget = MutableStateFlow<AdsbTrafficUiModel?>(null)
+    val selectedAdsbTarget: StateFlow<AdsbTrafficUiModel?> = _selectedAdsbTarget.asStateFlow()
     private val _containerReady = MutableStateFlow(false)
     private val _liveDataReady = MutableStateFlow(false)
     private val _isMapVisible = MutableStateFlow(false)
@@ -229,6 +243,7 @@ class MapScreenViewModel @Inject constructor(
         mapStateStore.setDisplaySmoothingProfile(featureFlags.defaultDisplaySmoothingProfile)
         observeTrailSettings()
         observeOgnTraffic()
+        observeAdsbTraffic()
         flightDataUiAdapter.start()
         replayCoordinator.start()
     }
@@ -384,6 +399,32 @@ class MapScreenViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
+    @OptIn(FlowPreview::class)
+    private fun observeAdsbTraffic() {
+        combine(
+            allowSensorStart,
+            _isMapVisible,
+            adsbOverlayEnabled
+        ) { sensorAllowed, mapVisible, overlayEnabled ->
+            sensorAllowed && mapVisible && overlayEnabled
+        }
+            .onEach { shouldStream ->
+                adsbTrafficUseCase.setStreamingEnabled(shouldStream)
+            }
+            .launchIn(viewModelScope)
+
+        mapLocation
+            .filterNotNull()
+            .debounce(1_500L)
+            .onEach { location ->
+                adsbTrafficUseCase.updateCenter(
+                    latitude = location.latitude,
+                    longitude = location.longitude
+                )
+            }
+            .launchIn(viewModelScope)
+    }
+
     fun setMapVisible(isVisible: Boolean) {
         if (_isMapVisible.value == isVisible) return
         _isMapVisible.value = isVisible
@@ -393,6 +434,24 @@ class MapScreenViewModel @Inject constructor(
         viewModelScope.launch {
             ognTrafficUseCase.setOverlayEnabled(!ognOverlayEnabled.value)
         }
+    }
+
+    fun onToggleAdsbTraffic() {
+        viewModelScope.launch {
+            val next = !adsbOverlayEnabled.value
+            adsbTrafficUseCase.setOverlayEnabled(next)
+            if (!next) {
+                _selectedAdsbTarget.value = null
+            }
+        }
+    }
+
+    fun onAdsbTargetSelected(target: AdsbTrafficUiModel) {
+        _selectedAdsbTarget.value = target
+    }
+
+    fun dismissSelectedAdsbTarget() {
+        _selectedAdsbTarget.value = null
     }
 
     private fun loadWaypoints() {
@@ -502,6 +561,7 @@ class MapScreenViewModel @Inject constructor(
 
     override fun onCleared() {
         ognTrafficUseCase.stop()
+        adsbTrafficUseCase.stop()
         ballastController.dispose()
         super.onCleared()
     }

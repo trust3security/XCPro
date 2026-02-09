@@ -34,6 +34,10 @@ import com.example.dfcards.RealTimeFlightData
 import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.units.UnitsPreferences
+import com.example.xcpro.adsb.AdsbConnectionState
+import com.example.xcpro.adsb.AdsbMarkerDetailsSheet
+import com.example.xcpro.adsb.AdsbTrafficSnapshot
+import com.example.xcpro.adsb.AdsbTrafficUiModel
 import com.example.xcpro.map.BuildConfig
 import com.example.xcpro.map.components.MapActionButtons
 import com.example.xcpro.map.MapCameraManager
@@ -92,6 +96,9 @@ internal fun MapScreenContent(
     showDistanceCircles: Boolean,
     ognSnapshot: OgnTrafficSnapshot,
     ognOverlayEnabled: Boolean,
+    adsbSnapshot: AdsbTrafficSnapshot,
+    adsbOverlayEnabled: Boolean,
+    selectedAdsbTarget: AdsbTrafficUiModel?,
     isUiEditMode: Boolean,
     onEditModeChange: (Boolean) -> Unit,
     isAATEditMode: Boolean,
@@ -123,6 +130,8 @@ internal fun MapScreenContent(
     onAutoCalibrateQnh: () -> Unit,
     onSetManualQnh: (Double) -> Unit,
     onToggleOgnTraffic: () -> Unit,
+    onToggleAdsbTraffic: () -> Unit,
+    onDismissAdsbTargetDetails: () -> Unit,
     ballastUiState: StateFlow<BallastUiState>,
     isBallastPillHidden: Boolean,
     onBallastCommand: (BallastCommand) -> Unit,
@@ -230,12 +239,14 @@ internal fun MapScreenContent(
             showReturnButton = showReturnButton,
             showDistanceCircles = showDistanceCircles,
             showOgnTraffic = ognOverlayEnabled,
+            showAdsbTraffic = adsbOverlayEnabled,
             showQnhFab = showQnhFab,
             showVarioDemoFab = showVarioDemoFab,
             showRacingReplayFab = showRacingReplayFab,
             onRecenter = locationManager::recenterOnCurrentLocation,
             onToggleDistanceCircles = { overlayManager.toggleDistanceCircles() },
             onToggleOgnTraffic = onToggleOgnTraffic,
+            onToggleAdsbTraffic = onToggleAdsbTraffic,
             onReturn = { locationManager.returnToSavedLocation() },
             onShowQnhDialog = {
                 val currentQnh = flightDataManager.liveFlightData?.qnh ?: 1013.25
@@ -257,6 +268,14 @@ internal fun MapScreenContent(
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .padding(start = 16.dp, bottom = 24.dp)
+        )
+
+        AdsbDebugPanel(
+            visible = BuildConfig.DEBUG && adsbOverlayEnabled,
+            snapshot = adsbSnapshot,
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(start = 16.dp, bottom = 132.dp)
         )
 
         QnhDialogHost(
@@ -289,6 +308,14 @@ internal fun MapScreenContent(
                 qnhError = null
             }
         )
+
+        selectedAdsbTarget?.let { target ->
+            AdsbMarkerDetailsSheet(
+                target = target,
+                unitsPreferences = unitsPreferences,
+                onDismiss = onDismissAdsbTargetDetails
+            )
+        }
     }
 
     ReplayDiagnosticsLogger(
@@ -361,6 +388,66 @@ private fun OgnConnectionState.toDebugLabel(): String = when (this) {
     OgnConnectionState.CONNECTING -> "CONNECTING"
     OgnConnectionState.CONNECTED -> "CONNECTED"
     OgnConnectionState.ERROR -> "ERROR"
+}
+
+@Composable
+private fun AdsbDebugPanel(
+    visible: Boolean,
+    snapshot: AdsbTrafficSnapshot,
+    modifier: Modifier = Modifier
+) {
+    if (!visible) return
+    Surface(
+        modifier = modifier,
+        color = Color(0xCC1F2937),
+        tonalElevation = 4.dp,
+        shadowElevation = 4.dp,
+        shape = MaterialTheme.shapes.small
+    ) {
+        androidx.compose.foundation.layout.Column(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+        ) {
+            Text(
+                text = "ADS-B ${snapshot.connectionState.toDebugLabel()}",
+                color = Color(0xFFF9FAFB),
+                style = MaterialTheme.typography.labelMedium
+            )
+            Text(
+                text = "Counts: ${snapshot.fetchedCount}/${snapshot.withinRadiusCount}/${snapshot.displayedCount}",
+                color = Color(0xFFE5E7EB),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = "Center: ${formatCoord(snapshot.centerLat)}, ${formatCoord(snapshot.centerLon)}",
+                color = Color(0xFFE5E7EB),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = "Radius: ${snapshot.receiveRadiusKm} km",
+                color = Color(0xFFE5E7EB),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = "HTTP: ${snapshot.lastHttpStatus ?: "--"} | Credits: ${snapshot.remainingCredits ?: "--"}",
+                color = Color(0xFFE5E7EB),
+                style = MaterialTheme.typography.bodySmall
+            )
+            snapshot.lastError?.takeIf { it.isNotBlank() }?.let { error ->
+                Text(
+                    text = "Error: $error",
+                    color = Color(0xFFFCA5A5),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        }
+    }
+}
+
+private fun AdsbConnectionState.toDebugLabel(): String = when (this) {
+    AdsbConnectionState.Disabled -> "DISABLED"
+    AdsbConnectionState.Active -> "ACTIVE"
+    is AdsbConnectionState.BackingOff -> "BACKOFF ${retryAfterSec}s"
+    is AdsbConnectionState.Error -> "ERROR"
 }
 
 private fun formatCoord(value: Double?): String {
@@ -448,12 +535,14 @@ private fun MapActionButtonsLayer(
     showReturnButton: Boolean,
     showDistanceCircles: Boolean,
     showOgnTraffic: Boolean,
+    showAdsbTraffic: Boolean,
     showQnhFab: Boolean,
     showVarioDemoFab: Boolean,
     showRacingReplayFab: Boolean,
     onRecenter: () -> Unit,
     onToggleDistanceCircles: () -> Unit,
     onToggleOgnTraffic: () -> Unit,
+    onToggleAdsbTraffic: () -> Unit,
     onReturn: () -> Unit,
     onShowQnhDialog: () -> Unit,
     onDismissQnhFab: () -> Unit,
@@ -471,9 +560,11 @@ private fun MapActionButtonsLayer(
         showReturnButton = showReturnButton,
         showDistanceCircles = showDistanceCircles,
         showOgnTraffic = showOgnTraffic,
+        showAdsbTraffic = showAdsbTraffic,
         onRecenter = onRecenter,
         onToggleDistanceCircles = onToggleDistanceCircles,
         onToggleOgnTraffic = onToggleOgnTraffic,
+        onToggleAdsbTraffic = onToggleAdsbTraffic,
         onReturn = onReturn,
         onShowQnhDialog = onShowQnhDialog,
         showQnhFab = showQnhFab,
