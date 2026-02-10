@@ -9,7 +9,9 @@ import com.example.xcpro.core.common.geometry.OffsetPx
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.adsb.AdsbTrafficSnapshot
 import com.example.xcpro.adsb.AdsbTrafficUiModel
+import com.example.xcpro.adsb.AdsbSelectedTargetDetails
 import com.example.xcpro.adsb.Icao24
+import com.example.xcpro.adsb.metadata.domain.AdsbMetadataEnrichmentUseCase
 import com.example.xcpro.weather.wind.model.WindState
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.replay.SessionStatus
@@ -75,7 +77,8 @@ class MapScreenViewModel @Inject constructor(
     private val mapVarioPreferencesUseCase: MapVarioPreferencesUseCase,
     private val hawkVarioUseCase: HawkVarioUseCase,
     private val ognTrafficUseCase: OgnTrafficUseCase,
-    private val adsbTrafficUseCase: AdsbTrafficUseCase
+    private val adsbTrafficUseCase: AdsbTrafficUseCase,
+    private val adsbMetadataEnrichmentUseCase: AdsbMetadataEnrichmentUseCase
 ) : ViewModel() {
 
     private val initialStyleName = mapStyleUseCase.initialStyle()
@@ -199,10 +202,11 @@ class MapScreenViewModel @Inject constructor(
     val mapCommands: SharedFlow<MapCommand> = _mapCommands.asSharedFlow()
     private val _selectedAdsbId = MutableStateFlow<Icao24?>(null)
     val selectedAdsbId: StateFlow<Icao24?> = _selectedAdsbId.asStateFlow()
-    val selectedAdsbTarget: StateFlow<AdsbTrafficUiModel?> =
-        combine(_selectedAdsbId, adsbTargets) { selectedId, targets ->
-            selectedId?.let { id -> targets.firstOrNull { it.id == id } }
-        }.stateIn(
+    val selectedAdsbTarget: StateFlow<AdsbSelectedTargetDetails?> =
+        adsbMetadataEnrichmentUseCase.selectedTargetDetails(
+            selectedIcao24 = _selectedAdsbId,
+            adsbTargets = adsbTargets
+        ).stateIn(
             scope = viewModelScope,
             started = SharingStarted.Eagerly,
             initialValue = null
@@ -251,6 +255,9 @@ class MapScreenViewModel @Inject constructor(
     init {
         mapStateStore.setTrailSettings(trailSettingsUseCase.getSettings())
         mapStateStore.setDisplaySmoothingProfile(featureFlags.defaultDisplaySmoothingProfile)
+        viewModelScope.launch {
+            adsbTrafficUseCase.bootstrapMetadataSync()
+        }
         observeTrailSettings()
         observeOgnTraffic()
         observeAdsbTraffic()

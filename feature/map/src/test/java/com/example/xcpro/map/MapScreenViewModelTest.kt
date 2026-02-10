@@ -63,6 +63,13 @@ import com.example.xcpro.adsb.AdsbTrafficRepository
 import com.example.xcpro.adsb.AdsbTrafficSnapshot
 import com.example.xcpro.adsb.AdsbTrafficUiModel
 import com.example.xcpro.adsb.Icao24
+import com.example.xcpro.adsb.metadata.domain.AdsbMetadataEnrichmentUseCase
+import com.example.xcpro.adsb.metadata.domain.AircraftMetadata
+import com.example.xcpro.adsb.metadata.domain.AircraftMetadataRepository
+import com.example.xcpro.adsb.metadata.domain.AircraftMetadataSyncRepository
+import com.example.xcpro.adsb.metadata.domain.AircraftMetadataSyncScheduler
+import com.example.xcpro.adsb.metadata.domain.MetadataSyncRunResult
+import com.example.xcpro.adsb.metadata.domain.MetadataSyncState
 import com.example.xcpro.ogn.OgnConnectionState
 import com.example.xcpro.ogn.OgnTrafficPreferencesRepository
 import com.example.xcpro.ogn.OgnTrafficRepository
@@ -486,9 +493,38 @@ class MapScreenViewModelTest {
             }
         }
         val adsbTrafficPreferencesRepository = AdsbTrafficPreferencesRepository(context)
+        val metadataRepository = object : AircraftMetadataRepository {
+            override suspend fun getMetadataFor(icao24s: List<String>): Map<String, AircraftMetadata> {
+                return emptyMap()
+            }
+        }
+        val metadataSyncRepository = object : AircraftMetadataSyncRepository {
+            override val syncState = MutableStateFlow<MetadataSyncState>(MetadataSyncState.Idle)
+
+            override suspend fun onScheduled() {
+                syncState.value = MetadataSyncState.Scheduled
+            }
+
+            override suspend fun onPausedByUser() {
+                syncState.value = MetadataSyncState.PausedByUser(lastSuccessWallMs = null)
+            }
+
+            override suspend fun runSyncNow(): MetadataSyncRunResult = MetadataSyncRunResult.Skipped
+        }
+        val metadataSyncScheduler = object : AircraftMetadataSyncScheduler {
+            override suspend fun onOverlayPreferenceChanged(enabled: Boolean) = Unit
+            override suspend fun bootstrapForOverlayPreference(overlayEnabled: Boolean) = Unit
+        }
         val adsbTrafficUseCase = AdsbTrafficUseCase(
             repository = adsbTrafficRepository,
-            preferencesRepository = adsbTrafficPreferencesRepository
+            preferencesRepository = adsbTrafficPreferencesRepository,
+            metadataSyncRepository = metadataSyncRepository,
+            metadataSyncScheduler = metadataSyncScheduler
+        )
+        val adsbMetadataEnrichmentUseCase = AdsbMetadataEnrichmentUseCase(
+            aircraftMetadataRepository = metadataRepository,
+            metadataSyncRepository = metadataSyncRepository,
+            ioDispatcher = mainDispatcherRule.dispatcher
         )
 
         return MapScreenViewModel(
@@ -511,7 +547,8 @@ class MapScreenViewModelTest {
             mapVarioPreferencesUseCase = mapVarioPreferencesUseCase,
             hawkVarioUseCase = hawkVarioUseCase,
             ognTrafficUseCase = ognTrafficUseCase,
-            adsbTrafficUseCase = adsbTrafficUseCase
+            adsbTrafficUseCase = adsbTrafficUseCase,
+            adsbMetadataEnrichmentUseCase = adsbMetadataEnrichmentUseCase
         )
     }
 

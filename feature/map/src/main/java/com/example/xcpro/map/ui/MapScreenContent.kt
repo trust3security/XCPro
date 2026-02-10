@@ -39,6 +39,7 @@ import com.example.xcpro.adsb.Icao24
 import com.example.xcpro.adsb.AdsbMarkerDetailsSheet
 import com.example.xcpro.adsb.AdsbTrafficSnapshot
 import com.example.xcpro.adsb.AdsbTrafficUiModel
+import com.example.xcpro.adsb.AdsbSelectedTargetDetails
 import com.example.xcpro.map.BuildConfig
 import com.example.xcpro.map.components.MapActionButtons
 import com.example.xcpro.map.MapCameraManager
@@ -99,7 +100,7 @@ internal fun MapScreenContent(
     ognOverlayEnabled: Boolean,
     adsbSnapshot: AdsbTrafficSnapshot,
     adsbOverlayEnabled: Boolean,
-    selectedAdsbTarget: AdsbTrafficUiModel?,
+    selectedAdsbTarget: AdsbSelectedTargetDetails?,
     isUiEditMode: Boolean,
     onEditModeChange: (Boolean) -> Unit,
     isAATEditMode: Boolean,

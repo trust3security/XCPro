@@ -19,13 +19,17 @@ import com.example.xcpro.common.units.SpeedMs
 import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.units.VerticalSpeedMs
+import com.example.xcpro.adsb.metadata.domain.MetadataAvailability
+import com.example.xcpro.adsb.metadata.domain.MetadataSyncState
 import com.example.xcpro.adsb.ui.openSkyCategoryLabel
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdsbMarkerDetailsSheet(
-    target: AdsbTrafficUiModel,
+    target: AdsbSelectedTargetDetails,
     unitsPreferences: UnitsPreferences,
     onDismiss: () -> Unit
 ) {
@@ -43,9 +47,36 @@ fun AdsbMarkerDetailsSheet(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
+
+            Text(
+                text = "Aircraft identification",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+            DetailRow("Registration", target.registration ?: "--")
+            DetailRow("Typecode", target.typecode ?: "--")
+            DetailRow("Model", target.model ?: "--")
+            DetailRow("Manufacturer", target.manufacturerName ?: "--")
+            DetailRow("Operator", target.operator ?: "--")
+            DetailRow("Operator callsign", target.operatorCallsign ?: "--")
+            DetailRow("ICAO aircraft type", target.icaoAircraftType ?: "--")
+            DetailRow("Owner", target.owner ?: "--")
+            Text(
+                text = metadataStatusText(target.metadataAvailability, target.metadataSyncState),
+                style = MaterialTheme.typography.bodySmall,
+                color = when (target.metadataAvailability) {
+                    MetadataAvailability.Ready -> MaterialTheme.colorScheme.primary
+                    is MetadataAvailability.Unavailable -> MaterialTheme.colorScheme.error
+                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                }
+            )
+
+            Text(
+                text = "Live state",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
             DetailRow("ICAO24", target.id.raw.uppercase(Locale.US))
-            DetailRow("Type", openSkyCategoryLabel(target.category))
-            DetailRow("Category", target.category?.toString() ?: "--")
             DetailRow("Altitude", target.altitudeM?.let { UnitsFormatter.altitude(AltitudeM(it), unitsPreferences).text } ?: "--")
             DetailRow("Speed", target.speedMps?.let { UnitsFormatter.speed(SpeedMs(it), unitsPreferences).text } ?: "--")
             DetailRow("Track", target.trackDeg?.let { "${it.roundToOneDecimal()}\u00B0" } ?: "--")
@@ -55,6 +86,14 @@ fun AdsbMarkerDetailsSheet(
             )
             DetailRow("Age", "${target.ageSec}s")
             DetailRow("Distance", UnitsFormatter.distance(DistanceM(target.distanceMeters), unitsPreferences).text)
+
+            Text(
+                text = "Emitter category",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+            DetailRow("Emitter category", openSkyCategoryLabel(target.category))
+            DetailRow("Category raw", target.category?.toString() ?: "--")
             Text(
                 text = "Informational only. Not for collision avoidance or separation.",
                 style = MaterialTheme.typography.bodySmall,
@@ -84,3 +123,34 @@ private fun DetailRow(label: String, value: String) {
 }
 
 private fun Double.roundToOneDecimal(): String = String.format(Locale.US, "%.1f", this)
+
+private fun metadataStatusText(
+    availability: MetadataAvailability,
+    syncState: MetadataSyncState
+): String {
+    return when (availability) {
+        MetadataAvailability.Ready -> "Metadata loaded"
+        MetadataAvailability.SyncInProgress -> "Metadata sync in progress"
+        MetadataAvailability.Missing -> when (syncState) {
+            MetadataSyncState.Idle -> "Metadata not available"
+            MetadataSyncState.Scheduled -> "Metadata sync scheduled"
+            MetadataSyncState.Running -> "Metadata sync running"
+            is MetadataSyncState.PausedByUser -> "Metadata sync paused"
+            is MetadataSyncState.Success ->
+                "Metadata not found for this ICAO24 (last sync ${formatWallTime(syncState.lastSuccessWallMs)})"
+
+            is MetadataSyncState.Failed ->
+                "Metadata sync failed: ${syncState.reason}"
+        }
+
+        is MetadataAvailability.Unavailable -> "Metadata unavailable: ${availability.errorSummary}"
+    }
+}
+
+private fun formatWallTime(wallMs: Long?): String {
+    if (wallMs == null || wallMs <= 0L) {
+        return "--"
+    }
+    val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US)
+    return formatter.format(Date(wallMs))
+}

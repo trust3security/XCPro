@@ -34,6 +34,7 @@ import com.example.xcpro.map.model.GpsStatusUiModel
 import com.example.xcpro.adsb.Icao24
 import com.example.xcpro.adsb.AdsbTrafficSnapshot
 import com.example.xcpro.adsb.AdsbTrafficUiModel
+import com.example.xcpro.adsb.AdsbSelectedTargetDetails
 import com.example.xcpro.ogn.OgnTrafficSnapshot
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
 import com.example.xcpro.tasks.TaskManagerCoordinator
@@ -76,7 +77,7 @@ internal data class MapScreenScaffoldInputs(
     val ognOverlayEnabled: Boolean,
     val adsbSnapshot: AdsbTrafficSnapshot,
     val adsbOverlayEnabled: Boolean,
-    val selectedAdsbTarget: AdsbTrafficUiModel?,
+    val selectedAdsbTarget: AdsbSelectedTargetDetails?,
     val isUiEditMode: Boolean,
     val onEditModeChange: (Boolean) -> Unit,
     val isAATEditMode: Boolean,

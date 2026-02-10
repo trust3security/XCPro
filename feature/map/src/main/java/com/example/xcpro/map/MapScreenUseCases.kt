@@ -7,6 +7,9 @@ import com.example.xcpro.adsb.AdsbTrafficPreferencesRepository
 import com.example.xcpro.adsb.AdsbTrafficRepository
 import com.example.xcpro.adsb.AdsbTrafficSnapshot
 import com.example.xcpro.adsb.AdsbTrafficUiModel
+import com.example.xcpro.adsb.metadata.domain.AircraftMetadataSyncRepository
+import com.example.xcpro.adsb.metadata.domain.AircraftMetadataSyncScheduler
+import com.example.xcpro.adsb.metadata.domain.MetadataSyncState
 import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.ogn.OgnTrafficRepository
 import com.example.xcpro.ogn.OgnTrafficPreferencesRepository
@@ -35,6 +38,7 @@ import com.example.xcpro.MapOrientationManagerFactory
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.CoroutineScope
 
@@ -177,12 +181,15 @@ class OgnTrafficUseCase @Inject constructor(
 
 class AdsbTrafficUseCase @Inject constructor(
     private val repository: AdsbTrafficRepository,
-    private val preferencesRepository: AdsbTrafficPreferencesRepository
+    private val preferencesRepository: AdsbTrafficPreferencesRepository,
+    private val metadataSyncRepository: AircraftMetadataSyncRepository,
+    private val metadataSyncScheduler: AircraftMetadataSyncScheduler
 ) {
     val targets: StateFlow<List<AdsbTrafficUiModel>> = repository.targets
     val snapshot: StateFlow<AdsbTrafficSnapshot> = repository.snapshot
     val isStreamingEnabled: StateFlow<Boolean> = repository.isEnabled
     val overlayEnabled: Flow<Boolean> = preferencesRepository.enabledFlow
+    val metadataSyncState: StateFlow<MetadataSyncState> = metadataSyncRepository.syncState
 
     fun setStreamingEnabled(enabled: Boolean) {
         repository.setEnabled(enabled)
@@ -194,6 +201,12 @@ class AdsbTrafficUseCase @Inject constructor(
 
     suspend fun setOverlayEnabled(enabled: Boolean) {
         preferencesRepository.setEnabled(enabled)
+        metadataSyncScheduler.onOverlayPreferenceChanged(enabled)
+    }
+
+    suspend fun bootstrapMetadataSync() {
+        val enabled = overlayEnabled.first()
+        metadataSyncScheduler.bootstrapForOverlayPreference(enabled)
     }
 
     fun stop() {

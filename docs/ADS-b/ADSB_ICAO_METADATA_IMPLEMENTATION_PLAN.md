@@ -179,6 +179,13 @@ Selection rule:
 - Prefer latest `metadata/aircraft-database-complete-YYYY-MM.csv`.
 - Fallback to `metadata/aircraftDatabase.csv` only if no complete snapshot exists.
 
+Selection parsing requirements:
+
+1. match complete snapshots with strict regex:
+   `^metadata/aircraft-database-complete-(\\d{4})-(\\d{2})\\.csv$`
+2. parse year/month numerically and choose max `(year, month)`; do not rely on plain string sort only
+3. ignore non-matching keys (`.zip`, README, doc tables, incomplete monthly keys)
+
 Bucket listing pagination requirement:
 
 1. file discovery must handle S3 XML pagination (`IsTruncated`, `NextContinuationToken`)
@@ -197,9 +204,12 @@ Implementation requirement:
 Source resilience requirement:
 
 1. if bucket listing fails (network error, parse error, endpoint change), do not block feature rollout
-2. fallback directly to `https://opensky-network.org/datasets/metadata/aircraftDatabase.csv`
-3. emit typed sync state describing fallback path used
-4. keep last good local metadata active on any source-discovery failure
+2. first fallback source is `metadata/aircraftDatabase.csv` from the same metadata bucket
+3. second fallback source is `https://opensky-network.org/datasets/metadata/aircraftDatabase.csv`
+4. emit typed sync state describing fallback path used
+5. keep last good local metadata active on any source-discovery failure
+6. if selected complete-snapshot download fails (404/403/5xx/timeout), retry with direct fallback dataset URL before emitting terminal failure
+7. if fallback dataset download also fails, keep last good local metadata and emit typed terminal failure
 
 ## 4) Target Design (SSOT and Data Flow)
 
@@ -260,6 +270,7 @@ Repository and importer:
 - `AircraftMetadataRepositoryImpl.kt`
 - `AircraftMetadataSyncRepository.kt` (interface)
 - `AircraftMetadataSyncRepositoryImpl.kt`
+- `AircraftMetadataSyncCheckpointStore.kt` (persistent sync checkpoints: source key/etag/lastSuccess/error)
 - `AircraftMetadataImporter.kt`
 - `AircraftMetadataFileSelector.kt`
 - `AircraftMetadataCsvParser.kt`
@@ -301,6 +312,7 @@ Dependencies:
 - add WorkManager runtime (`work-runtime-ktx`) in `feature:map` module (worker host)
 - add `androidx.hilt:hilt-work` in `feature:map` module (for `@HiltWorker`)
 - add `androidx.hilt:hilt-work` in `app` module (for `HiltWorkerFactory`)
+- add WorkManager runtime (`work-runtime-ktx`) in `app` module for application-level worker configuration
 - add/verify version-catalog aliases for Room + WorkManager + hilt-work if missing
 
 ## 5A) Database Migration and Versioning Contract
@@ -344,7 +356,7 @@ All thresholds and intervals are centralized in `AircraftMetadataSyncPolicy` (no
 1. list metadata bucket XML
 2. parse keys matching:
    - `aircraft-database-complete-YYYY-MM.csv`
-3. choose newest lexicographically by year-month
+3. choose newest by numeric `(year, month)` comparison (not plain lexical sort)
 4. persist chosen `key`, `lastModified`, and `etag`
 
 ### 7.2 Import
@@ -406,6 +418,7 @@ Lookup scalability guard:
     - one-time sync: `enqueueUniqueWork(..., ExistingWorkPolicy.KEEP, ...)`
     - periodic sync: `enqueueUniquePeriodicWork(..., ExistingPeriodicWorkPolicy.UPDATE, ...)`
 13. disabling overlay while running requests worker cancellation immediately and transitions to `PausedByUser`
+14. re-enable after rapid disable/enable race must still guarantee one-time sync is eventually enqueued
 
 ### 7.4 Failure Policy
 
@@ -441,12 +454,14 @@ When metadata exists, additionally show:
 When metadata missing:
 
 - show explicit fallback text: `Metadata not available`
+- show sync status text derived from typed sync state (`Scheduled`, `Running`, `Success`, `Failed`) plus last-success/last-error context when available
 
 Metadata uncertainty contract:
 
 1. expose `MetadataAvailability` on selected target UI model
 2. never display guessed registration/typecode/model as authoritative values
 3. if metadata becomes unavailable mid-session, keep UI stable and transition through typed state
+4. on selected target change (`icao24` changes), metadata fields from prior target must be cleared immediately; never show previous target metadata for new selection
 
 Anti-flicker contract for selected target metadata:
 
@@ -518,11 +533,15 @@ Exit criteria:
 - add cancellation and cleanup tests for interrupted imports
 - implement bootstrap scheduling path for already-enabled overlays on cold start
 - implement discovery fallback when bucket listing is unavailable
+- implement complete-snapshot download failure fallback to direct dataset URL
 - implement deterministic duplicate-ICAO resolution policy in importer
 - implement staging swap guard (no empty/partial promotion)
 - implement paginated metadata bucket discovery
 - implement chunked metadata lookup queries for ICAO lists
 - implement explicit unique-work policy and disable-cancel behavior
+- implement strict complete-snapshot filename regex + numeric year/month selection
+- implement source fallback cascade (bucket fallback then direct dataset URL)
+- implement enable/disable race-safe scheduling guarantees
 
 Exit criteria:
 
@@ -533,12 +552,17 @@ Exit criteria:
 - no import path performs blocking work on Main
 - cold-start with overlay already enabled triggers initial sync scheduling
 - source-listing failure still schedules/executes fallback dataset import path
+- source-listing failure follows fallback cascade: bucket `metadata/aircraftDatabase.csv` then direct dataset URL
+- complete-snapshot download failure still attempts direct dataset fallback before terminal failure
 - BOM/alias headers are parsed correctly
 - duplicate ICAO rows resolve deterministically
 - zero-row or partial import never replaces active metadata table
 - paginated listing selects latest snapshot correctly
 - disabling overlay cancels pending one-time + periodic sync work
 - metadata lookup handles large ICAO lists via deterministic chunking
+- strict filename regex + numeric year/month selection picks expected latest complete snapshot
+- total source failure preserves previously imported metadata and reports typed terminal failure
+- rapid disable/enable race still results in eventual one-time sync scheduling
 
 ### Phase 3: ADS-B join and UI integration
 
@@ -601,6 +625,7 @@ Mandatory new tests:
 6. `AdsbMarkerDetailsSheet` UI test
    - metadata rendered
    - fallback rendered when missing
+   - sync status text rendered for missing/running/error paths
 7. `AircraftMetadataSyncStateMachineTest`
    - validates allowed transitions only
    - validates typed failure propagation
@@ -621,6 +646,7 @@ Mandatory new tests:
    - verifies metadata lookup is not executed in per-frame overlay render/update loops
 14. `MetadataAvailabilityStabilityTest`
    - validates anti-flicker transitions (`SyncInProgress` -> terminal states) for selected target
+   - validates selected-target switch clears prior-target metadata immediately
 15. `MapPositionPipelineNonRegressionTest`
    - verifies metadata feature does not alter map-position source ownership/wiring
 16. `MetadataSyncBootstrapTest`
@@ -629,25 +655,36 @@ Mandatory new tests:
    - disabling overlay transitions sync state to `PausedByUser`
    - re-enabling overlay transitions `PausedByUser -> Scheduled`
 18. `MetadataSourceFallbackTest`
-   - bucket listing failure path falls back to direct dataset URL
+   - bucket listing failure path tries bucket `metadata/aircraftDatabase.csv` first, then direct dataset URL if needed
    - typed sync state indicates fallback source path
-19. `MetadataCsvHeaderRobustnessTest`
+   - complete-snapshot download failure path falls back to direct dataset URL
+19. `MetadataSourceTotalFailureRetentionTest`
+   - when all source attempts fail, prior local metadata remains active
+   - typed terminal failure state is emitted without destructive table changes
+20. `MetadataCsvHeaderRobustnessTest`
    - UTF-8 BOM first header token is handled
    - alias header variants map to canonical fields
-20. `MetadataDuplicateIcaoResolutionTest`
+21. `MetadataDuplicateIcaoResolutionTest`
    - duplicate ICAO rows resolve by documented deterministic policy
-21. `MetadataSwapGuardTest`
+22. `MetadataSwapGuardTest`
    - zero-row/partial staging import cannot replace active metadata table
    - prior active metadata remains queryable after guard-triggered failure
-22. `MetadataBucketPaginationTest`
+23. `MetadataBucketPaginationTest`
    - multi-page S3 listing aggregation yields correct latest snapshot selection
    - mid-pagination parse failure triggers fallback path without data loss
-23. `MetadataLookupChunkingTest`
+24. `MetadataLookupChunkingTest`
    - ICAO lookup list above single-query bind threshold is chunked deterministically
-24. `MetadataSyncUniqueWorkPolicyTest`
+25. `MetadataSyncUniqueWorkPolicyTest`
    - repeated schedule calls do not create duplicate one-time/periodic workers
-25. `MetadataSyncWorkerCancellationTest`
+26. `MetadataSyncWorkerCancellationTest`
    - disabling overlay cancels pending one-time and periodic sync workers
+27. `MetadataEnableDisableRaceSchedulingTest`
+   - rapid disable/enable sequence still leads to eventual one-time sync scheduling
+28. `MetadataSyncCheckpointPersistenceTest`
+   - source key/etag/last success/error checkpoints survive process restart
+29. `MetadataCompleteSnapshotSelectionTest`
+   - strict regex filtering excludes non-complete/non-csv keys
+   - numeric year/month comparison selects correct latest complete snapshot
 
 ## 13) Non-Goals (for this plan)
 
@@ -675,10 +712,14 @@ Release-ready means all are true:
 12. ADS-B runtime baseline remains unchanged (15 km radius, >100 ft, >40 kt, FLARM-filtered, cap=30).
 13. Initial metadata sync is triggered by overlay enable preference transition, not by map visibility/streaming state.
 14. Cold-start with overlay already enabled still triggers first metadata sync when no prior success exists.
-15. Metadata source discovery failure degrades gracefully via direct dataset fallback without wiping last good local metadata.
-16. CSV import is robust to BOM/header alias variance and does not regress silently on schema drift.
-17. Duplicate ICAO rows in source produce deterministic metadata results.
-18. Active metadata table is never replaced by an empty or partial import.
-19. Multi-page metadata source listing is handled correctly and deterministically.
-20. Metadata lookup scales beyond current target cap via deterministic chunked queries.
-21. Overlay disable reliably cancels pending one-time and periodic metadata sync work.
+15. Metadata source discovery failure degrades gracefully via fallback cascade (bucket `metadata/aircraftDatabase.csv` then direct dataset URL) without wiping last good local metadata.
+16. Complete-snapshot download failures degrade through direct dataset fallback before terminal failure.
+17. CSV import is robust to BOM/header alias variance and does not regress silently on schema drift.
+18. Duplicate ICAO rows in source produce deterministic metadata results.
+19. Active metadata table is never replaced by an empty or partial import.
+20. Multi-page metadata source listing is handled correctly and deterministically.
+21. Metadata lookup scales beyond current target cap via deterministic chunked queries.
+22. Overlay disable reliably cancels pending one-time and periodic metadata sync work.
+23. Selected-target switch never shows stale metadata from previously selected ICAO.
+24. Total source failure preserves last good local metadata and surfaces typed terminal sync failure.
+25. Rapid disable/enable sequences still result in eventual one-time sync scheduling.

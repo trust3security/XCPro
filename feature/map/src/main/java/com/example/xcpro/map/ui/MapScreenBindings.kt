@@ -6,6 +6,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.adsb.AdsbTrafficSnapshot
 import com.example.xcpro.adsb.AdsbTrafficUiModel
+import com.example.xcpro.adsb.AdsbSelectedTargetDetails
 import com.example.xcpro.map.MapScreenViewModel
 import com.example.xcpro.map.MapStateReader
 import com.example.xcpro.map.MapStateStore
@@ -35,7 +36,7 @@ internal data class MapScreenBindings(
     val adsbTargets: List<AdsbTrafficUiModel>,
     val adsbSnapshot: AdsbTrafficSnapshot,
     val adsbOverlayEnabled: Boolean,
-    val selectedAdsbTarget: AdsbTrafficUiModel?,
+    val selectedAdsbTarget: AdsbSelectedTargetDetails?,
     val isAATEditMode: Boolean,
     val savedLocation: MapStateStore.MapPoint?,
     val savedZoom: Double?,
