@@ -3,13 +3,10 @@ package com.example.xcpro.map
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.Paint
-import android.graphics.PorterDuff
-import android.graphics.PorterDuffColorFilter
-import androidx.annotation.DrawableRes
 import androidx.core.content.ContextCompat
-import com.example.xcpro.adsb.Icao24
 import com.example.xcpro.adsb.AdsbTrafficUiModel
+import com.example.xcpro.adsb.Icao24
+import com.example.xcpro.adsb.ui.AdsbAircraftIcon
 import com.example.xcpro.core.common.logging.AppLogger
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
@@ -17,9 +14,9 @@ import org.maplibre.android.maps.Style
 import org.maplibre.android.style.expressions.Expression
 import org.maplibre.android.style.layers.PropertyFactory.iconAllowOverlap
 import org.maplibre.android.style.layers.PropertyFactory.iconAnchor
-import org.maplibre.android.style.layers.PropertyFactory.iconKeepUpright
 import org.maplibre.android.style.layers.PropertyFactory.iconIgnorePlacement
 import org.maplibre.android.style.layers.PropertyFactory.iconImage
+import org.maplibre.android.style.layers.PropertyFactory.iconKeepUpright
 import org.maplibre.android.style.layers.PropertyFactory.iconOpacity
 import org.maplibre.android.style.layers.PropertyFactory.iconRotate
 import org.maplibre.android.style.layers.PropertyFactory.iconRotationAlignment
@@ -38,8 +35,6 @@ import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
-import org.maplibre.geojson.Point
-import java.util.Locale
 
 class AdsbTrafficOverlay(
     private val context: Context,
@@ -52,19 +47,24 @@ class AdsbTrafficOverlay(
             if (style.getSource(SOURCE_ID) == null) {
                 style.addSource(GeoJsonSource(SOURCE_ID))
             }
+            ensureStyleImages(style)
             if (style.getLayer(ICON_LAYER_ID) == null) {
-                registerStyleImages(style)
                 val iconLayer = SymbolLayer(ICON_LAYER_ID, SOURCE_ID)
                     .withProperties(
-                        iconImage(TEST_ICON_ID),
+                        iconImage(Expression.get(AdsbGeoJsonMapper.PROP_ICON_ID)),
                         iconSize(ICON_SIZE),
-                        iconRotate(Expression.get(PROP_TRACK_DEG)),
+                        iconRotate(
+                            Expression.coalesce(
+                                Expression.get(AdsbGeoJsonMapper.PROP_TRACK_DEG),
+                                Expression.literal(0.0)
+                            )
+                        ),
                         iconRotationAlignment("map"),
                         iconKeepUpright(false),
                         iconAllowOverlap(true),
                         iconIgnorePlacement(true),
                         iconAnchor("center"),
-                        iconOpacity(Expression.get(PROP_ALPHA))
+                        iconOpacity(Expression.get(AdsbGeoJsonMapper.PROP_ALPHA))
                     )
                 val anchorId = BlueLocationOverlay.LAYER_ID
                 if (style.getLayer(anchorId) != null) {
@@ -77,7 +77,7 @@ class AdsbTrafficOverlay(
             if (style.getLayer(LABEL_LAYER_ID) == null) {
                 val labelLayer = SymbolLayer(LABEL_LAYER_ID, SOURCE_ID)
                     .withProperties(
-                        textField(Expression.get(PROP_LABEL)),
+                        textField(Expression.get(AdsbGeoJsonMapper.PROP_LABEL)),
                         textSize(LABEL_TEXT_SIZE_SP),
                         textColor(LABEL_TEXT_COLOR),
                         textHaloColor(LABEL_HALO_COLOR),
@@ -86,7 +86,7 @@ class AdsbTrafficOverlay(
                         textAnchor("top"),
                         textAllowOverlap(true),
                         textIgnorePlacement(true),
-                        textOpacity(Expression.get(PROP_ALPHA))
+                        textOpacity(Expression.get(AdsbGeoJsonMapper.PROP_ALPHA))
                     )
                 if (style.getLayer(ICON_LAYER_ID) != null) {
                     style.addLayerAbove(labelLayer, ICON_LAYER_ID)
@@ -106,23 +106,11 @@ class AdsbTrafficOverlay(
         val features = ArrayList<Feature>(targets.size.coerceAtMost(MAX_TARGETS))
         for (target in targets) {
             if (features.size >= MAX_TARGETS) break
-            if (!target.lat.isFinite() || !target.lon.isFinite()) continue
-            val feature = Feature.fromGeometry(
-                Point.fromLngLat(target.lon, target.lat)
-            )
-            val callsign = target.callsign?.trim()?.takeIf { it.isNotBlank() }
-            feature.addStringProperty(PROP_ICAO24, target.id.raw)
-            feature.addStringProperty(PROP_LABEL, callsign ?: target.id.raw.uppercase(Locale.US))
-            feature.addNumberProperty(PROP_TRACK_DEG, target.trackDeg ?: 0.0)
+            val feature = AdsbGeoJsonMapper.toFeature(target) ?: continue
             feature.addNumberProperty(
-                PROP_ALPHA,
+                AdsbGeoJsonMapper.PROP_ALPHA,
                 if (target.isStale) STALE_ALPHA else LIVE_ALPHA
             )
-            target.altitudeM?.let { feature.addNumberProperty(PROP_ALT_M, it) }
-            target.speedMps?.let { feature.addNumberProperty(PROP_SPEED_MPS, it) }
-            target.climbMps?.let { feature.addNumberProperty(PROP_VS_MPS, it) }
-            target.category?.let { feature.addNumberProperty(PROP_CATEGORY, it) }
-            feature.addNumberProperty(PROP_AGE_SEC, target.ageSec)
             features.add(feature)
         }
         source.setGeoJson(FeatureCollection.fromFeatures(features))
@@ -141,8 +129,10 @@ class AdsbTrafficOverlay(
         }.getOrNull().orEmpty()
 
         for (feature in features) {
-            if (!feature.hasProperty(PROP_ICAO24)) continue
-            val rawId = runCatching { feature.getStringProperty(PROP_ICAO24) }.getOrNull()
+            if (!feature.hasProperty(AdsbGeoJsonMapper.PROP_ICAO24)) continue
+            val rawId = runCatching {
+                feature.getStringProperty(AdsbGeoJsonMapper.PROP_ICAO24)
+            }.getOrNull()
             val id = Icao24.from(rawId) ?: continue
             return id
         }
@@ -161,10 +151,30 @@ class AdsbTrafficOverlay(
             style.removeLayer(LABEL_LAYER_ID)
             style.removeLayer(ICON_LAYER_ID)
             style.removeSource(SOURCE_ID)
-            style.removeImage(TEST_ICON_ID)
+            AdsbAircraftIcon.values().forEach { icon ->
+                style.removeImage(icon.styleImageId)
+            }
         } catch (t: Throwable) {
             AppLogger.w(TAG, "Failed to cleanup ADS-B overlay: ${t.message}")
         }
+    }
+
+    private fun ensureStyleImages(style: Style) {
+        AdsbAircraftIcon.values().forEach { icon ->
+            val existing = runCatching { style.getImage(icon.styleImageId) }.getOrNull()
+            if (existing != null) return@forEach
+            val bitmap = drawableToBitmap(icon.resId) ?: return@forEach
+            style.addImage(icon.styleImageId, bitmap)
+        }
+    }
+
+    private fun drawableToBitmap(drawableId: Int): Bitmap? {
+        val drawable = ContextCompat.getDrawable(context, drawableId) ?: return null
+        val bitmap = Bitmap.createBitmap(ICON_BITMAP_SIZE_PX, ICON_BITMAP_SIZE_PX, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        drawable.setBounds(0, 0, ICON_BITMAP_SIZE_PX, ICON_BITMAP_SIZE_PX)
+        drawable.draw(canvas)
+        return bitmap
     }
 
     private companion object {
@@ -173,70 +183,18 @@ class AdsbTrafficOverlay(
         private const val SOURCE_ID = "adsb-traffic-source"
         private const val ICON_LAYER_ID = "adsb-traffic-icon-layer"
         private const val LABEL_LAYER_ID = "adsb-traffic-label-layer"
-        private const val TEST_ICON_ID = "adsb_icon_test"
-
-        private const val PROP_ICAO24 = "icao24"
-        private const val PROP_LABEL = "label"
-        private const val PROP_TRACK_DEG = "track_deg"
-        private const val PROP_ALPHA = "alpha"
-        private const val PROP_ALT_M = "alt_m"
-        private const val PROP_SPEED_MPS = "speed_mps"
-        private const val PROP_VS_MPS = "vs_mps"
-        private const val PROP_AGE_SEC = "age_s"
-        private const val PROP_CATEGORY = "category"
 
         private const val MAX_TARGETS = 120
         private const val LIVE_ALPHA = 0.90
         private const val STALE_ALPHA = 0.45
 
-        private const val ICON_SIZE = 0.05f
+        private const val ICON_SIZE = 1.0f
+        private const val ICON_BITMAP_SIZE_PX = 28
 
         private const val LABEL_TEXT_SIZE_SP = 11f
         private const val LABEL_HALO_WIDTH_DP = 1.1f
         private const val LABEL_TEXT_OFFSET_Y = 1.1f
         private const val LABEL_TEXT_COLOR = "#FFF3D4"
         private const val LABEL_HALO_COLOR = "#2B1204"
-        private const val DEFAULT_ICON_SIZE_PX = 24
-        private const val TEST_ICON_TINT_COLOR = 0xFF000000.toInt()
-    }
-
-    private fun registerStyleImages(style: Style) {
-        addStyleImage(
-            style = style,
-            imageId = TEST_ICON_ID,
-            drawableId = R.drawable.ic_adsb_aircraft_test
-        )
-    }
-
-    private fun addStyleImage(
-        style: Style,
-        imageId: String,
-        @DrawableRes drawableId: Int
-    ) {
-        val bitmap = drawableToBitmap(drawableId)?.let(::tintBitmap)
-        if (bitmap != null) {
-            style.addImage(imageId, bitmap)
-        }
-    }
-
-    private fun drawableToBitmap(@DrawableRes drawableId: Int): Bitmap? {
-        val drawable = ContextCompat.getDrawable(context, drawableId) ?: return null
-        val width = drawable.intrinsicWidth.takeIf { it > 0 } ?: DEFAULT_ICON_SIZE_PX
-        val height = drawable.intrinsicHeight.takeIf { it > 0 } ?: DEFAULT_ICON_SIZE_PX
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        drawable.setBounds(0, 0, width, height)
-        drawable.draw(canvas)
-        return bitmap
-    }
-
-    private fun tintBitmap(source: Bitmap): Bitmap {
-        val tinted = Bitmap.createBitmap(source.width, source.height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(tinted)
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            colorFilter = PorterDuffColorFilter(TEST_ICON_TINT_COLOR, PorterDuff.Mode.SRC_IN)
-        }
-        canvas.drawBitmap(source, 0f, 0f, paint)
-        return tinted
     }
 }

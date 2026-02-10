@@ -19,8 +19,7 @@ import com.example.xcpro.common.units.SpeedMs
 import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.units.VerticalSpeedMs
-import com.example.xcpro.adsb.ui.aircraftKind
-import com.example.xcpro.adsb.ui.displayLabel
+import com.example.xcpro.adsb.ui.openSkyCategoryLabel
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -45,7 +44,8 @@ fun AdsbMarkerDetailsSheet(
                 fontWeight = FontWeight.SemiBold
             )
             DetailRow("ICAO24", target.id.raw.uppercase(Locale.US))
-            DetailRow("Type", target.aircraftKind().displayLabel())
+            DetailRow("Type", openSkyCategoryLabel(target.category))
+            DetailRow("Category", target.category?.toString() ?: "--")
             DetailRow("Altitude", target.altitudeM?.let { UnitsFormatter.altitude(AltitudeM(it), unitsPreferences).text } ?: "--")
             DetailRow("Speed", target.speedMps?.let { UnitsFormatter.speed(SpeedMs(it), unitsPreferences).text } ?: "--")
             DetailRow("Track", target.trackDeg?.let { "${it.roundToOneDecimal()}\u00B0" } ?: "--")
