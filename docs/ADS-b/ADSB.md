@@ -1,60 +1,107 @@
-# ADSB.md — ADS‑B Internet Traffic in XCPro (OpenSky) — 20 km
-**v3: uses ICAO24 to identify aircraft + optional metadata enrichment**
+# ADSB.md — Live ADS‑B Internet Traffic in XCPro (OpenSky) — 15 km
+**v5 (AUTONOMOUS): ICAO24 identity + aircraft metadata enrichment (registration/typecode/model)**
 
-This doc is for an **autonomous Codex agent**. It must be implementable without user input.
-
----
-
-## 0) The non-negotiables (read first)
-
-### 0.1 ICAO24 is the identity key
-OpenSky state vectors include **ICAO24**:
-- In ADS‑B, each aircraft/transponder is identified by a unique **ICAO 24‑bit address** shown as a **6‑char hex string** (example `c0ffee`).  
-  Source: OpenSky API docs.  
-- In the `/states/all` response, `states[row][0]` is `icao24` and is described as a unique ICAO 24-bit transponder address in hex string form.  
-  Source: OpenSky REST docs.
-
-**XCPro MUST treat `icao24` as the stable primary key** for:
-- marker identity (no flicker)
-- tap → details
-- metadata lookup (registration/model/type)
-
-Sources:
-- https://openskynetwork.github.io/opensky-api/ (ICAO 24-bit address as hex string)
-- https://openskynetwork.github.io/opensky-api/rest.html (state vector index 0 = icao24)
-
-### 0.2 Category is NOT model/type
-OpenSky `category` is an ADS‑B emitter category bucket and is frequently 0/1 (no info).
-Category is used for **icons**.
-**Aircraft identification (registration/model/typecode)** requires **metadata enrichment** keyed by ICAO24.
-
-See: `ADSB_AircraftMetadata.md`
-
-### 0.3 OpenSky use constraints
-OpenSky API is intended for research/non-commercial use; commercial usage requires permission.  
-Source: OpenSky API docs.
+This document is written for an autonomous engineering agent (Codex).
+It must be implementable end‑to‑end without asking the user questions.
 
 ---
 
-## 1) API request — MUST include extended=1
-You only get `category` when you request:
+## 0) What “identify the aircraft” means (definition)
+There are **two** different “type” concepts:
 
-`GET https://opensky-network.org/api/states/all?lamin=...&lomin=...&lamax=...&lomax=...&extended=1`
+### 0.1 Aircraft identification (what pilots actually mean by “what aircraft is that?”)
+Using ICAO24 (the transponder address) as a key, display:
+- **Registration** (tail number) — e.g. `VH‑DFV`
+- **Typecode** (ICAO aircraft type designator) — e.g. `C208`
+- **Model** — e.g. `CESSNA 208 Caravan`
+- Optional: `icaoaircrafttype` (ICAO Doc 8643 3‑symbol aircraft description, e.g. `L1T`)
 
-OpenSky REST docs explicitly document:
-- `/states/all`
-- request param `icao24` filter
-- request param `extended=1` to request category
-- response index 0 = `icao24`
-- response includes `true_track` and `vertical_rate`
+This requires **metadata enrichment**. `/states/all` alone does not provide these.
 
-Source:
+### 0.2 Emitter category (what OpenSky calls `category`)
+OpenSky `/states/all?extended=1` can provide an ADS‑B **emitter category bucket** (light/small/rotorcraft/glider/etc).
+Many aircraft report `category=0` or `1` (no info), which is normal.
+
+**Rule:** In the UI, never label OpenSky `category` as “Aircraft Type”. Call it **Emitter category**.
+
+OpenSky state vector + `icao24` + `category` reference:
 https://openskynetwork.github.io/opensky-api/rest.html
 
 ---
 
-## 2) State vector indexes (DO NOT GUESS)
-Use constants exactly as per OpenSky docs:
+## 1) Data sources
+### 1.1 Live traffic (positions, speed, alt, track, climb rate)
+Use OpenSky REST:
+`GET https://opensky-network.org/api/states/all?lamin=...&lomin=...&lamax=...&lomax=...&extended=1`
+
+Docs:
+https://openskynetwork.github.io/opensky-api/rest.html
+
+### 1.2 Aircraft metadata (registration / model / typecode) keyed by ICAO24
+Use OpenSky Aircraft Database CSV dataset:
+- Primary dataset URL:
+  https://opensky-network.org/datasets/metadata/aircraftDatabase.csv
+- OpenSky explains the aircraft database can be downloaded as CSV and is updated irregularly (snapshots may exist):
+  https://opensky-network.org/data
+- Aircraft database page points to the dataset:
+  https://opensky-network.org/data/aircraft
+
+This metadata is imported locally into a Room database and looked up by ICAO24.
+
+---
+
+## 2) Requirements (hard)
+### 2.1 ICAO24 (identity) — MUST
+- Parse `icao24` from OpenSky state vector index `0`
+- Normalize lowercase for storage/lookup (display uppercase optionally)
+- Use `icao24` as MapLibre `Feature.id` (prevents flicker, enables stable updates)
+
+### 2.2 Metadata enrichment — MUST (this is the missing functionality)
+- Implement a local metadata store keyed by ICAO24:
+  - Room entity/table
+  - DAO query by list of ICAOs (IN query)
+  - Repository API
+- Implement WorkManager sync:
+  - downloads `aircraftDatabase.csv`
+  - stream-parse + batch insert into Room
+  - exposes readiness + progress + last error
+- Join metadata into ADS‑B UI models and show in details sheet
+
+### 2.3 UI requirements (stop confusing “type”)
+In details sheet show sections:
+
+**Aircraft identification**
+- Registration
+- Typecode
+- Model
+- (Optional) ICAO aircraft description code
+
+**Live state**
+- ICAO24
+- callsign
+- altitude / speed / track / vertical rate
+
+**Emitter category**
+- category label + raw integer (e.g. `Rotorcraft (8)` or `No category info (1)`)
+
+If metadata DB is not ready:
+- show “Metadata not available yet”
+- show sync state (“Downloading…”, “Importing…”, “Last updated …”, “Error …”)
+
+### 2.4 Runtime envelope (implemented as of 2026-02-10)
+- Receive radius: 15 km around the active ADS-B center.
+- Airborne gate: altitude must be >100 ft and speed must be >40 kt.
+- Position source filter: FLARM-sourced rows (`position_source=3`) are ignored.
+- Display cap: maximum 30 displayed aircraft.
+
+Implementation note:
+- Current details sheet labels still show `Type` and `Category`.
+- A metadata UI pass should rename this to `Emitter category` to match this contract.
+
+---
+
+## 3) OpenSky /states/all parsing (indexes)
+Use constants:
 
 ```kotlin
 private const val IDX_ICAO24 = 0
@@ -68,117 +115,41 @@ private const val IDX_TRUE_TRACK_DEG = 10
 private const val IDX_VERT_RATE_MPS = 11
 private const val IDX_GEO_ALT_M = 13
 private const val IDX_POSITION_SOURCE = 16
-private const val IDX_CATEGORY = 17 // only present when extended=1
+private const val IDX_CATEGORY = 17 // only when extended=1
 ```
 
----
-
-## 3) Robust parsing (fixes Kotlin JSON numeric pitfalls)
-
-OpenSky values often arrive as `Double` even for integer-looking fields.
-
-```kotlin
-private fun Any?.asIntOrNull(): Int? = (this as? Number)?.toInt()
-private fun Any?.asDoubleOrNull(): Double? = (this as? Number)?.toDouble()
-private fun Any?.asBoolOrNull(): Boolean? = this as? Boolean
-private fun Any?.asStringOrNull(): String? = this as? String
-
-private fun String.normalizeIcao24(): String = trim().lowercase()
-private fun String.normalizeCallsign(): String = trim()
-```
-
-Parse:
-
-```kotlin
-val icao24 = (row[IDX_ICAO24] as String).normalizeIcao24()
-val callsign = row.getOrNull(IDX_CALLSIGN).asStringOrNull()?.normalizeCallsign()?.ifBlank { null }
-
-val category: Int? = if (row.size > IDX_CATEGORY) row[IDX_CATEGORY].asIntOrNull() else null
-val onGround: Boolean? = row.getOrNull(IDX_ON_GROUND).asBoolOrNull()
-val speedMps: Double? = row.getOrNull(IDX_VELOCITY_MPS).asDoubleOrNull()
-val trackDeg: Double? = row.getOrNull(IDX_TRUE_TRACK_DEG).asDoubleOrNull()
-val vrMps: Double? = row.getOrNull(IDX_VERT_RATE_MPS).asDoubleOrNull()
-val geoAltM: Double? = row.getOrNull(IDX_GEO_ALT_M).asDoubleOrNull()
-val baroAltM: Double? = row.getOrNull(IDX_BARO_ALT_M).asDoubleOrNull()
-```
-
-**Mandatory debug once per session:**
-- `row.size` (17 vs 18)
-- `icao24`
-- `raw category`
-- `trackDeg`, `vrMps`
-This catches 99% of “type/category missing” issues.
+Parse ICAO24 as string (do not convert to int):
+- store lowercase
+- trim whitespace
 
 ---
 
-## 4) Domain model MUST include ICAO24
+## 4) Implementation docs for Codex
+Codex must follow these repo docs (already provided elsewhere):
+- ARCHITECTURE.md
+- CODING_RULES.md
 
-```kotlin
-data class AdsbTarget(
-  val icao24: String,        // REQUIRED primary key
-  val callsign: String?,
-  val lat: Double,
-  val lon: Double,
-  val geoAltM: Double?,
-  val baroAltM: Double?,
-  val speedMps: Double?,
-  val trackDeg: Double?,
-  val verticalRateMps: Double?,
-  val onGround: Boolean?,
-  val category: Int?          // only with extended=1
-)
-```
+Canonical implementation contract:
+- `ADSB_ICAO_METADATA_IMPLEMENTATION_PLAN.md`
 
----
+Supporting reference docs:
+- `ADSB_AircraftMetadata.md`
+- `ADSB_CategoryIconMapping.md`
+- `ADSB_IconsAndTap_Plan.md`
 
-## 5) Identification in UI (details sheet)
-Tap an ADS‑B target → show:
-
-### 5.1 Always show (live state)
-- ICAO24 (hex string, uppercase for display if you like)
-- Callsign (if present)
-- Altitude (geo or baro)
-- Speed
-- Track
-- Vertical rate (climb/descent) — OpenSky provides `vertical_rate` in m/s.
-
-### 5.2 Show when available (metadata enrichment)
-From local metadata DB keyed by ICAO24:
-- registration (tail number)
-- typecode (e.g. C208)
-- model (e.g. CESSNA 208 Caravan)
-- manufacturer name
-- operator / operatorcallsign (if present)
-- icaoaircrafttype (if present)
-
-Implementation details are in `ADSB_AircraftMetadata.md`.
+Legacy docs (superseded; keep only for historical context):
+- `ADSB_AUTONOMOUS_ENGINEER_IMPLEMENTATION_PLAN.md`
+- `ADSB_FileTouchList.md`
+- `ADSB_md_patch_aircraft_metadata_required.md`
 
 ---
 
-## 6) MapLibre identity (no flicker)
-Your MapLibre GeoJSON features MUST use ICAO24 as the stable id:
-
-```kotlin
-val f = Feature.fromGeometry(Point.fromLngLat(lon, lat))
-f.id(icao24) // critical
-f.addStringProperty("icao24", icao24)
-```
-
-This ensures updates are applied to the same feature without destroying/recreating symbols.
-
----
-
-## 7) Icons + category logic
-Category mapping stays as documented in `ADSB_CategoryIconMapping.md`.
-Even with correct implementation, many aircraft will report category 0/1 and you must handle that:
-- show raw category in UI
-- optionally infer a display bucket (see Category doc)
-- metadata enrichment may still provide typecode/model even if category is missing
-
----
-
-## 8) Acceptance criteria
-1) Every ADS‑B target displays ICAO24 in the details sheet.
-2) The same ICAO24 marker updates smoothly (no flicker).
-3) If the metadata DB is ready and a record exists, the details sheet shows registration + typecode + model.
-4) If no record exists, details sheet shows “Metadata not available” (but still shows ICAO24).
+## 5) Acceptance tests (high level)
+1) Tap any aircraft: ICAO24 is always shown.
+2) After metadata sync:
+   - at least some aircraft show registration/typecode/model (when present in DB).
+3) Metadata sync runs:
+   - when ADS‑B enabled first time
+   - does not block UI thread
+   - survives app restarts
+4) Markers do not flicker and update smoothly.
