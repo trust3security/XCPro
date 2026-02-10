@@ -31,6 +31,7 @@ import com.example.xcpro.qnh.QnhCalibrationState
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.map.model.GpsStatusUiModel
+import com.example.xcpro.adsb.Icao24
 import com.example.xcpro.adsb.AdsbTrafficSnapshot
 import com.example.xcpro.adsb.AdsbTrafficUiModel
 import com.example.xcpro.ogn.OgnTrafficSnapshot
@@ -108,6 +109,7 @@ internal data class MapScreenScaffoldInputs(
     val onSetManualQnh: (Double) -> Unit,
     val onToggleOgnTraffic: () -> Unit,
     val onToggleAdsbTraffic: () -> Unit,
+    val onAdsbTargetSelected: (Icao24) -> Unit,
     val onDismissAdsbTargetDetails: () -> Unit,
     val ballastUiState: StateFlow<BallastUiState>,
     val isBallastPillHidden: Boolean,
@@ -182,15 +184,6 @@ internal fun rememberMapScreenScaffoldInputs(
         mapRuntimeController.onMapReady(map)
         managers.overlayManager.updateOgnTrafficTargets(bindings.ognTargets)
         managers.overlayManager.updateAdsbTrafficTargets(bindings.adsbTargets)
-        map.addOnMapClickListener { tap ->
-            val tappedTarget = managers.overlayManager.findAdsbTargetAt(tap)
-            if (tappedTarget != null) {
-                mapViewModel.onAdsbTargetSelected(tappedTarget)
-                true
-            } else {
-                false
-            }
-        }
     }
 
     return MapScreenScaffoldInputs(
@@ -273,6 +266,7 @@ internal fun rememberMapScreenScaffoldInputs(
         onSetManualQnh = mapViewModel::onSetManualQnh,
         onToggleOgnTraffic = mapViewModel::onToggleOgnTraffic,
         onToggleAdsbTraffic = mapViewModel::onToggleAdsbTraffic,
+        onAdsbTargetSelected = mapViewModel::onAdsbTargetSelected,
         onDismissAdsbTargetDetails = mapViewModel::dismissSelectedAdsbTarget,
         ballastUiState = mapViewModel.ballastUiState,
         isBallastPillHidden = mapUiState.hideBallastPill,

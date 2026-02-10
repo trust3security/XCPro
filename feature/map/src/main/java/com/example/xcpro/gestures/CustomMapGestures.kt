@@ -24,6 +24,8 @@ import org.maplibre.android.maps.MapLibreMap
 private const val MODE_SWITCH_THRESHOLD_PX = 250f
 private const val SINGLE_FINGER_ZOOM_FACTOR = 0.003
 private const val SINGLE_FINGER_DRAG_MIN_PX = 2f
+private const val TAP_MAX_DURATION_MS = 300L
+private const val TAP_MAX_MOVE_PX = 14f
 
 @Composable
 fun CustomMapGestureHandler(
@@ -38,6 +40,7 @@ fun CustomMapGestureHandler(
     visibleModes: List<FlightMode> = FlightMode.values().toList(),
     taskGestureHandler: TaskGestureHandler? = null,
     gestureRegions: List<MapGestureRegion> = emptyList(),
+    onMapTap: (org.maplibre.android.geometry.LatLng) -> Unit = {},
     mapViewPixelRatio: Float = 0f,
     modifier: Modifier = Modifier
 ) {
@@ -96,6 +99,8 @@ fun CustomMapGestureHandler(
                     val gestureStartTimeMs = System.currentTimeMillis()
                     var fingerCount = 1
                     var isFirstFrame = true
+                    var handledGesture = false
+                    var maxDistanceFromStartPx = 0f
 
                     val startContext = TaskGestureContext(
                         mapLibreMap = mapLibreMap,
@@ -127,10 +132,12 @@ fun CustomMapGestureHandler(
                         )
 
                         if (taskGestureHandler?.onGestureMove(gestureContext) == TaskGestureConsume.Consume) {
+                            handledGesture = true
                             activePointers.forEach { it.consume() }
                             continue
                         }
 
+                        var consumeThisFrame = false
                         when (fingerCount) {
                             1 -> {
                                 if (initialFingerCount.value != 1) {
@@ -140,6 +147,13 @@ fun CustomMapGestureHandler(
                                 val dragAmount = firstPointer.position - gestureStartPosition.value
                                 totalDragX.value = dragAmount.x
                                 totalDragY.value = dragAmount.y
+                                val distanceFromStart = kotlin.math.hypot(
+                                    dragAmount.x.toDouble(),
+                                    dragAmount.y.toDouble()
+                                ).toFloat()
+                                if (distanceFromStart > maxDistanceFromStartPx) {
+                                    maxDistanceFromStartPx = distanceFromStart
+                                }
 
                                 if (abs(totalDragX.value) > abs(totalDragY.value)) {
                                     if (abs(totalDragX.value) > MODE_SWITCH_THRESHOLD_PX && !hasSwitchedMode.value) {
@@ -157,11 +171,15 @@ fun CustomMapGestureHandler(
                                         }
                                         onModeChange(newMode)
                                         hasSwitchedMode.value = true
+                                        handledGesture = true
+                                        consumeThisFrame = true
                                     }
                                 } else {
                                     val previous = firstPointer.previousPosition ?: firstPointer.position
                                     val currentDrag = firstPointer.position - previous
                                     if (abs(currentDrag.y) > SINGLE_FINGER_DRAG_MIN_PX) {
+                                        handledGesture = true
+                                        consumeThisFrame = true
                                         val zoomDelta = -currentDrag.y * SINGLE_FINGER_ZOOM_FACTOR
                                         mapLibreMap?.let { map ->
                                             val currentZoom = map.cameraPosition.zoom
@@ -199,6 +217,8 @@ fun CustomMapGestureHandler(
                                     )
                                     val panDelta = centerPoint - previousCenterPoint
                                     if (abs(panDelta.x) > 1f || abs(panDelta.y) > 1f) {
+                                        handledGesture = true
+                                        consumeThisFrame = true
                                         if (!showReturnButton) {
                                             if (currentLocation != null) {
                                                 onSaveLocation(
@@ -238,7 +258,9 @@ fun CustomMapGestureHandler(
                             else -> Unit
                         }
 
-                        activePointers.forEach { it.consume() }
+                        if (consumeThisFrame) {
+                            activePointers.forEach { it.consume() }
+                        }
                     } while (fingerCount > 0)
 
                     val endContext = TaskGestureContext(
@@ -249,6 +271,22 @@ fun CustomMapGestureHandler(
                         currentTimeMs = System.currentTimeMillis()
                     )
                     taskGestureHandler?.onGestureEnd(endContext)
+
+                    val gestureDurationMs = System.currentTimeMillis() - gestureStartTimeMs
+                    val isTap = initialFingerCount.value == 1 &&
+                        !handledGesture &&
+                        gestureDurationMs <= TAP_MAX_DURATION_MS &&
+                        maxDistanceFromStartPx <= TAP_MAX_MOVE_PX
+                    if (isTap) {
+                        val tapPoint = android.graphics.PointF(
+                            gestureStartPosition.value.x,
+                            gestureStartPosition.value.y
+                        )
+                        val tapLatLng = mapLibreMap?.projection?.fromScreenLocation(tapPoint)
+                        if (tapLatLng != null) {
+                            onMapTap(tapLatLng)
+                        }
+                    }
                 }
             }
     )

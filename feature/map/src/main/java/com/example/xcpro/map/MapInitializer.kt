@@ -164,7 +164,7 @@ class MapInitializer(
             mapState.blueLocationOverlay?.initialize()
             mapState.ognTrafficOverlay = OgnTrafficOverlay(map)
             mapState.ognTrafficOverlay?.initialize()
-            mapState.adsbTrafficOverlay = AdsbTrafficOverlay(map)
+            mapState.adsbTrafficOverlay = AdsbTrafficOverlay(context, map)
             mapState.adsbTrafficOverlay?.initialize()
             snailTrailManager.initialize(map)
             setupScaleBar(map)

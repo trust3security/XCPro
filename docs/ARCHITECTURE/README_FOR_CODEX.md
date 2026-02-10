@@ -30,14 +30,7 @@ Codex MUST read the following files **in this exact order** before making any ch
    - Why the upcoming changes exist  
    - What must NOT be changed
 
-4. **GENIUS_PHONE_SENSORS_WIND_TAS_IAS_NETTO_SPEC.md**  
-   - Authoritative physics + behavior spec  
-   - Wind, TAS/IAS proxy, TE, Netto, tiering  
-   - If code conflicts with this document, the code is wrong
 
-5. **CONFIDENCE_MODEL_SPEC.md**  
-   - Explicit confidence signals and decay rules  
-   - Backbone for validity and tiering decisions
 
 
 
@@ -70,11 +63,9 @@ Codex MUST NOT:
 
 If Codex encounters missing context:
 
-1. Create a **small, factual** doc:
-   - `docs/WIND_PIPELINE_MAP.md`
-   - Or similar flow map
-2. Continue implementation using the specs
-3. Do not guess or invent behavior
+
+1. Continue implementation using the specs
+2. Do not guess or invent behavior
 
 If a rule seems unclear:
 - Stop

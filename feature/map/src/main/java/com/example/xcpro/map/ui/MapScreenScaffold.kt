@@ -44,6 +44,7 @@ import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.map.model.GpsStatusUiModel
 import com.example.xcpro.adsb.AdsbTrafficSnapshot
 import com.example.xcpro.adsb.AdsbTrafficUiModel
+import com.example.xcpro.adsb.Icao24
 import com.example.xcpro.ogn.OgnTrafficSnapshot
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
 import com.example.xcpro.tasks.TaskManagerCoordinator
@@ -122,6 +123,7 @@ internal fun MapScreenScaffold(inputs: MapScreenScaffoldInputs) {
         onSetManualQnh = inputs.onSetManualQnh,
         onToggleOgnTraffic = inputs.onToggleOgnTraffic,
         onToggleAdsbTraffic = inputs.onToggleAdsbTraffic,
+        onAdsbTargetSelected = inputs.onAdsbTargetSelected,
         onDismissAdsbTargetDetails = inputs.onDismissAdsbTargetDetails,
         ballastUiState = inputs.ballastUiState,
         isBallastPillHidden = inputs.isBallastPillHidden,
@@ -208,6 +210,7 @@ internal fun MapScreenScaffold(
     onSetManualQnh: (Double) -> Unit,
     onToggleOgnTraffic: () -> Unit,
     onToggleAdsbTraffic: () -> Unit,
+    onAdsbTargetSelected: (Icao24) -> Unit,
     onDismissAdsbTargetDetails: () -> Unit,
     ballastUiState: StateFlow<BallastUiState>,
     isBallastPillHidden: Boolean,
@@ -299,6 +302,7 @@ internal fun MapScreenScaffold(
                     onSetManualQnh = onSetManualQnh,
                     onToggleOgnTraffic = onToggleOgnTraffic,
                     onToggleAdsbTraffic = onToggleAdsbTraffic,
+                    onAdsbTargetSelected = onAdsbTargetSelected,
                     onDismissAdsbTargetDetails = onDismissAdsbTargetDetails,
                     ballastUiState = ballastUiState,
                     isBallastPillHidden = isBallastPillHidden,

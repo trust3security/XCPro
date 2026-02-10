@@ -14,10 +14,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.xcpro.common.units.AltitudeM
+import com.example.xcpro.common.units.DistanceM
 import com.example.xcpro.common.units.SpeedMs
 import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.units.VerticalSpeedMs
+import com.example.xcpro.adsb.ui.aircraftKind
+import com.example.xcpro.adsb.ui.displayLabel
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,6 +45,7 @@ fun AdsbMarkerDetailsSheet(
                 fontWeight = FontWeight.SemiBold
             )
             DetailRow("ICAO24", target.id.raw.uppercase(Locale.US))
+            DetailRow("Type", target.aircraftKind().displayLabel())
             DetailRow("Altitude", target.altitudeM?.let { UnitsFormatter.altitude(AltitudeM(it), unitsPreferences).text } ?: "--")
             DetailRow("Speed", target.speedMps?.let { UnitsFormatter.speed(SpeedMs(it), unitsPreferences).text } ?: "--")
             DetailRow("Track", target.trackDeg?.let { "${it.roundToOneDecimal()}\u00B0" } ?: "--")
@@ -50,6 +54,7 @@ fun AdsbMarkerDetailsSheet(
                 target.climbMps?.let { UnitsFormatter.verticalSpeed(VerticalSpeedMs(it), unitsPreferences).text } ?: "--"
             )
             DetailRow("Age", "${target.ageSec}s")
+            DetailRow("Distance", UnitsFormatter.distance(DistanceM(target.distanceMeters), unitsPreferences).text)
             Text(
                 text = "Informational only. Not for collision avoidance or separation.",
                 style = MaterialTheme.typography.bodySmall,

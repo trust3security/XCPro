@@ -35,6 +35,7 @@ import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.adsb.AdsbConnectionState
+import com.example.xcpro.adsb.Icao24
 import com.example.xcpro.adsb.AdsbMarkerDetailsSheet
 import com.example.xcpro.adsb.AdsbTrafficSnapshot
 import com.example.xcpro.adsb.AdsbTrafficUiModel
@@ -131,6 +132,7 @@ internal fun MapScreenContent(
     onSetManualQnh: (Double) -> Unit,
     onToggleOgnTraffic: () -> Unit,
     onToggleAdsbTraffic: () -> Unit,
+    onAdsbTargetSelected: (Icao24) -> Unit,
     onDismissAdsbTargetDetails: () -> Unit,
     ballastUiState: StateFlow<BallastUiState>,
     isBallastPillHidden: Boolean,
@@ -187,6 +189,8 @@ internal fun MapScreenContent(
                         currentLocation = currentLocation,
                         showReturnButton = showReturnButton,
                         showDistanceCircles = showDistanceCircles,
+                        overlayManager = overlayManager,
+                        onAdsbTargetSelected = onAdsbTargetSelected,
                         isAATEditMode = isAATEditMode,
                         isUiEditMode = isUiEditMode,
                         onEditModeChange = onEditModeChange,
@@ -413,7 +417,12 @@ private fun AdsbDebugPanel(
                 style = MaterialTheme.typography.labelMedium
             )
             Text(
-                text = "Counts: ${snapshot.fetchedCount}/${snapshot.withinRadiusCount}/${snapshot.displayedCount}",
+                text = "Active displayed: ${snapshot.displayedCount}",
+                color = Color(0xFFE5E7EB),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = "Counts (fetched/within/displayed): ${snapshot.fetchedCount}/${snapshot.withinRadiusCount}/${snapshot.displayedCount}",
                 color = Color(0xFFE5E7EB),
                 style = MaterialTheme.typography.bodySmall
             )

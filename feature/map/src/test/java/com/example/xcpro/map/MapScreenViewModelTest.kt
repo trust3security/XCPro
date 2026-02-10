@@ -62,6 +62,7 @@ import com.example.xcpro.adsb.AdsbTrafficPreferencesRepository
 import com.example.xcpro.adsb.AdsbTrafficRepository
 import com.example.xcpro.adsb.AdsbTrafficSnapshot
 import com.example.xcpro.adsb.AdsbTrafficUiModel
+import com.example.xcpro.adsb.Icao24
 import com.example.xcpro.ogn.OgnConnectionState
 import com.example.xcpro.ogn.OgnTrafficPreferencesRepository
 import com.example.xcpro.ogn.OgnTrafficRepository
@@ -299,6 +300,77 @@ class MapScreenViewModelTest {
         assertEquals(180.0, viewModel.mapState.savedBearing.value)
     }
 
+    @Test
+    fun adsbSelection_tracksSelectedIdFromCurrentTargetList() = runBlocking {
+        val adsbRepository = FakeAdsbTrafficRepository()
+        val viewModel = createViewModel(adsbRepositoryOverride = adsbRepository)
+        val id = Icao24.from("abc123") ?: error("invalid test id")
+
+        adsbRepository.targets.value = listOf(sampleAdsbTarget(id))
+        drainMain()
+
+        viewModel.onAdsbTargetSelected(id)
+        drainMain()
+
+        assertEquals(id, viewModel.selectedAdsbId.value)
+        assertEquals(id, viewModel.selectedAdsbTarget.value?.id)
+    }
+
+    @Test
+    fun adsbSelection_clearsWhenSelectedTargetDisappears() = runBlocking {
+        val adsbRepository = FakeAdsbTrafficRepository()
+        val viewModel = createViewModel(adsbRepositoryOverride = adsbRepository)
+        val id = Icao24.from("abc123") ?: error("invalid test id")
+
+        adsbRepository.targets.value = listOf(sampleAdsbTarget(id))
+        drainMain()
+        viewModel.onAdsbTargetSelected(id)
+        drainMain()
+        assertEquals(id, viewModel.selectedAdsbTarget.value?.id)
+
+        adsbRepository.targets.value = emptyList()
+        drainMain()
+
+        assertNull(viewModel.selectedAdsbId.value)
+        assertNull(viewModel.selectedAdsbTarget.value)
+    }
+
+    @Test
+    fun onToggleAdsbTraffic_seedsCenterFromCameraSnapshotImmediately() {
+        val adsbRepository = FakeAdsbTrafficRepository()
+        val viewModel = createViewModel(adsbRepositoryOverride = adsbRepository)
+
+        viewModel.mapStateActions.updateCameraSnapshot(
+            target = MapStateStore.MapPoint(latitude = -35.1234, longitude = 149.1234),
+            zoom = 11.0,
+            bearing = 0.0
+        )
+        drainMain()
+
+        viewModel.onToggleAdsbTraffic()
+        drainMain()
+
+        assertEquals(-35.1234, adsbRepository.lastCenterLat ?: Double.NaN, 1e-6)
+        assertEquals(149.1234, adsbRepository.lastCenterLon ?: Double.NaN, 1e-6)
+    }
+
+    @Test
+    fun adsbCenter_updatesFromCameraSnapshotWithoutGpsLocation() {
+        val adsbRepository = FakeAdsbTrafficRepository()
+        val viewModel = createViewModel(adsbRepositoryOverride = adsbRepository)
+
+        viewModel.mapStateActions.updateCameraSnapshot(
+            target = MapStateStore.MapPoint(latitude = -34.5000, longitude = 150.5000),
+            zoom = 9.0,
+            bearing = 15.0
+        )
+        mainDispatcherRule.dispatcher.scheduler.advanceTimeBy(1_600L)
+        drainMain()
+
+        assertEquals(-34.5000, adsbRepository.lastCenterLat ?: Double.NaN, 1e-6)
+        assertEquals(150.5000, adsbRepository.lastCenterLon ?: Double.NaN, 1e-6)
+    }
+
     private class SuccessfulWaypointLoader(
         private val waypoints: List<WaypointData>
     ) : WaypointLoader {
@@ -317,7 +389,8 @@ class MapScreenViewModelTest {
     }
 
     private fun createViewModel(
-        waypointLoader: WaypointLoader = SuccessfulWaypointLoader(emptyList())
+        waypointLoader: WaypointLoader = SuccessfulWaypointLoader(emptyList()),
+        adsbRepositoryOverride: AdsbTrafficRepository? = null
     ): MapScreenViewModel {
         val localTaskManager = com.example.xcpro.tasks.TaskManagerCoordinator(null)
         val localTaskFeatureFlags = TaskFeatureFlags()
@@ -377,7 +450,7 @@ class MapScreenViewModelTest {
             repository = ognTrafficRepository,
             preferencesRepository = ognTrafficPreferencesRepository
         )
-        val adsbTrafficRepository = object : AdsbTrafficRepository {
+        val adsbTrafficRepository = adsbRepositoryOverride ?: object : AdsbTrafficRepository {
             override val targets = MutableStateFlow<List<AdsbTrafficUiModel>>(emptyList())
             override val snapshot = MutableStateFlow(
                 AdsbTrafficSnapshot(
@@ -385,7 +458,7 @@ class MapScreenViewModelTest {
                     connectionState = AdsbConnectionState.Disabled,
                     centerLat = null,
                     centerLon = null,
-                    receiveRadiusKm = 20,
+                    receiveRadiusKm = 10,
                     fetchedCount = 0,
                     withinRadiusCount = 0,
                     displayedCount = 0,
@@ -440,6 +513,65 @@ class MapScreenViewModelTest {
             ognTrafficUseCase = ognTrafficUseCase,
             adsbTrafficUseCase = adsbTrafficUseCase
         )
+    }
+
+    private fun sampleAdsbTarget(id: Icao24): AdsbTrafficUiModel = AdsbTrafficUiModel(
+        id = id,
+        callsign = "TEST01",
+        lat = -35.0,
+        lon = 149.0,
+        altitudeM = 1000.0,
+        speedMps = 70.0,
+        trackDeg = 180.0,
+        climbMps = 0.5,
+        ageSec = 2,
+        isStale = false,
+        distanceMeters = 1500.0,
+        bearingDegFromUser = 220.0,
+        positionSource = 0,
+        category = 3,
+        lastContactEpochSec = null
+    )
+
+    private class FakeAdsbTrafficRepository : AdsbTrafficRepository {
+        override val targets = MutableStateFlow<List<AdsbTrafficUiModel>>(emptyList())
+        override val snapshot = MutableStateFlow(
+            AdsbTrafficSnapshot(
+                targets = emptyList(),
+                connectionState = AdsbConnectionState.Disabled,
+                centerLat = null,
+                centerLon = null,
+                receiveRadiusKm = 10,
+                fetchedCount = 0,
+                withinRadiusCount = 0,
+                displayedCount = 0,
+                lastHttpStatus = null,
+                remainingCredits = null,
+                lastPollMonoMs = null,
+                lastSuccessMonoMs = null,
+                lastError = null
+            )
+        )
+        override val isEnabled = MutableStateFlow(false)
+        var lastCenterLat: Double? = null
+        var lastCenterLon: Double? = null
+
+        override fun setEnabled(enabled: Boolean) {
+            isEnabled.value = enabled
+        }
+
+        override fun updateCenter(latitude: Double, longitude: Double) {
+            lastCenterLat = latitude
+            lastCenterLon = longitude
+        }
+
+        override fun start() {
+            setEnabled(true)
+        }
+
+        override fun stop() {
+            setEnabled(false)
+        }
     }
 
     private class FakeQnhRepository : QnhRepository {

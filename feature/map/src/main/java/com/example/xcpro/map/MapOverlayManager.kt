@@ -2,6 +2,7 @@ package com.example.xcpro.map
 
 import android.content.Context
 import android.util.Log
+import com.example.xcpro.adsb.Icao24
 import com.example.xcpro.airspace.AirspaceUseCase
 import com.example.xcpro.adsb.AdsbTrafficUiModel
 import com.example.xcpro.flightdata.WaypointFilesUseCase
@@ -127,7 +128,7 @@ class MapOverlayManager(
                 mapState.ognTrafficOverlay?.render(latestOgnTargets)
 
                 mapState.adsbTrafficOverlay?.cleanup()
-                mapState.adsbTrafficOverlay = AdsbTrafficOverlay(map)
+                mapState.adsbTrafficOverlay = AdsbTrafficOverlay(context, map)
                 mapState.adsbTrafficOverlay?.initialize()
                 mapState.adsbTrafficOverlay?.render(latestAdsbTargets)
             }
@@ -154,7 +155,7 @@ class MapOverlayManager(
                 mapState.ognTrafficOverlay?.initialize()
                 mapState.ognTrafficOverlay?.render(latestOgnTargets)
 
-                mapState.adsbTrafficOverlay = AdsbTrafficOverlay(map)
+                mapState.adsbTrafficOverlay = AdsbTrafficOverlay(context, map)
                 mapState.adsbTrafficOverlay?.initialize()
                 mapState.adsbTrafficOverlay?.render(latestAdsbTargets)
             }
@@ -179,14 +180,13 @@ class MapOverlayManager(
         latestAdsbTargets = targets
         val map = mapState.mapLibreMap ?: return
         if (mapState.adsbTrafficOverlay == null) {
-            mapState.adsbTrafficOverlay = AdsbTrafficOverlay(map)
+            mapState.adsbTrafficOverlay = AdsbTrafficOverlay(context, map)
         }
         mapState.adsbTrafficOverlay?.render(targets)
     }
 
-    fun findAdsbTargetAt(tap: LatLng): AdsbTrafficUiModel? {
-        val byId = latestAdsbTargets.associateBy { it.id.raw }
-        return mapState.adsbTrafficOverlay?.findTargetAt(tap, byId)
+    fun findAdsbTargetAt(tap: LatLng): Icao24? {
+        return mapState.adsbTrafficOverlay?.findTargetAt(tap)
     }
 
     fun onZoomChanged(map: MapLibreMap?) {

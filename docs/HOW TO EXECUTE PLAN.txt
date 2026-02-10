@@ -1,0 +1,10 @@
+Right now you have:
+
+TASK_OGN_50KM.md
+→ What to build (Codex execution spec)
+
+OGN_PROTOCOL_NOTES.md
+→ How OGN actually works (protocol, parsing, privacy)
+
+OGN_APRS_TEST_VECTORS.md
+→ Ground truth inputs (forces correct parsing + prevents regressions)

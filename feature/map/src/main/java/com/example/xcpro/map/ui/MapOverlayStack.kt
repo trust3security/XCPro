@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.dfcards.dfcards.FlightDataViewModel
+import com.example.xcpro.adsb.Icao24
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.map.BuildConfig
 import com.example.xcpro.map.FlightDataManager
@@ -25,6 +26,7 @@ import com.example.xcpro.map.MapGestureSetup
 import com.example.xcpro.map.MapInitializer
 import com.example.xcpro.map.MapModalManager
 import com.example.xcpro.map.MapModalUI
+import com.example.xcpro.map.MapOverlayManager
 import com.example.xcpro.map.MapOverlayGestureTarget
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.ballast.BallastCommand
@@ -58,6 +60,8 @@ internal fun MapOverlayStack(
     currentLocation: MapLocationUiModel?,
     showReturnButton: Boolean,
     showDistanceCircles: Boolean,
+    overlayManager: MapOverlayManager,
+    onAdsbTargetSelected: (Icao24) -> Unit,
     isAATEditMode: Boolean,
     isUiEditMode: Boolean,
     onEditModeChange: (Boolean) -> Unit,
@@ -153,6 +157,12 @@ internal fun MapOverlayStack(
                 showReturnButton = showReturnButton,
                 isAATEditMode = isAATEditMode,
                 onAATEditModeChange = onSetAATEditMode,
+                onMapTap = { tap ->
+                    val tappedId = overlayManager.findAdsbTargetAt(tap)
+                    if (tappedId != null) {
+                        onAdsbTargetSelected(tappedId)
+                    }
+                },
                 gestureRegions = gestureRegions,
                 modifier = Modifier.zIndex(3.6f)
             )

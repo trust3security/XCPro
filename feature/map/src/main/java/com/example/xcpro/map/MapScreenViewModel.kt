@@ -9,6 +9,7 @@ import com.example.xcpro.core.common.geometry.OffsetPx
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.adsb.AdsbTrafficSnapshot
 import com.example.xcpro.adsb.AdsbTrafficUiModel
+import com.example.xcpro.adsb.Icao24
 import com.example.xcpro.weather.wind.model.WindState
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.replay.SessionStatus
@@ -41,6 +42,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -195,8 +197,16 @@ class MapScreenViewModel @Inject constructor(
     val uiEffects: SharedFlow<MapUiEffect> = _uiEffects.asSharedFlow()
     private val _mapCommands = MutableSharedFlow<MapCommand>(extraBufferCapacity = 1)
     val mapCommands: SharedFlow<MapCommand> = _mapCommands.asSharedFlow()
-    private val _selectedAdsbTarget = MutableStateFlow<AdsbTrafficUiModel?>(null)
-    val selectedAdsbTarget: StateFlow<AdsbTrafficUiModel?> = _selectedAdsbTarget.asStateFlow()
+    private val _selectedAdsbId = MutableStateFlow<Icao24?>(null)
+    val selectedAdsbId: StateFlow<Icao24?> = _selectedAdsbId.asStateFlow()
+    val selectedAdsbTarget: StateFlow<AdsbTrafficUiModel?> =
+        combine(_selectedAdsbId, adsbTargets) { selectedId, targets ->
+            selectedId?.let { id -> targets.firstOrNull { it.id == id } }
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = null
+        )
     private val _containerReady = MutableStateFlow(false)
     private val _liveDataReady = MutableStateFlow(false)
     private val _isMapVisible = MutableStateFlow(false)
@@ -413,14 +423,34 @@ class MapScreenViewModel @Inject constructor(
             }
             .launchIn(viewModelScope)
 
-        mapLocation
+        val centerFromCamera = mapState.lastCameraSnapshot
             .filterNotNull()
+            .map { snapshot ->
+                snapshot.target.latitude to snapshot.target.longitude
+            }
+
+        val centerFromGps = mapLocation
+            .filterNotNull()
+            .map { location ->
+                location.latitude to location.longitude
+            }
+
+        merge(centerFromCamera, centerFromGps)
             .debounce(1_500L)
-            .onEach { location ->
+            .onEach { (latitude, longitude) ->
                 adsbTrafficUseCase.updateCenter(
-                    latitude = location.latitude,
-                    longitude = location.longitude
+                    latitude = latitude,
+                    longitude = longitude
                 )
+            }
+            .launchIn(viewModelScope)
+
+        adsbTargets
+            .onEach { targets ->
+                val selectedId = _selectedAdsbId.value ?: return@onEach
+                if (targets.none { it.id == selectedId }) {
+                    _selectedAdsbId.value = null
+                }
             }
             .launchIn(viewModelScope)
     }
@@ -439,19 +469,41 @@ class MapScreenViewModel @Inject constructor(
     fun onToggleAdsbTraffic() {
         viewModelScope.launch {
             val next = !adsbOverlayEnabled.value
+            if (next) {
+                seedAdsbCenterFromCurrentView()
+            }
             adsbTrafficUseCase.setOverlayEnabled(next)
             if (!next) {
-                _selectedAdsbTarget.value = null
+                _selectedAdsbId.value = null
             }
         }
     }
 
-    fun onAdsbTargetSelected(target: AdsbTrafficUiModel) {
-        _selectedAdsbTarget.value = target
+    private fun seedAdsbCenterFromCurrentView() {
+        val cameraTarget = mapState.lastCameraSnapshot.value?.target
+        if (cameraTarget != null) {
+            adsbTrafficUseCase.updateCenter(
+                latitude = cameraTarget.latitude,
+                longitude = cameraTarget.longitude
+            )
+            return
+        }
+
+        val gps = mapLocation.value
+        if (gps != null) {
+            adsbTrafficUseCase.updateCenter(
+                latitude = gps.latitude,
+                longitude = gps.longitude
+            )
+        }
+    }
+
+    fun onAdsbTargetSelected(id: Icao24) {
+        _selectedAdsbId.value = id
     }
 
     fun dismissSelectedAdsbTarget() {
-        _selectedAdsbTarget.value = null
+        _selectedAdsbId.value = null
     }
 
     private fun loadWaypoints() {

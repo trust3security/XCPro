@@ -16,6 +16,7 @@ import com.example.xcpro.gestures.CustomMapGestureHandler
 import com.example.xcpro.gestures.TaskGestureCallbacks
 import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.tasks.TaskManagerCoordinator
+import org.maplibre.android.geometry.LatLng
 
 /**
  * MapGestureSetup - Centralized gesture handling configuration
@@ -47,6 +48,7 @@ object MapGestureSetup {
         showReturnButton: Boolean,
         isAATEditMode: Boolean,
         onAATEditModeChange: (Boolean) -> Unit,
+        onMapTap: (LatLng) -> Unit = {},
         gestureRegions: List<MapGestureRegion> = emptyList(),
         modifier: Modifier = Modifier
     ) {
@@ -102,6 +104,7 @@ object MapGestureSetup {
                 visibleModes = flightDataManager.visibleModes,
                 taskGestureHandler = taskGestureHandler,
                 gestureRegions = gestureRegions,
+                onMapTap = onMapTap,
                 mapViewPixelRatio = pixelRatio,
                 modifier = Modifier.fillMaxSize()
             )

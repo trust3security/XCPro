@@ -81,6 +81,67 @@ class AdsbTrafficRepositoryTest {
         repository.stop()
     }
 
+    @Test
+    fun successResponse_keepsOnlyHighConfidenceAirborneTargets() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val provider = SequenceProvider(
+            listOf(
+                ProviderResult.Success(
+                    response = OpenSkyResponse(
+                        timeSec = 1_710_000_000L,
+                        states = listOf(
+                            state(
+                                icao24 = "a1b2c3",
+                                latitude = -33.8688,
+                                longitude = 151.2093,
+                                altitudeM = 30.48,
+                                speedMps = 30.0
+                            ),
+                            state(
+                                icao24 = "d4e5f6",
+                                latitude = -33.8687,
+                                longitude = 151.2094,
+                                altitudeM = 300.0,
+                                speedMps = 20.5778
+                            ),
+                            state(
+                                icao24 = "abc123",
+                                latitude = -33.8686,
+                                longitude = 151.2095,
+                                altitudeM = 300.0,
+                                speedMps = 45.0
+                            ),
+                            state(
+                                icao24 = "123abc",
+                                latitude = -33.8685,
+                                longitude = 151.2096,
+                                altitudeM = 300.0,
+                                speedMps = 45.0,
+                                positionSource = 3
+                            )
+                        )
+                    ),
+                    httpCode = 200,
+                    remainingCredits = 12
+                )
+            )
+        )
+        val repository = AdsbTrafficRepositoryImpl(
+            providerClient = provider,
+            tokenRepository = FakeTokenRepository(),
+            clock = FakeClock(monoMs = 0L, wallMs = 0L),
+            dispatcher = dispatcher
+        )
+
+        repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
+        repository.setEnabled(true)
+        runCurrent()
+
+        assertEquals(1, repository.targets.value.size)
+        assertEquals("abc123", repository.targets.value.first().id.raw)
+        repository.stop()
+    }
+
     private class FakeTokenRepository : OpenSkyTokenRepository {
         override suspend fun getValidTokenOrNull(): String? = null
         override fun invalidate() = Unit
@@ -105,5 +166,27 @@ class AdsbTrafficRepositoryTest {
             return queue.removeAt(0)
         }
     }
-}
 
+    private fun state(
+        icao24: String,
+        latitude: Double,
+        longitude: Double,
+        altitudeM: Double?,
+        speedMps: Double?,
+        positionSource: Int? = 0
+    ): OpenSkyStateVector = OpenSkyStateVector(
+        icao24 = icao24,
+        callsign = icao24.uppercase(),
+        timePositionSec = 1_710_000_000L,
+        lastContactSec = 1_710_000_001L,
+        longitude = longitude,
+        latitude = latitude,
+        baroAltitudeM = altitudeM,
+        velocityMps = speedMps,
+        trueTrackDeg = 180.0,
+        verticalRateMps = 0.0,
+        geoAltitudeM = null,
+        positionSource = positionSource,
+        category = 2
+    )
+}

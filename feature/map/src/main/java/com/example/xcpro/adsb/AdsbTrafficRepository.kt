@@ -293,13 +293,17 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
         val longitude = longitude ?: return null
         if (!AdsbGeoMath.isValidCoordinate(latitude, longitude)) return null
         if (positionSource == POSITION_SOURCE_FLARM) return null
+        val altitudeMeters = altitudeM?.takeIf { it.isFinite() } ?: return null
+        val speedMetersPerSecond = velocityMps?.takeIf { it.isFinite() } ?: return null
+        if (altitudeMeters <= MIN_AIRBORNE_ALTITUDE_M) return null
+        if (speedMetersPerSecond <= MIN_AIRBORNE_SPEED_MPS) return null
         return AdsbTarget(
             id = id,
             callsign = callsign?.takeIf { it.isNotBlank() },
             lat = latitude,
             lon = longitude,
-            altitudeM = altitudeM,
-            speedMps = velocityMps,
+            altitudeM = altitudeMeters,
+            speedMps = speedMetersPerSecond,
             trackDeg = trueTrackDeg,
             climbMps = verticalRateMps,
             positionSource = positionSource,
@@ -322,11 +326,13 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
 
     private companion object {
         private const val TAG = "AdsbTrafficRepository"
-        private const val RECEIVE_RADIUS_KM = 20
+        private const val RECEIVE_RADIUS_KM = 15
         private const val MAX_DISPLAYED_TARGETS = 30
         private const val STALE_AFTER_SEC = 60
         private const val EXPIRY_AFTER_SEC = 120
         private const val POSITION_SOURCE_FLARM = 3
+        private const val MIN_AIRBORNE_ALTITUDE_M = 30.48 // 100 ft
+        private const val MIN_AIRBORNE_SPEED_MPS = 20.5778 // 40 kt
 
         private const val POLL_INTERVAL_MS = 10_000L
         private const val WAIT_FOR_CENTER_MS = 1_000L
@@ -334,4 +340,3 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
         private const val RECONNECT_BACKOFF_MAX_MS = 60_000L
     }
 }
-
