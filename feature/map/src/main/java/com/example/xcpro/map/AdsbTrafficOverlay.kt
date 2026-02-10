@@ -3,13 +3,13 @@ package com.example.xcpro.map
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.Paint
-import android.graphics.PorterDuff
-import android.graphics.PorterDuffColorFilter
 import androidx.annotation.DrawableRes
 import androidx.core.content.ContextCompat
 import com.example.xcpro.adsb.Icao24
 import com.example.xcpro.adsb.AdsbTrafficUiModel
+import com.example.xcpro.adsb.ui.AdsbIconIds
+import com.example.xcpro.adsb.ui.classifyAdsbAircraftKind
+import com.example.xcpro.adsb.ui.toAdsbIconId
 import com.example.xcpro.core.common.logging.AppLogger
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
@@ -56,7 +56,7 @@ class AdsbTrafficOverlay(
                 registerStyleImages(style)
                 val iconLayer = SymbolLayer(ICON_LAYER_ID, SOURCE_ID)
                     .withProperties(
-                        iconImage(TEST_ICON_ID),
+                        iconImage(Expression.get(PROP_ICON_ID)),
                         iconSize(ICON_SIZE),
                         iconRotate(Expression.get(PROP_TRACK_DEG)),
                         iconRotationAlignment("map"),
@@ -118,6 +118,13 @@ class AdsbTrafficOverlay(
                 PROP_ALPHA,
                 if (target.isStale) STALE_ALPHA else LIVE_ALPHA
             )
+            feature.addStringProperty(
+                PROP_ICON_ID,
+                classifyAdsbAircraftKind(
+                    category = target.category,
+                    speedMps = target.speedMps
+                ).toAdsbIconId()
+            )
             target.altitudeM?.let { feature.addNumberProperty(PROP_ALT_M, it) }
             target.speedMps?.let { feature.addNumberProperty(PROP_SPEED_MPS, it) }
             target.climbMps?.let { feature.addNumberProperty(PROP_VS_MPS, it) }
@@ -161,7 +168,12 @@ class AdsbTrafficOverlay(
             style.removeLayer(LABEL_LAYER_ID)
             style.removeLayer(ICON_LAYER_ID)
             style.removeSource(SOURCE_ID)
-            style.removeImage(TEST_ICON_ID)
+            style.removeImage(AdsbIconIds.SMALL_SINGLE_ENGINE)
+            style.removeImage(AdsbIconIds.SMALL_JET)
+            style.removeImage(AdsbIconIds.LARGE_JET)
+            style.removeImage(AdsbIconIds.HELICOPTER)
+            style.removeImage(AdsbIconIds.GLIDER)
+            style.removeImage(AdsbIconIds.UNKNOWN)
         } catch (t: Throwable) {
             AppLogger.w(TAG, "Failed to cleanup ADS-B overlay: ${t.message}")
         }
@@ -173,10 +185,9 @@ class AdsbTrafficOverlay(
         private const val SOURCE_ID = "adsb-traffic-source"
         private const val ICON_LAYER_ID = "adsb-traffic-icon-layer"
         private const val LABEL_LAYER_ID = "adsb-traffic-label-layer"
-        private const val TEST_ICON_ID = "adsb_icon_test"
-
         private const val PROP_ICAO24 = "icao24"
         private const val PROP_LABEL = "label"
+        private const val PROP_ICON_ID = "icon_id"
         private const val PROP_TRACK_DEG = "track_deg"
         private const val PROP_ALPHA = "alpha"
         private const val PROP_ALT_M = "alt_m"
@@ -197,14 +208,38 @@ class AdsbTrafficOverlay(
         private const val LABEL_TEXT_COLOR = "#FFF3D4"
         private const val LABEL_HALO_COLOR = "#2B1204"
         private const val DEFAULT_ICON_SIZE_PX = 24
-        private const val TEST_ICON_TINT_COLOR = 0xFF000000.toInt()
     }
 
     private fun registerStyleImages(style: Style) {
         addStyleImage(
             style = style,
-            imageId = TEST_ICON_ID,
-            drawableId = R.drawable.ic_adsb_aircraft_test
+            imageId = AdsbIconIds.SMALL_SINGLE_ENGINE,
+            drawableId = R.drawable.ic_adsb_small_single_engine
+        )
+        addStyleImage(
+            style = style,
+            imageId = AdsbIconIds.SMALL_JET,
+            drawableId = R.drawable.ic_adsb_small_jet
+        )
+        addStyleImage(
+            style = style,
+            imageId = AdsbIconIds.LARGE_JET,
+            drawableId = R.drawable.ic_adsb_large_jet
+        )
+        addStyleImage(
+            style = style,
+            imageId = AdsbIconIds.HELICOPTER,
+            drawableId = R.drawable.ic_adsb_helicopter
+        )
+        addStyleImage(
+            style = style,
+            imageId = AdsbIconIds.GLIDER,
+            drawableId = R.drawable.ic_adsb_glider
+        )
+        addStyleImage(
+            style = style,
+            imageId = AdsbIconIds.UNKNOWN,
+            drawableId = R.drawable.ic_adsb_unknown
         )
     }
 
@@ -213,7 +248,7 @@ class AdsbTrafficOverlay(
         imageId: String,
         @DrawableRes drawableId: Int
     ) {
-        val bitmap = drawableToBitmap(drawableId)?.let(::tintBitmap)
+        val bitmap = drawableToBitmap(drawableId)
         if (bitmap != null) {
             style.addImage(imageId, bitmap)
         }
@@ -230,13 +265,4 @@ class AdsbTrafficOverlay(
         return bitmap
     }
 
-    private fun tintBitmap(source: Bitmap): Bitmap {
-        val tinted = Bitmap.createBitmap(source.width, source.height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(tinted)
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            colorFilter = PorterDuffColorFilter(TEST_ICON_TINT_COLOR, PorterDuff.Mode.SRC_IN)
-        }
-        canvas.drawBitmap(source, 0f, 0f, paint)
-        return tinted
-    }
 }
