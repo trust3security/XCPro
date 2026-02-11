@@ -46,7 +46,25 @@ class AdsbGeoJsonMapperTest {
         assertFalse(feature.hasProperty(AdsbGeoJsonMapper.PROP_TRACK_DEG))
     }
 
-    private fun sampleTarget(category: Int?, trackDeg: Double?): AdsbTrafficUiModel {
+    @Test
+    fun toFeature_usesEmergencyIconWhenCollisionRiskIsTrue() {
+        val target = sampleTarget(category = 9, trackDeg = 180.0, isEmergencyCollisionRisk = true)
+
+        val feature = AdsbGeoJsonMapper.toFeature(target)
+
+        assertNotNull(feature)
+        feature ?: return
+        assertEquals(
+            "adsb_icon_glider_emergency",
+            feature.getStringProperty(AdsbGeoJsonMapper.PROP_ICON_ID)
+        )
+    }
+
+    private fun sampleTarget(
+        category: Int?,
+        trackDeg: Double?,
+        isEmergencyCollisionRisk: Boolean = false
+    ): AdsbTrafficUiModel {
         val id = Icao24.from("abc123") ?: error("invalid test id")
         return AdsbTrafficUiModel(
             id = id,
@@ -63,7 +81,8 @@ class AdsbGeoJsonMapperTest {
             bearingDegFromUser = 220.0,
             positionSource = 0,
             category = category,
-            lastContactEpochSec = null
+            lastContactEpochSec = null,
+            isEmergencyCollisionRisk = isEmergencyCollisionRisk
         )
     }
 }

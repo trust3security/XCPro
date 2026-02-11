@@ -2,6 +2,7 @@ package com.example.xcpro.map
 
 import com.example.xcpro.adsb.AdsbTrafficUiModel
 import com.example.xcpro.adsb.ui.aircraftIcon
+import com.example.xcpro.adsb.ui.emergencyStyleImageId
 import com.google.gson.JsonObject
 import org.maplibre.geojson.Feature
 import org.maplibre.geojson.Point
@@ -27,9 +28,17 @@ internal object AdsbGeoJsonMapper {
             target.id.raw
         )
         val callsign = target.callsign?.trim()?.takeIf { it.isNotBlank() }
+        val aircraftIcon = target.aircraftIcon()
         feature.addStringProperty(PROP_ICAO24, target.id.raw)
         feature.addStringProperty(PROP_LABEL, callsign ?: target.id.raw.uppercase(Locale.US))
-        feature.addStringProperty(PROP_ICON_ID, target.aircraftIcon().styleImageId)
+        feature.addStringProperty(
+            PROP_ICON_ID,
+            if (target.isEmergencyCollisionRisk) {
+                aircraftIcon.emergencyStyleImageId()
+            } else {
+                aircraftIcon.styleImageId
+            }
+        )
         target.trackDeg?.let { feature.addNumberProperty(PROP_TRACK_DEG, it) }
         target.altitudeM?.let { feature.addNumberProperty(PROP_ALT_M, it) }
         target.speedMps?.let { feature.addNumberProperty(PROP_SPEED_MPS, it) }

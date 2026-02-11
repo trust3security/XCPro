@@ -1,6 +1,7 @@
 package com.example.xcpro.adsb
 
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.math.abs
 
 internal data class AdsbStoreSelection(
     val withinRadiusCount: Int,
@@ -52,6 +53,12 @@ internal class AdsbTrafficStore {
                 )
                 if (distanceMeters > radiusMeters) continue
                 val ageSec = ((nowMonoMs - target.receivedMonoMs) / 1_000L).toInt().coerceAtLeast(0)
+                val bearingDegFromUser = AdsbGeoMath.bearingDegrees(
+                    fromLat = centerLat,
+                    fromLon = centerLon,
+                    toLat = target.lat,
+                    toLon = target.lon
+                )
                 add(
                     AdsbTrafficUiModel(
                         id = target.id,
@@ -65,15 +72,15 @@ internal class AdsbTrafficStore {
                         ageSec = ageSec,
                         isStale = ageSec >= staleAfterSec,
                         distanceMeters = distanceMeters,
-                        bearingDegFromUser = AdsbGeoMath.bearingDegrees(
-                            fromLat = centerLat,
-                            fromLon = centerLon,
-                            toLat = target.lat,
-                            toLon = target.lon
-                        ),
+                        bearingDegFromUser = bearingDegFromUser,
                         positionSource = target.positionSource,
                         category = target.category,
-                        lastContactEpochSec = target.lastContactEpochSec
+                        lastContactEpochSec = target.lastContactEpochSec,
+                        isEmergencyCollisionRisk = isEmergencyCollisionRisk(
+                            distanceMeters = distanceMeters,
+                            trackDeg = target.trackDeg,
+                            bearingDegFromUser = bearingDegFromUser
+                        )
                     )
                 )
             }
@@ -88,5 +95,32 @@ internal class AdsbTrafficStore {
             displayed = displayed
         )
     }
-}
 
+    private fun isEmergencyCollisionRisk(
+        distanceMeters: Double,
+        trackDeg: Double?,
+        bearingDegFromUser: Double
+    ): Boolean {
+        if (!distanceMeters.isFinite() || distanceMeters > EMERGENCY_DISTANCE_METERS) return false
+        val track = trackDeg ?: return false
+        if (!track.isFinite()) return false
+        val bearingFromTargetToUser = normalizeDegrees(bearingDegFromUser + 180.0)
+        val headingError = minHeadingDiffDeg(track, bearingFromTargetToUser)
+        return headingError <= COLLISION_HEADING_TOLERANCE_DEG
+    }
+
+    private fun normalizeDegrees(value: Double): Double {
+        val normalized = value % 360.0
+        return if (normalized < 0.0) normalized + 360.0 else normalized
+    }
+
+    private fun minHeadingDiffDeg(a: Double, b: Double): Double {
+        val diff = abs(normalizeDegrees(a) - normalizeDegrees(b))
+        return if (diff > 180.0) 360.0 - diff else diff
+    }
+
+    private companion object {
+        private const val EMERGENCY_DISTANCE_METERS = 1_000.0
+        private const val COLLISION_HEADING_TOLERANCE_DEG = 20.0
+    }
+}

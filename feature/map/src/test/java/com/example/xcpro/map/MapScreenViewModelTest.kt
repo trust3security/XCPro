@@ -385,7 +385,7 @@ class MapScreenViewModelTest {
     }
 
     @Test
-    fun ognIconSize_defaultsTo56Px() {
+    fun ognIconSize_defaultsToConfiguredDefaultPx() {
         val viewModel = createViewModel()
 
         assertEquals(OGN_ICON_SIZE_DEFAULT_PX, viewModel.ognIconSizePx.value)

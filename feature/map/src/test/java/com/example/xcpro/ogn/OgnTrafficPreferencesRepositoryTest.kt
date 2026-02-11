@@ -33,7 +33,7 @@ class OgnTrafficPreferencesRepositoryTest {
     }
 
     @Test
-    fun iconSizeFlow_defaultsTo56Px() = runTest {
+    fun iconSizeFlow_defaultsToConfiguredDefaultPx() = runTest {
         val repository = OgnTrafficPreferencesRepository(context)
 
         val current = repository.iconSizePxFlow.first()
@@ -55,7 +55,7 @@ class OgnTrafficPreferencesRepositoryTest {
     fun setIconSizePx_clampsAboveMaximum() = runTest {
         val repository = OgnTrafficPreferencesRepository(context)
 
-        repository.setIconSizePx(500)
+        repository.setIconSizePx(999)
         val current = repository.iconSizePxFlow.first()
 
         assertEquals(OGN_ICON_SIZE_MAX_PX, current)
@@ -65,9 +65,9 @@ class OgnTrafficPreferencesRepositoryTest {
     fun setIconSizePx_persistsValidValue() = runTest {
         val repository = OgnTrafficPreferencesRepository(context)
 
-        repository.setIconSizePx(92)
+        repository.setIconSizePx(240)
         val current = repository.iconSizePxFlow.first()
 
-        assertEquals(92, current)
+        assertEquals(240, current)
     }
 }

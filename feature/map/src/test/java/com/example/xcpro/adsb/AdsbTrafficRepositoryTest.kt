@@ -142,6 +142,91 @@ class AdsbTrafficRepositoryTest {
         repository.stop()
     }
 
+    @Test
+    fun lowRemainingCredits_emptyScene_appliesBudgetFloorDelay() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val provider = SequenceProvider(
+            listOf(
+                ProviderResult.Success(
+                    response = OpenSkyResponse(timeSec = 1_710_000_000L, states = emptyList()),
+                    httpCode = 200,
+                    remainingCredits = 40
+                ),
+                ProviderResult.Success(
+                    response = OpenSkyResponse(timeSec = 1_710_000_010L, states = emptyList()),
+                    httpCode = 200,
+                    remainingCredits = 39
+                )
+            )
+        )
+        val repository = AdsbTrafficRepositoryImpl(
+            providerClient = provider,
+            tokenRepository = FakeTokenRepository(),
+            clock = FakeClock(monoMs = 0L, wallMs = 0L),
+            dispatcher = dispatcher
+        )
+
+        repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
+        repository.setEnabled(true)
+        runCurrent()
+        assertEquals(1, provider.callCount)
+
+        advanceTimeBy(59_000L)
+        runCurrent()
+        assertEquals(1, provider.callCount)
+
+        advanceTimeBy(2_000L)
+        runCurrent()
+        assertTrue(provider.callCount >= 2)
+        repository.stop()
+    }
+
+    @Test
+    fun nearbyTraffic_prioritizesFastPollingEvenWithLowCredits() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val provider = SequenceProvider(
+            listOf(
+                ProviderResult.Success(
+                    response = OpenSkyResponse(
+                        timeSec = 1_710_000_000L,
+                        states = listOf(
+                            state(
+                                icao24 = "abc123",
+                                latitude = -33.8687,
+                                longitude = 151.2092,
+                                altitudeM = 500.0,
+                                speedMps = 40.0
+                            )
+                        )
+                    ),
+                    httpCode = 200,
+                    remainingCredits = 40
+                ),
+                ProviderResult.Success(
+                    response = OpenSkyResponse(timeSec = 1_710_000_010L, states = emptyList()),
+                    httpCode = 200,
+                    remainingCredits = 39
+                )
+            )
+        )
+        val repository = AdsbTrafficRepositoryImpl(
+            providerClient = provider,
+            tokenRepository = FakeTokenRepository(),
+            clock = FakeClock(monoMs = 0L, wallMs = 0L),
+            dispatcher = dispatcher
+        )
+
+        repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
+        repository.setEnabled(true)
+        runCurrent()
+        assertEquals(1, provider.callCount)
+
+        advanceTimeBy(11_000L)
+        runCurrent()
+        assertTrue(provider.callCount >= 2)
+        repository.stop()
+    }
+
     private class FakeTokenRepository : OpenSkyTokenRepository {
         override suspend fun getValidTokenOrNull(): String? = null
         override fun invalidate() = Unit

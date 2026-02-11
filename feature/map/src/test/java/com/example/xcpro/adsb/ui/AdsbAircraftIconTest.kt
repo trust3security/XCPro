@@ -31,4 +31,16 @@ class AdsbAircraftIconTest {
         assertEquals(R.drawable.ic_adsb_drone, AdsbAircraftIcon.Drone.resId)
         assertEquals(R.drawable.ic_adsb_unknown, AdsbAircraftIcon.Unknown.resId)
     }
+
+    @Test
+    fun hasStableEmergencyStyleImageIds() {
+        assertEquals(
+            "adsb_icon_plane_light_emergency",
+            AdsbAircraftIcon.PlaneLight.emergencyStyleImageId()
+        )
+        assertEquals(
+            "adsb_icon_unknown_emergency",
+            AdsbAircraftIcon.Unknown.emergencyStyleImageId()
+        )
+    }
 }

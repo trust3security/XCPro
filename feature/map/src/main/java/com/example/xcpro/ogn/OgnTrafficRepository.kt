@@ -19,6 +19,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -75,6 +76,8 @@ class OgnTrafficRepositoryImpl @Inject constructor(
     @Volatile
     private var loopJob: Job? = null
 
+    private val loopJobLock = Any()
+
     @Volatile
     private var connectionState: OgnConnectionState = OgnConnectionState.DISCONNECTED
 
@@ -120,16 +123,22 @@ class OgnTrafficRepositoryImpl @Inject constructor(
     }
 
     private fun ensureLoopRunning() {
-        val existing = loopJob
-        if (existing != null && existing.isActive) return
-        loopJob = scope.launch {
-            runConnectionLoop()
+        synchronized(loopJobLock) {
+            val existing = loopJob
+            if (existing != null && existing.isActive) return
+            loopJob = scope.launch {
+                runConnectionLoop()
+            }
         }
     }
 
     private suspend fun stopLoopAndClearTargets() {
-        loopJob?.cancelAndJoin()
-        loopJob = null
+        val jobToCancel = synchronized(loopJobLock) {
+            val existing = loopJob
+            loopJob = null
+            existing
+        }
+        jobToCancel?.cancelAndJoin()
         targetsByKey.clear()
         _targets.value = emptyList()
         connectionState = OgnConnectionState.DISCONNECTED
@@ -138,32 +147,41 @@ class OgnTrafficRepositoryImpl @Inject constructor(
     }
 
     private suspend fun runConnectionLoop() {
+        val thisJob = currentCoroutineContext()[Job]
         var backoffMs = RECONNECT_BACKOFF_START_MS
-        while (_isEnabled.value) {
-            refreshDdbIfDue()
-            val centerAtConnect = waitForCenter() ?: break
-            try {
-                connectAndRead(centerAtConnect)
-                backoffMs = RECONNECT_BACKOFF_START_MS
-                reconnectBackoffMs = null
-            } catch (t: Throwable) {
-                connectionState = OgnConnectionState.ERROR
-                lastError = sanitizeError(t)
-                publishSnapshot()
-                AppLogger.w(TAG, "Traffic stream disconnected: ${t.message}")
-            }
+        try {
+            while (_isEnabled.value) {
+                refreshDdbIfDue()
+                val centerAtConnect = waitForCenter() ?: break
+                try {
+                    connectAndRead(centerAtConnect)
+                    backoffMs = RECONNECT_BACKOFF_START_MS
+                    reconnectBackoffMs = null
+                } catch (t: Throwable) {
+                    connectionState = OgnConnectionState.ERROR
+                    lastError = sanitizeError(t)
+                    publishSnapshot()
+                    AppLogger.w(TAG, "Traffic stream disconnected: ${t.message}")
+                }
 
-            sweepStaleTargets(clock.nowMonoMs())
-            if (!_isEnabled.value) break
-            reconnectBackoffMs = backoffMs
-            lastReconnectWallMs = clock.nowWallMs()
+                sweepStaleTargets(clock.nowMonoMs())
+                if (!_isEnabled.value) break
+                reconnectBackoffMs = backoffMs
+                lastReconnectWallMs = clock.nowWallMs()
+                publishSnapshot()
+                delay(backoffMs)
+                backoffMs = (backoffMs * 2L).coerceAtMost(RECONNECT_BACKOFF_MAX_MS)
+            }
+            connectionState = OgnConnectionState.DISCONNECTED
+            reconnectBackoffMs = null
             publishSnapshot()
-            delay(backoffMs)
-            backoffMs = (backoffMs * 2L).coerceAtMost(RECONNECT_BACKOFF_MAX_MS)
+        } finally {
+            synchronized(loopJobLock) {
+                if (loopJob == thisJob) {
+                    loopJob = null
+                }
+            }
         }
-        connectionState = OgnConnectionState.DISCONNECTED
-        reconnectBackoffMs = null
-        publishSnapshot()
     }
 
     private suspend fun waitForCenter(): Center? {
@@ -273,9 +291,16 @@ class OgnTrafficRepositoryImpl @Inject constructor(
         }
 
         val label = resolveDisplayLabel(parsed, identity)
+        val previousTrackDegrees = targetsByKey[parsed.id]?.trackDegrees
+        val stabilizedTrackDegrees = stabilizeTrackDegrees(
+            incomingTrackDegrees = parsed.trackDegrees,
+            groundSpeedMps = parsed.groundSpeedMps,
+            previousTrackDegrees = previousTrackDegrees
+        )
         val enriched = parsed.copy(
             displayLabel = label,
             identity = identity,
+            trackDegrees = stabilizedTrackDegrees,
             lastSeenMillis = nowMonoMs
         )
         targetsByKey[enriched.id] = enriched
@@ -404,3 +429,44 @@ class OgnTrafficRepositoryImpl @Inject constructor(
 
     }
 }
+
+internal fun stabilizeTrackDegrees(
+    incomingTrackDegrees: Double?,
+    groundSpeedMps: Double?,
+    previousTrackDegrees: Double?
+): Double? {
+    val previous = previousTrackDegrees
+        ?.takeIf { it.isFinite() }
+        ?.let(::normalizeHeading360)
+    val incoming = incomingTrackDegrees
+        ?.takeIf { it.isFinite() }
+        ?.let(::normalizeHeading360)
+
+    if (incoming == null) return previous
+
+    val speed = groundSpeedMps
+    if (speed == null || !speed.isFinite() || speed < TRACK_UPDATE_MIN_SPEED_MPS) {
+        return previous ?: incoming
+    }
+
+    if (previous == null) return incoming
+
+    val delta = shortestAngularDeltaDegrees(previous, incoming)
+    return if (abs(delta) < TRACK_UPDATE_MIN_DELTA_DEG) previous else incoming
+}
+
+internal fun shortestAngularDeltaDegrees(fromDeg: Double, toDeg: Double): Double {
+    var delta = (toDeg - fromDeg) % 360.0
+    if (delta > 180.0) delta -= 360.0
+    if (delta <= -180.0) delta += 360.0
+    return delta
+}
+
+private fun normalizeHeading360(value: Double): Double {
+    var normalized = value % 360.0
+    if (normalized < 0.0) normalized += 360.0
+    return normalized
+}
+
+private const val TRACK_UPDATE_MIN_SPEED_MPS = 5.0
+private const val TRACK_UPDATE_MIN_DELTA_DEG = 4.0

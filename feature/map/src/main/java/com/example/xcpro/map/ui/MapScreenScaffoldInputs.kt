@@ -185,7 +185,9 @@ internal fun rememberMapScreenScaffoldInputs(
     val onMapReady: (MapLibreMap) -> Unit = { map ->
         mapRuntimeController.onMapReady(map)
         managers.overlayManager.setOgnIconSizePx(bindings.ognIconSizePx)
-        managers.overlayManager.updateOgnTrafficTargets(bindings.ognTargets)
+        managers.overlayManager.updateOgnTrafficTargets(
+            if (bindings.ognOverlayEnabled) bindings.ognTargets else emptyList()
+        )
         managers.overlayManager.setAdsbIconSizePx(bindings.adsbIconSizePx)
         managers.overlayManager.updateAdsbTrafficTargets(bindings.adsbTargets)
     }

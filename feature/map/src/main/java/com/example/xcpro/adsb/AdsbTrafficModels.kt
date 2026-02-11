@@ -44,6 +44,7 @@ data class AdsbTrafficUiModel(
     val positionSource: Int?,
     val category: Int?,
     val lastContactEpochSec: Long?,
+    val isEmergencyCollisionRisk: Boolean = false,
     val metadataTypecode: String? = null,
     val metadataIcaoAircraftType: String? = null
 )

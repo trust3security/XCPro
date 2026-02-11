@@ -48,6 +48,8 @@ enum class AdsbAircraftIcon(
     )
 }
 
+fun AdsbAircraftIcon.emergencyStyleImageId(): String = "${styleImageId}_emergency"
+
 fun AdsbAircraftIcon.displayLabel(): String = when (this) {
     AdsbAircraftIcon.PlaneLight -> "Light aircraft"
     AdsbAircraftIcon.PlaneLarge -> "Large aircraft"

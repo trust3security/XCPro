@@ -94,6 +94,9 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
 
     @Volatile
     private var withinRadiusCount: Int = 0
+    private var consecutiveEmptyPolls: Int = 0
+    private var lastPolledCenter: Center? = null
+    private val requestTimesMonoMs = ArrayDeque<Long>()
 
     override fun start() {
         setEnabled(true)
@@ -140,6 +143,8 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
         lastError = null
         fetchedCount = 0
         withinRadiusCount = 0
+        consecutiveEmptyPolls = 0
+        lastPolledCenter = null
         publishSnapshot()
     }
 
@@ -164,7 +169,7 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
                     lastError = null
                     publishSnapshot()
                     backoffMs = RECONNECT_BACKOFF_START_MS
-                    delay(POLL_INTERVAL_MS)
+                    delay(computeNextPollDelayMs(centerAtPoll, nowMonoMs))
                 }
 
                 is ProviderResult.RateLimited -> {
@@ -203,11 +208,13 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
     }
 
     private suspend fun fetchWithAuthRetry(bbox: BBox): ProviderResult {
+        recordRequest(clock.nowMonoMs())
         val token = tokenRepository.getValidTokenOrNull()
         val first = providerClient.fetchStates(bbox, token?.let(::AdsbAuth))
         if (first is ProviderResult.HttpError && first.code == 401 && !token.isNullOrBlank()) {
             tokenRepository.invalidate()
             val refreshedToken = tokenRepository.getValidTokenOrNull()
+            recordRequest(clock.nowMonoMs())
             return providerClient.fetchStates(bbox, refreshedToken?.let(::AdsbAuth))
         }
         return first
@@ -239,6 +246,11 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
             staleAfterSec = STALE_AFTER_SEC
         )
         withinRadiusCount = selection.withinRadiusCount
+        consecutiveEmptyPolls = if (selection.withinRadiusCount == 0) {
+            consecutiveEmptyPolls + 1
+        } else {
+            0
+        }
         _targets.value = selection.displayed
         lastSuccessMonoMs = nowMonoMs
         if (selection.displayed.isNotEmpty()) {
@@ -258,6 +270,70 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
         withinRadiusCount = selection.withinRadiusCount
         _targets.value = selection.displayed
         publishSnapshot()
+    }
+
+    private fun computeNextPollDelayMs(centerAtPoll: Center, nowMonoMs: Long): Long {
+        val adaptiveMs = computeAdaptivePollDelayMs(centerAtPoll)
+        val budgetFloorMs = computeBudgetFloorDelayMs(nowMonoMs)
+        val shouldPrioritizeNearbyTraffic = withinRadiusCount > 0
+        val delayMs = if (shouldPrioritizeNearbyTraffic) {
+            adaptiveMs
+        } else {
+            maxOf(adaptiveMs, budgetFloorMs)
+        }
+        lastPolledCenter = centerAtPoll
+        return delayMs.coerceIn(POLL_INTERVAL_HOT_MS, POLL_INTERVAL_MAX_MS)
+    }
+
+    private fun computeAdaptivePollDelayMs(centerAtPoll: Center): Long {
+        if (withinRadiusCount > 0) return POLL_INTERVAL_HOT_MS
+        val movementMeters = lastPolledCenter?.let {
+            AdsbGeoMath.haversineMeters(
+                lat1 = it.latitude,
+                lon1 = it.longitude,
+                lat2 = centerAtPoll.latitude,
+                lon2 = centerAtPoll.longitude
+            )
+        } ?: 0.0
+        if (movementMeters >= MOVEMENT_FAST_POLL_THRESHOLD_METERS) return POLL_INTERVAL_HOT_MS
+        return when {
+            consecutiveEmptyPolls >= EMPTY_STREAK_QUIET_POLLS -> POLL_INTERVAL_QUIET_MS
+            consecutiveEmptyPolls >= EMPTY_STREAK_COLD_POLLS -> POLL_INTERVAL_COLD_MS
+            consecutiveEmptyPolls >= EMPTY_STREAK_WARM_POLLS -> POLL_INTERVAL_WARM_MS
+            else -> POLL_INTERVAL_HOT_MS
+        }
+    }
+
+    private fun computeBudgetFloorDelayMs(nowMonoMs: Long): Long {
+        val credits = remainingCredits
+        if (credits != null) {
+            return when {
+                credits <= CREDIT_FLOOR_CRITICAL -> BUDGET_FLOOR_CRITICAL_MS
+                credits <= CREDIT_FLOOR_LOW -> BUDGET_FLOOR_LOW_MS
+                credits <= CREDIT_FLOOR_GUARDED -> BUDGET_FLOOR_GUARDED_MS
+                else -> 0L
+            }
+        }
+        pruneRequestHistory(nowMonoMs)
+        val requestsInLastHour = requestTimesMonoMs.size
+        return when {
+            requestsInLastHour >= REQUESTS_PER_HOUR_CRITICAL -> BUDGET_FLOOR_CRITICAL_MS
+            requestsInLastHour >= REQUESTS_PER_HOUR_LOW -> BUDGET_FLOOR_LOW_MS
+            requestsInLastHour >= REQUESTS_PER_HOUR_GUARDED -> BUDGET_FLOOR_GUARDED_MS
+            else -> 0L
+        }
+    }
+
+    private fun recordRequest(nowMonoMs: Long) {
+        requestTimesMonoMs.addLast(nowMonoMs)
+        pruneRequestHistory(nowMonoMs)
+    }
+
+    private fun pruneRequestHistory(nowMonoMs: Long) {
+        val cutoff = nowMonoMs - REQUEST_HISTORY_WINDOW_MS
+        while (requestTimesMonoMs.isNotEmpty() && requestTimesMonoMs.first() < cutoff) {
+            requestTimesMonoMs.removeFirst()
+        }
     }
 
     private fun publishSnapshot() {
@@ -334,7 +410,25 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
         private const val MIN_AIRBORNE_ALTITUDE_M = 30.48 // 100 ft
         private const val MIN_AIRBORNE_SPEED_MPS = 20.5778 // 40 kt
 
-        private const val POLL_INTERVAL_MS = 10_000L
+        private const val POLL_INTERVAL_HOT_MS = 10_000L
+        private const val POLL_INTERVAL_WARM_MS = 20_000L
+        private const val POLL_INTERVAL_COLD_MS = 30_000L
+        private const val POLL_INTERVAL_QUIET_MS = 40_000L
+        private const val POLL_INTERVAL_MAX_MS = 60_000L
+        private const val MOVEMENT_FAST_POLL_THRESHOLD_METERS = 500.0
+        private const val EMPTY_STREAK_WARM_POLLS = 1
+        private const val EMPTY_STREAK_COLD_POLLS = 3
+        private const val EMPTY_STREAK_QUIET_POLLS = 6
+        private const val CREDIT_FLOOR_GUARDED = 500
+        private const val CREDIT_FLOOR_LOW = 200
+        private const val CREDIT_FLOOR_CRITICAL = 50
+        private const val BUDGET_FLOOR_GUARDED_MS = 20_000L
+        private const val BUDGET_FLOOR_LOW_MS = 30_000L
+        private const val BUDGET_FLOOR_CRITICAL_MS = 60_000L
+        private const val REQUEST_HISTORY_WINDOW_MS = 60L * 60L * 1_000L
+        private const val REQUESTS_PER_HOUR_GUARDED = 120
+        private const val REQUESTS_PER_HOUR_LOW = 180
+        private const val REQUESTS_PER_HOUR_CRITICAL = 300
         private const val WAIT_FOR_CENTER_MS = 1_000L
         private const val RECONNECT_BACKOFF_START_MS = 2_000L
         private const val RECONNECT_BACKOFF_MAX_MS = 60_000L

@@ -59,49 +59,23 @@ class OgnTrafficOverlay(
             }
             ensureStyleImage(style)
             if (style.getLayer(ICON_LAYER_ID) == null) {
-                val iconLayer = SymbolLayer(ICON_LAYER_ID, SOURCE_ID)
-                    .withProperties(
-                        iconImage(ICON_IMAGE_ID),
-                        iconSize(iconScaleForPx(currentIconSizePx)),
-                        iconRotate(
-                            Expression.coalesce(
-                                Expression.get(PROP_TRACK_DEG),
-                                Expression.literal(0.0)
-                            )
-                        ),
-                        iconRotationAlignment("map"),
-                        iconKeepUpright(false),
-                        iconAllowOverlap(true),
-                        iconIgnorePlacement(true),
-                        iconAnchor("center"),
-                        iconOpacity(Expression.get(PROP_ALPHA))
-                    )
+                val iconLayer = createIconLayer()
                 val anchorId = BlueLocationOverlay.LAYER_ID
                 if (style.getLayer(anchorId) != null) {
-                    style.addLayerBelow(iconLayer, anchorId)
+                    style.addLayerAbove(iconLayer, anchorId)
                 } else {
                     style.addLayer(iconLayer)
                 }
             }
             if (style.getLayer(LABEL_LAYER_ID) == null) {
-                val labelLayer = SymbolLayer(LABEL_LAYER_ID, SOURCE_ID)
-                    .withProperties(
-                        textField(Expression.get(PROP_LABEL)),
-                        textSize(LABEL_TEXT_SIZE_SP),
-                        textColor(LABEL_TEXT_COLOR),
-                        textHaloColor(LABEL_HALO_COLOR),
-                        textHaloWidth(LABEL_HALO_WIDTH_DP),
-                        textOffset(arrayOf(0f, labelOffsetYForPx(currentIconSizePx))),
-                        textAnchor("top"),
-                        textAllowOverlap(true),
-                        textIgnorePlacement(true)
-                    )
+                val labelLayer = createLabelLayer()
                 if (style.getLayer(ICON_LAYER_ID) != null) {
                     style.addLayerAbove(labelLayer, ICON_LAYER_ID)
                 } else {
                     style.addLayer(labelLayer)
                 }
             }
+            ensureLayerOrder(style)
             applyIconSizeToStyle()
         } catch (t: Throwable) {
             AppLogger.e(TAG, "Failed to initialize OGN overlay: ${t.message}", t)
@@ -167,6 +141,60 @@ class OgnTrafficOverlay(
         if (existing != null) return
         val bitmap = drawableToBitmap(R.drawable.ic_adsb_glider) ?: return
         style.addImage(ICON_IMAGE_ID, bitmap)
+    }
+
+    private fun createIconLayer(): SymbolLayer =
+        SymbolLayer(ICON_LAYER_ID, SOURCE_ID)
+            .withProperties(
+                iconImage(ICON_IMAGE_ID),
+                iconSize(iconScaleForPx(currentIconSizePx)),
+                iconRotate(
+                    Expression.coalesce(
+                        Expression.get(PROP_TRACK_DEG),
+                        Expression.literal(0.0)
+                    )
+                ),
+                iconRotationAlignment("map"),
+                iconKeepUpright(false),
+                iconAllowOverlap(true),
+                iconIgnorePlacement(true),
+                iconAnchor("center"),
+                iconOpacity(Expression.get(PROP_ALPHA))
+            )
+
+    private fun createLabelLayer(): SymbolLayer =
+        SymbolLayer(LABEL_LAYER_ID, SOURCE_ID)
+            .withProperties(
+                textField(Expression.get(PROP_LABEL)),
+                textSize(LABEL_TEXT_SIZE_SP),
+                textColor(LABEL_TEXT_COLOR),
+                textHaloColor(LABEL_HALO_COLOR),
+                textHaloWidth(LABEL_HALO_WIDTH_DP),
+                textOffset(arrayOf(0f, labelOffsetYForPx(currentIconSizePx))),
+                textAnchor("top"),
+                textAllowOverlap(true),
+                textIgnorePlacement(true)
+            )
+
+    private fun ensureLayerOrder(style: Style) {
+        val anchorId = BlueLocationOverlay.LAYER_ID
+        if (style.getLayer(anchorId) == null) return
+        if (style.getLayer(ICON_LAYER_ID) == null || style.getLayer(LABEL_LAYER_ID) == null) return
+
+        val layerIds = style.layers.map { it.id }
+        val anchorIndex = layerIds.indexOf(anchorId)
+        val iconIndex = layerIds.indexOf(ICON_LAYER_ID)
+        val labelIndex = layerIds.indexOf(LABEL_LAYER_ID)
+        if (anchorIndex < 0 || iconIndex < 0 || labelIndex < 0) return
+
+        val iconNeedsMove = iconIndex <= anchorIndex
+        val labelNeedsMove = labelIndex <= iconIndex
+        if (!iconNeedsMove && !labelNeedsMove) return
+
+        style.removeLayer(LABEL_LAYER_ID)
+        style.removeLayer(ICON_LAYER_ID)
+        style.addLayerAbove(createIconLayer(), anchorId)
+        style.addLayerAbove(createLabelLayer(), ICON_LAYER_ID)
     }
 
     private fun drawableToBitmap(drawableId: Int): Bitmap? {

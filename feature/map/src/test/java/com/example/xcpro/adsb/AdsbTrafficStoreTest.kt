@@ -69,6 +69,39 @@ class AdsbTrafficStoreTest {
         assertTrue(uncappedSelection.displayed.any { it.id == targets.first().id && it.isStale })
     }
 
+    @Test
+    fun select_marksEmergencyWhenTargetIsCloseAndInbound() {
+        val store = AdsbTrafficStore()
+        val now = 400_000L
+        val inbound = target(
+            index = 1,
+            lat = -33.8688,
+            lon = 151.2140,
+            receivedMonoMs = now
+        ).copy(trackDeg = 270.0)
+        val outbound = target(
+            index = 2,
+            lat = -33.8688,
+            lon = 151.2140,
+            receivedMonoMs = now
+        ).copy(trackDeg = 90.0)
+        store.upsertAll(listOf(inbound, outbound))
+
+        val selection = store.select(
+            nowMonoMs = now,
+            centerLat = -33.8688,
+            centerLon = 151.2093,
+            radiusMeters = 20_000.0,
+            maxDisplayed = 30,
+            staleAfterSec = 60
+        )
+
+        val inboundUi = selection.displayed.first { it.id == inbound.id }
+        val outboundUi = selection.displayed.first { it.id == outbound.id }
+        assertTrue(inboundUi.isEmergencyCollisionRisk)
+        assertTrue(!outboundUi.isEmergencyCollisionRisk)
+    }
+
     private fun target(
         index: Int,
         lat: Double = -33.8688,
