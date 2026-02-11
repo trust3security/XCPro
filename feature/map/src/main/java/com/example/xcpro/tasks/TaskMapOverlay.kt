@@ -24,23 +24,17 @@ fun TaskMapOverlay(
     val uiState by resolvedViewModel.uiState.collectAsStateWithLifecycle()
     val currentTask = uiState.task
     val currentTaskType = uiState.taskType
-
-    LaunchedEffect(mapLibreMap) {
-        taskManager.setMapInstance(mapLibreMap)
-    }
+    val activeLeg = uiState.stats.activeIndex
 
     // Plot task on map when task changes, task type switches, OR map becomes available
-    LaunchedEffect(currentTask, currentTaskType, mapLibreMap) {
+    LaunchedEffect(currentTask, currentTaskType, activeLeg, mapLibreMap) {
 
         // CRITICAL FIX: Clear ALL task visuals before plotting new ones
         // This ensures complete separation and prevents color contamination
         if (mapLibreMap != null) {
 
             // FORCE clear ALL Racing visuals - even when switching to AAT
-            taskManager.getRacingTaskManager().clearRacingFromMap(mapLibreMap)
-
-            // FORCE clear ALL AAT visuals - even when switching to Racing
-            taskManager.getAATTaskManager().clearAATFromMap(mapLibreMap)
+            TaskMapRenderRouter.clearAllTaskVisuals(taskManager, mapLibreMap)
 
             // Additional safety: Clear any remaining task-related layers that might be orphaned
             mapLibreMap.getStyle { style ->
@@ -84,7 +78,7 @@ fun TaskMapOverlay(
         }
 
         if (currentTask.waypoints.isNotEmpty()) {
-            taskManager.plotOnMap(mapLibreMap)
+            TaskMapRenderRouter.plotCurrentTask(taskManager, mapLibreMap)
         }
     }
 

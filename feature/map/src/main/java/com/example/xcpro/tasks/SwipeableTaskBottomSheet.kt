@@ -54,7 +54,6 @@ private fun calculateOptimalHeight(
 // ---------- MAIN BOTTOM SHEET ----------
 @Composable
 fun SwipeableTaskBottomSheet(
-    taskManager: TaskManagerCoordinator,
     onClearTask: () -> Unit,
     onSaveTask: () -> Unit,
     onDismiss: () -> Unit,
@@ -89,7 +88,6 @@ fun SwipeableTaskBottomSheet(
     //  SSOT FIX: Make task reactive so distance/UI updates when radius changes
     // CRITICAL: Without derivedStateOf, task captures once and never updates!
     val task by remember { derivedStateOf { uiState.task } }
-    var taskType by remember { mutableStateOf(uiState.taskType) }
 
     var currentHeightPx by remember(initialHeight) {
         val height = when (initialHeight) {
@@ -206,14 +204,13 @@ fun SwipeableTaskBottomSheet(
             when {
                 currentHeightPx <= minimizedPx + 50f -> {
                     // Minimized content
-                    MinimizedContent(task = task, taskManager = taskManager)
+                    MinimizedContent(task = task, taskType = uiState.taskType)
                 }
                 currentHeightPx >= fullyExpandedPx - 50f -> {
                     // Fully expanded content with categories
                     ExpandedContent(
                         uiState = uiState,
                         task = task,
-                        taskManager = taskManager,
                         taskViewModel = resolvedTaskViewModel,
                         selectedCategory = selectedCategory,
                         onCategorySelect = { selectedCategory = it },
@@ -230,7 +227,6 @@ fun SwipeableTaskBottomSheet(
                     ExpandedContent(
                         uiState = uiState,
                         task = task,
-                        taskManager = taskManager,
                         taskViewModel = resolvedTaskViewModel,
                         selectedCategory = selectedCategory,
                         onCategorySelect = { selectedCategory = it },
@@ -251,7 +247,6 @@ fun SwipeableTaskBottomSheet(
 private fun ExpandedContent(
     uiState: TaskUiState,
     task: Task,
-    taskManager: TaskManagerCoordinator,
     taskViewModel: TaskSheetViewModel,
     selectedCategory: TaskCategory,
     onCategorySelect: (TaskCategory) -> Unit,
@@ -303,7 +298,6 @@ private fun ExpandedContent(
                 ManageBTTabRouter(
                     uiState = uiState,
                     task = task,
-                    taskManager = taskManager,
                     taskViewModel = taskViewModel,
                     mapLibreMap = mapLibreMap,
                     allWaypoints = allWaypoints,
@@ -311,17 +305,14 @@ private fun ExpandedContent(
                     onSaveTask = onSaveTask,
                     onDismiss = onDismiss,
                     currentQNH = currentQNH,
-                    taskType = taskManager.taskType
+                    taskType = uiState.taskType
                 )
             }
             TaskCategory.RULES -> {
                 RulesBTTab(
-                    selected = taskManager.taskType,
-                    onSelect = { taskType ->
-                        taskManager.setTaskType(taskType)
-                    },
-                    taskManager = taskManager,
-                    taskViewModel = taskViewModel
+                    uiState = uiState,
+                    onSelect = taskViewModel::onSetTaskType,
+                    onUpdateAATParameters = taskViewModel::onUpdateAATParameters
                 )
             }
             TaskCategory.FILES -> {

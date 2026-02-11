@@ -26,6 +26,8 @@ datastorePreferencesCoreAndroid = "1.1.7" # latest as of Aug 2025
 hilt = "2.56.1"
 hiltAndroidx = "1.3.0"
 splashscreen = "1.2.0"
+room = "2.7.2"
+work = "2.10.3"
 
 
 [libraries]
@@ -72,6 +74,10 @@ hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.r
 androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltAndroidx" }
 androidx-hilt-work = { group = "androidx.hilt", name = "hilt-work", version.ref = "hiltAndroidx" }
 androidx-hilt-compiler = { group = "androidx.hilt", name = "hilt-compiler", version.ref = "hiltAndroidx" }
+androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "work" }
 androidx-test-core = { group = "androidx.test", name = "core-ktx", version = "1.6.0" }
 robolectric = { group = "org.robolectric", name = "robolectric", version = "4.12.1" }
 androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "splashscreen" }

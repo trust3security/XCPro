@@ -8,13 +8,10 @@ import com.example.xcpro.tasks.aat.models.AATWaypoint
 import com.example.xcpro.tasks.aat.models.AATWaypointRole
 import java.time.Duration
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import org.maplibre.android.maps.MapLibreMap
 import org.mockito.kotlin.any
-import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
@@ -33,10 +30,9 @@ class AATCoordinatorDelegateTest {
     }
 
     @Test
-    fun `updateWaypointPointType re-plots when map available`() {
+    fun `updateWaypointPointType delegates update bridge`() {
         val taskManager = mock<AATTaskManager>()
-        val map = mock<MapLibreMap>()
-        val delegate = delegate(taskManager) { map }
+        val delegate = delegate(taskManager)
 
         delegate.updateWaypointPointType(
             index = 1,
@@ -59,14 +55,12 @@ class AATCoordinatorDelegateTest {
             keyholeAngle = 45.0,
             sectorOuterRadius = 5.6
         )
-        verify(taskManager).plotAATOnMap(map)
-        assertTrue(logs.any { it.contains("Re-plotting AAT task after point type update") })
     }
 
     @Test
-    fun `updateWaypointPointType logs when map missing`() {
+    fun `updateWaypointPointType supports null attrs`() {
         val taskManager = mock<AATTaskManager>()
-        val delegate = delegate(taskManager) { null }
+        val delegate = delegate(taskManager)
 
         delegate.updateWaypointPointType(
             index = 0,
@@ -89,8 +83,6 @@ class AATCoordinatorDelegateTest {
             keyholeAngle = null,
             sectorOuterRadius = null
         )
-        verify(taskManager, never()).plotAATOnMap(anyOrNull())
-        assertTrue(logs.any { it.contains("Cannot re-plot AAT task") })
     }
 
     @Test
@@ -149,58 +141,26 @@ class AATCoordinatorDelegateTest {
     @Test
     fun `enterEditMode delegates to task manager`() {
         val taskManager = mock<AATTaskManager>()
-        val map = mock<MapLibreMap>()
-        val delegate = delegate(taskManager) { map }
+        val delegate = delegate(taskManager)
 
         delegate.enterEditMode(2)
 
         verify(taskManager).setEditMode(2, true)
-        verify(taskManager).plotAATEditOverlay(map, 2)
-        verify(taskManager).plotAATOnMap(map)
     }
 
     @Test
-    fun `exitEditMode clears overlays`() {
+    fun `exitEditMode clears edit mode`() {
         val taskManager = mock<AATTaskManager>()
-        val map = mock<MapLibreMap>()
-        val delegate = delegate(taskManager) { map }
+        val delegate = delegate(taskManager)
 
         delegate.exitEditMode()
 
         verify(taskManager).setEditMode(-1, false)
-        verify(taskManager).clearAATEditOverlay(map)
-        verify(taskManager).plotAATOnMap(map)
-    }
-
-    @Test
-    fun `checkTargetPointHit returns null when map missing`() {
-        val taskManager = mock<AATTaskManager>()
-        val delegate = delegate(taskManager) { null }
-
-        val result = delegate.checkTargetPointHit(10f, 20f)
-
-        assertNull(result)
-        verify(taskManager, never()).checkTargetPointHit(any<MapLibreMap>(), any<Float>(), any<Float>())
-        assertTrue(logs.any { it.contains("Cannot check target point hit") })
-    }
-
-    @Test
-    fun `checkTargetPointHit delegates when map available`() {
-        val taskManager = mock<AATTaskManager>()
-        val map = mock<MapLibreMap>()
-        whenever(taskManager.checkTargetPointHit(map, 12f, 34f)).thenReturn(7)
-        val delegate = delegate(taskManager) { map }
-
-        val result = delegate.checkTargetPointHit(12f, 34f)
-
-        assertEquals(7, result)
-        verify(taskManager).checkTargetPointHit(map, 12f, 34f)
     }
 
     private fun delegate(
-        taskManager: AATTaskManager,
-        mapProvider: () -> MapLibreMap? = { mock<MapLibreMap>() }
-    ) = AATCoordinatorDelegate(taskManager, mapProvider, log)
+        taskManager: AATTaskManager
+    ) = AATCoordinatorDelegate(taskManager, log)
 }
 
 

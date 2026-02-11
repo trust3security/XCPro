@@ -3,8 +3,6 @@ package com.example.xcpro.tasks
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
-import org.mockito.Mockito
-import org.maplibre.android.maps.MapLibreMap
 
 class AATEditControllerTest {
 
@@ -19,54 +17,46 @@ class AATEditControllerTest {
     }
 
     @Test
-    fun `updateTargetPoint plots when map available`() {
-        val map = Mockito.mock(MapLibreMap::class.java)
-        val controller = controller { map }
+    fun `updateTargetPoint delegates update`() {
+        val controller = controller()
 
         controller.updateTargetPoint(2, 51.0, -0.1)
 
         assertEquals(listOf(Triple(2, 51.0, -0.1)), fakeOperations.updateCalls)
-        assertEquals(listOf(map), fakeOperations.plotCalls)
         assertTrue(logs.any { it.contains("Updating AAT target point index=2") })
     }
 
     @Test
-    fun `updateTargetPoint logs when map missing`() {
-        val controller = controller { null }
+    fun `updateTargetPoint handles multiple updates`() {
+        val controller = controller()
 
         controller.updateTargetPoint(1, 40.0, 10.0)
+        controller.updateTargetPoint(2, 41.0, 11.0)
 
-        assertEquals(1, fakeOperations.updateCalls.size)
-        assertTrue(fakeOperations.plotCalls.isEmpty())
-        assertTrue(logs.any { it.contains("Cannot re-plot AAT task") })
+        assertEquals(2, fakeOperations.updateCalls.size)
     }
 
     @Test
-    fun `enterEditMode applies overlay and plotting`() {
-        val map = Mockito.mock(MapLibreMap::class.java)
-        val controller = controller { map }
+    fun `enterEditMode sets edit state`() {
+        val controller = controller()
 
         controller.enterEditMode(3)
 
         assertEquals(listOf(3 to true), fakeOperations.editModeCalls)
-        assertEquals(listOf(map to 3), fakeOperations.overlayCalls)
-        assertEquals(listOf(map), fakeOperations.plotCalls)
     }
 
     @Test
-    fun `exitEditMode clears overlay`() {
-        val map = Mockito.mock(MapLibreMap::class.java)
-        val controller = controller { map }
+    fun `exitEditMode clears edit state`() {
+        val controller = controller()
 
         controller.exitEditMode()
 
         assertEquals(listOf(-1 to false), fakeOperations.editModeCalls)
-        assertEquals(listOf(map), fakeOperations.clearOverlayCalls)
     }
 
     @Test
     fun `isInEditMode delegates to operations`() {
-        val controller = controller { null }
+        val controller = controller()
         fakeOperations.isEditMode = true
 
         assertTrue(controller.isInEditMode())
@@ -74,7 +64,7 @@ class AATEditControllerTest {
 
     @Test
     fun `editWaypointIndex delegates to operations`() {
-        val controller = controller { null }
+        val controller = controller()
         fakeOperations.editIndex = 7
 
         assertEquals(7, controller.editWaypointIndex())
@@ -82,48 +72,22 @@ class AATEditControllerTest {
 
     @Test
     fun `checkAreaTap delegates to operations`() {
-        val controller = controller { null }
+        val controller = controller()
         fakeOperations.areaTapResult = 2 to "area"
 
         assertEquals(2 to "area", controller.checkAreaTap(1.0, 2.0))
     }
 
-    @Test
-    fun `checkTargetPointHit returns null when map missing`() {
-        val controller = controller { null }
-
-        assertNull(controller.checkTargetPointHit(10f, 20f))
-        assertTrue(logs.any { it.contains("Cannot check target point hit") })
-        assertTrue(fakeOperations.targetPointHitCalls.isEmpty())
-    }
-
-    @Test
-    fun `checkTargetPointHit delegates when map exists`() {
-        val map = Mockito.mock(MapLibreMap::class.java)
-        fakeOperations.targetPointHitResult = 5
-        val controller = controller { map }
-
-        val result = controller.checkTargetPointHit(12f, 34f)
-
-        assertEquals(5, result)
-        assertEquals(listOf(Triple(map, 12f, 34f)), fakeOperations.targetPointHitCalls)
-    }
-
-    private fun controller(mapProvider: () -> MapLibreMap?) =
-        AATEditController(fakeOperations, mapProvider, log)
+    private fun controller() =
+        AATEditController(fakeOperations, log)
 
     private class FakeAATOperations : AATEditOperations {
         val updateCalls = mutableListOf<Triple<Int, Double, Double>>()
         val editModeCalls = mutableListOf<Pair<Int, Boolean>>()
-        val overlayCalls = mutableListOf<Pair<MapLibreMap, Int>>()
-        val plotCalls = mutableListOf<MapLibreMap>()
-        val clearOverlayCalls = mutableListOf<MapLibreMap>()
-        val targetPointHitCalls = mutableListOf<Triple<MapLibreMap, Float, Float>>()
 
         var isEditMode: Boolean = false
         var editIndex: Int? = null
         var areaTapResult: Pair<Int, Any>? = null
-        var targetPointHitResult: Int? = null
 
         override fun updateTargetPoint(index: Int, lat: Double, lon: Double) {
             updateCalls += Triple(index, lat, lon)
@@ -137,29 +101,8 @@ class AATEditControllerTest {
             editIndex = if (enabled) waypointIndex else null
         }
 
-        override fun plotAATEditOverlay(map: MapLibreMap, waypointIndex: Int) {
-            overlayCalls += map to waypointIndex
-        }
-
-        override fun plotAATOnMap(map: MapLibreMap) {
-            plotCalls += map
-        }
-
-        override fun clearAATEditOverlay(map: MapLibreMap) {
-            clearOverlayCalls += map
-        }
-
         override fun isInEditMode(): Boolean = isEditMode
 
         override fun getEditWaypointIndex(): Int? = editIndex
-
-        override fun checkTargetPointHit(
-            map: MapLibreMap,
-            screenX: Float,
-            screenY: Float
-        ): Int? {
-            targetPointHitCalls += Triple(map, screenX, screenY)
-            return targetPointHitResult
-        }
     }
 }

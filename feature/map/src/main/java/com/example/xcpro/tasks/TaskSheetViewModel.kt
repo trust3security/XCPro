@@ -2,18 +2,24 @@ package com.example.xcpro.tasks
 
 import androidx.lifecycle.ViewModel
 import com.example.xcpro.common.waypoint.SearchWaypoint
+import com.example.xcpro.tasks.core.TaskWaypoint
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.domain.logic.TaskAdvanceState
-import com.example.xcpro.tasks.domain.model.GeoPoint
+import com.example.xcpro.tasks.racing.models.RacingStartPointType
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.Duration
 import javax.inject.Inject
 import kotlinx.coroutines.flow.StateFlow
-import kotlin.math.pow
 
 /**
  * Bridges UI intents to task use-cases while maintaining
  * a domain TaskRepository for validation/stats.
  */
+data class RacingStartDistanceUi(
+    val distanceKm: Double,
+    val isOptimalCrossing: Boolean
+)
+
 @HiltViewModel
 class TaskSheetViewModel @Inject constructor(
     private val taskCoordinator: TaskSheetCoordinatorUseCase,
@@ -87,35 +93,74 @@ class TaskSheetViewModel @Inject constructor(
 
     fun onLocationUpdate(lat: Double, lon: Double) {
         val state = uiState.value
-        val leg = taskCoordinator.currentLeg
+        val leg = state.stats.activeIndex
         val waypoint = state.task.waypoints.getOrNull(leg) ?: return
         val target = state.targets.getOrNull(leg)?.target
-        val activePoint = target?.let { GeoPoint(it.lat, it.lon) } ?: GeoPoint(waypoint.lat, waypoint.lon)
-        val distance = haversineMeters(lat, lon, activePoint.lat, activePoint.lon)
-        val radius = effectiveRadius(taskCoordinator.taskType, waypoint.role)
-        val hasEntered = distance <= radius + 30.0 // 30 m buffer
-        val closeToTarget = distance <= 200.0
-        onProximityEvent(hasEntered, closeToTarget)
+        val proximity = useCase.evaluateProximity(
+            taskType = state.taskType,
+            waypointRole = waypoint.role,
+            aircraftLat = lat,
+            aircraftLon = lon,
+            targetLat = target?.lat ?: waypoint.lat,
+            targetLon = target?.lon ?: waypoint.lon
+        )
+        onProximityEvent(
+            hasEnteredOZ = proximity.hasEnteredObservationZone,
+            closeToTarget = proximity.isCloseToTarget
+        )
     }
 
-    private fun haversineMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
-        val r = 6371000.0
-        val dLat = Math.toRadians(lat2 - lat1)
-        val dLon = Math.toRadians(lon2 - lon1)
-        val a = kotlin.math.sin(dLat / 2).pow(2.0) +
-            kotlin.math.cos(Math.toRadians(lat1)) * kotlin.math.cos(Math.toRadians(lat2)) *
-            kotlin.math.sin(dLon / 2).pow(2.0)
-        return 2 * r * kotlin.math.asin(kotlin.math.sqrt(a))
+    fun distanceToActiveWaypointKm(lat: Double, lon: Double): Double? {
+        val state = uiState.value
+        val leg = state.stats.activeIndex
+        val waypoint = state.task.waypoints.getOrNull(leg) ?: return null
+        val target = state.targets.getOrNull(leg)?.target
+        val distanceMeters = useCase.distanceMeters(
+            fromLat = lat,
+            fromLon = lon,
+            toLat = target?.lat ?: waypoint.lat,
+            toLon = target?.lon ?: waypoint.lon
+        )
+        return distanceMeters / 1000.0
     }
 
-    private fun effectiveRadius(taskType: TaskType, role: com.example.xcpro.tasks.core.WaypointRole): Double =
-        when (role) {
-            com.example.xcpro.tasks.core.WaypointRole.START -> 100.0 // half width of 200m line
-            com.example.xcpro.tasks.core.WaypointRole.FINISH -> 3000.0
-            com.example.xcpro.tasks.core.WaypointRole.TURNPOINT,
-            com.example.xcpro.tasks.core.WaypointRole.OPTIONAL ->
-                if (taskType == TaskType.AAT) 5000.0 else 500.0
-        }
+    fun resolveRacingStartDistanceUi(
+        selectedStartType: RacingStartPointType,
+        startWaypoint: TaskWaypoint,
+        nextWaypoint: TaskWaypoint
+    ): RacingStartDistanceUi {
+        val useOptimalCrossing = selectedStartType == RacingStartPointType.START_LINE
+        val distanceKm = taskCoordinator.calculateDistanceToNextWaypointKm(
+            fromWaypoint = startWaypoint,
+            nextWaypoint = nextWaypoint,
+            useOptimalStartLine = useOptimalCrossing
+        )
+        return RacingStartDistanceUi(
+            distanceKm = distanceKm,
+            isOptimalCrossing = useOptimalCrossing
+        )
+    }
+
+    fun calculateDistanceToNextWaypointKm(
+        fromWaypoint: TaskWaypoint,
+        nextWaypoint: TaskWaypoint
+    ): Double {
+        return taskCoordinator.calculateDistanceToNextWaypointKm(
+            fromWaypoint = fromWaypoint,
+            nextWaypoint = nextWaypoint,
+            useOptimalStartLine = false
+        )
+    }
+
+    fun onSetActiveLeg(index: Int) = mutate {
+        val waypoints = uiState.value.task.waypoints
+        if (waypoints.isEmpty()) return@mutate
+        taskCoordinator.setActiveLeg(index.coerceIn(0, waypoints.lastIndex))
+    }
+
+    fun onUpdateAATParameters(minimumTime: Duration, maximumTime: Duration) = mutate {
+        taskCoordinator.updateAATParameters(minimumTime, maximumTime)
+    }
 
     fun importPersistedTask(json: String) = mutate {
         val persisted = TaskPersistSerializer.deserialize(json)

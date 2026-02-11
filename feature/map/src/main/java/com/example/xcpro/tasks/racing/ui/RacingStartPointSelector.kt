@@ -1,13 +1,12 @@
 package com.example.xcpro.tasks.racing.ui
 
-import com.example.xcpro.tasks.core.TaskWaypoint
+import com.example.xcpro.tasks.RacingStartDistanceUi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
@@ -17,7 +16,6 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.unit.dp
 import android.util.Log
 import com.example.xcpro.tasks.racing.models.RacingStartPointType
-import com.example.xcpro.tasks.TaskManagerCoordinator
 
 private const val TAG = "RacingStartPointSelector"
 
@@ -36,9 +34,7 @@ private const val TAG = "RacingStartPointSelector"
 internal fun RacingStartPointSelector(
     selectedStartType: RacingStartPointType,
     gateWidth: String,
-    waypoint: TaskWaypoint,
-    nextWaypoint: TaskWaypoint?,
-    taskManager: TaskManagerCoordinator,
+    distanceToNext: RacingStartDistanceUi?,
     onStartTypeChange: (RacingStartPointType) -> Unit,
     onGateWidthChange: (String) -> Unit
 ) {
@@ -162,18 +158,8 @@ internal fun RacingStartPointSelector(
         }
     }
 
-    // Distance to next turnpoint
-    if (nextWaypoint != null) {
-        val distance by remember(selectedStartType, gateWidth, nextWaypoint) {
-            derivedStateOf<Double> {
-                if (selectedStartType == RacingStartPointType.START_LINE) {
-                    val optimalPoint = taskManager.calculateOptimalStartLineCrossingPoint(waypoint, nextWaypoint)
-                    taskManager.haversineDistance(optimalPoint.first, optimalPoint.second, nextWaypoint.lat, nextWaypoint.lon)
-                } else {
-                    taskManager.calculateSimpleSegmentDistance(waypoint, nextWaypoint)
-                }
-            }
-        }
+    // Distance to next turnpoint (already resolved by ViewModel/use-case)
+    if (distanceToNext != null) {
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
@@ -194,8 +180,8 @@ internal fun RacingStartPointSelector(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Distance to next turnpoint: ${String.format("%.1f", distance)} km" +
-                        if (selectedStartType == RacingStartPointType.START_LINE) " (optimal crossing)" else "",
+                    text = "Distance to next turnpoint: ${String.format("%.1f", distanceToNext.distanceKm)} km" +
+                        if (distanceToNext.isOptimalCrossing) " (optimal crossing)" else "",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium
                 )

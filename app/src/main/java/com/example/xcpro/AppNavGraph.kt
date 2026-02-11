@@ -33,6 +33,8 @@ import com.example.xcpro.screens.navdrawer.HawkVarioSettingsScreen
 import com.example.xcpro.screens.navdrawer.PolarSettingsScreen
 import com.example.xcpro.screens.navdrawer.UnitsSettingsScreen
 import com.example.xcpro.screens.navdrawer.OrientationSettingsScreen
+import com.example.xcpro.screens.navdrawer.AdsbSettingsScreen
+import com.example.xcpro.screens.navdrawer.OgnSettingsScreen
 import com.example.xcpro.screens.diagnostics.VarioDiagnosticsScreen
 import com.example.xcpro.screens.replay.IgcReplayScreen
 
@@ -137,6 +139,8 @@ fun AppNavGraph(
         composable("manage_account") { ManageAccount(navController, drawerState) }
         composable("logbook") { Logbook(navController, drawerState) }
         composable("layouts") { LayoutScreen(navController, drawerState) }
+        composable("adsb_settings") { AdsbSettingsScreen(navController, drawerState) }
+        composable("ogn_settings") { OgnSettingsScreen(navController, drawerState) }
         composable("dfnavboxes") { DFNavboxes(navController, drawerState) }
         composable("orientation_settings") { backStackEntry ->
             OrientationSettingsScreen(

@@ -1,6 +1,7 @@
 package com.example.xcpro.tasks.racing.ui
 
 import com.example.xcpro.tasks.core.TaskWaypoint
+import com.example.xcpro.tasks.RacingStartDistanceUi
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
@@ -8,7 +9,6 @@ import android.util.Log
 import com.example.xcpro.tasks.racing.models.RacingStartPointType
 import com.example.xcpro.tasks.racing.models.RacingFinishPointType
 import com.example.xcpro.tasks.racing.models.RacingTurnPointType
-import com.example.xcpro.tasks.TaskManagerCoordinator
 
 private const val TAG = "RacingTaskPointTypeSelector"
 
@@ -36,8 +36,8 @@ fun RacingTaskPointTypeSelector(
     keyholeInnerRadius: String,
     keyholeAngle: String,
     faiQuadrantOuterRadius: String,
-    nextWaypoint: TaskWaypoint? = null,
-    taskManager: TaskManagerCoordinator,
+    startDistanceUi: RacingStartDistanceUi?,
+    turnDistanceToNextKm: Double?,
     onStartTypeChange: (RacingStartPointType) -> Unit,
     onFinishTypeChange: (RacingFinishPointType) -> Unit,
     onTurnTypeChange: (RacingTurnPointType) -> Unit,
@@ -54,9 +54,7 @@ fun RacingTaskPointTypeSelector(
                 RacingStartPointSelector(
                     selectedStartType = selectedStartType,
                     gateWidth = gateWidth,
-                    waypoint = waypoint,
-                    nextWaypoint = nextWaypoint,
-                    taskManager = taskManager,
+                    distanceToNext = startDistanceUi,
                     onStartTypeChange = onStartTypeChange,
                     onGateWidthChange = onGateWidthChange
                 )
@@ -78,9 +76,7 @@ fun RacingTaskPointTypeSelector(
                     keyholeInnerRadius = keyholeInnerRadius,
                     keyholeAngle = keyholeAngle,
                     faiQuadrantOuterRadius = faiQuadrantOuterRadius,
-                    waypoint = waypoint,
-                    nextWaypoint = nextWaypoint,
-                    taskManager = taskManager,
+                    distanceToNextKm = turnDistanceToNextKm,
                     onTurnTypeChange = onTurnTypeChange,
                     onGateWidthChange = onGateWidthChange,
                     onKeyholeInnerRadiusChange = onKeyholeInnerRadiusChange,

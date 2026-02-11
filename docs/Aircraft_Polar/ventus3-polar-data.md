@@ -1,4 +1,3 @@
-﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
 
 # Schempp-Hirth Ventus 3 - Complete Performance Data
 ## 15-Meter and 18-Meter Configurations

@@ -8,7 +8,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.xcpro.tasks.TaskUiState
-import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.tasks.TaskSheetViewModel
 import com.example.xcpro.tasks.QRCodeDialog
 import com.example.xcpro.tasks.TaskStatsSection
@@ -26,7 +25,6 @@ internal fun AATFullyExpandedContent(
     onClearTask: () -> Unit,
     onSaveTask: () -> Unit,
     onDismiss: () -> Unit,
-    taskManager: TaskManagerCoordinator,
     taskViewModel: TaskSheetViewModel,
     mapLibreMap: MapLibreMap?,
     allWaypoints: List<WaypointData>,
@@ -40,7 +38,7 @@ internal fun AATFullyExpandedContent(
         TaskStatsSection(
             task = task,
             taskType = TaskType.AAT,
-            taskManager = taskManager,
+            distanceKm = uiState.stats.distanceNominal / 1000.0,
             onQRCodeClick = { showQRDialog = true }
         )
 
@@ -69,9 +67,7 @@ internal fun AATFullyExpandedContent(
                 targets = uiState.targets,
                 allWaypoints = allWaypoints,
                 currentQNH = currentQNH,
-                taskManager = taskManager,
                 taskViewModel = taskViewModel,
-                mapLibreMap = mapLibreMap,
                 onReorder = { fromIndex, toIndex -> taskViewModel.onReorderWaypoint(fromIndex, toIndex) },
                 onRemove = { index -> taskViewModel.onRemoveWaypoint(index) },
                 onWaypointReplace = { index, newWaypoint -> taskViewModel.onReplaceWaypoint(index, newWaypoint) },
@@ -96,7 +92,6 @@ internal fun AATFullyExpandedContent(
 
     if (showQRDialog) {
         QRCodeDialog(
-            taskManager = taskManager,
             uiState = uiState,
             onDismiss = { showQRDialog = false },
             onImportJson = { json -> taskViewModel.importPersistedTask(json) }

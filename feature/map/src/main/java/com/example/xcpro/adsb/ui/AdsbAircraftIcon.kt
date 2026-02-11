@@ -31,11 +31,11 @@ enum class AdsbAircraftIcon(
         styleImageId = "adsb_icon_balloon"
     ),
     Parachutist(
-        resId = R.drawable.ic_adsb_parachutist,
+        resId = R.drawable.ic_adsb_parachutist_symbol,
         styleImageId = "adsb_icon_parachutist"
     ),
     Hangglider(
-        resId = R.drawable.ic_adsb_hangglider,
+        resId = R.drawable.ic_adsb_hangglider_symbol,
         styleImageId = "adsb_icon_hangglider"
     ),
     Drone(

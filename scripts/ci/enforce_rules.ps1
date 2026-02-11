@@ -109,6 +109,99 @@ $asciiArgs = @(
 )
 Assert-NoMatches -Name "Non-ASCII characters in production Kotlin source" -RgArgs $asciiArgs
 
+# 7) Task coordinator boundary: no manager escape-hatch APIs/calls in production source.
+$taskBoundaryArgs = @(
+    "-n",
+    "(getRacingTaskManager\(|getAATTaskManager\()",
+    "--glob", "**/src/main/java/**/*.kt"
+)
+Assert-NoMatches -Name "Task coordinator manager escape hatches in production source" -RgArgs $taskBoundaryArgs
+
+# 8) Task manager boundary: no MapLibre imports in AAT/Racing task managers.
+$taskManagerMapLibreImportsArgs = @(
+    "-n",
+    "org\.maplibre\.android",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/AATTaskManager.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskManager.kt"
+)
+Assert-NoMatches -Name "MapLibre imports in task managers" -RgArgs $taskManagerMapLibreImportsArgs
+
+# 9) Task manager boundary: no legacy map-render/edit APIs on task managers.
+$taskManagerMapApiArgs = @(
+    "-n",
+    "(fun\s+plotRacingOnMap\(|fun\s+clearRacingFromMap\(|fun\s+plotAATOnMap\(|fun\s+clearAATFromMap\(|fun\s+plotAATEditOverlay\(|fun\s+clearAATEditOverlay\(|fun\s+checkTargetPointHit\()",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/AATTaskManager.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskManager.kt"
+)
+Assert-NoMatches -Name "Legacy map APIs in task managers" -RgArgs $taskManagerMapApiArgs
+
+# 10) Task domain purity: no Android/Compose/MapLibre imports in task domain packages.
+$taskDomainUiImportsArgs = @(
+    "-n",
+    "^import\s+(android\.|androidx\.|org\.maplibre\.android)",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/domain/**/*.kt"
+)
+Assert-NoMatches -Name "Android/UI imports in task domain packages" -RgArgs $taskDomainUiImportsArgs
+
+# 11) Task UI boundary: no TaskManagerCoordinator type leaks in task composable surfaces
+# that should be driven by TaskUiState + TaskSheetViewModel intents.
+$taskUiCoordinatorTypeLeakArgs = @(
+    "-n",
+    "TaskManagerCoordinator",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/TaskTopDropdownPanel.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/SwipeableTaskBottomSheet.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/ManageBTTabRouter.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/TaskBottomSheetComponents.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/TaskQRGenerator.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/QrTaskDialogs.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingManageBTTab.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingWaypointList.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/racing/ui/RacingTaskPointTypeSelector.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/racing/ui/RacingStartPointSelector.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/racing/ui/RacingTurnPointSelector.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/AATManageBTTab.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/AATManageContent.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/AATManageList.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/ui/AATTaskPointTypeSelector.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/ui/AATStartPointSelector.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/ui/AATTurnPointSelector.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/map/ui/task/MapTaskScreenUi.kt"
+)
+Assert-NoMatches -Name "TaskManagerCoordinator type leaks in task composable surfaces" -RgArgs $taskUiCoordinatorTypeLeakArgs
+
+# 12) Task coordinator cleanup: do not reintroduce deprecated helper escape hatches.
+$taskCoordinatorLegacyHelperArgs = @(
+    "-n",
+    "(fun\s+getTaskSpecificWaypoint\(|fun\s+haversineDistance\()",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt"
+)
+Assert-NoMatches -Name "Legacy TaskManagerCoordinator helper escape hatches" -RgArgs $taskCoordinatorLegacyHelperArgs
+
+# 13) Task UI boundary: no direct coordinator instance calls from scoped task composable surfaces.
+$taskUiDirectCoordinatorCallsArgs = @(
+    "-n",
+    "\b(taskManager|taskCoordinator|coordinator)\s*\.",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/TaskTopDropdownPanel.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/SwipeableTaskBottomSheet.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/ManageBTTabRouter.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/TaskBottomSheetComponents.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/TaskQRGenerator.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/QrTaskDialogs.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingManageBTTab.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingWaypointList.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/racing/ui/RacingTaskPointTypeSelector.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/racing/ui/RacingStartPointSelector.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/racing/ui/RacingTurnPointSelector.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/AATManageBTTab.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/AATManageContent.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/AATManageList.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/ui/AATTaskPointTypeSelector.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/ui/AATStartPointSelector.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/ui/AATTurnPointSelector.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/map/ui/task/MapTaskScreenUi.kt"
+)
+Assert-NoMatches -Name "Direct coordinator calls in task composable surfaces" -RgArgs $taskUiDirectCoordinatorCallsArgs
+
 if ($script:HadFailures) {
     Write-Host ""
     Write-Host "Rule enforcement failed."

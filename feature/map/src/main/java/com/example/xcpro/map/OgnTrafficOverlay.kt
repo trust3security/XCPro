@@ -1,17 +1,29 @@
 package com.example.xcpro.map
 
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.os.SystemClock
+import androidx.core.content.ContextCompat
 import com.example.xcpro.core.common.logging.AppLogger
+import com.example.xcpro.ogn.OGN_ICON_SIZE_DEFAULT_PX
 import com.example.xcpro.ogn.OgnSubscriptionPolicy
 import com.example.xcpro.ogn.OgnTrafficTarget
 import com.example.xcpro.ogn.OgnViewportBounds
+import com.example.xcpro.ogn.clampOgnIconSizePx
+import org.maplibre.android.geometry.LatLngBounds
+import org.maplibre.android.maps.MapLibreMap
+import org.maplibre.android.maps.Style
 import org.maplibre.android.style.expressions.Expression
-import org.maplibre.android.style.layers.CircleLayer
-import org.maplibre.android.style.layers.PropertyFactory.circleColor
-import org.maplibre.android.style.layers.PropertyFactory.circleOpacity
-import org.maplibre.android.style.layers.PropertyFactory.circleRadius
-import org.maplibre.android.style.layers.PropertyFactory.circleStrokeColor
-import org.maplibre.android.style.layers.PropertyFactory.circleStrokeWidth
+import org.maplibre.android.style.layers.PropertyFactory.iconAllowOverlap
+import org.maplibre.android.style.layers.PropertyFactory.iconAnchor
+import org.maplibre.android.style.layers.PropertyFactory.iconIgnorePlacement
+import org.maplibre.android.style.layers.PropertyFactory.iconImage
+import org.maplibre.android.style.layers.PropertyFactory.iconKeepUpright
+import org.maplibre.android.style.layers.PropertyFactory.iconOpacity
+import org.maplibre.android.style.layers.PropertyFactory.iconRotate
+import org.maplibre.android.style.layers.PropertyFactory.iconRotationAlignment
+import org.maplibre.android.style.layers.PropertyFactory.iconSize
 import org.maplibre.android.style.layers.PropertyFactory.textAllowOverlap
 import org.maplibre.android.style.layers.PropertyFactory.textAnchor
 import org.maplibre.android.style.layers.PropertyFactory.textColor
@@ -23,11 +35,9 @@ import org.maplibre.android.style.layers.PropertyFactory.textOffset
 import org.maplibre.android.style.layers.PropertyFactory.textSize
 import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
-import org.maplibre.android.geometry.LatLngBounds
 import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.Point
-import org.maplibre.android.maps.MapLibreMap
 import kotlin.math.abs
 
 /**
@@ -35,8 +45,11 @@ import kotlin.math.abs
  * Keeps all MapLibre source/layer state local to the UI runtime.
  */
 class OgnTrafficOverlay(
-    private val map: MapLibreMap
+    private val context: Context,
+    private val map: MapLibreMap,
+    initialIconSizePx: Int = OGN_ICON_SIZE_DEFAULT_PX
 ) {
+    private var currentIconSizePx: Int = clampOgnIconSizePx(initialIconSizePx)
 
     fun initialize() {
         val style = map.style ?: return
@@ -44,20 +57,30 @@ class OgnTrafficOverlay(
             if (style.getSource(SOURCE_ID) == null) {
                 style.addSource(GeoJsonSource(SOURCE_ID))
             }
-            if (style.getLayer(CIRCLE_LAYER_ID) == null) {
-                val circleLayer = CircleLayer(CIRCLE_LAYER_ID, SOURCE_ID)
+            ensureStyleImage(style)
+            if (style.getLayer(ICON_LAYER_ID) == null) {
+                val iconLayer = SymbolLayer(ICON_LAYER_ID, SOURCE_ID)
                     .withProperties(
-                        circleRadius(CIRCLE_RADIUS_DP),
-                        circleColor(CIRCLE_COLOR),
-                        circleStrokeColor(CIRCLE_STROKE_COLOR),
-                        circleStrokeWidth(CIRCLE_STROKE_WIDTH_DP),
-                        circleOpacity(Expression.get(PROP_ALPHA))
+                        iconImage(ICON_IMAGE_ID),
+                        iconSize(iconScaleForPx(currentIconSizePx)),
+                        iconRotate(
+                            Expression.coalesce(
+                                Expression.get(PROP_TRACK_DEG),
+                                Expression.literal(0.0)
+                            )
+                        ),
+                        iconRotationAlignment("map"),
+                        iconKeepUpright(false),
+                        iconAllowOverlap(true),
+                        iconIgnorePlacement(true),
+                        iconAnchor("center"),
+                        iconOpacity(Expression.get(PROP_ALPHA))
                     )
                 val anchorId = BlueLocationOverlay.LAYER_ID
                 if (style.getLayer(anchorId) != null) {
-                    style.addLayerBelow(circleLayer, anchorId)
+                    style.addLayerBelow(iconLayer, anchorId)
                 } else {
-                    style.addLayer(circleLayer)
+                    style.addLayer(iconLayer)
                 }
             }
             if (style.getLayer(LABEL_LAYER_ID) == null) {
@@ -68,20 +91,28 @@ class OgnTrafficOverlay(
                         textColor(LABEL_TEXT_COLOR),
                         textHaloColor(LABEL_HALO_COLOR),
                         textHaloWidth(LABEL_HALO_WIDTH_DP),
-                        textOffset(arrayOf(0f, LABEL_TEXT_OFFSET_Y)),
+                        textOffset(arrayOf(0f, labelOffsetYForPx(currentIconSizePx))),
                         textAnchor("top"),
                         textAllowOverlap(true),
                         textIgnorePlacement(true)
                     )
-                if (style.getLayer(CIRCLE_LAYER_ID) != null) {
-                    style.addLayerAbove(labelLayer, CIRCLE_LAYER_ID)
+                if (style.getLayer(ICON_LAYER_ID) != null) {
+                    style.addLayerAbove(labelLayer, ICON_LAYER_ID)
                 } else {
                     style.addLayer(labelLayer)
                 }
             }
+            applyIconSizeToStyle()
         } catch (t: Throwable) {
             AppLogger.e(TAG, "Failed to initialize OGN overlay: ${t.message}", t)
         }
+    }
+
+    fun setIconSizePx(iconSizePx: Int) {
+        val clamped = clampOgnIconSizePx(iconSizePx)
+        if (clamped == currentIconSizePx) return
+        currentIconSizePx = clamped
+        applyIconSizeToStyle()
     }
 
     fun render(targets: List<OgnTrafficTarget>) {
@@ -104,6 +135,9 @@ class OgnTrafficOverlay(
                 PROP_ALPHA,
                 if (target.isStale(nowMonoMs, STALE_VISUAL_AFTER_MS)) STALE_ALPHA else LIVE_ALPHA
             )
+            if (target.trackDegrees?.isFinite() == true) {
+                feature.addNumberProperty(PROP_TRACK_DEG, target.trackDegrees)
+            }
             features.add(feature)
         }
 
@@ -120,12 +154,48 @@ class OgnTrafficOverlay(
         val style = map.style ?: return
         try {
             style.removeLayer(LABEL_LAYER_ID)
-            style.removeLayer(CIRCLE_LAYER_ID)
+            style.removeLayer(ICON_LAYER_ID)
             style.removeSource(SOURCE_ID)
+            style.removeImage(ICON_IMAGE_ID)
         } catch (t: Throwable) {
             AppLogger.w(TAG, "Failed to cleanup OGN overlay: ${t.message}")
         }
     }
+
+    private fun ensureStyleImage(style: Style) {
+        val existing = runCatching { style.getImage(ICON_IMAGE_ID) }.getOrNull()
+        if (existing != null) return
+        val bitmap = drawableToBitmap(R.drawable.ic_adsb_glider) ?: return
+        style.addImage(ICON_IMAGE_ID, bitmap)
+    }
+
+    private fun drawableToBitmap(drawableId: Int): Bitmap? {
+        val drawable = ContextCompat.getDrawable(context, drawableId) ?: return null
+        val bitmap = Bitmap.createBitmap(
+            ICON_BITMAP_BASE_SIZE_PX,
+            ICON_BITMAP_BASE_SIZE_PX,
+            Bitmap.Config.ARGB_8888
+        )
+        val canvas = Canvas(bitmap)
+        drawable.setBounds(0, 0, ICON_BITMAP_BASE_SIZE_PX, ICON_BITMAP_BASE_SIZE_PX)
+        drawable.draw(canvas)
+        return bitmap
+    }
+
+    private fun applyIconSizeToStyle() {
+        val style = map.style ?: return
+        val iconLayer = style.getLayer(ICON_LAYER_ID) as? SymbolLayer
+        iconLayer?.setProperties(iconSize(iconScaleForPx(currentIconSizePx)))
+
+        val labelLayer = style.getLayer(LABEL_LAYER_ID) as? SymbolLayer
+        labelLayer?.setProperties(textOffset(arrayOf(0f, labelOffsetYForPx(currentIconSizePx))))
+    }
+
+    private fun iconScaleForPx(iconSizePx: Int): Float =
+        iconSizePx.toFloat() / ICON_BITMAP_BASE_SIZE_PX.toFloat()
+
+    private fun labelOffsetYForPx(iconSizePx: Int): Float =
+        LABEL_TEXT_OFFSET_BASE_Y * iconScaleForPx(iconSizePx)
 
     private fun isValidCoordinate(latitude: Double, longitude: Double): Boolean {
         if (!latitude.isFinite() || !longitude.isFinite()) return false
@@ -156,11 +226,13 @@ class OgnTrafficOverlay(
         private const val TAG = "OgnTrafficOverlay"
 
         private const val SOURCE_ID = "ogn-traffic-source"
-        private const val CIRCLE_LAYER_ID = "ogn-traffic-circle-layer"
+        private const val ICON_LAYER_ID = "ogn-traffic-icon-layer"
         private const val LABEL_LAYER_ID = "ogn-traffic-label-layer"
+        private const val ICON_IMAGE_ID = "ogn_icon_glider"
 
         private const val PROP_LABEL = "label"
         private const val PROP_ALPHA = "alpha"
+        private const val PROP_TRACK_DEG = "track_deg"
 
         private const val MAX_TARGETS = 500
         private const val STALE_VISUAL_AFTER_MS = 60_000L
@@ -168,14 +240,11 @@ class OgnTrafficOverlay(
         private const val LIVE_ALPHA = 0.90
         private const val STALE_ALPHA = 0.45
 
-        private const val CIRCLE_RADIUS_DP = 4.5f
-        private const val CIRCLE_STROKE_WIDTH_DP = 1.25f
-        private const val CIRCLE_COLOR = "#00B0FF"
-        private const val CIRCLE_STROKE_COLOR = "#0B1E2D"
+        private const val ICON_BITMAP_BASE_SIZE_PX = OGN_ICON_SIZE_DEFAULT_PX
 
         private const val LABEL_TEXT_SIZE_SP = 11f
         private const val LABEL_HALO_WIDTH_DP = 1.1f
-        private const val LABEL_TEXT_OFFSET_Y = 1.1f
+        private const val LABEL_TEXT_OFFSET_BASE_Y = 1.1f
         private const val LABEL_TEXT_COLOR = "#EAF4FF"
         private const val LABEL_HALO_COLOR = "#0B1E2D"
     }

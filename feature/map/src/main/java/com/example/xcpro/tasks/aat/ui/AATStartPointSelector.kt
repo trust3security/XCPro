@@ -14,7 +14,6 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.unit.dp
 import com.example.xcpro.tasks.aat.models.AATStartPointType
-import com.example.xcpro.tasks.TaskManagerCoordinator
 
 /**
  * AAT Start Point Configuration UI
@@ -32,7 +31,6 @@ internal fun AATStartPointSelector(
     gateWidth: String,
     waypoint: TaskWaypoint,
     nextWaypoint: TaskWaypoint?,
-    taskManager: TaskManagerCoordinator,
     onStartTypeChange: (AATStartPointType) -> Unit,
     onGateWidthChange: (String) -> Unit
 ) {

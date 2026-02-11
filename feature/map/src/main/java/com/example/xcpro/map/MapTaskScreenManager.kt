@@ -3,13 +3,16 @@ package com.example.xcpro.map
 import android.util.Log
 import com.example.xcpro.tasks.BottomSheetState
 import com.example.xcpro.tasks.TaskManagerCoordinator
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 /**
  * Centralized task screen management for MapScreen
- * Handles task search overlay, bottom sheet, and minimized indicator
+ * Handles task panel state and task-panel entrypoints from map UI.
  */
 class MapTaskScreenManager(
     internal val mapState: MapScreenState,
@@ -19,93 +22,44 @@ class MapTaskScreenManager(
         private const val TAG = "MapTaskScreenManager"
     }
 
-    private val _showTaskScreen = MutableStateFlow(false)
-    val showTaskScreen: StateFlow<Boolean> = _showTaskScreen.asStateFlow()
-
-    private val _showTaskBottomSheet = MutableStateFlow(false)
-    val showTaskBottomSheet: StateFlow<Boolean> = _showTaskBottomSheet.asStateFlow()
-
-    private val _taskBottomSheetInitialHeight = MutableStateFlow(BottomSheetState.HALF_EXPANDED)
-    val taskBottomSheetInitialHeight: StateFlow<BottomSheetState> =
-        _taskBottomSheetInitialHeight.asStateFlow()
-
-    /**
-     * Show task search screen
-     */
-    fun showTaskSearch() {
-        _showTaskScreen.value = true
-        Log.d(TAG, "Task search screen opened")
+    enum class TaskPanelState {
+        HIDDEN,
+        COLLAPSED,
+        EXPANDED_PARTIAL,
+        EXPANDED_FULL
     }
 
-    /**
-     * Hide task search screen
-     */
-    fun hideTaskSearch() {
-        _showTaskScreen.value = false
-        Log.d(TAG, "Task search screen closed")
-    }
+    private val _taskPanelState = MutableStateFlow(TaskPanelState.HIDDEN)
+    val taskPanelState: StateFlow<TaskPanelState> = _taskPanelState.asStateFlow()
 
     /**
-     * Show task bottom sheet with specified height
+     * Compatibility read model for existing callsites:
+     * true only when task panel content is expanded and visible.
      */
-    fun showTaskBottomSheet(initialHeight: BottomSheetState = BottomSheetState.HALF_EXPANDED) {
-        _taskBottomSheetInitialHeight.value = initialHeight
-        _showTaskBottomSheet.value = true
-        Log.d(TAG, "Task bottom sheet opened at $initialHeight")
-    }
-
-    /**
-     * Hide task bottom sheet
-     */
-    fun hideTaskBottomSheet() {
-        _showTaskBottomSheet.value = false
-        Log.d(TAG, "Task bottom sheet closed")
-    }
+    val showTaskBottomSheet: Flow<Boolean> = taskPanelState
+        .map { state ->
+            state == TaskPanelState.EXPANDED_PARTIAL || state == TaskPanelState.EXPANDED_FULL
+        }
+        .distinctUntilChanged()
 
     /**
      * Handle navigation drawer task selection
      */
     fun handleNavigationTaskSelection(item: String) {
         when (item) {
-            "task" -> {
-                showTaskSearch()
-            }
             "add_task" -> {
-                // Searchbar removed - directly toggle bottom sheet instead
-                if (_showTaskBottomSheet.value) {
-                    hideTaskBottomSheet()
-                } else {
-                    showTaskBottomSheet(BottomSheetState.HALF_EXPANDED)
-                }
+                handleAddTaskToggle()
             }
         }
         Log.d(TAG, "Navigation task selection handled: $item")
     }
 
     /**
-     * Handle task search overlay close
-     */
-    fun handleTaskSearchClose() {
-        hideTaskSearch()
-        if (taskManager.currentTask.waypoints.isNotEmpty()) {
-            showTaskBottomSheet(BottomSheetState.HALF_EXPANDED)
-        }
-    }
-
-    /**
-     * Handle waypoint goto from search
-     */
-    fun handleWaypointGoto() {
-        Log.d("TASK_UX", " Setting bottom sheet to HALF_EXPANDED for search selection")
-        showTaskBottomSheet(BottomSheetState.HALF_EXPANDED)
-    }
-
-    /**
      * Handle minimized indicator click
      */
     fun handleMinimizedIndicatorClick() {
-        Log.d("TASK_UX", " Setting bottom sheet to FULLY_EXPANDED for minimized indicator click")
-        showTaskBottomSheet(BottomSheetState.FULLY_EXPANDED)
+        Log.d("TASK_UX", "Setting task panel to EXPANDED_FULL for minimized indicator click")
+        showTaskPanel(TaskPanelState.EXPANDED_FULL)
     }
 
     /**
@@ -113,7 +67,7 @@ class MapTaskScreenManager(
      */
     fun handleTaskClear() {
         taskManager.clearTask()
-        hideTaskBottomSheet()
+        hideTaskPanel()
 
         // Clear map layers
         mapState.mapLibreMap?.getStyle()?.let { style ->
@@ -141,16 +95,73 @@ class MapTaskScreenManager(
      */
     fun handleBackGesture(): Boolean {
         return when {
-            _showTaskScreen.value -> {
-                hideTaskSearch()
-                hideTaskBottomSheet()
-                true
-            }
-            _showTaskBottomSheet.value -> {
-                hideTaskBottomSheet()
+            _taskPanelState.value != TaskPanelState.HIDDEN -> {
+                hideTaskPanel()
                 true
             }
             else -> false
+        }
+    }
+
+    fun showTaskPanel(initialState: TaskPanelState = TaskPanelState.EXPANDED_PARTIAL) {
+        _taskPanelState.value = normalizeState(initialState)
+        Log.d(TAG, "Task panel opened at ${_taskPanelState.value}")
+    }
+
+    fun hideTaskPanel() {
+        _taskPanelState.value = TaskPanelState.HIDDEN
+        Log.d(TAG, "Task panel closed")
+    }
+
+    fun collapseTaskPanel() {
+        _taskPanelState.value = if (taskManager.currentTask.waypoints.isNotEmpty()) {
+            TaskPanelState.COLLAPSED
+        } else {
+            TaskPanelState.HIDDEN
+        }
+        Log.d(TAG, "Task panel collapsed to ${_taskPanelState.value}")
+    }
+
+    fun setPanelState(state: TaskPanelState) {
+        _taskPanelState.value = normalizeState(state)
+        Log.d(TAG, "Task panel state updated to ${_taskPanelState.value}")
+    }
+
+    /**
+     * Backward-compatibility shim while callsites migrate from BottomSheetState.
+     */
+    fun showTaskBottomSheet(initialHeight: BottomSheetState = BottomSheetState.HALF_EXPANDED) {
+        val target = when (initialHeight) {
+            BottomSheetState.MINIMIZED -> TaskPanelState.COLLAPSED
+            BottomSheetState.HALF_EXPANDED -> TaskPanelState.EXPANDED_PARTIAL
+            BottomSheetState.FULLY_EXPANDED -> TaskPanelState.EXPANDED_FULL
+        }
+        showTaskPanel(target)
+    }
+
+    /**
+     * Backward-compatibility shim while callsites migrate from bottom-sheet naming.
+     */
+    fun hideTaskBottomSheet() {
+        hideTaskPanel()
+    }
+
+    private fun handleAddTaskToggle() {
+        val next = when (_taskPanelState.value) {
+            TaskPanelState.HIDDEN -> TaskPanelState.EXPANDED_PARTIAL
+            TaskPanelState.COLLAPSED -> TaskPanelState.EXPANDED_PARTIAL
+            TaskPanelState.EXPANDED_PARTIAL -> TaskPanelState.HIDDEN
+            TaskPanelState.EXPANDED_FULL -> TaskPanelState.HIDDEN
+        }
+        _taskPanelState.value = normalizeState(next)
+        Log.d(TAG, "Add Task toggled panel to ${_taskPanelState.value}")
+    }
+
+    private fun normalizeState(state: TaskPanelState): TaskPanelState {
+        return if (state == TaskPanelState.COLLAPSED && taskManager.currentTask.waypoints.isEmpty()) {
+            TaskPanelState.HIDDEN
+        } else {
+            state
         }
     }
 }

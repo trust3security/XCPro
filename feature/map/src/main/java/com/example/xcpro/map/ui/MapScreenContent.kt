@@ -39,6 +39,7 @@ import com.example.xcpro.adsb.Icao24
 import com.example.xcpro.adsb.AdsbMarkerDetailsSheet
 import com.example.xcpro.adsb.AdsbTrafficSnapshot
 import com.example.xcpro.adsb.AdsbTrafficUiModel
+import com.example.xcpro.adsb.AdsbSelectedTargetDetails
 import com.example.xcpro.map.BuildConfig
 import com.example.xcpro.map.components.MapActionButtons
 import com.example.xcpro.map.MapCameraManager
@@ -99,7 +100,7 @@ internal fun MapScreenContent(
     ognOverlayEnabled: Boolean,
     adsbSnapshot: AdsbTrafficSnapshot,
     adsbOverlayEnabled: Boolean,
-    selectedAdsbTarget: AdsbTrafficUiModel?,
+    selectedAdsbTarget: AdsbSelectedTargetDetails?,
     isUiEditMode: Boolean,
     onEditModeChange: (Boolean) -> Unit,
     isAATEditMode: Boolean,
@@ -230,10 +231,7 @@ internal fun MapScreenContent(
         MapTaskManagerLayer(
             taskScreenManager = taskScreenManager,
             waypointData = waypointData,
-            currentLocation = currentLocation,
-            onWaypointGoto = { waypoint ->
-                cameraManager.moveToWaypoint(waypoint.latitude, waypoint.longitude)
-            }
+            currentLocation = currentLocation
         )
 
         MapActionButtonsLayer(
@@ -524,14 +522,12 @@ private fun ReplayDiagnosticsLogger(
 private fun MapTaskManagerLayer(
     taskScreenManager: MapTaskScreenManager,
     waypointData: List<WaypointData>,
-    currentLocation: MapLocationUiModel?,
-    onWaypointGoto: (WaypointData) -> Unit
+    currentLocation: MapLocationUiModel?
 ) {
     MapTaskScreenUi.AllTaskScreenComponents(
         taskScreenManager = taskScreenManager,
         allWaypoints = waypointData,
         currentQNH = "1013 hPa",
-        onWaypointGoto = onWaypointGoto,
         currentLocation = currentLocation
     )
 }

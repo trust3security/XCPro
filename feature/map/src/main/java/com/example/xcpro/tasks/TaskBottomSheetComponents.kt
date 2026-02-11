@@ -36,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.example.xcpro.tasks.core.Task
+import com.example.xcpro.tasks.core.TaskType
 import kotlinx.coroutines.flow.collectLatest
 
 enum class TaskCategory(val label: String) {
@@ -47,7 +48,7 @@ enum class TaskCategory(val label: String) {
 }
 
 @Composable
-fun TaskPreviewContent(task: Task, taskManager: TaskManagerCoordinator) {
+fun TaskPreviewContent(task: Task, taskType: TaskType) {
     val context = LocalContext.current
     val filesViewModel: TaskFilesViewModel = hiltViewModel()
     var showQRDialog by remember { mutableStateOf(false) }
@@ -153,7 +154,7 @@ fun TaskPreviewContent(task: Task, taskManager: TaskManagerCoordinator) {
     if (showQRDialog) {
         QRCodeDialog(
             task = task,
-            taskManager = taskManager,
+            taskType = taskType,
             onDismiss = { showQRDialog = false }
         )
     }

@@ -22,7 +22,6 @@ import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.tasks.AdvanceControls
 import com.example.xcpro.tasks.PersistentWaypointSearchBar
 import com.example.xcpro.tasks.QRCodeDialog
-import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.tasks.TaskSheetViewModel
 import com.example.xcpro.tasks.TaskStatsSection
 import com.example.xcpro.tasks.TaskUiState
@@ -37,7 +36,6 @@ import org.maplibre.android.maps.MapLibreMap
 fun RacingManageBTTab(
     uiState: TaskUiState,
     task: Task,
-    taskManager: TaskManagerCoordinator,
     taskViewModel: TaskSheetViewModel,
     mapLibreMap: MapLibreMap?,
     allWaypoints: List<WaypointData> = emptyList(),
@@ -52,7 +50,6 @@ fun RacingManageBTTab(
         onClearTask = onClearTask,
         onSaveTask = onSaveTask,
         onDismiss = onDismiss,
-        taskManager = taskManager,
         taskViewModel = taskViewModel,
         mapLibreMap = mapLibreMap,
         allWaypoints = allWaypoints,
@@ -67,7 +64,6 @@ private fun RacingFullyExpandedContent(
     onClearTask: () -> Unit,
     onSaveTask: () -> Unit,
     onDismiss: () -> Unit,
-    taskManager: TaskManagerCoordinator,
     taskViewModel: TaskSheetViewModel,
     mapLibreMap: MapLibreMap?,
     allWaypoints: List<WaypointData> = emptyList(),
@@ -83,7 +79,7 @@ private fun RacingFullyExpandedContent(
         TaskStatsSection(
             task = task,
             taskType = com.example.xcpro.tasks.core.TaskType.RACING,
-            taskManager = taskManager,
+            distanceKm = uiState.stats.distanceNominal / 1000.0,
             onQRCodeClick = { showQRDialog = true }
         )
 
@@ -115,7 +111,6 @@ private fun RacingFullyExpandedContent(
                 waypoints = task.waypoints,
                 allWaypoints = allWaypoints,
                 currentQNH = currentQNH,
-                taskManager = taskManager,
                 taskViewModel = taskViewModel,
                 onReorder = { fromIndex, toIndex ->
                     taskViewModel.onReorderWaypoint(fromIndex, toIndex)
@@ -161,7 +156,6 @@ private fun RacingFullyExpandedContent(
     // QR Code Dialog
     if (showQRDialog) {
         QRCodeDialog(
-            taskManager = taskManager,
             uiState = uiState,
             onDismiss = { showQRDialog = false },
             onImportJson = { json -> taskViewModel.importPersistedTask(json) }

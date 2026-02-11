@@ -6,6 +6,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.adsb.AdsbTrafficSnapshot
 import com.example.xcpro.adsb.AdsbTrafficUiModel
+import com.example.xcpro.adsb.AdsbSelectedTargetDetails
 import com.example.xcpro.map.MapScreenViewModel
 import com.example.xcpro.map.MapStateReader
 import com.example.xcpro.map.MapStateStore
@@ -32,10 +33,12 @@ internal data class MapScreenBindings(
     val ognTargets: List<OgnTrafficTarget>,
     val ognSnapshot: OgnTrafficSnapshot,
     val ognOverlayEnabled: Boolean,
+    val ognIconSizePx: Int,
     val adsbTargets: List<AdsbTrafficUiModel>,
     val adsbSnapshot: AdsbTrafficSnapshot,
     val adsbOverlayEnabled: Boolean,
-    val selectedAdsbTarget: AdsbTrafficUiModel?,
+    val adsbIconSizePx: Int,
+    val selectedAdsbTarget: AdsbSelectedTargetDetails?,
     val isAATEditMode: Boolean,
     val savedLocation: MapStateStore.MapPoint?,
     val savedZoom: Double?,
@@ -63,9 +66,11 @@ internal fun rememberMapScreenBindings(
     val ognTargets by mapViewModel.ognTargets.collectAsStateWithLifecycle()
     val ognSnapshot by mapViewModel.ognSnapshot.collectAsStateWithLifecycle()
     val ognOverlayEnabled by mapViewModel.ognOverlayEnabled.collectAsStateWithLifecycle()
+    val ognIconSizePx by mapViewModel.ognIconSizePx.collectAsStateWithLifecycle()
     val adsbTargets by mapViewModel.adsbTargets.collectAsStateWithLifecycle()
     val adsbSnapshot by mapViewModel.adsbSnapshot.collectAsStateWithLifecycle()
     val adsbOverlayEnabled by mapViewModel.adsbOverlayEnabled.collectAsStateWithLifecycle()
+    val adsbIconSizePx by mapViewModel.adsbIconSizePx.collectAsStateWithLifecycle()
     val selectedAdsbTarget by mapViewModel.selectedAdsbTarget.collectAsStateWithLifecycle()
     val isAATEditMode by mapViewModel.isAATEditMode.collectAsStateWithLifecycle()
     val savedLocation by mapStateReader.savedLocation.collectAsStateWithLifecycle()
@@ -89,9 +94,11 @@ internal fun rememberMapScreenBindings(
         ognTargets = ognTargets,
         ognSnapshot = ognSnapshot,
         ognOverlayEnabled = ognOverlayEnabled,
+        ognIconSizePx = ognIconSizePx,
         adsbTargets = adsbTargets,
         adsbSnapshot = adsbSnapshot,
         adsbOverlayEnabled = adsbOverlayEnabled,
+        adsbIconSizePx = adsbIconSizePx,
         selectedAdsbTarget = selectedAdsbTarget,
         isAATEditMode = isAATEditMode,
         savedLocation = savedLocation,

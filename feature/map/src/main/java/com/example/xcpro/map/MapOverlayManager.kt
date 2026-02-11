@@ -3,15 +3,20 @@ package com.example.xcpro.map
 import android.content.Context
 import android.util.Log
 import com.example.xcpro.adsb.Icao24
+import com.example.xcpro.adsb.ADSB_ICON_SIZE_DEFAULT_PX
+import com.example.xcpro.adsb.clampAdsbIconSizePx
 import com.example.xcpro.airspace.AirspaceUseCase
 import com.example.xcpro.adsb.AdsbTrafficUiModel
 import com.example.xcpro.flightdata.WaypointFilesUseCase
 import com.example.xcpro.map.BuildConfig
+import com.example.xcpro.ogn.OGN_ICON_SIZE_DEFAULT_PX
 import com.example.xcpro.ogn.OgnTrafficTarget
+import com.example.xcpro.ogn.clampOgnIconSizePx
 import com.example.xcpro.loadAndApplyAirspace
 import com.example.xcpro.loadAndApplyWaypoints
 import com.example.xcpro.map.trail.SnailTrailManager
 import com.example.xcpro.tasks.TaskManagerCoordinator
+import com.example.xcpro.tasks.TaskMapRenderRouter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.maplibre.android.geometry.LatLng
@@ -38,6 +43,8 @@ class MapOverlayManager(
 
     private var latestOgnTargets: List<OgnTrafficTarget> = emptyList()
     private var latestAdsbTargets: List<AdsbTrafficUiModel> = emptyList()
+    private var ognIconSizePx: Int = OGN_ICON_SIZE_DEFAULT_PX
+    private var adsbIconSizePx: Int = ADSB_ICON_SIZE_DEFAULT_PX
 
     fun toggleDistanceCircles() {
         stateActions.toggleDistanceCircles()
@@ -81,12 +88,12 @@ class MapOverlayManager(
         try {
             if (taskManager.currentTask.waypoints.isNotEmpty()) {
                 if (BuildConfig.DEBUG) {
-                    Log.d(
+                Log.d(
                         TAG,
                         "Plotting saved task with ${taskManager.currentTask.waypoints.size} waypoints"
                     )
                 }
-                taskManager.plotOnMap(map)
+                TaskMapRenderRouter.plotCurrentTask(taskManager, map)
             } else if (BuildConfig.DEBUG) {
                 Log.d(TAG, "No saved task to plot")
             }
@@ -123,12 +130,12 @@ class MapOverlayManager(
             }
             if (map != null) {
                 mapState.ognTrafficOverlay?.cleanup()
-                mapState.ognTrafficOverlay = OgnTrafficOverlay(map)
+                mapState.ognTrafficOverlay = createOgnTrafficOverlay(map)
                 mapState.ognTrafficOverlay?.initialize()
                 mapState.ognTrafficOverlay?.render(latestOgnTargets)
 
                 mapState.adsbTrafficOverlay?.cleanup()
-                mapState.adsbTrafficOverlay = AdsbTrafficOverlay(context, map)
+                mapState.adsbTrafficOverlay = createAdsbTrafficOverlay(map)
                 mapState.adsbTrafficOverlay?.initialize()
                 mapState.adsbTrafficOverlay?.render(latestAdsbTargets)
             }
@@ -151,11 +158,11 @@ class MapOverlayManager(
             refreshWaypoints(map)
             plotSavedTask(map)
             if (map != null) {
-                mapState.ognTrafficOverlay = OgnTrafficOverlay(map)
+                mapState.ognTrafficOverlay = createOgnTrafficOverlay(map)
                 mapState.ognTrafficOverlay?.initialize()
                 mapState.ognTrafficOverlay?.render(latestOgnTargets)
 
-                mapState.adsbTrafficOverlay = AdsbTrafficOverlay(context, map)
+                mapState.adsbTrafficOverlay = createAdsbTrafficOverlay(map)
                 mapState.adsbTrafficOverlay?.initialize()
                 mapState.adsbTrafficOverlay?.render(latestAdsbTargets)
             }
@@ -171,7 +178,7 @@ class MapOverlayManager(
         latestOgnTargets = targets
         val map = mapState.mapLibreMap ?: return
         if (mapState.ognTrafficOverlay == null) {
-            mapState.ognTrafficOverlay = OgnTrafficOverlay(map)
+            mapState.ognTrafficOverlay = createOgnTrafficOverlay(map)
         }
         mapState.ognTrafficOverlay?.render(targets)
     }
@@ -180,10 +187,48 @@ class MapOverlayManager(
         latestAdsbTargets = targets
         val map = mapState.mapLibreMap ?: return
         if (mapState.adsbTrafficOverlay == null) {
-            mapState.adsbTrafficOverlay = AdsbTrafficOverlay(context, map)
+            mapState.adsbTrafficOverlay = createAdsbTrafficOverlay(map)
         }
         mapState.adsbTrafficOverlay?.render(targets)
     }
+
+    fun setAdsbIconSizePx(iconSizePx: Int) {
+        val clamped = clampAdsbIconSizePx(iconSizePx)
+        adsbIconSizePx = clamped
+        if (mapState.adsbTrafficOverlay == null) {
+            val map = mapState.mapLibreMap
+            if (map != null) {
+                mapState.adsbTrafficOverlay = createAdsbTrafficOverlay(map)
+            }
+        }
+        mapState.adsbTrafficOverlay?.setIconSizePx(clamped)
+    }
+
+    fun setOgnIconSizePx(iconSizePx: Int) {
+        val clamped = clampOgnIconSizePx(iconSizePx)
+        ognIconSizePx = clamped
+        if (mapState.ognTrafficOverlay == null) {
+            val map = mapState.mapLibreMap
+            if (map != null) {
+                mapState.ognTrafficOverlay = createOgnTrafficOverlay(map)
+            }
+        }
+        mapState.ognTrafficOverlay?.setIconSizePx(clamped)
+    }
+
+    private fun createOgnTrafficOverlay(map: MapLibreMap): OgnTrafficOverlay =
+        OgnTrafficOverlay(
+            context = context,
+            map = map,
+            initialIconSizePx = ognIconSizePx
+        )
+
+    private fun createAdsbTrafficOverlay(map: MapLibreMap): AdsbTrafficOverlay =
+        AdsbTrafficOverlay(
+            context = context,
+            map = map,
+            initialIconSizePx = adsbIconSizePx
+        )
 
     fun findAdsbTargetAt(tap: LatLng): Icao24? {
         return mapState.adsbTrafficOverlay?.findTargetAt(tap)

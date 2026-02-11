@@ -1,4 +1,3 @@
-﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
 
 # Jonker JS1 C Revelation - Complete Performance Data
 ## 18-Meter and 21-Meter Configurations

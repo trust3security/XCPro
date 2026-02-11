@@ -72,8 +72,7 @@ fun MapActionButtons(
     } else {
         demoSim3BottomPadding
     }
-    val isTaskSearchVisible by taskScreenManager.showTaskScreen.collectAsStateWithLifecycle()
-    val isTaskSheetVisible by taskScreenManager.showTaskBottomSheet.collectAsStateWithLifecycle()
+    val isTaskPanelExpanded by taskScreenManager.showTaskBottomSheet.collectAsStateWithLifecycle(initialValue = false)
 
     Box(
         modifier = modifier
@@ -105,7 +104,7 @@ fun MapActionButtons(
         DistanceCirclesButton(
             isEnabled = showDistanceCircles,
             onToggle = onToggleDistanceCircles,
-            isBottomSheetVisible = isTaskSheetVisible || isTaskSearchVisible,
+            isBottomSheetVisible = isTaskPanelExpanded,
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(top = distanceTopPadding, end = 16.dp)

@@ -1,6 +1,5 @@
 package com.example.xcpro.tasks
 
-import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -34,14 +33,17 @@ enum class BottomSheetState {
 @Composable
 fun TaskMinimizedIndicator(
     task: Task,
-    taskManager: TaskManagerCoordinator,
+    activeLegIndex: Int,
+    onSetActiveLeg: (Int) -> Unit,
+    distanceToWaypointKm: ((Double, Double) -> Double?)?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     currentGPSLocation: Pair<Double, Double>? = null // Real-time GPS position for live distance updates
 ) {
     if (task.waypoints.isNotEmpty()) {
         // Get current waypoint name and truncate if too long
-        val currentWaypoint = taskManager.getCurrentLegWaypoint()
+        val boundedLeg = activeLegIndex.coerceIn(0, task.waypoints.lastIndex)
+        val currentWaypoint = task.waypoints.getOrNull(boundedLeg)
         val waypointName = currentWaypoint?.title ?: "Unknown"
         val displayName = if (waypointName.length > 18) {
             "${waypointName.take(15)}..."
@@ -69,7 +71,7 @@ fun TaskMinimizedIndicator(
                 Box(
                     modifier = Modifier
                         .size(60.dp) // Increased by 25% from 48dp
-                        .clickable { taskManager.setActiveLeg(taskManager.currentLeg - 1) },
+                        .clickable { onSetActiveLeg(boundedLeg - 1) },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -87,8 +89,8 @@ fun TaskMinimizedIndicator(
                 ) {
                     // Determine waypoint color based on position
                     val waypointColor = when {
-                        taskManager.currentLeg == 0 -> Color(0xFF4CAF50) // Green for Start
-                        taskManager.currentLeg == task.waypoints.size - 1 -> Color(0xFFF44336) // Red for Finish
+                        boundedLeg == 0 -> Color(0xFF4CAF50) // Green for Start
+                        boundedLeg == task.waypoints.size - 1 -> Color(0xFFF44336) // Red for Finish
                         else -> Color(0xFF2196F3) // Blue for Turn Points
                     }
 
@@ -101,8 +103,8 @@ fun TaskMinimizedIndicator(
                     )
 
                     // Show real-time distance to current waypoint (updates live as pilot flies)
-                    val distanceToWaypoint = if (currentGPSLocation != null) {
-                        taskManager.calculateDistanceToCurrentWaypoint(
+                    val distanceToWaypoint = if (currentGPSLocation != null && distanceToWaypointKm != null) {
+                        distanceToWaypointKm.invoke(
                             currentGPSLocation.first,   // Current GPS latitude
                             currentGPSLocation.second   // Current GPS longitude
                         )
@@ -123,7 +125,7 @@ fun TaskMinimizedIndicator(
                 Box(
                     modifier = Modifier
                         .size(60.dp) // Increased by 25% from 48dp
-                        .clickable { taskManager.setActiveLeg(taskManager.currentLeg + 1) },
+                        .clickable { onSetActiveLeg(boundedLeg + 1) },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -136,17 +138,5 @@ fun TaskMinimizedIndicator(
             }
         }
     }
-}
-
-/**
- * Temporary stub for TaskStatsSection
- */
-@androidx.compose.runtime.Composable
-fun TaskStatsSection(
-    task: Task,
-    taskType: TaskType,
-    taskManager: TaskManagerCoordinator
-) {
-    androidx.compose.material3.Text("Task statistics: ${task.waypoints.size} waypoints")
 }
 

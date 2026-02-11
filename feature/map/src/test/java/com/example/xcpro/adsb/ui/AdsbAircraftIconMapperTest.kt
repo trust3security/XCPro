@@ -66,4 +66,64 @@ class AdsbAircraftIconMapperTest {
         assertEquals("Unknown", openSkyCategoryLabel(null))
         assertEquals("Unknown", openSkyCategoryLabel(19))
     }
+
+    @Test
+    fun prefersIcaoAircraftTypeWhenAvailable() {
+        assertEquals(
+            AdsbAircraftIcon.Helicopter,
+            iconForAircraft(
+                category = 3,
+                metadataTypecode = "C172",
+                metadataIcaoAircraftType = "H1P"
+            )
+        )
+    }
+
+    @Test
+    fun fallsBackToTypecodeHeuristicsWhenIcaoAircraftTypeMissing() {
+        assertEquals(
+            AdsbAircraftIcon.Glider,
+            iconForAircraft(
+                category = null,
+                metadataTypecode = "ASW2",
+                metadataIcaoAircraftType = null
+            )
+        )
+    }
+
+    @Test
+    fun fallsBackToOpenSkyCategoryWhenMetadataDoesNotClassify() {
+        assertEquals(
+            AdsbAircraftIcon.Balloon,
+            iconForAircraft(
+                category = 10,
+                metadataTypecode = null,
+                metadataIcaoAircraftType = null
+            )
+        )
+    }
+
+    @Test
+    fun classifiesMediumJetClassAsLargeAircraft() {
+        assertEquals(
+            AdsbAircraftIcon.PlaneLarge,
+            iconForAircraft(
+                category = null,
+                metadataTypecode = "B738",
+                metadataIcaoAircraftType = "L2J"
+            )
+        )
+    }
+
+    @Test
+    fun keepsLightIconForSmallJetClass() {
+        assertEquals(
+            AdsbAircraftIcon.PlaneLight,
+            iconForAircraft(
+                category = null,
+                metadataTypecode = "VLJ1",
+                metadataIcaoAircraftType = "L1J"
+            )
+        )
+    }
 }

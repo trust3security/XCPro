@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Straighten
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.AirplanemodeActive
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
@@ -210,7 +211,7 @@ fun SettingsScreen(
                         }
                     }
 
-                    // Row 3: Layouts (single)
+                    // Row 3: Layouts | ADS-b
                     item {
                         Row(
                             modifier = Modifier
@@ -222,6 +223,29 @@ fun SettingsScreen(
                                 title = "Layouts",
                                 icon = Icons.Default.GridView,
                                 onClick = { navController.navigate("layouts") },
+                                modifier = Modifier.weight(1f)
+                            )
+                            CategoryItem(
+                                title = "ADS-b",
+                                icon = Icons.Default.AirplanemodeActive,
+                                onClick = { navController.navigate("adsb_settings") },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+
+                    // Row 3b: OGN (single)
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            CategoryItem(
+                                title = "OGN",
+                                icon = Icons.Default.Flight,
+                                onClick = { navController.navigate("ogn_settings") },
                                 modifier = Modifier.weight(1f)
                             )
                             Spacer(modifier = Modifier.weight(1f))

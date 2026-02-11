@@ -1,4 +1,3 @@
-﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
 
 # XC Pro
 
@@ -37,15 +36,16 @@ It is designed for **experimental, training, and development use** -- not as a c
 
 ## Documentation
 
-See `CONTRIBUTING.md` for required reading order and contributor workflow.
+Start with `../../AGENTS.md` for agent/contributor entry instructions.
+See `CONTRIBUTING.md` for contributor workflow details.
 Pipeline overview: `PIPELINE.md` (diagram: `PIPELINE.svg`).
 
 ---
 
-## Compliance status (audit 2026-01-27)
+## Compliance Status (tracked)
 
-This repo is not fully compliant with ARCHITECTURE.md and CODING_RULES.md.
-See `KNOWN_DEVIATIONS.md` for the current list of exceptions and owner/expiry.
+Compliance is tracked in `KNOWN_DEVIATIONS.md`.
+Current listed deviations: `None` (last verified in that file on 2026-02-04).
 Refactor checklist: `../refactor/Agent-Execution-Contract-LevoCompliance.md`.
 
 CI rule enforcement (local):
@@ -125,7 +125,7 @@ Key files:
 ## Supported Hardware & Sensors
 
 ### Minimum
-- Android: (set your real minimum here; e.g. 10 / API 29)
+- Android 11 / API 30 (`minSdk = 30`)
 - Required sensors for full functionality:
   - **Barometer** (pressure sensor)
   - **IMU** (accelerometer + gyroscope)
@@ -133,7 +133,7 @@ Key files:
 ### Optional / supported
 - GNSS:
   - Phone internal GNSS works
-  - External GNSS receivers may be supported (document the models you support here)
+  - External GNSS receivers are supported via configured data sources when available
 
 ### Degraded behaviour if missing
 - No barometer: altitude/vario quality degrades significantly (fallbacks become noisier)
@@ -145,30 +145,51 @@ Key files:
 ## Configuration / Profiles
 
 - Profiles define tuning and behaviour (e.g., smoothing, audio mapping, display preferences).
-- Config location: (document where you store these; e.g., app storage path or assets)
-- If you use `local.properties` keys (maps/API/etc), document them here:
-  - `YOUR_KEY_NAME=...`
+- Profile storage:
+  - DataStore name: `profile_preferences`
+  - Keys: `profiles_json`, `active_profile_id`
+- App runtime/file config:
+  - `configuration.json` in app internal storage (`context.filesDir`)
+- Build/local key used for map API:
+  - `MAPLIBRE_API_KEY` (read via Gradle property into `BuildConfig`)
 
 ### Files (airspace / IGC)
-- Airspace: (how to load and where files go)
-- IGC: (how to import / select files for replay)
+- Airspace:
+  - UI path: Flight Data -> Airspace -> Add Airspace File
+  - Supported format: `.txt` (OpenAir-like)
+  - Imported files are copied into app internal storage (`context.filesDir`)
+  - Enabled files/classes are stored in `configuration.json`
+- Waypoints:
+  - UI path: Flight Data -> Waypoints -> Add Waypoint File
+  - Supported format: `.cup`
+  - Imported files are copied into app internal storage (`context.filesDir`)
+  - Enabled file state is stored in `configuration.json`
+- IGC replay:
+  - UI path: Settings -> IGC Replay -> Choose IGC File
+  - Uses Android document picker (SAF/OpenDocument)
+  - Replay reads selected document URIs through `contentResolver`
 
 ---
 
 ## Project Structure
 
-High-level module map (edit to match your repo):
+High-level module map:
 
-- `app/` -- Android entrypoints, navigation shell, DI wiring
-- `data/` -- sensor sources, repositories, persistence
-- `domain/` -- use-cases, pure models, TE/filter math
-- `ui/` -- Compose screens, ViewModels, UI state models
-- (add your actual modules here: `core/`, `feature/`, `dfcards-library/`, etc.)
+- `app/` -- Android app shell, navigation graph, service entrypoints, top-level DI
+- `core/common/` -- shared utils and logging primitives
+- `core/geometry/` -- geometry/math helpers
+- `core/time/` -- clock/time abstractions
+- `core/ui/` -- shared UI primitives
+- `feature/map/` -- map, sensors, fusion, replay, airspace/waypoint integrations
+- `feature/profile/` -- profile models, storage, profile UI/workflows
+- `feature/variometer/` -- variometer-specific UI/layout concerns
+- `dfcards-library/` -- flight data cards runtime and view-model tiering
 
 Where to start for new work:
-- New UI: `ui/` + ViewModel changes (no direct `data/` access)
-- New sensor source: `data/` (repository remains SSOT owner)
-- New math/filter: `domain/` use-case (pure + unit tested)
+- New map/sensor/replay behavior: `feature/map/` (keep SSOT and timebase rules)
+- New profile behavior: `feature/profile/`
+- Shared pure logic/time/geometry utilities: `core/*`
+- App wiring/navigation/service lifecycle only: `app/`
 
 ---
 
@@ -176,11 +197,13 @@ Where to start for new work:
 
 - Purpose: deterministic testing and development without real flight
 - How to run:
-  1. (steps to select replay/simulator mode)
-  2. (how to point it at an IGC file or deterministic seed)
+  1. Open Settings -> `IGC Replay`
+  2. Tap `Choose IGC File` and select a log
+  3. Optionally set speed and scrub timeline
+  4. Tap `Start Replay` (map view resumes and replay drives pipeline)
 - Outputs / logs:
-  - (where logs go)
-  - (where exported data goes)
+  - Replay/session diagnostics are emitted to Logcat in debug builds
+  - No dedicated replay export artifact is produced by this flow
 
 ---
 
@@ -188,7 +211,9 @@ Where to start for new work:
 
 - Not a certified flight instrument; do not rely on it as the sole source of flight-critical information.
 - Emulator sensor behaviour is not representative; use a physical device for validation.
-- (Add 1-3 current limitations here: performance, device-specific sensor quirks, missing features, etc.)
+- Static analysis tasks `detekt` / `ktlintCheck` are not configured in this repo;
+  use `enforceRules`, lint, and tests as the active quality gates.
+- IGC replay quality depends on source log quality (timestamp/cadence/noise in the log data).
 
 ---
 
@@ -202,26 +227,26 @@ The pilot remains solely responsible for safe operation of the aircraft.
 
 ## License
 
-Add a `LICENSE` file at repo root and state the license here.
-Example:
-- MIT / Apache-2.0 / Proprietary (pick one and be explicit)
+No `LICENSE` file is present at repo root at this time.
+Do not assume open-source licensing terms unless a license file is added.
 
 ---
 
 ## Support / Contact
 
 - Bugs / feature requests: open a GitHub Issue (preferred)
-- Security/privacy reports: (email or private channel if you want one)
+- Security/privacy reports: use a private maintainer channel when available;
+  avoid posting sensitive data in public issues.
 
 ---
 
 ## Screenshots / Demo
 
-Add at least one screenshot or a short GIF/video link here.
+Screenshots/demo assets are not currently maintained in this document.
 
 ---
 
 ## Changelog / Releases
 
-If you tag releases, link release notes here.
+No release-note index is currently maintained in this file.
 

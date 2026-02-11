@@ -24,14 +24,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.xcpro.common.waypoint.SearchWaypoint
 import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.common.waypoint.toSearchWaypoint
-import com.example.xcpro.tasks.TaskManagerCoordinator
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskSearchBarsOverlay(
     allWaypoints: List<WaypointData>,
-    taskManager: TaskManagerCoordinator,
+    onAddWaypoint: (SearchWaypoint) -> Unit,
     onClose: () -> Unit,
     onGoto: (SearchWaypoint) -> Unit
 ) {
@@ -173,11 +172,9 @@ fun TaskSearchBarsOverlay(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {
-                                        val newRecentWaypoints =
-                                            (listOf(wp) + recentWaypoints.filter { it.id != wp.id }).take(5)
                                         viewModel.recordRecent(wp)
 
-                                        taskManager.addWaypoint(wp)
+                                        onAddWaypoint(wp)
                                         onGoto(wp)
 
                                         query = TextFieldValue(text = "", selection = TextRange(0))

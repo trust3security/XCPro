@@ -1,7 +1,5 @@
 package com.example.xcpro.tasks
 
-import android.content.Context
-import android.content.SharedPreferences
 import androidx.annotation.VisibleForTesting
 import com.example.xcpro.common.waypoint.SearchWaypoint
 import com.example.xcpro.gestures.TaskGestureCallbacks
@@ -11,30 +9,32 @@ import com.example.xcpro.tasks.aat.gestures.AatGestureHandler
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.TaskWaypoint
+import com.example.xcpro.tasks.domain.engine.AATTaskEngine
+import com.example.xcpro.tasks.domain.engine.RacingTaskEngine
+import com.example.xcpro.tasks.domain.persistence.TaskEnginePersistenceService
 import com.example.xcpro.tasks.racing.RacingTaskManager
 import com.example.xcpro.tasks.racing.gestures.RacingGestureHandler
-import java.lang.ref.WeakReference
+import java.time.Duration
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import org.maplibre.android.maps.MapLibreMap
+import kotlinx.coroutines.launch
 
 /**
  * Routes calls to the Racing or AAT task managers; contains no task-specific math.
  */
-class TaskManagerCoordinator(val context: Context? = null) {
+class TaskManagerCoordinator(
+    private val taskEnginePersistenceService: TaskEnginePersistenceService? = null,
+    private val racingTaskEngine: RacingTaskEngine? = null,
+    private val aatTaskEngine: AATTaskEngine? = null,
+    private val racingTaskManager: RacingTaskManager,
+    private val aatTaskManager: AATTaskManager
+) {
+    private val coordinatorScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    private val prefs: SharedPreferences? = context?.getSharedPreferences("task_coordinator_prefs", Context.MODE_PRIVATE)
-    private val racingTaskManager = RacingTaskManager(context)
-    private val aatTaskManager = AATTaskManager(context)
-    private val persistenceStore = TaskCoordinatorPersistence(
-        prefs,
-        loadRacingTask = { racingTaskManager.loadRacingTask() != null },
-        loadAATTask = { aatTaskManager.loadAATTask() != null },
-        log = ::log
-    )
-
-    private var mapInstanceRef: WeakReference<MapLibreMap?> = WeakReference(null)
     private var racingDelegate = createRacingDelegate()
     private var aatDelegate = createAATDelegate()
     private var proximityHandler: ((Boolean, Boolean) -> Unit)? = null
@@ -61,13 +61,11 @@ class TaskManagerCoordinator(val context: Context? = null) {
 
     private fun createRacingDelegate() = RacingCoordinatorDelegate(
         taskManager = racingTaskManager,
-        mapProvider = { mapInstanceRef.get() },
         log = ::log
     )
 
     private fun createAATDelegate() = AATCoordinatorDelegate(
         taskManager = aatTaskManager,
-        mapProvider = { mapInstanceRef.get() },
         log = ::log
     )
 
@@ -85,7 +83,7 @@ class TaskManagerCoordinator(val context: Context? = null) {
         val hasWaypoints = currentWaypoints.isNotEmpty()
         log("Switching from ${_taskType.value.name} to ${newTaskType.name} (preserveWaypoints=$hasWaypoints)")
 
-        clearCurrentTask(mapInstanceRef.get())
+        clearCurrentTask()
         _taskType.value = newTaskType
 
         if (hasWaypoints) {
@@ -98,7 +96,13 @@ class TaskManagerCoordinator(val context: Context? = null) {
         } else {
             log("No waypoints to preserve during task switch")
         }
-        persistenceStore.saveTaskType(newTaskType)
+        val service = taskEnginePersistenceService
+        if (service != null) {
+            coordinatorScope.launch {
+                service.saveTaskType(newTaskType)
+            }
+        }
+        syncEngineFromManager(newTaskType)
     }
 
     fun initializeTask(waypoints: List<SearchWaypoint>) =
@@ -110,20 +114,11 @@ class TaskManagerCoordinator(val context: Context? = null) {
     fun removeWaypoint(index: Int) =
         withCurrentManager(racingBlock = { removeRacingWaypoint(index) }, aatBlock = { removeAATWaypoint(index) })
 
-    fun plotOnMap(map: MapLibreMap?) = currentDelegate().plotOnMap(map)
-
     fun clearTask() = withCurrentManager(racingBlock = { clearRacingTask() }, aatBlock = { clearAATTask() })
 
     fun getTaskSummary(): String = withCurrentManager(racingBlock = { getRacingTaskSummary() }, aatBlock = { getAATTaskSummary() })
 
     fun isTaskValid(): Boolean = withCurrentManager(racingBlock = { isRacingTaskValid() }, aatBlock = { isAATTaskValid() })
-
-    fun loadTaskType() {
-        _taskType.value = persistenceStore.loadTaskType(_taskType.value)
-    }
-
-    fun getRacingTaskManager(): RacingTaskManager = racingTaskManager
-    fun getAATTaskManager(): AATTaskManager = aatTaskManager
 
     fun createGestureHandler(callbacks: TaskGestureCallbacks): TaskGestureHandler {
         return if (_taskType.value == TaskType.AAT) {
@@ -178,14 +173,18 @@ class TaskManagerCoordinator(val context: Context? = null) {
     fun replaceWaypoint(index: Int, newWaypoint: SearchWaypoint) =
         withCurrentManager(racingBlock = { replaceRacingWaypoint(index, newWaypoint) }, aatBlock = { replaceAATWaypoint(index, newWaypoint) })
 
-    fun getTaskSpecificWaypoint(index: Int): Any? = when (_taskType.value) {
-        TaskType.RACING -> racingTaskManager.currentRacingTask.waypoints.getOrNull(index)
-        TaskType.AAT -> aatTaskManager.currentAATTask.waypoints.getOrNull(index)
-    }
-
-    fun loadSavedTasks() {
-        loadTaskType(); val result = persistenceStore.loadSavedTasks()
-        log("Finished loading saved tasks (racing=${result.racingLoaded}, aat=${result.aatLoaded})")
+    suspend fun loadSavedTasks() {
+        val service = taskEnginePersistenceService
+        if (service != null) {
+            val restoredType = service.restore(_taskType.value)
+            _taskType.value = restoredType
+            applyEngineTaskToManager(TaskType.RACING)
+            applyEngineTaskToManager(TaskType.AAT)
+            log("Finished loading saved tasks from service (type=${restoredType.name})")
+            return
+        }
+        syncEnginesFromManagers()
+        log("Finished loading task state without persistence service (type=${_taskType.value.name})")
     }
 
     fun advanceToNextLeg() {
@@ -206,8 +205,8 @@ class TaskManagerCoordinator(val context: Context? = null) {
         }
     }
     fun setActiveLeg(index: Int) = withCurrentManager(
-        racingBlock = { setRacingLeg(index, mapInstanceRef.get()) },
-        aatBlock = { setAATLeg(index, mapInstanceRef.get()) }
+        racingBlock = { setRacingLeg(index) },
+        aatBlock = { setAATLeg(index) }
     ).also { legChangeHandlers.forEach { handler -> handler.invoke(currentLeg) } }
 
     fun getActiveLeg(): Int = currentLeg
@@ -233,30 +232,45 @@ class TaskManagerCoordinator(val context: Context? = null) {
         return Pair(startWaypoint.lat, startWaypoint.lon)
     }
 
-    @Deprecated("Use calculateSimpleSegmentDistance for clarity", ReplaceWith("calculateSimpleSegmentDistance"))
-    fun haversineDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double = when (_taskType.value) {
-        TaskType.RACING -> racingTaskManager.calculateSegmentDistance(lat1, lon1, lat2, lon2)
-        TaskType.AAT -> aatTaskManager.calculateSegmentDistance(lat1, lon1, lat2, lon2)
+    suspend fun getSavedTasks(): List<String> {
+        val currentType = _taskType.value
+        val service = taskEnginePersistenceService
+        if (service != null) {
+            return service.listTaskNames(currentType)
+        }
+        return emptyList()
     }
 
-    fun getSavedTasks(context: Context): List<String> = when (_taskType.value) {
-        TaskType.RACING -> racingTaskManager.getSavedRacingTasks()
-        TaskType.AAT -> aatTaskManager.getSavedAATTasks(context)
+    suspend fun saveTask(taskName: String): Boolean {
+        val currentType = _taskType.value
+        val service = taskEnginePersistenceService
+        if (service != null) {
+            syncEngineFromManager(currentType)
+            return service.saveNamedTask(currentType, taskName)
+        }
+        return false
     }
 
-    fun saveTask(context: Context, taskName: String): Boolean = when (_taskType.value) {
-        TaskType.RACING -> racingTaskManager.saveRacingTask(taskName)
-        TaskType.AAT -> aatTaskManager.saveAATTask(context, taskName)
+    suspend fun loadTask(taskName: String): Boolean {
+        val currentType = _taskType.value
+        val service = taskEnginePersistenceService
+        if (service != null) {
+            val loaded = service.loadNamedTask(currentType, taskName)
+            if (loaded) {
+                applyEngineTaskToManager(currentType)
+            }
+            return loaded
+        }
+        return false
     }
 
-    fun loadTask(context: Context, taskName: String): Boolean = when (_taskType.value) {
-        TaskType.RACING -> racingTaskManager.loadRacingTaskFromFile(taskName)
-        TaskType.AAT -> aatTaskManager.loadAATTaskFromFile(context, taskName)
-    }
-
-    fun deleteTask(context: Context, taskName: String): Boolean = when (_taskType.value) {
-        TaskType.RACING -> racingTaskManager.deleteRacingTask(taskName)
-        TaskType.AAT -> aatTaskManager.deleteAATTask(context, taskName)
+    suspend fun deleteTask(taskName: String): Boolean {
+        val currentType = _taskType.value
+        val service = taskEnginePersistenceService
+        if (service != null) {
+            return service.deleteNamedTask(currentType, taskName)
+        }
+        return false
     }
 
     fun setTaskType(taskType: TaskType) = switchToTaskType(taskType)
@@ -312,13 +326,9 @@ class TaskManagerCoordinator(val context: Context? = null) {
         aatDelegate.updateArea(index, radiusMeters)
     }
 
-    private fun clearCurrentTask(map: MapLibreMap?) {
-        currentDelegate().clearFromMap(map)
+    private fun clearCurrentTask() {
         currentDelegate().clearTask()
     }
-
-    fun setMapInstance(map: MapLibreMap?) { mapInstanceRef = WeakReference(map) }
-    fun getMapInstance(): MapLibreMap? = mapInstanceRef.get()
 
     fun setProximityHandler(handler: (Boolean, Boolean) -> Unit) {
         proximityHandler = handler
@@ -349,5 +359,71 @@ class TaskManagerCoordinator(val context: Context? = null) {
     fun exitAATEditMode() { if (_taskType.value == TaskType.AAT) aatDelegate.exitEditMode() }
     fun isInAATEditMode(): Boolean = _taskType.value == TaskType.AAT && aatDelegate.isInEditMode()
     fun getAATEditWaypointIndex(): Int? = if (_taskType.value == TaskType.AAT) aatDelegate.editWaypointIndex() else null
-    fun checkAATTargetPointHit(screenX: Float, screenY: Float): Int? = if (_taskType.value == TaskType.AAT) aatDelegate.checkTargetPointHit(screenX, screenY) else null
+
+    private fun syncEnginesFromManagers() {
+        syncEngineFromManager(TaskType.RACING)
+        syncEngineFromManager(TaskType.AAT)
+    }
+
+    private fun syncEngineFromManager(taskType: TaskType) {
+        when (taskType) {
+            TaskType.RACING -> racingTaskEngine?.setTask(racingTaskManager.getCoreTask())
+            TaskType.AAT -> {
+                val minimum = aatTaskManager.currentAATTask.minimumTime
+                val maximum = aatTaskManager.currentAATTask.maximumTime
+                val taskWithTimes = withAatTimes(
+                    task = aatTaskManager.getCoreTask(),
+                    minimum = minimum,
+                    maximum = maximum
+                )
+                aatTaskEngine?.setTask(taskWithTimes)
+            }
+        }
+    }
+
+    private fun applyEngineTaskToManager(taskType: TaskType) {
+        when (taskType) {
+            TaskType.RACING -> {
+                val state = racingTaskEngine?.state?.value ?: return
+                racingTaskManager.initializeFromGenericWaypoints(state.base.task.waypoints)
+                racingTaskManager.setRacingLeg(state.base.activeLegIndex)
+            }
+            TaskType.AAT -> {
+                val state = aatTaskEngine?.state?.value ?: return
+                aatTaskManager.initializeFromGenericWaypoints(state.base.task.waypoints)
+                aatTaskManager.updateAATTimes(
+                    minTime = state.minimumTime,
+                    maxTime = state.maximumTime.takeIf { !it.isNegative && !it.isZero }
+                )
+                aatTaskManager.setAATLeg(state.base.activeLegIndex)
+            }
+        }
+    }
+
+    private fun withAatTimes(
+        task: Task,
+        minimum: Duration,
+        maximum: Duration?
+    ): Task {
+        if (task.waypoints.isEmpty()) return task
+        val minSeconds = minimum.seconds.toDouble()
+        val maxSeconds = maximum?.seconds?.toDouble()
+        return task.copy(
+            waypoints = task.waypoints.map { waypoint ->
+                val params = waypoint.customParameters.toMutableMap()
+                params[KEY_AAT_MIN_TIME_SECONDS] = minSeconds
+                if (maxSeconds != null) {
+                    params[KEY_AAT_MAX_TIME_SECONDS] = maxSeconds
+                } else {
+                    params.remove(KEY_AAT_MAX_TIME_SECONDS)
+                }
+                waypoint.copy(customParameters = params)
+            }
+        )
+    }
+
+    private companion object {
+        private const val KEY_AAT_MIN_TIME_SECONDS = "aatMinimumTimeSeconds"
+        private const val KEY_AAT_MAX_TIME_SECONDS = "aatMaximumTimeSeconds"
+    }
 }

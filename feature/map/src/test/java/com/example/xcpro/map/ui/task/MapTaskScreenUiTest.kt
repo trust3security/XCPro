@@ -28,39 +28,39 @@ class MapTaskScreenUiTest {
     val composeTestRule = createComposeRule()
 
     @Test
-    fun taskBottomSheet_showsContainerWhenVisible() {
+    fun taskTopPanel_showsContainerWhenVisible() {
         val taskScreenManager = createManager(sampleTask(withWaypoints = false))
         taskScreenManager.showTaskBottomSheet()
 
         composeTestRule.setContent {
-            MapTaskScreenUi.TaskBottomSheet(
+            MapTaskScreenUi.TaskTopPanel(
                 taskScreenManager = taskScreenManager,
                 allWaypoints = emptyList(),
                 currentQNH = "1013",
-                bottomSheetContent = { Box(Modifier) }
+                panelContent = { Box(Modifier) }
             )
         }
 
         composeTestRule
-            .onNodeWithTag(MapTaskScreenUi.Tags.TASK_BOTTOM_SHEET)
+            .onNodeWithTag(MapTaskScreenUi.Tags.TASK_TOP_PANEL)
             .assertIsDisplayed()
     }
 
     @Test
-    fun taskBottomSheet_hidesContainerWhenNotVisible() {
+    fun taskTopPanel_hidesContainerWhenNotVisible() {
         val taskScreenManager = createManager(sampleTask(withWaypoints = false))
 
         composeTestRule.setContent {
-            MapTaskScreenUi.TaskBottomSheet(
+            MapTaskScreenUi.TaskTopPanel(
                 taskScreenManager = taskScreenManager,
                 allWaypoints = emptyList(),
                 currentQNH = "1013",
-                bottomSheetContent = { Box(Modifier) }
+                panelContent = { Box(Modifier) }
             )
         }
 
         composeTestRule
-            .onAllNodesWithTag(MapTaskScreenUi.Tags.TASK_BOTTOM_SHEET)
+            .onAllNodesWithTag(MapTaskScreenUi.Tags.TASK_TOP_PANEL)
             .assertCountEquals(0)
     }
 

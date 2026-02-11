@@ -23,7 +23,7 @@ tasks/racing/
 """ RacingTaskPersistence.kt           - SharedPreferences operations
 """ RacingTaskStorage.kt               (262 lines) - File I/O (CUP format)
 """ RacingWaypointManager.kt           (271 lines) - Waypoint CRUD
-""" RacingTaskMapOverlay.kt            - Map overlay integration
+""" TaskMapRenderRouter.kt             - Shared task map overlay routing integration
 """ RacingManageBTTab.kt               (471 lines) - Bottom tab UI
 """ RacingGeometryUtils.kt             (241 lines) - Geometry utilities
 """ RacingGeoJSONValidator.kt          (246 lines) - GeoJSON validation

@@ -12,17 +12,20 @@ import com.example.xcpro.map.MapTaskIntegration
 import com.example.xcpro.map.ui.widgets.MapUIWidgetManager
 import com.example.xcpro.map.ui.widgets.MapUIWidgets
 import com.example.xcpro.tasks.TaskManagerCoordinator
+import org.maplibre.android.maps.MapLibreMap
 
 @Composable
 internal fun BoxScope.AatEditFab(
     isAATEditMode: Boolean,
     taskManager: TaskManagerCoordinator,
+    mapLibreMap: MapLibreMap?,
     cameraManager: MapCameraManager,
     onExitAATEditMode: () -> Unit
 ) {
     MapTaskIntegration.AATEditModeFAB(
         isAATEditMode = isAATEditMode,
         taskManager = taskManager,
+        mapLibreMap = mapLibreMap,
         cameraManager = cameraManager,
         onExitEditMode = onExitAATEditMode,
         modifier = Modifier

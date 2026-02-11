@@ -9,7 +9,6 @@ import android.util.Log
 import com.example.xcpro.tasks.aat.models.AATStartPointType
 import com.example.xcpro.tasks.aat.models.AATFinishPointType
 import com.example.xcpro.tasks.aat.models.AATTurnPointType
-import com.example.xcpro.tasks.TaskManagerCoordinator
 
 private const val TAG = "AATTaskPointTypeSelector"
 
@@ -39,7 +38,6 @@ fun AATTaskPointTypeSelector(
     keyholeAngle: String,
     sectorOuterRadius: String,
     nextWaypoint: TaskWaypoint? = null,
-    taskManager: TaskManagerCoordinator,
     onStartTypeChange: (AATStartPointType) -> Unit,
     onFinishTypeChange: (AATFinishPointType) -> Unit,
     onTurnTypeChange: (AATTurnPointType) -> Unit,
@@ -58,7 +56,6 @@ fun AATTaskPointTypeSelector(
                     gateWidth = gateWidth,
                     waypoint = waypoint,
                     nextWaypoint = nextWaypoint,
-                    taskManager = taskManager,
                     onStartTypeChange = onStartTypeChange,
                     onGateWidthChange = onGateWidthChange
                 )
@@ -82,7 +79,6 @@ fun AATTaskPointTypeSelector(
                     sectorOuterRadius = sectorOuterRadius,
                     waypoint = waypoint,
                     nextWaypoint = nextWaypoint,
-                    taskManager = taskManager,
                     onTurnTypeChange = onTurnTypeChange,
                     onGateWidthChange = onGateWidthChange,
                     onKeyholeInnerRadiusChange = onKeyholeInnerRadiusChange,

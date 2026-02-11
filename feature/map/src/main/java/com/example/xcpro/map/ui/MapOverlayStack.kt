@@ -226,6 +226,7 @@ internal fun MapOverlayStack(
         AatEditFab(
             isAATEditMode = isAATEditMode,
             taskManager = taskManager,
+            mapLibreMap = mapState.mapLibreMap,
             cameraManager = cameraManager,
             onExitAATEditMode = onExitAATEditMode
         )

@@ -22,7 +22,7 @@ import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.TaskWaypoint
 
 @Composable
-fun MinimizedContent(task: Task, taskManager: TaskManagerCoordinator) {
+fun MinimizedContent(task: Task, taskType: TaskType) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -30,7 +30,7 @@ fun MinimizedContent(task: Task, taskManager: TaskManagerCoordinator) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         TaskMinimizedIndicator(
-            taskType = taskManager.taskType,
+            taskType = taskType,
             waypointCount = task.waypoints.size
         )
 
@@ -38,7 +38,7 @@ fun MinimizedContent(task: Task, taskManager: TaskManagerCoordinator) {
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "${taskManager.taskType} Task",
+                text = "$taskType Task",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )

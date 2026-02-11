@@ -1,4 +1,3 @@
-﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
 
 # ARCHITECTURE.md
 
@@ -59,6 +58,9 @@ UI -> domain -> data
 Rules:
 - UI must not depend on data repositories.
 - Domain must not depend on Android or UI types.
+- Domain defines repository/data-source interfaces (ports) for external I/O used by business logic.
+- Data layer implements those ports via adapters.
+- Engines/use-cases depend on ports, not concrete Android/data implementations.
 - Core pipeline components are provided by DI, never constructed inside managers.
 
 ---
@@ -160,6 +162,19 @@ Repositories may use `MutableStateFlow` internally but MUST expose only
   - Simulator / replay sources
 - ViewModels receive UseCases only
 - UseCases receive Repositories only
+- Domain engines/use-cases receive boundary interfaces (ports), not concrete adapters.
+- Data adapters are bound to ports in DI modules.
+
+### Boundary Adapter Rule (Ports + Adapters)
+Required:
+- Define boundary interfaces in domain for persistence/network/device/file I/O used by business logic.
+- Implement those interfaces in data adapters.
+- Inject interfaces into engines/use-cases via DI.
+- Keep Android/framework types inside adapters and Android lifecycle components.
+
+Forbidden:
+- Engines/use-cases depending directly on `Context`, `SharedPreferences`, Room DAOs, HTTP clients, file APIs, or sensor managers.
+- Passing concrete data adapters through ViewModels/UI to business logic.
 
 ### Forbidden
 - `new` inside ViewModels
@@ -242,6 +257,34 @@ write back smoothed values.
 - Camera updates are gated and short-animated to avoid jumps.
 
 See `../../mapposition.md` for the concrete flow and component list.
+
+---
+
+## 5B. Task Pipeline Contract (Racing and AAT)
+
+Task management follows the same MVVM + UDF + SSOT model as flight data.
+
+### Allowed Flow
+```
+Task UI (Compose)
+  -> TaskSheetViewModel intents
+    -> Task use-cases/coordinator use-cases
+      -> Task repository/coordinator (authoritative state)
+        -> ViewModel StateFlow
+          -> Task UI render
+```
+
+### Ownership Rules
+- Task definitions, active leg, and persistence are authoritative in task repository/coordinator owners.
+- Boundary policy (zone entry, distance/radius policy, auto-advance criteria) belongs to domain/use-case logic.
+- ViewModels transform task domain state into UI state and dispatch intents.
+- Composables render state and emit intents only.
+
+### Forbidden
+- Composables calling task managers/coordinators directly for mutation or business queries.
+- Composables reading manager internals as state (for example currentTask/currentLeg/currentAATTask).
+- ViewModels exposing raw manager/controller handles as public API.
+- Non-UI manager/domain classes using Compose runtime state primitives.
 
 ---
 
@@ -395,6 +438,7 @@ These rules prevent regressions and future rewrites.
 
 Rules:
 - Non-trivial refactors must have a written plan doc with phases, ownership, and tests.
+- Use `CHANGE_PLAN_TEMPLATE.md` as the default starting point for non-trivial feature/refactor plans.
 - SSOT ownership must be explicit with a simple flow diagram or bullet flow.
 - Time base must be specified and enforced in code and tests (monotonic or replay only).
 - State machines must be explicit: list states and transitions in docs.
@@ -409,9 +453,7 @@ Red flags in review (reject changes):
 ---
 
 ## Related Docs
-- `../REFACTOR_LOCATION_MANAGER.md`
-- `../REFACTOR_SNAIL_TRAIL_OVERLAY.md`
-- `../refactor/REFACTOR_SNAIL_TRAIL.md`
+- `CHANGE_PLAN_TEMPLATE.md`: neutral plan template for new features and refactors.
 - `../../mapposition.md`: map display update flow and time-base rules.
 
 ## Final Rule

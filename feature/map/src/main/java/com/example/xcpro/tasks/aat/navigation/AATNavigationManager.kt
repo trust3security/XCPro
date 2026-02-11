@@ -1,9 +1,9 @@
 package com.example.xcpro.tasks.aat.navigation
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import com.example.xcpro.tasks.aat.SimpleAATTask
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * AAT Navigation Manager
@@ -17,9 +17,10 @@ import com.example.xcpro.tasks.aat.SimpleAATTask
  */
 class AATNavigationManager {
 
-    // Current leg state - exposed as observable state for UI
-    private var _currentLeg by mutableStateOf(0)
-    val currentLeg: Int get() = _currentLeg
+    // Current leg state
+    private val currentLegState = MutableStateFlow(0)
+    val currentLegFlow: StateFlow<Int> = currentLegState.asStateFlow()
+    val currentLeg: Int get() = currentLegState.value
 
     /**
      * Set the current leg directly
@@ -29,7 +30,7 @@ class AATNavigationManager {
      * @param leg The leg index (0-based)
      */
     fun setCurrentLeg(leg: Int) {
-        _currentLeg = leg
+        currentLegState.value = leg
     }
 
     /**
@@ -41,8 +42,8 @@ class AATNavigationManager {
      * @param task The current task (used to validate leg bounds)
      */
     fun goToPreviousLeg(task: SimpleAATTask) {
-        if (_currentLeg > 0) {
-            _currentLeg--
+        if (currentLegState.value > 0) {
+            currentLegState.value = currentLegState.value - 1
         } else {
         }
     }
@@ -56,8 +57,8 @@ class AATNavigationManager {
      * @param task The current task (used to validate leg bounds)
      */
     fun advanceToNextLeg(task: SimpleAATTask) {
-        if (_currentLeg < task.waypoints.size - 1) {
-            _currentLeg++
+        if (currentLegState.value < task.waypoints.size - 1) {
+            currentLegState.value = currentLegState.value + 1
         } else {
         }
     }
@@ -68,7 +69,7 @@ class AATNavigationManager {
      * Sets current leg to 0 (first leg).
      */
     fun resetToStart() {
-        _currentLeg = 0
+        currentLegState.value = 0
     }
 
     /**
@@ -76,14 +77,14 @@ class AATNavigationManager {
      *
      * @return The 0-based leg index
      */
-    fun getCurrentLegIndex(): Int = _currentLeg
+    fun getCurrentLegIndex(): Int = currentLegState.value
 
     /**
      * Check if at the first leg
      *
      * @return true if current leg is 0
      */
-    fun isAtFirstLeg(): Boolean = _currentLeg == 0
+    fun isAtFirstLeg(): Boolean = currentLegState.value == 0
 
     /**
      * Check if at the last leg
@@ -91,5 +92,5 @@ class AATNavigationManager {
      * @param task The current task
      * @return true if current leg is the last waypoint
      */
-    fun isAtLastLeg(task: SimpleAATTask): Boolean = _currentLeg >= task.waypoints.size - 1
+    fun isAtLastLeg(task: SimpleAATTask): Boolean = currentLegState.value >= task.waypoints.size - 1
 }

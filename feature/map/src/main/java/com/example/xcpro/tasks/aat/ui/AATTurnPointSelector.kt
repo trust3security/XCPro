@@ -14,7 +14,6 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.unit.dp
 import com.example.xcpro.tasks.aat.models.AATTurnPointType
-import com.example.xcpro.tasks.TaskManagerCoordinator
 
 /**
  * AAT Turn Point Configuration UI
@@ -35,7 +34,6 @@ internal fun AATTurnPointSelector(
     sectorOuterRadius: String,
     waypoint: TaskWaypoint,
     nextWaypoint: TaskWaypoint?,
-    taskManager: TaskManagerCoordinator,
     onTurnTypeChange: (AATTurnPointType) -> Unit,
     onGateWidthChange: (String) -> Unit,
     onKeyholeInnerRadiusChange: (String) -> Unit,

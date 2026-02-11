@@ -9,7 +9,10 @@ import com.example.xcpro.core.common.geometry.OffsetPx
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.adsb.AdsbTrafficSnapshot
 import com.example.xcpro.adsb.AdsbTrafficUiModel
+import com.example.xcpro.adsb.AdsbSelectedTargetDetails
 import com.example.xcpro.adsb.Icao24
+import com.example.xcpro.adsb.ADSB_ICON_SIZE_DEFAULT_PX
+import com.example.xcpro.adsb.metadata.domain.AdsbMetadataEnrichmentUseCase
 import com.example.xcpro.weather.wind.model.WindState
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.replay.SessionStatus
@@ -25,6 +28,7 @@ import com.example.xcpro.map.trail.MapTrailSettingsUseCase
 import com.example.xcpro.map.trail.domain.TrailUpdateResult
 import com.example.xcpro.ogn.OgnTrafficTarget
 import com.example.xcpro.ogn.OgnTrafficSnapshot
+import com.example.xcpro.ogn.OGN_ICON_SIZE_DEFAULT_PX
 import com.example.xcpro.qnh.CalibrateQnhUseCase
 import com.example.xcpro.qnh.QnhCalibrationFailureReason
 import com.example.xcpro.variometer.layout.VariometerUiState
@@ -75,7 +79,8 @@ class MapScreenViewModel @Inject constructor(
     private val mapVarioPreferencesUseCase: MapVarioPreferencesUseCase,
     private val hawkVarioUseCase: HawkVarioUseCase,
     private val ognTrafficUseCase: OgnTrafficUseCase,
-    private val adsbTrafficUseCase: AdsbTrafficUseCase
+    private val adsbTrafficUseCase: AdsbTrafficUseCase,
+    private val adsbMetadataEnrichmentUseCase: AdsbMetadataEnrichmentUseCase
 ) : ViewModel() {
 
     private val initialStyleName = mapStyleUseCase.initialStyle()
@@ -84,12 +89,7 @@ class MapScreenViewModel @Inject constructor(
     val mapStateActions: MapStateActions = MapStateActionsDelegate(mapStateStore)
     private val featureFlags = mapFeatureFlagsUseCase.featureFlags
     val mapFeatureFlags = featureFlags
-    val taskManager = mapTasksUseCase.taskManager
-    private val taskNavigationController = mapTasksUseCase.taskNavigationController
-    val varioServiceManager = sensorsUseCase.serviceManager
     val cardPreferences = mapCardPreferencesUseCase.cardPreferences
-    val igcReplayController = mapReplayUseCase.controller
-    private val racingReplayLogBuilder = mapReplayUseCase.racingReplayLogBuilder
 
     private val uiControllers = mapUiControllersUseCase.create(viewModelScope)
     private val ballastController = uiControllers.ballastController
@@ -134,7 +134,7 @@ class MapScreenViewModel @Inject constructor(
                 started = SharingStarted.Eagerly,
                 initialValue = HawkVarioUiState()
             )
-    val replaySessionState: StateFlow<SessionState> = igcReplayController.session
+    val replaySessionState: StateFlow<SessionState> = mapReplayUseCase.replaySession
     val showVarioDemoFab: Boolean = featureFlags.showVarioDemoFab
     val showRacingReplayFab: Boolean = featureFlags.showRacingReplayFab
     val gpsStatusFlow: StateFlow<GpsStatusUiModel> =
@@ -177,7 +177,21 @@ class MapScreenViewModel @Inject constructor(
                 started = SharingStarted.Eagerly,
                 initialValue = false
             )
-    val adsbTargets: StateFlow<List<AdsbTrafficUiModel>> = adsbTrafficUseCase.targets
+    val ognIconSizePx: StateFlow<Int> =
+        ognTrafficUseCase.iconSizePx
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = OGN_ICON_SIZE_DEFAULT_PX
+            )
+    private val rawAdsbTargets: StateFlow<List<AdsbTrafficUiModel>> = adsbTrafficUseCase.targets
+    val adsbTargets: StateFlow<List<AdsbTrafficUiModel>> =
+        adsbMetadataEnrichmentUseCase.targetsWithMetadata(rawAdsbTargets)
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = emptyList()
+            )
     val adsbSnapshot: StateFlow<AdsbTrafficSnapshot> = adsbTrafficUseCase.snapshot
     val adsbOverlayEnabled: StateFlow<Boolean> =
         adsbTrafficUseCase.overlayEnabled
@@ -185,6 +199,13 @@ class MapScreenViewModel @Inject constructor(
                 scope = viewModelScope,
                 started = SharingStarted.Eagerly,
                 initialValue = false
+            )
+    val adsbIconSizePx: StateFlow<Int> =
+        adsbTrafficUseCase.iconSizePx
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = ADSB_ICON_SIZE_DEFAULT_PX
             )
 
     val variometerUiState: StateFlow<VariometerUiState> = variometerLayoutUseCase.state
@@ -199,10 +220,11 @@ class MapScreenViewModel @Inject constructor(
     val mapCommands: SharedFlow<MapCommand> = _mapCommands.asSharedFlow()
     private val _selectedAdsbId = MutableStateFlow<Icao24?>(null)
     val selectedAdsbId: StateFlow<Icao24?> = _selectedAdsbId.asStateFlow()
-    val selectedAdsbTarget: StateFlow<AdsbTrafficUiModel?> =
-        combine(_selectedAdsbId, adsbTargets) { selectedId, targets ->
-            selectedId?.let { id -> targets.firstOrNull { it.id == id } }
-        }.stateIn(
+    val selectedAdsbTarget: StateFlow<AdsbSelectedTargetDetails?> =
+        adsbMetadataEnrichmentUseCase.selectedTargetDetails(
+            selectedIcao24 = _selectedAdsbId,
+            adsbTargets = rawAdsbTargets
+        ).stateIn(
             scope = viewModelScope,
             started = SharingStarted.Eagerly,
             initialValue = null
@@ -214,7 +236,7 @@ class MapScreenViewModel @Inject constructor(
         combine(_containerReady, _liveDataReady) { container, data -> container && data }
             .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
-    private val flightDataUiAdapter = FlightDataUiAdapter(
+    private val flightDataUiAdapter = mapReplayUseCase.createFlightDataUiAdapter(
         scope = viewModelScope,
         flightDataFlow = flightDataUseCase.flightData,
         windStateFlow = windStateUseCase.windState,
@@ -225,16 +247,11 @@ class MapScreenViewModel @Inject constructor(
         liveDataReady = _liveDataReady,
         containerReady = _containerReady,
         uiEffects = _uiEffects,
-        igcReplayController = igcReplayController,
         trailUpdates = _trailUpdates
     )
 
-    private val replayCoordinator = MapScreenReplayCoordinator(
-        taskManager = taskManager,
-        taskNavigationController = taskNavigationController,
+    private val replayCoordinator = mapReplayUseCase.createReplayCoordinator(
         flightDataFlow = flightDataUseCase.flightData,
-        igcReplayController = igcReplayController,
-        racingReplayLogBuilder = racingReplayLogBuilder,
         featureFlags = featureFlags,
         mapStateStore = mapStateStore,
         mapStateActions = mapStateActions,
@@ -251,6 +268,9 @@ class MapScreenViewModel @Inject constructor(
     init {
         mapStateStore.setTrailSettings(trailSettingsUseCase.getSettings())
         mapStateStore.setDisplaySmoothingProfile(featureFlags.defaultDisplaySmoothingProfile)
+        viewModelScope.launch {
+            adsbTrafficUseCase.bootstrapMetadataSync()
+        }
         observeTrailSettings()
         observeOgnTraffic()
         observeAdsbTraffic()
@@ -283,7 +303,9 @@ class MapScreenViewModel @Inject constructor(
 
     init {
         if (featureFlags.loadSavedTasksOnInit) {
-            mapTasksUseCase.loadSavedTasks()
+            viewModelScope.launch {
+                mapTasksUseCase.loadSavedTasks()
+            }
         }
         observeUnits()
         observeGliderConfig()
@@ -445,7 +467,7 @@ class MapScreenViewModel @Inject constructor(
             }
             .launchIn(viewModelScope)
 
-        adsbTargets
+        rawAdsbTargets
             .onEach { targets ->
                 val selectedId = _selectedAdsbId.value ?: return@onEach
                 if (targets.none { it.id == selectedId }) {

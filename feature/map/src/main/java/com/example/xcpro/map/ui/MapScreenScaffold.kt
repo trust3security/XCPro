@@ -45,6 +45,7 @@ import com.example.xcpro.map.model.GpsStatusUiModel
 import com.example.xcpro.adsb.AdsbTrafficSnapshot
 import com.example.xcpro.adsb.AdsbTrafficUiModel
 import com.example.xcpro.adsb.Icao24
+import com.example.xcpro.adsb.AdsbSelectedTargetDetails
 import com.example.xcpro.ogn.OgnTrafficSnapshot
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
 import com.example.xcpro.tasks.TaskManagerCoordinator
@@ -177,7 +178,7 @@ internal fun MapScreenScaffold(
     ognOverlayEnabled: Boolean,
     adsbSnapshot: AdsbTrafficSnapshot,
     adsbOverlayEnabled: Boolean,
-    selectedAdsbTarget: AdsbTrafficUiModel?,
+    selectedAdsbTarget: AdsbSelectedTargetDetails?,
     isUiEditMode: Boolean,
     onEditModeChange: (Boolean) -> Unit,
     isAATEditMode: Boolean,

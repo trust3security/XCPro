@@ -7,7 +7,12 @@ import com.example.xcpro.common.units.UnitsRepository
 import com.example.xcpro.common.waypoint.HomeWaypointRepository
 import com.example.xcpro.core.time.Clock
 import com.example.xcpro.map.QnhPreferencesRepository
+import com.example.xcpro.tasks.aat.AATTaskManager
 import com.example.xcpro.tasks.TaskManagerCoordinator
+import com.example.xcpro.tasks.domain.engine.AATTaskEngine
+import com.example.xcpro.tasks.domain.engine.RacingTaskEngine
+import com.example.xcpro.tasks.domain.persistence.TaskEnginePersistenceService
+import com.example.xcpro.tasks.racing.RacingTaskManager
 import com.example.xcpro.profiles.ProfileStorage
 import com.example.xcpro.profiles.DataStoreProfileStorage
 import com.example.xcpro.vario.LevoVarioPreferencesRepository
@@ -24,9 +29,31 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideTaskManagerCoordinator(
+    fun provideRacingTaskManager(
         @ApplicationContext context: Context
-    ): TaskManagerCoordinator = TaskManagerCoordinator(context)
+    ): RacingTaskManager = RacingTaskManager(context)
+
+    @Provides
+    @Singleton
+    fun provideAATTaskManager(
+        @ApplicationContext context: Context
+    ): AATTaskManager = AATTaskManager(context)
+
+    @Provides
+    @Singleton
+    fun provideTaskManagerCoordinator(
+        taskEnginePersistenceService: TaskEnginePersistenceService,
+        racingTaskEngine: RacingTaskEngine,
+        aatTaskEngine: AATTaskEngine,
+        racingTaskManager: RacingTaskManager,
+        aatTaskManager: AATTaskManager
+    ): TaskManagerCoordinator = TaskManagerCoordinator(
+        taskEnginePersistenceService = taskEnginePersistenceService,
+        racingTaskEngine = racingTaskEngine,
+        aatTaskEngine = aatTaskEngine,
+        racingTaskManager = racingTaskManager,
+        aatTaskManager = aatTaskManager
+    )
 
     @Provides
     @Singleton

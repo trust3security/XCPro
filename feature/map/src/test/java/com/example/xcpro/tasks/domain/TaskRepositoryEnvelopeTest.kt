@@ -1,6 +1,7 @@
 package com.example.xcpro.tasks.domain
 
 import com.example.xcpro.tasks.TaskRepository
+import com.example.xcpro.tasks.domain.logic.TaskProximityEvaluator
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.TaskWaypoint
@@ -11,7 +12,10 @@ import org.junit.Test
 
 class TaskRepositoryEnvelopeTest {
 
-    private val repo = TaskRepository(TaskValidator())
+    private val repo = TaskRepository(
+        validator = TaskValidator(),
+        proximityEvaluator = TaskProximityEvaluator()
+    )
 
     private fun wp(id: String, lat: Double, lon: Double) = TaskWaypoint(
         id = id,
