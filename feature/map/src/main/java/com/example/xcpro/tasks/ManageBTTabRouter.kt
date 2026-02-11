@@ -18,7 +18,6 @@ import com.example.xcpro.tasks.aat.AATManageBTTab
 fun ManageBTTabRouter(
     uiState: TaskUiState,
     task: Task,
-    taskManager: TaskManagerCoordinator,
     taskViewModel: TaskSheetViewModel,
     mapLibreMap: MapLibreMap?,
     allWaypoints: List<WaypointData> = emptyList(),
@@ -33,7 +32,6 @@ fun ManageBTTabRouter(
         TaskType.RACING -> {
             RacingManageBTTab(
                 task = task,
-                taskManager = taskManager,
                 taskViewModel = taskViewModel,
                 uiState = uiState,
                 mapLibreMap = mapLibreMap,
@@ -47,7 +45,6 @@ fun ManageBTTabRouter(
         TaskType.AAT -> {
             AATManageBTTab(
                 task = task,
-                taskManager = taskManager,
                 taskViewModel = taskViewModel,
                 uiState = uiState,
                 mapLibreMap = mapLibreMap,

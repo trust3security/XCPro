@@ -48,13 +48,11 @@ import androidx.compose.ui.unit.dp
 import com.example.xcpro.common.waypoint.SearchWaypoint
 import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.tasks.SearchableWaypointField
-import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.tasks.TaskSheetViewModel
 import com.example.xcpro.tasks.core.TaskWaypoint
 import com.example.xcpro.tasks.racing.models.RacingFinishPointType
 import com.example.xcpro.tasks.racing.models.RacingStartPointType
 import com.example.xcpro.tasks.racing.models.RacingTurnPointType
-import com.example.xcpro.tasks.racing.models.RacingWaypoint
 import com.example.xcpro.tasks.racing.ui.RacingTaskPointTypeSelector
 import kotlinx.coroutines.launch
 
@@ -70,7 +68,6 @@ internal fun RacingReorderableWaypointList(
     onRemove: (Int) -> Unit,
     onTaskPointTypeUpdate: (Int, RacingStartPointType?, RacingFinishPointType?, RacingTurnPointType?, Double?, Double?, Double?, Double?) -> Unit,
     onWaypointReplace: (Int, SearchWaypoint) -> Unit,
-    taskManager: TaskManagerCoordinator,
     taskViewModel: TaskSheetViewModel,
     currentQNH: String? = null,
     modifier: Modifier = Modifier
@@ -120,7 +117,6 @@ internal fun RacingReorderableWaypointList(
                     else -> "Turn $index"
                 },
                 nextWaypoint = if (index < waypoints.lastIndex) waypoints[index + 1] else null,
-                taskManager = taskManager,
                 taskViewModel = taskViewModel,
                 isExpanded = expandedWaypointIndex == index,
                 onExpandToggle = { shouldExpand ->
@@ -157,7 +153,6 @@ private fun RacingReorderableWaypointItem(
     totalCount: Int,
     role: String,
     nextWaypoint: TaskWaypoint? = null,
-    taskManager: TaskManagerCoordinator,
     taskViewModel: TaskSheetViewModel,
     isExpanded: Boolean,
     onExpandToggle: (Boolean) -> Unit,
@@ -170,14 +165,9 @@ private fun RacingReorderableWaypointItem(
 ) {
     val Blue = Color(0xFF007AFF)
 
-    // RACING-ONLY task-specific waypoint handling
-    val specificWaypoint = taskManager.getTaskSpecificWaypoint(index)
-    val racingWaypoint = specificWaypoint as? RacingWaypoint
-
-    // DIRECT MODEL READ: No cached UI state - always read from model to prevent override bug
-    val selectedStartType = racingWaypoint?.startPointType ?: RacingStartPointType.START_CYLINDER
-    val selectedFinishType = racingWaypoint?.finishPointType ?: RacingFinishPointType.FINISH_CYLINDER
-    val selectedTurnType = racingWaypoint?.turnPointType ?: RacingTurnPointType.TURN_POINT_CYLINDER
+    val selectedStartType = remember(taskWaypoint) { inferRacingStartType(taskWaypoint) }
+    val selectedFinishType = remember(taskWaypoint) { inferRacingFinishType(taskWaypoint) }
+    val selectedTurnType = remember(taskWaypoint) { inferRacingTurnType(taskWaypoint) }
 
     // Keep track of which waypoint role this is
     val waypointRole = when {
@@ -186,24 +176,49 @@ private fun RacingReorderableWaypointItem(
         else -> "Turn Point"
     }
 
-    // Get actual value from Racing waypoint - let the model handle defaults
-    val actualValue = racingWaypoint?.gateWidth
+    val gateWidthValue = remember(taskWaypoint.customRadius) {
+        taskWaypoint.customRadius ?: 0.0
+    }
+    val keyholeInnerRadiusValue = remember(taskWaypoint.customParameters) {
+        taskWaypoint.customParameters["keyholeInnerRadius"].asDoubleOrNull() ?: 0.5
+    }
+    val keyholeAngleValue = remember(taskWaypoint.customParameters) {
+        taskWaypoint.customParameters["keyholeAngle"].asDoubleOrNull() ?: 45.0
+    }
+    val faiQuadrantOuterRadiusValue = remember(taskWaypoint.customParameters) {
+        taskWaypoint.customParameters["faiQuadrantOuterRadius"].asDoubleOrNull() ?: 10.0
+    }
 
-    // Display the model's actual value - no UI fallbacks
-    val displayValue = actualValue?.toString() ?: "0.0"
-
-    var gateWidth by remember { mutableStateOf(displayValue) }
-
-    // UI REFRESH: Update when underlying waypoint data changes
-    LaunchedEffect(actualValue) {
-        if (actualValue != null) {
-            gateWidth = actualValue.toString()
+    val turnDistanceToNextKm = remember(taskWaypoint, nextWaypoint) {
+        nextWaypoint?.let { taskViewModel.calculateDistanceToNextWaypointKm(taskWaypoint, it) }
+    }
+    val startDistanceUi = remember(taskWaypoint, nextWaypoint, selectedStartType) {
+        nextWaypoint?.let {
+            taskViewModel.resolveRacingStartDistanceUi(
+                selectedStartType = selectedStartType,
+                startWaypoint = taskWaypoint,
+                nextWaypoint = it
+            )
         }
     }
 
-    var keyholeInnerRadius by remember { mutableStateOf(racingWaypoint?.keyholeInnerRadius?.toString() ?: "0.5") }
-    var keyholeAngle by remember { mutableStateOf(racingWaypoint?.keyholeAngle?.toString() ?: "45") }
-    var faiQuadrantOuterRadius by remember { mutableStateOf(racingWaypoint?.faiQuadrantOuterRadius?.toString() ?: "10") }
+    val displayValue = gateWidthValue.toString()
+
+    var gateWidth by remember(taskWaypoint.id, gateWidthValue) { mutableStateOf(displayValue) }
+
+    LaunchedEffect(gateWidthValue) {
+        gateWidth = gateWidthValue.toString()
+    }
+
+    var keyholeInnerRadius by remember(taskWaypoint.id, keyholeInnerRadiusValue) {
+        mutableStateOf(keyholeInnerRadiusValue.toString())
+    }
+    var keyholeAngle by remember(taskWaypoint.id, keyholeAngleValue) {
+        mutableStateOf(keyholeAngleValue.toString())
+    }
+    var faiQuadrantOuterRadius by remember(taskWaypoint.id, faiQuadrantOuterRadiusValue) {
+        mutableStateOf(faiQuadrantOuterRadiusValue.toString())
+    }
 
     Surface(
         modifier = Modifier
@@ -313,8 +328,8 @@ private fun RacingReorderableWaypointItem(
                     keyholeInnerRadius = keyholeInnerRadius,
                     keyholeAngle = keyholeAngle,
                     faiQuadrantOuterRadius = faiQuadrantOuterRadius,
-                    nextWaypoint = nextWaypoint,
-                    taskManager = taskManager,
+                    startDistanceUi = startDistanceUi,
+                    turnDistanceToNextKm = turnDistanceToNextKm,
                     onStartTypeChange = { newType ->
                         onTaskPointTypeUpdate(newType, selectedFinishType, selectedTurnType,
                             gateWidth.toDoubleOrNull(), keyholeInnerRadius.toDoubleOrNull(),
@@ -380,4 +395,24 @@ private fun RacingReorderableWaypointItem(
             }
         }
     }
+}
+
+private fun inferRacingStartType(waypoint: TaskWaypoint): RacingStartPointType =
+    waypoint.customPointType
+        ?.let { runCatching { RacingStartPointType.valueOf(it) }.getOrNull() }
+        ?: RacingStartPointType.START_CYLINDER
+
+private fun inferRacingFinishType(waypoint: TaskWaypoint): RacingFinishPointType =
+    waypoint.customPointType
+        ?.let { runCatching { RacingFinishPointType.valueOf(it) }.getOrNull() }
+        ?: RacingFinishPointType.FINISH_CYLINDER
+
+private fun inferRacingTurnType(waypoint: TaskWaypoint): RacingTurnPointType =
+    waypoint.customPointType
+        ?.let { runCatching { RacingTurnPointType.valueOf(it) }.getOrNull() }
+        ?: RacingTurnPointType.TURN_POINT_CYLINDER
+
+private fun Any?.asDoubleOrNull(): Double? = when (this) {
+    is Number -> this.toDouble()
+    else -> null
 }

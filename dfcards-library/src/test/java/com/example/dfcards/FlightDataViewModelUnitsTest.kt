@@ -1,6 +1,7 @@
 package com.example.dfcards
 
 import com.example.dfcards.dfcards.FlightCardsUseCaseFactory
+import com.example.dfcards.dfcards.FlightDataTemplateManagerFactory
 import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.xcpro.common.units.AltitudeUnit
 import com.example.xcpro.common.units.VerticalSpeedUnit
@@ -18,7 +19,8 @@ class FlightDataViewModelUnitsTest {
         val factory = FlightCardsUseCaseFactory(clock)
         return FlightDataViewModel(
             ioDispatcher = Dispatchers.Unconfined,
-            cardsUseCaseFactory = factory
+            cardsUseCaseFactory = factory,
+            templateManagerFactory = FlightDataTemplateManagerFactory()
         )
     }
 

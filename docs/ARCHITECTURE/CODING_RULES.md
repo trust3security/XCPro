@@ -1,4 +1,3 @@
-﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
 
 # CODING_RULES.md
 
@@ -30,7 +29,11 @@ The following checks must fail the build when violated:
 - Timebase: no System.currentTimeMillis, SystemClock, Date(), or Instant.now in domain or fusion logic.
 - DI: core pipeline components must be injected, not constructed inside managers.
 - ViewModel purity: no SharedPreferences and no androidx.compose.ui.* types in ViewModels.
+- ViewModel boundaries: no business geospatial math/policy (distance/radius/zone-entry logic) in ViewModels.
 - Compose lifecycle: use collectAsStateWithLifecycle for UI state collection.
+- Task UDF boundaries: no direct TaskManagerCoordinator mutation/query calls from Composables.
+- UseCase boundary: use-case wrappers must not expose raw manager/controller handles that bypass use-case APIs.
+- Manager state model: non-UI managers/domain classes must not use Compose runtime state (mutableStateOf, derivedStateOf, remember).
 - Vendor strings: no "xcsoar" or "XCSoar" literals in production Kotlin source.
 - Encoding: no non-ASCII characters in production Kotlin source.
 
@@ -77,6 +80,9 @@ ui/
 - Repositories never import `ui`
 - UseCases never import Android UI classes
 - Domain models contain no Android types
+- Domain/use-case packages define boundary contracts (interfaces) for external I/O used by business logic.
+- Data packages implement those contracts with adapters and bind them through DI.
+- UseCases/engines depend on contracts, not concrete data adapters.
 
 ---
 
@@ -111,6 +117,7 @@ val state: StateFlow<UiState> = _state
 - State duplication across layers
 - UI remembering derived values
 - ViewModel caching domain data
+- Compose runtime state in non-UI/domain/manager classes
 
 If state exists in two places, one is wrong.
 
@@ -165,6 +172,8 @@ Forbidden:
 - Long-running loops
 - Platform APIs
 - Business math
+- Exposing raw managers/controllers as public ViewModel handles
+- Constructing domain/service collaborators directly when DI/factory is available
 
 ---
 
@@ -183,6 +192,8 @@ Forbidden:
 - Business logic
 - State derivation
 - Domain calculations
+- Direct calls from Composables to manager/repository methods for domain mutations or business queries
+- Reading manager internals as UI state (for example currentTask/currentLeg/currentAATTask)
 - Collecting flows directly in Composables without lifecycle awareness
 - Manual coroutine scopes
 - Side effects outside `LaunchedEffect`
@@ -196,11 +207,31 @@ Repositories:
 - Hide data sources
 - Expose `Flow` / `StateFlow` only
 - Own preference access (UI/ViewModel must not construct SharedPreferences or preference wrappers)
+- Implement boundary contracts consumed by domain/use-case code when those boundaries are change-prone.
 
 Forbidden:
 - UI logic
 - Android UI imports
 - Caching UI state
+
+## 9A. Adapter Depth Rules (Goldilocks)
+
+Use the full ports/adapters pattern (domain contract + data adapter + DI) when any are true:
+- Multiple data sources/backends exist or are expected.
+- Live/replay/simulator/external-device implementations must be swappable.
+- Offline/cache policy is business-relevant.
+- Domain logic is non-trivial (state machines, filters, fusion, scoring, routing).
+- Business logic needs unit tests without Android/DB/network/file stack.
+- Provider/file-format/device boundaries are likely to change.
+
+A simplified repository is acceptable when all are true:
+- Single stable storage source.
+- Trivial logic and low change risk.
+- No practical need to swap implementation in tests/features.
+
+Even in simplified cases:
+- Keep Android/framework types out of domain/use-case code.
+- Keep repositories DI-injected and behind MVVM/UDF/SSOT boundaries.
 
 ---
 
@@ -216,6 +247,7 @@ Forbidden:
 - Lifecycle awareness
 - Platform APIs
 - Hidden state
+- Exposing raw managers/controllers that allow callsites to bypass use-case methods
 
 ---
 

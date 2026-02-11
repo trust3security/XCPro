@@ -43,7 +43,9 @@ data class AdsbTrafficUiModel(
     val bearingDegFromUser: Double,
     val positionSource: Int?,
     val category: Int?,
-    val lastContactEpochSec: Long?
+    val lastContactEpochSec: Long?,
+    val metadataTypecode: String? = null,
+    val metadataIcaoAircraftType: String? = null
 )
 
 sealed interface AdsbConnectionState {
@@ -72,4 +74,3 @@ data class AdsbTrafficSnapshot(
 data class AdsbAuth(
     val bearerToken: String?
 )
-

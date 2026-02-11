@@ -2,23 +2,12 @@ package com.example.xcpro.tasks.aat
 
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.compose.runtime.*
 import com.example.xcpro.common.waypoint.SearchWaypoint
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskWaypoint
 import com.example.xcpro.tasks.core.WaypointRole
-import org.maplibre.android.maps.MapLibreMap
-import org.maplibre.android.maps.Style
-import org.maplibre.android.geometry.LatLng
-import org.maplibre.android.style.sources.GeoJsonSource
-import org.maplibre.android.style.layers.CircleLayer
-import org.maplibre.android.style.layers.LineLayer
-import org.maplibre.android.style.layers.FillLayer
-import org.maplibre.android.style.layers.PropertyFactory
-import org.maplibre.android.style.expressions.Expression
-import android.graphics.Color
 import kotlin.math.*
 import java.time.Duration
 import java.util.UUID
@@ -35,6 +24,7 @@ import com.example.xcpro.tasks.aat.models.AATAssignedArea
 import com.example.xcpro.tasks.aat.models.AATAreaShape
 import com.example.xcpro.tasks.aat.calculations.AATMathUtils
 import com.example.xcpro.tasks.aat.models.AATLatLng
+import com.example.xcpro.tasks.aat.models.getAuthorityRadius
 import com.example.xcpro.tasks.aat.validation.AATValidationIntegration
 
 // STAGE 7: Refactored module imports
@@ -43,9 +33,11 @@ import com.example.xcpro.tasks.aat.persistence.AATTaskFileIO
 import com.example.xcpro.tasks.aat.navigation.AATNavigationManager
 import com.example.xcpro.tasks.aat.interaction.AATEditModeManager
 import com.example.xcpro.tasks.aat.validation.AATValidationBridge
-import com.example.xcpro.tasks.aat.rendering.AATTaskRenderer
 // STAGE 8: Waypoint management extraction
 import com.example.xcpro.tasks.aat.waypoints.AATWaypointManager
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Simple AAT Task model for manager use (avoiding conflicts with complex models)
@@ -74,7 +66,6 @@ class AATTaskManager(val context: Context? = null) {
     private val navigationManager = AATNavigationManager()
     private val editModeManager = AATEditModeManager()
     private val validationBridge = AATValidationBridge()
-    private val renderer = AATTaskRenderer(geometryGenerator)
     // STAGE 8: Waypoint management module
     private val waypointManager = AATWaypointManager()
     // STAGE 9: Point type configuration, validation, and file operations wrappers
@@ -85,9 +76,21 @@ class AATTaskManager(val context: Context? = null) {
     // AAT-specific calculator - completely autonomous
     private val aatTaskCalculator = AATTaskCalculator()
 
-    // AAT task state - keep _currentLeg for compatibility with 13 references
-    internal var _currentAATTask by mutableStateOf(SimpleAATTask())
-    internal var _currentLeg by mutableStateOf(0)
+    // AAT task state (SSOT in manager; non-UI reactive model)
+    private val currentAATTaskState = MutableStateFlow(SimpleAATTask())
+    private val currentLegState = MutableStateFlow(0)
+    val currentAATTaskFlow: StateFlow<SimpleAATTask> = currentAATTaskState.asStateFlow()
+    val currentLegFlow: StateFlow<Int> = currentLegState.asStateFlow()
+    internal var _currentAATTask: SimpleAATTask
+        get() = currentAATTaskState.value
+        set(value) {
+            currentAATTaskState.value = value
+        }
+    internal var _currentLeg: Int
+        get() = currentLegState.value
+        set(value) {
+            currentLegState.value = value
+        }
 
     // Public properties
     val currentAATTask: SimpleAATTask get() = _currentAATTask
@@ -98,9 +101,26 @@ class AATTaskManager(val context: Context? = null) {
      * Conversion lives inside AAT module to keep coordinator feature-agnostic.
      */
     fun getCoreTask(): Task {
+        val minTimeSeconds = _currentAATTask.minimumTime.seconds.toDouble()
+        val maxTimeSeconds = _currentAATTask.maximumTime?.seconds?.toDouble()
         return Task(
             id = _currentAATTask.id,
             waypoints = _currentAATTask.waypoints.map { waypoint ->
+                val customParameters = mutableMapOf<String, Any>(
+                    "radiusMeters" to waypoint.assignedArea.radiusMeters,
+                    "innerRadiusMeters" to waypoint.assignedArea.innerRadiusMeters,
+                    "outerRadiusMeters" to waypoint.assignedArea.outerRadiusMeters,
+                    "startAngleDegrees" to waypoint.assignedArea.startAngleDegrees,
+                    "endAngleDegrees" to waypoint.assignedArea.endAngleDegrees,
+                    "lineWidthMeters" to waypoint.assignedArea.lineWidthMeters,
+                    "targetLat" to waypoint.targetPoint.latitude,
+                    "targetLon" to waypoint.targetPoint.longitude,
+                    "isTargetPointCustomized" to waypoint.isTargetPointCustomized,
+                    KEY_AAT_MIN_TIME_SECONDS to minTimeSeconds
+                )
+                if (maxTimeSeconds != null) {
+                    customParameters[KEY_AAT_MAX_TIME_SECONDS] = maxTimeSeconds
+                }
                 TaskWaypoint(
                     id = waypoint.id,
                     title = waypoint.title,
@@ -112,15 +132,13 @@ class AATTaskManager(val context: Context? = null) {
                         com.example.xcpro.tasks.aat.models.AATWaypointRole.TURNPOINT -> WaypointRole.TURNPOINT
                         com.example.xcpro.tasks.aat.models.AATWaypointRole.FINISH -> WaypointRole.FINISH
                     },
-                    customRadius = waypoint.assignedArea.radiusMeters / 1000.0,
-                    customPointType = waypoint.assignedArea.shape.name,
-                    customParameters = mapOf(
-                        "innerRadiusMeters" to waypoint.assignedArea.innerRadiusMeters,
-                        "outerRadiusMeters" to waypoint.assignedArea.outerRadiusMeters,
-                        "startAngleDegrees" to waypoint.assignedArea.startAngleDegrees,
-                        "endAngleDegrees" to waypoint.assignedArea.endAngleDegrees,
-                        "lineWidthMeters" to waypoint.assignedArea.lineWidthMeters
-                    )
+                    customRadius = waypoint.getAuthorityRadius(),
+                    customPointType = when (waypoint.role) {
+                        com.example.xcpro.tasks.aat.models.AATWaypointRole.START -> waypoint.startPointType.name
+                        com.example.xcpro.tasks.aat.models.AATWaypointRole.TURNPOINT -> waypoint.turnPointType.name
+                        com.example.xcpro.tasks.aat.models.AATWaypointRole.FINISH -> waypoint.finishPointType.name
+                    },
+                    customParameters = customParameters
                 )
             }
         )
@@ -138,13 +156,10 @@ class AATTaskManager(val context: Context? = null) {
         _currentLeg = navigationManager.currentLeg
     }
 
-    fun setAATLeg(index: Int, map: MapLibreMap?) {
+    fun setAATLeg(index: Int) {
         if (_currentAATTask.waypoints.isEmpty()) return
         navigationManager.setCurrentLeg(index.coerceIn(0, _currentAATTask.waypoints.lastIndex))
         _currentLeg = navigationManager.currentLeg
-        if (map != null) {
-            plotAATOnMap(map)
-        }
     }
 
     /** Initialize AAT task - STAGE 8: Delegate to AATWaypointManager */
@@ -268,16 +283,6 @@ class AATTaskManager(val context: Context? = null) {
             keyholeAngle = keyholeAngle,
             sectorOuterRadius = sectorOuterRadius
         )
-    }
-
-    /** Plot AAT on map - STAGE 7: Delegate to AATTaskRenderer */
-    fun plotAATOnMap(map: MapLibreMap?) {
-        renderer.plotTaskOnMap(map, _currentAATTask, editModeManager.editWaypointIndex)
-    }
-
-    /** Clear AAT from map - STAGE 7: Delegate to AATTaskRenderer */
-    fun clearAATFromMap(map: MapLibreMap?) {
-        renderer.clearTaskFromMap(map)
     }
 
     // STAGE 7 CLEANUP: Old plotting/geometry functions removed (543 lines of dead code)
@@ -462,14 +467,6 @@ class AATTaskManager(val context: Context? = null) {
     /** Get edit waypoint index - STAGE 7: Delegate to AATEditModeManager */
     fun getEditWaypointIndex(): Int? = editModeManager.editWaypointIndex
 
-    /** Plot edit overlay - STAGE 7: Delegate to AATEditModeManager */
-    fun plotAATEditOverlay(mapLibreMap: MapLibreMap, waypointIndex: Int) =
-        editModeManager.plotEditOverlay(mapLibreMap, _currentAATTask, waypointIndex)
-
-    /** Clear edit overlay - STAGE 7: Delegate to AATEditModeManager */
-    fun clearAATEditOverlay(mapLibreMap: MapLibreMap) =
-        editModeManager.clearEditOverlay(mapLibreMap)
-
     /** Update target point - STAGE 7: Delegate to AATEditModeManager */
     fun updateTargetPoint(index: Int, lat: Double, lon: Double) {
         editModeManager.updateTargetPoint(_currentAATTask, index, lat, lon)?.let { updatedWaypoint ->
@@ -479,12 +476,11 @@ class AATTaskManager(val context: Context? = null) {
         }
     }
 
-    /** Check target point hit - STAGE 7: Delegate to AATEditModeManager */
-    fun checkTargetPointHit(mapLibreMap: MapLibreMap, screenX: Float, screenY: Float): Int? =
-        editModeManager.checkTargetPointHit(mapLibreMap, screenX, screenY)
-
     // STAGE 9: calculateAngleBisector() and calculateTurnDirection() removed
     // Now in AATPointTypeConfigurator for geometry configuration
 }
 
 // AAT-specific enums moved to models/AATWaypoint.kt to avoid duplication
+
+private const val KEY_AAT_MIN_TIME_SECONDS = "aatMinimumTimeSeconds"
+private const val KEY_AAT_MAX_TIME_SECONDS = "aatMaximumTimeSeconds"

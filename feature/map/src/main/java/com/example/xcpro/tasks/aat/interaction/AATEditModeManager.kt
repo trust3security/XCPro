@@ -1,11 +1,11 @@
 package com.example.xcpro.tasks.aat.interaction
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import com.example.xcpro.tasks.aat.SimpleAATTask
 import com.example.xcpro.tasks.aat.models.AATWaypoint
 import com.example.xcpro.tasks.aat.map.AATMovablePointManager
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import org.maplibre.android.maps.MapLibreMap
 
 /**
@@ -25,7 +25,13 @@ class AATEditModeManager {
     private val gestureController = AATEditGestureController()
     private val geometryValidator = AATEditGeometryValidator(AATMovablePointManager())
     private val overlayRenderer = AATEditOverlayRenderer()
-    private var editState by mutableStateOf(AATEditState())
+    private val editStateFlow = MutableStateFlow(AATEditState())
+    val state: StateFlow<AATEditState> = editStateFlow.asStateFlow()
+    private var editState: AATEditState
+        get() = editStateFlow.value
+        set(value) {
+            editStateFlow.value = value
+        }
 
     val isInEditMode: Boolean get() = editState.activeWaypointIndex != null
     val editWaypointIndex: Int? get() = editState.activeWaypointIndex

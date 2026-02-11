@@ -47,6 +47,8 @@ import com.example.xcpro.map.trail.MapTrailPreferences
 import com.example.xcpro.map.trail.MapTrailSettingsUseCase
 import com.example.xcpro.tasks.TaskFeatureFlags
 import com.example.xcpro.tasks.TaskNavigationController
+import com.example.xcpro.tasks.aat.AATTaskManager
+import com.example.xcpro.tasks.racing.RacingTaskManager
 import com.example.xcpro.tasks.racing.navigation.RacingAdvanceState
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationEngine
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationStateStore
@@ -58,6 +60,8 @@ import com.example.xcpro.ConfigurationRepository
 import com.example.xcpro.hawk.HawkVarioUiState
 import com.example.xcpro.hawk.HawkVarioUseCase
 import com.example.xcpro.adsb.AdsbConnectionState
+import com.example.xcpro.adsb.ADSB_ICON_SIZE_DEFAULT_PX
+import com.example.xcpro.adsb.ADSB_ICON_SIZE_MAX_PX
 import com.example.xcpro.adsb.AdsbTrafficPreferencesRepository
 import com.example.xcpro.adsb.AdsbTrafficRepository
 import com.example.xcpro.adsb.AdsbTrafficSnapshot
@@ -71,6 +75,8 @@ import com.example.xcpro.adsb.metadata.domain.AircraftMetadataSyncScheduler
 import com.example.xcpro.adsb.metadata.domain.MetadataSyncRunResult
 import com.example.xcpro.adsb.metadata.domain.MetadataSyncState
 import com.example.xcpro.ogn.OgnConnectionState
+import com.example.xcpro.ogn.OGN_ICON_SIZE_DEFAULT_PX
+import com.example.xcpro.ogn.OGN_ICON_SIZE_MAX_PX
 import com.example.xcpro.ogn.OgnTrafficPreferencesRepository
 import com.example.xcpro.ogn.OgnTrafficRepository
 import com.example.xcpro.ogn.OgnTrafficSnapshot
@@ -378,6 +384,42 @@ class MapScreenViewModelTest {
         assertEquals(150.5000, adsbRepository.lastCenterLon ?: Double.NaN, 1e-6)
     }
 
+    @Test
+    fun ognIconSize_defaultsTo56Px() {
+        val viewModel = createViewModel()
+
+        assertEquals(OGN_ICON_SIZE_DEFAULT_PX, viewModel.ognIconSizePx.value)
+    }
+
+    @Test
+    fun ognIconSize_readsPersistedPreferenceOnInit() = runBlocking {
+        val preferencesRepository = OgnTrafficPreferencesRepository(context)
+        preferencesRepository.setIconSizePx(OGN_ICON_SIZE_MAX_PX)
+
+        val viewModel = createViewModel()
+        drainMain()
+
+        assertEquals(OGN_ICON_SIZE_MAX_PX, viewModel.ognIconSizePx.value)
+    }
+
+    @Test
+    fun adsbIconSize_defaultsTo56Px() {
+        val viewModel = createViewModel()
+
+        assertEquals(ADSB_ICON_SIZE_DEFAULT_PX, viewModel.adsbIconSizePx.value)
+    }
+
+    @Test
+    fun adsbIconSize_readsPersistedPreferenceOnInit() = runBlocking {
+        val preferencesRepository = AdsbTrafficPreferencesRepository(context)
+        preferencesRepository.setIconSizePx(ADSB_ICON_SIZE_MAX_PX)
+
+        val viewModel = createViewModel()
+        drainMain()
+
+        assertEquals(ADSB_ICON_SIZE_MAX_PX, viewModel.adsbIconSizePx.value)
+    }
+
     private class SuccessfulWaypointLoader(
         private val waypoints: List<WaypointData>
     ) : WaypointLoader {
@@ -399,7 +441,13 @@ class MapScreenViewModelTest {
         waypointLoader: WaypointLoader = SuccessfulWaypointLoader(emptyList()),
         adsbRepositoryOverride: AdsbTrafficRepository? = null
     ): MapScreenViewModel {
-        val localTaskManager = com.example.xcpro.tasks.TaskManagerCoordinator(null)
+        val localTaskManager = com.example.xcpro.tasks.TaskManagerCoordinator(
+            taskEnginePersistenceService = null,
+            racingTaskEngine = null,
+            aatTaskEngine = null,
+            racingTaskManager = RacingTaskManager(null),
+            aatTaskManager = AATTaskManager(null)
+        )
         val localTaskFeatureFlags = TaskFeatureFlags()
         val localTaskNavigationController = TaskNavigationController(
             taskManager = localTaskManager,
@@ -415,8 +463,13 @@ class MapScreenViewModelTest {
             orientationManagerFactory = orientationManagerFactory,
             ballastControllerFactory = ballastControllerFactory
         )
-        val mapReplayUseCase = MapReplayUseCase(replayController, RacingReplayLogBuilder())
-        val mapTasksUseCase = MapTasksUseCase(localTaskManager, localTaskNavigationController)
+        val mapReplayUseCase = MapReplayUseCase(
+            taskManager = localTaskManager,
+            taskNavigationController = localTaskNavigationController,
+            controller = replayController,
+            racingReplayLogBuilder = RacingReplayLogBuilder()
+        )
+        val mapTasksUseCase = MapTasksUseCase(localTaskManager)
         mapFeatureFlags.loadSavedTasksOnInit = false
         val mapFeatureFlagsUseCase = MapFeatureFlagsUseCase(mapFeatureFlags)
         val mapCardPreferencesUseCase = MapCardPreferencesUseCase(cardPreferences)

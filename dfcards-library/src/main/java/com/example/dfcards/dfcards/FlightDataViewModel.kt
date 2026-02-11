@@ -32,7 +32,8 @@ private const val TAG = "FlightDataViewModel"
 @HiltViewModel
 class FlightDataViewModel @Inject constructor(
     @DfCardsIoDispatcher private val ioDispatcher: CoroutineDispatcher,
-    private val cardsUseCaseFactory: FlightCardsUseCaseFactory
+    private val cardsUseCaseFactory: FlightCardsUseCaseFactory,
+    templateManagerFactory: FlightDataTemplateManagerFactory
 ) : ViewModel() {
     private val cardsUseCase = cardsUseCaseFactory.create(viewModelScope)
     private var ingest: FlightDataIngest? = null
@@ -77,8 +78,10 @@ class FlightDataViewModel @Inject constructor(
         loadEssentialCardsOnStartup = ::loadEssentialCardsOnStartup,
         logDebug = ::logDebug
     )
-    private val templateManager =
-        FlightDataTemplateManager(cardPreferences = _cardPreferences, availableTemplates = _availableTemplates)
+    private val templateManager = templateManagerFactory.create(
+        cardPreferences = _cardPreferences,
+        availableTemplates = _availableTemplates
+    )
     val cardStateFlows: Map<String, StateFlow<CardState>> get() = cardsUseCase.cardStateFlows
     @Deprecated(
         message = "Use cardStateFlows instead for better performance",

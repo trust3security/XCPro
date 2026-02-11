@@ -30,11 +30,12 @@ class AircraftMetadataRepositoryImpl @Inject constructor(
         val fromDb = rows.associate { row ->
             row.icao24 to row.toDomain()
         }
-        if (fromDb.size == normalized.size || normalized.size > ON_DEMAND_MAX_BATCH_SIZE) {
+        if (fromDb.size == normalized.size) {
             return fromDb
         }
 
         val missing = normalized.filterNot(fromDb::containsKey)
+            .take(ON_DEMAND_MAX_BATCH_SIZE)
         val hydratedRows = ArrayList<AircraftMetadataEntity>(missing.size)
         val nowMonoMs = clock.nowMonoMs()
 

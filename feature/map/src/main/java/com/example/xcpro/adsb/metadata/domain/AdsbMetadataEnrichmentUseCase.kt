@@ -19,6 +19,35 @@ class AdsbMetadataEnrichmentUseCase @Inject constructor(
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) {
 
+    fun targetsWithMetadata(
+        adsbTargets: Flow<List<AdsbTrafficUiModel>>
+    ): Flow<List<AdsbTrafficUiModel>> {
+        return adsbTargets.mapLatest { targets ->
+            if (targets.isEmpty()) {
+                return@mapLatest emptyList()
+            }
+            val metadataByIcao24 = withContext(ioDispatcher) {
+                aircraftMetadataRepository.getMetadataFor(targets.map { it.id.raw }.distinct())
+            }
+            targets.map { target ->
+                val metadata = metadataByIcao24[target.id.raw]
+                val resolvedTypecode = metadata?.typecode
+                val resolvedIcaoAircraftType = metadata?.icaoAircraftType
+                if (
+                    target.metadataTypecode == resolvedTypecode &&
+                    target.metadataIcaoAircraftType == resolvedIcaoAircraftType
+                ) {
+                    target
+                } else {
+                    target.copy(
+                        metadataTypecode = resolvedTypecode,
+                        metadataIcaoAircraftType = resolvedIcaoAircraftType
+                    )
+                }
+            }
+        }
+    }
+
     fun selectedTargetDetails(
         selectedIcao24: Flow<Icao24?>,
         adsbTargets: Flow<List<AdsbTrafficUiModel>>

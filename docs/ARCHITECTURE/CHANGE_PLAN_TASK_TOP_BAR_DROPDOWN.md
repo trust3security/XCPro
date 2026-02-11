@@ -16,8 +16,15 @@ Read first:
 - Title: Map Task UI Refactor - Bottom Sheet to Top Drop-Down Panel
 - Owner: XCPro Team
 - Date: 2026-02-11
-- Issue/PR: TBD
-- Status: Draft
+- Issue/PR: RULES-20260211-02, RULES-20260211-03 (subset)
+- Status: Active sub-plan (UI track)
+
+### 0.0 Plan Linkage
+
+- Parent active compliance plan:
+  `docs/refactor/Task_Architecture_Compliance_Refactor_Plan.md`
+- This sub-plan is limited to UI container/state interactions.
+- Parent plan owns full closure for all RULES-20260211-* architecture issues.
 
 ### 0.1 Locked UX Decisions
 
@@ -56,6 +63,7 @@ Read first:
   Navigation algorithm changes.
   Replay pipeline changes.
   Broad UI redesign outside task panel area.
+  Full architecture-compliance closure for RULES-20260211-* (handled by parent plan).
 - User-visible impact:
   Task editor opens from top and expands downward instead of from bottom.
   Collapsed task state appears as a top bar and expands in place.
@@ -230,8 +238,7 @@ Phase ownership:
 
 - Goal:
   Introduce panel-state naming that supports top drop-down behavior without breaking existing callers.
-- Owner:
-  Map/Task UI maintainers
+- Owner: Map/Task UI maintainers (XCPro Team)
 - Files to change:
   `feature/map/src/main/java/com/example/xcpro/map/MapTaskScreenManager.kt`
   `feature/map/src/main/java/com/example/xcpro/tasks/BottomSheetState.kt` (or replacement enum/file)
@@ -250,8 +257,7 @@ Phase ownership:
 
 - Goal:
   Replace `SwipeableTaskBottomSheet` container with a top drop-down container while reusing tab content, and keep visual/motion parity with current bottom-sheet values as the baseline.
-- Owner:
-  Map/Task UI maintainers
+- Owner: Map/Task UI maintainers (XCPro Team)
 - Files to change:
   `feature/map/src/main/java/com/example/xcpro/map/ui/task/MapTaskScreenUi.kt`
   `feature/map/src/main/java/com/example/xcpro/tasks/SwipeableTaskBottomSheet.kt` (either refactor or replace with top-panel composable)
@@ -270,8 +276,7 @@ Phase ownership:
 
 - Goal:
   Resolve conflicts with existing top UI components and gesture layering.
-- Owner:
-  Map UI integration maintainers
+- Owner: Map UI integration maintainers (XCPro Team)
 - Files to change:
   `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffold.kt` (GPS banner spacing/insets if needed)
   `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt` (z-index ordering if needed)
@@ -295,8 +300,7 @@ Phase ownership:
 
 - Goal:
   Remove bottom-sheet-only camera-fit assumptions and align with top occlusion model.
-- Owner:
-  Map camera + AAT maintainers
+- Owner: Map camera + AAT maintainers (XCPro Team)
 - Files to change:
   `feature/map/src/main/java/com/example/xcpro/map/MapCameraManager.kt`
   `feature/map/src/main/java/com/example/xcpro/map/MapGestureSetup.kt` (if occlusion parameter plumbing changes)
@@ -311,8 +315,7 @@ Phase ownership:
 
 - Goal:
   Align docs and remove obsolete bottom-sheet terminology.
-- Owner:
-  Documentation owner + feature owner
+- Owner: Documentation owner + feature owner (XCPro Team)
 - Files to change:
   `docs/ARCHITECTURE/PIPELINE.md` (if wiring/ownership terms changed)
   `docs/03_Features/Racing_Task_Navigation_EXISTING_UI.md`

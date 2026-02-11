@@ -142,6 +142,7 @@ internal fun rememberMapScreenScaffoldInputs(
     initialMapStyle: String,
     onMapStyleSelected: (String) -> Unit,
     mapViewModel: MapScreenViewModel,
+    taskManager: TaskManagerCoordinator,
     mapUiState: MapUiState,
     bindings: MapScreenBindings,
     managers: MapScreenManagers,
@@ -183,7 +184,9 @@ internal fun rememberMapScreenScaffoldInputs(
     }
     val onMapReady: (MapLibreMap) -> Unit = { map ->
         mapRuntimeController.onMapReady(map)
+        managers.overlayManager.setOgnIconSizePx(bindings.ognIconSizePx)
         managers.overlayManager.updateOgnTrafficTargets(bindings.ognTargets)
+        managers.overlayManager.setAdsbIconSizePx(bindings.adsbIconSizePx)
         managers.overlayManager.updateAdsbTrafficTargets(bindings.adsbTargets)
     }
 
@@ -205,7 +208,7 @@ internal fun rememberMapScreenScaffoldInputs(
         locationManager = managers.locationManager,
         flightDataManager = mapViewModel.flightDataManager,
         flightViewModel = flightViewModel,
-        taskManager = mapViewModel.taskManager,
+        taskManager = taskManager,
         windArrowState = windArrowState,
         showWindSpeedOnVario = showWindSpeedOnVario,
         cameraManager = managers.cameraManager,

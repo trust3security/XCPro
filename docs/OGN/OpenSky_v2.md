@@ -1,4 +1,3 @@
-﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
 
 # OpenSky.md -- GA ADS-B traffic around the user (XCPro / Android)
 

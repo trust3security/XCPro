@@ -1,4 +1,3 @@
-﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
 
 # CardDataFormatter Phase 1 Plan - Typed IDs and Spec Scaffolding
 

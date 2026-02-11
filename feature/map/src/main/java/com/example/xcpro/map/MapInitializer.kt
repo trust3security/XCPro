@@ -9,6 +9,7 @@ import com.example.xcpro.screens.overlays.getMapStyleUrl
 import com.example.xcpro.map.BlueLocationOverlay
 import com.example.xcpro.map.trail.SnailTrailManager
 import com.example.xcpro.tasks.TaskManagerCoordinator
+import com.example.xcpro.tasks.TaskMapRenderRouter
 import kotlin.math.max
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -23,6 +24,8 @@ import com.example.xcpro.loadAndApplyAirspace
 import com.example.xcpro.loadAndApplyWaypoints
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 
 class MapInitializer(
     private val context: Context,
@@ -63,9 +66,6 @@ class MapInitializer(
             setupInitialPosition(map)
             setupGestures(map)
             setupListeners(map)
-            // CRITICAL FIX: Set map instance in TaskManagerCoordinator for cleanup operations
-            taskManager.setMapInstance(map)
-            Log.d(TAG, "Set map instance in TaskManagerCoordinator for task switching cleanup")
             Log.d(TAG, "Map initialization completed successfully")
             map
         } catch (e: Exception) {
@@ -74,16 +74,21 @@ class MapInitializer(
         }
     }
 
-    private fun setupMapStyle(map: MapLibreMap) {
+    private suspend fun setupMapStyle(map: MapLibreMap) {
         val styleName = mapStateReader.mapStyleName.value
         val styleUrl = getMapStyleUrl(styleName)
-        map.setStyle(styleUrl) { _ ->
-            Log.d(TAG, "Map style loaded: $styleName")
+        suspendCancellableCoroutine { continuation ->
+            map.setStyle(styleUrl) { _ ->
+                Log.d(TAG, "Map style loaded: $styleName")
 
-            // Initialize overlays after style is loaded
-            setupOverlays(map)
+                // Initialize overlays after style is loaded
+                setupOverlays(map)
 
-            loadMapData(map)
+                loadMapData(map)
+                if (continuation.isActive) {
+                    continuation.resume(Unit)
+                }
+            }
         }
     }
 
@@ -148,7 +153,7 @@ class MapInitializer(
         try {
             if (taskManager.currentTask.waypoints.isNotEmpty()) {
                 Log.d(TAG, " Plotting saved task with ${taskManager.currentTask.waypoints.size} waypoints")
-                taskManager.plotOnMap(map)
+                TaskMapRenderRouter.plotCurrentTask(taskManager, map)
             } else {
                 Log.d(TAG, " No saved task to plot")
             }
@@ -162,8 +167,9 @@ class MapInitializer(
             // Initialize blue location overlay
             mapState.blueLocationOverlay = BlueLocationOverlay(context, map)
             mapState.blueLocationOverlay?.initialize()
-            mapState.ognTrafficOverlay = OgnTrafficOverlay(map)
+            mapState.ognTrafficOverlay = OgnTrafficOverlay(context, map)
             mapState.ognTrafficOverlay?.initialize()
+            mapState.adsbTrafficOverlay?.cleanup()
             mapState.adsbTrafficOverlay = AdsbTrafficOverlay(context, map)
             mapState.adsbTrafficOverlay?.initialize()
             snailTrailManager.initialize(map)

@@ -21,6 +21,7 @@ import com.example.xcpro.weather.wind.data.WindSensorFusionRepository
 import com.example.xcpro.weather.wind.model.WindState
 import com.example.xcpro.common.waypoint.WaypointLoader
 import com.example.xcpro.common.waypoint.WaypointData
+import com.example.xcpro.map.trail.domain.TrailUpdateResult
 import com.example.xcpro.map.ballast.BallastController
 import com.example.xcpro.map.ballast.BallastControllerFactory
 import com.example.xcpro.map.config.MapFeatureFlags
@@ -37,6 +38,8 @@ import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.MapOrientationManagerFactory
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -96,7 +99,6 @@ class MapWaypointsUseCase @Inject constructor(
 class MapSensorsUseCase @Inject constructor(
     private val varioServiceManager: VarioServiceManager
 ) {
-    val serviceManager: VarioServiceManager = varioServiceManager
     val gpsStatusFlow: StateFlow<GpsStatus> = varioServiceManager.unifiedSensorManager.gpsStatusFlow
     val flightStateFlow: StateFlow<FlyingState> = varioServiceManager.flightStateSource.flightState
 
@@ -113,18 +115,70 @@ class MapVarioPreferencesUseCase @Inject constructor(
 }
 
 class MapTasksUseCase @Inject constructor(
-    val taskManager: TaskManagerCoordinator,
-    val taskNavigationController: TaskNavigationController
+    private val taskManager: TaskManagerCoordinator
 ) {
-    fun loadSavedTasks() {
+    suspend fun loadSavedTasks() {
         taskManager.loadSavedTasks()
     }
 }
 
 class MapReplayUseCase @Inject constructor(
-    val controller: IgcReplayController,
-    val racingReplayLogBuilder: RacingReplayLogBuilder
-)
+    private val taskManager: TaskManagerCoordinator,
+    private val taskNavigationController: TaskNavigationController,
+    private val controller: IgcReplayController,
+    private val racingReplayLogBuilder: RacingReplayLogBuilder
+) {
+    val replaySession: StateFlow<com.example.xcpro.replay.SessionState> = controller.session
+
+    internal fun createFlightDataUiAdapter(
+        scope: CoroutineScope,
+        flightDataFlow: StateFlow<CompleteFlightData?>,
+        windStateFlow: StateFlow<WindState>,
+        flightStateFlow: StateFlow<FlyingState>,
+        hawkVarioUiStateFlow: StateFlow<com.example.xcpro.hawk.HawkVarioUiState>,
+        flightDataManager: FlightDataManager,
+        mapStateStore: MapStateReader,
+        liveDataReady: MutableStateFlow<Boolean>,
+        containerReady: MutableStateFlow<Boolean>,
+        uiEffects: MutableSharedFlow<MapUiEffect>,
+        trailUpdates: MutableStateFlow<TrailUpdateResult?>
+    ): FlightDataUiAdapter = FlightDataUiAdapter(
+        scope = scope,
+        flightDataFlow = flightDataFlow,
+        windStateFlow = windStateFlow,
+        flightStateFlow = flightStateFlow,
+        hawkVarioUiStateFlow = hawkVarioUiStateFlow,
+        flightDataManager = flightDataManager,
+        mapStateStore = mapStateStore,
+        liveDataReady = liveDataReady,
+        containerReady = containerReady,
+        uiEffects = uiEffects,
+        igcReplayController = controller,
+        trailUpdates = trailUpdates
+    )
+
+    internal fun createReplayCoordinator(
+        flightDataFlow: StateFlow<CompleteFlightData?>,
+        featureFlags: MapFeatureFlags,
+        mapStateStore: MapStateStore,
+        mapStateActions: MapStateActions,
+        uiEffects: MutableSharedFlow<MapUiEffect>,
+        replaySessionState: StateFlow<com.example.xcpro.replay.SessionState>,
+        scope: CoroutineScope
+    ): MapScreenReplayCoordinator = MapScreenReplayCoordinator(
+        taskManager = taskManager,
+        taskNavigationController = taskNavigationController,
+        flightDataFlow = flightDataFlow,
+        igcReplayController = controller,
+        racingReplayLogBuilder = racingReplayLogBuilder,
+        featureFlags = featureFlags,
+        mapStateStore = mapStateStore,
+        mapStateActions = mapStateActions,
+        uiEffects = uiEffects,
+        replaySessionState = replaySessionState,
+        scope = scope
+    )
+}
 
 data class MapUiControllers(
     val flightDataManager: FlightDataManager,
@@ -161,6 +215,7 @@ class OgnTrafficUseCase @Inject constructor(
     val snapshot: StateFlow<OgnTrafficSnapshot> = repository.snapshot
     val isStreamingEnabled: StateFlow<Boolean> = repository.isEnabled
     val overlayEnabled: Flow<Boolean> = preferencesRepository.enabledFlow
+    val iconSizePx: Flow<Int> = preferencesRepository.iconSizePxFlow
 
     fun setStreamingEnabled(enabled: Boolean) {
         repository.setEnabled(enabled)
@@ -172,6 +227,10 @@ class OgnTrafficUseCase @Inject constructor(
 
     suspend fun setOverlayEnabled(enabled: Boolean) {
         preferencesRepository.setEnabled(enabled)
+    }
+
+    suspend fun setIconSizePx(iconSizePx: Int) {
+        preferencesRepository.setIconSizePx(iconSizePx)
     }
 
     fun stop() {
@@ -189,6 +248,7 @@ class AdsbTrafficUseCase @Inject constructor(
     val snapshot: StateFlow<AdsbTrafficSnapshot> = repository.snapshot
     val isStreamingEnabled: StateFlow<Boolean> = repository.isEnabled
     val overlayEnabled: Flow<Boolean> = preferencesRepository.enabledFlow
+    val iconSizePx: Flow<Int> = preferencesRepository.iconSizePxFlow
     val metadataSyncState: StateFlow<MetadataSyncState> = metadataSyncRepository.syncState
 
     fun setStreamingEnabled(enabled: Boolean) {
@@ -202,6 +262,10 @@ class AdsbTrafficUseCase @Inject constructor(
     suspend fun setOverlayEnabled(enabled: Boolean) {
         preferencesRepository.setEnabled(enabled)
         metadataSyncScheduler.onOverlayPreferenceChanged(enabled)
+    }
+
+    suspend fun setIconSizePx(iconSizePx: Int) {
+        preferencesRepository.setIconSizePx(iconSizePx)
     }
 
     suspend fun bootstrapMetadataSync() {

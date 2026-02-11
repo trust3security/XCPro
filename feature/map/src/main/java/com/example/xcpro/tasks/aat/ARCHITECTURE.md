@@ -15,7 +15,7 @@
   - `AATValidatorExamples.kt` (356 lines) - Demo/example code never used in production
   - `AATTestVerification.kt.disabled` - Already disabled test file
   - `AATDistanceCalculator.kt.disabled` - Duplicate disabled file
-- **9 debug println statements** removed from `AATTaskMapOverlay.kt`
+- **9 debug println statements** removed from legacy AAT map overlay wiring
 - **8 commented import lines** cleaned from 4 files
 
 ### Current Module Stats

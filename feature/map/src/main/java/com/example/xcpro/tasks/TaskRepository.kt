@@ -6,6 +6,8 @@ import com.example.xcpro.tasks.core.TaskWaypoint
 import com.example.xcpro.tasks.core.WaypointRole
 import com.example.xcpro.tasks.domain.logic.AATTargetOptimizer
 import com.example.xcpro.tasks.domain.logic.TaskAdvanceState
+import com.example.xcpro.tasks.domain.logic.TaskProximityDecision
+import com.example.xcpro.tasks.domain.logic.TaskProximityEvaluator
 import com.example.xcpro.tasks.domain.logic.TaskValidator
 import com.example.xcpro.tasks.domain.model.*
 import javax.inject.Inject
@@ -19,7 +21,8 @@ import kotlin.math.*
  * the new domain layer.
  */
 class TaskRepository @Inject constructor(
-    private val validator: TaskValidator
+    private val validator: TaskValidator,
+    private val proximityEvaluator: TaskProximityEvaluator
 ) {
 
     private val _state = MutableStateFlow(TaskUiState())
@@ -225,6 +228,30 @@ class TaskRepository @Inject constructor(
 
     fun shouldAutoAdvance(hasEntered: Boolean, closeToTarget: Boolean): Boolean =
         advanceState.shouldAdvance(hasEntered, closeToTarget)
+
+    fun evaluateProximity(
+        taskType: TaskType,
+        waypointRole: WaypointRole,
+        aircraftLat: Double,
+        aircraftLon: Double,
+        targetLat: Double,
+        targetLon: Double
+    ): TaskProximityDecision =
+        proximityEvaluator.evaluate(
+            taskType = taskType,
+            waypointRole = waypointRole,
+            aircraftLat = aircraftLat,
+            aircraftLon = aircraftLon,
+            targetLat = targetLat,
+            targetLon = targetLon
+        )
+
+    fun distanceMeters(
+        fromLat: Double,
+        fromLon: Double,
+        toLat: Double,
+        toLon: Double
+    ): Double = proximityEvaluator.distanceMeters(fromLat, fromLon, toLat, toLon)
 
     fun setAdvanceMode(mode: TaskAdvanceState.Mode) {
         advanceState.setMode(mode)

@@ -32,8 +32,7 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun QRCodeDialog(
-    taskManager: TaskManagerCoordinator,
-    uiState: TaskUiState? = null,
+    uiState: TaskUiState,
     onDismiss: () -> Unit,
     onImportJson: (String) -> Unit = {}
 ){
@@ -71,9 +70,9 @@ fun QRCodeDialog(
         scope.launch {
             try {
                 val taskData = TaskPersistSerializer.serialize(
-                    task = taskManager.currentTask,
-                    taskType = taskManager.taskType,
-                    targets = uiState?.targets.orEmpty()
+                    task = uiState.task,
+                    taskType = uiState.taskType,
+                    targets = uiState.targets
                 )
                 qrBitmap = generateQRCode(taskData)
                 isLoading = false
@@ -125,7 +124,7 @@ fun QRCodeDialog(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Task: ${taskManager.currentTask.waypoints.size} waypoints",
+                            text = "Task: ${uiState.task.waypoints.size} waypoints",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary
                         )

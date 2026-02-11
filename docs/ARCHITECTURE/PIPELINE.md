@@ -1,4 +1,3 @@
-﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
 
 # PIPELINE.md
 
@@ -144,6 +143,35 @@ UI effects:
 Map bindings:
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenBindings.kt`
   - Binds `mapLocation` into UI state.
+  - Binds `ognIconSizePx` and `adsbIconSizePx` from settings for runtime overlay sizing.
+
+OGN icon size settings path:
+- `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
+  - SSOT for OGN overlay enabled + icon size preferences.
+- `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt`
+  - `OgnTrafficUseCase` exposes `iconSizePx` flow.
+- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
+  - Converts `iconSizePx` to lifecycle-aware state for UI/runtime.
+- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
+  - Pushes icon-size changes into overlay runtime controller.
+- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
+  - Applies and re-applies icon size for existing and recreated OGN overlays.
+- `feature/map/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
+  - Updates SymbolLayer `iconSize` dynamically from configured pixel size.
+
+ADS-b icon size settings path:
+- `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficPreferencesRepository.kt`
+  - SSOT for ADS-b overlay enabled + icon size preferences.
+- `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt`
+  - `AdsbTrafficUseCase` exposes `iconSizePx` flow.
+- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
+  - Converts `iconSizePx` to lifecycle-aware state for UI/runtime.
+- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
+  - Pushes icon-size changes into overlay runtime controller.
+- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
+  - Applies and re-applies icon size for existing and recreated overlays.
+- `feature/map/src/main/java/com/example/xcpro/map/AdsbTrafficOverlay.kt`
+  - Updates SymbolLayer `iconSize` dynamically from configured pixel size.
 
 ## 5A) Cards (dfcards-library) sub-pipeline
 
@@ -191,6 +219,64 @@ Key files:
 - `dfcards-library/src/main/java/com/example/dfcards/dfcards/FlightDataViewModel.kt`
 - `dfcards-library/src/main/java/com/example/dfcards/dfcards/CardContainer.kt`
 - `dfcards-library/src/main/java/com/example/dfcards/FlightDataSources.kt`
+
+## 5B) Task Management Pipeline (Racing + AAT)
+
+Target architecture flow:
+
+Task UI (Compose)
+  -> `TaskSheetViewModel` intents
+  -> `TaskSheetUseCase` + `TaskSheetCoordinatorUseCase`
+  -> task repository/coordinator authoritative state
+  -> `TaskUiState` StateFlow
+  -> Task UI render
+
+Authoritative ownership:
+- Task definition and active leg: task repository/coordinator owners.
+- Zone entry policy and auto-advance policy: domain/use-case logic.
+- Persistence: repository/persistence adapters (not ViewModel/UI).
+- Map drawing side effects: runtime controllers invoked by use-case/viewmodel orchestration, not direct Composable manager calls.
+
+Current persistence startup bridge (2026-02-11):
+- `MapScreenViewModel` startup
+  -> `MapTasksUseCase.loadSavedTasks()`
+  -> `TaskManagerCoordinator.loadSavedTasks()` (suspend)
+  -> `TaskEnginePersistenceService.restore()` for task type + autosaved engine state
+  -> coordinator applies restored engine state into legacy managers for current UI compatibility.
+
+Named task persistence bridge (2026-02-11):
+- `TaskManagerCoordinator` named operations (`list/save/load/delete`) route to
+  `TaskEnginePersistenceService` in DI runtime.
+- Runtime coordinator construction is DI-only; compatibility access uses the DI singleton.
+
+Task map rendering bridge (2026-02-11):
+- `TaskManagerCoordinator` no longer stores a map instance.
+- `TaskManagerCoordinator` AAT edit/target APIs are map-agnostic (no `MapLibreMap` parameters).
+- UI/runtime map drawing routes through:
+  - `feature/map/src/main/java/com/example/xcpro/tasks/TaskMapRenderRouter.kt`
+  - `feature/map/src/main/java/com/example/xcpro/tasks/TaskMapOverlay.kt`
+  - `feature/map/src/main/java/com/example/xcpro/map/MapInitializer.kt`
+  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
+- UI/runtime redraw for AAT edit transitions and drag updates is triggered from:
+  - `feature/map/src/main/java/com/example/xcpro/map/MapGestureSetup.kt`
+  - `feature/map/src/main/java/com/example/xcpro/map/MapTaskIntegration.kt`
+- Rendering is selected by current task type (RACING/AAT) in the UI runtime layer.
+- `TaskMapRenderRouter` consumes `TaskManagerCoordinator.currentTask` snapshots and
+  shared core->task mappers (Racing/AAT) instead of coordinator manager escape hatches.
+- `RacingTaskManager` / `AATTaskManager` no longer expose MapLibre render/edit APIs;
+  map rendering/editing flows are UI/runtime-only via renderers/controllers.
+
+Task navigation/replay bridge (2026-02-11):
+- `TaskNavigationController` and `MapScreenReplayCoordinator` consume
+  coordinator core-task snapshots and shared mapping helpers for racing
+  navigation/replay inputs.
+- Navigation/replay code paths do not read `RacingTaskManager.currentRacingTask`
+  directly.
+
+Non-negotiable boundaries:
+- Composables do not call task managers/coordinators directly for mutation or business queries.
+- Composables do not read manager internals (`currentTask`, `currentLeg`, `currentAATTask`) as UI state.
+- ViewModels expose task UI state and intents; they do not expose raw manager/controller handles.
 
 ## 6) Audio Pipeline
 

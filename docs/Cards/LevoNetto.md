@@ -1,4 +1,3 @@
-﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
 
 # Levo Netto (LEVO NETTO) - end to end flow, display, and XCSoar parity notes
 

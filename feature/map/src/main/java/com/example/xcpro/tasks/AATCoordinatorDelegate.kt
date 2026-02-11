@@ -3,7 +3,6 @@ package com.example.xcpro.tasks
 import com.example.xcpro.tasks.aat.AATTaskManager
 import com.example.xcpro.tasks.core.TaskWaypoint
 import java.time.Duration
-import org.maplibre.android.maps.MapLibreMap
 
 /**
  * Encapsulates all AAT-specific coordination logic so the [TaskManagerCoordinator]
@@ -11,7 +10,6 @@ import org.maplibre.android.maps.MapLibreMap
  */
 internal class AATCoordinatorDelegate(
     private val taskManager: AATTaskManager,
-    private val mapProvider: () -> MapLibreMap?,
     private val log: (String) -> Unit
 ) : TaskTypeCoordinatorDelegate {
 
@@ -25,27 +23,12 @@ internal class AATCoordinatorDelegate(
         override fun setEditMode(waypointIndex: Int, enabled: Boolean) =
             taskManager.setEditMode(waypointIndex, enabled)
 
-        override fun plotAATEditOverlay(map: MapLibreMap, waypointIndex: Int) =
-            taskManager.plotAATEditOverlay(map, waypointIndex)
-
-        override fun plotAATOnMap(map: MapLibreMap) =
-            taskManager.plotAATOnMap(map)
-
-        override fun clearAATEditOverlay(map: MapLibreMap) =
-            taskManager.clearAATEditOverlay(map)
-
         override fun isInEditMode(): Boolean = taskManager.isInEditMode()
 
         override fun getEditWaypointIndex(): Int? = taskManager.getEditWaypointIndex()
-
-        override fun checkTargetPointHit(
-            map: MapLibreMap,
-            screenX: Float,
-            screenY: Float
-        ): Int? = taskManager.checkTargetPointHit(map, screenX, screenY)
     }
 
-    private val editController = AATEditController(editOperations, mapProvider, log)
+    private val editController = AATEditController(editOperations, log)
 
     fun updateWaypointPointType(
         index: Int,
@@ -82,14 +65,6 @@ internal class AATCoordinatorDelegate(
             keyholeAngle = keyholeAngle,
             sectorOuterRadius = sectorOuterRadius
         )
-
-        val map = mapProvider()
-        if (map != null) {
-            log("Re-plotting AAT task after point type update")
-            taskManager.plotAATOnMap(map)
-        } else {
-            log("Cannot re-plot AAT task - map instance is null")
-        }
     }
 
     fun updateTargetPoint(index: Int, lat: Double, lon: Double) =
@@ -122,29 +97,6 @@ internal class AATCoordinatorDelegate(
     fun isInEditMode(): Boolean = editController.isInEditMode()
 
     fun editWaypointIndex(): Int? = editController.editWaypointIndex()
-
-    fun checkTargetPointHit(screenX: Float, screenY: Float): Int? =
-        editController.checkTargetPointHit(screenX, screenY)
-
-    override fun plotOnMap(map: MapLibreMap?) {
-        val resolvedMap = map ?: mapProvider()
-        if (resolvedMap == null) {
-            log("Cannot plot AAT task - map instance is null")
-            return
-        }
-        taskManager.plotAATOnMap(resolvedMap)
-        log("Plotted AAT task on map")
-    }
-
-    override fun clearFromMap(map: MapLibreMap?) {
-        val resolvedMap = map ?: mapProvider()
-        if (resolvedMap == null) {
-            log("Cannot clear AAT visuals - map instance is null")
-            return
-        }
-        taskManager.clearAATFromMap(resolvedMap)
-        log("Cleared AAT visuals from map")
-    }
 
     override fun clearTask() {
         taskManager.clearAATTask()

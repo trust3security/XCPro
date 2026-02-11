@@ -16,6 +16,7 @@ import com.example.xcpro.gestures.CustomMapGestureHandler
 import com.example.xcpro.gestures.TaskGestureCallbacks
 import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.tasks.TaskManagerCoordinator
+import com.example.xcpro.tasks.TaskMapRenderRouter
 import org.maplibre.android.geometry.LatLng
 
 /**
@@ -60,16 +61,19 @@ object MapGestureSetup {
                     onAATEditModeChange(true)
                     cameraManager.zoomToAATAreaForEdit(lat, lon, radiusKm)
                     taskManager.enterAATEditMode(waypointIndex)
+                    TaskMapRenderRouter.plotCurrentTask(taskManager, mapState.mapLibreMap)
                     Log.d(TAG, "Entered AAT edit mode for waypoint $waypointIndex")
                 },
                 onExitEditMode = {
                     onAATEditModeChange(false)
                     cameraManager.restoreAATCameraPosition()
                     taskManager.exitAATEditMode()
+                    TaskMapRenderRouter.plotCurrentTask(taskManager, mapState.mapLibreMap)
                     Log.d(TAG, "Exited AAT edit mode")
                 },
                 onDragTarget = { waypointIndex, lat, lon ->
                     taskManager.updateAATTargetPoint(waypointIndex, lat, lon)
+                    TaskMapRenderRouter.plotCurrentTask(taskManager, mapState.mapLibreMap)
                 }
             )
         }

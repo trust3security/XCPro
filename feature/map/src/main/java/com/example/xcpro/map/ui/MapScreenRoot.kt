@@ -12,6 +12,7 @@ import com.example.xcpro.map.MapUiEvent
 import com.example.xcpro.map.MapStateStore
 import com.example.dfcards.dfcards.FlightDataViewModel
 import android.annotation.SuppressLint
+import androidx.activity.compose.BackHandler
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -40,6 +41,7 @@ import com.example.xcpro.map.widgets.MapWidgetLayoutViewModel
 import com.example.xcpro.map.widgets.MapWidgetOffsets
 import dagger.hilt.android.EntryPointAccessors
 import com.example.xcpro.hawk.HAWK_VARIO_CARD_ID
+import kotlinx.coroutines.launch
 
 /**
  * G PHASE 2: Convert CompleteFlightData (from FlightDataCalculator) to RealTimeFlightData (for cards)
@@ -69,6 +71,9 @@ internal fun MapScreenRoot(
     }
     val airspaceUseCase = remember(entryPoint) { entryPoint.airspaceUseCase() }
     val waypointFilesUseCase = remember(entryPoint) { entryPoint.waypointFilesUseCase() }
+    val taskManager = remember(entryPoint) { entryPoint.taskManagerCoordinator() }
+    val varioServiceManager = remember(entryPoint) { entryPoint.varioServiceManager() }
+    val igcReplayController = remember(entryPoint) { entryPoint.igcReplayController() }
     MapScreenSideEffects(
         uiEffects = mapViewModel.uiEffects,
         drawerState = drawerState,
@@ -88,7 +93,6 @@ internal fun MapScreenRoot(
     val windArrowState by mapViewModel.windArrowState.collectAsStateWithLifecycle()
     val showWindSpeedOnVario by mapViewModel.showWindSpeedOnVario.collectAsStateWithLifecycle()
     val showHawkCard by mapViewModel.showHawkCard.collectAsStateWithLifecycle()
-    val taskManager = mapViewModel.taskManager
     val hiddenCardIds = remember(showHawkCard) {
         if (showHawkCard) emptySet() else setOf(HAWK_VARIO_CARD_ID)
     }
@@ -145,8 +149,8 @@ internal fun MapScreenRoot(
         taskManager = taskManager,
         mapStateActions = mapViewModel.mapStateActions,
         orientationManager = orientationManager,
-        varioServiceManager = mapViewModel.varioServiceManager,
-        igcReplayController = mapViewModel.igcReplayController,
+        varioServiceManager = varioServiceManager,
+        igcReplayController = igcReplayController,
         featureFlags = mapViewModel.mapFeatureFlags,
         coroutineScope = coroutineScope,
         airspaceUseCase = airspaceUseCase,
@@ -161,6 +165,21 @@ internal fun MapScreenRoot(
     val lifecycleManager = managers.lifecycleManager
     val modalManager = managers.modalManager
     val mapInitializer = managers.mapInitializer
+    val panelState by taskScreenManager.taskPanelState.collectAsStateWithLifecycle()
+    val isTaskPanelVisible = panelState != com.example.xcpro.map.MapTaskScreenManager.TaskPanelState.HIDDEN
+
+    BackHandler(enabled = drawerState.isOpen || modalManager.isAnyModalOpen() || isTaskPanelVisible) {
+        when {
+            drawerState.isOpen -> {
+                coroutineScope.launch { drawerState.close() }
+            }
+            modalManager.handleBackGesture() -> Unit
+            taskScreenManager.handleBackGesture() -> Unit
+            else -> {
+                navController.popBackStack()
+            }
+        }
+    }
 
     LaunchedEffect(mapState.mapLibreMap, airspaceState.enabledFiles, airspaceState.classStates) {
         overlayManager.refreshAirspace(mapState.mapLibreMap)
@@ -181,7 +200,9 @@ internal fun MapScreenRoot(
     val trailSettings = bindings.trailSettings
     val trailUpdateResult = bindings.trailUpdateResult
     val ognTargets = bindings.ognTargets
+    val ognIconSizePx = bindings.ognIconSizePx
     val adsbTargets = bindings.adsbTargets
+    val adsbIconSizePx = bindings.adsbIconSizePx
 
     // G AAT Edit Mode State - Track when AAT pin editing is active
     val isAATEditMode = bindings.isAATEditMode
@@ -189,8 +210,14 @@ internal fun MapScreenRoot(
     LaunchedEffect(ognTargets) {
         overlayManager.updateOgnTrafficTargets(ognTargets)
     }
+    LaunchedEffect(ognIconSizePx) {
+        overlayManager.setOgnIconSizePx(ognIconSizePx)
+    }
     LaunchedEffect(adsbTargets) {
         overlayManager.updateAdsbTrafficTargets(adsbTargets)
+    }
+    LaunchedEffect(adsbIconSizePx) {
+        overlayManager.setAdsbIconSizePx(adsbIconSizePx)
     }
     
     // Map FlightMode to FlightModeSelection using FlightDataManager
@@ -334,6 +361,7 @@ internal fun MapScreenRoot(
         initialMapStyle = initialMapStyle,
         onMapStyleSelected = onMapStyleSelected,
         mapViewModel = mapViewModel,
+        taskManager = taskManager,
         mapUiState = mapUiState,
         bindings = bindings,
         managers = managers,

@@ -26,7 +26,7 @@ class TaskFilesUseCase @Inject constructor(
                 ?: return TaskImportResult.Failure("Unable to read task file")
             TaskImportResult.Json(displayName = displayName, json = json)
         } else {
-            val success = taskManager.loadTask(repository.appContext(), displayName)
+            val success = taskManager.loadTask(displayName)
             TaskImportResult.Cup(displayName = displayName, success = success)
         }
     }

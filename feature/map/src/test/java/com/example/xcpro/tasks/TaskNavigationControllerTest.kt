@@ -6,6 +6,8 @@ import com.example.xcpro.tasks.racing.navigation.RacingNavigationEngine
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationFix
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationStateStore
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationStatus
+import com.example.xcpro.tasks.aat.AATTaskManager
+import com.example.xcpro.tasks.racing.RacingTaskManager
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -18,8 +20,8 @@ class TaskNavigationControllerTest {
 
     @Test
     fun controllerAdvancesLegWhenAutoAdvanceArmed() = runTest {
-        val coordinator = TaskManagerCoordinator(context = null)
-        coordinator.getRacingTaskManager().initializeRacingTask(sampleWaypoints())
+        val coordinator = createCoordinator()
+        coordinator.initializeTask(sampleWaypoints())
         val controller = createController(coordinator)
         controller.setAdvanceArmed(true)
 
@@ -42,8 +44,8 @@ class TaskNavigationControllerTest {
     fun controllerDoesNotAdvanceWhenAutoAdvanceDisabled() = runTest {
         val featureFlags = TaskFeatureFlags().apply { enableRacingAutoAdvance = false }
         try {
-            val coordinator = TaskManagerCoordinator(context = null)
-            coordinator.getRacingTaskManager().initializeRacingTask(sampleWaypoints())
+            val coordinator = createCoordinator()
+            coordinator.initializeTask(sampleWaypoints())
             val controller = createController(coordinator, featureFlags)
             controller.setAdvanceArmed(true)
 
@@ -65,8 +67,8 @@ class TaskNavigationControllerTest {
 
     @Test
     fun manualLegChangeDisarmsAndSyncsState() = runTest {
-        val coordinator = TaskManagerCoordinator(context = null)
-        coordinator.getRacingTaskManager().initializeRacingTask(sampleWaypoints())
+        val coordinator = createCoordinator()
+        coordinator.initializeTask(sampleWaypoints())
         val controller = createController(coordinator)
         controller.setAdvanceArmed(true)
 
@@ -105,4 +107,13 @@ class TaskNavigationControllerTest {
         engine = RacingNavigationEngine(),
         featureFlags = featureFlags
     )
+
+    private fun createCoordinator(): TaskManagerCoordinator =
+        TaskManagerCoordinator(
+            taskEnginePersistenceService = null,
+            racingTaskEngine = null,
+            aatTaskEngine = null,
+            racingTaskManager = RacingTaskManager(null),
+            aatTaskManager = AATTaskManager(null)
+        )
 }

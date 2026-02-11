@@ -15,6 +15,7 @@ import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.tasks.TaskNavigationController
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.racing.SimpleRacingTask
+import com.example.xcpro.tasks.racing.toSimpleRacingTask
 import com.example.xcpro.tasks.racing.navigation.RacingAdvanceState
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationEvent
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationEventType
@@ -451,7 +452,7 @@ internal class MapScreenReplayCoordinator(
         if (taskManager.taskType != TaskType.RACING) {
             return null
         }
-        val task = taskManager.getRacingTaskManager().currentRacingTask
+        val task = taskManager.currentTask.toSimpleRacingTask()
         if (task.waypoints.size < 2) {
             return null
         }
@@ -459,9 +460,9 @@ internal class MapScreenReplayCoordinator(
     }
 
     private fun buildRacingEventMessage(event: RacingNavigationEvent): String {
-        val task = taskManager.getRacingTaskManager().currentRacingTask
-        val reachedIndex = event.fromLegIndex
-        val waypointName = task.waypoints.getOrNull(reachedIndex)?.title
+        val waypointName = taskManager.currentTask.waypoints
+            .getOrNull(event.fromLegIndex)
+            ?.title
         return when (event.type) {
             RacingNavigationEventType.START ->
                 if (waypointName != null) "Start crossed: $waypointName" else "Start crossed"

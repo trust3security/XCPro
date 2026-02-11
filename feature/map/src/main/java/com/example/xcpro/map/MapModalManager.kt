@@ -94,7 +94,7 @@ object MapModalUI {
                 modifier = modifier
                     .fillMaxSize()
                     .background(Color.Black.copy(alpha = 0.3f))
-                    .zIndex(15f)
+                    .zIndex(80f)
                     .pointerInput(Unit) { detectTapGestures {} }
             ) {
                 Card(

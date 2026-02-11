@@ -144,6 +144,63 @@ class AdsbMetadataEnrichmentUseCaseTest {
         assertEquals(MetadataAvailability.Missing, latest.metadataAvailability)
     }
 
+    @Test
+    fun targetsWithMetadata_appliesTypecodeAndIcaoAircraftTypeByIcao() = runTest {
+        val syncRepository = FakeSyncRepository(MetadataSyncState.Idle)
+        val metadataRepository = FakeMetadataRepository(
+            mapOf(
+                "abc123" to AircraftMetadata(
+                    icao24 = "abc123",
+                    registration = "VH-DFV",
+                    typecode = "R44",
+                    model = null,
+                    manufacturerName = null,
+                    owner = null,
+                    operator = null,
+                    operatorCallsign = null,
+                    icaoAircraftType = "H1P"
+                )
+            )
+        )
+        val useCase = AdsbMetadataEnrichmentUseCase(
+            aircraftMetadataRepository = metadataRepository,
+            metadataSyncRepository = syncRepository,
+            ioDispatcher = StandardTestDispatcher(testScheduler)
+        )
+        val targets = MutableStateFlow(listOf(target("abc123"), target("def456")))
+
+        val enriched = useCase.targetsWithMetadata(targets).first()
+
+        val first = enriched.first { it.id.raw == "abc123" }
+        assertEquals("R44", first.metadataTypecode)
+        assertEquals("H1P", first.metadataIcaoAircraftType)
+        val second = enriched.first { it.id.raw == "def456" }
+        assertEquals(null, second.metadataTypecode)
+        assertEquals(null, second.metadataIcaoAircraftType)
+    }
+
+    @Test
+    fun targetsWithMetadata_clearsStaleMetadataWhenNoLongerAvailable() = runTest {
+        val syncRepository = FakeSyncRepository(MetadataSyncState.Idle)
+        val metadataRepository = FakeMetadataRepository(emptyMap())
+        val useCase = AdsbMetadataEnrichmentUseCase(
+            aircraftMetadataRepository = metadataRepository,
+            metadataSyncRepository = syncRepository,
+            ioDispatcher = StandardTestDispatcher(testScheduler)
+        )
+        val baseTarget = target("abc123").copy(
+            metadataTypecode = "C172",
+            metadataIcaoAircraftType = "L1P"
+        )
+        val targets = MutableStateFlow(listOf(baseTarget))
+
+        val enriched = useCase.targetsWithMetadata(targets).first()
+
+        val first = enriched.first()
+        assertEquals(null, first.metadataTypecode)
+        assertEquals(null, first.metadataIcaoAircraftType)
+    }
+
     private fun target(rawIcao24: String): AdsbTrafficUiModel {
         val id = Icao24.from(rawIcao24) ?: error("invalid ICAO24")
         return AdsbTrafficUiModel(

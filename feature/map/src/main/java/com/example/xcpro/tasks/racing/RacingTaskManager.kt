@@ -1,12 +1,10 @@
 package com.example.xcpro.tasks.racing
 
 import android.content.Context
-import androidx.compose.runtime.*
 import com.example.xcpro.common.waypoint.SearchWaypoint
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskWaypoint
 import com.example.xcpro.tasks.core.WaypointRole
-import org.maplibre.android.maps.MapLibreMap
 import kotlin.math.*
 import java.util.UUID
 import java.util.*
@@ -18,6 +16,9 @@ import com.example.xcpro.tasks.racing.models.RacingStartPointType
 import com.example.xcpro.tasks.racing.models.RacingFinishPointType
 import com.example.xcpro.tasks.racing.models.RacingTurnPointType
 import com.example.xcpro.tasks.racing.turnpoints.TaskContext
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Simple Racing Task model for manager use (avoiding conflicts with complex models)
@@ -55,7 +56,6 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
 
     // Racing-specific calculators - completely autonomous
     private val racingTaskCalculator = RacingTaskCalculator()
-    private val racingTaskDisplay = RacingTaskDisplay()
     private val racingTaskValidator = RacingTaskValidator()
 
     // Racing waypoint manager - handles waypoint collection operations
@@ -64,9 +64,21 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
     // Racing task initializer - handles task initialization operations
     private val racingTaskInitializer = RacingTaskInitializer()
 
-    // Racing task state
-    internal var _currentRacingTask by mutableStateOf(SimpleRacingTask())
-    internal var _currentLeg by mutableStateOf(0)
+    // Racing task state (SSOT in manager; non-UI reactive model)
+    private val currentRacingTaskState = MutableStateFlow(SimpleRacingTask())
+    private val currentLegState = MutableStateFlow(0)
+    val currentRacingTaskFlow: StateFlow<SimpleRacingTask> = currentRacingTaskState.asStateFlow()
+    val currentLegFlow: StateFlow<Int> = currentLegState.asStateFlow()
+    internal var _currentRacingTask: SimpleRacingTask
+        get() = currentRacingTaskState.value
+        set(value) {
+            currentRacingTaskState.value = value
+        }
+    internal var _currentLeg: Int
+        get() = currentLegState.value
+        set(value) {
+            currentLegState.value = value
+        }
 
     // Public properties
     val currentRacingTask: SimpleRacingTask get() = _currentRacingTask
@@ -293,20 +305,6 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
     }
 
     /**
-     * Plot Racing task on map - delegates to Racing display
-     */
-    fun plotRacingOnMap(map: MapLibreMap?) {
-        racingTaskDisplay.plotRacingOnMap(map, _currentRacingTask.waypoints, this)
-    }
-
-    /**
-     * Clear Racing task visuals from map - delegates to display class
-     */
-    fun clearRacingFromMap(map: MapLibreMap?) {
-        racingTaskDisplay.clearRacingFromMap(map)
-    }
-
-    /**
      * Clear Racing task
      */
     fun clearRacingTask() {
@@ -336,13 +334,10 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
         }
     }
 
-    fun setRacingLeg(index: Int, map: MapLibreMap?) {
+    fun setRacingLeg(index: Int) {
         if (_currentRacingTask.waypoints.isEmpty()) return
         val clamped = index.coerceIn(0, _currentRacingTask.waypoints.lastIndex)
         _currentLeg = clamped
-        if (map != null) {
-            plotRacingOnMap(map)
-        }
     }
 
     // REMOVED: convertAATToRacing() function

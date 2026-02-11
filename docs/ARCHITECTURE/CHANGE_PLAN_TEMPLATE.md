@@ -47,6 +47,22 @@ Confirm dependency flow remains:
 - Modules/files touched:
 - Any boundary risk:
 
+### 2.2A Boundary Moves (Mandatory)
+
+List each responsibility that changes ownership.
+
+| Responsibility | Old Owner | New Owner | Why | Validation |
+|---|---|---|---|---|
+| | | | | |
+
+### 2.2B Bypass Removal Plan (Mandatory)
+
+List direct-call bypasses being removed (or explicitly retained with rationale).
+
+| Bypass Callsite | Current Bypass | Planned Replacement | Phase |
+|---|---|---|---|
+| | | | |
+
 ### 2.3 Time Base
 
 For each time-dependent value, declare time base explicitly.
@@ -72,6 +88,14 @@ Explicitly forbidden comparisons:
 - Randomness used: Yes/No (if yes, how seeded)
 - Replay/live divergence rules:
 
+### 2.6 Enforcement Coverage (Mandatory)
+
+Map each architecture rule risk to an automated guard.
+
+| Risk | Rule Reference | Guard Type (lint/enforceRules/test/review) | File/Test |
+|---|---|---|---|
+| | | | |
+
 ## 3) Data Flow (Before -> After)
 
 Describe end-to-end flow as text:
@@ -95,6 +119,7 @@ For each phase, define:
 - Replay/regression tests:
 - UI/instrumentation tests (if needed):
 - Degraded/failure-mode tests:
+- Boundary tests for removed bypasses:
 
 Required checks:
 

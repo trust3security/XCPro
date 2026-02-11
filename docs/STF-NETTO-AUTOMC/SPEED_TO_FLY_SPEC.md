@@ -1,4 +1,3 @@
-﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
 
 # Speed-to-Fly Specification (Uses Polar + Auto-MC + Glide-Netto)
 

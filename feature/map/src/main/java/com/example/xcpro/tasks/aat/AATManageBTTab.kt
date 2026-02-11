@@ -2,12 +2,9 @@ package com.example.xcpro.tasks.aat
 
 import androidx.compose.runtime.Composable
 import com.example.xcpro.common.waypoint.WaypointData
-import com.example.xcpro.tasks.AdvanceControls
-import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.tasks.TaskSheetViewModel
 import com.example.xcpro.tasks.TaskUiState
 import com.example.xcpro.tasks.core.Task
-import com.example.xcpro.tasks.core.TaskType
 import org.maplibre.android.maps.MapLibreMap
 
 /**
@@ -18,7 +15,6 @@ import org.maplibre.android.maps.MapLibreMap
 fun AATManageBTTab(
     uiState: TaskUiState,
     task: Task,
-    taskManager: TaskManagerCoordinator,
     taskViewModel: TaskSheetViewModel,
     mapLibreMap: MapLibreMap?,
     allWaypoints: List<WaypointData> = emptyList(),
@@ -33,7 +29,6 @@ fun AATManageBTTab(
         onClearTask = onClearTask,
         onSaveTask = onSaveTask,
         onDismiss = onDismiss,
-        taskManager = taskManager,
         taskViewModel = taskViewModel,
         mapLibreMap = mapLibreMap,
         allWaypoints = allWaypoints,

@@ -1,6 +1,5 @@
 package com.example.xcpro.tasks.racing.ui
 
-import com.example.xcpro.tasks.core.TaskWaypoint
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -17,7 +16,6 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.unit.dp
 import com.example.xcpro.tasks.racing.models.RacingTurnPointType
-import com.example.xcpro.tasks.TaskManagerCoordinator
 
 /**
  * Racing Turn Point Configuration UI
@@ -36,9 +34,7 @@ internal fun RacingTurnPointSelector(
     keyholeInnerRadius: String,
     keyholeAngle: String,
     faiQuadrantOuterRadius: String,
-    waypoint: TaskWaypoint,
-    nextWaypoint: TaskWaypoint?,
-    taskManager: TaskManagerCoordinator,
+    distanceToNextKm: Double?,
     onTurnTypeChange: (RacingTurnPointType) -> Unit,
     onGateWidthChange: (String) -> Unit,
     onKeyholeInnerRadiusChange: (String) -> Unit,
@@ -227,10 +223,7 @@ internal fun RacingTurnPointSelector(
     }
 
     // Distance to next turnpoint
-    if (nextWaypoint != null) {
-        val distance: Double = remember(nextWaypoint) {
-            taskManager.calculateSimpleSegmentDistance(waypoint, nextWaypoint)
-        }
+    if (distanceToNextKm != null) {
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
@@ -251,7 +244,7 @@ internal fun RacingTurnPointSelector(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Distance to next turnpoint: ${String.format("%.1f", distance)} km",
+                    text = "Distance to next turnpoint: ${String.format("%.1f", distanceToNextKm)} km",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium
                 )

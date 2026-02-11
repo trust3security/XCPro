@@ -80,6 +80,38 @@ class AircraftMetadataRepositoryImplTest {
         verify(client, times(1)).fetchByIcao24("abcdef")
     }
 
+    @Test
+    fun largeBatchStillHydratesBoundedMissingSubset() = runTest {
+        val dao = mock<AircraftMetadataDao>()
+        val client = mock<OpenSkyIcaoMetadataClient>()
+        val clock = FakeClock(monoMs = 2_000L)
+        val first = sampleEntity(icao24 = "aa0001", registration = "N1")
+        val second = sampleEntity(icao24 = "aa0002", registration = "N2")
+        val third = sampleEntity(icao24 = "aa0003", registration = "N3")
+        val ids = listOf("aa0001", "aa0002", "aa0003", "aa0004")
+        whenever(dao.getActiveByIcao24s(ids)).thenReturn(emptyList())
+        whenever(client.fetchByIcao24("aa0001")).thenReturn(Result.success(first))
+        whenever(client.fetchByIcao24("aa0002")).thenReturn(Result.success(second))
+        whenever(client.fetchByIcao24("aa0003")).thenReturn(Result.success(third))
+
+        val repository = AircraftMetadataRepositoryImpl(
+            dao = dao,
+            onDemandClient = client,
+            clock = clock
+        )
+
+        val result = repository.getMetadataFor(ids)
+
+        assertEquals("N1", result["aa0001"]?.registration)
+        assertEquals("N2", result["aa0002"]?.registration)
+        assertEquals("N3", result["aa0003"]?.registration)
+        assertNull(result["aa0004"])
+        verify(client, times(1)).fetchByIcao24("aa0001")
+        verify(client, times(1)).fetchByIcao24("aa0002")
+        verify(client, times(1)).fetchByIcao24("aa0003")
+        verify(client, times(0)).fetchByIcao24("aa0004")
+    }
+
     private fun sampleEntity(
         icao24: String,
         registration: String?
@@ -99,4 +131,3 @@ class AircraftMetadataRepositoryImplTest {
         )
     }
 }
-

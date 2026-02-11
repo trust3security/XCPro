@@ -28,11 +28,9 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import kotlinx.coroutines.launch
-import org.maplibre.android.maps.MapLibreMap
 import com.example.xcpro.common.waypoint.SearchWaypoint
 import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.tasks.SearchableWaypointField
-import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.tasks.TaskSheetViewModel
 import com.example.xcpro.tasks.aat.models.*
 import com.example.xcpro.tasks.aat.ui.AATTaskPointTypeSelector
@@ -47,9 +45,7 @@ internal fun AATReorderableWaypointList(
     onReorder: (Int, Int) -> Unit,
     onRemove: (Int) -> Unit,
     onWaypointReplace: (Int, SearchWaypoint) -> Unit,
-    taskManager: TaskManagerCoordinator,
     taskViewModel: TaskSheetViewModel,
-    mapLibreMap: MapLibreMap? = null,
     currentQNH: String? = null,
     modifier: Modifier = Modifier
 ) {
@@ -92,9 +88,7 @@ internal fun AATReorderableWaypointList(
                 },
                 nextWaypoint = if (index < waypoints.lastIndex) waypoints[index + 1] else null,
                 targetSnapshot = targets.getOrNull(index),
-                taskManager = taskManager,
                 taskViewModel = taskViewModel,
-                mapLibreMap = mapLibreMap,
                 isExpanded = expandedWaypointIndex == index,
                 onExpandToggle = { shouldExpand ->
                     if (shouldExpand) {
@@ -123,9 +117,7 @@ private fun AATReorderableWaypointItem(
     role: String,
     nextWaypoint: TaskWaypoint?,
     targetSnapshot: TaskTargetSnapshot?,
-    taskManager: TaskManagerCoordinator,
     taskViewModel: TaskSheetViewModel,
-    mapLibreMap: MapLibreMap?,
     isExpanded: Boolean,
     onExpandToggle: (Boolean) -> Unit,
     onMoveUp: (() -> Unit)?,
@@ -136,37 +128,48 @@ private fun AATReorderableWaypointItem(
 ) {
     val Blue = Color(0xFF2196F3)
     val targetParam = remember(targetSnapshot?.targetParam) { mutableStateOf(targetSnapshot?.targetParam ?: 0.5) }
-    val aatWaypoint = remember(taskManager.getAATTaskManager().currentAATTask.waypoints) {
-        taskManager.getAATTaskManager().currentAATTask.waypoints.getOrNull(index)
+    val innerRadiusMeters = remember(taskWaypoint.customParameters) {
+        taskWaypoint.customParameters["innerRadiusMeters"].asDoubleOrNull() ?: 0.0
+    }
+    val outerRadiusMeters = remember(taskWaypoint.customParameters) {
+        taskWaypoint.customParameters["outerRadiusMeters"].asDoubleOrNull()
+    }
+    val startAngleDegrees = remember(taskWaypoint.customParameters) {
+        taskWaypoint.customParameters["startAngleDegrees"].asDoubleOrNull() ?: 0.0
+    }
+    val endAngleDegrees = remember(taskWaypoint.customParameters) {
+        taskWaypoint.customParameters["endAngleDegrees"].asDoubleOrNull() ?: 90.0
+    }
+    val radiusMeters = remember(taskWaypoint.customRadius) {
+        (taskWaypoint.customRadius ?: 10.0) * 1000.0
     }
 
-    var selectedAATStartType by remember(aatWaypoint) {
-        mutableStateOf(aatWaypoint?.startPointType ?: AATStartPointType.AAT_START_LINE)
+    var selectedAATStartType by remember(taskWaypoint) {
+        mutableStateOf(inferAATStartType(taskWaypoint))
     }
-    var selectedAATFinishType by remember(aatWaypoint) {
-        mutableStateOf(aatWaypoint?.finishPointType ?: AATFinishPointType.AAT_FINISH_CYLINDER)
+    var selectedAATFinishType by remember(taskWaypoint) {
+        mutableStateOf(inferAATFinishType(taskWaypoint))
     }
-    var selectedAATTurnType by remember(aatWaypoint) {
-        mutableStateOf(aatWaypoint?.turnPointType ?: AATTurnPointType.AAT_CYLINDER)
+    var selectedAATTurnType by remember(taskWaypoint) {
+        mutableStateOf(inferAATTurnType(taskWaypoint, innerRadiusMeters))
     }
 
-    val defaultRadiusKm = ((aatWaypoint?.assignedArea?.radiusMeters ?: 10000.0) / 1000.0)
-    var gateWidth by remember(aatWaypoint) { mutableStateOf(String.format("%.1f", defaultRadiusKm)) }
-    var aatKeyholeInnerRadius by remember(aatWaypoint) {
+    val defaultRadiusKm = radiusMeters / 1000.0
+    var gateWidth by remember(taskWaypoint.id, radiusMeters) { mutableStateOf(String.format("%.1f", defaultRadiusKm)) }
+    var aatKeyholeInnerRadius by remember(taskWaypoint.id, innerRadiusMeters) {
         // Default to 0.5 km when no inner radius is set
-        val innerKm = ((aatWaypoint?.assignedArea?.innerRadiusMeters ?: 0.0) / 1000.0)
+        val innerKm = (innerRadiusMeters / 1000.0)
             .takeIf { it > 0 } ?: 0.5
         mutableStateOf(String.format("%.1f", innerKm))
     }
-    var aatKeyholeAngle by remember(aatWaypoint) {
-        val rawAngle = aatWaypoint?.assignedArea?.let { it.endAngleDegrees - it.startAngleDegrees } ?: 90.0
+    var aatKeyholeAngle by remember(taskWaypoint.id, startAngleDegrees, endAngleDegrees) {
+        val rawAngle = endAngleDegrees - startAngleDegrees
         val displayAngle = if (kotlin.math.abs(rawAngle - 90.0) < 1e-2) 90.0 else rawAngle
         mutableStateOf(String.format("%.1f", displayAngle))
     }
-    var aatSectorOuterRadius by remember(aatWaypoint) {
+    var aatSectorOuterRadius by remember(taskWaypoint.id, outerRadiusMeters, radiusMeters) {
         mutableStateOf(
-            ((aatWaypoint?.assignedArea?.outerRadiusMeters
-                ?: aatWaypoint?.assignedArea?.radiusMeters ?: 10000.0) / 1000.0).let { String.format("%.1f", it) }
+            ((outerRadiusMeters ?: radiusMeters) / 1000.0).let { String.format("%.1f", it) }
         )
     }
 
@@ -279,7 +282,6 @@ private fun AATReorderableWaypointItem(
                     keyholeAngle = aatKeyholeAngle,
                     sectorOuterRadius = aatSectorOuterRadius,
                     nextWaypoint = nextWaypoint,
-                    taskManager = taskManager,
                     onStartTypeChange = { newType ->
                         selectedAATStartType = newType
                         taskViewModel.onUpdateAATWaypointPointType(
@@ -384,4 +386,29 @@ private fun AATReorderableWaypointItem(
             }
         }
     }
+}
+
+private fun inferAATStartType(waypoint: TaskWaypoint): AATStartPointType =
+    when (waypoint.customPointType) {
+        AATAreaShape.CIRCLE.name -> AATStartPointType.AAT_START_CYLINDER
+        AATAreaShape.SECTOR.name -> AATStartPointType.AAT_START_SECTOR
+        else -> AATStartPointType.AAT_START_LINE
+    }
+
+private fun inferAATFinishType(waypoint: TaskWaypoint): AATFinishPointType =
+    when (waypoint.customPointType) {
+        AATAreaShape.LINE.name -> AATFinishPointType.AAT_FINISH_LINE
+        else -> AATFinishPointType.AAT_FINISH_CYLINDER
+    }
+
+private fun inferAATTurnType(waypoint: TaskWaypoint, innerRadiusMeters: Double): AATTurnPointType =
+    when {
+        innerRadiusMeters > 0.0 -> AATTurnPointType.AAT_KEYHOLE
+        waypoint.customPointType == AATAreaShape.SECTOR.name -> AATTurnPointType.AAT_SECTOR
+        else -> AATTurnPointType.AAT_CYLINDER
+    }
+
+private fun Any?.asDoubleOrNull(): Double? = when (this) {
+    is Number -> this.toDouble()
+    else -> null
 }

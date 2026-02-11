@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -18,6 +19,7 @@ private val Context.adsbTrafficDataStore: DataStore<Preferences> by preferencesD
     name = ADSB_DATASTORE_NAME
 )
 private val KEY_ADSB_TRAFFIC_ENABLED = booleanPreferencesKey("adsb_traffic_enabled")
+private val KEY_ADSB_ICON_SIZE_PX = intPreferencesKey("adsb_icon_size_px")
 
 @Singleton
 class AdsbTrafficPreferencesRepository @Inject constructor(
@@ -27,10 +29,24 @@ class AdsbTrafficPreferencesRepository @Inject constructor(
         .map { preferences -> preferences[KEY_ADSB_TRAFFIC_ENABLED] ?: false }
         .distinctUntilChanged()
 
+    val iconSizePxFlow: Flow<Int> = context.adsbTrafficDataStore.data
+        .map { preferences ->
+            clampAdsbIconSizePx(
+                preferences[KEY_ADSB_ICON_SIZE_PX] ?: ADSB_ICON_SIZE_DEFAULT_PX
+            )
+        }
+        .distinctUntilChanged()
+
     suspend fun setEnabled(enabled: Boolean) {
         context.adsbTrafficDataStore.edit { preferences ->
             preferences[KEY_ADSB_TRAFFIC_ENABLED] = enabled
         }
     }
-}
 
+    suspend fun setIconSizePx(iconSizePx: Int) {
+        val clamped = clampAdsbIconSizePx(iconSizePx)
+        context.adsbTrafficDataStore.edit { preferences ->
+            preferences[KEY_ADSB_ICON_SIZE_PX] = clamped
+        }
+    }
+}

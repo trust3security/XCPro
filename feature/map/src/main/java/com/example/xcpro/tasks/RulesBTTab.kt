@@ -14,17 +14,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.xcpro.tasks.core.Task
 import java.time.Duration
 import java.util.Locale
-import com.example.xcpro.tasks.TaskManagerCoordinator
 
 @Composable
 fun RulesBTTab(
-    selected: TaskType,
+    uiState: TaskUiState,
     onSelect: (TaskType) -> Unit,
-    taskManager: TaskManagerCoordinator? = null,
-    taskViewModel: TaskSheetViewModel? = null
+    onUpdateAATParameters: (Duration, Duration) -> Unit
 ) {
+    val selected = uiState.taskType
+    val currentWaypoints = uiState.task.waypoints
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -39,148 +41,145 @@ fun RulesBTTab(
         )
 
         // Enhanced waypoint preservation info with smart conversion feedback
-        taskManager?.let { tm ->
-            val currentWaypoints = tm.currentTask.waypoints
-            if (currentWaypoints.isNotEmpty()) {
-                val customizedWaypoints = currentWaypoints.filter { it.hasCustomizations }
-                val standardizedWaypoints = currentWaypoints.size - customizedWaypoints.size
+        if (currentWaypoints.isNotEmpty()) {
+            val customizedWaypoints = currentWaypoints.filter { it.hasCustomizations }
+            val standardizedWaypoints = currentWaypoints.size - customizedWaypoints.size
 
-                Spacer(Modifier.height(8.dp))
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                    ),
-                    border = androidx.compose.foundation.BorderStroke(
-                        1.dp,
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-                    )
+            Spacer(Modifier.height(8.dp))
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                ),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp)
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp)
+                    // Header with icon
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // Header with icon
+                        Icon(
+                            imageVector = Icons.Default.SwapHoriz,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            text = "Task Type Switching",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    // Current task summary
+                    Text(
+                        text = "Current ${selected.name} task: ${currentWaypoints.size} waypoints",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    if (customizedWaypoints.isNotEmpty()) {
+                        Spacer(Modifier.height(4.dp))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.SwapHoriz,
+                                imageVector = Icons.Default.Settings,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
+                                tint = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.size(16.dp)
                             )
                             Text(
-                                text = "Task Type Switching",
-                                style = MaterialTheme.typography.titleSmall,
+                                text = " ${customizedWaypoints.size} waypoint${if (customizedWaypoints.size > 1) "s" else ""} with custom settings will be preserved",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    if (standardizedWaypoints > 0) {
+                        Spacer(Modifier.height(4.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AutoFixHigh,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.tertiary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = " ${standardizedWaypoints} waypoint${if (standardizedWaypoints > 1) "s" else ""} will use new task type defaults",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    // Standardized defaults info
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        ),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(8.dp)
+                        ) {
+                            Text(
+                                text = "Standardized Defaults",
+                                style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.primary
                             )
-                        }
-
-                        Spacer(Modifier.height(8.dp))
-
-                        // Current task summary
-                        Text(
-                            text = "Current ${tm.taskType.name} task: ${currentWaypoints.size} waypoints",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-
-                        if (customizedWaypoints.isNotEmpty()) {
                             Spacer(Modifier.height(4.dp))
                             Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Settings,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.secondary,
-                                    modifier = Modifier.size(16.dp)
-                                )
                                 Text(
-                                    text = " ${customizedWaypoints.size} waypoint${if (customizedWaypoints.size > 1) "s" else ""} with custom settings will be preserved",
+                                    text = "Start Lines:",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                            }
-                        }
-
-                        if (standardizedWaypoints > 0) {
-                            Spacer(Modifier.height(4.dp))
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.AutoFixHigh,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.tertiary,
-                                    modifier = Modifier.size(16.dp)
-                                )
                                 Text(
-                                    text = " ${standardizedWaypoints} waypoint${if (standardizedWaypoints > 1) "s" else ""} will use new task type defaults",
+                                    text = "10km",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-
-                        Spacer(Modifier.height(8.dp))
-
-                        // Standardized defaults info
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surface
-                            ),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(8.dp)
-                            ) {
-                                Text(
-                                    text = "Standardized Defaults",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.SemiBold,
+                                    fontWeight = FontWeight.Medium,
                                     color = MaterialTheme.colorScheme.primary
                                 )
-                                Spacer(Modifier.height(4.dp))
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(
-                                        text = "Start Lines:",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Text(
-                                        text = "10km",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontWeight = FontWeight.Medium,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(
-                                        text = "Finish Cylinders:",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Text(
-                                        text = "3km",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontWeight = FontWeight.Medium,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "Finish Cylinders:",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "3km",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
                             }
                         }
                     }
@@ -196,7 +195,6 @@ fun RulesBTTab(
             isSelected = selected == TaskType.RACING,
             onClick = {
                 onSelect(TaskType.RACING)
-                taskViewModel?.onSetTaskType(TaskType.RACING)
             },
             title = "Racing Task",
             description = "Fixed course with turnpoints. Fastest wins.",
@@ -211,7 +209,6 @@ fun RulesBTTab(
             isSelected = selected == TaskType.AAT,
             onClick = {
                 onSelect(TaskType.AAT)
-                taskViewModel?.onSetTaskType(TaskType.AAT)
             },
             title = "Assigned Area Task (AAT)",
             description = "Flexible course with area targets and minimum time.",
@@ -226,7 +223,7 @@ fun RulesBTTab(
         // Task-specific parameters
         when (selected) {
             TaskType.RACING -> RacingTaskParameters()
-            TaskType.AAT -> AATTaskParameters(taskManager)
+            TaskType.AAT -> AATTaskParameters(uiState.task, onUpdateAATParameters)
         }
     }
 }
@@ -336,12 +333,13 @@ private fun RacingTaskParameters() {
 }
 
 @Composable
-private fun AATTaskParameters(taskManager: TaskManagerCoordinator?) {
-    // Initialize from AAT manager only when current task type is AAT
-    val isAAT = taskManager?.taskType == TaskType.AAT
-    val aatManager = if (isAAT) taskManager?.getAATTaskManager() else null
-    val initialMinTime = aatManager?.currentAATTask?.minimumTime?.toHours()?.toFloat() ?: 3.0f
-    val initialMaxTime = aatManager?.currentAATTask?.maximumTime?.toHours()?.toFloat() ?: 4.0f
+private fun AATTaskParameters(
+    task: Task,
+    onUpdateAATParameters: (Duration, Duration) -> Unit
+) {
+    val initialTimes = remember(task) { extractAatTimes(task) }
+    val initialMinTime = initialTimes.first
+    val initialMaxTime = initialTimes.second
     
     var minTime by remember { mutableStateOf(initialMinTime) }
     var maxTime by remember { mutableStateOf(initialMaxTime) }
@@ -361,7 +359,7 @@ private fun AATTaskParameters(taskManager: TaskManagerCoordinator?) {
                 value = minTime,
                 onValueChange = { 
                     minTime = it
-                    taskManager?.updateAATParameters(
+                    onUpdateAATParameters(
                         Duration.ofMinutes((minTime * 60).toLong()),
                         Duration.ofMinutes((maxTime * 60).toLong())
                     )
@@ -383,7 +381,7 @@ private fun AATTaskParameters(taskManager: TaskManagerCoordinator?) {
                 value = maxTime,
                 onValueChange = { 
                     maxTime = it
-                    taskManager?.updateAATParameters(
+                    onUpdateAATParameters(
                         Duration.ofMinutes((minTime * 60).toLong()),
                         Duration.ofMinutes((maxTime * 60).toLong())
                     )
@@ -408,6 +406,15 @@ private fun AATTaskParameters(taskManager: TaskManagerCoordinator?) {
             value = "Distance handicapped by time"
         )
     }
+}
+
+private fun extractAatTimes(task: Task): Pair<Float, Float> {
+    val sample = task.waypoints.firstOrNull()?.customParameters ?: emptyMap()
+    val minSeconds = sample["aatMinimumTimeSeconds"] as? Double
+    val maxSeconds = sample["aatMaximumTimeSeconds"] as? Double
+    val minHours = (minSeconds?.div(3600.0) ?: 3.0).toFloat()
+    val maxHours = (maxSeconds?.div(3600.0) ?: 4.0).toFloat()
+    return minHours to maxHours
 }
 
 @Composable

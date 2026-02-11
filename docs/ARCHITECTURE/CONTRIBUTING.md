@@ -1,4 +1,3 @@
-﻿> NOTICE (2026-02-06): Task refactor plan is documented in $plan. Review before implementing task-related changes.
 
 # CONTRIBUTING.md -- XC Pro (Android/Kotlin)
 
@@ -49,6 +48,20 @@ A change is ready when:
 - [ ] **Lint/detekt** pass; **Compose previews** compile.
 - [ ] No deprecated APIs; no global mutable state.
 - [ ] Performance budget respected in hot paths (TE->audio <= 50 ms typical).
+
+---
+
+## 3A) Refactor Guard Checklist (Task and Map)
+
+Use this checklist for any task/map refactor before opening a PR.
+
+- [ ] UI emits intents to ViewModel only; no direct `TaskManagerCoordinator` mutations from Composables.
+- [ ] UI reads ViewModel state only; no direct manager internals in Composables (`currentTask`, `currentLeg`, `currentAATTask`).
+- [ ] ViewModels contain no business geospatial policy (distance/radius/zone-entry/auto-advance math).
+- [ ] Non-UI managers/domain classes do not use Compose runtime state (`mutableStateOf`, `derivedStateOf`, `remember`).
+- [ ] Core collaborators are injected; no manager/persistence construction inside coordinators.
+- [ ] If pipeline wiring changed, `PIPELINE.md` is updated in the same PR.
+- [ ] If any rule is knowingly violated, add an entry in `KNOWN_DEVIATIONS.md` with issue ID, owner, and expiry.
 
 ---
 

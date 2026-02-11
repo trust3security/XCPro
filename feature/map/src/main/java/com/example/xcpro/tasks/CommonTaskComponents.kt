@@ -37,11 +37,9 @@ import com.example.xcpro.tasks.domain.logic.TaskAdvanceState
 fun TaskStatsSection(
     task: Task,
     taskType: TaskType,
-    taskManager: TaskManagerCoordinator,
+    distanceKm: Double,
     onQRCodeClick: () -> Unit
 ) {
-    val distance = taskManager.calculateTaskDistanceForTask(task)
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -50,7 +48,7 @@ fun TaskStatsSection(
     ) {
         TaskStatItem(
             label = "Distance",
-            value = "${String.format("%.1f", distance)} km",
+            value = "${String.format("%.1f", distanceKm)} km",
             icon = Icons.Default.Straighten
         )
 

@@ -9,6 +9,7 @@ import com.example.xcpro.tasks.racing.navigation.RacingNavigationFix
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationState
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationStatus
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationStateStore
+import com.example.xcpro.tasks.racing.toSimpleRacingTask
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
@@ -61,7 +62,7 @@ class TaskNavigationController internal constructor(
             return
         }
 
-        val racingTask = taskManager.getRacingTaskManager().currentRacingTask
+        val racingTask = taskManager.currentTask.toSimpleRacingTask()
         val decision = engine.step(racingTask, stateStore.state.value, fix)
         applyDecision(decision)
     }
@@ -95,7 +96,7 @@ class TaskNavigationController internal constructor(
         if (taskManager.taskType != TaskType.RACING) {
             return
         }
-        val racingTask = taskManager.getRacingTaskManager().currentRacingTask
+        val racingTask = taskManager.currentTask.toSimpleRacingTask()
         val maxIndex = racingTask.waypoints.lastIndex
         val clampedIndex = if (maxIndex >= 0) newLegIndex.coerceIn(0, maxIndex) else 0
         val status = if (clampedIndex <= 0) {

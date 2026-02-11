@@ -27,6 +27,7 @@ import androidx.compose.ui.window.Dialog
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import com.google.zxing.common.BitMatrix
+import com.example.xcpro.tasks.core.TaskType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -34,7 +35,7 @@ import kotlinx.coroutines.withContext
 @Composable
 fun QRCodeDialog(
     task: Task,
-    taskManager: TaskManagerCoordinator,
+    taskType: TaskType,
     onDismiss: () -> Unit,
     onImportJson: (String) -> Unit = {}
 ) {
@@ -48,7 +49,7 @@ fun QRCodeDialog(
     LaunchedEffect(task) {
         scope.launch {
             try {
-                val qrData = generateTaskQRData(task, taskManager)
+                val qrData = generateTaskQRData(task, taskType)
                 val bitmap = generateQRCode(qrData)
                 qrBitmap = bitmap
                 isLoading = false
@@ -193,10 +194,10 @@ fun QRCodeDialog(
     }
 }
 
-private fun generateTaskQRData(task: Task, taskManager: TaskManagerCoordinator): String =
+private fun generateTaskQRData(task: Task, taskType: TaskType): String =
     TaskPersistSerializer.serialize(
         task = task,
-        taskType = taskManager.taskType,
+        taskType = taskType,
         targets = emptyList() // legacy QR path lacks repository targets context
     )
 

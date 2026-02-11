@@ -5,7 +5,7 @@ import com.example.dfcards.FlightTemplate
 import kotlinx.coroutines.flow.StateFlow
 import java.util.UUID
 
-internal class FlightDataTemplateManager(
+class FlightDataTemplateManager(
     private val cardPreferences: StateFlow<CardPreferences?>,
     private val availableTemplates: StateFlow<List<FlightTemplate>>
 ) {

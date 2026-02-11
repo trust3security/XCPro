@@ -2,7 +2,10 @@ package com.example.xcpro.tasks
 
 import com.example.xcpro.common.waypoint.SearchWaypoint
 import com.example.xcpro.tasks.core.Task
+import com.example.xcpro.tasks.core.TaskWaypoint
 import com.example.xcpro.tasks.core.TaskType
+import com.example.xcpro.tasks.core.WaypointRole
+import java.time.Duration
 import javax.inject.Inject
 
 class TaskSheetCoordinatorUseCase @Inject constructor(
@@ -61,6 +64,41 @@ class TaskSheetCoordinatorUseCase @Inject constructor(
         taskManager.setActiveLeg(index)
     }
 
+    fun calculateSimpleSegmentDistance(from: TaskWaypoint, to: TaskWaypoint): Double {
+        return taskManager.calculateSimpleSegmentDistance(from, to)
+    }
+
+    fun calculateOptimalStartLineDistanceKm(startWaypoint: TaskWaypoint, nextWaypoint: TaskWaypoint): Double {
+        val optimal = taskManager.calculateOptimalStartLineCrossingPoint(startWaypoint, nextWaypoint)
+        val projectedStart = TaskWaypoint(
+            id = "optimal-start",
+            title = "Optimal Start Crossing",
+            subtitle = "",
+            lat = optimal.first,
+            lon = optimal.second,
+            role = WaypointRole.START
+        )
+        return taskManager.calculateSimpleSegmentDistance(projectedStart, nextWaypoint)
+    }
+
+    fun calculateDistanceToNextWaypointKm(
+        fromWaypoint: TaskWaypoint,
+        nextWaypoint: TaskWaypoint,
+        useOptimalStartLine: Boolean
+    ): Double {
+        return if (useOptimalStartLine) {
+            calculateOptimalStartLineDistanceKm(
+                startWaypoint = fromWaypoint,
+                nextWaypoint = nextWaypoint
+            )
+        } else {
+            calculateSimpleSegmentDistance(
+                from = fromWaypoint,
+                to = nextWaypoint
+            )
+        }
+    }
+
     fun updateWaypointPointType(
         index: Int,
         startType: Any?,
@@ -111,5 +149,9 @@ class TaskSheetCoordinatorUseCase @Inject constructor(
 
     fun updateAATArea(index: Int, radiusMeters: Double) {
         taskManager.updateAATArea(index, radiusMeters)
+    }
+
+    fun updateAATParameters(minimumTime: Duration, maximumTime: Duration) {
+        taskManager.updateAATParameters(minimumTime, maximumTime)
     }
 }

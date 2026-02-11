@@ -1,9 +1,17 @@
 package com.example.xcpro.tasks
 
+import com.example.xcpro.common.waypoint.SearchWaypoint
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskType
-import org.junit.Assert.assertNull
+import com.example.xcpro.tasks.core.TaskWaypoint
+import com.example.xcpro.tasks.core.WaypointRole
+import com.example.xcpro.tasks.domain.engine.AATTaskEngine
+import com.example.xcpro.tasks.domain.engine.RacingTaskEngine
+import com.example.xcpro.tasks.domain.persistence.TaskEnginePersistenceService
+import com.example.xcpro.tasks.aat.AATTaskManager
+import com.example.xcpro.tasks.racing.RacingTaskManager
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
@@ -12,18 +20,28 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import kotlinx.coroutines.test.runTest
 
 class TaskManagerCoordinatorTest {
 
     private val aatDelegate: AATCoordinatorDelegate = mock()
     private val racingDelegate: RacingCoordinatorDelegate = mock()
+    private val persistenceService: TaskEnginePersistenceService = mock()
+    private val racingTaskEngine: RacingTaskEngine = mock()
+    private val aatTaskEngine: AATTaskEngine = mock()
     private val sampleTask = Task(id = "sample-task")
 
     private lateinit var coordinator: TaskManagerCoordinator
 
     @Before
     fun setUp() {
-        coordinator = TaskManagerCoordinator(context = null)
+        coordinator = TaskManagerCoordinator(
+            taskEnginePersistenceService = persistenceService,
+            racingTaskEngine = racingTaskEngine,
+            aatTaskEngine = aatTaskEngine,
+            racingTaskManager = RacingTaskManager(null),
+            aatTaskManager = AATTaskManager(null)
+        )
         coordinator.replaceAATDelegateForTesting(aatDelegate)
         coordinator.replaceRacingDelegateForTesting(racingDelegate)
     }
@@ -56,43 +74,6 @@ class TaskManagerCoordinatorTest {
     }
 
     @Test
-    fun `checkAATTargetPointHit delegates when task type is AAT`() {
-        coordinator.setTaskTypeForTesting(TaskType.AAT)
-
-        coordinator.checkAATTargetPointHit(12f, 34f)
-
-        verify(aatDelegate).checkTargetPointHit(eq(12f), eq(34f))
-    }
-
-    @Test
-    fun `checkAATTargetPointHit returns null when task type is racing`() {
-        coordinator.setTaskTypeForTesting(TaskType.RACING)
-
-        val result = coordinator.checkAATTargetPointHit(10f, 20f)
-
-        assertNull(result)
-        verify(aatDelegate, never()).checkTargetPointHit(any<Float>(), any<Float>())
-    }
-
-    @Test
-    fun `plotOnMap delegates to racing implementation when task type is racing`() {
-        coordinator.setTaskTypeForTesting(TaskType.RACING)
-
-        coordinator.plotOnMap(null)
-
-        verify(racingDelegate).plotOnMap(null)
-    }
-
-    @Test
-    fun `plotOnMap delegates to AAT implementation when task type is AAT`() {
-        coordinator.setTaskTypeForTesting(TaskType.AAT)
-
-        coordinator.plotOnMap(null)
-
-        verify(aatDelegate).plotOnMap(null)
-    }
-
-    @Test
     fun `calculateTaskDistanceForTask uses current delegate distance`() {
         coordinator.setTaskTypeForTesting(TaskType.RACING)
         whenever(racingDelegate.calculateDistance()).thenReturn(123.4)
@@ -103,6 +84,125 @@ class TaskManagerCoordinatorTest {
         verify(racingDelegate).calculateDistance()
         verify(aatDelegate, never()).calculateDistance()
     }
+
+    @Test
+    fun `racing add remove reorder waypoints keeps expected order`() {
+        coordinator.setTaskTypeForTesting(TaskType.RACING)
+
+        coordinator.addWaypoint(searchWaypoint("start", 0.0, 0.0))
+        coordinator.addWaypoint(searchWaypoint("tp1", 0.1, 0.1))
+        coordinator.addWaypoint(searchWaypoint("finish", 0.2, 0.2))
+        assertEquals(listOf("start", "tp1", "finish"), coordinator.currentTask.waypoints.map { it.id })
+
+        coordinator.removeWaypoint(1)
+        assertEquals(listOf("start", "finish"), coordinator.currentTask.waypoints.map { it.id })
+
+        coordinator.reorderWaypoints(1, 0)
+        assertEquals(listOf("finish", "start"), coordinator.currentTask.waypoints.map { it.id })
+    }
+
+    @Test
+    fun `aat add remove reorder waypoints keeps expected order`() {
+        coordinator.setTaskTypeForTesting(TaskType.AAT)
+
+        coordinator.addWaypoint(searchWaypoint("start", 0.0, 0.0))
+        coordinator.addWaypoint(searchWaypoint("tp1", 0.1, 0.1))
+        coordinator.addWaypoint(searchWaypoint("finish", 0.2, 0.2))
+        assertEquals(listOf("start", "tp1", "finish"), coordinator.currentTask.waypoints.map { it.id })
+
+        coordinator.reorderWaypoints(2, 1)
+        assertEquals(listOf("start", "finish", "tp1"), coordinator.currentTask.waypoints.map { it.id })
+
+        coordinator.removeWaypoint(1)
+        assertEquals(listOf("start", "tp1"), coordinator.currentTask.waypoints.map { it.id })
+    }
+
+    @Test
+    fun `switch task type preserves waypoint ids across racing and aat`() {
+        val localCoordinator = createCoordinatorWithoutPersistence()
+        localCoordinator.setTaskTypeForTesting(TaskType.RACING)
+        localCoordinator.addWaypoint(searchWaypoint("start", 0.0, 0.0))
+        localCoordinator.addWaypoint(searchWaypoint("finish", 0.3, 0.3))
+        val expectedIds = localCoordinator.currentTask.waypoints.map { it.id }
+
+        localCoordinator.setTaskType(TaskType.AAT)
+        assertEquals(TaskType.AAT, localCoordinator.taskType)
+        assertEquals(expectedIds, localCoordinator.currentTask.waypoints.map { it.id })
+
+        localCoordinator.setTaskType(TaskType.RACING)
+        assertEquals(TaskType.RACING, localCoordinator.taskType)
+        assertEquals(expectedIds, localCoordinator.currentTask.waypoints.map { it.id })
+    }
+
+    @Test
+    fun `racing segment distance calculation is positive and symmetric`() {
+        val localCoordinator = createCoordinatorWithoutPersistence()
+        localCoordinator.setTaskTypeForTesting(TaskType.RACING)
+        val from = coreWaypoint(id = "a", lat = 0.0, lon = 0.0, role = WaypointRole.START)
+        val to = coreWaypoint(id = "b", lat = 0.0, lon = 1.0, role = WaypointRole.TURNPOINT)
+
+        val forward = localCoordinator.calculateSimpleSegmentDistance(from, to)
+        val reverse = localCoordinator.calculateSimpleSegmentDistance(to, from)
+
+        assertTrue(forward > 100.0)
+        assertTrue(forward < 120.0)
+        assertEquals(forward, reverse, 1e-9)
+    }
+
+    @Test
+    fun `loadSavedTasks restores type from persistence service`() = runTest {
+        whenever(persistenceService.restore(any())).thenReturn(TaskType.AAT)
+
+        coordinator.loadSavedTasks()
+
+        assertEquals(TaskType.AAT, coordinator.taskType)
+        verify(persistenceService).restore(eq(TaskType.RACING))
+    }
+
+    @Test
+    fun `saveTask routes named save through persistence service`() = runTest {
+        whenever(persistenceService.saveNamedTask(any(), any())).thenReturn(true)
+        coordinator.setTaskTypeForTesting(TaskType.RACING)
+        coordinator.addWaypoint(searchWaypoint("start", 0.0, 0.0))
+        coordinator.addWaypoint(searchWaypoint("finish", 0.1, 0.1))
+
+        val result = coordinator.saveTask("demo-task")
+
+        assertTrue(result)
+        verify(persistenceService).saveNamedTask(eq(TaskType.RACING), eq("demo-task"))
+    }
+
+    private fun createCoordinatorWithoutPersistence(): TaskManagerCoordinator =
+        TaskManagerCoordinator(
+            taskEnginePersistenceService = null,
+            racingTaskEngine = null,
+            aatTaskEngine = null,
+            racingTaskManager = RacingTaskManager(null),
+            aatTaskManager = AATTaskManager(null)
+        )
+
+    private fun searchWaypoint(id: String, lat: Double, lon: Double): SearchWaypoint =
+        SearchWaypoint(
+            id = id,
+            title = id,
+            subtitle = "",
+            lat = lat,
+            lon = lon
+        )
+
+    private fun coreWaypoint(
+        id: String,
+        lat: Double,
+        lon: Double,
+        role: WaypointRole
+    ): TaskWaypoint = TaskWaypoint(
+        id = id,
+        title = id,
+        subtitle = "",
+        lat = lat,
+        lon = lon,
+        role = role
+    )
 }
 
 
