@@ -173,6 +173,21 @@ ADS-b icon size settings path:
 - `feature/map/src/main/java/com/example/xcpro/map/AdsbTrafficOverlay.kt`
   - Updates SymbolLayer `iconSize` dynamically from configured pixel size.
 
+ADS-b lifecycle/visibility semantics:
+- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
+  - Streaming enable is driven by `allowSensorStart && mapVisible && adsbOverlayEnabled`.
+  - When streaming turns on, center is seeded from current camera/GPS before enabling.
+  - Center updates use immediate-first + sampled cadence (1.5s window) to avoid debounce starvation under continuous updates.
+  - Ownship origin updates are pushed from live GPS into ADS-b repository for distance/bearing semantics.
+  - Explicit ADS-b FAB off triggers immediate repository target clear.
+- `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt`
+  - Disabling streaming pauses polling without clearing last-known targets.
+  - Explicit clear path removes cached targets and resets displayed list.
+  - Query center is used for fetch/radius filtering; ownship origin is used for displayed distance/bearing when available.
+  - Center/origin updates trigger immediate store reselection for cached targets.
+- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
+  - ADS-b overlay renders `emptyList()` when overlay preference is disabled.
+
 ## 5A) Cards (dfcards-library) sub-pipeline
 
 Cards do not read sensors directly. They consume `RealTimeFlightData` produced by the app module.

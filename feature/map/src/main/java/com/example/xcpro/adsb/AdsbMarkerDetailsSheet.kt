@@ -18,7 +18,6 @@ import com.example.xcpro.common.units.DistanceM
 import com.example.xcpro.common.units.SpeedMs
 import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.UnitsPreferences
-import com.example.xcpro.common.units.VerticalSpeedMs
 import com.example.xcpro.adsb.metadata.domain.MetadataAvailability
 import com.example.xcpro.adsb.metadata.domain.MetadataSyncState
 import com.example.xcpro.adsb.ui.openSkyCategoryLabel
@@ -82,7 +81,7 @@ fun AdsbMarkerDetailsSheet(
             DetailRow("Track", target.trackDeg?.let { "${it.roundToOneDecimal()}\u00B0" } ?: "--")
             DetailRow(
                 "Vertical Rate",
-                target.climbMps?.let { UnitsFormatter.verticalSpeed(VerticalSpeedMs(it), unitsPreferences).text } ?: "--"
+                AdsbDetailsFormatter.formatVerticalRate(target.climbMps, unitsPreferences)
             )
             DetailRow("Age", "${target.ageSec}s")
             DetailRow("Distance", UnitsFormatter.distance(DistanceM(target.distanceMeters), unitsPreferences).text)

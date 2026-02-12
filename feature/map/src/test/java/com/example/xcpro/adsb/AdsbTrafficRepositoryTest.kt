@@ -227,6 +227,171 @@ class AdsbTrafficRepositoryTest {
         repository.stop()
     }
 
+    @Test
+    fun enableBeforeCenter_fetchesSoonAfterCenterIsProvided() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val provider = SequenceProvider(
+            listOf(
+                ProviderResult.Success(
+                    response = OpenSkyResponse(timeSec = 1_710_000_000L, states = emptyList()),
+                    httpCode = 200,
+                    remainingCredits = null
+                )
+            )
+        )
+        val repository = AdsbTrafficRepositoryImpl(
+            providerClient = provider,
+            tokenRepository = FakeTokenRepository(),
+            clock = FakeClock(monoMs = 0L, wallMs = 0L),
+            dispatcher = dispatcher
+        )
+
+        repository.setEnabled(true)
+        runCurrent()
+        assertEquals(0, provider.callCount)
+
+        repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
+        advanceTimeBy(150L)
+        runCurrent()
+
+        assertTrue(provider.callCount >= 1)
+        repository.stop()
+    }
+
+    @Test
+    fun disableStreaming_preservesTargets_untilExplicitClear() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val provider = SequenceProvider(
+            listOf(
+                ProviderResult.Success(
+                    response = OpenSkyResponse(
+                        timeSec = 1_710_000_000L,
+                        states = listOf(
+                            state(
+                                icao24 = "abc123",
+                                latitude = -33.8687,
+                                longitude = 151.2092,
+                                altitudeM = 500.0,
+                                speedMps = 40.0
+                            )
+                        )
+                    ),
+                    httpCode = 200,
+                    remainingCredits = null
+                )
+            )
+        )
+        val repository = AdsbTrafficRepositoryImpl(
+            providerClient = provider,
+            tokenRepository = FakeTokenRepository(),
+            clock = FakeClock(monoMs = 0L, wallMs = 0L),
+            dispatcher = dispatcher
+        )
+
+        repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
+        repository.setEnabled(true)
+        runCurrent()
+        assertEquals(1, repository.targets.value.size)
+
+        repository.setEnabled(false)
+        runCurrent()
+        assertEquals(1, repository.targets.value.size)
+
+        repository.clearTargets()
+        runCurrent()
+        assertTrue(repository.targets.value.isEmpty())
+    }
+
+    @Test
+    fun centerUpdate_reselectsCachedTargetsWithoutWaitingForNextPoll() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val provider = SequenceProvider(
+            listOf(
+                ProviderResult.Success(
+                    response = OpenSkyResponse(
+                        timeSec = 1_710_000_000L,
+                        states = listOf(
+                            state(
+                                icao24 = "abc123",
+                                latitude = -33.8687,
+                                longitude = 151.2092,
+                                altitudeM = 500.0,
+                                speedMps = 40.0
+                            )
+                        )
+                    ),
+                    httpCode = 200,
+                    remainingCredits = null
+                )
+            )
+        )
+        val repository = AdsbTrafficRepositoryImpl(
+            providerClient = provider,
+            tokenRepository = FakeTokenRepository(),
+            clock = FakeClock(monoMs = 0L, wallMs = 0L),
+            dispatcher = dispatcher
+        )
+
+        repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
+        repository.setEnabled(true)
+        runCurrent()
+        assertEquals(1, repository.targets.value.size)
+        assertEquals(1, provider.callCount)
+
+        repository.updateCenter(latitude = -34.1000, longitude = 150.8000)
+        runCurrent()
+
+        assertTrue(repository.targets.value.isEmpty())
+        assertEquals(1, provider.callCount)
+        repository.stop()
+    }
+
+    @Test
+    fun ownshipOriginUpdate_recomputesDistanceWithoutNewFetch() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val provider = SequenceProvider(
+            listOf(
+                ProviderResult.Success(
+                    response = OpenSkyResponse(
+                        timeSec = 1_710_000_000L,
+                        states = listOf(
+                            state(
+                                icao24 = "abc123",
+                                latitude = -33.8687,
+                                longitude = 151.2092,
+                                altitudeM = 500.0,
+                                speedMps = 40.0
+                            )
+                        )
+                    ),
+                    httpCode = 200,
+                    remainingCredits = null
+                )
+            )
+        )
+        val repository = AdsbTrafficRepositoryImpl(
+            providerClient = provider,
+            tokenRepository = FakeTokenRepository(),
+            clock = FakeClock(monoMs = 0L, wallMs = 0L),
+            dispatcher = dispatcher
+        )
+
+        repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
+        repository.setEnabled(true)
+        runCurrent()
+        val initialDistance = repository.targets.value.firstOrNull()?.distanceMeters ?: 0.0
+        assertTrue(initialDistance < 100.0)
+        assertEquals(1, provider.callCount)
+
+        repository.updateOwnshipOrigin(latitude = -33.8600, longitude = 151.2000)
+        runCurrent()
+
+        val updatedDistance = repository.targets.value.firstOrNull()?.distanceMeters ?: 0.0
+        assertTrue(updatedDistance > 500.0)
+        assertEquals(1, provider.callCount)
+        repository.stop()
+    }
+
     private class FakeTokenRepository : OpenSkyTokenRepository {
         override suspend fun getValidTokenOrNull(): String? = null
         override fun invalidate() = Unit

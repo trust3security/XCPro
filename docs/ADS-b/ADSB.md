@@ -81,6 +81,16 @@ In details sheet show sections:
 - callsign
 - altitude / speed / track / vertical rate
 
+Units contract for Live state:
+- `Altitude`, `Speed`, `Vertical Rate`, and `Distance` must follow `General -> Units`.
+- If vertical speed unit is `ft/min`, display the unit suffix as `ft/min` (not plain `ft`).
+- FPM display precision should be integer unless a future spec explicitly changes it.
+- `Distance` should be referenced to pilot ownship position (current user GPS), not merely ADS-B query center.
+- If query center and ownship differ, details must still preserve ownship-referenced distance semantics.
+- Implementation (2026-02-12):
+  - Query center drives ADS-B fetch/radius filtering.
+  - Ownship origin drives details `Distance` and `bearingDegFromUser` when GPS is available.
+
 **Emitter category**
 - category label + raw integer (e.g. `Rotorcraft (8)` or `No category info (1)`)
 
@@ -95,8 +105,8 @@ If metadata DB is not ready:
 - Display cap: maximum 30 displayed aircraft.
 
 Implementation note:
-- Current details sheet labels still show `Type` and `Category`.
-- A metadata UI pass should rename this to `Emitter category` to match this contract.
+- Details sheet labels now use `Emitter category` and `Category raw`.
+- Keep this naming; do not relabel as generic `Type`.
 
 ---
 

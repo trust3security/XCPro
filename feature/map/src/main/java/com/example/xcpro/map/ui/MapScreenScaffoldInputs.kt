@@ -189,7 +189,9 @@ internal fun rememberMapScreenScaffoldInputs(
             if (bindings.ognOverlayEnabled) bindings.ognTargets else emptyList()
         )
         managers.overlayManager.setAdsbIconSizePx(bindings.adsbIconSizePx)
-        managers.overlayManager.updateAdsbTrafficTargets(bindings.adsbTargets)
+        managers.overlayManager.updateAdsbTrafficTargets(
+            if (bindings.adsbOverlayEnabled) bindings.adsbTargets else emptyList()
+        )
     }
 
     return MapScreenScaffoldInputs(
