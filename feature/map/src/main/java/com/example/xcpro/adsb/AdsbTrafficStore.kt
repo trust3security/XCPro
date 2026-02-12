@@ -37,25 +37,33 @@ internal class AdsbTrafficStore {
 
     fun select(
         nowMonoMs: Long,
-        centerLat: Double,
-        centerLon: Double,
+        queryCenterLat: Double,
+        queryCenterLon: Double,
+        referenceLat: Double,
+        referenceLon: Double,
         radiusMeters: Double,
         maxDisplayed: Int,
         staleAfterSec: Int
     ): AdsbStoreSelection {
         val withinRadius = buildList {
             for (target in targetsById.values) {
-                val distanceMeters = AdsbGeoMath.haversineMeters(
-                    lat1 = centerLat,
-                    lon1 = centerLon,
+                val distanceFromQueryCenterMeters = AdsbGeoMath.haversineMeters(
+                    lat1 = queryCenterLat,
+                    lon1 = queryCenterLon,
                     lat2 = target.lat,
                     lon2 = target.lon
                 )
-                if (distanceMeters > radiusMeters) continue
+                if (distanceFromQueryCenterMeters > radiusMeters) continue
                 val ageSec = ((nowMonoMs - target.receivedMonoMs) / 1_000L).toInt().coerceAtLeast(0)
+                val distanceMeters = AdsbGeoMath.haversineMeters(
+                    lat1 = referenceLat,
+                    lon1 = referenceLon,
+                    lat2 = target.lat,
+                    lon2 = target.lon
+                )
                 val bearingDegFromUser = AdsbGeoMath.bearingDegrees(
-                    fromLat = centerLat,
-                    fromLon = centerLon,
+                    fromLat = referenceLat,
+                    fromLon = referenceLon,
                     toLat = target.lat,
                     toLon = target.lon
                 )

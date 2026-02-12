@@ -17,8 +17,10 @@ class AdsbTrafficStoreTest {
         val removed = store.purgeExpired(nowMonoMs = now, expiryAfterSec = 120)
         val selection = store.select(
             nowMonoMs = now,
-            centerLat = -33.8688,
-            centerLon = 151.2093,
+            queryCenterLat = -33.8688,
+            queryCenterLon = 151.2093,
+            referenceLat = -33.8688,
+            referenceLon = 151.2093,
             radiusMeters = 20_000.0,
             maxDisplayed = 30,
             staleAfterSec = 60
@@ -49,8 +51,10 @@ class AdsbTrafficStoreTest {
 
         val selection = store.select(
             nowMonoMs = now,
-            centerLat = -33.8688,
-            centerLon = 151.2093,
+            queryCenterLat = -33.8688,
+            queryCenterLon = 151.2093,
+            referenceLat = -33.8688,
+            referenceLon = 151.2093,
             radiusMeters = 20_000.0,
             maxDisplayed = 30,
             staleAfterSec = 60
@@ -60,8 +64,10 @@ class AdsbTrafficStoreTest {
         assertEquals(30, selection.displayed.size)
         val uncappedSelection = store.select(
             nowMonoMs = now,
-            centerLat = -33.8688,
-            centerLon = 151.2093,
+            queryCenterLat = -33.8688,
+            queryCenterLon = 151.2093,
+            referenceLat = -33.8688,
+            referenceLon = 151.2093,
             radiusMeters = 20_000.0,
             maxDisplayed = 31,
             staleAfterSec = 60
@@ -89,8 +95,10 @@ class AdsbTrafficStoreTest {
 
         val selection = store.select(
             nowMonoMs = now,
-            centerLat = -33.8688,
-            centerLon = 151.2093,
+            queryCenterLat = -33.8688,
+            queryCenterLon = 151.2093,
+            referenceLat = -33.8688,
+            referenceLon = 151.2093,
             radiusMeters = 20_000.0,
             maxDisplayed = 30,
             staleAfterSec = 60
@@ -100,6 +108,33 @@ class AdsbTrafficStoreTest {
         val outboundUi = selection.displayed.first { it.id == outbound.id }
         assertTrue(inboundUi.isEmergencyCollisionRisk)
         assertTrue(!outboundUi.isEmergencyCollisionRisk)
+    }
+
+    @Test
+    fun select_usesReferencePositionForDistanceAndBearing() {
+        val store = AdsbTrafficStore()
+        val now = 500_000L
+        val target = target(
+            index = 3,
+            lat = -33.8688,
+            lon = 151.2140,
+            receivedMonoMs = now
+        )
+        store.upsertAll(listOf(target))
+
+        val selection = store.select(
+            nowMonoMs = now,
+            queryCenterLat = -33.8688,
+            queryCenterLon = 151.2093,
+            referenceLat = -33.8600,
+            referenceLon = 151.2000,
+            radiusMeters = 20_000.0,
+            maxDisplayed = 30,
+            staleAfterSec = 60
+        )
+
+        val displayed = selection.displayed.first()
+        assertTrue(displayed.distanceMeters > 1_000.0)
     }
 
     private fun target(

@@ -255,8 +255,16 @@ class AdsbTrafficUseCase @Inject constructor(
         repository.setEnabled(enabled)
     }
 
+    fun clearTargets() {
+        repository.clearTargets()
+    }
+
     fun updateCenter(latitude: Double, longitude: Double) {
         repository.updateCenter(latitude, longitude)
+    }
+
+    fun updateOwnshipOrigin(latitude: Double, longitude: Double) {
+        repository.updateOwnshipOrigin(latitude, longitude)
     }
 
     suspend fun setOverlayEnabled(enabled: Boolean) {

@@ -5,9 +5,9 @@
 - Title: ADS-b General Settings Page + Map Icon Size Slider
 - Owner: XCPro Team
 - Date: 2026-02-10
-- Last Updated: 2026-02-11
+- Last Updated: 2026-02-12
 - Issue/PR: TBD
-- Status: Implemented (hard-exit audit rerun in progress after final runtime patch)
+- Status: Implemented (including lifecycle/visibility target-retention patch)
 
 ## 1) Fixed Compliance Matrix (Locked + Execution Status)
 
@@ -25,6 +25,7 @@
 | CM-10 | Required repo checks pass | Gradle tasks | PARTIAL (latest rerun) | `enforceRules` passed on 2026-02-11; `testDebugUnitTest` was interrupted; `assembleDebug` rerun pending |
 | CM-11 | Pipeline docs updated for new ADS-b settings-to-overlay wiring | `docs/ARCHITECTURE/PIPELINE.md` | PASS | ADS-b icon-size wiring documented |
 | CM-12 | No untracked architecture deviation is introduced | `docs/ARCHITECTURE/KNOWN_DEVIATIONS.md` | PASS | No deviation entry required for this work |
+| CM-13 | Leaving map for ADS-b settings does not clear last-known aircraft; explicit FAB off clears immediately | `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt`, `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`, `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`, `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt` | PASS | Streaming pause retains cache; explicit off path clears targets; overlay rendering gated by overlay-enabled |
 
 ## 2) Implemented Scope
 
@@ -83,6 +84,24 @@ Files:
 - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficPreferencesRepositoryTest.kt` (new)
 - `feature/map/src/test/java/com/example/xcpro/map/MapScreenViewModelTest.kt`
 - `docs/ARCHITECTURE/PIPELINE.md`
+
+### Phase 5: ADS-b Lifecycle Retention + Explicit Clear Semantics
+
+Status: COMPLETED
+
+Files:
+- `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt`
+- `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt`
+- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
+- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
+- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt`
+- `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficRepositoryTest.kt`
+- `feature/map/src/test/java/com/example/xcpro/map/MapScreenViewModelTest.kt`
+
+Behavior contract added:
+- Map hidden / settings page open: pause ADS-b polling but keep last-known targets.
+- ADS-b FAB off: clear targets immediately (user intent to hide/stop).
+- Map return with ADS-b enabled: reuse retained targets until first fresh poll updates positions.
 
 ## 4) Strict Closed-Loop Audit Log (Hard Exit Rule)
 

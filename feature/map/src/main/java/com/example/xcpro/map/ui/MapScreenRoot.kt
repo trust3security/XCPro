@@ -203,6 +203,7 @@ internal fun MapScreenRoot(
     val ognOverlayEnabled = bindings.ognOverlayEnabled
     val ognIconSizePx = bindings.ognIconSizePx
     val adsbTargets = bindings.adsbTargets
+    val adsbOverlayEnabled = bindings.adsbOverlayEnabled
     val adsbIconSizePx = bindings.adsbIconSizePx
 
     // G AAT Edit Mode State - Track when AAT pin editing is active
@@ -216,8 +217,10 @@ internal fun MapScreenRoot(
     LaunchedEffect(ognIconSizePx) {
         overlayManager.setOgnIconSizePx(ognIconSizePx)
     }
-    LaunchedEffect(adsbTargets) {
-        overlayManager.updateAdsbTrafficTargets(adsbTargets)
+    LaunchedEffect(adsbTargets, adsbOverlayEnabled) {
+        overlayManager.updateAdsbTrafficTargets(
+            if (adsbOverlayEnabled) adsbTargets else emptyList()
+        )
     }
     LaunchedEffect(adsbIconSizePx) {
         overlayManager.setAdsbIconSizePx(adsbIconSizePx)

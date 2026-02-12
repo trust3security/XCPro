@@ -43,11 +43,15 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.sample
+import kotlinx.coroutines.flow.shareIn
+import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.SharingStarted
@@ -441,6 +445,9 @@ class MapScreenViewModel @Inject constructor(
             sensorAllowed && mapVisible && overlayEnabled
         }
             .onEach { shouldStream ->
+                if (shouldStream) {
+                    seedAdsbCenterFromCurrentView()
+                }
                 adsbTrafficUseCase.setStreamingEnabled(shouldStream)
             }
             .launchIn(viewModelScope)
@@ -458,11 +465,21 @@ class MapScreenViewModel @Inject constructor(
             }
 
         merge(centerFromCamera, centerFromGps)
-            .debounce(1_500L)
+            .sampleWithImmediateFirst(windowMs = 1_500L, scope = viewModelScope)
             .onEach { (latitude, longitude) ->
                 adsbTrafficUseCase.updateCenter(
                     latitude = latitude,
                     longitude = longitude
+                )
+            }
+            .launchIn(viewModelScope)
+
+        mapLocation
+            .filterNotNull()
+            .onEach { location ->
+                adsbTrafficUseCase.updateOwnshipOrigin(
+                    latitude = location.latitude,
+                    longitude = location.longitude
                 )
             }
             .launchIn(viewModelScope)
@@ -496,6 +513,7 @@ class MapScreenViewModel @Inject constructor(
             }
             adsbTrafficUseCase.setOverlayEnabled(next)
             if (!next) {
+                adsbTrafficUseCase.clearTargets()
                 _selectedAdsbId.value = null
             }
         }
@@ -674,4 +692,20 @@ private fun com.example.xcpro.sensors.GPSData.toUiModel(): MapLocationUiModel =
         monotonicTimestampMs = monotonicTimestampMillis
     )
 
+@OptIn(FlowPreview::class)
+private fun <T> kotlinx.coroutines.flow.Flow<T>.sampleWithImmediateFirst(
+    windowMs: Long,
+    scope: kotlinx.coroutines.CoroutineScope
+): kotlinx.coroutines.flow.Flow<T> {
+    val shared = distinctUntilChanged()
+        .shareIn(
+            scope = scope,
+            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 0L),
+            replay = 1
+        )
+    return merge(
+        shared.take(1),
+        shared.sample(windowMs)
+    )
+}
 

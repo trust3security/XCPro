@@ -24,7 +24,9 @@ interface AdsbTrafficRepository {
     val isEnabled: StateFlow<Boolean>
 
     fun setEnabled(enabled: Boolean)
+    fun clearTargets()
     fun updateCenter(latitude: Double, longitude: Double)
+    fun updateOwnshipOrigin(latitude: Double, longitude: Double)
     fun start()
     fun stop()
 }
@@ -67,6 +69,9 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
 
     @Volatile
     private var center: Center? = null
+
+    @Volatile
+    private var ownshipOrigin: Center? = null
 
     @Volatile
     private var loopJob: Job? = null
@@ -113,17 +118,34 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
             ensureLoopRunning()
         } else {
             scope.launch {
-                stopLoopAndClearTargets()
+                stopLoop(clearTargets = false)
             }
+        }
+    }
+
+    override fun clearTargets() {
+        scope.launch {
+            clearCachedTargets()
+            publishSnapshot()
         }
     }
 
     override fun updateCenter(latitude: Double, longitude: Double) {
         if (!latitude.isFinite() || !longitude.isFinite()) return
         if (abs(latitude) > 90.0 || abs(longitude) > 180.0) return
-        center = Center(latitude = latitude, longitude = longitude)
-        publishSnapshot()
+        val updatedCenter = Center(latitude = latitude, longitude = longitude)
+        center = updatedCenter
+        publishFromStore(updatedCenter)
         if (_isEnabled.value) ensureLoopRunning()
+    }
+
+    override fun updateOwnshipOrigin(latitude: Double, longitude: Double) {
+        if (!latitude.isFinite() || !longitude.isFinite()) return
+        if (abs(latitude) > 90.0 || abs(longitude) > 180.0) return
+        ownshipOrigin = Center(latitude = latitude, longitude = longitude)
+        center?.let { activeCenter ->
+            publishFromStore(activeCenter)
+        }
     }
 
     private fun ensureLoopRunning() {
@@ -134,18 +156,24 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
         }
     }
 
-    private suspend fun stopLoopAndClearTargets() {
+    private suspend fun stopLoop(clearTargets: Boolean) {
         loopJob?.cancelAndJoin()
         loopJob = null
-        store.clear()
-        _targets.value = emptyList()
         connectionState = AdsbConnectionState.Disabled
         lastError = null
+        if (clearTargets) {
+            clearCachedTargets()
+        }
+        publishSnapshot()
+    }
+
+    private fun clearCachedTargets() {
+        store.clear()
+        _targets.value = emptyList()
         fetchedCount = 0
         withinRadiusCount = 0
         consecutiveEmptyPolls = 0
         lastPolledCenter = null
-        publishSnapshot()
     }
 
     private suspend fun runLoop() {
@@ -237,10 +265,13 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
         }
         store.upsertAll(mappedTargets)
         store.purgeExpired(nowMonoMs = nowMonoMs, expiryAfterSec = EXPIRY_AFTER_SEC)
+        val ownshipReference = ownshipReference(centerAtPoll)
         val selection = store.select(
             nowMonoMs = nowMonoMs,
-            centerLat = centerAtPoll.latitude,
-            centerLon = centerAtPoll.longitude,
+            queryCenterLat = centerAtPoll.latitude,
+            queryCenterLon = centerAtPoll.longitude,
+            referenceLat = ownshipReference.latitude,
+            referenceLon = ownshipReference.longitude,
             radiusMeters = RECEIVE_RADIUS_KM * 1_000.0,
             maxDisplayed = MAX_DISPLAYED_TARGETS,
             staleAfterSec = STALE_AFTER_SEC
@@ -259,10 +290,13 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
     }
 
     private fun publishFromStore(centerAtPoll: Center) {
+        val ownshipReference = ownshipReference(centerAtPoll)
         val selection = store.select(
             nowMonoMs = clock.nowMonoMs(),
-            centerLat = centerAtPoll.latitude,
-            centerLon = centerAtPoll.longitude,
+            queryCenterLat = centerAtPoll.latitude,
+            queryCenterLon = centerAtPoll.longitude,
+            referenceLat = ownshipReference.latitude,
+            referenceLon = ownshipReference.longitude,
             radiusMeters = RECEIVE_RADIUS_KM * 1_000.0,
             maxDisplayed = MAX_DISPLAYED_TARGETS,
             staleAfterSec = STALE_AFTER_SEC
@@ -271,6 +305,9 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
         _targets.value = selection.displayed
         publishSnapshot()
     }
+
+    private fun ownshipReference(fallbackCenter: Center): Center =
+        ownshipOrigin ?: fallbackCenter
 
     private fun computeNextPollDelayMs(centerAtPoll: Center, nowMonoMs: Long): Long {
         val adaptiveMs = computeAdaptivePollDelayMs(centerAtPoll)
@@ -429,7 +466,7 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
         private const val REQUESTS_PER_HOUR_GUARDED = 120
         private const val REQUESTS_PER_HOUR_LOW = 180
         private const val REQUESTS_PER_HOUR_CRITICAL = 300
-        private const val WAIT_FOR_CENTER_MS = 1_000L
+        private const val WAIT_FOR_CENTER_MS = 100L
         private const val RECONNECT_BACKOFF_START_MS = 2_000L
         private const val RECONNECT_BACKOFF_MAX_MS = 60_000L
     }

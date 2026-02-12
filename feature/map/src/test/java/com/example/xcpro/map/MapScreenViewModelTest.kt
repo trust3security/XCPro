@@ -368,7 +368,7 @@ class MapScreenViewModelTest {
     }
 
     @Test
-    fun adsbCenter_updatesFromCameraSnapshotWithoutGpsLocation() {
+    fun adsbCenter_updatesFromCameraSnapshotImmediatelyWithoutGpsLocation() {
         val adsbRepository = FakeAdsbTrafficRepository()
         val viewModel = createViewModel(adsbRepositoryOverride = adsbRepository)
 
@@ -377,7 +377,6 @@ class MapScreenViewModelTest {
             zoom = 9.0,
             bearing = 15.0
         )
-        mainDispatcherRule.dispatcher.scheduler.advanceTimeBy(1_600L)
         drainMain()
 
         assertEquals(-34.5000, adsbRepository.lastCenterLat ?: Double.NaN, 1e-6)
@@ -535,7 +534,12 @@ class MapScreenViewModelTest {
                 isEnabled.value = enabled
             }
 
+            override fun clearTargets() {
+                targets.value = emptyList()
+            }
+
             override fun updateCenter(latitude: Double, longitude: Double) = Unit
+            override fun updateOwnshipOrigin(latitude: Double, longitude: Double) = Unit
 
             override fun start() {
                 setEnabled(true)
@@ -645,14 +649,27 @@ class MapScreenViewModelTest {
         override val isEnabled = MutableStateFlow(false)
         var lastCenterLat: Double? = null
         var lastCenterLon: Double? = null
+        var lastOwnshipLat: Double? = null
+        var lastOwnshipLon: Double? = null
+        var clearTargetsCalls: Int = 0
 
         override fun setEnabled(enabled: Boolean) {
             isEnabled.value = enabled
         }
 
+        override fun clearTargets() {
+            clearTargetsCalls += 1
+            targets.value = emptyList()
+        }
+
         override fun updateCenter(latitude: Double, longitude: Double) {
             lastCenterLat = latitude
             lastCenterLon = longitude
+        }
+
+        override fun updateOwnshipOrigin(latitude: Double, longitude: Double) {
+            lastOwnshipLat = latitude
+            lastOwnshipLon = longitude
         }
 
         override fun start() {
