@@ -18,6 +18,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.xcpro.adsb.Icao24
 import com.example.xcpro.common.flight.FlightMode
+import com.example.xcpro.gestures.TaskGestureCallbacks
+import com.example.xcpro.gestures.TaskGestureHandler
 import com.example.xcpro.map.BuildConfig
 import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.map.LocationManager
@@ -37,12 +39,13 @@ import com.example.xcpro.replay.SessionState
 import com.example.xcpro.map.WindArrowUiState
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
 import com.example.xcpro.tasks.TaskManagerCoordinator
+import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.variometer.layout.VariometerUiState
 import com.example.xcpro.map.model.MapLocationUiModel
 import kotlinx.coroutines.flow.StateFlow
 
 @Composable
-@Suppress("LongParameterList")
+@Suppress("LongParameterList", "UNUSED_PARAMETER")
 internal fun MapOverlayStack(
     mapState: MapScreenState,
     mapInitializer: MapInitializer,
@@ -51,6 +54,8 @@ internal fun MapOverlayStack(
     flightDataManager: FlightDataManager,
     flightViewModel: FlightDataViewModel,
     taskManager: TaskManagerCoordinator,
+    taskType: TaskType,
+    createTaskGestureHandler: (TaskGestureCallbacks) -> TaskGestureHandler,
     windArrowState: WindArrowUiState,
     showWindSpeedOnVario: Boolean,
     cameraManager: MapCameraManager,
@@ -65,7 +70,8 @@ internal fun MapOverlayStack(
     isAATEditMode: Boolean,
     isUiEditMode: Boolean,
     onEditModeChange: (Boolean) -> Unit,
-    onSetAATEditMode: (Boolean) -> Unit,
+    onEnterAATEditMode: (Int) -> Unit,
+    onUpdateAATTargetPoint: (Int, Double, Double) -> Unit,
     onExitAATEditMode: () -> Unit,
     safeContainerSize: MutableState<IntSize>,
     variometerUiState: VariometerUiState,
@@ -120,7 +126,7 @@ internal fun MapOverlayStack(
             locationManager = locationManager,
             flightDataManager = flightDataManager,
             flightViewModel = flightViewModel,
-            taskManager = taskManager,
+            overlayManager = overlayManager,
             isUiEditMode = isUiEditMode,
             onEditModeChange = onEditModeChange,
             onContainerSizeChanged = { size ->
@@ -147,7 +153,7 @@ internal fun MapOverlayStack(
         if (!isUiEditMode) {
             MapGestureSetup.GestureHandlerOverlay(
                 mapState = mapState,
-                taskManager = taskManager,
+                taskType = taskType,
                 flightDataManager = flightDataManager,
                 locationManager = locationManager,
                 cameraManager = cameraManager,
@@ -156,7 +162,11 @@ internal fun MapOverlayStack(
                 currentLocation = currentLocation,
                 showReturnButton = showReturnButton,
                 isAATEditMode = isAATEditMode,
-                onAATEditModeChange = onSetAATEditMode,
+                createTaskGestureHandler = createTaskGestureHandler,
+                onEnterAATEditMode = onEnterAATEditMode,
+                onExitAATEditMode = onExitAATEditMode,
+                onUpdateAATTargetPoint = onUpdateAATTargetPoint,
+                onSyncTaskVisuals = { overlayManager.requestTaskRenderSync() },
                 onMapTap = { tap ->
                     val tappedId = overlayManager.findAdsbTargetAt(tap)
                     if (tappedId != null) {
@@ -225,10 +235,10 @@ internal fun MapOverlayStack(
 
         AatEditFab(
             isAATEditMode = isAATEditMode,
-            taskManager = taskManager,
-            mapLibreMap = mapState.mapLibreMap,
+            taskType = taskType,
             cameraManager = cameraManager,
-            onExitAATEditMode = onExitAATEditMode
+            onExitAATEditMode = onExitAATEditMode,
+            onSyncTaskVisuals = { overlayManager.requestTaskRenderSync() }
         )
 
         HamburgerMenu(

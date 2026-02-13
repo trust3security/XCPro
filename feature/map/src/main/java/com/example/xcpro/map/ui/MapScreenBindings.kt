@@ -17,6 +17,7 @@ import com.example.xcpro.ogn.OgnTrafficTarget
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.map.model.GpsStatusUiModel
+import com.example.xcpro.tasks.core.TaskType
 
 internal data class MapScreenBindings(
     val gpsStatus: GpsStatusUiModel,
@@ -40,6 +41,7 @@ internal data class MapScreenBindings(
     val adsbIconSizePx: Int,
     val selectedAdsbTarget: AdsbSelectedTargetDetails?,
     val isAATEditMode: Boolean,
+    val taskType: TaskType,
     val savedLocation: MapStateStore.MapPoint?,
     val savedZoom: Double?,
     val savedBearing: Double?,
@@ -73,6 +75,7 @@ internal fun rememberMapScreenBindings(
     val adsbIconSizePx by mapViewModel.adsbIconSizePx.collectAsStateWithLifecycle()
     val selectedAdsbTarget by mapViewModel.selectedAdsbTarget.collectAsStateWithLifecycle()
     val isAATEditMode by mapViewModel.isAATEditMode.collectAsStateWithLifecycle()
+    val taskType by mapViewModel.taskType.collectAsStateWithLifecycle()
     val savedLocation by mapStateReader.savedLocation.collectAsStateWithLifecycle()
     val savedZoom by mapStateReader.savedZoom.collectAsStateWithLifecycle()
     val savedBearing by mapStateReader.savedBearing.collectAsStateWithLifecycle()
@@ -101,6 +104,7 @@ internal fun rememberMapScreenBindings(
         adsbIconSizePx = adsbIconSizePx,
         selectedAdsbTarget = selectedAdsbTarget,
         isAATEditMode = isAATEditMode,
+        taskType = taskType,
         savedLocation = savedLocation,
         savedZoom = savedZoom,
         savedBearing = savedBearing,

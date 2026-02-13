@@ -4,19 +4,17 @@ import android.util.Log
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.zIndex
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.gestures.CustomMapGestureHandler
 import com.example.xcpro.gestures.TaskGestureCallbacks
+import com.example.xcpro.gestures.TaskGestureHandler
 import com.example.xcpro.map.model.MapLocationUiModel
-import com.example.xcpro.tasks.TaskManagerCoordinator
-import com.example.xcpro.tasks.TaskMapRenderRouter
+import com.example.xcpro.tasks.core.TaskType
 import org.maplibre.android.geometry.LatLng
 
 /**
@@ -39,7 +37,7 @@ object MapGestureSetup {
     @Composable
     fun GestureHandlerOverlay(
         mapState: MapScreenState,
-        taskManager: TaskManagerCoordinator,
+        taskType: TaskType,
         flightDataManager: FlightDataManager,
         locationManager: LocationManager,
         cameraManager: MapCameraManager,
@@ -48,37 +46,44 @@ object MapGestureSetup {
         currentLocation: MapLocationUiModel?,
         showReturnButton: Boolean,
         isAATEditMode: Boolean,
-        onAATEditModeChange: (Boolean) -> Unit,
+        createTaskGestureHandler: (TaskGestureCallbacks) -> TaskGestureHandler,
+        onEnterAATEditMode: (Int) -> Unit,
+        onExitAATEditMode: () -> Unit,
+        onUpdateAATTargetPoint: (Int, Double, Double) -> Unit,
+        onSyncTaskVisuals: () -> Unit,
         onMapTap: (LatLng) -> Unit = {},
         gestureRegions: List<MapGestureRegion> = emptyList(),
         modifier: Modifier = Modifier
     ) {
-        val taskType by taskManager.taskTypeFlow.collectAsStateWithLifecycle()
         val pixelRatio = mapState.mapView?.pixelRatio ?: LocalDensity.current.density
-        val gestureCallbacks = remember(cameraManager, taskManager, onAATEditModeChange) {
+        val gestureCallbacks = remember(
+            cameraManager,
+            onEnterAATEditMode,
+            onExitAATEditMode,
+            onUpdateAATTargetPoint,
+            onSyncTaskVisuals
+        ) {
             TaskGestureCallbacks(
                 onEnterEditMode = { waypointIndex, lat, lon, radiusKm ->
-                    onAATEditModeChange(true)
                     cameraManager.zoomToAATAreaForEdit(lat, lon, radiusKm)
-                    taskManager.enterAATEditMode(waypointIndex)
-                    TaskMapRenderRouter.plotCurrentTask(taskManager, mapState.mapLibreMap)
+                    onEnterAATEditMode(waypointIndex)
+                    onSyncTaskVisuals()
                     Log.d(TAG, "Entered AAT edit mode for waypoint $waypointIndex")
                 },
                 onExitEditMode = {
-                    onAATEditModeChange(false)
                     cameraManager.restoreAATCameraPosition()
-                    taskManager.exitAATEditMode()
-                    TaskMapRenderRouter.plotCurrentTask(taskManager, mapState.mapLibreMap)
+                    onExitAATEditMode()
+                    onSyncTaskVisuals()
                     Log.d(TAG, "Exited AAT edit mode")
                 },
                 onDragTarget = { waypointIndex, lat, lon ->
-                    taskManager.updateAATTargetPoint(waypointIndex, lat, lon)
-                    TaskMapRenderRouter.plotCurrentTask(taskManager, mapState.mapLibreMap)
+                    onUpdateAATTargetPoint(waypointIndex, lat, lon)
+                    onSyncTaskVisuals()
                 }
             )
         }
         val taskGestureHandler = remember(taskType, gestureCallbacks) {
-            taskManager.createGestureHandler(gestureCallbacks)
+            createTaskGestureHandler(gestureCallbacks)
         }
 
         LaunchedEffect(taskGestureHandler, isAATEditMode) {

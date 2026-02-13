@@ -9,7 +9,6 @@ import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.MapOrientationPreferences
 import com.example.xcpro.common.units.UnitsConverter
-import com.example.xcpro.vario.VarioServiceManager
 import com.example.xcpro.map.helpers.GliderPaddingHelper
 import com.example.xcpro.map.config.MapFeatureFlags
 import com.example.xcpro.map.domain.MapShiftBiasCalculator
@@ -28,7 +27,7 @@ class LocationManager(
     private val mapStateReader: MapStateReader,
     private val stateActions: MapStateActions,
     private val coroutineScope: CoroutineScope,
-    private val varioServiceManager: VarioServiceManager,
+    private val sensorsUseCase: MapSensorsUseCase,
     private val featureFlags: MapFeatureFlags,
     private val replayHeadingProvider: ((Long) -> Double?)? = null,
     private val replayFixProvider: ((Long) -> ReplayDisplayPose?)? = null
@@ -57,7 +56,7 @@ class LocationManager(
     private val sensorsController = LocationSensorsController(
         context = context,
         scope = coroutineScope,
-        varioServiceManager = varioServiceManager
+        sensorsUseCase = sensorsUseCase
     )
     private val cameraUpdateGateFilter = MapLocationFilter(
         MapLocationFilter.Config(
@@ -152,7 +151,7 @@ class LocationManager(
     )
 
     //  PHASE 2: Unified sensor management
-    val unifiedSensorManager: UnifiedSensorManager = varioServiceManager.unifiedSensorManager
+    val unifiedSensorManager: UnifiedSensorManager = sensorsUseCase.unifiedSensorManager
 
     //  PHASE 2: Flight data calculator (combines all sensor data + calculations)
 

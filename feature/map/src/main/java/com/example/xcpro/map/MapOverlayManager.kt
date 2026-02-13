@@ -16,7 +16,6 @@ import com.example.xcpro.loadAndApplyAirspace
 import com.example.xcpro.loadAndApplyWaypoints
 import com.example.xcpro.map.trail.SnailTrailManager
 import com.example.xcpro.tasks.TaskManagerCoordinator
-import com.example.xcpro.tasks.TaskMapRenderRouter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.maplibre.android.geometry.LatLng
@@ -30,6 +29,7 @@ class MapOverlayManager(
     private val context: Context,
     private val mapState: MapScreenState,
     private val mapStateReader: MapStateReader,
+    private val taskRenderSyncCoordinator: TaskRenderSyncCoordinator,
     private val taskManager: TaskManagerCoordinator,
     private val stateActions: MapStateActions,
     private val snailTrailManager: SnailTrailManager,
@@ -86,17 +86,13 @@ class MapOverlayManager(
 
     fun plotSavedTask(map: MapLibreMap?) {
         try {
-            if (taskManager.currentTask.waypoints.isNotEmpty()) {
-                if (BuildConfig.DEBUG) {
+            if (BuildConfig.DEBUG) {
                 Log.d(
-                        TAG,
-                        "Plotting saved task with ${taskManager.currentTask.waypoints.size} waypoints"
-                    )
-                }
-                TaskMapRenderRouter.plotCurrentTask(taskManager, map)
-            } else if (BuildConfig.DEBUG) {
-                Log.d(TAG, "No saved task to plot")
+                    TAG,
+                    "Refreshing task overlays for ${taskManager.currentTask.waypoints.size} waypoints"
+                )
             }
+            taskRenderSyncCoordinator.onOverlayRefresh(map)
         } catch (e: Exception) {
             Log.e(TAG, "Error plotting saved task: ${e.message}", e)
         }
@@ -104,6 +100,7 @@ class MapOverlayManager(
 
     fun clearTaskOverlays(map: MapLibreMap?) {
         try {
+            taskRenderSyncCoordinator.clearTaskVisuals(map)
             if (BuildConfig.DEBUG) {
                 Log.d(TAG, "Task overlays cleared (handled by TaskManager)")
             }
@@ -119,7 +116,7 @@ class MapOverlayManager(
             }
             refreshAirspace(map)
             refreshWaypoints(map)
-            plotSavedTask(map)
+            taskRenderSyncCoordinator.onMapStyleChanged(map)
             if (mapState.blueLocationOverlay == null && map != null) {
                 Log.d(TAG, "Blue location overlay missing after style change; creating now")
                 mapState.blueLocationOverlay = BlueLocationOverlay(context, map)
@@ -156,7 +153,7 @@ class MapOverlayManager(
             }
             refreshAirspace(map)
             refreshWaypoints(map)
-            plotSavedTask(map)
+            taskRenderSyncCoordinator.onOverlayRefresh(map)
             if (map != null) {
                 mapState.ognTrafficOverlay = createOgnTrafficOverlay(map)
                 mapState.ognTrafficOverlay?.initialize()
@@ -172,6 +169,14 @@ class MapOverlayManager(
         } catch (e: Exception) {
             Log.e(TAG, "Error initializing overlays: ${e.message}", e)
         }
+    }
+
+    fun requestTaskRenderSync() {
+        taskRenderSyncCoordinator.onTaskMutation()
+    }
+
+    fun onTaskStateChanged(signature: TaskRenderSyncCoordinator.TaskStateSignature) {
+        taskRenderSyncCoordinator.onTaskStateChanged(signature)
     }
 
     fun updateOgnTrafficTargets(targets: List<OgnTrafficTarget>) {

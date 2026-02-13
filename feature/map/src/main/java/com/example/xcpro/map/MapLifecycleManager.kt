@@ -6,8 +6,9 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.example.xcpro.MapOrientationManager
-import com.example.xcpro.replay.IgcReplayController
+import com.example.xcpro.replay.SessionState
 import com.example.xcpro.replay.SessionStatus
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Centralized lifecycle management for MapScreen
@@ -17,7 +18,7 @@ class MapLifecycleManager(
     internal val mapState: MapScreenState,
     private val orientationManager: MapOrientationManager,
     internal val locationManager: LocationManager,
-    private val igcReplayController: IgcReplayController,
+    private val replaySessionState: StateFlow<SessionState>,
     private val stateActions: MapStateActions
 ) {
     companion object {
@@ -40,18 +41,7 @@ class MapLifecycleManager(
             }
             Lifecycle.Event.ON_RESUME -> {
                 mapState.mapView?.onResume()
-
-                //  Restart sensors if needed after sleep mode
-                // This ensures GPS and other sensors resume after screen-off
-                val replaySession = igcReplayController.session.value
-                val allowRestart = replaySession.selection == null ||
-                    replaySession.status == SessionStatus.IDLE
-                if (allowRestart) {
-                    locationManager.restartSensorsIfNeeded()
-                } else {
-                    Log.d(TAG, "Replay active; skipping sensor restart on resume")
-                }
-
+                restartSensorsIfAllowed()
                 Log.d(TAG, "Map view onResume - sensors checked for restart")
             }
             Lifecycle.Event.ON_PAUSE -> {
@@ -73,6 +63,18 @@ class MapLifecycleManager(
                 Log.d(TAG, "Map view onDestroy")
             }
             else -> Unit
+        }
+    }
+
+    /**
+     * Sync non-MapView lifecycle responsibilities when observer attaches after resume.
+     */
+    fun syncCurrentOwnerState(state: Lifecycle.State) {
+        if (state.isAtLeast(Lifecycle.State.STARTED)) {
+            orientationManager.start()
+        }
+        if (state.isAtLeast(Lifecycle.State.RESUMED)) {
+            restartSensorsIfAllowed()
         }
     }
 
@@ -110,6 +112,17 @@ class MapLifecycleManager(
             Log.d(TAG, "Captured camera snapshot for restore")
         } catch (e: Exception) {
             Log.w(TAG, "Failed to capture camera snapshot: ${e.message}", e)
+        }
+    }
+
+    private fun restartSensorsIfAllowed() {
+        val replaySession = replaySessionState.value
+        val allowRestart = replaySession.selection == null ||
+            replaySession.status == SessionStatus.IDLE
+        if (allowRestart) {
+            locationManager.restartSensorsIfNeeded()
+        } else {
+            Log.d(TAG, "Replay active; skipping sensor restart on resume")
         }
     }
 
@@ -162,11 +175,12 @@ object MapLifecycleEffects {
     ) {
         val lifecycle = LocalLifecycleOwner.current.lifecycle
 
-        DisposableEffect(Unit) {
+        DisposableEffect(lifecycle, lifecycleManager) {
             val observer = LifecycleEventObserver { _, event ->
                 lifecycleManager.handleLifecycleEvent(event)
             }
             lifecycle.addObserver(observer)
+            lifecycleManager.syncCurrentOwnerState(lifecycle.currentState)
 
             onDispose {
                 lifecycle.removeObserver(observer)

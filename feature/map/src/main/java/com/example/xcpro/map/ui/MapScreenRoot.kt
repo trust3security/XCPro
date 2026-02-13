@@ -29,7 +29,6 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.xcpro.airspace.AirspaceViewModel
-import com.example.xcpro.di.MapUseCaseEntryPoint
 // G REMOVED DataQuality - no longer used
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
 import com.example.xcpro.screens.navdrawer.lookandfeel.LookAndFeelViewModel
@@ -39,8 +38,8 @@ import com.example.xcpro.core.common.geometry.OffsetPx
 import com.example.xcpro.map.widgets.MapWidgetId
 import com.example.xcpro.map.widgets.MapWidgetLayoutViewModel
 import com.example.xcpro.map.widgets.MapWidgetOffsets
-import dagger.hilt.android.EntryPointAccessors
 import com.example.xcpro.hawk.HAWK_VARIO_CARD_ID
+import com.example.xcpro.tasks.rememberTaskManagerCoordinator
 import kotlinx.coroutines.launch
 
 /**
@@ -66,14 +65,7 @@ internal fun MapScreenRoot(
     val mapUiState by mapViewModel.uiState.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
-    val entryPoint = remember(context) {
-        EntryPointAccessors.fromApplication(context, MapUseCaseEntryPoint::class.java)
-    }
-    val airspaceUseCase = remember(entryPoint) { entryPoint.airspaceUseCase() }
-    val waypointFilesUseCase = remember(entryPoint) { entryPoint.waypointFilesUseCase() }
-    val taskManager = remember(entryPoint) { entryPoint.taskManagerCoordinator() }
-    val varioServiceManager = remember(entryPoint) { entryPoint.varioServiceManager() }
-    val igcReplayController = remember(entryPoint) { entryPoint.igcReplayController() }
+    val taskManager = rememberTaskManagerCoordinator()
     MapScreenSideEffects(
         uiEffects = mapViewModel.uiEffects,
         drawerState = drawerState,
@@ -149,12 +141,14 @@ internal fun MapScreenRoot(
         taskManager = taskManager,
         mapStateActions = mapViewModel.mapStateActions,
         orientationManager = orientationManager,
-        varioServiceManager = varioServiceManager,
-        igcReplayController = igcReplayController,
+        sensorsUseCase = mapViewModel.mapSensorsRuntimeUseCase,
+        replaySessionState = mapViewModel.replaySessionState,
+        replayHeadingProvider = mapViewModel::getInterpolatedReplayHeadingDeg,
+        replayFixProvider = mapViewModel::getInterpolatedReplayPose,
         featureFlags = mapViewModel.mapFeatureFlags,
         coroutineScope = coroutineScope,
-        airspaceUseCase = airspaceUseCase,
-        waypointFilesUseCase = waypointFilesUseCase
+        airspaceUseCase = mapViewModel.mapAirspaceUseCase,
+        waypointFilesUseCase = mapViewModel.mapWaypointFilesUseCase
     )
     val snailTrailManager = managers.snailTrailManager
     val overlayManager = managers.overlayManager
@@ -232,7 +226,7 @@ internal fun MapScreenRoot(
         Log.d("MapScreenRoot", "activeProfile=$activeProfileId mode=$currentFlightModeSelection")
     }
     MapScreenRuntimeEffects(
-        taskManager = taskManager,
+        taskType = bindings.taskType,
         drawerState = drawerState,
         isAATEditMode = isAATEditMode,
         onExitAATEditMode = mapViewModel::exitAATEditMode,

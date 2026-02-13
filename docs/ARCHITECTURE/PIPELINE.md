@@ -175,16 +175,20 @@ ADS-b icon size settings path:
 
 ADS-b lifecycle/visibility semantics:
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
+  - Map overlay targets come from the raw ADS-b repository stream with metadata merged opportunistically.
+  - Map marker positions are not gated by metadata-enrichment latency.
+- `feature/map/src/main/java/com/example/xcpro/map/MapScreenTrafficCoordinator.kt`
   - Streaming enable is driven by `allowSensorStart && mapVisible && adsbOverlayEnabled`.
-  - When streaming turns on, center is seeded from current camera/GPS before enabling.
-  - Center updates use immediate-first + sampled cadence (1.5s window) to avoid debounce starvation under continuous updates.
-  - Ownship origin updates are pushed from live GPS into ADS-b repository for distance/bearing semantics.
+  - When streaming turns on, center is seeded from current GPS position (camera fallback when GPS is unavailable).
+  - Query-center and ownship-origin updates are GPS-driven from `mapLocation`.
   - Explicit ADS-b FAB off triggers immediate repository target clear.
 - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt`
   - Disabling streaming pauses polling without clearing last-known targets.
   - Explicit clear path removes cached targets and resets displayed list.
-  - Query center is used for fetch/radius filtering; ownship origin is used for displayed distance/bearing when available.
-  - Center/origin updates trigger immediate store reselection for cached targets.
+  - Query center is used for fetch/radius filtering (20 km receive radius); ownship origin is used for displayed distance/bearing when available.
+- `feature/map/src/main/java/com/example/xcpro/map/AdsbTrafficOverlay.kt`
+  - Per-aircraft runtime interpolation smooths marker motion between provider samples.
+  - Interpolation is visual-only and does not mutate repository SSOT.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
   - ADS-b overlay renders `emptyList()` when overlay preference is disabled.
 
@@ -264,22 +268,33 @@ Named task persistence bridge (2026-02-11):
   `TaskEnginePersistenceService` in DI runtime.
 - Runtime coordinator construction is DI-only; compatibility access uses the DI singleton.
 
-Task map rendering bridge (2026-02-11):
+Task map rendering bridge (2026-02-12):
 - `TaskManagerCoordinator` no longer stores a map instance.
 - `TaskManagerCoordinator` AAT edit/target APIs are map-agnostic (no `MapLibreMap` parameters).
-- UI/runtime map drawing routes through:
-  - `feature/map/src/main/java/com/example/xcpro/tasks/TaskMapRenderRouter.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/TaskMapOverlay.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapInitializer.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
-- UI/runtime redraw for AAT edit transitions and drag updates is triggered from:
-  - `feature/map/src/main/java/com/example/xcpro/map/MapGestureSetup.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapTaskIntegration.kt`
+- Single trigger owner for map task redraw:
+  - `feature/map/src/main/java/com/example/xcpro/map/TaskRenderSyncCoordinator.kt`
+  - Trigger sources emit coordinator events from:
+    - `feature/map/src/main/java/com/example/xcpro/tasks/TaskMapOverlay.kt` (task state changes)
+    - `feature/map/src/main/java/com/example/xcpro/map/MapInitializer.kt` (map ready)
+    - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt` (style/overlay refresh)
+    - `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt` (AAT edit + gesture mutations)
+- Coordinator owns the only runtime call path to:
+  - `TaskMapRenderRouter.syncTaskVisuals(...)`
+  - This API owns clear + orphan cleanup + conditional replot sequencing.
 - Rendering is selected by current task type (RACING/AAT) in the UI runtime layer.
 - `TaskMapRenderRouter` consumes `TaskManagerCoordinator.currentTask` snapshots and
   shared core->task mappers (Racing/AAT) instead of coordinator manager escape hatches.
 - `RacingTaskManager` / `AATTaskManager` no longer expose MapLibre render/edit APIs;
   map rendering/editing flows are UI/runtime-only via renderers/controllers.
+- `MapInitializer` orchestration is split into focused runtime collaborators:
+  - `MapScaleBarController` (scale bar lifecycle/zoom constraints)
+  - `MapInitializerDataLoader` (airspace/waypoint bootstrap and refresh)
+- `MapScreenViewModel` now exposes task type and task gesture/edit operations through
+  `MapTasksUseCase`, and map runtime effects consume ViewModel-bound task type state
+  instead of reading coordinator state directly in Composables.
+- Runtime UI/composable dependency lookup no longer uses entrypoint accessors:
+  - `TaskManagerCoordinator` is provided via `TaskManagerCoordinatorHostViewModel`.
+  - Task navdrawer airspace use-case access is provided via `TaskScreenUseCasesViewModel`.
 
 Task navigation/replay bridge (2026-02-11):
 - `TaskNavigationController` and `MapScreenReplayCoordinator` consume

@@ -58,3 +58,10 @@ nul
 .gradle-home/
 /.idea/firebender/
 .gradle_user/
+
+# Local scratch / agent artifacts
+/.gradle-local/
+/.java-home/
+/.tmp/
+/TEMP/
+deep-research-report.md

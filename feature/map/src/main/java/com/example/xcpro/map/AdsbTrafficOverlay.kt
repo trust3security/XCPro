@@ -7,6 +7,8 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
+import android.os.SystemClock
+import android.view.Choreographer
 import androidx.core.content.ContextCompat
 import com.example.xcpro.adsb.ADSB_ICON_SIZE_DEFAULT_PX
 import com.example.xcpro.adsb.AdsbTrafficUiModel
@@ -49,6 +51,16 @@ class AdsbTrafficOverlay(
     initialIconSizePx: Int = ADSB_ICON_SIZE_DEFAULT_PX
 ) {
     private var currentIconSizePx: Int = clampAdsbIconSizePx(initialIconSizePx)
+    private val motionSmoother = AdsbDisplayMotionSmoother()
+    private var frameScheduled = false
+    private val frameCallback = Choreographer.FrameCallback { frameTimeNanos ->
+        frameScheduled = false
+        val nowMonoMs = frameTimeNanos / 1_000_000L
+        renderFrame(nowMonoMs)
+        if (motionSmoother.hasActiveAnimations(nowMonoMs) && map.style != null) {
+            scheduleFrameLoop()
+        }
+    }
 
     fun initialize() {
         val style = map.style ?: return
@@ -118,19 +130,18 @@ class AdsbTrafficOverlay(
 
     fun render(targets: List<AdsbTrafficUiModel>) {
         initialize()
-        val style = map.style ?: return
-        val source = style.getSourceAs<GeoJsonSource>(SOURCE_ID) ?: return
-        val features = ArrayList<Feature>(targets.size.coerceAtMost(MAX_TARGETS))
-        for (target in targets) {
-            if (features.size >= MAX_TARGETS) break
-            val feature = AdsbGeoJsonMapper.toFeature(target) ?: continue
-            feature.addNumberProperty(
-                AdsbGeoJsonMapper.PROP_ALPHA,
-                if (target.isStale) STALE_ALPHA else LIVE_ALPHA
-            )
-            features.add(feature)
+        val nowMonoMs = nowMonoMs()
+        val changed = motionSmoother.onTargets(targets, nowMonoMs)
+        val hasAnimation = motionSmoother.hasActiveAnimations(nowMonoMs)
+        if (!changed && !hasAnimation) {
+            return
         }
-        source.setGeoJson(FeatureCollection.fromFeatures(features))
+        renderFrame(nowMonoMs)
+        if (hasAnimation) {
+            scheduleFrameLoop()
+        } else {
+            stopFrameLoop()
+        }
     }
 
     fun findTargetAt(tap: LatLng): Icao24? {
@@ -157,12 +168,16 @@ class AdsbTrafficOverlay(
     }
 
     fun clear() {
+        stopFrameLoop()
+        motionSmoother.clear()
         val style = map.style ?: return
         val source = style.getSourceAs<GeoJsonSource>(SOURCE_ID) ?: return
         source.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
     }
 
     fun cleanup() {
+        stopFrameLoop()
+        motionSmoother.clear()
         val style = map.style ?: return
         try {
             style.removeLayer(LABEL_LAYER_ID)
@@ -229,6 +244,40 @@ class AdsbTrafficOverlay(
 
         val labelLayer = style.getLayer(LABEL_LAYER_ID) as? SymbolLayer
         labelLayer?.setProperties(textOffset(arrayOf(labelOffsetXForPx(currentIconSizePx), 0f)))
+    }
+
+    private fun renderFrame(nowMonoMs: Long) {
+        val style = map.style ?: return
+        val source = style.getSourceAs<GeoJsonSource>(SOURCE_ID) ?: return
+        source.setGeoJson(FeatureCollection.fromFeatures(buildFeatures(nowMonoMs)))
+    }
+
+    private fun buildFeatures(nowMonoMs: Long): Array<Feature> {
+        val features = ArrayList<Feature>(MAX_TARGETS)
+        for (target in motionSmoother.frame(nowMonoMs)) {
+            if (features.size >= MAX_TARGETS) break
+            val feature = AdsbGeoJsonMapper.toFeature(target) ?: continue
+            feature.addNumberProperty(
+                AdsbGeoJsonMapper.PROP_ALPHA,
+                if (target.isStale) STALE_ALPHA else LIVE_ALPHA
+            )
+            features.add(feature)
+        }
+        return features.toTypedArray()
+    }
+
+    private fun nowMonoMs(): Long = SystemClock.elapsedRealtime()
+
+    private fun scheduleFrameLoop() {
+        if (frameScheduled) return
+        frameScheduled = true
+        Choreographer.getInstance().postFrameCallback(frameCallback)
+    }
+
+    private fun stopFrameLoop() {
+        if (!frameScheduled) return
+        Choreographer.getInstance().removeFrameCallback(frameCallback)
+        frameScheduled = false
     }
 
     private fun iconScaleForPx(iconSizePx: Int): Float =

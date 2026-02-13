@@ -25,6 +25,8 @@ import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.waypoint.WaypointData
+import com.example.xcpro.gestures.TaskGestureCallbacks
+import com.example.xcpro.gestures.TaskGestureHandler
 import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.map.LocationManager
 import com.example.xcpro.map.MapCameraManager
@@ -49,6 +51,7 @@ import com.example.xcpro.adsb.AdsbSelectedTargetDetails
 import com.example.xcpro.ogn.OgnTrafficSnapshot
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
 import com.example.xcpro.tasks.TaskManagerCoordinator
+import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.variometer.layout.VariometerUiState
 import kotlinx.coroutines.flow.StateFlow
 import org.maplibre.android.maps.MapLibreMap
@@ -77,6 +80,8 @@ internal fun MapScreenScaffold(inputs: MapScreenScaffoldInputs) {
         flightDataManager = inputs.flightDataManager,
         flightViewModel = inputs.flightViewModel,
         taskManager = inputs.taskManager,
+        taskType = inputs.taskType,
+        createTaskGestureHandler = inputs.createTaskGestureHandler,
         windArrowState = inputs.windArrowState,
         showWindSpeedOnVario = inputs.showWindSpeedOnVario,
         cameraManager = inputs.cameraManager,
@@ -95,7 +100,8 @@ internal fun MapScreenScaffold(inputs: MapScreenScaffoldInputs) {
         isUiEditMode = inputs.isUiEditMode,
         onEditModeChange = inputs.onEditModeChange,
         isAATEditMode = inputs.isAATEditMode,
-        onSetAATEditMode = inputs.onSetAATEditMode,
+        onEnterAATEditMode = inputs.onEnterAATEditMode,
+        onUpdateAATTargetPoint = inputs.onUpdateAATTargetPoint,
         onExitAATEditMode = inputs.onExitAATEditMode,
         safeContainerSize = inputs.safeContainerSize,
         overlayManager = inputs.overlayManager,
@@ -164,6 +170,8 @@ internal fun MapScreenScaffold(
     flightDataManager: FlightDataManager,
     flightViewModel: FlightDataViewModel,
     taskManager: TaskManagerCoordinator,
+    taskType: TaskType,
+    createTaskGestureHandler: (TaskGestureCallbacks) -> TaskGestureHandler,
     windArrowState: WindArrowUiState,
     showWindSpeedOnVario: Boolean,
     cameraManager: MapCameraManager,
@@ -182,7 +190,8 @@ internal fun MapScreenScaffold(
     isUiEditMode: Boolean,
     onEditModeChange: (Boolean) -> Unit,
     isAATEditMode: Boolean,
-    onSetAATEditMode: (Boolean) -> Unit,
+    onEnterAATEditMode: (Int) -> Unit,
+    onUpdateAATTargetPoint: (Int, Double, Double) -> Unit,
     onExitAATEditMode: () -> Unit,
     safeContainerSize: MutableState<IntSize>,
     overlayManager: MapOverlayManager,
@@ -256,6 +265,8 @@ internal fun MapScreenScaffold(
                     flightDataManager = flightDataManager,
                     flightViewModel = flightViewModel,
                     taskManager = taskManager,
+                    taskType = taskType,
+                    createTaskGestureHandler = createTaskGestureHandler,
                     windArrowState = windArrowState,
                     showWindSpeedOnVario = showWindSpeedOnVario,
                     cameraManager = cameraManager,
@@ -274,7 +285,8 @@ internal fun MapScreenScaffold(
                     isUiEditMode = isUiEditMode,
                     onEditModeChange = onEditModeChange,
                     isAATEditMode = isAATEditMode,
-                    onSetAATEditMode = onSetAATEditMode,
+                    onEnterAATEditMode = onEnterAATEditMode,
+                    onUpdateAATTargetPoint = onUpdateAATTargetPoint,
                     onExitAATEditMode = onExitAATEditMode,
                     safeContainerSize = safeContainerSize,
                     overlayManager = overlayManager,

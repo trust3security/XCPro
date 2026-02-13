@@ -14,14 +14,12 @@ import com.example.xcpro.tasks.domain.engine.RacingTaskEngine
 import com.example.xcpro.tasks.domain.persistence.TaskEnginePersistenceService
 import com.example.xcpro.tasks.racing.RacingTaskManager
 import com.example.xcpro.tasks.racing.gestures.RacingGestureHandler
-import java.time.Duration
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
 /**
  * Routes calls to the Racing or AAT task managers; contains no task-specific math.
@@ -43,6 +41,16 @@ class TaskManagerCoordinator(
     private val _taskType = MutableStateFlow(TaskType.RACING)
     val taskType: TaskType get() = _taskType.value
     val taskTypeFlow: StateFlow<TaskType> = _taskType.asStateFlow()
+    private val persistenceBridge = TaskCoordinatorPersistenceBridge(
+        taskTypeState = _taskType,
+        taskEnginePersistenceService = taskEnginePersistenceService,
+        racingTaskEngine = racingTaskEngine,
+        aatTaskEngine = aatTaskEngine,
+        racingTaskManager = racingTaskManager,
+        aatTaskManager = aatTaskManager,
+        scope = coordinatorScope,
+        log = ::log
+    )
 
     private inline fun <T> withCurrentManager(
         racingBlock: RacingTaskManager.() -> T,
@@ -96,13 +104,8 @@ class TaskManagerCoordinator(
         } else {
             log("No waypoints to preserve during task switch")
         }
-        val service = taskEnginePersistenceService
-        if (service != null) {
-            coordinatorScope.launch {
-                service.saveTaskType(newTaskType)
-            }
-        }
-        syncEngineFromManager(newTaskType)
+        persistenceBridge.persistTaskType(newTaskType)
+        persistenceBridge.syncEngineFromManager(newTaskType)
     }
 
     fun initializeTask(waypoints: List<SearchWaypoint>) =
@@ -174,17 +177,7 @@ class TaskManagerCoordinator(
         withCurrentManager(racingBlock = { replaceRacingWaypoint(index, newWaypoint) }, aatBlock = { replaceAATWaypoint(index, newWaypoint) })
 
     suspend fun loadSavedTasks() {
-        val service = taskEnginePersistenceService
-        if (service != null) {
-            val restoredType = service.restore(_taskType.value)
-            _taskType.value = restoredType
-            applyEngineTaskToManager(TaskType.RACING)
-            applyEngineTaskToManager(TaskType.AAT)
-            log("Finished loading saved tasks from service (type=${restoredType.name})")
-            return
-        }
-        syncEnginesFromManagers()
-        log("Finished loading task state without persistence service (type=${_taskType.value.name})")
+        persistenceBridge.loadSavedTasks()
     }
 
     fun advanceToNextLeg() {
@@ -233,44 +226,19 @@ class TaskManagerCoordinator(
     }
 
     suspend fun getSavedTasks(): List<String> {
-        val currentType = _taskType.value
-        val service = taskEnginePersistenceService
-        if (service != null) {
-            return service.listTaskNames(currentType)
-        }
-        return emptyList()
+        return persistenceBridge.getSavedTasks()
     }
 
     suspend fun saveTask(taskName: String): Boolean {
-        val currentType = _taskType.value
-        val service = taskEnginePersistenceService
-        if (service != null) {
-            syncEngineFromManager(currentType)
-            return service.saveNamedTask(currentType, taskName)
-        }
-        return false
+        return persistenceBridge.saveTask(taskName)
     }
 
     suspend fun loadTask(taskName: String): Boolean {
-        val currentType = _taskType.value
-        val service = taskEnginePersistenceService
-        if (service != null) {
-            val loaded = service.loadNamedTask(currentType, taskName)
-            if (loaded) {
-                applyEngineTaskToManager(currentType)
-            }
-            return loaded
-        }
-        return false
+        return persistenceBridge.loadTask(taskName)
     }
 
     suspend fun deleteTask(taskName: String): Boolean {
-        val currentType = _taskType.value
-        val service = taskEnginePersistenceService
-        if (service != null) {
-            return service.deleteNamedTask(currentType, taskName)
-        }
-        return false
+        return persistenceBridge.deleteTask(taskName)
     }
 
     fun setTaskType(taskType: TaskType) = switchToTaskType(taskType)
@@ -360,70 +328,4 @@ class TaskManagerCoordinator(
     fun isInAATEditMode(): Boolean = _taskType.value == TaskType.AAT && aatDelegate.isInEditMode()
     fun getAATEditWaypointIndex(): Int? = if (_taskType.value == TaskType.AAT) aatDelegate.editWaypointIndex() else null
 
-    private fun syncEnginesFromManagers() {
-        syncEngineFromManager(TaskType.RACING)
-        syncEngineFromManager(TaskType.AAT)
-    }
-
-    private fun syncEngineFromManager(taskType: TaskType) {
-        when (taskType) {
-            TaskType.RACING -> racingTaskEngine?.setTask(racingTaskManager.getCoreTask())
-            TaskType.AAT -> {
-                val minimum = aatTaskManager.currentAATTask.minimumTime
-                val maximum = aatTaskManager.currentAATTask.maximumTime
-                val taskWithTimes = withAatTimes(
-                    task = aatTaskManager.getCoreTask(),
-                    minimum = minimum,
-                    maximum = maximum
-                )
-                aatTaskEngine?.setTask(taskWithTimes)
-            }
-        }
-    }
-
-    private fun applyEngineTaskToManager(taskType: TaskType) {
-        when (taskType) {
-            TaskType.RACING -> {
-                val state = racingTaskEngine?.state?.value ?: return
-                racingTaskManager.initializeFromGenericWaypoints(state.base.task.waypoints)
-                racingTaskManager.setRacingLeg(state.base.activeLegIndex)
-            }
-            TaskType.AAT -> {
-                val state = aatTaskEngine?.state?.value ?: return
-                aatTaskManager.initializeFromGenericWaypoints(state.base.task.waypoints)
-                aatTaskManager.updateAATTimes(
-                    minTime = state.minimumTime,
-                    maxTime = state.maximumTime.takeIf { !it.isNegative && !it.isZero }
-                )
-                aatTaskManager.setAATLeg(state.base.activeLegIndex)
-            }
-        }
-    }
-
-    private fun withAatTimes(
-        task: Task,
-        minimum: Duration,
-        maximum: Duration?
-    ): Task {
-        if (task.waypoints.isEmpty()) return task
-        val minSeconds = minimum.seconds.toDouble()
-        val maxSeconds = maximum?.seconds?.toDouble()
-        return task.copy(
-            waypoints = task.waypoints.map { waypoint ->
-                val params = waypoint.customParameters.toMutableMap()
-                params[KEY_AAT_MIN_TIME_SECONDS] = minSeconds
-                if (maxSeconds != null) {
-                    params[KEY_AAT_MAX_TIME_SECONDS] = maxSeconds
-                } else {
-                    params.remove(KEY_AAT_MAX_TIME_SECONDS)
-                }
-                waypoint.copy(customParameters = params)
-            }
-        )
-    }
-
-    private companion object {
-        private const val KEY_AAT_MIN_TIME_SECONDS = "aatMinimumTimeSeconds"
-        private const val KEY_AAT_MAX_TIME_SECONDS = "aatMaximumTimeSeconds"
-    }
 }

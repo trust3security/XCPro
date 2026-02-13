@@ -41,6 +41,7 @@ AI/agents: read the first three files in order before edits; include Levo docs w
 A change is ready when:
 - [ ] Code adheres to **CODING_RULES.md** (SSOT, UDF, clean layering).
 - [ ] `./gradlew enforceRules` passes (architecture/coding rule enforcement).
+- [ ] Quality rescore included in PR description (see `docs/ARCHITECTURE/AGENT.md` -> Quality Rescore).
 - [ ] **Rationale comments** are present for non-obvious decisions (`// AI-NOTE:` markers encouraged).
 - [ ] Levo pipeline changes are documented in `../LevoVario/levo.md` and any
       related architecture/time-base rules are updated.
@@ -54,6 +55,8 @@ A change is ready when:
 ## 3A) Refactor Guard Checklist (Task and Map)
 
 Use this checklist for any task/map refactor before opening a PR.
+
+- [ ] Architecture drift checklist completed (see `.github/pull_request_template.md`).
 
 - [ ] UI emits intents to ViewModel only; no direct `TaskManagerCoordinator` mutations from Composables.
 - [ ] UI reads ViewModel state only; no direct manager internals in Composables (`currentTask`, `currentLeg`, `currentAATTask`).

@@ -14,14 +14,16 @@ import com.example.xcpro.adsb.Icao24
 import com.example.xcpro.adsb.ADSB_ICON_SIZE_DEFAULT_PX
 import com.example.xcpro.adsb.metadata.domain.AdsbMetadataEnrichmentUseCase
 import com.example.xcpro.weather.wind.model.WindState
+import com.example.xcpro.gestures.TaskGestureCallbacks
+import com.example.xcpro.gestures.TaskGestureHandler
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.replay.SessionStatus
 import com.example.xcpro.map.ballast.BallastCommand
 import com.example.xcpro.map.ballast.BallastUiState
-import com.example.xcpro.map.domain.MapWaypointError
-import com.example.xcpro.map.domain.toUserMessage
 import com.example.xcpro.map.model.GpsStatusUiModel
 import com.example.xcpro.map.model.MapLocationUiModel
+import com.example.xcpro.airspace.AirspaceUseCase
+import com.example.xcpro.flightdata.WaypointFilesUseCase
 import com.example.xcpro.hawk.HawkVarioUiState
 import com.example.xcpro.hawk.HawkVarioUseCase
 import com.example.xcpro.map.trail.MapTrailSettingsUseCase
@@ -30,34 +32,28 @@ import com.example.xcpro.ogn.OgnTrafficTarget
 import com.example.xcpro.ogn.OgnTrafficSnapshot
 import com.example.xcpro.ogn.OGN_ICON_SIZE_DEFAULT_PX
 import com.example.xcpro.qnh.CalibrateQnhUseCase
-import com.example.xcpro.qnh.QnhCalibrationFailureReason
+import com.example.xcpro.replay.ReplayDisplayPose
+import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.variometer.layout.VariometerUiState
 import com.example.xcpro.variometer.layout.VariometerLayoutUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.sample
-import kotlinx.coroutines.flow.shareIn
-import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.FlowPreview
-import java.util.Locale
 
 /**
  * Lifecycle-aware owner for map state and domain controllers (no runtime map handles).
@@ -67,6 +63,8 @@ class MapScreenViewModel @Inject constructor(
     private val mapStyleUseCase: MapStyleUseCase,
     private val unitsUseCase: UnitsPreferencesUseCase,
     private val mapWaypointsUseCase: MapWaypointsUseCase,
+    val mapAirspaceUseCase: AirspaceUseCase,
+    val mapWaypointFilesUseCase: WaypointFilesUseCase,
     private val gliderConfigUseCase: GliderConfigUseCase,
     private val sensorsUseCase: MapSensorsUseCase,
     private val flightDataUseCase: FlightDataUseCase,
@@ -118,52 +116,27 @@ class MapScreenViewModel @Inject constructor(
     val ballastUiState: StateFlow<BallastUiState> = ballastController.state
     val windState: StateFlow<WindState> = windStateUseCase.windState
     val showWindSpeedOnVario: StateFlow<Boolean> =
-        mapVarioPreferencesUseCase.showWindSpeedOnVario
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.Eagerly,
-                initialValue = true
-            )
+        mapVarioPreferencesUseCase.showWindSpeedOnVario.eagerState(initial = true)
     val showHawkCard: StateFlow<Boolean> =
-        mapVarioPreferencesUseCase.showHawkCard
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.Eagerly,
-                initialValue = false
-            )
+        mapVarioPreferencesUseCase.showHawkCard.eagerState(initial = false)
     val hawkVarioUiState: StateFlow<HawkVarioUiState> =
-        hawkVarioUseCase.hawkVarioUiState
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.Eagerly,
-                initialValue = HawkVarioUiState()
-            )
+        hawkVarioUseCase.hawkVarioUiState.eagerState(initial = HawkVarioUiState())
     val replaySessionState: StateFlow<SessionState> = mapReplayUseCase.replaySession
     val showVarioDemoFab: Boolean = featureFlags.showVarioDemoFab
     val showRacingReplayFab: Boolean = featureFlags.showRacingReplayFab
     val gpsStatusFlow: StateFlow<GpsStatusUiModel> =
         sensorsUseCase.gpsStatusFlow
             .map { it.toUiModel() }
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.Eagerly,
-                initialValue = GpsStatusUiModel.Searching
-            )
+            .eagerState(initial = GpsStatusUiModel.Searching)
     val suppressLiveGps: StateFlow<Boolean> =
         replaySessionState
             .map { it.selection != null }
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.Eagerly,
-                initialValue = replaySessionState.value.selection != null
-            )
+            .eagerState(initial = replaySessionState.value.selection != null)
     val allowSensorStart: StateFlow<Boolean> =
         replaySessionState
             .map { it.selection == null || it.status == SessionStatus.IDLE }
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.Eagerly,
-                initialValue = replaySessionState.value.selection == null ||
+            .eagerState(
+                initial = replaySessionState.value.selection == null ||
                     replaySessionState.value.status == SessionStatus.IDLE
             )
     // AI-NOTE: Map location is derived from FlightDataUseCase (SSOT) so the ViewModel does not
@@ -175,42 +148,45 @@ class MapScreenViewModel @Inject constructor(
     val ognTargets: StateFlow<List<OgnTrafficTarget>> = ognTrafficUseCase.targets
     val ognSnapshot: StateFlow<OgnTrafficSnapshot> = ognTrafficUseCase.snapshot
     val ognOverlayEnabled: StateFlow<Boolean> =
-        ognTrafficUseCase.overlayEnabled
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.Eagerly,
-                initialValue = false
-            )
+        ognTrafficUseCase.overlayEnabled.eagerState(initial = false)
     val ognIconSizePx: StateFlow<Int> =
-        ognTrafficUseCase.iconSizePx
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.Eagerly,
-                initialValue = OGN_ICON_SIZE_DEFAULT_PX
-            )
+        ognTrafficUseCase.iconSizePx.eagerState(initial = OGN_ICON_SIZE_DEFAULT_PX)
     private val rawAdsbTargets: StateFlow<List<AdsbTrafficUiModel>> = adsbTrafficUseCase.targets
+    private val enrichedAdsbTargets: StateFlow<List<AdsbTrafficUiModel>> =
+        adsbMetadataEnrichmentUseCase.targetsWithMetadata(rawAdsbTargets).eagerState(initial = emptyList())
     val adsbTargets: StateFlow<List<AdsbTrafficUiModel>> =
-        adsbMetadataEnrichmentUseCase.targetsWithMetadata(rawAdsbTargets)
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.Eagerly,
-                initialValue = emptyList()
-            )
+        combine(rawAdsbTargets, enrichedAdsbTargets) { rawTargets, enrichedTargets ->
+            if (rawTargets.isEmpty()) {
+                return@combine emptyList()
+            }
+            if (enrichedTargets.isEmpty()) {
+                return@combine rawTargets
+            }
+
+            val metadataById = HashMap<String, AdsbTrafficUiModel>(enrichedTargets.size)
+            for (target in enrichedTargets) {
+                metadataById[target.id.raw] = target
+            }
+            rawTargets.map { target ->
+                val enriched = metadataById[target.id.raw] ?: return@map target
+                if (
+                    target.metadataTypecode == enriched.metadataTypecode &&
+                    target.metadataIcaoAircraftType == enriched.metadataIcaoAircraftType
+                ) {
+                    target
+                } else {
+                    target.copy(
+                        metadataTypecode = enriched.metadataTypecode,
+                        metadataIcaoAircraftType = enriched.metadataIcaoAircraftType
+                    )
+                }
+            }
+        }.eagerState(initial = emptyList())
     val adsbSnapshot: StateFlow<AdsbTrafficSnapshot> = adsbTrafficUseCase.snapshot
     val adsbOverlayEnabled: StateFlow<Boolean> =
-        adsbTrafficUseCase.overlayEnabled
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.Eagerly,
-                initialValue = false
-            )
+        adsbTrafficUseCase.overlayEnabled.eagerState(initial = false)
     val adsbIconSizePx: StateFlow<Int> =
-        adsbTrafficUseCase.iconSizePx
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.Eagerly,
-                initialValue = ADSB_ICON_SIZE_DEFAULT_PX
-            )
+        adsbTrafficUseCase.iconSizePx.eagerState(initial = ADSB_ICON_SIZE_DEFAULT_PX)
 
     val variometerUiState: StateFlow<VariometerUiState> = variometerLayoutUseCase.state
 
@@ -228,17 +204,14 @@ class MapScreenViewModel @Inject constructor(
         adsbMetadataEnrichmentUseCase.selectedTargetDetails(
             selectedIcao24 = _selectedAdsbId,
             adsbTargets = rawAdsbTargets
-        ).stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.Eagerly,
-            initialValue = null
-        )
+        ).eagerState(initial = null)
     private val _containerReady = MutableStateFlow(false)
     private val _liveDataReady = MutableStateFlow(false)
     private val _isMapVisible = MutableStateFlow(false)
+    private val _isAATEditMode = MutableStateFlow(false)
     val cardHydrationReady: StateFlow<Boolean> =
         combine(_containerReady, _liveDataReady) { container, data -> container && data }
-            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+            .eagerState(initial = false)
 
     private val flightDataUiAdapter = mapReplayUseCase.createFlightDataUiAdapter(
         scope = viewModelScope,
@@ -268,6 +241,27 @@ class MapScreenViewModel @Inject constructor(
         uiEffects = _uiEffects,
         onRefreshWaypoints = ::loadWaypoints
     )
+    private val waypointQnhCoordinator = MapScreenWaypointQnhCoordinator(
+        scope = viewModelScope,
+        uiState = _uiState,
+        uiEffects = _uiEffects,
+        mapWaypointsUseCase = mapWaypointsUseCase,
+        qnhUseCase = qnhUseCase,
+        calibrateQnhUseCase = calibrateQnhUseCase
+    )
+    private val trafficCoordinator = MapScreenTrafficCoordinator(
+        scope = viewModelScope,
+        allowSensorStart = allowSensorStart,
+        isMapVisible = _isMapVisible,
+        ognOverlayEnabled = ognOverlayEnabled,
+        adsbOverlayEnabled = adsbOverlayEnabled,
+        mapState = mapState,
+        mapLocation = mapLocation,
+        rawAdsbTargets = rawAdsbTargets,
+        selectedAdsbId = _selectedAdsbId,
+        ognTrafficUseCase = ognTrafficUseCase,
+        adsbTrafficUseCase = adsbTrafficUseCase
+    )
 
     init {
         mapStateStore.setTrailSettings(trailSettingsUseCase.getSettings())
@@ -276,14 +270,14 @@ class MapScreenViewModel @Inject constructor(
             adsbTrafficUseCase.bootstrapMetadataSync()
         }
         observeTrailSettings()
-        observeOgnTraffic()
-        observeAdsbTraffic()
+        trafficCoordinator.bind()
         flightDataUiAdapter.start()
         replayCoordinator.start()
     }
 
-    private val _isAATEditMode = MutableStateFlow(false)
     val isAATEditMode: StateFlow<Boolean> = _isAATEditMode.asStateFlow()
+    val taskType: StateFlow<TaskType> = mapTasksUseCase.taskTypeFlow
+    val mapSensorsRuntimeUseCase: MapSensorsUseCase = sensorsUseCase
     private val unitsState = unitsUseCase.unitsFlow.inVm(
         scope = viewModelScope,
         initial = UnitsPreferences()
@@ -317,266 +311,66 @@ class MapScreenViewModel @Inject constructor(
         onEvent(MapUiEvent.RefreshWaypoints)
     }
 
-    fun emitMapCommand(command: MapCommand) {
-        _mapCommands.tryEmit(command)
-    }
-
-    fun onVarioDemoReplay() {
-        replayCoordinator.onVarioDemoReplay()
-    }
-
-    fun onRacingTaskReplay() {
-        replayCoordinator.onRacingTaskReplay()
-    }
-
-    fun onVarioDemoReplaySim() {
-        replayCoordinator.onVarioDemoReplaySim()
-    }
-
-    fun onVarioDemoReplaySimLive() {
-        replayCoordinator.onVarioDemoReplaySimLive()
-    }
-
-    fun onVarioDemoReplaySim3() {
-        replayCoordinator.onVarioDemoReplaySim3()
-    }
-
-    fun updateSafeContainerSize(size: MapStateStore.MapSize) {
-        mapStateStore.updateSafeContainerSize(size)
-    }
+    fun emitMapCommand(command: MapCommand) = _mapCommands.tryEmit(command)
+    fun onVarioDemoReplay() = replayCoordinator.onVarioDemoReplay()
+    fun onRacingTaskReplay() = replayCoordinator.onRacingTaskReplay()
+    fun onVarioDemoReplaySim() = replayCoordinator.onVarioDemoReplaySim()
+    fun onVarioDemoReplaySimLive() = replayCoordinator.onVarioDemoReplaySimLive()
+    fun onVarioDemoReplaySim3() = replayCoordinator.onVarioDemoReplaySim3()
+    fun updateSafeContainerSize(size: MapStateStore.MapSize) = mapStateStore.updateSafeContainerSize(size)
 
     fun setMapStyle(styleName: String) {
-        if (mapStateStore.updateMapStyleName(styleName)) {
-            emitMapCommand(MapCommand.SetStyle(styleName))
-        }
+        if (mapStateStore.updateMapStyleName(styleName)) emitMapCommand(MapCommand.SetStyle(styleName))
     }
 
-    fun persistMapStyle(styleName: String) {
-        viewModelScope.launch {
-            mapStyleUseCase.saveStyle(styleName)
-        }
-    }
+    fun persistMapStyle(styleName: String) = viewModelScope.launch { mapStyleUseCase.saveStyle(styleName) }
 
     fun setFlightMode(newMode: FlightMode) {
         mapStateStore.setCurrentMode(newMode)
-        val selection = when (newMode) {
+        mapStateStore.setCurrentFlightMode(
+            when (newMode) {
             FlightMode.CRUISE -> com.example.dfcards.FlightModeSelection.CRUISE
             FlightMode.THERMAL -> com.example.dfcards.FlightModeSelection.THERMAL
             FlightMode.FINAL_GLIDE -> com.example.dfcards.FlightModeSelection.FINAL_GLIDE
-        }
-        mapStateStore.setCurrentFlightMode(selection)
+            }
+        )
         flightDataManager.updateFlightModeFromEnum(newMode)
         sensorsUseCase.setFlightMode(newMode)
     }
 
-    fun onEvent(event: MapUiEvent) {
-        uiEventHandler.onEvent(event)
-    }
+    fun onEvent(event: MapUiEvent) = uiEventHandler.onEvent(event)
 
-    private fun normalizeAngleDeg(angle: Float): Float {
-        var normalized = angle % 360f
-        if (normalized < 0f) normalized += 360f
-        return normalized
-    }
-    private fun observeUnits() {
-        unitsState
-            .onEach { preferences ->
-                _uiState.update { it.copy(unitsPreferences = preferences) }
-                flightDataManager.updateUnitsPreferences(preferences)
-            }
-            .launchIn(viewModelScope)
-    }
+    private fun <T> Flow<T>.eagerState(initial: T): StateFlow<T> =
+        stateIn(scope = viewModelScope, started = SharingStarted.Eagerly, initialValue = initial)
 
-    private fun observeGliderConfig() {
-        gliderConfigUseCase.config
-            .onEach { config ->
-                _uiState.update { it.copy(hideBallastPill = config.hideBallastPill) }
-            }
-            .launchIn(viewModelScope)
-    }
+    private fun normalizeAngleDeg(angle: Float): Float = ((angle % 360f) + 360f) % 360f
 
-    private fun observeQnhCalibration() {
-        qnhUseCase.calibrationState
-            .onEach { state ->
-                _uiState.update { it.copy(qnhCalibrationState = state) }
-            }
-            .launchIn(viewModelScope)
-    }
-
-    private fun observeTrailSettings() {
-        trailSettingsUseCase.settingsFlow
-            .onEach { settings -> mapStateStore.setTrailSettings(settings) }
-            .launchIn(viewModelScope)
-    }
-
-    @OptIn(FlowPreview::class)
-    private fun observeOgnTraffic() {
-        combine(
-            allowSensorStart,
-            _isMapVisible,
-            ognOverlayEnabled
-        ) { sensorAllowed, mapVisible, overlayEnabled ->
-            sensorAllowed && mapVisible && overlayEnabled
+    private fun observeUnits() = unitsState
+        .onEach { preferences ->
+            _uiState.update { it.copy(unitsPreferences = preferences) }
+            flightDataManager.updateUnitsPreferences(preferences)
         }
-            .onEach { shouldStream ->
-                ognTrafficUseCase.setStreamingEnabled(shouldStream)
-            }
-            .launchIn(viewModelScope)
+        .launchIn(viewModelScope)
 
-        mapState.lastCameraSnapshot
-            .filterNotNull()
-            .debounce(1_500L)
-            .onEach { cameraSnapshot ->
-                ognTrafficUseCase.updateCenter(
-                    latitude = cameraSnapshot.target.latitude,
-                    longitude = cameraSnapshot.target.longitude
-                )
-            }
-            .launchIn(viewModelScope)
-    }
+    private fun observeGliderConfig() = gliderConfigUseCase.config
+        .onEach { config -> _uiState.update { it.copy(hideBallastPill = config.hideBallastPill) } }
+        .launchIn(viewModelScope)
 
-    @OptIn(FlowPreview::class)
-    private fun observeAdsbTraffic() {
-        combine(
-            allowSensorStart,
-            _isMapVisible,
-            adsbOverlayEnabled
-        ) { sensorAllowed, mapVisible, overlayEnabled ->
-            sensorAllowed && mapVisible && overlayEnabled
-        }
-            .onEach { shouldStream ->
-                if (shouldStream) {
-                    seedAdsbCenterFromCurrentView()
-                }
-                adsbTrafficUseCase.setStreamingEnabled(shouldStream)
-            }
-            .launchIn(viewModelScope)
+    private fun observeQnhCalibration() = qnhUseCase.calibrationState
+        .onEach { state -> _uiState.update { it.copy(qnhCalibrationState = state) } }
+        .launchIn(viewModelScope)
 
-        val centerFromCamera = mapState.lastCameraSnapshot
-            .filterNotNull()
-            .map { snapshot ->
-                snapshot.target.latitude to snapshot.target.longitude
-            }
+    private fun observeTrailSettings() = trailSettingsUseCase.settingsFlow
+        .onEach { settings -> mapStateStore.setTrailSettings(settings) }
+        .launchIn(viewModelScope)
 
-        val centerFromGps = mapLocation
-            .filterNotNull()
-            .map { location ->
-                location.latitude to location.longitude
-            }
+    fun setMapVisible(isVisible: Boolean) = trafficCoordinator.setMapVisible(isVisible)
+    fun onToggleOgnTraffic() = trafficCoordinator.onToggleOgnTraffic()
+    fun onToggleAdsbTraffic() = trafficCoordinator.onToggleAdsbTraffic()
+    fun onAdsbTargetSelected(id: Icao24) = trafficCoordinator.onAdsbTargetSelected(id)
+    fun dismissSelectedAdsbTarget() = trafficCoordinator.dismissSelectedAdsbTarget()
 
-        merge(centerFromCamera, centerFromGps)
-            .sampleWithImmediateFirst(windowMs = 1_500L, scope = viewModelScope)
-            .onEach { (latitude, longitude) ->
-                adsbTrafficUseCase.updateCenter(
-                    latitude = latitude,
-                    longitude = longitude
-                )
-            }
-            .launchIn(viewModelScope)
-
-        mapLocation
-            .filterNotNull()
-            .onEach { location ->
-                adsbTrafficUseCase.updateOwnshipOrigin(
-                    latitude = location.latitude,
-                    longitude = location.longitude
-                )
-            }
-            .launchIn(viewModelScope)
-
-        rawAdsbTargets
-            .onEach { targets ->
-                val selectedId = _selectedAdsbId.value ?: return@onEach
-                if (targets.none { it.id == selectedId }) {
-                    _selectedAdsbId.value = null
-                }
-            }
-            .launchIn(viewModelScope)
-    }
-
-    fun setMapVisible(isVisible: Boolean) {
-        if (_isMapVisible.value == isVisible) return
-        _isMapVisible.value = isVisible
-    }
-
-    fun onToggleOgnTraffic() {
-        viewModelScope.launch {
-            ognTrafficUseCase.setOverlayEnabled(!ognOverlayEnabled.value)
-        }
-    }
-
-    fun onToggleAdsbTraffic() {
-        viewModelScope.launch {
-            val next = !adsbOverlayEnabled.value
-            if (next) {
-                seedAdsbCenterFromCurrentView()
-            }
-            adsbTrafficUseCase.setOverlayEnabled(next)
-            if (!next) {
-                adsbTrafficUseCase.clearTargets()
-                _selectedAdsbId.value = null
-            }
-        }
-    }
-
-    private fun seedAdsbCenterFromCurrentView() {
-        val cameraTarget = mapState.lastCameraSnapshot.value?.target
-        if (cameraTarget != null) {
-            adsbTrafficUseCase.updateCenter(
-                latitude = cameraTarget.latitude,
-                longitude = cameraTarget.longitude
-            )
-            return
-        }
-
-        val gps = mapLocation.value
-        if (gps != null) {
-            adsbTrafficUseCase.updateCenter(
-                latitude = gps.latitude,
-                longitude = gps.longitude
-            )
-        }
-    }
-
-    fun onAdsbTargetSelected(id: Icao24) {
-        _selectedAdsbId.value = id
-    }
-
-    fun dismissSelectedAdsbTarget() {
-        _selectedAdsbId.value = null
-    }
-
-    private fun loadWaypoints() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoadingWaypoints = true, waypointError = null) }
-            val result = runCatching { mapWaypointsUseCase.loadWaypoints() }
-            result
-                .onSuccess { waypoints ->
-                    _uiState.update {
-                        it.copy(
-                            waypoints = waypoints,
-                            isLoadingWaypoints = false,
-                            waypointError = if (waypoints.isEmpty()) MapWaypointError.Empty else null
-                        )
-                    }
-                }
-                .onFailure { error ->
-                    val failure = MapWaypointError.LoadFailed(error)
-                    _uiState.update {
-                        it.copy(
-                            waypoints = emptyList(),
-                            isLoadingWaypoints = false,
-                            waypointError = failure
-                        )
-                    }
-                    _uiEffects.tryEmit(
-                        MapUiEffect.ShowToast(
-                            failure.toUserMessage("Failed to load waypoints")
-                        )
-                    )
-                }
-        }
-    }
+    private fun loadWaypoints() = waypointQnhCoordinator.loadWaypoints()
 
     fun ensureVariometerLayout(
         screenWidthPx: Float,
@@ -584,23 +378,19 @@ class MapScreenViewModel @Inject constructor(
         defaultSizePx: Float,
         minSizePx: Float,
         maxSizePx: Float
-    ) {
-        variometerLayoutUseCase.ensureLayout(
-            screenWidthPx = screenWidthPx,
-            screenHeightPx = screenHeightPx,
-            defaultSizePx = defaultSizePx,
-            minSizePx = minSizePx,
-            maxSizePx = maxSizePx
-        )
-    }
+    ) = variometerLayoutUseCase.ensureLayout(
+        screenWidthPx = screenWidthPx,
+        screenHeightPx = screenHeightPx,
+        defaultSizePx = defaultSizePx,
+        minSizePx = minSizePx,
+        maxSizePx = maxSizePx
+    )
 
     fun onVariometerOffsetCommitted(
         offset: OffsetPx,
         screenWidthPx: Float,
         screenHeightPx: Float
-    ) {
-        variometerLayoutUseCase.onOffsetCommitted(offset, screenWidthPx, screenHeightPx)
-    }
+    ) = variometerLayoutUseCase.onOffsetCommitted(offset, screenWidthPx, screenHeightPx)
 
     fun onVariometerSizeCommitted(
         sizePx: Float,
@@ -608,48 +398,43 @@ class MapScreenViewModel @Inject constructor(
         screenHeightPx: Float,
         minSizePx: Float,
         maxSizePx: Float
-    ) {
-        variometerLayoutUseCase.onSizeCommitted(
-            sizePx = sizePx,
-            screenWidthPx = screenWidthPx,
-            screenHeightPx = screenHeightPx,
-            minSizePx = minSizePx,
-            maxSizePx = maxSizePx
-        )
-    }
+    ) = variometerLayoutUseCase.onSizeCommitted(
+        sizePx = sizePx,
+        screenWidthPx = screenWidthPx,
+        screenHeightPx = screenHeightPx,
+        minSizePx = minSizePx,
+        maxSizePx = maxSizePx
+    )
+
     fun setAATEditMode(enabled: Boolean) {
         _isAATEditMode.value = enabled
     }
 
+    fun createTaskGestureHandler(callbacks: TaskGestureCallbacks): TaskGestureHandler =
+        mapTasksUseCase.createGestureHandler(callbacks)
+
+    fun getInterpolatedReplayHeadingDeg(nowMs: Long): Double? =
+        mapReplayUseCase.getInterpolatedReplayHeadingDeg(nowMs)
+
+    fun getInterpolatedReplayPose(nowMs: Long): ReplayDisplayPose? =
+        mapReplayUseCase.getInterpolatedReplayPose(nowMs)
+
+    fun enterAATEditMode(waypointIndex: Int) {
+        _isAATEditMode.value = true
+        mapTasksUseCase.enterAATEditMode(waypointIndex)
+    }
+
+    fun updateAATTargetPoint(index: Int, lat: Double, lon: Double) =
+        mapTasksUseCase.updateAATTargetPoint(index, lat, lon)
+
     fun exitAATEditMode() {
         _isAATEditMode.value = false
+        mapTasksUseCase.exitAATEditMode()
     }
 
-    fun submitBallastCommand(command: BallastCommand) {
-        ballastController.submit(command)
-    }
-
-    fun onAutoCalibrateQnh() {
-        viewModelScope.launch {
-            when (val result = calibrateQnhUseCase.execute()) {
-                is com.example.xcpro.qnh.QnhCalibrationResult.Success -> {
-                    val label = String.format(Locale.US, "%.1f", result.value.hpa)
-                    _uiEffects.emit(MapUiEffect.ShowToast("QNH updated to $label hPa"))
-                }
-                is com.example.xcpro.qnh.QnhCalibrationResult.Failure -> {
-                    _uiEffects.emit(MapUiEffect.ShowToast(result.reason.toUserMessage()))
-                }
-            }
-        }
-    }
-
-    fun onSetManualQnh(hpa: Double) {
-        viewModelScope.launch {
-            qnhUseCase.setManualQnh(hpa)
-            val label = String.format(Locale.US, "%.1f", hpa)
-            _uiEffects.emit(MapUiEffect.ShowToast("QNH set to $label hPa"))
-        }
-    }
+    fun submitBallastCommand(command: BallastCommand) = ballastController.submit(command)
+    fun onAutoCalibrateQnh() = waypointQnhCoordinator.onAutoCalibrateQnh()
+    fun onSetManualQnh(hpa: Double) = waypointQnhCoordinator.onSetManualQnh(hpa)
 
     override fun onCleared() {
         ognTrafficUseCase.stop()
@@ -657,55 +442,5 @@ class MapScreenViewModel @Inject constructor(
         ballastController.dispose()
         super.onCleared()
     }
-}
-
-private fun QnhCalibrationFailureReason.toUserMessage(): String = when (this) {
-    QnhCalibrationFailureReason.REPLAY_MODE -> "Auto calibration disabled in replay"
-    QnhCalibrationFailureReason.ALREADY_RUNNING -> "Auto calibration already running"
-    QnhCalibrationFailureReason.TIMEOUT -> "Auto calibration timed out"
-    QnhCalibrationFailureReason.INVALID_QNH -> "Auto calibration produced invalid QNH"
-    QnhCalibrationFailureReason.MISSING_SENSORS -> "Auto calibration needs GPS and baro"
-    QnhCalibrationFailureReason.UNKNOWN -> "Auto calibration failed"
-}
-
-private fun com.example.xcpro.sensors.GpsStatus.toUiModel(): GpsStatusUiModel = when (this) {
-    com.example.xcpro.sensors.GpsStatus.NoPermission -> GpsStatusUiModel.NoPermission
-    com.example.xcpro.sensors.GpsStatus.Disabled -> GpsStatusUiModel.Disabled
-    com.example.xcpro.sensors.GpsStatus.Searching -> GpsStatusUiModel.Searching
-    is com.example.xcpro.sensors.GpsStatus.LostFix -> GpsStatusUiModel.LostFix(ageMs = ageMs)
-    is com.example.xcpro.sensors.GpsStatus.Ok -> GpsStatusUiModel.Ok(
-        ageMs = ageMs,
-        accuracyMeters = accuracyMeters
-    )
-}
-
-private fun com.example.xcpro.sensors.GPSData.toUiModel(): MapLocationUiModel =
-    MapLocationUiModel(
-        latitude = position.latitude,
-        longitude = position.longitude,
-        speedMs = speed.value,
-        bearingDeg = bearing,
-        accuracyMeters = accuracy.toDouble(),
-        bearingAccuracyDeg = bearingAccuracyDeg,
-        speedAccuracyMs = speedAccuracyMs,
-        timestampMs = timestamp,
-        monotonicTimestampMs = monotonicTimestampMillis
-    )
-
-@OptIn(FlowPreview::class)
-private fun <T> kotlinx.coroutines.flow.Flow<T>.sampleWithImmediateFirst(
-    windowMs: Long,
-    scope: kotlinx.coroutines.CoroutineScope
-): kotlinx.coroutines.flow.Flow<T> {
-    val shared = distinctUntilChanged()
-        .shareIn(
-            scope = scope,
-            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 0L),
-            replay = 1
-        )
-    return merge(
-        shared.take(1),
-        shared.sample(windowMs)
-    )
 }
 

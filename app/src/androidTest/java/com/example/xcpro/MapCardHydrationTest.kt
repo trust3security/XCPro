@@ -7,6 +7,7 @@ import com.example.dfcards.CardPreferences
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.RealTimeFlightData
 import com.example.dfcards.dfcards.FlightCardsUseCaseFactory
+import com.example.dfcards.dfcards.FlightDataTemplateManagerFactory
 import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.xcpro.map.CardIngestionCoordinator
 import com.example.xcpro.map.FlightDataManager
@@ -47,7 +48,8 @@ class MapCardHydrationTest {
         val cardsUseCaseFactory = FlightCardsUseCaseFactory(SystemClockProvider())
         val flightDataViewModel = FlightDataViewModel(
             ioDispatcher = Dispatchers.IO,
-            cardsUseCaseFactory = cardsUseCaseFactory
+            cardsUseCaseFactory = cardsUseCaseFactory,
+            templateManagerFactory = FlightDataTemplateManagerFactory()
         )
         val cardHydrationReady = MutableStateFlow(false)
         val unitsPreferencesFlow = MutableStateFlow(flightDataManager.unitsPreferences)

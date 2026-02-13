@@ -13,10 +13,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import android.util.Log
-import com.example.xcpro.tasks.TaskManagerCoordinator
-import com.example.xcpro.tasks.TaskMapRenderRouter
 import com.example.xcpro.tasks.core.TaskType
-import org.maplibre.android.maps.MapLibreMap
 
 /**
  * MapTaskIntegration - Task-type specific UI components for MapScreen
@@ -41,22 +38,21 @@ object MapTaskIntegration {
     @Composable
     fun AATEditModeFAB(
         isAATEditMode: Boolean,
-        taskManager: TaskManagerCoordinator,
-        mapLibreMap: MapLibreMap?,
+        taskType: TaskType,
         cameraManager: MapCameraManager,
         onExitEditMode: () -> Unit,
+        onSyncTaskVisuals: () -> Unit,
         modifier: Modifier = Modifier
     ) {
         //  Task-type guard: Only show for AAT tasks
-        if (!isAATEditMode || taskManager.taskType != TaskType.AAT) {
+        if (!isAATEditMode || taskType != TaskType.AAT) {
             return
         }
 
         FloatingActionButton(
             onClick = {
                 onExitEditMode()
-                taskManager.exitAATEditMode()
-                TaskMapRenderRouter.plotCurrentTask(taskManager, mapLibreMap)
+                onSyncTaskVisuals()
                 //  Restore camera position (zoom out to overview) - same as double-click exit
                 cameraManager.restoreAATCameraPosition()
                 Log.d(TAG, " FAB: Exited AAT edit mode and restored camera zoom")
@@ -81,7 +77,7 @@ object MapTaskIntegration {
      */
     @Composable
     fun RacingTaskUI(
-        taskManager: TaskManagerCoordinator,
+        taskType: TaskType,
         modifier: Modifier = Modifier
     ) {
         // Racing tasks use standard map display - no special overlay UI needed

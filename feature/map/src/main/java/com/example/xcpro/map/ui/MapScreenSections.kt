@@ -11,6 +11,8 @@ import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import android.util.Log
 import android.view.MotionEvent
 import com.example.xcpro.map.BuildConfig
@@ -18,11 +20,11 @@ import com.example.dfcards.RealTimeFlightData
 import com.example.dfcards.dfcards.CardContainer
 import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.xcpro.tasks.TaskMapOverlay
-import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapInitializer
 import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.map.LocationManager
+import com.example.xcpro.map.MapOverlayManager
 import kotlinx.coroutines.launch
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
@@ -38,7 +40,7 @@ fun MapMainLayers(
     locationManager: LocationManager,
     flightDataManager: FlightDataManager,
     flightViewModel: FlightDataViewModel,
-    taskManager: TaskManagerCoordinator,
+    overlayManager: MapOverlayManager,
     isUiEditMode: Boolean,
     onEditModeChange: (Boolean) -> Unit,
     onContainerSizeChanged: (androidx.compose.ui.unit.IntSize) -> Unit,
@@ -75,8 +77,7 @@ fun MapMainLayers(
                 .zIndex(3f)
         ) {
             TaskMapOverlay(
-                taskManager = taskManager,
-                mapLibreMap = mapState.mapLibreMap,
+                onTaskStateChanged = overlayManager::onTaskStateChanged,
                 modifier = Modifier.fillMaxSize()
             )
         }
@@ -201,17 +202,38 @@ private fun MapViewHost(
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
+    val lifecycleState = LocalLifecycleOwner.current.lifecycle.currentState
     AndroidView(
         factory = { ctx ->
             MapView(ctx).apply {
                 mapState.mapView = this
                 locationManager.bindRenderFrameListener(this)
+                // Catch up lifecycle immediately when the MapView is created.
+                if (lifecycleState.isAtLeast(Lifecycle.State.CREATED)) {
+                    onCreate(null)
+                }
+                if (lifecycleState.isAtLeast(Lifecycle.State.STARTED)) {
+                    onStart()
+                }
+                if (lifecycleState.isAtLeast(Lifecycle.State.RESUMED)) {
+                    onResume()
+                }
                 getMapAsync { map: MapLibreMap ->
                     scope.launch {
                         try {
                             mapInitializer.initializeMap(map)
                             onMapReady(map)
-                        } catch (_: Exception) {}
+                        } catch (e: Exception) {
+                            Log.e("MapViewHost", "Map initialization failed: ${e.message}", e)
+                            runCatching { onMapReady(map) }
+                                .onFailure { callbackError ->
+                                    Log.e(
+                                        "MapViewHost",
+                                        "onMapReady fallback failed: ${callbackError.message}",
+                                        callbackError
+                                    )
+                                }
+                        }
                     }
                 }
             }

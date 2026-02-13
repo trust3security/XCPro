@@ -29,9 +29,7 @@ import com.example.xcpro.loadAndApplyWaypoints
 import com.example.xcpro.screens.navdrawer.tasks.TaskFilesBottomBar
 import com.example.xcpro.screens.navdrawer.tasks.TaskFilesBottomSheetContent
 import com.example.xcpro.map.ui.documentRefForUri
-import com.example.xcpro.di.MapUseCaseEntryPoint
 import com.example.ui1.icons.Reply_all
-import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.launch
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -67,12 +65,10 @@ fun Task(
     val context = LocalContext.current
     val airspaceViewModel: AirspaceViewModel = hiltViewModel()
     val waypointsViewModel: WaypointsViewModel = hiltViewModel()
+    val taskScreenUseCasesViewModel: TaskScreenUseCasesViewModel = hiltViewModel()
     val airspaceState by airspaceViewModel.uiState.collectAsStateWithLifecycle()
     val waypointsState by waypointsViewModel.uiState.collectAsStateWithLifecycle()
-    val entryPoint = remember(context) {
-        EntryPointAccessors.fromApplication(context, MapUseCaseEntryPoint::class.java)
-    }
-    val airspaceUseCase = remember(entryPoint) { entryPoint.airspaceUseCase() }
+    val airspaceUseCase = taskScreenUseCasesViewModel.airspaceUseCase
     var mapLibreMap by remember { mutableStateOf<MapLibreMap?>(null) }
     var currentMode by remember { mutableStateOf(FlightMode.CRUISE) }
     val modes = FlightMode.values()

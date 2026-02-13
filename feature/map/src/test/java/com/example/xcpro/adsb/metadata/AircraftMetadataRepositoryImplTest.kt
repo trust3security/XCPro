@@ -112,6 +112,66 @@ class AircraftMetadataRepositoryImplTest {
         verify(client, times(0)).fetchByIcao24("aa0004")
     }
 
+    @Test
+    fun cooldownOnLeadingIds_doesNotStarveLaterEligibleMissingIcaos() = runTest {
+        val dao = mock<AircraftMetadataDao>()
+        val client = mock<OpenSkyIcaoMetadataClient>()
+        val clock = FakeClock(monoMs = 1_000L)
+        val ids = listOf("aa0001", "aa0002", "aa0003", "aa0004")
+        val fourth = sampleEntity(icao24 = "aa0004", registration = "N4")
+        whenever(dao.getActiveByIcao24s(ids)).thenReturn(emptyList())
+        whenever(client.fetchByIcao24("aa0001")).thenReturn(Result.success(null))
+        whenever(client.fetchByIcao24("aa0002")).thenReturn(Result.success(null))
+        whenever(client.fetchByIcao24("aa0003")).thenReturn(Result.success(null))
+        whenever(client.fetchByIcao24("aa0004")).thenReturn(Result.success(fourth))
+
+        val repository = AircraftMetadataRepositoryImpl(
+            dao = dao,
+            onDemandClient = client,
+            clock = clock
+        )
+
+        repository.getMetadataFor(ids)
+        clock.advanceMonoMs(1_000L)
+        val second = repository.getMetadataFor(ids)
+
+        assertEquals("N4", second["aa0004"]?.registration)
+        verify(client, times(1)).fetchByIcao24("aa0001")
+        verify(client, times(1)).fetchByIcao24("aa0002")
+        verify(client, times(1)).fetchByIcao24("aa0003")
+        verify(client, times(1)).fetchByIcao24("aa0004")
+        verify(dao).upsertActive(listOf(fourth))
+    }
+
+    @Test
+    fun transientOnDemandFailure_retriesAfterShortCooldown() = runTest {
+        val dao = mock<AircraftMetadataDao>()
+        val client = mock<OpenSkyIcaoMetadataClient>()
+        val clock = FakeClock(monoMs = 10_000L)
+        val recovered = sampleEntity(icao24 = "abcdef", registration = "N757F")
+        whenever(dao.getActiveByIcao24s(listOf("abcdef"))).thenReturn(emptyList())
+        whenever(client.fetchByIcao24("abcdef"))
+            .thenReturn(Result.failure(IllegalStateException("network")))
+            .thenReturn(Result.success(recovered))
+
+        val repository = AircraftMetadataRepositoryImpl(
+            dao = dao,
+            onDemandClient = client,
+            clock = clock
+        )
+
+        val first = repository.getMetadataFor(listOf("ABCDEF"))
+        clock.advanceMonoMs(10_000L)
+        val stillCoolingDown = repository.getMetadataFor(listOf("ABCDEF"))
+        clock.advanceMonoMs(51_000L)
+        val retried = repository.getMetadataFor(listOf("ABCDEF"))
+
+        assertNull(first["abcdef"])
+        assertNull(stillCoolingDown["abcdef"])
+        assertEquals("N757F", retried["abcdef"]?.registration)
+        verify(client, times(2)).fetchByIcao24("abcdef")
+    }
+
     private fun sampleEntity(
         icao24: String,
         registration: String?

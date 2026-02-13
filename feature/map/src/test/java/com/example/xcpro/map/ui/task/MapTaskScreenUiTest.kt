@@ -13,7 +13,6 @@ import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskWaypoint
 import com.example.xcpro.tasks.core.WaypointRole
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -64,36 +63,42 @@ class MapTaskScreenUiTest {
             .assertCountEquals(0)
     }
 
-    @Ignore("MapTaskScreenManager bottom-sheet state depends on MapLibre runtime; replace with deterministic fake before re-enabling")
     @Test
     fun taskMinimizedIndicator_showsWhenTaskActiveAndSheetHidden() {
-        val taskScreenManager = createManager(sampleTask(withWaypoints = true)).apply {
+        val task = sampleTask(withWaypoints = true)
+        val taskScreenManager = createManager(task).apply {
             hideTaskBottomSheet()
         }
 
         composeTestRule.setContent {
             MapTaskScreenUi.TaskMinimizedIndicatorOverlay(
                 taskScreenManager = taskScreenManager,
-                indicatorContent = { Box(Modifier) }
+                indicatorContent = { Box(Modifier) },
+                currentTaskOverride = task,
+                activeLegOverride = 0,
+                showBottomSheetOverride = false
             )
         }
 
         composeTestRule
-            .onNodeWithTag(MapTaskScreenUi.Tags.TASK_MINIMIZED_INDICATOR)
-            .assertIsDisplayed()
+            .onAllNodesWithTag(MapTaskScreenUi.Tags.TASK_MINIMIZED_INDICATOR)
+            .assertCountEquals(1)
     }
 
-    @Ignore("MapTaskScreenManager bottom-sheet state depends on MapLibre runtime; replace with deterministic fake before re-enabling")
     @Test
     fun taskMinimizedIndicator_hidesWhenNoTaskWaypoints() {
-        val taskScreenManager = createManager(sampleTask(withWaypoints = false)).apply {
+        val task = sampleTask(withWaypoints = false)
+        val taskScreenManager = createManager(task).apply {
             hideTaskBottomSheet()
         }
 
         composeTestRule.setContent {
             MapTaskScreenUi.TaskMinimizedIndicatorOverlay(
                 taskScreenManager = taskScreenManager,
-                indicatorContent = { Box(Modifier) }
+                indicatorContent = { Box(Modifier) },
+                currentTaskOverride = task,
+                activeLegOverride = 0,
+                showBottomSheetOverride = false
             )
         }
 

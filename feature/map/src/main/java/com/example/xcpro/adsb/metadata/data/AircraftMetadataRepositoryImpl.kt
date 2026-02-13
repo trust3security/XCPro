@@ -35,19 +35,33 @@ class AircraftMetadataRepositoryImpl @Inject constructor(
         }
 
         val missing = normalized.filterNot(fromDb::containsKey)
-            .take(ON_DEMAND_MAX_BATCH_SIZE)
-        val hydratedRows = ArrayList<AircraftMetadataEntity>(missing.size)
         val nowMonoMs = clock.nowMonoMs()
+        val eligibleMissing = missing
+            .filter { icao24 -> isEligibleForOnDemandLookup(icao24 = icao24, nowMonoMs = nowMonoMs) }
+            .take(ON_DEMAND_MAX_BATCH_SIZE)
+        val hydratedRows = ArrayList<AircraftMetadataEntity>(eligibleMissing.size)
 
-        missing.forEach { missingIcao24 ->
-            val lastAttemptMonoMs = onDemandAttemptByIcao24[missingIcao24]
-            if (lastAttemptMonoMs != null && nowMonoMs - lastAttemptMonoMs < ON_DEMAND_RETRY_COOLDOWN_MS) {
+        eligibleMissing.forEach { missingIcao24 ->
+            val fetchResult = onDemandClient.fetchByIcao24(missingIcao24)
+            if (fetchResult.isFailure) {
+                onDemandAttemptByIcao24[missingIcao24] = OnDemandAttempt(
+                    attemptedAtMonoMs = nowMonoMs,
+                    cooldownMs = ON_DEMAND_ERROR_RETRY_COOLDOWN_MS
+                )
                 return@forEach
             }
 
-            onDemandAttemptByIcao24[missingIcao24] = nowMonoMs
-            val hydrated = onDemandClient.fetchByIcao24(missingIcao24).getOrNull() ?: return@forEach
+            val hydrated = fetchResult.getOrNull()
+            if (hydrated == null) {
+                onDemandAttemptByIcao24[missingIcao24] = OnDemandAttempt(
+                    attemptedAtMonoMs = nowMonoMs,
+                    cooldownMs = ON_DEMAND_NOT_FOUND_RETRY_COOLDOWN_MS
+                )
+                return@forEach
+            }
+
             hydratedRows += hydrated
+            onDemandAttemptByIcao24.remove(missingIcao24)
         }
 
         if (hydratedRows.isNotEmpty()) {
@@ -66,11 +80,22 @@ class AircraftMetadataRepositoryImpl @Inject constructor(
             ?.takeIf { ICAO24_REGEX.matches(it) }
     }
 
+    private fun isEligibleForOnDemandLookup(icao24: String, nowMonoMs: Long): Boolean {
+        val lastAttempt = onDemandAttemptByIcao24[icao24] ?: return true
+        return nowMonoMs - lastAttempt.attemptedAtMonoMs >= lastAttempt.cooldownMs
+    }
+
     private companion object {
         val ICAO24_REGEX = Regex("[0-9a-f]{6}")
         const val ON_DEMAND_MAX_BATCH_SIZE = 3
-        const val ON_DEMAND_RETRY_COOLDOWN_MS = 10L * 60L * 1000L
+        const val ON_DEMAND_NOT_FOUND_RETRY_COOLDOWN_MS = 10L * 60L * 1000L
+        const val ON_DEMAND_ERROR_RETRY_COOLDOWN_MS = 60L * 1000L
     }
 
-    private val onDemandAttemptByIcao24 = ConcurrentHashMap<String, Long>()
+    private val onDemandAttemptByIcao24 = ConcurrentHashMap<String, OnDemandAttempt>()
+
+    private data class OnDemandAttempt(
+        val attemptedAtMonoMs: Long,
+        val cooldownMs: Long
+    )
 }

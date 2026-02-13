@@ -9,6 +9,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.withContext
 
@@ -22,9 +23,9 @@ class AdsbMetadataEnrichmentUseCase @Inject constructor(
     fun targetsWithMetadata(
         adsbTargets: Flow<List<AdsbTrafficUiModel>>
     ): Flow<List<AdsbTrafficUiModel>> {
-        return adsbTargets.mapLatest { targets ->
+        return adsbTargets.map { targets ->
             if (targets.isEmpty()) {
-                return@mapLatest emptyList()
+                return@map emptyList()
             }
             val metadataByIcao24 = withContext(ioDispatcher) {
                 aircraftMetadataRepository.getMetadataFor(targets.map { it.id.raw }.distinct())

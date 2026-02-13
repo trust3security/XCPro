@@ -39,12 +39,21 @@ internal object AdsbGeoJsonMapper {
                 aircraftIcon.styleImageId
             }
         )
-        target.trackDeg?.let { feature.addNumberProperty(PROP_TRACK_DEG, it) }
+        target.trackDeg
+            ?.takeIf { it.isFinite() }
+            ?.let { feature.addNumberProperty(PROP_TRACK_DEG, normalizeTrackDegrees(it)) }
         target.altitudeM?.let { feature.addNumberProperty(PROP_ALT_M, it) }
         target.speedMps?.let { feature.addNumberProperty(PROP_SPEED_MPS, it) }
-        target.climbMps?.let { feature.addNumberProperty(PROP_VS_MPS, it) }
+        target.climbMps
+            ?.takeIf { it.isFinite() }
+            ?.let { feature.addNumberProperty(PROP_VS_MPS, it) }
         target.category?.let { feature.addNumberProperty(PROP_CATEGORY, it) }
         feature.addNumberProperty(PROP_AGE_SEC, target.ageSec)
         return feature
+    }
+
+    private fun normalizeTrackDegrees(value: Double): Double {
+        val normalized = value % 360.0
+        return if (normalized < 0.0) normalized + 360.0 else normalized
     }
 }

@@ -39,6 +39,18 @@ The following checks must fail the build when violated:
 
 ---
 
+### 1A.1 Static Analysis Expectations (Timebase)
+
+In addition to runtime review, CI should include static checks that flag forbidden time calls
+in domain/fusion paths (and ideally repo-wide, excluding tests):
+
+- `System.currentTimeMillis`
+- `SystemClock.*`
+- `Date()`
+- `Instant.now()`
+
+Acceptable: injected `Clock`/`TimeSource` interfaces.
+
 ## 1B. Exception Process
 
 Exceptions require:

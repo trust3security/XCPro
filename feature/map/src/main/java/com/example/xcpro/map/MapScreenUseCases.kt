@@ -11,6 +11,7 @@ import com.example.xcpro.adsb.metadata.domain.AircraftMetadataSyncRepository
 import com.example.xcpro.adsb.metadata.domain.AircraftMetadataSyncScheduler
 import com.example.xcpro.adsb.metadata.domain.MetadataSyncState
 import com.example.xcpro.flightdata.FlightDataRepository
+import com.example.xcpro.sensors.UnifiedSensorManager
 import com.example.xcpro.ogn.OgnTrafficRepository
 import com.example.xcpro.ogn.OgnTrafficPreferencesRepository
 import com.example.xcpro.ogn.OgnTrafficSnapshot
@@ -28,7 +29,11 @@ import com.example.xcpro.map.config.MapFeatureFlags
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.tasks.TaskNavigationController
 import com.example.xcpro.replay.IgcReplayController
+import com.example.xcpro.replay.ReplayDisplayPose
 import com.example.xcpro.map.replay.RacingReplayLogBuilder
+import com.example.xcpro.gestures.TaskGestureCallbacks
+import com.example.xcpro.gestures.TaskGestureHandler
+import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.vario.VarioServiceManager
 import com.example.xcpro.vario.LevoVarioPreferencesRepository
 import com.example.xcpro.sensors.GpsStatus
@@ -101,9 +106,16 @@ class MapSensorsUseCase @Inject constructor(
 ) {
     val gpsStatusFlow: StateFlow<GpsStatus> = varioServiceManager.unifiedSensorManager.gpsStatusFlow
     val flightStateFlow: StateFlow<FlyingState> = varioServiceManager.flightStateSource.flightState
+    val unifiedSensorManager: UnifiedSensorManager = varioServiceManager.unifiedSensorManager
 
     fun setFlightMode(mode: com.example.xcpro.common.flight.FlightMode) {
         varioServiceManager.setFlightMode(mode)
+    }
+
+    suspend fun startSensors(): Boolean = varioServiceManager.start()
+
+    fun stopSensors() {
+        varioServiceManager.stop()
     }
 }
 
@@ -117,8 +129,26 @@ class MapVarioPreferencesUseCase @Inject constructor(
 class MapTasksUseCase @Inject constructor(
     private val taskManager: TaskManagerCoordinator
 ) {
+    val taskTypeFlow: StateFlow<TaskType> = taskManager.taskTypeFlow
+
     suspend fun loadSavedTasks() {
         taskManager.loadSavedTasks()
+    }
+
+    fun createGestureHandler(callbacks: TaskGestureCallbacks): TaskGestureHandler {
+        return taskManager.createGestureHandler(callbacks)
+    }
+
+    fun enterAATEditMode(waypointIndex: Int) {
+        taskManager.enterAATEditMode(waypointIndex)
+    }
+
+    fun exitAATEditMode() {
+        taskManager.exitAATEditMode()
+    }
+
+    fun updateAATTargetPoint(index: Int, lat: Double, lon: Double) {
+        taskManager.updateAATTargetPoint(index, lat, lon)
     }
 }
 
@@ -129,6 +159,12 @@ class MapReplayUseCase @Inject constructor(
     private val racingReplayLogBuilder: RacingReplayLogBuilder
 ) {
     val replaySession: StateFlow<com.example.xcpro.replay.SessionState> = controller.session
+
+    fun getInterpolatedReplayHeadingDeg(nowMs: Long): Double? =
+        controller.getInterpolatedReplayHeadingDeg(nowMs)
+
+    fun getInterpolatedReplayPose(nowMs: Long): ReplayDisplayPose? =
+        controller.getInterpolatedReplayPose(nowMs)
 
     internal fun createFlightDataUiAdapter(
         scope: CoroutineScope,

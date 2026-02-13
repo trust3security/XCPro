@@ -1,6 +1,6 @@
 ﻿> NOTICE: Review the active task plan before implementing task-related changes.
 
-> Active task compliance plan: `docs/refactor/Task_Architecture_Compliance_Refactor_Plan.md`
+> Active task compliance plan: `docs/refactor/Map_Task_5of5_Stabilization_Plan_2026-02-12.md`
 
 # CODEBASE_CONTEXT_AND_INTENT.md
 

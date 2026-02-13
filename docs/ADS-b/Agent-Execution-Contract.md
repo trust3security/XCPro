@@ -206,3 +206,167 @@ At task end, include:
 - PR-ready summary (what/why/how).
 - Manual verification steps (2-5 steps).
 
+---
+
+# 7) Ready-To-Run Contract: Map/Task 5 of 5 Hardening (2026-02-12)
+
+Use this section when the task is "raise map/task quality to 5/5 with no
+behavior regressions."
+
+## 7.1 Execution Prompt (Copy/Paste)
+
+```text
+Use `docs/ADS-b/Agent-Execution-Contract.md` Section 7 as the active contract.
+Implement autonomously end-to-end.
+
+Primary plan doc:
+`docs/refactor/Map_Task_5of5_Stabilization_Plan_2026-02-12.md`
+
+Non-negotiables:
+- Preserve MVVM + UDF + SSOT boundaries.
+- Remove map/task UI bypasses called out in the plan.
+- Keep replay deterministic.
+- No partial TODO-only refactor.
+```
+
+## 7.2 Fixed Change Request
+
+- Consolidate map/task rendering to a single runtime owner.
+- Remove direct task manager/service/replay manager access from map Composables.
+- Replace UI-side direct mutation/query bypasses with ViewModel intents + state.
+- Re-enable and expand tests for map/task high-risk paths.
+- Decompose map/task orchestration hotspots to lower blast radius.
+
+## 7.3 In-Scope Files (Initial)
+
+- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
+- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRuntimeEffects.kt`
+- `feature/map/src/main/java/com/example/xcpro/map/MapGestureSetup.kt`
+- `feature/map/src/main/java/com/example/xcpro/map/MapTaskIntegration.kt`
+- `feature/map/src/main/java/com/example/xcpro/tasks/TaskMapOverlay.kt`
+- `feature/map/src/main/java/com/example/xcpro/map/MapInitializer.kt`
+- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
+- `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt`
+- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
+- `feature/map/src/test/java/com/example/xcpro/map/MapScreenViewModelTest.kt`
+- `feature/map/src/test/java/com/example/xcpro/map/ui/task/MapTaskScreenUiTest.kt`
+
+## 7.4 Ordered Phases (Must Follow)
+
+1. Phase 0: Baseline + guardrails.
+2. Phase 1: Single task render owner.
+3. Phase 2: UI boundary hardening.
+4. Phase 3: Maintainability decomposition.
+5. Phase 4: Test confidence closure.
+6. Phase 5: Docs + full verification.
+
+For each phase, agent output must include:
+- Files changed.
+- Tests added/updated.
+- Verification commands + pass/fail.
+- Any assumptions taken.
+
+## 7.5 Hard Acceptance Criteria
+
+- Exactly one render ownership path performs task clear+plot orchestration.
+- Map Composables no longer directly mutate/query task coordinator for business
+  behavior (intent/state path only).
+- `MapScreenRoot` no longer acquires task/service/replay managers via app
+  entry-point bypasses.
+- Ignored tests in map/task critical path are zero.
+- Required checks all pass:
+  - `./gradlew enforceRules`
+  - `./gradlew testDebugUnitTest`
+  - `./gradlew assembleDebug`
+  - `./gradlew connectedDebugAndroidTest` (when emulator/device is available)
+
+## 7.6 5/5 Exit Score Rules
+
+- Overall quality 5/5:
+  - All acceptance criteria met and no open P0/P1 findings.
+- Release readiness 5/5:
+  - All required checks green, including connected tests when environment allows.
+- Architecture cleanliness 5/5:
+  - All bypass-removal items in the plan are closed.
+- Maintainability/change safety 5/5:
+  - Hotspot decomposition gates are met and render path ownership is singular.
+- Test confidence 5/5:
+  - Deterministic reruns stable and no ignored tests in risky map/task scope.
+
+## 7.7 Execution Evidence (2026-02-12)
+
+Latest autonomous execution status against Section 7:
+
+- Completed:
+  - Single task-render ownership via `TaskMapRenderRouter.syncTaskVisuals(...)`.
+  - Map root bypass removal for task/service/replay manager access.
+  - Non-root `EntryPointAccessors.fromApplication(...)` runtime callsites removed (now 0).
+  - Task gesture/edit paths routed through use-case + ViewModel APIs.
+  - Critical map/task ignored-test debt removed (`MapScreenViewModelTest`, `MapTaskScreenUiTest`).
+  - Hotspot decomposition gates met:
+    - `MapScreenRoot.kt` 392 LOC
+    - `MapScreenContent.kt` 337 LOC
+    - `MapScreenViewModel.kt` 418 LOC
+    - `MapScreenScaffoldInputs.kt` 304 LOC
+
+- Verification results:
+  - `./gradlew enforceRules` -> PASS
+  - `./gradlew testDebugUnitTest` -> PASS
+  - `./gradlew assembleDebug` -> PASS
+  - `./gradlew connectedDebugAndroidTest --no-parallel` -> PASS on `SM-S908E - Android 16`
+
+- Outstanding external gate:
+  - None.
+
+## 7.8 Follow-On Autonomous Contract: ROI Hardening Pass
+
+Use this when executing the post-closure cleanup defined in:
+- `docs/refactor/Map_Task_5of5_Stabilization_Plan_2026-02-12.md` (Section 9)
+
+Execution order:
+1. Workstream A: consolidate task render sync triggers to one owner path.
+2. Workstream B: decompose `MapInitializer` and `TaskManagerCoordinator`.
+3. Workstream C: remove remaining runtime `EntryPoints.get(...)` lookups.
+
+Hard requirements:
+- No behavior regressions in task overlay toggle/edit/navigation flows.
+- Preserve MVVM + UDF + SSOT boundaries.
+- Keep replay deterministic.
+- Keep docs in sync with final wiring.
+
+Acceptance criteria for the pass:
+- Trigger ownership:
+  - Direct production callsites of `TaskMapRenderRouter.syncTaskVisuals(...)` are reduced to a single coordinator owner.
+- Maintainability:
+  - `MapInitializer` and `TaskManagerCoordinator` responsibilities are split into bounded collaborators.
+- Dependency purity:
+  - Runtime UI/composable code no longer uses `EntryPoints.get(...)`.
+- Verification:
+  - `./gradlew enforceRules`
+  - `./gradlew testDebugUnitTest`
+  - `./gradlew assembleDebug`
+  - `./gradlew connectedDebugAndroidTest --no-parallel` (device/emulator available)
+
+Execution status update (2026-02-12):
+- Workstream A: Completed.
+  - Added `TaskRenderSyncCoordinator` as the single runtime trigger owner.
+  - Rewired map/task trigger callsites to coordinator methods.
+  - Added `TaskRenderSyncCoordinatorTest` for dedupe + pending-map behavior.
+- Workstream B: Completed.
+  - `MapInitializer` split with dedicated collaborators:
+    - `MapScaleBarController`
+    - `MapInitializerDataLoader`
+  - `TaskManagerCoordinator` persistence/sync responsibilities extracted to:
+    - `TaskCoordinatorPersistenceBridge`
+- Workstream C: Completed.
+  - Removed all runtime entrypoint lookups (`EntryPoints.get(...)` now 0).
+  - Replaced entrypoint acquisition with Hilt ViewModel hosts:
+    - `TaskManagerCoordinatorHostViewModel`
+    - `TaskScreenUseCasesViewModel`
+  - Removed obsolete `MapUseCaseEntryPoint`.
+- Verification rerun after B/C:
+  - `./gradlew enforceRules` -> PASS
+  - `./gradlew testDebugUnitTest` -> PASS
+  - `./gradlew assembleDebug` -> PASS
+  - `./gradlew :app:connectedDebugAndroidTest --no-parallel` -> PASS on `SM-S908E - Android 16`
+

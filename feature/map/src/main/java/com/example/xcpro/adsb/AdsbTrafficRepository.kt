@@ -439,7 +439,7 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
 
     private companion object {
         private const val TAG = "AdsbTrafficRepository"
-        private const val RECEIVE_RADIUS_KM = 15
+        private const val RECEIVE_RADIUS_KM = 20
         private const val MAX_DISPLAYED_TARGETS = 30
         private const val STALE_AFTER_SEC = 60
         private const val EXPIRY_AFTER_SEC = 120

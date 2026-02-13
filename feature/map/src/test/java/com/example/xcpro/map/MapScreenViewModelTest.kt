@@ -45,6 +45,8 @@ import com.example.xcpro.replay.ReplayEvent
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.map.trail.MapTrailPreferences
 import com.example.xcpro.map.trail.MapTrailSettingsUseCase
+import com.example.xcpro.map.trail.buildCompleteFlightData
+import com.example.xcpro.map.trail.defaultGps
 import com.example.xcpro.tasks.TaskFeatureFlags
 import com.example.xcpro.tasks.TaskNavigationController
 import com.example.xcpro.tasks.aat.AATTaskManager
@@ -349,7 +351,7 @@ class MapScreenViewModelTest {
     }
 
     @Test
-    fun onToggleAdsbTraffic_seedsCenterFromCameraSnapshotImmediately() {
+    fun onToggleAdsbTraffic_seedsCenterFromCameraSnapshotWhenGpsUnavailable() {
         val adsbRepository = FakeAdsbTrafficRepository()
         val viewModel = createViewModel(adsbRepositoryOverride = adsbRepository)
 
@@ -368,19 +370,22 @@ class MapScreenViewModelTest {
     }
 
     @Test
-    fun adsbCenter_updatesFromCameraSnapshotImmediatelyWithoutGpsLocation() {
+    fun adsbCenter_updatesFromOwnshipGpsLocation() {
         val adsbRepository = FakeAdsbTrafficRepository()
-        val viewModel = createViewModel(adsbRepositoryOverride = adsbRepository)
+        createViewModel(adsbRepositoryOverride = adsbRepository)
+        drainMain()
 
-        viewModel.mapStateActions.updateCameraSnapshot(
-            target = MapStateStore.MapPoint(latitude = -34.5000, longitude = 150.5000),
-            zoom = 9.0,
-            bearing = 15.0
+        flightDataRepository.update(
+            buildCompleteFlightData(
+                gps = defaultGps(latitude = -34.5000, longitude = 150.5000)
+            )
         )
         drainMain()
 
         assertEquals(-34.5000, adsbRepository.lastCenterLat ?: Double.NaN, 1e-6)
         assertEquals(150.5000, adsbRepository.lastCenterLon ?: Double.NaN, 1e-6)
+        assertEquals(-34.5000, adsbRepository.lastOwnshipLat ?: Double.NaN, 1e-6)
+        assertEquals(150.5000, adsbRepository.lastOwnshipLon ?: Double.NaN, 1e-6)
     }
 
     @Test
@@ -517,7 +522,7 @@ class MapScreenViewModelTest {
                     connectionState = AdsbConnectionState.Disabled,
                     centerLat = null,
                     centerLon = null,
-                    receiveRadiusKm = 10,
+                    receiveRadiusKm = 20,
                     fetchedCount = 0,
                     withinRadiusCount = 0,
                     displayedCount = 0,
@@ -635,7 +640,7 @@ class MapScreenViewModelTest {
                 connectionState = AdsbConnectionState.Disabled,
                 centerLat = null,
                 centerLon = null,
-                receiveRadiusKm = 10,
+                receiveRadiusKm = 20,
                 fetchedCount = 0,
                 withinRadiusCount = 0,
                 displayedCount = 0,

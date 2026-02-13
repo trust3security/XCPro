@@ -33,6 +33,15 @@ If touching variometer/replay pipeline behavior, also read:
 - If architecture rules are violated, fix the code or record a time-boxed
   exception in `docs/ARCHITECTURE/KNOWN_DEVIATIONS.md` (issue ID, owner, expiry).
 
+
+## Task Execution Template (Per-Change)
+
+For autonomous feature/refactor work, start from:
+
+- `docs/ARCHITECTURE/AGENT.md`
+
+This ensures phased execution, acceptance criteria, required checks, and a mandatory quality rescore.
+
 ## Documentation Sync Rules
 
 - If pipeline wiring changes, update `docs/ARCHITECTURE/PIPELINE.md`.
@@ -63,6 +72,9 @@ Windows convenience:
 ```bat
 preflight.bat
 ```
+
+PR hygiene:
+- Use `.github/pull_request_template.md` and complete the architecture drift checklist.
 
 ## Legacy Note
 

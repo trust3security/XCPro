@@ -5,7 +5,6 @@ import android.content.Context
 import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
 import com.example.xcpro.sensors.UnifiedSensorManager
-import com.example.xcpro.vario.VarioServiceManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -14,14 +13,14 @@ import kotlinx.coroutines.launch
 internal class LocationSensorsController(
     private val context: Context,
     private val scope: CoroutineScope,
-    private val varioServiceManager: VarioServiceManager
+    private val sensorsUseCase: MapSensorsUseCase
 ) {
     companion object {
         private const val TAG = "LocationManager"
     }
 
     private var sensorsStarted = false
-    private val unifiedSensorManager: UnifiedSensorManager = varioServiceManager.unifiedSensorManager
+    private val unifiedSensorManager: UnifiedSensorManager = sensorsUseCase.unifiedSensorManager
     private var restartJob: Job? = null
 
     fun onLocationPermissionsResult(fineLocationGranted: Boolean) {
@@ -133,7 +132,7 @@ internal class LocationSensorsController(
             // Sensors might still be producing data from a previous session, but
             // the vario service (flight data collection, MacCready observers, etc.)
             // is not running. Make sure we spin it up so cards receive data.
-            val startedNow = varioServiceManager.start()
+            val startedNow = sensorsUseCase.startSensors()
             val statusAfterStart = unifiedSensorManager.getSensorStatus()
             sensorsStarted = startedNow || statusAfterStart.gpsStarted
             if (sensorsStarted) {
@@ -141,7 +140,7 @@ internal class LocationSensorsController(
             }
         }
 
-        val started = varioServiceManager.start()
+        val started = sensorsUseCase.startSensors()
         val statusAfterStart = unifiedSensorManager.getSensorStatus()
         sensorsStarted = started || statusAfterStart.gpsStarted
         if (!sensorsStarted) {
@@ -152,7 +151,7 @@ internal class LocationSensorsController(
     private fun stopSensors() {
         val status = unifiedSensorManager.getSensorStatus()
         if (!sensorsStarted && !status.gpsStarted) return
-        varioServiceManager.stop()
+        sensorsUseCase.stopSensors()
         sensorsStarted = false
     }
 }

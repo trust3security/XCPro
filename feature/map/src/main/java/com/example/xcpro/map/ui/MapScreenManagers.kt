@@ -12,17 +12,20 @@ import com.example.xcpro.map.MapOverlayManager
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapStateActions
 import com.example.xcpro.map.MapStateReader
+import com.example.xcpro.map.MapSensorsUseCase
 import com.example.xcpro.map.MapTaskScreenManager
+import com.example.xcpro.map.TaskRenderSyncCoordinator
 import com.example.xcpro.map.trail.SnailTrailManager
 import com.example.xcpro.map.ui.widgets.MapUIWidgetManager
-import com.example.xcpro.replay.IgcReplayController
+import com.example.xcpro.replay.ReplayDisplayPose
+import com.example.xcpro.replay.SessionState
 import com.example.xcpro.airspace.AirspaceUseCase
 import com.example.xcpro.flightdata.WaypointFilesUseCase
 import com.example.xcpro.tasks.TaskManagerCoordinator
-import com.example.xcpro.vario.VarioServiceManager
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.map.config.MapFeatureFlags
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.StateFlow
 
 internal data class MapScreenManagers(
     val snailTrailManager: SnailTrailManager,
@@ -44,8 +47,10 @@ internal fun rememberMapScreenManagers(
     taskManager: TaskManagerCoordinator,
     mapStateActions: MapStateActions,
     orientationManager: MapOrientationManager,
-    varioServiceManager: VarioServiceManager,
-    igcReplayController: IgcReplayController,
+    sensorsUseCase: MapSensorsUseCase,
+    replaySessionState: StateFlow<SessionState>,
+    replayHeadingProvider: (Long) -> Double?,
+    replayFixProvider: (Long) -> ReplayDisplayPose?,
     featureFlags: MapFeatureFlags,
     coroutineScope: CoroutineScope,
     airspaceUseCase: AirspaceUseCase,
@@ -55,12 +60,20 @@ internal fun rememberMapScreenManagers(
         SnailTrailManager(context, mapState, featureFlags)
     }
 
+    val taskRenderSyncCoordinator = remember(taskManager, mapState) {
+        TaskRenderSyncCoordinator(
+            taskManager = taskManager,
+            mapProvider = { mapState.mapLibreMap }
+        )
+    }
+
     val overlayManager = remember(
         mapState,
         taskManager,
         context,
         mapStateReader,
         mapStateActions,
+        taskRenderSyncCoordinator,
         snailTrailManager,
         coroutineScope,
         airspaceUseCase,
@@ -70,6 +83,7 @@ internal fun rememberMapScreenManagers(
             context,
             mapState,
             mapStateReader,
+            taskRenderSyncCoordinator,
             taskManager,
             mapStateActions,
             snailTrailManager,
@@ -94,10 +108,9 @@ internal fun rememberMapScreenManagers(
     val locationManager = remember(
         mapState,
         mapStateReader,
-        varioServiceManager,
+        sensorsUseCase,
         context,
-        featureFlags,
-        igcReplayController
+        featureFlags
     ) {
         LocationManager(
             context = context,
@@ -105,10 +118,10 @@ internal fun rememberMapScreenManagers(
             mapStateReader = mapStateReader,
             stateActions = mapStateActions,
             coroutineScope = coroutineScope,
-            varioServiceManager = varioServiceManager,
+            sensorsUseCase = sensorsUseCase,
             featureFlags = featureFlags,
-            replayHeadingProvider = igcReplayController::getInterpolatedReplayHeadingDeg,
-            replayFixProvider = igcReplayController::getInterpolatedReplayPose
+            replayHeadingProvider = replayHeadingProvider,
+            replayFixProvider = replayFixProvider
         )
     }
 
@@ -116,10 +129,16 @@ internal fun rememberMapScreenManagers(
         mapState,
         orientationManager,
         locationManager,
-        igcReplayController,
+        replaySessionState,
         mapStateActions
     ) {
-        MapLifecycleManager(mapState, orientationManager, locationManager, igcReplayController, mapStateActions)
+        MapLifecycleManager(
+            mapState = mapState,
+            orientationManager = orientationManager,
+            locationManager = locationManager,
+            replaySessionState = replaySessionState,
+            stateActions = mapStateActions
+        )
     }
 
     val modalManager = remember(mapState) {
@@ -131,7 +150,7 @@ internal fun rememberMapScreenManagers(
         mapStateReader,
         mapStateActions,
         orientationManager,
-        taskManager,
+        taskRenderSyncCoordinator,
         context,
         coroutineScope,
         snailTrailManager,
@@ -144,7 +163,7 @@ internal fun rememberMapScreenManagers(
             mapStateReader = mapStateReader,
             stateActions = mapStateActions,
             orientationManager = orientationManager,
-            taskManager = taskManager,
+            taskRenderSyncCoordinator = taskRenderSyncCoordinator,
             snailTrailManager = snailTrailManager,
             coroutineScope = coroutineScope,
             airspaceUseCase = airspaceUseCase,

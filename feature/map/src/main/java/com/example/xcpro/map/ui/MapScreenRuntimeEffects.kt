@@ -14,13 +14,12 @@ import com.example.xcpro.map.config.MapFeatureFlags
 import com.example.xcpro.map.trail.SnailTrailManager
 import com.example.xcpro.map.trail.TrailSettings
 import com.example.xcpro.map.trail.domain.TrailUpdateResult
-import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.tasks.core.TaskType
 import kotlinx.coroutines.isActive
 
 @Composable
 internal fun MapScreenRuntimeEffects(
-    taskManager: TaskManagerCoordinator,
+    taskType: TaskType,
     drawerState: DrawerState,
     isAATEditMode: Boolean,
     onExitAATEditMode: () -> Unit,
@@ -35,18 +34,18 @@ internal fun MapScreenRuntimeEffects(
     orientationManager: MapOrientationManager
 ) {
     // GAA CRITICAL FIX: Reset AAT edit mode when task type changes
-    LaunchedEffect(taskManager.taskType, isAATEditMode) {
-        if (taskManager.taskType != TaskType.AAT && isAATEditMode) {
-            Log.d(MapScreenRootTag, "='AA Task type changed to ${taskManager.taskType} - resetting AAT edit mode")
+    LaunchedEffect(taskType, isAATEditMode) {
+        if (taskType != TaskType.AAT && isAATEditMode) {
+            Log.d(MapScreenRootTag, "Task type changed to $taskType - resetting AAT edit mode")
             onExitAATEditMode()
         }
     }
 
     // GAA Control drawer gestures based on task type and edit mode
     // Uses MapTaskIntegration to determine if drawer should be blocked
-    LaunchedEffect(isAATEditMode, taskManager.taskType) {
+    LaunchedEffect(isAATEditMode, taskType) {
         val shouldBlock = MapTaskIntegration.shouldBlockDrawerGestures(
-            taskType = taskManager.taskType,
+            taskType = taskType,
             isAATEditMode = isAATEditMode
         )
 
@@ -55,7 +54,7 @@ internal fun MapScreenRuntimeEffects(
             if (drawerState.isOpen) {
                 drawerState.close()
             }
-            Log.d(MapScreenRootTag, "='AoA Task-specific drawer blocking active (${taskManager.taskType})")
+            Log.d(MapScreenRootTag, "Task-specific drawer blocking active ($taskType)")
         } else {
             Log.d(MapScreenRootTag, "GAA Drawer gestures enabled")
         }
