@@ -9,7 +9,9 @@ import java.util.Locale
  */
 fun iconForCategory(category: Int?): AdsbAircraftIcon = when (category) {
     2, 3 -> AdsbAircraftIcon.PlaneLight
-    4, 5, 6, 7 -> AdsbAircraftIcon.PlaneLarge
+    4 -> AdsbAircraftIcon.PlaneMedium
+    5, 7 -> AdsbAircraftIcon.PlaneLarge
+    6 -> AdsbAircraftIcon.PlaneHeavy
     8 -> AdsbAircraftIcon.Helicopter
     9 -> AdsbAircraftIcon.Glider
     10 -> AdsbAircraftIcon.Balloon
@@ -22,8 +24,15 @@ fun iconForCategory(category: Int?): AdsbAircraftIcon = when (category) {
 fun iconForAircraft(
     category: Int?,
     metadataTypecode: String?,
-    metadataIcaoAircraftType: String?
+    metadataIcaoAircraftType: String?,
+    icao24Raw: String? = null
 ): AdsbAircraftIcon {
+    if (normalizeIcao24(icao24Raw) in LARGE_ICON_ICAO24_OVERRIDES) {
+        return AdsbAircraftIcon.PlaneLargeIcaoOverride
+    }
+    if (category == 6) {
+        return AdsbAircraftIcon.PlaneHeavy
+    }
     val fromMetadata = iconFromIcaoMetadata(
         typecode = metadataTypecode,
         icaoAircraftType = metadataIcaoAircraftType
@@ -34,7 +43,8 @@ fun iconForAircraft(
 fun AdsbTrafficUiModel.aircraftIcon(): AdsbAircraftIcon = iconForAircraft(
     category = category,
     metadataTypecode = metadataTypecode,
-    metadataIcaoAircraftType = metadataIcaoAircraftType
+    metadataIcaoAircraftType = metadataIcaoAircraftType,
+    icao24Raw = id.raw
 )
 
 fun openSkyCategoryLabel(category: Int?): String = when (category) {
@@ -98,10 +108,34 @@ private fun iconFromIcaoMetadata(
     if (HELICOPTER_TYPECODE_PREFIXES.any { normalizedTypecode.startsWith(it) }) {
         return AdsbAircraftIcon.Helicopter
     }
+    if (FIXED_WING_TYPECODE_REGEX.matches(normalizedTypecode) && normalizedTypecode.any { it.isDigit() }) {
+        return when {
+            LARGE_FIXED_WING_TYPECODE_PREFIXES.any { normalizedTypecode.startsWith(it) } ->
+                AdsbAircraftIcon.PlaneLarge
+
+            MEDIUM_FIXED_WING_TYPECODE_PREFIXES.any { normalizedTypecode.startsWith(it) } ->
+                AdsbAircraftIcon.PlaneMedium
+
+            else -> AdsbAircraftIcon.PlaneLight
+        }
+    }
     return null
 }
 
+private fun normalizeIcao24(raw: String?): String? {
+    return raw
+        ?.trim()
+        ?.lowercase(Locale.US)
+        ?.takeIf { ICAO24_REGEX.matches(it) }
+}
+
+private val ICAO24_REGEX = Regex("[0-9a-f]{6}")
 private val ICAO_AIRCRAFT_TYPE_REGEX = Regex("[A-Z][0-9][A-Z]")
+private val FIXED_WING_TYPECODE_REGEX = Regex("[A-Z][A-Z0-9]{2,3}")
+private val LARGE_ICON_ICAO24_OVERRIDES = setOf(
+    "7c7c77",
+    "7c6c90"
+)
 
 private val GLIDER_TYPECODE_PREFIXES = listOf(
     "GLID",
@@ -120,4 +154,34 @@ private val HELICOPTER_TYPECODE_PREFIXES = listOf(
     "AW",
     "H60",
     "UH"
+)
+
+private val LARGE_FIXED_WING_TYPECODE_PREFIXES = listOf(
+    "A3",
+    "A38",
+    "A39",
+    "B74",
+    "B77",
+    "B78",
+    "B79",
+    "MD11",
+    "DC10",
+    "L101",
+    "C17"
+)
+
+private val MEDIUM_FIXED_WING_TYPECODE_PREFIXES = listOf(
+    "A2",
+    "B73",
+    "B75",
+    "B76",
+    "E17",
+    "E18",
+    "E19",
+    "CRJ",
+    "AT7",
+    "AT8",
+    "DH8",
+    "F70",
+    "F100"
 )

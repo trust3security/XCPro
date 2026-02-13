@@ -14,9 +14,21 @@ enum class AdsbAircraftIcon(
         resId = R.drawable.ic_adsb_plane_light,
         styleImageId = "adsb_icon_plane_light"
     ),
+    PlaneMedium(
+        resId = R.drawable.ic_adsb_plane_medium,
+        styleImageId = "adsb_icon_plane_medium"
+    ),
     PlaneLarge(
         resId = R.drawable.ic_adsb_plane_large,
         styleImageId = "adsb_icon_plane_large"
+    ),
+    PlaneHeavy(
+        resId = R.drawable.ic_adsb_plane_heavy,
+        styleImageId = "adsb_icon_plane_heavy"
+    ),
+    PlaneLargeIcaoOverride(
+        resId = R.drawable.ic_adsb_plane_large,
+        styleImageId = "adsb_icon_plane_large_icao_override"
     ),
     Helicopter(
         resId = R.drawable.ic_adsb_helicopter,
@@ -52,7 +64,10 @@ fun AdsbAircraftIcon.emergencyStyleImageId(): String = "${styleImageId}_emergenc
 
 fun AdsbAircraftIcon.displayLabel(): String = when (this) {
     AdsbAircraftIcon.PlaneLight -> "Light aircraft"
+    AdsbAircraftIcon.PlaneMedium -> "Medium aircraft"
     AdsbAircraftIcon.PlaneLarge -> "Large aircraft"
+    AdsbAircraftIcon.PlaneHeavy -> "Heavy aircraft"
+    AdsbAircraftIcon.PlaneLargeIcaoOverride -> "Large aircraft"
     AdsbAircraftIcon.Helicopter -> "Helicopter"
     AdsbAircraftIcon.Glider -> "Glider"
     AdsbAircraftIcon.Balloon -> "Balloon"

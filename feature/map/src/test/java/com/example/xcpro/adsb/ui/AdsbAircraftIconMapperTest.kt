@@ -28,10 +28,10 @@ class AdsbAircraftIconMapperTest {
     }
 
     @Test
-    fun mapsLargeAircraftCategories() {
-        assertEquals(AdsbAircraftIcon.PlaneLarge, iconForCategory(4))
+    fun mapsMediumLargeAndHeavyAircraftCategories() {
+        assertEquals(AdsbAircraftIcon.PlaneMedium, iconForCategory(4))
         assertEquals(AdsbAircraftIcon.PlaneLarge, iconForCategory(5))
-        assertEquals(AdsbAircraftIcon.PlaneLarge, iconForCategory(6))
+        assertEquals(AdsbAircraftIcon.PlaneHeavy, iconForCategory(6))
     }
 
     @Test
@@ -123,6 +123,89 @@ class AdsbAircraftIconMapperTest {
                 category = null,
                 metadataTypecode = "VLJ1",
                 metadataIcaoAircraftType = "L1J"
+            )
+        )
+    }
+
+    @Test
+    fun prefersHeavyIconWhenCategoryIsHeavyEvenWithMetadata() {
+        assertEquals(
+            AdsbAircraftIcon.PlaneHeavy,
+            iconForAircraft(
+                category = 6,
+                metadataTypecode = "A359",
+                metadataIcaoAircraftType = "L2J"
+            )
+        )
+    }
+
+    @Test
+    fun classifiesA359TypecodeAsLargeFixedWingWhenCategoryMissing() {
+        assertEquals(
+            AdsbAircraftIcon.PlaneLarge,
+            iconForAircraft(
+                category = 0,
+                metadataTypecode = "A359",
+                metadataIcaoAircraftType = null
+            )
+        )
+    }
+
+    @Test
+    fun classifiesC172TypecodeAsLightFixedWingWhenCategoryMissing() {
+        assertEquals(
+            AdsbAircraftIcon.PlaneLight,
+            iconForAircraft(
+                category = 0,
+                metadataTypecode = "C172",
+                metadataIcaoAircraftType = null
+            )
+        )
+    }
+
+    @Test
+    fun classifiesB738TypecodeAsMediumFixedWingWhenCategoryMissing() {
+        assertEquals(
+            AdsbAircraftIcon.PlaneMedium,
+            iconForAircraft(
+                category = 0,
+                metadataTypecode = "B738",
+                metadataIcaoAircraftType = null
+            )
+        )
+    }
+
+    @Test
+    fun appliesIcaoLargeIconOverrideForConfiguredIcao24() {
+        assertEquals(
+            AdsbAircraftIcon.PlaneLargeIcaoOverride,
+            iconForAircraft(
+                category = 2,
+                metadataTypecode = "C172",
+                metadataIcaoAircraftType = null,
+                icao24Raw = "7C7C77"
+            )
+        )
+        assertEquals(
+            AdsbAircraftIcon.PlaneLargeIcaoOverride,
+            iconForAircraft(
+                category = 2,
+                metadataTypecode = "A320",
+                metadataIcaoAircraftType = null,
+                icao24Raw = "7C6C90"
+            )
+        )
+    }
+
+    @Test
+    fun ignoresIcaoOverrideForNonConfiguredIcao24() {
+        assertEquals(
+            AdsbAircraftIcon.PlaneLight,
+            iconForAircraft(
+                category = 2,
+                metadataTypecode = "C172",
+                metadataIcaoAircraftType = null,
+                icao24Raw = "7C7C78"
             )
         )
     }
