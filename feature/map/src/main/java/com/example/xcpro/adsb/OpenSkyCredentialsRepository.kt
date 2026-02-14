@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.example.xcpro.map.BuildConfig
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -17,13 +18,24 @@ class OpenSkyCredentialsRepository @Inject constructor(
     }
 
     fun loadCredentials(): OpenSkyClientCredentials? {
-        val clientId = prefs.getString(KEY_CLIENT_ID, null)?.trim().orEmpty()
-        val clientSecret = prefs.getString(KEY_CLIENT_SECRET, null)?.trim().orEmpty()
-        if (clientId.isBlank() || clientSecret.isBlank()) return null
-        return OpenSkyClientCredentials(
-            clientId = clientId,
-            clientSecret = clientSecret
-        )
+        val configuredClientId = BuildConfig.OPENSKY_CLIENT_ID.trim()
+        val configuredClientSecret = BuildConfig.OPENSKY_CLIENT_SECRET.trim()
+        if (configuredClientId.isNotBlank() && configuredClientSecret.isNotBlank()) {
+            return OpenSkyClientCredentials(
+                clientId = configuredClientId,
+                clientSecret = configuredClientSecret
+            )
+        }
+
+        val savedClientId = prefs.getString(KEY_CLIENT_ID, null)?.trim().orEmpty()
+        val savedClientSecret = prefs.getString(KEY_CLIENT_SECRET, null)?.trim().orEmpty()
+        if (savedClientId.isNotBlank() && savedClientSecret.isNotBlank()) {
+            return OpenSkyClientCredentials(
+                clientId = savedClientId,
+                clientSecret = savedClientSecret
+            )
+        }
+        return null
     }
 
     fun saveCredentials(clientId: String, clientSecret: String) {
@@ -63,4 +75,3 @@ class OpenSkyCredentialsRepository @Inject constructor(
         private const val KEY_CLIENT_SECRET = "client_secret"
     }
 }
-

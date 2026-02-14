@@ -6,12 +6,51 @@ plugins {
     alias(libs.plugins.dagger.hilt)
 }
 
+import java.util.Properties
+
+fun String.asBuildConfigString(): String {
+    val escaped = this.replace("\\", "\\\\").replace("\"", "\\\"")
+    return "\"$escaped\""
+}
+
+val localProperties: Properties by lazy {
+    Properties().apply {
+        val localPropertiesFile = rootProject.file("local.properties")
+        if (localPropertiesFile.exists()) {
+            localPropertiesFile.inputStream().use { load(it) }
+        }
+    }
+}
+
+fun readSecretProperty(name: String): String {
+    val gradleValue = providers.gradleProperty(name).orNull?.trim().orEmpty()
+    if (gradleValue.isNotEmpty()) return gradleValue
+    return localProperties.getProperty(name)?.trim().orEmpty()
+}
+
 android {
     namespace = "com.example.xcpro.map"
     compileSdk = 35
 
     defaultConfig {
         minSdk = 30
+    }
+
+    buildTypes {
+        debug {
+            val openSkyClientId = readSecretProperty("OPENSKY_CLIENT_ID")
+            val openSkyClientSecret = readSecretProperty("OPENSKY_CLIENT_SECRET")
+            buildConfigField("String", "OPENSKY_CLIENT_ID", openSkyClientId.asBuildConfigString())
+            buildConfigField(
+                "String",
+                "OPENSKY_CLIENT_SECRET",
+                openSkyClientSecret.asBuildConfigString()
+            )
+        }
+        release {
+            buildConfigField("String", "OPENSKY_CLIENT_ID", "\"\"")
+            buildConfigField("String", "OPENSKY_CLIENT_SECRET", "\"\"")
+        }
     }
 
     buildFeatures {
