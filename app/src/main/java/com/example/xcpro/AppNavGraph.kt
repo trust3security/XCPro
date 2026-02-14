@@ -99,7 +99,6 @@ fun AppNavGraph(
             )
             setSelectedNavItem("Task")
         }
-        composable("task_creation") { TaskCreation(navController = navController, drawerState = drawerState) }
         composable(
             route = "flight_data/waypoints?autoFocusHome={autoFocusHome}",
             arguments = listOf(navArgument("autoFocusHome") { type = NavType.BoolType; defaultValue = false })

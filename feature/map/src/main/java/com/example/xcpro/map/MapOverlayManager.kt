@@ -15,7 +15,6 @@ import com.example.xcpro.ogn.clampOgnIconSizePx
 import com.example.xcpro.loadAndApplyAirspace
 import com.example.xcpro.loadAndApplyWaypoints
 import com.example.xcpro.map.trail.SnailTrailManager
-import com.example.xcpro.tasks.TaskManagerCoordinator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.maplibre.android.geometry.LatLng
@@ -23,14 +22,14 @@ import org.maplibre.android.maps.MapLibreMap
 
 /**
  * Centralized overlay management for MapScreen. Handles distance circles, airspace, waypoints,
- * and task plotting interactions with TaskManagerCoordinator.
+ * and task plotting interactions through TaskRenderSyncCoordinator.
  */
 class MapOverlayManager(
     private val context: Context,
     private val mapState: MapScreenState,
     private val mapStateReader: MapStateReader,
     private val taskRenderSyncCoordinator: TaskRenderSyncCoordinator,
-    private val taskManager: TaskManagerCoordinator,
+    private val taskWaypointCountProvider: () -> Int,
     private val stateActions: MapStateActions,
     private val snailTrailManager: SnailTrailManager,
     private val coroutineScope: CoroutineScope,
@@ -89,7 +88,7 @@ class MapOverlayManager(
             if (BuildConfig.DEBUG) {
                 Log.d(
                     TAG,
-                    "Refreshing task overlays for ${taskManager.currentTask.waypoints.size} waypoints"
+                    "Refreshing task overlays for ${taskWaypointCountProvider()} waypoints"
                 )
             }
             taskRenderSyncCoordinator.onOverlayRefresh(map)
@@ -276,7 +275,7 @@ class MapOverlayManager(
                 }\n"
             )
             append("- ADS-B Targets: ${latestAdsbTargets.size}\n")
-            append("- Task Waypoints: ${taskManager.currentTask.waypoints.size}\n")
+            append("- Task Waypoints: ${taskWaypointCountProvider()}\n")
         }
     }
 }

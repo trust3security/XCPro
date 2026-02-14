@@ -38,7 +38,7 @@ object MapGestureSetup {
     fun GestureHandlerOverlay(
         mapState: MapScreenState,
         taskType: TaskType,
-        flightDataManager: FlightDataManager,
+        visibleModes: List<FlightMode>,
         locationManager: LocationManager,
         cameraManager: MapCameraManager,
         currentMode: FlightMode,
@@ -110,7 +110,7 @@ object MapGestureSetup {
                 onSaveLocation = { location, zoom, bearing ->
                     locationManager.handleUserInteraction(location, zoom, bearing)
                 },
-                visibleModes = flightDataManager.visibleModes,
+                visibleModes = visibleModes,
                 taskGestureHandler = taskGestureHandler,
                 gestureRegions = gestureRegions,
                 onMapTap = onMapTap,

@@ -64,7 +64,13 @@ Run these checks locally for non-trivial changes:
 Run when relevant (device/emulator available):
 
 ```bash
-./gradlew connectedDebugAndroidTest
+./gradlew :app:connectedDebugAndroidTest --no-parallel "-Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true"
+```
+
+Run for release/CI verification (full multi-module instrumentation):
+
+```bash
+./gradlew connectedDebugAndroidTest --no-parallel
 ```
 
 Windows convenience:

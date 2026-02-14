@@ -4,7 +4,6 @@ import android.content.Context
 import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
 import com.example.xcpro.common.orientation.OrientationData
-import com.example.xcpro.sensors.UnifiedSensorManager
 import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.MapOrientationPreferences
@@ -150,11 +149,6 @@ class LocationManager(
         onRenderFrame = { onRenderFrame() }
     )
 
-    //  PHASE 2: Unified sensor management
-    val unifiedSensorManager: UnifiedSensorManager = sensorsUseCase.unifiedSensorManager
-
-    //  PHASE 2: Flight data calculator (combines all sensor data + calculations)
-
     // Map UI state proxies (MapStateStore is the single owner)
     private var currentUserLocation: LatLng?
         get() = mapStateReader.currentUserLocation.value?.let { LatLng(it.latitude, it.longitude) }
@@ -185,6 +179,8 @@ class LocationManager(
     fun restartSensorsIfNeeded() {
         sensorsController.restartSensorsIfNeeded()
     }
+
+    fun isGpsEnabled(): Boolean = sensorsUseCase.isGpsEnabled()
 
 
     fun updateLocationFromGPS(

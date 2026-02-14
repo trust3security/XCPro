@@ -156,7 +156,7 @@ class MapLifecycleManager(
             append("- Map View: ${if (mapState.mapView != null) "Initialized" else "Not Initialized"}\n")
             append("- Map LibreMap: ${if (mapState.mapLibreMap != null) "Initialized" else "Not Initialized"}\n")
             append("- Orientation Manager: Available\n")
-            append("- Location Tracking: ${locationManager.unifiedSensorManager.isGpsEnabled()}\n")
+            append("- Location Tracking: ${locationManager.isGpsEnabled()}\n")
         }
     }
 }

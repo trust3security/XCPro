@@ -97,7 +97,7 @@ Target architecture shape:
 - Coordinator becomes a pure router (no MapLibre or Context).
 
 Authoritative plan:
-- See `docs/refactor/Task_Architecture_Compliance_Refactor_Plan.md`.
+- See `docs/refactor/Map_Task_5of5_Finalization_Plan_2026-02-13.md`.
 
 ---
 
@@ -172,7 +172,7 @@ Phase 8 (Cleanup + enforcement):
 - Add checks for Android/UI imports in task domain packages.
 
 Full plan:
-- See `docs/refactor/Task_Architecture_Compliance_Refactor_Plan.md`.
+- See `docs/refactor/Map_Task_5of5_Finalization_Plan_2026-02-13.md`.
 
 ---
 

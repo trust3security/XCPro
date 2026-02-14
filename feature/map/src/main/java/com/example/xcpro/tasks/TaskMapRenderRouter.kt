@@ -1,5 +1,6 @@
 package com.example.xcpro.tasks
 
+import com.example.xcpro.map.TaskRenderSnapshot
 import com.example.xcpro.tasks.aat.toSimpleAATTask
 import com.example.xcpro.tasks.aat.rendering.AATTaskRenderer
 import com.example.xcpro.tasks.core.TaskType
@@ -61,10 +62,10 @@ object TaskMapRenderRouter {
         "task-line"
     )
 
-    fun plotCurrentTask(taskManager: TaskManagerCoordinator, map: MapLibreMap?) {
+    fun plotCurrentTask(snapshot: TaskRenderSnapshot, map: MapLibreMap?) {
         val currentMap = map ?: return
-        val coreTask = taskManager.currentTask
-        when (taskManager.taskType) {
+        val coreTask = snapshot.task
+        when (snapshot.taskType) {
             TaskType.RACING -> {
                 val racingTask = coreTask.toSimpleRacingTask()
                 racingTaskDisplay.plotRacingOnMap(
@@ -78,24 +79,24 @@ object TaskMapRenderRouter {
                 aatTaskRenderer.plotTaskOnMap(
                     map = currentMap,
                     task = aatTask,
-                    editModeWaypointIndex = taskManager.getAATEditWaypointIndex()
+                    editModeWaypointIndex = snapshot.aatEditWaypointIndex
                 )
             }
         }
     }
 
-    fun clearAllTaskVisuals(@Suppress("UNUSED_PARAMETER") taskManager: TaskManagerCoordinator, map: MapLibreMap?) {
+    fun clearAllTaskVisuals(map: MapLibreMap?) {
         val currentMap = map ?: return
         racingTaskDisplay.clearRacingFromMap(currentMap)
         aatTaskRenderer.clearTaskFromMap(currentMap)
     }
 
-    fun syncTaskVisuals(taskManager: TaskManagerCoordinator, map: MapLibreMap?) {
+    fun syncTaskVisuals(snapshot: TaskRenderSnapshot, map: MapLibreMap?) {
         val currentMap = map ?: return
-        clearAllTaskVisuals(taskManager, currentMap)
+        clearAllTaskVisuals(currentMap)
         removeOrphanedTaskStyleArtifacts(currentMap)
-        if (taskManager.currentTask.waypoints.isNotEmpty()) {
-            plotCurrentTask(taskManager, currentMap)
+        if (snapshot.task.waypoints.isNotEmpty()) {
+            plotCurrentTask(snapshot, currentMap)
         }
     }
 

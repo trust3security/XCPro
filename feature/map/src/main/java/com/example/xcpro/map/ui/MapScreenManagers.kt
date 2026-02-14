@@ -14,6 +14,7 @@ import com.example.xcpro.map.MapStateActions
 import com.example.xcpro.map.MapStateReader
 import com.example.xcpro.map.MapSensorsUseCase
 import com.example.xcpro.map.MapTaskScreenManager
+import com.example.xcpro.map.MapTasksUseCase
 import com.example.xcpro.map.TaskRenderSyncCoordinator
 import com.example.xcpro.map.trail.SnailTrailManager
 import com.example.xcpro.map.ui.widgets.MapUIWidgetManager
@@ -21,7 +22,6 @@ import com.example.xcpro.replay.ReplayDisplayPose
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.airspace.AirspaceUseCase
 import com.example.xcpro.flightdata.WaypointFilesUseCase
-import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.map.config.MapFeatureFlags
 import kotlinx.coroutines.CoroutineScope
@@ -44,7 +44,6 @@ internal fun rememberMapScreenManagers(
     context: Context,
     mapState: MapScreenState,
     mapStateReader: MapStateReader,
-    taskManager: TaskManagerCoordinator,
     mapStateActions: MapStateActions,
     orientationManager: MapOrientationManager,
     sensorsUseCase: MapSensorsUseCase,
@@ -53,6 +52,7 @@ internal fun rememberMapScreenManagers(
     replayFixProvider: (Long) -> ReplayDisplayPose?,
     featureFlags: MapFeatureFlags,
     coroutineScope: CoroutineScope,
+    tasksUseCase: MapTasksUseCase,
     airspaceUseCase: AirspaceUseCase,
     waypointFilesUseCase: WaypointFilesUseCase
 ): MapScreenManagers {
@@ -60,16 +60,16 @@ internal fun rememberMapScreenManagers(
         SnailTrailManager(context, mapState, featureFlags)
     }
 
-    val taskRenderSyncCoordinator = remember(taskManager, mapState) {
+    val taskRenderSyncCoordinator = remember(tasksUseCase, mapState) {
         TaskRenderSyncCoordinator(
-            taskManager = taskManager,
+            snapshotProvider = tasksUseCase::taskRenderSnapshot,
             mapProvider = { mapState.mapLibreMap }
         )
     }
 
     val overlayManager = remember(
         mapState,
-        taskManager,
+        tasksUseCase,
         context,
         mapStateReader,
         mapStateActions,
@@ -84,7 +84,7 @@ internal fun rememberMapScreenManagers(
             mapState,
             mapStateReader,
             taskRenderSyncCoordinator,
-            taskManager,
+            tasksUseCase::currentWaypointCount,
             mapStateActions,
             snailTrailManager,
             coroutineScope,
@@ -97,8 +97,8 @@ internal fun rememberMapScreenManagers(
         MapUIWidgetManager(mapState)
     }
 
-    val taskScreenManager = remember(mapState, taskManager) {
-        MapTaskScreenManager(mapState, taskManager)
+    val taskScreenManager = remember(mapState, tasksUseCase, coroutineScope) {
+        MapTaskScreenManager(mapState, tasksUseCase, coroutineScope)
     }
 
     val cameraManager = remember(mapState, mapStateReader, mapStateActions) {

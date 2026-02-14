@@ -5,7 +5,6 @@ package com.example.xcpro.map.ui
  */
 
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -28,7 +27,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -58,7 +56,6 @@ import com.example.xcpro.map.MapInitializer
 import com.example.xcpro.map.LocationManager
 import com.example.xcpro.map.ballast.BallastCommand
 import com.example.xcpro.map.ballast.BallastUiState
-import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.map.FlightDataManager
@@ -80,6 +77,7 @@ import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.VerticalSpeedMs
 import org.maplibre.android.maps.MapLibreMap
 import com.example.xcpro.qnh.QnhCalibrationState
+import java.util.Locale
 
 @Composable
 internal fun MapScreenContent(
@@ -90,7 +88,6 @@ internal fun MapScreenContent(
     locationManager: LocationManager,
     flightDataManager: FlightDataManager,
     flightViewModel: FlightDataViewModel,
-    taskManager: TaskManagerCoordinator,
     taskType: TaskType,
     createTaskGestureHandler: (TaskGestureCallbacks) -> TaskGestureHandler,
     windArrowState: WindArrowUiState,
@@ -159,6 +156,12 @@ internal fun MapScreenContent(
     showRacingReplayFab: Boolean,
     onRacingReplayClick: () -> Unit
 ) {
+    val liveFlightData by flightDataManager.liveFlightDataFlow.collectAsStateWithLifecycle()
+    val currentQnhLabel = remember(liveFlightData?.qnh) {
+        val qnh = liveFlightData?.qnh ?: 1013.25
+        String.format(Locale.US, "%.1f hPa", qnh)
+    }
+
     var showQnhDialog by remember { mutableStateOf(false) }
     var qnhInput by remember { mutableStateOf("") }
     var qnhError by remember { mutableStateOf<String?>(null) }
@@ -166,7 +169,7 @@ internal fun MapScreenContent(
 
     Box(Modifier.fillMaxSize()) {
         Scaffold(
-            modifier = Modifier.border(2.dp, Color.Yellow)
+            modifier = Modifier
         ) { padding ->
             BoxWithConstraints(
                 modifier = Modifier
@@ -188,7 +191,6 @@ internal fun MapScreenContent(
                         locationManager = locationManager,
                         flightDataManager = flightDataManager,
                         flightViewModel = flightViewModel,
-                        taskManager = taskManager,
                         taskType = taskType,
                         createTaskGestureHandler = createTaskGestureHandler,
                         windArrowState = windArrowState,
@@ -242,7 +244,8 @@ internal fun MapScreenContent(
         MapTaskManagerLayer(
             taskScreenManager = taskScreenManager,
             waypointData = waypointData,
-            currentLocation = currentLocation
+            currentLocation = currentLocation,
+            currentQnh = currentQnhLabel
         )
 
         MapActionButtonsLayer(
@@ -262,7 +265,7 @@ internal fun MapScreenContent(
             onToggleAdsbTraffic = onToggleAdsbTraffic,
             onReturn = { locationManager.returnToSavedLocation() },
             onShowQnhDialog = {
-                val currentQnh = flightDataManager.liveFlightData?.qnh ?: 1013.25
+                val currentQnh = liveFlightData?.qnh ?: 1013.25
                 qnhInput = seedQnhInputValue(currentQnh, unitsPreferences)
                 qnhError = null
                 showQnhDialog = true
@@ -297,7 +300,7 @@ internal fun MapScreenContent(
             qnhInput = qnhInput,
             qnhError = qnhError,
             unitsPreferences = unitsPreferences,
-            liveData = flightDataManager.liveFlightData,
+            liveData = liveFlightData,
             calibrationState = qnhCalibrationState,
             onQnhInputChange = {
                 qnhInput = it

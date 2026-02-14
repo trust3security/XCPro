@@ -1,6 +1,5 @@
 package com.example.xcpro.map
 
-import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.tasks.TaskMapRenderRouter
 import com.example.xcpro.tasks.core.TaskType
 import org.maplibre.android.maps.MapLibreMap
@@ -10,10 +9,10 @@ import org.maplibre.android.maps.MapLibreMap
  * All map/task trigger paths should call this coordinator instead of the router directly.
  */
 class TaskRenderSyncCoordinator(
-    private val taskManager: TaskManagerCoordinator,
+    private val snapshotProvider: () -> TaskRenderSnapshot,
     private val mapProvider: () -> MapLibreMap?,
-    private val renderSync: (TaskManagerCoordinator, MapLibreMap?) -> Unit = TaskMapRenderRouter::syncTaskVisuals,
-    private val renderClear: (TaskManagerCoordinator, MapLibreMap?) -> Unit = TaskMapRenderRouter::clearAllTaskVisuals
+    private val renderSync: (TaskRenderSnapshot, MapLibreMap?) -> Unit = TaskMapRenderRouter::syncTaskVisuals,
+    private val renderClear: (MapLibreMap?) -> Unit = TaskMapRenderRouter::clearAllTaskVisuals
 ) {
 
     data class TaskStateSignature(
@@ -25,6 +24,7 @@ class TaskRenderSyncCoordinator(
 
     private var lastTaskStateSignature: TaskStateSignature? = null
     private var pendingSync = false
+    private var pendingClear = false
 
     fun onMapReady(map: MapLibreMap?) {
         syncNow(map)
@@ -43,7 +43,7 @@ class TaskRenderSyncCoordinator(
     }
 
     fun onTaskStateChanged(signature: TaskStateSignature) {
-        if (!pendingSync && signature == lastTaskStateSignature) {
+        if (!pendingSync && !pendingClear && signature == lastTaskStateSignature) {
             return
         }
         lastTaskStateSignature = signature
@@ -53,20 +53,28 @@ class TaskRenderSyncCoordinator(
     fun clearTaskVisuals(map: MapLibreMap? = null) {
         val currentMap = map ?: mapProvider()
         if (currentMap == null) {
-            pendingSync = true
+            pendingClear = true
+            pendingSync = false
             return
         }
+        pendingClear = false
         pendingSync = false
-        renderClear(taskManager, currentMap)
+        renderClear(currentMap)
     }
 
     private fun syncNow(map: MapLibreMap?) {
         val currentMap = map ?: mapProvider()
         if (currentMap == null) {
-            pendingSync = true
+            if (!pendingClear) {
+                pendingSync = true
+            }
             return
         }
+        if (pendingClear) {
+            renderClear(currentMap)
+            pendingClear = false
+        }
         pendingSync = false
-        renderSync(taskManager, currentMap)
+        renderSync(snapshotProvider(), currentMap)
     }
 }

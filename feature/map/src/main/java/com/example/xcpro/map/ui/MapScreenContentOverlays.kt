@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.dfcards.RealTimeFlightData
+import com.example.xcpro.adsb.AdsbAuthMode
 import com.example.xcpro.adsb.AdsbConnectionState
 import com.example.xcpro.adsb.AdsbTrafficSnapshot
 import com.example.xcpro.common.units.UnitsFormatter
@@ -30,7 +31,6 @@ import com.example.xcpro.ogn.OgnTrafficSnapshot
 import com.example.xcpro.qnh.QnhCalibrationState
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.replay.SessionStatus
-import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.map.ballast.BallastCommand
 import com.example.xcpro.map.ballast.BallastUiState
@@ -151,6 +151,18 @@ internal fun AdsbDebugPanel(
                 color = Color(0xFFE5E7EB),
                 style = MaterialTheme.typography.bodySmall
             )
+            Text(
+                text = "Auth: ${snapshot.authMode.toDebugLabel()}",
+                color = if (snapshot.authMode == AdsbAuthMode.AuthFailed) Color(0xFFFCA5A5) else Color(0xFFE5E7EB),
+                style = MaterialTheme.typography.bodySmall
+            )
+            snapshot.debugReasonLabel()?.let { reason ->
+                Text(
+                    text = "Reason: $reason",
+                    color = Color(0xFFFDE68A),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
             snapshot.lastError?.takeIf { it.isNotBlank() }?.let { error ->
                 Text(
                     text = "Error: $error",
@@ -167,6 +179,32 @@ private fun AdsbConnectionState.toDebugLabel(): String = when (this) {
     AdsbConnectionState.Active -> "ACTIVE"
     is AdsbConnectionState.BackingOff -> "BACKOFF ${retryAfterSec}s"
     is AdsbConnectionState.Error -> "ERROR"
+}
+
+private fun AdsbAuthMode.toDebugLabel(): String = when (this) {
+    AdsbAuthMode.Anonymous -> "ANONYMOUS"
+    AdsbAuthMode.Authenticated -> "AUTHENTICATED"
+    AdsbAuthMode.AuthFailed -> "AUTH FAILED"
+}
+
+private fun AdsbTrafficSnapshot.debugReasonLabel(): String? {
+    if (authMode == AdsbAuthMode.AuthFailed && lastHttpStatus != 429) {
+        return "Credential auth failed; using anonymous fallback"
+    }
+    if (connectionState !is AdsbConnectionState.BackingOff) return null
+    return when {
+        lastHttpStatus == 429 && authMode == AdsbAuthMode.Anonymous ->
+            "Anonymous quota exceeded (OpenSky 429)"
+        lastHttpStatus == 429 && authMode == AdsbAuthMode.Authenticated ->
+            "Account quota exceeded (OpenSky 429)"
+        lastHttpStatus == 429 && authMode == AdsbAuthMode.AuthFailed ->
+            "Credential auth failed; anonymous quota exceeded"
+        lastHttpStatus == 429 ->
+            "OpenSky request quota exceeded"
+        authMode == AdsbAuthMode.AuthFailed ->
+            "Credential auth failed; using anonymous fallback"
+        else -> null
+    }
 }
 
 private fun formatCoord(value: Double?): String {
@@ -234,12 +272,13 @@ internal fun ReplayDiagnosticsLogger(
 internal fun MapTaskManagerLayer(
     taskScreenManager: MapTaskScreenManager,
     waypointData: List<WaypointData>,
-    currentLocation: MapLocationUiModel?
+    currentLocation: MapLocationUiModel?,
+    currentQnh: String
 ) {
     MapTaskScreenUi.AllTaskScreenComponents(
         taskScreenManager = taskScreenManager,
         allWaypoints = waypointData,
-        currentQNH = "1013 hPa",
+        currentQNH = currentQnh,
         currentLocation = currentLocation
     )
 }

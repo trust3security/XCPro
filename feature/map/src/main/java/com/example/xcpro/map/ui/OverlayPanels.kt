@@ -109,7 +109,7 @@ internal fun VariometerPanel(
     val teArcVario by flightDataManager.teArcVarioFlow.collectAsStateWithLifecycle()
     val liveFlightData by flightDataManager.liveFlightDataFlow.collectAsStateWithLifecycle()
     val windSpeed by flightDataManager.windSpeedDisplayFlow.collectAsStateWithLifecycle()
-    val unitsPreferences = flightDataManager.unitsPreferences
+    val unitsPreferences by flightDataManager.unitsPreferencesFlow.collectAsStateWithLifecycle()
     val displayVarioUnits by remember(displayNumericVario, unitsPreferences) {
         derivedStateOf {
             unitsPreferences.verticalSpeed.fromSi(VerticalSpeedMs(displayNumericVario.toDouble()))

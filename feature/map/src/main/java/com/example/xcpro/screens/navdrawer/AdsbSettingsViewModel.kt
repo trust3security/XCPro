@@ -3,6 +3,7 @@ package com.example.xcpro.screens.navdrawer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.xcpro.adsb.ADSB_ICON_SIZE_DEFAULT_PX
+import com.example.xcpro.adsb.OpenSkyClientCredentials
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
@@ -25,5 +26,16 @@ class AdsbSettingsViewModel @Inject constructor(
         viewModelScope.launch {
             useCase.setIconSizePx(iconSizePx)
         }
+    }
+
+    fun loadOpenSkyCredentials(): OpenSkyClientCredentials? =
+        useCase.loadOpenSkyCredentials()
+
+    fun saveOpenSkyCredentials(clientId: String, clientSecret: String) {
+        useCase.saveOpenSkyCredentials(clientId = clientId, clientSecret = clientSecret)
+    }
+
+    fun clearOpenSkyCredentials() {
+        useCase.clearOpenSkyCredentials()
     }
 }

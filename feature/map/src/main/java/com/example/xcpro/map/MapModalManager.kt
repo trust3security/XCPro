@@ -5,7 +5,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -13,6 +15,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.example.xcpro.components.AirspaceSettingsContent
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Centralized modal management for MapScreen
@@ -25,15 +30,14 @@ class MapModalManager(
         private const val TAG = "MapModalManager"
     }
 
-    // Modal state
-    var showAirspaceSettings by mutableStateOf(false)
-        private set
+    private val _showAirspaceSettings = MutableStateFlow(false)
+    val showAirspaceSettings: StateFlow<Boolean> = _showAirspaceSettings.asStateFlow()
 
     /**
      * Show airspace settings modal
      */
     fun showAirspaceSettingsModal() {
-        showAirspaceSettings = true
+        _showAirspaceSettings.value = true
         Log.d(TAG, "Airspace settings modal opened")
     }
 
@@ -41,7 +45,7 @@ class MapModalManager(
      * Hide airspace settings modal
      */
     fun hideAirspaceSettingsModal() {
-        showAirspaceSettings = false
+        _showAirspaceSettings.value = false
         Log.d(TAG, "Airspace settings modal closed")
     }
 
@@ -50,7 +54,7 @@ class MapModalManager(
      */
     fun handleBackGesture(): Boolean {
         return when {
-            showAirspaceSettings -> {
+            _showAirspaceSettings.value -> {
                 hideAirspaceSettingsModal()
                 true
             }
@@ -62,7 +66,7 @@ class MapModalManager(
      * Check if any modal is currently open
      */
     fun isAnyModalOpen(): Boolean {
-        return showAirspaceSettings
+        return _showAirspaceSettings.value
     }
 
     /**
@@ -71,7 +75,7 @@ class MapModalManager(
     fun getModalStatus(): String {
         return buildString {
             append("MapModalManager Status:\n")
-            append("- Airspace Settings: ${if (showAirspaceSettings) "Open" else "Closed"}\n")
+            append("- Airspace Settings: ${if (_showAirspaceSettings.value) "Open" else "Closed"}\n")
         }
     }
 }
@@ -89,7 +93,8 @@ object MapModalUI {
         modalManager: MapModalManager,
         modifier: Modifier = Modifier
     ) {
-        if (modalManager.showAirspaceSettings) {
+        val showAirspaceSettings by modalManager.showAirspaceSettings.collectAsStateWithLifecycle()
+        if (showAirspaceSettings) {
             Box(
                 modifier = modifier
                     .fillMaxSize()

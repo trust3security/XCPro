@@ -27,9 +27,6 @@ fun iconForAircraft(
     metadataIcaoAircraftType: String?,
     icao24Raw: String? = null
 ): AdsbAircraftIcon {
-    if (normalizeIcao24(icao24Raw) in LARGE_ICON_ICAO24_OVERRIDES) {
-        return AdsbAircraftIcon.PlaneLargeIcaoOverride
-    }
     if (category == 6) {
         return AdsbAircraftIcon.PlaneHeavy
     }
@@ -37,6 +34,12 @@ fun iconForAircraft(
         typecode = metadataTypecode,
         icaoAircraftType = metadataIcaoAircraftType
     )
+    if (fromMetadata == AdsbAircraftIcon.PlaneHeavy) {
+        return AdsbAircraftIcon.PlaneHeavy
+    }
+    if (normalizeIcao24(icao24Raw) in LARGE_ICON_ICAO24_OVERRIDES) {
+        return AdsbAircraftIcon.PlaneLargeIcaoOverride
+    }
     return fromMetadata ?: iconForCategory(category)
 }
 
@@ -70,6 +73,24 @@ private fun iconFromIcaoMetadata(
     typecode: String?,
     icaoAircraftType: String?
 ): AdsbAircraftIcon? {
+    val fromTypecode = typecode
+        ?.trim()
+        ?.uppercase(Locale.US)
+        ?.takeIf { it.isNotBlank() }
+        ?.let(::iconFromTypecode)
+    val fromIcaoClass = iconFromIcaoAircraftType(icaoAircraftType)
+
+    if (fromTypecode != null) {
+        if (fromTypecode == AdsbAircraftIcon.PlaneLight && fromIcaoClass == AdsbAircraftIcon.PlaneTwinProp) {
+            return fromIcaoClass
+        }
+        return fromTypecode
+    }
+
+    return fromIcaoClass
+}
+
+private fun iconFromIcaoAircraftType(icaoAircraftType: String?): AdsbAircraftIcon? {
     val normalizedClass = icaoAircraftType
         ?.trim()
         ?.uppercase(Locale.US)
@@ -78,30 +99,29 @@ private fun iconFromIcaoMetadata(
         if (normalizedClass.startsWith("H")) {
             return AdsbAircraftIcon.Helicopter
         }
-        val sizeClass = normalizedClass[1].digitToIntOrNull()
+        val engineCount = normalizedClass[1].digitToIntOrNull() ?: 1
         return when (normalizedClass[2]) {
-            'J' -> if ((sizeClass ?: 1) >= 2) {
-                AdsbAircraftIcon.PlaneLarge
-            } else {
-                AdsbAircraftIcon.PlaneLight
+            'J' -> when {
+                engineCount >= 4 -> AdsbAircraftIcon.PlaneHeavy
+                engineCount == 2 -> AdsbAircraftIcon.PlaneTwinJet
+                engineCount == 3 -> AdsbAircraftIcon.PlaneLarge
+                else -> AdsbAircraftIcon.PlaneLight
             }
 
-            'P', 'T' -> if ((sizeClass ?: 1) >= 3) {
-                AdsbAircraftIcon.PlaneLarge
-            } else {
-                AdsbAircraftIcon.PlaneLight
+            'P', 'T' -> when {
+                engineCount == 2 -> AdsbAircraftIcon.PlaneTwinProp
+                engineCount >= 3 -> AdsbAircraftIcon.PlaneLarge
+                else -> AdsbAircraftIcon.PlaneLight
             }
 
             else -> null
         }
     }
 
-    val normalizedTypecode = typecode
-        ?.trim()
-        ?.uppercase(Locale.US)
-        ?.takeIf { it.isNotBlank() }
-        ?: return null
+    return null
+}
 
+private fun iconFromTypecode(normalizedTypecode: String): AdsbAircraftIcon? {
     if (GLIDER_TYPECODE_PREFIXES.any { normalizedTypecode.startsWith(it) }) {
         return AdsbAircraftIcon.Glider
     }
@@ -110,8 +130,20 @@ private fun iconFromIcaoMetadata(
     }
     if (FIXED_WING_TYPECODE_REGEX.matches(normalizedTypecode) && normalizedTypecode.any { it.isDigit() }) {
         return when {
+            FOUR_ENGINE_JET_TYPECODE_EXACT.contains(normalizedTypecode) ->
+                AdsbAircraftIcon.PlaneHeavy
+
+            FOUR_ENGINE_JET_TYPECODE_PREFIXES.any { normalizedTypecode.startsWith(it) } ->
+                AdsbAircraftIcon.PlaneHeavy
+
+            TWIN_JET_TYPECODE_PREFIXES.any { normalizedTypecode.startsWith(it) } ->
+                AdsbAircraftIcon.PlaneTwinJet
+
             LARGE_FIXED_WING_TYPECODE_PREFIXES.any { normalizedTypecode.startsWith(it) } ->
                 AdsbAircraftIcon.PlaneLarge
+
+            TWIN_PROP_TYPECODE_PREFIXES.any { normalizedTypecode.startsWith(it) } ->
+                AdsbAircraftIcon.PlaneTwinProp
 
             MEDIUM_FIXED_WING_TYPECODE_PREFIXES.any { normalizedTypecode.startsWith(it) } ->
                 AdsbAircraftIcon.PlaneMedium
@@ -156,32 +188,48 @@ private val HELICOPTER_TYPECODE_PREFIXES = listOf(
     "UH"
 )
 
-private val LARGE_FIXED_WING_TYPECODE_PREFIXES = listOf(
-    "A3",
+private val FOUR_ENGINE_JET_TYPECODE_PREFIXES = listOf(
     "A38",
-    "A39",
-    "B74",
-    "B77",
-    "B78",
-    "B79",
-    "MD11",
-    "DC10",
-    "L101",
+    "A34",
+    "B74"
+)
+
+private val FOUR_ENGINE_JET_TYPECODE_EXACT = setOf(
     "C17"
 )
 
-private val MEDIUM_FIXED_WING_TYPECODE_PREFIXES = listOf(
+private val TWIN_JET_TYPECODE_PREFIXES = listOf(
     "A2",
+    "A3",
     "B73",
     "B75",
     "B76",
+    "B77",
+    "B78",
+    "B79",
     "E17",
     "E18",
     "E19",
     "CRJ",
-    "AT7",
-    "AT8",
-    "DH8",
     "F70",
     "F100"
+)
+
+private val LARGE_FIXED_WING_TYPECODE_PREFIXES = listOf(
+    "A39",
+    "MD11",
+    "DC10",
+    "L101"
+)
+
+private val TWIN_PROP_TYPECODE_PREFIXES = listOf(
+    "AT7",
+    "AT8",
+    "DH8"
+)
+
+private val MEDIUM_FIXED_WING_TYPECODE_PREFIXES = listOf(
+    "AT7",
+    "AT8",
+    "DH8"
 )

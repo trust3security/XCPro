@@ -39,7 +39,6 @@ import com.example.xcpro.adsb.AdsbTrafficUiModel
 import com.example.xcpro.adsb.AdsbSelectedTargetDetails
 import com.example.xcpro.ogn.OgnTrafficSnapshot
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
-import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.variometer.layout.VariometerUiState
 import kotlinx.coroutines.CoroutineScope
@@ -65,7 +64,6 @@ internal data class MapScreenScaffoldInputs(
     val locationManager: LocationManager,
     val flightDataManager: FlightDataManager,
     val flightViewModel: FlightDataViewModel,
-    val taskManager: TaskManagerCoordinator,
     val taskType: TaskType,
     val createTaskGestureHandler: (TaskGestureCallbacks) -> TaskGestureHandler,
     val windArrowState: WindArrowUiState,
@@ -148,7 +146,6 @@ internal fun rememberMapScreenScaffoldInputs(
     initialMapStyle: String,
     onMapStyleSelected: (String) -> Unit,
     mapViewModel: MapScreenViewModel,
-    taskManager: TaskManagerCoordinator,
     mapUiState: MapUiState,
     bindings: MapScreenBindings,
     managers: MapScreenManagers,
@@ -218,7 +215,6 @@ internal fun rememberMapScreenScaffoldInputs(
         locationManager = managers.locationManager,
         flightDataManager = mapViewModel.flightDataManager,
         flightViewModel = flightViewModel,
-        taskManager = taskManager,
         taskType = bindings.taskType,
         createTaskGestureHandler = mapViewModel::createTaskGestureHandler,
         windArrowState = windArrowState,

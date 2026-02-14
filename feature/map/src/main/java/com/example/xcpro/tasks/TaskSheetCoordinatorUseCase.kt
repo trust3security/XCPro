@@ -8,17 +8,20 @@ import com.example.xcpro.tasks.core.WaypointRole
 import java.time.Duration
 import javax.inject.Inject
 
+data class TaskCoordinatorSnapshot(
+    val task: Task,
+    val taskType: TaskType,
+    val activeLeg: Int
+)
+
 class TaskSheetCoordinatorUseCase @Inject constructor(
     private val taskManager: TaskManagerCoordinator
 ) {
-    val currentTask: Task
-        get() = taskManager.currentTask
-
-    val taskType: TaskType
-        get() = taskManager.taskType
-
-    val currentLeg: Int
-        get() = taskManager.currentLeg
+    fun snapshot(): TaskCoordinatorSnapshot = TaskCoordinatorSnapshot(
+        task = taskManager.currentTask,
+        taskType = taskManager.taskType,
+        activeLeg = taskManager.currentLeg
+    )
 
     fun setProximityHandler(handler: (Boolean, Boolean) -> Unit) {
         taskManager.setProximityHandler(handler)

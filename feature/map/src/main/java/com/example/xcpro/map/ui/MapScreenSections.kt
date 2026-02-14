@@ -285,7 +285,7 @@ private fun CardGridLayer(
                     }
                     Log.d(
                         "GESTURE_CARD_BOX",
-                        "action= edit= pointers=[] consumed="
+                        "action=$action edit=$isUiEditMode pointers=[$pointerSummary] consumed=false"
                     )
                 }
                 false

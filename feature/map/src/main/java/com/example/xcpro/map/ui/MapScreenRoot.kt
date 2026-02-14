@@ -3,7 +3,6 @@ package com.example.xcpro.map.ui
  * Root MapScreen composable wiring managers, state, and scaffold.
  * Invariants: UI renders state only; mutations are routed through MapScreenViewModel.
  */
-
 import com.example.xcpro.map.ui.effects.MapComposeEffects
 import com.example.xcpro.map.MapLifecycleEffects
 import com.example.xcpro.map.MapScreenState
@@ -12,15 +11,11 @@ import com.example.xcpro.map.MapUiEvent
 import com.example.xcpro.map.MapStateStore
 import com.example.dfcards.dfcards.FlightDataViewModel
 import android.annotation.SuppressLint
-import androidx.activity.compose.BackHandler
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -39,8 +34,6 @@ import com.example.xcpro.map.widgets.MapWidgetId
 import com.example.xcpro.map.widgets.MapWidgetLayoutViewModel
 import com.example.xcpro.map.widgets.MapWidgetOffsets
 import com.example.xcpro.hawk.HAWK_VARIO_CARD_ID
-import com.example.xcpro.tasks.rememberTaskManagerCoordinator
-import kotlinx.coroutines.launch
 
 /**
  * G PHASE 2: Convert CompleteFlightData (from FlightDataCalculator) to RealTimeFlightData (for cards)
@@ -65,7 +58,6 @@ internal fun MapScreenRoot(
     val mapUiState by mapViewModel.uiState.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
-    val taskManager = rememberTaskManagerCoordinator()
     MapScreenSideEffects(
         uiEffects = mapViewModel.uiEffects,
         drawerState = drawerState,
@@ -138,7 +130,6 @@ internal fun MapScreenRoot(
         context = context,
         mapState = mapState,
         mapStateReader = mapStateReader,
-        taskManager = taskManager,
         mapStateActions = mapViewModel.mapStateActions,
         orientationManager = orientationManager,
         sensorsUseCase = mapViewModel.mapSensorsRuntimeUseCase,
@@ -147,6 +138,7 @@ internal fun MapScreenRoot(
         replayFixProvider = mapViewModel::getInterpolatedReplayPose,
         featureFlags = mapViewModel.mapFeatureFlags,
         coroutineScope = coroutineScope,
+        tasksUseCase = mapViewModel.mapTasksRuntimeUseCase,
         airspaceUseCase = mapViewModel.mapAirspaceUseCase,
         waypointFilesUseCase = mapViewModel.mapWaypointFilesUseCase
     )
@@ -162,22 +154,14 @@ internal fun MapScreenRoot(
     val panelState by taskScreenManager.taskPanelState.collectAsStateWithLifecycle()
     val isTaskPanelVisible = panelState != com.example.xcpro.map.MapTaskScreenManager.TaskPanelState.HIDDEN
 
-    BackHandler(enabled = drawerState.isOpen || modalManager.isAnyModalOpen() || isTaskPanelVisible) {
-        when {
-            drawerState.isOpen -> {
-                coroutineScope.launch { drawerState.close() }
-            }
-            modalManager.handleBackGesture() -> Unit
-            taskScreenManager.handleBackGesture() -> Unit
-            else -> {
-                navController.popBackStack()
-            }
-        }
-    }
-
-    LaunchedEffect(mapState.mapLibreMap, airspaceState.enabledFiles, airspaceState.classStates) {
-        overlayManager.refreshAirspace(mapState.mapLibreMap)
-    }
+    MapScreenBackHandler(
+        drawerState = drawerState,
+        modalManager = modalManager,
+        taskScreenManager = taskScreenManager,
+        isTaskPanelVisible = isTaskPanelVisible,
+        navController = navController,
+        coroutineScope = coroutineScope
+    )
     val bindings = rememberMapScreenBindings(
         mapViewModel = mapViewModel,
         mapStateReader = mapStateReader
@@ -203,25 +187,20 @@ internal fun MapScreenRoot(
     // G AAT Edit Mode State - Track when AAT pin editing is active
     val isAATEditMode = bindings.isAATEditMode
 
-    LaunchedEffect(ognTargets, ognOverlayEnabled) {
-        overlayManager.updateOgnTrafficTargets(
-            if (ognOverlayEnabled) ognTargets else emptyList()
-        )
-    }
-    LaunchedEffect(ognIconSizePx) {
-        overlayManager.setOgnIconSizePx(ognIconSizePx)
-    }
-    LaunchedEffect(adsbTargets, adsbOverlayEnabled) {
-        overlayManager.updateAdsbTrafficTargets(
-            if (adsbOverlayEnabled) adsbTargets else emptyList()
-        )
-    }
-    LaunchedEffect(adsbIconSizePx) {
-        overlayManager.setAdsbIconSizePx(adsbIconSizePx)
-    }
+    MapScreenOverlayEffects(
+        mapState = mapState,
+        airspaceState = airspaceState,
+        overlayManager = overlayManager,
+        ognTargets = ognTargets,
+        ognOverlayEnabled = ognOverlayEnabled,
+        ognIconSizePx = ognIconSizePx,
+        adsbTargets = adsbTargets,
+        adsbOverlayEnabled = adsbOverlayEnabled,
+        adsbIconSizePx = adsbIconSizePx
+    )
     
-    // Map FlightMode to FlightModeSelection using FlightDataManager
-    val currentFlightModeSelection = flightDataManager.currentFlightMode
+    // Map FlightMode to FlightModeSelection using FlightDataManager.
+    val currentFlightModeSelection by flightDataManager.currentFlightModeFlow.collectAsStateWithLifecycle()
     LaunchedEffect(activeProfileId, currentFlightModeSelection) {
         Log.d("MapScreenRoot", "activeProfile=$activeProfileId mode=$currentFlightModeSelection")
     }
@@ -330,26 +309,7 @@ internal fun MapScreenRoot(
         isReplayPlaying = replaySession.status == com.example.xcpro.replay.SessionStatus.PLAYING
     )
 
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner, mapViewModel) {
-        mapViewModel.setMapVisible(
-            lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
-        )
-        val observer = LifecycleEventObserver { _, event ->
-            when (event) {
-                Lifecycle.Event.ON_START,
-                Lifecycle.Event.ON_RESUME -> mapViewModel.setMapVisible(true)
-                Lifecycle.Event.ON_PAUSE,
-                Lifecycle.Event.ON_STOP -> mapViewModel.setMapVisible(false)
-                else -> Unit
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-            mapViewModel.setMapVisible(false)
-        }
-    }
+    MapVisibilityLifecycleEffect(mapViewModel)
 
     val scaffoldInputs = rememberMapScreenScaffoldInputs(
         coroutineScope = coroutineScope,
@@ -361,7 +321,6 @@ internal fun MapScreenRoot(
         initialMapStyle = initialMapStyle,
         onMapStyleSelected = onMapStyleSelected,
         mapViewModel = mapViewModel,
-        taskManager = taskManager,
         mapUiState = mapUiState,
         bindings = bindings,
         managers = managers,

@@ -4,21 +4,13 @@ import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlinx.coroutines.launch
 
 @HiltViewModel
 internal class TaskManagerCoordinatorHostViewModel @Inject constructor(
     val taskManagerCoordinator: TaskManagerCoordinator
-) : ViewModel() {
-    init {
-        viewModelScope.launch {
-            taskManagerCoordinator.loadSavedTasks()
-        }
-    }
-}
+) : ViewModel()
 
 @Composable
 fun rememberTaskManagerCoordinator(): TaskManagerCoordinator {

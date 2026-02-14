@@ -286,10 +286,11 @@ class TaskSheetViewModel @Inject constructor(
     }
 
     private fun sync() {
+        val snapshot = taskCoordinator.snapshot()
         useCase.updateFrom(
-            task = taskCoordinator.currentTask,
-            taskType = taskCoordinator.taskType,
-            activeIndex = taskCoordinator.currentLeg
+            task = snapshot.task,
+            taskType = snapshot.taskType,
+            activeIndex = snapshot.activeLeg
         )
     }
 }

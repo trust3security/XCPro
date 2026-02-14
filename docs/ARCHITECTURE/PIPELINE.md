@@ -177,6 +177,11 @@ ADS-b lifecycle/visibility semantics:
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
   - Map overlay targets come from the raw ADS-b repository stream with metadata merged opportunistically.
   - Map marker positions are not gated by metadata-enrichment latency.
+- `feature/map/src/main/java/com/example/xcpro/adsb/metadata/data/AircraftMetadataRepositoryImpl.kt`
+  - On-demand ICAO metadata upserts emit a metadata revision signal.
+- `feature/map/src/main/java/com/example/xcpro/adsb/metadata/domain/AdsbMetadataEnrichmentUseCase.kt`
+  - Target/icon enrichment and selected-target details recompute when metadata revision changes,
+    so icon/category overrides refresh immediately after metadata persistence (no extra poll wait).
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenTrafficCoordinator.kt`
   - Streaming enable is driven by `allowSensorStart && mapVisible && adsbOverlayEnabled`.
   - When streaming turns on, center is seeded from current GPS position (camera fallback when GPS is unavailable).
@@ -282,8 +287,9 @@ Task map rendering bridge (2026-02-12):
   - `TaskMapRenderRouter.syncTaskVisuals(...)`
   - This API owns clear + orphan cleanup + conditional replot sequencing.
 - Rendering is selected by current task type (RACING/AAT) in the UI runtime layer.
-- `TaskMapRenderRouter` consumes `TaskManagerCoordinator.currentTask` snapshots and
-  shared core->task mappers (Racing/AAT) instead of coordinator manager escape hatches.
+- `TaskMapRenderRouter` consumes `TaskRenderSnapshot` from `MapTasksUseCase`
+  (`taskRenderSnapshot()`) and shared core->task mappers (Racing/AAT) instead
+  of coordinator manager escape hatches.
 - `RacingTaskManager` / `AATTaskManager` no longer expose MapLibre render/edit APIs;
   map rendering/editing flows are UI/runtime-only via renderers/controllers.
 - `MapInitializer` orchestration is split into focused runtime collaborators:

@@ -76,12 +76,24 @@ Use this checklist for any task/map refactor before opening a PR.
 # static analysis
 ./gradlew detekt ktlintCheck
 
-# unit + instrumentation tests
-./gradlew testDebugUnitTest connectedDebugAndroidTest
+# unit + fast local instrumentation (app module only, keep debug app installed)
+./gradlew testDebugUnitTest :app:connectedDebugAndroidTest --no-parallel "-Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true"
+
+# full release/CI instrumentation (all modules)
+./gradlew connectedDebugAndroidTest --no-parallel
 
 # assemble + verify previews
 ./gradlew :app:assembleDebug
 ```
+
+Fast local loop for feature/debug work:
+```bat
+dev-fast.bat feature:map compile
+dev-fast.bat feature:map assemble
+dev-fast.bat app install
+```
+
+Use `preflight.bat` before PR/release validation.
 
 **Android Studio:** Latest stable + Kotlin plugin. Enable `Preview` and `Layout Inspector` for Compose. Use `Analyze > Inspect Code` before PR.
 
@@ -157,9 +169,10 @@ Example:
 1. Fork/clone, create branch `feat/<scope>-<short>`.
 2. Implement per **ARCHITECTURE.md** + **CODING_RULES.md**.
 3. Add tests + `AI-NOTE` comments.
-4. Run `detekt`, `ktlintCheck`, `test`, `connectedAndroidTest`.
-5. Open PR with a crisp description + screenshots/notes.
-6. Address review feedback and merge once green.
+4. Run `detekt`, `ktlintCheck`, `testDebugUnitTest`, and `:app:connectedDebugAndroidTest --no-parallel "-Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true"`.
+5. Run full `connectedDebugAndroidTest --no-parallel` before release/merge.
+6. Open PR with a crisp description + screenshots/notes.
+7. Address review feedback and merge once green.
 
 ---
 

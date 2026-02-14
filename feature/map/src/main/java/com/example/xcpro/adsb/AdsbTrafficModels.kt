@@ -56,9 +56,16 @@ sealed interface AdsbConnectionState {
     data class Error(val message: String) : AdsbConnectionState
 }
 
+enum class AdsbAuthMode {
+    Anonymous,
+    Authenticated,
+    AuthFailed
+}
+
 data class AdsbTrafficSnapshot(
     val targets: List<AdsbTrafficUiModel>,
     val connectionState: AdsbConnectionState,
+    val authMode: AdsbAuthMode = AdsbAuthMode.Anonymous,
     val centerLat: Double?,
     val centerLon: Double?,
     val receiveRadiusKm: Int,

@@ -2,6 +2,7 @@ package com.example.xcpro.tasks.racing.navigation
 
 import com.example.xcpro.core.time.FakeClock
 import com.example.xcpro.replay.IgcParser
+import com.example.xcpro.replay.IgcPoint
 import com.example.xcpro.tasks.racing.SimpleRacingTask
 import com.example.xcpro.tasks.racing.models.RacingFinishPointType
 import com.example.xcpro.tasks.racing.models.RacingStartPointType
@@ -25,9 +26,27 @@ class RacingReplayValidationTest {
         val log = parser.parse(resource)
         assertTrue("Expected IGC points", log.points.isNotEmpty())
 
+        val firstRunEvents = replayEvents(task, log.points)
+        val secondRunEvents = replayEvents(task, log.points)
+        assertEquals(firstRunEvents, secondRunEvents)
+
+        val startMillis = log.points.first().timestampMillis
+        assertEquals(3, firstRunEvents.size)
+        assertEquals(RacingNavigationEventType.START, firstRunEvents[0].type)
+        assertEquals(RacingNavigationEventType.TURNPOINT, firstRunEvents[1].type)
+        assertEquals(RacingNavigationEventType.FINISH, firstRunEvents[2].type)
+        assertTrue(firstRunEvents[0].timestampMillis >= startMillis)
+        assertTrue(firstRunEvents[1].timestampMillis >= firstRunEvents[0].timestampMillis)
+        assertTrue(firstRunEvents[2].timestampMillis >= firstRunEvents[1].timestampMillis)
+    }
+
+    private fun replayEvents(
+        task: SimpleRacingTask,
+        points: List<IgcPoint>
+    ): List<RacingNavigationEvent> {
         val events = mutableListOf<RacingNavigationEvent>()
         var state = RacingNavigationState()
-        log.points.forEach { point ->
+        points.forEach { point ->
             val fix = RacingNavigationFix(
                 lat = point.latitude,
                 lon = point.longitude,
@@ -37,15 +56,7 @@ class RacingReplayValidationTest {
             state = decision.state
             decision.event?.let(events::add)
         }
-
-        val startMillis = log.points.first().timestampMillis
-        assertEquals(3, events.size)
-        assertEquals(RacingNavigationEventType.START, events[0].type)
-        assertEquals(RacingNavigationEventType.TURNPOINT, events[1].type)
-        assertEquals(RacingNavigationEventType.FINISH, events[2].type)
-        assertTrue(events[0].timestampMillis >= startMillis)
-        assertTrue(events[1].timestampMillis >= events[0].timestampMillis)
-        assertTrue(events[2].timestampMillis >= events[1].timestampMillis)
+        return events
     }
 
     private fun buildSimpleTask(): SimpleRacingTask {

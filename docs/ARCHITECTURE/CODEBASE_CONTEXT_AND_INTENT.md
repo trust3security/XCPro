@@ -1,6 +1,6 @@
 ﻿> NOTICE: Review the active task plan before implementing task-related changes.
 
-> Active task compliance plan: `docs/refactor/Map_Task_5of5_Stabilization_Plan_2026-02-12.md`
+> Active task compliance plan: `docs/refactor/Map_Task_5of5_Finalization_Plan_2026-02-13.md`
 
 # CODEBASE_CONTEXT_AND_INTENT.md
 
@@ -125,7 +125,7 @@ Silent quality regressions are unacceptable.
 Contributors/agents should:
 
 1) Read `ARCHITECTURE.md`, then `CODING_RULES.md`, then this file.
-2) Execute `docs/refactor/Task_Architecture_Compliance_Refactor_Plan.md` in strict phase order.
+2) Execute `docs/refactor/Map_Task_5of5_Finalization_Plan_2026-02-13.md` in strict phase order.
 3) Add/adjust tests at each phase.
 4) Keep `KNOWN_DEVIATIONS.md` empty unless explicitly approved.
 5) Run required build/test checks after each phase.

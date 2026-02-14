@@ -8,14 +8,16 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import com.example.xcpro.map.MapScreenState
+import com.example.xcpro.map.MapTasksUseCase
 import com.example.xcpro.map.MapTaskScreenManager
-import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskWaypoint
 import com.example.xcpro.tasks.core.WaypointRole
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
@@ -108,14 +110,16 @@ class MapTaskScreenUiTest {
     }
 
     private fun createManager(task: Task): MapTaskScreenManager {
-        val taskManager: TaskManagerCoordinator = mock()
-        whenever(taskManager.currentTask).thenReturn(task)
+        val tasksUseCase: MapTasksUseCase = mock()
+        whenever(tasksUseCase.currentTaskSnapshot()).thenReturn(task)
+        whenever(tasksUseCase.currentWaypointCount()).thenReturn(task.waypoints.size)
 
         val mapState = MapScreenState()
 
         return MapTaskScreenManager(
             mapState = mapState,
-            taskManager = taskManager
+            tasksUseCase = tasksUseCase,
+            coroutineScope = CoroutineScope(Dispatchers.Unconfined)
         )
     }
 

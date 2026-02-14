@@ -38,6 +38,8 @@ import kotlinx.coroutines.runBlocking
 import com.example.xcpro.map.domain.MapWaypointError
 import com.example.xcpro.map.config.MapFeatureFlags
 import com.example.xcpro.map.replay.RacingReplayLogBuilder
+import com.example.xcpro.airspace.AirspaceUseCase
+import com.example.xcpro.flightdata.WaypointFilesUseCase
 import com.example.xcpro.orientation.HeadingResolver
 import com.example.xcpro.orientation.OrientationClock
 import com.example.xcpro.replay.IgcReplayController
@@ -87,7 +89,6 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -201,7 +202,6 @@ class MapScreenViewModelTest {
         gliderConfigUseCase = GliderConfigUseCase(gliderRepository)
     }
 
-    @Ignore("GliderRepository + TaskManager persistence hangs under Robolectric until injected abstractions are provided")
     @Test
     fun refreshWaypoints_success_updatesState() = runBlocking {
         val expected = listOf(
@@ -231,7 +231,6 @@ class MapScreenViewModelTest {
         assertNull(state.waypointError)
     }
 
-    @Ignore("GliderRepository + TaskManager persistence hangs under Robolectric until injected abstractions are provided")
     @Test
     fun refreshWaypoints_failure_setsError() = runBlocking {
         val loader = FailingWaypointLoader(IllegalStateException("Failed to read waypoints"))
@@ -461,6 +460,8 @@ class MapScreenViewModelTest {
             featureFlags = localTaskFeatureFlags
         )
         val mapWaypointsUseCase = MapWaypointsUseCase(waypointLoader)
+        val mapAirspaceUseCase = Mockito.mock(AirspaceUseCase::class.java)
+        val mapWaypointFilesUseCase = Mockito.mock(WaypointFilesUseCase::class.java)
         val mapSensorsUseCase = MapSensorsUseCase(varioServiceManager)
         val mapUiControllersUseCase = MapUiControllersUseCase(
             flightDataManagerFactory = flightDataManagerFactory,
@@ -545,6 +546,7 @@ class MapScreenViewModelTest {
 
             override fun updateCenter(latitude: Double, longitude: Double) = Unit
             override fun updateOwnshipOrigin(latitude: Double, longitude: Double) = Unit
+            override fun reconnectNow() = Unit
 
             override fun start() {
                 setEnabled(true)
@@ -556,6 +558,8 @@ class MapScreenViewModelTest {
         }
         val adsbTrafficPreferencesRepository = AdsbTrafficPreferencesRepository(context)
         val metadataRepository = object : AircraftMetadataRepository {
+            override val metadataRevision = MutableStateFlow(0L)
+
             override suspend fun getMetadataFor(icao24s: List<String>): Map<String, AircraftMetadata> {
                 return emptyMap()
             }
@@ -593,6 +597,8 @@ class MapScreenViewModelTest {
             mapStyleUseCase = mapStyleUseCase,
             unitsUseCase = unitsUseCase,
             mapWaypointsUseCase = mapWaypointsUseCase,
+            mapAirspaceUseCase = mapAirspaceUseCase,
+            mapWaypointFilesUseCase = mapWaypointFilesUseCase,
             gliderConfigUseCase = gliderConfigUseCase,
             sensorsUseCase = mapSensorsUseCase,
             flightDataUseCase = flightDataUseCase,
@@ -676,6 +682,8 @@ class MapScreenViewModelTest {
             lastOwnshipLat = latitude
             lastOwnshipLon = longitude
         }
+
+        override fun reconnectNow() = Unit
 
         override fun start() {
             setEnabled(true)

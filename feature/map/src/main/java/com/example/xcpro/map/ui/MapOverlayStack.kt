@@ -38,7 +38,6 @@ import com.example.xcpro.map.ui.widgets.MapUIWidgets
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.map.WindArrowUiState
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
-import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.variometer.layout.VariometerUiState
 import com.example.xcpro.map.model.MapLocationUiModel
@@ -53,7 +52,6 @@ internal fun MapOverlayStack(
     locationManager: LocationManager,
     flightDataManager: FlightDataManager,
     flightViewModel: FlightDataViewModel,
-    taskManager: TaskManagerCoordinator,
     taskType: TaskType,
     createTaskGestureHandler: (TaskGestureCallbacks) -> TaskGestureHandler,
     windArrowState: WindArrowUiState,
@@ -101,6 +99,7 @@ internal fun MapOverlayStack(
     replayState: StateFlow<SessionState>
 ) {
     val gestureRegions by widgetManager.gestureRegions.collectAsStateWithLifecycle()
+    val visibleModes by flightDataManager.visibleModesFlow.collectAsStateWithLifecycle()
 
     LaunchedEffect(gestureRegions) {
         if (BuildConfig.DEBUG) Log.d("GESTURE_REGIONS", gestureRegions.joinToString(prefix = "[", postfix = "]") { region ->
@@ -154,7 +153,7 @@ internal fun MapOverlayStack(
             MapGestureSetup.GestureHandlerOverlay(
                 mapState = mapState,
                 taskType = taskType,
-                flightDataManager = flightDataManager,
+                visibleModes = visibleModes,
                 locationManager = locationManager,
                 cameraManager = cameraManager,
                 currentMode = currentMode,
@@ -181,7 +180,7 @@ internal fun MapOverlayStack(
         MapUIWidgets.FlightModeMenu(
             widgetManager = widgetManager,
             currentMode = currentMode,
-            visibleModes = flightDataManager.visibleModes,
+            visibleModes = visibleModes,
             onModeChange = onModeChange,
             flightModeOffset = flightModeOffset.value,
             screenWidthPx = screenWidthPx,

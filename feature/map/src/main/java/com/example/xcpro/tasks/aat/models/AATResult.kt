@@ -49,7 +49,7 @@ data class AATResult(
     }
     
     /**
-     * Get average speed formatted (XXX.X km/h)
+     * Get average speed formatted (0.0 km/h)
      */
     fun getAverageSpeedFormatted(): String {
         return String.format("%.1f km/h", averageSpeed)

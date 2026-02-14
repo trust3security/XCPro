@@ -27,6 +27,7 @@ interface AdsbTrafficRepository {
     fun clearTargets()
     fun updateCenter(latitude: Double, longitude: Double)
     fun updateOwnshipOrigin(latitude: Double, longitude: Double)
+    fun reconnectNow()
     fun start()
     fun stop()
 }
@@ -49,6 +50,7 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
         AdsbTrafficSnapshot(
             targets = emptyList(),
             connectionState = AdsbConnectionState.Disabled,
+            authMode = AdsbAuthMode.Anonymous,
             centerLat = null,
             centerLon = null,
             receiveRadiusKm = RECEIVE_RADIUS_KM,
@@ -87,6 +89,9 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
 
     @Volatile
     private var remainingCredits: Int? = null
+
+    @Volatile
+    private var authMode: AdsbAuthMode = AdsbAuthMode.Anonymous
 
     @Volatile
     private var lastPollMonoMs: Long? = null
@@ -145,6 +150,20 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
         ownshipOrigin = Center(latitude = latitude, longitude = longitude)
         center?.let { activeCenter ->
             publishFromStore(activeCenter)
+        }
+    }
+
+    override fun reconnectNow() {
+        if (!_isEnabled.value) return
+        scope.launch {
+            loopJob?.cancelAndJoin()
+            loopJob = null
+            if (_isEnabled.value) {
+                ensureLoopRunning()
+            } else {
+                connectionState = AdsbConnectionState.Disabled
+                publishSnapshot()
+            }
         }
     }
 
@@ -236,12 +255,23 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
     }
 
     private suspend fun fetchWithAuthRetry(bbox: BBox): ProviderResult {
+        val hasCredentials = tokenRepository.hasCredentials()
         recordRequest(clock.nowMonoMs())
         val token = tokenRepository.getValidTokenOrNull()
+        authMode = when {
+            !token.isNullOrBlank() -> AdsbAuthMode.Authenticated
+            hasCredentials -> AdsbAuthMode.AuthFailed
+            else -> AdsbAuthMode.Anonymous
+        }
         val first = providerClient.fetchStates(bbox, token?.let(::AdsbAuth))
         if (first is ProviderResult.HttpError && first.code == 401 && !token.isNullOrBlank()) {
             tokenRepository.invalidate()
             val refreshedToken = tokenRepository.getValidTokenOrNull()
+            authMode = when {
+                !refreshedToken.isNullOrBlank() -> AdsbAuthMode.Authenticated
+                hasCredentials -> AdsbAuthMode.AuthFailed
+                else -> AdsbAuthMode.Anonymous
+            }
             recordRequest(clock.nowMonoMs())
             return providerClient.fetchStates(bbox, refreshedToken?.let(::AdsbAuth))
         }
@@ -313,11 +343,17 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
         val adaptiveMs = computeAdaptivePollDelayMs(centerAtPoll)
         val budgetFloorMs = computeBudgetFloorDelayMs(nowMonoMs)
         val shouldPrioritizeNearbyTraffic = withinRadiusCount > 0
-        val delayMs = if (shouldPrioritizeNearbyTraffic) {
+        val baseDelayMs = if (shouldPrioritizeNearbyTraffic) {
             adaptiveMs
         } else {
             maxOf(adaptiveMs, budgetFloorMs)
         }
+        val authFloorMs = when (authMode) {
+            AdsbAuthMode.Authenticated -> 0L
+            AdsbAuthMode.Anonymous -> ANONYMOUS_POLL_FLOOR_MS
+            AdsbAuthMode.AuthFailed -> AUTH_FAILED_POLL_FLOOR_MS
+        }
+        val delayMs = maxOf(baseDelayMs, authFloorMs)
         lastPolledCenter = centerAtPoll
         return delayMs.coerceIn(POLL_INTERVAL_HOT_MS, POLL_INTERVAL_MAX_MS)
     }
@@ -378,6 +414,7 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
         _snapshot.value = AdsbTrafficSnapshot(
             targets = _targets.value,
             connectionState = connectionState,
+            authMode = authMode,
             centerLat = activeCenter?.latitude,
             centerLon = activeCenter?.longitude,
             receiveRadiusKm = RECEIVE_RADIUS_KM,
@@ -462,6 +499,8 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
         private const val BUDGET_FLOOR_GUARDED_MS = 20_000L
         private const val BUDGET_FLOOR_LOW_MS = 30_000L
         private const val BUDGET_FLOOR_CRITICAL_MS = 60_000L
+        private const val ANONYMOUS_POLL_FLOOR_MS = 30_000L
+        private const val AUTH_FAILED_POLL_FLOOR_MS = 45_000L
         private const val REQUEST_HISTORY_WINDOW_MS = 60L * 60L * 1_000L
         private const val REQUESTS_PER_HOUR_GUARDED = 120
         private const val REQUESTS_PER_HOUR_LOW = 180

@@ -1,0 +1,47 @@
+ we want to make these 5/5   Compliance scorecard
+
+    - Timebase management: 2/5 — Hardcoded system time usage in domain reduces control and test robustness.
+    - Dependency Injection (DI): 2/5 — Internal construction limits mocking and flexibility.
+    - ViewModel purity: 3/5 — Mixes UI and persistence concerns, affecting clarity.
+    - Lifecycle management: 3/5 — Partial lifecycle awareness; needs standardized Compose lifecycle usage.
+    - Vendor-neutrality and encoding: 4/5 — Mostly neutral though some vendor strings and encoding issues remain.
+    - Overall architecture: 3/5 — Functional but can improve modularity and testability.
+
+  what do we need to add to the coding_rules.md and architecture.md - advise me
+
+
+• Rescored after Workstreams A/B/C completion:
+
+  - Architecture cleanliness: 
+  - Maintainability/change safety: 
+  - Test confidence on risky paths: 
+  - Overall map/task slice quality: 
+  - Release readiness (map/task slice): 
+  - Test confidence on risky map/task paths
+
+  1. typecode exact lookup (A320, B738, C130, A388) -> engine count/type + WTC.
+  2. If no lookup hit, decode icaoAircraftType (e.g., L2J = landplane, 2 engines, jet).
+  3. If neither available, fallback to OpenSky category.
+  4. If conflict, prefer exact typecode data and keep category as secondary hint.
+
+  Icon model that works well
+
+  - Fixed wing:
+      - single piston
+      - twin piston
+      - single turboprop
+      - twin turboprop
+      - twin jet
+      - tri/quad jet
+      - heavy generic
+  - Rotary:
+      - single turbine heli
+      - twin turbine heli
+  - Keep glider/balloon/drone/parachutist as today.
+  - Optional: use one base silhouette + small engine-count badge (x1, x2, x4) to reduce asset count.
+
+  Where to change in your codebase
+
+
+
+

@@ -52,8 +52,7 @@ class MapCameraManager(
         get() = mapStateReader.targetZoom
 
     // Camera state
-    var lastCameraBearing by mutableStateOf(0.0)
-        private set
+    private var lastCameraBearing: Double = 0.0
 
     // AAT Edit Mode: Saved camera position for restore on exit
     private var savedCameraPosition: CameraPosition? = null

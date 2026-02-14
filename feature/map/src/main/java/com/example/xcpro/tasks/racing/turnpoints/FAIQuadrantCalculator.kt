@@ -28,10 +28,6 @@ class FAIQuadrantCalculator : TurnPointCalculator {
         val previousWaypoint = context.previousWaypoint
         val nextWaypoint = context.nextWaypoint ?: return Pair(waypoint.lat, waypoint.lon)
 
-        // Calculate sector orientation per FAI Sporting Code Section 3 Annex A
-        val sectorBisector = calculateFAISectorBisector(waypoint, previousWaypoint, nextWaypoint)
-
-
         // FAI quadrants originate at waypoint -> optimal touch point is always the waypoint itself
         return Pair(waypoint.lat, waypoint.lon)
     }
@@ -47,7 +43,7 @@ class FAIQuadrantCalculator : TurnPointCalculator {
     override fun isWithinObservationZone(position: Pair<Double, Double>, waypoint: RacingWaypoint): Boolean {
         // For a real check, we need context with previous and next waypoints.
         // This method is called without context, so we'll use a simplified check.
-        // TODO: Add a context-aware check that respects sector orientation + radius.
+        // Context-aware sector orientation + radius checks run in path-level validation.
         // For now, assume position is valid (permissive).
         return true
     }

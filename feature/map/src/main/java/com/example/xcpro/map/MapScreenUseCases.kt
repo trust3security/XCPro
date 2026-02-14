@@ -11,7 +11,7 @@ import com.example.xcpro.adsb.metadata.domain.AircraftMetadataSyncRepository
 import com.example.xcpro.adsb.metadata.domain.AircraftMetadataSyncScheduler
 import com.example.xcpro.adsb.metadata.domain.MetadataSyncState
 import com.example.xcpro.flightdata.FlightDataRepository
-import com.example.xcpro.sensors.UnifiedSensorManager
+import com.example.xcpro.sensors.SensorStatus
 import com.example.xcpro.ogn.OgnTrafficRepository
 import com.example.xcpro.ogn.OgnTrafficPreferencesRepository
 import com.example.xcpro.ogn.OgnTrafficSnapshot
@@ -33,6 +33,7 @@ import com.example.xcpro.replay.ReplayDisplayPose
 import com.example.xcpro.map.replay.RacingReplayLogBuilder
 import com.example.xcpro.gestures.TaskGestureCallbacks
 import com.example.xcpro.gestures.TaskGestureHandler
+import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.vario.VarioServiceManager
 import com.example.xcpro.vario.LevoVarioPreferencesRepository
@@ -106,7 +107,6 @@ class MapSensorsUseCase @Inject constructor(
 ) {
     val gpsStatusFlow: StateFlow<GpsStatus> = varioServiceManager.unifiedSensorManager.gpsStatusFlow
     val flightStateFlow: StateFlow<FlyingState> = varioServiceManager.flightStateSource.flightState
-    val unifiedSensorManager: UnifiedSensorManager = varioServiceManager.unifiedSensorManager
 
     fun setFlightMode(mode: com.example.xcpro.common.flight.FlightMode) {
         varioServiceManager.setFlightMode(mode)
@@ -117,6 +117,10 @@ class MapSensorsUseCase @Inject constructor(
     fun stopSensors() {
         varioServiceManager.stop()
     }
+
+    fun sensorStatus(): SensorStatus = varioServiceManager.unifiedSensorManager.getSensorStatus()
+
+    fun isGpsEnabled(): Boolean = varioServiceManager.unifiedSensorManager.isGpsEnabled()
 }
 
 class MapVarioPreferencesUseCase @Inject constructor(
@@ -125,6 +129,12 @@ class MapVarioPreferencesUseCase @Inject constructor(
     val showWindSpeedOnVario: Flow<Boolean> = repository.config.map { it.showWindSpeedOnVario }
     val showHawkCard: Flow<Boolean> = repository.config.map { it.showHawkCard }
 }
+
+data class TaskRenderSnapshot(
+    val task: Task,
+    val taskType: TaskType,
+    val aatEditWaypointIndex: Int?
+)
 
 class MapTasksUseCase @Inject constructor(
     private val taskManager: TaskManagerCoordinator
@@ -150,6 +160,22 @@ class MapTasksUseCase @Inject constructor(
     fun updateAATTargetPoint(index: Int, lat: Double, lon: Double) {
         taskManager.updateAATTargetPoint(index, lat, lon)
     }
+
+    fun clearTask() {
+        taskManager.clearTask()
+    }
+
+    suspend fun saveTask(taskName: String): Boolean = taskManager.saveTask(taskName)
+
+    fun currentTaskSnapshot(): Task = taskManager.currentTask
+
+    fun currentWaypointCount(): Int = taskManager.currentTask.waypoints.size
+
+    fun taskRenderSnapshot(): TaskRenderSnapshot = TaskRenderSnapshot(
+        task = taskManager.currentTask,
+        taskType = taskManager.taskType,
+        aatEditWaypointIndex = taskManager.getAATEditWaypointIndex()
+    )
 }
 
 class MapReplayUseCase @Inject constructor(

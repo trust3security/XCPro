@@ -1,11 +1,13 @@
 package com.example.xcpro.tasks.aat
 
-import androidx.compose.runtime.*
 import com.example.xcpro.core.time.Clock
 import com.example.xcpro.tasks.aat.calculations.AATDistanceCalculator
 import com.example.xcpro.tasks.aat.calculations.AATInteractiveTaskDistance
 import com.example.xcpro.tasks.aat.map.*
 import com.example.xcpro.tasks.aat.models.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import org.maplibre.android.maps.MapLibreMap
 
 /**
@@ -69,10 +71,10 @@ class AATInteractiveTurnpointManager(
     private var coordinateConverter: AATMapCoordinateConverter? = null
 
     // State management
-    private var currentWaypoints by mutableStateOf(emptyList<AATWaypoint>())
-    private var currentDistance by mutableStateOf<AATInteractiveTaskDistance?>(null)
-    private var isEditMode by mutableStateOf(false)
-    private var focusedAreaIndex by mutableStateOf(-1)
+    private var currentWaypoints: List<AATWaypoint> = emptyList()
+    private var currentDistance: AATInteractiveTaskDistance? = null
+    private var isEditMode: Boolean = false
+    private var focusedAreaIndex: Int = -1
 
     // Map reference
     private var mapLibreMap: MapLibreMap? = null
@@ -134,8 +136,9 @@ class AATInteractiveTurnpointManager(
      */
     fun isInEditMode(): Boolean = isEditMode
 
-    // Note: getCurrentWaypoints(), getCurrentDistance(), and getFocusedAreaIndex()
-    // are automatically provided by the mutableStateOf properties above
+    fun getCurrentDistance(): AATInteractiveTaskDistance? = currentDistance
+
+    fun getFocusedAreaIndex(): Int = focusedAreaIndex
 
     /**
      * Get map interaction handler for UI integration

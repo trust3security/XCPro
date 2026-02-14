@@ -1,13 +1,13 @@
 
 # KNOWN_DEVIATIONS.md
 
-Audit date: 2026-02-11
+Audit date: 2026-02-14
 
 This file lists known deviations from ARCHITECTURE.md and CODING_RULES.md.
 Each entry must include an issue ID, owner, and expiry date.
 
 Active remediation plan:
-- `docs/refactor/Task_Architecture_Compliance_Refactor_Plan.md`
+- `docs/refactor/Map_Task_5of5_Finalization_Plan_2026-02-13.md`
 
 ## Current deviations
 
@@ -15,8 +15,12 @@ None.
 
 ## Verification
 
-Last verified: 2026-02-11
-- Commands: ./gradlew enforceRules, ./gradlew testDebugUnitTest, ./gradlew assembleDebug
+Last verified: 2026-02-14
+- Commands:
+  - ./gradlew enforceRules
+  - ./gradlew testDebugUnitTest
+  - ./gradlew assembleDebug
+  - ./gradlew :app:connectedDebugAndroidTest --no-parallel "-Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true" (run twice)
 
 ## Resolved deviations
 
@@ -127,7 +131,7 @@ Last verified: 2026-02-11
 - Resolved: 2026-02-11
 - Notes:
   - `TaskManagerCoordinator` no longer constructs managers/prefs or owns `Context`; collaborators are injected.
-  - `TaskManagerCompat.rememberTaskManagerCoordinator` now resolves the DI singleton via Hilt entry point (no direct construction).
+  - `TaskManagerCompat.rememberTaskManagerCoordinator` now resolves via Hilt ViewModel host (`TaskManagerCoordinatorHostViewModel`) with no runtime entry-point lookup.
   - Coordinator map-instance ownership and map-typed AAT edit APIs were removed; UI runtime redraw routes through `TaskMapRenderRouter`.
 
 18) TaskSheetViewModel contained business geospatial math/policy
@@ -192,7 +196,7 @@ Last verified: 2026-02-11
 - Resolved: 2026-02-11
 - Notes:
   - Removed `getRacingTaskManager()` and `getAATTaskManager()` from `TaskManagerCoordinator`.
-  - Task map rendering now consumes `TaskManagerCoordinator.currentTask` via shared Racing/AAT task mappers.
+  - Task map rendering now consumes `TaskRenderSnapshot` from `MapTasksUseCase` through `TaskRenderSyncCoordinator` and shared Racing/AAT task mappers.
   - `enforceRules` now blocks reintroduction of coordinator manager escape-hatch APIs.
 
 25) Task managers exposed MapLibre render/edit APIs

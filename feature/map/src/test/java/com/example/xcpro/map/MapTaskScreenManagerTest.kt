@@ -1,6 +1,5 @@
 package com.example.xcpro.map
 
-import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskWaypoint
 import com.example.xcpro.tasks.core.WaypointRole
@@ -8,6 +7,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
@@ -100,10 +101,15 @@ class MapTaskScreenManagerTest {
     }
 
     private fun createManager(task: Task): MapTaskScreenManager {
-        val taskManager: TaskManagerCoordinator = mock()
-        whenever(taskManager.currentTask).thenReturn(task)
+        val tasksUseCase: MapTasksUseCase = mock()
+        whenever(tasksUseCase.currentTaskSnapshot()).thenReturn(task)
+        whenever(tasksUseCase.currentWaypointCount()).thenReturn(task.waypoints.size)
         val mapState = MapScreenState()
-        return MapTaskScreenManager(mapState = mapState, taskManager = taskManager)
+        return MapTaskScreenManager(
+            mapState = mapState,
+            tasksUseCase = tasksUseCase,
+            coroutineScope = CoroutineScope(Dispatchers.Unconfined)
+        )
     }
 
     private fun sampleTask(withWaypoints: Boolean): Task {

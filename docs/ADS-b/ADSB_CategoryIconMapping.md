@@ -1,23 +1,35 @@
-# ADSB_CategoryIconMapping.md — OpenSky category → XCPro icon buckets
-**v5: category is for ICONS only (not registration/model)**
+# ADSB_CategoryIconMapping.md - OpenSky category to XCPro icon buckets
 
-OpenSky category is an ADS‑B emitter category bucket.
-It is frequently 0/1 (no info). That is normal.
+Version: 2026-02-14
 
-OpenSky docs:
+Category is an ADS-B emitter bucket. It is often `0`/`1` (no info), which is normal.
+
+OpenSky category docs:
 https://openskynetwork.github.io/opensky-api/rest.html
 
-Aircraft identification (registration/typecode/model) is via ICAO24 metadata DB:
+Aircraft identity fields (registration/typecode/model) come from ICAO24 metadata:
 See `ADSB_AircraftMetadata.md`.
 
-## Icon mapping
-2,3  -> PLANE_LIGHT
-4,5,6 -> PLANE_LARGE
-7 -> PLANE_LARGE (high performance)
-8 -> HELICOPTER
-9 -> GLIDER
-10 -> BALLOON
-11 -> PARACHUTIST
-12 -> HANGGLIDER
-14 -> DRONE
-else -> UNKNOWN
+## Current precedence (runtime)
+
+1. Heavy category (`6`) -> heavy icon.
+2. Metadata-driven classification:
+   - Typecode heuristics first.
+   - ICAO aircraft class decode second.
+3. ICAO24 hard override list (only for non-heavy results).
+4. OpenSky category fallback.
+5. Unknown.
+
+## OpenSky category fallback mapping
+
+- `2`, `3` -> `PLANE_LIGHT`
+- `4` -> `PLANE_MEDIUM`
+- `5`, `7` -> `PLANE_LARGE`
+- `6` -> `PLANE_HEAVY`
+- `8` -> `HELICOPTER`
+- `9` -> `GLIDER`
+- `10` -> `BALLOON`
+- `11` -> `PARACHUTIST`
+- `12` -> `HANGGLIDER`
+- `14` -> `DRONE`
+- else -> `UNKNOWN`

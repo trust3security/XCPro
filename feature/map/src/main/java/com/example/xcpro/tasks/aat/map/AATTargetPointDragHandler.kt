@@ -6,18 +6,21 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.unit.IntOffset
-import org.maplibre.android.geometry.LatLng
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.xcpro.tasks.aat.models.AATLatLng
 import com.example.xcpro.tasks.aat.models.AATWaypoint
-import com.example.xcpro.tasks.aat.map.AATMovablePointManager
 import com.example.xcpro.tasks.aat.calculations.AATMathUtils
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlin.math.*
 
 /**
@@ -90,8 +93,9 @@ class AATTargetPointDragHandler(
     private val onInvalidPosition: () -> Unit,
     private val dragThreshold: Float = 10f
 ) {
-    private var dragState by mutableStateOf(DragState())
-    private var lastValidPosition by mutableStateOf(waypoint.targetPoint)
+    private val _dragState = MutableStateFlow(DragState())
+    val dragState: StateFlow<DragState> = _dragState.asStateFlow()
+    private var lastValidPosition: AATLatLng = waypoint.targetPoint
     private val movablePointManager = AATMovablePointManager()
 
     /**
@@ -118,7 +122,7 @@ class AATTargetPointDragHandler(
      */
     private fun handleDragStart(startOffset: Offset) {
 
-        dragState = DragState(
+        _dragState.value = DragState(
             isDragging = true,
             startPosition = startOffset,
             currentPosition = startOffset
@@ -132,10 +136,11 @@ class AATTargetPointDragHandler(
      * Uses movablePointManager to clamp to the allowed geometry.
      */
     private fun handleDrag(dragAmount: Offset) {
-        if (!dragState.isDragging) return
+        val state = _dragState.value
+        if (!state.isDragging) return
 
-        val newPosition = dragState.currentPosition + dragAmount
-        val newDragOffset = dragState.dragOffset + dragAmount
+        val newPosition = state.currentPosition + dragAmount
+        val newDragOffset = state.dragOffset + dragAmount
 
         // Convert screen position to map coordinates
         val mapCoords = coordinateConverter?.screenToMap(newPosition.x, newPosition.y)
@@ -152,7 +157,7 @@ class AATTargetPointDragHandler(
             val validatedPoint = validatedWaypoint.targetPoint
 
             lastValidPosition = validatedPoint
-            dragState = dragState.copy(
+            _dragState.value = state.copy(
                 currentPosition = newPosition,
                 dragOffset = newDragOffset,
                 isValidPosition = true
@@ -166,14 +171,14 @@ class AATTargetPointDragHandler(
      * Handle drag end using the last valid in-bounds position.
      */
     private fun handleDragEnd() {
-        if (!dragState.isDragging) return
+        if (!_dragState.value.isDragging) return
 
 
         //  FIX: Always use last valid position - no clamping
         // If user dragged outside bounds, pin stays at last valid inside position
         val finalPosition = lastValidPosition
 
-        dragState = DragState() // Reset to default state
+        _dragState.value = DragState() // Reset to default state
         onDragEnd(finalPosition)
     }
 
@@ -202,19 +207,19 @@ class AATTargetPointDragHandler(
     /**
      * Get current drag state
      */
-    fun getCurrentDragState(): DragState = dragState
+    fun getCurrentDragState(): DragState = _dragState.value
 
     /**
      * Check if currently dragging
      */
-    fun isDragging(): Boolean = dragState.isDragging
+    fun isDragging(): Boolean = _dragState.value.isDragging
 
     /**
      * Get drag offset for visual feedback
      */
     fun getDragOffset(): IntOffset = IntOffset(
-        dragState.dragOffset.x.roundToInt(),
-        dragState.dragOffset.y.roundToInt()
+        _dragState.value.dragOffset.x.roundToInt(),
+        _dragState.value.dragOffset.y.roundToInt()
     )
 }
 
@@ -268,7 +273,7 @@ fun DraggableTargetPoint(
     dragHandler: AATTargetPointDragHandler,
     content: @Composable () -> Unit
 ) {
-    val dragState = dragHandler.getCurrentDragState()
+    val dragState by dragHandler.dragState.collectAsStateWithLifecycle()
 
     Box(
         modifier = Modifier

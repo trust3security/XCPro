@@ -23,12 +23,15 @@ class AdsbMetadataEnrichmentUseCase @Inject constructor(
     fun targetsWithMetadata(
         adsbTargets: Flow<List<AdsbTrafficUiModel>>
     ): Flow<List<AdsbTrafficUiModel>> {
-        return adsbTargets.map { targets ->
+        return combine(adsbTargets, aircraftMetadataRepository.metadataRevision) { targets, _ ->
+            targets
+        }.mapLatest { targets ->
             if (targets.isEmpty()) {
-                return@map emptyList()
+                return@mapLatest emptyList()
             }
+            val lookupOrder = prioritizedLookupOrder(targets)
             val metadataByIcao24 = withContext(ioDispatcher) {
-                aircraftMetadataRepository.getMetadataFor(targets.map { it.id.raw }.distinct())
+                aircraftMetadataRepository.getMetadataFor(lookupOrder)
             }
             targets.map { target ->
                 val metadata = metadataByIcao24[target.id.raw]
@@ -57,7 +60,11 @@ class AdsbMetadataEnrichmentUseCase @Inject constructor(
             selected?.let { id -> targets.firstOrNull { it.id == id } }
         }
 
-        return combine(selectedTarget, metadataSyncRepository.syncState) { target, syncState ->
+        return combine(
+            selectedTarget,
+            metadataSyncRepository.syncState,
+            aircraftMetadataRepository.metadataRevision
+        ) { target, syncState, _ ->
             target to syncState
         }.mapLatest { (target, syncState) ->
             if (target == null) {
@@ -107,5 +114,34 @@ class AdsbMetadataEnrichmentUseCase @Inject constructor(
                 metadataSyncState = syncState
             )
         }
+    }
+
+    private fun prioritizedLookupOrder(targets: List<AdsbTrafficUiModel>): List<String> {
+        if (targets.isEmpty()) return emptyList()
+
+        val priority = LinkedHashSet<String>(targets.size)
+        val regular = LinkedHashSet<String>(targets.size)
+        for (target in targets) {
+            val hasMetadataHint =
+                !target.metadataTypecode.isNullOrBlank() ||
+                    !target.metadataIcaoAircraftType.isNullOrBlank()
+            val category = target.category
+            val categoryNeedsIcaoLookup =
+                category == null || category !in CATEGORY_WITH_DIRECT_ICON_MAPPING
+            if (!hasMetadataHint && categoryNeedsIcaoLookup) {
+                priority += target.id.raw
+            } else {
+                regular += target.id.raw
+            }
+        }
+
+        return buildList(priority.size + regular.size) {
+            addAll(priority)
+            addAll(regular)
+        }
+    }
+
+    private companion object {
+        val CATEGORY_WITH_DIRECT_ICON_MAPPING = setOf(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14)
     }
 }

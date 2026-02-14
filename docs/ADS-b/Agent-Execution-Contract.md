@@ -220,7 +220,7 @@ Use `docs/ADS-b/Agent-Execution-Contract.md` Section 7 as the active contract.
 Implement autonomously end-to-end.
 
 Primary plan doc:
-`docs/refactor/Map_Task_5of5_Stabilization_Plan_2026-02-12.md`
+`docs/refactor/Map_Task_5of5_Finalization_Plan_2026-02-13.md`
 
 Non-negotiables:
 - Preserve MVVM + UDF + SSOT boundaries.
@@ -321,7 +321,7 @@ Latest autonomous execution status against Section 7:
 ## 7.8 Follow-On Autonomous Contract: ROI Hardening Pass
 
 Use this when executing the post-closure cleanup defined in:
-- `docs/refactor/Map_Task_5of5_Stabilization_Plan_2026-02-12.md` (Section 9)
+- `docs/refactor/Map_Task_5of5_Finalization_Plan_2026-02-13.md`
 
 Execution order:
 1. Workstream A: consolidate task render sync triggers to one owner path.
@@ -369,4 +369,8 @@ Execution status update (2026-02-12):
   - `./gradlew testDebugUnitTest` -> PASS
   - `./gradlew assembleDebug` -> PASS
   - `./gradlew :app:connectedDebugAndroidTest --no-parallel` -> PASS on `SM-S908E - Android 16`
+
+Next execution plan:
+- `docs/refactor/Map_Task_5of5_Finalization_Plan_2026-02-13.md`
+- Use this plan for the final 4.5 -> 5.0 hardening pass.
 

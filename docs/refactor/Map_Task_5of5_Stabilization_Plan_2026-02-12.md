@@ -1,5 +1,8 @@
 # Map_Task_5of5_Stabilization_Plan_2026-02-12.md
 
+Superseded by `docs/refactor/Map_Task_5of5_Finalization_Plan_2026-02-13.md`.
+Historical baseline record only.
+
 ## Purpose
 
 Raise the map/task vertical slice from current "works but high churn" status to
@@ -19,7 +22,7 @@ Read first:
 - Owner: XCPro Team
 - Date: 2026-02-12
 - Issue/PR: QUALITY-20260212-MAP-TASK-5OF5
-- Status: Complete for 5/5 baseline gates (follow-on ROI backlog documented)
+- Status: Superseded (historical baseline; do not use as active execution contract)
 
 ## 1) Scope
 
@@ -105,8 +108,7 @@ Read first:
     - `docs/ARCHITECTURE/PIPELINE.md`
     - `docs/ARCHITECTURE/CODEBASE_CONTEXT_AND_INTENT.md` active-plan pointer.
 - Remaining for full 5/5 closure:
-  - None. Final connected-device verification completed on 2026-02-12.
-    - `./gradlew.bat connectedDebugAndroidTest --no-parallel` -> PASS on `SM-S908E - Android 16`.
+  - Continue under `docs/refactor/Map_Task_5of5_Finalization_Plan_2026-02-13.md`.
 
 ## 2) Architecture Contract
 

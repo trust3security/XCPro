@@ -2,7 +2,8 @@ package com.example.xcpro.map
 
 import android.util.Log
 import com.example.xcpro.tasks.BottomSheetState
-import com.example.xcpro.tasks.TaskManagerCoordinator
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,7 +17,8 @@ import kotlinx.coroutines.flow.map
  */
 class MapTaskScreenManager(
     internal val mapState: MapScreenState,
-    internal val taskManager: TaskManagerCoordinator
+    private val tasksUseCase: MapTasksUseCase,
+    private val coroutineScope: CoroutineScope
 ) {
     companion object {
         private const val TAG = "MapTaskScreenManager"
@@ -66,28 +68,34 @@ class MapTaskScreenManager(
      * Handle task clear operation
      */
     fun handleTaskClear() {
-        taskManager.clearTask()
+        tasksUseCase.clearTask()
         hideTaskPanel()
-
-        // Clear map layers
-        mapState.mapLibreMap?.getStyle()?.let { style ->
-            try {
-                style.removeLayer("task-line-layer")
-                style.removeSource("task-line-source")
-                Log.d(TAG, "Task layers cleared from map")
-            } catch (e: Exception) {
-                // Layers don't exist, that's fine
-                Log.d(TAG, "Task layers already cleared or don't exist")
-            }
-        }
+        Log.d(TAG, "Task cleared")
     }
 
     /**
      * Handle task save operation
      */
     fun handleTaskSave() {
-        // TODO: Implement save functionality
-        Log.d(TAG, " TASK DEBUG: Save task requested")
+        val task = tasksUseCase.currentTaskSnapshot()
+        if (task.waypoints.isEmpty()) {
+            Log.d(TAG, "Skip save: task is empty")
+            return
+        }
+
+        val saveName = task.id
+            .takeIf { it.isNotBlank() }
+            ?.let { "task_${it.take(8)}" }
+            ?: "task_autosave"
+
+        coroutineScope.launch {
+            val saved = tasksUseCase.saveTask(saveName)
+            if (saved) {
+                Log.d(TAG, "Task saved as $saveName")
+            } else {
+                Log.e(TAG, "Failed to save task as $saveName")
+            }
+        }
     }
 
     /**
@@ -114,7 +122,7 @@ class MapTaskScreenManager(
     }
 
     fun collapseTaskPanel() {
-        _taskPanelState.value = if (taskManager.currentTask.waypoints.isNotEmpty()) {
+        _taskPanelState.value = if (tasksUseCase.currentWaypointCount() > 0) {
             TaskPanelState.COLLAPSED
         } else {
             TaskPanelState.HIDDEN
@@ -158,7 +166,7 @@ class MapTaskScreenManager(
     }
 
     private fun normalizeState(state: TaskPanelState): TaskPanelState {
-        return if (state == TaskPanelState.COLLAPSED && taskManager.currentTask.waypoints.isEmpty()) {
+        return if (state == TaskPanelState.COLLAPSED && tasksUseCase.currentWaypointCount() == 0) {
             TaskPanelState.HIDDEN
         } else {
             state

@@ -5,6 +5,9 @@ import com.example.xcpro.adsb.metadata.data.AircraftMetadataEntity
 import com.example.xcpro.adsb.metadata.data.AircraftMetadataRepositoryImpl
 import com.example.xcpro.adsb.metadata.data.OpenSkyIcaoMetadataClient
 import com.example.xcpro.core.time.FakeClock
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -14,6 +17,7 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class AircraftMetadataRepositoryImplTest {
 
     @Test
@@ -21,18 +25,22 @@ class AircraftMetadataRepositoryImplTest {
         val dao = mock<AircraftMetadataDao>()
         val client = mock<OpenSkyIcaoMetadataClient>()
         val clock = FakeClock(monoMs = 1_000L)
+        val dispatcher = StandardTestDispatcher(testScheduler)
         val row = sampleEntity(icao24 = "aa3487", registration = "N757F")
         whenever(dao.getActiveByIcao24s(listOf("aa3487"))).thenReturn(listOf(row))
 
         val repository = AircraftMetadataRepositoryImpl(
             dao = dao,
             onDemandClient = client,
-            clock = clock
+            clock = clock,
+            ioDispatcher = dispatcher
         )
 
         val result = repository.getMetadataFor(listOf("AA3487"))
+        advanceUntilIdle()
 
         assertEquals("N757F", result["aa3487"]?.registration)
+        assertEquals(0L, repository.metadataRevision.value)
         verify(client, times(0)).fetchByIcao24("aa3487")
     }
 
@@ -41,19 +49,27 @@ class AircraftMetadataRepositoryImplTest {
         val dao = mock<AircraftMetadataDao>()
         val client = mock<OpenSkyIcaoMetadataClient>()
         val clock = FakeClock(monoMs = 1_000L)
+        val dispatcher = StandardTestDispatcher(testScheduler)
         val row = sampleEntity(icao24 = "aa3487", registration = "N757F")
-        whenever(dao.getActiveByIcao24s(listOf("aa3487"))).thenReturn(emptyList())
+        whenever(dao.getActiveByIcao24s(listOf("aa3487")))
+            .thenReturn(emptyList(), listOf(row))
         whenever(client.fetchByIcao24("aa3487")).thenReturn(Result.success(row))
 
         val repository = AircraftMetadataRepositoryImpl(
             dao = dao,
             onDemandClient = client,
-            clock = clock
+            clock = clock,
+            ioDispatcher = dispatcher
         )
 
-        val result = repository.getMetadataFor(listOf("AA3487"))
+        val first = repository.getMetadataFor(listOf("AA3487"))
+        assertNull(first["aa3487"])
+        assertEquals(0L, repository.metadataRevision.value)
+        advanceUntilIdle()
+        assertEquals(1L, repository.metadataRevision.value)
+        val second = repository.getMetadataFor(listOf("AA3487"))
 
-        assertEquals("N757F", result["aa3487"]?.registration)
+        assertEquals("N757F", second["aa3487"]?.registration)
         verify(dao).upsertActive(listOf(row))
         verify(client).fetchByIcao24("aa3487")
     }
@@ -63,17 +79,21 @@ class AircraftMetadataRepositoryImplTest {
         val dao = mock<AircraftMetadataDao>()
         val client = mock<OpenSkyIcaoMetadataClient>()
         val clock = FakeClock(monoMs = 1_000L)
+        val dispatcher = StandardTestDispatcher(testScheduler)
         whenever(dao.getActiveByIcao24s(listOf("abcdef"))).thenReturn(emptyList())
         whenever(client.fetchByIcao24("abcdef")).thenReturn(Result.success(null))
 
         val repository = AircraftMetadataRepositoryImpl(
             dao = dao,
             onDemandClient = client,
-            clock = clock
+            clock = clock,
+            ioDispatcher = dispatcher
         )
 
         val first = repository.getMetadataFor(listOf("ABCDEF"))
+        advanceUntilIdle()
         val second = repository.getMetadataFor(listOf("ABCDEF"))
+        advanceUntilIdle()
 
         assertNull(first["abcdef"])
         assertNull(second["abcdef"])
@@ -85,31 +105,38 @@ class AircraftMetadataRepositoryImplTest {
         val dao = mock<AircraftMetadataDao>()
         val client = mock<OpenSkyIcaoMetadataClient>()
         val clock = FakeClock(monoMs = 2_000L)
-        val first = sampleEntity(icao24 = "aa0001", registration = "N1")
-        val second = sampleEntity(icao24 = "aa0002", registration = "N2")
-        val third = sampleEntity(icao24 = "aa0003", registration = "N3")
-        val ids = listOf("aa0001", "aa0002", "aa0003", "aa0004")
-        whenever(dao.getActiveByIcao24s(ids)).thenReturn(emptyList())
-        whenever(client.fetchByIcao24("aa0001")).thenReturn(Result.success(first))
-        whenever(client.fetchByIcao24("aa0002")).thenReturn(Result.success(second))
-        whenever(client.fetchByIcao24("aa0003")).thenReturn(Result.success(third))
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val ids = (1..9).map { "aa000$it" }
+        val firstBatch = ids.take(8).mapIndexed { index, id ->
+            sampleEntity(icao24 = id, registration = "N${index + 1}")
+        }
+        whenever(dao.getActiveByIcao24s(ids))
+            .thenReturn(emptyList(), firstBatch)
+        firstBatch.forEach { row ->
+            whenever(client.fetchByIcao24(row.icao24)).thenReturn(Result.success(row))
+        }
 
         val repository = AircraftMetadataRepositoryImpl(
             dao = dao,
             onDemandClient = client,
-            clock = clock
+            clock = clock,
+            ioDispatcher = dispatcher
         )
 
-        val result = repository.getMetadataFor(ids)
+        val firstRead = repository.getMetadataFor(ids)
+        ids.forEach { id -> assertNull(firstRead[id]) }
+        advanceUntilIdle()
+        val secondRead = repository.getMetadataFor(ids)
 
-        assertEquals("N1", result["aa0001"]?.registration)
-        assertEquals("N2", result["aa0002"]?.registration)
-        assertEquals("N3", result["aa0003"]?.registration)
-        assertNull(result["aa0004"])
-        verify(client, times(1)).fetchByIcao24("aa0001")
-        verify(client, times(1)).fetchByIcao24("aa0002")
-        verify(client, times(1)).fetchByIcao24("aa0003")
-        verify(client, times(0)).fetchByIcao24("aa0004")
+        firstBatch.forEachIndexed { index, row ->
+            assertEquals("N${index + 1}", secondRead[row.icao24]?.registration)
+        }
+        assertNull(secondRead[ids.last()])
+        firstBatch.forEach { row ->
+            verify(client, times(1)).fetchByIcao24(row.icao24)
+        }
+        verify(client, times(0)).fetchByIcao24(ids.last())
+        verify(dao).upsertActive(firstBatch)
     }
 
     @Test
@@ -117,30 +144,38 @@ class AircraftMetadataRepositoryImplTest {
         val dao = mock<AircraftMetadataDao>()
         val client = mock<OpenSkyIcaoMetadataClient>()
         val clock = FakeClock(monoMs = 1_000L)
-        val ids = listOf("aa0001", "aa0002", "aa0003", "aa0004")
-        val fourth = sampleEntity(icao24 = "aa0004", registration = "N4")
-        whenever(dao.getActiveByIcao24s(ids)).thenReturn(emptyList())
-        whenever(client.fetchByIcao24("aa0001")).thenReturn(Result.success(null))
-        whenever(client.fetchByIcao24("aa0002")).thenReturn(Result.success(null))
-        whenever(client.fetchByIcao24("aa0003")).thenReturn(Result.success(null))
-        whenever(client.fetchByIcao24("aa0004")).thenReturn(Result.success(fourth))
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val ids = (1..9).map { "aa000$it" }
+        val trailing = ids.last()
+        val trailingEntity = sampleEntity(icao24 = trailing, registration = "N9")
+        whenever(dao.getActiveByIcao24s(ids))
+            .thenReturn(emptyList(), emptyList(), listOf(trailingEntity))
+        ids.dropLast(1).forEach { id ->
+            whenever(client.fetchByIcao24(id)).thenReturn(Result.success(null))
+        }
+        whenever(client.fetchByIcao24(trailing)).thenReturn(Result.success(trailingEntity))
 
         val repository = AircraftMetadataRepositoryImpl(
             dao = dao,
             onDemandClient = client,
-            clock = clock
+            clock = clock,
+            ioDispatcher = dispatcher
         )
 
         repository.getMetadataFor(ids)
+        advanceUntilIdle()
         clock.advanceMonoMs(1_000L)
         val second = repository.getMetadataFor(ids)
+        assertNull(second[trailing])
+        advanceUntilIdle()
+        val third = repository.getMetadataFor(ids)
 
-        assertEquals("N4", second["aa0004"]?.registration)
-        verify(client, times(1)).fetchByIcao24("aa0001")
-        verify(client, times(1)).fetchByIcao24("aa0002")
-        verify(client, times(1)).fetchByIcao24("aa0003")
-        verify(client, times(1)).fetchByIcao24("aa0004")
-        verify(dao).upsertActive(listOf(fourth))
+        assertEquals("N9", third[trailing]?.registration)
+        ids.dropLast(1).forEach { id ->
+            verify(client, times(1)).fetchByIcao24(id)
+        }
+        verify(client, times(1)).fetchByIcao24(trailing)
+        verify(dao, times(1)).upsertActive(listOf(trailingEntity))
     }
 
     @Test
@@ -148,8 +183,10 @@ class AircraftMetadataRepositoryImplTest {
         val dao = mock<AircraftMetadataDao>()
         val client = mock<OpenSkyIcaoMetadataClient>()
         val clock = FakeClock(monoMs = 10_000L)
+        val dispatcher = StandardTestDispatcher(testScheduler)
         val recovered = sampleEntity(icao24 = "abcdef", registration = "N757F")
-        whenever(dao.getActiveByIcao24s(listOf("abcdef"))).thenReturn(emptyList())
+        whenever(dao.getActiveByIcao24s(listOf("abcdef")))
+            .thenReturn(emptyList(), emptyList(), emptyList(), listOf(recovered))
         whenever(client.fetchByIcao24("abcdef"))
             .thenReturn(Result.failure(IllegalStateException("network")))
             .thenReturn(Result.success(recovered))
@@ -157,13 +194,19 @@ class AircraftMetadataRepositoryImplTest {
         val repository = AircraftMetadataRepositoryImpl(
             dao = dao,
             onDemandClient = client,
-            clock = clock
+            clock = clock,
+            ioDispatcher = dispatcher
         )
 
         val first = repository.getMetadataFor(listOf("ABCDEF"))
+        advanceUntilIdle()
         clock.advanceMonoMs(10_000L)
         val stillCoolingDown = repository.getMetadataFor(listOf("ABCDEF"))
+        advanceUntilIdle()
         clock.advanceMonoMs(51_000L)
+        val beforeRetryHydrate = repository.getMetadataFor(listOf("ABCDEF"))
+        assertNull(beforeRetryHydrate["abcdef"])
+        advanceUntilIdle()
         val retried = repository.getMetadataFor(listOf("ABCDEF"))
 
         assertNull(first["abcdef"])

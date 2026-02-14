@@ -2,9 +2,6 @@ package com.example.xcpro.map
 
 import android.content.Context
 import android.util.Log
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import com.example.dfcards.CardPreferences
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.RealTimeFlightData
@@ -236,17 +233,25 @@ class FlightDataManager(
      */
     var rawFlightData: RealTimeFlightData? = null
         private set
-    var currentFlightMode by mutableStateOf(FlightModeSelection.CRUISE)
-        private set
+    private val _currentFlightMode = MutableStateFlow(FlightModeSelection.CRUISE)
+    val currentFlightModeFlow: StateFlow<FlightModeSelection> = _currentFlightMode.asStateFlow()
+    val currentFlightMode: FlightModeSelection
+        get() = _currentFlightMode.value
 
-    var showCardLibrary by mutableStateOf(false)
-        private set
+    private val _showCardLibrary = MutableStateFlow(false)
+    val showCardLibraryFlow: StateFlow<Boolean> = _showCardLibrary.asStateFlow()
+    val showCardLibrary: Boolean
+        get() = _showCardLibrary.value
 
-    var visibleModes by mutableStateOf(listOf(FlightMode.CRUISE))
-        private set
+    private val _visibleModes = MutableStateFlow(listOf(FlightMode.CRUISE))
+    val visibleModesFlow: StateFlow<List<FlightMode>> = _visibleModes.asStateFlow()
+    val visibleModes: List<FlightMode>
+        get() = _visibleModes.value
 
-    var unitsPreferences by mutableStateOf(UnitsPreferences())
-        private set
+    private val _unitsPreferences = MutableStateFlow(UnitsPreferences())
+    val unitsPreferencesFlow: StateFlow<UnitsPreferences> = _unitsPreferences.asStateFlow()
+    val unitsPreferences: UnitsPreferences
+        get() = _unitsPreferences.value
 
     private var bufferedCardSample: RealTimeFlightData? = null
 
@@ -265,12 +270,12 @@ class FlightDataManager(
         }
 
     fun updateFlightMode(newMode: FlightModeSelection) {
-        currentFlightMode = newMode
+        _currentFlightMode.value = newMode
         Log.d(TAG, "Flight mode updated to: ${newMode.displayName}")
     }
 
     fun updateFlightModeFromEnum(newMode: FlightMode) {
-        currentFlightMode = mapToFlightModeSelection(newMode)
+        _currentFlightMode.value = mapToFlightModeSelection(newMode)
         Log.d(TAG, "Flight mode updated from enum to: ${currentFlightMode.displayName}")
     }
 
@@ -285,12 +290,12 @@ class FlightDataManager(
         filtered.add(FlightMode.CRUISE)
         if (visibilities["THERMAL"] != false) filtered.add(FlightMode.THERMAL)
         if (visibilities["FINAL_GLIDE"] != false) filtered.add(FlightMode.FINAL_GLIDE)
-        visibleModes = filtered
+        _visibleModes.value = filtered
         Log.d(TAG, "Visible modes for profile '$profileName': ${filtered.map { it.name }}")
     }
 
     fun updateUnitsPreferences(preferences: UnitsPreferences) {
-        unitsPreferences = preferences
+        _unitsPreferences.value = preferences
         Log.d(TAG, "Units updated to $preferences")
     }
 
@@ -311,15 +316,15 @@ class FlightDataManager(
         bufferedCardSample?.also { bufferedCardSample = null }
 
     fun showCardLibrary() {
-        showCardLibrary = true
+        _showCardLibrary.value = true
     }
 
     fun hideCardLibrary() {
-        showCardLibrary = false
+        _showCardLibrary.value = false
     }
 
     fun isCurrentModeVisible(currentMode: FlightMode): Boolean =
-        currentMode in visibleModes
+        currentMode in _visibleModes.value
 
     fun getFallbackMode(): FlightMode = FlightMode.CRUISE
 

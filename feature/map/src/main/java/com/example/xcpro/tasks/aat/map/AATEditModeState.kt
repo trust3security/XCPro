@@ -1,10 +1,12 @@
 package com.example.xcpro.tasks.aat.map
 
-import androidx.compose.runtime.*
+import com.example.xcpro.tasks.aat.calculations.AATMathUtils
 import com.example.xcpro.core.time.Clock
 import com.example.xcpro.tasks.aat.models.AATLatLng
 import com.example.xcpro.tasks.aat.models.AATWaypoint
-import com.example.xcpro.tasks.aat.calculations.AATMathUtils
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
  * AAT Edit Mode State Management - Phase 1 Foundation
@@ -76,11 +78,11 @@ class AATEditModeStateManager(
     initialState: AATEditState = AATEditState.VIEW_MODE
 ) {
     private val nowMs: () -> Long = clock::nowMonoMs
-    private var _currentSession by mutableStateOf(
+    private val currentSessionState = MutableStateFlow(
         AATEditSession(state = initialState, sessionStartTime = nowMs())
     )
 
-    val currentSession: AATEditSession get() = _currentSession
+    val currentSession: AATEditSession get() = currentSessionState.value
 
     /**
      * Enter edit mode for specific AAT area
@@ -90,12 +92,12 @@ class AATEditModeStateManager(
         waypoint: AATWaypoint,
         targetZoom: Float = 3.0f
     ): Boolean {
-        if (_currentSession.state == AATEditState.AREA_EDIT) {
+        if (currentSessionState.value.state == AATEditState.AREA_EDIT) {
             return false
         }
 
 
-        _currentSession = AATEditSession(
+        currentSessionState.value = AATEditSession(
             state = AATEditState.AREA_EDIT,
             focusedAreaIndex = areaIndex,
             focusedWaypoint = waypoint,
@@ -112,10 +114,10 @@ class AATEditModeStateManager(
      * Exit edit mode and return to overview
      */
     fun exitEditMode(overviewZoom: Float = 1.0f): AATEditSession {
-        val previousSession = _currentSession
+        val previousSession = currentSessionState.value
 
 
-        _currentSession = AATEditSession(
+        currentSessionState.value = AATEditSession(
             state = AATEditState.VIEW_MODE,
             zoomLevel = overviewZoom,
             sessionStartTime = nowMs()
@@ -128,11 +130,11 @@ class AATEditModeStateManager(
      * Update target point position during editing
      */
     fun updateTargetPoint(newPosition: AATLatLng): Boolean {
-        if (_currentSession.state != AATEditState.AREA_EDIT) {
+        if (currentSessionState.value.state != AATEditState.AREA_EDIT) {
             return false
         }
 
-        val waypoint = _currentSession.focusedWaypoint
+        val waypoint = currentSessionState.value.focusedWaypoint
         if (waypoint == null) {
             return false
         }
@@ -149,7 +151,7 @@ class AATEditModeStateManager(
             return false
         }
 
-        _currentSession = _currentSession.copy(
+        currentSessionState.value = currentSessionState.value.copy(
             currentTargetPoint = newPosition,
             hasUnsavedChanges = true
         )
@@ -161,12 +163,13 @@ class AATEditModeStateManager(
      * Save changes and apply to waypoint
      */
     fun saveChanges(): AATWaypoint? {
-        if (_currentSession.state != AATEditState.AREA_EDIT || !_currentSession.hasUnsavedChanges) {
+        val session = currentSessionState.value
+        if (session.state != AATEditState.AREA_EDIT || !session.hasUnsavedChanges) {
             return null
         }
 
-        val waypoint = _currentSession.focusedWaypoint
-        val newTargetPoint = _currentSession.currentTargetPoint
+        val waypoint = session.focusedWaypoint
+        val newTargetPoint = session.currentTargetPoint
 
         if (waypoint == null || newTargetPoint == null) {
             return null
@@ -174,10 +177,10 @@ class AATEditModeStateManager(
 
         val updatedWaypoint = waypoint.copy(
             targetPoint = newTargetPoint,
-            isTargetPointCustomized = _currentSession.hasMovedTargetPoint
+            isTargetPointCustomized = session.hasMovedTargetPoint
         )
 
-        _currentSession = _currentSession.copy(hasUnsavedChanges = false)
+        currentSessionState.value = session.copy(hasUnsavedChanges = false)
 
         return updatedWaypoint
     }
@@ -186,9 +189,10 @@ class AATEditModeStateManager(
      * Discard changes and revert to original position
      */
     fun discardChanges() {
-        if (_currentSession.originalTargetPoint != null) {
-            _currentSession = _currentSession.copy(
-                currentTargetPoint = _currentSession.originalTargetPoint,
+        val session = currentSessionState.value
+        if (session.originalTargetPoint != null) {
+            currentSessionState.value = session.copy(
+                currentTargetPoint = session.originalTargetPoint,
                 hasUnsavedChanges = false
             )
         }
@@ -198,18 +202,19 @@ class AATEditModeStateManager(
      * Check if specific area is currently focused
      */
     fun isAreaFocused(areaIndex: Int): Boolean {
-        return _currentSession.isEditingArea && _currentSession.focusedAreaIndex == areaIndex
+        val session = currentSessionState.value
+        return session.isEditingArea && session.focusedAreaIndex == areaIndex
     }
 
     /**
      * Get current zoom level for map display
      */
-    fun getCurrentZoomLevel(): Float = _currentSession.zoomLevel
+    fun getCurrentZoomLevel(): Float = currentSessionState.value.zoomLevel
 
     /**
      * Update zoom level
      */
     fun updateZoomLevel(newZoom: Float) {
-        _currentSession = _currentSession.copy(zoomLevel = newZoom)
+        currentSessionState.value = currentSessionState.value.copy(zoomLevel = newZoom)
     }
 }

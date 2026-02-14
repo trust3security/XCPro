@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.Context
 import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
-import com.example.xcpro.sensors.UnifiedSensorManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -20,7 +19,6 @@ internal class LocationSensorsController(
     }
 
     private var sensorsStarted = false
-    private val unifiedSensorManager: UnifiedSensorManager = sensorsUseCase.unifiedSensorManager
     private var restartJob: Job? = null
 
     fun onLocationPermissionsResult(fineLocationGranted: Boolean) {
@@ -70,7 +68,7 @@ internal class LocationSensorsController(
         restartJob = scope.launch {
             Log.d(TAG, "Checking if sensors need restart after sleep mode...")
 
-            val sensorStatus = unifiedSensorManager.getSensorStatus()
+            val sensorStatus = sensorsUseCase.sensorStatus()
 
             // Restart if any critical sensor is not running (common after doze/background)
             val needsRestart = (
@@ -124,7 +122,7 @@ internal class LocationSensorsController(
     }
 
     private suspend fun ensureSensorsRunning() {
-        val status = unifiedSensorManager.getSensorStatus()
+        val status = sensorsUseCase.sensorStatus()
         if (sensorsStarted && status.gpsStarted) {
             return
         }
@@ -133,7 +131,7 @@ internal class LocationSensorsController(
             // the vario service (flight data collection, MacCready observers, etc.)
             // is not running. Make sure we spin it up so cards receive data.
             val startedNow = sensorsUseCase.startSensors()
-            val statusAfterStart = unifiedSensorManager.getSensorStatus()
+            val statusAfterStart = sensorsUseCase.sensorStatus()
             sensorsStarted = startedNow || statusAfterStart.gpsStarted
             if (sensorsStarted) {
                 return
@@ -141,7 +139,7 @@ internal class LocationSensorsController(
         }
 
         val started = sensorsUseCase.startSensors()
-        val statusAfterStart = unifiedSensorManager.getSensorStatus()
+        val statusAfterStart = sensorsUseCase.sensorStatus()
         sensorsStarted = started || statusAfterStart.gpsStarted
         if (!sensorsStarted) {
             Log.w(TAG, "Sensor start deferred (likely waiting on location permission)")
@@ -149,7 +147,7 @@ internal class LocationSensorsController(
     }
 
     private fun stopSensors() {
-        val status = unifiedSensorManager.getSensorStatus()
+        val status = sensorsUseCase.sensorStatus()
         if (!sensorsStarted && !status.gpsStarted) return
         sensorsUseCase.stopSensors()
         sensorsStarted = false

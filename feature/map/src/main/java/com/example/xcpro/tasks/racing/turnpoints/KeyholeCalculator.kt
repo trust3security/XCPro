@@ -70,7 +70,8 @@ class KeyholeCalculator : TurnPointCalculator {
         val sectorRadiusKm = waypoint.gateWidth // Outer sector radius
 
         if (distanceToCenter <= sectorRadiusKm) {
-            // TODO: Add proper sector angle validation when context is available
+            // Context-free fallback: validate against outer radius only.
+            // Angle validation requires previous/next leg context.
             return true
         }
 

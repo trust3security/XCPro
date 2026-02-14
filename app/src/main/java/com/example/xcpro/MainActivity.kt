@@ -88,8 +88,6 @@ class MainActivity : ComponentActivity(), StatusBarStyleApplier {
             Log.d(TAG, "Setup info: ${setupManager.getSetupInfo()}")
         }
 
-        // runKeyholeVerificationTest() // TODO: Re-enable after keyhole implementation is completed
-
         setContent {
             Baseui1Theme {
                 MainActivityScreen()

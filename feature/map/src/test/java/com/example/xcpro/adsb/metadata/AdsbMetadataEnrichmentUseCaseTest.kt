@@ -10,12 +10,18 @@ import com.example.xcpro.adsb.metadata.domain.MetadataAvailability
 import com.example.xcpro.adsb.metadata.domain.MetadataSyncRunResult
 import com.example.xcpro.adsb.metadata.domain.MetadataSyncState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -201,7 +207,123 @@ class AdsbMetadataEnrichmentUseCaseTest {
         assertEquals(null, first.metadataIcaoAircraftType)
     }
 
-    private fun target(rawIcao24: String): AdsbTrafficUiModel {
+    @Test
+    fun targetsWithMetadata_reactsImmediatelyToMetadataRevisionWithoutTargetReemit() = runTest {
+        val syncRepository = FakeSyncRepository(MetadataSyncState.Idle)
+        val metadataRepository = FakeMetadataRepository(emptyMap())
+        val useCase = AdsbMetadataEnrichmentUseCase(
+            aircraftMetadataRepository = metadataRepository,
+            metadataSyncRepository = syncRepository,
+            ioDispatcher = StandardTestDispatcher(testScheduler)
+        )
+        val targets = MutableStateFlow(listOf(target("abc123")))
+
+        val shared = useCase.targetsWithMetadata(targets).shareIn(
+            scope = backgroundScope,
+            started = SharingStarted.Eagerly,
+            replay = 1
+        )
+        advanceUntilIdle()
+
+        val initial = shared.first()
+        assertEquals(null, initial.first().metadataTypecode)
+
+        val awaitUpdated = backgroundScope.async {
+            shared.drop(1).first()
+        }
+
+        metadataRepository.upsertMetadata(
+            AircraftMetadata(
+                icao24 = "abc123",
+                registration = "N123AB",
+                typecode = "B738",
+                model = "Boeing 737-800",
+                manufacturerName = "Boeing",
+                owner = null,
+                operator = null,
+                operatorCallsign = null,
+                icaoAircraftType = "L2J"
+            )
+        )
+        advanceUntilIdle()
+
+        val updated = withTimeout(1_000) { awaitUpdated.await() }
+        assertEquals("B738", updated.first().metadataTypecode)
+        assertEquals("L2J", updated.first().metadataIcaoAircraftType)
+    }
+
+    @Test
+    fun selectedTargetDetails_reactsImmediatelyToMetadataRevisionWithoutTargetReemit() = runTest {
+        val syncRepository = FakeSyncRepository(MetadataSyncState.Idle)
+        val metadataRepository = FakeMetadataRepository(emptyMap())
+        val useCase = AdsbMetadataEnrichmentUseCase(
+            aircraftMetadataRepository = metadataRepository,
+            metadataSyncRepository = syncRepository,
+            ioDispatcher = StandardTestDispatcher(testScheduler)
+        )
+        val selectedId = MutableStateFlow(Icao24.from("abc123"))
+        val targets = MutableStateFlow(listOf(target("abc123")))
+
+        val shared = useCase.selectedTargetDetails(selectedId, targets)
+            .filterNotNull()
+            .shareIn(
+                scope = backgroundScope,
+                started = SharingStarted.Eagerly,
+                replay = 1
+            )
+        advanceUntilIdle()
+
+        val initial = shared.first()
+        assertEquals(MetadataAvailability.Missing, initial.metadataAvailability)
+
+        val awaitUpdated = backgroundScope.async {
+            shared.drop(1).first()
+        }
+
+        metadataRepository.upsertMetadata(
+            AircraftMetadata(
+                icao24 = "abc123",
+                registration = "N123AB",
+                typecode = "B738",
+                model = "Boeing 737-800",
+                manufacturerName = "Boeing",
+                owner = null,
+                operator = null,
+                operatorCallsign = null,
+                icaoAircraftType = "L2J"
+            )
+        )
+        advanceUntilIdle()
+
+        val updated = withTimeout(1_000) { awaitUpdated.await() }
+        assertEquals("N123AB", updated.registration)
+        assertEquals("B738", updated.typecode)
+        assertEquals(MetadataAvailability.Ready, updated.metadataAvailability)
+    }
+
+    @Test
+    fun targetsWithMetadata_prioritizesLookupForUnknownCategoryTargets() = runTest {
+        val syncRepository = FakeSyncRepository(MetadataSyncState.Idle)
+        val metadataRepository = FakeMetadataRepository(emptyMap())
+        val useCase = AdsbMetadataEnrichmentUseCase(
+            aircraftMetadataRepository = metadataRepository,
+            metadataSyncRepository = syncRepository,
+            ioDispatcher = StandardTestDispatcher(testScheduler)
+        )
+        val targets = MutableStateFlow(
+            listOf(
+                target("abc123", category = 2),
+                target("def456", category = 0),
+                target("fedcba", category = 8)
+            )
+        )
+
+        useCase.targetsWithMetadata(targets).first()
+
+        assertEquals(listOf("def456", "abc123", "fedcba"), metadataRepository.lastLookupOrder)
+    }
+
+    private fun target(rawIcao24: String, category: Int = 2): AdsbTrafficUiModel {
         val id = Icao24.from(rawIcao24) ?: error("invalid ICAO24")
         return AdsbTrafficUiModel(
             id = id,
@@ -217,7 +339,7 @@ class AdsbMetadataEnrichmentUseCaseTest {
             distanceMeters = 1200.0,
             bearingDegFromUser = 90.0,
             positionSource = 0,
-            category = 2,
+            category = category,
             lastContactEpochSec = 1_710_000_000L
         )
     }
@@ -225,8 +347,19 @@ class AdsbMetadataEnrichmentUseCaseTest {
     private class FakeMetadataRepository(
         private val values: Map<String, AircraftMetadata>
     ) : AircraftMetadataRepository {
+        override val metadataRevision = MutableStateFlow(0L)
+        private val metadataByIcao24 = values.toMutableMap()
+        var lastLookupOrder: List<String> = emptyList()
+            private set
+
         override suspend fun getMetadataFor(icao24s: List<String>): Map<String, AircraftMetadata> {
-            return values.filterKeys { it in icao24s }
+            lastLookupOrder = icao24s
+            return metadataByIcao24.filterKeys { it in icao24s }
+        }
+
+        fun upsertMetadata(metadata: AircraftMetadata) {
+            metadataByIcao24[metadata.icao24] = metadata
+            metadataRevision.value = metadataRevision.value + 1L
         }
     }
 

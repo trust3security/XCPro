@@ -12,6 +12,8 @@ class AdsbAircraftIconTest {
         assertEquals("adsb_icon_plane_medium", AdsbAircraftIcon.PlaneMedium.styleImageId)
         assertEquals("adsb_icon_plane_large", AdsbAircraftIcon.PlaneLarge.styleImageId)
         assertEquals("adsb_icon_plane_heavy", AdsbAircraftIcon.PlaneHeavy.styleImageId)
+        assertEquals("adsb_icon_jet_twin", AdsbAircraftIcon.PlaneTwinJet.styleImageId)
+        assertEquals("adsb_icon_twinprop", AdsbAircraftIcon.PlaneTwinProp.styleImageId)
         assertEquals(
             "adsb_icon_plane_large_icao_override",
             AdsbAircraftIcon.PlaneLargeIcaoOverride.styleImageId
@@ -27,10 +29,12 @@ class AdsbAircraftIconTest {
 
     @Test
     fun hasExpectedDrawableMappings() {
-        assertEquals(R.drawable.ic_adsb_plane_light, AdsbAircraftIcon.PlaneLight.resId)
+        assertEquals(R.drawable.ic_adsb_plane_medium, AdsbAircraftIcon.PlaneLight.resId)
         assertEquals(R.drawable.ic_adsb_plane_medium, AdsbAircraftIcon.PlaneMedium.resId)
         assertEquals(R.drawable.ic_adsb_plane_large, AdsbAircraftIcon.PlaneLarge.resId)
         assertEquals(R.drawable.ic_adsb_plane_heavy, AdsbAircraftIcon.PlaneHeavy.resId)
+        assertEquals(R.drawable.ic_adsb_jet_twin, AdsbAircraftIcon.PlaneTwinJet.resId)
+        assertEquals(R.drawable.ic_adsb_twinprop, AdsbAircraftIcon.PlaneTwinProp.resId)
         assertEquals(
             R.drawable.ic_adsb_plane_large,
             AdsbAircraftIcon.PlaneLargeIcaoOverride.resId

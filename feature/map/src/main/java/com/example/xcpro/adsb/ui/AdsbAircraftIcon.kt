@@ -11,7 +11,9 @@ enum class AdsbAircraftIcon(
     val styleImageId: String
 ) {
     PlaneLight(
-        resId = R.drawable.ic_adsb_plane_light,
+        // Dedicated light-aircraft asset was removed from the drawable set.
+        // Keep light classification distinct while using the closest available fixed-wing icon.
+        resId = R.drawable.ic_adsb_plane_medium,
         styleImageId = "adsb_icon_plane_light"
     ),
     PlaneMedium(
@@ -25,6 +27,14 @@ enum class AdsbAircraftIcon(
     PlaneHeavy(
         resId = R.drawable.ic_adsb_plane_heavy,
         styleImageId = "adsb_icon_plane_heavy"
+    ),
+    PlaneTwinJet(
+        resId = R.drawable.ic_adsb_jet_twin,
+        styleImageId = "adsb_icon_jet_twin"
+    ),
+    PlaneTwinProp(
+        resId = R.drawable.ic_adsb_twinprop,
+        styleImageId = "adsb_icon_twinprop"
     ),
     PlaneLargeIcaoOverride(
         resId = R.drawable.ic_adsb_plane_large,
@@ -67,6 +77,8 @@ fun AdsbAircraftIcon.displayLabel(): String = when (this) {
     AdsbAircraftIcon.PlaneMedium -> "Medium aircraft"
     AdsbAircraftIcon.PlaneLarge -> "Large aircraft"
     AdsbAircraftIcon.PlaneHeavy -> "Heavy aircraft"
+    AdsbAircraftIcon.PlaneTwinJet -> "Twin-jet aircraft"
+    AdsbAircraftIcon.PlaneTwinProp -> "Twin-prop aircraft"
     AdsbAircraftIcon.PlaneLargeIcaoOverride -> "Large aircraft"
     AdsbAircraftIcon.Helicopter -> "Helicopter"
     AdsbAircraftIcon.Glider -> "Glider"

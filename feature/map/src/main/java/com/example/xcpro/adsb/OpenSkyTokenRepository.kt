@@ -13,6 +13,7 @@ import okhttp3.Request
 
 interface OpenSkyTokenRepository {
     suspend fun getValidTokenOrNull(): String?
+    fun hasCredentials(): Boolean
     fun invalidate()
 }
 
@@ -50,6 +51,8 @@ class OpenSkyTokenRepositoryImpl @Inject constructor(
         }
         fresh.accessToken
     }
+
+    override fun hasCredentials(): Boolean = credentialsRepository.loadCredentials() != null
 
     override fun invalidate() {
         synchronized(lock) {
@@ -89,4 +92,3 @@ class OpenSkyTokenRepositoryImpl @Inject constructor(
         private const val TOKEN_REFRESH_BUFFER_MS = 5L * 60L * 1_000L
     }
 }
-
