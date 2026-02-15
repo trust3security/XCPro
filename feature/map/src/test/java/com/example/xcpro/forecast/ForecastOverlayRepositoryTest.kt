@@ -38,6 +38,7 @@ class ForecastOverlayRepositoryTest {
         preferencesRepository.setOpacity(FORECAST_OPACITY_DEFAULT)
         preferencesRepository.setSelectedParameterId(DEFAULT_FORECAST_PARAMETER_ID)
         preferencesRepository.setSelectedTimeUtcMs(null)
+        preferencesRepository.setAutoTimeEnabled(FORECAST_AUTO_TIME_DEFAULT)
     }
 
     @After
@@ -95,6 +96,28 @@ class ForecastOverlayRepositoryTest {
         assertNotNull(state.legend)
     }
 
+    @Test
+    fun selectedParameter_matchesCaseInsensitively() = runTest(testDispatcher) {
+        val preferencesRepository = ForecastPreferencesRepository(context)
+        val catalogPort = LowercaseCatalogPort()
+        val repository = ForecastOverlayRepository(
+            preferencesRepository = preferencesRepository,
+            catalogPort = catalogPort,
+            tilesPort = CountingTilesPort(),
+            legendPort = CountingLegendPort(),
+            valuePort = catalogPort,
+            clock = clock,
+            dispatcher = testDispatcher
+        )
+
+        preferencesRepository.setSelectedParameterId(ForecastParameterId("DWCRIT"))
+        advanceUntilIdle()
+
+        val state = repository.overlayState.first()
+
+        assertEquals("dwcrit", state.selectedParameterId.value)
+    }
+
     private class CountingTilesPort : ForecastTilesPort {
         var calls: Int = 0
 
@@ -125,5 +148,40 @@ class ForecastOverlayRepositoryTest {
             )
         }
     }
-}
 
+    private class LowercaseCatalogPort : ForecastCatalogPort, ForecastValuePort {
+        override suspend fun getParameters(): List<ForecastParameterMeta> = listOf(
+            ForecastParameterMeta(
+                id = ForecastParameterId("wstar_bsratio"),
+                name = "Thermal",
+                category = "Thermal",
+                unitLabel = "m/s"
+            ),
+            ForecastParameterMeta(
+                id = ForecastParameterId("dwcrit"),
+                name = "Thermal Height",
+                category = "Thermal",
+                unitLabel = "m"
+            )
+        )
+
+        override fun getTimeSlots(
+            nowUtcMs: Long,
+            regionCode: String
+        ): List<ForecastTimeSlot> = listOf(
+            ForecastTimeSlot(validTimeUtcMs = nowUtcMs)
+        )
+
+        override suspend fun getValue(
+            latitude: Double,
+            longitude: Double,
+            parameterId: ForecastParameterId,
+            timeSlot: ForecastTimeSlot
+        ): ForecastPointValue = ForecastPointValue(
+            value = 0.0,
+            unitLabel = "m",
+            validTimeUtcMs = timeSlot.validTimeUtcMs
+        )
+    }
+
+}

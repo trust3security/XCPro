@@ -53,6 +53,8 @@ internal fun ForecastOverlayBottomSheet(
     onDismiss: () -> Unit,
     onEnabledChanged: (Boolean) -> Unit,
     onParameterSelected: (ForecastParameterId) -> Unit,
+    onAutoTimeEnabledChanged: (Boolean) -> Unit,
+    onJumpToNow: () -> Unit,
     onTimeSelected: (Long) -> Unit,
     onOpacityChanged: (Float) -> Unit
 ) {
@@ -68,6 +70,11 @@ internal fun ForecastOverlayBottomSheet(
     LaunchedEffect(selectedTimeIndex) {
         sliderIndex = selectedTimeIndex.toFloat()
     }
+    val maxTimeIndex = uiState.timeSlots.lastIndex.coerceAtLeast(0)
+    val displayTimeIndex = sliderIndex.roundToInt().coerceIn(0, maxTimeIndex)
+    val selectedTimeLabel = uiState.timeSlots
+        .getOrNull(displayTimeIndex)
+        ?.let { slot -> formatForecastTime(slot.validTimeUtcMs) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -126,9 +133,30 @@ internal fun ForecastOverlayBottomSheet(
             }
 
             Text(
-                text = "Time",
+                text = selectedTimeLabel?.let { "Time $it" } ?: "Time",
                 style = MaterialTheme.typography.titleMedium
             )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Follow current time",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                TextButton(
+                    onClick = onJumpToNow,
+                    enabled = uiState.enabled
+                ) {
+                    Text("Now")
+                }
+                Switch(
+                    checked = uiState.autoTimeEnabled,
+                    onCheckedChange = onAutoTimeEnabledChanged,
+                    enabled = uiState.enabled
+                )
+            }
             if (uiState.timeSlots.isEmpty()) {
                 Text(
                     text = "No time slots available",
@@ -136,26 +164,28 @@ internal fun ForecastOverlayBottomSheet(
                     style = MaterialTheme.typography.bodySmall
                 )
             } else {
-                val maxIndex = uiState.timeSlots.lastIndex.coerceAtLeast(0)
                 Slider(
                     value = sliderIndex,
                     onValueChange = { raw ->
-                        sliderIndex = raw.coerceIn(0f, maxIndex.toFloat())
+                        sliderIndex = raw.coerceIn(0f, maxTimeIndex.toFloat())
                     },
                     onValueChangeFinished = {
-                        val index = sliderIndex.roundToInt().coerceIn(0, maxIndex)
+                        val index = sliderIndex.roundToInt().coerceIn(0, maxTimeIndex)
+                        if (uiState.autoTimeEnabled) {
+                            onAutoTimeEnabledChanged(false)
+                        }
                         onTimeSelected(uiState.timeSlots[index].validTimeUtcMs)
                     },
                     enabled = uiState.enabled,
-                    valueRange = 0f..maxIndex.toFloat(),
-                    steps = (maxIndex - 1).coerceAtLeast(0)
+                    valueRange = 0f..maxTimeIndex.toFloat(),
+                    steps = (maxTimeIndex - 1).coerceAtLeast(0)
                 )
-                val displayIndex = sliderIndex.roundToInt().coerceIn(0, maxIndex)
-                val selectedSlot = uiState.timeSlots[displayIndex]
-                Text(
-                    text = formatForecastTime(selectedSlot.validTimeUtcMs),
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                selectedTimeLabel?.let { label ->
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
             }
 
             Text(

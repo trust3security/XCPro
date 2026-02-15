@@ -37,16 +37,10 @@ class SkySightForecastProviderAdapter @Inject constructor(
     ): List<ForecastTimeSlot> {
         val zoneId = resolveRegionZone(regionCode)
         val localDate = Instant.ofEpochMilli(nowUtcMs).atZone(zoneId).toLocalDate()
-        val dates = (-1L..2L).map { offset ->
-            localDate.plusDays(offset)
-        }
-        return dates
-            .flatMap { date ->
-                buildRegionTimeSlotsForDate(
-                    localDate = date,
-                    zoneId = zoneId
-                )
-            }
+        return buildRegionTimeSlotsForDate(
+            localDate = localDate,
+            zoneId = zoneId
+        )
             .sortedBy { slot -> slot.validTimeUtcMs }
     }
 

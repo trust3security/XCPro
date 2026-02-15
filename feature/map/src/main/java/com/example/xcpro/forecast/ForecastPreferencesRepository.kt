@@ -26,13 +26,15 @@ private val KEY_FORECAST_OPACITY = floatPreferencesKey("forecast_opacity")
 private val KEY_FORECAST_SELECTED_PARAMETER_ID = stringPreferencesKey("forecast_selected_parameter_id")
 private val KEY_FORECAST_SELECTED_TIME_UTC_MS = longPreferencesKey("forecast_selected_time_utc_ms")
 private val KEY_FORECAST_SELECTED_REGION = stringPreferencesKey("forecast_selected_region")
+private val KEY_FORECAST_AUTO_TIME_ENABLED = booleanPreferencesKey("forecast_auto_time_enabled")
 
 data class ForecastPreferences(
     val overlayEnabled: Boolean = false,
     val opacity: Float = FORECAST_OPACITY_DEFAULT,
     val selectedParameterId: ForecastParameterId = DEFAULT_FORECAST_PARAMETER_ID,
     val selectedTimeUtcMs: Long? = null,
-    val selectedRegion: String = DEFAULT_FORECAST_REGION_CODE
+    val selectedRegion: String = DEFAULT_FORECAST_REGION_CODE,
+    val autoTimeEnabled: Boolean = FORECAST_AUTO_TIME_DEFAULT
 )
 
 @Singleton
@@ -61,6 +63,10 @@ class ForecastPreferencesRepository @Inject constructor(
 
     val selectedRegionFlow: Flow<String> = preferencesFlow
         .map { forecastPreferences -> forecastPreferences.selectedRegion }
+        .distinctUntilChanged()
+
+    val autoTimeEnabledFlow: Flow<Boolean> = preferencesFlow
+        .map { forecastPreferences -> forecastPreferences.autoTimeEnabled }
         .distinctUntilChanged()
 
     suspend fun currentPreferences(): ForecastPreferences = preferencesFlow.first()
@@ -100,13 +106,21 @@ class ForecastPreferencesRepository @Inject constructor(
         }
     }
 
+    suspend fun setAutoTimeEnabled(enabled: Boolean) {
+        context.forecastDataStore.edit { preferences ->
+            preferences[KEY_FORECAST_AUTO_TIME_ENABLED] = enabled
+            if (enabled) {
+                preferences.remove(KEY_FORECAST_SELECTED_TIME_UTC_MS)
+            }
+        }
+    }
+
     private fun toForecastPreferences(preferences: Preferences): ForecastPreferences {
         val selectedParameter = ForecastParameterId(
             preferences[KEY_FORECAST_SELECTED_PARAMETER_ID]
                 ?.trim()
                 .orEmpty()
                 .ifBlank { DEFAULT_FORECAST_PARAMETER_ID.value }
-                .uppercase()
         )
         val selectedRegion = normalizeForecastRegionCode(
             preferences[KEY_FORECAST_SELECTED_REGION]
@@ -118,7 +132,8 @@ class ForecastPreferencesRepository @Inject constructor(
             ),
             selectedParameterId = selectedParameter,
             selectedTimeUtcMs = preferences[KEY_FORECAST_SELECTED_TIME_UTC_MS],
-            selectedRegion = selectedRegion
+            selectedRegion = selectedRegion,
+            autoTimeEnabled = preferences[KEY_FORECAST_AUTO_TIME_ENABLED] ?: FORECAST_AUTO_TIME_DEFAULT
         )
     }
 }

@@ -16,6 +16,7 @@ class ForecastOverlayViewModel @Inject constructor(
     observeForecastOverlayStateUseCase: ObserveForecastOverlayStateUseCase,
     private val setForecastEnabledUseCase: SetForecastEnabledUseCase,
     private val selectForecastParameterUseCase: SelectForecastParameterUseCase,
+    private val setForecastAutoTimeEnabledUseCase: SetForecastAutoTimeEnabledUseCase,
     private val setForecastTimeUseCase: SetForecastTimeUseCase,
     private val setForecastOpacityUseCase: SetForecastOpacityUseCase,
     private val queryForecastValueAtPointUseCase: QueryForecastValueAtPointUseCase
@@ -49,6 +50,18 @@ class ForecastOverlayViewModel @Inject constructor(
     fun selectTime(timeUtcMs: Long) {
         viewModelScope.launch {
             setForecastTimeUseCase(timeUtcMs)
+        }
+    }
+
+    fun setAutoTimeEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            setForecastAutoTimeEnabledUseCase(enabled)
+        }
+    }
+
+    fun jumpToNow() {
+        viewModelScope.launch {
+            setForecastAutoTimeEnabledUseCase(true)
         }
     }
 
@@ -89,4 +102,3 @@ class ForecastOverlayViewModel @Inject constructor(
         _queryStatus.value = null
     }
 }
-

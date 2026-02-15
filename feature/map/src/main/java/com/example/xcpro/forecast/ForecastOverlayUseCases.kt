@@ -25,10 +25,20 @@ class SelectForecastParameterUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(parameterId: ForecastParameterId) {
         val availableParameters = catalogPort.getParameters()
-        val selectedId = availableParameters.firstOrNull { it.id == parameterId }?.id
+        val selectedId = availableParameters.firstOrNull { meta ->
+            meta.id.value.equals(parameterId.value, ignoreCase = true)
+        }?.id
             ?: availableParameters.firstOrNull()?.id
             ?: DEFAULT_FORECAST_PARAMETER_ID
         preferencesRepository.setSelectedParameterId(selectedId)
+    }
+}
+
+class SetForecastAutoTimeEnabledUseCase @Inject constructor(
+    private val preferencesRepository: ForecastPreferencesRepository
+) {
+    suspend operator fun invoke(enabled: Boolean) {
+        preferencesRepository.setAutoTimeEnabled(enabled)
     }
 }
 
@@ -44,12 +54,14 @@ class SetForecastTimeUseCase @Inject constructor(
             regionCode = regionCode
         )
         if (slots.isEmpty()) {
+            preferencesRepository.setAutoTimeEnabled(false)
             preferencesRepository.setSelectedTimeUtcMs(timeUtcMs)
             return
         }
         val clampedTime = slots.minByOrNull { slot ->
             abs(slot.validTimeUtcMs - timeUtcMs)
         }?.validTimeUtcMs ?: slots.first().validTimeUtcMs
+        preferencesRepository.setAutoTimeEnabled(false)
         preferencesRepository.setSelectedTimeUtcMs(clampedTime)
     }
 }

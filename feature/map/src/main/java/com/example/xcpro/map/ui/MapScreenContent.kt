@@ -398,6 +398,8 @@ internal fun MapScreenContent(
                 onDismiss = { showForecastSheet = false },
                 onEnabledChanged = forecastViewModel::setEnabled,
                 onParameterSelected = forecastViewModel::selectParameter,
+                onAutoTimeEnabledChanged = forecastViewModel::setAutoTimeEnabled,
+                onJumpToNow = forecastViewModel::jumpToNow,
                 onTimeSelected = forecastViewModel::selectTime,
                 onOpacityChanged = forecastViewModel::setOpacity
             )

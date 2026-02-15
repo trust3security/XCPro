@@ -31,6 +31,7 @@ class ForecastPreferencesRepositoryTest {
         repository.setSelectedParameterId(DEFAULT_FORECAST_PARAMETER_ID)
         repository.setSelectedTimeUtcMs(null)
         repository.setSelectedRegion(DEFAULT_FORECAST_REGION_CODE)
+        repository.setAutoTimeEnabled(FORECAST_AUTO_TIME_DEFAULT)
     }
 
     @After
@@ -110,5 +111,38 @@ class ForecastPreferencesRepositoryTest {
         val selectedRegion = repository.selectedRegionFlow.first()
 
         assertEquals(DEFAULT_FORECAST_REGION_CODE, selectedRegion)
+    }
+
+    @Test
+    fun setSelectedParameter_preservesProviderIdCasing() = runTest {
+        val repository = ForecastPreferencesRepository(context)
+
+        repository.setSelectedParameterId(ForecastParameterId("dwcrit"))
+        val selected = repository.selectedParameterIdFlow.first()
+
+        assertEquals("dwcrit", selected.value)
+    }
+
+    @Test
+    fun autoTimeEnabled_defaultsToConfiguredDefault() = runTest {
+        val repository = ForecastPreferencesRepository(context)
+
+        val enabled = repository.autoTimeEnabledFlow.first()
+
+        assertEquals(FORECAST_AUTO_TIME_DEFAULT, enabled)
+    }
+
+    @Test
+    fun setAutoTimeEnabled_trueClearsManualTimeSelection() = runTest {
+        val repository = ForecastPreferencesRepository(context)
+
+        repository.setSelectedTimeUtcMs(1_700_000_000_000L)
+        repository.setAutoTimeEnabled(true)
+
+        val selectedTime = repository.selectedTimeUtcMsFlow.first()
+        val autoTimeEnabled = repository.autoTimeEnabledFlow.first()
+
+        assertEquals(null, selectedTime)
+        assertTrue(autoTimeEnabled)
     }
 }

@@ -54,6 +54,7 @@ data class ForecastPointValue(
 data class ForecastOverlayUiState(
     val enabled: Boolean = false,
     val opacity: Float = FORECAST_OPACITY_DEFAULT,
+    val autoTimeEnabled: Boolean = FORECAST_AUTO_TIME_DEFAULT,
     val parameters: List<ForecastParameterMeta> = emptyList(),
     val selectedParameterId: ForecastParameterId = DEFAULT_FORECAST_PARAMETER_ID,
     val timeSlots: List<ForecastTimeSlot> = emptyList(),
