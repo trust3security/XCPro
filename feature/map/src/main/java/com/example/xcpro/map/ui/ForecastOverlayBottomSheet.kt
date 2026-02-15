@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
@@ -110,18 +112,23 @@ internal fun ForecastOverlayBottomSheet(
                 text = "Parameter",
                 style = MaterialTheme.typography.titleMedium
             )
-            Row(
+            LazyRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 if (uiState.parameters.isEmpty()) {
-                    Text(
-                        text = "No parameters available",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall
-                    )
+                    item {
+                        Text(
+                            text = "No parameters available",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                 } else {
-                    uiState.parameters.forEach { parameter ->
+                    items(
+                        items = uiState.parameters,
+                        key = { parameter -> parameter.id.value }
+                    ) { parameter ->
                         FilterChip(
                             selected = parameter.id == uiState.selectedParameterId,
                             onClick = { onParameterSelected(parameter.id) },
