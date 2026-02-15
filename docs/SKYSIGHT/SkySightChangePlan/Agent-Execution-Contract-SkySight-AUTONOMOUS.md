@@ -5,10 +5,15 @@ It is based on the generic skeleton you provided and is fully populated so an au
 
 Use together with:
 - `docs/ARCHITECTURE/AGENT.md`
+- `docs/ARCHITECTURE/CHANGE_PLAN_TEMPLATE.md`
 - `docs/ARCHITECTURE/ARCHITECTURE.md`
 - `docs/ARCHITECTURE/CODING_RULES.md`
 - `docs/ARCHITECTURE/PIPELINE.md`
 - `AGENTS.md` / `AGENTS` repo rules
+
+Change-plan compliance:
+- This contract is intended to be executed as a concrete change plan aligned with
+  `docs/ARCHITECTURE/CHANGE_PLAN_TEMPLATE.md` for non-trivial feature/refactor work.
 
 ---
 

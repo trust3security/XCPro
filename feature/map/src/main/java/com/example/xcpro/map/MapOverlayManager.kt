@@ -7,6 +7,10 @@ import com.example.xcpro.adsb.ADSB_ICON_SIZE_DEFAULT_PX
 import com.example.xcpro.adsb.clampAdsbIconSizePx
 import com.example.xcpro.airspace.AirspaceUseCase
 import com.example.xcpro.adsb.AdsbTrafficUiModel
+import com.example.xcpro.forecast.FORECAST_OPACITY_DEFAULT
+import com.example.xcpro.forecast.ForecastLegendSpec
+import com.example.xcpro.forecast.ForecastTileSpec
+import com.example.xcpro.forecast.clampForecastOpacity
 import com.example.xcpro.flightdata.WaypointFilesUseCase
 import com.example.xcpro.map.BuildConfig
 import com.example.xcpro.ogn.OGN_ICON_SIZE_DEFAULT_PX
@@ -44,6 +48,10 @@ class MapOverlayManager(
     private var latestAdsbTargets: List<AdsbTrafficUiModel> = emptyList()
     private var ognIconSizePx: Int = OGN_ICON_SIZE_DEFAULT_PX
     private var adsbIconSizePx: Int = ADSB_ICON_SIZE_DEFAULT_PX
+    private var forecastOverlayEnabled: Boolean = false
+    private var latestForecastTileSpec: ForecastTileSpec? = null
+    private var latestForecastLegend: ForecastLegendSpec? = null
+    private var forecastOpacity: Float = FORECAST_OPACITY_DEFAULT
 
     fun toggleDistanceCircles() {
         stateActions.toggleDistanceCircles()
@@ -134,6 +142,10 @@ class MapOverlayManager(
                 mapState.adsbTrafficOverlay = createAdsbTrafficOverlay(map)
                 mapState.adsbTrafficOverlay?.initialize()
                 mapState.adsbTrafficOverlay?.render(latestAdsbTargets)
+
+                mapState.forecastOverlay?.cleanup()
+                mapState.forecastOverlay = ForecastRasterOverlay(map)
+                reapplyForecastOverlay(map)
             }
             snailTrailManager.onMapStyleChanged(map)
             mapState.blueLocationOverlay?.bringToFront()
@@ -161,6 +173,9 @@ class MapOverlayManager(
                 mapState.adsbTrafficOverlay = createAdsbTrafficOverlay(map)
                 mapState.adsbTrafficOverlay?.initialize()
                 mapState.adsbTrafficOverlay?.render(latestAdsbTargets)
+
+                mapState.forecastOverlay = ForecastRasterOverlay(map)
+                reapplyForecastOverlay(map)
             }
             if (BuildConfig.DEBUG) {
                 Log.d(TAG, "Map overlays initialized successfully")
@@ -194,6 +209,43 @@ class MapOverlayManager(
             mapState.adsbTrafficOverlay = createAdsbTrafficOverlay(map)
         }
         mapState.adsbTrafficOverlay?.render(targets)
+    }
+
+    fun setForecastOverlay(
+        enabled: Boolean,
+        tileSpec: ForecastTileSpec?,
+        opacity: Float,
+        legendSpec: ForecastLegendSpec?
+    ) {
+        forecastOverlayEnabled = enabled
+        latestForecastTileSpec = tileSpec
+        latestForecastLegend = legendSpec
+        forecastOpacity = clampForecastOpacity(opacity)
+        val map = mapState.mapLibreMap ?: return
+        if (!enabled || tileSpec == null) {
+            mapState.forecastOverlay?.clear()
+            return
+        }
+        if (mapState.forecastOverlay == null) {
+            mapState.forecastOverlay = ForecastRasterOverlay(map)
+        }
+        mapState.forecastOverlay?.render(
+            tileSpec = tileSpec,
+            opacity = forecastOpacity,
+            legendSpec = legendSpec
+        )
+    }
+
+    fun clearForecastOverlay() {
+        forecastOverlayEnabled = false
+        latestForecastTileSpec = null
+        latestForecastLegend = null
+        mapState.forecastOverlay?.clear()
+    }
+
+    fun reapplyForecastOverlay() {
+        val map = mapState.mapLibreMap ?: return
+        reapplyForecastOverlay(map)
     }
 
     fun setAdsbIconSizePx(iconSizePx: Int) {
@@ -275,7 +327,29 @@ class MapOverlayManager(
                 }\n"
             )
             append("- ADS-B Targets: ${latestAdsbTargets.size}\n")
+            append("- Forecast Overlay Enabled: $forecastOverlayEnabled\n")
+            append(
+                "- Forecast Raster Overlay: ${
+                    if (mapState.forecastOverlay != null) "Initialized" else "Not Initialized"
+                }\n"
+            )
             append("- Task Waypoints: ${taskWaypointCountProvider()}\n")
         }
+    }
+
+    private fun reapplyForecastOverlay(map: MapLibreMap) {
+        if (!forecastOverlayEnabled) {
+            mapState.forecastOverlay?.clear()
+            return
+        }
+        val tileSpec = latestForecastTileSpec ?: return
+        if (mapState.forecastOverlay == null) {
+            mapState.forecastOverlay = ForecastRasterOverlay(map)
+        }
+        mapState.forecastOverlay?.render(
+            tileSpec = tileSpec,
+            opacity = forecastOpacity,
+            legendSpec = latestForecastLegend
+        )
     }
 }

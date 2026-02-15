@@ -23,6 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,6 +41,7 @@ import com.example.xcpro.adsb.AdsbMarkerDetailsSheet
 import com.example.xcpro.adsb.AdsbTrafficSnapshot
 import com.example.xcpro.adsb.AdsbTrafficUiModel
 import com.example.xcpro.adsb.AdsbSelectedTargetDetails
+import com.example.xcpro.forecast.ForecastOverlayViewModel
 import com.example.xcpro.gestures.TaskGestureCallbacks
 import com.example.xcpro.gestures.TaskGestureHandler
 import com.example.xcpro.map.BuildConfig
@@ -157,6 +159,10 @@ internal fun MapScreenContent(
     onRacingReplayClick: () -> Unit
 ) {
     val liveFlightData by flightDataManager.liveFlightDataFlow.collectAsStateWithLifecycle()
+    val forecastViewModel: ForecastOverlayViewModel = hiltViewModel()
+    val forecastOverlayState by forecastViewModel.overlayState.collectAsStateWithLifecycle()
+    val forecastPointCallout by forecastViewModel.pointCallout.collectAsStateWithLifecycle()
+    val forecastQueryStatus by forecastViewModel.queryStatus.collectAsStateWithLifecycle()
     val currentQnhLabel = remember(liveFlightData?.qnh) {
         val qnh = liveFlightData?.qnh ?: 1013.25
         String.format(Locale.US, "%.1f hPa", qnh)
@@ -166,6 +172,28 @@ internal fun MapScreenContent(
     var qnhInput by remember { mutableStateOf("") }
     var qnhError by remember { mutableStateOf<String?>(null) }
     var showQnhFab by remember { mutableStateOf(true) }
+    var showForecastSheet by remember { mutableStateOf(false) }
+
+    LaunchedEffect(
+        mapState.mapLibreMap,
+        forecastOverlayState.enabled,
+        forecastOverlayState.tileSpec,
+        forecastOverlayState.legend,
+        forecastOverlayState.opacity,
+        forecastOverlayState.errorMessage
+    ) {
+        if (!forecastOverlayState.enabled || forecastOverlayState.errorMessage != null) {
+            overlayManager.clearForecastOverlay()
+            return@LaunchedEffect
+        }
+        val tileSpec = forecastOverlayState.tileSpec ?: return@LaunchedEffect
+        overlayManager.setForecastOverlay(
+            enabled = true,
+            tileSpec = tileSpec,
+            opacity = forecastOverlayState.opacity,
+            legendSpec = forecastOverlayState.legend
+        )
+    }
 
     Box(Modifier.fillMaxSize()) {
         Scaffold(
@@ -204,6 +232,14 @@ internal fun MapScreenContent(
                         showDistanceCircles = showDistanceCircles,
                         overlayManager = overlayManager,
                         onAdsbTargetSelected = onAdsbTargetSelected,
+                        onMapLongPress = { point ->
+                            if (!isAATEditMode) {
+                                forecastViewModel.queryPointValue(
+                                    latitude = point.latitude,
+                                    longitude = point.longitude
+                                )
+                            }
+                        },
                         isAATEditMode = isAATEditMode,
                         isUiEditMode = isUiEditMode,
                         onEditModeChange = onEditModeChange,
@@ -256,6 +292,7 @@ internal fun MapScreenContent(
             showDistanceCircles = showDistanceCircles,
             showOgnTraffic = ognOverlayEnabled,
             showAdsbTraffic = adsbOverlayEnabled,
+            showForecastOverlay = forecastOverlayState.enabled,
             showQnhFab = showQnhFab,
             showVarioDemoFab = showVarioDemoFab,
             showRacingReplayFab = showRacingReplayFab,
@@ -263,6 +300,7 @@ internal fun MapScreenContent(
             onToggleDistanceCircles = { overlayManager.toggleDistanceCircles() },
             onToggleOgnTraffic = onToggleOgnTraffic,
             onToggleAdsbTraffic = onToggleAdsbTraffic,
+            onShowForecastSheet = { showForecastSheet = true },
             onReturn = { locationManager.returnToSavedLocation() },
             onShowQnhDialog = {
                 val currentQnh = liveFlightData?.qnh ?: 1013.25
@@ -292,6 +330,26 @@ internal fun MapScreenContent(
             AdsbDebugPanel(
                 visible = BuildConfig.DEBUG && adsbOverlayEnabled,
                 snapshot = adsbSnapshot
+            )
+        }
+
+        forecastPointCallout?.let { callout ->
+            ForecastPointCalloutCard(
+                callout = callout,
+                onDismiss = forecastViewModel::clearPointCallout,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 72.dp, start = 16.dp, end = 16.dp)
+            )
+        }
+
+        forecastQueryStatus?.let { status ->
+            ForecastQueryStatusChip(
+                message = status,
+                onDismiss = forecastViewModel::clearQueryStatus,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 28.dp, start = 16.dp, end = 16.dp)
             )
         }
 
@@ -331,6 +389,17 @@ internal fun MapScreenContent(
                 target = target,
                 unitsPreferences = unitsPreferences,
                 onDismiss = onDismissAdsbTargetDetails
+            )
+        }
+
+        if (showForecastSheet) {
+            ForecastOverlayBottomSheet(
+                uiState = forecastOverlayState,
+                onDismiss = { showForecastSheet = false },
+                onEnabledChanged = forecastViewModel::setEnabled,
+                onParameterSelected = forecastViewModel::selectParameter,
+                onTimeSelected = forecastViewModel::selectTime,
+                onOpacityChanged = forecastViewModel::setOpacity
             )
         }
     }

@@ -1,31 +1,18 @@
 package com.example.xcpro.map.components
 
-import android.util.Log
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Flight
-import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.automirrored.filled.Undo
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.zIndex
-import com.example.xcpro.map.model.MapLocationUiModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.xcpro.map.MapTaskScreenManager
-import com.example.ui1.icons.LocationSailplane
-import com.example.ui1.icons.Glider
+import com.example.xcpro.map.model.MapLocationUiModel
 
 @Composable
 fun MapActionButtons(
@@ -36,10 +23,12 @@ fun MapActionButtons(
     showDistanceCircles: Boolean,
     showOgnTraffic: Boolean,
     showAdsbTraffic: Boolean,
+    showForecastOverlay: Boolean,
     onRecenter: () -> Unit,
     onToggleDistanceCircles: () -> Unit,
     onToggleOgnTraffic: () -> Unit,
     onToggleAdsbTraffic: () -> Unit,
+    onShowForecastSheet: () -> Unit,
     onReturn: () -> Unit,
     onShowQnhDialog: () -> Unit,
     showQnhFab: Boolean,
@@ -61,8 +50,9 @@ fun MapActionButtons(
     val distanceTopPadding = if (showQnhFab) qnhTopPadding + fabSpacing else qnhTopPadding
     val ognTopPadding = distanceTopPadding + fabSpacing
     val adsbTopPadding = ognTopPadding + fabSpacing
+    val forecastTopPadding = adsbTopPadding + fabSpacing
     val demoFabSize = 48.dp
-    val demoSpacing = 12.6.dp // ~2mm gap between FAB edges
+    val demoSpacing = 12.6.dp
     val demoSim3BottomPadding = 16.dp
     val demoSimBottomPadding = demoSim3BottomPadding + demoFabSize + demoSpacing
     val demoSim2BottomPadding = demoSimBottomPadding + demoFabSize + demoSpacing
@@ -78,10 +68,7 @@ fun MapActionButtons(
         modifier = modifier
             .fillMaxSize()
             .padding(top = topInset, bottom = bottomInset)
-            //  REMOVED: .zIndex(50f) was blocking hamburger menu at zIndex(4f)
-            // Individual buttons have their own z-index values as needed
     ) {
-        // Recenter Button
         if (showRecenterButton && currentLocation != null) {
             RecenterButton(
                 onRecenter = onRecenter,
@@ -89,7 +76,6 @@ fun MapActionButtons(
             )
         }
 
-        // Return Button
         if (showReturnButton) {
             ReturnButton(
                 onReturn = onReturn,
@@ -100,7 +86,6 @@ fun MapActionButtons(
             )
         }
 
-        // Distance Circles Button - lower z-index when bottom sheet is open
         DistanceCirclesButton(
             isEnabled = showDistanceCircles,
             onToggle = onToggleDistanceCircles,
@@ -124,6 +109,14 @@ fun MapActionButtons(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(top = adsbTopPadding, end = 16.dp)
+        )
+
+        ForecastOverlayButton(
+            isEnabled = showForecastOverlay,
+            onClick = onShowForecastSheet,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = forecastTopPadding, end = 16.dp)
         )
 
         if (showQnhFab) {
@@ -188,313 +181,3 @@ fun MapActionButtons(
         }
     }
 }
-
-@Composable
-private fun RecenterButton(
-    onRecenter: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .padding(end = 16.dp)
-            .size(48.dp)
-    ) {
-        FloatingActionButton(
-            onClick = {
-                if (com.example.xcpro.map.BuildConfig.DEBUG) Log.d("MapActionButtons", "Recenter button clicked")
-                onRecenter()
-            },
-            modifier = Modifier.matchParentSize(),
-            containerColor = MaterialTheme.colorScheme.secondary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-            elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp)
-        ) {
-            Icon(
-                imageVector = LocationSailplane,
-                contentDescription = "Recenter",
-                modifier = Modifier.size(24.dp)
-            )
-        }
-    }
-}
-
-@Composable
-private fun ReturnButton(
-    onReturn: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .size(48.dp)
-    ) {
-        FloatingActionButton(
-            onClick = {
-                if (com.example.xcpro.map.BuildConfig.DEBUG) Log.d("MapActionButtons", "Return button clicked")
-                onReturn()
-            },
-            modifier = Modifier.matchParentSize(),
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-            elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp)
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.Undo,
-                contentDescription = "Return to Previous",
-                modifier = Modifier.size(24.dp)
-            )
-        }
-    }
-}
-
-@Composable
-private fun DistanceCirclesButton(
-    isEnabled: Boolean,
-    onToggle: () -> Unit,
-    isBottomSheetVisible: Boolean = false,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .size(48.dp)
-            .zIndex(if (isBottomSheetVisible) 10f else 50f)
-    ) {
-        FloatingActionButton(
-            onClick = {
-                if (com.example.xcpro.map.BuildConfig.DEBUG) Log.d("MapActionButtons", "Distance circles button clicked")
-                onToggle()
-            },
-            modifier = Modifier.matchParentSize(),
-            containerColor = if (isEnabled) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.surfaceVariant
-            },
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-            elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp)
-        ) {
-            ThreeCirclesIcon(
-                color = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier.size(24.dp)
-            )
-        }
-    }
-}
-
-@Composable
-private fun QnhButton(
-    onClick: () -> Unit,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .size(48.dp)
-            .zIndex(50f)
-    ) {
-            FloatingActionButton(
-                onClick = onClick,
-                modifier = Modifier.fillMaxSize(),
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-            elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Speed,
-                contentDescription = "Set QNH",
-                modifier = Modifier.size(24.dp)
-            )
-        }
-
-        Surface(
-            color = Color(0xFFD32F2F),
-            shape = CircleShape,
-            tonalElevation = 0.dp,
-            shadowElevation = 2.dp,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .offset(x = 5.dp, y = (-5).dp)
-                .size(18.dp)
-                .zIndex(60f)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clickable(onClick = onDismiss),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Close,
-                    contentDescription = "Dismiss QNH control",
-                    tint = Color.White,
-                    modifier = Modifier.size(10.dp)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun OgnTrafficButton(
-    isEnabled: Boolean,
-    onToggle: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .size(48.dp)
-            .zIndex(50f)
-    ) {
-        FloatingActionButton(
-            onClick = onToggle,
-            modifier = Modifier.matchParentSize(),
-            containerColor = if (isEnabled) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.surfaceVariant
-            },
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-            elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp)
-        ) {
-            Icon(
-                imageVector = Glider,
-                contentDescription = "Toggle glider traffic",
-                modifier = Modifier.size(22.dp)
-            )
-        }
-    }
-}
-
-@Composable
-private fun AdsbTrafficButton(
-    isEnabled: Boolean,
-    onToggle: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .size(48.dp)
-            .zIndex(50f)
-    ) {
-        FloatingActionButton(
-            onClick = onToggle,
-            modifier = Modifier.matchParentSize(),
-            containerColor = if (isEnabled) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.surfaceVariant
-            },
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-            elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Flight,
-                contentDescription = "Toggle ADS-B traffic",
-                modifier = Modifier.size(22.dp)
-            )
-        }
-    }
-}
-
-@Composable
-private fun VarioDemoButton(
-    onClick: () -> Unit,
-    badgeText: String,
-    badgeColor: Color,
-    contentDescription: String,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .size(48.dp)
-            .zIndex(50f)
-    ) {
-        FloatingActionButton(
-            onClick = onClick,
-            modifier = Modifier.fillMaxSize(),
-            containerColor = MaterialTheme.colorScheme.secondary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-            elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Filled.PlayArrow,
-                contentDescription = contentDescription,
-                modifier = Modifier.size(24.dp)
-            )
-        }
-
-        Surface(
-            color = badgeColor,
-            shape = CircleShape,
-            tonalElevation = 0.dp,
-            shadowElevation = 2.dp,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .offset(x = 6.dp, y = (-6).dp)
-                .size(22.dp)
-                .zIndex(60f)
-        ) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = badgeText,
-                    color = Color.White,
-                    fontSize = 8.sp,
-                    maxLines = 1
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ThreeCirclesIcon(
-    color: Color,
-    modifier: Modifier = Modifier
-) {
-    Canvas(modifier = modifier) {
-        val centerX = size.width / 2f
-        val centerY = size.height / 2f
-        val strokeWidth = 2.dp.toPx()
-
-        // Draw 3 concentric circles with increasing radii
-        val maxRadius = size.minDimension / 2f - strokeWidth
-
-        // Inner circle (33% of max radius)
-        drawCircle(
-            color = color,
-            radius = maxRadius * 0.33f,
-            center = androidx.compose.ui.geometry.Offset(centerX, centerY),
-            style = Stroke(width = strokeWidth)
-        )
-
-        // Middle circle (66% of max radius)
-        drawCircle(
-            color = color,
-            radius = maxRadius * 0.66f,
-            center = androidx.compose.ui.geometry.Offset(centerX, centerY),
-            style = Stroke(width = strokeWidth)
-        )
-
-        // Outer circle (100% of max radius)
-        drawCircle(
-            color = color,
-            radius = maxRadius,
-            center = androidx.compose.ui.geometry.Offset(centerX, centerY),
-            style = Stroke(width = strokeWidth)
-        )
-    }
-}
-
-
-
-
-
-
-
-
-
-
-
-

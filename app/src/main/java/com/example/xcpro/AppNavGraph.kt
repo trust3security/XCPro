@@ -34,6 +34,7 @@ import com.example.xcpro.screens.navdrawer.PolarSettingsScreen
 import com.example.xcpro.screens.navdrawer.UnitsSettingsScreen
 import com.example.xcpro.screens.navdrawer.OrientationSettingsScreen
 import com.example.xcpro.screens.navdrawer.AdsbSettingsScreen
+import com.example.xcpro.screens.navdrawer.ForecastSettingsScreen
 import com.example.xcpro.screens.navdrawer.OgnSettingsScreen
 import com.example.xcpro.screens.diagnostics.VarioDiagnosticsScreen
 import com.example.xcpro.screens.replay.IgcReplayScreen
@@ -112,7 +113,7 @@ fun AppNavGraph(
                 initialTab = "waypoints",
                 autoFocusHome = autoFocusHome,
                 activeProfile = profileUiState.activeProfile,
-                flightDataManager = mapViewModel.flightDataManager
+                flightDataManager = mapViewModel.runtimeDependencies.flightDataManager
             )
         }
         composable("flight_data") { backStackEntry ->
@@ -122,7 +123,7 @@ fun AppNavGraph(
                 navController = navController,
                 drawerState = drawerState,
                 activeProfile = profileUiState.activeProfile,
-                flightDataManager = mapViewModel.flightDataManager
+                flightDataManager = mapViewModel.runtimeDependencies.flightDataManager
             )
         }
         composable("files") { FilesScreen(navController, drawerState) }
@@ -140,6 +141,7 @@ fun AppNavGraph(
         composable("layouts") { LayoutScreen(navController, drawerState) }
         composable("adsb_settings") { AdsbSettingsScreen(navController, drawerState) }
         composable("ogn_settings") { OgnSettingsScreen(navController, drawerState) }
+        composable("forecast_settings") { ForecastSettingsScreen(navController, drawerState) }
         composable("dfnavboxes") { DFNavboxes(navController, drawerState) }
         composable("orientation_settings") { backStackEntry ->
             OrientationSettingsScreen(

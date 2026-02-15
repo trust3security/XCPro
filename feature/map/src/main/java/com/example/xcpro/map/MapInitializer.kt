@@ -47,6 +47,7 @@ class MapInitializer(
     suspend fun initializeMap(map: MapLibreMap): MapLibreMap {
         return try {
             Log.d(TAG, "Starting map initialization")
+            SkySightMapLibreNetworkConfigurator.ensureConfigured()
             mapState.mapLibreMap = map
             setupMapStyle(map)
             setupInitialPosition(map)

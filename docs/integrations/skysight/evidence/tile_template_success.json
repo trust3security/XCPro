@@ -1,0 +1,15 @@
+﻿{
+    "source":  "edge.skysight.io",
+    "region":  "WEST_US",
+    "date":  "20260213",
+    "time":  "0600",
+    "parameter":  "wstar_bsratio",
+    "urlTemplate":  "https://edge.skysight.io/WEST_US/20260213/0600/wstar_bsratio/{z}/{x}/{y}",
+    "minZoom":  3,
+    "maxZoom":  5,
+    "tileSizePx":  256,
+    "format":  "VECTOR_INDEXED_FILL",
+    "sourceLayer":  "0600",
+    "valueProperty":  "idx",
+    "originHeaderRequired":  true
+}

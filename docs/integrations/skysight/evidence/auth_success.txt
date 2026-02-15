@@ -1,0 +1,13 @@
+﻿HTTP/1.1 200 OK
+content-type: text/html; charset=utf-8
+vary: Accept-Encoding
+cache-control: no-cache
+set-cookie: hl<REDACTED>; Max-Age=15724800; Path=/; expires=Sun, 16-Aug-2026 07:07:31 GMT
+x-cloud-trace-context: a09676f4b31a26e1efebc0773f76bdb3
+date: Sun, 15 Feb 2026 07:07:31 GMT
+server: Google Frontend
+Content-Length: 224
+via: 1.1 google
+Alt-Svc: h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+
+{"key": "<REDACTED>", "valid_until": 1771140451, "allowed_regions": ["WEST_US", "EAST_US", "EUROPE", "EAST_AUS", "WA", "NZ", "JAPAN", "ARGENTINA_CHILE", "SANEW", "BRAZIL", "HRRR", "ICONEU"]}

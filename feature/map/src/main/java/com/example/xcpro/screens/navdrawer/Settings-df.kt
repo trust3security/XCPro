@@ -234,7 +234,7 @@ fun SettingsScreen(
                         }
                     }
 
-                    // Row 3b: OGN (single)
+                    // Row 3b: OGN | Forecast
                     item {
                         Row(
                             modifier = Modifier
@@ -248,7 +248,12 @@ fun SettingsScreen(
                                 onClick = { navController.navigate("ogn_settings") },
                                 modifier = Modifier.weight(1f)
                             )
-                            Spacer(modifier = Modifier.weight(1f))
+                            CategoryItem(
+                                title = "Forecast",
+                                icon = Icons.Default.Cloud,
+                                onClick = { navController.navigate("forecast_settings") },
+                                modifier = Modifier.weight(1f)
+                            )
                         }
                     }
 
