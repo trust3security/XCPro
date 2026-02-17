@@ -388,6 +388,39 @@ class MapScreenViewModelTest {
     }
 
     @Test
+    fun ognCenter_updatesFromOwnshipGpsLocation() {
+        val ognRepository = FakeOgnTrafficRepository()
+        createViewModel(ognRepositoryOverride = ognRepository)
+        drainMain()
+
+        flightDataRepository.update(
+            buildCompleteFlightData(
+                gps = defaultGps(latitude = -34.5000, longitude = 150.5000)
+            )
+        )
+        drainMain()
+
+        assertEquals(-34.5000, ognRepository.lastCenterLat ?: Double.NaN, 1e-6)
+        assertEquals(150.5000, ognRepository.lastCenterLon ?: Double.NaN, 1e-6)
+    }
+
+    @Test
+    fun ognCenter_doesNotUpdateFromCameraSnapshotWithoutGps() {
+        val ognRepository = FakeOgnTrafficRepository()
+        val viewModel = createViewModel(ognRepositoryOverride = ognRepository)
+
+        viewModel.mapStateActions.updateCameraSnapshot(
+            target = MapStateStore.MapPoint(latitude = -35.1234, longitude = 149.1234),
+            zoom = 11.0,
+            bearing = 0.0
+        )
+        drainMain()
+
+        assertNull(ognRepository.lastCenterLat)
+        assertNull(ognRepository.lastCenterLon)
+    }
+
+    @Test
     fun ognIconSize_defaultsToConfiguredDefaultPx() {
         val viewModel = createViewModel()
 
@@ -442,6 +475,7 @@ class MapScreenViewModelTest {
 
     private fun createViewModel(
         waypointLoader: WaypointLoader = SuccessfulWaypointLoader(emptyList()),
+        ognRepositoryOverride: OgnTrafficRepository? = null,
         adsbRepositoryOverride: AdsbTrafficRepository? = null
     ): MapScreenViewModel {
         val localTaskManager = com.example.xcpro.tasks.TaskManagerCoordinator(
@@ -479,37 +513,7 @@ class MapScreenViewModelTest {
         val mapFeatureFlagsUseCase = MapFeatureFlagsUseCase(mapFeatureFlags)
         val mapCardPreferencesUseCase = MapCardPreferencesUseCase(cardPreferences)
         val mapVarioPreferencesUseCase = MapVarioPreferencesUseCase(levoVarioPreferencesRepository)
-        val ognTrafficRepository = object : OgnTrafficRepository {
-            override val targets = MutableStateFlow<List<OgnTrafficTarget>>(emptyList())
-            override val snapshot = MutableStateFlow(
-                OgnTrafficSnapshot(
-                    targets = emptyList(),
-                    connectionState = OgnConnectionState.DISCONNECTED,
-                    lastError = null,
-                    subscriptionCenterLat = null,
-                    subscriptionCenterLon = null,
-                    receiveRadiusKm = 300,
-                    ddbCacheAgeMs = null,
-                    reconnectBackoffMs = null,
-                    lastReconnectWallMs = null
-                )
-            )
-            override val isEnabled = MutableStateFlow(false)
-
-            override fun setEnabled(enabled: Boolean) {
-                isEnabled.value = enabled
-            }
-
-            override fun updateCenter(latitude: Double, longitude: Double) = Unit
-
-            override fun start() {
-                setEnabled(true)
-            }
-
-            override fun stop() {
-                setEnabled(false)
-            }
-        }
+        val ognTrafficRepository = ognRepositoryOverride ?: FakeOgnTrafficRepository()
         val ognTrafficPreferencesRepository = OgnTrafficPreferencesRepository(context)
         val ognTrafficUseCase = OgnTrafficUseCase(
             repository = ognTrafficRepository,
@@ -637,6 +641,43 @@ class MapScreenViewModelTest {
         category = 3,
         lastContactEpochSec = null
     )
+
+    private class FakeOgnTrafficRepository : OgnTrafficRepository {
+        override val targets = MutableStateFlow<List<OgnTrafficTarget>>(emptyList())
+        override val snapshot = MutableStateFlow(
+            OgnTrafficSnapshot(
+                targets = emptyList(),
+                connectionState = OgnConnectionState.DISCONNECTED,
+                lastError = null,
+                subscriptionCenterLat = null,
+                subscriptionCenterLon = null,
+                receiveRadiusKm = 150,
+                ddbCacheAgeMs = null,
+                reconnectBackoffMs = null,
+                lastReconnectWallMs = null
+            )
+        )
+        override val isEnabled = MutableStateFlow(false)
+        var lastCenterLat: Double? = null
+        var lastCenterLon: Double? = null
+
+        override fun setEnabled(enabled: Boolean) {
+            isEnabled.value = enabled
+        }
+
+        override fun updateCenter(latitude: Double, longitude: Double) {
+            lastCenterLat = latitude
+            lastCenterLon = longitude
+        }
+
+        override fun start() {
+            setEnabled(true)
+        }
+
+        override fun stop() {
+            setEnabled(false)
+        }
+    }
 
     private class FakeAdsbTrafficRepository : AdsbTrafficRepository {
         override val targets = MutableStateFlow<List<AdsbTrafficUiModel>>(emptyList())

@@ -1,5 +1,6 @@
 package com.example.xcpro.adsb.metadata.data
 
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -41,6 +42,7 @@ class AircraftMetadataCsvParser @Inject constructor() {
             val sanitized = value
                 .removePrefix("\uFEFF")
                 .trim()
+                .let(::stripWrappingQuotes)
             sanitizeHeaderKey(sanitized) to index
         }.toMap()
 
@@ -102,21 +104,25 @@ class AircraftMetadataCsvParser @Inject constructor() {
         }
         val result = ArrayList<String>()
         val current = StringBuilder()
-        var inQuotes = false
+        var activeQuote: Char? = null
         var index = 0
         while (index < line.length) {
             val c = line[index]
             when {
-                c == '"' && inQuotes && index + 1 < line.length && line[index + 1] == '"' -> {
-                    current.append('"')
+                (c == '"' || c == '\'') && activeQuote == c && index + 1 < line.length && line[index + 1] == c -> {
+                    current.append(c)
                     index += 1
                 }
 
-                c == '"' -> {
-                    inQuotes = !inQuotes
+                (c == '"' || c == '\'') && activeQuote == null && current.isEmpty() -> {
+                    activeQuote = c
                 }
 
-                c == ',' && !inQuotes -> {
+                (c == '"' || c == '\'') && activeQuote == c -> {
+                    activeQuote = null
+                }
+
+                c == ',' && activeQuote == null -> {
                     result += current.toString()
                     current.setLength(0)
                 }
@@ -139,14 +145,24 @@ class AircraftMetadataCsvParser @Inject constructor() {
     }
 
     private fun normalizeIcao24(raw: String?): String? {
-        return raw
-            ?.trim()
-            ?.lowercase()
+        return normalizeText(raw)
+            ?.lowercase(Locale.US)
             ?.takeIf { ICAO24_REGEX.matches(it) }
     }
 
     private fun normalizeText(raw: String?): String? {
-        return raw?.trim()?.takeIf { it.isNotEmpty() }
+        val trimmed = raw?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        val unwrapped = stripWrappingQuotes(trimmed).trim()
+        return unwrapped.takeIf { it.isNotEmpty() }
+    }
+
+    private fun stripWrappingQuotes(raw: String): String {
+        if (raw.length < 2) return raw
+        val first = raw.first()
+        val last = raw.last()
+        val hasMatchingQuotes = (first == '"' && last == '"') || (first == '\'' && last == '\'')
+        if (!hasMatchingQuotes) return raw
+        return raw.substring(1, raw.lastIndex)
     }
 
     private fun qualityScore(
@@ -189,6 +205,6 @@ class AircraftMetadataCsvParser @Inject constructor() {
         val OWNER_ALIASES = setOf("owner")
         val OPERATOR_ALIASES = setOf("operator")
         val OPERATOR_CALLSIGN_ALIASES = setOf("operatorcallsign")
-        val ICAO_AIRCRAFT_TYPE_ALIASES = setOf("icaoaircrafttype")
+        val ICAO_AIRCRAFT_TYPE_ALIASES = setOf("icaoaircrafttype", "icaoaircraftclass")
     }
 }

@@ -320,7 +320,29 @@ class AdsbMetadataEnrichmentUseCaseTest {
 
         useCase.targetsWithMetadata(targets).first()
 
-        assertEquals(listOf("def456", "abc123", "fedcba"), metadataRepository.lastLookupOrder)
+        assertEquals(listOf("def456", "fedcba", "abc123"), metadataRepository.lastLookupOrder)
+    }
+
+    @Test
+    fun targetsWithMetadata_deprioritizesTargetsWithExistingMetadataHints() = runTest {
+        val syncRepository = FakeSyncRepository(MetadataSyncState.Idle)
+        val metadataRepository = FakeMetadataRepository(emptyMap())
+        val useCase = AdsbMetadataEnrichmentUseCase(
+            aircraftMetadataRepository = metadataRepository,
+            metadataSyncRepository = syncRepository,
+            ioDispatcher = StandardTestDispatcher(testScheduler)
+        )
+        val hinted = target("abc123", category = 0).copy(
+            metadataTypecode = "B738",
+            metadataIcaoAircraftType = "L2J"
+        )
+        val unknown = target("def456", category = 0)
+        val regular = target("fedcba", category = 2)
+        val targets = MutableStateFlow(listOf(hinted, unknown, regular))
+
+        useCase.targetsWithMetadata(targets).first()
+
+        assertEquals(listOf("def456", "fedcba", "abc123"), metadataRepository.lastLookupOrder)
     }
 
     private fun target(rawIcao24: String, category: Int = 2): AdsbTrafficUiModel {

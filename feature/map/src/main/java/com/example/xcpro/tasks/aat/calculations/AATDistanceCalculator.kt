@@ -2,7 +2,6 @@ package com.example.xcpro.tasks.aat.calculations
 
 import com.example.xcpro.tasks.aat.areas.AreaBoundaryCalculator
 import com.example.xcpro.tasks.aat.models.*
-import kotlin.math.*
 
 /**
  * Calculator for various distance measurements in AAT tasks.
@@ -18,6 +17,7 @@ import kotlin.math.*
 class AATDistanceCalculator {
     
     private val areaBoundaryCalculator = AreaBoundaryCalculator()
+    private val interactiveDistanceCalculator = AATInteractiveDistanceCalculator()
     
     /**
      * Calculate the minimum possible task distance.
@@ -292,198 +292,23 @@ class AATDistanceCalculator {
         return minDistance + (maxDistance - minDistance) * clampedStrategy
     }
 
-    // ========== INTERACTIVE TURNPOINT SUPPORT (Phase 3) ==========
-
-    /**
-     * Calculate real-time task distance through target points for interactive AAT system
-     * This method supports movable target points within AAT areas.
-     */
     fun calculateInteractiveTaskDistance(waypoints: List<AATWaypoint>): AATInteractiveTaskDistance {
-        if (waypoints.isEmpty()) {
-            return AATInteractiveTaskDistance(0.0, emptyList())
-        }
-
-        if (waypoints.size == 1) {
-            return calculateSingleWaypointInteractiveTask(waypoints[0])
-        }
-
-        val segments = mutableListOf<AATInteractiveDistanceSegment>()
-        var totalDistance = 0.0
-
-        // Calculate segments between consecutive waypoints using target points
-        for (i in 0 until waypoints.size - 1) {
-            val fromWaypoint = waypoints[i]
-            val toWaypoint = waypoints[i + 1]
-
-            val segment = calculateInteractiveSegmentDistance(
-                fromWaypoint = fromWaypoint,
-                toWaypoint = toWaypoint,
-                fromIndex = i,
-                toIndex = i + 1
-            )
-
-            segments.add(segment)
-            totalDistance += segment.distance
-        }
-
-        return AATInteractiveTaskDistance(
-            totalDistance = totalDistance,
-            segments = segments,
-            calculationTime = 0L
-        )
+        return interactiveDistanceCalculator.calculateInteractiveTaskDistance(waypoints)
     }
 
-    /**
-     * Calculate real-time distance update when a single target point moves
-     * Optimized for frequent updates during dragging operations
-     */
     fun calculateDistanceUpdate(
         waypoints: List<AATWaypoint>,
         changedWaypointIndex: Int,
         newTargetPoint: AATLatLng
     ): AATInteractiveTaskDistance {
-        // Create updated waypoints list with new target point
-        val updatedWaypoints = waypoints.toMutableList()
-        updatedWaypoints[changedWaypointIndex] = updatedWaypoints[changedWaypointIndex].copy(
-            targetPoint = newTargetPoint
-        )
-
-        // Recalculate with updated target point
-        return calculateInteractiveTaskDistance(updatedWaypoints)
-    }
-
-    /**
-     * Calculate single waypoint task for interactive system
-     */
-    private fun calculateSingleWaypointInteractiveTask(waypoint: AATWaypoint): AATInteractiveTaskDistance {
-        // For single waypoint, distance is center to target point
-        val distance = haversineDistance(
-            waypoint.lat, waypoint.lon,
-            waypoint.targetPoint.latitude, waypoint.targetPoint.longitude
-        )
-
-        val segment = AATInteractiveDistanceSegment(
-            fromPoint = AATLatLng(waypoint.lat, waypoint.lon),
-            toPoint = waypoint.targetPoint,
-            distance = distance,
-            segmentType = AATInteractiveSegmentType.CENTER_TO_TARGET,
-            fromWaypointIndex = 0,
-            toWaypointIndex = 0
-        )
-
-        return AATInteractiveTaskDistance(
-            totalDistance = distance,
-            segments = listOf(segment)
+        return interactiveDistanceCalculator.calculateDistanceUpdate(
+            waypoints = waypoints,
+            changedWaypointIndex = changedWaypointIndex,
+            newTargetPoint = newTargetPoint
         )
     }
 
-    /**
-     * Calculate distance between two AAT waypoints using their target points
-     */
-    private fun calculateInteractiveSegmentDistance(
-        fromWaypoint: AATWaypoint,
-        toWaypoint: AATWaypoint,
-        fromIndex: Int,
-        toIndex: Int
-    ): AATInteractiveDistanceSegment {
-
-        // Use target points for distance calculation
-        val fromPoint = fromWaypoint.targetPoint
-        val toPoint = toWaypoint.targetPoint
-
-        // Calculate great circle distance
-        val distance = haversineDistance(
-            fromPoint.latitude, fromPoint.longitude,
-            toPoint.latitude, toPoint.longitude
-        )
-
-        // Determine segment type based on waypoint roles
-        val segmentType = when {
-            fromWaypoint.role == AATWaypointRole.START && toWaypoint.role == AATWaypointRole.FINISH ->
-                AATInteractiveSegmentType.START_TO_FINISH
-            fromWaypoint.role == AATWaypointRole.START ->
-                AATInteractiveSegmentType.START_TO_TURNPOINT
-            toWaypoint.role == AATWaypointRole.FINISH ->
-                AATInteractiveSegmentType.TURNPOINT_TO_FINISH
-            else ->
-                AATInteractiveSegmentType.TURNPOINT_TO_TURNPOINT
-        }
-
-        return AATInteractiveDistanceSegment(
-            fromPoint = fromPoint,
-            toPoint = toPoint,
-            distance = distance,
-            segmentType = segmentType,
-            fromWaypointIndex = fromIndex,
-            toWaypointIndex = toIndex
-        )
-    }
-
-    /**
-     * Calculate optimal target point positions for maximum distance
-     * Used by strategic positioning features
-     */
     fun optimizeTargetPointsForMaxDistance(waypoints: List<AATWaypoint>): List<AATWaypoint> {
-        if (waypoints.size < 2) return waypoints
-
-        val optimized = waypoints.toMutableList()
-
-        // For each waypoint, position target point to maximize distance
-        for (i in waypoints.indices) {
-            val waypoint = waypoints[i]
-            val prevWaypoint = if (i > 0) waypoints[i - 1] else null
-            val nextWaypoint = if (i < waypoints.size - 1) waypoints[i + 1] else null
-
-            val optimalTarget = calculateOptimalTargetForMaxDistance(
-                waypoint, prevWaypoint, nextWaypoint
-            )
-
-            optimized[i] = waypoint.copy(targetPoint = optimalTarget)
-        }
-
-        return optimized
-    }
-
-    /**
-     * Calculate optimal target point position for maximum distance
-     */
-    private fun calculateOptimalTargetForMaxDistance(
-        waypoint: AATWaypoint,
-        prevWaypoint: AATWaypoint?,
-        nextWaypoint: AATWaypoint?
-    ): AATLatLng {
-        val areaRadiusKm = waypoint.assignedArea.radiusMeters / 1000.0
-
-        when {
-            prevWaypoint == null && nextWaypoint != null -> {
-                // First waypoint: position away from next waypoint
-                val bearing = calculateBearing(
-                    nextWaypoint.lat, nextWaypoint.lon,
-                    waypoint.lat, waypoint.lon
-                )
-                return calculateDestination(waypoint.lat, waypoint.lon, bearing, areaRadiusKm * 0.8)
-            }
-            prevWaypoint != null && nextWaypoint == null -> {
-                // Last waypoint: position away from previous waypoint
-                val bearing = calculateBearing(
-                    prevWaypoint.lat, prevWaypoint.lon,
-                    waypoint.lat, waypoint.lon
-                )
-                return calculateDestination(waypoint.lat, waypoint.lon, bearing, areaRadiusKm * 0.8)
-            }
-            prevWaypoint != null && nextWaypoint != null -> {
-                // Middle waypoint: position perpendicular for maximum distance
-                val bisectorBearing = calculateBisectorBearing(
-                    prevWaypoint.lat, prevWaypoint.lon,
-                    waypoint.lat, waypoint.lon,
-                    nextWaypoint.lat, nextWaypoint.lon
-                )
-                return calculateDestination(waypoint.lat, waypoint.lon, bisectorBearing, areaRadiusKm * 0.8)
-            }
-            else -> {
-                // Single waypoint: keep at center
-                return AATLatLng(waypoint.lat, waypoint.lon)
-            }
-        }
+        return interactiveDistanceCalculator.optimizeTargetPointsForMaxDistance(waypoints)
     }
 }

@@ -2,9 +2,12 @@ package com.example.xcpro.tasks
 
 import androidx.lifecycle.ViewModel
 import com.example.xcpro.common.waypoint.SearchWaypoint
+import com.example.xcpro.tasks.core.PersistedOzParams
+import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskWaypoint
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.domain.logic.TaskAdvanceState
+import com.example.xcpro.tasks.domain.model.TaskTargetSnapshot
 import com.example.xcpro.tasks.racing.models.RacingStartPointType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Duration
@@ -64,17 +67,12 @@ class TaskSheetViewModel @Inject constructor(
 
     fun onSetTargetParam(index: Int, param: Double) {
         useCase.setTargetParam(index, param)
-        // Relay to legacy manager so map overlays stay in sync.
-        useCase.state.value.targets.getOrNull(index)?.target?.let { target ->
-            taskCoordinator.updateAATTargetPoint(index, target.lat, target.lon)
-        }
+        syncAatTargetAt(index)
     }
 
     fun onToggleTargetLock(index: Int) {
         useCase.toggleTargetLock(index)
-        useCase.state.value.targets.getOrNull(index)?.target?.let { target ->
-            taskCoordinator.updateAATTargetPoint(index, target.lat, target.lon)
-        }
+        syncAatTargetAt(index)
     }
 
     fun onAdvanceMode(mode: TaskAdvanceState.Mode) {
@@ -167,60 +165,13 @@ class TaskSheetViewModel @Inject constructor(
         val (importedTask, targets) = TaskPersistSerializer.toTask(persisted)
         taskCoordinator.setTaskType(persisted.taskType)
         taskCoordinator.clearTask()
-        importedTask.waypoints.forEach { wp ->
-            onAddWaypoint(
-                SearchWaypoint(
-                    id = wp.id,
-                    title = wp.title,
-                    subtitle = wp.subtitle,
-                    lat = wp.lat,
-                    lon = wp.lon
-                )
-            )
-        }
-        // apply targets after waypoints are present
-        if (persisted.taskType == TaskType.AAT) {
-            targets.forEach { t ->
-                useCase.setTargetParam(t.index, t.targetParam)
-                useCase.setTargetLock(t.index, t.isLocked)
-                t.target?.let { target -> taskCoordinator.updateAATTargetPoint(t.index, target.lat, target.lon) }
-            }
-        }
-        // apply OZ params where present (basic radius support)
-        persisted.waypoints.forEachIndexed { index, wp ->
-            val radius = wp.ozParams["radiusMeters"] ?: wp.ozParams["outerRadiusMeters"]
-            if (radius != null && persisted.taskType == TaskType.AAT) {
-                taskCoordinator.updateAATArea(index, radius)
-            }
-            if (persisted.taskType == TaskType.AAT) {
-                val keyholeInnerKm = wp.ozParams["innerRadiusMeters"]?.div(1000.0)
-                val angleDeg = wp.ozParams["angleDeg"]
-                val sectorOuterKm = wp.ozParams["outerRadiusMeters"]?.div(1000.0)
-                taskCoordinator.updateAATWaypointPointType(
-                    index = index,
-                    startType = null,
-                    finishType = null,
-                    turnType = null,
-                    gateWidth = radius?.div(1000.0),
-                    keyholeInnerRadius = keyholeInnerKm,
-                    keyholeAngle = angleDeg,
-                    sectorOuterRadius = sectorOuterKm
-                )
-            }
-            if (radius != null && persisted.taskType == TaskType.RACING && index > 0 && index < importedTask.waypoints.lastIndex) {
-                // best-effort: use gateWidth for turnpoints (km)
-                taskCoordinator.updateWaypointPointType(
-                    index = index,
-                    startType = null,
-                    finishType = null,
-                    turnType = null,
-                    gateWidth = radius / 1000.0,
-                    keyholeInnerRadius = null,
-                    keyholeAngle = null,
-                    faiQuadrantOuterRadius = null
-                )
-            }
-        }
+        importWaypoints(importedTask)
+        applyImportedTargets(taskType = persisted.taskType, targets = targets)
+        applyImportedObservationZones(
+            persisted = persisted,
+            taskType = persisted.taskType,
+            importedTask = importedTask
+        )
         taskCoordinator.setActiveLeg(0)
     }
 
@@ -283,6 +234,94 @@ class TaskSheetViewModel @Inject constructor(
     private fun mutate(block: () -> Unit) {
         block()
         sync()
+    }
+
+    private fun syncAatTargetAt(index: Int) {
+        useCase.state.value.targets.getOrNull(index)?.target?.let { target ->
+            taskCoordinator.updateAATTargetPoint(index, target.lat, target.lon)
+        }
+    }
+
+    private fun importWaypoints(importedTask: Task) {
+        importedTask.waypoints.forEach { waypoint ->
+            onAddWaypoint(
+                SearchWaypoint(
+                    id = waypoint.id,
+                    title = waypoint.title,
+                    subtitle = waypoint.subtitle,
+                    lat = waypoint.lat,
+                    lon = waypoint.lon
+                )
+            )
+        }
+    }
+
+    private fun applyImportedTargets(taskType: TaskType, targets: List<TaskTargetSnapshot>) {
+        if (taskType != TaskType.AAT) return
+        targets.forEach { targetSnapshot ->
+            useCase.setTargetParam(targetSnapshot.index, targetSnapshot.targetParam)
+            useCase.setTargetLock(targetSnapshot.index, targetSnapshot.isLocked)
+            targetSnapshot.target?.let { target ->
+                taskCoordinator.updateAATTargetPoint(targetSnapshot.index, target.lat, target.lon)
+            }
+        }
+    }
+
+    private fun applyImportedObservationZones(
+        persisted: TaskPersistSerializer.PersistedTask,
+        taskType: TaskType,
+        importedTask: Task
+    ) {
+        persisted.waypoints.forEachIndexed { index, waypoint ->
+            val ozParams = PersistedOzParams.from(waypoint.ozParams)
+            val radiusMeters = ozParams.effectiveRadiusMeters()
+            if (taskType == TaskType.AAT) {
+                applyAatObservationZone(index, ozParams, radiusMeters)
+            }
+            if (taskType == TaskType.RACING) {
+                applyRacingObservationZone(index, radiusMeters, importedTask)
+            }
+        }
+    }
+
+    private fun applyAatObservationZone(
+        index: Int,
+        ozParams: PersistedOzParams,
+        radiusMeters: Double?
+    ) {
+        if (radiusMeters != null) {
+            taskCoordinator.updateAATArea(index, radiusMeters)
+        }
+        taskCoordinator.updateAATWaypointPointType(
+            index = index,
+            startType = null,
+            finishType = null,
+            turnType = null,
+            gateWidth = radiusMeters?.div(1000.0),
+            keyholeInnerRadius = ozParams.innerRadiusMeters?.div(1000.0),
+            keyholeAngle = ozParams.angleDeg,
+            sectorOuterRadius = ozParams.outerRadiusMeters?.div(1000.0)
+        )
+    }
+
+    private fun applyRacingObservationZone(
+        index: Int,
+        radiusMeters: Double?,
+        importedTask: Task
+    ) {
+        if (radiusMeters == null) return
+        if (index <= 0 || index >= importedTask.waypoints.lastIndex) return
+        // best-effort: use gateWidth for turnpoints (km)
+        taskCoordinator.updateWaypointPointType(
+            index = index,
+            startType = null,
+            finishType = null,
+            turnType = null,
+            gateWidth = radiusMeters / 1000.0,
+            keyholeInnerRadius = null,
+            keyholeAngle = null,
+            faiQuadrantOuterRadius = null
+        )
     }
 
     private fun sync() {

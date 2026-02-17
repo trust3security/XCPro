@@ -7,7 +7,7 @@ This file lists known deviations from ARCHITECTURE.md and CODING_RULES.md.
 Each entry must include an issue ID, owner, and expiry date.
 
 Active remediation plan:
-- `docs/refactor/Map_Task_5of5_Finalization_Plan_2026-02-13.md`
+- `docs/refactor/Map_Task_Maintainability_5of5_Refactor_Plan_2026-02-14.md`
 
 ## Current deviations
 

@@ -41,6 +41,14 @@ class SnailTrailOverlay(
     private val metersPerPixelProvider = MapLibreMetersPerPixelProvider(map, mapView)
     private val renderPlanner = SnailTrailRenderPlanner(metersPerPixelProvider)
     private val tailBuilder = SnailTrailTailBuilder(MapLibreTailClipper(map))
+    private val tailRenderer = SnailTrailTailRenderer(
+        map = map,
+        logger = logger,
+        tailBuilder = tailBuilder,
+        metersPerPixelProvider = metersPerPixelProvider,
+        iconSizePx = com.example.xcpro.map.BlueLocationOverlay.ICON_SIZE_PX.toFloat(),
+        renderSequenceProvider = { renderSequence }
+    )
     private var tailCache: SnailTrailStyleCache? = null
 
     fun initialize() {
@@ -267,12 +275,11 @@ class SnailTrailOverlay(
             )
         }
 
-        renderTailInternal(
+        tailRenderer.renderTailInternal(
             lastPoint = filteredWithTail.lastOrNull(),
             settings = settings,
             currentLocation = currentLocation,
             currentTimeMillis = currentTimeMillis,
-            currentZoom = currentZoom,
             tailCache = tailCache,
             frameId = frameId,
             metersPerPixel = metersPerPixel,
@@ -312,112 +319,18 @@ class SnailTrailOverlay(
         frameId: Long? = null
     ) {
         if (!isInitialized) return
-        val style = map.style ?: return
-        val tailSource = style.getSourceAs<GeoJsonSource>(SnailTrailStyle.TAIL_SOURCE_ID) ?: return
-        if (settings.length == TrailLength.OFF || currentLocation == null || lastPoint == null) {
-            tailSource.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
-            return
-        }
-        updatePaletteIfNeeded(settings.type)
-        val cache = tailCache ?: return
-        val minTime = SnailTrailMath.minTimeMillis(settings.length, currentTimeMillis)
-        val renderPoints = SnailTrailMath.filterPoints(
-            points = listOf(lastPoint),
-            minTimeMillis = minTime,
+        tailRenderer.renderTail(
+            lastPoint = lastPoint,
+            settings = settings,
+            currentLocation = currentLocation,
             currentTimeMillis = currentTimeMillis,
             isCircling = isCircling,
-            settings = settings
-        )
-        val renderPoint = renderPoints.firstOrNull()
-        if (renderPoint == null) {
-            tailSource.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
-            return
-        }
-        val metersPerPixel = metersPerPixelProvider.metersPerPixel(currentLocation.latitude, currentZoom)
-        val segment = tailBuilder.build(
-            SnailTrailTailBuilder.Input(
-                lastPoint = renderPoint,
-                settings = settings,
-                currentLocation = TrailGeoPoint(currentLocation.latitude, currentLocation.longitude),
-                currentTimeMillis = currentTimeMillis,
-                styleCache = cache,
-                metersPerPixel = metersPerPixel,
-                iconSizePx = com.example.xcpro.map.BlueLocationOverlay.ICON_SIZE_PX.toFloat()
-            )
-        )
-        if (segment == null) {
-            tailSource.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
-            return
-        }
-        val tailFeature = SnailTrailFeatureBuilder.lineFeature(
-            segment.start,
-            segment.end,
-            segment.colorIndex,
-            segment.width
-        )
-        tailSource.setGeoJson(FeatureCollection.fromFeatures(listOf(tailFeature)))
-        val logId = frameId ?: renderSequence
-        logger.logSegment(
-            renderId = logId,
-            index = 0,
-            kind = "line-to-current frame=${frameId ?: -1}",
-            start = segment.start,
-            end = segment.end,
-            colorIndex = segment.colorIndex,
-            type = settings.type,
-            width = segment.width,
-            radius = null
-        )
-    }
-
-    private fun renderTailInternal(
-        lastPoint: RenderPoint?,
-        settings: TrailSettings,
-        currentLocation: LatLng?,
-        currentTimeMillis: Long,
-        currentZoom: Float,
-        tailCache: SnailTrailStyleCache?,
-        frameId: Long?,
-        metersPerPixel: Double,
-        renderId: Long?
-    ) {
-        if (lastPoint == null || currentLocation == null) return
-        val cache = tailCache ?: return
-        val style = map.style ?: return
-        val tailSource = style.getSourceAs<GeoJsonSource>(SnailTrailStyle.TAIL_SOURCE_ID) ?: return
-        val segment = tailBuilder.build(
-            SnailTrailTailBuilder.Input(
-                lastPoint = lastPoint,
-                settings = settings,
-                currentLocation = TrailGeoPoint(currentLocation.latitude, currentLocation.longitude),
-                currentTimeMillis = currentTimeMillis,
-                styleCache = cache,
-                metersPerPixel = metersPerPixel,
-                iconSizePx = com.example.xcpro.map.BlueLocationOverlay.ICON_SIZE_PX.toFloat()
-            )
-        )
-        if (segment == null) {
-            tailSource.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
-            return
-        }
-        val tailFeature = SnailTrailFeatureBuilder.lineFeature(
-            segment.start,
-            segment.end,
-            segment.colorIndex,
-            segment.width
-        )
-        tailSource.setGeoJson(FeatureCollection.fromFeatures(listOf(tailFeature)))
-        val logId = frameId ?: renderId ?: renderSequence
-        logger.logSegment(
-            renderId = logId,
-            index = 0,
-            kind = "line-to-current frame=${frameId ?: -1}",
-            start = segment.start,
-            end = segment.end,
-            colorIndex = segment.colorIndex,
-            type = settings.type,
-            width = segment.width,
-            radius = null
+            currentZoom = currentZoom,
+            tailCache = tailCache,
+            frameId = frameId,
+            updatePalette = {
+                updatePaletteIfNeeded(settings.type)
+            }
         )
     }
 

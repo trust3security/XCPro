@@ -1,4 +1,4 @@
-# ADSB.md — Live ADS‑B Internet Traffic in XCPro (OpenSky) — 15 km
+# ADSB.md — Live ADS‑B Internet Traffic in XCPro (OpenSky) — 20 km
 **v5 (AUTONOMOUS): ICAO24 identity + aircraft metadata enrichment (registration/typecode/model)**
 
 This document is written for an autonomous engineering agent (Codex).
@@ -98,8 +98,8 @@ If metadata DB is not ready:
 - show “Metadata not available yet”
 - show sync state (“Downloading…”, “Importing…”, “Last updated …”, “Error …”)
 
-### 2.4 Runtime envelope (implemented as of 2026-02-10)
-- Receive radius: 15 km around the active ADS-B center.
+### 2.4 Runtime envelope (implemented as of 2026-02-17)
+- Receive radius: 20 km around the active ADS-B center.
 - Airborne gate: altitude must be >100 ft and speed must be >40 kt.
 - Position source filter: FLARM-sourced rows (`position_source=3`) are ignored.
 - Display cap: maximum 30 displayed aircraft.
@@ -163,3 +163,42 @@ Legacy docs (superseded; keep only for historical context):
    - does not block UI thread
    - survives app restarts
 4) Markers do not flicker and update smoothly.
+
+---
+
+## 6) Deep-dive findings (2026-02-17)
+
+These findings were verified against current runtime behavior and current OpenSky metadata formats.
+
+### 6.1 Icon classification defects
+
+1. Rotorcraft category (`8`) is not authoritative in current runtime precedence.
+   - Metadata/typecode can override it to fixed-wing.
+2. Conflict policy prefers typecode over ICAO class in most cases.
+   - Helicopter ICAO class (`H*`) can still be shown as airplane icon.
+3. Helicopter typecode prefix coverage is narrow, while fixed-wing fallback is broad.
+   - This combination creates systematic helicopter -> airplane misclassification for many real typecodes.
+
+Measured impact from a 2026-02-17 classifier replay over `aircraftDatabase.csv`:
+- Helicopter ICAO-class rows: `5484`
+- Rows currently classified as non-helicopter by runtime mapper logic: `3065` (~55.9%)
+
+### 6.2 Metadata source/format mismatch risk
+
+Sync discovery prefers S3 complete snapshots (`metadata/aircraft-database-complete-YYYY-MM.csv`) first.
+Those snapshots currently differ from direct dataset assumptions:
+- May use `icaoAircraftClass` instead of `icaoAircraftType`.
+- Often use single-quoted fields.
+
+If parser/aliases are not aligned to both formats, imports can fail or lose class metadata,
+which directly lowers icon-classification quality.
+
+### 6.3 Required remediation updates
+
+1. Make non-fixed-wing categories (`8/9/10/11/12/14`) authoritative for icon family.
+2. Prevent weak fixed-wing typecode fallback from overriding explicit helicopter class/category.
+3. Update metadata parser/header mapping for both direct and complete snapshot formats.
+4. Add regression tests for:
+   - category/class/typecode conflict ordering
+   - single-quoted snapshot parsing
+   - `icaoAircraftClass` alias handling

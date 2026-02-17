@@ -14,5 +14,9 @@ internal object AircraftMetadataSyncPolicy {
     const val SOURCE_BUCKET_FALLBACK_KEY = "metadata/aircraftDatabase.csv"
     const val SOURCE_DIRECT_FALLBACK =
         "https://opensky-network.org/datasets/metadata/aircraftDatabase.csv"
+
+    // Guard against replacing a healthy active table with a malformed/partial import.
+    const val IMPORT_HEALTH_GUARD_MIN_BASELINE_ROWS = 1_000
+    const val IMPORT_HEALTH_GUARD_MIN_RATIO = 0.20
 }
 

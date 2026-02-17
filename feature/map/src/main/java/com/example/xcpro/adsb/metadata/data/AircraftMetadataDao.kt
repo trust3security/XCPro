@@ -81,7 +81,10 @@ interface AircraftMetadataDao {
                 excluded.quality_score > adsb_aircraft_metadata_staging.quality_score OR
                 (excluded.quality_score = adsb_aircraft_metadata_staging.quality_score AND
                  excluded.source_row_order >= adsb_aircraft_metadata_staging.source_row_order)
-            ) THEN excluded.icao_aircraft_type ELSE adsb_aircraft_metadata_staging.icao_aircraft_type END,
+            ) THEN COALESCE(
+                excluded.icao_aircraft_type,
+                adsb_aircraft_metadata_staging.icao_aircraft_type
+            ) ELSE adsb_aircraft_metadata_staging.icao_aircraft_type END,
             quality_score = CASE WHEN (
                 excluded.quality_score > adsb_aircraft_metadata_staging.quality_score OR
                 (excluded.quality_score = adsb_aircraft_metadata_staging.quality_score AND
@@ -110,6 +113,9 @@ interface AircraftMetadataDao {
 
     @Query("SELECT COUNT(*) FROM adsb_aircraft_metadata_staging")
     suspend fun countStaging(): Int
+
+    @Query("SELECT COUNT(*) FROM adsb_aircraft_metadata")
+    suspend fun countActive(): Int
 
     @Query(
         """

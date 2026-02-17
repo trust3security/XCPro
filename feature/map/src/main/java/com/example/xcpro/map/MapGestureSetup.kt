@@ -52,6 +52,7 @@ object MapGestureSetup {
         onUpdateAATTargetPoint: (Int, Double, Double) -> Unit,
         onSyncTaskVisuals: () -> Unit,
         onMapTap: (LatLng) -> Unit = {},
+        onMapLongPress: (LatLng) -> Unit = {},
         gestureRegions: List<MapGestureRegion> = emptyList(),
         modifier: Modifier = Modifier
     ) {
@@ -114,6 +115,7 @@ object MapGestureSetup {
                 taskGestureHandler = taskGestureHandler,
                 gestureRegions = gestureRegions,
                 onMapTap = onMapTap,
+                onMapLongPress = onMapLongPress,
                 mapViewPixelRatio = pixelRatio,
                 modifier = Modifier.fillMaxSize()
             )

@@ -2,19 +2,14 @@ package com.example.xcpro.tasks.aat.map
 
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.geometry.Offset
-import android.graphics.PointF
 import com.example.xcpro.core.time.Clock
 import org.maplibre.android.maps.MapLibreMap
-import org.maplibre.android.geometry.LatLng
 import com.example.xcpro.tasks.aat.models.AATWaypoint
 import com.example.xcpro.tasks.aat.models.AATLatLng
-import com.example.xcpro.tasks.aat.calculations.AATMathUtils
-import kotlinx.coroutines.delay
-import kotlin.math.*
 
 /**
  * AAT Map Interaction Handler - Phase 1 Integration
@@ -80,7 +75,7 @@ class AATMapInteractionHandler(
     // Drag state tracking
     private var isDragging = false
     private var draggedPointIndex: Int? = null
-    private var dragStartPoint: AATLatLng? = null
+    private val movablePointManager = AATMovablePointManager()
 
     /**
      * Attach to MapLibre map instance
@@ -139,9 +134,10 @@ class AATMapInteractionHandler(
 
 
         // Find which AAT area was tapped
-        val tappedArea = findTappedAATArea(
-            tapDetails.mapCoordinates.latitude,
-            tapDetails.mapCoordinates.longitude
+        val tappedArea = AATAreaTapDetector.findTappedArea(
+            waypoints = aatWaypoints,
+            lat = tapDetails.mapCoordinates.latitude,
+            lon = tapDetails.mapCoordinates.longitude
         )
 
         if (tappedArea != null) {
@@ -207,14 +203,6 @@ class AATMapInteractionHandler(
         if (hitPointIndex != null) {
             isDragging = true
             draggedPointIndex = hitPointIndex
-
-            val converter = coordinateConverter
-            if (converter != null) {
-                val startLatLng = converter.screenToMap(screenX, screenY)
-                if (startLatLng != null) {
-                    dragStartPoint = AATLatLng(startLatLng.latitude, startLatLng.longitude)
-                }
-            }
         }
     }
 
@@ -235,7 +223,6 @@ class AATMapInteractionHandler(
         //  FIX: Let AATMovablePointManager handle validation properly
         // It knows about all geometry types (cylinder, sector, keyhole)
         val waypoint = aatWaypoints.getOrNull(draggedPointIndex!!) ?: return
-        val movablePointManager = AATMovablePointManager()
         val validatedWaypoint = movablePointManager.moveTargetPoint(
             waypoint,
             newPosition.latitude,
@@ -257,101 +244,12 @@ class AATMapInteractionHandler(
             // Just clean up state
             isDragging = false
             draggedPointIndex = null
-            dragStartPoint = null
         }
     }
 
     //  REMOVED: applyAreaBoundaryConstraints() - Was causing the restriction bug!
     // This function snapped pins to center when outside bounds, creating artificial restrictions.
     // Now using AATMovablePointManager.moveTargetPoint() which handles all geometry types correctly.
-
-    /**
-     * Calculate bearing from point1 to point2 in degrees (0-360)
-     */
-    private fun calculateBearing(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
-        val lat1Rad = Math.toRadians(lat1)
-        val lat2Rad = Math.toRadians(lat2)
-        val dLon = Math.toRadians(lon2 - lon1)
-
-        val y = sin(dLon) * cos(lat2Rad)
-        val x = cos(lat1Rad) * sin(lat2Rad) - sin(lat1Rad) * cos(lat2Rad) * cos(dLon)
-
-        val bearing = Math.toDegrees(atan2(y, x))
-        return (bearing + 360.0) % 360.0
-    }
-
-    /**
-     * Check if an angle falls within a sector defined by start and end angles
-     */
-    private fun isAngleInSector(angle: Double, startAngle: Double, endAngle: Double): Boolean {
-        val normalizedAngle = (angle + 360.0) % 360.0
-        val normalizedStart = (startAngle + 360.0) % 360.0
-        val normalizedEnd = (endAngle + 360.0) % 360.0
-
-        return if (normalizedEnd >= normalizedStart) {
-            // Normal case: sector doesn't cross 0
-            normalizedAngle >= normalizedStart && normalizedAngle <= normalizedEnd
-        } else {
-            // Sector crosses 0 (e.g., 350 to 10)
-            normalizedAngle >= normalizedStart || normalizedAngle <= normalizedEnd
-        }
-    }
-
-    /**
-     * Find which AAT area contains the given coordinates
-     *  FIX: Proper geometry-aware checking for all turnpoint types (Circle, Sector, Keyhole)
-     * @return Pair of (areaIndex, waypoint) or null if not found
-     */
-    private fun findTappedAATArea(lat: Double, lon: Double): Pair<Int, AATWaypoint>? {
-        aatWaypoints.forEachIndexed { index, waypoint ->
-            val distance = AATMathUtils.calculateDistanceKm(lat, lon, waypoint.lat, waypoint.lon)
-
-            //  FIX: Check area based on actual geometry shape
-            val isInArea = when (waypoint.assignedArea.shape) {
-                com.example.xcpro.tasks.aat.models.AATAreaShape.CIRCLE -> {
-                    // Simple circle check
-                    val radiusKm = waypoint.assignedArea.radiusMeters / 1000.0
-                    distance <= radiusKm
-                }
-                com.example.xcpro.tasks.aat.models.AATAreaShape.SECTOR -> {
-                    // Sector or Keyhole: Check if in inner cylinder OR outer sector
-                    val innerRadiusKm = waypoint.assignedArea.innerRadiusMeters / 1000.0
-                    val outerRadiusKm = waypoint.assignedArea.outerRadiusMeters / 1000.0
-
-                    if (innerRadiusKm > 0.0) {
-                        // KEYHOLE: Check inner cylinder OR sector
-                        if (distance <= innerRadiusKm) {
-                            true // Inside inner cylinder (always valid)
-                        } else if (distance <= outerRadiusKm) {
-                            // Check if within sector angles
-                            val bearing = calculateBearing(waypoint.lat, waypoint.lon, lat, lon)
-                            isAngleInSector(bearing, waypoint.assignedArea.startAngleDegrees, waypoint.assignedArea.endAngleDegrees)
-                        } else {
-                            false
-                        }
-                    } else {
-                        // SECTOR: Check if within outer radius AND sector angles
-                        if (distance <= outerRadiusKm) {
-                            val bearing = calculateBearing(waypoint.lat, waypoint.lon, lat, lon)
-                            isAngleInSector(bearing, waypoint.assignedArea.startAngleDegrees, waypoint.assignedArea.endAngleDegrees)
-                        } else {
-                            false
-                        }
-                    }
-                }
-                com.example.xcpro.tasks.aat.models.AATAreaShape.LINE -> {
-                    // Line check (for start/finish)
-                    val halfWidth = (waypoint.assignedArea.lineWidthMeters / 1000.0) / 2.0
-                    distance <= halfWidth
-                }
-            }
-
-            if (isInArea) {
-                return Pair(index, waypoint)
-            }
-        }
-        return null
-    }
 
     /**
      * Get current edit mode state

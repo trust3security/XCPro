@@ -44,10 +44,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.SharingStarted
@@ -61,8 +58,8 @@ class MapScreenViewModel @Inject constructor(
     private val mapStyleUseCase: MapStyleUseCase,
     private val unitsUseCase: UnitsPreferencesUseCase,
     private val mapWaypointsUseCase: MapWaypointsUseCase,
-    val mapAirspaceUseCase: AirspaceUseCase,
-    val mapWaypointFilesUseCase: WaypointFilesUseCase,
+    private val mapAirspaceUseCase: AirspaceUseCase,
+    private val mapWaypointFilesUseCase: WaypointFilesUseCase,
     private val gliderConfigUseCase: GliderConfigUseCase,
     private val sensorsUseCase: MapSensorsUseCase,
     private val flightDataUseCase: FlightDataUseCase,
@@ -88,13 +85,21 @@ class MapScreenViewModel @Inject constructor(
     val mapState: MapStateReader = mapStateStore
     val mapStateActions: MapStateActions = MapStateActionsDelegate(mapStateStore)
     private val featureFlags = mapFeatureFlagsUseCase.featureFlags
-    val mapFeatureFlags = featureFlags
     val cardPreferences = mapCardPreferencesUseCase.cardPreferences
 
     private val uiControllers = mapUiControllersUseCase.create(viewModelScope)
+    val runtimeDependencies: MapScreenRuntimeDependencies = MapScreenRuntimeDependencies(
+        flightDataManager = uiControllers.flightDataManager,
+        orientationManager = uiControllers.orientationManager,
+        sensorsUseCase = sensorsUseCase,
+        tasksUseCase = mapTasksUseCase,
+        airspaceUseCase = mapAirspaceUseCase,
+        waypointFilesUseCase = mapWaypointFilesUseCase,
+        featureFlags = featureFlags
+    )
     private val ballastController = uiControllers.ballastController
-    val flightDataManager: FlightDataManager = uiControllers.flightDataManager
-    val orientationManager: MapOrientationManager = uiControllers.orientationManager
+    private val flightDataManager: FlightDataManager = runtimeDependencies.flightDataManager
+    private val orientationManager: MapOrientationManager = runtimeDependencies.orientationManager
     val windArrowState: StateFlow<WindArrowUiState> =
         createWindArrowState(
             scope = viewModelScope,
@@ -112,23 +117,12 @@ class MapScreenViewModel @Inject constructor(
     val replaySessionState: StateFlow<SessionState> = mapReplayUseCase.replaySession
     val showVarioDemoFab: Boolean = featureFlags.showVarioDemoFab
     val showRacingReplayFab: Boolean = featureFlags.showRacingReplayFab
-    val gpsStatusFlow: StateFlow<GpsStatusUiModel> = sensorsUseCase.gpsStatusFlow
-        .map { it.toUiModel() }
-        .eagerState(scope = viewModelScope, initial = GpsStatusUiModel.Searching)
-    val suppressLiveGps: StateFlow<Boolean> = replaySessionState
-        .map { it.selection != null }
-        .eagerState(scope = viewModelScope, initial = replaySessionState.value.selection != null)
-    val allowSensorStart: StateFlow<Boolean> = replaySessionState
-        .map { it.selection == null || it.status == SessionStatus.IDLE }
-        .eagerState(
-            scope = viewModelScope,
-            initial = replaySessionState.value.selection == null ||
-                replaySessionState.value.status == SessionStatus.IDLE
-        )
-    val mapLocation: StateFlow<MapLocationUiModel?> =
-        flightDataUseCase.flightData
-            .map { it?.gps?.toUiModel() }
-            .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    val gpsStatusFlow: StateFlow<GpsStatusUiModel> = createGpsStatusUiState(viewModelScope, sensorsUseCase)
+    private val replaySensorGates: MapReplaySensorGateStates =
+        createReplaySensorGateStates(viewModelScope, replaySessionState)
+    val suppressLiveGps: StateFlow<Boolean> = replaySensorGates.suppressLiveGps
+    val allowSensorStart: StateFlow<Boolean> = replaySensorGates.allowSensorStart
+    val mapLocation: StateFlow<MapLocationUiModel?> = createMapLocationState(viewModelScope, flightDataUseCase)
     val ognTargets: StateFlow<List<OgnTrafficTarget>> = ognTrafficUseCase.targets
     val ognSnapshot: StateFlow<OgnTrafficSnapshot> = ognTrafficUseCase.snapshot
     val ognOverlayEnabled: StateFlow<Boolean> = ognTrafficUseCase.overlayEnabled
@@ -170,9 +164,8 @@ class MapScreenViewModel @Inject constructor(
     private val _liveDataReady = MutableStateFlow(false)
     private val _isMapVisible = MutableStateFlow(false)
     private val _isAATEditMode = MutableStateFlow(false)
-    val cardHydrationReady: StateFlow<Boolean> = combine(_containerReady, _liveDataReady) { container, data ->
-        container && data
-    }.eagerState(scope = viewModelScope, initial = false)
+    val cardHydrationReady: StateFlow<Boolean> =
+        createCardHydrationReadyState(viewModelScope, _containerReady, _liveDataReady)
 
     private val flightDataUiAdapter = mapReplayUseCase.createFlightDataUiAdapter(
         scope = viewModelScope,
@@ -190,7 +183,7 @@ class MapScreenViewModel @Inject constructor(
 
     private val replayCoordinator = mapReplayUseCase.createReplayCoordinator(
         flightDataFlow = flightDataUseCase.flightData,
-        featureFlags = featureFlags,
+        featureFlags = runtimeDependencies.featureFlags,
         mapStateStore = mapStateStore,
         mapStateActions = mapStateActions,
         uiEffects = _uiEffects,
@@ -224,22 +217,8 @@ class MapScreenViewModel @Inject constructor(
         adsbTrafficUseCase = adsbTrafficUseCase
     )
 
-    init {
-        mapStateStore.setTrailSettings(trailSettingsUseCase.getSettings())
-        mapStateStore.setDisplaySmoothingProfile(featureFlags.defaultDisplaySmoothingProfile)
-        viewModelScope.launch {
-            adsbTrafficUseCase.bootstrapMetadataSync()
-        }
-        observeTrailSettings()
-        trafficCoordinator.bind()
-        flightDataUiAdapter.start()
-        replayCoordinator.start()
-    }
-
     val isAATEditMode: StateFlow<Boolean> = _isAATEditMode.asStateFlow()
     val taskType: StateFlow<TaskType> = mapTasksUseCase.taskTypeFlow
-    val mapSensorsRuntimeUseCase: MapSensorsUseCase = sensorsUseCase
-    val mapTasksRuntimeUseCase: MapTasksUseCase = mapTasksUseCase
     private val unitsState = unitsUseCase.unitsFlow.inVm(
         scope = viewModelScope,
         initial = UnitsPreferences()
@@ -262,14 +241,29 @@ class MapScreenViewModel @Inject constructor(
     }
 
     init {
+        mapStateStore.setTrailSettings(trailSettingsUseCase.getSettings())
+        mapStateStore.setDisplaySmoothingProfile(featureFlags.defaultDisplaySmoothingProfile)
+        bindMapStateObservers(
+            scope = viewModelScope,
+            unitsState = unitsState,
+            uiState = _uiState,
+            flightDataManager = flightDataManager,
+            gliderConfigUseCase = gliderConfigUseCase,
+            qnhUseCase = qnhUseCase,
+            trailSettingsUseCase = trailSettingsUseCase,
+            mapStateStore = mapStateStore
+        )
+        trafficCoordinator.bind()
+        flightDataUiAdapter.start()
+        replayCoordinator.start()
+        viewModelScope.launch {
+            adsbTrafficUseCase.bootstrapMetadataSync()
+        }
         if (featureFlags.loadSavedTasksOnInit) {
             viewModelScope.launch {
                 mapTasksUseCase.loadSavedTasks()
             }
         }
-        observeUnits()
-        observeGliderConfig()
-        observeQnhCalibration()
         onEvent(MapUiEvent.RefreshWaypoints)
     }
 
@@ -295,25 +289,6 @@ class MapScreenViewModel @Inject constructor(
     }
 
     fun onEvent(event: MapUiEvent) = uiEventHandler.onEvent(event)
-
-    private fun observeUnits() = unitsState
-        .onEach { preferences ->
-            _uiState.update { it.copy(unitsPreferences = preferences) }
-            flightDataManager.updateUnitsPreferences(preferences)
-        }
-        .launchIn(viewModelScope)
-
-    private fun observeGliderConfig() = gliderConfigUseCase.config
-        .onEach { config -> _uiState.update { it.copy(hideBallastPill = config.hideBallastPill) } }
-        .launchIn(viewModelScope)
-
-    private fun observeQnhCalibration() = qnhUseCase.calibrationState
-        .onEach { state -> _uiState.update { it.copy(qnhCalibrationState = state) } }
-        .launchIn(viewModelScope)
-
-    private fun observeTrailSettings() = trailSettingsUseCase.settingsFlow
-        .onEach { settings -> mapStateStore.setTrailSettings(settings) }
-        .launchIn(viewModelScope)
 
     fun setMapVisible(isVisible: Boolean) = trafficCoordinator.setMapVisible(isVisible)
     fun onToggleOgnTraffic() = trafficCoordinator.onToggleOgnTraffic()

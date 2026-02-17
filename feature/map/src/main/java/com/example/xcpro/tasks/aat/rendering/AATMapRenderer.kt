@@ -299,85 +299,10 @@ internal class AATMapRenderer {
      * @param editModeWaypointIndex Optional index of waypoint in edit mode (shows red dot)
      */
     fun plotTargetPointPins(style: Style, waypoints: List<AATWaypoint>, editModeWaypointIndex: Int? = null) {
-        try {
-            val features = waypoints.mapIndexed { index, waypoint ->
-                val isEditMode = editModeWaypointIndex == index
-                """
-                {
-                    "type": "Feature",
-                    "properties": {
-                        "title": "${waypoint.title} Target Point",
-                        "role": "${waypoint.role.name}",
-                        "index": $index,
-                        "draggable": true,
-                        "type": "target_point",
-                        "editMode": $isEditMode
-                    },
-                    "geometry": {
-                        "type": "Point",
-                        "coordinates": [${waypoint.targetPoint.longitude}, ${waypoint.targetPoint.latitude}]
-                    }
-                }
-                """.trimIndent()
-            }
-
-            val geoJson = """
-            {
-                "type": "FeatureCollection",
-                "features": [${features.joinToString(",")}]
-            }
-            """.trimIndent()
-
-            if (style.getSource("aat-target-points") == null) {
-                style.addSource(GeoJsonSource("aat-target-points", geoJson))
-            } else {
-                val existingSource = style.getSourceAs<GeoJsonSource>("aat-target-points")
-                existingSource?.setGeoJson(geoJson)
-            }
-
-            // Always recreate layer to apply edit mode color and size changes
-            try {
-                if (style.getLayer("aat-target-points-layer") != null) {
-                    style.removeLayer("aat-target-points-layer")
-                }
-            } catch (e: Exception) {
-                // Layer doesn't exist, ignore
-            }
-
-            // Color logic: START always green, edit mode red, finish red, turnpoint blue
-            val colorExpression = Expression.switchCase(
-                // FIRST: Check if START - always show GREEN
-                Expression.eq(Expression.get("role"), Expression.literal("START")),
-                Expression.color("#388E3C".toColorInt()), // GREEN for start
-                // SECOND: Check if in edit mode - show RED
-                Expression.eq(Expression.get("editMode"), Expression.literal(true)),
-                Expression.color("#FF0000".toColorInt()), // RED for edit mode
-                // THIRD: Check role for finish - show red
-                Expression.eq(Expression.get("role"), Expression.literal("FINISH")),
-                Expression.color("#F44336".toColorInt()), // Red for finish
-                // DEFAULT: BLUE for turnpoint
-                Expression.color("#2196F3".toColorInt())  // Blue for turnpoint
-            )
-
-            // Size logic: 4f in edit mode for easier dragging, 2f otherwise
-            val radiusExpression = Expression.switchCase(
-                Expression.eq(Expression.get("editMode"), Expression.literal(true)),
-                Expression.literal(4f), // Larger in edit mode
-                Expression.literal(2f)  // Normal size otherwise
-            )
-
-            style.addLayer(
-                CircleLayer("aat-target-points-layer", "aat-target-points")
-                    .withProperties(
-                        PropertyFactory.circleRadius(radiusExpression), // Dynamic size based on edit mode
-                        PropertyFactory.circleColor(colorExpression),
-                        PropertyFactory.circleStrokeWidth(1f),
-                        PropertyFactory.circleStrokeColor("#FFFFFF"),
-                        PropertyFactory.circleOpacity(0.9f)
-                    )
-            )
-
-        } catch (e: Exception) {
-        }
+        AATTargetPointPinRenderer.plotTargetPointPins(
+            style = style,
+            waypoints = waypoints,
+            editModeWaypointIndex = editModeWaypointIndex
+        )
     }
 }

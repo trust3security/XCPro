@@ -3,6 +3,9 @@ package com.example.xcpro.tasks
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.TaskWaypoint
+import com.example.xcpro.tasks.core.PersistedOzParams
+import com.example.xcpro.tasks.core.TargetStateCustomParams
+import com.example.xcpro.tasks.core.TaskWaypointParamKeys
 import com.example.xcpro.tasks.core.WaypointRole
 import com.example.xcpro.tasks.domain.model.TaskTargetSnapshot
 import com.google.gson.Gson
@@ -72,14 +75,16 @@ object TaskPersistSerializer {
                     lat = p.lat,
                     lon = p.lon,
                     role = p.role,
-                    customParameters = mapOf<String, Any>(
-                        "targetParam" to (p.targetParam ?: 0.5),
-                        "targetLocked" to (p.targetLocked ?: false),
-                        "targetLat" to (p.targetLat ?: p.lat),
-                        "targetLon" to (p.targetLon ?: p.lon),
-                        "ozType" to (p.ozType ?: ""),
-                        "ozParams" to (p.ozParams as Any)
-                    )
+                    customParameters = mutableMapOf<String, Any>().apply {
+                        TargetStateCustomParams(
+                            targetParam = p.targetParam ?: 0.5,
+                            targetLocked = p.targetLocked ?: false,
+                            targetLat = p.targetLat ?: p.lat,
+                            targetLon = p.targetLon ?: p.lon
+                        ).applyTo(this)
+                        this[TaskWaypointParamKeys.OZ_TYPE] = p.ozType ?: ""
+                        this[TaskWaypointParamKeys.OZ_PARAMS] = p.ozParams as Any
+                    }
                 )
             }
         )
@@ -107,16 +112,23 @@ object TaskPersistSerializer {
     }
 
     private fun defaultOzParams(taskType: TaskType, role: WaypointRole): Map<String, Double?> = when (role) {
-        WaypointRole.START -> mapOf("lengthMeters" to 1000.0, "widthMeters" to 200.0)
-        WaypointRole.FINISH -> mapOf("radiusMeters" to 3000.0)
+        WaypointRole.START -> PersistedOzParams(
+            lengthMeters = 1000.0,
+            widthMeters = 200.0
+        ).toMap()
+        WaypointRole.FINISH -> PersistedOzParams(
+            radiusMeters = 3000.0
+        ).toMap()
         WaypointRole.TURNPOINT, WaypointRole.OPTIONAL -> {
-            if (taskType == TaskType.AAT) mapOf(
-                "radiusMeters" to 5000.0,
-                "outerRadiusMeters" to 5000.0,
-                "innerRadiusMeters" to 0.0,
-                "angleDeg" to 90.0
-            )
-            else mapOf("radiusMeters" to 500.0)
+            if (taskType == TaskType.AAT) PersistedOzParams(
+                radiusMeters = 5000.0,
+                outerRadiusMeters = 5000.0,
+                innerRadiusMeters = 0.0,
+                angleDeg = 90.0
+            ).toMap()
+            else PersistedOzParams(
+                radiusMeters = 500.0
+            ).toMap()
         }
     }
 }

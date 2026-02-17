@@ -15,14 +15,15 @@ This file is the single source of truth for OGN protocol behavior.
 - Transport: TCP (line-oriented text)
 
 Login format (receive-only):
-user XCPro pass -1 vers XCPro 0.1 filter r/<lat>/<lon>/50
+user OGNXC1 pass <APRS_PASSCODE> vers XCPro 0.1 filter r/<lat>/<lon>/150
 
 ---
 
 ## Filtering Strategy
-- Server-side: radius filter r/<lat>/<lon>/50
-- Client-side: haversine distance <= 50 km
-- Stale warning: 45 seconds
+- Center source: ownship/user GPS position
+- Server-side: radius filter r/<lat>/<lon>/150
+- Client-side: haversine distance <= 150 km
+- Stale warning: 60 seconds (visual fade)
 - Eviction: 120 seconds
 
 ---
@@ -62,7 +63,7 @@ Drop packets with:
 
 ## Required Tests
 - Parse canonical OGN example line correctly.
-- Haversine distance thresholds: 49.9 / 50.0 / 50.1 km.
+- Haversine distance thresholds: 149.9 / 150.0 / 150.1 km.
 - Stale eviction timing.
 - Duplicate ID update replaces prior target.
 

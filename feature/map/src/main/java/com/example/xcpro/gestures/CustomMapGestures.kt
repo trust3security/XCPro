@@ -26,6 +26,7 @@ private const val SINGLE_FINGER_ZOOM_FACTOR = 0.003
 private const val SINGLE_FINGER_DRAG_MIN_PX = 2f
 private const val TAP_MAX_DURATION_MS = 300L
 private const val TAP_MAX_MOVE_PX = 14f
+private const val LONG_PRESS_MIN_DURATION_MS = 550L
 
 @Composable
 fun CustomMapGestureHandler(
@@ -41,6 +42,7 @@ fun CustomMapGestureHandler(
     taskGestureHandler: TaskGestureHandler? = null,
     gestureRegions: List<MapGestureRegion> = emptyList(),
     onMapTap: (org.maplibre.android.geometry.LatLng) -> Unit = {},
+    onMapLongPress: (org.maplibre.android.geometry.LatLng) -> Unit = {},
     mapViewPixelRatio: Float = 0f,
     modifier: Modifier = Modifier
 ) {
@@ -277,14 +279,22 @@ fun CustomMapGestureHandler(
                         !handledGesture &&
                         gestureDurationMs <= TAP_MAX_DURATION_MS &&
                         maxDistanceFromStartPx <= TAP_MAX_MOVE_PX
-                    if (isTap) {
+                    val isLongPress = initialFingerCount.value == 1 &&
+                        !handledGesture &&
+                        gestureDurationMs >= LONG_PRESS_MIN_DURATION_MS &&
+                        maxDistanceFromStartPx <= TAP_MAX_MOVE_PX
+                    if (isTap || isLongPress) {
                         val tapPoint = android.graphics.PointF(
                             gestureStartPosition.value.x,
                             gestureStartPosition.value.y
                         )
                         val tapLatLng = mapLibreMap?.projection?.fromScreenLocation(tapPoint)
                         if (tapLatLng != null) {
-                            onMapTap(tapLatLng)
+                            if (isLongPress) {
+                                onMapLongPress(tapLatLng)
+                            } else {
+                                onMapTap(tapLatLng)
+                            }
                         }
                     }
                 }

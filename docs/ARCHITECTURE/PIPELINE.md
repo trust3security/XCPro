@@ -159,6 +159,17 @@ OGN icon size settings path:
 - `feature/map/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
   - Updates SymbolLayer `iconSize` dynamically from configured pixel size.
 
+OGN lifecycle/position semantics:
+- `feature/map/src/main/java/com/example/xcpro/map/MapScreenTrafficCoordinator.kt`
+  - Streaming enable is driven by `allowSensorStart && mapVisible && ognOverlayEnabled`.
+  - Query center updates are GPS-driven from `mapLocation` (user position), not camera center.
+- `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficRepository.kt`
+  - Uses APRS radius filtering and client-side haversine filtering at 150 km radius
+    (300 km diameter contract around user position).
+  - If no center is available yet, repository waits before opening the stream.
+- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
+  - OGN overlay renders `emptyList()` when overlay preference is disabled.
+
 ADS-b icon size settings path:
 - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficPreferencesRepository.kt`
   - SSOT for ADS-b overlay enabled + icon size preferences.
@@ -196,6 +207,30 @@ ADS-b lifecycle/visibility semantics:
   - Interpolation is visual-only and does not mutate repository SSOT.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
   - ADS-b overlay renders `emptyList()` when overlay preference is disabled.
+
+Forecast overlay (SkySight-backed) path:
+- `feature/map/src/main/java/com/example/xcpro/forecast/ForecastPreferencesRepository.kt`
+  - SSOT for forecast overlay preferences (`enabled`, `opacity`, `windOverlayScale`, `windDisplayMode`, `autoTimeEnabled`, `selectedParameterId`, `selectedTimeUtcMs`, `selectedRegion`).
+- `feature/map/src/main/java/com/example/xcpro/di/ForecastModule.kt`
+  - Binds forecast ports to `SkySightForecastProviderAdapter` in production runtime.
+- `feature/map/src/main/java/com/example/xcpro/forecast/SkySightForecastProviderAdapter.kt`
+  - Adapter for SkySight catalog/tile/legend/value contracts.
+  - Resolves region-aware time slots, per-parameter tile URL formats, source-layer candidates, and point fields.
+- `feature/map/src/main/java/com/example/xcpro/forecast/FakeForecastProviderAdapter.kt`
+  - Test utility adapter for unit tests and local contract validation only.
+- `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayRepository.kt`
+  - Composes prefs + provider ports into overlay-ready state and point-query results.
+  - Maintains last-good tile/legend with fatal-vs-warning error separation.
+- `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayViewModel.kt`
+  - ViewModel-intent boundary for enable/parameter/time/opacity and long-press point query.
+- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
+  - Collects forecast state, opens forecast sheet, dispatches long-press point queries (disabled during AAT edit mode), and renders callout/status.
+- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
+  - Runtime owner for forecast raster overlay lifecycle and style-reload reapplication.
+- `feature/map/src/main/java/com/example/xcpro/map/ForecastRasterOverlay.kt`
+  - MapLibre runtime controller for forecast vector layers.
+  - Supports indexed-fill overlays and wind-point overlays with branch-specific layer cleanup.
+  - Wind-point rendering supports `ARROW` and `BARB` display modes from forecast preferences SSOT.
 
 ## 5A) Cards (dfcards-library) sub-pipeline
 

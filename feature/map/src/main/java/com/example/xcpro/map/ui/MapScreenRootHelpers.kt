@@ -7,16 +7,22 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.xcpro.core.common.geometry.DensityScale
+import com.example.xcpro.core.common.geometry.OffsetPx
 import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.map.MapCameraEffects
 import com.example.xcpro.map.MapCameraManager
 import com.example.xcpro.map.MapOverlayManager
 import com.example.xcpro.map.MapScreenViewModel
+import com.example.xcpro.map.widgets.MapWidgetId
+import com.example.xcpro.map.widgets.MapWidgetLayoutViewModel
 import com.example.xcpro.map.widgets.MapWidgetOffsets
 import com.example.xcpro.variometer.layout.VariometerUiState
 import kotlinx.coroutines.flow.collect
@@ -34,6 +40,59 @@ internal data class VariometerLayoutState(
     val minSizePx: Float,
     val maxSizePx: Float
 )
+
+internal data class MapScreenWidgetLayoutBinding(
+    val screenWidthPx: Float,
+    val screenHeightPx: Float,
+    val hamburgerOffsetState: MutableState<Offset>,
+    val flightModeOffsetState: MutableState<Offset>,
+    val ballastOffsetState: MutableState<Offset>,
+    val onHamburgerOffsetChange: (Offset) -> Unit,
+    val onFlightModeOffsetChange: (Offset) -> Unit,
+    val onBallastOffsetChange: (Offset) -> Unit
+)
+
+@Composable
+internal fun rememberMapScreenWidgetLayoutBinding(
+    density: Density
+): MapScreenWidgetLayoutBinding {
+    val screenWidthPx = with(density) { LocalConfiguration.current.screenWidthDp.dp.toPx() }
+    val screenHeightPx = with(density) { LocalConfiguration.current.screenHeightDp.dp.toPx() }
+    val widgetLayoutViewModel: MapWidgetLayoutViewModel = hiltViewModel()
+    val densityScale = remember(density) { DensityScale(density = density.density, fontScale = density.fontScale) }
+    val widgetOffsets by widgetLayoutViewModel.offsets.collectAsStateWithLifecycle()
+    LaunchedEffect(screenWidthPx, screenHeightPx, densityScale) {
+        widgetLayoutViewModel.loadLayout(screenWidthPx, screenHeightPx, densityScale)
+    }
+    val resolvedWidgetOffsets = widgetOffsets ?: MapWidgetOffsets(
+        sideHamburger = OffsetPx.Zero,
+        flightMode = OffsetPx.Zero,
+        ballast = OffsetPx.Zero
+    )
+    val offsetStates = rememberMapWidgetOffsets(resolvedWidgetOffsets)
+    val onHamburgerOffsetChange: (Offset) -> Unit = { offset ->
+        offsetStates.hamburgerOffset.value = offset
+        widgetLayoutViewModel.updateOffset(MapWidgetId.SIDE_HAMBURGER, offset.toOffsetPx())
+    }
+    val onFlightModeOffsetChange: (Offset) -> Unit = { offset ->
+        offsetStates.flightModeOffset.value = offset
+        widgetLayoutViewModel.updateOffset(MapWidgetId.FLIGHT_MODE, offset.toOffsetPx())
+    }
+    val onBallastOffsetChange: (Offset) -> Unit = { offset ->
+        offsetStates.ballastOffset.value = offset
+        widgetLayoutViewModel.updateOffset(MapWidgetId.BALLAST, offset.toOffsetPx())
+    }
+    return MapScreenWidgetLayoutBinding(
+        screenWidthPx = screenWidthPx,
+        screenHeightPx = screenHeightPx,
+        hamburgerOffsetState = offsetStates.hamburgerOffset,
+        flightModeOffsetState = offsetStates.flightModeOffset,
+        ballastOffsetState = offsetStates.ballastOffset,
+        onHamburgerOffsetChange = onHamburgerOffsetChange,
+        onFlightModeOffsetChange = onFlightModeOffsetChange,
+        onBallastOffsetChange = onBallastOffsetChange
+    )
+}
 
 @Composable
 internal fun rememberMapWidgetOffsets(

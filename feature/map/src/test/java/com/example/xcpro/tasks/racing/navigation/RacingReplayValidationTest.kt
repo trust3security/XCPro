@@ -17,6 +17,13 @@ class RacingReplayValidationTest {
 
     private val engine = RacingNavigationEngine()
 
+    data class ReplayStepTrace(
+        val index: Int,
+        val status: RacingNavigationStatus,
+        val currentLegIndex: Int,
+        val eventType: RacingNavigationEventType?
+    )
+
     @Test
     fun replayPathTriggersStartTurnFinishInOrder() {
         val task = buildSimpleTask()
@@ -40,6 +47,22 @@ class RacingReplayValidationTest {
         assertTrue(firstRunEvents[2].timestampMillis >= firstRunEvents[1].timestampMillis)
     }
 
+    @Test
+    fun replayStateTrace_isDeterministicAcrossRepeatedRuns() {
+        val task = buildSimpleTask()
+        val resource = javaClass.classLoader?.getResourceAsStream(REPLAY_RESOURCE)
+            ?: error("Missing replay fixture: $REPLAY_RESOURCE")
+        val parser = IgcParser(FakeClock(wallMs = 0L))
+        val log = parser.parse(resource)
+        assertTrue("Expected IGC points", log.points.isNotEmpty())
+
+        val firstTrace = replayStateTrace(task, log.points)
+        val secondTrace = replayStateTrace(task, log.points)
+
+        assertEquals(firstTrace, secondTrace)
+        assertTrue(firstTrace.any { it.eventType != null })
+    }
+
     private fun replayEvents(
         task: SimpleRacingTask,
         points: List<IgcPoint>
@@ -57,6 +80,30 @@ class RacingReplayValidationTest {
             decision.event?.let(events::add)
         }
         return events
+    }
+
+    private fun replayStateTrace(
+        task: SimpleRacingTask,
+        points: List<IgcPoint>
+    ): List<ReplayStepTrace> {
+        val trace = mutableListOf<ReplayStepTrace>()
+        var state = RacingNavigationState()
+        points.forEachIndexed { index, point ->
+            val fix = RacingNavigationFix(
+                lat = point.latitude,
+                lon = point.longitude,
+                timestampMillis = point.timestampMillis
+            )
+            val decision = engine.step(task, state, fix)
+            state = decision.state
+            trace += ReplayStepTrace(
+                index = index,
+                status = state.status,
+                currentLegIndex = state.currentLegIndex,
+                eventType = decision.event?.type
+            )
+        }
+        return trace
     }
 
     private fun buildSimpleTask(): SimpleRacingTask {

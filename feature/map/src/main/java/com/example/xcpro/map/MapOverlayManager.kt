@@ -8,9 +8,14 @@ import com.example.xcpro.adsb.clampAdsbIconSizePx
 import com.example.xcpro.airspace.AirspaceUseCase
 import com.example.xcpro.adsb.AdsbTrafficUiModel
 import com.example.xcpro.forecast.FORECAST_OPACITY_DEFAULT
+import com.example.xcpro.forecast.FORECAST_WIND_OVERLAY_SCALE_DEFAULT
 import com.example.xcpro.forecast.ForecastLegendSpec
+import com.example.xcpro.forecast.ForecastTileFormat
 import com.example.xcpro.forecast.ForecastTileSpec
+import com.example.xcpro.forecast.ForecastWindDisplayMode
 import com.example.xcpro.forecast.clampForecastOpacity
+import com.example.xcpro.forecast.clampForecastWindOverlayScale
+import com.example.xcpro.forecast.FORECAST_WIND_DISPLAY_MODE_DEFAULT
 import com.example.xcpro.flightdata.WaypointFilesUseCase
 import com.example.xcpro.map.BuildConfig
 import com.example.xcpro.ogn.OGN_ICON_SIZE_DEFAULT_PX
@@ -52,6 +57,8 @@ class MapOverlayManager(
     private var latestForecastTileSpec: ForecastTileSpec? = null
     private var latestForecastLegend: ForecastLegendSpec? = null
     private var forecastOpacity: Float = FORECAST_OPACITY_DEFAULT
+    private var forecastWindOverlayScale: Float = FORECAST_WIND_OVERLAY_SCALE_DEFAULT
+    private var forecastWindDisplayMode: ForecastWindDisplayMode = FORECAST_WIND_DISPLAY_MODE_DEFAULT
 
     fun toggleDistanceCircles() {
         stateActions.toggleDistanceCircles()
@@ -215,12 +222,16 @@ class MapOverlayManager(
         enabled: Boolean,
         tileSpec: ForecastTileSpec?,
         opacity: Float,
+        windOverlayScale: Float,
+        windDisplayMode: ForecastWindDisplayMode,
         legendSpec: ForecastLegendSpec?
     ) {
         forecastOverlayEnabled = enabled
         latestForecastTileSpec = tileSpec
         latestForecastLegend = legendSpec
         forecastOpacity = clampForecastOpacity(opacity)
+        forecastWindOverlayScale = clampForecastWindOverlayScale(windOverlayScale)
+        forecastWindDisplayMode = windDisplayMode
         val map = mapState.mapLibreMap ?: return
         if (!enabled || tileSpec == null) {
             mapState.forecastOverlay?.clear()
@@ -232,6 +243,8 @@ class MapOverlayManager(
         mapState.forecastOverlay?.render(
             tileSpec = tileSpec,
             opacity = forecastOpacity,
+            windOverlayScale = forecastWindOverlayScale,
+            windDisplayMode = forecastWindDisplayMode,
             legendSpec = legendSpec
         )
     }
@@ -288,6 +301,14 @@ class MapOverlayManager(
 
     fun findAdsbTargetAt(tap: LatLng): Icao24? {
         return mapState.adsbTrafficOverlay?.findTargetAt(tap)
+    }
+
+    fun findForecastWindArrowSpeedAt(tap: LatLng): Double? {
+        if (!forecastOverlayEnabled) return null
+        val tileSpec = latestForecastTileSpec ?: return null
+        if (tileSpec.format != ForecastTileFormat.VECTOR_WIND_POINTS) return null
+        if (forecastWindDisplayMode != ForecastWindDisplayMode.ARROW) return null
+        return mapState.forecastOverlay?.findWindArrowSpeedAt(tap)
     }
 
     fun onZoomChanged(map: MapLibreMap?) {
@@ -349,6 +370,8 @@ class MapOverlayManager(
         mapState.forecastOverlay?.render(
             tileSpec = tileSpec,
             opacity = forecastOpacity,
+            windOverlayScale = forecastWindOverlayScale,
+            windDisplayMode = forecastWindDisplayMode,
             legendSpec = latestForecastLegend
         )
     }

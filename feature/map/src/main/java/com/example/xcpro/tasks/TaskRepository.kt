@@ -3,6 +3,7 @@ package com.example.xcpro.tasks
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.TaskWaypoint
+import com.example.xcpro.tasks.core.TargetStateCustomParams
 import com.example.xcpro.tasks.core.WaypointRole
 import com.example.xcpro.tasks.domain.logic.AATTargetOptimizer
 import com.example.xcpro.tasks.domain.logic.TaskAdvanceState
@@ -102,12 +103,15 @@ class TaskRepository @Inject constructor(
             hasTargetsFlag = hasTargetsFlag || allowsTarget
 
             val remembered = targetStateById[wp.id]
-            val targetParam = (wp.customParameters["targetParam"] as? Double)
-                ?: remembered?.param ?: 0.5
-            val targetLocked = (wp.customParameters["targetLocked"] as? Boolean)
-                ?: remembered?.locked ?: false
-            val targetLat = wp.customParameters["targetLat"] as? Double
-            val targetLon = wp.customParameters["targetLon"] as? Double
+            val targetParams = TargetStateCustomParams.from(
+                source = wp.customParameters,
+                fallbackTargetParam = remembered?.param ?: 0.5,
+                fallbackTargetLocked = remembered?.locked ?: false
+            )
+            val targetParam = targetParams.targetParam
+            val targetLocked = targetParams.targetLocked
+            val targetLat = targetParams.targetLat
+            val targetLon = targetParams.targetLon
             val seedTarget = if (targetLat != null && targetLon != null) GeoPoint(targetLat, targetLon) else null
 
             basePoints += TaskPointDef(

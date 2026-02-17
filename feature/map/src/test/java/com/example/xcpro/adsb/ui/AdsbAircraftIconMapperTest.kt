@@ -80,13 +80,33 @@ class AdsbAircraftIconMapperTest {
     }
 
     @Test
-    fun prefersTypecodeWhenTypecodeConflictsWithIcaoAircraftType() {
+    fun prefersHelicopterClassWhenTypecodeConflictsWithIcaoAircraftType() {
         assertEquals(
-            AdsbAircraftIcon.PlaneLight,
+            AdsbAircraftIcon.Helicopter,
             iconForAircraft(
                 category = 3,
                 metadataTypecode = "C172",
                 metadataIcaoAircraftType = "H1P"
+            )
+        )
+    }
+
+    @Test
+    fun nonFixedWingCategoryIsAuthoritativeOverMetadata() {
+        assertEquals(
+            AdsbAircraftIcon.Helicopter,
+            iconForAircraft(
+                category = 8,
+                metadataTypecode = "B738",
+                metadataIcaoAircraftType = "L2J"
+            )
+        )
+        assertEquals(
+            AdsbAircraftIcon.Glider,
+            iconForAircraft(
+                category = 9,
+                metadataTypecode = "B738",
+                metadataIcaoAircraftType = "L2J"
             )
         )
     }
@@ -146,6 +166,38 @@ class AdsbAircraftIconMapperTest {
             iconForAircraft(
                 category = 0,
                 metadataTypecode = "AT76",
+                metadataIcaoAircraftType = null
+            )
+        )
+    }
+
+    @Test
+    fun weakFallbackTypecodeDoesNotOverrideIcaoAircraftClass() {
+        assertEquals(
+            AdsbAircraftIcon.PlaneTwinProp,
+            iconForAircraft(
+                category = 0,
+                metadataTypecode = "ZZ99",
+                metadataIcaoAircraftType = "L2P"
+            )
+        )
+    }
+
+    @Test
+    fun classifiesCommonHelicopterTypecodesWithoutIcaoClass() {
+        assertEquals(
+            AdsbAircraftIcon.Helicopter,
+            iconForAircraft(
+                category = 0,
+                metadataTypecode = "B429",
+                metadataIcaoAircraftType = null
+            )
+        )
+        assertEquals(
+            AdsbAircraftIcon.Helicopter,
+            iconForAircraft(
+                category = 0,
+                metadataTypecode = "A139",
                 metadataIcaoAircraftType = null
             )
         )

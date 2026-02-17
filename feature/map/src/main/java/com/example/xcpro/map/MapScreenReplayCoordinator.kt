@@ -13,12 +13,8 @@ import com.example.xcpro.replay.SessionState
 import com.example.xcpro.replay.SessionStatus
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.tasks.TaskNavigationController
-import com.example.xcpro.tasks.core.TaskType
-import com.example.xcpro.tasks.racing.SimpleRacingTask
-import com.example.xcpro.tasks.racing.toSimpleRacingTask
 import com.example.xcpro.tasks.racing.navigation.RacingAdvanceState
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationEvent
-import com.example.xcpro.tasks.racing.navigation.RacingNavigationEventType
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationFix
 import com.example.xcpro.sensors.CompleteFlightData
 import kotlinx.coroutines.CoroutineScope
@@ -45,25 +41,20 @@ internal class MapScreenReplayCoordinator(
 
     private val racingEventDebouncer = RacingNavigationEventDebouncer()
     private val racingReplayLogger = RacingReplayEventLogger()
+    private val racingReplaySnapshots = RacingReplaySnapshotController(
+        taskNavigationController = taskNavigationController,
+        igcReplayController = igcReplayController,
+        replaySessionState = replaySessionState
+    )
+    private val demoReplaySnapshots = DemoReplaySnapshotController(
+        mapStateStore = mapStateStore,
+        mapStateActions = mapStateActions,
+        igcReplayController = igcReplayController,
+        featureFlags = featureFlags,
+        replaySessionState = replaySessionState
+    )
     private var racingReplayActive = false
-    private var racingReplayAdvanceSnapshot: RacingAdvanceState.Snapshot? = null
-    private var racingReplaySpeedSnapshot: Double? = null
-    private var racingReplayCadenceSnapshot: ReplayCadenceProfile? = null
     private var lastRacingFix: RacingNavigationFix? = null
-    private var demoReplaySnapshot: ReplayUiSnapshot? = null
-    private var demoDisplayPoseOverride: DisplayPoseMode? = null
-    private var demoReplayCadenceSnapshot: ReplayCadenceProfile? = null
-    private var demoReplaySpeedSnapshot: Double? = null
-    private var demoReplayBaroStepSnapshot: Long? = null
-    private var demoReplayNoiseSnapshot: ReplayNoiseProfile? = null
-    private var demoReplayGpsAccuracySnapshot: Float? = null
-    private var demoReplayInterpolationSnapshot: ReplayInterpolation? = null
-    private var demoReplayTrackHeadingSnapshot: Boolean? = null
-    private var demoReplayBearingClampSnapshot: Double? = null
-    private var demoReplayIconHeadingSmoothingSnapshot: Boolean? = null
-    private var demoReplayRuntimeHeadingSnapshot: Boolean? = null
-    private var demoReplayRenderFrameSyncSnapshot: Boolean? = null
-    private var demoReplayFrameLogIntervalSnapshot: Long? = null
     private val liveGpsProfileTracker = LiveGpsProfileTracker()
 
     private val racingFixFlow = flightDataFlow
@@ -88,7 +79,7 @@ internal class MapScreenReplayCoordinator(
     fun onVarioDemoReplay() {
         scope.launch {
             try {
-                captureDemoReplaySnapshot()
+                demoReplaySnapshots.captureUiIfNeeded()
                 igcReplayController.setAutoStopAfterFinish(true)
                 Log.i(TAG, "VARIO_DEMO start asset=$VARIO_DEMO_ASSET_PATH")
                 igcReplayController.stopAndWait(emitCancelledEvent = false)
@@ -100,7 +91,7 @@ internal class MapScreenReplayCoordinator(
                 igcReplayController.play()
                 uiEffects.emit(MapUiEffect.ShowToast("Vario demo replay started"))
             } catch (t: Throwable) {
-                restoreDemoReplaySnapshot()
+                demoReplaySnapshots.restoreIfCaptured()
                 Log.e(TAG, "Failed to start vario demo replay", t)
                 uiEffects.emit(MapUiEffect.ShowToast("Vario demo replay failed"))
             }
@@ -110,7 +101,7 @@ internal class MapScreenReplayCoordinator(
     fun onVarioDemoReplaySim() {
         scope.launch {
             try {
-                captureDemoReplaySnapshot()
+                demoReplaySnapshots.captureUiIfNeeded()
                 igcReplayController.setAutoStopAfterFinish(true)
                 Log.i(TAG, "VARIO_DEMO_SIM start asset=$VARIO_DEMO_ASSET_PATH")
                 igcReplayController.stopAndWait(emitCancelledEvent = false)
@@ -122,7 +113,7 @@ internal class MapScreenReplayCoordinator(
                 igcReplayController.play()
                 uiEffects.emit(MapUiEffect.ShowToast("Vario demo (sim) replay started"))
             } catch (t: Throwable) {
-                restoreDemoReplaySnapshot()
+                demoReplaySnapshots.restoreIfCaptured()
                 Log.e(TAG, "Failed to start vario demo replay (sim)", t)
                 uiEffects.emit(MapUiEffect.ShowToast("Vario demo (sim) replay failed"))
             }
@@ -132,21 +123,11 @@ internal class MapScreenReplayCoordinator(
     fun onVarioDemoReplaySimLive() {
         scope.launch {
             try {
-                captureDemoReplaySnapshot()
-                demoDisplayPoseOverride = DisplayPoseMode.SMOOTHED
+                demoReplaySnapshots.captureUiIfNeeded()
+                demoReplaySnapshots.setDisplayPoseOverride(DisplayPoseMode.SMOOTHED)
                 mapStateActions.setDisplayPoseMode(DisplayPoseMode.SMOOTHED)
-                captureDemoReplayCadenceSnapshot()
-                captureDemoReplaySpeedSnapshot()
-                captureDemoReplayBaroStepSnapshot()
-                captureDemoReplayNoiseSnapshot()
-                captureDemoReplayGpsAccuracySnapshot()
-                captureDemoReplayInterpolationSnapshot()
-                captureDemoReplayTrackHeadingSnapshot()
-                captureDemoReplayBearingClampSnapshot()
-                captureDemoReplayIconHeadingSmoothingSnapshot()
-                captureDemoReplayRuntimeHeadingSnapshot()
-                captureDemoReplayRenderFrameSyncSnapshot()
-                captureDemoReplayFrameLogIntervalSnapshot()
+                demoReplaySnapshots.captureRuntimeReplaySettingsIfNeeded()
+                demoReplaySnapshots.captureFeatureFlagSettingsIfNeeded()
                 featureFlags.forceReplayTrackHeading = true
                 featureFlags.maxTrackBearingStepDeg = SIM2_BASELINE_BEARING_STEP_DEG
                 featureFlags.useIconHeadingSmoothing = false
@@ -183,7 +164,7 @@ internal class MapScreenReplayCoordinator(
                 igcReplayController.play()
                 uiEffects.emit(MapUiEffect.ShowToast("Vario demo (sim2) replay started"))
             } catch (t: Throwable) {
-                restoreDemoReplaySnapshot()
+                demoReplaySnapshots.restoreIfCaptured()
                 Log.e(TAG, "Failed to start vario demo replay (sim2)", t)
                 uiEffects.emit(MapUiEffect.ShowToast("Vario demo (sim2) replay failed"))
             }
@@ -193,13 +174,8 @@ internal class MapScreenReplayCoordinator(
     fun onVarioDemoReplaySim3() {
         scope.launch {
             try {
-                captureDemoReplaySnapshot()
-                captureDemoReplayCadenceSnapshot()
-                captureDemoReplaySpeedSnapshot()
-                captureDemoReplayBaroStepSnapshot()
-                captureDemoReplayNoiseSnapshot()
-                captureDemoReplayGpsAccuracySnapshot()
-                captureDemoReplayInterpolationSnapshot()
+                demoReplaySnapshots.captureUiIfNeeded()
+                demoReplaySnapshots.captureRuntimeReplaySettingsIfNeeded()
                 igcReplayController.setSpeed(SIM3_REPLAY_SPEED_MULTIPLIER)
                 igcReplayController.setAutoStopAfterFinish(true)
                 Log.i(TAG, "VARIO_DEMO_SIM3 start asset=$VARIO_DEMO_SIM3_ASSET_PATH")
@@ -228,7 +204,7 @@ internal class MapScreenReplayCoordinator(
                 igcReplayController.play()
                 uiEffects.emit(MapUiEffect.ShowToast("Vario demo (sim3) replay started"))
             } catch (t: Throwable) {
-                restoreDemoReplaySnapshot()
+                demoReplaySnapshots.restoreIfCaptured()
                 Log.e(TAG, "Failed to start vario demo replay (sim3)", t)
                 uiEffects.emit(MapUiEffect.ShowToast("Vario demo (sim3) replay failed"))
             }
@@ -240,7 +216,7 @@ internal class MapScreenReplayCoordinator(
             racingReplayActive = true
             racingReplayLogger.reset()
             try {
-                val task = currentRacingTaskOrNull()
+                val task = currentRacingTaskOrNull(taskManager)
                 if (task == null) {
                     racingReplayActive = false
                     uiEffects.emit(
@@ -248,9 +224,7 @@ internal class MapScreenReplayCoordinator(
                     )
                     return@launch
                 }
-                captureRacingReplayAdvanceSnapshot()
-                captureRacingReplaySpeedSnapshot()
-                captureRacingReplayCadenceSnapshot()
+                racingReplaySnapshots.captureIfNeeded()
                 taskNavigationController.resetNavigationState()
                 taskManager.setActiveLeg(0)
                 taskNavigationController.setAdvanceMode(RacingAdvanceState.Mode.AUTO)
@@ -271,9 +245,7 @@ internal class MapScreenReplayCoordinator(
                 igcReplayController.play()
                 uiEffects.emit(MapUiEffect.ShowToast("Racing task replay started"))
             } catch (t: Throwable) {
-                restoreRacingReplayAdvanceSnapshot()
-                restoreRacingReplaySpeedSnapshot()
-                restoreRacingReplayCadenceSnapshot()
+                racingReplaySnapshots.restore()
                 racingReplayActive = false
                 Log.e(TAG, "Failed to start racing task replay", t)
                 uiEffects.emit(MapUiEffect.ShowToast("Racing task replay failed"))
@@ -284,8 +256,8 @@ internal class MapScreenReplayCoordinator(
     private fun observeReplayEvents() {
         igcReplayController.events
             .onEach { event ->
-                if (demoReplaySnapshot != null) {
-                    restoreDemoReplaySnapshot()
+                if (demoReplaySnapshots.hasSnapshot) {
+                    demoReplaySnapshots.restoreIfCaptured()
                     when (event) {
                         is ReplayEvent.Failed -> {
                             igcReplayController.setAutoStopAfterFinish(false)
@@ -303,9 +275,7 @@ internal class MapScreenReplayCoordinator(
                     val session = replaySessionState.value
                     racingReplayLogger.flush(session)
                     racingReplayLogger.reset()
-                    restoreRacingReplayAdvanceSnapshot()
-                    restoreRacingReplaySpeedSnapshot()
-                    restoreRacingReplayCadenceSnapshot()
+                    racingReplaySnapshots.restore()
                     racingReplayActive = false
                 }
             }
@@ -315,7 +285,7 @@ internal class MapScreenReplayCoordinator(
     private fun observeReplayDisplayPoseMode() {
         replaySessionState
             .onEach { session ->
-                val overrideMode = demoDisplayPoseOverride
+                val overrideMode = demoReplaySnapshots.currentDisplayPoseOverride()
                 val useRawReplay = featureFlags.useRawReplayPose &&
                     session.selection != null &&
                     session.status != SessionStatus.IDLE
@@ -349,177 +319,11 @@ internal class MapScreenReplayCoordinator(
                     )
                 }
                 if (!racingEventDebouncer.shouldEmit(event)) return@onEach
-                uiEffects.emit(MapUiEffect.ShowToast(buildRacingEventMessage(event)))
+                uiEffects.emit(MapUiEffect.ShowToast(buildRacingEventMessage(taskManager, event)))
             }
             .launchIn(scope)
     }
 
-    private fun captureRacingReplayAdvanceSnapshot() {
-        if (racingReplayAdvanceSnapshot != null) return
-        racingReplayAdvanceSnapshot = taskNavigationController.snapshot()
-    }
-
-    private fun restoreRacingReplayAdvanceSnapshot() {
-        val snapshot = racingReplayAdvanceSnapshot ?: return
-        taskNavigationController.setAdvanceMode(snapshot.mode)
-        taskNavigationController.setAdvanceArmed(snapshot.isArmed)
-        racingReplayAdvanceSnapshot = null
-    }
-
-    private fun captureRacingReplaySpeedSnapshot() {
-        if (racingReplaySpeedSnapshot != null) return
-        racingReplaySpeedSnapshot = replaySessionState.value.speedMultiplier
-    }
-
-    private fun restoreRacingReplaySpeedSnapshot() {
-        val snapshot = racingReplaySpeedSnapshot ?: return
-        igcReplayController.setSpeed(snapshot)
-        racingReplaySpeedSnapshot = null
-    }
-
-    private fun captureRacingReplayCadenceSnapshot() {
-        if (racingReplayCadenceSnapshot != null) return
-        racingReplayCadenceSnapshot = igcReplayController.getReplayCadence()
-    }
-
-    private fun captureDemoReplayCadenceSnapshot() {
-        if (demoReplayCadenceSnapshot != null) return
-        demoReplayCadenceSnapshot = igcReplayController.getReplayCadence()
-    }
-
-    private fun captureDemoReplaySpeedSnapshot() {
-        if (demoReplaySpeedSnapshot != null) return
-        demoReplaySpeedSnapshot = replaySessionState.value.speedMultiplier
-    }
-
-    private fun captureDemoReplayBaroStepSnapshot() {
-        if (demoReplayBaroStepSnapshot != null) return
-        demoReplayBaroStepSnapshot = igcReplayController.getReplayBaroStepMs()
-    }
-
-    private fun captureDemoReplayGpsAccuracySnapshot() {
-        if (demoReplayGpsAccuracySnapshot != null) return
-        demoReplayGpsAccuracySnapshot = igcReplayController.getReplayGpsAccuracyMeters()
-    }
-
-    private fun captureDemoReplayNoiseSnapshot() {
-        if (demoReplayNoiseSnapshot != null) return
-        demoReplayNoiseSnapshot = igcReplayController.getReplayNoiseProfile()
-    }
-
-    private fun captureDemoReplayTrackHeadingSnapshot() {
-        if (demoReplayTrackHeadingSnapshot != null) return
-        demoReplayTrackHeadingSnapshot = featureFlags.forceReplayTrackHeading
-    }
-
-    private fun captureDemoReplayInterpolationSnapshot() {
-        if (demoReplayInterpolationSnapshot != null) return
-        demoReplayInterpolationSnapshot = igcReplayController.getReplayInterpolation()
-    }
-
-    private fun captureDemoReplayBearingClampSnapshot() {
-        if (demoReplayBearingClampSnapshot != null) return
-        demoReplayBearingClampSnapshot = featureFlags.maxTrackBearingStepDeg
-    }
-
-    private fun captureDemoReplayIconHeadingSmoothingSnapshot() {
-        if (demoReplayIconHeadingSmoothingSnapshot != null) return
-        demoReplayIconHeadingSmoothingSnapshot = featureFlags.useIconHeadingSmoothing
-    }
-
-    private fun captureDemoReplayRuntimeHeadingSnapshot() {
-        if (demoReplayRuntimeHeadingSnapshot != null) return
-        demoReplayRuntimeHeadingSnapshot = featureFlags.useRuntimeReplayHeading
-    }
-
-    private fun captureDemoReplayRenderFrameSyncSnapshot() {
-        if (demoReplayRenderFrameSyncSnapshot != null) return
-        demoReplayRenderFrameSyncSnapshot = featureFlags.useRenderFrameSync
-    }
-
-    private fun captureDemoReplayFrameLogIntervalSnapshot() {
-        if (demoReplayFrameLogIntervalSnapshot != null) return
-        demoReplayFrameLogIntervalSnapshot = featureFlags.sim2FrameLogIntervalMs
-    }
-
-    private fun restoreRacingReplayCadenceSnapshot() {
-        val snapshot = racingReplayCadenceSnapshot ?: return
-        igcReplayController.setReplayCadence(snapshot)
-        racingReplayCadenceSnapshot = null
-    }
-
-    private fun currentRacingTaskOrNull(): SimpleRacingTask? {
-        if (taskManager.taskType != TaskType.RACING) {
-            return null
-        }
-        val task = taskManager.currentTask.toSimpleRacingTask()
-        if (task.waypoints.size < 2) {
-            return null
-        }
-        return task
-    }
-
-    private fun buildRacingEventMessage(event: RacingNavigationEvent): String {
-        val waypointName = taskManager.currentTask.waypoints
-            .getOrNull(event.fromLegIndex)
-            ?.title
-        return when (event.type) {
-            RacingNavigationEventType.START ->
-                if (waypointName != null) "Start crossed: $waypointName" else "Start crossed"
-            RacingNavigationEventType.TURNPOINT ->
-                if (waypointName != null) "Turnpoint reached: $waypointName" else "Turnpoint reached"
-            RacingNavigationEventType.FINISH ->
-                if (waypointName != null) "Finish reached: $waypointName" else "Finish reached"
-        }
-    }
-
-    private fun captureDemoReplaySnapshot() {
-        if (demoReplaySnapshot != null) return
-        demoReplaySnapshot = ReplayUiSnapshot(
-            isTrackingLocation = mapStateStore.isTrackingLocation.value,
-            showReturnButton = mapStateStore.showReturnButton.value,
-            showRecenterButton = mapStateStore.showRecenterButton.value,
-            hasInitiallyCentered = mapStateStore.hasInitiallyCentered.value,
-            savedLocation = mapStateStore.savedLocation.value,
-            savedZoom = mapStateStore.savedZoom.value,
-            savedBearing = mapStateStore.savedBearing.value
-        )
-    }
-
-    private fun restoreDemoReplaySnapshot() {
-        val snapshot = demoReplaySnapshot ?: return
-        demoReplaySnapshot = null
-        demoDisplayPoseOverride = null
-        demoReplayTrackHeadingSnapshot?.let { featureFlags.forceReplayTrackHeading = it }
-        demoReplayTrackHeadingSnapshot = null
-        demoReplayBearingClampSnapshot?.let { featureFlags.maxTrackBearingStepDeg = it }
-        demoReplayBearingClampSnapshot = null
-        demoReplayIconHeadingSmoothingSnapshot?.let { featureFlags.useIconHeadingSmoothing = it }
-        demoReplayIconHeadingSmoothingSnapshot = null
-        demoReplayRuntimeHeadingSnapshot?.let { featureFlags.useRuntimeReplayHeading = it }
-        demoReplayRuntimeHeadingSnapshot = null
-        demoReplayRenderFrameSyncSnapshot?.let { featureFlags.useRenderFrameSync = it }
-        demoReplayRenderFrameSyncSnapshot = null
-        demoReplayFrameLogIntervalSnapshot?.let { featureFlags.sim2FrameLogIntervalMs = it }
-        demoReplayFrameLogIntervalSnapshot = null
-        demoReplayCadenceSnapshot?.let { igcReplayController.setReplayCadence(it) }
-        demoReplayCadenceSnapshot = null
-        demoReplaySpeedSnapshot?.let { igcReplayController.setSpeed(it) }
-        demoReplaySpeedSnapshot = null
-        demoReplayBaroStepSnapshot?.let { igcReplayController.setReplayBaroStepMs(it) }
-        demoReplayBaroStepSnapshot = null
-        demoReplayNoiseSnapshot?.let { igcReplayController.setReplayNoiseProfile(it) }
-        demoReplayNoiseSnapshot = null
-        demoReplayGpsAccuracySnapshot?.let { igcReplayController.setReplayGpsAccuracyMeters(it) }
-        demoReplayGpsAccuracySnapshot = null
-        demoReplayInterpolationSnapshot?.let { igcReplayController.setReplayInterpolation(it) }
-        demoReplayInterpolationSnapshot = null
-        mapStateActions.setTrackingLocation(snapshot.isTrackingLocation)
-        mapStateActions.setShowReturnButton(snapshot.showReturnButton)
-        mapStateActions.setShowRecenterButton(snapshot.showRecenterButton)
-        mapStateActions.setHasInitiallyCentered(snapshot.hasInitiallyCentered)
-        mapStateActions.saveLocation(snapshot.savedLocation, snapshot.savedZoom, snapshot.savedBearing)
-    }
 
     private companion object {
         private const val TAG = "MapScreenReplayCoord"
@@ -528,8 +332,6 @@ internal class MapScreenReplayCoordinator(
         private const val VARIO_DEMO_SIM3_ASSET_PATH = "replay/vario-demo-const-120s.igc"
         private const val RACING_REPLAY_SPEED_MULTIPLIER = 1.0
         private val RACING_REPLAY_CADENCE_PROFILE = ReplayCadenceProfile.LIVE_100MS
-        private const val SIM2_FALLBACK_GPS_STEP_MS = 1_000L
-        private const val SIM2_FALLBACK_GPS_ACCURACY_M = 5f
         private const val SIM2_BASELINE_STEP_MS = 1_000L
         private const val SIM2_BASELINE_ACCURACY_M = 1f
         private const val SIM2_BASELINE_BEARING_STEP_DEG = 360.0
@@ -539,13 +341,3 @@ internal class MapScreenReplayCoordinator(
         private const val SIM3_REPLAY_SPEED_MULTIPLIER = 1.0
     }
 }
-
-private data class ReplayUiSnapshot(
-    val isTrackingLocation: Boolean,
-    val showReturnButton: Boolean,
-    val showRecenterButton: Boolean,
-    val hasInitiallyCentered: Boolean,
-    val savedLocation: MapStateStore.MapPoint?,
-    val savedZoom: Double?,
-    val savedBearing: Double?
-)

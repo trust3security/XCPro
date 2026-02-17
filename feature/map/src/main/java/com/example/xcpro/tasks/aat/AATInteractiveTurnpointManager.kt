@@ -3,11 +3,12 @@ package com.example.xcpro.tasks.aat
 import com.example.xcpro.core.time.Clock
 import com.example.xcpro.tasks.aat.calculations.AATDistanceCalculator
 import com.example.xcpro.tasks.aat.calculations.AATInteractiveTaskDistance
-import com.example.xcpro.tasks.aat.map.*
+import com.example.xcpro.tasks.aat.map.AATInteractionCallbacks
+import com.example.xcpro.tasks.aat.map.AATMapCoordinateConverter
+import com.example.xcpro.tasks.aat.map.AATMapCoordinateConverterFactory
+import com.example.xcpro.tasks.aat.map.AATMapInteractionHandler
+import com.example.xcpro.tasks.aat.map.AATMovablePointManager
 import com.example.xcpro.tasks.aat.models.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
 import org.maplibre.android.maps.MapLibreMap
 
 /**
@@ -46,19 +47,6 @@ data class AATManagerCallbacks(
     val onMapCameraUpdate: (lat: Double, lon: Double, zoom: Float) -> Unit = { _, _, _ -> },
     val onCheckTargetPointHit: (Float, Float) -> Int? = { _, _ -> null }
 )
-
-@Composable
-fun rememberAATInteractiveTurnpointManager(
-    aatWaypoints: List<AATWaypoint>,
-    clock: Clock,
-    callbacks: AATManagerCallbacks = AATManagerCallbacks()
-): AATInteractiveTurnpointManager {
-    return remember(clock) {
-        AATInteractiveTurnpointManager(callbacks, clock)
-    }.apply {
-        updateWaypoints(aatWaypoints)
-    }
-}
 
 class AATInteractiveTurnpointManager(
     private val callbacks: AATManagerCallbacks,
@@ -273,96 +261,5 @@ class AATInteractiveTurnpointManager(
         currentDistance = distance
         callbacks.onDistanceUpdated(distance)
 
-    }
-}
-
-/**
- * Composable for AAT Interactive Turnpoint integration
- */
-@Composable
-fun AATInteractiveTurnpointIntegration(
-    aatWaypoints: List<AATWaypoint>,
-    mapLibreMap: MapLibreMap?,
-    clock: Clock,
-    onWaypointUpdated: (Int, AATWaypoint) -> Unit,
-    onDistanceUpdated: (AATInteractiveTaskDistance) -> Unit = {},
-    onEditModeChanged: (Boolean, Int) -> Unit = { _, _ -> },
-    onMapCameraUpdate: (Double, Double, Float) -> Unit = { _, _, _ -> },
-    onCheckTargetPointHit: (Float, Float) -> Int? = { _, _ -> null },
-    modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier
-) {
-    val manager = rememberAATInteractiveTurnpointManager(
-        aatWaypoints = aatWaypoints,
-        clock = clock,
-        callbacks = AATManagerCallbacks(
-            onWaypointUpdated = onWaypointUpdated,
-            onDistanceUpdated = onDistanceUpdated,
-            onEditModeChanged = onEditModeChanged,
-            onMapCameraUpdate = onMapCameraUpdate,
-            onCheckTargetPointHit = onCheckTargetPointHit
-        )
-    )
-
-    // Attach to map when available
-    LaunchedEffect(mapLibreMap) {
-        manager.attachToMap(mapLibreMap)
-    }
-
-    // Update waypoints when they change
-    LaunchedEffect(aatWaypoints) {
-        manager.updateWaypoints(aatWaypoints)
-    }
-
-    // Interactive overlay
-    if (mapLibreMap != null) {
-        com.example.xcpro.tasks.aat.ui.AATOverlayFactory.CreateInteractiveOverlay(
-            aatWaypoints = aatWaypoints,
-            mapLibreMap = mapLibreMap,
-            clock = clock,
-            onTargetPointUpdated = { index: Int, newTargetPoint: AATLatLng ->
-                // Convert AATLatLng update to AATWaypoint update
-                if (index < aatWaypoints.size) {
-                    val updatedWaypoint = aatWaypoints[index].copy(
-                        targetPoint = newTargetPoint,
-                        isTargetPointCustomized = true
-                    )
-                    onWaypointUpdated(index, updatedWaypoint)
-                }
-            },
-            onEditModeChanged = onEditModeChanged,
-            onCheckTargetPointHit = onCheckTargetPointHit,
-            modifier = modifier
-        )
-    }
-}
-
-/**
- * Factory for creating AAT interactive turnpoint managers
- */
-object AATInteractiveTurnpointManagerFactory {
-
-    /**
-     * Create manager for full interactive mode
-     */
-    fun createInteractiveManager(
-        callbacks: AATManagerCallbacks,
-        clock: Clock
-    ): AATInteractiveTurnpointManager {
-        return AATInteractiveTurnpointManager(callbacks, clock)
-    }
-
-    /**
-     * Create manager for read-only display mode
-     */
-    fun createDisplayManager(
-        clock: Clock,
-        onDistanceUpdated: (AATInteractiveTaskDistance) -> Unit = {}
-    ): AATInteractiveTurnpointManager {
-        return AATInteractiveTurnpointManager(
-            AATManagerCallbacks(
-                onDistanceUpdated = onDistanceUpdated
-            ),
-            clock
-        )
     }
 }

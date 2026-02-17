@@ -42,6 +42,7 @@ import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.variometer.layout.VariometerUiState
 import com.example.xcpro.map.model.MapLocationUiModel
 import kotlinx.coroutines.flow.StateFlow
+import org.maplibre.android.geometry.LatLng
 
 @Composable
 @Suppress("LongParameterList", "UNUSED_PARAMETER")
@@ -65,6 +66,8 @@ internal fun MapOverlayStack(
     showDistanceCircles: Boolean,
     overlayManager: MapOverlayManager,
     onAdsbTargetSelected: (Icao24) -> Unit,
+    onForecastWindArrowSpeedTap: (Double) -> Unit,
+    onMapLongPress: (LatLng) -> Unit,
     isAATEditMode: Boolean,
     isUiEditMode: Boolean,
     onEditModeChange: (Boolean) -> Unit,
@@ -170,8 +173,14 @@ internal fun MapOverlayStack(
                     val tappedId = overlayManager.findAdsbTargetAt(tap)
                     if (tappedId != null) {
                         onAdsbTargetSelected(tappedId)
+                    } else {
+                        val tappedWindSpeedKt = overlayManager.findForecastWindArrowSpeedAt(tap)
+                        if (tappedWindSpeedKt != null) {
+                            onForecastWindArrowSpeedTap(tappedWindSpeedKt)
+                        }
                     }
                 },
+                onMapLongPress = onMapLongPress,
                 gestureRegions = gestureRegions,
                 modifier = Modifier.zIndex(3.6f)
             )

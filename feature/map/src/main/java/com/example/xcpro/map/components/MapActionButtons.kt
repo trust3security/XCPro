@@ -115,8 +115,8 @@ fun MapActionButtons(
             isEnabled = showForecastOverlay,
             onClick = onShowForecastSheet,
             modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = forecastTopPadding, end = 16.dp)
+                .align(Alignment.TopStart)
+                .padding(top = forecastTopPadding, start = 16.dp)
         )
 
         if (showQnhFab) {

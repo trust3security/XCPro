@@ -165,6 +165,7 @@ internal fun rememberMapScreenScaffoldInputs(
     onFlightModeOffsetChange: (Offset) -> Unit,
     onBallastOffsetChange: (Offset) -> Unit,
     flightViewModel: FlightDataViewModel,
+    flightDataManager: FlightDataManager,
     windArrowState: WindArrowUiState,
     showWindSpeedOnVario: Boolean,
     cardStyle: CardStyle,
@@ -195,6 +196,7 @@ internal fun rememberMapScreenScaffoldInputs(
         managers.overlayManager.updateAdsbTrafficTargets(
             if (bindings.adsbOverlayEnabled) bindings.adsbTargets else emptyList()
         )
+        managers.overlayManager.reapplyForecastOverlay()
     }
 
     return MapScreenScaffoldInputs(
@@ -213,7 +215,7 @@ internal fun rememberMapScreenScaffoldInputs(
         mapInitializer = managers.mapInitializer,
         onMapReady = onMapReady,
         locationManager = managers.locationManager,
-        flightDataManager = mapViewModel.flightDataManager,
+        flightDataManager = flightDataManager,
         flightViewModel = flightViewModel,
         taskType = bindings.taskType,
         createTaskGestureHandler = mapViewModel::createTaskGestureHandler,

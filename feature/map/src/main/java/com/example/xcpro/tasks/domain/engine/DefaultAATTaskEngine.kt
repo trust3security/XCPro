@@ -2,29 +2,17 @@ package com.example.xcpro.tasks.domain.engine
 
 import com.example.xcpro.tasks.aat.SimpleAATTask
 import com.example.xcpro.tasks.aat.geometry.AATGeometryGenerator
-import com.example.xcpro.tasks.aat.models.AATAreaShape
-import com.example.xcpro.tasks.aat.models.AATAssignedArea
-import com.example.xcpro.tasks.aat.models.AATFinishPointType
-import com.example.xcpro.tasks.aat.models.AATLatLng
-import com.example.xcpro.tasks.aat.models.AATRadiusAuthority
-import com.example.xcpro.tasks.aat.models.AATStartPointType
-import com.example.xcpro.tasks.aat.models.AATTurnPointType
-import com.example.xcpro.tasks.aat.models.AATWaypoint
-import com.example.xcpro.tasks.aat.models.AATWaypointRole
 import com.example.xcpro.tasks.aat.validation.AATValidationBridge
 import com.example.xcpro.tasks.aat.calculations.AATMathUtils
+import com.example.xcpro.tasks.core.TaskWaypointParamKeys
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.TaskWaypoint
-import com.example.xcpro.tasks.core.WaypointRole
 import java.time.Duration
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-
-/**
- * Pure AAT task engine backed by StateFlow and core task models.
- */
+/** Pure AAT task engine backed by StateFlow and core task models. */
 class DefaultAATTaskEngine(
     private val geometryGenerator: AATGeometryGenerator = AATGeometryGenerator(),
     private val validationBridge: AATValidationBridge = AATValidationBridge()
@@ -38,10 +26,9 @@ class DefaultAATTaskEngine(
         )
     )
     override val state: StateFlow<AATTaskEngineState> = _state.asStateFlow()
-
     override fun setTask(task: Task) {
         publish(
-            task = task.copy(waypoints = normalizeWaypointsForAAT(task.waypoints)),
+            task = task.copy(waypoints = AATTaskWaypointCodec.normalizeWaypointsForAAT(task.waypoints)),
             requestedActiveLeg = _state.value.base.activeLegIndex,
             minimumTime = _state.value.minimumTime,
             maximumTime = _state.value.maximumTime,
@@ -53,7 +40,7 @@ class DefaultAATTaskEngine(
         val current = _state.value.base.task
         val updated = current.copy(waypoints = current.waypoints + waypoint)
         publish(
-            task = updated.copy(waypoints = normalizeWaypointsForAAT(updated.waypoints)),
+            task = updated.copy(waypoints = AATTaskWaypointCodec.normalizeWaypointsForAAT(updated.waypoints)),
             requestedActiveLeg = _state.value.base.activeLegIndex,
             minimumTime = _state.value.minimumTime,
             maximumTime = _state.value.maximumTime,
@@ -80,7 +67,7 @@ class DefaultAATTaskEngine(
             }
         }
         publish(
-            task = current.copy(waypoints = normalizeWaypointsForAAT(updatedWaypoints)),
+            task = current.copy(waypoints = AATTaskWaypointCodec.normalizeWaypointsForAAT(updatedWaypoints)),
             requestedActiveLeg = adjustedLeg,
             minimumTime = _state.value.minimumTime,
             maximumTime = _state.value.maximumTime,
@@ -105,7 +92,7 @@ class DefaultAATTaskEngine(
             }
         }
         publish(
-            task = current.copy(waypoints = normalizeWaypointsForAAT(updatedWaypoints)),
+            task = current.copy(waypoints = AATTaskWaypointCodec.normalizeWaypointsForAAT(updatedWaypoints)),
             requestedActiveLeg = _state.value.base.activeLegIndex,
             minimumTime = _state.value.minimumTime,
             maximumTime = _state.value.maximumTime,
@@ -139,13 +126,13 @@ class DefaultAATTaskEngine(
         val updatedWaypoints = current.waypoints.toMutableList()
         val targetWaypoint = updatedWaypoints[index]
         val updatedParams = targetWaypoint.customParameters.toMutableMap().apply {
-            this["targetLat"] = lat
-            this["targetLon"] = lon
-            this["isTargetPointCustomized"] = true
+            this[TaskWaypointParamKeys.TARGET_LAT] = lat
+            this[TaskWaypointParamKeys.TARGET_LON] = lon
+            this[TaskWaypointParamKeys.IS_TARGET_POINT_CUSTOMIZED] = true
         }
         updatedWaypoints[index] = targetWaypoint.copy(customParameters = updatedParams)
         publish(
-            task = current.copy(waypoints = normalizeWaypointsForAAT(updatedWaypoints)),
+            task = current.copy(waypoints = AATTaskWaypointCodec.normalizeWaypointsForAAT(updatedWaypoints)),
             requestedActiveLeg = _state.value.base.activeLegIndex,
             minimumTime = _state.value.minimumTime,
             maximumTime = _state.value.maximumTime,
@@ -170,15 +157,15 @@ class DefaultAATTaskEngine(
         val updatedWaypoints = current.waypoints.toMutableList()
         val targetWaypoint = updatedWaypoints[index]
         val updatedParams = targetWaypoint.customParameters.toMutableMap().apply {
-            this["radiusMeters"] = radiusMeters
-            this["outerRadiusMeters"] = radiusMeters
+            this[TaskWaypointParamKeys.RADIUS_METERS] = radiusMeters
+            this[TaskWaypointParamKeys.OUTER_RADIUS_METERS] = radiusMeters
         }
         updatedWaypoints[index] = targetWaypoint.copy(
             customRadius = radiusMeters / 1000.0,
             customParameters = updatedParams
         )
         publish(
-            task = current.copy(waypoints = normalizeWaypointsForAAT(updatedWaypoints)),
+            task = current.copy(waypoints = AATTaskWaypointCodec.normalizeWaypointsForAAT(updatedWaypoints)),
             requestedActiveLeg = _state.value.base.activeLegIndex,
             minimumTime = _state.value.minimumTime,
             maximumTime = _state.value.maximumTime,
@@ -187,9 +174,9 @@ class DefaultAATTaskEngine(
     }
 
     fun calculateTaskDistanceMeters(task: Task = _state.value.base.task): Double {
-        val waypoints = normalizeWaypointsForAAT(task.waypoints)
+        val waypoints = AATTaskWaypointCodec.normalizeWaypointsForAAT(task.waypoints)
         if (waypoints.size < 2) return 0.0
-        val aatWaypoints = waypoints.map { it.toAATWaypoint() }
+        val aatWaypoints = waypoints.map(AATTaskWaypointCodec::toAATWaypoint)
         val pathPoints = geometryGenerator.calculateOptimalAATPath(aatWaypoints)
         if (pathPoints.size < 2) return 0.0
 
@@ -218,7 +205,7 @@ class DefaultAATTaskEngine(
         val valid = validationBridge.isTaskValid(
             SimpleAATTask(
                 id = task.id,
-                waypoints = task.waypoints.map { it.toAATWaypoint() },
+                waypoints = task.waypoints.map(AATTaskWaypointCodec::toAATWaypoint),
                 minimumTime = minimumTime,
                 maximumTime = maximumTime.takeIf { !it.isZero && !it.isNegative }
             )
@@ -235,141 +222,6 @@ class DefaultAATTaskEngine(
             editWaypointIndex = editWaypointIndex
         )
     }
-
-    private fun normalizeWaypointsForAAT(waypoints: List<TaskWaypoint>): List<TaskWaypoint> {
-        if (waypoints.isEmpty()) return emptyList()
-        return waypoints.mapIndexed { index, waypoint ->
-            val normalizedRole = when {
-                waypoints.size == 1 -> WaypointRole.START
-                index == 0 -> WaypointRole.START
-                index == waypoints.lastIndex -> WaypointRole.FINISH
-                else -> WaypointRole.TURNPOINT
-            }
-            val normalizedType = normalizePointType(waypoint.customPointType, normalizedRole)
-            val defaultRadius = defaultRadiusKm(normalizedRole)
-            val normalizedRadius = if (waypoint.role != normalizedRole) {
-                defaultRadius
-            } else {
-                waypoint.customRadius?.takeIf { it > 0.0 } ?: defaultRadius
-            }
-            val normalizedParams = waypoint.customParameters.toMutableMap().apply {
-                if (!containsKey("targetLat")) this["targetLat"] = waypoint.lat
-                if (!containsKey("targetLon")) this["targetLon"] = waypoint.lon
-            }
-            waypoint.copy(
-                role = normalizedRole,
-                customPointType = normalizedType,
-                customRadius = normalizedRadius,
-                customParameters = normalizedParams
-            )
-        }
-    }
-
-    private fun normalizePointType(customPointType: String?, role: WaypointRole): String {
-        return when (role) {
-            WaypointRole.START -> {
-                val valid = setOf(
-                    AATStartPointType.AAT_START_LINE.name,
-                    AATStartPointType.AAT_START_CYLINDER.name,
-                    AATStartPointType.AAT_START_SECTOR.name
-                )
-                if (customPointType in valid) customPointType!! else AATStartPointType.AAT_START_LINE.name
-            }
-            WaypointRole.FINISH -> {
-                val valid = setOf(
-                    AATFinishPointType.AAT_FINISH_CYLINDER.name,
-                    AATFinishPointType.AAT_FINISH_LINE.name
-                )
-                if (customPointType in valid) customPointType!! else AATFinishPointType.AAT_FINISH_CYLINDER.name
-            }
-            WaypointRole.TURNPOINT, WaypointRole.OPTIONAL -> {
-                val valid = setOf(
-                    AATTurnPointType.AAT_CYLINDER.name,
-                    AATTurnPointType.AAT_SECTOR.name,
-                    AATTurnPointType.AAT_KEYHOLE.name
-                )
-                if (customPointType in valid) customPointType!! else AATTurnPointType.AAT_CYLINDER.name
-            }
-        }
-    }
-
-    private fun defaultRadiusKm(role: WaypointRole): Double {
-        val aatRole = when (role) {
-            WaypointRole.START -> AATWaypointRole.START
-            WaypointRole.FINISH -> AATWaypointRole.FINISH
-            WaypointRole.TURNPOINT, WaypointRole.OPTIONAL -> AATWaypointRole.TURNPOINT
-        }
-        return AATRadiusAuthority.getRadiusForRole(aatRole)
-    }
-
-    private fun TaskWaypoint.toAATWaypoint(): AATWaypoint {
-        val normalizedRole = when (role) {
-            WaypointRole.START -> AATWaypointRole.START
-            WaypointRole.FINISH -> AATWaypointRole.FINISH
-            WaypointRole.TURNPOINT, WaypointRole.OPTIONAL -> AATWaypointRole.TURNPOINT
-        }
-        val startType = customPointType
-            ?.let { runCatching { AATStartPointType.valueOf(it) }.getOrNull() }
-            ?: AATStartPointType.AAT_START_LINE
-        val finishType = customPointType
-            ?.let { runCatching { AATFinishPointType.valueOf(it) }.getOrNull() }
-            ?: AATFinishPointType.AAT_FINISH_CYLINDER
-        val turnType = customPointType
-            ?.let { runCatching { AATTurnPointType.valueOf(it) }.getOrNull() }
-            ?: AATTurnPointType.AAT_CYLINDER
-
-        val radiusMeters = ((customRadius?.takeIf { it > 0.0 }
-            ?: AATRadiusAuthority.getRadiusForRole(normalizedRole)) * 1000.0)
-        val innerRadiusMeters = (customParameters["innerRadiusMeters"] as? Number)?.toDouble() ?: 0.0
-        val outerRadiusMeters = (customParameters["outerRadiusMeters"] as? Number)?.toDouble() ?: radiusMeters
-        val startAngleDegrees = (customParameters["startAngleDegrees"] as? Number)?.toDouble() ?: 0.0
-        val endAngleDegrees = (customParameters["endAngleDegrees"] as? Number)?.toDouble() ?: 90.0
-        val lineWidthMeters = (customParameters["lineWidthMeters"] as? Number)?.toDouble() ?: radiusMeters
-        val targetLat = (customParameters["targetLat"] as? Number)?.toDouble() ?: lat
-        val targetLon = (customParameters["targetLon"] as? Number)?.toDouble() ?: lon
-        val isTargetPointCustomized =
-            (customParameters["isTargetPointCustomized"] as? Boolean) ?: (targetLat != lat || targetLon != lon)
-
-        val areaShape = when (normalizedRole) {
-            AATWaypointRole.START -> {
-                if (startType == AATStartPointType.AAT_START_LINE) AATAreaShape.LINE else AATAreaShape.CIRCLE
-            }
-            AATWaypointRole.FINISH -> {
-                if (finishType == AATFinishPointType.AAT_FINISH_LINE) AATAreaShape.LINE else AATAreaShape.CIRCLE
-            }
-            AATWaypointRole.TURNPOINT -> {
-                if (turnType == AATTurnPointType.AAT_SECTOR || turnType == AATTurnPointType.AAT_KEYHOLE) {
-                    AATAreaShape.SECTOR
-                } else {
-                    AATAreaShape.CIRCLE
-                }
-            }
-        }
-
-        return AATWaypoint(
-            id = id,
-            title = title,
-            subtitle = subtitle,
-            lat = lat,
-            lon = lon,
-            role = normalizedRole,
-            assignedArea = AATAssignedArea(
-                shape = areaShape,
-                radiusMeters = radiusMeters,
-                innerRadiusMeters = innerRadiusMeters,
-                outerRadiusMeters = outerRadiusMeters,
-                startAngleDegrees = startAngleDegrees,
-                endAngleDegrees = endAngleDegrees,
-                lineWidthMeters = lineWidthMeters
-            ),
-            startPointType = startType,
-            finishPointType = finishType,
-            turnPointType = turnType,
-            targetPoint = AATLatLng(targetLat, targetLon),
-            isTargetPointCustomized = isTargetPointCustomized
-        )
-    }
-
     companion object {
         private val DEFAULT_MINIMUM_TIME: Duration = Duration.ofHours(3)
         private val DEFAULT_MAXIMUM_TIME: Duration = Duration.ofHours(6)

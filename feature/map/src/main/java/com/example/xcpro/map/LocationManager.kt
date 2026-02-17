@@ -14,7 +14,6 @@ import com.example.xcpro.map.domain.MapShiftBiasCalculator
 import com.example.xcpro.map.MapLocationFilter
 import com.example.xcpro.map.MapLibreProjector
 import com.example.xcpro.map.MapPositionController
-import com.example.xcpro.common.orientation.MapOrientationMode
 import com.example.xcpro.replay.ReplayDisplayPose
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.geometry.LatLng
@@ -132,17 +131,22 @@ class LocationManager(
         bearingEpsDeg = CAMERA_BEARING_EPS_DEG,
         defaultAnimationMs = CAMERA_ANIMATION_MS
     )
-    private var latestOrientation: OrientationData = OrientationData()
-    @Volatile private var lastDisplayPoseLocation: LatLng? = null
-    @Volatile private var lastDisplayPoseTimestampMs: Long = 0L
-    @Volatile private var lastDisplayPoseFrameId: Long = 0L
-    @Volatile private var displayPoseFrameListener: ((DisplayPoseSnapshot) -> Unit)? = null
-    private var displayFrameCounter: Long = 0L
     private val frameLogger = DisplayPoseFrameLogger(
         tag = TAG,
         defaultIntervalMs = FRAME_LOG_INTERVAL_MS,
         timeBaseProvider = { poseCoordinator.timeBase },
         featureFlags = featureFlags
+    )
+    private val displayPoseRenderer = DisplayPoseRenderCoordinator(
+        mapState = mapState,
+        mapStateReader = mapStateReader,
+        featureFlags = featureFlags,
+        poseCoordinator = poseCoordinator,
+        replayHeadingProvider = replayHeadingProvider,
+        replayFixProvider = replayFixProvider,
+        trackingCameraController = trackingCameraController,
+        positionController = positionController,
+        frameLogger = frameLogger
     )
     private val renderFrameSync = RenderFrameSync(
         isEnabled = { featureFlags.useRenderFrameSync },
@@ -187,7 +191,7 @@ class LocationManager(
         location: MapLocationUiModel,
         orientation: OrientationData
     ) {
-        latestOrientation = orientation
+        displayPoseRenderer.updateOrientation(orientation)
         if (!isValidCoordinate(location.latitude, location.longitude)) {
             logLocationDebug {
                 "Live GPS: invalid coordinates (lat=${location.latitude}, lon=${location.longitude})"
@@ -199,7 +203,7 @@ class LocationManager(
     }
 
     fun updateOrientation(orientation: OrientationData) {
-        latestOrientation = orientation
+        displayPoseRenderer.updateOrientation(orientation)
     }
 
     fun setReplaySpeedMultiplier(multiplier: Double) {
@@ -229,122 +233,26 @@ class LocationManager(
         val frameId: Long
     )
 
-    fun getDisplayPoseLocation(): LatLng? = lastDisplayPoseLocation
+    fun getDisplayPoseLocation(): LatLng? = displayPoseRenderer.getDisplayPoseLocation()
 
     fun getDisplayPoseTimestampMs(): Long? =
-        lastDisplayPoseTimestampMs.takeIf { it > 0L }
+        displayPoseRenderer.getDisplayPoseTimestampMs()
 
-    fun getDisplayPoseSnapshot(): DisplayPoseSnapshot? {
-        val location = lastDisplayPoseLocation ?: return null
-        val timestamp = lastDisplayPoseTimestampMs
-        if (timestamp <= 0L) return null
-        val frameId = lastDisplayPoseFrameId
-        if (frameId <= 0L) return null
-        return DisplayPoseSnapshot(location, timestamp, frameId)
-    }
+    fun getDisplayPoseSnapshot(): DisplayPoseSnapshot? =
+        displayPoseRenderer.getDisplayPoseSnapshot()
 
     fun setDisplayPoseFrameListener(listener: ((DisplayPoseSnapshot) -> Unit)?) {
-        displayPoseFrameListener = listener
+        displayPoseRenderer.setDisplayPoseFrameListener(listener)
     }
 
     private fun renderDisplayFrame() {
-        val nowMs = poseCoordinator.nowMs()
-        val mode = mapStateReader.displayPoseMode.value
-        val smoothingProfile = mapStateReader.displaySmoothingProfile.value
-        val pose = poseCoordinator.selectPose(nowMs, mode, smoothingProfile) ?: return
-        if (mapState.mapLibreMap == null) return
-        val orientation = latestOrientation
-        val forceTrackHeading = featureFlags.forceReplayTrackHeading &&
-            poseCoordinator.timeBase == DisplayClock.TimeBase.REPLAY
-        val runtimeFix = if (forceTrackHeading && featureFlags.useRuntimeReplayHeading) {
-            replayFixProvider?.invoke(nowMs)
-        } else {
-            null
-        }
-        val runtimeBearing = runtimeFix?.bearingDeg
-            ?: if (forceTrackHeading && featureFlags.useRuntimeReplayHeading) {
-                replayHeadingProvider?.invoke(nowMs)
-            } else {
-                null
-            }
-        val poseLocation = runtimeFix?.let { fix ->
-            LatLng(fix.latitude, fix.longitude)
-        } ?: pose.location
-        val poseTimestampMs = runtimeFix?.timestampMillis ?: pose.updatedAtMs
-        val headingDeg = when {
-            runtimeBearing != null -> runtimeBearing
-            forceTrackHeading -> pose.trackDeg
-            else -> orientation.headingDeg
-        }
-        val headingValid = runtimeBearing != null || forceTrackHeading || orientation.headingValid
-        val trackDeg = runtimeBearing ?: pose.trackDeg
-        val speedMs = runtimeFix?.speedMs ?: pose.speedMs
-        val cameraTargetBearing = if (runtimeBearing != null &&
-            orientation.mode != MapOrientationMode.NORTH_UP
-        ) {
-            runtimeBearing
-        } else {
-            orientation.bearing
-        }
-
-        displayFrameCounter += 1
-        lastDisplayPoseFrameId = displayFrameCounter
-        lastDisplayPoseLocation = poseLocation
-        lastDisplayPoseTimestampMs = poseTimestampMs
-        if (featureFlags.useRenderFrameSync) {
-            frameLogger.logIfDue(
-                frameId = lastDisplayPoseFrameId,
-                poseTimestampMs = poseTimestampMs,
-                location = poseLocation,
-                trackDeg = trackDeg,
-                headingDeg = headingDeg,
-                cameraTargetBearing = cameraTargetBearing
-            )
-        }
-        if (featureFlags.useRenderFrameSync) {
-            displayPoseFrameListener?.invoke(
-                DisplayPoseSnapshot(
-                    location = poseLocation,
-                    timestampMs = poseTimestampMs,
-                    frameId = lastDisplayPoseFrameId
-                )
-            )
-        }
-
-        val trackingResult = trackingCameraController.updateCamera(
-            MapTrackingCameraController.FrameInput(
-                location = poseLocation,
-                trackDeg = trackDeg,
-                cameraTargetBearing = cameraTargetBearing,
-                speedMs = speedMs,
-                orientationMode = orientation.mode,
-                timeBase = poseCoordinator.timeBase,
-                nowMs = nowMs
-            )
-        ) ?: return
-        trackingResult.initialCenteredZoom?.let { zoom ->
+        displayPoseRenderer.renderDisplayFrame { poseLocation, zoom ->
             saveLocation(poseLocation, zoom, 0.0)
             logLocationDebug {
                 "INITIAL CENTERING: centered map on first GPS location: " +
                     "${poseLocation.latitude}, ${poseLocation.longitude}"
             }
         }
-
-        val cameraBearing = trackingResult.cameraBearing
-        val overlayBearing = if (cameraBearing.isFinite()) cameraBearing else orientation.bearing
-        positionController.updateOverlay(
-            location = poseLocation,
-            trackBearing = trackDeg,
-            headingDeg = headingDeg,
-            headingValid = headingValid,
-            bearingAccuracyDeg = pose.bearingAccuracyDeg,
-            speedAccuracyMs = pose.speedAccuracyMs,
-            mapBearing = overlayBearing,
-            orientationMode = orientation.mode,
-            speedMs = speedMs,
-            nowMs = nowMs,
-            frameId = lastDisplayPoseFrameId
-        )
     }
 
     fun bindRenderFrameListener(mapView: MapView) {
@@ -382,7 +290,7 @@ class LocationManager(
             return
         }
 
-        latestOrientation = orientation
+        displayPoseRenderer.updateOrientation(orientation)
         val envelope = feedAdapter.fromFlightData(liveData, orientation)
         pushRawFix(envelope)
     }

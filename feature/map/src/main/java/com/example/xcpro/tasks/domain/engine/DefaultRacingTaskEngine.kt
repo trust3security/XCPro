@@ -3,6 +3,7 @@ package com.example.xcpro.tasks.domain.engine
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.TaskWaypoint
+import com.example.xcpro.tasks.core.RacingWaypointCustomParams
 import com.example.xcpro.tasks.core.WaypointRole
 import com.example.xcpro.tasks.racing.RacingGeometryUtils
 import com.example.xcpro.tasks.racing.RacingTaskCalculator
@@ -201,9 +202,7 @@ class DefaultRacingTaskEngine(
         val turnType = customPointType
             ?.let { runCatching { RacingTurnPointType.valueOf(it) }.getOrNull() }
             ?: RacingTurnPointType.TURN_POINT_CYLINDER
-        val keyholeInnerRadius = (customParameters["keyholeInnerRadius"] as? Number)?.toDouble() ?: 0.5
-        val keyholeAngle = (customParameters["keyholeAngle"] as? Number)?.toDouble() ?: 90.0
-        val faiQuadrantOuterRadius = (customParameters["faiQuadrantOuterRadius"] as? Number)?.toDouble() ?: 10.0
+        val racingParams = RacingWaypointCustomParams.from(customParameters)
 
         return RacingWaypoint.createWithStandardizedDefaults(
             id = id,
@@ -216,9 +215,9 @@ class DefaultRacingTaskEngine(
             finishPointType = finishType,
             turnPointType = turnType,
             customGateWidth = customRadius?.takeIf { it > 0.0 },
-            keyholeInnerRadius = keyholeInnerRadius,
-            keyholeAngle = keyholeAngle,
-            faiQuadrantOuterRadius = faiQuadrantOuterRadius
+            keyholeInnerRadius = racingParams.keyholeInnerRadius,
+            keyholeAngle = racingParams.keyholeAngle,
+            faiQuadrantOuterRadius = racingParams.faiQuadrantOuterRadius
         )
     }
 }

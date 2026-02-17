@@ -4,11 +4,9 @@ import com.example.xcpro.adsb.AdsbTrafficUiModel
 import com.example.xcpro.adsb.Icao24
 import com.example.xcpro.map.model.MapLocationUiModel
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
@@ -29,7 +27,6 @@ internal class MapScreenTrafficCoordinator(
     private val ognTrafficUseCase: OgnTrafficUseCase,
     private val adsbTrafficUseCase: AdsbTrafficUseCase
 ) {
-    @OptIn(FlowPreview::class)
     fun bind() {
         combine(
             allowSensorStart,
@@ -40,17 +37,6 @@ internal class MapScreenTrafficCoordinator(
         }
             .onEach { shouldStream ->
                 ognTrafficUseCase.setStreamingEnabled(shouldStream)
-            }
-            .launchIn(scope)
-
-        mapState.lastCameraSnapshot
-            .filterNotNull()
-            .debounce(1_500L)
-            .onEach { cameraSnapshot ->
-                ognTrafficUseCase.updateCenter(
-                    latitude = cameraSnapshot.target.latitude,
-                    longitude = cameraSnapshot.target.longitude
-                )
             }
             .launchIn(scope)
 
@@ -76,6 +62,10 @@ internal class MapScreenTrafficCoordinator(
             }
             .distinctUntilChanged()
             .onEach { (latitude, longitude) ->
+                ognTrafficUseCase.updateCenter(
+                    latitude = latitude,
+                    longitude = longitude
+                )
                 adsbTrafficUseCase.updateCenter(
                     latitude = latitude,
                     longitude = longitude

@@ -1,6 +1,7 @@
 package com.example.xcpro.tasks
 
 import com.example.xcpro.tasks.aat.AATTaskManager
+import com.example.xcpro.tasks.core.AATTaskTimeCustomParams
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.domain.engine.AATTaskEngine
@@ -117,24 +118,16 @@ internal class TaskCoordinatorPersistenceBridge(
         maximum: Duration?
     ): Task {
         if (task.waypoints.isEmpty()) return task
-        val minSeconds = minimum.seconds.toDouble()
-        val maxSeconds = maximum?.seconds?.toDouble()
+        val typedTimes = AATTaskTimeCustomParams(
+            minimumTimeSeconds = minimum.seconds.toDouble(),
+            maximumTimeSeconds = maximum?.seconds?.toDouble()
+        )
         return task.copy(
             waypoints = task.waypoints.map { waypoint ->
                 val params = waypoint.customParameters.toMutableMap()
-                params[KEY_AAT_MIN_TIME_SECONDS] = minSeconds
-                if (maxSeconds != null) {
-                    params[KEY_AAT_MAX_TIME_SECONDS] = maxSeconds
-                } else {
-                    params.remove(KEY_AAT_MAX_TIME_SECONDS)
-                }
+                typedTimes.applyTo(params)
                 waypoint.copy(customParameters = params)
             }
         )
-    }
-
-    private companion object {
-        private const val KEY_AAT_MIN_TIME_SECONDS = "aatMinimumTimeSeconds"
-        private const val KEY_AAT_MAX_TIME_SECONDS = "aatMaximumTimeSeconds"
     }
 }

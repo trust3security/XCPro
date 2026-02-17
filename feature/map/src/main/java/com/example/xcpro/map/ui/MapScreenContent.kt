@@ -28,6 +28,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -41,7 +43,9 @@ import com.example.xcpro.adsb.AdsbMarkerDetailsSheet
 import com.example.xcpro.adsb.AdsbTrafficSnapshot
 import com.example.xcpro.adsb.AdsbTrafficUiModel
 import com.example.xcpro.adsb.AdsbSelectedTargetDetails
+import com.example.xcpro.forecast.ForecastTileFormat
 import com.example.xcpro.forecast.ForecastOverlayViewModel
+import com.example.xcpro.forecast.ForecastWindDisplayMode
 import com.example.xcpro.gestures.TaskGestureCallbacks
 import com.example.xcpro.gestures.TaskGestureHandler
 import com.example.xcpro.map.BuildConfig
@@ -69,6 +73,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import android.util.Log
+import androidx.compose.foundation.shape.RoundedCornerShape
 import com.example.xcpro.seedQnhInputValue
 import com.example.xcpro.convertQnhInputToHpa
 import com.example.xcpro.variometer.layout.VariometerUiState
@@ -173,6 +178,10 @@ internal fun MapScreenContent(
     var qnhError by remember { mutableStateOf<String?>(null) }
     var showQnhFab by remember { mutableStateOf(true) }
     var showForecastSheet by remember { mutableStateOf(false) }
+    var tappedWindArrowSpeedKt by remember { mutableStateOf<Double?>(null) }
+    val isForecastWindArrowOverlayActive = forecastOverlayState.enabled &&
+        forecastOverlayState.windDisplayMode == ForecastWindDisplayMode.ARROW &&
+        forecastOverlayState.tileSpec?.format == ForecastTileFormat.VECTOR_WIND_POINTS
 
     LaunchedEffect(
         mapState.mapLibreMap,
@@ -180,6 +189,8 @@ internal fun MapScreenContent(
         forecastOverlayState.tileSpec,
         forecastOverlayState.legend,
         forecastOverlayState.opacity,
+        forecastOverlayState.windOverlayScale,
+        forecastOverlayState.windDisplayMode,
         forecastOverlayState.errorMessage
     ) {
         if (!forecastOverlayState.enabled || forecastOverlayState.errorMessage != null) {
@@ -191,8 +202,23 @@ internal fun MapScreenContent(
             enabled = true,
             tileSpec = tileSpec,
             opacity = forecastOverlayState.opacity,
+            windOverlayScale = forecastOverlayState.windOverlayScale,
+            windDisplayMode = forecastOverlayState.windDisplayMode,
             legendSpec = forecastOverlayState.legend
         )
+    }
+
+    LaunchedEffect(isForecastWindArrowOverlayActive) {
+        if (!isForecastWindArrowOverlayActive) {
+            tappedWindArrowSpeedKt = null
+        }
+    }
+
+    LaunchedEffect(tappedWindArrowSpeedKt) {
+        if (tappedWindArrowSpeedKt != null) {
+            delay(WIND_ARROW_SPEED_TAP_DISPLAY_MS)
+            tappedWindArrowSpeedKt = null
+        }
     }
 
     Box(Modifier.fillMaxSize()) {
@@ -232,8 +258,13 @@ internal fun MapScreenContent(
                         showDistanceCircles = showDistanceCircles,
                         overlayManager = overlayManager,
                         onAdsbTargetSelected = onAdsbTargetSelected,
+                        onForecastWindArrowSpeedTap = { speedKt ->
+                            if (isForecastWindArrowOverlayActive) {
+                                tappedWindArrowSpeedKt = speedKt
+                            }
+                        },
                         onMapLongPress = { point ->
-                            if (!isAATEditMode) {
+                            if (!isAATEditMode && forecastOverlayState.enabled) {
                                 forecastViewModel.queryPointValue(
                                     latitude = point.latitude,
                                     longitude = point.longitude
@@ -333,9 +364,22 @@ internal fun MapScreenContent(
             )
         }
 
+        tappedWindArrowSpeedKt?.let { speedKt ->
+            WindArrowSpeedTapLabel(
+                speedKt = speedKt,
+                unitLabel = forecastOverlayState.legend?.unitLabel
+                    ?.takeIf { label -> label.isNotBlank() }
+                    ?: DEFAULT_WIND_SPEED_UNIT_LABEL,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(horizontal = 16.dp)
+            )
+        }
+
         forecastPointCallout?.let { callout ->
             ForecastPointCalloutCard(
                 callout = callout,
+                regionCode = forecastOverlayState.selectedRegionCode,
                 onDismiss = forecastViewModel::clearPointCallout,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -399,9 +443,12 @@ internal fun MapScreenContent(
                 onEnabledChanged = forecastViewModel::setEnabled,
                 onParameterSelected = forecastViewModel::selectParameter,
                 onAutoTimeEnabledChanged = forecastViewModel::setAutoTimeEnabled,
+                onFollowTimeOffsetChanged = forecastViewModel::setFollowTimeOffsetMinutes,
                 onJumpToNow = forecastViewModel::jumpToNow,
                 onTimeSelected = forecastViewModel::selectTime,
-                onOpacityChanged = forecastViewModel::setOpacity
+                onOpacityChanged = forecastViewModel::setOpacity,
+                onWindOverlayScaleChanged = forecastViewModel::setWindOverlayScale,
+                onWindDisplayModeChanged = forecastViewModel::setWindDisplayMode
             )
         }
     }
@@ -412,3 +459,35 @@ internal fun MapScreenContent(
         unitsPreferences = unitsPreferences
     )
 }
+
+@Composable
+private fun WindArrowSpeedTapLabel(
+    speedKt: Double,
+    unitLabel: String,
+    modifier: Modifier = Modifier
+) {
+    val textStyle = MaterialTheme.typography.headlineSmall.copy(
+        fontSize = MaterialTheme.typography.headlineSmall.fontSize * 0.5f,
+        fontWeight = FontWeight.SemiBold
+    )
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(18.dp),
+        color = Color.White.copy(alpha = 0.92f),
+        tonalElevation = 2.dp,
+        shadowElevation = 8.dp
+    ) {
+        Text(
+            text = "Wind ${formatWindSpeedForTap(speedKt)} $unitLabel",
+            color = Color.Black,
+            style = textStyle,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+        )
+    }
+}
+
+private fun formatWindSpeedForTap(speedKt: Double): String =
+    String.format(Locale.US, "%.0f", speedKt)
+
+private const val WIND_ARROW_SPEED_TAP_DISPLAY_MS = 4_000L
+private const val DEFAULT_WIND_SPEED_UNIT_LABEL = "kt"

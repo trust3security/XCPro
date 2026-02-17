@@ -1,6 +1,7 @@
 package com.example.xcpro.tasks.racing
 
 import com.example.xcpro.common.waypoint.SearchWaypoint
+import com.example.xcpro.tasks.core.RacingWaypointCustomParams
 import com.example.xcpro.tasks.core.TaskWaypoint
 import com.example.xcpro.tasks.core.WaypointRole
 import com.example.xcpro.tasks.racing.models.RacingWaypoint
@@ -87,9 +88,7 @@ class RacingTaskInitializer {
             }
 
             // Extract advanced parameters with sensible defaults
-            val keyholeInnerRadius = (genericWaypoint.customParameters["keyholeInnerRadius"] as? Double) ?: 0.5
-            val keyholeAngle = (genericWaypoint.customParameters["keyholeAngle"] as? Double) ?: 90.0
-            val faiQuadrantOuterRadius = (genericWaypoint.customParameters["faiQuadrantOuterRadius"] as? Double) ?: 10.0
+            val racingParams = RacingWaypointCustomParams.from(genericWaypoint.customParameters)
 
             // Get user customized radius if available, otherwise let factory method apply proper defaults
             val customGateWidth = genericWaypoint.customRadius?.takeIf { it > 0.0 }
@@ -107,9 +106,9 @@ class RacingTaskInitializer {
                 turnPointType = turnPointType,
                 customGateWidth = customGateWidth, // Preserve user customization or apply role-based defaults
                 // Advanced parameters - preserved if available
-                keyholeInnerRadius = keyholeInnerRadius,
-                keyholeAngle = keyholeAngle,
-                faiQuadrantOuterRadius = faiQuadrantOuterRadius
+                keyholeInnerRadius = racingParams.keyholeInnerRadius,
+                keyholeAngle = racingParams.keyholeAngle,
+                faiQuadrantOuterRadius = racingParams.faiQuadrantOuterRadius
             )
         }
 

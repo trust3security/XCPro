@@ -411,8 +411,9 @@ class OgnTrafficRepositoryImpl @Inject constructor(
         private const val APP_NAME = "XCPro"
         private const val APP_VERSION = "0.1"
 
-        private const val RECEIVE_RADIUS_KM = 300.0
-        private const val FILTER_UPDATE_MIN_MOVE_KM = 75.0
+        // Product contract: 300 km diameter around user position -> 150 km radius.
+        private const val RECEIVE_RADIUS_KM = 150.0
+        private const val FILTER_UPDATE_MIN_MOVE_KM = 20.0
 
         private const val SOCKET_CONNECT_TIMEOUT_MS = 10_000
         private const val SOCKET_READ_TIMEOUT_MS = 20_000

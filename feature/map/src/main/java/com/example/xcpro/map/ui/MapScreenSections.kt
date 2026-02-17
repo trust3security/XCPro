@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
@@ -13,6 +14,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.currentStateAsState
 import android.util.Log
 import android.view.MotionEvent
 import com.example.xcpro.map.BuildConfig
@@ -202,7 +204,8 @@ private fun MapViewHost(
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
-    val lifecycleState = LocalLifecycleOwner.current.lifecycle.currentState
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val lifecycleState by lifecycleOwner.lifecycle.currentStateAsState()
     AndroidView(
         factory = { ctx ->
             MapView(ctx).apply {
