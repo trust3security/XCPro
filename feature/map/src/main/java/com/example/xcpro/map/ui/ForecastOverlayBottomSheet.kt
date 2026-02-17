@@ -61,7 +61,9 @@ internal fun ForecastOverlayBottomSheet(
     uiState: ForecastOverlayUiState,
     onDismiss: () -> Unit,
     onEnabledChanged: (Boolean) -> Unit,
-    onParameterSelected: (ForecastParameterId) -> Unit,
+    onPrimaryParameterToggled: (ForecastParameterId) -> Unit,
+    onWindOverlayEnabledChanged: (Boolean) -> Unit,
+    onWindParameterSelected: (ForecastParameterId) -> Unit,
     onAutoTimeEnabledChanged: (Boolean) -> Unit,
     onFollowTimeOffsetChanged: (Int) -> Unit,
     onJumpToNow: () -> Unit,
@@ -122,6 +124,25 @@ internal fun ForecastOverlayBottomSheet(
     LaunchedEffect(uiState.windOverlayScale) {
         windOverlayScaleDraft = uiState.windOverlayScale
     }
+    val selectedPrimaryOverlayIds = remember(
+        uiState.selectedPrimaryParameterId,
+        uiState.secondaryPrimaryOverlayEnabled,
+        uiState.selectedSecondaryPrimaryParameterId
+    ) {
+        buildList {
+            add(uiState.selectedPrimaryParameterId)
+            if (
+                uiState.secondaryPrimaryOverlayEnabled &&
+                !uiState.selectedSecondaryPrimaryParameterId.value.equals(
+                    uiState.selectedPrimaryParameterId.value,
+                    ignoreCase = true
+                )
+            ) {
+                add(uiState.selectedSecondaryPrimaryParameterId)
+            }
+        }
+    }
+    val selectedPrimaryOverlayCount = selectedPrimaryOverlayIds.size
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -154,14 +175,19 @@ internal fun ForecastOverlayBottomSheet(
             }
 
             Text(
-                text = "Parameter",
+                text = "Parameters",
                 style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = "Select up to 2 non-wind overlays",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             LazyRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                if (uiState.parameters.isEmpty()) {
+                if (uiState.primaryParameters.isEmpty()) {
                     item {
                         Text(
                             text = "No parameters available",
@@ -171,14 +197,65 @@ internal fun ForecastOverlayBottomSheet(
                     }
                 } else {
                     items(
-                        items = uiState.parameters,
+                        items = uiState.primaryParameters,
+                        key = { parameter -> parameter.id.value }
+                    ) { parameter ->
+                        val isSelected = selectedPrimaryOverlayIds.any { selected ->
+                            selected.value.equals(parameter.id.value, ignoreCase = true)
+                        }
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = { onPrimaryParameterToggled(parameter.id) },
+                            label = { Text(parameter.name) },
+                            enabled = uiState.enabled && (
+                                isSelected || selectedPrimaryOverlayCount < MAX_PRIMARY_OVERLAY_SELECTIONS
+                            )
+                        )
+                    }
+                }
+            }
+
+            Text(
+                text = "Wind overlay",
+                style = MaterialTheme.typography.titleMedium
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Show wind",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                Switch(
+                    checked = uiState.windOverlayEnabled,
+                    onCheckedChange = onWindOverlayEnabledChanged,
+                    enabled = uiState.enabled
+                )
+            }
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (uiState.windParameters.isEmpty()) {
+                    item {
+                        Text(
+                            text = "No wind parameters available",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                } else {
+                    items(
+                        items = uiState.windParameters,
                         key = { parameter -> parameter.id.value }
                     ) { parameter ->
                         FilterChip(
-                            selected = parameter.id == uiState.selectedParameterId,
-                            onClick = { onParameterSelected(parameter.id) },
+                            selected = parameter.id == uiState.selectedWindParameterId,
+                            onClick = { onWindParameterSelected(parameter.id) },
                             label = { Text(parameter.name) },
-                            enabled = uiState.enabled
+                            enabled = uiState.enabled && uiState.windOverlayEnabled
                         )
                     }
                 }
@@ -307,7 +384,7 @@ internal fun ForecastOverlayBottomSheet(
                         selected = uiState.windDisplayMode == mode,
                         onClick = { onWindDisplayModeChanged(mode) },
                         label = { Text(mode.label) },
-                        enabled = uiState.enabled
+                        enabled = uiState.enabled && uiState.windOverlayEnabled
                     )
                 }
             }
@@ -321,11 +398,11 @@ internal fun ForecastOverlayBottomSheet(
                         onWindOverlayScaleChanged(windOverlayScaleDraft)
                     }
                 },
-                enabled = uiState.enabled,
+                enabled = uiState.enabled && uiState.windOverlayEnabled,
                 valueRange = FORECAST_WIND_OVERLAY_SCALE_MIN..FORECAST_WIND_OVERLAY_SCALE_MAX
             )
 
-            uiState.legend?.let { legend ->
+            uiState.primaryLegend?.let { legend ->
                 Text(
                     text = "Legend (${legend.unitLabel})",
                     style = MaterialTheme.typography.titleMedium
@@ -351,6 +428,38 @@ internal fun ForecastOverlayBottomSheet(
                                 text = "${stop.value}",
                                 style = MaterialTheme.typography.bodySmall
                             )
+                        }
+                    }
+                }
+            }
+            if (uiState.secondaryPrimaryOverlayEnabled) {
+                uiState.secondaryPrimaryLegend?.let { legend ->
+                    Text(
+                        text = "Second overlay legend (${legend.unitLabel})",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        legend.stops.forEach { stop ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(width = 20.dp, height = 12.dp)
+                                        .background(
+                                            color = Color(stop.argb),
+                                            shape = RoundedCornerShape(2.dp)
+                                        )
+                                )
+                                Text(
+                                    text = "${stop.value}",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
                         }
                     }
                 }
@@ -472,3 +581,5 @@ private fun formatDirectionDegrees(value: Double): String {
     val normalized = ((value % 360.0) + 360.0) % 360.0
     return String.format(Locale.US, "%.0f%c", normalized, '\u00B0')
 }
+
+private const val MAX_PRIMARY_OVERLAY_SELECTIONS = 2

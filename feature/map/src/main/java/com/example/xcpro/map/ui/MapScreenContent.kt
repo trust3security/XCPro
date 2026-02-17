@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
@@ -29,8 +30,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.example.dfcards.RealTimeFlightData
@@ -82,6 +85,8 @@ import com.example.xcpro.replay.SessionState
 import com.example.xcpro.replay.SessionStatus
 import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.VerticalSpeedMs
+import kotlin.math.roundToInt
+import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import com.example.xcpro.qnh.QnhCalibrationState
 import java.util.Locale
@@ -178,16 +183,25 @@ internal fun MapScreenContent(
     var qnhError by remember { mutableStateOf<String?>(null) }
     var showQnhFab by remember { mutableStateOf(true) }
     var showForecastSheet by remember { mutableStateOf(false) }
-    var tappedWindArrowSpeedKt by remember { mutableStateOf<Double?>(null) }
+    var tappedWindArrowCallout by remember { mutableStateOf<WindArrowTapCallout?>(null) }
+    var windTapLabelSize by remember { mutableStateOf(IntSize.Zero) }
+    var overlayViewportSize by remember { mutableStateOf(IntSize.Zero) }
     val isForecastWindArrowOverlayActive = forecastOverlayState.enabled &&
+        forecastOverlayState.windOverlayEnabled &&
         forecastOverlayState.windDisplayMode == ForecastWindDisplayMode.ARROW &&
-        forecastOverlayState.tileSpec?.format == ForecastTileFormat.VECTOR_WIND_POINTS
+        forecastOverlayState.windTileSpec?.format == ForecastTileFormat.VECTOR_WIND_POINTS
 
     LaunchedEffect(
         mapState.mapLibreMap,
         forecastOverlayState.enabled,
-        forecastOverlayState.tileSpec,
-        forecastOverlayState.legend,
+        forecastOverlayState.primaryTileSpec,
+        forecastOverlayState.primaryLegend,
+        forecastOverlayState.secondaryPrimaryOverlayEnabled,
+        forecastOverlayState.secondaryPrimaryTileSpec,
+        forecastOverlayState.secondaryPrimaryLegend,
+        forecastOverlayState.windOverlayEnabled,
+        forecastOverlayState.windTileSpec,
+        forecastOverlayState.windLegend,
         forecastOverlayState.opacity,
         forecastOverlayState.windOverlayScale,
         forecastOverlayState.windDisplayMode,
@@ -197,31 +211,44 @@ internal fun MapScreenContent(
             overlayManager.clearForecastOverlay()
             return@LaunchedEffect
         }
-        val tileSpec = forecastOverlayState.tileSpec ?: return@LaunchedEffect
+        val primaryTileSpec = forecastOverlayState.primaryTileSpec ?: return@LaunchedEffect
         overlayManager.setForecastOverlay(
             enabled = true,
-            tileSpec = tileSpec,
+            primaryTileSpec = primaryTileSpec,
+            primaryLegendSpec = forecastOverlayState.primaryLegend,
+            secondaryPrimaryOverlayEnabled = forecastOverlayState.secondaryPrimaryOverlayEnabled,
+            secondaryPrimaryTileSpec = forecastOverlayState.secondaryPrimaryTileSpec,
+            secondaryPrimaryLegendSpec = forecastOverlayState.secondaryPrimaryLegend,
+            windOverlayEnabled = forecastOverlayState.windOverlayEnabled,
+            windTileSpec = forecastOverlayState.windTileSpec,
+            windLegendSpec = forecastOverlayState.windLegend,
             opacity = forecastOverlayState.opacity,
             windOverlayScale = forecastOverlayState.windOverlayScale,
             windDisplayMode = forecastOverlayState.windDisplayMode,
-            legendSpec = forecastOverlayState.legend
         )
     }
 
     LaunchedEffect(isForecastWindArrowOverlayActive) {
         if (!isForecastWindArrowOverlayActive) {
-            tappedWindArrowSpeedKt = null
+            tappedWindArrowCallout = null
+            windTapLabelSize = IntSize.Zero
         }
     }
 
-    LaunchedEffect(tappedWindArrowSpeedKt) {
-        if (tappedWindArrowSpeedKt != null) {
+    LaunchedEffect(tappedWindArrowCallout) {
+        if (tappedWindArrowCallout != null) {
             delay(WIND_ARROW_SPEED_TAP_DISPLAY_MS)
-            tappedWindArrowSpeedKt = null
+            tappedWindArrowCallout = null
         }
     }
 
-    Box(Modifier.fillMaxSize()) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .onSizeChanged { size ->
+                overlayViewportSize = size
+            }
+    ) {
         Scaffold(
             modifier = Modifier
         ) { padding ->
@@ -258,9 +285,12 @@ internal fun MapScreenContent(
                         showDistanceCircles = showDistanceCircles,
                         overlayManager = overlayManager,
                         onAdsbTargetSelected = onAdsbTargetSelected,
-                        onForecastWindArrowSpeedTap = { speedKt ->
+                        onForecastWindArrowSpeedTap = { tapLatLng, speedKt ->
                             if (isForecastWindArrowOverlayActive) {
-                                tappedWindArrowSpeedKt = speedKt
+                                tappedWindArrowCallout = WindArrowTapCallout(
+                                    tapLatLng = tapLatLng,
+                                    speedKt = speedKt
+                                )
                             }
                         },
                         onMapLongPress = { point ->
@@ -364,16 +394,50 @@ internal fun MapScreenContent(
             )
         }
 
-        tappedWindArrowSpeedKt?.let { speedKt ->
-            WindArrowSpeedTapLabel(
-                speedKt = speedKt,
-                unitLabel = forecastOverlayState.legend?.unitLabel
-                    ?.takeIf { label -> label.isNotBlank() }
-                    ?: DEFAULT_WIND_SPEED_UNIT_LABEL,
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .padding(horizontal = 16.dp)
-            )
+        tappedWindArrowCallout?.let { callout ->
+            val map = mapState.mapLibreMap
+            val screenPoint = map?.projection?.toScreenLocation(callout.tapLatLng)
+            if (screenPoint != null) {
+                val edgePaddingPx = with(density) { WIND_TAP_LABEL_EDGE_PADDING_DP.dp.toPx() }
+                val anchorGapPx = with(density) { WIND_TAP_LABEL_ANCHOR_GAP_DP.dp.toPx() }
+                val estimatedWidthPx = with(density) { WIND_TAP_LABEL_ESTIMATED_WIDTH_DP.dp.toPx() }
+                val estimatedHeightPx = with(density) { WIND_TAP_LABEL_ESTIMATED_HEIGHT_DP.dp.toPx() }
+                val labelWidthPx = if (windTapLabelSize.width > 0) {
+                    windTapLabelSize.width.toFloat()
+                } else {
+                    estimatedWidthPx
+                }
+                val labelHeightPx = if (windTapLabelSize.height > 0) {
+                    windTapLabelSize.height.toFloat()
+                } else {
+                    estimatedHeightPx
+                }
+                val maxX = (overlayViewportSize.width.toFloat() - labelWidthPx - edgePaddingPx)
+                    .coerceAtLeast(edgePaddingPx)
+                val maxY = (overlayViewportSize.height.toFloat() - labelHeightPx - edgePaddingPx)
+                    .coerceAtLeast(edgePaddingPx)
+                val targetX = (screenPoint.x - (labelWidthPx / 2f))
+                    .coerceIn(edgePaddingPx, maxX)
+                val targetY = (screenPoint.y - labelHeightPx - anchorGapPx)
+                    .coerceIn(edgePaddingPx, maxY)
+
+                WindArrowSpeedTapLabel(
+                    speedKt = callout.speedKt,
+                    unitLabel = forecastOverlayState.windLegend?.unitLabel
+                        ?.takeIf { label -> label.isNotBlank() }
+                        ?: DEFAULT_WIND_SPEED_UNIT_LABEL,
+                    modifier = Modifier
+                        .offset {
+                            IntOffset(
+                                x = targetX.roundToInt(),
+                                y = targetY.roundToInt()
+                            )
+                        }
+                        .onSizeChanged { size ->
+                            windTapLabelSize = size
+                        }
+                )
+            }
         }
 
         forecastPointCallout?.let { callout ->
@@ -441,7 +505,9 @@ internal fun MapScreenContent(
                 uiState = forecastOverlayState,
                 onDismiss = { showForecastSheet = false },
                 onEnabledChanged = forecastViewModel::setEnabled,
-                onParameterSelected = forecastViewModel::selectParameter,
+                onPrimaryParameterToggled = forecastViewModel::togglePrimaryOverlayParameter,
+                onWindOverlayEnabledChanged = forecastViewModel::setWindOverlayEnabled,
+                onWindParameterSelected = forecastViewModel::selectWindParameter,
                 onAutoTimeEnabledChanged = forecastViewModel::setAutoTimeEnabled,
                 onFollowTimeOffsetChanged = forecastViewModel::setFollowTimeOffsetMinutes,
                 onJumpToNow = forecastViewModel::jumpToNow,
@@ -489,5 +555,14 @@ private fun WindArrowSpeedTapLabel(
 private fun formatWindSpeedForTap(speedKt: Double): String =
     String.format(Locale.US, "%.0f", speedKt)
 
+private data class WindArrowTapCallout(
+    val tapLatLng: LatLng,
+    val speedKt: Double
+)
+
 private const val WIND_ARROW_SPEED_TAP_DISPLAY_MS = 4_000L
 private const val DEFAULT_WIND_SPEED_UNIT_LABEL = "kt"
+private const val WIND_TAP_LABEL_EDGE_PADDING_DP = 8
+private const val WIND_TAP_LABEL_ANCHOR_GAP_DP = 10
+private const val WIND_TAP_LABEL_ESTIMATED_WIDTH_DP = 136
+private const val WIND_TAP_LABEL_ESTIMATED_HEIGHT_DP = 42

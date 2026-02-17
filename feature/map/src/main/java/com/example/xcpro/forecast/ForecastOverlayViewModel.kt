@@ -16,6 +16,11 @@ class ForecastOverlayViewModel @Inject constructor(
     observeForecastOverlayStateUseCase: ObserveForecastOverlayStateUseCase,
     private val setForecastEnabledUseCase: SetForecastEnabledUseCase,
     private val selectForecastParameterUseCase: SelectForecastParameterUseCase,
+    private val toggleForecastPrimaryOverlaySelectionUseCase: ToggleForecastPrimaryOverlaySelectionUseCase,
+    private val setForecastSecondaryPrimaryOverlayEnabledUseCase: SetForecastSecondaryPrimaryOverlayEnabledUseCase,
+    private val selectForecastSecondaryPrimaryParameterUseCase: SelectForecastSecondaryPrimaryParameterUseCase,
+    private val setForecastWindOverlayEnabledUseCase: SetForecastWindOverlayEnabledUseCase,
+    private val selectForecastWindParameterUseCase: SelectForecastWindParameterUseCase,
     private val setForecastAutoTimeEnabledUseCase: SetForecastAutoTimeEnabledUseCase,
     private val setForecastFollowTimeOffsetUseCase: SetForecastFollowTimeOffsetUseCase,
     private val setForecastTimeUseCase: SetForecastTimeUseCase,
@@ -47,6 +52,36 @@ class ForecastOverlayViewModel @Inject constructor(
     fun selectParameter(parameterId: ForecastParameterId) {
         viewModelScope.launch {
             selectForecastParameterUseCase(parameterId)
+        }
+    }
+
+    fun togglePrimaryOverlayParameter(parameterId: ForecastParameterId) {
+        viewModelScope.launch {
+            toggleForecastPrimaryOverlaySelectionUseCase(parameterId)
+        }
+    }
+
+    fun setSecondaryPrimaryOverlayEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            setForecastSecondaryPrimaryOverlayEnabledUseCase(enabled)
+        }
+    }
+
+    fun selectSecondaryPrimaryParameter(parameterId: ForecastParameterId) {
+        viewModelScope.launch {
+            selectForecastSecondaryPrimaryParameterUseCase(parameterId)
+        }
+    }
+
+    fun setWindOverlayEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            setForecastWindOverlayEnabledUseCase(enabled)
+        }
+    }
+
+    fun selectWindParameter(parameterId: ForecastParameterId) {
+        viewModelScope.launch {
+            selectForecastWindParameterUseCase(parameterId)
         }
     }
 

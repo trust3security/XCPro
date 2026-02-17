@@ -66,7 +66,7 @@ internal fun MapOverlayStack(
     showDistanceCircles: Boolean,
     overlayManager: MapOverlayManager,
     onAdsbTargetSelected: (Icao24) -> Unit,
-    onForecastWindArrowSpeedTap: (Double) -> Unit,
+    onForecastWindArrowSpeedTap: (LatLng, Double) -> Unit,
     onMapLongPress: (LatLng) -> Unit,
     isAATEditMode: Boolean,
     isUiEditMode: Boolean,
@@ -176,7 +176,7 @@ internal fun MapOverlayStack(
                     } else {
                         val tappedWindSpeedKt = overlayManager.findForecastWindArrowSpeedAt(tap)
                         if (tappedWindSpeedKt != null) {
-                            onForecastWindArrowSpeedTap(tappedWindSpeedKt)
+                            onForecastWindArrowSpeedTap(tap, tappedWindSpeedKt)
                         }
                     }
                 },

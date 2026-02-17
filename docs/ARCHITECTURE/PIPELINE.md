@@ -210,7 +210,9 @@ ADS-b lifecycle/visibility semantics:
 
 Forecast overlay (SkySight-backed) path:
 - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastPreferencesRepository.kt`
-  - SSOT for forecast overlay preferences (`enabled`, `opacity`, `windOverlayScale`, `windDisplayMode`, `autoTimeEnabled`, `selectedParameterId`, `selectedTimeUtcMs`, `selectedRegion`).
+  - SSOT for forecast overlay preferences (`enabled`, `opacity`, `autoTimeEnabled`, `selectedPrimaryParameterId`, `selectedTimeUtcMs`, `selectedRegion`).
+  - Optional secondary primary overlay prefs (`secondaryPrimaryOverlayEnabled`, `selectedSecondaryPrimaryParameterId`).
+  - Wind-overlay prefs are separate (`windOverlayEnabled`, `selectedWindParameterId`, `windOverlayScale`, `windDisplayMode`).
 - `feature/map/src/main/java/com/example/xcpro/di/ForecastModule.kt`
   - Binds forecast ports to `SkySightForecastProviderAdapter` in production runtime.
 - `feature/map/src/main/java/com/example/xcpro/forecast/SkySightForecastProviderAdapter.kt`
@@ -220,15 +222,24 @@ Forecast overlay (SkySight-backed) path:
   - Test utility adapter for unit tests and local contract validation only.
 - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayRepository.kt`
   - Composes prefs + provider ports into overlay-ready state and point-query results.
-  - Maintains last-good tile/legend with fatal-vs-warning error separation.
+  - Emits primary layer state, optional secondary-primary layer state, and optional wind-layer state independently.
+  - Maintains last-good tile/legend with fatal-vs-warning error separation
+    (primary tile failure is fatal; secondary-primary and wind-layer failures are warning-only).
 - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayViewModel.kt`
-  - ViewModel-intent boundary for enable/parameter/time/opacity and long-press point query.
+  - ViewModel-intent boundary for enable/time/opacity and long-press point query.
+  - Non-wind parameter selection is a single multi-select intent (max 2) mapped to
+    internal primary + optional secondary-primary preferences.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
-  - Collects forecast state, opens forecast sheet, dispatches long-press point queries (disabled during AAT edit mode), and renders callout/status.
+  - Collects forecast state, opens forecast sheet, dispatches long-press point queries
+    (disabled during AAT edit mode), and renders callout/status.
+  - Forecast sheet exposes one non-wind parameter list (max 2 selected) plus separate
+    wind overlay controls.
 - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
   - Runtime owner for forecast raster overlay lifecycle and style-reload reapplication.
+  - Hosts three runtime overlay instances: primary forecast layer + optional secondary-primary layer + optional wind overlay layer.
 - `feature/map/src/main/java/com/example/xcpro/map/ForecastRasterOverlay.kt`
   - MapLibre runtime controller for forecast vector layers.
+  - Uses namespace-scoped layer/source IDs so multiple forecast overlays can render together.
   - Supports indexed-fill overlays and wind-point overlays with branch-specific layer cleanup.
   - Wind-point rendering supports `ARROW` and `BARB` display modes from forecast preferences SSOT.
 
