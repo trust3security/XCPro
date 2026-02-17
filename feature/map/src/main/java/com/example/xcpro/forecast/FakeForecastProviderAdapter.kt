@@ -52,7 +52,8 @@ class FakeForecastProviderAdapter @Inject constructor() :
 
     override suspend fun getTileSpec(
         parameterId: ForecastParameterId,
-        timeSlot: ForecastTimeSlot
+        timeSlot: ForecastTimeSlot,
+        regionCode: String
     ): ForecastTileSpec {
         val slotBucket = timeSlot.validTimeUtcMs / HOUR_MS
         val urlTemplate = "$FAKE_TILE_TEMPLATE?layer=${parameterId.value.lowercase()}&slot=$slotBucket"
@@ -65,9 +66,13 @@ class FakeForecastProviderAdapter @Inject constructor() :
         )
     }
 
-    override suspend fun getLegend(parameterId: ForecastParameterId): ForecastLegendSpec {
+    override suspend fun getLegend(
+        parameterId: ForecastParameterId,
+        timeSlot: ForecastTimeSlot,
+        regionCode: String
+    ): ForecastLegendSpec {
         return when (parameterId.value.uppercase()) {
-            "THERMAL" -> ForecastLegendSpec(
+            "THERMAL", "WSTAR_BSRATIO" -> ForecastLegendSpec(
                 unitLabel = "m/s",
                 stops = listOf(
                     ForecastLegendStop(0.0, 0xFF0B3D91.toInt()),
@@ -124,7 +129,8 @@ class FakeForecastProviderAdapter @Inject constructor() :
         latitude: Double,
         longitude: Double,
         parameterId: ForecastParameterId,
-        timeSlot: ForecastTimeSlot
+        timeSlot: ForecastTimeSlot,
+        regionCode: String
     ): ForecastPointValue {
         val normalizedSeed = normalizedSeed(
             latitude = latitude,
@@ -134,7 +140,7 @@ class FakeForecastProviderAdapter @Inject constructor() :
         )
 
         val (min, max, unitLabel) = when (parameterId.value.uppercase()) {
-            "THERMAL" -> Triple(0.0, 6.0, "m/s")
+            "THERMAL", "WSTAR_BSRATIO" -> Triple(0.0, 6.0, "m/s")
             "CLOUDBASE" -> Triple(500.0, 3500.0, "m")
             "WIND_850" -> Triple(0.0, 40.0, "kt")
             else -> Triple(0.0, 20.0, "mm/h")
@@ -145,11 +151,19 @@ class FakeForecastProviderAdapter @Inject constructor() :
             "CLOUDBASE" -> (rawValue / 10.0).roundToInt() * 10.0
             else -> (rawValue * 10.0).roundToInt() / 10.0
         }
+        val direction = when (parameterId.value.uppercase()) {
+            "WIND_850", "SFCWIND0", "BLTOPWIND" -> {
+                ((normalizedSeed * 360.0) + 360.0) % 360.0
+            }
+
+            else -> null
+        }
 
         return ForecastPointValue(
             value = roundedValue,
             unitLabel = unitLabel,
-            validTimeUtcMs = timeSlot.validTimeUtcMs
+            validTimeUtcMs = timeSlot.validTimeUtcMs,
+            directionFromDeg = direction
         )
     }
 

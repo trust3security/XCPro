@@ -3,7 +3,7 @@ package com.example.xcpro.forecast
 @JvmInline
 value class ForecastParameterId(val value: String)
 
-val DEFAULT_FORECAST_PARAMETER_ID = ForecastParameterId("THERMAL")
+val DEFAULT_FORECAST_PARAMETER_ID = ForecastParameterId("wstar_bsratio")
 
 data class ForecastParameterMeta(
     val id: ForecastParameterId,
@@ -27,12 +27,16 @@ data class ForecastTileSpec(
     val attribution: String = "Map tiles provider",
     val format: ForecastTileFormat = ForecastTileFormat.RASTER,
     val sourceLayer: String? = null,
-    val valueProperty: String = "idx"
+    val sourceLayerCandidates: List<String> = emptyList(),
+    val valueProperty: String = "idx",
+    val speedProperty: String? = null,
+    val directionProperty: String? = null
 )
 
 enum class ForecastTileFormat {
     RASTER,
-    VECTOR_INDEXED_FILL
+    VECTOR_INDEXED_FILL,
+    VECTOR_WIND_POINTS
 }
 
 data class ForecastLegendStop(
@@ -48,13 +52,18 @@ data class ForecastLegendSpec(
 data class ForecastPointValue(
     val value: Double,
     val unitLabel: String,
-    val validTimeUtcMs: Long
+    val validTimeUtcMs: Long,
+    val directionFromDeg: Double? = null
 )
 
 data class ForecastOverlayUiState(
     val enabled: Boolean = false,
     val opacity: Float = FORECAST_OPACITY_DEFAULT,
+    val windOverlayScale: Float = FORECAST_WIND_OVERLAY_SCALE_DEFAULT,
+    val windDisplayMode: ForecastWindDisplayMode = FORECAST_WIND_DISPLAY_MODE_DEFAULT,
+    val selectedRegionCode: String = DEFAULT_FORECAST_REGION_CODE,
     val autoTimeEnabled: Boolean = FORECAST_AUTO_TIME_DEFAULT,
+    val followTimeOffsetMinutes: Int = FORECAST_FOLLOW_TIME_OFFSET_MINUTES_DEFAULT,
     val parameters: List<ForecastParameterMeta> = emptyList(),
     val selectedParameterId: ForecastParameterId = DEFAULT_FORECAST_PARAMETER_ID,
     val timeSlots: List<ForecastTimeSlot> = emptyList(),
@@ -62,7 +71,8 @@ data class ForecastOverlayUiState(
     val legend: ForecastLegendSpec? = null,
     val tileSpec: ForecastTileSpec? = null,
     val isLoading: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val warningMessage: String? = null
 )
 
 data class ForecastPointCallout(

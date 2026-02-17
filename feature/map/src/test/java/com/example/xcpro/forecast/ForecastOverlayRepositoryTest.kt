@@ -13,6 +13,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -36,8 +37,11 @@ class ForecastOverlayRepositoryTest {
         val preferencesRepository = ForecastPreferencesRepository(context)
         preferencesRepository.setOverlayEnabled(false)
         preferencesRepository.setOpacity(FORECAST_OPACITY_DEFAULT)
+        preferencesRepository.setWindOverlayScale(FORECAST_WIND_OVERLAY_SCALE_DEFAULT)
+        preferencesRepository.setWindDisplayMode(FORECAST_WIND_DISPLAY_MODE_DEFAULT)
         preferencesRepository.setSelectedParameterId(DEFAULT_FORECAST_PARAMETER_ID)
         preferencesRepository.setSelectedTimeUtcMs(null)
+        preferencesRepository.setFollowTimeOffsetMinutes(FORECAST_FOLLOW_TIME_OFFSET_MINUTES_DEFAULT)
         preferencesRepository.setAutoTimeEnabled(FORECAST_AUTO_TIME_DEFAULT)
     }
 
@@ -88,7 +92,9 @@ class ForecastOverlayRepositoryTest {
         preferencesRepository.setOverlayEnabled(true)
         advanceUntilIdle()
 
-        val state = repository.overlayState.first { it.enabled }
+        val state = repository.overlayState.first { state ->
+            state.enabled && state.tileSpec != null && state.legend != null
+        }
 
         assertEquals(1, tilesPort.calls)
         assertEquals(1, legendPort.calls)
@@ -118,12 +124,138 @@ class ForecastOverlayRepositoryTest {
         assertEquals("dwcrit", state.selectedParameterId.value)
     }
 
+    @Test
+    fun windDisplayMode_propagatesToUiState() = runTest(testDispatcher) {
+        val preferencesRepository = ForecastPreferencesRepository(context)
+        val catalogPort = FakeForecastProviderAdapter()
+        val repository = ForecastOverlayRepository(
+            preferencesRepository = preferencesRepository,
+            catalogPort = catalogPort,
+            tilesPort = CountingTilesPort(),
+            legendPort = CountingLegendPort(),
+            valuePort = catalogPort,
+            clock = clock,
+            dispatcher = testDispatcher
+        )
+
+        preferencesRepository.setWindDisplayMode(ForecastWindDisplayMode.BARB)
+        advanceUntilIdle()
+
+        val state = repository.overlayState.first()
+
+        assertEquals(ForecastWindDisplayMode.BARB, state.windDisplayMode)
+    }
+
+    @Test
+    fun autoTime_withPositiveFollowOffset_selectsFutureSlot() = runTest(testDispatcher) {
+        val preferencesRepository = ForecastPreferencesRepository(context)
+        val catalogPort = OffsetAwareCatalogPort()
+        val repository = ForecastOverlayRepository(
+            preferencesRepository = preferencesRepository,
+            catalogPort = catalogPort,
+            tilesPort = CountingTilesPort(),
+            legendPort = CountingLegendPort(),
+            valuePort = catalogPort,
+            clock = clock,
+            dispatcher = testDispatcher
+        )
+
+        preferencesRepository.setFollowTimeOffsetMinutes(60)
+        preferencesRepository.setAutoTimeEnabled(true)
+        advanceUntilIdle()
+
+        val state = repository.overlayState.first()
+        val nowUtcMs = clock.nowWallMs()
+
+        assertEquals(nowUtcMs + 60 * 60_000L, state.selectedTimeUtcMs)
+        assertEquals(60, state.followTimeOffsetMinutes)
+    }
+
+    @Test
+    fun autoTime_withNegativeFollowOffset_selectsPastSlot() = runTest(testDispatcher) {
+        val preferencesRepository = ForecastPreferencesRepository(context)
+        val catalogPort = OffsetAwareCatalogPort()
+        val repository = ForecastOverlayRepository(
+            preferencesRepository = preferencesRepository,
+            catalogPort = catalogPort,
+            tilesPort = CountingTilesPort(),
+            legendPort = CountingLegendPort(),
+            valuePort = catalogPort,
+            clock = clock,
+            dispatcher = testDispatcher
+        )
+
+        preferencesRepository.setFollowTimeOffsetMinutes(-60)
+        preferencesRepository.setAutoTimeEnabled(true)
+        advanceUntilIdle()
+
+        val state = repository.overlayState.first()
+        val nowUtcMs = clock.nowWallMs()
+
+        assertEquals(nowUtcMs - 60 * 60_000L, state.selectedTimeUtcMs)
+        assertEquals(-60, state.followTimeOffsetMinutes)
+    }
+
+    @Test
+    fun manualMode_withoutSelectedTime_ignoresFollowOffset() = runTest(testDispatcher) {
+        val preferencesRepository = ForecastPreferencesRepository(context)
+        val catalogPort = OffsetAwareCatalogPort()
+        val repository = ForecastOverlayRepository(
+            preferencesRepository = preferencesRepository,
+            catalogPort = catalogPort,
+            tilesPort = CountingTilesPort(),
+            legendPort = CountingLegendPort(),
+            valuePort = catalogPort,
+            clock = clock,
+            dispatcher = testDispatcher
+        )
+
+        preferencesRepository.setAutoTimeEnabled(false)
+        preferencesRepository.setSelectedTimeUtcMs(null)
+        preferencesRepository.setFollowTimeOffsetMinutes(60)
+        advanceUntilIdle()
+
+        val state = repository.overlayState.first()
+        val nowUtcMs = clock.nowWallMs()
+
+        assertEquals(nowUtcMs, state.selectedTimeUtcMs)
+    }
+
+    @Test
+    fun queryPointValue_returnsUnavailable_whenParameterDoesNotSupportPointValue() = runTest(testDispatcher) {
+        val preferencesRepository = ForecastPreferencesRepository(context)
+        val catalogPort = ConvergenceCatalogPort()
+        val valuePort = CountingValuePort()
+        val repository = ForecastOverlayRepository(
+            preferencesRepository = preferencesRepository,
+            catalogPort = catalogPort,
+            tilesPort = CountingTilesPort(),
+            legendPort = CountingLegendPort(),
+            valuePort = valuePort,
+            clock = clock,
+            dispatcher = testDispatcher
+        )
+
+        preferencesRepository.setOverlayEnabled(true)
+        preferencesRepository.setSelectedParameterId(ForecastParameterId("wblmaxmin"))
+        advanceUntilIdle()
+
+        val result = repository.queryPointValue(
+            latitude = -33.8688,
+            longitude = 151.2093
+        )
+
+        assertTrue(result is ForecastPointQueryResult.Unavailable)
+        assertEquals(0, valuePort.calls)
+    }
+
     private class CountingTilesPort : ForecastTilesPort {
         var calls: Int = 0
 
         override suspend fun getTileSpec(
             parameterId: ForecastParameterId,
-            timeSlot: ForecastTimeSlot
+            timeSlot: ForecastTimeSlot,
+            regionCode: String
         ): ForecastTileSpec {
             calls += 1
             return ForecastTileSpec(
@@ -137,7 +269,11 @@ class ForecastOverlayRepositoryTest {
     private class CountingLegendPort : ForecastLegendPort {
         var calls: Int = 0
 
-        override suspend fun getLegend(parameterId: ForecastParameterId): ForecastLegendSpec {
+        override suspend fun getLegend(
+            parameterId: ForecastParameterId,
+            timeSlot: ForecastTimeSlot,
+            regionCode: String
+        ): ForecastLegendSpec {
             calls += 1
             return ForecastLegendSpec(
                 unitLabel = "m/s",
@@ -176,12 +312,85 @@ class ForecastOverlayRepositoryTest {
             latitude: Double,
             longitude: Double,
             parameterId: ForecastParameterId,
-            timeSlot: ForecastTimeSlot
+            timeSlot: ForecastTimeSlot,
+            regionCode: String
         ): ForecastPointValue = ForecastPointValue(
             value = 0.0,
             unitLabel = "m",
             validTimeUtcMs = timeSlot.validTimeUtcMs
         )
+    }
+
+    private class OffsetAwareCatalogPort : ForecastCatalogPort, ForecastValuePort {
+        override suspend fun getParameters(): List<ForecastParameterMeta> = listOf(
+            ForecastParameterMeta(
+                id = DEFAULT_FORECAST_PARAMETER_ID,
+                name = "Thermal",
+                category = "Thermal",
+                unitLabel = "m/s"
+            )
+        )
+
+        override fun getTimeSlots(
+            nowUtcMs: Long,
+            regionCode: String
+        ): List<ForecastTimeSlot> = listOf(
+            ForecastTimeSlot(validTimeUtcMs = nowUtcMs - 60 * 60_000L),
+            ForecastTimeSlot(validTimeUtcMs = nowUtcMs - 30 * 60_000L),
+            ForecastTimeSlot(validTimeUtcMs = nowUtcMs),
+            ForecastTimeSlot(validTimeUtcMs = nowUtcMs + 30 * 60_000L),
+            ForecastTimeSlot(validTimeUtcMs = nowUtcMs + 60 * 60_000L)
+        )
+
+        override suspend fun getValue(
+            latitude: Double,
+            longitude: Double,
+            parameterId: ForecastParameterId,
+            timeSlot: ForecastTimeSlot,
+            regionCode: String
+        ): ForecastPointValue = ForecastPointValue(
+            value = 0.0,
+            unitLabel = "m/s",
+            validTimeUtcMs = timeSlot.validTimeUtcMs
+        )
+    }
+
+    private class ConvergenceCatalogPort : ForecastCatalogPort {
+        override suspend fun getParameters(): List<ForecastParameterMeta> = listOf(
+            ForecastParameterMeta(
+                id = ForecastParameterId("wblmaxmin"),
+                name = "Convergence",
+                category = "Lift",
+                unitLabel = "m/s",
+                supportsPointValue = false
+            )
+        )
+
+        override fun getTimeSlots(
+            nowUtcMs: Long,
+            regionCode: String
+        ): List<ForecastTimeSlot> = listOf(
+            ForecastTimeSlot(validTimeUtcMs = nowUtcMs)
+        )
+    }
+
+    private class CountingValuePort : ForecastValuePort {
+        var calls: Int = 0
+
+        override suspend fun getValue(
+            latitude: Double,
+            longitude: Double,
+            parameterId: ForecastParameterId,
+            timeSlot: ForecastTimeSlot,
+            regionCode: String
+        ): ForecastPointValue {
+            calls += 1
+            return ForecastPointValue(
+                value = 0.0,
+                unitLabel = "m/s",
+                validTimeUtcMs = timeSlot.validTimeUtcMs
+            )
+        }
     }
 
 }

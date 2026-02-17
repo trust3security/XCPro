@@ -41,9 +41,16 @@ import androidx.compose.ui.unit.dp
 import com.example.xcpro.forecast.ForecastOverlayUiState
 import com.example.xcpro.forecast.ForecastParameterId
 import com.example.xcpro.forecast.ForecastPointCallout
+import com.example.xcpro.forecast.ForecastWindDisplayMode
+import com.example.xcpro.forecast.FORECAST_FOLLOW_TIME_OFFSET_MINUTES_DEFAULT
+import com.example.xcpro.forecast.FORECAST_FOLLOW_TIME_OFFSET_OPTIONS_MINUTES
+import com.example.xcpro.forecast.FORECAST_WIND_OVERLAY_SCALE_MAX
+import com.example.xcpro.forecast.FORECAST_WIND_OVERLAY_SCALE_MIN
 import com.example.xcpro.forecast.clampForecastOpacity
+import com.example.xcpro.forecast.clampForecastWindOverlayScale
+import com.example.xcpro.forecast.forecastRegionLabel
+import com.example.xcpro.forecast.forecastRegionZoneId
 import java.time.Instant
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -56,9 +63,12 @@ internal fun ForecastOverlayBottomSheet(
     onEnabledChanged: (Boolean) -> Unit,
     onParameterSelected: (ForecastParameterId) -> Unit,
     onAutoTimeEnabledChanged: (Boolean) -> Unit,
+    onFollowTimeOffsetChanged: (Int) -> Unit,
     onJumpToNow: () -> Unit,
     onTimeSelected: (Long) -> Unit,
-    onOpacityChanged: (Float) -> Unit
+    onOpacityChanged: (Float) -> Unit,
+    onWindOverlayScaleChanged: (Float) -> Unit,
+    onWindDisplayModeChanged: (ForecastWindDisplayMode) -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val selectedTimeIndex = remember(uiState.timeSlots, uiState.selectedTimeUtcMs) {
@@ -76,7 +86,42 @@ internal fun ForecastOverlayBottomSheet(
     val displayTimeIndex = sliderIndex.roundToInt().coerceIn(0, maxTimeIndex)
     val selectedTimeLabel = uiState.timeSlots
         .getOrNull(displayTimeIndex)
-        ?.let { slot -> formatForecastTime(slot.validTimeUtcMs) }
+        ?.let { slot ->
+            formatForecastTime(
+                timeUtcMs = slot.validTimeUtcMs,
+                regionCode = uiState.selectedRegionCode
+            )
+        }
+    val followOffsetOptions = FORECAST_FOLLOW_TIME_OFFSET_OPTIONS_MINUTES
+    val selectedFollowOffsetIndex = remember(uiState.followTimeOffsetMinutes) {
+        val fallbackIndex = followOffsetOptions.indexOf(FORECAST_FOLLOW_TIME_OFFSET_MINUTES_DEFAULT)
+            .takeIf { index -> index >= 0 }
+            ?: 0
+        followOffsetOptions.indexOf(uiState.followTimeOffsetMinutes)
+            .takeIf { index -> index >= 0 }
+            ?: fallbackIndex
+    }
+    var followOffsetIndex by remember(uiState.followTimeOffsetMinutes, selectedFollowOffsetIndex) {
+        mutableFloatStateOf(selectedFollowOffsetIndex.toFloat())
+    }
+    LaunchedEffect(selectedFollowOffsetIndex) {
+        followOffsetIndex = selectedFollowOffsetIndex.toFloat()
+    }
+    val maxFollowOffsetIndex = followOffsetOptions.lastIndex.coerceAtLeast(0)
+    val displayFollowOffsetIndex = followOffsetIndex
+        .roundToInt()
+        .coerceIn(0, maxFollowOffsetIndex)
+    val displayFollowOffsetMinutes = followOffsetOptions
+        .getOrNull(displayFollowOffsetIndex)
+        ?: FORECAST_FOLLOW_TIME_OFFSET_MINUTES_DEFAULT
+    var opacityDraft by remember { mutableFloatStateOf(uiState.opacity) }
+    var windOverlayScaleDraft by remember { mutableFloatStateOf(uiState.windOverlayScale) }
+    LaunchedEffect(uiState.opacity) {
+        opacityDraft = uiState.opacity
+    }
+    LaunchedEffect(uiState.windOverlayScale) {
+        windOverlayScaleDraft = uiState.windOverlayScale
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -143,6 +188,11 @@ internal fun ForecastOverlayBottomSheet(
                 text = selectedTimeLabel?.let { "Time $it" } ?: "Time",
                 style = MaterialTheme.typography.titleMedium
             )
+            Text(
+                text = "Region time zone: ${forecastRegionLabel(uiState.selectedRegionCode)}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -196,16 +246,83 @@ internal fun ForecastOverlayBottomSheet(
             }
 
             Text(
-                text = "Opacity ${(uiState.opacity * 100f).roundToInt()}%",
+                text = "Follow time offset ${formatFollowTimeOffsetLabel(displayFollowOffsetMinutes)}",
                 style = MaterialTheme.typography.titleMedium
             )
             Slider(
-                value = uiState.opacity,
+                value = followOffsetIndex,
+                onValueChange = { raw ->
+                    followOffsetIndex = raw.coerceIn(0f, maxFollowOffsetIndex.toFloat())
+                },
+                onValueChangeFinished = {
+                    val index = followOffsetIndex.roundToInt().coerceIn(0, maxFollowOffsetIndex)
+                    val selectedOffsetMinutes = followOffsetOptions
+                        .getOrNull(index)
+                        ?: FORECAST_FOLLOW_TIME_OFFSET_MINUTES_DEFAULT
+                    if (selectedOffsetMinutes != uiState.followTimeOffsetMinutes) {
+                        onFollowTimeOffsetChanged(selectedOffsetMinutes)
+                    }
+                },
+                enabled = uiState.enabled && uiState.autoTimeEnabled,
+                valueRange = 0f..maxFollowOffsetIndex.toFloat(),
+                steps = (maxFollowOffsetIndex - 1).coerceAtLeast(0)
+            )
+
+            Text(
+                text = "Opacity ${(opacityDraft * 100f).roundToInt()}%",
+                style = MaterialTheme.typography.titleMedium
+            )
+            Slider(
+                value = opacityDraft,
                 onValueChange = { value ->
-                    onOpacityChanged(clampForecastOpacity(value))
+                    opacityDraft = clampForecastOpacity(value)
+                },
+                onValueChangeFinished = {
+                    if (opacityDraft != uiState.opacity) {
+                        onOpacityChanged(opacityDraft)
+                    }
                 },
                 enabled = uiState.enabled,
                 valueRange = 0f..1f
+            )
+
+            Text(
+                text = "Wind marker size ${(windOverlayScaleDraft * 100f).roundToInt()}%",
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = "Applies to wind overlays only",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(
+                    items = ForecastWindDisplayMode.entries,
+                    key = { mode -> mode.storageValue }
+                ) { mode ->
+                    FilterChip(
+                        selected = uiState.windDisplayMode == mode,
+                        onClick = { onWindDisplayModeChanged(mode) },
+                        label = { Text(mode.label) },
+                        enabled = uiState.enabled
+                    )
+                }
+            }
+            Slider(
+                value = windOverlayScaleDraft,
+                onValueChange = { value ->
+                    windOverlayScaleDraft = clampForecastWindOverlayScale(value)
+                },
+                onValueChangeFinished = {
+                    if (windOverlayScaleDraft != uiState.windOverlayScale) {
+                        onWindOverlayScaleChanged(windOverlayScaleDraft)
+                    }
+                },
+                enabled = uiState.enabled,
+                valueRange = FORECAST_WIND_OVERLAY_SCALE_MIN..FORECAST_WIND_OVERLAY_SCALE_MAX
             )
 
             uiState.legend?.let { legend ->
@@ -247,6 +364,14 @@ internal fun ForecastOverlayBottomSheet(
                 )
             }
 
+            uiState.warningMessage?.let { warning ->
+                Text(
+                    text = warning,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
             uiState.errorMessage?.let { error ->
                 Text(
                     text = error,
@@ -263,6 +388,7 @@ internal fun ForecastOverlayBottomSheet(
 @Composable
 internal fun ForecastPointCalloutCard(
     callout: ForecastPointCallout,
+    regionCode: String,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -282,13 +408,25 @@ internal fun ForecastPointCalloutCard(
                 text = "Value here: ${callout.pointValue.value} ${callout.pointValue.unitLabel}",
                 style = MaterialTheme.typography.bodyMedium
             )
+            callout.pointValue.directionFromDeg?.let { direction ->
+                Text(
+                    text = "Wind from ${formatDirectionDegrees(direction)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             Text(
                 text = "Lat ${formatCoordinate(callout.latitude)}, Lon ${formatCoordinate(callout.longitude)}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                text = "Valid ${formatForecastTime(callout.pointValue.validTimeUtcMs)}",
+                text = "Valid ${
+                    formatForecastTime(
+                        timeUtcMs = callout.pointValue.validTimeUtcMs,
+                        regionCode = regionCode
+                    )
+                }",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -314,11 +452,23 @@ internal fun ForecastQueryStatusChip(
     )
 }
 
-private fun formatForecastTime(timeUtcMs: Long): String {
+private fun formatForecastTime(timeUtcMs: Long, regionCode: String): String {
     val formatter = DateTimeFormatter.ofPattern("EEE HH:mm")
     return formatter.format(
-        Instant.ofEpochMilli(timeUtcMs).atZone(ZoneId.systemDefault())
+        Instant.ofEpochMilli(timeUtcMs).atZone(forecastRegionZoneId(regionCode))
     )
 }
 
+private fun formatFollowTimeOffsetLabel(offsetMinutes: Int): String =
+    when {
+        offsetMinutes > 0 -> "Now +${offsetMinutes}m"
+        offsetMinutes < 0 -> "Now ${offsetMinutes}m"
+        else -> "Now"
+    }
+
 private fun formatCoordinate(value: Double): String = String.format(Locale.US, "%.4f", value)
+
+private fun formatDirectionDegrees(value: Double): String {
+    val normalized = ((value % 360.0) + 360.0) % 360.0
+    return String.format(Locale.US, "%.0f%c", normalized, '\u00B0')
+}

@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -27,13 +28,19 @@ private val KEY_FORECAST_SELECTED_PARAMETER_ID = stringPreferencesKey("forecast_
 private val KEY_FORECAST_SELECTED_TIME_UTC_MS = longPreferencesKey("forecast_selected_time_utc_ms")
 private val KEY_FORECAST_SELECTED_REGION = stringPreferencesKey("forecast_selected_region")
 private val KEY_FORECAST_AUTO_TIME_ENABLED = booleanPreferencesKey("forecast_auto_time_enabled")
+private val KEY_FORECAST_FOLLOW_TIME_OFFSET_MINUTES = intPreferencesKey("forecast_follow_time_offset_minutes")
+private val KEY_FORECAST_WIND_OVERLAY_SCALE = floatPreferencesKey("forecast_wind_overlay_scale")
+private val KEY_FORECAST_WIND_DISPLAY_MODE = stringPreferencesKey("forecast_wind_display_mode")
 
 data class ForecastPreferences(
     val overlayEnabled: Boolean = false,
     val opacity: Float = FORECAST_OPACITY_DEFAULT,
+    val windOverlayScale: Float = FORECAST_WIND_OVERLAY_SCALE_DEFAULT,
+    val windDisplayMode: ForecastWindDisplayMode = FORECAST_WIND_DISPLAY_MODE_DEFAULT,
     val selectedParameterId: ForecastParameterId = DEFAULT_FORECAST_PARAMETER_ID,
     val selectedTimeUtcMs: Long? = null,
     val selectedRegion: String = DEFAULT_FORECAST_REGION_CODE,
+    val followTimeOffsetMinutes: Int = FORECAST_FOLLOW_TIME_OFFSET_MINUTES_DEFAULT,
     val autoTimeEnabled: Boolean = FORECAST_AUTO_TIME_DEFAULT
 )
 
@@ -53,6 +60,14 @@ class ForecastPreferencesRepository @Inject constructor(
         .map { forecastPreferences -> forecastPreferences.opacity }
         .distinctUntilChanged()
 
+    val windOverlayScaleFlow: Flow<Float> = preferencesFlow
+        .map { forecastPreferences -> forecastPreferences.windOverlayScale }
+        .distinctUntilChanged()
+
+    val windDisplayModeFlow: Flow<ForecastWindDisplayMode> = preferencesFlow
+        .map { forecastPreferences -> forecastPreferences.windDisplayMode }
+        .distinctUntilChanged()
+
     val selectedParameterIdFlow: Flow<ForecastParameterId> = preferencesFlow
         .map { forecastPreferences -> forecastPreferences.selectedParameterId }
         .distinctUntilChanged()
@@ -69,6 +84,10 @@ class ForecastPreferencesRepository @Inject constructor(
         .map { forecastPreferences -> forecastPreferences.autoTimeEnabled }
         .distinctUntilChanged()
 
+    val followTimeOffsetMinutesFlow: Flow<Int> = preferencesFlow
+        .map { forecastPreferences -> forecastPreferences.followTimeOffsetMinutes }
+        .distinctUntilChanged()
+
     suspend fun currentPreferences(): ForecastPreferences = preferencesFlow.first()
 
     suspend fun setOverlayEnabled(enabled: Boolean) {
@@ -81,6 +100,19 @@ class ForecastPreferencesRepository @Inject constructor(
         val clamped = clampForecastOpacity(opacity)
         context.forecastDataStore.edit { preferences ->
             preferences[KEY_FORECAST_OPACITY] = clamped
+        }
+    }
+
+    suspend fun setWindOverlayScale(scale: Float) {
+        val clamped = clampForecastWindOverlayScale(scale)
+        context.forecastDataStore.edit { preferences ->
+            preferences[KEY_FORECAST_WIND_OVERLAY_SCALE] = clamped
+        }
+    }
+
+    suspend fun setWindDisplayMode(mode: ForecastWindDisplayMode) {
+        context.forecastDataStore.edit { preferences ->
+            preferences[KEY_FORECAST_WIND_DISPLAY_MODE] = mode.storageValue
         }
     }
 
@@ -115,6 +147,13 @@ class ForecastPreferencesRepository @Inject constructor(
         }
     }
 
+    suspend fun setFollowTimeOffsetMinutes(offsetMinutes: Int) {
+        val normalized = normalizeForecastFollowTimeOffsetMinutes(offsetMinutes)
+        context.forecastDataStore.edit { preferences ->
+            preferences[KEY_FORECAST_FOLLOW_TIME_OFFSET_MINUTES] = normalized
+        }
+    }
+
     private fun toForecastPreferences(preferences: Preferences): ForecastPreferences {
         val selectedParameter = ForecastParameterId(
             preferences[KEY_FORECAST_SELECTED_PARAMETER_ID]
@@ -125,14 +164,25 @@ class ForecastPreferencesRepository @Inject constructor(
         val selectedRegion = normalizeForecastRegionCode(
             preferences[KEY_FORECAST_SELECTED_REGION]
         )
+        val windDisplayMode = ForecastWindDisplayMode.fromStorageValue(
+            preferences[KEY_FORECAST_WIND_DISPLAY_MODE]
+        )
         return ForecastPreferences(
             overlayEnabled = preferences[KEY_FORECAST_OVERLAY_ENABLED] ?: false,
             opacity = clampForecastOpacity(
                 preferences[KEY_FORECAST_OPACITY] ?: FORECAST_OPACITY_DEFAULT
             ),
+            windOverlayScale = clampForecastWindOverlayScale(
+                preferences[KEY_FORECAST_WIND_OVERLAY_SCALE] ?: FORECAST_WIND_OVERLAY_SCALE_DEFAULT
+            ),
+            windDisplayMode = windDisplayMode,
             selectedParameterId = selectedParameter,
             selectedTimeUtcMs = preferences[KEY_FORECAST_SELECTED_TIME_UTC_MS],
             selectedRegion = selectedRegion,
+            followTimeOffsetMinutes = normalizeForecastFollowTimeOffsetMinutes(
+                preferences[KEY_FORECAST_FOLLOW_TIME_OFFSET_MINUTES]
+                    ?: FORECAST_FOLLOW_TIME_OFFSET_MINUTES_DEFAULT
+            ),
             autoTimeEnabled = preferences[KEY_FORECAST_AUTO_TIME_ENABLED] ?: FORECAST_AUTO_TIME_DEFAULT
         )
     }

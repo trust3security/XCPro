@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -20,6 +22,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -57,6 +60,7 @@ fun ForecastSettingsScreen(
     val scope = rememberCoroutineScope()
     val overlayEnabled by viewModel.overlayEnabled.collectAsStateWithLifecycle()
     val opacity by viewModel.opacity.collectAsStateWithLifecycle()
+    val windDisplayMode by viewModel.windDisplayMode.collectAsStateWithLifecycle()
     val selectedRegion by viewModel.selectedRegion.collectAsStateWithLifecycle()
     val authConfirmation by viewModel.authConfirmation.collectAsStateWithLifecycle()
     val authReturnCode by viewModel.authReturnCode.collectAsStateWithLifecycle()
@@ -155,6 +159,9 @@ fun ForecastSettingsScreen(
                             onValueChange = { value ->
                                 val clamped = value.coerceIn(FORECAST_OPACITY_MIN, FORECAST_OPACITY_MAX)
                                 sliderValue = clamped
+                            },
+                            onValueChangeFinished = {
+                                val clamped = sliderValue.coerceIn(FORECAST_OPACITY_MIN, FORECAST_OPACITY_MAX)
                                 if (clamped != opacity) {
                                     viewModel.setOpacity(clamped)
                                 }
@@ -163,6 +170,32 @@ fun ForecastSettingsScreen(
                         )
                         Text(
                             text = "Minimum 0%, maximum 100%.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "Wind display",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        LazyRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(
+                                items = viewModel.windDisplayModes,
+                                key = { mode -> mode.storageValue }
+                            ) { mode ->
+                                FilterChip(
+                                    selected = mode == windDisplayMode,
+                                    onClick = { viewModel.setWindDisplayMode(mode) },
+                                    label = { Text(mode.label) },
+                                    enabled = overlayEnabled
+                                )
+                            }
+                        }
+                        Text(
+                            text = "Used by wind parameters in map forecast overlays.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

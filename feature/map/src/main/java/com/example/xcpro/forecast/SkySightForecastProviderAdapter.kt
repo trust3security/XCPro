@@ -1,7 +1,6 @@
 package com.example.xcpro.forecast
 
 import com.example.xcpro.common.di.IoDispatcher
-import com.example.xcpro.core.time.Clock
 import java.io.IOException
 import java.time.Instant
 import java.time.LocalDate
@@ -23,8 +22,6 @@ import org.json.JSONObject
 
 @Singleton
 class SkySightForecastProviderAdapter @Inject constructor(
-    private val preferencesRepository: ForecastPreferencesRepository,
-    private val clock: Clock,
     private val httpClient: OkHttpClient,
     @IoDispatcher private val dispatcher: CoroutineDispatcher
 ) : ForecastCatalogPort, ForecastTilesPort, ForecastLegendPort, ForecastValuePort {
@@ -46,9 +43,10 @@ class SkySightForecastProviderAdapter @Inject constructor(
 
     override suspend fun getTileSpec(
         parameterId: ForecastParameterId,
-        timeSlot: ForecastTimeSlot
+        timeSlot: ForecastTimeSlot,
+        regionCode: String
     ): ForecastTileSpec {
-        val selectedRegion = preferencesRepository.currentPreferences().selectedRegion
+        val selectedRegion = normalizeForecastRegionCode(regionCode)
         val target = resolveRegionTarget(selectedRegion)
         val regionDateTime = formatRegionDateTime(
             utcMs = timeSlot.validTimeUtcMs,
@@ -56,26 +54,50 @@ class SkySightForecastProviderAdapter @Inject constructor(
         )
         val tileParameter = resolveTileParameter(parameterId)
 
-        val urlTemplate = "https://edge.skysight.io/$target/${regionDateTime.datePart}/${regionDateTime.timePart}/$tileParameter/{z}/{x}/{y}"
+        val isWind = isWindParameter(tileParameter)
+        val urlTemplate = if (isWind) {
+            "https://edge.skysight.io/$target/${regionDateTime.datePart}/${regionDateTime.timePart}/wind/{z}/{x}/{y}/$tileParameter"
+        } else {
+            "https://edge.skysight.io/$target/${regionDateTime.datePart}/${regionDateTime.timePart}/$tileParameter/{z}/{x}/{y}"
+        }
+
+        val primarySourceLayer = resolveSourceLayer(
+            tileParameter = tileParameter,
+            timePart = regionDateTime.timePart
+        )
+        val sourceLayerCandidates = resolveSourceLayerCandidates(
+            tileParameter = tileParameter,
+            timePart = regionDateTime.timePart
+        )
+
         return ForecastTileSpec(
             urlTemplate = urlTemplate,
-            minZoom = 3,
-            maxZoom = 5,
+            minZoom = WIND_MIN_ZOOM,
+            maxZoom = if (isWind) WIND_MAX_ZOOM else FILL_MAX_ZOOM,
             tileSizePx = 256,
             attribution = "Map tiles provider",
-            format = ForecastTileFormat.VECTOR_INDEXED_FILL,
-            sourceLayer = regionDateTime.timePart,
-            valueProperty = "idx"
+            format = if (isWind) {
+                ForecastTileFormat.VECTOR_WIND_POINTS
+            } else {
+                ForecastTileFormat.VECTOR_INDEXED_FILL
+            },
+            sourceLayer = primarySourceLayer,
+            sourceLayerCandidates = sourceLayerCandidates,
+            valueProperty = "idx",
+            speedProperty = if (isWind) "spd" else null,
+            directionProperty = if (isWind) "dir" else null
         )
     }
 
-    override suspend fun getLegend(parameterId: ForecastParameterId): ForecastLegendSpec {
-        val selectedPreferences = preferencesRepository.currentPreferences()
-        val selectedRegion = selectedPreferences.selectedRegion
+    override suspend fun getLegend(
+        parameterId: ForecastParameterId,
+        timeSlot: ForecastTimeSlot,
+        regionCode: String
+    ): ForecastLegendSpec {
+        val selectedRegion = normalizeForecastRegionCode(regionCode)
         val target = resolveRegionTarget(selectedRegion)
-        val selectedUtcMs = selectedPreferences.selectedTimeUtcMs ?: clock.nowWallMs()
         val datePart = formatRegionDateTime(
-            utcMs = selectedUtcMs,
+            utcMs = timeSlot.validTimeUtcMs,
             regionCode = selectedRegion
         ).datePart
         val tileParameter = resolveTileParameter(parameterId)
@@ -91,9 +113,10 @@ class SkySightForecastProviderAdapter @Inject constructor(
         latitude: Double,
         longitude: Double,
         parameterId: ForecastParameterId,
-        timeSlot: ForecastTimeSlot
+        timeSlot: ForecastTimeSlot,
+        regionCode: String
     ): ForecastPointValue = withContext(dispatcher) {
-        val selectedRegion = preferencesRepository.currentPreferences().selectedRegion
+        val selectedRegion = normalizeForecastRegionCode(regionCode)
         val target = resolveRegionTarget(selectedRegion)
         val regionDateTime = formatRegionDateTime(
             utcMs = timeSlot.validTimeUtcMs,
@@ -106,14 +129,22 @@ class SkySightForecastProviderAdapter @Inject constructor(
             .toRequestBody(JSON_MEDIA_TYPE)
         val url = "https://cf.skysight.io/point/$latitude/$longitude?region=$target"
         val rawBody = executePost(url = url, body = payload)
+        val jsonBody = JSONObject(rawBody)
         val value = parsePointValue(
-            rawBody = rawBody,
+            jsonBody = jsonBody,
             fieldName = resolvePointField(parameterId)
         )
+        val direction = resolvePointDirectionField(parameterId)?.let { fieldName ->
+            parseOptionalPointValue(
+                jsonBody = jsonBody,
+                fieldName = fieldName
+            )
+        }
         ForecastPointValue(
             value = value,
             unitLabel = unitLabelFor(parameterId),
-            validTimeUtcMs = timeSlot.validTimeUtcMs
+            validTimeUtcMs = timeSlot.validTimeUtcMs,
+            directionFromDeg = direction
         )
     }
 
@@ -185,26 +216,60 @@ class SkySightForecastProviderAdapter @Inject constructor(
         )
     }
 
-    private fun parsePointValue(rawBody: String, fieldName: String): Double {
-        val json = JSONObject(rawBody)
-        val values = json.optJSONArray(fieldName)
+    private fun parsePointValue(jsonBody: JSONObject, fieldName: String): Double {
+        val values = jsonBody.optJSONArray(fieldName)
         if (values != null && values.length() > 0) {
             val first = values.optDouble(0, Double.NaN)
             if (!first.isNaN()) return first
         }
-        val direct = json.optDouble(fieldName, Double.NaN)
+        val direct = jsonBody.optDouble(fieldName, Double.NaN)
         if (!direct.isNaN()) return direct
         throw IOException("SkySight point field '$fieldName' missing")
     }
 
+    private fun parseOptionalPointValue(jsonBody: JSONObject, fieldName: String): Double? {
+        val values = jsonBody.optJSONArray(fieldName)
+        if (values != null && values.length() > 0) {
+            val first = values.optDouble(0, Double.NaN)
+            if (!first.isNaN()) return first
+        }
+        val direct = jsonBody.optDouble(fieldName, Double.NaN)
+        if (!direct.isNaN()) return direct
+        return null
+    }
+
     private fun resolveTileParameter(parameterId: ForecastParameterId): String {
-        return when (parameterId.value.uppercase(Locale.US)) {
+        return when (parameterId.value.trim().uppercase(Locale.US)) {
             "THERMAL" -> "wstar_bsratio"
             "CLOUDBASE" -> "zsfclcl"
             "RAIN" -> "accrain"
-            else -> parameterId.value
+            else -> parameterId.value.trim()
         }
     }
+
+    private fun resolveSourceLayer(tileParameter: String, timePart: String): String =
+        when (tileParameter.uppercase(Locale.US)) {
+            "WSTAR_BSRATIO" -> "bsratio"
+            "SFCWIND0", "BLTOPWIND" -> tileParameter.lowercase(Locale.US)
+            else -> timePart
+        }
+
+    private fun resolveSourceLayerCandidates(
+        tileParameter: String,
+        timePart: String
+    ): List<String> {
+        return when (tileParameter.uppercase(Locale.US)) {
+            "WSTAR_BSRATIO" -> listOf("bsratio", timePart)
+            "SFCWIND0", "BLTOPWIND" -> listOf(tileParameter.lowercase(Locale.US))
+            else -> listOf(timePart)
+        }
+    }
+
+    private fun isWindParameter(tileParameter: String): Boolean =
+        when (tileParameter.uppercase(Locale.US)) {
+            "SFCWIND0", "BLTOPWIND" -> true
+            else -> false
+        }
 
     private fun resolvePointField(parameterId: ForecastParameterId): String {
         return when (resolveTileParameter(parameterId).uppercase(Locale.US)) {
@@ -212,6 +277,14 @@ class SkySightForecastProviderAdapter @Inject constructor(
             "SFCWIND0" -> "sfcwindspd"
             "BLTOPWIND" -> "bltopwindspd"
             else -> resolveTileParameter(parameterId)
+        }
+    }
+
+    private fun resolvePointDirectionField(parameterId: ForecastParameterId): String? {
+        return when (resolveTileParameter(parameterId).uppercase(Locale.US)) {
+            "SFCWIND0" -> "sfcwinddir"
+            "BLTOPWIND" -> "bltopwinddir"
+            else -> null
         }
     }
 
@@ -258,11 +331,8 @@ class SkySightForecastProviderAdapter @Inject constructor(
     private fun resolveRegionTarget(regionCode: String): String =
         normalizeForecastRegionCode(regionCode)
 
-    private fun resolveRegionZone(regionCode: String): ZoneId {
-        val normalized = normalizeForecastRegionCode(regionCode)
-        val timezone = REGION_TIMEZONES[normalized] ?: "UTC"
-        return ZoneId.of(timezone)
-    }
+    private fun resolveRegionZone(regionCode: String): ZoneId =
+        forecastRegionZoneId(regionCode)
 
     private data class RegionDateTime(
         val datePart: String,
@@ -276,21 +346,9 @@ class SkySightForecastProviderAdapter @Inject constructor(
         private const val SLOT_START_HOUR = 6
         private const val SLOT_STEP_MINUTES = 30
         private const val SLOT_COUNT_PER_DAY = 29
-
-        private val REGION_TIMEZONES: Map<String, String> = mapOf(
-            "WEST_US" to "America/Los_Angeles",
-            "EAST_US" to "America/New_York",
-            "EUROPE" to "Europe/Berlin",
-            "EAST_AUS" to "Australia/Sydney",
-            "WA" to "Australia/Perth",
-            "NZ" to "Pacific/Auckland",
-            "JAPAN" to "Asia/Tokyo",
-            "ARGENTINA_CHILE" to "America/Argentina/Buenos_Aires",
-            "SANEW" to "Africa/Johannesburg",
-            "BRAZIL" to "America/Sao_Paulo",
-            "HRRR" to "America/Denver",
-            "ICONEU" to "Europe/Berlin"
-        )
+        private const val WIND_MIN_ZOOM = 3
+        private const val WIND_MAX_ZOOM = 16
+        private const val FILL_MAX_ZOOM = 5
 
         private val PARAMETER_META: List<ForecastParameterMeta> = listOf(
             ForecastParameterMeta(
@@ -304,6 +362,25 @@ class SkySightForecastProviderAdapter @Inject constructor(
                 name = "Thermal Height",
                 category = "Thermal",
                 unitLabel = "m"
+            ),
+            ForecastParameterMeta(
+                id = ForecastParameterId("wblmaxmin"),
+                name = "Convergence",
+                category = "Lift",
+                unitLabel = "m/s",
+                supportsPointValue = false
+            ),
+            ForecastParameterMeta(
+                id = ForecastParameterId("sfcwind0"),
+                name = "Surface Wind",
+                category = "Wind",
+                unitLabel = "kt"
+            ),
+            ForecastParameterMeta(
+                id = ForecastParameterId("bltopwind"),
+                name = "BL Top Wind",
+                category = "Wind",
+                unitLabel = "kt"
             ),
             ForecastParameterMeta(
                 id = ForecastParameterId("zsfclcl"),

@@ -1,13 +1,13 @@
 package com.example.xcpro.forecast
 
-import android.content.Context
-import androidx.test.core.app.ApplicationProvider
-import com.example.xcpro.core.time.FakeClock
 import java.time.Instant
 import java.time.ZoneId
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.test.runTest
 import okhttp3.OkHttpClient
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -18,16 +18,16 @@ import org.robolectric.annotation.Config
 @Config(sdk = [33])
 class SkySightForecastProviderAdapterTest {
 
-    private val context: Context = ApplicationProvider.getApplicationContext()
-
-    @Test
-    fun timeSlots_coverCurrentRegionDayOnly() {
-        val adapter = SkySightForecastProviderAdapter(
-            preferencesRepository = ForecastPreferencesRepository(context),
-            clock = FakeClock(monoMs = 0L, wallMs = 1_700_000_000_000L),
+    private fun createAdapter(): SkySightForecastProviderAdapter {
+        return SkySightForecastProviderAdapter(
             httpClient = OkHttpClient(),
             dispatcher = Dispatchers.IO
         )
+    }
+
+    @Test
+    fun timeSlots_coverCurrentRegionDayOnly() {
+        val adapter = createAdapter()
         val nowUtcMs = 1_700_000_123_456L
         val regionCode = "WEST_US"
         val zoneId = ZoneId.of("America/Los_Angeles")
@@ -52,5 +52,70 @@ class SkySightForecastProviderAdapterTest {
         assertEquals(0, firstLocal.minute)
         assertEquals(20, lastLocal.hour)
         assertEquals(0, lastLocal.minute)
+    }
+
+    @Test
+    fun windTileSpec_usesWindPathAndVectorPointFormat() = runTest {
+        val adapter = createAdapter()
+        val slot = ForecastTimeSlot(validTimeUtcMs = 1_739_448_000_000L) // 2025-02-15T12:00:00Z
+
+        val tileSpec = adapter.getTileSpec(
+            parameterId = ForecastParameterId("sfcwind0"),
+            timeSlot = slot,
+            regionCode = "WEST_US"
+        )
+
+        assertEquals(ForecastTileFormat.VECTOR_WIND_POINTS, tileSpec.format)
+        assertTrue(tileSpec.urlTemplate.contains("/wind/{z}/{x}/{y}/sfcwind0"))
+        assertEquals("sfcwind0", tileSpec.sourceLayer)
+        assertEquals("spd", tileSpec.speedProperty)
+        assertEquals("dir", tileSpec.directionProperty)
+        assertEquals(16, tileSpec.maxZoom)
+    }
+
+    @Test
+    fun thermalTileSpec_usesBsratioSourceLayer() = runTest {
+        val adapter = createAdapter()
+        val slot = ForecastTimeSlot(validTimeUtcMs = 1_739_448_000_000L) // 2025-02-15T12:00:00Z
+
+        val tileSpec = adapter.getTileSpec(
+            parameterId = ForecastParameterId("wstar_bsratio"),
+            timeSlot = slot,
+            regionCode = "WEST_US"
+        )
+
+        assertEquals(ForecastTileFormat.VECTOR_INDEXED_FILL, tileSpec.format)
+        assertEquals("bsratio", tileSpec.sourceLayer)
+        assertTrue(tileSpec.sourceLayerCandidates.contains("bsratio"))
+        assertEquals("idx", tileSpec.valueProperty)
+    }
+
+    @Test
+    fun parameters_includeConvergence_withPointValueDisabled() = runTest {
+        val adapter = createAdapter()
+
+        val convergence = adapter.getParameters().firstOrNull { meta ->
+            meta.id.value == "wblmaxmin"
+        }
+
+        assertNotNull(convergence)
+        assertEquals("Convergence", convergence?.name)
+        assertFalse(convergence?.supportsPointValue ?: true)
+    }
+
+    @Test
+    fun convergenceTileSpec_usesIndexedFillPath() = runTest {
+        val adapter = createAdapter()
+        val slot = ForecastTimeSlot(validTimeUtcMs = 1_739_448_000_000L) // 2025-02-15T12:00:00Z
+
+        val tileSpec = adapter.getTileSpec(
+            parameterId = ForecastParameterId("wblmaxmin"),
+            timeSlot = slot,
+            regionCode = "WEST_US"
+        )
+
+        assertEquals(ForecastTileFormat.VECTOR_INDEXED_FILL, tileSpec.format)
+        assertTrue(tileSpec.urlTemplate.contains("/wblmaxmin/{z}/{x}/{y}"))
+        assertEquals(5, tileSpec.maxZoom)
     }
 }

@@ -4,6 +4,7 @@ import com.example.xcpro.forecast.ForecastAuthCheckResult
 import com.example.xcpro.forecast.ForecastAuthRepository
 import com.example.xcpro.forecast.ForecastCredentialsRepository
 import com.example.xcpro.forecast.ForecastRegionOption
+import com.example.xcpro.forecast.ForecastWindDisplayMode
 import com.example.xcpro.forecast.ForecastPreferencesRepository
 import com.example.xcpro.forecast.FORECAST_REGION_OPTIONS
 import com.example.xcpro.forecast.ForecastProviderCredentials
@@ -17,8 +18,10 @@ class ForecastSettingsUseCase @Inject constructor(
 ) {
     val overlayEnabledFlow: Flow<Boolean> = preferencesRepository.overlayEnabledFlow
     val opacityFlow: Flow<Float> = preferencesRepository.opacityFlow
+    val windDisplayModeFlow: Flow<ForecastWindDisplayMode> = preferencesRepository.windDisplayModeFlow
     val selectedRegionFlow: Flow<String> = preferencesRepository.selectedRegionFlow
     val availableRegions: List<ForecastRegionOption> = FORECAST_REGION_OPTIONS
+    val windDisplayModes: List<ForecastWindDisplayMode> = ForecastWindDisplayMode.entries
 
     suspend fun setOverlayEnabled(enabled: Boolean) {
         preferencesRepository.setOverlayEnabled(enabled)
@@ -26,6 +29,10 @@ class ForecastSettingsUseCase @Inject constructor(
 
     suspend fun setOpacity(opacity: Float) {
         preferencesRepository.setOpacity(opacity)
+    }
+
+    suspend fun setWindDisplayMode(mode: ForecastWindDisplayMode) {
+        preferencesRepository.setWindDisplayMode(mode)
     }
 
     suspend fun setSelectedRegion(regionCode: String) {

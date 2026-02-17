@@ -28,9 +28,12 @@ class ForecastPreferencesRepositoryTest {
         val repository = ForecastPreferencesRepository(context)
         repository.setOverlayEnabled(false)
         repository.setOpacity(FORECAST_OPACITY_DEFAULT)
+        repository.setWindOverlayScale(FORECAST_WIND_OVERLAY_SCALE_DEFAULT)
+        repository.setWindDisplayMode(FORECAST_WIND_DISPLAY_MODE_DEFAULT)
         repository.setSelectedParameterId(DEFAULT_FORECAST_PARAMETER_ID)
         repository.setSelectedTimeUtcMs(null)
         repository.setSelectedRegion(DEFAULT_FORECAST_REGION_CODE)
+        repository.setFollowTimeOffsetMinutes(FORECAST_FOLLOW_TIME_OFFSET_MINUTES_DEFAULT)
         repository.setAutoTimeEnabled(FORECAST_AUTO_TIME_DEFAULT)
     }
 
@@ -78,19 +81,63 @@ class ForecastPreferencesRepositoryTest {
     }
 
     @Test
+    fun windOverlayScaleFlow_defaultsToConfiguredDefault() = runTest {
+        val repository = ForecastPreferencesRepository(context)
+
+        val current = repository.windOverlayScaleFlow.first()
+
+        assertEquals(FORECAST_WIND_OVERLAY_SCALE_DEFAULT, current)
+    }
+
+    @Test
+    fun setWindOverlayScale_clampsBelowMinimum() = runTest {
+        val repository = ForecastPreferencesRepository(context)
+
+        repository.setWindOverlayScale(-1f)
+        val current = repository.windOverlayScaleFlow.first()
+
+        assertEquals(FORECAST_WIND_OVERLAY_SCALE_MIN, current)
+    }
+
+    @Test
+    fun setWindOverlayScale_clampsAboveMaximum() = runTest {
+        val repository = ForecastPreferencesRepository(context)
+
+        repository.setWindOverlayScale(9f)
+        val current = repository.windOverlayScaleFlow.first()
+
+        assertEquals(FORECAST_WIND_OVERLAY_SCALE_MAX, current)
+    }
+
+    @Test
+    fun windDisplayMode_defaultsToArrow() = runTest {
+        val repository = ForecastPreferencesRepository(context)
+
+        val current = repository.windDisplayModeFlow.first()
+
+        assertEquals(FORECAST_WIND_DISPLAY_MODE_DEFAULT, current)
+    }
+
+    @Test
     fun setValues_persistAndReadBack() = runTest {
         val repository = ForecastPreferencesRepository(context)
 
         repository.setOverlayEnabled(true)
         repository.setOpacity(0.4f)
+        repository.setWindOverlayScale(1.5f)
+        repository.setWindDisplayMode(ForecastWindDisplayMode.BARB)
         repository.setSelectedRegion("EUROPE")
 
         val enabled = repository.overlayEnabledFlow.first()
         val opacity = repository.opacityFlow.first()
+        val windOverlayScale = repository.windOverlayScaleFlow.first()
+        val windDisplayMode = repository.windDisplayModeFlow.first()
         val selectedRegion = repository.selectedRegionFlow.first()
 
         assertTrue(enabled)
         assertEquals(0.4f, opacity)
+        assertEquals(1.5f, windOverlayScale)
+        assertEquals(ForecastWindDisplayMode.BARB, windDisplayMode)
         assertEquals("EUROPE", selectedRegion)
     }
 
@@ -130,6 +177,29 @@ class ForecastPreferencesRepositoryTest {
         val enabled = repository.autoTimeEnabledFlow.first()
 
         assertEquals(FORECAST_AUTO_TIME_DEFAULT, enabled)
+    }
+
+    @Test
+    fun followTimeOffset_defaultsToNow() = runTest {
+        val repository = ForecastPreferencesRepository(context)
+
+        val offset = repository.followTimeOffsetMinutesFlow.first()
+
+        assertEquals(FORECAST_FOLLOW_TIME_OFFSET_MINUTES_DEFAULT, offset)
+    }
+
+    @Test
+    fun setFollowTimeOffset_normalizesToNearestAllowedStep() = runTest {
+        val repository = ForecastPreferencesRepository(context)
+
+        repository.setFollowTimeOffsetMinutes(44)
+        val positiveOffset = repository.followTimeOffsetMinutesFlow.first()
+
+        repository.setFollowTimeOffsetMinutes(-44)
+        val negativeOffset = repository.followTimeOffsetMinutesFlow.first()
+
+        assertEquals(30, positiveOffset)
+        assertEquals(-30, negativeOffset)
     }
 
     @Test

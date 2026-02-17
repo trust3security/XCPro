@@ -17,8 +17,11 @@ class ForecastOverlayViewModel @Inject constructor(
     private val setForecastEnabledUseCase: SetForecastEnabledUseCase,
     private val selectForecastParameterUseCase: SelectForecastParameterUseCase,
     private val setForecastAutoTimeEnabledUseCase: SetForecastAutoTimeEnabledUseCase,
+    private val setForecastFollowTimeOffsetUseCase: SetForecastFollowTimeOffsetUseCase,
     private val setForecastTimeUseCase: SetForecastTimeUseCase,
     private val setForecastOpacityUseCase: SetForecastOpacityUseCase,
+    private val setForecastWindOverlayScaleUseCase: SetForecastWindOverlayScaleUseCase,
+    private val setForecastWindDisplayModeUseCase: SetForecastWindDisplayModeUseCase,
     private val queryForecastValueAtPointUseCase: QueryForecastValueAtPointUseCase
 ) : ViewModel() {
 
@@ -59,6 +62,12 @@ class ForecastOverlayViewModel @Inject constructor(
         }
     }
 
+    fun setFollowTimeOffsetMinutes(offsetMinutes: Int) {
+        viewModelScope.launch {
+            setForecastFollowTimeOffsetUseCase(offsetMinutes)
+        }
+    }
+
     fun jumpToNow() {
         viewModelScope.launch {
             setForecastAutoTimeEnabledUseCase(true)
@@ -68,6 +77,18 @@ class ForecastOverlayViewModel @Inject constructor(
     fun setOpacity(opacity: Float) {
         viewModelScope.launch {
             setForecastOpacityUseCase(opacity)
+        }
+    }
+
+    fun setWindOverlayScale(scale: Float) {
+        viewModelScope.launch {
+            setForecastWindOverlayScaleUseCase(scale)
+        }
+    }
+
+    fun setWindDisplayMode(mode: ForecastWindDisplayMode) {
+        viewModelScope.launch {
+            setForecastWindDisplayModeUseCase(mode)
         }
     }
 

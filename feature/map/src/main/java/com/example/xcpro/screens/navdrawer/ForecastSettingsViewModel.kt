@@ -4,9 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.xcpro.forecast.ForecastAuthCheckResult
 import com.example.xcpro.forecast.FORECAST_OPACITY_DEFAULT
+import com.example.xcpro.forecast.FORECAST_WIND_DISPLAY_MODE_DEFAULT
 import com.example.xcpro.forecast.DEFAULT_FORECAST_REGION_CODE
 import com.example.xcpro.forecast.ForecastRegionOption
 import com.example.xcpro.forecast.ForecastProviderCredentials
+import com.example.xcpro.forecast.ForecastWindDisplayMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,6 +31,7 @@ class ForecastSettingsViewModel @Inject constructor(
     val authChecking: StateFlow<Boolean> = _authChecking
 
     val regionOptions: List<ForecastRegionOption> = useCase.availableRegions
+    val windDisplayModes: List<ForecastWindDisplayMode> = useCase.windDisplayModes
 
     val overlayEnabled: StateFlow<Boolean> = useCase.overlayEnabledFlow
         .stateIn(
@@ -42,6 +45,13 @@ class ForecastSettingsViewModel @Inject constructor(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = FORECAST_OPACITY_DEFAULT
+        )
+
+    val windDisplayMode: StateFlow<ForecastWindDisplayMode> = useCase.windDisplayModeFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = FORECAST_WIND_DISPLAY_MODE_DEFAULT
         )
 
     val selectedRegion: StateFlow<String> = useCase.selectedRegionFlow
@@ -60,6 +70,12 @@ class ForecastSettingsViewModel @Inject constructor(
     fun setOpacity(opacity: Float) {
         viewModelScope.launch {
             useCase.setOpacity(opacity)
+        }
+    }
+
+    fun setWindDisplayMode(mode: ForecastWindDisplayMode) {
+        viewModelScope.launch {
+            useCase.setWindDisplayMode(mode)
         }
     }
 

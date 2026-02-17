@@ -34,13 +34,15 @@ class FakeForecastProviderAdapterTest {
             latitude = -34.1234,
             longitude = 149.5678,
             parameterId = parameterId,
-            timeSlot = slot
+            timeSlot = slot,
+            regionCode = DEFAULT_FORECAST_REGION_CODE
         )
         val second = adapter.getValue(
             latitude = -34.1234,
             longitude = 149.5678,
             parameterId = parameterId,
-            timeSlot = slot
+            timeSlot = slot,
+            regionCode = DEFAULT_FORECAST_REGION_CODE
         )
 
         assertEquals(first, second)

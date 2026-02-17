@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.Flow
 class ObserveForecastOverlayStateUseCase @Inject constructor(
     private val repository: ForecastOverlayRepository
 ) {
-    operator fun invoke(): Flow<ForecastOverlayUiState> = repository.loadingOverlayState()
+    operator fun invoke(): Flow<ForecastOverlayUiState> = repository.overlayState
 }
 
 class SetForecastEnabledUseCase @Inject constructor(
@@ -42,6 +42,14 @@ class SetForecastAutoTimeEnabledUseCase @Inject constructor(
     }
 }
 
+class SetForecastFollowTimeOffsetUseCase @Inject constructor(
+    private val preferencesRepository: ForecastPreferencesRepository
+) {
+    suspend operator fun invoke(offsetMinutes: Int) {
+        preferencesRepository.setFollowTimeOffsetMinutes(offsetMinutes)
+    }
+}
+
 class SetForecastTimeUseCase @Inject constructor(
     private val preferencesRepository: ForecastPreferencesRepository,
     private val catalogPort: ForecastCatalogPort,
@@ -71,6 +79,22 @@ class SetForecastOpacityUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(opacity: Float) {
         preferencesRepository.setOpacity(opacity)
+    }
+}
+
+class SetForecastWindOverlayScaleUseCase @Inject constructor(
+    private val preferencesRepository: ForecastPreferencesRepository
+) {
+    suspend operator fun invoke(scale: Float) {
+        preferencesRepository.setWindOverlayScale(scale)
+    }
+}
+
+class SetForecastWindDisplayModeUseCase @Inject constructor(
+    private val preferencesRepository: ForecastPreferencesRepository
+) {
+    suspend operator fun invoke(mode: ForecastWindDisplayMode) {
+        preferencesRepository.setWindDisplayMode(mode)
     }
 }
 

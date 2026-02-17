@@ -10,12 +10,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.withContext
 
 @Singleton
@@ -29,127 +28,157 @@ class ForecastOverlayRepository @Inject constructor(
     private val clock: Clock,
     @IoDispatcher private val dispatcher: CoroutineDispatcher
 ) {
-    val overlayState: Flow<ForecastOverlayUiState> = preferencesRepository.preferencesFlow
-        .mapLatest { preferences ->
-            val selection = resolveSelection(
-                preferences = preferences,
-                nowUtcMs = clock.nowWallMs()
-            )
-            val baseState = ForecastOverlayUiState(
-                enabled = preferences.overlayEnabled,
-                opacity = preferences.opacity,
-                autoTimeEnabled = preferences.autoTimeEnabled,
-                parameters = selection.parameters,
-                selectedParameterId = selection.selectedParameterId,
-                timeSlots = selection.timeSlots,
-                selectedTimeUtcMs = selection.selectedTimeSlot.validTimeUtcMs
-            )
-            if (!preferences.overlayEnabled) {
-                return@mapLatest baseState
-            }
-            try {
-                val legend = legendPort.getLegend(selection.selectedParameterId)
-                val tileSpec = tilesPort.getTileSpec(
-                    parameterId = selection.selectedParameterId,
-                    timeSlot = selection.selectedTimeSlot
-                )
-                return@mapLatest baseState.copy(
-                    legend = legend,
-                    tileSpec = tileSpec
-                )
-            } catch (t: Throwable) {
-                return@mapLatest baseState.copy(
-                    errorMessage = t.message ?: "Failed to load forecast overlay"
-                )
-            }
-        }
-        .flowOn(dispatcher)
+    val overlayState: Flow<ForecastOverlayUiState> = loadingOverlayState()
 
     fun loadingOverlayState(): Flow<ForecastOverlayUiState> = flow {
-        var lastFetchKey: OverlayFetchKey? = null
-        var lastFetchPayload: OverlayFetchPayload? = null
-        var lastFetchError: String? = null
+        var cachedTileKey: OverlayTileKey? = null
+        var cachedTileSpec: ForecastTileSpec? = null
+        var tileErrorKey: OverlayTileKey? = null
+        var tileErrorMessage: String? = null
+        var lastTileAttemptMs: Long = 0L
+
+        var cachedLegendKey: OverlayLegendKey? = null
+        var cachedLegend: ForecastLegendSpec? = null
+        var legendErrorKey: OverlayLegendKey? = null
+        var legendErrorMessage: String? = null
+        var lastLegendAttemptMs: Long = 0L
 
         selectionInputFlow().collect { input ->
             val preferences = input.preferences
+            val nowUtcMs = input.nowUtcMs
             val selection = resolveSelection(
                 preferences = preferences,
-                nowUtcMs = input.nowUtcMs
+                nowUtcMs = nowUtcMs
             )
             val baseState = ForecastOverlayUiState(
                 enabled = preferences.overlayEnabled,
                 opacity = preferences.opacity,
+                windOverlayScale = preferences.windOverlayScale,
+                windDisplayMode = preferences.windDisplayMode,
+                selectedRegionCode = normalizeForecastRegionCode(preferences.selectedRegion),
                 autoTimeEnabled = preferences.autoTimeEnabled,
+                followTimeOffsetMinutes = preferences.followTimeOffsetMinutes,
                 parameters = selection.parameters,
                 selectedParameterId = selection.selectedParameterId,
                 timeSlots = selection.timeSlots,
                 selectedTimeUtcMs = selection.selectedTimeSlot.validTimeUtcMs
             )
             if (!preferences.overlayEnabled) {
-                lastFetchKey = null
-                lastFetchPayload = null
-                lastFetchError = null
+                cachedTileKey = null
+                cachedTileSpec = null
+                tileErrorKey = null
+                tileErrorMessage = null
+                lastTileAttemptMs = 0L
+                cachedLegendKey = null
+                cachedLegend = null
+                legendErrorKey = null
+                legendErrorMessage = null
+                lastLegendAttemptMs = 0L
                 emit(baseState)
                 return@collect
             }
 
-            val fetchKey = OverlayFetchKey(
-                regionCode = preferences.selectedRegion,
+            val tileKey = OverlayTileKey(
+                regionCode = normalizeForecastRegionCode(preferences.selectedRegion),
                 parameterId = selection.selectedParameterId,
                 timeUtcMs = selection.selectedTimeSlot.validTimeUtcMs
             )
-            if (fetchKey == lastFetchKey) {
-                val cachedPayload = lastFetchPayload
-                val cachedError = lastFetchError
-                when {
-                    cachedPayload != null -> {
-                        emit(
-                            baseState.copy(
-                                legend = cachedPayload.legend,
-                                tileSpec = cachedPayload.tileSpec
-                            )
-                        )
-                    }
+            val legendKey = OverlayLegendKey(
+                regionCode = normalizeForecastRegionCode(preferences.selectedRegion),
+                parameterId = selection.selectedParameterId,
+                dayBucket = forecastRegionLocalDayBucket(
+                    utcMs = selection.selectedTimeSlot.validTimeUtcMs,
+                    regionCode = preferences.selectedRegion
+                )
+            )
 
-                    cachedError != null -> {
-                        emit(baseState.copy(errorMessage = cachedError))
-                    }
+            val currentTileSpec = if (cachedTileKey == tileKey) cachedTileSpec else null
+            val currentLegend = if (cachedLegendKey == legendKey) cachedLegend else null
 
-                    else -> emit(baseState)
+            val shouldFetchTile = currentTileSpec == null ||
+                shouldRetry(
+                    errorKeyMatches = tileErrorKey == tileKey,
+                    lastAttemptMs = lastTileAttemptMs,
+                    nowUtcMs = nowUtcMs
+                )
+            val shouldFetchLegend = currentLegend == null ||
+                shouldRetry(
+                    errorKeyMatches = legendErrorKey == legendKey,
+                    lastAttemptMs = lastLegendAttemptMs,
+                    nowUtcMs = nowUtcMs
+                )
+
+            if (shouldFetchTile || shouldFetchLegend) {
+                emit(
+                    baseState.copy(
+                        isLoading = true,
+                        tileSpec = currentTileSpec,
+                        legend = currentLegend
+                    )
+                )
+            }
+
+            if (shouldFetchTile) {
+                lastTileAttemptMs = nowUtcMs
+                try {
+                    val tileSpec = tilesPort.getTileSpec(
+                        parameterId = selection.selectedParameterId,
+                        timeSlot = selection.selectedTimeSlot,
+                        regionCode = preferences.selectedRegion
+                    )
+                    cachedTileKey = tileKey
+                    cachedTileSpec = tileSpec
+                    if (tileErrorKey == tileKey) {
+                        tileErrorKey = null
+                        tileErrorMessage = null
+                    }
+                } catch (t: Throwable) {
+                    tileErrorKey = tileKey
+                    tileErrorMessage = t.message ?: "Failed to load forecast tiles"
                 }
-                return@collect
             }
 
-            emit(baseState.copy(isLoading = true))
-            lastFetchKey = fetchKey
-            lastFetchPayload = null
-            lastFetchError = null
-            try {
-                val legend = legendPort.getLegend(selection.selectedParameterId)
-                val tileSpec = tilesPort.getTileSpec(
-                    parameterId = selection.selectedParameterId,
-                    timeSlot = selection.selectedTimeSlot
-                )
-                lastFetchPayload = OverlayFetchPayload(
-                    legend = legend,
-                    tileSpec = tileSpec
-                )
-                emit(
-                    baseState.copy(
-                        isLoading = false,
-                        legend = legend,
-                        tileSpec = tileSpec
+            if (shouldFetchLegend) {
+                lastLegendAttemptMs = nowUtcMs
+                try {
+                    val legend = legendPort.getLegend(
+                        parameterId = selection.selectedParameterId,
+                        timeSlot = selection.selectedTimeSlot,
+                        regionCode = preferences.selectedRegion
                     )
-                )
-            } catch (t: Throwable) {
-                lastFetchError = t.message ?: "Failed to load forecast overlay"
-                emit(
-                    baseState.copy(
-                        isLoading = false,
-                        errorMessage = lastFetchError
-                    )
-                )
+                    cachedLegendKey = legendKey
+                    cachedLegend = legend
+                    if (legendErrorKey == legendKey) {
+                        legendErrorKey = null
+                        legendErrorMessage = null
+                    }
+                } catch (t: Throwable) {
+                    legendErrorKey = legendKey
+                    legendErrorMessage = t.message ?: "Failed to load forecast legend"
+                }
             }
+
+            val tileForState = if (cachedTileKey == tileKey) cachedTileSpec else null
+            val legendForState = if (cachedLegendKey == legendKey) cachedLegend else null
+            val warningMessage = joinMessages(
+                if (legendErrorKey == legendKey) legendErrorMessage else null,
+                if (tileErrorKey == tileKey && tileForState != null) tileErrorMessage else null
+            )
+            val fatalError = if (tileForState == null && tileErrorKey == tileKey) {
+                tileErrorMessage ?: "Failed to load forecast tiles"
+            } else {
+                null
+            }
+
+            emit(
+                baseState.copy(
+                    isLoading = false,
+                    tileSpec = tileForState,
+                    legend = legendForState,
+                    errorMessage = fatalError,
+                    warningMessage = warningMessage
+                )
+            )
         }
     }.flowOn(dispatcher)
 
@@ -168,12 +197,21 @@ class ForecastOverlayRepository @Inject constructor(
             preferences = preferences,
             nowUtcMs = clock.nowWallMs()
         )
+        val selectedParameterMeta = selection.parameters.firstOrNull { meta ->
+            meta.id.value.equals(selection.selectedParameterId.value, ignoreCase = true)
+        }
+        if (selectedParameterMeta?.supportsPointValue == false) {
+            return@withContext ForecastPointQueryResult.Unavailable(
+                reason = "${selectedParameterMeta.name} point value is unavailable"
+            )
+        }
         return@withContext try {
             val pointValue = valuePort.getValue(
                 latitude = latitude,
                 longitude = longitude,
                 parameterId = selection.selectedParameterId,
-                timeSlot = selection.selectedTimeSlot
+                timeSlot = selection.selectedTimeSlot,
+                regionCode = preferences.selectedRegion
             )
             ForecastPointQueryResult.Success(
                 latitude = latitude,
@@ -189,19 +227,15 @@ class ForecastOverlayRepository @Inject constructor(
 
     private fun selectionInputFlow(): Flow<SelectionInput> =
         preferencesRepository.preferencesFlow.flatMapLatest { preferences ->
-            if (preferences.autoTimeEnabled) {
-                autoTimeTickerFlow().map { nowUtcMs ->
-                    SelectionInput(
-                        preferences = preferences,
-                        nowUtcMs = nowUtcMs
-                    )
-                }
+            val tickFlow: Flow<Long> = if (preferences.overlayEnabled) {
+                autoTimeTickerFlow()
             } else {
-                flowOf(
-                    SelectionInput(
-                        preferences = preferences,
-                        nowUtcMs = clock.nowWallMs()
-                    )
+                flowOf(clock.nowWallMs())
+            }
+            tickFlow.map { nowUtcMs ->
+                SelectionInput(
+                    preferences = preferences,
+                    nowUtcMs = nowUtcMs
                 )
             }
         }
@@ -229,6 +263,12 @@ class ForecastOverlayRepository @Inject constructor(
         ).ifEmpty {
             listOf(ForecastTimeSlot(roundDownToHour(nowUtcMs)))
         }
+        val followOffsetMs = if (preferences.autoTimeEnabled) {
+            preferences.followTimeOffsetMinutes * MINUTE_MS
+        } else {
+            0L
+        }
+        val followNowUtcMs = nowUtcMs + followOffsetMs
         val requestedTimeUtcMs = if (preferences.autoTimeEnabled) {
             null
         } else {
@@ -237,7 +277,7 @@ class ForecastOverlayRepository @Inject constructor(
         val selectedTimeSlot = selectTimeSlot(
             requestedUtcMs = requestedTimeUtcMs,
             timeSlots = timeSlots,
-            nowUtcMs = nowUtcMs
+            nowUtcMs = followNowUtcMs
         )
         return ResolvedSelection(
             parameters = parameters,
@@ -284,6 +324,24 @@ class ForecastOverlayRepository @Inject constructor(
         )
     )
 
+    private fun shouldRetry(
+        errorKeyMatches: Boolean,
+        lastAttemptMs: Long,
+        nowUtcMs: Long
+    ): Boolean {
+        if (!errorKeyMatches) return false
+        if (lastAttemptMs <= 0L) return true
+        return (nowUtcMs - lastAttemptMs) >= RETRY_AFTER_FAILURE_MS
+    }
+
+    private fun joinMessages(vararg messages: String?): String? {
+        val filtered = messages
+            .mapNotNull { message -> message?.trim()?.takeIf { it.isNotEmpty() } }
+            .distinct()
+        if (filtered.isEmpty()) return null
+        return filtered.joinToString(separator = " | ")
+    }
+
     private fun roundDownToHour(wallUtcMs: Long): Long = (wallUtcMs / HOUR_MS) * HOUR_MS
 
     private data class ResolvedSelection(
@@ -298,19 +356,22 @@ class ForecastOverlayRepository @Inject constructor(
         val nowUtcMs: Long
     )
 
-    private data class OverlayFetchKey(
+    private data class OverlayTileKey(
         val regionCode: String,
         val parameterId: ForecastParameterId,
         val timeUtcMs: Long
     )
 
-    private data class OverlayFetchPayload(
-        val legend: ForecastLegendSpec,
-        val tileSpec: ForecastTileSpec
+    private data class OverlayLegendKey(
+        val regionCode: String,
+        val parameterId: ForecastParameterId,
+        val dayBucket: Long
     )
 
     private companion object {
         private const val HOUR_MS = 3_600_000L
+        private const val MINUTE_MS = 60_000L
         private const val AUTO_TIME_TICK_MS = 60_000L
+        private const val RETRY_AFTER_FAILURE_MS = 30_000L
     }
 }

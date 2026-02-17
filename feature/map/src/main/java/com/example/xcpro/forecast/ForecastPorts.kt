@@ -12,12 +12,17 @@ interface ForecastCatalogPort {
 interface ForecastTilesPort {
     suspend fun getTileSpec(
         parameterId: ForecastParameterId,
-        timeSlot: ForecastTimeSlot
+        timeSlot: ForecastTimeSlot,
+        regionCode: String
     ): ForecastTileSpec
 }
 
 interface ForecastLegendPort {
-    suspend fun getLegend(parameterId: ForecastParameterId): ForecastLegendSpec
+    suspend fun getLegend(
+        parameterId: ForecastParameterId,
+        timeSlot: ForecastTimeSlot,
+        regionCode: String
+    ): ForecastLegendSpec
 }
 
 interface ForecastValuePort {
@@ -25,6 +30,7 @@ interface ForecastValuePort {
         latitude: Double,
         longitude: Double,
         parameterId: ForecastParameterId,
-        timeSlot: ForecastTimeSlot
+        timeSlot: ForecastTimeSlot,
+        regionCode: String
     ): ForecastPointValue
 }
