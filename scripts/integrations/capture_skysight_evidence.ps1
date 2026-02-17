@@ -175,6 +175,61 @@ function Find-WorkingTileSlot {
     return $null
 }
 
+function Is-WindParameter {
+    param([string]$Param)
+
+    $normalized = $Param.Trim().ToUpperInvariant()
+    return $normalized -in @("SFCWIND0", "BLTOPWIND")
+}
+
+function Resolve-SourceLayer {
+    param(
+        [string]$Param,
+        [string]$TimePart
+    )
+
+    $normalized = $Param.Trim().ToUpperInvariant()
+    switch ($normalized) {
+        "WSTAR_BSRATIO" { return "bsratio" }
+        "SFCWIND0" { return "sfcwind0" }
+        "BLTOPWIND" { return "bltopwind" }
+        default { return $TimePart }
+    }
+}
+
+function Resolve-SourceLayerCandidates {
+    param(
+        [string]$Param,
+        [string]$TimePart
+    )
+
+    $normalized = $Param.Trim().ToUpperInvariant()
+    switch ($normalized) {
+        "WSTAR_BSRATIO" { return @("bsratio", $TimePart) }
+        "SFCWIND0" { return @("sfcwind0") }
+        "BLTOPWIND" { return @("bltopwind") }
+        default { return @($TimePart) }
+    }
+}
+
+function Resolve-MaxZoom {
+    param([string]$Param)
+
+    if (Is-WindParameter -Param $Param) {
+        return 16
+    }
+    return 5
+}
+
+function Resolve-TileFormat {
+    param([string]$Param)
+
+    if (Is-WindParameter -Param $Param) {
+        return "VECTOR_WIND_POINTS"
+    }
+    return "VECTOR_INDEXED_FILL"
+}
+
 function Extract-LegendArray {
     param([string]$RawLegend)
 
@@ -280,12 +335,23 @@ $tileTemplateObject = [ordered]@{
     parameter = $workingTile.Param
     urlTemplate = "https://edge.skysight.io/$($workingTile.Region)/$($workingTile.DatePart)/$($workingTile.TimePart)/$($workingTile.Param)/{z}/{x}/{y}"
     minZoom = 3
-    maxZoom = 5
+    maxZoom = (Resolve-MaxZoom -Param $workingTile.Param)
     tileSizePx = 256
-    format = "VECTOR_INDEXED_FILL"
-    sourceLayer = $workingTile.TimePart
-    valueProperty = "idx"
+    format = (Resolve-TileFormat -Param $workingTile.Param)
+    sourceLayer = (Resolve-SourceLayer -Param $workingTile.Param -TimePart $workingTile.TimePart)
+    sourceLayerCandidates = (Resolve-SourceLayerCandidates -Param $workingTile.Param -TimePart $workingTile.TimePart)
     originHeaderRequired = $true
+    zoomPolicy = [ordered]@{
+        fillMaxZoom = 5
+        windMaxZoom = 16
+    }
+    windUrlTemplateExample = "https://edge.skysight.io/$($workingTile.Region)/$($workingTile.DatePart)/$($workingTile.TimePart)/wind/{z}/{x}/{y}/sfcwind0"
+}
+if (Is-WindParameter -Param $workingTile.Param) {
+    $tileTemplateObject["speedProperty"] = "spd"
+    $tileTemplateObject["directionProperty"] = "dir"
+} else {
+    $tileTemplateObject["valueProperty"] = "idx"
 }
 $tileTemplateObject | ConvertTo-Json -Depth 8 | Set-Content -Path $tileTemplateSuccess -Encoding UTF8
 
@@ -357,6 +423,8 @@ $parametersObject = [ordered]@{
     overlayParameters = @(
         @{ id = "wstar_bsratio"; name = "Thermal"; category = "Thermal"; unit = "m/s"; supportsTiles = $true; supportsLegend = $true; supportsPointValue = $true },
         @{ id = "dwcrit"; name = "Thermal Height"; category = "Thermal"; unit = "m"; supportsTiles = $true; supportsLegend = $true; supportsPointValue = $true },
+        @{ id = "sfcwind0"; name = "Surface Wind"; category = "Wind"; unit = "kt"; supportsTiles = $true; supportsLegend = $true; supportsPointValue = $true },
+        @{ id = "bltopwind"; name = "BL Top Wind"; category = "Wind"; unit = "kt"; supportsTiles = $true; supportsLegend = $true; supportsPointValue = $true },
         @{ id = "zsfclcl"; name = "Cloudbase"; category = "Cloud"; unit = "m"; supportsTiles = $true; supportsLegend = $true; supportsPointValue = $true },
         @{ id = "zsfclcldif"; name = "Cloudbase Spread"; category = "Cloud"; unit = "m"; supportsTiles = $true; supportsLegend = $true; supportsPointValue = $true },
         @{ id = "accrain"; name = "Rain"; category = "Precip"; unit = "mm"; supportsTiles = $true; supportsLegend = $true; supportsPointValue = $true },

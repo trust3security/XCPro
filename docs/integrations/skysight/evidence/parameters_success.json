@@ -64,6 +64,24 @@
                                   "supportsPointValue":  true
                               },
                               {
+                                  "id":  "sfcwind0",
+                                  "name":  "Surface Wind",
+                                  "supportsLegend":  true,
+                                  "supportsTiles":  true,
+                                  "unit":  "kt",
+                                  "category":  "Wind",
+                                  "supportsPointValue":  true
+                              },
+                              {
+                                  "id":  "bltopwind",
+                                  "name":  "BL Top Wind",
+                                  "supportsLegend":  true,
+                                  "supportsTiles":  true,
+                                  "unit":  "kt",
+                                  "category":  "Wind",
+                                  "supportsPointValue":  true
+                              },
+                              {
                                   "id":  "zsfclcl",
                                   "name":  "Cloudbase",
                                   "supportsLegend":  true,

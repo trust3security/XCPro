@@ -295,6 +295,17 @@ Minimum fields required:
 - `name`, `unit`, `type`, `min`, `max`, `step`
 - model availability metadata (if present)
 
+#### 4.6.1a Convergence parameter confirmation
+
+If convergence is planned in MVP+, verify parameter id `wblmaxmin` exists in the
+captured catalog and keep one redacted proof snippet in
+`parameters_success.json` showing:
+
+- `id` or key: `wblmaxmin`
+- display name: `Convergence`
+- units/type/min/max/step fields
+- model list (if present)
+
 #### 4.6.2 Tile template contract (edge)
 Capture a proven template for the selected parameter/time:
 
@@ -321,6 +332,10 @@ curl -sS -X POST "https://cf.skysight.io/point/<LAT>/<LON>?region=<REGION>" \
 ```
 
 Capture an invalid or out-of-range request to produce `value_no_data.txt`.
+
+If convergence is planned, also test point payload presence for `wblmaxmin`
+mapping. If no convergence field is returned, record this explicitly and keep
+convergence point-value support disabled until mapping is provided by SkySight.
 
 #### 4.6.4 Updated marker (optional but useful)
 

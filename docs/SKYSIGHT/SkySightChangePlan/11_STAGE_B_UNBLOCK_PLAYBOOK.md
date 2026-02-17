@@ -45,6 +45,22 @@ Each `*.json` should be the **raw response body** exactly as returned.
 - Keep field names, nesting, and types intact
 - Keep numeric ranges and example strings if they are not secrets
 
+### Convergence add-on evidence (recommended now)
+
+If convergence is in scope, also capture:
+
+```
+docs/integrations/skysight/evidence/
+  convergence_tile_success.txt
+  convergence_legend_success.json
+  convergence_value_probe.json
+```
+
+Use parameter id `wblmaxmin` for convergence probes. If point response does not
+contain a convergence value field, record that result in
+`convergence_value_probe.json` and keep point-value support disabled in XCPro
+until SkySight provides official field mapping.
+
 ---
 
 ## Fastest path to unblock (choose ONE)

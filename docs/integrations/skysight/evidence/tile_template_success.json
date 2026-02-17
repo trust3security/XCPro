@@ -9,7 +9,16 @@
     "maxZoom":  5,
     "tileSizePx":  256,
     "format":  "VECTOR_INDEXED_FILL",
-    "sourceLayer":  "0600",
-    "valueProperty":  "idx",
-    "originHeaderRequired":  true
+    "sourceLayer":  "bsratio",
+    "sourceLayerCandidates":  [
+                                  "bsratio",
+                                  "0600"
+                              ],
+    "originHeaderRequired":  true,
+    "zoomPolicy":  {
+                       "fillMaxZoom":  5,
+                       "windMaxZoom":  16
+                   },
+    "windUrlTemplateExample":  "https://edge.skysight.io/WEST_US/20260213/0600/wind/{z}/{x}/{y}/sfcwind0",
+    "valueProperty":  "idx"
 }
