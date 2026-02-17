@@ -123,6 +123,8 @@ class MapScreenViewModel @Inject constructor(
     val suppressLiveGps: StateFlow<Boolean> = replaySensorGates.suppressLiveGps
     val allowSensorStart: StateFlow<Boolean> = replaySensorGates.allowSensorStart
     val mapLocation: StateFlow<MapLocationUiModel?> = createMapLocationState(viewModelScope, flightDataUseCase)
+    private val ownshipAltitudeMeters: StateFlow<Double?> =
+        createOwnshipAltitudeState(viewModelScope, flightDataUseCase)
     val ognTargets: StateFlow<List<OgnTrafficTarget>> = ognTrafficUseCase.targets
     val ognSnapshot: StateFlow<OgnTrafficSnapshot> = ognTrafficUseCase.snapshot
     val ognOverlayEnabled: StateFlow<Boolean> = ognTrafficUseCase.overlayEnabled
@@ -211,6 +213,19 @@ class MapScreenViewModel @Inject constructor(
         adsbOverlayEnabled = adsbOverlayEnabled,
         mapState = mapState,
         mapLocation = mapLocation,
+        ownshipAltitudeMeters = ownshipAltitudeMeters,
+        adsbMaxDistanceKm = adsbTrafficUseCase.maxDistanceKm.eagerState(
+            scope = viewModelScope,
+            initial = com.example.xcpro.adsb.ADSB_MAX_DISTANCE_DEFAULT_KM
+        ),
+        adsbVerticalAboveMeters = adsbTrafficUseCase.verticalAboveMeters.eagerState(
+            scope = viewModelScope,
+            initial = com.example.xcpro.adsb.ADSB_VERTICAL_FILTER_ABOVE_DEFAULT_METERS
+        ),
+        adsbVerticalBelowMeters = adsbTrafficUseCase.verticalBelowMeters.eagerState(
+            scope = viewModelScope,
+            initial = com.example.xcpro.adsb.ADSB_VERTICAL_FILTER_BELOW_DEFAULT_METERS
+        ),
         rawAdsbTargets = rawAdsbTargets,
         selectedAdsbId = _selectedAdsbId,
         ognTrafficUseCase = ognTrafficUseCase,

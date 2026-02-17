@@ -311,6 +311,9 @@ class AdsbTrafficUseCase @Inject constructor(
     val isStreamingEnabled: StateFlow<Boolean> = repository.isEnabled
     val overlayEnabled: Flow<Boolean> = preferencesRepository.enabledFlow
     val iconSizePx: Flow<Int> = preferencesRepository.iconSizePxFlow
+    val maxDistanceKm: Flow<Int> = preferencesRepository.maxDistanceKmFlow
+    val verticalAboveMeters: Flow<Double> = preferencesRepository.verticalAboveMetersFlow
+    val verticalBelowMeters: Flow<Double> = preferencesRepository.verticalBelowMetersFlow
     val metadataSyncState: StateFlow<MetadataSyncState> = metadataSyncRepository.syncState
 
     fun setStreamingEnabled(enabled: Boolean) {
@@ -327,6 +330,22 @@ class AdsbTrafficUseCase @Inject constructor(
 
     fun updateOwnshipOrigin(latitude: Double, longitude: Double) {
         repository.updateOwnshipOrigin(latitude, longitude)
+    }
+
+    fun updateOwnshipAltitudeMeters(altitudeMeters: Double?) {
+        repository.updateOwnshipAltitudeMeters(altitudeMeters)
+    }
+
+    fun updateDisplayFilters(
+        maxDistanceKm: Int,
+        verticalAboveMeters: Double,
+        verticalBelowMeters: Double
+    ) {
+        repository.updateDisplayFilters(
+            maxDistanceKm = maxDistanceKm,
+            verticalAboveMeters = verticalAboveMeters,
+            verticalBelowMeters = verticalBelowMeters
+        )
     }
 
     suspend fun setOverlayEnabled(enabled: Boolean) {

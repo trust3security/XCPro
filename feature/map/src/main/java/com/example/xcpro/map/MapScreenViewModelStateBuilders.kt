@@ -110,6 +110,17 @@ internal fun createMapLocationState(
         .map { it?.gps?.toUiModel() }
         .stateIn(scope, SharingStarted.Eagerly, null)
 
+internal fun createOwnshipAltitudeState(
+    scope: CoroutineScope,
+    flightDataUseCase: FlightDataUseCase
+): StateFlow<Double?> =
+    flightDataUseCase.flightData
+        .map { sample ->
+            val gpsAltitude = sample?.gps?.altitude?.value?.takeIf { it.isFinite() }
+            gpsAltitude ?: sample?.baroAltitude?.value?.takeIf { it.isFinite() }
+        }
+        .stateIn(scope, SharingStarted.Eagerly, null)
+
 internal fun createCardHydrationReadyState(
     scope: CoroutineScope,
     containerReady: StateFlow<Boolean>,

@@ -550,6 +550,12 @@ class MapScreenViewModelTest {
 
             override fun updateCenter(latitude: Double, longitude: Double) = Unit
             override fun updateOwnshipOrigin(latitude: Double, longitude: Double) = Unit
+            override fun updateOwnshipAltitudeMeters(altitudeMeters: Double?) = Unit
+            override fun updateDisplayFilters(
+                maxDistanceKm: Int,
+                verticalAboveMeters: Double,
+                verticalBelowMeters: Double
+            ) = Unit
             override fun reconnectNow() = Unit
 
             override fun start() {
@@ -723,6 +729,14 @@ class MapScreenViewModelTest {
             lastOwnshipLat = latitude
             lastOwnshipLon = longitude
         }
+
+        override fun updateOwnshipAltitudeMeters(altitudeMeters: Double?) = Unit
+
+        override fun updateDisplayFilters(
+            maxDistanceKm: Int,
+            verticalAboveMeters: Double,
+            verticalBelowMeters: Double
+        ) = Unit
 
         override fun reconnectNow() = Unit
 

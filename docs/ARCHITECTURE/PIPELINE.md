@@ -170,13 +170,13 @@ OGN lifecycle/position semantics:
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
   - OGN overlay renders `emptyList()` when overlay preference is disabled.
 
-ADS-b icon size settings path:
+ADS-b settings path:
 - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficPreferencesRepository.kt`
-  - SSOT for ADS-b overlay enabled + icon size preferences.
+  - SSOT for ADS-b overlay enabled + icon size + max distance + vertical above/below preferences.
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt`
-  - `AdsbTrafficUseCase` exposes `iconSizePx` flow.
+  - `AdsbTrafficUseCase` exposes ADS-b settings flows (`iconSizePx`, `maxDistanceKm`, `verticalAboveMeters`, `verticalBelowMeters`).
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
-  - Converts `iconSizePx` to lifecycle-aware state for UI/runtime.
+  - Converts ADS-b settings flows and ownship altitude into lifecycle-aware state for UI/runtime wiring.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
   - Pushes icon-size changes into overlay runtime controller.
 - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
@@ -197,13 +197,17 @@ ADS-b lifecycle/visibility semantics:
   - Streaming enable is driven by `allowSensorStart && mapVisible && adsbOverlayEnabled`.
   - When streaming turns on, center is seeded from current GPS position (camera fallback when GPS is unavailable).
   - Query-center and ownship-origin updates are GPS-driven from `mapLocation`.
+  - Ownship altitude and ADS-b filter settings flows are forwarded to the ADS-b repository runtime.
   - Explicit ADS-b FAB off triggers immediate repository target clear.
 - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt`
   - Disabling streaming pauses polling without clearing last-known targets.
   - Explicit clear path removes cached targets and resets displayed list.
-  - Query center is used for fetch/radius filtering (20 km receive radius); ownship origin is used for displayed distance/bearing when available.
+  - Query center is used for fetch/radius filtering (configurable `1..50 km`, default `10 km`).
+  - Ownship origin is used for displayed distance/bearing when available.
+  - Ownship altitude is used for vertical above/below filtering with fail-open when altitude is unavailable.
 - `feature/map/src/main/java/com/example/xcpro/map/AdsbTrafficOverlay.kt`
   - Per-aircraft runtime interpolation smooths marker motion between provider samples.
+  - Proximity color expression is distance-based with emergency override priority.
   - Interpolation is visual-only and does not mutate repository SSOT.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
   - ADS-b overlay renders `emptyList()` when overlay preference is disabled.

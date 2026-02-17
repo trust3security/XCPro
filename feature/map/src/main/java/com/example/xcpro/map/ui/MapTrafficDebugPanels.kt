@@ -102,7 +102,12 @@ internal fun AdsbDebugPanel(
                 style = MaterialTheme.typography.bodySmall
             )
             Text(
-                text = "Counts (fetched/within/displayed): ${snapshot.fetchedCount}/${snapshot.withinRadiusCount}/${snapshot.displayedCount}",
+                text = "Counts (fetched/horizontal/vertical/displayed): ${snapshot.fetchedCount}/${snapshot.withinRadiusCount}/${snapshot.withinVerticalCount}/${snapshot.displayedCount}",
+                color = Color(0xFFE5E7EB),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = "Filtered (vertical/capped): ${snapshot.filteredByVerticalCount}/${snapshot.cappedCount}",
                 color = Color(0xFFE5E7EB),
                 style = MaterialTheme.typography.bodySmall
             )

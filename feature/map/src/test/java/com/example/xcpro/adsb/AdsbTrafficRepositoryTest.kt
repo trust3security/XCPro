@@ -442,6 +442,120 @@ class AdsbTrafficRepositoryTest {
         repository.stop()
     }
 
+    @Test
+    fun updateDisplayFilters_reselectsFromCacheAndUpdatesRadiusSnapshot() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val provider = SequenceProvider(
+            listOf(
+                ProviderResult.Success(
+                    response = OpenSkyResponse(
+                        timeSec = 1_710_000_000L,
+                        states = listOf(
+                            state(
+                                icao24 = "abc123",
+                                latitude = -33.7688,
+                                longitude = 151.2093,
+                                altitudeM = 500.0,
+                                speedMps = 40.0
+                            )
+                        )
+                    ),
+                    httpCode = 200,
+                    remainingCredits = null
+                )
+            )
+        )
+        val repository = AdsbTrafficRepositoryImpl(
+            providerClient = provider,
+            tokenRepository = FakeTokenRepository(),
+            clock = FakeClock(monoMs = 0L, wallMs = 0L),
+            dispatcher = dispatcher
+        )
+
+        repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
+        repository.setEnabled(true)
+        runCurrent()
+        assertEquals(0, repository.targets.value.size)
+        assertEquals(10, repository.snapshot.value.receiveRadiusKm)
+        assertEquals(1, provider.callCount)
+
+        repository.updateDisplayFilters(
+            maxDistanceKm = 20,
+            verticalAboveMeters = 5_000.0,
+            verticalBelowMeters = 5_000.0
+        )
+        runCurrent()
+
+        assertEquals(1, repository.targets.value.size)
+        assertEquals(20, repository.snapshot.value.receiveRadiusKm)
+        assertEquals(1, provider.callCount)
+        repository.stop()
+    }
+
+    @Test
+    fun ownshipAltitudeUpdate_appliesVerticalFilterWithoutNewFetch() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val provider = SequenceProvider(
+            listOf(
+                ProviderResult.Success(
+                    response = OpenSkyResponse(
+                        timeSec = 1_710_000_000L,
+                        states = listOf(
+                            state(
+                                icao24 = "abc123",
+                                latitude = -33.8687,
+                                longitude = 151.2092,
+                                altitudeM = 1_050.0,
+                                speedMps = 40.0
+                            ),
+                            state(
+                                icao24 = "def456",
+                                latitude = -33.8686,
+                                longitude = 151.2094,
+                                altitudeM = 1_900.0,
+                                speedMps = 40.0
+                            )
+                        )
+                    ),
+                    httpCode = 200,
+                    remainingCredits = null
+                )
+            )
+        )
+        val repository = AdsbTrafficRepositoryImpl(
+            providerClient = provider,
+            tokenRepository = FakeTokenRepository(),
+            clock = FakeClock(monoMs = 0L, wallMs = 0L),
+            dispatcher = dispatcher
+        )
+
+        repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
+        repository.updateDisplayFilters(
+            maxDistanceKm = 20,
+            verticalAboveMeters = 100.0,
+            verticalBelowMeters = 100.0
+        )
+        repository.setEnabled(true)
+        runCurrent()
+
+        // Ownship altitude unknown -> fail-open vertical filtering.
+        assertEquals(2, repository.targets.value.size)
+        assertEquals(2, repository.snapshot.value.withinVerticalCount)
+        assertEquals(0, repository.snapshot.value.filteredByVerticalCount)
+        assertEquals(1, provider.callCount)
+
+        repository.updateOwnshipAltitudeMeters(1_000.0)
+        runCurrent()
+
+        assertEquals(1, repository.targets.value.size)
+        assertEquals("abc123", repository.targets.value.first().id.raw)
+        assertEquals(2, repository.snapshot.value.withinRadiusCount)
+        assertEquals(1, repository.snapshot.value.withinVerticalCount)
+        assertEquals(1, repository.snapshot.value.filteredByVerticalCount)
+        assertEquals(1, provider.callCount)
+        repository.stop()
+    }
+
     private class FakeTokenRepository(
         private var token: String? = null,
         private val hasCredentials: Boolean = false

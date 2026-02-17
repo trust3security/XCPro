@@ -27,6 +27,12 @@ interface AdsbTrafficRepository {
     fun clearTargets()
     fun updateCenter(latitude: Double, longitude: Double)
     fun updateOwnshipOrigin(latitude: Double, longitude: Double)
+    fun updateOwnshipAltitudeMeters(altitudeMeters: Double?)
+    fun updateDisplayFilters(
+        maxDistanceKm: Int,
+        verticalAboveMeters: Double,
+        verticalBelowMeters: Double
+    )
     fun reconnectNow()
     fun start()
     fun stop()
@@ -53,9 +59,12 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
             authMode = AdsbAuthMode.Anonymous,
             centerLat = null,
             centerLon = null,
-            receiveRadiusKm = RECEIVE_RADIUS_KM,
+            receiveRadiusKm = ADSB_MAX_DISTANCE_DEFAULT_KM,
             fetchedCount = 0,
             withinRadiusCount = 0,
+            withinVerticalCount = 0,
+            filteredByVerticalCount = 0,
+            cappedCount = 0,
             displayedCount = 0,
             lastHttpStatus = null,
             remainingCredits = null,
@@ -104,6 +113,22 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
 
     @Volatile
     private var withinRadiusCount: Int = 0
+    @Volatile
+    private var withinVerticalCount: Int = 0
+    @Volatile
+    private var filteredByVerticalCount: Int = 0
+    @Volatile
+    private var cappedCount: Int = 0
+
+    @Volatile
+    private var ownshipAltitudeMeters: Double? = null
+
+    @Volatile
+    private var receiveRadiusKm: Int = ADSB_MAX_DISTANCE_DEFAULT_KM
+    @Volatile
+    private var verticalFilterAboveMeters: Double = ADSB_VERTICAL_FILTER_ABOVE_DEFAULT_METERS
+    @Volatile
+    private var verticalFilterBelowMeters: Double = ADSB_VERTICAL_FILTER_BELOW_DEFAULT_METERS
     private var consecutiveEmptyPolls: Int = 0
     private var lastPolledCenter: Center? = null
     private val requestTimesMonoMs = ArrayDeque<Long>()
@@ -153,6 +178,34 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
         }
     }
 
+    override fun updateOwnshipAltitudeMeters(altitudeMeters: Double?) {
+        ownshipAltitudeMeters = altitudeMeters?.takeIf { it.isFinite() }
+        center?.let { activeCenter ->
+            publishFromStore(activeCenter)
+        }
+    }
+
+    override fun updateDisplayFilters(
+        maxDistanceKm: Int,
+        verticalAboveMeters: Double,
+        verticalBelowMeters: Double
+    ) {
+        val clampedDistanceKm = clampAdsbMaxDistanceKm(maxDistanceKm)
+        val clampedAboveMeters = clampAdsbVerticalFilterMeters(verticalAboveMeters)
+        val clampedBelowMeters = clampAdsbVerticalFilterMeters(verticalBelowMeters)
+        val changed =
+            receiveRadiusKm != clampedDistanceKm ||
+                this.verticalFilterAboveMeters != clampedAboveMeters ||
+                this.verticalFilterBelowMeters != clampedBelowMeters
+        if (!changed) return
+        receiveRadiusKm = clampedDistanceKm
+        this.verticalFilterAboveMeters = clampedAboveMeters
+        this.verticalFilterBelowMeters = clampedBelowMeters
+        center?.let { activeCenter ->
+            publishFromStore(activeCenter)
+        } ?: publishSnapshot()
+    }
+
     override fun reconnectNow() {
         if (!_isEnabled.value) return
         scope.launch {
@@ -191,6 +244,9 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
         _targets.value = emptyList()
         fetchedCount = 0
         withinRadiusCount = 0
+        withinVerticalCount = 0
+        filteredByVerticalCount = 0
+        cappedCount = 0
         consecutiveEmptyPolls = 0
         lastPolledCenter = null
     }
@@ -207,7 +263,7 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
             val bbox = AdsbGeoMath.computeBbox(
                 centerLat = centerAtPoll.latitude,
                 centerLon = centerAtPoll.longitude,
-                radiusKm = RECEIVE_RADIUS_KM.toDouble()
+                radiusKm = receiveRadiusKm.toDouble()
             )
             when (val result = fetchWithAuthRetry(bbox)) {
                 is ProviderResult.Success -> {
@@ -302,11 +358,18 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
             queryCenterLon = centerAtPoll.longitude,
             referenceLat = ownshipReference.latitude,
             referenceLon = ownshipReference.longitude,
-            radiusMeters = RECEIVE_RADIUS_KM * 1_000.0,
+            ownshipAltitudeMeters = ownshipReference.altitudeMeters,
+            usesOwnshipReference = ownshipReference.usesOwnshipReference,
+            radiusMeters = receiveRadiusKm * 1_000.0,
+            verticalAboveMeters = verticalFilterAboveMeters,
+            verticalBelowMeters = verticalFilterBelowMeters,
             maxDisplayed = MAX_DISPLAYED_TARGETS,
             staleAfterSec = STALE_AFTER_SEC
         )
         withinRadiusCount = selection.withinRadiusCount
+        withinVerticalCount = selection.withinVerticalCount
+        filteredByVerticalCount = selection.filteredByVerticalCount
+        cappedCount = selection.cappedCount
         consecutiveEmptyPolls = if (selection.withinRadiusCount == 0) {
             consecutiveEmptyPolls + 1
         } else {
@@ -327,17 +390,41 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
             queryCenterLon = centerAtPoll.longitude,
             referenceLat = ownshipReference.latitude,
             referenceLon = ownshipReference.longitude,
-            radiusMeters = RECEIVE_RADIUS_KM * 1_000.0,
+            ownshipAltitudeMeters = ownshipReference.altitudeMeters,
+            usesOwnshipReference = ownshipReference.usesOwnshipReference,
+            radiusMeters = receiveRadiusKm * 1_000.0,
+            verticalAboveMeters = verticalFilterAboveMeters,
+            verticalBelowMeters = verticalFilterBelowMeters,
             maxDisplayed = MAX_DISPLAYED_TARGETS,
             staleAfterSec = STALE_AFTER_SEC
         )
         withinRadiusCount = selection.withinRadiusCount
+        withinVerticalCount = selection.withinVerticalCount
+        filteredByVerticalCount = selection.filteredByVerticalCount
+        cappedCount = selection.cappedCount
         _targets.value = selection.displayed
         publishSnapshot()
     }
 
-    private fun ownshipReference(fallbackCenter: Center): Center =
-        ownshipOrigin ?: fallbackCenter
+    private fun ownshipReference(fallbackCenter: Center): ReferencePoint {
+        val ownship = ownshipOrigin
+        val altitude = ownshipAltitudeMeters?.takeIf { it.isFinite() }
+        return if (ownship != null) {
+            ReferencePoint(
+                latitude = ownship.latitude,
+                longitude = ownship.longitude,
+                altitudeMeters = altitude,
+                usesOwnshipReference = true
+            )
+        } else {
+            ReferencePoint(
+                latitude = fallbackCenter.latitude,
+                longitude = fallbackCenter.longitude,
+                altitudeMeters = altitude,
+                usesOwnshipReference = false
+            )
+        }
+    }
 
     private fun computeNextPollDelayMs(centerAtPoll: Center, nowMonoMs: Long): Long {
         val adaptiveMs = computeAdaptivePollDelayMs(centerAtPoll)
@@ -417,9 +504,12 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
             authMode = authMode,
             centerLat = activeCenter?.latitude,
             centerLon = activeCenter?.longitude,
-            receiveRadiusKm = RECEIVE_RADIUS_KM,
+            receiveRadiusKm = receiveRadiusKm,
             fetchedCount = fetchedCount,
             withinRadiusCount = withinRadiusCount,
+            withinVerticalCount = withinVerticalCount,
+            filteredByVerticalCount = filteredByVerticalCount,
+            cappedCount = cappedCount,
             displayedCount = _targets.value.size,
             lastHttpStatus = lastHttpStatus,
             remainingCredits = remainingCredits,
@@ -474,9 +564,15 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
         val longitude: Double
     )
 
+    private data class ReferencePoint(
+        val latitude: Double,
+        val longitude: Double,
+        val altitudeMeters: Double?,
+        val usesOwnshipReference: Boolean
+    )
+
     private companion object {
         private const val TAG = "AdsbTrafficRepository"
-        private const val RECEIVE_RADIUS_KM = 20
         private const val MAX_DISPLAYED_TARGETS = 30
         private const val STALE_AFTER_SEC = 60
         private const val EXPIRY_AFTER_SEC = 120

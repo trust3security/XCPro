@@ -22,6 +22,10 @@ internal class MapScreenTrafficCoordinator(
     private val adsbOverlayEnabled: StateFlow<Boolean>,
     private val mapState: MapStateReader,
     private val mapLocation: StateFlow<MapLocationUiModel?>,
+    private val ownshipAltitudeMeters: StateFlow<Double?>,
+    private val adsbMaxDistanceKm: StateFlow<Int>,
+    private val adsbVerticalAboveMeters: StateFlow<Double>,
+    private val adsbVerticalBelowMeters: StateFlow<Double>,
     private val rawAdsbTargets: StateFlow<List<AdsbTrafficUiModel>>,
     private val selectedAdsbId: MutableStateFlow<Icao24?>,
     private val ognTrafficUseCase: OgnTrafficUseCase,
@@ -73,6 +77,29 @@ internal class MapScreenTrafficCoordinator(
                 adsbTrafficUseCase.updateOwnshipOrigin(
                     latitude = latitude,
                     longitude = longitude
+                )
+            }
+            .launchIn(scope)
+
+        ownshipAltitudeMeters
+            .onEach { altitudeMeters ->
+                adsbTrafficUseCase.updateOwnshipAltitudeMeters(altitudeMeters)
+            }
+            .launchIn(scope)
+
+        combine(
+            adsbMaxDistanceKm,
+            adsbVerticalAboveMeters,
+            adsbVerticalBelowMeters
+        ) { maxDistanceKm, verticalAboveMeters, verticalBelowMeters ->
+            Triple(maxDistanceKm, verticalAboveMeters, verticalBelowMeters)
+        }
+            .distinctUntilChanged()
+            .onEach { (maxDistanceKm, verticalAboveMeters, verticalBelowMeters) ->
+                adsbTrafficUseCase.updateDisplayFilters(
+                    maxDistanceKm = maxDistanceKm,
+                    verticalAboveMeters = verticalAboveMeters,
+                    verticalBelowMeters = verticalBelowMeters
                 )
             }
             .launchIn(scope)

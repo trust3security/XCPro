@@ -25,6 +25,9 @@ class AdsbTrafficPreferencesRepositoryTest {
     fun setUp() = runBlocking {
         val repository = AdsbTrafficPreferencesRepository(context)
         repository.setIconSizePx(ADSB_ICON_SIZE_DEFAULT_PX)
+        repository.setMaxDistanceKm(ADSB_MAX_DISTANCE_DEFAULT_KM)
+        repository.setVerticalAboveMeters(ADSB_VERTICAL_FILTER_ABOVE_DEFAULT_METERS)
+        repository.setVerticalBelowMeters(ADSB_VERTICAL_FILTER_BELOW_DEFAULT_METERS)
     }
 
     @After
@@ -69,5 +72,68 @@ class AdsbTrafficPreferencesRepositoryTest {
         val current = repository.iconSizePxFlow.first()
 
         assertEquals(92, current)
+    }
+
+    @Test
+    fun maxDistance_defaultsTo10Km() = runTest {
+        val repository = AdsbTrafficPreferencesRepository(context)
+
+        val current = repository.maxDistanceKmFlow.first()
+
+        assertEquals(ADSB_MAX_DISTANCE_DEFAULT_KM, current)
+    }
+
+    @Test
+    fun setMaxDistance_clampsAndPersists() = runTest {
+        val repository = AdsbTrafficPreferencesRepository(context)
+
+        repository.setMaxDistanceKm(0)
+        assertEquals(ADSB_MAX_DISTANCE_MIN_KM, repository.maxDistanceKmFlow.first())
+
+        repository.setMaxDistanceKm(999)
+        assertEquals(ADSB_MAX_DISTANCE_MAX_KM, repository.maxDistanceKmFlow.first())
+
+        repository.setMaxDistanceKm(27)
+        assertEquals(27, repository.maxDistanceKmFlow.first())
+    }
+
+    @Test
+    fun verticalFilters_defaultToConfiguredFeetEquivalents() = runTest {
+        val repository = AdsbTrafficPreferencesRepository(context)
+
+        assertEquals(
+            ADSB_VERTICAL_FILTER_ABOVE_DEFAULT_METERS,
+            repository.verticalAboveMetersFlow.first(),
+            1e-6
+        )
+        assertEquals(
+            ADSB_VERTICAL_FILTER_BELOW_DEFAULT_METERS,
+            repository.verticalBelowMetersFlow.first(),
+            1e-6
+        )
+    }
+
+    @Test
+    fun setVerticalFilters_clampAndPersist() = runTest {
+        val repository = AdsbTrafficPreferencesRepository(context)
+
+        repository.setVerticalAboveMeters(-10.0)
+        assertEquals(
+            ADSB_VERTICAL_FILTER_MIN_METERS,
+            repository.verticalAboveMetersFlow.first(),
+            1e-6
+        )
+
+        repository.setVerticalBelowMeters(999_999.0)
+        assertEquals(
+            ADSB_VERTICAL_FILTER_MAX_METERS,
+            repository.verticalBelowMetersFlow.first(),
+            1e-6
+        )
+
+        repository.setVerticalAboveMeters(1234.5)
+        repository.setVerticalBelowMeters(678.9)
+        assertEquals(1234.5, repository.verticalAboveMetersFlow.first(), 1e-6)
+        assertEquals(678.9, repository.verticalBelowMetersFlow.first(), 1e-6)
     }
 }

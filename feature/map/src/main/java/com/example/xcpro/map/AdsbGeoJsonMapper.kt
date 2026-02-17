@@ -14,6 +14,9 @@ internal object AdsbGeoJsonMapper {
     const val PROP_ICON_ID = "icon_id"
     const val PROP_TRACK_DEG = "track_deg"
     const val PROP_ALPHA = "alpha"
+    const val PROP_DISTANCE_M = "distance_m"
+    const val PROP_HAS_OWNSHIP_REF = "has_ownship_ref"
+    const val PROP_IS_EMERGENCY = "is_emergency"
     const val PROP_ALT_M = "alt_m"
     const val PROP_SPEED_MPS = "speed_mps"
     const val PROP_VS_MPS = "vs_mps"
@@ -39,6 +42,11 @@ internal object AdsbGeoJsonMapper {
                 aircraftIcon.styleImageId
             }
         )
+        if (target.distanceMeters.isFinite()) {
+            feature.addNumberProperty(PROP_DISTANCE_M, target.distanceMeters)
+        }
+        feature.addNumberProperty(PROP_HAS_OWNSHIP_REF, if (target.usesOwnshipReference) 1 else 0)
+        feature.addNumberProperty(PROP_IS_EMERGENCY, if (target.isEmergencyCollisionRisk) 1 else 0)
         target.trackDeg
             ?.takeIf { it.isFinite() }
             ?.let { feature.addNumberProperty(PROP_TRACK_DEG, normalizeTrackDegrees(it)) }
