@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>SkySight - david@trust3security.com</title>
+    <meta charset="UTF-8">
+    <link rel="icon" href="/favicon.ico">
+    <meta name="description" content="SkySight Weather - forecast maps for soaring and aviation, out to 5 days in the future across several locations">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#f8f8f8" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/ozsoar/apple-touch-icon.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/ozsoar/apple-touch-icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="/ozsoar/apple-touch-icon-144x144.png">
+    <link rel="apple-touch-icon" sizes="120x120" href="/ozsoar/apple-touch-icon-120x120.png">
+    <link rel="apple-touch-icon" sizes="114x114" href="/ozsoar/apple-touch-icon-114x114.png">
+    <link rel="apple-touch-icon" sizes="76x76" href="/ozsoar/apple-touch-icon-76x76.png">
+    <link rel="apple-touch-icon" sizes="72x72" href="/ozsoar/apple-touch-icon-72x72.png">
+    <link rel="apple-touch-icon" sizes="57x57" href="/ozsoar/apple-touch-icon-57x57.png">
+    <link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials">
+    <link rel="preconnect" href="https://edge.skysight.io">
+    <link rel="preconnect" href="https://maps.skysight.io">
+    <script>
+      const user = {
+        email: "david@trust3security.com",
+        centre: [-33.901931445148094,151.22787733871934],
+        zoom: 9,
+        region: "EAST_AUS",
+        usertz: "Australia/Sydney",
+        uservert: "kt",
+        userhgt: "ft",
+        userspd: "kts",
+        userdist: "km",
+        usertemp: "c",
+        useraircraft: "glider",
+        pilotF: 104,
+        default_param: "pfdtot",
+        tasks: '[{"dist":545.730989688261,"label":"546km Closed 4-leg","watch":false,"feature":{"type":"Feature","properties":{},"geometry":{"type":"LineString","coordinates":[[150.52574157714844,-30.89073514772766],[149.76768493652344,-29.299274048713947],[148.7603759765625,-29.976646842099903],[150.72349548339844,-30.764111589862495],[150.52574157714844,-30.89073514772766]]}}}]',
+        alerts: '[]',
+        airspaceEnabled: true,
+        lastUpdate: 1771212128,
+        locale: 'en_US',
+        paid: true,
+        wind_display_type: 'arrows',
+        waypoints: '{"type": "FeatureCollection","features": [{ "properties": {"name": "001 Lake Keepit AF", "elev": "347.0m", "style": 4, "rwydir": 140}, "type": "Feature", "geometry": {"coordinates":[150.5258, -30.89068333333333], "type": "Point"}},{ "properties": {"name": "002 Abington AG", "elev": "738.0m", "style": 3, "rwydir": 120}, "type": "Feature", "geometry": {"coordinates":[151.25398333333334, -30.316116666666666], "type": "Point"}},{ "properties": {"name": "003 Ardglen Rw TP", "elev": "638.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[150.78793333333334, -31.738316666666666], "type": "Point"}},{ "properties": {"name": "004 Ardgour AG", "elev": "530.0m", "style": 3, "rwydir": 150}, "type": "Feature", "geometry": {"coordinates":[150.04168333333334, -31.655], "type": "Point"}},{ "properties": {"name": "005 Arding AG", "elev": "1053.0m", "style": 3, "rwydir": 50}, "type": "Feature", "geometry": {"coordinates":[151.51921666666667, -30.591433333333335], "type": "Point"}},{ "properties": {"name": "006 Armidale AD", "elev": "1088.0m", "style": 5, "rwydir": 50}, "type": "Feature", "geometry": {"coordinates":[151.61528333333334, -30.5333], "type": "Point"}},{ "properties": {"name": "007 Ashford AF", "elev": "466.0m", "style": 2, "rwydir": 90}, "type": "Feature", "geometry": {"coordinates":[151.05651666666665, -29.317133333333334], "type": "Point"}},{ "properties": {"name": "008 Ashley AF", "elev": "200.0m", "style": 2, "rwydir": 10}, "type": "Feature", "geometry": {"coordinates":[149.76778333333334, -29.299383333333335], "type": "Point"}},{ "properties": {"name": "009 Baan Baa AG", "elev": "233.0m", "style": 3, "rwydir": 0}, "type": "Feature", "geometry": {"coordinates":[149.94668333333334, -30.549], "type": "Point"}},{ "properties": {"name": "010 Baan Baa S AG", "elev": "241.0m", "style": 3, "rwydir": 90}, "type": "Feature", "geometry": {"coordinates":[149.96091666666666, -30.605133333333335], "type": "Point"}},{ "properties": {"name": "011 Baby State Forest TP", "elev": "574.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[149.47425, -31.304333333333332], "type": "Point"}},{ "properties": {"name": "012 Bakers AG", "elev": "759.0m", "style": 3, "rwydir": 40}, "type": "Feature", "geometry": {"coordinates":[150.99285, -30.332133333333335], "type": "Point"}},{ "properties": {"name": "013 Ballandool AG", "elev": "149.0m", "style": 3, "rwydir": 80}, "type": "Feature", "geometry": {"coordinates":[147.62693333333334, -28.96055], "type": "Point"}},{ "properties": {"name": "014 Bando AG", "elev": "352.0m", "style": 3, "rwydir": 110}, "type": "Feature", "geometry": {"coordinates":[149.84693333333334, -31.23845], "type": "Point"}},{ "properties": {"name": "015 Banoon AG", "elev": "746.0m", "style": 3, "rwydir": 20}, "type": "Feature", "geometry": {"coordinates":[150.43538333333333, -30.576716666666666], "type": "Point"}},{ "properties": {"name": "016 Baradine AF", "elev": "306.0m", "style": 2, "rwydir": 120}, "type": "Feature", "geometry": {"coordinates":[149.0916, -30.955], "type": "Point"}},{ "properties": {"name": "017 Barraba AD", "elev": "510.0m", "style": 2, "rwydir": 160}, "type": "Feature", "geometry": {"coordinates":[150.5977, -30.3933], "type": "Point"}},{ "properties": {"name": "018 Bathurst AD", "elev": "732.0m", "style": 5, "rwydir": 180}, "type": "Feature", "geometry": {"coordinates":[149.65121666666667, -33.406816666666664], "type": "Point"}},{ "properties": {"name": "019 Bathurst GC AF", "elev": "655.0m", "style": 4, "rwydir": 40}, "type": "Feature", "geometry": {"coordinates":[149.51848333333334, -33.37911666666667], "type": "Point"}},{ "properties": {"name": "020 Belara AG", "elev": "240.0m", "style": 3, "rwydir": 140}, "type": "Feature", "geometry": {"coordinates":[150.46333333333334, -28.827633333333335], "type": "Point"}},{ "properties": {"name": "021 Bellata Silo TP", "elev": "236.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[149.78973333333334, -29.919266666666665], "type": "Point"}},{ "properties": {"name": "022 Ben Lomond AG", "elev": "1434.0m", "style": 3, "rwydir": 110}, "type": "Feature", "geometry": {"coordinates":[151.67981666666665, -30.011466666666667], "type": "Point"}},{ "properties": {"name": "023 Bengalala AG", "elev": "263.0m", "style": 3, "rwydir": 70}, "type": "Feature", "geometry": {"coordinates":[150.24378333333334, -30.8977], "type": "Point"}},{ "properties": {"name": "024 Berwicks AG", "elev": "397.0m", "style": 3, "rwydir": 130}, "type": "Feature", "geometry": {"coordinates":[150.40488333333334, -31.725716666666667], "type": "Point"}},{ "properties": {"name": "025 Bingara AF", "elev": "301.0m", "style": 2, "rwydir": 110}, "type": "Feature", "geometry": {"coordinates":[150.53898333333333, -29.8168], "type": "Point"}},{ "properties": {"name": "026 Biniguy AF", "elev": "239.0m", "style": 2, "rwydir": 10}, "type": "Feature", "geometry": {"coordinates":[150.1918, -29.5055], "type": "Point"}},{ "properties": {"name": "027 Binnaway AF", "elev": "464.0m", "style": 2, "rwydir": 60}, "type": "Feature", "geometry": {"coordinates":[149.34478333333334, -31.552933333333332], "type": "Point"}},{ "properties": {"name": "028 Bluff Mountain TP", "elev": "1156.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[148.97651666666667, -31.3299], "type": "Point"}},{ "properties": {"name": "029 Boggabri AF", "elev": "243.0m", "style": 2, "rwydir": 30}, "type": "Feature", "geometry": {"coordinates":[150.04923333333332, -30.7229], "type": "Point"}},{ "properties": {"name": "030 Boggabri S AG", "elev": "248.0m", "style": 3, "rwydir": 10}, "type": "Feature", "geometry": {"coordinates":[150.0775, -30.778833333333335], "type": "Point"}},{ "properties": {"name": "031 BooBoo AG", "elev": "295.0m", "style": 3, "rwydir": 80}, "type": "Feature", "geometry": {"coordinates":[149.92455, -29.895533333333333], "type": "Point"}},{ "properties": {"name": "032 Boolcaroll AG", "elev": "180.0m", "style": 3, "rwydir": 0}, "type": "Feature", "geometry": {"coordinates":[149.38956666666667, -29.99738333333333], "type": "Point"}},{ "properties": {"name": "033 Booloola AG", "elev": "306.0m", "style": 3, "rwydir": 100}, "type": "Feature", "geometry": {"coordinates":[149.84696666666667, -31.075333333333333], "type": "Point"}},{ "properties": {"name": "034 Boomi AF", "elev": "186.0m", "style": 2, "rwydir": 10}, "type": "Feature", "geometry": {"coordinates":[149.59511666666666, -28.728233333333332], "type": "Point"}},{ "properties": {"name": "035 Bora HG AF", "elev": "390.0m", "style": 2, "rwydir": 40}, "type": "Feature", "geometry": {"coordinates":[150.64718333333334, -30.6747], "type": "Point"}},{ "properties": {"name": "036 Borah Gap", "elev": "518.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[150.60748333333333, -30.59175], "type": "Point"}},{ "properties": {"name": "037 Breeza Silo TP", "elev": "292.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[150.46028333333334, -31.2446], "type": "Point"}},{ "properties": {"name": "038 Brewarrina AD", "elev": "124.0m", "style": 5, "rwydir": 40}, "type": "Feature", "geometry": {"coordinates":[146.81616666666667, -29.973433333333332], "type": "Point"}},{ "properties": {"name": "039 Brewon Stn AG", "elev": "128.0m", "style": 3, "rwydir": 100}, "type": "Feature", "geometry": {"coordinates":[147.51693333333333, -30.235166666666668], "type": "Point"}},{ "properties": {"name": "040 Brigalows AF", "elev": "460.0m", "style": 2, "rwydir": 40}, "type": "Feature", "geometry": {"coordinates":[150.3682, -30.2168], "type": "Point"}},{ "properties": {"name": "041 Brightn Wat AG", "elev": "167.0m", "style": 3, "rwydir": 130}, "type": "Feature", "geometry": {"coordinates":[149.22771666666668, -29.282616666666666], "type": "Point"}},{ "properties": {"name": "042 Bullamon Pn AG", "elev": "174.0m", "style": 3, "rwydir": 160}, "type": "Feature", "geometry": {"coordinates":[148.86766666666668, -28.604166666666668], "type": "Point"}},{ "properties": {"name": "043 Bulli Creek AF", "elev": "353.0m", "style": 2, "rwydir": 120}, "type": "Feature", "geometry": {"coordinates":[150.89055, -28.01915], "type": "Point"}},{ "properties": {"name": "044 Bundara AG", "elev": "675.0m", "style": 3, "rwydir": 110}, "type": "Feature", "geometry": {"coordinates":[151.10096666666666, -30.165033333333334], "type": "Point"}},{ "properties": {"name": "045 Bungendore AG", "elev": "807.0m", "style": 3, "rwydir": 80}, "type": "Feature", "geometry": {"coordinates":[150.99315, -30.716450000000002], "type": "Point"}},{ "properties": {"name": "046 Burren Jn AD", "elev": "165.0m", "style": 2, "rwydir": 150}, "type": "Feature", "geometry": {"coordinates":[148.97498333333334, -30.1583], "type": "Point"}},{ "properties": {"name": "047 Camels Hump TP", "elev": "1093.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[150.11951666666667, -30.3071], "type": "Point"}},{ "properties": {"name": "048 Carinda AD", "elev": "138.0m", "style": 2, "rwydir": 70}, "type": "Feature", "geometry": {"coordinates":[147.7098, -30.45825], "type": "Point"}},{ "properties": {"name": "049 Carmarthen AG", "elev": "454.0m", "style": 3, "rwydir": 150}, "type": "Feature", "geometry": {"coordinates":[150.73375, -30.6183], "type": "Point"}},{ "properties": {"name": "050 Carnarvon AF", "elev": "286.0m", "style": 2, "rwydir": 10}, "type": "Feature", "geometry": {"coordinates":[149.91328333333334, -31.051383333333334], "type": "Point"}},{ "properties": {"name": "051 Caroona AG", "elev": "333.0m", "style": 3, "rwydir": 100}, "type": "Feature", "geometry": {"coordinates":[150.39915, -31.4041], "type": "Point"}},{ "properties": {"name": "052 Carrol Cmn AG", "elev": "276.0m", "style": 3, "rwydir": 100}, "type": "Feature", "geometry": {"coordinates":[150.44311666666667, -31.007583333333333], "type": "Point"}},{ "properties": {"name": "053 Cassilis AG", "elev": "473.0m", "style": 3, "rwydir": 90}, "type": "Feature", "geometry": {"coordinates":[149.9639, -32.00228333333333], "type": "Point"}},{ "properties": {"name": "054 Castletop AG", "elev": "488.0m", "style": 3, "rwydir": 130}, "type": "Feature", "geometry": {"coordinates":[150.11903333333333, -30.13233333333333], "type": "Point"}},{ "properties": {"name": "055 Chesney Oks TP", "elev": "497.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[150.67091666666667, -31.78875], "type": "Point"}},{ "properties": {"name": "056 Clift AG", "elev": "300.0m", "style": 3, "rwydir": 150}, "type": "Feature", "geometry": {"coordinates":[150.35928333333334, -31.2758], "type": "Point"}},{ "properties": {"name": "057 Clostoun TP", "elev": "265.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[150.22706666666667, -30.830616666666668], "type": "Point"}},{ "properties": {"name": "058 Coladdi AG", "elev": "327.0m", "style": 3, "rwydir": 110}, "type": "Feature", "geometry": {"coordinates":[149.9322, -31.27605], "type": "Point"}},{ "properties": {"name": "059 Collarenbri AD", "elev": "143.0m", "style": 5, "rwydir": 0}, "type": "Feature", "geometry": {"coordinates":[148.5822, -29.521883333333335], "type": "Point"}},{ "properties": {"name": "060 Collie AG", "elev": "237.0m", "style": 3, "rwydir": 60}, "type": "Feature", "geometry": {"coordinates":[148.32898333333333, -31.6591], "type": "Point"}},{ "properties": {"name": "061 Condobolin AD", "elev": "195.0m", "style": 5, "rwydir": 20}, "type": "Feature", "geometry": {"coordinates":[147.2129, -33.065916666666666], "type": "Point"}},{ "properties": {"name": "062 Coolaba AG", "elev": "171.0m", "style": 3, "rwydir": 70}, "type": "Feature", "geometry": {"coordinates":[146.83516666666668, -30.948216666666667], "type": "Point"}},{ "properties": {"name": "063 Coolah AD", "elev": "505.0m", "style": 2, "rwydir": 90}, "type": "Feature", "geometry": {"coordinates":[149.6083, -31.774983333333335], "type": "Point"}},{ "properties": {"name": "064 Coolatai TP", "elev": "364.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[150.75218333333333, -29.2511], "type": "Point"}},{ "properties": {"name": "065 Coonabarabn AD", "elev": "641.0m", "style": 5, "rwydir": 120}, "type": "Feature", "geometry": {"coordinates":[149.26168333333334, -31.3333], "type": "Point"}},{ "properties": {"name": "066 Coonamble AD", "elev": "179.0m", "style": 5, "rwydir": 50}, "type": "Feature", "geometry": {"coordinates":[148.3791, -30.980216666666667], "type": "Point"}},{ "properties": {"name": "067 Coopla AG", "elev": "261.0m", "style": 3, "rwydir": 90}, "type": "Feature", "geometry": {"coordinates":[151.90913333333333, -31.613183333333332], "type": "Point"}},{ "properties": {"name": "068 Coorabin AF", "elev": "711.0m", "style": 2, "rwydir": 130}, "type": "Feature", "geometry": {"coordinates":[150.69578333333334, -30.3154], "type": "Point"}},{ "properties": {"name": "069 Copeton AG", "elev": "760.0m", "style": 3, "rwydir": 110}, "type": "Feature", "geometry": {"coordinates":[150.94246666666666, -30.1564], "type": "Point"}},{ "properties": {"name": "070 Croppa Crk TP", "elev": "282.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[150.30421666666666, -29.130533333333332], "type": "Point"}},{ "properties": {"name": "071 Cryon AG", "elev": "150.0m", "style": 3, "rwydir": 100}, "type": "Feature", "geometry": {"coordinates":[148.76043333333334, -29.9765], "type": "Point"}},{ "properties": {"name": "072 Curlewis Si TP", "elev": "278.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[150.26956666666666, -31.1138], "type": "Point"}},{ "properties": {"name": "073 Dabee AF", "elev": "603.0m", "style": 2, "rwydir": 100}, "type": "Feature", "geometry": {"coordinates":[150.04133333333334, -32.82111666666667], "type": "Point"}},{ "properties": {"name": "074 Dalby AD", "elev": "343.0m", "style": 5, "rwydir": 140}, "type": "Feature", "geometry": {"coordinates":[151.26358333333334, -27.158583333333333], "type": "Point"}},{ "properties": {"name": "075 Delungra AF", "elev": "584.0m", "style": 2, "rwydir": 120}, "type": "Feature", "geometry": {"coordinates":[150.76751666666667, -29.625983333333334], "type": "Point"}},{ "properties": {"name": "076 Delwood Stn TP", "elev": "338.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[149.7998, -30.75925], "type": "Point"}},{ "properties": {"name": "077 Doganabuganaram AG", "elev": "423.0m", "style": 3, "rwydir": 110}, "type": "Feature", "geometry": {"coordinates":[149.42421666666667, -31.764516666666665], "type": "Point"}},{ "properties": {"name": "078 Doonba AG", "elev": "739.0m", "style": 3, "rwydir": 0}, "type": "Feature", "geometry": {"coordinates":[150.68991666666668, -30.25205], "type": "Point"}},{ "properties": {"name": "079 Doyles Peak TP", "elev": "1213.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[150.1003, -30.1996], "type": "Point"}},{ "properties": {"name": "080 Dubbo AD", "elev": "280.0m", "style": 5, "rwydir": 50}, "type": "Feature", "geometry": {"coordinates":[148.57358333333335, -32.2183], "type": "Point"}},{ "properties": {"name": "081 Dunedoo AG", "elev": "392.0m", "style": 3, "rwydir": 160}, "type": "Feature", "geometry": {"coordinates":[149.42983333333333, -32.01065], "type": "Point"}},{ "properties": {"name": "082 Dunmore AF", "elev": "421.0m", "style": 2, "rwydir": 10}, "type": "Feature", "geometry": {"coordinates":[150.87568333333334, -30.65805], "type": "Point"}},{ "properties": {"name": "083 Duval AG", "elev": "1042.0m", "style": 3, "rwydir": 90}, "type": "Feature", "geometry": {"coordinates":[151.65291666666667, -30.430933333333332], "type": "Point"}},{ "properties": {"name": "084 Edgeroi Silo TP", "elev": "239.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[149.7965, -30.11628333333333], "type": "Point"}},{ "properties": {"name": "085 Ellerston AG", "elev": "598.0m", "style": 3, "rwydir": 10}, "type": "Feature", "geometry": {"coordinates":[151.28711666666666, -31.769183333333334], "type": "Point"}},{ "properties": {"name": "086 Ellis AG", "elev": "345.0m", "style": 3, "rwydir": 90}, "type": "Feature", "geometry": {"coordinates":[150.206, -29.678], "type": "Point"}},{ "properties": {"name": "087 Emby West AG", "elev": "166.0m", "style": 3, "rwydir": 170}, "type": "Feature", "geometry": {"coordinates":[147.91848333333334, -31.128583333333335], "type": "Point"}},{ "properties": {"name": "088 Emerald Hil TP", "elev": "261.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[150.10505, -30.88245], "type": "Point"}},{ "properties": {"name": "089 Erinvale AG", "elev": "249.0m", "style": 3, "rwydir": 10}, "type": "Feature", "geometry": {"coordinates":[150.0132, -30.7661], "type": "Point"}},{ "properties": {"name": "090 Eulah Creek TP", "elev": "271.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[149.92436666666666, -30.337483333333335], "type": "Point"}},{ "properties": {"name": "091 Eumungerie TP", "elev": "301.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[148.62135, -31.947066666666668], "type": "Point"}},{ "properties": {"name": "092 Flood Hill AG", "elev": "246.0m", "style": 3, "rwydir": 20}, "type": "Feature", "geometry": {"coordinates":[150.09635, -30.710733333333334], "type": "Point"}},{ "properties": {"name": "093 Garah Silo TP", "elev": "182.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[149.6382, -29.0762], "type": "Point"}},{ "properties": {"name": "094 Garrawilla AG", "elev": "388.0m", "style": 3, "rwydir": 60}, "type": "Feature", "geometry": {"coordinates":[149.63588333333334, -31.1734], "type": "Point"}},{ "properties": {"name": "095 Gilgandra AD", "elev": "288.0m", "style": 2, "rwydir": 160}, "type": "Feature", "geometry": {"coordinates":[148.63641666666666, -31.697216666666666], "type": "Point"}},{ "properties": {"name": "096 Glen Innes AD", "elev": "1042.0m", "style": 5, "rwydir": 150}, "type": "Feature", "geometry": {"coordinates":[151.6903, -29.675], "type": "Point"}},{ "properties": {"name": "097 Glenanaar AG", "elev": "164.0m", "style": 3, "rwydir": 20}, "type": "Feature", "geometry": {"coordinates":[147.93878333333333, -31.07205], "type": "Point"}},{ "properties": {"name": "098 Glenara AG", "elev": "510.0m", "style": 3, "rwydir": 100}, "type": "Feature", "geometry": {"coordinates":[150.23891666666665, -29.996433333333332], "type": "Point"}},{ "properties": {"name": "099 Glencaire AG", "elev": "814.0m", "style": 3, "rwydir": 130}, "type": "Feature", "geometry": {"coordinates":[151.11378333333334, -30.8047], "type": "Point"}},{ "properties": {"name": "100 Glencoe AG", "elev": "222.0m", "style": 3, "rwydir": 90}, "type": "Feature", "geometry": {"coordinates":[148.19903333333335, -31.6213], "type": "Point"}},{ "properties": {"name": "101 Glenrock AG", "elev": "939.0m", "style": 3, "rwydir": 20}, "type": "Feature", "geometry": {"coordinates":[151.3882, -31.726933333333335], "type": "Point"}},{ "properties": {"name": "102 Goondiwindi AD", "elev": "216.0m", "style": 5, "rwydir": 40}, "type": "Feature", "geometry": {"coordinates":[150.32001666666667, -28.522566666666666], "type": "Point"}},{ "properties": {"name": "103 Goonoo Gono AG", "elev": "451.0m", "style": 3, "rwydir": 40}, "type": "Feature", "geometry": {"coordinates":[150.92098333333334, -31.298366666666666], "type": "Point"}},{ "properties": {"name": "104 Greenbah AF", "elev": "196.0m", "style": 2, "rwydir": 170}, "type": "Feature", "geometry": {"coordinates":[149.54618333333335, -30.1429], "type": "Point"}},{ "properties": {"name": "105 Gulgong AF", "elev": "442.0m", "style": 4, "rwydir": 90}, "type": "Feature", "geometry": {"coordinates":[149.56056666666666, -32.29861666666667], "type": "Point"}},{ "properties": {"name": "106 Gum Springs AG", "elev": "513.0m", "style": 3, "rwydir": 120}, "type": "Feature", "geometry": {"coordinates":[149.30368333333334, -31.562166666666666], "type": "Point"}},{ "properties": {"name": "107 Gunnedah AD", "elev": "263.0m", "style": 5, "rwydir": 120}, "type": "Feature", "geometry": {"coordinates":[150.2483, -30.9567], "type": "Point"}},{ "properties": {"name": "108 GunnedahSES AF", "elev": "290.0m", "style": 5, "rwydir": 100}, "type": "Feature", "geometry": {"coordinates":[150.2844, -31.04345], "type": "Point"}},{ "properties": {"name": "109 Gunyerwarld AF", "elev": "341.0m", "style": 2, "rwydir": 100}, "type": "Feature", "geometry": {"coordinates":[150.52596666666668, -29.288], "type": "Point"}},{ "properties": {"name": "110 Gurley Silo TP", "elev": "219.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[149.8, -29.7333], "type": "Point"}},{ "properties": {"name": "111 Guyra AG", "elev": "1327.0m", "style": 3, "rwydir": 40}, "type": "Feature", "geometry": {"coordinates":[151.67285, -30.19975], "type": "Point"}},{ "properties": {"name": "112 Haddon Rig AF", "elev": "185.0m", "style": 2, "rwydir": 160}, "type": "Feature", "geometry": {"coordinates":[147.8957, -31.4661], "type": "Point"}},{ "properties": {"name": "113 Halls Creek AG", "elev": "623.0m", "style": 3, "rwydir": 170}, "type": "Feature", "geometry": {"coordinates":[150.92128333333332, -30.824633333333335], "type": "Point"}},{ "properties": {"name": "114 Inglewood AF", "elev": "284.0m", "style": 2, "rwydir": 90}, "type": "Feature", "geometry": {"coordinates":[151.09636666666665, -28.4176], "type": "Point"}},{ "properties": {"name": "115 Inverell AD", "elev": "810.0m", "style": 5, "rwydir": 170}, "type": "Feature", "geometry": {"coordinates":[151.14541666666668, -29.88905], "type": "Point"}},{ "properties": {"name": "116 Inverell N AF", "elev": "696.0m", "style": 2, "rwydir": 90}, "type": "Feature", "geometry": {"coordinates":[151.1679, -29.7757], "type": "Point"}},{ "properties": {"name": "117 Ironbark AG", "elev": "613.0m", "style": 3, "rwydir": 70}, "type": "Feature", "geometry": {"coordinates":[150.83378333333334, -30.280783333333332], "type": "Point"}},{ "properties": {"name": "118 Judes Creek AG", "elev": "276.0m", "style": 3, "rwydir": 40}, "type": "Feature", "geometry": {"coordinates":[148.65133333333333, -31.482266666666668], "type": "Point"}},{ "properties": {"name": "119 Kaputar Twr TP", "elev": "1464.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[150.1679, -30.2845], "type": "Point"}},{ "properties": {"name": "120 Keera AG", "elev": "380.0m", "style": 3, "rwydir": 150}, "type": "Feature", "geometry": {"coordinates":[150.76938333333334, -30.0389], "type": "Point"}},{ "properties": {"name": "121 Kelvin Grve AG", "elev": "1070.0m", "style": 3, "rwydir": 10}, "type": "Feature", "geometry": {"coordinates":[151.5633, -30.645416666666666], "type": "Point"}},{ "properties": {"name": "122 Kennedys AF", "elev": "309.0m", "style": 5, "rwydir": 20}, "type": "Feature", "geometry": {"coordinates":[150.1833, -30.971583333333335], "type": "Point"}},{ "properties": {"name": "123 Kentucky AG", "elev": "1042.0m", "style": 3, "rwydir": 130}, "type": "Feature", "geometry": {"coordinates":[151.5139, -30.8125], "type": "Point"}},{ "properties": {"name": "124 Keytah AF", "elev": "183.0m", "style": 5, "rwydir": 20}, "type": "Feature", "geometry": {"coordinates":[149.51668333333333, -29.4833], "type": "Point"}},{ "properties": {"name": "125 Kilarney AG", "elev": "599.0m", "style": 3, "rwydir": 130}, "type": "Feature", "geometry": {"coordinates":[150.76061666666666, -30.153183333333335], "type": "Point"}},{ "properties": {"name": "126 Kingstown AG", "elev": "715.0m", "style": 3, "rwydir": 30}, "type": "Feature", "geometry": {"coordinates":[151.10761666666667, -30.51033333333333], "type": "Point"}},{ "properties": {"name": "127 Koiwon AG", "elev": "197.0m", "style": 3, "rwydir": 10}, "type": "Feature", "geometry": {"coordinates":[149.65838333333335, -29.82968333333333], "type": "Point"}},{ "properties": {"name": "128 Kurrajon Pk AG", "elev": "544.0m", "style": 3, "rwydir": 100}, "type": "Feature", "geometry": {"coordinates":[149.71323333333333, -31.657783333333334], "type": "Point"}},{ "properties": {"name": "129 Leards SF TP", "elev": "410.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[150.16833333333332, -30.56955], "type": "Point"}},{ "properties": {"name": "130 Lightning R AD", "elev": "157.0m", "style": 5, "rwydir": 110}, "type": "Feature", "geometry": {"coordinates":[147.97521666666665, -29.452216666666665], "type": "Point"}},{ "properties": {"name": "131 Lindesay AG", "elev": "857.0m", "style": 3, "rwydir": 130}, "type": "Feature", "geometry": {"coordinates":[150.37245, -30.373983333333335], "type": "Point"}},{ "properties": {"name": "132 Linton AG", "elev": "743.0m", "style": 3, "rwydir": 100}, "type": "Feature", "geometry": {"coordinates":[150.85328333333334, -30.487666666666666], "type": "Point"}},{ "properties": {"name": "133 Lochalgin AG", "elev": "199.0m", "style": 3, "rwydir": 40}, "type": "Feature", "geometry": {"coordinates":[149.57376666666667, -30.231], "type": "Point"}},{ "properties": {"name": "134 Log Cabin AG", "elev": "580.0m", "style": 3, "rwydir": 40}, "type": "Feature", "geometry": {"coordinates":[150.52978333333334, -30.43455], "type": "Point"}},{ "properties": {"name": "135 Longford AG", "elev": "811.0m", "style": 3, "rwydir": 60}, "type": "Feature", "geometry": {"coordinates":[151.1113, -30.7662], "type": "Point"}},{ "properties": {"name": "136 Lorrimer AG", "elev": "655.0m", "style": 3, "rwydir": 80}, "type": "Feature", "geometry": {"coordinates":[150.96825, -29.6161], "type": "Point"}},{ "properties": {"name": "137 Lugwadine AG", "elev": "642.0m", "style": 3, "rwydir": 20}, "type": "Feature", "geometry": {"coordinates":[150.4327, -30.420666666666666], "type": "Point"}},{ "properties": {"name": "138 Lydhurst AG", "elev": "380.0m", "style": 3, "rwydir": 100}, "type": "Feature", "geometry": {"coordinates":[150.51051666666666, -30.744483333333335], "type": "Point"}},{ "properties": {"name": "139 Mandaloo AG", "elev": "1303.0m", "style": 3, "rwydir": 40}, "type": "Feature", "geometry": {"coordinates":[151.5962, -31.312733333333334], "type": "Point"}},{ "properties": {"name": "140 Manilla AG", "elev": "363.0m", "style": 3, "rwydir": 10}, "type": "Feature", "geometry": {"coordinates":[150.7235, -30.76418333333333], "type": "Point"}},{ "properties": {"name": "141 Melrose AG", "elev": "906.0m", "style": 3, "rwydir": 120}, "type": "Feature", "geometry": {"coordinates":[150.99906666666666, -30.70355], "type": "Point"}},{ "properties": {"name": "142 Mendooran TP", "elev": "359.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[149.1278, -31.836083333333335], "type": "Point"}},{ "properties": {"name": "143 Merah N AF", "elev": "189.0m", "style": 2, "rwydir": 170}, "type": "Feature", "geometry": {"coordinates":[149.43446666666668, -30.125283333333332], "type": "Point"}},{ "properties": {"name": "144 Mernot AG", "elev": "697.0m", "style": 3, "rwydir": 160}, "type": "Feature", "geometry": {"coordinates":[151.466, -31.657366666666668], "type": "Point"}},{ "properties": {"name": "145 Merrimba AG", "elev": "173.0m", "style": 3, "rwydir": 150}, "type": "Feature", "geometry": {"coordinates":[147.92508333333333, -31.2021], "type": "Point"}},{ "properties": {"name": "146 Merryfield AG", "elev": "709.0m", "style": 3, "rwydir": 100}, "type": "Feature", "geometry": {"coordinates":[151.2004, -30.3457], "type": "Point"}},{ "properties": {"name": "147 Merrylands AF", "elev": "279.0m", "style": 2, "rwydir": 10}, "type": "Feature", "geometry": {"coordinates":[149.8459, -30.9384], "type": "Point"}},{ "properties": {"name": "148 Midbk Scone AG", "elev": "282.0m", "style": 3, "rwydir": 10}, "type": "Feature", "geometry": {"coordinates":[150.81106666666668, -31.974116666666667], "type": "Point"}},{ "properties": {"name": "149 Middlebrook AF", "elev": "293.0m", "style": 5, "rwydir": 100}, "type": "Feature", "geometry": {"coordinates":[150.49183333333335, -31.08445], "type": "Point"}},{ "properties": {"name": "150 Mihi AG", "elev": "541.0m", "style": 3, "rwydir": 10}, "type": "Feature", "geometry": {"coordinates":[150.35033333333334, -30.6171], "type": "Point"}},{ "properties": {"name": "151 Milchomi AG", "elev": "342.0m", "style": 3, "rwydir": 0}, "type": "Feature", "geometry": {"coordinates":[148.99423333333334, -31.108816666666666], "type": "Point"}},{ "properties": {"name": "152 Miles AF", "elev": "301.0m", "style": 5, "rwydir": 50}, "type": "Feature", "geometry": {"coordinates":[150.16831666666667, -26.808316666666666], "type": "Point"}},{ "properties": {"name": "153 Milguy Silo TP", "elev": "271.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[150.1987, -29.349783333333335], "type": "Point"}},{ "properties": {"name": "154 Miralwyn AF", "elev": "128.0m", "style": 2, "rwydir": 100}, "type": "Feature", "geometry": {"coordinates":[147.32611666666668, -30.1485], "type": "Point"}},{ "properties": {"name": "155 Moema AG", "elev": "289.0m", "style": 3, "rwydir": 70}, "type": "Feature", "geometry": {"coordinates":[149.88755, -30.067816666666666], "type": "Point"}},{ "properties": {"name": "156 Montana AG", "elev": "353.0m", "style": 3, "rwydir": 100}, "type": "Feature", "geometry": {"coordinates":[149.95688333333334, -30.082883333333335], "type": "Point"}},{ "properties": {"name": "157 Moree AD", "elev": "211.0m", "style": 5, "rwydir": 20}, "type": "Feature", "geometry": {"coordinates":[149.84468333333334, -29.4988], "type": "Point"}},{ "properties": {"name": "158 Mount Baldwin TP", "elev": "869.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[150.64861666666667, -30.7304], "type": "Point"}},{ "properties": {"name": "159 Mount Borah TP", "elev": "882.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[150.60876666666667, -30.679066666666667], "type": "Point"}},{ "properties": {"name": "160 Mount Byar TP", "elev": "799.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[150.292, -30.488133333333334], "type": "Point"}},{ "properties": {"name": "161 Mount Caroll TP", "elev": "511.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[150.43265, -30.9478], "type": "Point"}},{ "properties": {"name": "162 Mount Surprise TP", "elev": "649.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[150.35181666666668, -30.708333333333332], "type": "Point"}},{ "properties": {"name": "163 Mt Wooloala TP", "elev": "478.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[150.49911666666668, -30.9573], "type": "Point"}},{ "properties": {"name": "164 MtAbundance AG", "elev": "567.0m", "style": 3, "rwydir": 60}, "type": "Feature", "geometry": {"coordinates":[149.61411666666666, -31.613216666666666], "type": "Point"}},{ "properties": {"name": "165 Mudgee AD", "elev": "465.0m", "style": 5, "rwydir": 50}, "type": "Feature", "geometry": {"coordinates":[149.61108333333334, -32.5625], "type": "Point"}},{ "properties": {"name": "166 Mullaley AF", "elev": "310.0m", "style": 2, "rwydir": 10}, "type": "Feature", "geometry": {"coordinates":[149.9384, -31.10868333333333], "type": "Point"}},{ "properties": {"name": "167 Mungindi AD", "elev": "168.0m", "style": 5, "rwydir": 130}, "type": "Feature", "geometry": {"coordinates":[149.05441666666667, -28.967683333333333], "type": "Point"}},{ "properties": {"name": "168 N Woodside AG", "elev": "198.0m", "style": 3, "rwydir": 80}, "type": "Feature", "geometry": {"coordinates":[148.16201666666666, -31.33155], "type": "Point"}},{ "properties": {"name": "169 Narrabri AD", "elev": "222.0m", "style": 5, "rwydir": 10}, "type": "Feature", "geometry": {"coordinates":[149.8266, -30.32], "type": "Point"}},{ "properties": {"name": "170 Narromine AD", "elev": "238.0m", "style": 5, "rwydir": 120}, "type": "Feature", "geometry": {"coordinates":[148.2331, -32.22078333333333], "type": "Point"}},{ "properties": {"name": "171 Nea AG", "elev": "284.0m", "style": 3, "rwydir": 130}, "type": "Feature", "geometry": {"coordinates":[150.3324, -31.16815], "type": "Point"}},{ "properties": {"name": "172 Nobby Rock TP", "elev": "504.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[150.36261666666667, -30.898683333333334], "type": "Point"}},{ "properties": {"name": "173 North Star AF", "elev": "250.0m", "style": 2, "rwydir": 130}, "type": "Feature", "geometry": {"coordinates":[150.41415, -28.872], "type": "Point"}},{ "properties": {"name": "174 Nyngan AD", "elev": "170.0m", "style": 5, "rwydir": 60}, "type": "Feature", "geometry": {"coordinates":[147.19841666666667, -31.552566666666667], "type": "Point"}},{ "properties": {"name": "175 Oakhampton AF", "elev": "418.0m", "style": 2, "rwydir": 160}, "type": "Feature", "geometry": {"coordinates":[150.6619, -30.5762], "type": "Point"}},{ "properties": {"name": "176 Oaky Creek AG", "elev": "508.0m", "style": 3, "rwydir": 20}, "type": "Feature", "geometry": {"coordinates":[150.6091, -30.5208], "type": "Point"}},{ "properties": {"name": "177 Orange AD", "elev": "950.0m", "style": 5, "rwydir": 130}, "type": "Feature", "geometry": {"coordinates":[149.133, -33.38158333333333], "type": "Point"}},{ "properties": {"name": "178 Orungul AF", "elev": "302.0m", "style": 2, "rwydir": 110}, "type": "Feature", "geometry": {"coordinates":[151.12211666666667, -28.61835], "type": "Point"}},{ "properties": {"name": "179 Ourimperee AF", "elev": "279.0m", "style": 2, "rwydir": 150}, "type": "Feature", "geometry": {"coordinates":[150.04066666666668, -30.912716666666668], "type": "Point"}},{ "properties": {"name": "180 Oxley AG", "elev": "160.0m", "style": 3, "rwydir": 0}, "type": "Feature", "geometry": {"coordinates":[147.58581666666666, -31.10568333333333], "type": "Point"}},{ "properties": {"name": "181 Pallal AG", "elev": "402.0m", "style": 3, "rwydir": 30}, "type": "Feature", "geometry": {"coordinates":[150.43626666666665, -29.92118333333333], "type": "Point"}},{ "properties": {"name": "182 Parkes AD", "elev": "320.0m", "style": 5, "rwydir": 50}, "type": "Feature", "geometry": {"coordinates":[148.2391, -33.1313], "type": "Point"}},{ "properties": {"name": "183 Peak Hill AF", "elev": "287.0m", "style": 2, "rwydir": 0}, "type": "Feature", "geometry": {"coordinates":[148.21101666666667, -32.73056666666667], "type": "Point"}},{ "properties": {"name": "184 Peidmont AG", "elev": "590.0m", "style": 3, "rwydir": 170}, "type": "Feature", "geometry": {"coordinates":[150.63058333333333, -30.245783333333332], "type": "Point"}},{ "properties": {"name": "185 Pilliga AF", "elev": "162.0m", "style": 2, "rwydir": 180}, "type": "Feature", "geometry": {"coordinates":[148.9053, -30.366816666666665], "type": "Point"}},{ "properties": {"name": "186 Pine View TP", "elev": "464.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[150.13301666666666, -30.3824], "type": "Point"}},{ "properties": {"name": "187 Ponds AG", "elev": "626.0m", "style": 3, "rwydir": 10}, "type": "Feature", "geometry": {"coordinates":[150.59783333333334, -30.1231], "type": "Point"}},{ "properties": {"name": "188 Premer AG", "elev": "380.0m", "style": 3, "rwydir": 10}, "type": "Feature", "geometry": {"coordinates":[149.9028, -31.479383333333335], "type": "Point"}},{ "properties": {"name": "189 Primavera AG", "elev": "375.0m", "style": 3, "rwydir": 40}, "type": "Feature", "geometry": {"coordinates":[150.81318333333334, -30.7162], "type": "Point"}},{ "properties": {"name": "190 Quambone AF", "elev": "148.0m", "style": 2, "rwydir": 10}, "type": "Feature", "geometry": {"coordinates":[147.8418, -30.879416666666668], "type": "Point"}},{ "properties": {"name": "191 Quirindi AD", "elev": "321.0m", "style": 5, "rwydir": 140}, "type": "Feature", "geometry": {"coordinates":[150.5181, -31.4986], "type": "Point"}},{ "properties": {"name": "192 Quirindi Si TP", "elev": "395.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[150.68096666666668, -31.504066666666667], "type": "Point"}},{ "properties": {"name": "193 Rangari AG", "elev": "431.0m", "style": 3, "rwydir": 10}, "type": "Feature", "geometry": {"coordinates":[150.3922, -30.686383333333332], "type": "Point"}},{ "properties": {"name": "194 Riamukka AG", "elev": "1056.0m", "style": 3, "rwydir": 0}, "type": "Feature", "geometry": {"coordinates":[151.6759, -31.427666666666667], "type": "Point"}},{ "properties": {"name": "195 Ridegelands AG", "elev": "657.0m", "style": 3, "rwydir": 150}, "type": "Feature", "geometry": {"coordinates":[150.60158333333334, -30.1966], "type": "Point"}},{ "properties": {"name": "196 Rocky Creek AG", "elev": "395.0m", "style": 3, "rwydir": 90}, "type": "Feature", "geometry": {"coordinates":[150.27221666666668, -30.050383333333333], "type": "Point"}},{ "properties": {"name": "197 Roma AD", "elev": "306.0m", "style": 5, "rwydir": 10}, "type": "Feature", "geometry": {"coordinates":[148.775, -26.545], "type": "Point"}},{ "properties": {"name": "198 Rosebery Pk AG", "elev": "456.0m", "style": 3, "rwydir": 30}, "type": "Feature", "geometry": {"coordinates":[150.1502, -30.1303], "type": "Point"}},{ "properties": {"name": "199 Rowena Eura AF", "elev": "155.0m", "style": 2, "rwydir": 100}, "type": "Feature", "geometry": {"coordinates":[148.83081666666666, -29.899016666666668], "type": "Point"}},{ "properties": {"name": "200 Rowena Farf AF", "elev": "154.0m", "style": 2, "rwydir": 10}, "type": "Feature", "geometry": {"coordinates":[148.8863, -29.8043], "type": "Point"}},{ "properties": {"name": "201 Rylstone AD", "elev": "608.0m", "style": 2, "rwydir": 100}, "type": "Feature", "geometry": {"coordinates":[149.99325, -32.77095], "type": "Point"}},{ "properties": {"name": "202 Sandy Camp AF", "elev": "149.0m", "style": 2, "rwydir": 160}, "type": "Feature", "geometry": {"coordinates":[147.7499, -30.8645], "type": "Point"}},{ "properties": {"name": "203 Scone AD", "elev": "225.0m", "style": 5, "rwydir": 120}, "type": "Feature", "geometry": {"coordinates":[150.83136666666667, -32.03771666666667], "type": "Point"}},{ "properties": {"name": "204 Scrubby Knob TP", "elev": "480.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[150.02651666666668, -29.995833333333334], "type": "Point"}},{ "properties": {"name": "205 Silent Grve AG", "elev": "1393.0m", "style": 3, "rwydir": 10}, "type": "Feature", "geometry": {"coordinates":[151.6346, -29.969133333333332], "type": "Point"}},{ "properties": {"name": "206 Southwood AF", "elev": "262.0m", "style": 5, "rwydir": 40}, "type": "Feature", "geometry": {"coordinates":[150.04248333333334, -27.895], "type": "Point"}},{ "properties": {"name": "207 Split Rock TP", "elev": "445.0m", "style": 12}, "type": "Feature", "geometry": {"coordinates":[150.6973, -30.577166666666667], "type": "Point"}},{ "properties": {"name": "208 Sport Rec AG", "elev": "332.0m", "style": 3, "rwydir": 160}, "type": "Feature", "geometry": {"coordinates":[150.4975, -30.8479], "type": "Point"}},{ "properties": {"name": "209 Spring rdge AG", "elev": "341.0m", "style": 3, "rwydir": 10}, "type": "Feature", "geometry": {"coordinates":[150.22168333333335, -31.43338333333333], "type": "Point"}},{ "properties": {"name": "210 St Elmo AG", "elev": "173.0m", "style": 3, "rwydir": 70}, "type": "Feature", "geometry": {"coordinates":[149.35881666666666, -29.397783333333333], "type": "Point"}},{ "properties": {"name": "211 St George AD", "elev": "200.0m", "style": 5, "rwydir": 110}, "type": "Feature", "geometry": {"coordinates":[148.59531666666666, -28.050316666666667], "type": "Point"}},{ "properties": {"name": "212 Stanthorpe AD", "elev": "882.0m", "style": 5, "rwydir": 90}, "type": "Feature", "geometry": {"coordinates":[151.98143333333334, -28.620066666666666], "type": "Point"}},{ "properties": {"name": "213 Strathalie AG", "elev": "320.0m", "style": 3, "rwydir": 170}, "type": "Feature", "geometry": {"coordinates":[150.57321666666667, -30.94633333333333], "type": "Point"}},{ "properties": {"name": "214 Strathaven AG", "elev": "362.0m", "style": 3, "rwydir": 120}, "type": "Feature", "geometry": {"coordinates":[150.64111666666668, -31.23415], "type": "Point"}},{ "properties": {"name": "215 Strathfield AG", "elev": "422.0m", "style": 3, "rwydir": 120}, "type": "Feature", "geometry": {"coordinates":[150.74306666666666, -30.648966666666666], "type": "Point"}},{ "properties": {"name": "216 Sundown Val AF", "elev": "922.0m", "style": 2, "rwydir": 120}, "type": "Feature", "geometry": {"coordinates":[150.98686666666666, -30.455516666666668], "type": "Point"}},{ "properties": {"name": "217 Swan Rocks TP", "elev": "556.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[150.05581666666666, -30.143983333333335], "type": "Point"}},{ "properties": {"name": "218 Tabletop Mi AG", "elev": "697.0m", "style": 3, "rwydir": 120}, "type": "Feature", "geometry": {"coordinates":[150.50696666666667, -30.26905], "type": "Point"}},{ "properties": {"name": "219 Tallawang AG", "elev": "549.0m", "style": 3, "rwydir": 0}, "type": "Feature", "geometry": {"coordinates":[150.91321666666667, -29.381783333333335], "type": "Point"}},{ "properties": {"name": "220 Tambar Sprg AF", "elev": "366.0m", "style": 2, "rwydir": 10}, "type": "Feature", "geometry": {"coordinates":[149.8416, -31.3118], "type": "Point"}},{ "properties": {"name": "221 Tamworth AD", "elev": "400.0m", "style": 5, "rwydir": 130}, "type": "Feature", "geometry": {"coordinates":[150.84668333333335, -31.083883333333333], "type": "Point"}},{ "properties": {"name": "222 Tara AD", "elev": "361.0m", "style": 5, "rwydir": 0}, "type": "Feature", "geometry": {"coordinates":[150.47665, -27.15665], "type": "Point"}},{ "properties": {"name": "223 Tellaraga N AG", "elev": "173.0m", "style": 3, "rwydir": 80}, "type": "Feature", "geometry": {"coordinates":[149.37993333333333, -29.519966666666665], "type": "Point"}},{ "properties": {"name": "224 Tellaraga S AG", "elev": "175.0m", "style": 3, "rwydir": 10}, "type": "Feature", "geometry": {"coordinates":[149.40721666666667, -29.594366666666666], "type": "Point"}},{ "properties": {"name": "225 Tenterfield AD", "elev": "795.0m", "style": 2, "rwydir": 80}, "type": "Feature", "geometry": {"coordinates":[151.92903333333334, -28.991783333333334], "type": "Point"}},{ "properties": {"name": "226 Terry HieHi TP", "elev": "297.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[150.1528, -29.7953], "type": "Point"}},{ "properties": {"name": "227 Texas AF", "elev": "299.0m", "style": 2, "rwydir": 90}, "type": "Feature", "geometry": {"coordinates":[151.15281666666667, -28.83465], "type": "Point"}},{ "properties": {"name": "228 Thalgarrah AG", "elev": "1139.0m", "style": 3, "rwydir": 40}, "type": "Feature", "geometry": {"coordinates":[151.85126666666667, -30.41865], "type": "Point"}},{ "properties": {"name": "229 The Gap TP", "elev": "338.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[150.5918, -31.3568], "type": "Point"}},{ "properties": {"name": "230 The Pines AG", "elev": "311.0m", "style": 3, "rwydir": 100}, "type": "Feature", "geometry": {"coordinates":[149.71808333333334, -30.9766], "type": "Point"}},{ "properties": {"name": "231 Thistledo AF", "elev": "174.0m", "style": 2, "rwydir": 60}, "type": "Feature", "geometry": {"coordinates":[149.4499, -29.674283333333335], "type": "Point"}},{ "properties": {"name": "232 Tia River AG", "elev": "1196.0m", "style": 3, "rwydir": 20}, "type": "Feature", "geometry": {"coordinates":[151.77471666666668, -31.185716666666668], "type": "Point"}},{ "properties": {"name": "233 Tiawandra AG", "elev": "265.0m", "style": 3, "rwydir": 100}, "type": "Feature", "geometry": {"coordinates":[150.291, -30.959516666666666], "type": "Point"}},{ "properties": {"name": "234 Tienyah AG", "elev": "439.0m", "style": 3, "rwydir": 60}, "type": "Feature", "geometry": {"coordinates":[150.46305, -30.76915], "type": "Point"}},{ "properties": {"name": "235 Togo Stn AF", "elev": "191.0m", "style": 2, "rwydir": 100}, "type": "Feature", "geometry": {"coordinates":[149.54348333333334, -30.0817], "type": "Point"}},{ "properties": {"name": "236 Tongy Stn AG", "elev": "522.0m", "style": 3, "rwydir": 20}, "type": "Feature", "geometry": {"coordinates":[149.79508333333334, -31.9785], "type": "Point"}},{ "properties": {"name": "237 Tooraweenah AD", "elev": "410.0m", "style": 2, "rwydir": 50}, "type": "Feature", "geometry": {"coordinates":[148.8983, -31.4433], "type": "Point"}},{ "properties": {"name": "238 Tottenham AF", "elev": "239.0m", "style": 2, "rwydir": 40}, "type": "Feature", "geometry": {"coordinates":[147.36923333333334, -32.256116666666664], "type": "Point"}},{ "properties": {"name": "239 Trangie AF", "elev": "212.0m", "style": 2, "rwydir": 10}, "type": "Feature", "geometry": {"coordinates":[148.00406666666666, -31.9756], "type": "Point"}},{ "properties": {"name": "240 Tranquil AG", "elev": "305.0m", "style": 3, "rwydir": 10}, "type": "Feature", "geometry": {"coordinates":[150.3889, -30.8715], "type": "Point"}},{ "properties": {"name": "241 Turrawan AG", "elev": "244.0m", "style": 3, "rwydir": 130}, "type": "Feature", "geometry": {"coordinates":[149.91138333333333, -30.4785], "type": "Point"}},{ "properties": {"name": "242 Twynam AG", "elev": "591.0m", "style": 3, "rwydir": 130}, "type": "Feature", "geometry": {"coordinates":[150.86011666666667, -29.620216666666668], "type": "Point"}},{ "properties": {"name": "243 Ultralight AF", "elev": "341.0m", "style": 2, "rwydir": 90}, "type": "Feature", "geometry": {"coordinates":[150.53873333333334, -30.8654], "type": "Point"}},{ "properties": {"name": "244 Upper Hrtn AF", "elev": "388.0m", "style": 2, "rwydir": 10}, "type": "Feature", "geometry": {"coordinates":[150.4034, -30.1092], "type": "Point"}},{ "properties": {"name": "245 Urubula AG", "elev": "306.0m", "style": 3, "rwydir": 100}, "type": "Feature", "geometry": {"coordinates":[150.33253333333334, -31.2809], "type": "Point"}},{ "properties": {"name": "246 Walcha AF", "elev": "1156.0m", "style": 2, "rwydir": 70}, "type": "Feature", "geometry": {"coordinates":[151.55295, -31.0084], "type": "Point"}},{ "properties": {"name": "247 Walgett AD", "elev": "134.0m", "style": 5, "rwydir": 60}, "type": "Feature", "geometry": {"coordinates":[148.125, -30.0333], "type": "Point"}},{ "properties": {"name": "248 Walladabah TP", "elev": "475.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[150.83066666666667, -31.538833333333333], "type": "Point"}},{ "properties": {"name": "249 Wangabutta AF", "elev": "645.0m", "style": 2, "rwydir": 130}, "type": "Feature", "geometry": {"coordinates":[149.16851666666668, -31.454133333333335], "type": "Point"}},{ "properties": {"name": "250 Warialda AF", "elev": "384.0m", "style": 2, "rwydir": 100}, "type": "Feature", "geometry": {"coordinates":[150.53328333333334, -29.5333], "type": "Point"}},{ "properties": {"name": "251 Warkworth AF", "elev": "71.0m", "style": 2, "rwydir": 110}, "type": "Feature", "geometry": {"coordinates":[151.0234, -32.54816666666667], "type": "Point"}},{ "properties": {"name": "252 Warraba Stn AG", "elev": "884.0m", "style": 3, "rwydir": 100}, "type": "Feature", "geometry": {"coordinates":[150.96461666666667, -30.473283333333335], "type": "Point"}},{ "properties": {"name": "253 Warrah Rdg AG", "elev": "357.0m", "style": 3, "rwydir": 160}, "type": "Feature", "geometry": {"coordinates":[150.61145, -31.633966666666666], "type": "Point"}},{ "properties": {"name": "254 Warren AD", "elev": "198.0m", "style": 5, "rwydir": 10}, "type": "Feature", "geometry": {"coordinates":[147.80141666666665, -31.73345], "type": "Point"}},{ "properties": {"name": "255 Watsons Crk TP", "elev": "876.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[151.01078333333334, -30.7195], "type": "Point"}},{ "properties": {"name": "256 Weabonga AG", "elev": "1057.0m", "style": 3, "rwydir": 80}, "type": "Feature", "geometry": {"coordinates":[151.44996666666665, -31.201383333333332], "type": "Point"}},{ "properties": {"name": "257 Wean Racecr AG", "elev": "279.0m", "style": 3, "rwydir": 100}, "type": "Feature", "geometry": {"coordinates":[150.24, -30.6828], "type": "Point"}},{ "properties": {"name": "258 Wee Waa AD", "elev": "187.0m", "style": 5, "rwydir": 50}, "type": "Feature", "geometry": {"coordinates":[149.40828333333334, -30.258283333333335], "type": "Point"}},{ "properties": {"name": "259 Wee Waa Sth AF", "elev": "200.0m", "style": 2, "rwydir": 10}, "type": "Feature", "geometry": {"coordinates":[149.49356666666668, -30.293666666666667], "type": "Point"}},{ "properties": {"name": "260 Weetaliba TP", "elev": "467.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[149.58386666666667, -31.63981666666667], "type": "Point"}},{ "properties": {"name": "261 Wellington AD", "elev": "397.0m", "style": 5, "rwydir": 140}, "type": "Feature", "geometry": {"coordinates":[148.9907, -32.46241666666667], "type": "Point"}},{ "properties": {"name": "262 Werrikimbe AG", "elev": "1120.0m", "style": 3, "rwydir": 90}, "type": "Feature", "geometry": {"coordinates":[151.99258333333333, -31.2776], "type": "Point"}},{ "properties": {"name": "263 Werris Creek TP", "elev": "381.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[150.6464, -31.3496], "type": "Point"}},{ "properties": {"name": "264 Widgen AF", "elev": "206.0m", "style": 5, "rwydir": 160}, "type": "Feature", "geometry": {"coordinates":[149.67086666666665, -30.18401666666667], "type": "Point"}},{ "properties": {"name": "265 Williamby TP", "elev": "369.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[150.5841, -30.86655], "type": "Point"}},{ "properties": {"name": "266 Willow Tree TP", "elev": "424.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[150.72591666666668, -31.65015], "type": "Point"}},{ "properties": {"name": "267 Wilsons Crk AG", "elev": "1043.0m", "style": 3, "rwydir": 100}, "type": "Feature", "geometry": {"coordinates":[151.42745, -30.661516666666667], "type": "Point"}},{ "properties": {"name": "268 Wimboyne AF", "elev": "425.0m", "style": 2, "rwydir": 0}, "type": "Feature", "geometry": {"coordinates":[150.175, -31.5822], "type": "Point"}},{ "properties": {"name": "269 Wittagoona AG", "elev": "366.0m", "style": 3, "rwydir": 20}, "type": "Feature", "geometry": {"coordinates":[150.7923, -30.7021], "type": "Point"}},{ "properties": {"name": "270 Wollum AG", "elev": "1090.0m", "style": 3, "rwydir": 100}, "type": "Feature", "geometry": {"coordinates":[151.40545, -30.813166666666667], "type": "Point"}},{ "properties": {"name": "271 Woodsreef AG", "elev": "520.0m", "style": 3, "rwydir": 60}, "type": "Feature", "geometry": {"coordinates":[150.7555, -30.34795], "type": "Point"}},{ "properties": {"name": "272 Woombalong TP", "elev": "290.0m", "style": 1}, "type": "Feature", "geometry": {"coordinates":[150.44838333333334, -30.919116666666667], "type": "Point"}},{ "properties": {"name": "273 Wydidya AF", "elev": "326.0m", "style": 2, "rwydir": 160}, "type": "Feature", "geometry": {"coordinates":[150.41286666666667, -29.112766666666666], "type": "Point"}},{ "properties": {"name": "274 Yahgunyah AG", "elev": "159.0m", "style": 3, "rwydir": 170}, "type": "Feature", "geometry": {"coordinates":[147.87863333333334, -31.06415], "type": "Point"}},{ "properties": {"name": "275 Yarramundi AG", "elev": "216.0m", "style": 3, "rwydir": 150}, "type": "Feature", "geometry": {"coordinates":[148.47078333333334, -31.2375], "type": "Point"}},{ "properties": {"name": "276 Yarran AG", "elev": "225.0m", "style": 3, "rwydir": 100}, "type": "Feature", "geometry": {"coordinates":[148.30331666666666, -31.44635], "type": "Point"}}]}'
+      }
+
+      const params = {
+        
+          vfr: {
+            name: "Flight Rules / Category",
+            type: "",
+            unit: "Category",
+            min: 1,
+            max: 4,
+            step: 1,
+            aircraft: ["balloon", "plane"],
+            models: ["ss"],
+          },
+        
+          wstar_bsratio: {
+            name: "Thermal Strength & B/S Ratio",
+            type: "vert",
+            unit: "m/s",
+            min: 0.5,
+            max: 4.0,
+            step: 0.5,
+            aircraft: ["hangglider", "paraglider", "glider", "modelaircraft"],
+            models: ["ss", "noaa", "hrrr", "dwd"],
+          },
+        
+          bsratio: {
+            name: "Thermal Strength & B/S Ratio",
+            type: "vert",
+            unit: "m/s",
+            min: 0.0,
+            max: 9.0,
+            step: 3.0,
+            aircraft: ["hangglider", "paraglider", "glider", "modelaircraft"],
+            models: ["ss", "noaa", "hrrr", "dwd"],
+          },
+        
+          hwcrit: {
+            name: "Height of Thermals",
+            type: "hgt",
+            unit: "m",
+            min: 300,
+            max: 4800,
+            step: 300,
+            aircraft: ["glider", "paraglider", "hangglider", "balloon", "modelaircraft"],
+            models: ["ss", "noaa", "hrrr", "dwd"],
+          },
+        
+          smoke: {
+            name: "Smoke",
+            type: "",
+            unit: "mg/m2",
+            min: 25,
+            max: 350,
+            step: 25,
+            aircraft: ["glider", "paraglider", "hangglider", "balloon", "plane", "modelaircraft"],
+            models: ["hrrr"],
+          },
+        
+          dwcrit: {
+            name: "Depth of Thermals (AGL)",
+            type: "hgt",
+            unit: "m",
+            min: 300,
+            max: 3600,
+            step: 300,
+            aircraft: ["hangglider", "paraglider", "glider"],
+            models: ["ss", "noaa", "hrrr", "dwd"],
+          },
+        
+          zsfclcldif: {
+            name: "Cu Depth",
+            type: "hgt",
+            unit: "m",
+            min: -1000,
+            max: 700,
+            step: 100,
+            aircraft: ["hangglider", "paraglider", "glider"],
+            models: ["ss", "noaa", "hrrr", "dwd"],
+          },
+        
+          zsfclclmask: {
+            name: "Cu Cloudbase",
+            type: "hgt",
+            unit: "m",
+            min: 0,
+            max: 4800,
+            step: 300,
+            aircraft: ["glider", "paraglider", "hangglider", "balloon"],
+            models: ["ss", "noaa", "hrrr", "dwd"],
+          },
+        
+          zsfclclmask_low: {
+            name: "Cu Cloudbase",
+            type: "hgt",
+            unit: "m",
+            min: 0,
+            max: 4800,
+            step: 300,
+            aircraft: ["glider", "paraglider", "hangglider", "balloon", "plane", "modelaircraft"],
+            models: ["ss", "noaa", "hrrr", "dwd"],
+          },
+        
+          zblclmask: {
+            name: "Overdevelopment",
+            type: "",
+            unit: "%",
+            min: 5,
+            max: 95,
+            step: 10,
+            aircraft: ["hangglider", "paraglider", "glider"],
+            models: ["ss", "hrrr", "dwd"],
+          },
+        
+          oktas_cu: {
+            name: "Cu Distribution",
+            type: "",
+            unit: "%",
+            min: 0,
+            max: 100,
+            step: 12.5,
+            aircraft: ["glider", "paraglider", "hangglider", "balloon", "plane", "modelaircraft"],
+            models: ["ss", "noaa", "hrrr", "dwd"],
+          },
+        
+          cucloudfrac: {
+            name: "Cu Overview",
+            type: "hgt",
+            unit: "m",
+            min: 300,
+            max: 4800,
+            step: 300,
+            aircraft: ["glider", "paraglider", "hangglider", "balloon", "plane", "modelaircraft"],
+            models: ["ss", "noaa", "hrrr", "dwd"],
+          },
+        
+          tcc: {
+            name: "Cloud Cover",
+            type: "",
+            unit: "%",
+            min: 1,
+            max: 3,
+            step: 1,
+            aircraft: ["glider", "paraglider", "hangglider", "balloon", "plane", "modelaircraft"],
+            models: ["ss", "noaa", "hrrr", "dwd"],
+          },
+        
+          cape: {
+            name: "CAPE / Storms",
+            type: "",
+            unit: "J",
+            min: 100,
+            max: 3100,
+            step: 300,
+            aircraft: ["glider", "paraglider", "hangglider", "balloon", "plane", "modelaircraft"],
+            models: ["ss", "noaa", "hrrr", "dwd"],
+          },
+        
+          accrain: {
+            name: "Rain",
+            type: "",
+            unit: "mm",
+            min: 0,
+            max: 5,
+            step: 0.5,
+            aircraft: ["glider", "paraglider", "hangglider", "balloon", "plane", "modelaircraft"],
+            models: ["ss", "noaa", "hrrr", "dwd"],
+          },
+        
+          spread: {
+            name: "Forecast Uncertainty",
+            type: "",
+            unit: "%",
+            min: 5,
+            max: 95,
+            step: 10,
+            aircraft: ["glider", "paraglider", "hangglider", "balloon", "plane", "modelaircraft"],
+            models: ["dwd", "noaa"],
+          },
+        
+          CFRACL: {
+            name: "Low level cloud cover",
+            type: "",
+            unit: "%",
+            min: 5,
+            max: 95,
+            step: 15,
+            aircraft: ["glider"],
+            models: ["ss", "noaa", "hrrr", "dwd"],
+          },
+        
+          CFRACM: {
+            name: "Mid level cloud cover",
+            type: "",
+            unit: "%",
+            min: 5,
+            max: 95,
+            step: 15,
+            aircraft: ["glider"],
+            models: ["ss", "noaa", "hrrr", "dwd"],
+          },
+        
+          CFRACH: {
+            name: "High level cloud cover",
+            type: "",
+            unit: "%",
+            min: 5,
+            max: 95,
+            step: 15,
+            aircraft: ["glider"],
+            models: ["ss", "noaa", "hrrr", "dwd"],
+          },
+        
+          thermals: {
+            name: "Thermal Hotspots",
+            type: "",
+            unit: "",
+            min: 0,
+            max: 1,
+            step: 1,
+            aircraft: ["hangglider", "paraglider", "glider"],
+            models: ["ss", "noaa", "hrrr", "dwd"],
+          },
+        
+          t2c: {
+            name: "Surface Temperature",
+            type: "temp",
+            unit: "c",
+            min: -6,
+            max: 48,
+            step: 2,
+            aircraft: ["glider", "paraglider", "hangglider", "balloon", "plane", "modelaircraft"],
+            models: ["ss", "noaa", "hrrr", "dwd"],
+          },
+        
+          sfcdewpt: {
+            name: "Surface Dewpoint",
+            type: "temp",
+            unit: "c",
+            min: -16,
+            max: 20,
+            step: 1,
+            aircraft: ["hangglider", "paraglider", "glider"],
+            models: ["ss", "noaa", "hrrr", "dwd"],
+          },
+        
+          sfcwind0: {
+            name: "Surface Wind",
+            type: "spd",
+            unit: "m/s",
+            min: 0,
+            max: 12,
+            step: 1,
+            aircraft: ["glider", "paraglider", "hangglider", "balloon", "plane", "modelaircraft"],
+            models: ["ss", "noaa", "hrrr", "dwd"],
+          },
+        
+          U: {
+            name: "Wind U-component",
+            type: "spd",
+            unit: "m/s",
+            min: 0,
+            max: 12,
+            step: 1,
+            aircraft: ["glider", "paraglider", "hangglider", "balloon", "plane", "modelaircraft"],
+            models: ["ss", "noaa", "hrrr", "dwd"],
+          },
+        
+          V: {
+            name: "Wind V-component",
+            type: "spd",
+            unit: "m/s",
+            min: 0,
+            max: 12,
+            step: 1,
+            aircraft: ["glider", "paraglider", "hangglider", "balloon", "plane", "modelaircraft"],
+            models: ["ss", "noaa", "hrrr", "dwd"],
+          },
+        
+          blwind: {
+            name: "Thermal Layer Wind (Avg)",
+            type: "spd",
+            unit: "m/s",
+            min: 1,
+            max: 16,
+            step: 1,
+            aircraft: ["hangglider", "paraglider", "glider"],
+            models: ["ss", "noaa", "hrrr", "dwd"],
+          },
+        
+          windataltitude: {
+            name: "Thermal Layer Wind (Avg)",
+            type: "spd",
+            unit: "m/s",
+            min: 1,
+            max: 16,
+            step: 1,
+            aircraft: ["hangglider", "paraglider", "glider"],
+            models: ["ss", "noaa", "hrrr", "dwd"],
+          },
+        
+          bltopwind: {
+            name: "Thermal Layer Top Wind",
+            type: "spd",
+            unit: "m/s",
+            min: 1,
+            max: 19,
+            step: 1,
+            aircraft: ["hangglider", "paraglider", "glider"],
+            models: ["ss", "noaa", "hrrr", "dwd"],
+          },
+        
+          wblmaxmin: {
+            name: "Convergence",
+            type: "vert",
+            unit: "m/s",
+            min: -0.25,
+            max: 0.75,
+            step: 0.1,
+            aircraft: ["hangglider", "paraglider", "glider"],
+            models: ["ss", "hrrr", "cosmo"],
+          },
+        
+          ridge: {
+            name: "Ridge Lift",
+            type: "vert",
+            unit: "m/s",
+            min: 0.1,
+            max: 1.2,
+            step: 0.1,
+            aircraft: ["hangglider", "paraglider", "glider"],
+            models: ["ss", "hrrr", "cosmo"],
+          },
+        
+          blwindshear: {
+            name: "Wind Shear",
+            type: "spd",
+            unit: "m/s",
+            min: 1,
+            max: 14,
+            step: 1,
+            aircraft: ["hangglider", "paraglider", "glider"],
+            models: ["ss", "hrrr", "cosmo"],
+          },
+        
+          mslpress: {
+            name: "MSL Pressure",
+            type: "",
+            unit: "mBar",
+            min: 984,
+            max: 1034,
+            step: 2,
+            aircraft: ["glider", "paraglider", "hangglider", "balloon", "plane", "modelaircraft"],
+            models: ["ss", "noaa", "hrrr", "dwd"],
+          },
+        
+          w_1000: {
+            name: "Vertical Velocity 1km/3kft",
+            type: "vert",
+            unit: "m/s",
+            min: -3.0,
+            max: 3.6,
+            step: 0.3,
+            aircraft: ["glider"],
+            models: ["ss", "hrrr", "cosmo"],
+          },
+        
+          w_2000: {
+            name: "Vertical Velocity 2km/7kft",
+            type: "vert",
+            unit: "m/s",
+            min: -3.0,
+            max: 3.6,
+            step: 0.3,
+            aircraft: ["glider", "paraglider"],
+            models: ["ss", "hrrr", "cosmo"],
+          },
+        
+          w_3000: {
+            name: "Vertical Velocity 3km/10kft",
+            type: "vert",
+            unit: "m/s",
+            min: -3.0,
+            max: 3.6,
+            step: 0.3,
+            aircraft: ["glider", "paraglider"],
+            models: ["ss", "hrrr", "cosmo"],
+          },
+        
+          w_4000: {
+            name: "Vertical Velocity 4km/13kft",
+            type: "vert",
+            unit: "m/s",
+            min: -3.0,
+            max: 3.6,
+            step: 0.3,
+            aircraft: ["glider", "paraglider"],
+            models: ["ss", "hrrr", "cosmo"],
+          },
+        
+          w_5000: {
+            name: "Vertical Velocity 5km/16kft",
+            type: "vert",
+            unit: "m/s",
+            min: -3.0,
+            max: 3.6,
+            step: 0.3,
+            aircraft: ["glider"],
+            models: ["ss", "hrrr", "cosmo"],
+          },
+        
+          w_6000: {
+            name: "Vertical Velocity 6km/19kft",
+            type: "vert",
+            unit: "m/s",
+            min: -3.0,
+            max: 3.6,
+            step: 0.3,
+            aircraft: ["glider"],
+            models: ["ss", "hrrr", "cosmo"],
+          },
+        
+          w_7000: {
+            name: "Vertical Velocity 7km/23kft",
+            type: "vert",
+            unit: "m/s",
+            min: -3.0,
+            max: 3.6,
+            step: 0.3,
+            aircraft: ["glider"],
+            models: ["ss", "hrrr", "cosmo"],
+          },
+        
+          w_9000: {
+            name: "Vertical Velocity 9km/29kft",
+            type: "vert",
+            unit: "m/s",
+            min: -3.0,
+            max: 3.6,
+            step: 0.3,
+            aircraft: ["glider"],
+            models: ["ss", "hrrr", "cosmo"],
+          },
+        
+          pfdtot: {
+            name: "Potential Flight Distance",
+            type: "dist",
+            unit: "km",
+            min: 50,
+            max: 950,
+            step: 100,
+            aircraft: ["glider"],
+            models: ["ss", "hrrr", "dwd"],
+          },
+        
+          pfdtothg: {
+            name: "Potential Flight Distance",
+            type: "",
+            unit: "km",
+            min: 30,
+            max: 330,
+            step: 30,
+            aircraft: ["paraglider", "hangglider", "modelaircraft"],
+            models: ["ss", "noaa", "hrrr", "dwd"],
+          },
+        
+          potfd: {
+            name: "XC Speed",
+            type: "xcspd",
+            unit: "kph",
+            min: 40,
+            max: 160,
+            step: 10,
+            aircraft: ["glider"],
+            models: ["ss", "hrrr", "dwd", "noaa"],
+          },
+        
+          potfd_hg: {
+            name: "XC Speed",
+            type: "xcspd",
+            unit: "kph",
+            min: 10,
+            max: 50,
+            step: 5,
+            aircraft: ["paraglider", "hangglider", "modelaircraft"],
+            models: ["ss", "hrrr", "dwd", "noaa"],
+          },
+        
+          stars: {
+            name: "Star Rating",
+            type: "",
+            unit: "Stars",
+            min: 0.5,
+            max: 5.5,
+            step: 1,
+            aircraft: ["paraglider", "hangglider", "modelaircraft"],
+            models: ["ss", "noaa", "hrrr", "dwd"],
+          },
+        
+          cceil: {
+            name: "Lowest Cloud Layer",
+            type: "hgt",
+            unit: "m",
+            min: 0,
+            max: 8100,
+            step: 300,
+            aircraft: ["plane"],
+            models: ["ss"],
+          },
+        
+          ctops: {
+            name: "Cloud Tops",
+            type: "hgt",
+            unit: "m",
+            min: 0,
+            max: 8100,
+            step: 300,
+            aircraft: ["plane"],
+            models: ["ss"],
+          },
+        
+          ice_base: {
+            name: "Icing Base",
+            type: "hgt",
+            unit: "ft",
+            min: 0,
+            max: 7200,
+            step: 300,
+            aircraft: ["plane"],
+            models: ["ss", "hrrr"],
+          },
+        
+          ice_top: {
+            name: "Icing Top",
+            type: "hgt",
+            unit: "ft",
+            min: 0,
+            max: 7200,
+            step: 300,
+            aircraft: ["plane"],
+            models: ["ss", "hrrr"],
+          },
+        
+          turbulence_low: {
+            name: "Turbulence (SFC-FL100)",
+            type: "",
+            unit: "Severity",
+            min: 1,
+            max: 3,
+            step: 1,
+            aircraft: ["glider", "balloon", "plane"],
+            models: ["ss"],
+          },
+        
+          turbulence_mid: {
+            name: "Turbulence (FL100-FL250)",
+            type: "",
+            unit: "Severity",
+            min: 1,
+            max: 3,
+            step: 1,
+            aircraft: ["glider", "balloon", "plane"],
+            models: ["ss"],
+          },
+        
+          bom_rain: {
+            name: "Rain last 72hrs",
+            type: "",
+            unit: "mm",
+            min: 0,
+            max: 45,
+            step: 3,
+            aircraft: ["hangglider", "paraglider", "glider"],
+            models: ["ss", "noaa", "hrrr", "dwd"],
+          },
+        
+          turbulence_high: {
+            name: "Turbulence (FL250-FL400)",
+            type: "",
+            unit: "Severity",
+            min: 1,
+            max: 3,
+            step: 1,
+            aircraft: ["glider", "plane"],
+            models: ["ss"],
+          },
+        
+          visibility: {
+            name: "Visibility",
+            type: "dist",
+            unit: "km",
+            min: 0,
+            max: 24,
+            step: 2,
+            aircraft: ["balloon", "plane"],
+            models: ["ss"],
+          },
+        
+          freezing: {
+            name: "Freezing Level",
+            type: "hgt",
+            unit: "m",
+            min: 300,
+            max: 5700,
+            step: 300,
+            aircraft: ["glider", "paraglider", "hangglider", "balloon", "plane", "modelaircraft"],
+            models: ["ss", "hrrr"],
+          },
+        
+          densityaltitude: {
+            name: "Density Altitude (Surface)",
+            type: "hgt",
+            unit: "m",
+            min: 300,
+            max: 4800,
+            step: 300,
+            aircraft: ["plane", "glider"],
+            models: ["ss", "noaa", "hrrr", "dwd"],
+          },
+        
+      }
+    </script>
+
+    <!-- loading screen -->
+    <style>
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            background-color: #267fb6;
+            z-index: 1000;
+        }
+
+        #loading-screen > div {
+            width: 12rem;
+            height: 12rem;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            margin: -6rem 0 0 -6rem;
+            text-align: center"
+        }
+
+        #loading-screen img {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        #loading-screen .bar {
+            width: 100%;
+            height: 0.5rem;
+            background-color: #005c76;
+            border-radius: 0.25rem;
+            margin: 1rem 0 3rem 0;
+        }
+
+        #loading-screen .bar .fill {
+            height: 0.5rem;
+            width: 1%;
+            background-color: white;
+            border-radius: 0.25rem;
+            transition: 0.5s linear width;
+        }
+
+        #loading-screen p {
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            display: block;
+            text-align: center;
+            color: #fff;
+            font-size: 0.85rem;
+        }
+
+        #loading-screen a {
+            color: #fff;
+            font-weight: bold;
+        }
+    </style>
+  </head>
+
+  <body>
+    <div id="app"></div>
+
+    <div id="loading-screen">
+        <div>
+            <img src="/ozsoar/img/white-eagle2.png" />
+            <div class="bar">
+                <div class="fill"></div>
+            </div>
+            <p>
+                For issues, please contact
+                <br />
+                <a href="mailto:skysight@skysight.io">skysight@skysight.io</a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+      // loading screen
+      const fill = document.querySelector('#loading-screen .bar .fill')
+      const timeout = setTimeout(() => (fill.style.width = '20%'), 300)
+
+      document.addEventListener('pageload', e => {
+        clearTimeout(timeout)
+        fill.style.width = e.detail.progress + '%'
+        if (e.detail.progress === 100) {
+          setTimeout(() => document.querySelector('#loading-screen').remove(), 100)
+        }
+      })
+    </script>
+
+    <!-- https://vitejs.dev/guide/backend-integration.html -->
+    
+      
+    
+    <link rel="stylesheet" href="assets/main-eN2zbMcD.css">
+    
+    
+    <link rel="preload" href="assets/vue-DlS9dVbv.js" crossOrigin="anonymous" as="script">
+    
+    <link rel="preload" href="assets/maplibregl-eo6dbimJ.js" crossOrigin="anonymous" as="script">
+    
+    <link rel="preload" href="assets/datalayer-AiNVKhzE.js" crossOrigin="anonymous" as="script">
+    
+    <link rel="preload" href="assets/turf-DXfbs44u.js" crossOrigin="anonymous" as="script">
+    
+    <link rel="preload" href="assets/qrcode-CMNHoSJ3.js" crossOrigin="anonymous" as="script">
+    
+    <link rel="preload" href="assets/glidelayer-CW0wpgll.js" crossOrigin="anonymous" as="script">
+    
+    <link rel="preload" href="assets/sentry-ClAY4Ubl.js" crossOrigin="anonymous" as="script">
+    
+    
+    <script type="module" src="assets/main-BpvAoCUP.js"></script>
+    
+    
+  </body>
+</html>

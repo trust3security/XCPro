@@ -50,6 +50,7 @@ internal fun MapOverlayStack(
     mapState: MapScreenState,
     mapInitializer: MapInitializer,
     onMapReady: (org.maplibre.android.maps.MapLibreMap) -> Unit,
+    onMapViewBound: () -> Unit,
     locationManager: LocationManager,
     flightDataManager: FlightDataManager,
     flightViewModel: FlightDataViewModel,
@@ -64,7 +65,11 @@ internal fun MapOverlayStack(
     currentLocation: MapLocationUiModel?,
     showReturnButton: Boolean,
     showDistanceCircles: Boolean,
+    ognOverlayEnabled: Boolean,
+    showOgnThermalsEnabled: Boolean,
     overlayManager: MapOverlayManager,
+    onOgnTargetSelected: (String) -> Unit,
+    onOgnThermalSelected: (String) -> Unit,
     onAdsbTargetSelected: (Icao24) -> Unit,
     onForecastWindArrowSpeedTap: (LatLng, Double) -> Unit,
     onMapLongPress: (LatLng) -> Unit,
@@ -125,6 +130,7 @@ internal fun MapOverlayStack(
             mapState = mapState,
             mapInitializer = mapInitializer,
             onMapReady = onMapReady,
+            onMapViewBound = onMapViewBound,
             locationManager = locationManager,
             flightDataManager = flightDataManager,
             flightViewModel = flightViewModel,
@@ -170,14 +176,32 @@ internal fun MapOverlayStack(
                 onUpdateAATTargetPoint = onUpdateAATTargetPoint,
                 onSyncTaskVisuals = { overlayManager.requestTaskRenderSync() },
                 onMapTap = { tap ->
-                    val tappedId = overlayManager.findAdsbTargetAt(tap)
-                    if (tappedId != null) {
-                        onAdsbTargetSelected(tappedId)
-                    } else {
-                        val tappedWindSpeedKt = overlayManager.findForecastWindArrowSpeedAt(tap)
-                        if (tappedWindSpeedKt != null) {
-                            onForecastWindArrowSpeedTap(tap, tappedWindSpeedKt)
+                    // OGN layers render above ADS-B layers; resolve traffic tap in layer order.
+                    if (ognOverlayEnabled) {
+                        val tappedOgnId = overlayManager.findOgnTargetAt(tap)
+                        if (tappedOgnId != null) {
+                            onOgnTargetSelected(tappedOgnId)
+                            return@GestureHandlerOverlay
                         }
+                    }
+
+                    if (ognOverlayEnabled && showOgnThermalsEnabled) {
+                        val tappedThermalId = overlayManager.findOgnThermalHotspotAt(tap)
+                        if (tappedThermalId != null) {
+                            onOgnThermalSelected(tappedThermalId)
+                            return@GestureHandlerOverlay
+                        }
+                    }
+
+                    val tappedAdsbId = overlayManager.findAdsbTargetAt(tap)
+                    if (tappedAdsbId != null) {
+                        onAdsbTargetSelected(tappedAdsbId)
+                        return@GestureHandlerOverlay
+                    }
+
+                    val tappedWindSpeedKt = overlayManager.findForecastWindArrowSpeedAt(tap)
+                    if (tappedWindSpeedKt != null) {
+                        onForecastWindArrowSpeedTap(tap, tappedWindSpeedKt)
                     }
                 },
                 onMapLongPress = onMapLongPress,

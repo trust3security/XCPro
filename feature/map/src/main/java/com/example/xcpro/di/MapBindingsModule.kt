@@ -8,10 +8,16 @@ import com.example.xcpro.adsb.AdsbTrafficRepositoryImpl
 import com.example.xcpro.adsb.OpenSkyProviderClient
 import com.example.xcpro.adsb.OpenSkyTokenRepository
 import com.example.xcpro.adsb.OpenSkyTokenRepositoryImpl
+import com.example.xcpro.adsb.data.AndroidAdsbNetworkAvailabilityAdapter
+import com.example.xcpro.adsb.domain.AdsbNetworkAvailabilityPort
 import com.example.xcpro.glider.GliderRepository
 import com.example.xcpro.map.RealWaypointLoader
 import com.example.xcpro.ogn.OgnTrafficRepository
 import com.example.xcpro.ogn.OgnTrafficRepositoryImpl
+import com.example.xcpro.ogn.OgnThermalRepository
+import com.example.xcpro.ogn.OgnThermalRepositoryImpl
+import com.example.xcpro.ogn.OgnGliderTrailRepository
+import com.example.xcpro.ogn.OgnGliderTrailRepositoryImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -38,6 +44,14 @@ abstract class GliderRepositoryModule {
 abstract class OgnBindingsModule {
     @Binds
     abstract fun bindOgnTrafficRepository(impl: OgnTrafficRepositoryImpl): OgnTrafficRepository
+
+    @Binds
+    abstract fun bindOgnThermalRepository(impl: OgnThermalRepositoryImpl): OgnThermalRepository
+
+    @Binds
+    abstract fun bindOgnGliderTrailRepository(
+        impl: OgnGliderTrailRepositoryImpl
+    ): OgnGliderTrailRepository
 }
 
 @Module
@@ -48,6 +62,11 @@ abstract class AdsbBindingsModule {
 
     @Binds
     abstract fun bindOpenSkyTokenRepository(impl: OpenSkyTokenRepositoryImpl): OpenSkyTokenRepository
+
+    @Binds
+    abstract fun bindAdsbNetworkAvailabilityPort(
+        impl: AndroidAdsbNetworkAvailabilityAdapter
+    ): AdsbNetworkAvailabilityPort
 
     @Binds
     abstract fun bindAdsbTrafficRepository(impl: AdsbTrafficRepositoryImpl): AdsbTrafficRepository

@@ -11,6 +11,7 @@ import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.sensors.UnifiedSensorManager
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -160,21 +161,35 @@ open class VarioServiceManager @Inject constructor(
     }
 
     private suspend fun startSensorsOnMainThread(): Boolean {
-        return try {
+        return runCatching {
             withContext(Dispatchers.Main.immediate) {
                 unifiedSensorManager.startAllSensors()
             }
-        } catch (t: Throwable) {
-            throw RuntimeException("Failed to start sensors", t)
+        }.getOrElse { error ->
+            if (error is CancellationException) {
+                throw error
+            }
+            Log.e(TAG, "Failed to start sensors on main thread", error)
+            false
         }
     }
 
     private suspend fun applyGpsUpdateInterval(intervalMs: Long) {
         if (lastGpsIntervalMs == intervalMs) return
-        lastGpsIntervalMs = intervalMs
-        withContext(Dispatchers.Main.immediate) {
-            unifiedSensorManager.setGpsUpdateIntervalMs(intervalMs)
+        val applied = runCatching {
+            withContext(Dispatchers.Main.immediate) {
+                unifiedSensorManager.setGpsUpdateIntervalMs(intervalMs)
+            }
+        }.onFailure { error ->
+            if (error is CancellationException) {
+                throw error
+            }
+            Log.e(TAG, "Failed to set GPS update interval to ${intervalMs}ms", error)
+        }.isSuccess
+        if (!applied) {
+            return
         }
+        lastGpsIntervalMs = intervalMs
         Log.d(TAG, "GPS update interval set to ${intervalMs}ms")
     }
 }

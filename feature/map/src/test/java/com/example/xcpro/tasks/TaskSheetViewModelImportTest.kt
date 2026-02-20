@@ -7,6 +7,7 @@ import com.example.xcpro.tasks.domain.logic.TaskProximityEvaluator
 import com.example.xcpro.tasks.domain.logic.TaskValidator
 import com.google.gson.Gson
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.ArgumentCaptor
 import org.mockito.Mockito
@@ -170,6 +171,64 @@ class TaskSheetViewModelImportTest {
             Mockito.nullable(Double::class.java),
             Mockito.nullable(Double::class.java)
         )
+    }
+
+    @Test
+    fun tryImportPersistedTask_batchesCoordinatorSyncToSingleSnapshotRefresh() {
+        val coordinator = mockCoordinator(taskType = TaskType.AAT)
+        val viewModel = createViewModel(coordinator)
+        Mockito.clearInvocations(coordinator)
+        Mockito.`when`(coordinator.snapshot()).thenReturn(
+            TaskCoordinatorSnapshot(
+                task = Task(id = "snapshot-task"),
+                taskType = TaskType.AAT,
+                activeLeg = 0
+            )
+        )
+        val persisted = TaskPersistSerializer.PersistedTask(
+            taskType = TaskType.AAT,
+            waypoints = listOf(
+                TaskPersistSerializer.PersistedWaypoint(
+                    id = "start",
+                    title = "Start",
+                    subtitle = "",
+                    lat = -34.90,
+                    lon = 138.60,
+                    role = WaypointRole.START,
+                    ozType = "LINE",
+                    ozParams = emptyMap()
+                ),
+                TaskPersistSerializer.PersistedWaypoint(
+                    id = "tp1",
+                    title = "TP1",
+                    subtitle = "",
+                    lat = -34.95,
+                    lon = 138.70,
+                    role = WaypointRole.TURNPOINT,
+                    ozType = "SEGMENT",
+                    ozParams = mapOf(
+                        "outerRadiusMeters" to 5000.0,
+                        "innerRadiusMeters" to 0.0,
+                        "angleDeg" to 90.0
+                    )
+                ),
+                TaskPersistSerializer.PersistedWaypoint(
+                    id = "finish",
+                    title = "Finish",
+                    subtitle = "",
+                    lat = -35.0,
+                    lon = 138.80,
+                    role = WaypointRole.FINISH,
+                    ozType = "CYLINDER",
+                    ozParams = mapOf("radiusMeters" to 3000.0)
+                )
+            )
+        )
+
+        val imported = viewModel.tryImportPersistedTask(Gson().toJson(persisted))
+
+        assertTrue(imported)
+        Mockito.verify(coordinator, Mockito.times(1)).snapshot()
     }
 
     private fun createViewModel(coordinator: TaskSheetCoordinatorUseCase): TaskSheetViewModel {

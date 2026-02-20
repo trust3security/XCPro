@@ -1,0 +1,139 @@
+package com.example.xcpro.map
+
+import android.graphics.Color
+import com.example.xcpro.core.common.logging.AppLogger
+import com.example.xcpro.ogn.OgnGliderTrailSegment
+import com.example.xcpro.ogn.isValidThermalCoordinate
+import com.example.xcpro.ogn.snailColorHexStops
+import org.maplibre.android.maps.MapLibreMap
+import org.maplibre.android.style.expressions.Expression
+import org.maplibre.android.style.layers.LineLayer
+import org.maplibre.android.style.layers.Property
+import org.maplibre.android.style.layers.PropertyFactory.lineCap
+import org.maplibre.android.style.layers.PropertyFactory.lineColor
+import org.maplibre.android.style.layers.PropertyFactory.lineJoin
+import org.maplibre.android.style.layers.PropertyFactory.lineOpacity
+import org.maplibre.android.style.layers.PropertyFactory.lineWidth
+import org.maplibre.android.style.sources.GeoJsonSource
+import org.maplibre.geojson.Feature
+import org.maplibre.geojson.FeatureCollection
+import org.maplibre.geojson.LineString
+import org.maplibre.geojson.Point
+
+class OgnGliderTrailOverlay(
+    private val map: MapLibreMap
+) {
+
+    fun initialize() {
+        val style = map.style ?: return
+        try {
+            if (style.getSource(SOURCE_ID) == null) {
+                style.addSource(GeoJsonSource(SOURCE_ID))
+            }
+            if (style.getLayer(LAYER_ID) == null) {
+                val layer = createLayer()
+                when {
+                    style.getLayer(OGN_THERMAL_CIRCLE_LAYER_ID) != null -> {
+                        style.addLayerBelow(layer, OGN_THERMAL_CIRCLE_LAYER_ID)
+                    }
+
+                    style.getLayer(OGN_ICON_LAYER_ID) != null -> {
+                        style.addLayerBelow(layer, OGN_ICON_LAYER_ID)
+                    }
+
+                    style.getLayer(BlueLocationOverlay.LAYER_ID) != null -> {
+                        style.addLayerBelow(layer, BlueLocationOverlay.LAYER_ID)
+                    }
+
+                    else -> {
+                        style.addLayer(layer)
+                    }
+                }
+            }
+        } catch (t: Throwable) {
+            AppLogger.e(TAG, "Failed to initialize OGN glider trail overlay: ${t.message}", t)
+        }
+    }
+
+    fun render(segments: List<OgnGliderTrailSegment>) {
+        initialize()
+        val style = map.style ?: return
+        val source = style.getSourceAs<GeoJsonSource>(SOURCE_ID) ?: return
+
+        val features = ArrayList<Feature>(segments.size)
+        for (segment in segments) {
+            if (
+                !isValidThermalCoordinate(segment.startLatitude, segment.startLongitude) ||
+                !isValidThermalCoordinate(segment.endLatitude, segment.endLongitude)
+            ) {
+                continue
+            }
+            val feature = Feature.fromGeometry(
+                LineString.fromLngLats(
+                    listOf(
+                        Point.fromLngLat(segment.startLongitude, segment.startLatitude),
+                        Point.fromLngLat(segment.endLongitude, segment.endLatitude)
+                    )
+                )
+            )
+            feature.addStringProperty(PROP_SEGMENT_ID, segment.id)
+            feature.addNumberProperty(PROP_COLOR_INDEX, segment.colorIndex)
+            feature.addNumberProperty(PROP_WIDTH_PX, segment.widthPx)
+            features.add(feature)
+        }
+        source.setGeoJson(FeatureCollection.fromFeatures(features))
+    }
+
+    fun clear() {
+        val style = map.style ?: return
+        val source = style.getSourceAs<GeoJsonSource>(SOURCE_ID) ?: return
+        source.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
+    }
+
+    fun cleanup() {
+        val style = map.style ?: return
+        try {
+            style.removeLayer(LAYER_ID)
+            style.removeSource(SOURCE_ID)
+        } catch (t: Throwable) {
+            AppLogger.w(TAG, "Failed to cleanup OGN glider trail overlay: ${t.message}")
+        }
+    }
+
+    private fun createLayer(): LineLayer {
+        val colorStops = snailColorHexStops().mapIndexed { index, hex ->
+            Expression.stop(index, Expression.color(Color.parseColor(hex)))
+        }.toTypedArray()
+        val colorExpression = Expression.match(
+            Expression.get(PROP_COLOR_INDEX),
+            Expression.color(Color.parseColor(DEFAULT_COLOR)),
+            *colorStops
+        )
+
+        return LineLayer(LAYER_ID, SOURCE_ID)
+            .withProperties(
+                lineColor(colorExpression),
+                lineWidth(Expression.get(PROP_WIDTH_PX)),
+                lineOpacity(LINE_OPACITY),
+                lineCap(Property.LINE_CAP_ROUND),
+                lineJoin(Property.LINE_JOIN_ROUND)
+            )
+    }
+
+    private companion object {
+        private const val TAG = "OgnGliderTrailOverlay"
+
+        private const val SOURCE_ID = "ogn-glider-trail-source"
+        private const val LAYER_ID = "ogn-glider-trail-line-layer"
+
+        private const val OGN_ICON_LAYER_ID = "ogn-traffic-icon-layer"
+        private const val OGN_THERMAL_CIRCLE_LAYER_ID = "ogn-thermal-circle-layer"
+
+        private const val PROP_SEGMENT_ID = "segment_id"
+        private const val PROP_COLOR_INDEX = "color_index"
+        private const val PROP_WIDTH_PX = "width_px"
+
+        private const val LINE_OPACITY = 0.92f
+        private const val DEFAULT_COLOR = "#FFF4B0"
+    }
+}

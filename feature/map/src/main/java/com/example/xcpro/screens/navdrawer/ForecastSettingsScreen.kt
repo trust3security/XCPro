@@ -190,7 +190,7 @@ fun ForecastSettingsScreen(
                                     selected = mode == windDisplayMode,
                                     onClick = { viewModel.setWindDisplayMode(mode) },
                                     label = { Text(mode.label) },
-                                    enabled = overlayEnabled
+                                    enabled = true
                                 )
                             }
                         }

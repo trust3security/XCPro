@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
@@ -12,9 +11,6 @@ import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.compose.currentStateAsState
 import android.util.Log
 import android.view.MotionEvent
 import com.example.xcpro.map.BuildConfig
@@ -27,6 +23,8 @@ import com.example.xcpro.map.MapInitializer
 import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.map.LocationManager
 import com.example.xcpro.map.MapOverlayManager
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
@@ -39,6 +37,7 @@ fun MapMainLayers(
     mapState: MapScreenState,
     mapInitializer: MapInitializer,
     onMapReady: (org.maplibre.android.maps.MapLibreMap) -> Unit,
+    onMapViewBound: () -> Unit,
     locationManager: LocationManager,
     flightDataManager: FlightDataManager,
     flightViewModel: FlightDataViewModel,
@@ -57,6 +56,7 @@ fun MapMainLayers(
             mapState = mapState,
             mapInitializer = mapInitializer,
             onMapReady = onMapReady,
+            onMapViewBound = onMapViewBound,
             locationManager = locationManager
         )
 
@@ -200,43 +200,48 @@ private fun MapViewHost(
     mapState: MapScreenState,
     mapInitializer: MapInitializer,
     onMapReady: (org.maplibre.android.maps.MapLibreMap) -> Unit,
+    onMapViewBound: () -> Unit,
     locationManager: LocationManager,
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
-    val lifecycleOwner = LocalLifecycleOwner.current
-    val lifecycleState by lifecycleOwner.lifecycle.currentStateAsState()
     AndroidView(
         factory = { ctx ->
             MapView(ctx).apply {
                 mapState.mapView = this
                 locationManager.bindRenderFrameListener(this)
-                // Catch up lifecycle immediately when the MapView is created.
-                if (lifecycleState.isAtLeast(Lifecycle.State.CREATED)) {
-                    onCreate(null)
-                }
-                if (lifecycleState.isAtLeast(Lifecycle.State.STARTED)) {
-                    onStart()
-                }
-                if (lifecycleState.isAtLeast(Lifecycle.State.RESUMED)) {
-                    onResume()
-                }
+                onMapViewBound()
                 getMapAsync { map: MapLibreMap ->
-                    scope.launch {
-                        try {
-                            mapInitializer.initializeMap(map)
-                            onMapReady(map)
-                        } catch (e: Exception) {
-                            Log.e("MapViewHost", "Map initialization failed: ${e.message}", e)
-                            runCatching { onMapReady(map) }
-                                .onFailure { callbackError ->
-                                    Log.e(
-                                        "MapViewHost",
-                                        "onMapReady fallback failed: ${callbackError.message}",
-                                        callbackError
-                                    )
-                                }
+                    if (!scope.isActive) {
+                        return@getMapAsync
+                    }
+                    runCatching { onMapReady(map) }
+                        .onFailure { callbackError ->
+                            Log.e(
+                                "MapViewHost",
+                                "onMapReady callback failed before initialization: ${callbackError.message}",
+                                callbackError
+                            )
                         }
+                    scope.launch {
+                        runCatching { mapInitializer.initializeMap(map) }
+                            .onFailure { error ->
+                                if (error is CancellationException) {
+                                    throw error
+                                }
+                                Log.e("MapViewHost", "Map initialization failed: ${error.message}", error)
+                            }
+                        if (!isActive) {
+                            return@launch
+                        }
+                        runCatching { onMapReady(map) }
+                            .onFailure { callbackError ->
+                                Log.e(
+                                    "MapViewHost",
+                                    "onMapReady callback failed after initialization: ${callbackError.message}",
+                                    callbackError
+                                )
+                            }
                     }
                 }
             }
@@ -244,6 +249,7 @@ private fun MapViewHost(
         update = { view ->
             mapState.mapView = view
             locationManager.bindRenderFrameListener(view)
+            onMapViewBound()
         },
         modifier = modifier.fillMaxSize()
     )

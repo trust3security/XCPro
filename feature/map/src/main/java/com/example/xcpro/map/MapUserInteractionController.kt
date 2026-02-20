@@ -66,6 +66,9 @@ class MapUserInteractionController(
     }
 
     fun showReturnButton() {
+        // Return and recenter are mutually exclusive controls on the same lane.
+        // Showing return after user pan must suppress recenter to avoid overlap/flicker.
+        showRecenterButton = false
         showReturnButton = true
         lastUserPanTime = nowWallMs()
         Log.d(logTag, "Return button shown due to user interaction")

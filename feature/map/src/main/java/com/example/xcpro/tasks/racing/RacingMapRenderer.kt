@@ -1,5 +1,7 @@
 package com.example.xcpro.tasks.racing
 
+import android.util.Log
+import com.example.xcpro.map.BuildConfig
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.Style
 import org.maplibre.android.style.sources.GeoJsonSource
@@ -120,7 +122,7 @@ internal class RacingMapRenderer {
                     )
             )
         } catch (e: Exception) {
-            e.printStackTrace() // Include stack trace for debugging MapLibre native crashes
+            logRenderFailure("drawWaypointMarkers", e)
         }
     }
 
@@ -132,87 +134,83 @@ internal class RacingMapRenderer {
         waypoints: List<RacingWaypoint>,
         geometryGenerator: RacingGeometryCoordinator
     ) {
+        val geometryGeoJson = buildTurnpointGeometryGeoJson(waypoints, geometryGenerator) ?: return
+        try {
+            style.addSource(GeoJsonSource("racing-turnpoint-areas", geometryGeoJson))
+            style.addLayer(createTurnpointGeometryFillLayer())
+            style.addLayer(createTurnpointGeometryBorderLayer())
+        } catch (e: Exception) {
+            logRenderFailure("drawTurnpointGeometry", e)
+        }
+    }
+
+    private fun buildTurnpointGeometryGeoJson(
+        waypoints: List<RacingWaypoint>,
+        geometryGenerator: RacingGeometryCoordinator
+    ): String? {
         val geometryFeatures = mutableListOf<String>()
-
-        waypoints.forEachIndexed { index, waypoint ->
-            try {
-                val geometryFeature = when (waypoint.role) {
-                    RacingWaypointRole.START -> {
-                        geometryGenerator.generateStartGeometry(index, waypoint, waypoints)
-                    }
-                    RacingWaypointRole.FINISH -> {
-                        geometryGenerator.generateFinishGeometry(index, waypoint, waypoints)
-                    }
-                    RacingWaypointRole.TURNPOINT -> {
-                        geometryGenerator.generateTurnpointGeometry(index, waypoint, waypoints)
-                    }
-                }
-
-                // CRASH FIX: Validate each geometry feature before adding
-                geometryFeature?.let { feature ->
-                    if (RacingGeoJSONValidator.validateGeoJSON(feature, "Racing ${waypoint.role} geometry")) {
-                        geometryFeatures.add(feature)
-                    } else {
-                    }
-                }
-            } catch (e: Exception) {
+        for (index in waypoints.indices) {
+            val waypoint = waypoints[index]
+            val feature = generateTurnpointGeometryFeature(index, waypoint, waypoints, geometryGenerator)
+                ?: continue
+            if (RacingGeoJSONValidator.validateGeoJSON(feature, "Racing ${waypoint.role} geometry")) {
+                geometryFeatures.add(feature)
             }
         }
+        if (geometryFeatures.isEmpty()) return null
+        return RacingGeoJSONValidator.validateFeatureCollection(
+            features = geometryFeatures,
+            context = "Racing turnpoint geometry FeatureCollection"
+        )
+    }
 
-        if (geometryFeatures.isNotEmpty()) {
-            val geometryGeoJson = """
-                {
-                    "type": "FeatureCollection",
-                    "features": [${geometryFeatures.joinToString(",")}]
-                }
-            """.trimIndent()
+    private fun generateTurnpointGeometryFeature(
+        index: Int,
+        waypoint: RacingWaypoint,
+        waypoints: List<RacingWaypoint>,
+        geometryGenerator: RacingGeometryCoordinator
+    ): String? {
+        return try {
+            when (waypoint.role) {
+                RacingWaypointRole.START ->
+                    geometryGenerator.generateStartGeometry(index, waypoint, waypoints)
 
-            // CRASH FIX: Validate complete geometry FeatureCollection before adding to MapLibre
-            if (!RacingGeoJSONValidator.validateGeoJSON(geometryGeoJson, "Racing turnpoint geometry FeatureCollection")) {
-                return
+                RacingWaypointRole.FINISH ->
+                    geometryGenerator.generateFinishGeometry(index, waypoint, waypoints)
+
+                RacingWaypointRole.TURNPOINT ->
+                    geometryGenerator.generateTurnpointGeometry(index, waypoint, waypoints)
             }
-
-            try {
-                style.addSource(GeoJsonSource("racing-turnpoint-areas", geometryGeoJson))
-
-                // Add fill layer for areas (cylinders, sectors)
-                style.addLayer(
-                    FillLayer("racing-turnpoint-areas-fill", "racing-turnpoint-areas")
-                        .withProperties(
-                            PropertyFactory.fillColor(
-                                Expression.switchCase(
-                                    Expression.eq(Expression.get("role"), Expression.literal("start")),
-                                    Expression.literal("#006400"), // Green for ALL start types
-                                    Expression.eq(Expression.get("role"), Expression.literal("finish")),
-                                    Expression.literal("#FF0000"), // Red for ALL finish types
-                                    Expression.literal("#0066FF") // Blue for ALL turnpoint types
-                                )
-                            ),
-                            PropertyFactory.fillOpacity(0.2f)
-                        )
-                )
-
-                // Add line layer for borders (start/finish lines, cylinder edges)
-                style.addLayer(
-                    LineLayer("racing-turnpoint-areas-border", "racing-turnpoint-areas")
-                        .withProperties(
-                            PropertyFactory.lineColor(
-                                Expression.switchCase(
-                                    Expression.eq(Expression.get("role"), Expression.literal("start")),
-                                    Expression.literal("#006400"), // Green for ALL start types
-                                    Expression.eq(Expression.get("role"), Expression.literal("finish")),
-                                    Expression.literal("#FF0000"), // Red for ALL finish types
-                                    Expression.literal("#0066FF") // Blue for ALL turnpoint types
-                                )
-                            ),
-                            PropertyFactory.lineWidth(1.5f),
-                            PropertyFactory.lineOpacity(0.9f)
-                        )
-                )
-
-            } catch (e: Exception) {
-            }
+        } catch (_: Exception) {
+            null
         }
+    }
+
+    private fun createTurnpointGeometryFillLayer(): FillLayer {
+        return FillLayer("racing-turnpoint-areas-fill", "racing-turnpoint-areas")
+            .withProperties(
+                PropertyFactory.fillColor(roleColorExpression()),
+                PropertyFactory.fillOpacity(0.2f)
+            )
+    }
+
+    private fun createTurnpointGeometryBorderLayer(): LineLayer {
+        return LineLayer("racing-turnpoint-areas-border", "racing-turnpoint-areas")
+            .withProperties(
+                PropertyFactory.lineColor(roleColorExpression()),
+                PropertyFactory.lineWidth(1.5f),
+                PropertyFactory.lineOpacity(0.9f)
+            )
+    }
+
+    private fun roleColorExpression(): Expression {
+        return Expression.switchCase(
+            Expression.eq(Expression.get("role"), Expression.literal("start")),
+            Expression.literal("#006400"),
+            Expression.eq(Expression.get("role"), Expression.literal("finish")),
+            Expression.literal("#FF0000"),
+            Expression.literal("#0066FF")
+        )
     }
 
     /**
@@ -276,9 +274,19 @@ internal class RacingMapRenderer {
                     )
             )
         } catch (e: Exception) {
-            e.printStackTrace() // Include stack trace for debugging MapLibre native crashes
-        } catch (e: Exception) {
-            e.printStackTrace()
+            logRenderFailure("drawRacingCourseLine", e)
         }
+    }
+
+    private fun logRenderFailure(stage: String, throwable: Throwable) {
+        if (!BuildConfig.DEBUG) {
+            return
+        }
+        val reason = throwable.message ?: throwable.javaClass.simpleName
+        Log.w(TAG, "$stage failed ($reason)")
+    }
+
+    private companion object {
+        const val TAG = "RacingMapRenderer"
     }
 }

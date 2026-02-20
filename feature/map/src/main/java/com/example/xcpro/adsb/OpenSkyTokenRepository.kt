@@ -3,15 +3,27 @@ package com.example.xcpro.adsb
 import com.example.xcpro.common.di.IoDispatcher
 import com.example.xcpro.core.time.Clock
 import com.google.gson.JsonParser
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 
+sealed interface OpenSkyTokenAccessState {
+    data class Available(val token: String) : OpenSkyTokenAccessState
+    data object NoCredentials : OpenSkyTokenAccessState
+    data class CredentialsRejected(val reason: String) : OpenSkyTokenAccessState
+    data class TransientFailure(val reason: String) : OpenSkyTokenAccessState
+}
+
 interface OpenSkyTokenRepository {
+    suspend fun getTokenAccessState(): OpenSkyTokenAccessState
     suspend fun getValidTokenOrNull(): String?
     fun hasCredentials(): Boolean
     fun invalidate()
@@ -32,25 +44,56 @@ class OpenSkyTokenRepositoryImpl @Inject constructor(
     private var expiryMonoMs: Long = 0L
 
     private val lock = Any()
+    private val tokenFetchMutex = Mutex()
 
-    override suspend fun getValidTokenOrNull(): String? = withContext(dispatcher) {
-        val now = clock.nowMonoMs()
-        synchronized(lock) {
+    override suspend fun getTokenAccessState(): OpenSkyTokenAccessState = withContext(dispatcher) {
+        fun cachedTokenIfFresh(nowMonoMs: Long): String? = synchronized(lock) {
             val token = cachedToken
-            if (!token.isNullOrBlank() && now + TOKEN_REFRESH_BUFFER_MS < expiryMonoMs) {
-                return@withContext token
+            if (!token.isNullOrBlank() && nowMonoMs + TOKEN_REFRESH_BUFFER_MS < expiryMonoMs) {
+                token
+            } else {
+                null
             }
         }
-
-        val credentials = credentialsRepository.loadCredentials() ?: return@withContext null
-        val fresh = fetchToken(credentials) ?: return@withContext null
-        synchronized(lock) {
-            cachedToken = fresh.accessToken
-            val expirySec = fresh.expiresInSec ?: DEFAULT_TOKEN_EXPIRY_SEC
-            expiryMonoMs = clock.nowMonoMs() + expirySec * 1_000L
+        cachedTokenIfFresh(clock.nowMonoMs())?.let { freshToken ->
+            return@withContext OpenSkyTokenAccessState.Available(freshToken)
         }
-        fresh.accessToken
+
+        val credentials = credentialsRepository.loadCredentials()
+            ?: return@withContext OpenSkyTokenAccessState.NoCredentials
+
+        return@withContext tokenFetchMutex.withLock {
+            cachedTokenIfFresh(clock.nowMonoMs())?.let { refreshedByAnotherRequest ->
+                return@withLock OpenSkyTokenAccessState.Available(refreshedByAnotherRequest)
+            }
+
+            when (val result = fetchToken(credentials)) {
+                is TokenFetchResult.Success -> {
+                    synchronized(lock) {
+                        cachedToken = result.token.accessToken
+                        val expirySec = result.token.expiresInSec ?: DEFAULT_TOKEN_EXPIRY_SEC
+                        expiryMonoMs = clock.nowMonoMs() + expirySec * 1_000L
+                    }
+                    OpenSkyTokenAccessState.Available(result.token.accessToken)
+                }
+
+                is TokenFetchResult.CredentialsRejected -> {
+                    synchronized(lock) {
+                        cachedToken = null
+                        expiryMonoMs = 0L
+                    }
+                    OpenSkyTokenAccessState.CredentialsRejected(result.reason)
+                }
+
+                is TokenFetchResult.TransientFailure -> {
+                    OpenSkyTokenAccessState.TransientFailure(result.reason)
+                }
+            }
+        }
     }
+
+    override suspend fun getValidTokenOrNull(): String? =
+        (getTokenAccessState() as? OpenSkyTokenAccessState.Available)?.token
 
     override fun hasCredentials(): Boolean = credentialsRepository.loadCredentials() != null
 
@@ -61,7 +104,7 @@ class OpenSkyTokenRepositoryImpl @Inject constructor(
         }
     }
 
-    private fun fetchToken(credentials: OpenSkyClientCredentials): OpenSkyTokenResponse? {
+    private suspend fun fetchToken(credentials: OpenSkyClientCredentials): TokenFetchResult {
         val formBody = FormBody.Builder()
             .add("grant_type", "client_credentials")
             .add("client_id", credentials.clientId)
@@ -73,16 +116,51 @@ class OpenSkyTokenRepositoryImpl @Inject constructor(
             .post(formBody)
             .build()
 
-        return runCatching {
-            httpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return@use null
+        return try {
+            httpClient.newCall(request).awaitResponse().use { response ->
+                if (response.code in CREDENTIALS_REJECTED_CODES) {
+                    return@use TokenFetchResult.CredentialsRejected(
+                        reason = "HTTP ${response.code}"
+                    )
+                }
+                if (!response.isSuccessful) {
+                    return@use TokenFetchResult.TransientFailure(
+                        reason = "HTTP ${response.code}"
+                    )
+                }
                 val body = response.body?.string().orEmpty()
-                val root = JsonParser.parseString(body).asJsonObject
+                val root = runCatching { JsonParser.parseString(body).asJsonObject }
+                    .getOrElse {
+                        return@use TokenFetchResult.TransientFailure(
+                            reason = "MalformedTokenResponse"
+                        )
+                    }
                 val token = root.get("access_token")?.takeIf { it.isJsonPrimitive }?.asString
                 val expiresIn = root.get("expires_in")?.takeIf { it.isJsonPrimitive }?.asLong
-                if (token.isNullOrBlank()) null else OpenSkyTokenResponse(token, expiresIn)
+                if (token.isNullOrBlank()) {
+                    TokenFetchResult.TransientFailure(reason = "MissingAccessToken")
+                } else {
+                    TokenFetchResult.Success(
+                        token = OpenSkyTokenResponse(
+                            accessToken = token,
+                            expiresInSec = expiresIn
+                        )
+                    )
+                }
             }
-        }.getOrNull()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: IOException) {
+            TokenFetchResult.TransientFailure(reason = e::class.java.simpleName.ifBlank { "NetworkError" })
+        } catch (_: Exception) {
+            TokenFetchResult.TransientFailure(reason = "TokenFetchFailure")
+        }
+    }
+
+    private sealed interface TokenFetchResult {
+        data class Success(val token: OpenSkyTokenResponse) : TokenFetchResult
+        data class CredentialsRejected(val reason: String) : TokenFetchResult
+        data class TransientFailure(val reason: String) : TokenFetchResult
     }
 
     private companion object {
@@ -90,5 +168,6 @@ class OpenSkyTokenRepositoryImpl @Inject constructor(
             "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
         private const val DEFAULT_TOKEN_EXPIRY_SEC = 1_800L
         private const val TOKEN_REFRESH_BUFFER_MS = 5L * 60L * 1_000L
+        private val CREDENTIALS_REJECTED_CODES = setOf(400, 401, 403)
     }
 }

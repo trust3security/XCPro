@@ -340,6 +340,7 @@ class AATTaskManager(val context: Context? = null) {
             val updatedWaypoints = _currentAATTask.waypoints.toMutableList()
             updatedWaypoints[index] = updatedWaypoint
             _currentAATTask = _currentAATTask.copy(waypoints = updatedWaypoints)
+            saveAATTask()
         }
     }
 }

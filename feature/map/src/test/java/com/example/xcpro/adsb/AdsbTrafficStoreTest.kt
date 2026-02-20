@@ -245,6 +245,42 @@ class AdsbTrafficStoreTest {
         assertTrue(selection.displayed.first().usesOwnshipReference.not())
     }
 
+    @Test
+    fun select_usesStableTieBreakOrderingForEqualPriorityTargets() {
+        val store = AdsbTrafficStore()
+        val now = 540_000L
+        val firstInserted = target(index = 2, receivedMonoMs = now).copy(
+            lat = -33.8688,
+            lon = 151.2093,
+            trackDeg = null
+        )
+        val secondInserted = target(index = 1, receivedMonoMs = now).copy(
+            lat = -33.8688,
+            lon = 151.2093,
+            trackDeg = null
+        )
+        store.upsertAll(listOf(firstInserted, secondInserted))
+
+        repeat(5) {
+            val selection = store.select(
+                nowMonoMs = now,
+                queryCenterLat = -33.8688,
+                queryCenterLon = 151.2093,
+                referenceLat = -33.8688,
+                referenceLon = 151.2093,
+                ownshipAltitudeMeters = 1_000.0,
+                usesOwnshipReference = false,
+                radiusMeters = 20_000.0,
+                verticalAboveMeters = 5_000.0,
+                verticalBelowMeters = 5_000.0,
+                maxDisplayed = 30,
+                staleAfterSec = 60
+            )
+            val orderedIds = selection.displayed.map { it.id.raw }
+            assertEquals(listOf("000001", "000002"), orderedIds)
+        }
+    }
+
     private fun target(
         index: Int,
         lat: Double = -33.8688,

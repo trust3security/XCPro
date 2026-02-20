@@ -2,6 +2,12 @@
 
 This folder contains everything needed to implement SkySight forecast overlays in XCPro without guessing.
 
+## Current status (2026-02-18)
+- Stage A is complete in code.
+- Stage B is complete in code and bound in DI (`SkySightForecastProviderAdapter`).
+- Evidence pack exists at `docs/integrations/skysight/evidence/`.
+- Active next track: satellite imagery overlay plan (`18_SATELLITE_OVERLAY_IMPLEMENTATION_PLAN.md`).
+
 ## 1) Execution order (read this first)
 - `SKYSIGHT_MVP_EXECUTION_ORDER.md`
 
@@ -68,12 +74,16 @@ Evidence files live here (commit redacted):
   - Comprehensive phase-by-phase plan to implement convergence in XCPro with
     architecture boundaries, tests, acceptance criteria, and rollback.
 
+## 15) Satellite overlay implementation plan
+- `18_SATELLITE_OVERLAY_IMPLEMENTATION_PLAN.md`
+  - Architecture-compliant implementation plan for HighSight-backed satellite
+    overlay integration (with compliance and rollout gates).
+
 ---
 
 ## Quick "what to do today"
-1) Implement Stage A:
-   - Follow `TRACK_A_FAKE_FORECAST_PROVIDER.md`
-2) Capture SkySight evidence pack:
-   - Follow `SKYSIGHT_EVIDENCE_CAPTURE.md`
-3) Only then implement SkySight adapter:
-   - Follow `SKYSIGHT_API_CONTRACT_REQUIRED.md`
+1) If changing forecast contracts:
+   - Start from `SKYSIGHT_API_CONTRACT_REQUIRED.md` and refresh the evidence pack first.
+2) For satellite imagery implementation:
+   - Follow `18_SATELLITE_OVERLAY_IMPLEMENTATION_PLAN.md`.
+3) Keep architecture docs in sync for pipeline/runtime wiring updates.

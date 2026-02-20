@@ -160,8 +160,18 @@ class TaskSheetViewModel @Inject constructor(
         taskCoordinator.updateAATParameters(minimumTime, maximumTime)
     }
 
-    fun importPersistedTask(json: String) = mutate {
-        val persisted = TaskPersistSerializer.deserialize(json)
+    fun importPersistedTask(json: String) {
+        tryImportPersistedTask(json)
+    }
+
+    fun tryImportPersistedTask(json: String): Boolean {
+        val persisted = runCatching { TaskPersistSerializer.deserialize(json) }.getOrNull() ?: return false
+        return runCatching {
+            mutate { applyPersistedTask(persisted) }
+        }.isSuccess
+    }
+
+    private fun applyPersistedTask(persisted: TaskPersistSerializer.PersistedTask) {
         val (importedTask, targets) = TaskPersistSerializer.toTask(persisted)
         taskCoordinator.setTaskType(persisted.taskType)
         taskCoordinator.clearTask()
@@ -244,7 +254,7 @@ class TaskSheetViewModel @Inject constructor(
 
     private fun importWaypoints(importedTask: Task) {
         importedTask.waypoints.forEach { waypoint ->
-            onAddWaypoint(
+            taskCoordinator.addWaypoint(
                 SearchWaypoint(
                     id = waypoint.id,
                     title = waypoint.title,

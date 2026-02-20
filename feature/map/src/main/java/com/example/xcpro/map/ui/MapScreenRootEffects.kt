@@ -26,7 +26,9 @@ import com.example.xcpro.map.MapScreenViewModel
 import com.example.xcpro.map.MapTaskScreenManager
 import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.adsb.AdsbTrafficUiModel
+import com.example.xcpro.ogn.OgnGliderTrailSegment
 import com.example.xcpro.ogn.OgnTrafficTarget
+import com.example.xcpro.ogn.OgnThermalHotspot
 import com.example.xcpro.map.ui.effects.MapComposeEffects
 import com.example.xcpro.profiles.ProfileUiState
 import com.example.xcpro.replay.SessionState
@@ -62,6 +64,10 @@ internal fun MapScreenOverlayEffects(
     overlayManager: MapOverlayManager,
     ognTargets: List<OgnTrafficTarget>,
     ognOverlayEnabled: Boolean,
+    ognThermalHotspots: List<OgnThermalHotspot>,
+    showOgnThermalsEnabled: Boolean,
+    ognGliderTrailSegments: List<OgnGliderTrailSegment>,
+    showOgnGliderTrailsEnabled: Boolean,
     ognIconSizePx: Int,
     adsbTargets: List<AdsbTrafficUiModel>,
     adsbOverlayEnabled: Boolean,
@@ -73,6 +79,16 @@ internal fun MapScreenOverlayEffects(
     LaunchedEffect(ognTargets, ognOverlayEnabled) {
         overlayManager.updateOgnTrafficTargets(
             if (ognOverlayEnabled) ognTargets else emptyList()
+        )
+    }
+    LaunchedEffect(ognThermalHotspots, ognOverlayEnabled, showOgnThermalsEnabled) {
+        overlayManager.updateOgnThermalHotspots(
+            if (ognOverlayEnabled && showOgnThermalsEnabled) ognThermalHotspots else emptyList()
+        )
+    }
+    LaunchedEffect(ognGliderTrailSegments, ognOverlayEnabled, showOgnGliderTrailsEnabled) {
+        overlayManager.updateOgnGliderTrailSegments(
+            if (ognOverlayEnabled && showOgnGliderTrailsEnabled) ognGliderTrailSegments else emptyList()
         )
     }
     LaunchedEffect(ognIconSizePx) {
@@ -117,6 +133,7 @@ internal fun MapVisibilityLifecycleEffect(mapViewModel: MapScreenViewModel) {
 @Composable
 internal fun MapScreenComposeAndLifecycleEffects(
     lifecycleManager: MapLifecycleManager,
+    runtimeController: MapRuntimeController,
     locationManager: LocationManager,
     locationPermissionLauncher: ActivityResultLauncher<Array<String>>,
     currentLocation: MapLocationUiModel?,
@@ -158,7 +175,10 @@ internal fun MapScreenComposeAndLifecycleEffects(
         allowSensorStart = allowSensorStart
     )
     MapLifecycleEffects.LifecycleObserverEffect(lifecycleManager)
-    DisposableEffect(lifecycleManager) {
-        onDispose { lifecycleManager.cleanup() }
+    DisposableEffect(lifecycleManager, runtimeController) {
+        onDispose {
+            runtimeController.clearMap()
+            lifecycleManager.cleanup()
+        }
     }
 }

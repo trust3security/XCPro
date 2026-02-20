@@ -16,6 +16,10 @@ import com.example.xcpro.ogn.OgnTrafficRepository
 import com.example.xcpro.ogn.OgnTrafficPreferencesRepository
 import com.example.xcpro.ogn.OgnTrafficSnapshot
 import com.example.xcpro.ogn.OgnTrafficTarget
+import com.example.xcpro.ogn.OgnGliderTrailRepository
+import com.example.xcpro.ogn.OgnGliderTrailSegment
+import com.example.xcpro.ogn.OgnThermalHotspot
+import com.example.xcpro.ogn.OgnThermalRepository
 import com.example.xcpro.qnh.QnhRepository
 import com.example.xcpro.sensors.CompleteFlightData
 import com.example.xcpro.weather.wind.data.WindSensorFusionRepository
@@ -271,13 +275,19 @@ class MapFeatureFlagsUseCase @Inject constructor(
 
 class OgnTrafficUseCase @Inject constructor(
     private val repository: OgnTrafficRepository,
-    private val preferencesRepository: OgnTrafficPreferencesRepository
+    private val preferencesRepository: OgnTrafficPreferencesRepository,
+    private val thermalRepository: OgnThermalRepository,
+    private val gliderTrailRepository: OgnGliderTrailRepository
 ) {
     val targets: StateFlow<List<OgnTrafficTarget>> = repository.targets
     val snapshot: StateFlow<OgnTrafficSnapshot> = repository.snapshot
     val isStreamingEnabled: StateFlow<Boolean> = repository.isEnabled
     val overlayEnabled: Flow<Boolean> = preferencesRepository.enabledFlow
     val iconSizePx: Flow<Int> = preferencesRepository.iconSizePxFlow
+    val thermalHotspots: StateFlow<List<OgnThermalHotspot>> = thermalRepository.hotspots
+    val showThermalsEnabled: Flow<Boolean> = preferencesRepository.showThermalsEnabledFlow
+    val gliderTrailSegments: StateFlow<List<OgnGliderTrailSegment>> = gliderTrailRepository.segments
+    val showGliderTrailsEnabled: Flow<Boolean> = preferencesRepository.showGliderTrailsEnabledFlow
 
     fun setStreamingEnabled(enabled: Boolean) {
         repository.setEnabled(enabled)
@@ -293,6 +303,14 @@ class OgnTrafficUseCase @Inject constructor(
 
     suspend fun setIconSizePx(iconSizePx: Int) {
         preferencesRepository.setIconSizePx(iconSizePx)
+    }
+
+    suspend fun setShowThermalsEnabled(enabled: Boolean) {
+        preferencesRepository.setShowThermalsEnabled(enabled)
+    }
+
+    suspend fun setShowGliderTrailsEnabled(enabled: Boolean) {
+        preferencesRepository.setShowGliderTrailsEnabled(enabled)
     }
 
     fun stop() {

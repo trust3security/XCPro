@@ -31,17 +31,41 @@ class ForecastOverlayRepository @Inject constructor(
     val overlayState: Flow<ForecastOverlayUiState> = loadingOverlayState()
 
     fun loadingOverlayState(): Flow<ForecastOverlayUiState> = flow {
-        var cachedTileKey: OverlayTileKey? = null
-        var cachedTileSpec: ForecastTileSpec? = null
-        var tileErrorKey: OverlayTileKey? = null
-        var tileErrorMessage: String? = null
-        var lastTileAttemptMs: Long = 0L
+        var cachedPrimaryTileKey: OverlayTileKey? = null
+        var cachedPrimaryTileSpec: ForecastTileSpec? = null
+        var primaryTileErrorKey: OverlayTileKey? = null
+        var primaryTileErrorMessage: String? = null
+        var lastPrimaryTileAttemptMs: Long = 0L
 
-        var cachedLegendKey: OverlayLegendKey? = null
-        var cachedLegend: ForecastLegendSpec? = null
-        var legendErrorKey: OverlayLegendKey? = null
-        var legendErrorMessage: String? = null
-        var lastLegendAttemptMs: Long = 0L
+        var cachedPrimaryLegendKey: OverlayLegendKey? = null
+        var cachedPrimaryLegend: ForecastLegendSpec? = null
+        var primaryLegendErrorKey: OverlayLegendKey? = null
+        var primaryLegendErrorMessage: String? = null
+        var lastPrimaryLegendAttemptMs: Long = 0L
+
+        var cachedSecondaryPrimaryTileKey: OverlayTileKey? = null
+        var cachedSecondaryPrimaryTileSpec: ForecastTileSpec? = null
+        var secondaryPrimaryTileErrorKey: OverlayTileKey? = null
+        var secondaryPrimaryTileErrorMessage: String? = null
+        var lastSecondaryPrimaryTileAttemptMs: Long = 0L
+
+        var cachedSecondaryPrimaryLegendKey: OverlayLegendKey? = null
+        var cachedSecondaryPrimaryLegend: ForecastLegendSpec? = null
+        var secondaryPrimaryLegendErrorKey: OverlayLegendKey? = null
+        var secondaryPrimaryLegendErrorMessage: String? = null
+        var lastSecondaryPrimaryLegendAttemptMs: Long = 0L
+
+        var cachedWindTileKey: OverlayTileKey? = null
+        var cachedWindTileSpec: ForecastTileSpec? = null
+        var windTileErrorKey: OverlayTileKey? = null
+        var windTileErrorMessage: String? = null
+        var lastWindTileAttemptMs: Long = 0L
+
+        var cachedWindLegendKey: OverlayLegendKey? = null
+        var cachedWindLegend: ForecastLegendSpec? = null
+        var windLegendErrorKey: OverlayLegendKey? = null
+        var windLegendErrorMessage: String? = null
+        var lastWindLegendAttemptMs: Long = 0L
 
         selectionInputFlow().collect { input ->
             val preferences = input.preferences
@@ -50,122 +74,448 @@ class ForecastOverlayRepository @Inject constructor(
                 preferences = preferences,
                 nowUtcMs = nowUtcMs
             )
+            val normalizedRegionCode = normalizeForecastRegionCode(preferences.selectedRegion)
+            val primaryEnabled = preferences.overlayEnabled
+            val secondaryPrimaryEnabled = primaryEnabled &&
+                preferences.secondaryPrimaryOverlayEnabled &&
+                selection.primaryParameters.size > 1
+            val windEnabled = preferences.windOverlayEnabled && selection.windParameters.isNotEmpty()
+            val anyOverlayEnabled = primaryEnabled || windEnabled
+
             val baseState = ForecastOverlayUiState(
-                enabled = preferences.overlayEnabled,
+                enabled = primaryEnabled,
                 opacity = preferences.opacity,
                 windOverlayScale = preferences.windOverlayScale,
+                secondaryPrimaryOverlayEnabled = secondaryPrimaryEnabled,
+                windOverlayEnabled = windEnabled,
                 windDisplayMode = preferences.windDisplayMode,
-                selectedRegionCode = normalizeForecastRegionCode(preferences.selectedRegion),
+                selectedRegionCode = normalizedRegionCode,
                 autoTimeEnabled = preferences.autoTimeEnabled,
                 followTimeOffsetMinutes = preferences.followTimeOffsetMinutes,
-                parameters = selection.parameters,
-                selectedParameterId = selection.selectedParameterId,
+                primaryParameters = selection.primaryParameters,
+                selectedPrimaryParameterId = selection.selectedPrimaryParameterId,
+                selectedSecondaryPrimaryParameterId = selection.selectedSecondaryPrimaryParameterId,
+                windParameters = selection.windParameters,
+                selectedWindParameterId = selection.selectedWindParameterId,
                 timeSlots = selection.timeSlots,
                 selectedTimeUtcMs = selection.selectedTimeSlot.validTimeUtcMs
             )
-            if (!preferences.overlayEnabled) {
-                cachedTileKey = null
-                cachedTileSpec = null
-                tileErrorKey = null
-                tileErrorMessage = null
-                lastTileAttemptMs = 0L
-                cachedLegendKey = null
-                cachedLegend = null
-                legendErrorKey = null
-                legendErrorMessage = null
-                lastLegendAttemptMs = 0L
+            if (!primaryEnabled) {
+                cachedPrimaryTileKey = null
+                cachedPrimaryTileSpec = null
+                primaryTileErrorKey = null
+                primaryTileErrorMessage = null
+                lastPrimaryTileAttemptMs = 0L
+
+                cachedPrimaryLegendKey = null
+                cachedPrimaryLegend = null
+                primaryLegendErrorKey = null
+                primaryLegendErrorMessage = null
+                lastPrimaryLegendAttemptMs = 0L
+
+                cachedSecondaryPrimaryTileKey = null
+                cachedSecondaryPrimaryTileSpec = null
+                secondaryPrimaryTileErrorKey = null
+                secondaryPrimaryTileErrorMessage = null
+                lastSecondaryPrimaryTileAttemptMs = 0L
+
+                cachedSecondaryPrimaryLegendKey = null
+                cachedSecondaryPrimaryLegend = null
+                secondaryPrimaryLegendErrorKey = null
+                secondaryPrimaryLegendErrorMessage = null
+                lastSecondaryPrimaryLegendAttemptMs = 0L
+            }
+
+            if (!anyOverlayEnabled) {
+                cachedWindTileKey = null
+                cachedWindTileSpec = null
+                windTileErrorKey = null
+                windTileErrorMessage = null
+                lastWindTileAttemptMs = 0L
+
+                cachedWindLegendKey = null
+                cachedWindLegend = null
+                windLegendErrorKey = null
+                windLegendErrorMessage = null
+                lastWindLegendAttemptMs = 0L
+
                 emit(baseState)
                 return@collect
             }
 
-            val tileKey = OverlayTileKey(
-                regionCode = normalizeForecastRegionCode(preferences.selectedRegion),
-                parameterId = selection.selectedParameterId,
-                timeUtcMs = selection.selectedTimeSlot.validTimeUtcMs
-            )
-            val legendKey = OverlayLegendKey(
-                regionCode = normalizeForecastRegionCode(preferences.selectedRegion),
-                parameterId = selection.selectedParameterId,
-                dayBucket = forecastRegionLocalDayBucket(
-                    utcMs = selection.selectedTimeSlot.validTimeUtcMs,
-                    regionCode = preferences.selectedRegion
-                )
+            val selectedTimeUtcMs = selection.selectedTimeSlot.validTimeUtcMs
+            val dayBucket = forecastRegionLocalDayBucket(
+                utcMs = selectedTimeUtcMs,
+                regionCode = preferences.selectedRegion
             )
 
-            val currentTileSpec = if (cachedTileKey == tileKey) cachedTileSpec else null
-            val currentLegend = if (cachedLegendKey == legendKey) cachedLegend else null
-
-            val shouldFetchTile = currentTileSpec == null ||
-                shouldRetry(
-                    errorKeyMatches = tileErrorKey == tileKey,
-                    lastAttemptMs = lastTileAttemptMs,
-                    nowUtcMs = nowUtcMs
+            val primaryTileKey = OverlayTileKey(
+                regionCode = normalizedRegionCode,
+                parameterId = selection.selectedPrimaryParameterId,
+                timeUtcMs = selectedTimeUtcMs
+            )
+            val primaryLegendKey = OverlayLegendKey(
+                regionCode = normalizedRegionCode,
+                parameterId = selection.selectedPrimaryParameterId,
+                dayBucket = dayBucket
+            )
+            val secondaryPrimaryTileKey = if (secondaryPrimaryEnabled) {
+                OverlayTileKey(
+                    regionCode = normalizedRegionCode,
+                    parameterId = selection.selectedSecondaryPrimaryParameterId,
+                    timeUtcMs = selectedTimeUtcMs
                 )
-            val shouldFetchLegend = currentLegend == null ||
-                shouldRetry(
-                    errorKeyMatches = legendErrorKey == legendKey,
-                    lastAttemptMs = lastLegendAttemptMs,
-                    nowUtcMs = nowUtcMs
+            } else {
+                null
+            }
+            val secondaryPrimaryLegendKey = if (secondaryPrimaryEnabled) {
+                OverlayLegendKey(
+                    regionCode = normalizedRegionCode,
+                    parameterId = selection.selectedSecondaryPrimaryParameterId,
+                    dayBucket = dayBucket
+                )
+            } else {
+                null
+            }
+
+            val windTileKey = if (windEnabled) {
+                OverlayTileKey(
+                    regionCode = normalizedRegionCode,
+                    parameterId = selection.selectedWindParameterId,
+                    timeUtcMs = selectedTimeUtcMs
+                )
+            } else {
+                null
+            }
+            val windLegendKey = if (windEnabled) {
+                OverlayLegendKey(
+                    regionCode = normalizedRegionCode,
+                    parameterId = selection.selectedWindParameterId,
+                    dayBucket = dayBucket
+                )
+            } else {
+                null
+            }
+
+            if (!secondaryPrimaryEnabled) {
+                cachedSecondaryPrimaryTileKey = null
+                cachedSecondaryPrimaryTileSpec = null
+                secondaryPrimaryTileErrorKey = null
+                secondaryPrimaryTileErrorMessage = null
+                lastSecondaryPrimaryTileAttemptMs = 0L
+
+                cachedSecondaryPrimaryLegendKey = null
+                cachedSecondaryPrimaryLegend = null
+                secondaryPrimaryLegendErrorKey = null
+                secondaryPrimaryLegendErrorMessage = null
+                lastSecondaryPrimaryLegendAttemptMs = 0L
+            }
+
+            if (!windEnabled) {
+                cachedWindTileKey = null
+                cachedWindTileSpec = null
+                windTileErrorKey = null
+                windTileErrorMessage = null
+                lastWindTileAttemptMs = 0L
+
+                cachedWindLegendKey = null
+                cachedWindLegend = null
+                windLegendErrorKey = null
+                windLegendErrorMessage = null
+                lastWindLegendAttemptMs = 0L
+            }
+
+            val currentPrimaryTile = if (cachedPrimaryTileKey == primaryTileKey) cachedPrimaryTileSpec else null
+            val currentPrimaryLegend = if (cachedPrimaryLegendKey == primaryLegendKey) cachedPrimaryLegend else null
+            val currentSecondaryPrimaryTile = if (
+                secondaryPrimaryTileKey != null && cachedSecondaryPrimaryTileKey == secondaryPrimaryTileKey
+            ) {
+                cachedSecondaryPrimaryTileSpec
+            } else {
+                null
+            }
+            val currentSecondaryPrimaryLegend = if (
+                secondaryPrimaryLegendKey != null && cachedSecondaryPrimaryLegendKey == secondaryPrimaryLegendKey
+            ) {
+                cachedSecondaryPrimaryLegend
+            } else {
+                null
+            }
+            val currentWindTile = if (windTileKey != null && cachedWindTileKey == windTileKey) {
+                cachedWindTileSpec
+            } else {
+                null
+            }
+            val currentWindLegend = if (windLegendKey != null && cachedWindLegendKey == windLegendKey) {
+                cachedWindLegend
+            } else {
+                null
+            }
+
+            val shouldFetchPrimaryTile = primaryEnabled && (
+                currentPrimaryTile == null ||
+                    shouldRetry(
+                        errorKeyMatches = primaryTileErrorKey == primaryTileKey,
+                        lastAttemptMs = lastPrimaryTileAttemptMs,
+                        nowUtcMs = nowUtcMs
+                    )
+                )
+            val shouldFetchPrimaryLegend = primaryEnabled && (
+                currentPrimaryLegend == null ||
+                    shouldRetry(
+                        errorKeyMatches = primaryLegendErrorKey == primaryLegendKey,
+                        lastAttemptMs = lastPrimaryLegendAttemptMs,
+                        nowUtcMs = nowUtcMs
+                    )
+                )
+            val shouldFetchSecondaryPrimaryTile = secondaryPrimaryTileKey != null && (
+                currentSecondaryPrimaryTile == null ||
+                    shouldRetry(
+                        errorKeyMatches = secondaryPrimaryTileErrorKey == secondaryPrimaryTileKey,
+                        lastAttemptMs = lastSecondaryPrimaryTileAttemptMs,
+                        nowUtcMs = nowUtcMs
+                    )
+                )
+            val shouldFetchSecondaryPrimaryLegend = secondaryPrimaryLegendKey != null && (
+                currentSecondaryPrimaryLegend == null ||
+                    shouldRetry(
+                        errorKeyMatches = secondaryPrimaryLegendErrorKey == secondaryPrimaryLegendKey,
+                        lastAttemptMs = lastSecondaryPrimaryLegendAttemptMs,
+                        nowUtcMs = nowUtcMs
+                    )
+                )
+            val shouldFetchWindTile = windTileKey != null && (
+                currentWindTile == null ||
+                    shouldRetry(
+                        errorKeyMatches = windTileErrorKey == windTileKey,
+                        lastAttemptMs = lastWindTileAttemptMs,
+                        nowUtcMs = nowUtcMs
+                    )
+                )
+            val shouldFetchWindLegend = windLegendKey != null && (
+                currentWindLegend == null ||
+                    shouldRetry(
+                        errorKeyMatches = windLegendErrorKey == windLegendKey,
+                        lastAttemptMs = lastWindLegendAttemptMs,
+                        nowUtcMs = nowUtcMs
+                    )
                 )
 
-            if (shouldFetchTile || shouldFetchLegend) {
+            if (
+                shouldFetchPrimaryTile ||
+                shouldFetchPrimaryLegend ||
+                shouldFetchSecondaryPrimaryTile ||
+                shouldFetchSecondaryPrimaryLegend ||
+                shouldFetchWindTile ||
+                shouldFetchWindLegend
+            ) {
                 emit(
                     baseState.copy(
                         isLoading = true,
-                        tileSpec = currentTileSpec,
-                        legend = currentLegend
+                        primaryTileSpec = if (primaryEnabled) currentPrimaryTile else null,
+                        primaryLegend = if (primaryEnabled) currentPrimaryLegend else null,
+                        secondaryPrimaryTileSpec = currentSecondaryPrimaryTile,
+                        secondaryPrimaryLegend = currentSecondaryPrimaryLegend,
+                        windTileSpec = currentWindTile,
+                        windLegend = currentWindLegend
                     )
                 )
             }
 
-            if (shouldFetchTile) {
-                lastTileAttemptMs = nowUtcMs
+            if (shouldFetchPrimaryTile) {
+                lastPrimaryTileAttemptMs = nowUtcMs
                 try {
                     val tileSpec = tilesPort.getTileSpec(
-                        parameterId = selection.selectedParameterId,
+                        parameterId = selection.selectedPrimaryParameterId,
                         timeSlot = selection.selectedTimeSlot,
                         regionCode = preferences.selectedRegion
                     )
-                    cachedTileKey = tileKey
-                    cachedTileSpec = tileSpec
-                    if (tileErrorKey == tileKey) {
-                        tileErrorKey = null
-                        tileErrorMessage = null
+                    cachedPrimaryTileKey = primaryTileKey
+                    cachedPrimaryTileSpec = tileSpec
+                    if (primaryTileErrorKey == primaryTileKey) {
+                        primaryTileErrorKey = null
+                        primaryTileErrorMessage = null
                     }
                 } catch (t: Throwable) {
-                    tileErrorKey = tileKey
-                    tileErrorMessage = t.message ?: "Failed to load forecast tiles"
+                    primaryTileErrorKey = primaryTileKey
+                    primaryTileErrorMessage = t.message ?: "Failed to load forecast tiles"
                 }
             }
 
-            if (shouldFetchLegend) {
-                lastLegendAttemptMs = nowUtcMs
+            if (shouldFetchPrimaryLegend) {
+                lastPrimaryLegendAttemptMs = nowUtcMs
                 try {
                     val legend = legendPort.getLegend(
-                        parameterId = selection.selectedParameterId,
+                        parameterId = selection.selectedPrimaryParameterId,
                         timeSlot = selection.selectedTimeSlot,
                         regionCode = preferences.selectedRegion
                     )
-                    cachedLegendKey = legendKey
-                    cachedLegend = legend
-                    if (legendErrorKey == legendKey) {
-                        legendErrorKey = null
-                        legendErrorMessage = null
+                    cachedPrimaryLegendKey = primaryLegendKey
+                    cachedPrimaryLegend = legend
+                    if (primaryLegendErrorKey == primaryLegendKey) {
+                        primaryLegendErrorKey = null
+                        primaryLegendErrorMessage = null
                     }
                 } catch (t: Throwable) {
-                    legendErrorKey = legendKey
-                    legendErrorMessage = t.message ?: "Failed to load forecast legend"
+                    primaryLegendErrorKey = primaryLegendKey
+                    primaryLegendErrorMessage = t.message ?: "Failed to load forecast legend"
                 }
             }
 
-            val tileForState = if (cachedTileKey == tileKey) cachedTileSpec else null
-            val legendForState = if (cachedLegendKey == legendKey) cachedLegend else null
+            if (shouldFetchSecondaryPrimaryTile) {
+                val requiredSecondaryPrimaryTileKey = requireNotNull(secondaryPrimaryTileKey)
+                lastSecondaryPrimaryTileAttemptMs = nowUtcMs
+                try {
+                    val tileSpec = tilesPort.getTileSpec(
+                        parameterId = selection.selectedSecondaryPrimaryParameterId,
+                        timeSlot = selection.selectedTimeSlot,
+                        regionCode = preferences.selectedRegion
+                    )
+                    cachedSecondaryPrimaryTileKey = requiredSecondaryPrimaryTileKey
+                    cachedSecondaryPrimaryTileSpec = tileSpec
+                    if (secondaryPrimaryTileErrorKey == requiredSecondaryPrimaryTileKey) {
+                        secondaryPrimaryTileErrorKey = null
+                        secondaryPrimaryTileErrorMessage = null
+                    }
+                } catch (t: Throwable) {
+                    secondaryPrimaryTileErrorKey = requiredSecondaryPrimaryTileKey
+                    secondaryPrimaryTileErrorMessage = t.message
+                        ?: "Failed to load secondary forecast tiles"
+                }
+            }
+
+            if (shouldFetchSecondaryPrimaryLegend) {
+                val requiredSecondaryPrimaryLegendKey = requireNotNull(secondaryPrimaryLegendKey)
+                lastSecondaryPrimaryLegendAttemptMs = nowUtcMs
+                try {
+                    val legend = legendPort.getLegend(
+                        parameterId = selection.selectedSecondaryPrimaryParameterId,
+                        timeSlot = selection.selectedTimeSlot,
+                        regionCode = preferences.selectedRegion
+                    )
+                    cachedSecondaryPrimaryLegendKey = requiredSecondaryPrimaryLegendKey
+                    cachedSecondaryPrimaryLegend = legend
+                    if (secondaryPrimaryLegendErrorKey == requiredSecondaryPrimaryLegendKey) {
+                        secondaryPrimaryLegendErrorKey = null
+                        secondaryPrimaryLegendErrorMessage = null
+                    }
+                } catch (t: Throwable) {
+                    secondaryPrimaryLegendErrorKey = requiredSecondaryPrimaryLegendKey
+                    secondaryPrimaryLegendErrorMessage = t.message
+                        ?: "Failed to load secondary forecast legend"
+                }
+            }
+
+            if (shouldFetchWindTile) {
+                val requiredWindTileKey = requireNotNull(windTileKey)
+                lastWindTileAttemptMs = nowUtcMs
+                try {
+                    val tileSpec = tilesPort.getTileSpec(
+                        parameterId = selection.selectedWindParameterId,
+                        timeSlot = selection.selectedTimeSlot,
+                        regionCode = preferences.selectedRegion
+                    )
+                    cachedWindTileKey = requiredWindTileKey
+                    cachedWindTileSpec = tileSpec
+                    if (windTileErrorKey == requiredWindTileKey) {
+                        windTileErrorKey = null
+                        windTileErrorMessage = null
+                    }
+                } catch (t: Throwable) {
+                    windTileErrorKey = requiredWindTileKey
+                    windTileErrorMessage = t.message ?: "Failed to load wind overlay tiles"
+                }
+            }
+
+            if (shouldFetchWindLegend) {
+                val requiredWindLegendKey = requireNotNull(windLegendKey)
+                lastWindLegendAttemptMs = nowUtcMs
+                try {
+                    val legend = legendPort.getLegend(
+                        parameterId = selection.selectedWindParameterId,
+                        timeSlot = selection.selectedTimeSlot,
+                        regionCode = preferences.selectedRegion
+                    )
+                    cachedWindLegendKey = requiredWindLegendKey
+                    cachedWindLegend = legend
+                    if (windLegendErrorKey == requiredWindLegendKey) {
+                        windLegendErrorKey = null
+                        windLegendErrorMessage = null
+                    }
+                } catch (t: Throwable) {
+                    windLegendErrorKey = requiredWindLegendKey
+                    windLegendErrorMessage = t.message ?: "Failed to load wind overlay legend"
+                }
+            }
+
+            val primaryTileForState = if (cachedPrimaryTileKey == primaryTileKey) cachedPrimaryTileSpec else null
+            val primaryLegendForState = if (cachedPrimaryLegendKey == primaryLegendKey) {
+                cachedPrimaryLegend
+            } else {
+                null
+            }
+            val secondaryPrimaryTileForState =
+                if (secondaryPrimaryTileKey != null && cachedSecondaryPrimaryTileKey == secondaryPrimaryTileKey) {
+                    cachedSecondaryPrimaryTileSpec
+                } else {
+                    null
+                }
+            val secondaryPrimaryLegendForState =
+                if (
+                    secondaryPrimaryLegendKey != null &&
+                    cachedSecondaryPrimaryLegendKey == secondaryPrimaryLegendKey
+                ) {
+                    cachedSecondaryPrimaryLegend
+                } else {
+                    null
+                }
+            val windTileForState = if (windTileKey != null && cachedWindTileKey == windTileKey) {
+                cachedWindTileSpec
+            } else {
+                null
+            }
+            val windLegendForState = if (windLegendKey != null && cachedWindLegendKey == windLegendKey) {
+                cachedWindLegend
+            } else {
+                null
+            }
+
             val warningMessage = joinMessages(
-                if (legendErrorKey == legendKey) legendErrorMessage else null,
-                if (tileErrorKey == tileKey && tileForState != null) tileErrorMessage else null
+                if (primaryEnabled && primaryLegendErrorKey == primaryLegendKey) {
+                    primaryLegendErrorMessage
+                } else {
+                    null
+                },
+                if (primaryEnabled && primaryTileErrorKey == primaryTileKey && primaryTileForState != null) {
+                    primaryTileErrorMessage
+                } else {
+                    null
+                },
+                if (
+                    secondaryPrimaryLegendKey != null &&
+                    secondaryPrimaryLegendErrorKey == secondaryPrimaryLegendKey
+                ) {
+                    secondaryPrimaryLegendErrorMessage
+                } else {
+                    null
+                },
+                if (
+                    secondaryPrimaryTileKey != null &&
+                    secondaryPrimaryTileErrorKey == secondaryPrimaryTileKey
+                ) {
+                    secondaryPrimaryTileErrorMessage
+                } else {
+                    null
+                },
+                if (windLegendKey != null && windLegendErrorKey == windLegendKey) windLegendErrorMessage else null,
+                if (windTileKey != null && windTileErrorKey == windTileKey) windTileErrorMessage else null
             )
-            val fatalError = if (tileForState == null && tileErrorKey == tileKey) {
-                tileErrorMessage ?: "Failed to load forecast tiles"
+            val fatalError = if (
+                primaryEnabled &&
+                primaryTileForState == null &&
+                primaryTileErrorKey == primaryTileKey
+            ) {
+                primaryTileErrorMessage ?: "Failed to load forecast tiles"
             } else {
                 null
             }
@@ -173,8 +523,12 @@ class ForecastOverlayRepository @Inject constructor(
             emit(
                 baseState.copy(
                     isLoading = false,
-                    tileSpec = tileForState,
-                    legend = legendForState,
+                    primaryTileSpec = if (primaryEnabled) primaryTileForState else null,
+                    primaryLegend = if (primaryEnabled) primaryLegendForState else null,
+                    secondaryPrimaryTileSpec = if (secondaryPrimaryEnabled) secondaryPrimaryTileForState else null,
+                    secondaryPrimaryLegend = if (secondaryPrimaryEnabled) secondaryPrimaryLegendForState else null,
+                    windTileSpec = if (windEnabled) windTileForState else null,
+                    windLegend = if (windEnabled) windLegendForState else null,
                     errorMessage = fatalError,
                     warningMessage = warningMessage
                 )
@@ -197,8 +551,8 @@ class ForecastOverlayRepository @Inject constructor(
             preferences = preferences,
             nowUtcMs = clock.nowWallMs()
         )
-        val selectedParameterMeta = selection.parameters.firstOrNull { meta ->
-            meta.id.value.equals(selection.selectedParameterId.value, ignoreCase = true)
+        val selectedParameterMeta = selection.primaryParameters.firstOrNull { meta ->
+            meta.id.value.equals(selection.selectedPrimaryParameterId.value, ignoreCase = true)
         }
         if (selectedParameterMeta?.supportsPointValue == false) {
             return@withContext ForecastPointQueryResult.Unavailable(
@@ -209,7 +563,7 @@ class ForecastOverlayRepository @Inject constructor(
             val pointValue = valuePort.getValue(
                 latitude = latitude,
                 longitude = longitude,
-                parameterId = selection.selectedParameterId,
+                parameterId = selection.selectedPrimaryParameterId,
                 timeSlot = selection.selectedTimeSlot,
                 regionCode = preferences.selectedRegion
             )
@@ -227,7 +581,9 @@ class ForecastOverlayRepository @Inject constructor(
 
     private fun selectionInputFlow(): Flow<SelectionInput> =
         preferencesRepository.preferencesFlow.flatMapLatest { preferences ->
-            val tickFlow: Flow<Long> = if (preferences.overlayEnabled) {
+            val tickFlow: Flow<Long> = if (
+                preferences.overlayEnabled || preferences.windOverlayEnabled
+            ) {
                 autoTimeTickerFlow()
             } else {
                 flowOf(clock.nowWallMs())
@@ -252,11 +608,28 @@ class ForecastOverlayRepository @Inject constructor(
         preferences: ForecastPreferences,
         nowUtcMs: Long
     ): ResolvedSelection {
-        val parameters = catalogPort.getParameters().ifEmpty { defaultParameters() }
-        val selectedParameterId = selectParameterId(
-            requested = preferences.selectedParameterId,
-            parameters = parameters
+        val parameters = catalogPort.getParameters().ifEmpty { defaultPrimaryParameters() }
+        val primaryParameters = parameters.filterNot(::isWindParameterMeta)
+            .ifEmpty { parameters }
+        val windParameters = parameters.filter(::isWindParameterMeta)
+
+        val selectedPrimaryParameterId = selectParameterId(
+            requested = preferences.selectedPrimaryParameterId,
+            parameters = primaryParameters,
+            fallback = DEFAULT_FORECAST_PARAMETER_ID
         )
+        val selectedSecondaryPrimaryParameterId = selectDistinctParameterId(
+            requested = preferences.selectedSecondaryPrimaryParameterId,
+            parameters = primaryParameters,
+            excluded = selectedPrimaryParameterId,
+            fallback = DEFAULT_FORECAST_SECONDARY_PRIMARY_PARAMETER_ID
+        )
+        val selectedWindParameterId = selectParameterId(
+            requested = preferences.selectedWindParameterId,
+            parameters = windParameters,
+            fallback = DEFAULT_FORECAST_WIND_PARAMETER_ID
+        )
+
         val timeSlots = catalogPort.getTimeSlots(
             nowUtcMs = nowUtcMs,
             regionCode = preferences.selectedRegion
@@ -280,8 +653,11 @@ class ForecastOverlayRepository @Inject constructor(
             nowUtcMs = followNowUtcMs
         )
         return ResolvedSelection(
-            parameters = parameters,
-            selectedParameterId = selectedParameterId,
+            primaryParameters = primaryParameters,
+            selectedPrimaryParameterId = selectedPrimaryParameterId,
+            selectedSecondaryPrimaryParameterId = selectedSecondaryPrimaryParameterId,
+            windParameters = windParameters,
+            selectedWindParameterId = selectedWindParameterId,
             timeSlots = timeSlots,
             selectedTimeSlot = selectedTimeSlot
         )
@@ -289,13 +665,30 @@ class ForecastOverlayRepository @Inject constructor(
 
     private fun selectParameterId(
         requested: ForecastParameterId,
-        parameters: List<ForecastParameterMeta>
+        parameters: List<ForecastParameterMeta>,
+        fallback: ForecastParameterId
     ): ForecastParameterId {
         val matched = parameters.firstOrNull { meta ->
             meta.id.value.equals(requested.value, ignoreCase = true)
         }?.id
         if (matched != null) return matched
-        return parameters.firstOrNull()?.id ?: DEFAULT_FORECAST_PARAMETER_ID
+        return parameters.firstOrNull()?.id ?: fallback
+    }
+
+    private fun selectDistinctParameterId(
+        requested: ForecastParameterId,
+        parameters: List<ForecastParameterMeta>,
+        excluded: ForecastParameterId,
+        fallback: ForecastParameterId
+    ): ForecastParameterId {
+        val distinctParameters = parameters.filterNot { meta ->
+            meta.id.value.equals(excluded.value, ignoreCase = true)
+        }
+        val matched = distinctParameters.firstOrNull { meta ->
+            meta.id.value.equals(requested.value, ignoreCase = true)
+        }?.id
+        if (matched != null) return matched
+        return distinctParameters.firstOrNull()?.id ?: fallback
     }
 
     private fun selectTimeSlot(
@@ -315,7 +708,7 @@ class ForecastOverlayRepository @Inject constructor(
         } ?: timeSlots.first()
     }
 
-    private fun defaultParameters(): List<ForecastParameterMeta> = listOf(
+    private fun defaultPrimaryParameters(): List<ForecastParameterMeta> = listOf(
         ForecastParameterMeta(
             id = DEFAULT_FORECAST_PARAMETER_ID,
             name = "Thermal",
@@ -345,8 +738,11 @@ class ForecastOverlayRepository @Inject constructor(
     private fun roundDownToHour(wallUtcMs: Long): Long = (wallUtcMs / HOUR_MS) * HOUR_MS
 
     private data class ResolvedSelection(
-        val parameters: List<ForecastParameterMeta>,
-        val selectedParameterId: ForecastParameterId,
+        val primaryParameters: List<ForecastParameterMeta>,
+        val selectedPrimaryParameterId: ForecastParameterId,
+        val selectedSecondaryPrimaryParameterId: ForecastParameterId,
+        val windParameters: List<ForecastParameterMeta>,
+        val selectedWindParameterId: ForecastParameterId,
         val timeSlots: List<ForecastTimeSlot>,
         val selectedTimeSlot: ForecastTimeSlot
     )
@@ -375,3 +771,6 @@ class ForecastOverlayRepository @Inject constructor(
         private const val RETRY_AFTER_FAILURE_MS = 30_000L
     }
 }
+
+private fun isWindParameterMeta(meta: ForecastParameterMeta): Boolean =
+    isForecastWindCategory(meta.category) || isForecastWindParameterId(meta.id)

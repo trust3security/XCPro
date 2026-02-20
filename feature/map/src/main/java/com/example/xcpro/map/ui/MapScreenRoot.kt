@@ -134,10 +134,17 @@ internal fun MapScreenRoot(
         overlayManager = managers.overlayManager,
         ognTargets = bindings.ognTargets,
         ognOverlayEnabled = bindings.ognOverlayEnabled,
+        ognThermalHotspots = bindings.ognThermalHotspots,
+        showOgnThermalsEnabled = bindings.showOgnThermalsEnabled,
+        ognGliderTrailSegments = bindings.ognGliderTrailSegments,
+        showOgnGliderTrailsEnabled = bindings.showOgnGliderTrailsEnabled,
         ognIconSizePx = bindings.ognIconSizePx,
         adsbTargets = bindings.adsbTargets,
         adsbOverlayEnabled = bindings.adsbOverlayEnabled,
         adsbIconSizePx = bindings.adsbIconSizePx
+    )
+    MapWeatherOverlayEffects(
+        overlayManager = managers.overlayManager
     )
 
     val currentFlightModeSelection by flightDataManager.currentFlightModeFlow.collectAsStateWithLifecycle()
@@ -164,9 +171,18 @@ internal fun MapScreenRoot(
         orientationManager = orientationManager
     )
 
+    val mapRuntimeController = rememberMapRuntimeController(
+        overlayManager = managers.overlayManager,
+        mapViewModel = mapViewModel,
+        cameraManager = managers.cameraManager,
+        orientationData = orientationData,
+        isReplayPlaying = bindings.replaySession.status == SessionStatus.PLAYING
+    )
+
     val locationPermissionLauncher = rememberLocationPermissionLauncher(managers.locationManager)
     MapScreenComposeAndLifecycleEffects(
         lifecycleManager = managers.lifecycleManager,
+        runtimeController = mapRuntimeController,
         locationManager = managers.locationManager,
         locationPermissionLauncher = locationPermissionLauncher,
         currentLocation = bindings.locationForUi,
@@ -198,14 +214,6 @@ internal fun MapScreenRoot(
         screenWidthPx = widgetLayout.screenWidthPx,
         screenHeightPx = widgetLayout.screenHeightPx,
         density = density
-    )
-
-    val mapRuntimeController = rememberMapRuntimeController(
-        overlayManager = managers.overlayManager,
-        mapViewModel = mapViewModel,
-        cameraManager = managers.cameraManager,
-        orientationData = orientationData,
-        isReplayPlaying = bindings.replaySession.status == SessionStatus.PLAYING
     )
 
     MapVisibilityLifecycleEffect(mapViewModel)

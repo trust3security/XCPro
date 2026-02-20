@@ -18,6 +18,8 @@ private const val OGN_DATASTORE_NAME = "ogn_traffic_preferences"
 private val Context.ognTrafficDataStore: DataStore<Preferences> by preferencesDataStore(name = OGN_DATASTORE_NAME)
 private val KEY_OGN_TRAFFIC_ENABLED = booleanPreferencesKey("ogn_traffic_enabled")
 private val KEY_OGN_ICON_SIZE_PX = intPreferencesKey("ogn_icon_size_px")
+private val KEY_OGN_SHOW_THERMALS_ENABLED = booleanPreferencesKey("ogn_show_thermals_enabled")
+private val KEY_OGN_SHOW_GLIDER_TRAILS_ENABLED = booleanPreferencesKey("ogn_show_glider_trails_enabled")
 
 @Singleton
 class OgnTrafficPreferencesRepository @Inject constructor(
@@ -35,6 +37,14 @@ class OgnTrafficPreferencesRepository @Inject constructor(
         }
         .distinctUntilChanged()
 
+    val showThermalsEnabledFlow: Flow<Boolean> = context.ognTrafficDataStore.data
+        .map { preferences -> preferences[KEY_OGN_SHOW_THERMALS_ENABLED] ?: false }
+        .distinctUntilChanged()
+
+    val showGliderTrailsEnabledFlow: Flow<Boolean> = context.ognTrafficDataStore.data
+        .map { preferences -> preferences[KEY_OGN_SHOW_GLIDER_TRAILS_ENABLED] ?: false }
+        .distinctUntilChanged()
+
     suspend fun setEnabled(enabled: Boolean) {
         context.ognTrafficDataStore.edit { preferences ->
             preferences[KEY_OGN_TRAFFIC_ENABLED] = enabled
@@ -45,6 +55,18 @@ class OgnTrafficPreferencesRepository @Inject constructor(
         val clamped = clampOgnIconSizePx(iconSizePx)
         context.ognTrafficDataStore.edit { preferences ->
             preferences[KEY_OGN_ICON_SIZE_PX] = clamped
+        }
+    }
+
+    suspend fun setShowThermalsEnabled(enabled: Boolean) {
+        context.ognTrafficDataStore.edit { preferences ->
+            preferences[KEY_OGN_SHOW_THERMALS_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setShowGliderTrailsEnabled(enabled: Boolean) {
+        context.ognTrafficDataStore.edit { preferences ->
+            preferences[KEY_OGN_SHOW_GLIDER_TRAILS_ENABLED] = enabled
         }
     }
 }

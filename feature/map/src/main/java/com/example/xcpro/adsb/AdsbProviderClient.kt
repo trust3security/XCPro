@@ -7,6 +7,16 @@ interface AdsbProviderClient {
     ): ProviderResult
 }
 
+enum class AdsbNetworkFailureKind {
+    DNS,
+    TIMEOUT,
+    CONNECT,
+    NO_ROUTE,
+    TLS,
+    MALFORMED_RESPONSE,
+    UNKNOWN
+}
+
 sealed interface ProviderResult {
     data class Success(
         val response: OpenSkyResponse,
@@ -25,7 +35,7 @@ sealed interface ProviderResult {
     ) : ProviderResult
 
     data class NetworkError(
+        val kind: AdsbNetworkFailureKind,
         val message: String
     ) : ProviderResult
 }
-

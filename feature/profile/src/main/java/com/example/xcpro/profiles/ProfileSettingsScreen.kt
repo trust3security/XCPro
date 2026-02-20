@@ -26,6 +26,16 @@ fun ProfileSettingsScreen(
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    if (!uiState.isHydrated) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
     val profile = uiState.profiles.find { it.id == profileId }
     
     var showExportDialog by remember { mutableStateOf(false) }
@@ -39,7 +49,10 @@ fun ProfileSettingsScreen(
         return
     }
     
-    var editedProfile by remember { mutableStateOf(profile) }
+    var editedProfile by remember(profile.id) { mutableStateOf(profile) }
+    LaunchedEffect(profile) {
+        editedProfile = profile
+    }
     
     Scaffold(
         topBar = {

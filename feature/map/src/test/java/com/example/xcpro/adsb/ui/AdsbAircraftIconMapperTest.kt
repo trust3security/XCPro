@@ -204,6 +204,63 @@ class AdsbAircraftIconMapperTest {
     }
 
     @Test
+    fun classifiesAdditionalCommonHelicopterPrefixesWithoutIcaoClass() {
+        val helicopterTypecodes = listOf(
+            "B06",
+            "AS50",
+            "H269",
+            "B407",
+            "H500",
+            "A109",
+            "MI8",
+            "S76",
+            "B47G"
+        )
+
+        helicopterTypecodes.forEach { typecode ->
+            assertEquals(
+                AdsbAircraftIcon.Helicopter,
+                iconForAircraft(
+                    category = 0,
+                    metadataTypecode = typecode,
+                    metadataIcaoAircraftType = null
+                )
+            )
+        }
+    }
+
+    @Test
+    fun nonFixedWingCategoriesRemainAuthoritativeOverConflictingMetadata() {
+        val conflictingTypecode = "B738"
+        val conflictingIcaoClass = "L2J"
+
+        assertEquals(
+            AdsbAircraftIcon.Helicopter,
+            iconForAircraft(8, conflictingTypecode, conflictingIcaoClass)
+        )
+        assertEquals(
+            AdsbAircraftIcon.Glider,
+            iconForAircraft(9, conflictingTypecode, conflictingIcaoClass)
+        )
+        assertEquals(
+            AdsbAircraftIcon.Balloon,
+            iconForAircraft(10, conflictingTypecode, conflictingIcaoClass)
+        )
+        assertEquals(
+            AdsbAircraftIcon.Parachutist,
+            iconForAircraft(11, conflictingTypecode, conflictingIcaoClass)
+        )
+        assertEquals(
+            AdsbAircraftIcon.Hangglider,
+            iconForAircraft(12, conflictingTypecode, conflictingIcaoClass)
+        )
+        assertEquals(
+            AdsbAircraftIcon.Drone,
+            iconForAircraft(14, conflictingTypecode, conflictingIcaoClass)
+        )
+    }
+
+    @Test
     fun classifiesFourEngineJetClassAsHeavyAircraft() {
         assertEquals(
             AdsbAircraftIcon.PlaneHeavy,

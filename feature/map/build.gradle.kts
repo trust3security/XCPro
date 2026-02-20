@@ -144,21 +144,6 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
 }
 
-tasks.withType<Test>().configureEach {
-    if (name == "testDebugUnitTest") {
-        val runId = System.currentTimeMillis().toString()
-        binaryResultsDirectory.set(
-            layout.buildDirectory.dir("test-results-map/$name/$runId/binary")
-        )
-        reports.junitXml.outputLocation.set(
-            layout.buildDirectory.dir("test-results-map/$name/$runId/xml")
-        )
-        reports.html.outputLocation.set(
-            layout.buildDirectory.dir("reports/tests/$name/$runId")
-        )
-    }
-}
-
 val hasAndroidTests = file("src/androidTest").walkTopDown().any { entry ->
     entry.isFile && (entry.extension == "kt" || entry.extension == "java")
 }

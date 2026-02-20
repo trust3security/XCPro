@@ -29,21 +29,19 @@ object FlightTemplates {
             FlightTemplate(
                 id = "id01",
                 name = "Cruise",
-                description = "Single track card for cruise mode",
-                cardIds = listOf("track"),
+                description = "Single AGL card for cruise mode",
+                cardIds = listOf("agl"),
                 icon = Icons.Filled.Flight,
                 isPreset = true
             ),
             FlightTemplate(
                 id = "id02",
                 name = "Thermal",
-                description = "Single track card for thermal mode",
+                description = "Core thermal efficiency cards",
                 cardIds = listOf(
-                    "thermal_tc_avg",
-                    "thermal_t_avg",
                     "thermal_tc_gain",
-                    "netto_avg30",
-                    "thermal_avg"
+                    "thermal_tc_avg",
+                    "thermal_t_avg"
                 ),
                 icon = Icons.Filled.Refresh,
                 isPreset = true

@@ -2,6 +2,11 @@
 
 This file defines the **minimum confirmed SkySight API contract** required to implement the SkySight provider adapter for XCPro’s Forecast Overlay MVP.
 
+Status update (2026-02-18):
+- Required evidence artifacts exist under docs/integrations/skysight/evidence/.
+- The SkySight forecast adapter is implemented and wired in production DI.
+- Keep this contract as the gate checklist for future contract or endpoint refresh work.
+
 ## Hard rule
 **Do not implement the real SkySight forecast adapter until the evidence pack exists in the repo.**  
 Until then, implement **Track A (FakeForecastProvider + overlay runtime)** only.
@@ -73,3 +78,4 @@ Commit the evidence files under:
 `docs/integrations/skysight/evidence/`
 
 See `SKYSIGHT_EVIDENCE_CAPTURE.md` for steps.
+

@@ -5,6 +5,8 @@ import com.example.xcpro.adsb.AdsbTrafficUiModel
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.map.model.GpsStatusUiModel
 import com.example.xcpro.map.model.MapLocationUiModel
+import com.example.xcpro.ogn.OgnTrafficTarget
+import com.example.xcpro.ogn.OgnThermalHotspot
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.replay.SessionStatus
 import kotlinx.coroutines.CoroutineScope
@@ -128,6 +130,24 @@ internal fun createCardHydrationReadyState(
 ): StateFlow<Boolean> =
     combine(containerReady, liveDataReady) { container, data -> container && data }
         .eagerState(scope = scope, initial = false)
+
+internal fun createSelectedOgnTargetState(
+    scope: CoroutineScope,
+    selectedOgnId: StateFlow<String?>,
+    ognTargets: StateFlow<List<OgnTrafficTarget>>
+): StateFlow<OgnTrafficTarget?> =
+    combine(selectedOgnId, ognTargets) { selectedId, targets ->
+        selectedId?.let { id -> targets.firstOrNull { it.id == id } }
+    }.stateIn(scope = scope, started = SharingStarted.Eagerly, initialValue = null)
+
+internal fun createSelectedOgnThermalState(
+    scope: CoroutineScope,
+    selectedThermalId: StateFlow<String?>,
+    thermalHotspots: StateFlow<List<OgnThermalHotspot>>
+): StateFlow<OgnThermalHotspot?> =
+    combine(selectedThermalId, thermalHotspots) { selectedId, hotspots ->
+        selectedId?.let { id -> hotspots.firstOrNull { it.id == id } }
+    }.stateIn(scope = scope, started = SharingStarted.Eagerly, initialValue = null)
 
 internal fun FlightMode.toCardFlightModeSelection(): com.example.dfcards.FlightModeSelection =
     when (this) {

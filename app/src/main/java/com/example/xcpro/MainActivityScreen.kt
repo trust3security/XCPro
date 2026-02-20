@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -71,23 +72,9 @@ fun MainActivityScreen(
     val scope = rememberCoroutineScope()
     var isBottomSheetVisible by remember { mutableStateOf(false) }
     var selectedNavItem by remember { mutableStateOf<String?>(null) }
-    var showProfileSelection by remember { mutableStateOf(false) }
 
     // Check if we need to show profile selection based on state
     val profileUiState by profileViewModel.uiState.collectAsStateWithLifecycle()
-    
-    LaunchedEffect(profileUiState) {
-        if (profileUiState.profiles.isEmpty()) {
-            // No profiles exist, show profile selection to create first one
-            showProfileSelection = true
-        } else if (profileUiState.activeProfile == null) {
-            // Profiles exist but none is active, show selection
-            showProfileSelection = true
-        } else {
-            // We have an active profile, can proceed to main app
-            showProfileSelection = false
-        }
-    }
     
     // Apply saved status bar style when profile changes
     LaunchedEffect(profileUiState.activeProfile?.id) {
@@ -103,9 +90,47 @@ fun MainActivityScreen(
 
     Log.d(TAG, "MainActivity: Current route=${currentRoute?.destination?.route}")
 
+    if (!profileUiState.isHydrated) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = androidx.compose.ui.Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
+    if (profileUiState.activeProfile == null && !profileUiState.bootstrapError.isNullOrBlank()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp),
+            contentAlignment = androidx.compose.ui.Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Profile Storage Error",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.error
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = profileUiState.bootstrapError ?: "Failed to load stored profiles.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        return
+    }
+
+    val showProfileSelection =
+        profileUiState.profiles.isEmpty() || profileUiState.activeProfile == null
     if (showProfileSelection) {
         ProfileSelectionScreen(
-            onProfileSelected = { showProfileSelection = false }
+            onProfileSelected = {}
         )
         return
     }

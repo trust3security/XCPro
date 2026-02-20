@@ -40,7 +40,6 @@ import com.example.dfcards.RealTimeFlightData
 import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.units.UnitsPreferences
-import com.example.xcpro.adsb.AdsbConnectionState
 import com.example.xcpro.adsb.Icao24
 import com.example.xcpro.adsb.AdsbMarkerDetailsSheet
 import com.example.xcpro.adsb.AdsbTrafficSnapshot
@@ -71,7 +70,11 @@ import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.map.WindArrowUiState
 import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.ogn.OgnConnectionState
+import com.example.xcpro.ogn.OgnMarkerDetailsSheet
 import com.example.xcpro.ogn.OgnTrafficSnapshot
+import com.example.xcpro.ogn.OgnTrafficTarget
+import com.example.xcpro.ogn.OgnThermalDetailsSheet
+import com.example.xcpro.ogn.OgnThermalHotspot
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -85,6 +88,7 @@ import com.example.xcpro.replay.SessionState
 import com.example.xcpro.replay.SessionStatus
 import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.VerticalSpeedMs
+import com.example.xcpro.weather.rain.WeatherOverlayViewModel
 import kotlin.math.roundToInt
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
@@ -97,6 +101,7 @@ internal fun MapScreenContent(
     mapState: MapScreenState,
     mapInitializer: MapInitializer,
     onMapReady: (MapLibreMap) -> Unit,
+    onMapViewBound: () -> Unit,
     locationManager: LocationManager,
     flightDataManager: FlightDataManager,
     flightViewModel: FlightDataViewModel,
@@ -114,8 +119,13 @@ internal fun MapScreenContent(
     showDistanceCircles: Boolean,
     ognSnapshot: OgnTrafficSnapshot,
     ognOverlayEnabled: Boolean,
+    ognThermalHotspots: List<OgnThermalHotspot>,
+    showOgnThermalsEnabled: Boolean,
+    showOgnGliderTrailsEnabled: Boolean,
     adsbSnapshot: AdsbTrafficSnapshot,
     adsbOverlayEnabled: Boolean,
+    selectedOgnTarget: OgnTrafficTarget?,
+    selectedOgnThermal: OgnThermalHotspot?,
     selectedAdsbTarget: AdsbSelectedTargetDetails?,
     isUiEditMode: Boolean,
     onEditModeChange: (Boolean) -> Unit,
@@ -149,8 +159,14 @@ internal fun MapScreenContent(
     onAutoCalibrateQnh: () -> Unit,
     onSetManualQnh: (Double) -> Unit,
     onToggleOgnTraffic: () -> Unit,
+    onToggleOgnThermals: () -> Unit,
+    onToggleOgnGliderTrails: () -> Unit,
     onToggleAdsbTraffic: () -> Unit,
+    onOgnTargetSelected: (String) -> Unit,
+    onOgnThermalSelected: (String) -> Unit,
     onAdsbTargetSelected: (Icao24) -> Unit,
+    onDismissOgnTargetDetails: () -> Unit,
+    onDismissOgnThermalDetails: () -> Unit,
     onDismissAdsbTargetDetails: () -> Unit,
     ballastUiState: StateFlow<BallastUiState>,
     isBallastPillHidden: Boolean,
@@ -173,6 +189,8 @@ internal fun MapScreenContent(
     val forecastOverlayState by forecastViewModel.overlayState.collectAsStateWithLifecycle()
     val forecastPointCallout by forecastViewModel.pointCallout.collectAsStateWithLifecycle()
     val forecastQueryStatus by forecastViewModel.queryStatus.collectAsStateWithLifecycle()
+    val weatherOverlayViewModel: WeatherOverlayViewModel = hiltViewModel()
+    val weatherOverlayState by weatherOverlayViewModel.overlayState.collectAsStateWithLifecycle()
     val currentQnhLabel = remember(liveFlightData?.qnh) {
         val qnh = liveFlightData?.qnh ?: 1013.25
         String.format(Locale.US, "%.1f hPa", qnh)
@@ -186,8 +204,7 @@ internal fun MapScreenContent(
     var tappedWindArrowCallout by remember { mutableStateOf<WindArrowTapCallout?>(null) }
     var windTapLabelSize by remember { mutableStateOf(IntSize.Zero) }
     var overlayViewportSize by remember { mutableStateOf(IntSize.Zero) }
-    val isForecastWindArrowOverlayActive = forecastOverlayState.enabled &&
-        forecastOverlayState.windOverlayEnabled &&
+    val isForecastWindArrowOverlayActive = forecastOverlayState.windOverlayEnabled &&
         forecastOverlayState.windDisplayMode == ForecastWindDisplayMode.ARROW &&
         forecastOverlayState.windTileSpec?.format == ForecastTileFormat.VECTOR_WIND_POINTS
 
@@ -204,17 +221,19 @@ internal fun MapScreenContent(
         forecastOverlayState.windLegend,
         forecastOverlayState.opacity,
         forecastOverlayState.windOverlayScale,
-        forecastOverlayState.windDisplayMode,
-        forecastOverlayState.errorMessage
+        forecastOverlayState.windDisplayMode
     ) {
-        if (!forecastOverlayState.enabled || forecastOverlayState.errorMessage != null) {
+        val hasPrimaryOverlay = forecastOverlayState.enabled &&
+            forecastOverlayState.primaryTileSpec != null
+        val hasWindOverlay = forecastOverlayState.windOverlayEnabled &&
+            forecastOverlayState.windTileSpec != null
+        if (!hasPrimaryOverlay && !hasWindOverlay) {
             overlayManager.clearForecastOverlay()
             return@LaunchedEffect
         }
-        val primaryTileSpec = forecastOverlayState.primaryTileSpec ?: return@LaunchedEffect
         overlayManager.setForecastOverlay(
-            enabled = true,
-            primaryTileSpec = primaryTileSpec,
+            enabled = forecastOverlayState.enabled,
+            primaryTileSpec = forecastOverlayState.primaryTileSpec,
             primaryLegendSpec = forecastOverlayState.primaryLegend,
             secondaryPrimaryOverlayEnabled = forecastOverlayState.secondaryPrimaryOverlayEnabled,
             secondaryPrimaryTileSpec = forecastOverlayState.secondaryPrimaryTileSpec,
@@ -241,6 +260,17 @@ internal fun MapScreenContent(
             tappedWindArrowCallout = null
         }
     }
+
+    val showOgnDebugPanel = rememberTrafficDebugPanelVisibility(
+        enabled = BuildConfig.DEBUG && ognOverlayEnabled,
+        readyForAutoDismiss = isOgnReadyForAutoDismiss(ognSnapshot),
+        autoDismissDelayMs = TRAFFIC_DEBUG_PANEL_AUTO_DISMISS_MS
+    )
+    val showAdsbDebugPanel = rememberTrafficDebugPanelVisibility(
+        enabled = BuildConfig.DEBUG && adsbOverlayEnabled,
+        readyForAutoDismiss = isAdsbReadyForAutoDismiss(adsbSnapshot),
+        autoDismissDelayMs = TRAFFIC_DEBUG_PANEL_AUTO_DISMISS_MS
+    )
 
     Box(
         Modifier
@@ -269,6 +299,7 @@ internal fun MapScreenContent(
                         mapState = mapState,
                         mapInitializer = mapInitializer,
                         onMapReady = onMapReady,
+                        onMapViewBound = onMapViewBound,
                         locationManager = locationManager,
                         flightDataManager = flightDataManager,
                         flightViewModel = flightViewModel,
@@ -283,7 +314,11 @@ internal fun MapScreenContent(
                         currentLocation = currentLocation,
                         showReturnButton = showReturnButton,
                         showDistanceCircles = showDistanceCircles,
+                        ognOverlayEnabled = ognOverlayEnabled,
+                        showOgnThermalsEnabled = showOgnThermalsEnabled,
                         overlayManager = overlayManager,
+                        onOgnTargetSelected = onOgnTargetSelected,
+                        onOgnThermalSelected = onOgnThermalSelected,
                         onAdsbTargetSelected = onAdsbTargetSelected,
                         onForecastWindArrowSpeedTap = { tapLatLng, speedKt ->
                             if (isForecastWindArrowOverlayActive) {
@@ -352,14 +387,19 @@ internal fun MapScreenContent(
             showReturnButton = showReturnButton,
             showDistanceCircles = showDistanceCircles,
             showOgnTraffic = ognOverlayEnabled,
+            showOgnThermals = showOgnThermalsEnabled,
+            showOgnGliderTrails = showOgnGliderTrailsEnabled,
             showAdsbTraffic = adsbOverlayEnabled,
-            showForecastOverlay = forecastOverlayState.enabled,
+            showForecastOverlay = forecastOverlayState.enabled || forecastOverlayState.windOverlayEnabled,
             showQnhFab = showQnhFab,
             showVarioDemoFab = showVarioDemoFab,
+            showAatEditFab = isAATEditMode && taskType == TaskType.AAT,
             showRacingReplayFab = showRacingReplayFab,
             onRecenter = locationManager::recenterOnCurrentLocation,
             onToggleDistanceCircles = { overlayManager.toggleDistanceCircles() },
             onToggleOgnTraffic = onToggleOgnTraffic,
+            onToggleOgnThermals = onToggleOgnThermals,
+            onToggleOgnGliderTrails = onToggleOgnGliderTrails,
             onToggleAdsbTraffic = onToggleAdsbTraffic,
             onShowForecastSheet = { showForecastSheet = true },
             onReturn = { locationManager.returnToSavedLocation() },
@@ -384,12 +424,12 @@ internal fun MapScreenContent(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             OgnDebugPanel(
-                visible = BuildConfig.DEBUG && ognOverlayEnabled,
+                visible = showOgnDebugPanel,
                 snapshot = ognSnapshot
             )
 
             AdsbDebugPanel(
-                visible = BuildConfig.DEBUG && adsbOverlayEnabled,
+                visible = showAdsbDebugPanel,
                 snapshot = adsbSnapshot
             )
         }
@@ -461,6 +501,13 @@ internal fun MapScreenContent(
             )
         }
 
+        WeatherMapConfidenceChip(
+            runtimeState = weatherOverlayState,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 28.dp, end = 16.dp)
+        )
+
         QnhDialogHost(
             visible = showQnhDialog,
             qnhInput = qnhInput,
@@ -492,12 +539,30 @@ internal fun MapScreenContent(
             }
         )
 
-        selectedAdsbTarget?.let { target ->
-            AdsbMarkerDetailsSheet(
-                target = target,
-                unitsPreferences = unitsPreferences,
-                onDismiss = onDismissAdsbTargetDetails
-            )
+        when {
+            selectedOgnTarget != null -> {
+                OgnMarkerDetailsSheet(
+                    target = selectedOgnTarget,
+                    unitsPreferences = unitsPreferences,
+                    onDismiss = onDismissOgnTargetDetails
+                )
+            }
+
+            selectedOgnThermal != null -> {
+                OgnThermalDetailsSheet(
+                    hotspot = selectedOgnThermal,
+                    unitsPreferences = unitsPreferences,
+                    onDismiss = onDismissOgnThermalDetails
+                )
+            }
+
+            selectedAdsbTarget != null -> {
+                AdsbMarkerDetailsSheet(
+                    target = selectedAdsbTarget,
+                    unitsPreferences = unitsPreferences,
+                    onDismiss = onDismissAdsbTargetDetails
+                )
+            }
         }
 
         if (showForecastSheet) {
@@ -560,7 +625,30 @@ private data class WindArrowTapCallout(
     val speedKt: Double
 )
 
+@Composable
+private fun rememberTrafficDebugPanelVisibility(
+    enabled: Boolean,
+    readyForAutoDismiss: Boolean,
+    autoDismissDelayMs: Long
+): Boolean {
+    var visible by remember(enabled) { mutableStateOf(enabled) }
+    LaunchedEffect(enabled, readyForAutoDismiss, autoDismissDelayMs) {
+        if (!enabled) {
+            visible = false
+            return@LaunchedEffect
+        }
+        visible = true
+        if (!readyForAutoDismiss) return@LaunchedEffect
+        delay(autoDismissDelayMs)
+        if (isActive) {
+            visible = false
+        }
+    }
+    return visible
+}
+
 private const val WIND_ARROW_SPEED_TAP_DISPLAY_MS = 4_000L
+private const val TRAFFIC_DEBUG_PANEL_AUTO_DISMISS_MS = 3_000L
 private const val DEFAULT_WIND_SPEED_UNIT_LABEL = "kt"
 private const val WIND_TAP_LABEL_EDGE_PADDING_DP = 8
 private const val WIND_TAP_LABEL_ANCHOR_GAP_DP = 10

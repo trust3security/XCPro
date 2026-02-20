@@ -77,4 +77,37 @@ class OgnAprsLineParserTest {
         assertNotNull(parsed)
         assertEquals("484D20", parsed?.deviceIdHex)
     }
+
+    @Test
+    fun parseTraffic_treatsCourse000AsUnknownTrack() {
+        val line =
+            "FLRDDDEAD>APRS,qAS,EDER:/114500h5029.86N/00956.98E'000/049/A=005524 id0ADDDEAD"
+
+        val parsed = parser.parseTraffic(line, receivedAtMillis = 1_700_000_000_000)
+
+        assertNotNull(parsed)
+        assertNull(parsed?.trackDegrees)
+    }
+
+    @Test
+    fun parseTraffic_acceptsCourse360() {
+        val line =
+            "FLRDDDEAD>APRS,qAS,EDER:/114500h5029.86N/00956.98E'360/049/A=005524 id0ADDDEAD"
+
+        val parsed = parser.parseTraffic(line, receivedAtMillis = 1_700_000_000_000)
+
+        assertNotNull(parsed)
+        assertEquals(360.0, parsed?.trackDegrees ?: Double.NaN, 1e-6)
+    }
+
+    @Test
+    fun parseTraffic_rejectsCourseAbove360() {
+        val line =
+            "FLRDDDEAD>APRS,qAS,EDER:/114500h5029.86N/00956.98E'361/049/A=005524 id0ADDDEAD"
+
+        val parsed = parser.parseTraffic(line, receivedAtMillis = 1_700_000_000_000)
+
+        assertNotNull(parsed)
+        assertNull(parsed?.trackDegrees)
+    }
 }

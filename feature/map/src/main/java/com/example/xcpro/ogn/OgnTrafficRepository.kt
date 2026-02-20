@@ -25,6 +25,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.math.abs
 
 interface OgnTrafficRepository {
@@ -93,6 +95,13 @@ class OgnTrafficRepositoryImpl @Inject constructor(
     @Volatile
     private var lastReconnectWallMs: Long? = null
 
+    @Volatile
+    private var activeSubscriptionCenter: Center? = null
+
+    private val stateTransitionMutex = Mutex()
+
+    internal var socketFactory: () -> Socket = { Socket() }
+
     override fun start() {
         setEnabled(true)
     }
@@ -104,11 +113,13 @@ class OgnTrafficRepositoryImpl @Inject constructor(
     override fun setEnabled(enabled: Boolean) {
         if (_isEnabled.value == enabled) return
         _isEnabled.value = enabled
-        if (enabled) {
-            ensureLoopRunning()
-        } else {
-            scope.launch {
-                stopLoopAndClearTargets()
+        scope.launch {
+            stateTransitionMutex.withLock {
+                if (_isEnabled.value) {
+                    ensureLoopRunning()
+                } else {
+                    stopLoopAndClearTargets()
+                }
             }
         }
     }
@@ -139,8 +150,10 @@ class OgnTrafficRepositoryImpl @Inject constructor(
             existing
         }
         jobToCancel?.cancelAndJoin()
+        if (_isEnabled.value) return
         targetsByKey.clear()
         _targets.value = emptyList()
+        activeSubscriptionCenter = null
         connectionState = OgnConnectionState.DISCONNECTED
         lastError = null
         publishSnapshot()
@@ -155,6 +168,8 @@ class OgnTrafficRepositoryImpl @Inject constructor(
                 val centerAtConnect = waitForCenter() ?: break
                 try {
                     connectAndRead(centerAtConnect)
+                    connectionState = OgnConnectionState.DISCONNECTED
+                    activeSubscriptionCenter = null
                     backoffMs = RECONNECT_BACKOFF_START_MS
                     reconnectBackoffMs = null
                 } catch (t: Throwable) {
@@ -172,6 +187,7 @@ class OgnTrafficRepositoryImpl @Inject constructor(
                 delay(backoffMs)
                 backoffMs = (backoffMs * 2L).coerceAtMost(RECONNECT_BACKOFF_MAX_MS)
             }
+            activeSubscriptionCenter = null
             connectionState = OgnConnectionState.DISCONNECTED
             reconnectBackoffMs = null
             publishSnapshot()
@@ -193,7 +209,7 @@ class OgnTrafficRepositoryImpl @Inject constructor(
     }
 
     private fun connectAndRead(centerAtConnect: Center) {
-        val socket = Socket()
+        val socket = socketFactory()
         var reader: BufferedReader? = null
         var writer: BufferedWriter? = null
         try {
@@ -216,9 +232,9 @@ class OgnTrafficRepositoryImpl @Inject constructor(
             writer.newLine()
             writer.flush()
 
-            connectionState = OgnConnectionState.CONNECTED
+            activeSubscriptionCenter = centerAtConnect
             publishSnapshot()
-            AppLogger.i(TAG, "Connected to OGN traffic feed with ${RECEIVE_RADIUS_KM.toInt()}km radius")
+            var connectionEstablished = false
 
             var lastSweepMonoMs = clock.nowMonoMs()
             var lastKeepaliveMonoMs = lastSweepMonoMs
@@ -243,7 +259,36 @@ class OgnTrafficRepositoryImpl @Inject constructor(
                 try {
                     val line = reader.readLine() ?: return
                     lastReceiveMonoMs = nowMonoMs
-                    handleIncomingLine(line, nowMonoMs, centerAtConnect)
+                    when (parseLogrespStatus(line)) {
+                        OgnLogrespStatus.VERIFIED -> {
+                            if (!connectionEstablished) {
+                                connectionEstablished = true
+                                connectionState = OgnConnectionState.CONNECTED
+                                publishSnapshot()
+                                AppLogger.i(
+                                    TAG,
+                                    "Connected to OGN traffic feed with ${RECEIVE_RADIUS_KM.toInt()}km radius"
+                                )
+                            }
+                        }
+
+                        OgnLogrespStatus.UNVERIFIED -> {
+                            throw IllegalStateException("OGN login unverified")
+                        }
+
+                        null -> {
+                            val sawTraffic = handleIncomingLine(line, nowMonoMs, centerAtConnect)
+                            if (sawTraffic && !connectionEstablished) {
+                                connectionEstablished = true
+                                connectionState = OgnConnectionState.CONNECTED
+                                publishSnapshot()
+                                AppLogger.i(
+                                    TAG,
+                                    "Connected to OGN traffic feed with ${RECEIVE_RADIUS_KM.toInt()}km radius"
+                                )
+                            }
+                        }
+                    }
                 } catch (_: SocketTimeoutException) {
                     // Expected timeout so we can evaluate keepalive/reconnect conditions.
                 }
@@ -265,29 +310,34 @@ class OgnTrafficRepositoryImpl @Inject constructor(
                 }
             }
         } finally {
+            activeSubscriptionCenter = null
             runCatching { reader?.close() }
             runCatching { writer?.close() }
             runCatching { socket.close() }
         }
     }
 
-    private fun handleIncomingLine(line: String, nowMonoMs: Long, centerAtConnect: Center) {
-        val parsed = parser.parseTraffic(line, nowMonoMs) ?: return
-        if (OgnSubscriptionPolicy.haversineKm(
-                lat1 = centerAtConnect.latitude,
-                lon1 = centerAtConnect.longitude,
-                lat2 = parsed.latitude,
-                lon2 = parsed.longitude
-            ) > RECEIVE_RADIUS_KM
+    private fun handleIncomingLine(line: String, nowMonoMs: Long, centerAtConnect: Center): Boolean {
+        val parsed = parser.parseTraffic(line, nowMonoMs) ?: return false
+        val requestedCenter = center
+        if (!isWithinReceiveRadiusKm(
+                targetLat = parsed.latitude,
+                targetLon = parsed.longitude,
+                requestedCenterLat = requestedCenter?.latitude,
+                requestedCenterLon = requestedCenter?.longitude,
+                subscriptionCenterLat = centerAtConnect.latitude,
+                subscriptionCenterLon = centerAtConnect.longitude,
+                radiusKm = RECEIVE_RADIUS_KM
+            )
         ) {
-            return
+            return true
         }
 
         val identity = parsed.deviceIdHex?.let(ddbRepository::lookup)
         if (identity?.tracked == false) {
             val removed = targetsByKey.remove(parsed.id)
             if (removed != null) publishTargets()
-            return
+            return true
         }
 
         val label = resolveDisplayLabel(parsed, identity)
@@ -305,6 +355,7 @@ class OgnTrafficRepositoryImpl @Inject constructor(
         )
         targetsByKey[enriched.id] = enriched
         publishTargets()
+        return true
     }
 
     private fun resolveDisplayLabel(
@@ -359,7 +410,9 @@ class OgnTrafficRepositoryImpl @Inject constructor(
             receiveRadiusKm = RECEIVE_RADIUS_KM.toInt(),
             ddbCacheAgeMs = ddbAge,
             reconnectBackoffMs = reconnectBackoffMs,
-            lastReconnectWallMs = lastReconnectWallMs
+            lastReconnectWallMs = lastReconnectWallMs,
+            activeSubscriptionCenterLat = activeSubscriptionCenter?.latitude,
+            activeSubscriptionCenterLon = activeSubscriptionCenter?.longitude
         )
     }
 
@@ -429,6 +482,44 @@ class OgnTrafficRepositoryImpl @Inject constructor(
         private const val DDB_REFRESH_CHECK_INTERVAL_MS = 60L * 60L * 1000L
 
     }
+}
+
+internal enum class OgnLogrespStatus {
+    VERIFIED,
+    UNVERIFIED
+}
+
+internal fun parseLogrespStatus(line: String): OgnLogrespStatus? {
+    val trimmed = line.trim()
+    if (trimmed.isEmpty() || !trimmed.startsWith("#")) return null
+    val normalized = trimmed.lowercase(Locale.US)
+    if (!normalized.contains("logresp")) return null
+    return when {
+        normalized.contains("unverified") -> OgnLogrespStatus.UNVERIFIED
+        normalized.contains("verified") -> OgnLogrespStatus.VERIFIED
+        else -> null
+    }
+}
+
+internal fun isWithinReceiveRadiusKm(
+    targetLat: Double,
+    targetLon: Double,
+    requestedCenterLat: Double?,
+    requestedCenterLon: Double?,
+    subscriptionCenterLat: Double,
+    subscriptionCenterLon: Double,
+    radiusKm: Double
+): Boolean {
+    val hasRequestedCenter = requestedCenterLat != null && requestedCenterLon != null
+    val centerLat = if (hasRequestedCenter) requestedCenterLat!! else subscriptionCenterLat
+    val centerLon = if (hasRequestedCenter) requestedCenterLon!! else subscriptionCenterLon
+    val distanceKm = OgnSubscriptionPolicy.haversineKm(
+        lat1 = centerLat,
+        lon1 = centerLon,
+        lat2 = targetLat,
+        lon2 = targetLon
+    )
+    return distanceKm <= radiusKm
 }
 
 internal fun stabilizeTrackDegrees(

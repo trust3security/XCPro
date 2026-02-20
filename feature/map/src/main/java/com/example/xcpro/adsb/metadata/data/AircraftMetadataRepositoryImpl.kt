@@ -13,6 +13,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 @Singleton
@@ -105,7 +106,7 @@ class AircraftMetadataRepositoryImpl @Inject constructor(
 
                 if (hydratedRows.isNotEmpty()) {
                     dao.upsertActive(hydratedRows)
-                    mutableMetadataRevision.value = mutableMetadataRevision.value + 1L
+                    mutableMetadataRevision.update { revision -> revision + 1L }
                 }
             } finally {
                 eligibleMissing.forEach(onDemandInFlightByIcao24::remove)

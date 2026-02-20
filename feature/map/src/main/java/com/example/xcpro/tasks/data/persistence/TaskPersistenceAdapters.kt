@@ -32,7 +32,7 @@ import com.example.xcpro.tasks.racing.models.RacingWaypoint
 import com.example.xcpro.tasks.racing.models.RacingWaypointRole
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.Duration
-import java.util.UUID
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -175,7 +175,7 @@ private fun Task.toSimpleRacingTask(): SimpleRacingTask {
         )
     }
     return SimpleRacingTask(
-        id = id.ifBlank { UUID.randomUUID().toString() },
+        id = deterministicFallbackId(prefix = "racing"),
         waypoints = racingWaypoints
     )
 }
@@ -276,11 +276,35 @@ private fun Task.toSimpleAATTask(): SimpleAATTask {
         )
     }
     return SimpleAATTask(
-        id = id.ifBlank { UUID.randomUUID().toString() },
+        id = deterministicFallbackId(prefix = "aat"),
         waypoints = aatWaypoints,
         minimumTime = minimumTime,
         maximumTime = maximumTime
     )
+}
+
+internal fun Task.deterministicFallbackId(prefix: String): String {
+    if (id.isNotBlank()) {
+        return id
+    }
+    val fingerprint = buildString {
+        waypoints.forEachIndexed { index, waypoint ->
+            append(index)
+            append('|')
+            append(waypoint.id.trim())
+            append('|')
+            append(waypoint.title.trim())
+            append('|')
+            append(String.format(Locale.US, "%.6f", waypoint.lat))
+            append('|')
+            append(String.format(Locale.US, "%.6f", waypoint.lon))
+            append('|')
+            append(waypoint.role.name)
+            append(';')
+        }
+    }
+    val suffix = fingerprint.hashCode().toUInt().toString(16).padStart(8, '0')
+    return "${prefix}_$suffix"
 }
 
 private fun SimpleAATTask.toCoreTask(): Task {

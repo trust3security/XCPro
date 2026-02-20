@@ -19,18 +19,16 @@ It is designed for **experimental, training, and development use** -- not as a c
 
 ---
 
-## Planned / Investigating
+## OGN Live Traffic (Implemented MVP)
 
 ### OGN live traffic (Open Glider Network)
 
-- Add a live traffic map layer for nearby gliders/aircraft to improve situational awareness.
-- OGN provides community receiver coverage with APRS data distribution and a device database
-  that helps identify aircraft; data use must follow OGN rules (ODbL, respect privacy choices,
-  no redistribution of data older than 24h).
-- Initial display plan: map markers with position, track, ground speed, altitude, and last seen age;
-  labels from the device database (CN/registration/type) when allowed; anonymized IDs when privacy
-  opts out; stale/expired styling; range filter around map center or ownship.
+- XCPro includes a live OGN traffic overlay on the map.
+- Subscription center is ownship GPS (`mapLocation`) and receive policy is 300 km diameter (150 km radius).
+- Markers render icon, label, and track rotation with stale fade/eviction handling.
+- Labels are enriched from OGN DDB where allowed by privacy flags.
 - Informational only, not for collision avoidance or separation.
+- Current implementation details are documented in `docs/OGN/OGN.md` and `docs/OGN/OGN_PROTOCOL_NOTES.md`.
 
 ---
 
@@ -249,4 +247,5 @@ Screenshots/demo assets are not currently maintained in this document.
 ## Changelog / Releases
 
 No release-note index is currently maintained in this file.
+
 

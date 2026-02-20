@@ -18,6 +18,7 @@ import com.example.xcpro.R
 import com.example.xcpro.vario.VarioServiceManager
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -69,9 +70,19 @@ class VarioForegroundService : Service() {
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, createNotification())
         serviceScope.launch {
-            val sensorsStarted = manager.start()
+            val sensorsStarted = runCatching { manager.start() }
+                .onFailure { error ->
+                    if (error is CancellationException) {
+                        throw error
+                    }
+                    Log.e(TAG, "Failed to start sensor pipeline from foreground service", error)
+                }
+                .getOrDefault(false)
             if (!sensorsStarted) {
-                Log.w(TAG, "Foreground service active but waiting for GPS permission before publishing data")
+                Log.w(
+                    TAG,
+                    "Foreground service active but waiting for GPS permission before publishing data"
+                )
             }
         }
     }

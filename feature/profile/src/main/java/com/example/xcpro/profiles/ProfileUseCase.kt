@@ -8,6 +8,8 @@ class ProfileUseCase @Inject constructor(
 ) {
     val profiles: StateFlow<List<UserProfile>> = repository.profiles
     val activeProfile: StateFlow<UserProfile?> = repository.activeProfile
+    val bootstrapComplete: StateFlow<Boolean> = repository.bootstrapComplete
+    val bootstrapError: StateFlow<String?> = repository.bootstrapError
 
     suspend fun setActiveProfile(profile: UserProfile): Result<Unit> =
         repository.setActiveProfile(profile)

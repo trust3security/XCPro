@@ -19,8 +19,16 @@ import com.example.xcpro.forecast.FORECAST_WIND_DISPLAY_MODE_DEFAULT
 import com.example.xcpro.flightdata.WaypointFilesUseCase
 import com.example.xcpro.map.BuildConfig
 import com.example.xcpro.ogn.OGN_ICON_SIZE_DEFAULT_PX
+import com.example.xcpro.ogn.OgnGliderTrailSegment
 import com.example.xcpro.ogn.OgnTrafficTarget
+import com.example.xcpro.ogn.OgnThermalHotspot
 import com.example.xcpro.ogn.clampOgnIconSizePx
+import com.example.xcpro.weather.rain.WEATHER_RAIN_OPACITY_DEFAULT
+import com.example.xcpro.weather.rain.WEATHER_RAIN_STALE_DIMMED_OPACITY_MAX
+import com.example.xcpro.weather.rain.WEATHER_RAIN_TRANSITION_DURATION_BALANCED_MS
+import com.example.xcpro.weather.rain.WeatherRainFrameSelection
+import com.example.xcpro.weather.rain.WeatherRadarStatusCode
+import com.example.xcpro.weather.rain.clampWeatherRainOpacity
 import com.example.xcpro.loadAndApplyAirspace
 import com.example.xcpro.loadAndApplyWaypoints
 import com.example.xcpro.map.trail.SnailTrailManager
@@ -50,15 +58,30 @@ class MapOverlayManager(
     }
 
     private var latestOgnTargets: List<OgnTrafficTarget> = emptyList()
+    private var latestOgnThermalHotspots: List<OgnThermalHotspot> = emptyList()
+    private var latestOgnGliderTrailSegments: List<OgnGliderTrailSegment> = emptyList()
     private var latestAdsbTargets: List<AdsbTrafficUiModel> = emptyList()
     private var ognIconSizePx: Int = OGN_ICON_SIZE_DEFAULT_PX
     private var adsbIconSizePx: Int = ADSB_ICON_SIZE_DEFAULT_PX
     private var forecastOverlayEnabled: Boolean = false
-    private var latestForecastTileSpec: ForecastTileSpec? = null
-    private var latestForecastLegend: ForecastLegendSpec? = null
+    private var forecastSecondaryPrimaryOverlayEnabled: Boolean = false
+    private var forecastWindOverlayEnabled: Boolean = false
+    private var latestForecastPrimaryTileSpec: ForecastTileSpec? = null
+    private var latestForecastPrimaryLegend: ForecastLegendSpec? = null
+    private var latestForecastSecondaryPrimaryTileSpec: ForecastTileSpec? = null
+    private var latestForecastSecondaryPrimaryLegend: ForecastLegendSpec? = null
+    private var latestForecastWindTileSpec: ForecastTileSpec? = null
+    private var latestForecastWindLegend: ForecastLegendSpec? = null
     private var forecastOpacity: Float = FORECAST_OPACITY_DEFAULT
     private var forecastWindOverlayScale: Float = FORECAST_WIND_OVERLAY_SCALE_DEFAULT
     private var forecastWindDisplayMode: ForecastWindDisplayMode = FORECAST_WIND_DISPLAY_MODE_DEFAULT
+    private var weatherRainEnabled: Boolean = false
+    private var weatherRainOpacity: Float = WEATHER_RAIN_OPACITY_DEFAULT
+    private var weatherRainTransitionDurationMs: Long = WEATHER_RAIN_TRANSITION_DURATION_BALANCED_MS
+    private var weatherRainFrameSelection: WeatherRainFrameSelection? = null
+    private var weatherRainStatusCode: WeatherRadarStatusCode = WeatherRadarStatusCode.NO_METADATA
+    private var weatherRainStale: Boolean = true
+    private var lastWeatherRainConfig: WeatherRainRuntimeConfig? = null
 
     fun toggleDistanceCircles() {
         stateActions.toggleDistanceCircles()
@@ -145,14 +168,41 @@ class MapOverlayManager(
                 mapState.ognTrafficOverlay?.initialize()
                 mapState.ognTrafficOverlay?.render(latestOgnTargets)
 
+                mapState.ognThermalOverlay?.cleanup()
+                mapState.ognThermalOverlay = createOgnThermalOverlay(map)
+                mapState.ognThermalOverlay?.initialize()
+                mapState.ognThermalOverlay?.render(latestOgnThermalHotspots)
+
+                mapState.ognGliderTrailOverlay?.cleanup()
+                mapState.ognGliderTrailOverlay = createOgnGliderTrailOverlay(map)
+                mapState.ognGliderTrailOverlay?.initialize()
+                mapState.ognGliderTrailOverlay?.render(latestOgnGliderTrailSegments)
+
                 mapState.adsbTrafficOverlay?.cleanup()
                 mapState.adsbTrafficOverlay = createAdsbTrafficOverlay(map)
                 mapState.adsbTrafficOverlay?.initialize()
                 mapState.adsbTrafficOverlay?.render(latestAdsbTargets)
 
                 mapState.forecastOverlay?.cleanup()
-                mapState.forecastOverlay = ForecastRasterOverlay(map)
+                mapState.forecastSecondaryOverlay?.cleanup()
+                mapState.forecastWindOverlay?.cleanup()
+                mapState.forecastOverlay = ForecastRasterOverlay(
+                    map = map,
+                    idNamespace = "primary"
+                )
+                mapState.forecastSecondaryOverlay = ForecastRasterOverlay(
+                    map = map,
+                    idNamespace = "secondary"
+                )
+                mapState.forecastWindOverlay = ForecastRasterOverlay(
+                    map = map,
+                    idNamespace = "wind"
+                )
                 reapplyForecastOverlay(map)
+
+                mapState.weatherRainOverlay?.cleanup()
+                mapState.weatherRainOverlay = WeatherRainOverlay(map)
+                reapplyWeatherRainOverlay(map)
             }
             snailTrailManager.onMapStyleChanged(map)
             mapState.blueLocationOverlay?.bringToFront()
@@ -177,12 +227,34 @@ class MapOverlayManager(
                 mapState.ognTrafficOverlay?.initialize()
                 mapState.ognTrafficOverlay?.render(latestOgnTargets)
 
+                mapState.ognThermalOverlay = createOgnThermalOverlay(map)
+                mapState.ognThermalOverlay?.initialize()
+                mapState.ognThermalOverlay?.render(latestOgnThermalHotspots)
+
+                mapState.ognGliderTrailOverlay = createOgnGliderTrailOverlay(map)
+                mapState.ognGliderTrailOverlay?.initialize()
+                mapState.ognGliderTrailOverlay?.render(latestOgnGliderTrailSegments)
+
                 mapState.adsbTrafficOverlay = createAdsbTrafficOverlay(map)
                 mapState.adsbTrafficOverlay?.initialize()
                 mapState.adsbTrafficOverlay?.render(latestAdsbTargets)
 
-                mapState.forecastOverlay = ForecastRasterOverlay(map)
+                mapState.forecastOverlay = ForecastRasterOverlay(
+                    map = map,
+                    idNamespace = "primary"
+                )
+                mapState.forecastSecondaryOverlay = ForecastRasterOverlay(
+                    map = map,
+                    idNamespace = "secondary"
+                )
+                mapState.forecastWindOverlay = ForecastRasterOverlay(
+                    map = map,
+                    idNamespace = "wind"
+                )
                 reapplyForecastOverlay(map)
+
+                mapState.weatherRainOverlay = WeatherRainOverlay(map)
+                reapplyWeatherRainOverlay(map)
             }
             if (BuildConfig.DEBUG) {
                 Log.d(TAG, "Map overlays initialized successfully")
@@ -209,6 +281,24 @@ class MapOverlayManager(
         mapState.ognTrafficOverlay?.render(targets)
     }
 
+    fun updateOgnThermalHotspots(hotspots: List<OgnThermalHotspot>) {
+        latestOgnThermalHotspots = hotspots
+        val map = mapState.mapLibreMap ?: return
+        if (mapState.ognThermalOverlay == null) {
+            mapState.ognThermalOverlay = createOgnThermalOverlay(map)
+        }
+        mapState.ognThermalOverlay?.render(hotspots)
+    }
+
+    fun updateOgnGliderTrailSegments(segments: List<OgnGliderTrailSegment>) {
+        latestOgnGliderTrailSegments = segments
+        val map = mapState.mapLibreMap ?: return
+        if (mapState.ognGliderTrailOverlay == null) {
+            mapState.ognGliderTrailOverlay = createOgnGliderTrailOverlay(map)
+        }
+        mapState.ognGliderTrailOverlay?.render(segments)
+    }
+
     fun updateAdsbTrafficTargets(targets: List<AdsbTrafficUiModel>) {
         latestAdsbTargets = targets
         val map = mapState.mapLibreMap ?: return
@@ -220,40 +310,152 @@ class MapOverlayManager(
 
     fun setForecastOverlay(
         enabled: Boolean,
-        tileSpec: ForecastTileSpec?,
+        primaryTileSpec: ForecastTileSpec?,
+        primaryLegendSpec: ForecastLegendSpec?,
+        secondaryPrimaryOverlayEnabled: Boolean,
+        secondaryPrimaryTileSpec: ForecastTileSpec?,
+        secondaryPrimaryLegendSpec: ForecastLegendSpec?,
+        windOverlayEnabled: Boolean,
+        windTileSpec: ForecastTileSpec?,
+        windLegendSpec: ForecastLegendSpec?,
         opacity: Float,
         windOverlayScale: Float,
-        windDisplayMode: ForecastWindDisplayMode,
-        legendSpec: ForecastLegendSpec?
+        windDisplayMode: ForecastWindDisplayMode
     ) {
-        forecastOverlayEnabled = enabled
-        latestForecastTileSpec = tileSpec
-        latestForecastLegend = legendSpec
+        val primaryOverlayEnabled = enabled
+        forecastOverlayEnabled = primaryOverlayEnabled || windOverlayEnabled
+        forecastSecondaryPrimaryOverlayEnabled = primaryOverlayEnabled && secondaryPrimaryOverlayEnabled
+        forecastWindOverlayEnabled = windOverlayEnabled
+        latestForecastPrimaryTileSpec = primaryTileSpec
+        latestForecastPrimaryLegend = primaryLegendSpec
+        latestForecastSecondaryPrimaryTileSpec = secondaryPrimaryTileSpec
+        latestForecastSecondaryPrimaryLegend = secondaryPrimaryLegendSpec
+        latestForecastWindTileSpec = windTileSpec
+        latestForecastWindLegend = windLegendSpec
         forecastOpacity = clampForecastOpacity(opacity)
         forecastWindOverlayScale = clampForecastWindOverlayScale(windOverlayScale)
         forecastWindDisplayMode = windDisplayMode
         val map = mapState.mapLibreMap ?: return
-        if (!enabled || tileSpec == null) {
+        if (!forecastOverlayEnabled) {
             mapState.forecastOverlay?.clear()
+            mapState.forecastSecondaryOverlay?.clear()
+            mapState.forecastWindOverlay?.clear()
             return
         }
         if (mapState.forecastOverlay == null) {
-            mapState.forecastOverlay = ForecastRasterOverlay(map)
+            mapState.forecastOverlay = ForecastRasterOverlay(
+                map = map,
+                idNamespace = "primary"
+            )
         }
-        mapState.forecastOverlay?.render(
-            tileSpec = tileSpec,
-            opacity = forecastOpacity,
-            windOverlayScale = forecastWindOverlayScale,
-            windDisplayMode = forecastWindDisplayMode,
-            legendSpec = legendSpec
-        )
+        if (mapState.forecastSecondaryOverlay == null) {
+            mapState.forecastSecondaryOverlay = ForecastRasterOverlay(
+                map = map,
+                idNamespace = "secondary"
+            )
+        }
+        if (mapState.forecastWindOverlay == null) {
+            mapState.forecastWindOverlay = ForecastRasterOverlay(
+                map = map,
+                idNamespace = "wind"
+            )
+        }
+        if (primaryOverlayEnabled && primaryTileSpec != null) {
+            mapState.forecastOverlay?.render(
+                tileSpec = primaryTileSpec,
+                opacity = forecastOpacity,
+                windOverlayScale = forecastWindOverlayScale,
+                windDisplayMode = forecastWindDisplayMode,
+                legendSpec = primaryLegendSpec
+            )
+        } else {
+            mapState.forecastOverlay?.clear()
+        }
+        if (forecastSecondaryPrimaryOverlayEnabled && secondaryPrimaryTileSpec != null) {
+            mapState.forecastSecondaryOverlay?.render(
+                tileSpec = secondaryPrimaryTileSpec,
+                opacity = forecastOpacity,
+                windOverlayScale = forecastWindOverlayScale,
+                windDisplayMode = forecastWindDisplayMode,
+                legendSpec = secondaryPrimaryLegendSpec
+            )
+        } else {
+            mapState.forecastSecondaryOverlay?.clear()
+        }
+        if (windOverlayEnabled && windTileSpec != null) {
+            mapState.forecastWindOverlay?.render(
+                tileSpec = windTileSpec,
+                opacity = forecastOpacity,
+                windOverlayScale = forecastWindOverlayScale,
+                windDisplayMode = forecastWindDisplayMode,
+                legendSpec = windLegendSpec
+            )
+        } else {
+            mapState.forecastWindOverlay?.clear()
+        }
     }
 
     fun clearForecastOverlay() {
         forecastOverlayEnabled = false
-        latestForecastTileSpec = null
-        latestForecastLegend = null
+        forecastSecondaryPrimaryOverlayEnabled = false
+        forecastWindOverlayEnabled = false
+        latestForecastPrimaryTileSpec = null
+        latestForecastPrimaryLegend = null
+        latestForecastSecondaryPrimaryTileSpec = null
+        latestForecastSecondaryPrimaryLegend = null
+        latestForecastWindTileSpec = null
+        latestForecastWindLegend = null
         mapState.forecastOverlay?.clear()
+        mapState.forecastSecondaryOverlay?.clear()
+        mapState.forecastWindOverlay?.clear()
+    }
+
+    fun setWeatherRainOverlay(
+        enabled: Boolean,
+        frameSelection: WeatherRainFrameSelection?,
+        opacity: Float,
+        transitionDurationMs: Long,
+        statusCode: WeatherRadarStatusCode,
+        stale: Boolean
+    ) {
+        val resolvedOpacity = clampWeatherRainOpacity(opacity)
+        val resolvedTransitionDurationMs = transitionDurationMs.coerceAtLeast(0L)
+
+        weatherRainEnabled = enabled
+        weatherRainFrameSelection = frameSelection
+        weatherRainOpacity = resolvedOpacity
+        weatherRainTransitionDurationMs = resolvedTransitionDurationMs
+        weatherRainStatusCode = statusCode
+        weatherRainStale = stale
+
+        val nextConfig = WeatherRainRuntimeConfig(
+            enabled = enabled,
+            frameSelection = frameSelection,
+            opacity = resolvedOpacity,
+            transitionDurationMs = resolvedTransitionDurationMs,
+            stale = stale
+        )
+        if (nextConfig == lastWeatherRainConfig) return
+        lastWeatherRainConfig = nextConfig
+
+        val map = mapState.mapLibreMap ?: return
+        applyWeatherRainOverlay(map, nextConfig)
+    }
+
+    fun clearWeatherRainOverlay() {
+        weatherRainEnabled = false
+        weatherRainFrameSelection = null
+        weatherRainOpacity = WEATHER_RAIN_OPACITY_DEFAULT
+        weatherRainTransitionDurationMs = WEATHER_RAIN_TRANSITION_DURATION_BALANCED_MS
+        weatherRainStatusCode = WeatherRadarStatusCode.NO_METADATA
+        weatherRainStale = true
+        lastWeatherRainConfig = null
+        mapState.weatherRainOverlay?.clear()
+    }
+
+    fun reapplyWeatherRainOverlay() {
+        val map = mapState.mapLibreMap ?: return
+        reapplyWeatherRainOverlay(map)
     }
 
     fun reapplyForecastOverlay() {
@@ -292,6 +494,12 @@ class MapOverlayManager(
             initialIconSizePx = ognIconSizePx
         )
 
+    private fun createOgnThermalOverlay(map: MapLibreMap): OgnThermalOverlay =
+        OgnThermalOverlay(map = map)
+
+    private fun createOgnGliderTrailOverlay(map: MapLibreMap): OgnGliderTrailOverlay =
+        OgnGliderTrailOverlay(map = map)
+
     private fun createAdsbTrafficOverlay(map: MapLibreMap): AdsbTrafficOverlay =
         AdsbTrafficOverlay(
             context = context,
@@ -303,12 +511,21 @@ class MapOverlayManager(
         return mapState.adsbTrafficOverlay?.findTargetAt(tap)
     }
 
+    fun findOgnTargetAt(tap: LatLng): String? {
+        return mapState.ognTrafficOverlay?.findTargetAt(tap)
+    }
+
+    fun findOgnThermalHotspotAt(tap: LatLng): String? {
+        return mapState.ognThermalOverlay?.findTargetAt(tap)
+    }
+
     fun findForecastWindArrowSpeedAt(tap: LatLng): Double? {
         if (!forecastOverlayEnabled) return null
-        val tileSpec = latestForecastTileSpec ?: return null
+        if (!forecastWindOverlayEnabled) return null
+        val tileSpec = latestForecastWindTileSpec ?: return null
         if (tileSpec.format != ForecastTileFormat.VECTOR_WIND_POINTS) return null
         if (forecastWindDisplayMode != ForecastWindDisplayMode.ARROW) return null
-        return mapState.forecastOverlay?.findWindArrowSpeedAt(tap)
+        return mapState.forecastWindOverlay?.findWindArrowSpeedAt(tap)
     }
 
     fun onZoomChanged(map: MapLibreMap?) {
@@ -343,15 +560,49 @@ class MapOverlayManager(
             )
             append("- OGN Targets: ${latestOgnTargets.size}\n")
             append(
+                "- OGN Thermal Overlay: ${
+                    if (mapState.ognThermalOverlay != null) "Initialized" else "Not Initialized"
+                }\n"
+            )
+            append("- OGN Thermal Hotspots: ${latestOgnThermalHotspots.size}\n")
+            append(
+                "- OGN Glider Trail Overlay: ${
+                    if (mapState.ognGliderTrailOverlay != null) "Initialized" else "Not Initialized"
+                }\n"
+            )
+            append("- OGN Glider Trail Segments: ${latestOgnGliderTrailSegments.size}\n")
+            append(
                 "- ADS-B Traffic Overlay: ${
                     if (mapState.adsbTrafficOverlay != null) "Initialized" else "Not Initialized"
                 }\n"
             )
             append("- ADS-B Targets: ${latestAdsbTargets.size}\n")
             append("- Forecast Overlay Enabled: $forecastOverlayEnabled\n")
+            append("- Forecast Secondary Overlay Enabled: $forecastSecondaryPrimaryOverlayEnabled\n")
+            append("- Forecast Wind Overlay Enabled: $forecastWindOverlayEnabled\n")
             append(
                 "- Forecast Raster Overlay: ${
                     if (mapState.forecastOverlay != null) "Initialized" else "Not Initialized"
+                }\n"
+            )
+            append(
+                "- Forecast Secondary Overlay: ${
+                    if (mapState.forecastSecondaryOverlay != null) "Initialized" else "Not Initialized"
+                }\n"
+            )
+            append(
+                "- Forecast Wind Overlay: ${
+                    if (mapState.forecastWindOverlay != null) "Initialized" else "Not Initialized"
+                }\n"
+            )
+            append("- Weather Rain Enabled: $weatherRainEnabled\n")
+            append("- Weather Rain Status: $weatherRainStatusCode\n")
+            append("- Weather Rain Stale: $weatherRainStale\n")
+            append("- Weather Rain Frame Selected: ${weatherRainFrameSelection != null}\n")
+            append("- Weather Rain Transition Duration Ms: $weatherRainTransitionDurationMs\n")
+            append(
+                "- Weather Rain Overlay: ${
+                    if (mapState.weatherRainOverlay != null) "Initialized" else "Not Initialized"
                 }\n"
             )
             append("- Task Waypoints: ${taskWaypointCountProvider()}\n")
@@ -361,18 +612,110 @@ class MapOverlayManager(
     private fun reapplyForecastOverlay(map: MapLibreMap) {
         if (!forecastOverlayEnabled) {
             mapState.forecastOverlay?.clear()
+            mapState.forecastSecondaryOverlay?.clear()
+            mapState.forecastWindOverlay?.clear()
             return
         }
-        val tileSpec = latestForecastTileSpec ?: return
         if (mapState.forecastOverlay == null) {
-            mapState.forecastOverlay = ForecastRasterOverlay(map)
+            mapState.forecastOverlay = ForecastRasterOverlay(
+                map = map,
+                idNamespace = "primary"
+            )
         }
-        mapState.forecastOverlay?.render(
-            tileSpec = tileSpec,
-            opacity = forecastOpacity,
-            windOverlayScale = forecastWindOverlayScale,
-            windDisplayMode = forecastWindDisplayMode,
-            legendSpec = latestForecastLegend
-        )
+        if (mapState.forecastSecondaryOverlay == null) {
+            mapState.forecastSecondaryOverlay = ForecastRasterOverlay(
+                map = map,
+                idNamespace = "secondary"
+            )
+        }
+        if (mapState.forecastWindOverlay == null) {
+            mapState.forecastWindOverlay = ForecastRasterOverlay(
+                map = map,
+                idNamespace = "wind"
+            )
+        }
+        val primaryTileSpec = latestForecastPrimaryTileSpec
+        if (primaryTileSpec != null) {
+            mapState.forecastOverlay?.render(
+                tileSpec = primaryTileSpec,
+                opacity = forecastOpacity,
+                windOverlayScale = forecastWindOverlayScale,
+                windDisplayMode = forecastWindDisplayMode,
+                legendSpec = latestForecastPrimaryLegend
+            )
+        } else {
+            mapState.forecastOverlay?.clear()
+        }
+        val secondaryPrimaryTileSpec = latestForecastSecondaryPrimaryTileSpec
+        if (forecastSecondaryPrimaryOverlayEnabled && secondaryPrimaryTileSpec != null) {
+            mapState.forecastSecondaryOverlay?.render(
+                tileSpec = secondaryPrimaryTileSpec,
+                opacity = forecastOpacity,
+                windOverlayScale = forecastWindOverlayScale,
+                windDisplayMode = forecastWindDisplayMode,
+                legendSpec = latestForecastSecondaryPrimaryLegend
+            )
+        } else {
+            mapState.forecastSecondaryOverlay?.clear()
+        }
+        val windTileSpec = latestForecastWindTileSpec
+        if (forecastWindOverlayEnabled && windTileSpec != null) {
+            mapState.forecastWindOverlay?.render(
+                tileSpec = windTileSpec,
+                opacity = forecastOpacity,
+                windOverlayScale = forecastWindOverlayScale,
+                windDisplayMode = forecastWindDisplayMode,
+                legendSpec = latestForecastWindLegend
+            )
+        } else {
+            mapState.forecastWindOverlay?.clear()
+        }
     }
+
+    private fun reapplyWeatherRainOverlay(map: MapLibreMap) {
+        val config = WeatherRainRuntimeConfig(
+            enabled = weatherRainEnabled,
+            frameSelection = weatherRainFrameSelection,
+            opacity = weatherRainOpacity,
+            transitionDurationMs = weatherRainTransitionDurationMs,
+            stale = weatherRainStale
+        )
+        applyWeatherRainOverlay(map, config)
+    }
+
+    private fun applyWeatherRainOverlay(
+        map: MapLibreMap,
+        config: WeatherRainRuntimeConfig
+    ) {
+        val frameSelection = config.frameSelection
+        if (!config.enabled || frameSelection == null) {
+            mapState.weatherRainOverlay?.clear()
+            return
+        }
+        if (mapState.weatherRainOverlay == null) {
+            mapState.weatherRainOverlay = WeatherRainOverlay(map)
+        }
+        val effectiveOpacity = if (config.stale) {
+            minOf(config.opacity, WEATHER_RAIN_STALE_DIMMED_OPACITY_MAX)
+        } else {
+            config.opacity
+        }
+        runCatching {
+            mapState.weatherRainOverlay?.render(
+                frameSelection = frameSelection,
+                opacity = effectiveOpacity,
+                transitionDurationMs = config.transitionDurationMs
+            )
+        }.onFailure { throwable ->
+            Log.e(TAG, "Weather rain overlay apply failed: ${throwable.message}", throwable)
+        }
+    }
+
+    private data class WeatherRainRuntimeConfig(
+        val enabled: Boolean,
+        val frameSelection: WeatherRainFrameSelection?,
+        val opacity: Float,
+        val transitionDurationMs: Long,
+        val stale: Boolean
+    )
 }

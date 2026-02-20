@@ -322,6 +322,129 @@ profile UI, dfcards, look-and-feel, and theme settings.
    - `feature/profile/src/main/java/com/example/xcpro/profiles/ui/ProfileSelectionList.kt`
    - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileSettingsScreen.kt`
 
+## Additional Deep Dive Findings (Sixth Pass, 2026-02-17)
+
+### Persistence consistency gap
+
+1. Profile list and active profile ID are persisted via separate DataStore edits.
+   Repository writes `profiles_json` and `active_profile_id` in separate calls, which are not
+   atomic as one combined state transition.
+   Risk: partial write windows and inconsistent on-disk pair after failure/interruption.
+   Files:
+   - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt`
+   - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileStorage.kt`
+
+### UI state projection gap
+
+1. `ProfileViewModel` can transiently preserve stale `activeProfile` when repository emits null.
+   In profiles collector, active profile is set as `useCase.activeProfile.value ?: previous`.
+   Risk: short-lived stale active-profile UI state and gating/style decisions based on stale value.
+   File:
+   - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileViewModel.kt`
+
+### Mutation serialization gap
+
+1. Repository write paths are unsynchronized across create/select/update/delete operations.
+   Mutations are derived from current in-memory state with no mutex/serialization guard.
+   Risk: lost updates or last-writer-wins anomalies under concurrent profile operations.
+   File:
+   - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt`
+
+## Additional Deep Dive Findings (Seventh Pass, 2026-02-17)
+
+### Mutation failure semantics gap
+
+1. Repository mutation paths mutate in-memory state before persistence and do not rollback on
+   storage write failure.
+   `createProfile`, `setActiveProfile`, `updateProfile`, and `deleteProfile` update
+   `_profiles`/`_activeProfile` first, then persist.
+   Risk: UI can show a failed operation while runtime state has already changed, causing memory/disk
+   divergence until next reload/reconciliation.
+   File:
+   - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt`
+
+### Active-invariant repair gap in mutation paths
+
+1. `deleteProfile(...)` only repairs active state when the deleted ID equals current active profile.
+   If active state is already null/invalid and a non-active row is deleted, repository can end with
+   `profiles.isNotEmpty()` and `activeProfile == null`.
+   Risk: null-active runtime persists despite available profiles.
+   File:
+   - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt`
+
+2. `createProfile(...)` only auto-activates when list size becomes `1`.
+   In an already-invalid state (profiles exist, active missing), create path does not repair the
+   active-profile invariant by itself.
+   Risk: callers can continue operating in null-active state after successful create.
+   File:
+   - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt`
+
+### Selection action-gating gap
+
+1. Profile selection screen still renders "Continue to Flight Map" whenever
+   `state.activeProfile != null`, even while `state.isLoading`.
+   Risk: user can continue while a select/create mutation is still in-flight, potentially using a
+   stale active profile.
+   File:
+   - `feature/profile/src/main/java/com/example/xcpro/profiles/ui/ProfileSelectionContent.kt`
+
+2. Skip action availability is keyed only by profile/active null state and does not consider
+   loading state.
+   Risk: skip can still fire during profile hydration/mutation transitions.
+   File:
+   - `feature/profile/src/main/java/com/example/xcpro/profiles/ui/ProfileSelectionContent.kt`
+
+### Time-source discipline gap
+
+1. `UserProfile` timestamp defaults call `System.currentTimeMillis()` directly.
+   Risk: profile metadata timestamps are non-deterministic and bypass injected-clock policy used
+   elsewhere.
+   File:
+   - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileModels.kt`
+
+## Additional Deep Dive Findings (Eighth Pass, 2026-02-17)
+
+### Cross-screen profile visibility consistency gap (dfcards)
+
+1. Profile mode-visibility hydration only includes profile IDs discovered from template/card
+   mappings (plus active profile at hydration time).
+   When switching later to a profile that has persisted visibility keys but no loaded
+   template/card mapping, `setActiveProfile(...)` seeds in-memory defaults via
+   `ensureVisibilityEntry(...)` instead of loading persisted visibility values first.
+   Risk: map and flight-data screens can diverge for the same profile after switch
+   (map path can still read persisted visibility, while dfcards in-memory state shows defaults),
+   and subsequent writes can overwrite prior persisted visibility intent.
+   Files:
+   - `dfcards-library/src/main/java/com/example/dfcards/dfcards/FlightProfileStore.kt`
+   - `dfcards-library/src/main/java/com/example/dfcards/dfcards/FlightDataViewModel.kt`
+   - `feature/map/src/main/java/com/example/xcpro/map/FlightDataManager.kt`
+   - `feature/map/src/main/java/com/example/xcpro/screens/flightdata/FlightDataScreensTab.kt`
+   - `dfcards-library/src/main/java/com/example/dfcards/dfcards/FlightDataIngest.kt`
+
+### Profile settings local state freshness gap
+
+1. `ProfileSettingsScreen` initializes editable state with `remember { mutableStateOf(profile) }`
+   and no key.
+   Risk: if the profile object changes while the screen stays open (hydration completion or
+   external mutation), local editable state can become stale and save outdated data.
+   File:
+   - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileSettingsScreen.kt`
+
+### Test coverage gap
+
+1. `FlightDataViewModel` unit tests do not cover visibility hydration and cross-profile
+   visibility restoration behavior.
+   Risk: regressions in profile visibility persistence/switching can pass current tests.
+   File:
+   - `dfcards-library/src/test/java/com/example/dfcards/FlightDataViewModelUnitsTest.kt`
+
+### Profile entrypoint gap
+
+1. Manage Account screen still exposes an "Edit Profile" row with a TODO no-op action.
+   Risk: user-visible profile-management path appears available but does nothing.
+   File:
+   - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ManageAccount.kt`
+
 ## Default Profile Constraints (Phase 1)
 
 For the first implementation milestone, default-profile behavior should satisfy:

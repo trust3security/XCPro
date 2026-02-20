@@ -2,8 +2,8 @@ package com.example.xcpro.map.ui
 
 import android.util.Log
 import com.example.xcpro.map.MapCommand
+import com.example.xcpro.map.MapStyleUrlResolver
 import com.example.xcpro.map.MapOverlayManager
-import com.example.xcpro.screens.overlays.getMapStyleUrl
 import org.maplibre.android.maps.MapLibreMap
 
 /**
@@ -18,13 +18,22 @@ class MapRuntimeController(
 
     private var map: MapLibreMap? = null
     private var pendingStyleName: String? = null
+    private var mapGeneration: Long = 0L
+    private var styleRequestToken: Long = 0L
 
     fun onMapReady(map: MapLibreMap) {
         this.map = map
-        pendingStyleName?.let { styleName ->
-            pendingStyleName = null
-            applyStyle(styleName)
-        }
+        mapGeneration++
+        // Initial style is owned by MapInitializer. Drop any stale pre-ready command
+        // to avoid double style loads during cold start.
+        pendingStyleName = null
+    }
+
+    fun clearMap() {
+        map = null
+        pendingStyleName = null
+        mapGeneration++
+        styleRequestToken++
     }
 
     fun apply(command: MapCommand) {
@@ -38,14 +47,24 @@ class MapRuntimeController(
             pendingStyleName = styleName
             return
         }
-        val styleUrl = getMapStyleUrl(styleName)
+        val activeGeneration = mapGeneration
+        val requestToken = ++styleRequestToken
+        val styleUrl = MapStyleUrlResolver.resolve(styleName)
         try {
             currentMap.setStyle(styleUrl) {
-                Log.d(TAG, "Map style loaded: $styleName ($styleUrl)")
+                val isCurrentMap = map === currentMap && mapGeneration == activeGeneration
+                val isCurrentRequest = styleRequestToken == requestToken
+                if (!isCurrentMap || !isCurrentRequest) {
+                    if (com.example.xcpro.map.BuildConfig.DEBUG) {
+                        Log.d(TAG, "Ignoring stale map style callback for $styleName")
+                    }
+                    return@setStyle
+                }
+                Log.d(TAG, "Map style loaded: $styleName")
                 overlayManager.onMapStyleChanged(currentMap)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to set style: ${e.message}", e)
+            Log.e(TAG, "Failed to set map style: $styleName", e)
         }
     }
 }

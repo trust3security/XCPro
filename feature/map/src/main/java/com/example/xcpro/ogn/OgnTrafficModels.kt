@@ -25,7 +25,9 @@ data class OgnTrafficSnapshot(
     val receiveRadiusKm: Int,
     val ddbCacheAgeMs: Long?,
     val reconnectBackoffMs: Long?,
-    val lastReconnectWallMs: Long?
+    val lastReconnectWallMs: Long?,
+    val activeSubscriptionCenterLat: Double? = null,
+    val activeSubscriptionCenterLon: Double? = null
 )
 
 data class OgnTrafficTarget(

@@ -11,7 +11,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.xcpro.adsb.AdsbAuthMode
 import com.example.xcpro.adsb.AdsbConnectionState
+import com.example.xcpro.adsb.AdsbNetworkFailureKind
 import com.example.xcpro.adsb.AdsbTrafficSnapshot
+import com.example.xcpro.adsb.ADSB_ERROR_CIRCUIT_BREAKER_OPEN
+import com.example.xcpro.adsb.ADSB_ERROR_CIRCUIT_BREAKER_PROBE
 import com.example.xcpro.ogn.OgnConnectionState
 import com.example.xcpro.ogn.OgnTrafficSnapshot
 import java.util.Locale
@@ -44,7 +47,12 @@ internal fun OgnDebugPanel(
                 style = MaterialTheme.typography.bodySmall
             )
             Text(
-                text = "Center: ${formatCoord(snapshot.subscriptionCenterLat)}, ${formatCoord(snapshot.subscriptionCenterLon)}",
+                text = "Requested center: ${formatCoord(snapshot.subscriptionCenterLat)}, ${formatCoord(snapshot.subscriptionCenterLon)}",
+                color = Color(0xFFD1D5DB),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = "Active center: ${formatCoord(snapshot.activeSubscriptionCenterLat)}, ${formatCoord(snapshot.activeSubscriptionCenterLon)}",
                 color = Color(0xFFD1D5DB),
                 style = MaterialTheme.typography.bodySmall
             )
@@ -131,6 +139,16 @@ internal fun AdsbDebugPanel(
                 color = if (snapshot.authMode == AdsbAuthMode.AuthFailed) Color(0xFFFCA5A5) else Color(0xFFE5E7EB),
                 style = MaterialTheme.typography.bodySmall
             )
+            Text(
+                text = "Failures: ${snapshot.consecutiveFailureCount} | Next retry mono: ${formatMonoMs(snapshot.nextRetryMonoMs)}",
+                color = Color(0xFFE5E7EB),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = "Last failure mono: ${formatMonoMs(snapshot.lastFailureMonoMs)}",
+                color = Color(0xFFE5E7EB),
+                style = MaterialTheme.typography.bodySmall
+            )
             snapshot.debugReasonLabel()?.let { reason ->
                 Text(
                     text = "Reason: $reason",
@@ -148,6 +166,13 @@ internal fun AdsbDebugPanel(
         }
     }
 }
+
+internal fun isOgnReadyForAutoDismiss(snapshot: OgnTrafficSnapshot): Boolean =
+    snapshot.connectionState == OgnConnectionState.CONNECTED
+
+internal fun isAdsbReadyForAutoDismiss(snapshot: AdsbTrafficSnapshot): Boolean =
+    snapshot.connectionState is AdsbConnectionState.Active &&
+        snapshot.authMode != AdsbAuthMode.AuthFailed
 
 private fun OgnConnectionState.toDebugLabel(): String = when (this) {
     OgnConnectionState.DISCONNECTED -> "DISCONNECTED"
@@ -169,9 +194,18 @@ private fun AdsbAuthMode.toDebugLabel(): String = when (this) {
     AdsbAuthMode.AuthFailed -> "AUTH FAILED"
 }
 
-private fun AdsbTrafficSnapshot.debugReasonLabel(): String? {
+internal fun AdsbTrafficSnapshot.debugReasonLabel(): String? {
+    if (connectionState is AdsbConnectionState.Error && lastError == ADSB_ERROR_CIRCUIT_BREAKER_OPEN) {
+        return "Circuit breaker open"
+    }
+    if (connectionState is AdsbConnectionState.Error && lastError == ADSB_ERROR_CIRCUIT_BREAKER_PROBE) {
+        return "Circuit breaker half-open probe"
+    }
     if (authMode == AdsbAuthMode.AuthFailed && lastHttpStatus != 429) {
         return "Credential auth failed; using anonymous fallback"
+    }
+    if (connectionState is AdsbConnectionState.Error && lastNetworkFailureKind != null) {
+        return "Network: ${lastNetworkFailureKind.toDebugLabel()}"
     }
     if (connectionState !is AdsbConnectionState.BackingOff) return null
     return when {
@@ -185,8 +219,20 @@ private fun AdsbTrafficSnapshot.debugReasonLabel(): String? {
             "OpenSky request quota exceeded"
         authMode == AdsbAuthMode.AuthFailed ->
             "Credential auth failed; using anonymous fallback"
+        lastNetworkFailureKind != null ->
+            "Network: ${lastNetworkFailureKind.toDebugLabel()}"
         else -> null
     }
+}
+
+private fun AdsbNetworkFailureKind.toDebugLabel(): String = when (this) {
+    AdsbNetworkFailureKind.DNS -> "DNS lookup failed"
+    AdsbNetworkFailureKind.TIMEOUT -> "Socket timeout"
+    AdsbNetworkFailureKind.CONNECT -> "Connection refused/unreachable"
+    AdsbNetworkFailureKind.NO_ROUTE -> "No route to host"
+    AdsbNetworkFailureKind.TLS -> "TLS handshake failure"
+    AdsbNetworkFailureKind.MALFORMED_RESPONSE -> "Malformed provider payload"
+    AdsbNetworkFailureKind.UNKNOWN -> "Unknown network failure"
 }
 
 private fun formatCoord(value: Double?): String {
@@ -207,4 +253,9 @@ private fun formatAge(ageMs: Long?): String {
 private fun formatBackoff(backoffMs: Long?): String {
     if (backoffMs == null || backoffMs <= 0L) return "--"
     return "${backoffMs / 1000L}s"
+}
+
+private fun formatMonoMs(monoMs: Long?): String {
+    if (monoMs == null || monoMs < 0L) return "--"
+    return "$monoMs"
 }

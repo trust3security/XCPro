@@ -44,6 +44,8 @@ fun CustomMapGestureHandler(
     onMapTap: (org.maplibre.android.geometry.LatLng) -> Unit = {},
     onMapLongPress: (org.maplibre.android.geometry.LatLng) -> Unit = {},
     mapViewPixelRatio: Float = 0f,
+    attributionTapPassthroughWidthPx: Float = 0f,
+    attributionTapPassthroughHeightPx: Float = 0f,
     modifier: Modifier = Modifier
 ) {
     val totalDragX = remember { mutableStateOf(0f) }
@@ -64,6 +66,17 @@ fun CustomMapGestureHandler(
                         val preDownChange = preDownEvent.changes.firstOrNull { it.changedToDown() }
                         if (preDownChange != null) {
                             gestureStartPosition.value = preDownChange.position
+                            if (
+                                shouldBypassAttributionTap(
+                                    pointerX = gestureStartPosition.value.x,
+                                    pointerY = gestureStartPosition.value.y,
+                                    viewportHeightPx = size.height.toFloat(),
+                                    passthroughWidthPx = attributionTapPassthroughWidthPx,
+                                    passthroughHeightPx = attributionTapPassthroughHeightPx
+                                )
+                            ) {
+                                return@awaitEachGesture
+                            }
                             val overlayRegion = gestureRegions.firstOrNull { region ->
                                 region.bounds.contains(gestureStartPosition.value)
                             }
@@ -87,6 +100,17 @@ fun CustomMapGestureHandler(
                         return@awaitEachGesture
                     }
                     gestureStartPosition.value = firstDown.position
+                    if (
+                        shouldBypassAttributionTap(
+                            pointerX = gestureStartPosition.value.x,
+                            pointerY = gestureStartPosition.value.y,
+                            viewportHeightPx = size.height.toFloat(),
+                            passthroughWidthPx = attributionTapPassthroughWidthPx,
+                            passthroughHeightPx = attributionTapPassthroughHeightPx
+                        )
+                    ) {
+                        return@awaitEachGesture
+                    }
 
                     val screenHeight = size.height.toFloat()
                     val isOverFlightDataCards = gestureStartPosition.value.y > (screenHeight - bottomSheetHeight)
@@ -300,4 +324,17 @@ fun CustomMapGestureHandler(
                 }
             }
     )
+}
+
+internal fun shouldBypassAttributionTap(
+    pointerX: Float,
+    pointerY: Float,
+    viewportHeightPx: Float,
+    passthroughWidthPx: Float,
+    passthroughHeightPx: Float
+): Boolean {
+    if (passthroughWidthPx <= 0f || passthroughHeightPx <= 0f) return false
+    if (pointerX < 0f || pointerY < 0f || viewportHeightPx <= 0f) return false
+    val minY = (viewportHeightPx - passthroughHeightPx).coerceAtLeast(0f)
+    return pointerX <= passthroughWidthPx && pointerY >= minY
 }

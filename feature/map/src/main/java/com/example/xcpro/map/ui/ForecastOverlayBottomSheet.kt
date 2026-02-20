@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -56,7 +58,7 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 @Composable
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 internal fun ForecastOverlayBottomSheet(
     uiState: ForecastOverlayUiState,
     onDismiss: () -> Unit,
@@ -164,7 +166,7 @@ internal fun ForecastOverlayBottomSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Enabled",
+                    text = "Show non-wind overlays",
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.weight(1f)
                 )
@@ -175,31 +177,23 @@ internal fun ForecastOverlayBottomSheet(
             }
 
             Text(
-                text = "Parameters",
-                style = MaterialTheme.typography.titleMedium
-            )
-            Text(
                 text = "Select up to 2 non-wind overlays",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            LazyRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                if (uiState.primaryParameters.isEmpty()) {
-                    item {
-                        Text(
-                            text = "No parameters available",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                } else {
-                    items(
-                        items = uiState.primaryParameters,
-                        key = { parameter -> parameter.id.value }
-                    ) { parameter ->
+            if (uiState.primaryParameters.isEmpty()) {
+                Text(
+                    text = "No parameters available",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            } else {
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    uiState.primaryParameters.forEach { parameter ->
                         val isSelected = selectedPrimaryOverlayIds.any { selected ->
                             selected.value.equals(parameter.id.value, ignoreCase = true)
                         }
@@ -215,23 +209,19 @@ internal fun ForecastOverlayBottomSheet(
                 }
             }
 
-            Text(
-                text = "Wind overlay",
-                style = MaterialTheme.typography.titleMedium
-            )
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = "Show wind",
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f)
                 )
                 Switch(
                     checked = uiState.windOverlayEnabled,
                     onCheckedChange = onWindOverlayEnabledChanged,
-                    enabled = uiState.enabled
+                    enabled = true
                 )
             }
             LazyRow(
@@ -255,7 +245,7 @@ internal fun ForecastOverlayBottomSheet(
                             selected = parameter.id == uiState.selectedWindParameterId,
                             onClick = { onWindParameterSelected(parameter.id) },
                             label = { Text(parameter.name) },
-                            enabled = uiState.enabled && uiState.windOverlayEnabled
+                            enabled = uiState.windOverlayEnabled
                         )
                     }
                 }
@@ -281,14 +271,14 @@ internal fun ForecastOverlayBottomSheet(
                 )
                 TextButton(
                     onClick = onJumpToNow,
-                    enabled = uiState.enabled
+                    enabled = true
                 ) {
                     Text("Now")
                 }
                 Switch(
                     checked = uiState.autoTimeEnabled,
                     onCheckedChange = onAutoTimeEnabledChanged,
-                    enabled = uiState.enabled
+                    enabled = true
                 )
             }
             if (uiState.timeSlots.isEmpty()) {
@@ -310,7 +300,7 @@ internal fun ForecastOverlayBottomSheet(
                         }
                         onTimeSelected(uiState.timeSlots[index].validTimeUtcMs)
                     },
-                    enabled = uiState.enabled,
+                    enabled = true,
                     valueRange = 0f..maxTimeIndex.toFloat(),
                     steps = (maxTimeIndex - 1).coerceAtLeast(0)
                 )
@@ -340,7 +330,7 @@ internal fun ForecastOverlayBottomSheet(
                         onFollowTimeOffsetChanged(selectedOffsetMinutes)
                     }
                 },
-                enabled = uiState.enabled && uiState.autoTimeEnabled,
+                enabled = uiState.autoTimeEnabled,
                 valueRange = 0f..maxFollowOffsetIndex.toFloat(),
                 steps = (maxFollowOffsetIndex - 1).coerceAtLeast(0)
             )
@@ -359,7 +349,7 @@ internal fun ForecastOverlayBottomSheet(
                         onOpacityChanged(opacityDraft)
                     }
                 },
-                enabled = uiState.enabled,
+                enabled = true,
                 valueRange = 0f..1f
             )
 
@@ -384,7 +374,7 @@ internal fun ForecastOverlayBottomSheet(
                         selected = uiState.windDisplayMode == mode,
                         onClick = { onWindDisplayModeChanged(mode) },
                         label = { Text(mode.label) },
-                        enabled = uiState.enabled && uiState.windOverlayEnabled
+                        enabled = uiState.windOverlayEnabled
                     )
                 }
             }
@@ -398,7 +388,7 @@ internal fun ForecastOverlayBottomSheet(
                         onWindOverlayScaleChanged(windOverlayScaleDraft)
                     }
                 },
-                enabled = uiState.enabled && uiState.windOverlayEnabled,
+                enabled = uiState.windOverlayEnabled,
                 valueRange = FORECAST_WIND_OVERLAY_SCALE_MIN..FORECAST_WIND_OVERLAY_SCALE_MAX
             )
 

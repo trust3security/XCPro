@@ -1,0 +1,688 @@
+﻿
+<!DOCTYPE html>
+<html>
+<head>
+    <!-- Meta Tags -->
+    <meta charset="UTF-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="keywords" content="SkySight Soaring Weather">
+    <meta name="description" content="SkySight Soaring Weather">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Favicon -->
+    <link rel="icon" href="/ozsoar/favicon.ico">
+    <!-- Title -->
+    <title>SkySight Soaring Weather</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css?family=Dosis:400,500,600,700%7COpen+Sans:400,600,700" rel="stylesheet">
+    <!-- Icon Fonts -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <!-- Vendor CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.0.0-beta/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.9.0/slick.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+    <!-- Main CSS -->
+     
+      <link rel="stylesheet" href="/ozsoar/vendor/strokegap/style.min.css">
+      <link rel="stylesheet" href="/ozsoar/home/css/style.min.css">
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-16890703736">
+    </script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'AW-16890703736');
+    </script>
+</head>
+<body id="top" class="dino-soft is-scrolling">
+<!-- Start Page Preloader 
+<div id="loading">
+    <div id="loading-center">
+        <div id="loading-center-absolute">
+            <div class="object" id="object_four"></div>
+            <div class="object" id="object_three"></div>
+            <div class="object" id="object_two"></div>
+            <div class="object" id="object_one"></div>
+        </div>
+    </div>
+</div>
+-->
+<!-- End Page Preloader -->
+<!-- Start Header -->
+<header class="header header-shrink header-inverse fixed-top">
+    <div class="container" style="max-width:1400px;">
+        <!-- Start Navigation -->
+        <nav class="navbar navbar-expand-lg">
+            <!-- Start Logo -->
+            <div class="navbar-brand" href="index.html">
+                <span class="logo-inverse">
+                    <img id="logo" src="/ozsoar/img/logo.png" style="vertical-align:initial;">
+                    <i style='color: #777; font-family: "Helvetica Neue",Helvetica,Arial,sans-serif; font-size: 2em; margin-left: 10px;' >SkySight</i>
+                </span>
+            </div>
+            <!-- End Logo -->
+            <!-- Start Mobile Button -->
+            <button class="navbar-toggler p-0" data-toggle="collapse" data-target="#navbarNav">
+                <span class="hamburger hamburger--spin js-hamburger">
+                    <span class="hamburger-box">
+                        <span class="hamburger-inner"></span>
+                    </span>
+                </span>
+            </button>
+            <!-- End Mobile Button -->
+            <!-- Start Menu -->
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item active">
+                        <a class="nav-link" href="#" data-scrollto="top">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-scrollto="tech">Tech</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-scrollto="plans">Pricing</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-scrollto="team">Team</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-scrollto="reviews">Reviews</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-scrollto="faq">FAQ</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-scrollto="contact">Contact</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link btn btn-sm btn-rounded btn-green u-w-90" href="/login/">Login</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">
+                          English<b class="caret"></b>
+                        </a>
+                        <ul class="dropdown-menu">
+                            
+                                
+                                    <li><a href="/?&hl=en_US">English (United States) - English (United States)</a></li>
+                                
+                            
+                                
+                                    <li><a href="/?&hl=pl_PL">Polish (Poland) - Polski (Polska)</a></li>
+                                
+                            
+                                
+                                    <li><a href="/?&hl=de_DE">German (Germany) - Deutsch (Deutschland)</a></li>
+                                
+                            
+                                
+                                    <li><a href="/?&hl=nl_BE">Dutch (Belgium) - Nederlands (België)</a></li>
+                                
+                            
+                                
+                                    <li><a href="/?&hl=nl_NL">Dutch (Netherlands) - Nederlands (Nederland)</a></li>
+                                
+                            
+                                
+                                    <li><a href="/?&hl=ja_JP">Japanese (Japan) - 日本語 (日本)</a></li>
+                                
+                            
+                                
+                                    <li><a href="/?&hl=fr_FR">French (France) - Français (France)</a></li>
+                                
+                            
+                                
+                                    <li><a href="/?&hl=es_ES">Spanish (Spain) - Español (España)</a></li>
+                                
+                            
+                                
+                                    <li><a href="/?&hl=cs_CZ">Czech (Czechia) - Čeština (Česko)</a></li>
+                                
+                            
+                                
+                                    <li><a href="/?&hl=nb_NO">Norwegian Bokmål (Norway) - Norsk Bokmål (Norge)</a></li>
+                                
+                            
+                                
+                                    <li><a href="/?&hl=it_IT">Italian (Italy) - Italiano (Italia)</a></li>
+                                
+                            
+                                
+                                    <li><a href="/?&hl=sv_SE">Swedish (Sweden) - Svenska (Sverige)</a></li>
+                                
+                            
+                                
+                                    <li><a href="/?&hl=vi_VN">Vietnamese (Vietnam) - Tiếng Việt (Việt Nam)</a></li>
+                                
+                            
+                        </ul>
+                    </li>
+
+                </ul>
+            </div>
+            <!-- End Menu -->
+        </nav>
+        <!-- End Navigation -->
+    </div>
+        
+  
+
+</header>
+<!-- End Header -->
+<!-- Start Hero -->
+<section class="hero-soft u-pt-md-120 pb-0 u-h-80vh" style="padding-top:80px">
+    <div class="container">
+        <div class="row" style="padding-bottom:20px">
+            <div class="col-lg-4">
+                <div class="tabs tabs-v1 text-center" role="tablist">
+                    <h4 class="u-mb-15 d-inline-block d-lg-block">
+                        <a href="#tab1" class="bg-white p-4 d-flex rounded box-shadow-v3" data-toggle="tab" role="tab">
+                            <span class="icon icon-WorldWide color-primary u-fs-36 mr-lg-3"></span>
+                            <span class="d-none d-lg-block">Soaring Weather</span>
+                        </a>
+                    </h4>
+                    <h4 class="u-mb-15 d-inline-block d-lg-block">
+                        <a href="#tab2" class="bg-white p-4 d-flex rounded" data-toggle="tab" role="tab">
+                            <span class="icon icon-Starship2 color-primary u-fs-36 mr-lg-3"></span>
+                            <span class="d-none d-lg-block">General Aviation Weather</span>
+                        </a>
+                    </h4>
+                    <h4 class="u-mb-15 d-inline-block d-lg-block">
+                        <a href="#tab3" class="bg-white p-4 d-flex rounded" data-toggle="tab" role="tab">
+                            <span class="icon icon-Planet color-primary u-fs-36 mr-lg-3"></span>
+                            <span class="d-none d-lg-block">Specialist Forecasting</span>
+                        </a>
+                    </h4>
+                    <h4 class="u-mb-15 d-inline-block d-lg-block hidden-xs-custom">
+                        <a href="#tab4" class="bg-white p-4 d-flex rounded" data-toggle="tab" role="tab">
+                            <span class="icon icon-Tools color-primary u-fs-36 mr-lg-3"></span>
+                            <span class="d-none d-lg-block">Weather Data Services</span>
+                        </a>
+                    </h4>
+                </div>
+            </div>
+            <div class="col-lg-7 ml-auto">
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="tab1" role="tabpanel">
+                        <img class="box-shadow-v1" src="/ozsoar/img/demo.jpg">
+                    </div>
+                    <div class="tab-pane fade" id="tab2" role="tabpanel">
+                        <img class="box-shadow-v1" src="/ozsoar/img/airspace.jpg">
+                    </div>
+                    <div class="tab-pane fade" id="tab3" role="tabpanel">
+                        <img class="box-shadow-v1" src="/ozsoar/img/perlan.jpg">
+                    </div>
+                    <div class="tab-pane fade" id="tab4" role="tabpanel">
+                        <img class="box-shadow-v1" src="/ozsoar/img/dataservices.png">
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+</section>
+<!-- End Hero -->
+<!-- Start Solution -->
+<section id="tech">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-7 m-auto text-center">
+                <h2 class="h1">
+                   Detailed & Interactive Forecasts 
+                </h2>
+                <div class="u-h-4 u-w-50 bg-primary rounded mt-4 u-mb-40 mx-auto"></div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-7 mr-auto mt-5">
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="tab1_1" role="tabpanel">
+                        <img class="box-shadow-v1" src="/ozsoar/img/sat.jpg">
+                    </div>
+                    <div class="tab-pane fade" id="tab1_2" role="tabpanel">
+                        <img class="box-shadow-v1" src="/ozsoar/img/xsection.png">
+                    </div>
+                    <div class="tab-pane fade" id="tab1_3" role="tabpanel">
+                        <img class="box-shadow-v1" src="/ozsoar/img/skewt-demo.png">
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 mt-5" role="tablist">
+                <div class="tabs">
+                    <a href="#tab1_1" class="u-p-25 d-block rounded box-shadow-v1 active u-mb-15" data-toggle="tab"
+                       role="tab">
+                        <h4>Advanced Modelling</h4>
+                        <p>High resolution, state-of-the-art weather model utilizing inhouse supercompute technology.</p>
+                    </a>
+                    <a href="#tab1_2" class="u-p-25 d-block rounded u-mb-15" data-toggle="tab" role="tab">
+                        <h4>Powerful Tools</h4>
+                        <p>Interactive tools to analyse the forecasts in detail, SkewT's, Point Forecasts, Cross Sections and more.</p>
+                    </a>
+                    <a href="#tab1_3" class="u-p-25 d-block rounded u-mb-15" data-toggle="tab" role="tab">
+                        <h4>Cross Platform</h4>
+                        <p>Works on all platforms with a modern web browser, laptops, tablets, phones and desktops. Also supports LXNAV LX9000's!</p>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<!-- End Solution -->
+<!-- Start Pricing -->
+<section id="plans" class="bg-gray-v1">
+    <div class="container text-center">
+        <div class="row">
+            <div class="col-12">
+                <h2 class="h1">Our Plans</h2>
+                <div class="u-h-4 u-w-50 bg-primary rounded mt-4 u-mb-40 mx-auto"></div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-4 col-md-6 col-sm-12 col-12 mt-4">
+                <div class="bg-white box-shadow-v1 rounded">
+                    <h4 class="m-0 py-4">
+                        General Aviation
+                    </h4>
+                    <hr class="m-0">
+                    <h2 class="u-fs-50 u-fw-500 py-4"><span class="paddle-gross" data-product="817642">$89</span>/yr</h2>
+                    <hr class="m-0">
+                    <ul class="list-unstyled u-py-40 u-lh-2">
+                        <li><strong>Interactive</strong> Point Forecasts</li>
+                        <li><strong>Interactive</strong> Skew-T Log-p</li>
+                        <li>Cloud Forecasts
+                        <li>Wind Forecasts
+                          <!--<li>Icing Forecasts-->
+                        <li>Turbulence Forecasts
+                        <li>Thermal Forecasts</li>
+                        <li>Storm Forecasts</li>
+                          <!--<li>VFR Forecasts-->
+                    </ul>
+                    <hr class="m-0">
+                    <div class="u-py-40">
+                        <a href="#" class="btn btn-primary btn-rounded" data-scrollto="join">
+                           Get Started
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6 col-sm-12 col-12 mt-4 dino-seo-col">
+                <div class="bg-white box-shadow-v1 rounded">
+                    <h4 class="m-0 py-4">
+                      Gliding
+                    </h4>
+                    <hr class="m-0">
+                    <h2 class="u-fs-50 u-fw-500 py-4"><span class="paddle-gross" data-product="817642">$89</span>/yr</h2>
+                    <hr class="m-0">
+                    <ul class="list-unstyled u-py-40 u-lh-2">
+                        <li><strong>Interactive</strong> Route Planning</li>
+                        <li><strong>Interactive</strong> Wave X-section</li>
+                        <li><strong>Interactive</strong> Skew-T Log-p</li>
+                        <li>Thermal Forecasts</li>
+                        <li>Wind Forecasts</li>
+                        <li>Storm Forecasts</li>
+                        <li>Wave & Convergence Forecasts</li>
+                    </ul>
+                    <hr class="m-0">
+                    <div class="u-py-40">
+                        <a href="#" class="btn btn-primary btn-rounded" data-scrollto="join">
+                            Get Started
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4 col-md-6 col-sm-12 col-12 mt-4 dino-seo-col">
+                <div class="bg-white box-shadow-v1 rounded">
+                    <h4 class="m-0 py-4">
+                     Custom
+                    </h4>
+                    <hr class="m-0">
+                    <h2 class="u-fs-50 u-fw-500 py-4">Contact Us</h2>
+                    <hr class="m-0">
+                    <ul class="list-unstyled u-py-40 u-lh-2">
+                        <li><strong>Custom</strong> Forecasts for:</li>
+                        <li>Research</li>
+                        <li>Record breaking</li>
+                        <li>Industry</li>
+                        <li>Agriculture</li>
+                        <li>Drones</li>
+                        <li>Defence</li>
+                    </ul>
+                    <hr class="m-0">
+                    <div class="u-py-40">
+                        <a href="#" class="btn btn-primary btn-rounded" data-scrollto="contact">
+                            Contact Us
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<!-- End Pricing -->
+<!-- Start Reviews -->
+<section id="reviews" class="bg-primary">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-6 m-auto text-center">
+                <h2 class="h1 text-white">
+                    What People Say
+                </h2>
+                <div class="u-h-4 u-w-50 bg-white rounded mt-4 mx-auto"></div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-12 u-mt-60 text-center">
+                <div data-init="carousel" data-slick='{
+				"slidesToShow":2,
+				"slidesToScroll": 1,
+				"arrows":true,
+				"prevArrow":"<div class=\"slick-prev box-shadow-v1\"><i class=\"fa fa-angle-left\"></i></div>",
+				"nextArrow":"<div class=\"slick-next box-shadow-v1\"><i class=\"fa fa-angle-right\"></i></div>",
+				"responsive": [{"breakpoint":1024, "settings":{"slidesToShow": 2, "arrows":false, "dots":true, "dotsClass":"slick-dots text-center mt-4 dots-white" }}, {"breakpoint":600, "settings":{"slidesToShow": 1, "arrows":false, "dots":true, "dotsClass":"slick-dots text-center mt-4 dots-white"}}]}'
+                     data-slick-margin="15">
+                    <div class="p-5 rounded bg-white">
+                        <img class="rounded-circle u-w-90 mx-auto mb-4" src="/ozsoar/img/wolfgang.jpg">
+                        <h4>Wolfgang Janowitsch & Hermann Trimmel</h4>
+                        <p class="text-muted">
+                          2x World Champion, renowned meteorologist
+                        </p>
+                        <p>"For a long time we judged the wave predictions of SkySight as a crutch to find approximate positions of wave lift. Since <a href="https://www.weglide.org/flight/528346">our flight from 6th of March</a> in completely blue conditions, we know that it's a must have! For us it's unbelievable how reliable it works!"</p>
+                    </div>
+                    <div class="p-5 rounded bg-white">
+                        <img class="rounded-circle u-w-90 mx-auto mb-4" src="/ozsoar/img/adam.jpg">
+                        <h4>Adam Woolley</h4>
+                        <p class="text-muted">
+                          Australian Champion
+                        </p>
+                        <p>"I particularly like the convergence feature, especially linked with my LX9000. Scarily accurate, which is allowing me to exploit conditions that others aren't easily able to take advantage of.
+"</p>
+                    </div>
+                    <div class="p-5 rounded bg-white">
+                        <img class="rounded-circle u-w-90 mx-auto mb-4" src="/ozsoar/img/arne.jpg">
+                        <h4>Arne Boye-Moller</h4>
+                        <p class="text-muted">
+                            13x Danish Champion
+                        </p>
+                        <p>"With SkySight I can make the best of a gliding day. The cross-sectional task planning is a center piece in exploiting the day's weather"</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<!-- End Reviews -->
+
+<!-- Start Join -->
+<section id="join" class="join-soft">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-6 mb-5 mb-lg-0">
+                <div class="bg-white box-shadow-v2 rounded text-center p-5">
+                    <h2>Register</h2>
+                    <p class="my-5">
+                        We offer a 7-day free trial period for you to test SkySight and see if it suits your needs.
+                    </p>
+
+                    <div class="u-h-4 u-w-50 bg-primary rounded mt-4 u-mb-40 mx-auto"></div>
+                    <form action="/register/" method="post">
+                        <input type="hidden" name="_csrf_token" value="YUCM67">
+                        <input name="email" type="email" class="form-control u-rounded-50 p-3 u-mb-20" placeholder="Your email"
+                               required>
+                        <input name="password" type="password" class="form-control u-rounded-50 p-3 u-mb-20" placeholder="Your password" required>
+                        <input name="c_password" type="password" class="form-control u-rounded-50 p-3 u-mb-20" placeholder="Your password again" required>
+                        <input name="coupon" type="text" class="form-control u-rounded-50 p-3 u-mb-20" placeholder="Coupon (optional)" >
+                        <label class="col-sm-11" style="padding-left:0px;padding-right:8px;" for="tos">Agree to <u><a href="/tos/">Terms of Service</a></u> and <u><a href="/aup/">Acceptable Use Policy</a></u></label><input class="required col-sm-1" id="tos" name="tos" placeholder="Confirm Password" type="checkbox" style="padding-bottom:16px; width:16px; height:16px" value="y">
+                        <div class="controls" id="captcha">
+                          <div class="cf-turnstile" data-sitekey="0x4AAAAAACBRS6BpyjEz1KEB" data-response-field-name="cf-turnstile-response" data-theme="light"></div>
+                        </div>
+                        </br>
+                        <button class="btn btn-rounded btn-primary u-w-170">Signup</button>
+                    </form>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-5 mb-lg-0">
+                <div class="bg-white box-shadow-v2 rounded text-center p-5">
+                    <h2>Existing users</h2>
+                    <div class="u-h-4 u-w-50 bg-primary rounded mt-4 u-mb-40 mx-auto"></div>
+                    <form action="/login/" method="post">
+                        <input type="hidden" name="_csrf_token" value="YUCM67">
+                        <input name="username" type="email" class="form-control u-rounded-50 p-3 u-mb-20" placeholder="Your email"
+                               required>
+                        <input name="password" type="password" class="form-control u-rounded-50 p-3 u-mb-20" placeholder="Your password" required>
+                        </br>
+                        <button class="btn btn-rounded btn-primary u-w-170">Login</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<!-- End Join -->
+<!-- Start Faqs -->
+<section id="faq" class="bg-gray-v2">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-6 m-auto text-center">
+                <h2 class="h1">
+                    What People Ask
+                </h2>
+                <div class="u-h-4 u-w-50 bg-primary rounded mt-4 u-mb-40 mx-auto"></div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-12 mt-4">
+                <div id="accordion" role="tablist" class="bg-white box-shadow-v3">
+                    <div class="accordion__faq">
+                        <a class="accordion__title p-4" data-toggle="collapse" href="#acc1">
+                            <i class="fa fa-angle-down mr-3"></i>
+                            Does SkySight forecast for my region?
+                        </a>
+                        <div id="acc1" class="collapse show" role="tabpanel" data-parent="#accordion">
+                            <div class="accordion__text">
+                              SkySight forecasts for most regions where there are glider pilots - including; Most of Europe, United States, Canada, Australia, New Zealand, Japan, Argentina and Brazil.
+                                                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion__faq">
+                        <a class="accordion__title p-4" data-toggle="collapse" href="#acc2">
+                            <i class="fa fa-angle-down mr-3"></i>
+                            What devices does SkySight work on?
+                        </a>
+                        <div id="acc2" class="collapse" role="tabpanel" data-parent="#accordion">
+                            <div class="accordion__text">
+                               SkySight supports all modern browsers (we recommend Chrome for best compatability), on all platforms. Our website is designed to function on all screen sizes, although some advanced features require larger screen sizes.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion__faq">
+                        <a class="accordion__title p-4" data-toggle="collapse" href="#acc3">
+                            <i class="fa fa-angle-down mr-3"></i>
+                           Is there an app?
+                        </a>
+                        <div id="acc3" class="collapse" role="tabpanel" data-parent="#accordion">
+                            <div class="accordion__text">
+                               We are focused on making our website have the best experience on all platforms - so we think an app is not necessary and just visiting our website on your device is all that is necessary.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion__faq">
+                        <a class="accordion__title p-4" data-toggle="collapse" href="#acc4">
+                            <i class="fa fa-angle-down mr-3"></i>
+                            Can I use SkySight for my competition or event?
+                        </a>
+                        <div id="acc4" class="collapse" role="tabpanel" data-parent="#accordion">
+                            <div class="accordion__text">
+                               Please contact us at skysight@skysight.io - we love supporting competitions and events, not only with free access, but sponsorship and prizes.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion__faq">
+                        <a class="accordion__title p-4" data-toggle="collapse" href="#acc5">
+                            <i class="fa fa-angle-down mr-3"></i>
+                            Is there help or instructions available?
+                        </a>
+                        <div id="acc5" class="collapse" role="tabpanel" data-parent="#accordion">
+                            <div class="accordion__text">
+                              Yes! We have a YouTube series you can watch at: <a href="https://www.youtube.com/watch?v=8RIN0086LzY">https://www.youtube.com/watch?v=8RIN0086LzY</a> 
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<!-- End Faqs -->
+<!-- Start Team -->
+<section id="team" class="startup-team">
+    <div class="container">
+        <div class="row">
+            <div class="col-12 text-center">
+                <h2 class="h1">
+                    Our Team
+                </h2>
+                <div class="u-h-4 u-w-50 bg-primary rounded mt-4 u-mb-20 mx-auto"></div>
+            </div>
+            <div class="col-lg-4 col-md-6 mt-4">
+                <div class="card text-center show-onHover-parent">
+                    <div class="u-pos-rel">
+                        <img class="w-100" src="/ozsoar/img/matthew.jpg">
+                        <div class="show-onHover u-pos-abs-center u-w-100p">
+                        </div>
+                    </div>
+                    <div class="py-4">
+                        <h4>Matthew Scutter</h4>
+                        <p class="mb-0">
+                        Lead Developer<br/>Junior World Champion
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6 mt-4">
+                <div class="card text-center show-onHover-parent">
+                    <div class="u-pos-rel">
+                        <img class="w-100" src="/ozsoar/img/sophie.jpg">
+                        <div class="show-onHover u-pos-abs-center u-w-100p">
+                        </div>
+                    </div>
+                    <div class="py-4">
+                        <h4>Dr. Sophie Curio</h4>
+                        <p class="mb-0">
+                        Sales<br/>Translations
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6 mt-4">
+                <div class="card text-center show-onHover-parent">
+                    <div class="u-pos-rel">
+                        <img class="w-100" src="/ozsoar/img/roger.jpg">
+                        <div class="show-onHover u-pos-abs-center u-w-100p">
+                        </div>
+                    </div>
+                    <div class="py-4">
+                        <h4>Roger</h4>
+                        <p class="mb-0">
+                        Visualizations Engineer<br/>Meteorologist
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<!-- End Team -->
+<!-- Start Contact -->
+<section id="contact">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-6 mx-auto text-center">
+                <h2 class="h1">
+                    Contact Us
+                </h2>
+                <div class="u-h-4 u-w-50 bg-primary rounded mt-4 u-mb-40 mx-auto"></div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-7 text-center mt-5">
+                <form action="/contact/" method="POST">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <input name="name" type="text" class="form-control u-rounded-50 p-3 u-mb-30" placeholder="Your Name"
+                                   required>
+                        </div>
+                        <div class="col-md-6">
+                            <input name="email" type="text" class="form-control u-rounded-50 p-3 u-mb-30" placeholder="Your Email"
+                                   required>
+                        </div>
+                    </div>
+                    <textarea name="message" class="form-control u-rounded-15 p-3 u-mb-30" rows="6" placeholder="Your Message"
+                              required></textarea>
+                    <div class="controls" id="captcha">
+                      <div class="cf-turnstile" data-sitekey="0x4AAAAAACBRS6BpyjEz1KEB" data-response-field-name="cf-turnstile-response" data-theme="light"></div>
+                    </div>
+                    <input type="hidden" name="_csrf_token" value="YUCM67">
+                    <button class="btn btn-rounded btn-primary u-w-170" type="submit">Submit</button>
+                </form>
+            </div>
+            <div class="col-lg-4 ml-auto col-md-5 mt-5">
+                <h4 class="u-fs-28 mb-4">Contact Information</h4>
+                <p>SkySight Weather Pty Ltd (622643805)</p>
+                <p><i class="fa fa-envelope-o"></i> skysight@skysight.io</p>
+                <p><i class="fa fa-map-marker"></i> 70 Main North Road, Willaston, SA, Australia</p>
+                <ul class="list-inline social social-rounded social-white mt-4">
+                        <li class="list-inline-item">
+                            <a href="https://www.facebook.com/SkySight.io/"><i class="fa fa-facebook"></i></a>
+                        </li>
+                    </ul>
+            </div>
+        </div>
+    </div>
+</section>
+<!-- End Contact -->
+<!-- Start Footer -->
+<footer>
+    <section class="u-py-40">
+        <div class="container">
+            <p class="mb-0 text-center">
+                © 2018 SkySight Weather Pty Ltd
+            </p>
+            <p>
+            </p>
+            <p class="mb-0">
+              <div class="row text-center" style="width: 100%">
+                <a style="flex: 1" class="nav-link" href="/tos/">Terms of Service</a>
+                <a style="flex: 1" class="nav-link" href="/aup/">Acceptable Usage Policy</a>
+                <a style="flex: 1" class="nav-link" href="/cookie/">Cookie Policy</a>
+                <a style="flex: 1" class="nav-link" href="/privacy/">Privacy Policy</a>
+                <a style="flex: 1" class="nav-link" href="https://highsight.dev">HighSight Satellite Imagery</a>
+              </div>
+            </p>
+        </div>
+    </section>
+</footer>
+<!-- End Footer -->
+<!-- Start Go To Top -->
+<div class="scroll-top bg-white box-shadow-v2">
+    <i class="fa fa-angle-up" aria-hidden="true"></i>
+</div>
+<!-- End Go To Top -->
+<!-- Plugins JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.4/umd/popper.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.0.0-beta/js/bootstrap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.9.0/slick.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-toggle/2.2.2/js/bootstrap-toggle.min.js"></script>
+<script async defer src="https://challenges.cloudflare.com/turnstile/v0/api.js"></script>
+<!-- Main JS -->
+<script src="/ozsoar/home/js/home.js"></script>
+<script src="https://cdn.paddle.com/paddle/paddle.js"></script>
+<script type="text/javascript">
+	Paddle.Setup({ vendor: 167066 });
+</script>
+
+</body>
+</html>

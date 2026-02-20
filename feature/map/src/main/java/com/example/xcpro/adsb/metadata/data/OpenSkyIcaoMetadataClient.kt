@@ -1,10 +1,12 @@
 package com.example.xcpro.adsb.metadata.data
 
+import com.example.xcpro.adsb.awaitResponse
 import com.example.xcpro.common.di.IoDispatcher
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -17,26 +19,31 @@ class OpenSkyIcaoMetadataClient @Inject constructor(
 ) {
 
     suspend fun fetchByIcao24(icao24: String): Result<AircraftMetadataEntity?> = withContext(ioDispatcher) {
-        runCatching {
+        try {
             val request = Request.Builder()
                 .url("$METADATA_BY_ICAO_URL_BASE/$icao24")
                 .header("Accept", "application/json")
                 .get()
                 .build()
 
-            httpClient.newCall(request).execute().use { response ->
+            val metadata = httpClient.newCall(request).awaitResponse().use { response ->
                 if (response.code == 404) {
-                    return@runCatching null
+                    return@use null
                 }
                 if (!response.isSuccessful) {
                     throw IOException("ICAO metadata lookup failed HTTP ${response.code} for $icao24")
                 }
                 val body = response.body?.string()?.trim().orEmpty()
                 if (body.isBlank()) {
-                    return@runCatching null
+                    return@use null
                 }
                 parseResponse(body)
             }
+            Result.success(metadata)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 

@@ -1,5 +1,5 @@
 # ADSB.md - Live ADS-B Internet Traffic in XCPro (OpenSky)
-**v6 (AUTONOMOUS): ICAO24 identity, metadata enrichment, and configurable display filters**
+**v7 (2026-02-20): runtime contract and deep code-pass findings**
 
 This document is the runtime contract for ADS-B behavior in XCPro.
 
@@ -37,7 +37,7 @@ Reference:
 - https://opensky-network.org/data
 - https://opensky-network.org/data/aircraft
 
-## 2) Runtime contract (implemented as of 2026-02-17)
+## 2) Runtime contract (validated as of 2026-02-20)
 
 ### 2.1 Identity and mapping
 - Parse `icao24` from state index `0`.
@@ -47,7 +47,7 @@ Reference:
 ### 2.2 Display envelope and filtering
 - Horizontal display distance:
   - user configurable
-  - min `1 km`, max `50 km`, default `10 km`
+  - min `1 km`, max `100 km`, default `10 km`
 - Vertical filtering:
   - separate `Above ownship` and `Below ownship` limits
   - values stored in meters
@@ -81,6 +81,40 @@ Reference:
 - Hot interval baseline is `10s`.
 - Runtime can back off based on empty scans, movement, auth mode, and quota budget floors.
 - Radius changes reconnect immediately from settings flow.
+- Transient network failures are classified (`DNS`, `timeout`, `connect`, `no route`, `TLS`, malformed payload, `unknown`)
+  and use bounded retry floors before exponential backoff:
+  - DNS/no-route: minimum `15s`
+  - timeout: minimum `8s`
+  - connect: minimum `10s`
+  - TLS/malformed payload: minimum `20s`
+  - unknown: minimum `2s`
+- Polling is connectivity-aware:
+  - when device network is offline, ADS-B polling pauses (no request loop churn)
+  - polling resumes immediately when network returns
+  - if connectivity drops during an active retry/poll delay window, the timer is interrupted and
+    polling waits for reconnect instead of burning the remaining delay budget
+- Failure circuit breaker:
+  - after `3` consecutive fetch failures, polling enters cooldown for `30s`
+  - after cooldown, one half-open probe fetch is attempted
+  - if probe fails, cooldown reopens; if probe succeeds, normal cadence resumes
+- Retry/circuit policy ownership:
+  - `AdsbPollingHealthPolicy` owns consecutive-failure counters, probe scheduling, and circuit state transitions
+- Snapshot diagnostics (debug panel):
+  - publishes `consecutiveFailureCount`, `nextRetryMonoMs`, and `lastFailureMonoMs`
+  - reason labels include circuit-breaker and network-failure categories
+- Token-auth behavior:
+  - explicit credential rejection from token endpoint (`400/401/403`) enters `AuthFailed` mode
+  - transient token-fetch network failures fall back to anonymous mode (not `AuthFailed`)
+- HTTP bridge cancellation hardening:
+  - coroutine/OkHttp bridge closes pending responses on cancel/resume races to avoid leaked sockets
+- Network callback hardening:
+  - `AdsbNetworkAvailabilityTracker` normalizes callback flaps and keeps fail-open behavior when callback registration is unavailable
+
+### 2.6 Network exception expectations
+- `UnknownHostException` is expected on unstable mobile DNS paths and maps to `AdsbNetworkFailureKind.DNS`.
+- `SocketTimeoutException` is expected under latency/packet loss and maps to `AdsbNetworkFailureKind.TIMEOUT`.
+- Both cases are treated as transient network failures, not fatal implementation bugs.
+- Correct runtime behavior is: classify -> bounded backoff -> circuit-breaker protection -> recover when network/provider stabilizes.
 
 ## 3) Details sheet requirements
 
@@ -128,19 +162,26 @@ private const val IDX_POSITION_SOURCE = 16
 private const val IDX_CATEGORY = 17 // when extended=1
 ```
 
-## 5) Known deep-dive findings (2026-02-17)
+## 5) Deep-pass status (updated 2026-02-21 +11:45)
 
-1. Icon classification risk remains for helicopter vs fixed-wing conflicts when metadata precedence is unfavorable.
-2. Metadata import must support both direct CSV and complete snapshot format differences (`icaoAircraftClass` alias and quoted-field variations).
-3. Regression tests are required for category/class/typecode conflict ordering.
+Closed in current implementation:
 
-See:
-- `docs/ADS-b/ADSB_DISTANCE_VERTICAL_FILTER_CHANGE_PLAN.md`
-- `docs/ADS-b/ADSB_CategoryIconMapping.md`
+1. Polling-health telemetry cross-thread visibility hardening.
+2. Top-level loop recovery guard for unexpected non-cancellation failures.
+3. Dedupe for unchanged center/origin/altitude updates to reduce avoidable reselection churn.
+4. Stable target ordering tie-break for equal-priority display candidates.
+5. Atomic metadata revision increment for on-demand hydration updates.
+6. Token refresh single-flight dedupe under concurrent stale-token requests.
+7. Metadata listing robustness guardrails (`NextMarker` fallback, token-loop guard, bounded page guard, dedicated tests).
+8. Icon classification precedence hardening for non-fixed-wing categories with expanded helicopter prefix/conflict tests.
 
-## 6) Implementation references
+Still open:
 
-- `docs/ADS-b/ADSB_ICAO_METADATA_IMPLEMENTATION_PLAN.md`
-- `docs/ADS-b/ADSB_DISTANCE_VERTICAL_FILTER_CHANGE_PLAN.md`
+1. Metadata import must continue supporting both direct CSV and complete snapshot format differences (`icaoAircraftClass` alias and quoted-field variations).
+
+## 6) Improvement and implementation references
+
+- `docs/ADS-b/README.md`
+- `docs/ADS-b/ADSB_Improvement_Plan.md`
 - `docs/ADS-b/ADSB_AircraftMetadata.md`
-- `docs/ADS-b/ADSB_IconsAndTap_Plan.md`
+- `docs/ADS-b/ADSB_CategoryIconMapping.md`

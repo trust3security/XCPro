@@ -25,6 +25,7 @@ class OgnTrafficPreferencesRepositoryTest {
     fun setUp() = runBlocking {
         val repository = OgnTrafficPreferencesRepository(context)
         repository.setIconSizePx(OGN_ICON_SIZE_DEFAULT_PX)
+        repository.setShowGliderTrailsEnabled(false)
     }
 
     @After
@@ -69,5 +70,24 @@ class OgnTrafficPreferencesRepositoryTest {
         val current = repository.iconSizePxFlow.first()
 
         assertEquals(240, current)
+    }
+
+    @Test
+    fun showGliderTrailsEnabled_defaultsToFalse() = runTest {
+        val repository = OgnTrafficPreferencesRepository(context)
+
+        val current = repository.showGliderTrailsEnabledFlow.first()
+
+        assertEquals(false, current)
+    }
+
+    @Test
+    fun setShowGliderTrailsEnabled_persistsValue() = runTest {
+        val repository = OgnTrafficPreferencesRepository(context)
+
+        repository.setShowGliderTrailsEnabled(true)
+        val current = repository.showGliderTrailsEnabledFlow.first()
+
+        assertEquals(true, current)
     }
 }

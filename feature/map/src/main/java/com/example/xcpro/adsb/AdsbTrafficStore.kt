@@ -125,6 +125,7 @@ internal class AdsbTrafficStore {
                 compareByDescending<AdsbTrafficUiModel> { it.isEmergencyCollisionRisk }
                     .thenBy { it.distanceMeters }
                     .thenBy { it.ageSec }
+                    .thenBy { it.id.raw }
             )
             .take(maxDisplayed)
 

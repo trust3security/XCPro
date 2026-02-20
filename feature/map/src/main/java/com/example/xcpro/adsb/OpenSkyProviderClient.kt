@@ -1,11 +1,18 @@
 package com.example.xcpro.adsb
 
 import com.example.xcpro.common.di.IoDispatcher
+import java.io.InterruptedIOException
 import java.io.IOException
+import java.net.ConnectException
+import java.net.NoRouteToHostException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
+import javax.net.ssl.SSLException
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
@@ -43,7 +50,7 @@ class OpenSkyProviderClient @Inject constructor(
             .build()
 
         try {
-            httpClient.newCall(request).execute().use { response ->
+            httpClient.newCall(request).awaitResponse().use { response ->
                 val code = response.code
                 val remainingCredits = response.header(HEADER_REMAINING)?.parseIntHeader()
                 return@withContext when (code) {
@@ -52,6 +59,7 @@ class OpenSkyProviderClient @Inject constructor(
                         val parsed = runCatching { OpenSkyStateVectorMapper.parseResponse(body) }
                             .getOrElse {
                                 return@withContext ProviderResult.NetworkError(
+                                    kind = AdsbNetworkFailureKind.MALFORMED_RESPONSE,
                                     message = "Malformed OpenSky response"
                                 )
                             }
@@ -78,8 +86,13 @@ class OpenSkyProviderClient @Inject constructor(
                     }
                 }
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: IOException) {
-            ProviderResult.NetworkError(message = e::class.java.simpleName.ifBlank { "NetworkError" })
+            ProviderResult.NetworkError(
+                kind = e.toNetworkFailureKind(),
+                message = e::class.java.simpleName.ifBlank { "NetworkError" }
+            )
         }
     }
 
@@ -91,6 +104,16 @@ class OpenSkyProviderClient @Inject constructor(
 
     private fun Double.formatCoord(): String = String.format(Locale.US, "%.6f", this)
 
+    private fun IOException.toNetworkFailureKind(): AdsbNetworkFailureKind = when (this) {
+        is UnknownHostException -> AdsbNetworkFailureKind.DNS
+        is SocketTimeoutException,
+        is InterruptedIOException -> AdsbNetworkFailureKind.TIMEOUT
+        is NoRouteToHostException -> AdsbNetworkFailureKind.NO_ROUTE
+        is ConnectException -> AdsbNetworkFailureKind.CONNECT
+        is SSLException -> AdsbNetworkFailureKind.TLS
+        else -> AdsbNetworkFailureKind.UNKNOWN
+    }
+
     private companion object {
         private const val BASE_URL = "https://opensky-network.org/api/states/all"
         private const val HEADER_REMAINING = "X-Rate-Limit-Remaining"
@@ -98,4 +121,3 @@ class OpenSkyProviderClient @Inject constructor(
         private const val DEFAULT_RETRY_AFTER_SEC = 60
     }
 }
-

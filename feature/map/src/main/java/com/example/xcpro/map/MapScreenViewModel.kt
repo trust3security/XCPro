@@ -1,5 +1,4 @@
-package com.example.xcpro.map
-
+﻿package com.example.xcpro.map
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.xcpro.MapOrientationManager
@@ -31,6 +30,8 @@ import com.example.xcpro.map.trail.domain.TrailUpdateResult
 import com.example.xcpro.ogn.OgnTrafficTarget
 import com.example.xcpro.ogn.OgnTrafficSnapshot
 import com.example.xcpro.ogn.OGN_ICON_SIZE_DEFAULT_PX
+import com.example.xcpro.ogn.OgnThermalHotspot
+import com.example.xcpro.ogn.OgnGliderTrailSegment
 import com.example.xcpro.qnh.CalibrateQnhUseCase
 import com.example.xcpro.replay.ReplayDisplayPose
 import com.example.xcpro.tasks.core.TaskType
@@ -44,49 +45,29 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.stateIn
-
-/**
- * Lifecycle-aware owner for map state and domain controllers (no runtime map handles).
- */
 @HiltViewModel
 class MapScreenViewModel @Inject constructor(
-    private val mapStyleUseCase: MapStyleUseCase,
-    private val unitsUseCase: UnitsPreferencesUseCase,
-    private val mapWaypointsUseCase: MapWaypointsUseCase,
-    private val mapAirspaceUseCase: AirspaceUseCase,
-    private val mapWaypointFilesUseCase: WaypointFilesUseCase,
-    private val gliderConfigUseCase: GliderConfigUseCase,
-    private val sensorsUseCase: MapSensorsUseCase,
-    private val flightDataUseCase: FlightDataUseCase,
-    private val mapUiControllersUseCase: MapUiControllersUseCase,
-    private val windStateUseCase: WindStateUseCase,
-    private val mapReplayUseCase: MapReplayUseCase,
-    private val mapTasksUseCase: MapTasksUseCase,
+    private val mapStyleUseCase: MapStyleUseCase, private val unitsUseCase: UnitsPreferencesUseCase,
+    private val mapWaypointsUseCase: MapWaypointsUseCase, private val mapAirspaceUseCase: AirspaceUseCase,
+    private val mapWaypointFilesUseCase: WaypointFilesUseCase, private val gliderConfigUseCase: GliderConfigUseCase,
+    private val sensorsUseCase: MapSensorsUseCase, private val flightDataUseCase: FlightDataUseCase,
+    private val mapUiControllersUseCase: MapUiControllersUseCase, private val windStateUseCase: WindStateUseCase,
+    private val mapReplayUseCase: MapReplayUseCase, private val mapTasksUseCase: MapTasksUseCase,
     private val mapFeatureFlagsUseCase: MapFeatureFlagsUseCase,
-    private val mapCardPreferencesUseCase: MapCardPreferencesUseCase,
-    private val qnhUseCase: QnhUseCase,
-    private val trailSettingsUseCase: MapTrailSettingsUseCase,
-    private val calibrateQnhUseCase: CalibrateQnhUseCase,
+    private val mapCardPreferencesUseCase: MapCardPreferencesUseCase, private val qnhUseCase: QnhUseCase,
+    private val trailSettingsUseCase: MapTrailSettingsUseCase, private val calibrateQnhUseCase: CalibrateQnhUseCase,
     private val variometerLayoutUseCase: VariometerLayoutUseCase,
-    private val mapVarioPreferencesUseCase: MapVarioPreferencesUseCase,
-    private val hawkVarioUseCase: HawkVarioUseCase,
-    private val ognTrafficUseCase: OgnTrafficUseCase,
-    private val adsbTrafficUseCase: AdsbTrafficUseCase,
+    private val mapVarioPreferencesUseCase: MapVarioPreferencesUseCase, private val hawkVarioUseCase: HawkVarioUseCase,
+    private val ognTrafficUseCase: OgnTrafficUseCase, private val adsbTrafficUseCase: AdsbTrafficUseCase,
     private val adsbMetadataEnrichmentUseCase: AdsbMetadataEnrichmentUseCase
 ) : ViewModel() {
-
     private val initialStyleName = mapStyleUseCase.initialStyle()
     private val mapStateStore: MapStateStore = MapStateStore(initialStyleName)
     val mapState: MapStateReader = mapStateStore
     val mapStateActions: MapStateActions = MapStateActionsDelegate(mapStateStore)
     private val featureFlags = mapFeatureFlagsUseCase.featureFlags
     val cardPreferences = mapCardPreferencesUseCase.cardPreferences
-
     private val uiControllers = mapUiControllersUseCase.create(viewModelScope)
     val runtimeDependencies: MapScreenRuntimeDependencies = MapScreenRuntimeDependencies(
         flightDataManager = uiControllers.flightDataManager,
@@ -98,8 +79,7 @@ class MapScreenViewModel @Inject constructor(
         featureFlags = featureFlags
     )
     private val ballastController = uiControllers.ballastController
-    private val flightDataManager: FlightDataManager = runtimeDependencies.flightDataManager
-    private val orientationManager: MapOrientationManager = runtimeDependencies.orientationManager
+    private val flightDataManager: FlightDataManager = runtimeDependencies.flightDataManager; private val orientationManager: MapOrientationManager = runtimeDependencies.orientationManager
     val windArrowState: StateFlow<WindArrowUiState> =
         createWindArrowState(
             scope = viewModelScope,
@@ -131,6 +111,12 @@ class MapScreenViewModel @Inject constructor(
         .eagerState(scope = viewModelScope, initial = false)
     val ognIconSizePx: StateFlow<Int> = ognTrafficUseCase.iconSizePx
         .eagerState(scope = viewModelScope, initial = OGN_ICON_SIZE_DEFAULT_PX)
+    val ognThermalHotspots: StateFlow<List<OgnThermalHotspot>> = ognTrafficUseCase.thermalHotspots
+    val showOgnThermalsEnabled: StateFlow<Boolean> = ognTrafficUseCase.showThermalsEnabled
+        .eagerState(scope = viewModelScope, initial = false)
+    val ognGliderTrailSegments: StateFlow<List<OgnGliderTrailSegment>> = ognTrafficUseCase.gliderTrailSegments
+    val showOgnGliderTrailsEnabled: StateFlow<Boolean> = ognTrafficUseCase.showGliderTrailsEnabled
+        .eagerState(scope = viewModelScope, initial = false)
     private val rawAdsbTargets: StateFlow<List<AdsbTrafficUiModel>> = adsbTrafficUseCase.targets
     private val enrichedAdsbTargets: StateFlow<List<AdsbTrafficUiModel>> =
         adsbMetadataEnrichmentUseCase.targetsWithMetadata(rawAdsbTargets)
@@ -146,9 +132,7 @@ class MapScreenViewModel @Inject constructor(
         .eagerState(scope = viewModelScope, initial = false)
     val adsbIconSizePx: StateFlow<Int> = adsbTrafficUseCase.iconSizePx
         .eagerState(scope = viewModelScope, initial = ADSB_ICON_SIZE_DEFAULT_PX)
-
     val variometerUiState: StateFlow<VariometerUiState> = variometerLayoutUseCase.state
-
     private val _uiState = MutableStateFlow(MapUiState())
     val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
     private val _trailUpdates = MutableStateFlow<TrailUpdateResult?>(null)
@@ -162,13 +146,24 @@ class MapScreenViewModel @Inject constructor(
     val selectedAdsbTarget: StateFlow<AdsbSelectedTargetDetails?> = adsbMetadataEnrichmentUseCase
         .selectedTargetDetails(selectedIcao24 = _selectedAdsbId, adsbTargets = rawAdsbTargets)
         .eagerState(scope = viewModelScope, initial = null)
+    private val _selectedOgnId = MutableStateFlow<String?>(null)
+    val selectedOgnTarget: StateFlow<OgnTrafficTarget?> = createSelectedOgnTargetState(
+        scope = viewModelScope,
+        selectedOgnId = _selectedOgnId,
+        ognTargets = ognTargets
+    )
+    private val _selectedOgnThermalId = MutableStateFlow<String?>(null)
+    val selectedOgnThermal: StateFlow<OgnThermalHotspot?> = createSelectedOgnThermalState(
+        scope = viewModelScope,
+        selectedThermalId = _selectedOgnThermalId,
+        thermalHotspots = ognThermalHotspots
+    )
     private val _containerReady = MutableStateFlow(false)
     private val _liveDataReady = MutableStateFlow(false)
     private val _isMapVisible = MutableStateFlow(false)
     private val _isAATEditMode = MutableStateFlow(false)
     val cardHydrationReady: StateFlow<Boolean> =
         createCardHydrationReadyState(viewModelScope, _containerReady, _liveDataReady)
-
     private val flightDataUiAdapter = mapReplayUseCase.createFlightDataUiAdapter(
         scope = viewModelScope,
         flightDataFlow = flightDataUseCase.flightData,
@@ -182,7 +177,6 @@ class MapScreenViewModel @Inject constructor(
         uiEffects = _uiEffects,
         trailUpdates = _trailUpdates
     )
-
     private val replayCoordinator = mapReplayUseCase.createReplayCoordinator(
         flightDataFlow = flightDataUseCase.flightData,
         featureFlags = runtimeDependencies.featureFlags,
@@ -226,12 +220,17 @@ class MapScreenViewModel @Inject constructor(
             scope = viewModelScope,
             initial = com.example.xcpro.adsb.ADSB_VERTICAL_FILTER_BELOW_DEFAULT_METERS
         ),
+        rawOgnTargets = ognTargets,
+        selectedOgnId = _selectedOgnId,
+        showThermalsEnabled = showOgnThermalsEnabled,
+        showGliderTrailsEnabled = showOgnGliderTrailsEnabled,
+        thermalHotspots = ognThermalHotspots,
+        selectedThermalId = _selectedOgnThermalId,
         rawAdsbTargets = rawAdsbTargets,
         selectedAdsbId = _selectedAdsbId,
         ognTrafficUseCase = ognTrafficUseCase,
         adsbTrafficUseCase = adsbTrafficUseCase
     )
-
     val isAATEditMode: StateFlow<Boolean> = _isAATEditMode.asStateFlow()
     val taskType: StateFlow<TaskType> = mapTasksUseCase.taskTypeFlow
     private val unitsState = unitsUseCase.unitsFlow.inVm(
@@ -254,7 +253,6 @@ class MapScreenViewModel @Inject constructor(
             }
         )
     }
-
     init {
         mapStateStore.setTrailSettings(trailSettingsUseCase.getSettings())
         mapStateStore.setDisplaySmoothingProfile(featureFlags.defaultDisplaySmoothingProfile)
@@ -281,7 +279,6 @@ class MapScreenViewModel @Inject constructor(
         }
         onEvent(MapUiEvent.RefreshWaypoints)
     }
-
     fun emitMapCommand(command: MapCommand) = _mapCommands.tryEmit(command)
     fun onVarioDemoReplay() = replayCoordinator.onVarioDemoReplay()
     fun onRacingTaskReplay() = replayCoordinator.onRacingTaskReplay()
@@ -289,30 +286,29 @@ class MapScreenViewModel @Inject constructor(
     fun onVarioDemoReplaySimLive() = replayCoordinator.onVarioDemoReplaySimLive()
     fun onVarioDemoReplaySim3() = replayCoordinator.onVarioDemoReplaySim3()
     fun updateSafeContainerSize(size: MapStateStore.MapSize) = mapStateStore.updateSafeContainerSize(size)
-
     fun setMapStyle(styleName: String) {
         if (mapStateStore.updateMapStyleName(styleName)) emitMapCommand(MapCommand.SetStyle(styleName))
     }
-
     fun persistMapStyle(styleName: String) = viewModelScope.launch { mapStyleUseCase.saveStyle(styleName) }
-
     fun setFlightMode(newMode: FlightMode) {
         mapStateStore.setCurrentMode(newMode)
         mapStateStore.setCurrentFlightMode(newMode.toCardFlightModeSelection())
         flightDataManager.updateFlightModeFromEnum(newMode)
         sensorsUseCase.setFlightMode(newMode)
     }
-
     fun onEvent(event: MapUiEvent) = uiEventHandler.onEvent(event)
-
     fun setMapVisible(isVisible: Boolean) = trafficCoordinator.setMapVisible(isVisible)
     fun onToggleOgnTraffic() = trafficCoordinator.onToggleOgnTraffic()
+    fun onToggleOgnThermals() = trafficCoordinator.onToggleOgnThermals()
+    fun onToggleOgnGliderTrails() = trafficCoordinator.onToggleOgnGliderTrails()
     fun onToggleAdsbTraffic() = trafficCoordinator.onToggleAdsbTraffic()
+    fun onOgnTargetSelected(id: String) = trafficCoordinator.onOgnTargetSelected(id)
+    fun onOgnThermalSelected(id: String) = trafficCoordinator.onOgnThermalSelected(id)
     fun onAdsbTargetSelected(id: Icao24) = trafficCoordinator.onAdsbTargetSelected(id)
+    fun dismissSelectedOgnTarget() = trafficCoordinator.dismissSelectedOgnTarget()
+    fun dismissSelectedOgnThermal() = trafficCoordinator.dismissSelectedOgnThermal()
     fun dismissSelectedAdsbTarget() = trafficCoordinator.dismissSelectedAdsbTarget()
-
     private fun loadWaypoints() = waypointQnhCoordinator.loadWaypoints()
-
     fun ensureVariometerLayout(
         screenWidthPx: Float,
         screenHeightPx: Float,
@@ -320,10 +316,8 @@ class MapScreenViewModel @Inject constructor(
         minSizePx: Float,
         maxSizePx: Float
     ) = variometerLayoutUseCase.ensureLayout(screenWidthPx, screenHeightPx, defaultSizePx, minSizePx, maxSizePx)
-
     fun onVariometerOffsetCommitted(offset: OffsetPx, screenWidthPx: Float, screenHeightPx: Float) =
         variometerLayoutUseCase.onOffsetCommitted(offset, screenWidthPx, screenHeightPx)
-
     fun onVariometerSizeCommitted(
         sizePx: Float,
         screenWidthPx: Float,
@@ -331,37 +325,20 @@ class MapScreenViewModel @Inject constructor(
         minSizePx: Float,
         maxSizePx: Float
     ) = variometerLayoutUseCase.onSizeCommitted(sizePx, screenWidthPx, screenHeightPx, minSizePx, maxSizePx)
-
-    fun setAATEditMode(enabled: Boolean) {
-        _isAATEditMode.value = enabled
-    }
-
+    fun setAATEditMode(enabled: Boolean) { _isAATEditMode.value = enabled }
     fun createTaskGestureHandler(callbacks: TaskGestureCallbacks): TaskGestureHandler =
         mapTasksUseCase.createGestureHandler(callbacks)
-
     fun getInterpolatedReplayHeadingDeg(nowMs: Long): Double? =
         mapReplayUseCase.getInterpolatedReplayHeadingDeg(nowMs)
-
     fun getInterpolatedReplayPose(nowMs: Long): ReplayDisplayPose? =
         mapReplayUseCase.getInterpolatedReplayPose(nowMs)
-
-    fun enterAATEditMode(waypointIndex: Int) {
-        _isAATEditMode.value = true
-        mapTasksUseCase.enterAATEditMode(waypointIndex)
-    }
-
+    fun enterAATEditMode(waypointIndex: Int) { _isAATEditMode.value = true; mapTasksUseCase.enterAATEditMode(waypointIndex) }
     fun updateAATTargetPoint(index: Int, lat: Double, lon: Double) =
         mapTasksUseCase.updateAATTargetPoint(index, lat, lon)
-
-    fun exitAATEditMode() {
-        _isAATEditMode.value = false
-        mapTasksUseCase.exitAATEditMode()
-    }
-
+    fun exitAATEditMode() { _isAATEditMode.value = false; mapTasksUseCase.exitAATEditMode() }
     fun submitBallastCommand(command: BallastCommand) = ballastController.submit(command)
     fun onAutoCalibrateQnh() = waypointQnhCoordinator.onAutoCalibrateQnh()
     fun onSetManualQnh(hpa: Double) = waypointQnhCoordinator.onSetManualQnh(hpa)
-
     override fun onCleared() {
         ognTrafficUseCase.stop()
         adsbTrafficUseCase.stop()
@@ -369,4 +346,3 @@ class MapScreenViewModel @Inject constructor(
         super.onCleared()
     }
 }
-

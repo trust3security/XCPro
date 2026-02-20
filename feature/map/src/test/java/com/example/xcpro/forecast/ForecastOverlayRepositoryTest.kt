@@ -38,8 +38,16 @@ class ForecastOverlayRepositoryTest {
         preferencesRepository.setOverlayEnabled(false)
         preferencesRepository.setOpacity(FORECAST_OPACITY_DEFAULT)
         preferencesRepository.setWindOverlayScale(FORECAST_WIND_OVERLAY_SCALE_DEFAULT)
+        preferencesRepository.setSecondaryPrimaryOverlayEnabled(
+            FORECAST_SECONDARY_PRIMARY_OVERLAY_ENABLED_DEFAULT
+        )
+        preferencesRepository.setWindOverlayEnabled(FORECAST_WIND_OVERLAY_ENABLED_DEFAULT)
         preferencesRepository.setWindDisplayMode(FORECAST_WIND_DISPLAY_MODE_DEFAULT)
-        preferencesRepository.setSelectedParameterId(DEFAULT_FORECAST_PARAMETER_ID)
+        preferencesRepository.setSelectedPrimaryParameterId(DEFAULT_FORECAST_PARAMETER_ID)
+        preferencesRepository.setSelectedSecondaryPrimaryParameterId(
+            DEFAULT_FORECAST_SECONDARY_PRIMARY_PARAMETER_ID
+        )
+        preferencesRepository.setSelectedWindParameterId(DEFAULT_FORECAST_WIND_PARAMETER_ID)
         preferencesRepository.setSelectedTimeUtcMs(null)
         preferencesRepository.setFollowTimeOffsetMinutes(FORECAST_FOLLOW_TIME_OFFSET_MINUTES_DEFAULT)
         preferencesRepository.setAutoTimeEnabled(FORECAST_AUTO_TIME_DEFAULT)
@@ -93,13 +101,158 @@ class ForecastOverlayRepositoryTest {
         advanceUntilIdle()
 
         val state = repository.overlayState.first { state ->
-            state.enabled && state.tileSpec != null && state.legend != null
+            state.enabled && state.primaryTileSpec != null && state.primaryLegend != null
         }
 
         assertEquals(1, tilesPort.calls)
         assertEquals(1, legendPort.calls)
-        assertNotNull(state.tileSpec)
-        assertNotNull(state.legend)
+        assertNotNull(state.primaryTileSpec)
+        assertNotNull(state.primaryLegend)
+    }
+
+    @Test
+    fun enabledOverlay_withSecondaryPrimary_fetchesBothPrimaryLayers() = runTest(testDispatcher) {
+        val preferencesRepository = ForecastPreferencesRepository(context)
+        val catalogPort = FakeForecastProviderAdapter()
+        val tilesPort = CountingTilesPort()
+        val legendPort = CountingLegendPort()
+        val repository = ForecastOverlayRepository(
+            preferencesRepository = preferencesRepository,
+            catalogPort = catalogPort,
+            tilesPort = tilesPort,
+            legendPort = legendPort,
+            valuePort = catalogPort,
+            clock = clock,
+            dispatcher = testDispatcher
+        )
+
+        preferencesRepository.setOverlayEnabled(true)
+        preferencesRepository.setSecondaryPrimaryOverlayEnabled(true)
+        preferencesRepository.setSelectedPrimaryParameterId(ForecastParameterId("wstar_bsratio"))
+        preferencesRepository.setSelectedSecondaryPrimaryParameterId(ForecastParameterId("accrain"))
+        advanceUntilIdle()
+
+        val state = repository.overlayState.first { state ->
+            state.enabled &&
+                state.primaryTileSpec != null &&
+                state.secondaryPrimaryTileSpec != null &&
+                state.primaryLegend != null &&
+                state.secondaryPrimaryLegend != null
+        }
+
+        assertTrue(state.secondaryPrimaryOverlayEnabled)
+        assertNotNull(state.secondaryPrimaryTileSpec)
+        assertNotNull(state.secondaryPrimaryLegend)
+        assertEquals(2, tilesPort.calls)
+        assertEquals(2, legendPort.calls)
+    }
+
+    @Test
+    fun enabledOverlay_rainPlusConvergence_fetchesBothAsMultiPrimary() = runTest(testDispatcher) {
+        val preferencesRepository = ForecastPreferencesRepository(context)
+        val catalogPort = RainConvergenceCatalogPort()
+        val tilesPort = RecordingTilesPort()
+        val legendPort = RecordingLegendPort()
+        val repository = ForecastOverlayRepository(
+            preferencesRepository = preferencesRepository,
+            catalogPort = catalogPort,
+            tilesPort = tilesPort,
+            legendPort = legendPort,
+            valuePort = CountingValuePort(),
+            clock = clock,
+            dispatcher = testDispatcher
+        )
+
+        preferencesRepository.setSelectedPrimaryParameterId(ForecastParameterId("accrain"))
+        preferencesRepository.setSelectedSecondaryPrimaryParameterId(ForecastParameterId("wblmaxmin"))
+        preferencesRepository.setOverlayEnabled(true)
+        preferencesRepository.setSecondaryPrimaryOverlayEnabled(true)
+        advanceUntilIdle()
+
+        val state = repository.overlayState.first { state ->
+            state.enabled &&
+                state.primaryTileSpec != null &&
+                state.primaryLegend != null &&
+                state.secondaryPrimaryTileSpec != null &&
+                state.secondaryPrimaryLegend != null
+        }
+
+        assertEquals("accrain", state.selectedPrimaryParameterId.value)
+        assertEquals("wblmaxmin", state.selectedSecondaryPrimaryParameterId.value)
+        assertEquals(
+            setOf("ACCRAIN", "WBLMAXMIN"),
+            tilesPort.requestedParameterIds.map { id -> id.value.uppercase() }.toSet()
+        )
+        assertEquals(
+            setOf("ACCRAIN", "WBLMAXMIN"),
+            legendPort.requestedParameterIds.map { id -> id.value.uppercase() }.toSet()
+        )
+    }
+
+    @Test
+    fun enabledOverlay_withWindOverlay_fetchesPrimaryAndWindTiles() = runTest(testDispatcher) {
+        val preferencesRepository = ForecastPreferencesRepository(context)
+        val catalogPort = FakeForecastProviderAdapter()
+        val tilesPort = CountingTilesPort()
+        val legendPort = CountingLegendPort()
+        val repository = ForecastOverlayRepository(
+            preferencesRepository = preferencesRepository,
+            catalogPort = catalogPort,
+            tilesPort = tilesPort,
+            legendPort = legendPort,
+            valuePort = catalogPort,
+            clock = clock,
+            dispatcher = testDispatcher
+        )
+
+        preferencesRepository.setOverlayEnabled(true)
+        preferencesRepository.setWindOverlayEnabled(true)
+        advanceUntilIdle()
+
+        val state = repository.overlayState.first { state ->
+            state.enabled &&
+                state.primaryTileSpec != null &&
+                state.primaryLegend != null &&
+                state.windTileSpec != null &&
+                state.windLegend != null
+        }
+
+        assertEquals(2, tilesPort.calls)
+        assertEquals(2, legendPort.calls)
+        assertTrue(state.windOverlayEnabled)
+    }
+
+    @Test
+    fun primaryDisabled_withWindOverlay_fetchesWindTilesOnly() = runTest(testDispatcher) {
+        val preferencesRepository = ForecastPreferencesRepository(context)
+        val catalogPort = FakeForecastProviderAdapter()
+        val tilesPort = CountingTilesPort()
+        val legendPort = CountingLegendPort()
+        val repository = ForecastOverlayRepository(
+            preferencesRepository = preferencesRepository,
+            catalogPort = catalogPort,
+            tilesPort = tilesPort,
+            legendPort = legendPort,
+            valuePort = catalogPort,
+            clock = clock,
+            dispatcher = testDispatcher
+        )
+
+        preferencesRepository.setOverlayEnabled(false)
+        preferencesRepository.setWindOverlayEnabled(true)
+        advanceUntilIdle()
+
+        val state = repository.overlayState.first { state ->
+            !state.enabled &&
+                state.primaryTileSpec == null &&
+                state.windOverlayEnabled &&
+                state.windTileSpec != null &&
+                state.windLegend != null
+        }
+
+        assertEquals(1, tilesPort.calls)
+        assertEquals(1, legendPort.calls)
+        assertTrue(state.windOverlayEnabled)
     }
 
     @Test
@@ -116,12 +269,12 @@ class ForecastOverlayRepositoryTest {
             dispatcher = testDispatcher
         )
 
-        preferencesRepository.setSelectedParameterId(ForecastParameterId("DWCRIT"))
+        preferencesRepository.setSelectedPrimaryParameterId(ForecastParameterId("DWCRIT"))
         advanceUntilIdle()
 
         val state = repository.overlayState.first()
 
-        assertEquals("dwcrit", state.selectedParameterId.value)
+        assertEquals("dwcrit", state.selectedPrimaryParameterId.value)
     }
 
     @Test
@@ -237,7 +390,7 @@ class ForecastOverlayRepositoryTest {
         )
 
         preferencesRepository.setOverlayEnabled(true)
-        preferencesRepository.setSelectedParameterId(ForecastParameterId("wblmaxmin"))
+        preferencesRepository.setSelectedPrimaryParameterId(ForecastParameterId("wblmaxmin"))
         advanceUntilIdle()
 
         val result = repository.queryPointValue(
@@ -275,6 +428,42 @@ class ForecastOverlayRepositoryTest {
             regionCode: String
         ): ForecastLegendSpec {
             calls += 1
+            return ForecastLegendSpec(
+                unitLabel = "m/s",
+                stops = listOf(
+                    ForecastLegendStop(value = 0.0, argb = 0xFF000000.toInt()),
+                    ForecastLegendStop(value = 1.0, argb = 0xFFFFFFFF.toInt())
+                )
+            )
+        }
+    }
+
+    private class RecordingTilesPort : ForecastTilesPort {
+        val requestedParameterIds = mutableListOf<ForecastParameterId>()
+
+        override suspend fun getTileSpec(
+            parameterId: ForecastParameterId,
+            timeSlot: ForecastTimeSlot,
+            regionCode: String
+        ): ForecastTileSpec {
+            requestedParameterIds.add(parameterId)
+            return ForecastTileSpec(
+                urlTemplate = "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                minZoom = 0,
+                maxZoom = 18
+            )
+        }
+    }
+
+    private class RecordingLegendPort : ForecastLegendPort {
+        val requestedParameterIds = mutableListOf<ForecastParameterId>()
+
+        override suspend fun getLegend(
+            parameterId: ForecastParameterId,
+            timeSlot: ForecastTimeSlot,
+            regionCode: String
+        ): ForecastLegendSpec {
+            requestedParameterIds.add(parameterId)
             return ForecastLegendSpec(
                 unitLabel = "m/s",
                 stops = listOf(
@@ -352,6 +541,31 @@ class ForecastOverlayRepositoryTest {
             value = 0.0,
             unitLabel = "m/s",
             validTimeUtcMs = timeSlot.validTimeUtcMs
+        )
+    }
+
+    private class RainConvergenceCatalogPort : ForecastCatalogPort {
+        override suspend fun getParameters(): List<ForecastParameterMeta> = listOf(
+            ForecastParameterMeta(
+                id = ForecastParameterId("accrain"),
+                name = "Rain",
+                category = "Precip",
+                unitLabel = "mm/h"
+            ),
+            ForecastParameterMeta(
+                id = ForecastParameterId("wblmaxmin"),
+                name = "Convergence",
+                category = "Lift",
+                unitLabel = "m/s",
+                supportsPointValue = false
+            )
+        )
+
+        override fun getTimeSlots(
+            nowUtcMs: Long,
+            regionCode: String
+        ): List<ForecastTimeSlot> = listOf(
+            ForecastTimeSlot(validTimeUtcMs = nowUtcMs)
         )
     }
 

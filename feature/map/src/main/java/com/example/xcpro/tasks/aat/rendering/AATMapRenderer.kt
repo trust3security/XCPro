@@ -1,6 +1,8 @@
 package com.example.xcpro.tasks.aat.rendering
 
+import android.util.Log
 import androidx.core.graphics.toColorInt
+import com.example.xcpro.map.BuildConfig
 import com.example.xcpro.tasks.aat.models.AATWaypoint
 import com.example.xcpro.tasks.aat.geometry.AATGeometryGenerator
 import org.maplibre.android.maps.Style
@@ -65,7 +67,7 @@ internal class AATMapRenderer {
                 }
 
             } catch (e: Exception) {
-                e.printStackTrace()
+                logRenderFailure("clearLayers", e)
             }
         }
     }
@@ -243,7 +245,7 @@ internal class AATMapRenderer {
                     )
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                logRenderFailure("addLineFeatures", e)
             }
         }
     }
@@ -304,5 +306,17 @@ internal class AATMapRenderer {
             waypoints = waypoints,
             editModeWaypointIndex = editModeWaypointIndex
         )
+    }
+
+    private fun logRenderFailure(stage: String, throwable: Throwable) {
+        if (!BuildConfig.DEBUG) {
+            return
+        }
+        val reason = throwable.message ?: throwable.javaClass.simpleName
+        Log.w(TAG, "$stage failed ($reason)")
+    }
+
+    private companion object {
+        const val TAG = "AATMapRenderer"
     }
 }

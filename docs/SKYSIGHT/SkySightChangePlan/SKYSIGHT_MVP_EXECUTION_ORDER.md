@@ -2,6 +2,10 @@
 
 This is the practical order of operations so XCPro can ship an MVP quickly.
 
+Status update (2026-02-18):
+- Step 1, Step 2, and Step 3 are completed in current codebase.
+- This file remains as historical execution order for future contract refreshes.
+
 ## Step 1 — Implement Stage A (no SkySight forecast endpoints needed)
 Implement provider-neutral forecast overlays + FakeForecastProvider:
 - Follow: `TRACK_A_FAKE_FORECAST_PROVIDER.md`

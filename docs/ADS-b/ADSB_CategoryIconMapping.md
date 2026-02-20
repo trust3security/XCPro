@@ -1,6 +1,6 @@
 # ADSB_CategoryIconMapping.md - OpenSky category to XCPro icon buckets
 
-Version: 2026-02-17
+Version: 2026-02-21
 
 Category is an ADS-B emitter bucket. It is often `0`/`1` (no info), which is normal.
 
@@ -12,36 +12,23 @@ See `ADSB_AircraftMetadata.md`.
 
 ## Current precedence (runtime)
 
-1. Heavy category (`6`) -> heavy icon.
-2. Metadata-driven classification:
-   - Typecode heuristics first.
-   - ICAO aircraft class decode second.
-3. ICAO24 hard override list (only for non-heavy results).
-4. OpenSky category fallback.
+Implemented in:
+- `feature/map/src/main/java/com/example/xcpro/adsb/domain/AdsbAircraftClassResolver.kt`
+- `feature/map/src/main/java/com/example/xcpro/adsb/ui/AdsbAircraftIconMapper.kt`
+
+Resolution order:
+
+1. Authoritative non-fixed-wing category gate:
+   - Category `6` (heavy) and categories `8`, `9`, `10`, `11`, `12`, `14` are authoritative.
+   - These categories are not overridden by conflicting fixed-wing metadata.
+2. Metadata classification:
+   - Typecode heuristics + ICAO aircraft class decode.
+   - Helicopter ICAO class (`H*`) wins conflict resolution.
+   - Weak fixed-wing typecode fallback does not override a stronger ICAO class.
+3. ICAO24 hard override list for large icon:
+   - Applied only after metadata classification and never above heavy classification.
+4. OpenSky category fallback mapping.
 5. Unknown.
-
-## Deep-dive findings (2026-02-17)
-
-Current runtime behavior has verified defects that can map helicopters to airplane icons:
-
-1. Rotorcraft category is not authoritative.
-   - Only heavy (`6`) is hard-locked before metadata.
-   - Category `8` can still be overridden by metadata heuristics.
-2. Typecode currently wins over ICAO aircraft class in most conflicts.
-   - If typecode classifies as fixed-wing and ICAO class says helicopter (`H*`), fixed-wing often wins.
-3. Helicopter typecode prefix coverage is too narrow.
-   - Current list: `R22`, `R44`, `R66`, `EC`, `AW`, `H60`, `UH`.
-4. Generic fixed-wing fallback is broad.
-   - Many helicopter typecodes with digits are captured by fixed-wing fallback and assigned plane icons.
-5. Additional mapper defect:
-   - `MEDIUM_FIXED_WING_TYPECODE_PREFIXES` duplicates twin-prop prefixes, so that branch is effectively dead.
-
-Measured impact from a 2026-02-17 run against OpenSky `aircraftDatabase.csv`:
-
-- Rows with helicopter ICAO class (`icaoaircrafttype` starts with `H`): `5484`
-- Rows classified as non-helicopter by current runtime mapper logic: `3065` (~55.9%)
-- Common missed helicopter typecodes include:
-  - `B06`, `AS50`, `H269`, `B407`, `H500`, `A139`, `B47G`, `A109`, `MI8`, `S76`, `B429`
 
 ## OpenSky category fallback mapping
 
@@ -57,9 +44,26 @@ Measured impact from a 2026-02-17 run against OpenSky `aircraftDatabase.csv`:
 - `14` -> `DRONE`
 - else -> `UNKNOWN`
 
-## Recommended correction order
+## Helicopter typecode coverage
 
-1. Make non-fixed-wing categories authoritative for icon family (`8`, `9`, `10`, `11`, `12`, `14`).
-2. Change conflict policy so helicopter ICAO class cannot be overridden by weak fixed-wing typecode fallback.
-3. Expand helicopter typecode recognition and reduce ambiguous fixed-wing fallback.
-4. Add mapper regression tests for category/class/typecode conflicts and common helicopter typecodes.
+Runtime prefix list includes:
+
+- `R22`, `R44`, `R66`, `EC`, `AW`, `H60`, `UH`
+- `B06`, `B47`, `B407`, `B429`
+- `A109`, `A119`, `A139`, `AS50`
+- `H269`, `H500`
+- `MI8`, `MI17`
+- `S76`, `S92`
+
+## Regression coverage
+
+Validated by:
+
+- `feature/map/src/test/java/com/example/xcpro/adsb/ui/AdsbAircraftIconMapperTest.kt`
+
+Test coverage includes:
+
+- Non-fixed-wing category authority against conflicting metadata.
+- Helicopter-vs-fixed-wing conflict precedence.
+- Common helicopter typecode prefixes (including digit-suffixed variants such as `B47G`).
+- Heavy-category priority and ICAO24 override guardrails.

@@ -1,4 +1,8 @@
-﻿# OGNKnowledge.md
+# OGNKnowledge.md
+
+> Research/reference brief for protocol context. This is not an authoritative runtime contract.
+> Use `docs/OGN/OGN.md`, `docs/OGN/OGN_PROTOCOL_NOTES.md`, and `docs/ARCHITECTURE/PIPELINE.md` for implemented behavior.
+
 _A practical, implementation-oriented briefing for a Codex agent to add an OGN (Open Glider Network) APRS-IS client + parser to XCPro (Kotlin/Android)._
 
 ## 1) What you are building
@@ -280,5 +284,6 @@ APRS-IS protocol:
 OGN Device Database:
 - https://github.com/glidernet/ogn-ddb
 - https://ddb.glidernet.org/download/?j=1
+
 
 

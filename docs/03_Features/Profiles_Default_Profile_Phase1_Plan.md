@@ -52,6 +52,23 @@ fallback keys and produce inconsistent user state.
 
 11. Profile deletion UX requires explicit confirmation before mutation is dispatched.
 
+12. Profile list and active ID persistence is atomic per mutation (no split-write windows).
+
+13. Profile UI active-profile projection does not retain stale values during repository null transitions.
+
+14. Concurrent profile mutations do not produce lost updates or split state.
+
+15. Failed create/select/update/delete operations do not leave partially-applied in-memory profile state.
+
+16. Create/delete mutation paths repair active-profile invariant even when starting from invalid
+    active state.
+
+17. Selection flow cannot Continue/Skip while profile mutation or hydration loading is in-flight.
+
+18. Profile visibility state for any selected profile hydrates from persisted values (not only
+    template/card-derived profile IDs), and map + flight-data screens remain consistent after
+    profile switches.
+
 ## Architecture Contract
 
 ### SSOT Ownership
@@ -264,6 +281,101 @@ Add explicit confirmation flow before delete dispatch:
 2. show invariant-aware messaging (default/last profile cannot be deleted),
 3. keep user on screen when deletion fails.
 
+### Step 17: Atomic Profile Persistence
+
+Files:
+
+1. `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileStorage.kt`
+2. `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt`
+
+Add combined persistence API for profile-state transitions:
+
+1. write `profiles_json` + `active_profile_id` together in one DataStore edit when both change,
+2. route create/select/delete reconciliation paths through the combined write API.
+
+### Step 18: Fresh Active-Profile Projection in ViewModel
+
+File:
+
+1. `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileViewModel.kt`
+
+Remove stale carry-forward projection:
+
+1. avoid `active ?: previous` fallback in profiles collector,
+2. ensure `uiState.activeProfile` strictly follows repository active-profile flow contract.
+
+### Step 19: Mutation Serialization
+
+File:
+
+1. `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt`
+
+Serialize mutation paths:
+
+1. guard create/select/update/delete with single-writer synchronization (mutex or equivalent),
+2. persist from the synchronized state snapshot only.
+
+### Step 20: Transactional Mutation Failure Semantics
+
+File:
+
+1. `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt`
+
+Ensure mutation outcomes are state-consistent:
+
+1. avoid exposing failed operations that still mutate in-memory `_profiles`/`_activeProfile`,
+2. use commit/rollback semantics so runtime and persisted state stay aligned on failure paths.
+
+### Step 21: Post-Mutation Active-Invariant Repair
+
+File:
+
+1. `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt`
+
+After create/delete/update mutation paths:
+
+1. run invariant reconciliation (`profiles.isNotEmpty()` must resolve valid active profile),
+2. persist repaired active ID/list state in the same mutation contract.
+
+### Step 22: Selection Action Gating During Loading
+
+Files:
+
+1. `feature/profile/src/main/java/com/example/xcpro/profiles/ui/ProfileSelectionContent.kt`
+2. `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileViewModel.kt`
+
+Prevent selection-flow exits during in-flight transitions:
+
+1. disable/guard Continue and Skip when `isLoading` is true,
+2. only allow continuation once active-profile selection/create commits successfully.
+
+### Step 23: Profile Visibility Hydration Completeness (dfcards)
+
+Files:
+
+1. `dfcards-library/src/main/java/com/example/dfcards/dfcards/FlightProfileStore.kt`
+2. `dfcards-library/src/main/java/com/example/dfcards/dfcards/FlightDataIngest.kt`
+3. `dfcards-library/src/main/java/com/example/dfcards/dfcards/FlightDataViewModel.kt`
+
+Ensure profile visibility hydration does not depend only on template/card mappings:
+
+1. include persisted visibility-bearing profile IDs in hydration source set (or lazily load
+   persisted visibilities on first profile activation before default seeding),
+2. prevent `setActiveProfile(...)` from silently defaulting visibilities when persisted values
+   exist for that profile.
+
+### Step 24: Visibility Hydration Regression Tests
+
+Files:
+
+1. `dfcards-library/src/test/java/com/example/dfcards/FlightDataViewModelUnitsTest.kt`
+
+Add tests for profile visibility persistence/switching:
+
+1. persisted visibilities are restored for profiles without template/card mappings,
+2. switching profiles preserves visibility intent and does not regress to defaults,
+3. map-facing and flight-data-facing visibility reads stay aligned after switch.
+
 ### Deferred Follow-Up (Phase 2)
 
 1. Consolidate color-theme ownership under one repository/use-case path.
@@ -274,11 +386,20 @@ Add explicit confirmation flow before delete dispatch:
 2. Split profile-selection and profile-creation semantics in repository API.
    Current `setActiveProfile(...)` behavior can implicitly insert missing profiles.
 
+3. Move profile timestamp stamping to repository clock policy.
+   Current `UserProfile` model defaults call `System.currentTimeMillis()` directly.
+
+4. Keep `ProfileSettingsScreen` local editable model keyed to source profile updates.
+   Current `remember { mutableStateOf(profile) }` can drift after source-profile refresh.
+
 ## Tests
 
 ### Unit
 
-File: `app/src/test/java/com/example/xcpro/profiles/ProfileRepositoryTest.kt`
+Primary files:
+
+1. `app/src/test/java/com/example/xcpro/profiles/ProfileRepositoryTest.kt`
+2. `dfcards-library/src/test/java/com/example/dfcards/FlightDataViewModelUnitsTest.kt`
 
 Add:
 
@@ -299,6 +420,14 @@ Add:
 15. Create-profile with blank/invalid names fails at repository layer.
 16. Clear-profile removes visibility map entries in memory (not only cards/templates).
 17. Delete actions require explicit confirmation in both selection and settings screens.
+18. Combined profile-list + active-id persistence is atomic for mutation paths.
+19. `uiState.activeProfile` does not retain stale previous value when repository emits null.
+20. Concurrent create/update/delete operations do not lose mutations.
+21. Failed profile mutations do not leave partially-applied in-memory state after returning error.
+22. Create/delete paths repair null/invalid active-profile state when profiles remain available.
+23. Continue/Skip controls are blocked while profile selection/create is in-flight.
+24. Persisted visibilities restore for profiles that have visibility keys but no template/card mappings.
+25. Profile switches keep map and flight-data visibility state aligned for the same profile.
 
 ### Optional UI/Integration
 
@@ -307,6 +436,8 @@ Add:
 3. Opening profile settings from profile list remains on-screen while state hydrates.
 4. Selecting "skip" does not leave app running with null active profile.
 5. Corrupted/unreadable profile storage still reaches deterministic default-profile recovery.
+6. Switching to a profile with persisted visibility keys but no template/card mappings keeps
+   visibility state consistent across map and flight-data screens.
 
 ## Verification
 
@@ -326,6 +457,9 @@ Add:
 | Delete cleanup may become partial across stores. | Centralize cleanup in one orchestrator and add integration tests for key removal. |
 | Flight mode may be briefly set from fallback key during profile switch. | Gate mode application on profile-bound preference flow emission. |
 | Storage flow failures may still terminate hydration unexpectedly. | Add explicit recoverable-error tests for profile storage flow behavior. |
+| Failed profile mutation could still alter runtime state while reporting error. | Add commit/rollback mutation contract tests for create/select/update/delete failure paths. |
+| Selection flow may still allow stale-state exit during in-flight operations. | Gate Continue/Skip/actions by loading state and assert in UI tests. |
+| Visibility hydration may still default on profile switch for profiles lacking template/card mappings. | Add explicit dfcards hydration/switch regression tests and require persisted visibility load before default seeding. |
 
 ## Exit Criteria
 
@@ -342,3 +476,9 @@ Add:
 11. Workboard statuses updated for completed tasks.
 12. Clear-profile/delete paths leave no stale in-memory profile card visibility state.
 13. Delete mutation is confirmation-gated in profile UIs.
+14. Profile list + active-id writes are atomic and consistent per mutation.
+15. Repository mutation paths are serialized and race-safe.
+16. Mutation failure paths keep runtime profile state consistent with persisted state.
+17. Mutation paths repair active-profile invariant when profiles remain after create/delete/update.
+18. Selection flow exit actions are loading-gated and invariant-safe.
+19. Profile visibility hydration/persistence remains consistent across profile switches in both map and flight-data flows.

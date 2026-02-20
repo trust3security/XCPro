@@ -1,0 +1,248 @@
+﻿
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7" lang="en"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8" lang="en"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9" lang="en"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en"> <!--<![endif]-->
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <title>SkySight</title>
+    <meta name="description" content="SkySight Weather - forecast maps for soaring and aviation, out to 5 days in the future across several locations">
+    <meta name="author" content="">
+    <meta name="keywords" content="">
+    <meta name="generator" content="">
+
+
+    <meta property="og:title"        content="SkySight" />
+    <meta property="og:description"        content="SkySight Weather - forecast maps for soaring and aviation, out to 5 days in the future across several locations" />
+
+
+    <!-- Mobile viewport optimized: h5bp.com/viewport -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/> <!--320-->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#f8f8f8" />
+
+    <link rel="preconnect" href="https://edge.skysight.io">
+    <link rel="preconnect" href="https://maps.skysight.io">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+
+    <link rel="shortcut icon" href="/ozsoar/favicon.ico">
+    <link rel="apple-touch-icon" href="/ozsoar/apple-touch-icon.png">
+    <link rel="stylesheet" href="/boilerplate/css/boilerplate.min.css">
+
+    <link rel="manifest" href="/secure/manifest.webmanifest">
+
+    
+    
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-16890703736"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() { dataLayer.push(arguments); }
+      gtag('js', new Date());
+      gtag('config', 'AW-16890703736');
+    </script>
+    <!-- End Google Analytics -->
+
+    <script>
+  !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+  n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+  t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+      document,'script','https://connect.facebook.net/en_US/fbevents.js');
+  fbq('init', '472506459769710'); // Insert your pixel ID here.
+  fbq('track', 'PageView');
+      </script>
+      <noscript><img height="1" width="1" style="display:none"
+        src="https://www.facebook.com/tr?id=472506459769710&ev=PageView&noscript=1"
+        /></noscript>
+<link href='https://cdnjs.cloudflare.com/ajax/libs/mapbox-gl/2.15.0/mapbox-gl.min.css' rel='stylesheet' />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/mapbox-gl-draw/1.2.0/mapbox-gl-draw.min.css" integrity="sha512-lLgT7TP62foSxj30kmzbA+WMjhFhB0r5epwM3co2igFFj64lFr0RrqQ3x89QvEw2s1nTFbf6evjlheCooiufJQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+<body>
+
+
+
+  <div style="padding-top: 50px">
+
+<div id="page">
+    
+    <div class="row">
+    <div class="container">
+    <div class="navbar navbar-default navbar-fixed-top" role="navigation">
+        <div class="navbar-header col-md-3 hidden-xs hidden-sm">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                <span class="glyphicon-chevron-down glyphicon"></span>
+            </button>
+            <a class="navbar-brand logo" href="#">
+                <img alt="Brand" src="/ozsoar/img/logo.png" style="max-height:100%;max-width:100%;">
+            </a>
+            <a class="navbar-brand title" href="/"><i>SkySight</i></a>
+
+        </div>
+       
+        <div class="navbar-header col-md-2 col-sm-4">
+        </div>
+        <div class="navbar-collapse col-md-2 col-sm-2" style="float:right">
+            <ul class="nav navbar-nav navbar-right">
+                
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                            <span class="glyphicon-globe glyphicon"></span>
+                            Language : English (United States) <b class="caret"></b>
+                        </a>
+                        <ul class="dropdown-menu">
+                            
+                                
+                                    <li><a href="/login/?continue=https%3A%2F%2Fskysight.io%2Fsecure%2F&hl=en_US">English (United States) - English (United States)</a></li>
+                                
+                            
+                                
+                                    <li><a href="/login/?continue=https%3A%2F%2Fskysight.io%2Fsecure%2F&hl=pl_PL">Polish (Poland) - Polski (Polska)</a></li>
+                                
+                            
+                                
+                                    <li><a href="/login/?continue=https%3A%2F%2Fskysight.io%2Fsecure%2F&hl=de_DE">German (Germany) - Deutsch (Deutschland)</a></li>
+                                
+                            
+                                
+                                    <li><a href="/login/?continue=https%3A%2F%2Fskysight.io%2Fsecure%2F&hl=nl_BE">Dutch (Belgium) - Nederlands (België)</a></li>
+                                
+                            
+                                
+                                    <li><a href="/login/?continue=https%3A%2F%2Fskysight.io%2Fsecure%2F&hl=nl_NL">Dutch (Netherlands) - Nederlands (Nederland)</a></li>
+                                
+                            
+                                
+                                    <li><a href="/login/?continue=https%3A%2F%2Fskysight.io%2Fsecure%2F&hl=ja_JP">Japanese (Japan) - 日本語 (日本)</a></li>
+                                
+                            
+                                
+                                    <li><a href="/login/?continue=https%3A%2F%2Fskysight.io%2Fsecure%2F&hl=fr_FR">French (France) - Français (France)</a></li>
+                                
+                            
+                                
+                                    <li><a href="/login/?continue=https%3A%2F%2Fskysight.io%2Fsecure%2F&hl=es_ES">Spanish (Spain) - Español (España)</a></li>
+                                
+                            
+                                
+                                    <li><a href="/login/?continue=https%3A%2F%2Fskysight.io%2Fsecure%2F&hl=cs_CZ">Czech (Czechia) - Čeština (Česko)</a></li>
+                                
+                            
+                                
+                                    <li><a href="/login/?continue=https%3A%2F%2Fskysight.io%2Fsecure%2F&hl=nb_NO">Norwegian Bokmål (Norway) - Norsk Bokmål (Norge)</a></li>
+                                
+                            
+                                
+                                    <li><a href="/login/?continue=https%3A%2F%2Fskysight.io%2Fsecure%2F&hl=it_IT">Italian (Italy) - Italiano (Italia)</a></li>
+                                
+                            
+                                
+                                    <li><a href="/login/?continue=https%3A%2F%2Fskysight.io%2Fsecure%2F&hl=sv_SE">Swedish (Sweden) - Svenska (Sverige)</a></li>
+                                
+                            
+                                
+                                    <li><a href="/login/?continue=https%3A%2F%2Fskysight.io%2Fsecure%2F&hl=vi_VN">Vietnamese (Vietnam) - Tiếng Việt (Việt Nam)</a></li>
+                                
+                            
+                        </ul>
+                    </li>
+                
+                </ul>
+            </div>
+            <!-- /.nav-collapse -->
+
+            </div>
+            <!-- /navbar-inner -->
+        </div><!-- /navbar -->
+       </div>
+    </div>
+    
+
+    <div id="content" class="container-fluid" style="padding-left:0px;padding-right:0px">
+        
+        
+        
+        
+    <form id="form_login_user" action="https://skysight.io/login/?continue=https%3A%2F%2Fskysight.io%2Fsecure%2F" method="post" class="well form-vertical auth-at-loginpage">
+        <fieldset>
+            <input type="hidden" name="_csrf_token" value="ynXxvQ">
+            <div class="form-group row">
+            	
+            	
+                	<label class="control-label col-sm-4" for="username">Email *</label>
+                
+                <div class="col-sm-8">
+                <input class="input-xlarge focused required form-control" id="username" name="username" placeholder="Enter your Email" required type="text" value="">
+                
+                </div>
+
+            </div>
+            <div class="form-group row">
+            	
+            	
+                	<label class="control-label col-sm-4" for="l_password">Password *</label>
+                
+                <div class="col-sm-8">
+                <input class="input-xlarge focused required form-control" id="l_password" name="password" placeholder="Enter your Password" required type="password" value="">
+                
+                </div>
+
+            </div>
+            <div class="form-group">
+                <div class="controls">
+                    <button type="submit" class="btn btn-primary btn-login">Login</button>
+                    <label class="remember" style="display:none">
+                        <input type="checkbox" name="remember_me" id="remember_me" value="on" checked>
+                    </label>
+                </div>
+            </div>
+            <div class="form-group">
+                <a href="/password-reset/">Forgot your password?</a>
+            </div>
+            <div id="register" class="form-actions">
+                <h4>Don't have an account?</h4>
+               	<a href="/register/" class="btn btn-primary btn-login">Sign Up</a>
+            </div>
+        </fieldset>
+    </form>
+
+    </div>
+
+
+    <!-- /content -->
+</div>
+<!-- /page -->
+
+<!-- scripts concatenated and minified via build script -->
+
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-toggle/2.2.2/js/bootstrap-toggle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js"></script>
+    
+
+    <script async defer src="https://challenges.cloudflare.com/turnstile/v0/api.js"></script>
+    <script>
+        $().ready(function() {
+            $("#form_login_user").validate({
+                submitHandler: function(form) {
+                      form.submit();
+                },
+                errorPlacement: function(error, element) {
+                    element.parent().parent().addClass("error");
+                    error.addClass("help-inline").appendTo( element.parent() );
+                }
+            });
+        });
+    </script>
+
+
+<!-- end scripts -->
+</div>
+</body>
+</html>

@@ -21,6 +21,66 @@ Read first:
 - Issue/PR: TBD
 - Status: In progress
 
+Compliance correction (2026-02-18):
+- The structural decomposition work in this plan remains valid.
+- Deep-pass runtime/file-flow audit found unresolved map/task slice risks
+  (import fidelity, CSV contract safety, main-thread task file I/O, target lock semantics).
+- Latest deep-pass refresh (2026-02-18, pass #6) added additional unresolved
+  blockers (export/share exception hardening, AAT target autosave gap,
+  duplicate-waypoint ID target-state aliasing, CUP role-code contract mismatch).
+- Hardening implementation pass #1 (2026-02-18) has now closed a subset of those
+  blockers (URI-driven CUP import, CSV contract parser/writer alignment, UTF-8 IO,
+  exception hardening in task-files VM flows, active-leg retention, duplicate-id
+  target-state isolation, AAT target autosave).
+- Hardening implementation pass #2 (2026-02-18) closed additional blockers:
+  - canonical export/share now serializes real target snapshots,
+  - serializer now preserves/restores task id + waypoint custom/OZ payloads,
+  - legacy duplicate QR path removed in favor of canonical dialog flow,
+  - sparse target snapshot serialization bug fixed (`index`/`id` resolution).
+- Hardening implementation pass #3 (2026-02-18) closed additional blockers:
+  - deterministic fallback ID policy now replaces random IDs in persistence adapters,
+  - CUP storage partitioning is now task-type scoped (`cup_tasks/racing`, `cup_tasks/aat`) with legacy fallback reads,
+  - share flow now emits a single multi-document chooser request (no duplicate chooser events).
+- Hardening implementation pass #4 (2026-02-18) added failure-mode confidence:
+  - `TaskFilesRepository` write/read failure handling tests,
+  - racing/AAT CUP storage failure-path tests,
+  - `TaskFilesViewModel` share failure mapping tests.
+- Hardening implementation pass #5 (2026-02-18) added migration policy coverage:
+  - one-time legacy `cup_tasks` -> scoped storage migration in racing/AAT storage paths,
+  - migration behavior verified by partitioning tests with legacy/scoped assertions.
+- Hardening implementation pass #6 (2026-02-18) added device-level share confidence:
+  - new instrumentation coverage for canonical multi-document share dispatch
+    (`TaskFilesShareInstrumentedTest`),
+  - connected-device run validates single chooser + `ACTION_SEND_MULTIPLE` share behavior.
+- Hardening implementation pass #7 (2026-02-18) added rollout cleanup closure:
+  - residual legacy `cup_tasks` conflicts are now archived by strict cleanup policy
+    once both racing/AAT migrations are complete,
+  - racing/AAT storage paths invoke cleanup policy on migration and post-migration access,
+  - partition/failure tests now lock cleanup sequencing and deterministic prefs isolation.
+- Deep-pass refresh (2026-02-18, pass #11) status:
+  - task-files hardening gate remains release-ready after re-audit,
+  - residual non-blocking debt was identified for immediate follow-up.
+- Hardening implementation pass #12 (2026-02-18) closed the pass #11 follow-up backlog:
+  - `TaskManagerCoordinator.calculateTaskDistanceForTask(task)` now honors provided task waypoint input,
+  - task map renderer `printStackTrace()` calls replaced with bounded debug-only logging.
+- Hardening implementation pass #13 (2026-02-18) closed additional residual projection/import drift:
+  - `TaskRepository` now preserves explicit waypoint roles and OZ metadata in domain projection,
+  - AAT target-capable projection now includes `OPTIONAL` role in addition to `TURNPOINT`,
+  - `TaskSheetViewModel` persisted import now batches waypoint adds without nested mutate/sync churn.
+- Verification rerun after pass #12:
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.TaskStoragePartitioningTest" --tests "com.example.xcpro.tasks.TaskStorageFailureModesTest"`: PASS
+  - `./gradlew --% :app:connectedDebugAndroidTest --no-parallel -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true -Pandroid.testInstrumentationRunnerArguments.class=com.example.xcpro.TaskFilesShareInstrumentedTest`: PASS
+  - `./gradlew connectedDebugAndroidTest --no-parallel`: PASS
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.TaskManagerCoordinatorTest"`: PASS
+  - `./gradlew enforceRules`: PASS
+  - `./gradlew testDebugUnitTest`: PASS
+  - `./gradlew assembleDebug`: PASS
+  - `./gradlew enforceRules testDebugUnitTest assembleDebug`: PASS
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.TaskSheetViewModelImportTest" --tests "com.example.xcpro.tasks.domain.TaskRepositoryProjectionComplianceTest"`: PASS
+- Map/task files hardening items in
+  `docs/ARCHITECTURE/CHANGE_PLAN_MAP_TASK_SLICE_HARDENING_2026-02-18.md`
+  are now completed and re-verified for release-path confidence.
+
 Execution update (2026-02-14):
 
 - Phase 0 baseline/contract pass completed:

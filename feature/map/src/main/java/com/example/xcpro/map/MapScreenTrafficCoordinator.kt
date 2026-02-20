@@ -3,6 +3,8 @@ package com.example.xcpro.map
 import com.example.xcpro.adsb.AdsbTrafficUiModel
 import com.example.xcpro.adsb.Icao24
 import com.example.xcpro.map.model.MapLocationUiModel
+import com.example.xcpro.ogn.OgnTrafficTarget
+import com.example.xcpro.ogn.OgnThermalHotspot
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,6 +28,12 @@ internal class MapScreenTrafficCoordinator(
     private val adsbMaxDistanceKm: StateFlow<Int>,
     private val adsbVerticalAboveMeters: StateFlow<Double>,
     private val adsbVerticalBelowMeters: StateFlow<Double>,
+    private val rawOgnTargets: StateFlow<List<OgnTrafficTarget>>,
+    private val selectedOgnId: MutableStateFlow<String?>,
+    private val showThermalsEnabled: StateFlow<Boolean>,
+    private val showGliderTrailsEnabled: StateFlow<Boolean>,
+    private val thermalHotspots: StateFlow<List<OgnThermalHotspot>>,
+    private val selectedThermalId: MutableStateFlow<String?>,
     private val rawAdsbTargets: StateFlow<List<AdsbTrafficUiModel>>,
     private val selectedAdsbId: MutableStateFlow<Icao24?>,
     private val ognTrafficUseCase: OgnTrafficUseCase,
@@ -112,6 +120,32 @@ internal class MapScreenTrafficCoordinator(
                 }
             }
             .launchIn(scope)
+
+        rawOgnTargets
+            .onEach { targets ->
+                val selectedId = selectedOgnId.value ?: return@onEach
+                if (targets.none { it.id == selectedId }) {
+                    selectedOgnId.value = null
+                }
+            }
+            .launchIn(scope)
+
+        thermalHotspots
+            .onEach { hotspots ->
+                val selectedId = selectedThermalId.value ?: return@onEach
+                if (hotspots.none { it.id == selectedId }) {
+                    selectedThermalId.value = null
+                }
+            }
+            .launchIn(scope)
+
+        showThermalsEnabled
+            .onEach { enabled ->
+                if (!enabled) {
+                    selectedThermalId.value = null
+                }
+            }
+            .launchIn(scope)
     }
 
     fun setMapVisible(isVisible: Boolean) {
@@ -121,7 +155,29 @@ internal class MapScreenTrafficCoordinator(
 
     fun onToggleOgnTraffic() {
         scope.launch {
-            ognTrafficUseCase.setOverlayEnabled(!ognOverlayEnabled.value)
+            val next = !ognOverlayEnabled.value
+            ognTrafficUseCase.setOverlayEnabled(next)
+            if (!next) {
+                selectedOgnId.value = null
+                selectedThermalId.value = null
+            }
+        }
+    }
+
+    fun onToggleOgnThermals() {
+        scope.launch {
+            val next = !showThermalsEnabled.value
+            ognTrafficUseCase.setShowThermalsEnabled(next)
+            if (!next) {
+                selectedThermalId.value = null
+            }
+        }
+    }
+
+    fun onToggleOgnGliderTrails() {
+        scope.launch {
+            val next = !showGliderTrailsEnabled.value
+            ognTrafficUseCase.setShowGliderTrailsEnabled(next)
         }
     }
 
@@ -140,11 +196,33 @@ internal class MapScreenTrafficCoordinator(
     }
 
     fun onAdsbTargetSelected(id: Icao24) {
+        selectedOgnId.value = null
+        selectedThermalId.value = null
         selectedAdsbId.value = id
     }
 
     fun dismissSelectedAdsbTarget() {
         selectedAdsbId.value = null
+    }
+
+    fun onOgnTargetSelected(id: String) {
+        selectedAdsbId.value = null
+        selectedThermalId.value = null
+        selectedOgnId.value = id
+    }
+
+    fun dismissSelectedOgnTarget() {
+        selectedOgnId.value = null
+    }
+
+    fun onOgnThermalSelected(id: String) {
+        selectedOgnId.value = null
+        selectedAdsbId.value = null
+        selectedThermalId.value = id
+    }
+
+    fun dismissSelectedOgnThermal() {
+        selectedThermalId.value = null
     }
 
     private fun seedAdsbCenterFromCurrentPosition() {

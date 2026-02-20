@@ -52,7 +52,7 @@ fun ProfileSelectionContent(
         ProfileSelectionHeader()
 
         when {
-            state.isLoading -> ProfileSelectionLoading(
+            !state.isHydrated || state.isLoading -> ProfileSelectionLoading(
                 modifier = Modifier.weight(1f)
             )
 
@@ -85,8 +85,17 @@ fun ProfileSelectionContent(
                 onDismiss = onClearError
             )
         }
-
-        if (state.profiles.isNotEmpty() && state.activeProfile == null) {
+        if (state.error == null && !state.bootstrapError.isNullOrBlank()) {
+            ProfileErrorCard(
+                message = state.bootstrapError,
+                onDismiss = null
+            )
+        }
+        if (state.profiles.isNotEmpty() &&
+            state.activeProfile == null &&
+            state.bootstrapError == null &&
+            !state.isLoading
+        ) {
             TextButton(
                 onClick = onSkip,
                 modifier = Modifier.padding(top = 16.dp)
@@ -234,7 +243,7 @@ private fun SelectedProfileCard(
 @Composable
 private fun ProfileErrorCard(
     message: String,
-    onDismiss: () -> Unit
+    onDismiss: (() -> Unit)?
 ) {
     Card(
         modifier = Modifier
@@ -256,12 +265,14 @@ private fun ProfileErrorCard(
                 color = MaterialTheme.colorScheme.onErrorContainer,
                 modifier = Modifier.weight(1f)
             )
-            IconButton(onClick = onDismiss) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Dismiss error",
-                    tint = MaterialTheme.colorScheme.onErrorContainer
-                )
+            if (onDismiss != null) {
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Dismiss error",
+                        tint = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
             }
         }
     }

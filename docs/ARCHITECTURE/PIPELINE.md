@@ -145,30 +145,64 @@ Map bindings:
   - Binds `mapLocation` into UI state.
   - Binds `ognIconSizePx` and `adsbIconSizePx` from settings for runtime overlay sizing.
 
-OGN icon size settings path:
+OGN settings path:
 - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
-  - SSOT for OGN overlay enabled + icon size preferences.
+  - SSOT for OGN overlay enabled + icon size + `showThermalsEnabled` + `showGliderTrailsEnabled` preferences.
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt`
-  - `OgnTrafficUseCase` exposes `iconSizePx` flow.
+  - `OgnTrafficUseCase` exposes OGN settings, thermal-hotspot flows, and OGN glider trail segment flows.
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
-  - Converts `iconSizePx` to lifecycle-aware state for UI/runtime.
+  - Converts OGN settings, thermal-hotspot state, and OGN trail state to lifecycle-aware UI/runtime state.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
-  - Pushes icon-size changes into overlay runtime controller.
+  - Pushes OGN overlay targets, thermal hotspots, and OGN trail segments into runtime overlay manager.
 - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
-  - Applies and re-applies icon size for existing and recreated OGN overlays.
+  - Applies icon size for OGN traffic overlays and owns OGN thermal + OGN glider-trail overlay runtime lifecycle.
 - `feature/map/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
   - Updates SymbolLayer `iconSize` dynamically from configured pixel size.
+- `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalRepository.kt`
+  - Derives session-lifetime thermal hotspots from OGN targets (in-memory until app restart).
+  - Applies thermal metrics only on fresh OGN samples per target (`lastSeenMillis` monotonic freshness gate).
+  - Prunes freshness-cache entries for absent targets after timeout to avoid unbounded session growth while preserving stale-present target protection.
+  - Runs repository-side housekeeping timers so thermal continuity/missing finalization occurs even when upstream target lists are quiet.
+- `feature/map/src/main/java/com/example/xcpro/map/OgnThermalOverlay.kt`
+  - Renders color-coded thermal hotspots using snail-trail climb palette indexing.
+- `feature/map/src/main/java/com/example/xcpro/ogn/OgnGliderTrailRepository.kt`
+  - Derives per-glider OGN trail segments from fresh OGN target samples.
+  - Owns sink/climb style mapping (color index + asymmetric width) and bounded in-memory retention.
+  - Uses injected monotonic clock for deterministic retention housekeeping.
+- `feature/map/src/main/java/com/example/xcpro/map/OgnGliderTrailOverlay.kt`
+  - Renders line segments using precomputed OGN trail style properties from repository output.
 
 OGN lifecycle/position semantics:
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenTrafficCoordinator.kt`
   - Streaming enable is driven by `allowSensorStart && mapVisible && ognOverlayEnabled`.
   - Query center updates are GPS-driven from `mapLocation` (user position), not camera center.
+- `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt`
+  - Tap routing resolves traffic markers before wind callouts.
+  - OGN marker taps are resolved before thermal and ADS-b taps.
+  - Thermal hotspot taps are resolved before ADS-b taps.
+  - Thermal hotspot taps route to thermal details selection when `showThermalsEnabled` is on.
+- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
+  - Owns selected OGN/thermal/ADS-b selection state and enforces mutual exclusion across these details sheets.
 - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficRepository.kt`
   - Uses APRS radius filtering and client-side haversine filtering at 150 km radius
     (300 km diameter contract around user position).
+  - Client-side filtering is evaluated against latest requested GPS center so the
+    300 km diameter policy stays user-centered between reconnects.
+  - Socket subscription reconnects when requested center moves >= 20 km from
+    active subscription center.
+  - Connection state remains `CONNECTING` until server `logresp verified` or
+    first valid traffic frame.
   - If no center is available yet, repository waits before opening the stream.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
-  - OGN overlay renders `emptyList()` when overlay preference is disabled.
+  - OGN traffic overlay renders `emptyList()` when overlay preference is disabled.
+  - Thermal overlay renders `emptyList()` unless `ognOverlayEnabled && showThermalsEnabled`.
+  - OGN glider-trail overlay renders `emptyList()` unless `ognOverlayEnabled && showGliderTrailsEnabled`.
+- `feature/map/src/main/java/com/example/xcpro/ogn/OgnMarkerDetailsSheet.kt`
+  - Renders selected OGN target details in a `ModalBottomSheet`.
+- `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalDetailsSheet.kt`
+  - Renders selected thermal hotspot details in a partially-expandable `ModalBottomSheet`.
+- `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalDetailsSheet.kt`
+  - Renders selected thermal details in a half-sheet style `ModalBottomSheet`.
 
 ADS-b settings path:
 - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficPreferencesRepository.kt`
@@ -201,10 +235,15 @@ ADS-b lifecycle/visibility semantics:
   - Explicit ADS-b FAB off triggers immediate repository target clear.
 - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt`
   - Disabling streaming pauses polling without clearing last-known targets.
+  - Polling is connectivity-aware via `AdsbNetworkAvailabilityPort`; retries pause while offline and resume on network restoration.
+  - Poll retry + circuit-breaker state transitions are owned by `AdsbPollingHealthPolicy`.
   - Explicit clear path removes cached targets and resets displayed list.
-  - Query center is used for fetch/radius filtering (configurable `1..50 km`, default `10 km`).
+  - Query center is used for fetch/radius filtering (configurable `1..100 km`, default `10 km`).
   - Ownship origin is used for displayed distance/bearing when available.
   - Ownship altitude is used for vertical above/below filtering with fail-open when altitude is unavailable.
+- `feature/map/src/main/java/com/example/xcpro/adsb/data/AndroidAdsbNetworkAvailabilityAdapter.kt`
+  - Android connectivity callback adapter bound to the ADS-B network-availability port.
+  - Callback events are normalized by `AdsbNetworkAvailabilityTracker` (including fail-open registration fallback).
 - `feature/map/src/main/java/com/example/xcpro/map/AdsbTrafficOverlay.kt`
   - Per-aircraft runtime interpolation smooths marker motion between provider samples.
   - Proximity color expression is distance-based with emergency override priority.
@@ -246,6 +285,22 @@ Forecast overlay (SkySight-backed) path:
   - Uses namespace-scoped layer/source IDs so multiple forecast overlays can render together.
   - Supports indexed-fill overlays and wind-point overlays with branch-specific layer cleanup.
   - Wind-point rendering supports `ARROW` and `BARB` display modes from forecast preferences SSOT.
+
+Weather rain overlay path:
+- `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherOverlayPreferencesRepository.kt`
+  - SSOT for weather rain overlay preferences (`enabled`, `opacity`, animation toggle, animation window, animation speed, transition quality, frame mode, render options).
+- `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherRadarMetadataRepository.kt`
+  - RainViewer metadata fetch + parse (`weather-maps.json`) with runtime status/fallback handling.
+- `feature/map/src/main/java/com/example/xcpro/weather/rain/ObserveWeatherOverlayStateUseCase.kt`
+  - Combines preferences + metadata into frame-based runtime state (`selectedFrame`, status, effective transition duration).
+- `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherOverlayViewModel.kt`
+  - Map-side weather overlay state for runtime binding.
+- `feature/map/src/main/java/com/example/xcpro/map/ui/MapWeatherOverlayEffects.kt`
+  - Collects weather overlay state and forwards frame-based runtime updates (including transition duration) to overlay manager.
+- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
+  - Owns weather overlay runtime config/status and reapply behavior on map-ready/style change.
+- `feature/map/src/main/java/com/example/xcpro/map/WeatherRainOverlay.kt`
+  - MapLibre raster source/layer runtime with per-frame cache and bounded cross-fade between frames to reduce animation stutter/blink when cycling.
 
 ## 5A) Cards (dfcards-library) sub-pipeline
 
@@ -345,6 +400,9 @@ Task map rendering bridge (2026-02-12):
 - `MapInitializer` orchestration is split into focused runtime collaborators:
   - `MapScaleBarController` (scale bar lifecycle/zoom constraints)
   - `MapInitializerDataLoader` (airspace/waypoint bootstrap and refresh)
+  - `MapStyleUrlResolver` (canonical style-name -> URL resolution for runtime style paths)
+- `MapInitializer.setupMapStyle(...)` uses bounded style-load wait with fallback init to avoid startup hangs.
+- `MapRuntimeController` applies style commands with map-generation/request-token guards so stale callbacks do not mutate active overlays.
 - `MapScreenViewModel` now exposes task type and task gesture/edit operations through
   `MapTasksUseCase`, and map runtime effects consume ViewModel-bound task type state
   instead of reading coordinator state directly in Composables.

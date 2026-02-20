@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.xcpro.common.documents.DocumentRef
 import com.example.xcpro.tasks.core.Task
+import com.example.xcpro.tasks.core.TaskType
+import com.example.xcpro.tasks.domain.model.TaskTargetSnapshot
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -46,10 +48,15 @@ class TaskFilesViewModel @Inject constructor(
 
     fun importTaskFile(document: DocumentRef) {
         viewModelScope.launch {
-            when (val result = useCase.importTaskFile(document)) {
+            val result = try {
+                useCase.importTaskFile(document)
+            } catch (throwable: Throwable) {
+                _events.emit(TaskFilesEvent.ShowMessage("Import failed: ${throwable.message ?: "unknown error"}"))
+                return@launch
+            }
+            when (result) {
                 is TaskImportResult.Json -> {
                     _events.emit(TaskFilesEvent.ApplyJson(result.json, result.displayName))
-                    _events.emit(TaskFilesEvent.ShowMessage("Imported ${result.displayName}"))
                 }
                 is TaskImportResult.Cup -> {
                     val message = if (result.success) {
@@ -68,7 +75,7 @@ class TaskFilesViewModel @Inject constructor(
 
     fun shareFile(document: DocumentRef, displayName: String) {
         viewModelScope.launch {
-            val request = useCase.buildShareRequest(document, displayName)
+            val request = runCatching { useCase.buildShareRequest(document, displayName) }.getOrNull()
             if (request != null) {
                 _events.emit(TaskFilesEvent.Share(request))
             } else {
@@ -79,7 +86,11 @@ class TaskFilesViewModel @Inject constructor(
 
     fun shareDownload(displayName: String) {
         viewModelScope.launch {
-            val request = useCase.shareExistingDownload(displayName)
+            val request = try {
+                useCase.shareExistingDownload(displayName)
+            } catch (_: Throwable) {
+                null
+            }
             if (request != null) {
                 _events.emit(TaskFilesEvent.Share(request))
             } else {
@@ -90,25 +101,73 @@ class TaskFilesViewModel @Inject constructor(
 
     fun exportTaskToDownloads(task: Task) {
         viewModelScope.launch {
-            val result = useCase.exportTaskToDownloads(task)
-            if (result.errorMessage != null) {
-                _events.emit(TaskFilesEvent.ShowMessage(result.errorMessage))
-            } else if (result.savedNames.isNotEmpty()) {
-                _events.emit(TaskFilesEvent.ShowMessage("Exported ${result.savedNames.joinToString(", ")}"))
+            runExport { useCase.exportTaskToDownloads(task) }
+        }
+    }
+
+    fun exportTaskToDownloads(
+        task: Task,
+        taskType: TaskType,
+        targets: List<TaskTargetSnapshot>
+    ) {
+        viewModelScope.launch {
+            runExport {
+                useCase.exportTaskToDownloads(
+                    task = task,
+                    taskType = taskType,
+                    targets = targets
+                )
             }
+        }
+    }
+
+    private suspend fun runExport(block: suspend () -> TaskExportResult) {
+        val result = try {
+            block()
+        } catch (throwable: Throwable) {
+            _events.emit(TaskFilesEvent.ShowMessage("Export failed: ${throwable.message ?: "unknown error"}"))
+            return
+        }
+        if (result.errorMessage != null) {
+            _events.emit(TaskFilesEvent.ShowMessage(result.errorMessage))
+        } else if (result.savedNames.isNotEmpty()) {
+            _events.emit(TaskFilesEvent.ShowMessage("Exported ${result.savedNames.joinToString(", ")}"))
         }
     }
 
     fun shareTask(task: Task) {
         viewModelScope.launch {
-            val requests = useCase.shareTask(task)
-            if (requests.isEmpty()) {
-                _events.emit(TaskFilesEvent.ShowMessage("Share failed"))
-            } else {
-                requests.forEach { request ->
-                    _events.emit(TaskFilesEvent.Share(request))
-                }
+            runShare { useCase.shareTask(task) }
+        }
+    }
+
+    fun shareTask(
+        task: Task,
+        taskType: TaskType,
+        targets: List<TaskTargetSnapshot>
+    ) {
+        viewModelScope.launch {
+            runShare {
+                useCase.shareTask(
+                    task = task,
+                    taskType = taskType,
+                    targets = targets
+                )
             }
+        }
+    }
+
+    private suspend fun runShare(block: suspend () -> ShareRequest?) {
+        val request = try {
+            block()
+        } catch (throwable: Throwable) {
+            _events.emit(TaskFilesEvent.ShowMessage("Share failed: ${throwable.message ?: "unknown error"}"))
+            return
+        }
+        if (request == null) {
+            _events.emit(TaskFilesEvent.ShowMessage("Share failed"))
+        } else {
+            _events.emit(TaskFilesEvent.Share(request))
         }
     }
 }

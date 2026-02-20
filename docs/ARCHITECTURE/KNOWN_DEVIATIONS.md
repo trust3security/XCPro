@@ -1,7 +1,7 @@
 
 # KNOWN_DEVIATIONS.md
 
-Audit date: 2026-02-14
+Audit date: 2026-02-18
 
 This file lists known deviations from ARCHITECTURE.md and CODING_RULES.md.
 Each entry must include an issue ID, owner, and expiry date.
@@ -11,16 +11,36 @@ Active remediation plan:
 
 ## Current deviations
 
-None.
+1) Legally required weather provider literals and attribution link usage in implementation internals
+- Rule: Vendor neutrality (`ARCHITECTURE.md`: no vendor names in production strings or public APIs).
+- Issue: RULES-20260220-11
+- Owner: XCPro Team
+- Expiry: 2026-06-30
+- Scope:
+  - `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherRainAttribution.kt`
+  - `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherRainTileUrlBuilder.kt`
+  - `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherRadarMetadataRepository.kt`
+  - `feature/map/src/main/java/com/example/xcpro/map/WeatherRainOverlay.kt`
+  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`
+- Rationale:
+  - Weather provider endpoints/host validation and legally required source attribution require provider literals.
+  - UI/public API naming remains provider-neutral outside explicit attribution/compliance surfaces.
+  - Deviation is bounded to weather integration internals and required attribution link handling.
+
+Compliance note (2026-02-20):
+- This deviation is time-boxed and must be removed by either:
+  - architecture wording update that explicitly allows legally required attribution literals, or
+  - provider abstraction changes that remove direct literals from production code.
+- Deep-pass findings and closure steps are tracked in
+  `docs/RAINVIEWER/01_RAINVIEWER_INDUSTRY_HARDENING_PLAN_2026-02-20.md`.
 
 ## Verification
 
-Last verified: 2026-02-14
+Last verified: 2026-02-18
 - Commands:
+  - ./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.*" --tests "com.example.xcpro.tasks.domain.*" --tests "com.example.xcpro.tasks.aat.*"
   - ./gradlew enforceRules
-  - ./gradlew testDebugUnitTest
   - ./gradlew assembleDebug
-  - ./gradlew :app:connectedDebugAndroidTest --no-parallel "-Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true" (run twice)
 
 ## Resolved deviations
 

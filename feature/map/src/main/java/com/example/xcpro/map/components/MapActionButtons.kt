@@ -1,9 +1,9 @@
 package com.example.xcpro.map.components
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -22,11 +22,15 @@ fun MapActionButtons(
     showReturnButton: Boolean,
     showDistanceCircles: Boolean,
     showOgnTraffic: Boolean,
+    showOgnThermals: Boolean,
+    showOgnGliderTrails: Boolean,
     showAdsbTraffic: Boolean,
     showForecastOverlay: Boolean,
     onRecenter: () -> Unit,
     onToggleDistanceCircles: () -> Unit,
     onToggleOgnTraffic: () -> Unit,
+    onToggleOgnThermals: () -> Unit,
+    onToggleOgnGliderTrails: () -> Unit,
     onToggleAdsbTraffic: () -> Unit,
     onShowForecastSheet: () -> Unit,
     onReturn: () -> Unit,
@@ -34,6 +38,7 @@ fun MapActionButtons(
     showQnhFab: Boolean,
     onDismissQnhFab: () -> Unit,
     showVarioDemoFab: Boolean,
+    showAatEditFab: Boolean,
     onVarioDemoReferenceClick: () -> Unit,
     onVarioDemoSimClick: () -> Unit,
     onVarioDemoSim2Click: () -> Unit,
@@ -44,14 +49,13 @@ fun MapActionButtons(
 ) {
     val topInset = 24.dp
     val bottomInset = 80.dp
-    val centerOffset = (bottomInset - topInset) * 0.5f
-    val qnhTopPadding = 130.dp
-    val fabSpacing = 64.dp
-    val distanceTopPadding = if (showQnhFab) qnhTopPadding + fabSpacing else qnhTopPadding
-    val ognTopPadding = distanceTopPadding + fabSpacing
-    val adsbTopPadding = ognTopPadding + fabSpacing
-    val forecastTopPadding = adsbTopPadding + fabSpacing
-    val demoFabSize = 48.dp
+    val fabSize = 48.dp
+    val fabSpacing = 16.dp
+    val fabStep = fabSize + fabSpacing
+    val minTopStartPadding = 72.dp
+    val preferredTopStartPadding = 130.dp
+    val minTopStep = fabSize + 8.dp
+    val demoFabSize = fabSize
     val demoSpacing = 12.6.dp
     val demoSim3BottomPadding = 16.dp
     val demoSimBottomPadding = demoSim3BottomPadding + demoFabSize + demoSpacing
@@ -64,15 +68,84 @@ fun MapActionButtons(
     }
     val isTaskPanelExpanded by taskScreenManager.showTaskBottomSheet.collectAsStateWithLifecycle(initialValue = false)
 
-    Box(
+    val adsbIndex = 0
+    val qnhIndex = if (showQnhFab) 1 else -1
+    val distanceIndex = if (showQnhFab) 2 else 1
+    val ognIndex = distanceIndex + 1
+    val thermalIndex = ognIndex + 1
+    val trailsIndex = thermalIndex + 1
+    val topControlsCount = trailsIndex + 1
+    val showRecenterControl = showRecenterButton && currentLocation != null && !showReturnButton
+    val centerControlsCount = (if (showRecenterControl) 1 else 0) + if (showReturnButton) 1 else 0
+
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
             .padding(top = topInset, bottom = bottomInset)
     ) {
-        if (showRecenterButton && currentLocation != null) {
+        val availableHeight = maxHeight
+        val centerGroupHeight = when (centerControlsCount) {
+            0 -> 0.dp
+            else -> fabSize + fabStep * (centerControlsCount - 1)
+        }
+        val desiredCenterTop = when (centerControlsCount) {
+            0 -> 0.dp
+            else -> ((availableHeight - centerGroupHeight) / 2f).coerceAtLeast(0.dp)
+        }
+        val maxTopBottomForCenter = (desiredCenterTop - fabSpacing).coerceAtLeast(0.dp)
+        val topStep = when {
+            centerControlsCount == 0 || topControlsCount <= 1 -> fabStep
+            else -> {
+                val provisionalTopHeight = fabSize + fabStep * (topControlsCount - 1)
+                val provisionalTopStart = (maxTopBottomForCenter - provisionalTopHeight)
+                    .coerceIn(minTopStartPadding, preferredTopStartPadding)
+                val availableForSteps = (maxTopBottomForCenter - provisionalTopStart - fabSize)
+                    .coerceAtLeast(0.dp)
+                (availableForSteps / (topControlsCount - 1))
+                    .coerceIn(minTopStep, fabStep)
+            }
+        }
+        val topGroupHeight = when (topControlsCount) {
+            0 -> 0.dp
+            else -> fabSize + topStep * (topControlsCount - 1)
+        }
+        val topStackStart = when {
+            centerControlsCount == 0 -> preferredTopStartPadding
+            else -> (maxTopBottomForCenter - topGroupHeight)
+                .coerceIn(minTopStartPadding, preferredTopStartPadding)
+        }
+        val adsbTopPadding = topStackStart + topStep * adsbIndex
+        val qnhTopPadding = if (qnhIndex >= 0) topStackStart + topStep * qnhIndex else 0.dp
+        val distanceTopPadding = topStackStart + topStep * distanceIndex
+        val ognTopPadding = topStackStart + topStep * ognIndex
+        val thermalTopPadding = topStackStart + topStep * thermalIndex
+        val trailsTopPadding = topStackStart + topStep * trailsIndex
+        val maxFabTopPadding = (availableHeight - fabSize - fabSpacing).coerceAtLeast(0.dp)
+        val topStackBottom = trailsTopPadding + fabSize
+        val forecastTopPadding = (topStackBottom + fabSpacing).coerceAtMost(maxFabTopPadding)
+        val minCenterTop = (topStackBottom + fabSpacing).coerceAtLeast(0.dp)
+        val maxCenterTop = (availableHeight - centerGroupHeight - fabSpacing).coerceAtLeast(0.dp)
+        val resolvedCenterMin = minCenterTop.coerceAtMost(maxCenterTop)
+        val centerGroupTop = when (centerControlsCount) {
+            0 -> 0.dp
+            else -> desiredCenterTop.coerceIn(resolvedCenterMin, maxCenterTop)
+        }
+        val recenterTopPadding = centerGroupTop
+        val returnTopPadding = if (showRecenterControl) {
+            centerGroupTop + fabStep
+        } else {
+            centerGroupTop
+        }
+        // Keep demo replay controls in a stable lane across tracking/recenter state changes.
+        // Only reserve extra end space when the AAT edit FAB occupies the same bottom-end lane.
+        val demoLaneEndPadding = if (showAatEditFab) 80.dp else 16.dp
+
+        if (showRecenterControl) {
             RecenterButton(
                 onRecenter = onRecenter,
-                modifier = Modifier.align(Alignment.CenterEnd)
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = recenterTopPadding)
             )
         }
 
@@ -80,9 +153,26 @@ fun MapActionButtons(
             ReturnButton(
                 onReturn = onReturn,
                 modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(end = 16.dp)
-                    .offset(y = centerOffset)
+                    .align(Alignment.TopEnd)
+                    .padding(top = returnTopPadding, end = 16.dp)
+            )
+        }
+
+        AdsbTrafficButton(
+            isEnabled = showAdsbTraffic,
+            onToggle = onToggleAdsbTraffic,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = adsbTopPadding, end = 16.dp)
+        )
+
+        if (showQnhFab) {
+            QnhButton(
+                onClick = onShowQnhDialog,
+                onDismiss = onDismissQnhFab,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = qnhTopPadding, end = 16.dp)
             )
         }
 
@@ -103,12 +193,20 @@ fun MapActionButtons(
                 .padding(top = ognTopPadding, end = 16.dp)
         )
 
-        AdsbTrafficButton(
-            isEnabled = showAdsbTraffic,
-            onToggle = onToggleAdsbTraffic,
+        OgnThermalsButton(
+            isEnabled = showOgnThermals,
+            onToggle = onToggleOgnThermals,
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(top = adsbTopPadding, end = 16.dp)
+                .padding(top = thermalTopPadding, end = 16.dp)
+        )
+
+        OgnGliderTrailsButton(
+            isEnabled = showOgnGliderTrails,
+            onToggle = onToggleOgnGliderTrails,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = trailsTopPadding, end = 16.dp)
         )
 
         ForecastOverlayButton(
@@ -119,16 +217,6 @@ fun MapActionButtons(
                 .padding(top = forecastTopPadding, start = 16.dp)
         )
 
-        if (showQnhFab) {
-            QnhButton(
-                onClick = onShowQnhDialog,
-                onDismiss = onDismissQnhFab,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = qnhTopPadding, end = 16.dp)
-            )
-        }
-
         if (showVarioDemoFab) {
             VarioDemoButton(
                 onClick = onVarioDemoReferenceClick,
@@ -137,7 +225,7 @@ fun MapActionButtons(
                 contentDescription = "Run vario demo replay (reference)",
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 16.dp, bottom = demoRefBottomPadding)
+                    .padding(end = demoLaneEndPadding, bottom = demoRefBottomPadding)
             )
             VarioDemoButton(
                 onClick = onVarioDemoSim2Click,
@@ -146,7 +234,7 @@ fun MapActionButtons(
                 contentDescription = "Run vario demo replay (sim2)",
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 16.dp, bottom = demoSim2BottomPadding)
+                    .padding(end = demoLaneEndPadding, bottom = demoSim2BottomPadding)
             )
             VarioDemoButton(
                 onClick = onVarioDemoSimClick,
@@ -155,7 +243,7 @@ fun MapActionButtons(
                 contentDescription = "Run vario demo replay (sim)",
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 16.dp, bottom = demoSimBottomPadding)
+                    .padding(end = demoLaneEndPadding, bottom = demoSimBottomPadding)
             )
             VarioDemoButton(
                 onClick = onVarioDemoSim3Click,
@@ -164,7 +252,7 @@ fun MapActionButtons(
                 contentDescription = "Run vario demo replay (sim3)",
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 16.dp, bottom = demoSim3BottomPadding)
+                    .padding(end = demoLaneEndPadding, bottom = demoSim3BottomPadding)
             )
         }
 
@@ -176,7 +264,7 @@ fun MapActionButtons(
                 contentDescription = "Run racing task replay",
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 16.dp, bottom = demoTaskBottomPadding)
+                    .padding(end = demoLaneEndPadding, bottom = demoTaskBottomPadding)
             )
         }
     }

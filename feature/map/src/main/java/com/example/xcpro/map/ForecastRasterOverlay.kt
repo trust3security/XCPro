@@ -1,4 +1,5 @@
 package com.example.xcpro.map
+
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -35,7 +36,8 @@ import org.maplibre.android.style.sources.TileSet
 import org.maplibre.android.style.sources.VectorSource
 
 class ForecastRasterOverlay(
-    private val map: MapLibreMap
+    private val map: MapLibreMap,
+    private val idNamespace: String = "forecast"
 ) {
     private var lastTileSpec: ForecastTileSpec? = null
     private var lastLegendSpec: ForecastLegendSpec? = null
@@ -98,11 +100,11 @@ class ForecastRasterOverlay(
         val style = map.style ?: return null
         val tileSpec = lastTileSpec ?: return null
         if (tileSpec.format != ForecastTileFormat.VECTOR_WIND_POINTS) return null
-        if (style.getLayer(WIND_SYMBOL_LAYER_ID) == null) return null
+        if (style.getLayer(windSymbolLayerId()) == null) return null
         val speedProperty = tileSpec.speedProperty ?: DEFAULT_WIND_SPEED_PROPERTY
         val screenPoint = map.projection.toScreenLocation(tap)
         val features = runCatching {
-            map.queryRenderedFeatures(screenPoint, WIND_SYMBOL_LAYER_ID)
+            map.queryRenderedFeatures(screenPoint, windSymbolLayerId())
         }.getOrNull().orEmpty()
         for (feature in features) {
             val speed = runCatching {
@@ -116,7 +118,7 @@ class ForecastRasterOverlay(
     }
 
     private fun ensureRasterSource(style: Style, tileSpec: ForecastTileSpec) {
-        val existing = style.getSource(RASTER_SOURCE_ID)
+        val existing = style.getSource(rasterSourceId())
         val needsRecreate = existing !is RasterSource || tileSpec != lastTileSpec
         if (!needsRecreate) return
 
@@ -127,24 +129,24 @@ class ForecastRasterOverlay(
             maxZoom = tileSpec.maxZoom.toFloat()
             attribution = tileSpec.attribution
         }
-        style.addSource(RasterSource(RASTER_SOURCE_ID, tileSet, tileSpec.tileSizePx))
+        style.addSource(RasterSource(rasterSourceId(), tileSet, tileSpec.tileSizePx))
     }
 
     private fun ensureRasterLayer(style: Style, opacity: Float) {
-        val existingLayer = style.getLayer(RASTER_LAYER_ID) as? RasterLayer
+        val existingLayer = style.getLayer(rasterLayerId()) as? RasterLayer
         if (existingLayer != null) {
             existingLayer.setProperties(rasterOpacity(opacity))
             return
         }
 
-        val layer = RasterLayer(RASTER_LAYER_ID, RASTER_SOURCE_ID).withProperties(
+        val layer = RasterLayer(rasterLayerId(), rasterSourceId()).withProperties(
             rasterOpacity(opacity)
         )
         addLayerBelowAnchor(style, layer)
     }
 
     private fun ensureVectorSource(style: Style, tileSpec: ForecastTileSpec) {
-        val existing = style.getSource(VECTOR_SOURCE_ID)
+        val existing = style.getSource(vectorSourceId())
         val needsRecreate = existing !is VectorSource || tileSpec != lastTileSpec
         if (!needsRecreate) return
 
@@ -155,7 +157,7 @@ class ForecastRasterOverlay(
             maxZoom = tileSpec.maxZoom.toFloat()
             attribution = tileSpec.attribution
         }
-        style.addSource(VectorSource(VECTOR_SOURCE_ID, tileSet))
+        style.addSource(VectorSource(vectorSourceId(), tileSet))
     }
 
     private fun ensureVectorFillLayer(
@@ -165,7 +167,7 @@ class ForecastRasterOverlay(
         opacity: Float
     ) {
         val sourceLayer = resolveSourceLayer(tileSpec) ?: return
-        val existingLayer = style.getLayer(VECTOR_FILL_LAYER_ID) as? FillLayer
+        val existingLayer = style.getLayer(vectorFillLayerId()) as? FillLayer
         if (existingLayer != null) {
             if (legendSpec != null && legendSpec != lastLegendSpec) {
                 existingLayer.setProperties(
@@ -180,7 +182,7 @@ class ForecastRasterOverlay(
             return
         }
 
-        val layer = FillLayer(VECTOR_FILL_LAYER_ID, VECTOR_SOURCE_ID).apply {
+        val layer = FillLayer(vectorFillLayerId(), vectorSourceId()).apply {
             setSourceLayer(sourceLayer)
         }.withProperties(
             fillColor(buildIndexedColorExpression(legendSpec, tileSpec.valueProperty)),
@@ -190,9 +192,9 @@ class ForecastRasterOverlay(
     }
 
     private fun ensureWindArrowImage(style: Style) {
-        val image = runCatching { style.getImage(WIND_ARROW_ICON_ID) }.getOrNull()
+        val image = runCatching { style.getImage(windArrowIconId()) }.getOrNull()
         if (image == null) {
-            style.addImage(WIND_ARROW_ICON_ID, createWindArrowBitmap())
+            style.addImage(windArrowIconId(), createWindArrowBitmap())
         }
     }
 
@@ -235,7 +237,7 @@ class ForecastRasterOverlay(
             }
             ForecastWindDisplayMode.BARB -> {
                 removeWindCircleLayer(style)
-                runCatching { style.removeLayer(WIND_SYMBOL_LAYER_ID) }
+                runCatching { style.removeLayer(windSymbolLayerId()) }
                 ensureWindBarbImages(style)
                 ensureWindBarbLayers(
                     style = style,
@@ -263,9 +265,9 @@ class ForecastRasterOverlay(
             speedProperty = speedProperty,
             legendSpec = legendSpec
         )
-        val symbolLayer = style.getLayer(WIND_SYMBOL_LAYER_ID) as? SymbolLayer
+        val symbolLayer = style.getLayer(windSymbolLayerId()) as? SymbolLayer
         if (symbolLayer == null) {
-            val layer = SymbolLayer(WIND_SYMBOL_LAYER_ID, VECTOR_SOURCE_ID).apply {
+            val layer = SymbolLayer(windSymbolLayerId(), vectorSourceId()).apply {
                 setSourceLayer(sourceLayer)
             }.withProperties(
                 iconImage(iconImageExpression),
@@ -318,7 +320,7 @@ class ForecastRasterOverlay(
         val colorStops = resolveWindArrowColorStops(legendSpec)
         if (colorStops.isEmpty()) {
             ensureWindArrowImage(style)
-            return Expression.literal(WIND_ARROW_ICON_ID)
+            return Expression.literal(windArrowIconId())
         }
 
         colorStops.forEach { stop ->
@@ -407,7 +409,7 @@ class ForecastRasterOverlay(
         )
         val symbolLayer = style.getLayer(layerId) as? SymbolLayer
         if (symbolLayer == null) {
-            val layer = SymbolLayer(layerId, VECTOR_SOURCE_ID).apply {
+            val layer = SymbolLayer(layerId, vectorSourceId()).apply {
                 setSourceLayer(sourceLayer)
                 setFilter(filterExpression)
             }.withProperties(
@@ -479,7 +481,7 @@ class ForecastRasterOverlay(
     }
 
     private fun removeWindSymbolLayer(style: Style) {
-        runCatching { style.removeLayer(WIND_SYMBOL_LAYER_ID) }
+        runCatching { style.removeLayer(windSymbolLayerId()) }
         removeWindBarbLayers(style)
     }
 
@@ -664,12 +666,14 @@ class ForecastRasterOverlay(
         return bitmap
     }
 
-    private fun windBarbIconId(speedKtBucket: Int): String = "$WIND_BARB_ICON_PREFIX$speedKtBucket"
+    private fun windBarbIconId(speedKtBucket: Int): String =
+        "${windBarbIconPrefix()}$speedKtBucket"
 
-    private fun windBarbLayerId(speedKtBucket: Int): String = "$WIND_BARB_LAYER_PREFIX$speedKtBucket"
+    private fun windBarbLayerId(speedKtBucket: Int): String =
+        "${windBarbLayerPrefix()}$speedKtBucket"
 
     private fun windArrowIconIdForColor(argb: Int): String =
-        "$WIND_ARROW_ICON_PREFIX${String.format(Locale.US, "%08X", argb)}"
+        "${windArrowIconPrefix()}${String.format(Locale.US, "%08X", argb)}"
 
     private fun toColorHex(argb: Int): String {
         val red = (argb shr 16) and 0xFF
@@ -690,22 +694,22 @@ class ForecastRasterOverlay(
     }
 
     private fun removeRasterLayerAndSource(style: Style) {
-        runCatching { style.removeLayer(RASTER_LAYER_ID) }
-        runCatching { style.removeSource(RASTER_SOURCE_ID) }
+        runCatching { style.removeLayer(rasterLayerId()) }
+        runCatching { style.removeSource(rasterSourceId()) }
     }
 
     private fun removeVectorLayersAndSource(style: Style) {
         removeVectorFillLayer(style)
         removeWindLayers(style)
-        runCatching { style.removeSource(VECTOR_SOURCE_ID) }
+        runCatching { style.removeSource(vectorSourceId()) }
     }
 
     private fun removeVectorFillLayer(style: Style) {
-        runCatching { style.removeLayer(VECTOR_FILL_LAYER_ID) }
+        runCatching { style.removeLayer(vectorFillLayerId()) }
     }
 
     private fun removeWindCircleLayer(style: Style) {
-        runCatching { style.removeLayer(WIND_CIRCLE_LAYER_ID) }
+        runCatching { style.removeLayer(windCircleLayerId()) }
     }
 
     private fun removeWindLayers(style: Style) {
@@ -713,18 +717,29 @@ class ForecastRasterOverlay(
         removeWindCircleLayer(style)
     }
 
-    private companion object {
-        const val RASTER_SOURCE_ID = "forecast-raster-source"
-        const val RASTER_LAYER_ID = "forecast-raster-layer"
-        const val VECTOR_SOURCE_ID = "forecast-vector-source"
-        const val VECTOR_FILL_LAYER_ID = "forecast-vector-fill-layer"
-        const val WIND_CIRCLE_LAYER_ID = "forecast-wind-circle-layer"
-        const val WIND_SYMBOL_LAYER_ID = "forecast-wind-symbol-layer"
-        const val WIND_ARROW_ICON_ID = "forecast-wind-arrow-icon"
-        const val WIND_ARROW_ICON_PREFIX = "forecast-wind-arrow-"
-        const val WIND_BARB_ICON_PREFIX = "forecast-wind-barb-"
-        const val WIND_BARB_LAYER_PREFIX = "forecast-wind-barb-layer-"
+    private fun overlayPrefix(): String = "forecast-$idNamespace"
 
+    private fun rasterSourceId(): String = "${overlayPrefix()}-raster-source"
+
+    private fun rasterLayerId(): String = "${overlayPrefix()}-raster-layer"
+
+    private fun vectorSourceId(): String = "${overlayPrefix()}-vector-source"
+
+    private fun vectorFillLayerId(): String = "${overlayPrefix()}-vector-fill-layer"
+
+    private fun windCircleLayerId(): String = "${overlayPrefix()}-wind-circle-layer"
+
+    private fun windSymbolLayerId(): String = "${overlayPrefix()}-wind-symbol-layer"
+
+    private fun windArrowIconId(): String = "${overlayPrefix()}-wind-arrow-icon"
+
+    private fun windArrowIconPrefix(): String = "${overlayPrefix()}-wind-arrow-"
+
+    private fun windBarbIconPrefix(): String = "${overlayPrefix()}-wind-barb-"
+
+    private fun windBarbLayerPrefix(): String = "${overlayPrefix()}-wind-barb-layer-"
+
+    private companion object {
         private const val DEFAULT_WIND_SPEED_PROPERTY = "spd"
         private const val DEFAULT_WIND_DIRECTION_PROPERTY = "dir"
         private const val WIND_ARROW_ICON_BITMAP_SIZE_PX = 96
@@ -784,3 +799,4 @@ class ForecastRasterOverlay(
         )
     }
 }
+

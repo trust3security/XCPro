@@ -25,41 +25,54 @@ class MapLifecycleManager(
         private const val TAG = "MapLifecycleManager"
     }
 
+    private var trackedMapView: org.maplibre.android.maps.MapView? = null
+    private var mapViewCreated = false
+    private var mapViewStarted = false
+    private var mapViewResumed = false
+
     /**
      * Handle map view lifecycle events
      */
     fun handleLifecycleEvent(event: Lifecycle.Event) {
+        resetLifecycleTrackingIfMapViewChanged()
         when (event) {
             Lifecycle.Event.ON_CREATE -> {
-                mapState.mapView?.onCreate(null)
-                Log.d(TAG, "Map view onCreate")
+                dispatchMapViewCreateIfNeeded()
             }
             Lifecycle.Event.ON_START -> {
-                mapState.mapView?.onStart()
+                dispatchMapViewStartIfNeeded()
                 orientationManager.start()
                 Log.d(TAG, "Map view onStart, orientation manager started")
             }
             Lifecycle.Event.ON_RESUME -> {
-                mapState.mapView?.onResume()
+                dispatchMapViewResumeIfNeeded()
                 restartSensorsIfAllowed()
                 Log.d(TAG, "Map view onResume - sensors checked for restart")
             }
             Lifecycle.Event.ON_PAUSE -> {
-                mapState.mapView?.onPause()
-                Log.d(TAG, "Map view onPause")
+                if (mapViewResumed) {
+                    mapState.mapView?.onPause()
+                    mapViewResumed = false
+                    Log.d(TAG, "Map view onPause")
+                }
             }
             Lifecycle.Event.ON_STOP -> {
-                mapState.mapView?.onStop()
+                if (mapViewStarted) {
+                    mapState.mapView?.onStop()
+                    mapViewStarted = false
+                }
                 orientationManager.stop()
                 Log.d(TAG, "Map view onStop, orientation manager stopped")
             }
             Lifecycle.Event.ON_DESTROY -> {
-                mapState.ognTrafficOverlay?.cleanup()
-                mapState.ognTrafficOverlay = null
-                mapState.adsbTrafficOverlay?.cleanup()
-                mapState.adsbTrafficOverlay = null
-                mapState.mapView?.onDestroy()
+                if (mapViewCreated) {
+                    mapState.mapView?.onDestroy()
+                }
+                resetLifecycleTracking()
                 locationManager.unbindRenderFrameListener()
+                clearRuntimeOverlays()
+                mapState.mapView = null
+                mapState.mapLibreMap = null
                 Log.d(TAG, "Map view onDestroy")
             }
             else -> Unit
@@ -70,6 +83,16 @@ class MapLifecycleManager(
      * Sync non-MapView lifecycle responsibilities when observer attaches after resume.
      */
     fun syncCurrentOwnerState(state: Lifecycle.State) {
+        resetLifecycleTrackingIfMapViewChanged()
+        if (state.isAtLeast(Lifecycle.State.CREATED)) {
+            dispatchMapViewCreateIfNeeded()
+        }
+        if (state.isAtLeast(Lifecycle.State.STARTED)) {
+            dispatchMapViewStartIfNeeded()
+        }
+        if (state.isAtLeast(Lifecycle.State.RESUMED)) {
+            dispatchMapViewResumeIfNeeded()
+        }
         if (state.isAtLeast(Lifecycle.State.STARTED)) {
             orientationManager.start()
         }
@@ -87,11 +110,13 @@ class MapLifecycleManager(
             orientationManager.stop()
             locationManager.stopLocationTracking()
             locationManager.unbindRenderFrameListener()
-            mapState.ognTrafficOverlay?.cleanup()
-            mapState.ognTrafficOverlay = null
-            mapState.adsbTrafficOverlay?.cleanup()
-            mapState.adsbTrafficOverlay = null
-            mapState.mapView?.onDestroy()
+            if (mapViewCreated) {
+                mapState.mapView?.onDestroy()
+            }
+            resetLifecycleTracking()
+            clearRuntimeOverlays()
+            mapState.mapView = null
+            mapState.mapLibreMap = null
             Log.d(TAG, "Cleanup completed: orientation manager stopped, location tracking stopped, map view destroyed")
         } catch (e: Exception) {
             Log.e(TAG, "Error during cleanup: ${e.message}", e)
@@ -127,20 +152,6 @@ class MapLifecycleManager(
     }
 
     /**
-     * Handle map style changes
-     */
-    fun handleMapStyleChange(styleUrl: String, onStyleLoaded: () -> Unit = {}) {
-        try {
-            mapState.mapLibreMap?.setStyle(styleUrl) {
-                Log.d(TAG, "Map style loaded: $styleUrl")
-                onStyleLoaded()
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error setting map style: ${e.message}", e)
-        }
-    }
-
-    /**
      * Get current lifecycle state
      */
     fun isMapViewReady(): Boolean {
@@ -158,6 +169,73 @@ class MapLifecycleManager(
             append("- Orientation Manager: Available\n")
             append("- Location Tracking: ${locationManager.isGpsEnabled()}\n")
         }
+    }
+
+    private fun resetLifecycleTrackingIfMapViewChanged() {
+        val currentMapView = mapState.mapView
+        if (currentMapView !== trackedMapView) {
+            trackedMapView = currentMapView
+            mapViewCreated = false
+            mapViewStarted = false
+            mapViewResumed = false
+        }
+    }
+
+    private fun dispatchMapViewCreateIfNeeded() {
+        if (mapViewCreated) return
+        mapState.mapView?.onCreate(null)
+        mapViewCreated = mapState.mapView != null
+        if (mapViewCreated) {
+            Log.d(TAG, "Map view onCreate")
+        }
+    }
+
+    private fun dispatchMapViewStartIfNeeded() {
+        if (mapViewStarted) return
+        dispatchMapViewCreateIfNeeded()
+        mapState.mapView?.onStart()
+        mapViewStarted = mapState.mapView != null
+    }
+
+    private fun dispatchMapViewResumeIfNeeded() {
+        if (mapViewResumed) return
+        dispatchMapViewStartIfNeeded()
+        mapState.mapView?.onResume()
+        mapViewResumed = mapState.mapView != null
+    }
+
+    private fun resetLifecycleTracking() {
+        trackedMapView = null
+        mapViewCreated = false
+        mapViewStarted = false
+        mapViewResumed = false
+    }
+
+    private fun clearRuntimeOverlays() {
+        mapState.ognTrafficOverlay?.cleanup()
+        mapState.ognTrafficOverlay = null
+        mapState.ognThermalOverlay?.cleanup()
+        mapState.ognThermalOverlay = null
+        mapState.ognGliderTrailOverlay?.cleanup()
+        mapState.ognGliderTrailOverlay = null
+        mapState.adsbTrafficOverlay?.cleanup()
+        mapState.adsbTrafficOverlay = null
+        mapState.forecastOverlay?.cleanup()
+        mapState.forecastOverlay = null
+        mapState.forecastSecondaryOverlay?.cleanup()
+        mapState.forecastSecondaryOverlay = null
+        mapState.forecastWindOverlay?.cleanup()
+        mapState.forecastWindOverlay = null
+        mapState.weatherRainOverlay?.cleanup()
+        mapState.weatherRainOverlay = null
+        mapState.blueLocationOverlay?.cleanup()
+        mapState.blueLocationOverlay = null
+        mapState.snailTrailOverlay?.cleanup()
+        mapState.snailTrailOverlay = null
+        mapState.distanceCirclesOverlay?.cleanup()
+        mapState.distanceCirclesOverlay = null
+        mapState.scaleBarPlugin = null
+        mapState.scaleBarWidget = null
     }
 }
 
@@ -202,36 +280,4 @@ object MapLifecycleEffects {
         }
     }
 
-    /**
-     * Map style loading effect
-     */
-    @Composable
-    fun MapStyleEffect(
-        lifecycleManager: MapLifecycleManager,
-        styleUrl: String,
-        onStyleLoaded: () -> Unit = {}
-    ) {
-        DisposableEffect(styleUrl) {
-            lifecycleManager.handleMapStyleChange(styleUrl, onStyleLoaded)
-            onDispose { }
-        }
-    }
-
-    /**
-     * Combined lifecycle effects for easy integration
-     */
-    @Composable
-    fun AllLifecycleEffects(
-        lifecycleManager: MapLifecycleManager,
-        styleUrl: String,
-        onStyleLoaded: () -> Unit = {}
-    ) {
-        LifecycleObserverEffect(lifecycleManager)
-
-        MapStyleEffect(
-            lifecycleManager = lifecycleManager,
-            styleUrl = styleUrl,
-            onStyleLoaded = onStyleLoaded
-        )
-    }
 }

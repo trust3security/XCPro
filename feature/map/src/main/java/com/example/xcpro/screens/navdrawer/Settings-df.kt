@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -46,9 +45,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import com.example.xcpro.map.R
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.launch
+import com.example.xcpro.navigation.SettingsRoutes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -112,13 +113,13 @@ fun SettingsScreen(
                             CategoryItem(
                                 title = "Files",
                                 icon = Icons.Default.Folder,
-                                onClick = { navController.navigate("Files") },
+                                onClick = { navController.navigate(SettingsRoutes.FILES) },
                                 modifier = Modifier.weight(1f)
                             )
                             CategoryItem(
                                 title = "Profiles",
                                 icon = Icons.Default.Map,
-                                onClick = { navController.navigate("Profiles") },
+                                onClick = { navController.navigate(SettingsRoutes.PROFILES) },
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -161,7 +162,6 @@ fun SettingsScreen(
                                 onClick = { navController.navigate("orientation_settings") },
                                 modifier = Modifier.weight(1f)
                             )
-                            Spacer(modifier = Modifier.weight(1f))
                         }
                     }
 
@@ -234,7 +234,25 @@ fun SettingsScreen(
                         }
                     }
 
-                    // Row 3b: OGN | Forecast
+                    // Row 3b: SkySight (right column)
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            CategoryItemDrawable(
+                                title = "SkySight",
+                                iconResId = R.drawable.ic_skysight,
+                                iconSize = 26.4.dp,
+                                onClick = { navController.navigate("forecast_settings") },
+                                modifier = Modifier.fillMaxWidth(0.5f)
+                            )
+                        }
+                    }
+
+                    // Row 3c: RainViewer | OGN
                     item {
                         Row(
                             modifier = Modifier
@@ -242,16 +260,17 @@ fun SettingsScreen(
                                 .padding(horizontal = 8.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
+                            CategoryItemDrawable(
+                                title = "RainViewer",
+                                iconResId = R.drawable.rainviewer,
+                                iconSize = 29.04.dp,
+                                onClick = { navController.navigate(SettingsRoutes.WEATHER_SETTINGS) },
+                                modifier = Modifier.weight(1f)
+                            )
                             CategoryItem(
                                 title = "OGN",
                                 icon = Icons.Default.Flight,
                                 onClick = { navController.navigate("ogn_settings") },
-                                modifier = Modifier.weight(1f)
-                            )
-                            CategoryItem(
-                                title = "Forecast",
-                                icon = Icons.Default.Cloud,
-                                onClick = { navController.navigate("forecast_settings") },
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -313,6 +332,44 @@ fun CategoryItem(title: String, icon: ImageVector, onClick: () -> Unit, modifier
                 contentDescription = null,
                 modifier = Modifier.size(24.dp),
                 tint = MaterialTheme.colorScheme.onSurface
+            )
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+        }
+    }
+}
+
+@Composable
+fun CategoryItemDrawable(
+    title: String,
+    iconResId: Int,
+    iconSize: Dp = 24.dp,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp)),
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(12.dp),
+        shadowElevation = 2.dp,
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+        )
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Icon(
+                painter = painterResource(id = iconResId),
+                contentDescription = null,
+                modifier = Modifier.size(iconSize),
+                tint = Color.Black
             )
             Text(title, style = MaterialTheme.typography.bodyLarge)
         }
