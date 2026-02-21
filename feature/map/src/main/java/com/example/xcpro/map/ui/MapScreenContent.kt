@@ -204,6 +204,8 @@ internal fun MapScreenContent(
     var tappedWindArrowCallout by remember { mutableStateOf<WindArrowTapCallout?>(null) }
     var windTapLabelSize by remember { mutableStateOf(IntSize.Zero) }
     var overlayViewportSize by remember { mutableStateOf(IntSize.Zero) }
+    // Temporarily suppress replay/debug FABs on MapScreen (REF/SIM/SIM2/SIM3/TASK).
+    val hideReplayDebugFabs = true
     val isForecastWindArrowOverlayActive = forecastOverlayState.windOverlayEnabled &&
         forecastOverlayState.windDisplayMode == ForecastWindDisplayMode.ARROW &&
         forecastOverlayState.windTileSpec?.format == ForecastTileFormat.VECTOR_WIND_POINTS
@@ -392,9 +394,9 @@ internal fun MapScreenContent(
             showAdsbTraffic = adsbOverlayEnabled,
             showForecastOverlay = forecastOverlayState.enabled || forecastOverlayState.windOverlayEnabled,
             showQnhFab = showQnhFab,
-            showVarioDemoFab = showVarioDemoFab,
+            showVarioDemoFab = showVarioDemoFab && !hideReplayDebugFabs,
             showAatEditFab = isAATEditMode && taskType == TaskType.AAT,
-            showRacingReplayFab = showRacingReplayFab,
+            showRacingReplayFab = showRacingReplayFab && !hideReplayDebugFabs,
             onRecenter = locationManager::recenterOnCurrentLocation,
             onToggleDistanceCircles = { overlayManager.toggleDistanceCircles() },
             onToggleOgnTraffic = onToggleOgnTraffic,

@@ -582,6 +582,90 @@ racing-task-navigation/
 
 ---
 
+## Recheck Addendum (2026-02-21)
+
+This addendum captures misses from a fresh codebase re-audit and updates the plan.
+Decision: keep this plan, but extend it with mandatory compliance workstreams.
+
+### Newly Identified Critical Gaps (Code Evidence)
+
+1. RT structural validation is still too weak.
+   - `feature/map/src/main/java/com/example/xcpro/tasks/domain/logic/TaskValidator.kt` uses `minPoints = 2` for Racing.
+   - RT needs explicit Start + >=2 TP + Finish semantics.
+2. JSON persistence/import is lossy for racing task semantics.
+   - `feature/map/src/main/java/com/example/xcpro/tasks/TaskPersistSerializer.kt` does not preserve racing point-type/rule fields and uses constant `id = "imported"`.
+   - `feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt` imports by replaying `addWaypoint(...)`, which drops role/type/rule fidelity.
+3. Deterministic ID policy is weak and collision-prone.
+   - `feature/map/src/main/java/com/example/xcpro/tasks/data/persistence/TaskPersistenceAdapters.kt` uses 32-bit `hashCode` suffix.
+   - Fingerprint excludes racing rule metadata.
+4. Start-line geometry helper has unit-contract drift risk.
+   - `feature/map/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt` passes `gateWidth` (km) into geometry methods that operate in meters.
+5. Sparse-fix line crossings can be dropped.
+   - `feature/map/src/main/java/com/example/xcpro/tasks/racing/boundary/RacingBoundaryCrossingPlanner.kt` requires both fixes within line-radius prefilter before intersection.
+6. Crossing timestamp semantics are not nearest-second normalized.
+   - `feature/map/src/main/java/com/example/xcpro/tasks/racing/boundary/RacingBoundaryCrossingMath.kt` interpolates with truncation.
+7. Racing nav events/states are too minimal for competition semantics.
+   - `feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationEvent.kt` and `feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationState.kt` only model START/TURNPOINT/FINISH with no tolerance/near-miss/penalty outcomes.
+8. Missing rule-level procedures from start/finish docs.
+   - No explicit PEV cadence constraints (max count, dedupe, interval windows).
+   - No straight-in exception path for finish min-altitude checks.
+   - No "land without delay" post-finish state/evidence handling.
+
+### Mandatory Plan Changes
+
+Add these workstreams to the existing Phase 1-6 sequence:
+
+1. Phase 0A - Racing Compliance Baseline
+   - Lock current behavior with tests before refactor.
+   - Add failing tests for RT structure, serializer fidelity, and crossing semantics.
+2. Phase 1A - Canonical Racing Rules + Serializer v2
+   - Extend task model for racing rules/metadata (gates, tolerance, PEV, finish policy).
+   - Preserve full fidelity in JSON (versioned schema, backward-compatible reader).
+3. Phase 2A - Navigation Semantics Upgrade
+   - Add tolerance and near-miss outcomes.
+   - Add multiple-start candidate handling.
+   - Normalize start/finish crossing timestamps to nearest second.
+   - Fix sparse-fix line crossing detection to be intersection-first with noise guards.
+4. Phase 2B - Deterministic Identity Hardening
+   - Replace 32-bit hash fallback with stable stronger fingerprinting.
+   - Include rule fingerprint in identity generation for no-id imports.
+5. Phase 3A - Import Hydration Fidelity
+   - Replace add-waypoint reconstruction with canonical set-task hydration path.
+   - Preserve waypoint role, point type, dimensions, and custom parameters on import.
+6. Phase 4A - Start/Finish Procedure Completion
+   - Implement explicit PEV cadence policy hooks.
+   - Implement finish straight-in exception handling.
+   - Implement post-finish "land without delay" outcome path.
+7. Phase 6A - Enforcement and Drift Guards
+   - Add CI guardrails for deterministic ID policy, unit-safe geometry API use, and banned lossy import patterns.
+
+### Additional Acceptance Gates
+
+- Racing tasks cannot be marked valid unless they satisfy Start + >=2 TP + Finish.
+- Import/export round-trip for racing tasks is lossless for role/type/radius/custom params.
+- Start/finish event times are nearest-second normalized and deterministic.
+- Sparse-fix boundary crossings are detected when segment intersection is valid.
+- Deterministic IDs for missing-id imports are stable and collision-resistant.
+- Racing event model exposes explicit outcomes for tolerance/near-miss and finish-procedure edge cases.
+
+### Additional Test Matrix
+
+- `TaskValidatorRacingStructureTest` for RT minimum structure.
+- `TaskPersistSerializerRacingRoundTripTest` for v2 fidelity.
+- `TaskSheetImportRacingFidelityTest` for UI/import hydration path.
+- `RacingLineCrossingSparseFixTest` for long-segment line crossing.
+- `RacingCrossingTimeRoundingTest` for nearest-second timestamp semantics.
+- `TaskDeterministicIdCollisionResistanceTest` for fallback identity quality.
+- `RacingPevCadenceRulesTest` for PEV cadence and interval constraints.
+- `RacingFinishStraightInExceptionTest` and `RacingPostFinishLandingDelayTest` for finish procedure semantics.
+
+### Revised Delivery Estimate
+
+- Additional effort: +8 to +12 days on top of the existing Phase 1-6 estimate.
+- Recommended execution: land Phase 0A and Phase 1A first, then continue remaining phases behind tests.
+
+---
+
 **END OF PLAN**
 
 *This plan maintains complete separation between Racing and AAT task navigation, with Racing implemented first as the simpler, more structured task type.*

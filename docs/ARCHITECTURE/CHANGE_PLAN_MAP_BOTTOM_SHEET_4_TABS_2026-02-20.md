@@ -6,7 +6,7 @@ Implementation plan for adding a compact 4-tab bottom sheet entry on MapScreen.
 This plan is intentionally UI-layer scoped and preserves existing map/task/sensor pipelines.
 
 Date: 2026-02-20
-Status: Draft (defaults locked: 1B, 2A, 3B, 4A + modal host policy)
+Status: Draft (defaults locked: 1B, 2A, 3B, 4A + modal host + discoverability policy)
 
 Read first:
 
@@ -22,7 +22,7 @@ Read first:
 - Owner: XCPro Team
 - Date: 2026-02-20
 - Issue/PR: TBD
-- Status: Draft (defaults locked: 1B, 2A, 3B, 4A + modal host policy)
+- Status: Draft (defaults locked: 1B, 2A, 3B, 4A + modal host + discoverability policy)
 
 ## 1) Scope
 
@@ -57,6 +57,7 @@ Read first:
   - Add explicit modal/panel coexistence rules (task panel, traffic detail sheets, airspace modal).
   - Add explicit bottom inset handling so the tab strip is safe above system navigation bars.
   - Define deterministic behavior when `More Weather Settings` is invoked while drawer is blocked by task-edit mode.
+  - Define deterministic V1 discoverability for drawer-first weather advanced path (`Settings -> General -> RainViewer`).
   - Keep initial integration line-budget safe by isolating new logic in new UI files.
 
 - Out of scope:
@@ -107,6 +108,10 @@ Required:
 4. Weather-route consolidation/removal is allowed only after explicit parity checklist pass.
 5. `More Weather Settings` action must dismiss tab sheet first, then open drawer.
 6. `More Weather Settings` is drawer-first in V1 (no direct deep-link navigation to weather route in this slice).
+7. Weather tab must include explicit helper copy for V1 route discoverability:
+   - `Open drawer -> Settings -> General -> RainViewer`.
+8. If navdrawer `Settings` section is persisted collapsed, `More Weather Settings` flow should expand that section before/while opening drawer.
+9. Because tab label is `Weather` while current settings card label is `RainViewer`, helper copy must reference `RainViewer` explicitly.
 
 ### 1.0D Weather Attribution and Dual-Entry Contract
 
@@ -125,6 +130,7 @@ This plan iteration locks these defaults:
 3. `3B` Satellite View: disabled/coming-soon in SkySight tab for this slice.
 4. `4A` Drawer-open determinism: use explicit open semantics for `More Weather Settings` (no ambiguous toggle path).
 5. Drawer-blocked fallback in V1: if drawer is blocked by task-edit mode, `More Weather Settings` is disabled with explanatory copy (no hidden no-op).
+6. Drawer-first discoverability fallback in V1: Weather tab helper copy explicitly calls out `Settings -> General -> RainViewer`.
 
 ### 1.0F Modal Host Policy (Locked)
 
@@ -154,6 +160,17 @@ Required for this slice:
 4. If drawer is blocked (for example AAT edit-mode guard), `More Weather Settings` must not silently fail:
    - disable action and show reason text in the tab content.
 5. Because drawer gestures are globally disabled in current `NavigationDrawer`, block policy must guard explicit/programmatic drawer-open commands (not gesture paths only).
+
+### 1.0I Drawer-First Settings Discoverability Contract (Locked)
+
+Required for this slice:
+
+1. Keep `More Weather Settings` drawer-first in V1 (no direct weather deep-link callback required).
+2. Weather tab content must include route helper copy:
+   - `Open drawer -> Settings -> General -> RainViewer`.
+3. `More Weather Settings` action should ensure the navdrawer `Settings` section is expanded before/while opening drawer.
+4. Weather-tab helper copy must acknowledge current `RainViewer` label to avoid Weather-vs-RainViewer ambiguity.
+5. Discoverability behavior must be test-covered (manual + compose) and not rely on user memory of drawer hierarchy.
 
 ### 1.1 SkySight Tab Option Mapping (Required)
 
@@ -226,6 +243,8 @@ Explicitly out of this slice:
 | Weather tab settings (enable/opacity/animation/frame/render options) | Existing weather preferences owner (`WeatherOverlayPreferencesRepository`) | Shared weather settings contract + `1B` map-tab facade | Local weather setting mirrors that diverge from shared preferences |
 | Weather runtime metadata/status (frame, freshness, staleness) | Existing weather runtime owner (`ObserveWeatherOverlayStateUseCase`/`WeatherOverlayViewModel`) | Existing `overlayState` flow | Parallel runtime models computed only in tab UI |
 | Weather attribution action | Shared weather attribution helper (weather package) | Explicit link handler contract aligned with existing Weather settings | Hardcoded duplicate attribution links/handlers with drift |
+| Weather advanced-route helper copy | Weather tab UI spec (single owner in tab host) | Static helper text + semantics tag | Hidden/implicit route assumptions that rely on user memory |
+| Navdrawer `Settings` section expansion state | Existing navdrawer state owner (`settingsExpanded`) | Existing navdrawer config state + deterministic open-flow update | Local duplicated expansion flags detached from drawer owner |
 | Traffic detail selection state | Existing `MapScreenTrafficCoordinator`/`MapScreenViewModel` owners | Existing selected-target flows | New local mirrors of selected detail IDs in Compose |
 | Tab-specific future settings | Existing feature ViewModels/repos (per feature) | Existing flows/use-cases | New hidden global mutable state |
 
@@ -268,6 +287,7 @@ Likely touched files:
 | Weather settings contract placement | Navdrawer package owns weather mutation contract | Shared weather settings contract moved/exposed under weather package | Prevent map UI from depending on navdrawer package internals | compile-time deps + tests |
 | Weather attribution affordance | Navdrawer weather screen only | Weather tab contract with explicit attribution link action | Preserve provider attribution access after tab rollout | compose + manual link validation |
 | `More Weather Settings` drawer action | Toggle-based drawer path | Deterministic drawer-open contract (`1.0G`) | Avoid accidental drawer close or inconsistent behavior | state + compose tests |
+| Weather advanced-route discoverability | Implicit user memory of drawer hierarchy and labels | Explicit helper-copy + settings-section expansion contract (`1.0I`) | Prevent Weather-vs-RainViewer confusion and dead-end perception | compose + manual discoverability checks |
 | Drawer open intent path from map UI | `ToggleDrawer` emits effects; `SetDrawerOpen(true)` updates state but does not open drawer UI | Add explicit open command path (`OpenDrawer` event/effect or direct open callback) | Avoid "explicit open" silently becoming no-op | event-handler tests + compose flow checks |
 | Drawer block enforcement | Runtime effect closes drawer on mode change but does not gate later programmatic `OpenDrawer` calls | Gate drawer-open commands with block predicate (`taskType` + `isAATEditMode`) | Ensure blocked mode cannot be bypassed by explicit open calls | state + compose tests |
 | Tab switching while modal is open | External launcher can be obscured by modal/scrim | In-sheet footer tabs bound to same selected-tab owner (`1.0H`) | Preserve discrete tab switching UX while sheet is visible | compose tests |
@@ -289,6 +309,7 @@ Likely touched files:
 | Weather tab local draft settings (potential) | Local mutable toggles/sliders detached from preferences flows | Flow-backed Weather tab controls routed through shared weather settings owner | Phase 1/2 |
 | Weather tab direct dependency on navdrawer weather use-case | Map UI importing navdrawer package contracts | Shared weather settings contract under weather package used by both entrypoints | Phase 1 |
 | `More Weather Settings` uses drawer toggle semantics | `ToggleDrawer` path may close instead of open under state drift | Explicit drawer-open path (or proven deterministic-open guard + tests) | Phase 1/2 |
+| Weather advanced route relies on implicit user memory | Drawer-first route requires extra taps and label translation (`Weather` vs `RainViewer`) | Explicit helper-copy contract + settings-section expansion flow | Phase 1/2 |
 | Non-saveable tab context | Local `remember` state resets on config recreation | Saveable tab-state helper policy (`rememberSaveable`) | Phase 1 |
 
 ### 2.2C Modal and Panel Precedence Contract
@@ -304,6 +325,8 @@ Required behavior:
 7. If forecast modal is visible and user opens a traffic detail, forecast modal is dismissed first.
 8. Legacy forecast FAB open path must not open forecast modal while task panel is visible.
 9. If drawer-open is blocked by task-edit mode, `More Weather Settings` action must be disabled and explicit about why.
+10. Drawer-first weather path must remain discoverable in-place via helper copy (`Settings -> General -> RainViewer`).
+11. If navdrawer `Settings` section is collapsed, weather advanced action must expand it before/while opening drawer.
 
 ### 2.2D Layering and Input Routing Contract
 
@@ -373,6 +396,8 @@ Required:
 7. Tab and navdrawer weather entrypoints must remain state-consistent via shared flows with no stale local caches.
 8. `More Weather Settings` action must dismiss tab sheet before opening drawer.
 9. If drawer-open is blocked by task-edit mode, `More Weather Settings` action must be disabled with explicit reason text.
+10. Weather tab must provide helper copy for V1 drawer-first route (`Settings -> General -> RainViewer`).
+11. If navdrawer `Settings` is collapsed, weather advanced action must expand it before/while opening drawer.
 
 ### 2.2J Single-Modal Surface Contract (Modal Strategy)
 
@@ -420,6 +445,17 @@ Required:
 1. Selected-tab state should be saveable across configuration recreation (`rememberSaveable` in UI host state helper).
 2. Visibility restore behavior is policy-driven and test-covered (either restore or explicit-reset contract).
 3. State restoration must not violate single-modal arbitration or precedence rules.
+
+### 2.2O Weather Advanced-Route Discoverability Contract
+
+Required:
+
+1. V1 route remains drawer-first:
+   - drawer open -> `Settings` -> `General` -> `RainViewer` -> weather settings screen.
+2. Weather tab must present helper copy that references the exact current route labels.
+3. `More Weather Settings` flow should expand navdrawer `Settings` section before/while opening drawer.
+4. Discoverability must be deterministic even when `settingsExpanded` was previously persisted as collapsed.
+5. Direct deep-link callback plumbing is not required in this slice as long as contract items above are met.
 
 ### 2.3 Time Base
 
@@ -477,6 +513,7 @@ Explicitly forbidden:
 | Forecast modal opens while task panel is visible (legacy FAB path) causing back-order conflicts | interaction determinism | enforce forecast/task-panel gating + back tests | legacy forecast task-panel gating tests |
 | Selected tab resets unexpectedly on config recreation | UX continuity | enforce Section 2.2N saveable state policy + tests | tab-state persistence tests |
 | Drawer-first Weather advanced path is perceived as broken due no deep-link | UX expectation | explicit V1 contract + manual UX checks | drawer-first expectation checks |
+| Weather advanced path discoverability degrades due `Weather` vs `RainViewer` naming and collapsed `Settings` section | UX expectation | enforce Section 2.2O helper-copy + section-expansion contract | weather advanced-route discoverability tests |
 
 ## 3) Data Flow (Before -> After)
 
@@ -538,8 +575,10 @@ Weather advanced-settings flow (MVP):
 ```
 Weather tab "More Weather Settings" tap
 -> dismiss tab sheet
+-> ensure drawer `Settings` section is expanded
 -> trigger explicit drawer-open action (non-toggle semantics)
--> user enters existing Settings -> Weather route
+-> user taps `General`
+-> user taps `RainViewer` (current weather settings card label)
 ```
 
 Weather advanced-settings action when drawer is blocked (target):
@@ -616,8 +655,10 @@ Sensors -> Repository (SSOT) -> UseCases -> ViewModel -> UI
   - Fixed modal host policy from Section 1.0F.
   - Fixed drawer-open determinism contract from Section 1.0G.
   - Fixed dual-tab-surface and drawer-blocked policy from Section 1.0H.
+  - Fixed drawer-first discoverability contract from Section 1.0I.
   - Fixed drawer-block enforcement contract from Section 2.2M.
   - Fixed tab-state persistence contract from Section 2.2N.
+  - Fixed weather advanced-route discoverability contract from Section 2.2O.
   - Fixed forecast parity gate from Section 2.2H.
 
 - Exit criteria:
@@ -671,6 +712,7 @@ Sensors -> Repository (SSOT) -> UseCases -> ViewModel -> UI
   - SkySight activation behavior is explicit (`Enable Toggle` or `Auto Enable`).
   - Compact visuals maintain reliable tap targets.
   - Drawer-blocked state is surfaced in Weather tab (`More Weather Settings` disabled with reason).
+  - Weather tab includes explicit drawer-first helper copy (`Settings -> General -> RainViewer`).
 
 - Exit criteria:
   - Host composables compile.
@@ -702,6 +744,7 @@ Sensors -> Repository (SSOT) -> UseCases -> ViewModel -> UI
   - Do not remove existing navdrawer weather settings entrypoint in this phase.
   - For `2A`, do not add direct weather-route navigation callback plumbing in this slice; use existing drawer-open action for `More Weather Settings`.
   - `More Weather Settings` action sequence must be deterministic: dismiss sheet first, then open drawer.
+  - `More Weather Settings` action should set/ensure navdrawer `Settings` section expanded before/while opening drawer.
   - Ensure single-modal arbitration across tabbed modal and existing detail/forecast modals.
   - Ensure legacy forecast FAB/detail modal paths also follow single-modal arbitration while dual-entry remains.
   - Ensure legacy forecast FAB open path is gated when task panel is visible.
@@ -771,6 +814,7 @@ Sensors -> Repository (SSOT) -> UseCases -> ViewModel -> UI
   - Drawer-open determinism tests: advanced-settings action cannot close drawer by toggle misfire.
   - Drawer-blocked behavior tests: weather advanced action is disabled with reason while drawer is task-blocked.
   - Drawer-block enforcement tests: explicit/programmatic open requests are rejected while block predicate is true.
+  - Weather advanced-route discoverability tests: helper copy and collapsed-settings-section path remain understandable and deterministic.
   - Legacy forecast/task-panel gating tests: forecast modal cannot open while task panel is visible.
   - Tab-state persistence tests: selected tab follows saveable policy across configuration recreation.
   - Drawer-first Weather settings UX checks: behavior is intentional and discoverable in V1.
@@ -819,6 +863,8 @@ Sensors -> Repository (SSOT) -> UseCases -> ViewModel -> UI
     - `More Weather Settings` action dismisses tab sheet before triggering drawer-open action.
     - `More Weather Settings` action uses deterministic drawer-open semantics (no toggle-close regression).
     - `More Weather Settings` action is disabled with explicit reason when drawer is blocked by task-edit mode.
+    - `Weather` tab shows helper copy for drawer-first route (`Settings -> General -> RainViewer`).
+    - `More Weather Settings` action expands navdrawer `Settings` section before/while drawer open.
     - legacy forecast FAB path cannot open forecast modal while task panel is visible.
   - Update/add map UI test for coexistence behavior with existing detail-sheet callbacks.
   - Add map UI test that validates modal arbitration does not depend on `MapModalManager` airspace-only flags.
@@ -846,6 +892,8 @@ Sensors -> Repository (SSOT) -> UseCases -> ViewModel -> UI
   - `More Weather Settings` action closes tab sheet and opens drawer (no overlapping surfaces).
   - In AAT edit mode (drawer blocked), `More Weather Settings` is disabled with clear reason text.
   - `More Weather Settings` drawer-first behavior is understandable in V1 (no direct weather deep-link expected).
+  - Starting with navdrawer `Settings` collapsed, `More Weather Settings` still exposes a clear path to `General` then `RainViewer`.
+  - Weather-tab helper copy explicitly references `RainViewer` naming to avoid ambiguity.
 
 Required checks:
 
@@ -893,6 +941,7 @@ Note:
 | Drawer open requested while weather tab sheet remains open | Medium | Enforce dismiss-sheet-then-open-drawer ordering with tests | XCPro Team |
 | Drawer-open path closes drawer due toggle-state drift | Medium | Prefer explicit open command path + deterministic state tests | XCPro Team |
 | Drawer blocked in AAT edit mode makes advanced weather action appear broken | Medium | Disable action with reason while blocked; test blocked-state behavior | XCPro Team |
+| Drawer-first weather advanced path is unclear because UI label says `Weather` but settings entry says `RainViewer` | Medium | Add helper-copy contract + collapsed-settings expansion behavior + tests | XCPro Team |
 | Forecast FAB opens modal while task panel is visible, causing back-order confusion | Medium | Add deterministic forecast/task-panel gating and regression tests | XCPro Team |
 
 ## 7) Acceptance Gates
@@ -914,6 +963,8 @@ Note:
 - `More Weather Settings` action uses deterministic drawer-open behavior (no toggle-close regression).
 - `More Weather Settings` action is disabled with explicit reason when drawer is blocked by task-edit mode.
 - `More Weather Settings` behavior is drawer-first in V1; direct weather deep-link is not required in this slice.
+- `Weather` tab includes drawer-first helper copy that references current labels: `Settings -> General -> RainViewer`.
+- When navdrawer `Settings` is collapsed, `More Weather Settings` flow expands it so `General` remains discoverable.
 - `SkySight` tab includes:
   - `Thermal Tops`
   - `Convergence`

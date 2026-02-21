@@ -45,6 +45,10 @@ Locked defaults applied to plan:
    - both share one selected-tab owner.
 7. Drawer-blocked fallback:
    - if task-edit mode blocks drawer open, `More Weather Settings` should be disabled with clear reason text.
+8. Drawer-first weather-route discoverability:
+   - keep explicit helper path copy in tab UX:
+     - `Settings -> General -> RainViewer`,
+   - and expand navdrawer `Settings` section before/while opening drawer when persisted collapsed.
 
 ## Current Codebase Findings (Map Screen)
 
@@ -72,6 +76,8 @@ Locked defaults applied to plan:
   - Good integration point for adding a new bottom tab-strip layer.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt`
   - `onHamburgerTap` currently emits `MapUiEvent.ToggleDrawer` (toggle semantics, not explicit open).
+- `feature/map/src/main/java/com/example/xcpro/navdrawer/NavigationDrawer.kt`
+  - `gesturesEnabled = false`; drawer open on map route is programmatic.
 
 ### Back and layering behavior
 
@@ -305,6 +311,25 @@ Implication:
    - Full-open modal can obscure outside launcher tabs.
    - To keep discrete tab switching visible while open, sheet content needs compact in-sheet footer tabs bound to same selected-tab SSOT.
 
+## Deep-Pass Gaps Found After Twelfth Review
+
+1. Drawer-first Weather advanced path discoverability was still underspecified.
+   - Current V1 flow is not a one-step route; it is:
+     - open drawer -> `Settings`/`General` -> `RainViewer`.
+   - Plan needed explicit helper-copy contract so this path is understandable in-tab.
+
+2. Label mismatch risk was not explicitly encoded.
+   - Bottom tab label is `Weather`, while current settings card label is `RainViewer`.
+   - Without explicit copy, users can miss the weather destination after drawer opens.
+
+3. Persisted collapsed drawer section can hide entry point.
+   - `settingsExpanded` is persisted and can be false from prior user state.
+   - Drawer-first flow should expand `Settings` section before/while opening drawer to keep path discoverable.
+
+4. Discoverability test coverage was incomplete.
+   - Existing plan checks drawer-first behavior generally.
+   - Needed explicit checks for `Weather`->`General`->`RainViewer` discoverability and collapsed-section start state.
+
 ## Weather Settings Ownership and Scope (Verified in Code)
 
 - Read path in map:
@@ -327,6 +352,34 @@ Implication:
 - Existing weather settings entrypoint remains active:
   - `feature/map/src/main/java/com/example/xcpro/navigation/SettingsRoutes.kt`
   - `app/src/main/java/com/example/xcpro/AppNavGraph.kt`
+
+## Weather Advanced-Settings Discoverability (Verified in Code)
+
+- Drawer-open trigger from map flow:
+  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt`
+  - `onHamburgerTap = { mapViewModel.onEvent(MapUiEvent.ToggleDrawer) }`
+  - No direct `weather_settings` deep-link callback on this path today.
+
+- Drawer interaction model on map:
+  - `feature/map/src/main/java/com/example/xcpro/navdrawer/NavigationDrawer.kt`
+  - `gesturesEnabled = false` (drawer opens programmatically).
+
+- Drawer route to settings:
+  - `feature/map/src/main/java/com/example/xcpro/navdrawer/DrawerMenuSections.kt`
+  - `Settings` section contains `General` item that navigates to `settings`.
+
+- Settings route to weather screen:
+  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Settings-df.kt`
+  - card label is `RainViewer`, and that card navigates to `SettingsRoutes.WEATHER_SETTINGS`.
+  - This is the current label users must recognize from a Weather-tab advanced action.
+
+- Weather settings route target:
+  - `app/src/main/java/com/example/xcpro/AppNavGraph.kt`
+  - `SettingsRoutes.WEATHER_SETTINGS` maps to `WeatherSettingsScreen`.
+
+- Persisted discoverability variable:
+  - `app/src/main/java/com/example/xcpro/AppNavGraph.kt`
+  - `settingsExpanded` is restored from config and can be user-collapsed.
 
 ## SkySight Tab Option Mapping (Verified in Code)
 
@@ -476,4 +529,5 @@ Reason:
   - `2A` weather MVP scope,
   - `3B` deferred satellite option,
   - modal host strategy,
-  - explicit drawer-open semantics for `More Weather Settings`.
+  - explicit drawer-open semantics for `More Weather Settings`,
+  - drawer-first route discoverability helper (`Settings -> General -> RainViewer`) with collapsed-settings expansion policy.

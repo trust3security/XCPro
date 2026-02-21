@@ -30,7 +30,7 @@ Read first:
 - Date: 2026-02-20
 - Issue/PR: ARCH-20260220-RT-COMPLIANCE
 - Status: Draft (implementation not started)
-- Recheck update: 2026-02-20 (second-pass delta applied)
+- Recheck update: 2026-02-21 (third-pass delta applied after code + plan re-audit)
 - Related decision: Item 7 from codebase review is **CHANGE**, not leave-as-is.
 - Why item 7 is change-required:
   - Runtime is centered on `SimpleRacingTask` (`feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskManager.kt`) while richer `RacingTask` (`feature/map/src/main/java/com/example/xcpro/tasks/racing/models/RacingTask.kt`) is not runtime-authoritative.
@@ -113,6 +113,29 @@ Second-pass audit found additional implementation-critical misses not explicit i
 7. Finish special-case rule is still unmodeled.
    - No contest boundary landing rule path (`finish when landing within contest site boundary, stop + 5 min`).
 
+## 1C) Missed Items from Third Recheck (Delta)
+
+Third-pass audit (code + plan + `docs/RACING_TASK`) found additional misses still not represented enough in this plan:
+
+1. Import hydration is still lossy and bypasses canonical task semantics.
+   - `TaskSheetViewModel.importPersistedTask(...)` clears task and rebuilds via `addWaypoint(...)`, which reassigns roles by index and ignores canonical direct hydration.
+   - `applyRacingObservationZone(...)` only patches turnpoint radius (`gateWidth`) for interior waypoints, leaving richer OZ/type metadata under-applied.
+2. Persisted-task ID fallback still collapses identity.
+   - `TaskPersistSerializer.toTask(...)` maps blank/null IDs to constant `"imported"`, creating collisions and weakening deterministic identity guarantees.
+3. Deterministic fallback IDs are still weakly collision-resistant.
+   - `TaskPersistenceAdapters.deterministicFallbackId(...)` uses 32-bit `hashCode()` suffix and omits rule metadata in fingerprint.
+4. Start-line optimal crossing path has unit-contract drift.
+   - `TaskManagerCoordinator.calculateOptimalStartLineCrossingPoint(...)` passes `wp.gateWidth` (km) to `RacingGeometryUtils.calculateOptimalLineCrossingPoint(...)`, whose internal destination calculations are meter-based.
+5. Line crossing planner can miss sparse-fix valid intersections.
+   - `RacingBoundaryCrossingPlanner.detectLineCrossing(...)` returns early unless both fixes are within line-radius before segment intersection is attempted.
+6. Crossing timestamp interpolation is not nearest-second normalized.
+   - `RacingBoundaryCrossingMath.interpolateTime(...)` truncates with `toLong()` while RT docs require nearest-second interpolation semantics.
+7. PEV cadence constraints are still not explicitly modeled.
+   - Missing explicit enforcement-ready fields/logic for max 3 presses, 30-second dedupe, and cylinder-start minimum 10-minute interval.
+8. Finish procedure still lacks two mandatory policy outcomes.
+   - Straight-in exemption for below-min-altitude finish-line crossings is not modeled.
+   - Post-finish `land without delay` outcome/evidence tracking is not modeled.
+
 ## 2) Architecture Contract
 
 ### 2.1 SSOT Ownership
@@ -147,6 +170,7 @@ Required:
 | Runtime nav input model | `SimpleRacingTask` shared broadly | Derived `RacingNavTask` projection from canonical task | Remove model split and drift | Mapper + engine tests |
 | Start/finish tolerance outcomes | Implicit crossing logic only | Explicit rule outcome model in nav events/state | UI and replay need auditability | Event contract tests |
 | RT structure validation | Generic `TaskValidator` min=2 | RT-specific structure contract | Align with RT docs | Validator tests |
+| Persisted task hydration/import | `TaskSheetViewModel` clear + rebuild via `addWaypoint` | Canonical hydrate path (`setTask` + targets + rules) in domain/use-case boundary | Prevent role/type/rule loss from positional rebuild | Import fidelity + round-trip tests |
 
 ### 2.2B Bypass Removal Plan (Mandatory)
 
@@ -155,6 +179,7 @@ Required:
 | `feature/map/src/main/java/com/example/xcpro/tasks/TaskNavigationController.kt` | Runtime directly maps to `SimpleRacingTask` | Map canonical task + rules -> `RacingNavTask` | Phase 2 |
 | `feature/map/src/main/java/com/example/xcpro/tasks/data/persistence/TaskPersistenceAdapters.kt` | Persists RT through simplified model | Persist canonical task/rules via versioned serializer | Phase 8 |
 | `feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt` | `Any?` point-type bridge APIs | Typed RT rule/geometry update commands | Phase 7 |
+| `feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt` (`importPersistedTask`) | Clear + `addWaypoint` reconstruction + best-effort OZ patching | Canonical import hydration command (preserve roles/types/rules/ids) | Phase 8 |
 | `feature/map/src/main/java/com/example/xcpro/tasks/racing/models/RacingTask.kt` | Separate rich model not runtime-owner | Deprecate then remove after migration | Phase 2/9 |
 | `feature/map/src/main/java/com/example/xcpro/map/RacingReplayTaskHelpers.kt` | Replay converts canonical task to `SimpleRacingTask` | Replay consumes canonical->nav projection only | Phase 2 |
 | `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskInitializer.kt` | Random UUID task IDs | Deterministic ID policy utility | Phase 2B |
@@ -210,6 +235,13 @@ Explicitly forbidden:
 | Nav fix lacks altitude/speed for rule checks | Domain correctness | Unit tests on fix adapter + engine | `RacingNavigationFixAdapterTest` |
 | Strict-vs-extended rule ambiguity | Explicit policy requirement | Validator tests | `TaskValidatorRacingProfileTest` |
 | Start default mismatch across UI/mapper | Consistency + change safety | Unit/UI tests | `RacingDefaultsConsistencyTest` |
+| Import path silently drops RT semantics | SSOT + persistence/import contract | Unit/integration tests | `TaskSheetImportRacingFidelityTest` |
+| Fallback ID collisions from 32-bit hash policy | Deterministic identity quality | Unit tests + enforceRules guard | `TaskDeterministicIdCollisionResistanceTest` |
+| Start-line geometry unit drift (km vs m) | Domain geometry correctness | Unit test + API contract assertion | `RacingStartLineUnitContractTest` |
+| Sparse-fix line crossing dropped by prefilter | RT crossing correctness | Boundary tests | `RacingLineCrossingSparseFixTest` |
+| Crossing times not nearest-second | RT start/finish timing contract | Unit + replay tests | `RacingCrossingTimeNearestSecondTest` |
+| PEV cadence constraints not represented | Start procedure compliance | Unit tests | `RacingPevCadenceRulesTest` |
+| Finish straight-in/landing-delay outcomes missing | Finish procedure compliance | Unit tests | `RacingFinishStraightInExceptionTest`, `RacingPostFinishLandingDelayTest` |
 
 ## 3) Target Architecture (Before -> After)
 
@@ -255,7 +287,7 @@ Planned rule details:
   - `gateOpenLocal`, `gateCloseLocal`, `timezoneId`
   - `crossingDirectionDeg` (for line)
   - `preStartAltitudeConstraint`
-  - `pev` (enabled/wait/window/retry limits)
+  - `pev` (enabled/wait/window/retry limits, `maxPressesPerLaunch = 3`, `dedupeSeconds = 30`, `minIntervalMinutes = 10` for cylinder-start mode)
 - `RacingTurnpointRules`:
   - default cylinder radius 500 m
   - near miss tolerance policy (500 m)
@@ -264,6 +296,8 @@ Planned rule details:
   - ring/line dimensions
   - line direction
   - min altitude constraint
+  - straight-in exemption policy for finish-line below-min-altitude cases
+  - post-finish landing policy (`LAND_WITHOUT_DELAY`) + evidence window
   - closing time/policy
   - optional contest boundary polygon + finish-on-landing policy (`STOP_PLUS_5_MIN`)
 - `RacingValidationRules`:
@@ -302,6 +336,8 @@ Engine behavior targets:
   - evaluate line/ring/cylinder mode
   - optional pre-start altitude evidence check
   - capture tolerance starts separately
+  - nearest-second normalized crossing timestamps
+  - PEV cadence semantics (max count, dedupe window, interval guards)
   - collect multiple valid starts (policy-driven)
 - Turnpoints:
   - strict entry/intersection with interpolated time
@@ -309,7 +345,9 @@ Engine behavior targets:
 - Finish:
   - line direction or ring entry
   - min altitude checks
+  - straight-in exception handling for finish-line altitude rule
   - closing-time outlanding logic
+  - post-finish `land without delay` outcome tracking
   - contest-boundary landing special case (when configured)
   - first finish only
 
@@ -404,17 +442,21 @@ CUP strategy:
 ### Phase 2B: Deterministic Identity and Defaults
 
 - Goal:
-  - Remove runtime randomness and align RT defaults across UI/engine/mappers.
+  - Remove runtime randomness, harden fallback identity quality, and align RT defaults across UI/engine/mappers.
 - Files:
   - `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskInitializer.kt`
   - `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingWaypointListItems.kt`
   - `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskCoreMappers.kt`
   - `feature/map/src/main/java/com/example/xcpro/tasks/data/persistence/TaskPersistenceAdapters.kt`
+  - `feature/map/src/main/java/com/example/xcpro/tasks/TaskPersistSerializer.kt`
 - Tests:
   - Deterministic ID generation tests (no `UUID.randomUUID` in RT init path).
+  - Collision-resistance tests for fallback IDs.
+  - Imported-task ID fallback tests (no constant `"imported"` collapse).
   - Start/finish/turn default consistency tests.
 - Exit criteria:
   - Deterministic IDs used for RT task initialization when no external ID is provided.
+  - Fallback deterministic IDs are collision-resistant enough for practical imports and include rule fingerprint inputs.
   - Default start behavior is consistent across UI and engine layers.
 
 ### Phase 3: RT Structural Validation Contract
@@ -434,7 +476,7 @@ CUP strategy:
 ### Phase 4: Start Procedure Compliance
 
 - Goal:
-  - Implement gate-time, start type, tolerance, pre-start altitude, and PEV-ready paths.
+  - Implement gate-time, start type, tolerance, pre-start altitude, and PEV-complete cadence semantics.
 - Files:
   - `feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationEngine.kt`
   - `feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationState.kt`
@@ -450,28 +492,32 @@ CUP strategy:
   - 500 m tolerance start outcome.
   - Pre-start altitude evidence checks.
   - Start-speed check using 8-second before/after fix windows.
+  - PEV cadence tests: max 3 presses, 30-second dedupe, 10-minute minimum interval (cylinder-start mode).
 - Exit criteria:
   - Start outcomes are explicit and policy-aware.
+  - Crossing times are nearest-second normalized.
   - Altitude/speed checks are implemented from navigation fix inputs, not inferred indirectly.
 
 ### Phase 5: Turnpoint Strict + Near-Miss Logic
 
 - Goal:
-  - Full strict TP achievement plus near-miss reporting.
+  - Full strict TP achievement plus near-miss reporting, and boundary math hardening for sparse-fix crossings.
 - Files:
   - `feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/`
   - `feature/map/src/main/java/com/example/xcpro/tasks/racing/boundary/`
 - Tests:
-  - Segment intersection and boundary interpolation tests.
+  - Segment intersection and boundary interpolation tests (including nearest-second timestamp normalization).
+  - Sparse-fix line crossing tests (intersection-first path, with explicit noise guards).
   - Near-miss 500 m tests.
   - Sequence enforcement tests.
 - Exit criteria:
   - TP progress exposes strict achievement and near-miss flags.
+  - Line/start/finish crossing planner no longer drops valid sparse-fix intersections by radius prefilter.
 
 ### Phase 6: Finish Procedure Compliance
 
 - Goal:
-  - Add finish line/ring direction rules, min-altitude checks, closure policy.
+  - Add finish line/ring direction rules, min-altitude checks (with straight-in exception), closure policy, and post-finish landing semantics.
 - Files:
   - `feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationEngine.kt`
   - finish evaluator helpers
@@ -481,10 +527,12 @@ CUP strategy:
   - Finish line direction pass/fail.
   - Finish ring entry timing interpolation.
   - Min-altitude warnings/penalty flags.
+  - Straight-in finish-line exception cases for below-min-altitude handling.
   - Finish close outlanding at last fix before close.
+  - Post-finish `land without delay` outcome/evidence tests.
   - Contest-boundary landing special case (`stop + 5 min`) when boundary is configured.
 - Exit criteria:
-  - Finish completion semantics match RT docs in app behavior.
+  - Finish completion semantics match RT docs in app behavior (including straight-in and landing-delay rules).
 
 ### Phase 7: Task Sheet UI + Typed Commands
 
@@ -510,19 +558,24 @@ CUP strategy:
 ### Phase 8: Import/Export and Backward Compatibility
 
 - Goal:
-  - Schema-v2 full fidelity for RT rules and robust compatibility.
+  - Schema-v2 full fidelity for RT rules and robust compatibility, including canonical import hydration.
 - Files:
   - `feature/map/src/main/java/com/example/xcpro/tasks/TaskPersistSerializer.kt`
   - `feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesUseCase.kt`
   - `feature/map/src/main/java/com/example/xcpro/tasks/CupFormatUtils.kt`
   - `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskStorage.kt`
   - `feature/map/src/main/java/com/example/xcpro/tasks/data/persistence/TaskPersistenceAdapters.kt`
+  - `feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt`
+  - `feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetCoordinatorUseCase.kt`
+  - `feature/map/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt`
 - Tests:
   - v1 -> v2 migration tests.
   - v2 round-trip fidelity tests for all RT rules.
+  - Persisted-task import fidelity tests (role/type/rule/ID preservation without positional rebuild).
   - CUP import default-rule hydration tests.
 - Exit criteria:
   - No data loss for RT rules in JSON; CUP remains intentionally reduced-fidelity with explicit defaults.
+  - Task-sheet import path hydrates canonical task directly (no lossy `addWaypoint` reconstruction).
 
 ### Phase 9: Hardening, Docs, and Cleanup
 
@@ -557,7 +610,8 @@ CUP strategy:
   - `FinishEvaluator`
   - `PenaltyAndToleranceEvaluator`
 - Keep `RacingBoundaryCrossingPlanner` as geometry primitive layer.
-- Preserve interpolation semantics from existing boundary planner.
+- Replace truncating interpolation with nearest-second normalized crossing timestamps where RT timing semantics require it.
+- Make line-crossing evaluation intersection-first, then apply policy/noise guards (instead of dropping by coarse prefilter alone).
 
 ### 5.3 ViewModel and Use-Case Command Typing
 
@@ -573,6 +627,7 @@ CUP strategy:
 - Add explicit payload version field.
 - Implement strict parser with defaulting rules for missing fields.
 - Add migration adapter for older payloads.
+- Remove constant `"imported"` identity fallback; retain provided IDs or use deterministic derivation policy.
 
 ### 5.5 Model Removal Sequence
 
@@ -585,6 +640,7 @@ CUP strategy:
 
 - No random UUID generation in task runtime initialization for RT.
 - Deterministic fallback ID must be based on stable waypoint fingerprint when external ID is absent.
+- Replace 32-bit hash fallback with stronger deterministic digest and include rule metadata in fingerprint input.
 - Add explicit tests for repeatability across identical imports/rebuilds.
 
 ### 5.7 Rule Profile Strategy
@@ -611,11 +667,18 @@ CUP strategy:
   - Start/TP/Finish evaluator tests.
   - Serializer compatibility tests.
   - Deterministic ID tests (no random runtime IDs).
+  - Deterministic ID collision-resistance tests.
+  - Persisted import fidelity tests (roles/types/rules/IDs preserved).
   - Profile gate tests (`FAI_STRICT` vs `XC_PRO_EXTENDED`).
   - Role preservation tests for steering/optional waypoints.
+  - Start-line unit contract tests (km input vs meter geometry conversions explicit and tested).
+  - Crossing timestamp nearest-second tests.
+  - PEV cadence tests (max presses/dedupe/min interval).
+  - Finish straight-in exception and post-finish landing-delay tests.
 - Replay/regression tests:
   - Deterministic replay twice with identical event/state trace.
   - Replay tests for gate-close and near-miss scenarios.
+  - Replay tests that assert nearest-second crossing event time parity for start/finish.
   - Replay-builder parity tests after removal of `SimpleRacingTask` coupling.
 - UI tests:
   - Rules editor rendering and intent dispatch.
@@ -629,6 +692,7 @@ CUP strategy:
 - Boundary tests:
   - Line crossing directional edge cases.
   - Ring enter/leave with sparse fixes.
+  - Line crossing sparse-fix segment intersection cases (including one endpoint outside radius).
   - Finish close at exact boundary time.
   - Contest boundary stop detection (`stop + 5 min`) when configured.
 
@@ -640,9 +704,16 @@ CUP strategy:
 - Start/turn/finish outcomes explicitly encode strict/tolerance/near-miss/closure states.
 - Replay remains deterministic for identical input.
 - `TaskPersistSerializer` round-trips RT rules without silent data loss.
+- Task import path preserves role/type/rule/ID fidelity (no lossy rebuild via `addWaypoint`).
 - No random UUID-based RT task IDs in runtime initialization paths.
+- Deterministic fallback IDs are collision-resistant and include rule metadata in derivation input.
 - No role-by-index rewrites in RT runtime that erase explicit steering/optional semantics.
+- Crossing timestamps used for start/finish semantics are nearest-second normalized.
+- Start-line optimal crossing uses explicit unit-safe meter contract.
+- Sparse-fix valid line crossings are not dropped by coarse prefilter.
 - Navigation fix contract carries required altitude/speed data for RT rule checks.
+- PEV cadence constraints (max 3, 30-second dedupe, 10-minute interval where applicable) are explicit and tested.
+- Finish straight-in exception and post-finish landing-delay outcomes are explicit and tested.
 - Active rule profile is explicit and tested (`FAI_STRICT` default, `XC_PRO_EXTENDED` opt-in).
 - `KNOWN_DEVIATIONS.md` unchanged unless explicit approved exception is required.
 
@@ -655,9 +726,16 @@ CUP strategy:
 | Timebase mistakes for gate times | High | Explicit conversion adapter + dedicated timebase tests | XCPro Team |
 | UI complexity growth in rules tab | Medium | Typed commands + sectioned composables + UI tests | XCPro Team |
 | Legacy import incompatibility | Medium | Versioned serializer + migration adapters + fixtures | XCPro Team |
+| Lossy task import reconstruction in task sheet | High | Canonical hydrate command + import fidelity tests | XCPro Team |
 | Default mismatch across UI/engine causes silent behavior drift | Medium | Add explicit default contract tests and profile default docs | XCPro Team |
 | Deterministic identity regressions due random IDs | High | Ban random IDs in RT runtime + enforceRules guard + tests | XCPro Team |
+| Deterministic fallback ID collisions from weak hash | High | Stronger deterministic digest + collision tests | XCPro Team |
 | Steering-point semantics lost by index rewrites | High | Remove rewrite paths and add role-preservation tests | XCPro Team |
+| Start-line unit mismatch in optimal crossing path | Medium/High | Explicit unit contract + unit tests | XCPro Team |
+| Sparse-fix crossings missed by planner prefilter | High | Intersection-first boundary evaluation + sparse-fix tests | XCPro Team |
+| Missing nearest-second normalization causes timing drift | High | Nearest-second rounding policy + replay parity tests | XCPro Team |
+| PEV cadence rules incompletely modeled | Medium | Typed cadence policy + dedicated tests | XCPro Team |
+| Finish straight-in/landing-delay semantics omitted | High | Explicit finish outcomes + policy tests | XCPro Team |
 
 ## 9) Rollback Plan
 
