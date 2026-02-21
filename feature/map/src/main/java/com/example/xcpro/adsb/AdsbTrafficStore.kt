@@ -5,6 +5,9 @@ import kotlin.math.abs
 
 internal data class AdsbStoreSelection(
     val withinRadiusCount: Int,
+    val withinVerticalCount: Int,
+    val filteredByVerticalCount: Int,
+    val cappedCount: Int,
     val displayed: List<AdsbTrafficUiModel>
 )
 
@@ -41,11 +44,17 @@ internal class AdsbTrafficStore {
         queryCenterLon: Double,
         referenceLat: Double,
         referenceLon: Double,
+        ownshipAltitudeMeters: Double?,
+        usesOwnshipReference: Boolean,
         radiusMeters: Double,
+        verticalAboveMeters: Double,
+        verticalBelowMeters: Double,
         maxDisplayed: Int,
         staleAfterSec: Int
     ): AdsbStoreSelection {
-        val withinRadius = buildList {
+        var withinHorizontalCount = 0
+        var filteredByVerticalCount = 0
+        val withinVertical = buildList {
             for (target in targetsById.values) {
                 val distanceFromQueryCenterMeters = AdsbGeoMath.haversineMeters(
                     lat1 = queryCenterLat,
@@ -54,6 +63,21 @@ internal class AdsbTrafficStore {
                     lon2 = target.lon
                 )
                 if (distanceFromQueryCenterMeters > radiusMeters) continue
+                withinHorizontalCount += 1
+
+                val altitudeDeltaMeters = ownshipAltitudeMeters?.let { ownshipAlt ->
+                    val targetAltitude = target.altitudeM?.takeIf { it.isFinite() } ?: return@let null
+                    targetAltitude - ownshipAlt
+                }
+                if (altitudeDeltaMeters != null) {
+                    val above = altitudeDeltaMeters
+                    val below = -altitudeDeltaMeters
+                    if (above > verticalAboveMeters || below > verticalBelowMeters) {
+                        filteredByVerticalCount += 1
+                        continue
+                    }
+                }
+
                 val ageSec = ((nowMonoMs - target.receivedMonoMs) / 1_000L).toInt().coerceAtLeast(0)
                 val distanceMeters = AdsbGeoMath.haversineMeters(
                     lat1 = referenceLat,
@@ -81,25 +105,36 @@ internal class AdsbTrafficStore {
                         isStale = ageSec >= staleAfterSec,
                         distanceMeters = distanceMeters,
                         bearingDegFromUser = bearingDegFromUser,
+                        usesOwnshipReference = usesOwnshipReference,
                         positionSource = target.positionSource,
                         category = target.category,
                         lastContactEpochSec = target.lastContactEpochSec,
                         isEmergencyCollisionRisk = isEmergencyCollisionRisk(
                             distanceMeters = distanceMeters,
                             trackDeg = target.trackDeg,
-                            bearingDegFromUser = bearingDegFromUser
+                            bearingDegFromUser = bearingDegFromUser,
+                            enabled = usesOwnshipReference
                         )
                     )
                 )
             }
         }
 
-        val displayed = withinRadius
-            .sortedWith(compareBy<AdsbTrafficUiModel> { it.ageSec }.thenBy { it.distanceMeters })
+        val displayed = withinVertical
+            .sortedWith(
+                compareByDescending<AdsbTrafficUiModel> { it.isEmergencyCollisionRisk }
+                    .thenBy { it.distanceMeters }
+                    .thenBy { it.ageSec }
+                    .thenBy { it.id.raw }
+            )
             .take(maxDisplayed)
 
+        val cappedCount = (withinVertical.size - displayed.size).coerceAtLeast(0)
         return AdsbStoreSelection(
-            withinRadiusCount = withinRadius.size,
+            withinRadiusCount = withinHorizontalCount,
+            withinVerticalCount = withinVertical.size,
+            filteredByVerticalCount = filteredByVerticalCount,
+            cappedCount = cappedCount,
             displayed = displayed
         )
     }
@@ -107,8 +142,10 @@ internal class AdsbTrafficStore {
     private fun isEmergencyCollisionRisk(
         distanceMeters: Double,
         trackDeg: Double?,
-        bearingDegFromUser: Double
+        bearingDegFromUser: Double,
+        enabled: Boolean
     ): Boolean {
+        if (!enabled) return false
         if (!distanceMeters.isFinite() || distanceMeters > EMERGENCY_DISTANCE_METERS) return false
         val track = trackDeg ?: return false
         if (!track.isFinite()) return false

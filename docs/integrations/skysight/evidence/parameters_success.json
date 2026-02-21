@@ -1,0 +1,148 @@
+﻿{
+    "source":  "Derived from cf.skysight.io point payload + known overlay mapping",
+    "region":  "WEST_US",
+    "date":  "20260213",
+    "time":  "0600",
+    "allowedRegions":  [
+                           "WEST_US",
+                           "EAST_US",
+                           "EUROPE",
+                           "EAST_AUS",
+                           "WA",
+                           "NZ",
+                           "JAPAN",
+                           "ARGENTINA_CHILE",
+                           "SANEW",
+                           "BRAZIL",
+                           "HRRR",
+                           "ICONEU"
+                       ],
+    "pointResponseFields":  [
+                                "accrain",
+                                "bltopwinddir",
+                                "bltopwindspd",
+                                "CFRACH",
+                                "CFRACL",
+                                "CFRACM",
+                                "da",
+                                "dwcrit",
+                                "HGT",
+                                "hwcrit",
+                                "mslpress",
+                                "potfd",
+                                "potfd_as",
+                                "real_mslpress",
+                                "real_sfcdewpt",
+                                "real_sfctemp",
+                                "sfcdewpt",
+                                "sfcgust",
+                                "sfcshf",
+                                "sfctemp",
+                                "sfcwinddir",
+                                "sfcwindspd",
+                                "wstar",
+                                "zsfclcl",
+                                "zsfclcldif"
+                            ],
+    "overlayParameters":  [
+                              {
+                                  "id":  "wstar_bsratio",
+                                  "name":  "Thermal",
+                                  "supportsLegend":  true,
+                                  "supportsTiles":  true,
+                                  "unit":  "m/s",
+                                  "category":  "Thermal",
+                                  "supportsPointValue":  true
+                              },
+                              {
+                                  "id":  "dwcrit",
+                                  "name":  "Thermal Height",
+                                  "supportsLegend":  true,
+                                  "supportsTiles":  true,
+                                  "unit":  "m",
+                                  "category":  "Thermal",
+                                  "supportsPointValue":  true
+                              },
+                              {
+                                  "id":  "sfcwind0",
+                                  "name":  "Surface Wind",
+                                  "supportsLegend":  true,
+                                  "supportsTiles":  true,
+                                  "unit":  "kt",
+                                  "category":  "Wind",
+                                  "supportsPointValue":  true
+                              },
+                              {
+                                  "id":  "bltopwind",
+                                  "name":  "BL Top Wind",
+                                  "supportsLegend":  true,
+                                  "supportsTiles":  true,
+                                  "unit":  "kt",
+                                  "category":  "Wind",
+                                  "supportsPointValue":  true
+                              },
+                              {
+                                  "id":  "zsfclcl",
+                                  "name":  "Cloudbase",
+                                  "supportsLegend":  true,
+                                  "supportsTiles":  true,
+                                  "unit":  "m",
+                                  "category":  "Cloud",
+                                  "supportsPointValue":  true
+                              },
+                              {
+                                  "id":  "zsfclcldif",
+                                  "name":  "Cloudbase Spread",
+                                  "supportsLegend":  true,
+                                  "supportsTiles":  true,
+                                  "unit":  "m",
+                                  "category":  "Cloud",
+                                  "supportsPointValue":  true
+                              },
+                              {
+                                  "id":  "accrain",
+                                  "name":  "Rain",
+                                  "supportsLegend":  true,
+                                  "supportsTiles":  true,
+                                  "unit":  "mm",
+                                  "category":  "Precip",
+                                  "supportsPointValue":  true
+                              },
+                              {
+                                  "id":  "CFRACL",
+                                  "name":  "Cloud Low",
+                                  "supportsLegend":  true,
+                                  "supportsTiles":  true,
+                                  "unit":  "%",
+                                  "category":  "Cloud",
+                                  "supportsPointValue":  true
+                              },
+                              {
+                                  "id":  "CFRACM",
+                                  "name":  "Cloud Mid",
+                                  "supportsLegend":  true,
+                                  "supportsTiles":  true,
+                                  "unit":  "%",
+                                  "category":  "Cloud",
+                                  "supportsPointValue":  true
+                              },
+                              {
+                                  "id":  "CFRACH",
+                                  "name":  "Cloud High",
+                                  "supportsLegend":  true,
+                                  "supportsTiles":  true,
+                                  "unit":  "%",
+                                  "category":  "Cloud",
+                                  "supportsPointValue":  true
+                              },
+                              {
+                                  "id":  "potfd",
+                                  "name":  "Potential Distance",
+                                  "supportsLegend":  true,
+                                  "supportsTiles":  true,
+                                  "unit":  "km",
+                                  "category":  "XC",
+                                  "supportsPointValue":  true
+                              }
+                          ]
+}

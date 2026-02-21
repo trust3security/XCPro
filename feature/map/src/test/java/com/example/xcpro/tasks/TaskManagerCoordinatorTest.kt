@@ -74,15 +74,26 @@ class TaskManagerCoordinatorTest {
     }
 
     @Test
-    fun `calculateTaskDistanceForTask uses current delegate distance`() {
+    fun `calculateTaskDistanceForTask uses provided task waypoints via segment delegate`() {
         coordinator.setTaskTypeForTesting(TaskType.RACING)
-        whenever(racingDelegate.calculateDistance()).thenReturn(123.4)
+        val first = coreWaypoint(id = "w1", lat = 0.0, lon = 0.0, role = WaypointRole.START)
+        val second = coreWaypoint(id = "w2", lat = 0.0, lon = 1.0, role = WaypointRole.TURNPOINT)
+        val third = coreWaypoint(id = "w3", lat = 1.0, lon = 1.0, role = WaypointRole.FINISH)
+        whenever(racingDelegate.calculateSegmentDistance(eq(first), eq(second))).thenReturn(12.5)
+        whenever(racingDelegate.calculateSegmentDistance(eq(second), eq(third))).thenReturn(7.5)
 
-        val distance = coordinator.calculateTaskDistanceForTask(sampleTask)
+        val distance = coordinator.calculateTaskDistanceForTask(
+            Task(
+                id = "external-task",
+                waypoints = listOf(first, second, third)
+            )
+        )
 
-        assertEquals(123.4, distance, 0.0)
-        verify(racingDelegate).calculateDistance()
-        verify(aatDelegate, never()).calculateDistance()
+        assertEquals(20.0, distance, 0.0)
+        verify(racingDelegate, never()).calculateDistance()
+        verify(racingDelegate).calculateSegmentDistance(eq(first), eq(second))
+        verify(racingDelegate).calculateSegmentDistance(eq(second), eq(third))
+        verify(aatDelegate, never()).calculateSegmentDistance(any(), any())
     }
 
     @Test

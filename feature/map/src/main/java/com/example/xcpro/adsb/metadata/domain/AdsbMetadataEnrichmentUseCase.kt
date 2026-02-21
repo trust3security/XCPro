@@ -119,29 +119,34 @@ class AdsbMetadataEnrichmentUseCase @Inject constructor(
     private fun prioritizedLookupOrder(targets: List<AdsbTrafficUiModel>): List<String> {
         if (targets.isEmpty()) return emptyList()
 
-        val priority = LinkedHashSet<String>(targets.size)
+        val highPriority = LinkedHashSet<String>(targets.size)
         val regular = LinkedHashSet<String>(targets.size)
+        val metadataHinted = LinkedHashSet<String>(targets.size)
         for (target in targets) {
             val hasMetadataHint =
                 !target.metadataTypecode.isNullOrBlank() ||
                     !target.metadataIcaoAircraftType.isNullOrBlank()
             val category = target.category
-            val categoryNeedsIcaoLookup =
-                category == null || category !in CATEGORY_WITH_DIRECT_ICON_MAPPING
-            if (!hasMetadataHint && categoryNeedsIcaoLookup) {
-                priority += target.id.raw
-            } else {
-                regular += target.id.raw
+            val categoryIsAmbiguous = category == null || category in AMBIGUOUS_CATEGORY_VALUES
+            val categoryIsNonFixedWing = category in NON_FIXED_WING_CATEGORY_VALUES
+            when {
+                hasMetadataHint -> metadataHinted += target.id.raw
+                categoryIsAmbiguous || categoryIsNonFixedWing -> highPriority += target.id.raw
+                else -> {
+                    regular += target.id.raw
+                }
             }
         }
 
-        return buildList(priority.size + regular.size) {
-            addAll(priority)
+        return buildList(highPriority.size + regular.size + metadataHinted.size) {
+            addAll(highPriority)
             addAll(regular)
+            addAll(metadataHinted)
         }
     }
 
     private companion object {
-        val CATEGORY_WITH_DIRECT_ICON_MAPPING = setOf(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14)
+        val AMBIGUOUS_CATEGORY_VALUES = setOf(0, 1, 13)
+        val NON_FIXED_WING_CATEGORY_VALUES = setOf(8, 9, 10, 11, 12, 14)
     }
 }

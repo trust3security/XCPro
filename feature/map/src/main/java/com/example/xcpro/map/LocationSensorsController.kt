@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -24,7 +25,15 @@ internal class LocationSensorsController(
     fun onLocationPermissionsResult(fineLocationGranted: Boolean) {
         if (fineLocationGranted) {
             Log.d(TAG, "Location permissions granted, starting background sensors")
-            scope.launch { ensureSensorsRunning() }
+            scope.launch {
+                runCatching { ensureSensorsRunning() }
+                    .onFailure { error ->
+                        if (error is CancellationException) {
+                            throw error
+                        }
+                        Log.e(TAG, "Failed to ensure sensors running after permission grant", error)
+                    }
+            }
         } else {
             Log.e(TAG, "Location permissions denied")
         }
@@ -39,7 +48,15 @@ internal class LocationSensorsController(
             android.content.pm.PackageManager.PERMISSION_GRANTED
         if (fineLocationGranted) {
             Log.d(TAG, "Location permissions already granted, starting background sensors")
-            scope.launch { ensureSensorsRunning() }
+            scope.launch {
+                runCatching { ensureSensorsRunning() }
+                    .onFailure { error ->
+                        if (error is CancellationException) {
+                            throw error
+                        }
+                        Log.e(TAG, "Failed to ensure sensors running while checking permissions", error)
+                    }
+            }
         } else {
             Log.d(TAG, "Requesting location permissions...")
             locationPermissionLauncher.launch(
@@ -66,59 +83,76 @@ internal class LocationSensorsController(
     fun restartSensorsIfNeeded() {
         restartJob?.cancel()
         restartJob = scope.launch {
-            Log.d(TAG, "Checking if sensors need restart after sleep mode...")
+            runCatching {
+                Log.d(TAG, "Checking if sensors need restart after sleep mode...")
+                val sensorStatus = sensorsUseCase.sensorStatus()
 
-            val sensorStatus = sensorsUseCase.sensorStatus()
+                // Restart if any critical sensor is not running (common after doze/background)
+                val needsRestart = (
+                    (!sensorStatus.gpsStarted && sensorStatus.hasLocationPermissions) ||
+                        (!sensorStatus.baroStarted && sensorStatus.baroAvailable) ||
+                        (!sensorStatus.accelStarted && sensorStatus.accelAvailable)
+                    )
+                if (needsRestart) {
+                    Log.d(
+                        TAG,
+                        "One or more sensors stopped (gpsStarted=${sensorStatus.gpsStarted}, baroStarted=${sensorStatus.baroStarted}, accelStarted=${sensorStatus.accelStarted}) - restarting all sensors"
+                    )
 
-            // Restart if any critical sensor is not running (common after doze/background)
-            val needsRestart = (
-                (!sensorStatus.gpsStarted && sensorStatus.hasLocationPermissions) ||
-                    (!sensorStatus.baroStarted && sensorStatus.baroAvailable) ||
-                    (!sensorStatus.accelStarted && sensorStatus.accelAvailable)
-                )
-            if (needsRestart) {
-                Log.d(
-                    TAG,
-                    "One or more sensors stopped (gpsStarted=${sensorStatus.gpsStarted}, baroStarted=${sensorStatus.baroStarted}, accelStarted=${sensorStatus.accelStarted}) - restarting all sensors"
-                )
+                    // Stop everything first to clean up any stale listeners
+                    stopSensors()
 
-                // Stop everything first to clean up any stale listeners
-                stopSensors()
+                    // Short delay to ensure clean shutdown
+                    delay(100)
 
-                // Short delay to ensure clean shutdown
-                delay(100)
+                    // Restart all sensors
+                    ensureSensorsRunning()
 
-                // Restart all sensors
-                ensureSensorsRunning()
+                    // Flight data fusion starts automatically with sensor data flow (no explicit start)
+                    Log.d(TAG, "Sensors restarted successfully after sleep/doze")
+                    return@runCatching
+                }
 
-                // Flight data fusion starts automatically with sensor data flow (no explicit start)
-                Log.d(TAG, "Sensors restarted successfully after sleep/doze")
-                return@launch
-            }
+                // If GPS was started but is no longer receiving updates, restart all sensors
+                if (!sensorStatus.gpsStarted && sensorStatus.hasLocationPermissions) {
+                    Log.d(TAG, "Sensors appear to be stopped (likely due to sleep mode), restarting...")
 
-            // If GPS was started but is no longer receiving updates, restart all sensors
-            if (!sensorStatus.gpsStarted && sensorStatus.hasLocationPermissions) {
-                Log.d(TAG, "Sensors appear to be stopped (likely due to sleep mode), restarting...")
+                    // Stop everything first to clean up any stale listeners
+                    stopSensors()
 
-                // Stop everything first to clean up any stale listeners
-                stopSensors()
+                    // Short delay to ensure clean shutdown
+                    delay(100)
 
-                // Short delay to ensure clean shutdown
-                delay(100)
+                    // Restart all sensors
+                    ensureSensorsRunning()
 
-                // Restart all sensors
-                ensureSensorsRunning()
+                    // Flight data fusion starts automatically with sensor data flow
+                    // No explicit start() method needed
 
-                // Flight data fusion starts automatically with sensor data flow
-                // No explicit start() method needed
-
-                Log.d(TAG, "Sensors restarted successfully after sleep mode")
-            } else if (sensorStatus.gpsStarted) {
-                Log.d(TAG, "Sensors already running, no restart needed")
-            } else {
-                Log.d(TAG, "No location permissions, cannot restart sensors")
+                    Log.d(TAG, "Sensors restarted successfully after sleep mode")
+                } else if (sensorStatus.gpsStarted) {
+                    Log.d(TAG, "Sensors already running, no restart needed")
+                } else {
+                    Log.d(TAG, "No location permissions, cannot restart sensors")
+                }
+            }.onFailure { error ->
+                if (error is CancellationException) {
+                    throw error
+                }
+                Log.e(TAG, "Sensor restart check failed", error)
             }
         }
+    }
+
+    private suspend fun safeStartSensors(): Boolean {
+        return runCatching { sensorsUseCase.startSensors() }
+            .onFailure { error ->
+                if (error is CancellationException) {
+                    throw error
+                }
+                Log.e(TAG, "Failed to start sensors through use case", error)
+            }
+            .getOrDefault(false)
     }
 
     private suspend fun ensureSensorsRunning() {
@@ -130,7 +164,7 @@ internal class LocationSensorsController(
             // Sensors might still be producing data from a previous session, but
             // the vario service (flight data collection, MacCready observers, etc.)
             // is not running. Make sure we spin it up so cards receive data.
-            val startedNow = sensorsUseCase.startSensors()
+            val startedNow = safeStartSensors()
             val statusAfterStart = sensorsUseCase.sensorStatus()
             sensorsStarted = startedNow || statusAfterStart.gpsStarted
             if (sensorsStarted) {
@@ -138,7 +172,7 @@ internal class LocationSensorsController(
             }
         }
 
-        val started = sensorsUseCase.startSensors()
+        val started = safeStartSensors()
         val statusAfterStart = sensorsUseCase.sensorStatus()
         sensorsStarted = started || statusAfterStart.gpsStarted
         if (!sensorsStarted) {

@@ -40,16 +40,26 @@ android {
         debug {
             val openSkyClientId = readSecretProperty("OPENSKY_CLIENT_ID")
             val openSkyClientSecret = readSecretProperty("OPENSKY_CLIENT_SECRET")
+            val skySightApiKey = readSecretProperty("SKYSIGHT_API_KEY")
             buildConfigField("String", "OPENSKY_CLIENT_ID", openSkyClientId.asBuildConfigString())
             buildConfigField(
                 "String",
                 "OPENSKY_CLIENT_SECRET",
                 openSkyClientSecret.asBuildConfigString()
             )
+            buildConfigField("String", "SKYSIGHT_API_KEY", skySightApiKey.asBuildConfigString())
         }
         release {
-            buildConfigField("String", "OPENSKY_CLIENT_ID", "\"\"")
-            buildConfigField("String", "OPENSKY_CLIENT_SECRET", "\"\"")
+            val openSkyClientId = readSecretProperty("OPENSKY_CLIENT_ID")
+            val openSkyClientSecret = readSecretProperty("OPENSKY_CLIENT_SECRET")
+            val skySightApiKey = readSecretProperty("SKYSIGHT_API_KEY")
+            buildConfigField("String", "OPENSKY_CLIENT_ID", openSkyClientId.asBuildConfigString())
+            buildConfigField(
+                "String",
+                "OPENSKY_CLIENT_SECRET",
+                openSkyClientSecret.asBuildConfigString()
+            )
+            buildConfigField("String", "SKYSIGHT_API_KEY", skySightApiKey.asBuildConfigString())
         }
     }
 
@@ -132,21 +142,6 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-}
-
-tasks.withType<Test>().configureEach {
-    if (name == "testDebugUnitTest") {
-        val runId = System.currentTimeMillis().toString()
-        binaryResultsDirectory.set(
-            layout.buildDirectory.dir("test-results-map/$name/$runId/binary")
-        )
-        reports.junitXml.outputLocation.set(
-            layout.buildDirectory.dir("test-results-map/$name/$runId/xml")
-        )
-        reports.html.outputLocation.set(
-            layout.buildDirectory.dir("reports/tests/$name/$runId")
-        )
-    }
 }
 
 val hasAndroidTests = file("src/androidTest").walkTopDown().any { entry ->

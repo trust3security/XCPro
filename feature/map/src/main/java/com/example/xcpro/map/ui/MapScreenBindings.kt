@@ -14,6 +14,8 @@ import com.example.xcpro.map.trail.TrailSettings
 import com.example.xcpro.map.trail.domain.TrailUpdateResult
 import com.example.xcpro.ogn.OgnTrafficSnapshot
 import com.example.xcpro.ogn.OgnTrafficTarget
+import com.example.xcpro.ogn.OgnThermalHotspot
+import com.example.xcpro.ogn.OgnGliderTrailSegment
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.map.model.GpsStatusUiModel
@@ -35,10 +37,16 @@ internal data class MapScreenBindings(
     val ognSnapshot: OgnTrafficSnapshot,
     val ognOverlayEnabled: Boolean,
     val ognIconSizePx: Int,
+    val ognThermalHotspots: List<OgnThermalHotspot>,
+    val showOgnThermalsEnabled: Boolean,
+    val ognGliderTrailSegments: List<OgnGliderTrailSegment>,
+    val showOgnGliderTrailsEnabled: Boolean,
     val adsbTargets: List<AdsbTrafficUiModel>,
     val adsbSnapshot: AdsbTrafficSnapshot,
     val adsbOverlayEnabled: Boolean,
     val adsbIconSizePx: Int,
+    val selectedOgnTarget: OgnTrafficTarget?,
+    val selectedOgnThermal: OgnThermalHotspot?,
     val selectedAdsbTarget: AdsbSelectedTargetDetails?,
     val isAATEditMode: Boolean,
     val taskType: TaskType,
@@ -69,10 +77,16 @@ internal fun rememberMapScreenBindings(
     val ognSnapshot by mapViewModel.ognSnapshot.collectAsStateWithLifecycle()
     val ognOverlayEnabled by mapViewModel.ognOverlayEnabled.collectAsStateWithLifecycle()
     val ognIconSizePx by mapViewModel.ognIconSizePx.collectAsStateWithLifecycle()
+    val ognThermalHotspots by mapViewModel.ognThermalHotspots.collectAsStateWithLifecycle()
+    val showOgnThermalsEnabled by mapViewModel.showOgnThermalsEnabled.collectAsStateWithLifecycle()
+    val ognGliderTrailSegments by mapViewModel.ognGliderTrailSegments.collectAsStateWithLifecycle()
+    val showOgnGliderTrailsEnabled by mapViewModel.showOgnGliderTrailsEnabled.collectAsStateWithLifecycle()
     val adsbTargets by mapViewModel.adsbTargets.collectAsStateWithLifecycle()
     val adsbSnapshot by mapViewModel.adsbSnapshot.collectAsStateWithLifecycle()
     val adsbOverlayEnabled by mapViewModel.adsbOverlayEnabled.collectAsStateWithLifecycle()
     val adsbIconSizePx by mapViewModel.adsbIconSizePx.collectAsStateWithLifecycle()
+    val selectedOgnTarget by mapViewModel.selectedOgnTarget.collectAsStateWithLifecycle()
+    val selectedOgnThermal by mapViewModel.selectedOgnThermal.collectAsStateWithLifecycle()
     val selectedAdsbTarget by mapViewModel.selectedAdsbTarget.collectAsStateWithLifecycle()
     val isAATEditMode by mapViewModel.isAATEditMode.collectAsStateWithLifecycle()
     val taskType by mapViewModel.taskType.collectAsStateWithLifecycle()
@@ -98,10 +112,16 @@ internal fun rememberMapScreenBindings(
         ognSnapshot = ognSnapshot,
         ognOverlayEnabled = ognOverlayEnabled,
         ognIconSizePx = ognIconSizePx,
+        ognThermalHotspots = ognThermalHotspots,
+        showOgnThermalsEnabled = showOgnThermalsEnabled,
+        ognGliderTrailSegments = ognGliderTrailSegments,
+        showOgnGliderTrailsEnabled = showOgnGliderTrailsEnabled,
         adsbTargets = adsbTargets,
         adsbSnapshot = adsbSnapshot,
         adsbOverlayEnabled = adsbOverlayEnabled,
         adsbIconSizePx = adsbIconSizePx,
+        selectedOgnTarget = selectedOgnTarget,
+        selectedOgnThermal = selectedOgnThermal,
         selectedAdsbTarget = selectedAdsbTarget,
         isAATEditMode = isAATEditMode,
         taskType = taskType,

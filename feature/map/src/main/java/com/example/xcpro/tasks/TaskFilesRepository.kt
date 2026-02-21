@@ -12,6 +12,7 @@ import com.example.xcpro.common.documents.DocumentRef
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.FileOutputStream
+import java.nio.charset.StandardCharsets
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
@@ -60,7 +61,7 @@ class TaskFilesRepository @Inject constructor(
         entries
     }
 
-    fun resolveDisplayName(document: DocumentRef): String? {
+    suspend fun resolveDisplayName(document: DocumentRef): String? = withContext(Dispatchers.IO) {
         val cursor = appContext.contentResolver.query(
             Uri.parse(document.uri),
             arrayOf(MediaStore.MediaColumns.DISPLAY_NAME),
@@ -68,19 +69,22 @@ class TaskFilesRepository @Inject constructor(
             null,
             null
         )
-        return cursor?.use { if (it.moveToFirst()) it.getString(0) else null }
+        cursor?.use { if (it.moveToFirst()) it.getString(0) else null }
     }
 
     suspend fun readText(document: DocumentRef): String? = withContext(Dispatchers.IO) {
         val uri = Uri.parse(document.uri)
-        appContext.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+        appContext.contentResolver
+            .openInputStream(uri)
+            ?.bufferedReader(StandardCharsets.UTF_8)
+            ?.use { it.readText() }
     }
 
     fun resolveMimeType(document: DocumentRef): String? =
         appContext.contentResolver.getType(Uri.parse(document.uri))
 
-    fun saveToDownloads(fileName: String, content: String): DocumentRef? {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+    suspend fun saveToDownloads(fileName: String, content: String): DocumentRef? = withContext(Dispatchers.IO) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val resolver = appContext.contentResolver
             val collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI
 
@@ -92,21 +96,31 @@ class TaskFilesRepository @Inject constructor(
 
             val pendingValues = ContentValues().apply {
                 put(MediaStore.Downloads.DISPLAY_NAME, fileName)
-                val mime = if (fileName.endsWith(".json")) "application/json" else "application/octet-stream"
+                val mime = if (fileName.endsWith(".json", ignoreCase = true)) {
+                    "application/json"
+                } else {
+                    "application/octet-stream"
+                }
                 put(MediaStore.Downloads.MIME_TYPE, mime)
                 put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
                 put(MediaStore.Downloads.IS_PENDING, 1)
             }
 
-            val itemUri = resolver.insert(collection, pendingValues) ?: return null
+            val itemUri = resolver.insert(collection, pendingValues) ?: return@withContext null
+            val writeSucceeded = runCatching {
+                resolver.openOutputStream(itemUri)?.use { output ->
+                    output.write(content.toByteArray(StandardCharsets.UTF_8))
+                } ?: error("Unable to open output stream for $fileName")
 
-            resolver.openOutputStream(itemUri)?.use { output ->
-                output.write(content.toByteArray())
-            } ?: return null
+                val publishValues = ContentValues().apply {
+                    put(MediaStore.Downloads.IS_PENDING, 0)
+                }
+                resolver.update(itemUri, publishValues, null, null)
+            }.isSuccess
 
-            ContentValues().apply {
-                put(MediaStore.Downloads.IS_PENDING, 0)
-                resolver.update(itemUri, this, null, null)
+            if (!writeSucceeded) {
+                runCatching { resolver.delete(itemUri, null, null) }
+                return@withContext null
             }
 
             DocumentRef(uri = itemUri.toString(), displayName = fileName)
@@ -118,14 +132,14 @@ class TaskFilesRepository @Inject constructor(
 
             val file = File(downloadsDir, fileName)
             FileOutputStream(file).use { output ->
-                output.write(content.toByteArray())
+                output.write(content.toByteArray(StandardCharsets.UTF_8))
             }
             DocumentRef(uri = Uri.fromFile(file).toString(), displayName = fileName)
         }
     }
 
-    fun findDownloadFileRef(fileName: String): DocumentRef? {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+    suspend fun findDownloadFileRef(fileName: String): DocumentRef? = withContext(Dispatchers.IO) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI
             val projection = arrayOf(MediaStore.Downloads._ID)
             appContext.contentResolver.query(
@@ -157,13 +171,13 @@ class TaskFilesRepository @Inject constructor(
         }
     }
 
-    fun writeCacheFile(fileName: String, content: String): DocumentRef {
+    suspend fun writeCacheFile(fileName: String, content: String): DocumentRef = withContext(Dispatchers.IO) {
         val file = File(appContext.cacheDir, fileName)
         FileOutputStream(file).use { output ->
-            output.write(content.toByteArray())
+            output.write(content.toByteArray(StandardCharsets.UTF_8))
         }
         val uri = FileProvider.getUriForFile(appContext, "${appContext.packageName}.fileprovider", file)
-        return DocumentRef(uri = uri.toString(), displayName = fileName)
+        DocumentRef(uri = uri.toString(), displayName = fileName)
     }
 
     fun appContext(): Context = appContext

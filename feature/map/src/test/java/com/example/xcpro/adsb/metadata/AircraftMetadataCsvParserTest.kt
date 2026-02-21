@@ -65,5 +65,39 @@ class AircraftMetadataCsvParserTest {
         )
         assertNull(row)
     }
+
+    @Test
+    fun parseHeader_supportsSnapshotAliasAndSingleQuotedRows() {
+        val mapping = parser.parseHeader(
+            "'icao24','registration','typecode','model','icaoAircraftClass'"
+        )
+
+        val row = parser.parseRecord(
+            rawLine = "'7c6db2','VH-TEST','B429','BELL 429','H1P'",
+            mapping = mapping,
+            sourceRowOrder = 4L
+        )
+
+        requireNotNull(row)
+        assertEquals("7c6db2", row.icao24)
+        assertEquals("VH-TEST", row.registration)
+        assertEquals("B429", row.typecode)
+        assertEquals("BELL 429", row.model)
+        assertEquals("H1P", row.icaoAircraftType)
+    }
+
+    @Test
+    fun parseRecord_handlesEscapedSingleQuotesInSingleQuotedRows() {
+        val mapping = parser.parseHeader("'icao24','model'")
+        val row = parser.parseRecord(
+            rawLine = "'abc123','VAN''S RV-6'",
+            mapping = mapping,
+            sourceRowOrder = 5L
+        )
+
+        requireNotNull(row)
+        assertEquals("abc123", row.icao24)
+        assertEquals("VAN'S RV-6", row.model)
+    }
 }
 

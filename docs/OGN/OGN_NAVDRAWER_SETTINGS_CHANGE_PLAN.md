@@ -1,4 +1,9 @@
-﻿# OGN Nav Drawer Settings Change Plan (Template-Compliant)
+# OGN Nav Drawer Settings Change Plan (Template-Compliant)
+
+> Historical implementation record (2026-02-11). For current runtime behavior, use:
+> - `docs/OGN/OGN.md`
+> - `docs/OGN/OGN_PROTOCOL_NOTES.md`
+> - `docs/ARCHITECTURE/PIPELINE.md`
 
 ## 0) Metadata
 
@@ -93,7 +98,7 @@ Explicitly forbidden comparisons:
   - Preference I/O and OGN repository network: `IO`
   - No heavy compute introduced on `Main`
 - Primary cadence/gating sensor:
-  - OGN center updates remain camera/GPS debounced in `MapScreenViewModel` (unchanged)
+  - OGN center updates are GPS-driven from `mapLocation` in `MapScreenTrafficCoordinator`.
 - Hot-path latency budget:
   - Slider change to icon-size style apply: target <= 50 ms typical
 
@@ -125,7 +130,7 @@ Explicitly forbidden comparisons:
 
 Before:
 
-`General settings (no OGN page) -> no OGN icon-size preference -> OgnTrafficOverlay fixed circle radius`
+`General settings (no OGN page) -> no OGN icon-size preference -> OgnTrafficOverlay fixed marker size`
 
 After:
 
@@ -178,7 +183,7 @@ After:
   - Size reapply is verified on active runtime paths (`onMapReady`, `LaunchedEffect`, `onMapStyleChanged`), not only on `MapOverlayManager.initializeOverlays(...)`.
   - OGN viewport culling (`OgnSubscriptionPolicy.isInViewport`) remains in effect after overlay refactor.
   - OGN style image IDs are unique to OGN overlay, so OGN cleanup cannot remove ADS-B style images.
-  - Icon-size slider semantics are pixel-based (`50..124`) and converted to MapLibre `iconSize` scale via a fixed base bitmap size.
+  - Icon-size slider semantics are pixel-based (`124..512`) and converted to MapLibre `iconSize` scale via a fixed base bitmap size.
   - OGN target cap remains enforced after icon migration.
   - OGN label offset scales with icon size so labels remain readable at min/max values.
   - OGN layer insertion order remains stable relative to blue ownship layer.
@@ -253,7 +258,7 @@ Execution compliance matrix for this change:
 |---|---|---|---|
 | CM-01 | Add `OGN` tile under `General` and route to dedicated screen | `Settings-df.kt`, `AppNavGraph.kt` | PASS |
 | CM-02 | OGN settings screen uses `SettingsTopAppBar` pattern | `OgnSettingsScreen.kt` | PASS |
-| CM-03 | Slider range exactly `50..124` and default `56` | `OgnIconSizing.kt`, `OgnSettingsScreen.kt`, `OgnTrafficPreferencesRepository.kt` | PASS |
+| CM-03 | Slider range exactly `124..512` and default `124` | `OgnIconSizing.kt`, `OgnSettingsScreen.kt`, `OgnTrafficPreferencesRepository.kt` | PASS |
 | CM-04 | OGN icon size persisted and restored from DataStore | `OgnTrafficPreferencesRepository.kt` | PASS |
 | CM-05 | Layer-correct path (`UI -> VM -> UseCase -> PreferencesRepository`) | `OgnSettingsViewModel.kt`, `OgnSettingsUseCase.kt`, `MapScreenUseCases.kt` | PASS |
 | CM-06 | OGN marker/icon size updates live without restart | `MapScreenViewModel.kt`, `MapScreenBindings.kt`, `MapScreenRoot.kt`, `MapOverlayManager.kt`, `OgnTrafficOverlay.kt` | CODE PASS / MANUAL PENDING |
@@ -300,10 +305,11 @@ Pass order:
 ## 11) Current Verification Snapshot (2026-02-11)
 
 - Completed:
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.ogn.OgnTrafficPreferencesRepositoryTest" --tests "com.example.xcpro.map.MapScreenViewModelTest.ognIconSize_defaultsTo56Px" --tests "com.example.xcpro.map.MapScreenViewModelTest.ognIconSize_readsPersistedPreferenceOnInit"` (PASS)
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.ogn.OgnTrafficPreferencesRepositoryTest" --tests "com.example.xcpro.map.MapScreenViewModelTest.ognIconSize_defaultsToConfiguredDefaultPx" --tests "com.example.xcpro.map.MapScreenViewModelTest.ognIconSize_readsPersistedPreferenceOnInit"` (PASS)
   - `./gradlew :app:compileDebugKotlin` (PASS)
   - `./gradlew enforceRules` (PASS)
   - `./gradlew testDebugUnitTest` (PASS)
   - `./gradlew assembleDebug` (PASS)
 - Remaining:
   - Manual map checks for slider live behavior, style-change resilience, and min/max label readability.
+

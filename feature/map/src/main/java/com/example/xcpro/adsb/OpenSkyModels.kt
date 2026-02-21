@@ -25,7 +25,7 @@ data class OpenSkyStateVector(
 }
 
 data class OpenSkyTokenResponse(
-    val accessToken: String?,
+    val accessToken: String,
     val expiresInSec: Long?
 )
 
@@ -33,4 +33,3 @@ data class OpenSkyClientCredentials(
     val clientId: String,
     val clientSecret: String
 )
-

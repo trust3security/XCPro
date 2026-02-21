@@ -82,6 +82,28 @@ function Assert-NoMatchesInComposableFiles {
     }
 }
 
+function Assert-MaxLines {
+    param(
+        [string]$Name,
+        [string]$FilePath,
+        [int]$MaxLines
+    )
+    if (-not (Test-Path $FilePath)) {
+        Write-Host ""
+        Write-Host "FAIL: $Name"
+        Write-Host "Missing file: $FilePath"
+        $script:HadFailures = $true
+        return
+    }
+    $lineCount = (Get-Content $FilePath | Measure-Object -Line).Lines
+    if ($lineCount -gt $MaxLines) {
+        Write-Host ""
+        Write-Host "FAIL: $Name"
+        Write-Host "$FilePath has $lineCount lines (max $MaxLines)."
+        $script:HadFailures = $true
+    }
+}
+
 Require-Rg
 
 $script:HadFailures = $false
@@ -223,12 +245,21 @@ Assert-NoMatches -Name "Direct task render-router calls outside sync coordinator
 $ignoredMapTaskTestsArgs = @(
     "-n",
     "(@Ignore|@Disabled)",
-    "--glob", "feature/map/src/test/java/com/example/xcpro/map/**/*.kt",
-    "--glob", "feature/map/src/test/java/com/example/xcpro/tasks/**/*.kt",
+    "--glob", "feature/map/src/test/java/**/*.kt",
     "--glob", "app/src/test/java/**/*.kt",
     "--glob", "app/src/androidTest/java/**/*.kt"
 )
 Assert-NoMatches -Name "Ignored/disabled tests in map/task test scopes" -RgArgs $ignoredMapTaskTestsArgs
+
+# 16A) Task composables must not resolve runtime manager owners directly.
+$taskManagerCompatBypassArgs = @(
+    "-n",
+    "rememberTaskManagerCoordinator\(",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/**/*.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/map/ui/task/**/*.kt",
+    "--glob", "!feature/map/src/main/java/com/example/xcpro/tasks/TaskManagerCompat.kt"
+)
+Assert-NoMatches -Name "rememberTaskManagerCoordinator bypass in task/map-task composable surfaces" -RgArgs $taskManagerCompatBypassArgs
 
 # 17) Non-UI manager/state model: no Compose runtime state in runtime manager/state classes.
 $mapManagerComposeStateArgs = @(
@@ -251,6 +282,320 @@ $mapTaskTodoArgs = @(
     "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/**/*.kt"
 )
 Assert-NoMatches -Name "TODO markers in production map/task code paths" -RgArgs $mapTaskTodoArgs
+
+# 19) Persisted OZ parsing must use typed contract (no raw string key indexing).
+$rawOzParamsArgs = @(
+    "-n",
+    'ozParams\["',
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/**/*.kt"
+)
+Assert-NoMatches -Name "Raw ozParams string-key indexing in task production code" -RgArgs $rawOzParamsArgs
+
+# 20) Task custom-parameter contract: no raw custom-parameter string literals in map builders.
+$rawTaskParamLiteralPairsArgs = @(
+    "-n",
+    '"(targetLat|targetLon|targetParam|targetLocked|keyholeInnerRadius|keyholeAngle|faiQuadrantOuterRadius|aatMinimumTimeSeconds|aatMaximumTimeSeconds|radiusMeters|outerRadiusMeters|innerRadiusMeters|startAngleDegrees|endAngleDegrees|lineWidthMeters|isTargetPointCustomized)"\s+to',
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/**/*.kt"
+)
+Assert-NoMatches -Name "Raw task custom-parameter literals in task production code" -RgArgs $rawTaskParamLiteralPairsArgs
+
+# 21) Task custom-parameter contract: no direct customParameters string-key indexing.
+$rawCustomParametersIndexArgs = @(
+    "-n",
+    'customParameters\s*\[\s*"',
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/**/*.kt"
+)
+Assert-NoMatches -Name "Raw customParameters string-key indexing in task production code" -RgArgs $rawCustomParametersIndexArgs
+
+# 22) Maintainability size budget for map/task hotspots.
+Assert-MaxLines `
+    -Name "MapCameraManager line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/map/MapCameraManager.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "MapScreenReplayCoordinator line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/map/MapScreenReplayCoordinator.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "MapScreenViewModel line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "MapScreenRoot line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt" `
+    -MaxLines 250
+Assert-MaxLines `
+    -Name "MapScreenRootStateBindings line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootStateBindings.kt" `
+    -MaxLines 120
+Assert-MaxLines `
+    -Name "MapScreenRootHelpers line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootHelpers.kt" `
+    -MaxLines 250
+Assert-MaxLines `
+    -Name "MapScreenRootEffects line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootEffects.kt" `
+    -MaxLines 220
+Assert-MaxLines `
+    -Name "MapScreenScaffoldInputs line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt" `
+    -MaxLines 320
+Assert-MaxLines `
+    -Name "MapScreenContentOverlays line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentOverlays.kt" `
+    -MaxLines 250
+Assert-MaxLines `
+    -Name "MapTrafficDebugPanels line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/map/ui/MapTrafficDebugPanels.kt" `
+    -MaxLines 250
+Assert-MaxLines `
+    -Name "MapReplayDiagnosticsLogger line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/map/ui/MapReplayDiagnosticsLogger.kt" `
+    -MaxLines 120
+Assert-MaxLines `
+    -Name "LocationManager line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/map/LocationManager.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "FlightDataManager line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/map/FlightDataManager.kt" `
+    -MaxLines 320
+Assert-MaxLines `
+    -Name "BlueLocationOverlay line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/map/BlueLocationOverlay.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "RacingNavigationEngine line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationEngine.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "AATTaskManager line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/AATTaskManager.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "RacingTaskManager line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskManager.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "TaskSheetViewModel line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt" `
+    -MaxLines 320
+Assert-MaxLines `
+    -Name "RulesBTTab line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/RulesBTTab.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "RulesBTTabComponents line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/RulesBTTabComponents.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "RulesBTTabParameters line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/RulesBTTabParameters.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "AATDistanceCalculator line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/calculations/AATDistanceCalculator.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "AATTaskDisplay line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/AATTaskDisplay.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "AATTaskCalculator line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/AATTaskCalculator.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "AATTaskValidator line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/AATTaskValidator.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "AATTaskQuickValidationEngine line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/AATTaskQuickValidationEngine.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "AATInteractiveDistanceCalculator line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/calculations/AATInteractiveDistanceCalculator.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "MapActionButtons line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/map/components/MapActionButtons.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "MapActionButtonItems line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/map/components/MapActionButtonItems.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "AATEditModeOverlay line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/ui/AATEditModeOverlay.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "AATEditModeHeader line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/ui/AATEditModeHeader.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "AATEditModeInfoCard line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/ui/AATEditModeInfoCard.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "AATEditModeActions line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/ui/AATEditModeActions.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "SectorAreaCalculator line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/areas/SectorAreaCalculator.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "SectorAreaGeometrySupport line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/areas/SectorAreaGeometrySupport.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "RacingReplayLogBuilder line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/map/replay/RacingReplayLogBuilder.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "RacingReplayAnchorBuilder line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/map/replay/RacingReplayAnchorBuilder.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "RacingTask model line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/racing/models/RacingTask.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "RacingTaskValidationModels line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/racing/models/RacingTaskValidationModels.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "RacingTaskResultModels line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/racing/models/RacingTaskResultModels.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "SnailTrailOverlay line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/map/trail/SnailTrailOverlay.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "SnailTrailTailRenderer line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/map/trail/SnailTrailTailRenderer.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "AATManageList line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/AATManageList.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "AATManageListItems line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/AATManageListItems.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "RacingWaypointList line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingWaypointList.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "RacingWaypointListItems line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingWaypointListItems.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "AATPathOptimizer line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/AATPathOptimizer.kt" `
+    -MaxLines 250
+Assert-MaxLines `
+    -Name "AATPathOptimizerSupport line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/AATPathOptimizerSupport.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "AATInteractiveTurnpointManager line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/AATInteractiveTurnpointManager.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "AATInteractiveTurnpointIntegration line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/AATInteractiveTurnpointIntegration.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "AATManageListTypeInference line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/AATManageListTypeInference.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "AATAreaTapDetector line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/map/AATAreaTapDetector.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "AATMapInteractionHandler line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/map/AATMapInteractionHandler.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "AATMovablePointManager line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/map/AATMovablePointManager.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "AATMovablePointGeometrySupport line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/map/AATMovablePointGeometrySupport.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "AATMovablePointStrategySupport line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/map/AATMovablePointStrategySupport.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "AATMapRenderer line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/rendering/AATMapRenderer.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "AATTargetPointPinRenderer line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/rendering/AATTargetPointPinRenderer.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "AATMapVisualIndicators line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/ui/AATMapVisualIndicators.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "AATMapVisualStatusIndicators line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/ui/AATMapVisualStatusIndicators.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "FAIComplianceRules line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/validation/FAIComplianceRules.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "FAIComplianceTaskRules line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/validation/FAIComplianceTaskRules.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "FAIComplianceAreaRules line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/validation/FAIComplianceAreaRules.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "AATWaypointManager line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/waypoints/AATWaypointManager.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "AATWaypointInitializationSupport line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/waypoints/AATWaypointInitializationSupport.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "AATWaypointMutationSupport line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/waypoints/AATWaypointMutationSupport.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "DefaultAATTaskEngine line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/domain/engine/DefaultAATTaskEngine.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "AATTaskWaypointCodec line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/domain/engine/AATTaskWaypointCodec.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "RacingBoundaryCrossingPlanner line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/racing/boundary/RacingBoundaryCrossingPlanner.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "RacingBoundaryCrossingMath line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/racing/boundary/RacingBoundaryCrossingMath.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "KeyholeGeometry line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/racing/turnpoints/KeyholeGeometry.kt" `
+    -MaxLines 350
+Assert-MaxLines `
+    -Name "KeyholeShapeSupport line budget" `
+    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/racing/turnpoints/KeyholeShapeSupport.kt" `
+    -MaxLines 350
 
 if ($script:HadFailures) {
     Write-Host ""

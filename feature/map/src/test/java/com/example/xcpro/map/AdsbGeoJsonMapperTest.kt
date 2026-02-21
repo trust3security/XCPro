@@ -24,6 +24,17 @@ class AdsbGeoJsonMapperTest {
             feature.getStringProperty(AdsbGeoJsonMapper.PROP_ICON_ID)
         )
         assertTrue(feature.hasProperty(AdsbGeoJsonMapper.PROP_TRACK_DEG))
+        assertTrue(feature.hasProperty(AdsbGeoJsonMapper.PROP_DISTANCE_M))
+        assertEquals(
+            1.0,
+            feature.getNumberProperty(AdsbGeoJsonMapper.PROP_HAS_OWNSHIP_REF).toDouble(),
+            1e-6
+        )
+        assertEquals(
+            0.0,
+            feature.getNumberProperty(AdsbGeoJsonMapper.PROP_IS_EMERGENCY).toDouble(),
+            1e-6
+        )
         assertEquals(
             273.5,
             feature.getNumberProperty(AdsbGeoJsonMapper.PROP_TRACK_DEG).toDouble(),
@@ -58,12 +69,33 @@ class AdsbGeoJsonMapperTest {
             "adsb_icon_glider_emergency",
             feature.getStringProperty(AdsbGeoJsonMapper.PROP_ICON_ID)
         )
+        assertEquals(
+            1.0,
+            feature.getNumberProperty(AdsbGeoJsonMapper.PROP_IS_EMERGENCY).toDouble(),
+            1e-6
+        )
+    }
+
+    @Test
+    fun toFeature_marksOwnshipReferenceAvailabilityFlag() {
+        val target = sampleTarget(category = 2, trackDeg = 95.0, usesOwnshipReference = false)
+
+        val feature = AdsbGeoJsonMapper.toFeature(target)
+
+        assertNotNull(feature)
+        feature ?: return
+        assertEquals(
+            0.0,
+            feature.getNumberProperty(AdsbGeoJsonMapper.PROP_HAS_OWNSHIP_REF).toDouble(),
+            1e-6
+        )
     }
 
     private fun sampleTarget(
         category: Int?,
         trackDeg: Double?,
-        isEmergencyCollisionRisk: Boolean = false
+        isEmergencyCollisionRisk: Boolean = false,
+        usesOwnshipReference: Boolean = true
     ): AdsbTrafficUiModel {
         val id = Icao24.from("abc123") ?: error("invalid test id")
         return AdsbTrafficUiModel(
@@ -79,6 +111,7 @@ class AdsbGeoJsonMapperTest {
             isStale = false,
             distanceMeters = 1500.0,
             bearingDegFromUser = 220.0,
+            usesOwnshipReference = usesOwnshipReference,
             positionSource = 0,
             category = category,
             lastContactEpochSec = null,

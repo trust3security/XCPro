@@ -1,0 +1,18 @@
+﻿HTTP/1.1 400 Bad Request
+Content-Type: application/json
+Content-Length: 14
+Connection: keep-alive
+Date: Sun, 15 Feb 2026 07:07:34 GMT
+X-Amzn-Trace-Id: Root=1-699170b6-21b468f70ec2cfae01240971;Parent=569901d227953634;Sampled=0;Lineage=1:fe8255d9:0
+x-amzn-RequestId: 952de306-f111-46ee-8b5d-03d6219e5e14
+Access-Control-Allow-Origin: *
+x-amz-apigw-id: Yz6MoFPRywMEb4A=
+Access-Control-Allow-Methods: GET, POST, HEAD
+Vary: Origin
+X-Cache: Error from cloudfront
+Via: 1.1 e80732d7ef726bed77c3f67a8339cc96.cloudfront.net (CloudFront)
+X-Amz-Cf-Pop: SYD3-P2
+Alt-Svc: h3=":443"; ma=86400
+X-Amz-Cf-Id: lfdGNXnbUi_N-BhsX4YdGO2dKNU0uBc94Uzl96HYtTv306xZiFAdXQ==
+
+Missing Origin

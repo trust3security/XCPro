@@ -27,6 +27,21 @@ https://opensky-network.org/data
 OpenSky aircraft database page points to the dataset:
 https://opensky-network.org/data/aircraft
 
+### 1.2 Snapshot source format caveat (verified 2026-02-17)
+
+The S3 "complete snapshot" source currently selected by sync discovery
+(`metadata/aircraft-database-complete-YYYY-MM.csv`) does not always match
+the direct dataset format exactly.
+
+Observed differences:
+- Header may provide `icaoAircraftClass` instead of `icaoAircraftType`.
+- Rows are often single-quoted (for example `'7c6db2'`) rather than double-quoted.
+
+Implication:
+- Parser/header-mapping must support both schema variants.
+- ICAO normalization must strip optional single or double wrapping quotes before regex validation.
+- If not handled, import can fail or lose class metadata, degrading icon classification quality.
+
 ---
 
 ## 2) Data model (Room)
@@ -134,6 +149,22 @@ If dependencies are not allowed, implement:
 
 Header-driven mapping is mandatory.
 
+### 4.4 Updated parser requirements (from deep-dive)
+
+Must support both of these OpenSky metadata shapes:
+
+1. Direct dataset format (`aircraftDatabase.csv`):
+   - Double-quoted CSV headers/values.
+   - `icaoaircrafttype` column.
+2. S3 complete snapshot format (`aircraft-database-complete-YYYY-MM.csv`):
+   - Single-quoted rows are common.
+   - `icaoAircraftClass` column commonly present.
+
+Required behavior:
+- Accept aliases for both `icaoaircrafttype` and `icaoaircraftclass`.
+- Strip wrapping single/double quotes before per-field normalization.
+- Preserve class metadata during dedupe/upsert (do not drop non-null class due tie/ordering alone).
+
 ---
 
 ## 5) Joining metadata into UI
@@ -173,3 +204,6 @@ If metadata not ready:
 - Unit: CSV parser handles quoted commas and escaped quotes.
 - Unit: header mapping works even if column order changes.
 - Integration: import a tiny sample CSV into in-memory Room and confirm lookup by ICAO24 returns expected fields.
+- Unit: parser handles single-quoted snapshot rows.
+- Unit: parser maps `icaoAircraftClass` as alias for ICAO class field.
+- Unit: quoted ICAO24 values normalize correctly (for example `'7c6db2'` -> `7c6db2`).

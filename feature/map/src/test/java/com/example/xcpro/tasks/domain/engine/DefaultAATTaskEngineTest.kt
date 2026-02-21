@@ -2,6 +2,7 @@ package com.example.xcpro.tasks.domain.engine
 
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.TaskWaypoint
+import com.example.xcpro.tasks.core.TaskWaypointParamKeys
 import com.example.xcpro.tasks.core.WaypointRole
 import java.time.Duration
 import org.junit.Assert.assertEquals
@@ -40,8 +41,8 @@ class DefaultAATTaskEngineTest {
         engine.updateAreaRadiusMeters(index = 1, radiusMeters = 15000.0)
 
         val waypoint = engine.state.value.base.task.waypoints[1]
-        assertEquals(45.1, (waypoint.customParameters["targetLat"] as Double), 0.0)
-        assertEquals(7.2, (waypoint.customParameters["targetLon"] as Double), 0.0)
+        assertEquals(45.1, (waypoint.customParameters[TaskWaypointParamKeys.TARGET_LAT] as Double), 0.0)
+        assertEquals(7.2, (waypoint.customParameters[TaskWaypointParamKeys.TARGET_LON] as Double), 0.0)
         assertEquals(15.0, waypoint.customRadius ?: 0.0, 1e-9)
     }
 

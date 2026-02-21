@@ -23,6 +23,7 @@ import org.maplibre.android.maps.Style
 import org.maplibre.android.style.expressions.Expression
 import org.maplibre.android.style.layers.PropertyFactory.iconAllowOverlap
 import org.maplibre.android.style.layers.PropertyFactory.iconAnchor
+import org.maplibre.android.style.layers.PropertyFactory.iconColor
 import org.maplibre.android.style.layers.PropertyFactory.iconIgnorePlacement
 import org.maplibre.android.style.layers.PropertyFactory.iconImage
 import org.maplibre.android.style.layers.PropertyFactory.iconKeepUpright
@@ -85,6 +86,7 @@ class AdsbTrafficOverlay(
                         iconAllowOverlap(true),
                         iconIgnorePlacement(true),
                         iconAnchor("center"),
+                        iconColor(proximityColorExpression()),
                         iconOpacity(Expression.get(AdsbGeoJsonMapper.PROP_ALPHA))
                     )
                 val anchorId = BlueLocationOverlay.LAYER_ID
@@ -201,11 +203,11 @@ class AdsbTrafficOverlay(
 
             val baseBitmap = drawableToBitmap(icon.resId) ?: return@forEach
             if (normalImage == null) {
-                style.addImage(icon.styleImageId, baseBitmap)
+                style.addImage(icon.styleImageId, baseBitmap, true)
             }
             if (emergencyImage == null) {
                 val emergencyBitmap = tintBitmap(baseBitmap, EMERGENCY_ICON_COLOR)
-                style.addImage(emergencyId, emergencyBitmap)
+                style.addImage(emergencyId, emergencyBitmap, true)
             }
         }
     }
@@ -286,6 +288,34 @@ class AdsbTrafficOverlay(
     private fun labelOffsetXForPx(iconSizePx: Int): Float =
         LABEL_TEXT_OFFSET_BASE_X * iconScaleForPx(iconSizePx)
 
+    private fun proximityColorExpression(): Expression {
+        val distanceExpr = Expression.coalesce(
+            Expression.get(AdsbGeoJsonMapper.PROP_DISTANCE_M),
+            Expression.literal(100_000.0)
+        )
+        val baseColor = Expression.interpolate(
+            Expression.linear(),
+            distanceExpr,
+            Expression.stop(0.0, Expression.color(Color.parseColor(PROXIMITY_RED_HEX))),
+            Expression.stop(2_000.0, Expression.color(Color.parseColor(PROXIMITY_RED_HEX))),
+            Expression.stop(5_000.0, Expression.color(Color.parseColor(PROXIMITY_GREEN_HEX))),
+            Expression.stop(100_000.0, Expression.color(Color.parseColor(PROXIMITY_GREEN_HEX)))
+        )
+        return Expression.switchCase(
+            Expression.eq(
+                Expression.get(AdsbGeoJsonMapper.PROP_IS_EMERGENCY),
+                Expression.literal(1)
+            ),
+            Expression.color(Color.parseColor(PROXIMITY_RED_HEX)),
+            Expression.eq(
+                Expression.get(AdsbGeoJsonMapper.PROP_HAS_OWNSHIP_REF),
+                Expression.literal(1)
+            ),
+            baseColor,
+            Expression.color(Color.parseColor(PROXIMITY_NEUTRAL_HEX))
+        )
+    }
+
     private companion object {
         private const val TAG = "AdsbTrafficOverlay"
 
@@ -305,5 +335,8 @@ class AdsbTrafficOverlay(
         private const val LABEL_TEXT_COLOR = "#FFF3D4"
         private const val LABEL_HALO_COLOR = "#2B1204"
         private val EMERGENCY_ICON_COLOR: Int = Color.parseColor("#E53935")
+        private const val PROXIMITY_GREEN_HEX = "#2E7D32"
+        private const val PROXIMITY_RED_HEX = "#E53935"
+        private const val PROXIMITY_NEUTRAL_HEX = "#A7B4C4"
     }
 }

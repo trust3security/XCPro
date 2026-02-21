@@ -1,9 +1,9 @@
-package com.example.xcpro.map.ui
-
+﻿package com.example.xcpro.map.ui
 import android.util.Log
 import androidx.compose.material3.DrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
@@ -38,6 +38,9 @@ import com.example.xcpro.adsb.AdsbTrafficSnapshot
 import com.example.xcpro.adsb.AdsbTrafficUiModel
 import com.example.xcpro.adsb.AdsbSelectedTargetDetails
 import com.example.xcpro.ogn.OgnTrafficSnapshot
+import com.example.xcpro.ogn.OgnTrafficTarget
+import com.example.xcpro.ogn.OgnThermalHotspot
+import com.example.xcpro.ogn.OgnGliderTrailSegment
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.variometer.layout.VariometerUiState
@@ -45,7 +48,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.maplibre.android.maps.MapLibreMap
-
 internal data class MapScreenScaffoldInputs(
     val drawerState: DrawerState,
     val navController: NavHostController,
@@ -61,6 +63,7 @@ internal data class MapScreenScaffoldInputs(
     val mapState: MapScreenState,
     val mapInitializer: MapInitializer,
     val onMapReady: (MapLibreMap) -> Unit,
+    val onMapViewBound: () -> Unit,
     val locationManager: LocationManager,
     val flightDataManager: FlightDataManager,
     val flightViewModel: FlightDataViewModel,
@@ -76,10 +79,13 @@ internal data class MapScreenScaffoldInputs(
     val showRecenterButton: Boolean,
     val showReturnButton: Boolean,
     val showDistanceCircles: Boolean,
-    val ognSnapshot: OgnTrafficSnapshot,
-    val ognOverlayEnabled: Boolean,
+    val ognSnapshot: OgnTrafficSnapshot, val ognOverlayEnabled: Boolean,
+    val ognThermalHotspots: List<OgnThermalHotspot>, val showOgnThermalsEnabled: Boolean,
+    val ognGliderTrailSegments: List<OgnGliderTrailSegment>, val showOgnGliderTrailsEnabled: Boolean,
     val adsbSnapshot: AdsbTrafficSnapshot,
     val adsbOverlayEnabled: Boolean,
+    val selectedOgnTarget: OgnTrafficTarget?,
+    val selectedOgnThermal: OgnThermalHotspot?,
     val selectedAdsbTarget: AdsbSelectedTargetDetails?,
     val isUiEditMode: Boolean,
     val onEditModeChange: (Boolean) -> Unit,
@@ -112,9 +118,13 @@ internal data class MapScreenScaffoldInputs(
     val qnhCalibrationState: QnhCalibrationState,
     val onAutoCalibrateQnh: () -> Unit,
     val onSetManualQnh: (Double) -> Unit,
-    val onToggleOgnTraffic: () -> Unit,
-    val onToggleAdsbTraffic: () -> Unit,
+    val onToggleOgnTraffic: () -> Unit, val onToggleOgnThermals: () -> Unit,
+    val onToggleOgnGliderTrails: () -> Unit,
+    val onToggleAdsbTraffic: () -> Unit, val onOgnTargetSelected: (String) -> Unit,
+    val onOgnThermalSelected: (String) -> Unit,
     val onAdsbTargetSelected: (Icao24) -> Unit,
+    val onDismissOgnTargetDetails: () -> Unit,
+    val onDismissOgnThermalDetails: () -> Unit,
     val onDismissAdsbTargetDetails: () -> Unit,
     val ballastUiState: StateFlow<BallastUiState>,
     val isBallastPillHidden: Boolean,
@@ -132,9 +142,7 @@ internal data class MapScreenScaffoldInputs(
     val showRacingReplayFab: Boolean,
     val onRacingReplayClick: () -> Unit
 )
-
 private const val MapScreenScaffoldInputsTag = "MapScreen"
-
 @Composable
 internal fun rememberMapScreenScaffoldInputs(
     coroutineScope: CoroutineScope,
@@ -165,11 +173,13 @@ internal fun rememberMapScreenScaffoldInputs(
     onFlightModeOffsetChange: (Offset) -> Unit,
     onBallastOffsetChange: (Offset) -> Unit,
     flightViewModel: FlightDataViewModel,
+    flightDataManager: FlightDataManager,
     windArrowState: WindArrowUiState,
     showWindSpeedOnVario: Boolean,
     cardStyle: CardStyle,
     hiddenCardIds: Set<String>
 ): MapScreenScaffoldInputs {
+    val lifecycleOwner = LocalLifecycleOwner.current
     val onDrawerItemSelected: (String) -> Unit = { item ->
         Log.d(MapScreenScaffoldInputsTag, "Navigation drawer item selected: $item")
         coroutineScope.launch {
@@ -186,17 +196,16 @@ internal fun rememberMapScreenScaffoldInputs(
         onMapStyleSelected(style)
     }
     val onMapReady: (MapLibreMap) -> Unit = { map ->
-        mapRuntimeController.onMapReady(map)
+        if (mapState.mapLibreMap != null) mapRuntimeController.onMapReady(map)
         managers.overlayManager.setOgnIconSizePx(bindings.ognIconSizePx)
-        managers.overlayManager.updateOgnTrafficTargets(
-            if (bindings.ognOverlayEnabled) bindings.ognTargets else emptyList()
-        )
+        managers.overlayManager.updateOgnTrafficTargets(if (bindings.ognOverlayEnabled) bindings.ognTargets else emptyList())
+        managers.overlayManager.updateOgnThermalHotspots(if (bindings.ognOverlayEnabled && bindings.showOgnThermalsEnabled) bindings.ognThermalHotspots else emptyList())
+        managers.overlayManager.updateOgnGliderTrailSegments(if (bindings.ognOverlayEnabled && bindings.showOgnGliderTrailsEnabled) bindings.ognGliderTrailSegments else emptyList())
         managers.overlayManager.setAdsbIconSizePx(bindings.adsbIconSizePx)
-        managers.overlayManager.updateAdsbTrafficTargets(
-            if (bindings.adsbOverlayEnabled) bindings.adsbTargets else emptyList()
-        )
+        managers.overlayManager.updateAdsbTrafficTargets(if (bindings.adsbOverlayEnabled) bindings.adsbTargets else emptyList())
+        managers.overlayManager.reapplyForecastOverlay(); managers.overlayManager.reapplyWeatherRainOverlay()
     }
-
+    val onMapViewBound: () -> Unit = { managers.lifecycleManager.syncCurrentOwnerState(lifecycleOwner.lifecycle.currentState) }
     return MapScreenScaffoldInputs(
         drawerState = drawerState,
         navController = navController,
@@ -212,8 +221,9 @@ internal fun rememberMapScreenScaffoldInputs(
         mapState = mapState,
         mapInitializer = managers.mapInitializer,
         onMapReady = onMapReady,
+        onMapViewBound = onMapViewBound,
         locationManager = managers.locationManager,
-        flightDataManager = mapViewModel.flightDataManager,
+        flightDataManager = flightDataManager,
         flightViewModel = flightViewModel,
         taskType = bindings.taskType,
         createTaskGestureHandler = mapViewModel::createTaskGestureHandler,
@@ -229,8 +239,14 @@ internal fun rememberMapScreenScaffoldInputs(
         showDistanceCircles = bindings.showDistanceCircles,
         ognSnapshot = bindings.ognSnapshot,
         ognOverlayEnabled = bindings.ognOverlayEnabled,
+        ognThermalHotspots = bindings.ognThermalHotspots,
+        showOgnThermalsEnabled = bindings.showOgnThermalsEnabled,
+        ognGliderTrailSegments = bindings.ognGliderTrailSegments,
+        showOgnGliderTrailsEnabled = bindings.showOgnGliderTrailsEnabled,
         adsbSnapshot = bindings.adsbSnapshot,
         adsbOverlayEnabled = bindings.adsbOverlayEnabled,
+        selectedOgnTarget = bindings.selectedOgnTarget,
+        selectedOgnThermal = bindings.selectedOgnThermal,
         selectedAdsbTarget = bindings.selectedAdsbTarget,
         isUiEditMode = mapUiState.isUiEditMode,
         onEditModeChange = { enabled -> mapViewModel.onEvent(MapUiEvent.SetUiEditMode(enabled)) },
@@ -247,22 +263,8 @@ internal fun rememberMapScreenScaffoldInputs(
         variometerUiState = variometerUiState,
         minVariometerSizePx = minVariometerSizePx,
         maxVariometerSizePx = maxVariometerSizePx,
-        onVariometerOffsetChange = { offset ->
-            mapViewModel.onVariometerOffsetCommitted(
-                offset = offset.toOffsetPx(),
-                screenWidthPx = screenWidthPx,
-                screenHeightPx = screenHeightPx
-            )
-        },
-        onVariometerSizeChange = { newSize ->
-            mapViewModel.onVariometerSizeCommitted(
-                sizePx = newSize,
-                screenWidthPx = screenWidthPx,
-                screenHeightPx = screenHeightPx,
-                minSizePx = minVariometerSizePx,
-                maxSizePx = maxVariometerSizePx
-            )
-        },
+        onVariometerOffsetChange = { offset -> mapViewModel.onVariometerOffsetCommitted(offset = offset.toOffsetPx(), screenWidthPx = screenWidthPx, screenHeightPx = screenHeightPx) },
+        onVariometerSizeChange = { newSize -> mapViewModel.onVariometerSizeCommitted(sizePx = newSize, screenWidthPx = screenWidthPx, screenHeightPx = screenHeightPx, minSizePx = minVariometerSizePx, maxSizePx = maxVariometerSizePx) },
         onVariometerLongPress = {},
         onVariometerEditFinished = {},
         hamburgerOffset = hamburgerOffsetState,
@@ -278,8 +280,14 @@ internal fun rememberMapScreenScaffoldInputs(
         onAutoCalibrateQnh = mapViewModel::onAutoCalibrateQnh,
         onSetManualQnh = mapViewModel::onSetManualQnh,
         onToggleOgnTraffic = mapViewModel::onToggleOgnTraffic,
+        onToggleOgnThermals = mapViewModel::onToggleOgnThermals,
+        onToggleOgnGliderTrails = mapViewModel::onToggleOgnGliderTrails,
         onToggleAdsbTraffic = mapViewModel::onToggleAdsbTraffic,
+        onOgnTargetSelected = mapViewModel::onOgnTargetSelected,
+        onOgnThermalSelected = mapViewModel::onOgnThermalSelected,
         onAdsbTargetSelected = mapViewModel::onAdsbTargetSelected,
+        onDismissOgnTargetDetails = mapViewModel::dismissSelectedOgnTarget,
+        onDismissOgnThermalDetails = mapViewModel::dismissSelectedOgnThermal,
         onDismissAdsbTargetDetails = mapViewModel::dismissSelectedAdsbTarget,
         ballastUiState = mapViewModel.ballastUiState,
         isBallastPillHidden = mapUiState.hideBallastPill,

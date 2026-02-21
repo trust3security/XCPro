@@ -3,6 +3,7 @@ package com.example.xcpro.tasks
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.TaskWaypoint
+import com.example.xcpro.tasks.core.TargetStateCustomParams
 import com.example.xcpro.tasks.core.WaypointRole
 import com.example.xcpro.tasks.domain.logic.AATTargetOptimizer
 import com.example.xcpro.tasks.domain.logic.TaskAdvanceState
@@ -27,14 +28,21 @@ class TaskRepository @Inject constructor(
 
     private val _state = MutableStateFlow(TaskUiState())
     val state: StateFlow<TaskUiState> = _state.asStateFlow()
+    private val observationZoneResolver = TaskObservationZoneResolver
 
-    // Keeps user-chosen target params/locks by waypoint id so they survive refresh.
-    private val targetStateById = mutableMapOf<String, TargetMemory>()
+    // Keeps user-chosen target params/locks by waypoint identity so they survive refresh.
+    private val targetStateByKey = mutableMapOf<TargetMemoryKey, TargetMemory>()
     private val advanceState = TaskAdvanceState()
+
+    private data class TargetMemoryKey(
+        val index: Int,
+        val waypointId: String
+    )
 
     private data class TargetMemory(
         var param: Double,
-        var locked: Boolean
+        var locked: Boolean,
+        var target: GeoPoint?
     )
 
     fun updateFrom(task: Task, taskType: TaskType, activeIndex: Int = 0) {
@@ -80,35 +88,35 @@ class TaskRepository @Inject constructor(
     private fun List<TaskWaypoint>.toDomainPoints(taskType: TaskType): DomainBuildResult {
         val basePoints = mutableListOf<TaskPointDef>()
         var hasTargetsFlag = false
+        val validKeys = mutableSetOf<TargetMemoryKey>()
 
         forEachIndexed { index, wp ->
-            val role = when (index) {
-                0 -> WaypointRole.START
-                lastIndex -> WaypointRole.FINISH
-                else -> WaypointRole.TURNPOINT
-            }
-            val zone: ObservationZone = when (role) {
-                WaypointRole.START -> LineOZ()
-                WaypointRole.FINISH -> CylinderOZ(radiusMeters = 3000.0)
-                WaypointRole.TURNPOINT, WaypointRole.OPTIONAL -> {
-                    if (taskType == TaskType.AAT) {
-                        SegmentOZ(radiusMeters = 5000.0, angleDeg = 90.0)
-                    } else {
-                        CylinderOZ(radiusMeters = 500.0)
-                    }
-                }
-            }
-            val allowsTarget = taskType == TaskType.AAT && role == WaypointRole.TURNPOINT
+            val memoryKey = TargetMemoryKey(index = index, waypointId = wp.id)
+            validKeys += memoryKey
+            val role = wp.role
+            val zone = observationZoneResolver.resolve(
+                taskType = taskType,
+                waypoint = wp,
+                role = role
+            )
+            val allowsTarget = taskType == TaskType.AAT &&
+                (role == WaypointRole.TURNPOINT || role == WaypointRole.OPTIONAL)
             hasTargetsFlag = hasTargetsFlag || allowsTarget
 
-            val remembered = targetStateById[wp.id]
-            val targetParam = (wp.customParameters["targetParam"] as? Double)
-                ?: remembered?.param ?: 0.5
-            val targetLocked = (wp.customParameters["targetLocked"] as? Boolean)
-                ?: remembered?.locked ?: false
-            val targetLat = wp.customParameters["targetLat"] as? Double
-            val targetLon = wp.customParameters["targetLon"] as? Double
-            val seedTarget = if (targetLat != null && targetLon != null) GeoPoint(targetLat, targetLon) else null
+            val remembered = targetStateByKey[memoryKey]
+            val targetParams = TargetStateCustomParams.from(
+                source = wp.customParameters,
+                fallbackTargetParam = remembered?.param ?: 0.5,
+                fallbackTargetLocked = remembered?.locked ?: false
+            )
+            val targetParam = targetParams.targetParam
+            val targetLocked = targetParams.targetLocked
+            val targetLat = targetParams.targetLat
+            val targetLon = targetParams.targetLon
+            val seedTarget = when {
+                targetLat != null && targetLon != null -> GeoPoint(targetLat, targetLon)
+                else -> remembered?.target
+            }
 
             basePoints += TaskPointDef(
                 id = wp.id,
@@ -122,15 +130,31 @@ class TaskRepository @Inject constructor(
                 targetLocked = targetLocked
             )
         }
+        targetStateByKey.keys.retainAll(validKeys)
 
         // Second pass to place targets along isoline inside the OZ arc.
         val withTargets = basePoints.mapIndexed { index, point ->
             if (taskType == TaskType.AAT && point.allowsTarget && index in 1 until lastIndex) {
-                val prev = GeoPoint(this[index - 1].lat, this[index - 1].lon)
-                val next = GeoPoint(this[index + 1].lat, this[index + 1].lon)
-                val result = AATTargetOptimizer.moveTarget(prev, point, next, point.targetParam)
-                targetStateById[point.id] = TargetMemory(result.rangeParam, point.targetLocked)
-                point.copy(target = result.target, targetParam = result.rangeParam)
+                val memoryKey = TargetMemoryKey(index = index, waypointId = point.id)
+                val preservedTarget = targetStateByKey[memoryKey]?.target ?: point.target
+                if (point.targetLocked && preservedTarget != null) {
+                    targetStateByKey[memoryKey] = TargetMemory(
+                        param = point.targetParam,
+                        locked = true,
+                        target = preservedTarget
+                    )
+                    point.copy(target = preservedTarget)
+                } else {
+                    val prev = GeoPoint(this[index - 1].lat, this[index - 1].lon)
+                    val next = GeoPoint(this[index + 1].lat, this[index + 1].lon)
+                    val result = AATTargetOptimizer.moveTarget(prev, point, next, point.targetParam)
+                    targetStateByKey[memoryKey] = TargetMemory(
+                        param = result.rangeParam,
+                        locked = point.targetLocked,
+                        target = result.target
+                    )
+                    point.copy(target = result.target, targetParam = result.rangeParam)
+                }
             } else point
         }
 
@@ -205,25 +229,49 @@ class TaskRepository @Inject constructor(
     fun setTargetParam(index: Int, param: Double) {
         val current = _state.value
         val wp = current.task.waypoints.getOrNull(index) ?: return
-        targetStateById[wp.id] = TargetMemory(param, targetStateById[wp.id]?.locked ?: false)
-        updateFrom(current.task, current.taskType)
+        val key = TargetMemoryKey(index = index, waypointId = wp.id)
+        val existing = targetStateByKey[key]
+        targetStateByKey[key] = TargetMemory(
+            param = param,
+            locked = existing?.locked ?: false,
+            target = existing?.target ?: current.targets.getOrNull(index)?.target
+        )
+        updateFrom(current.task, current.taskType, current.stats.activeIndex)
     }
 
     fun toggleTargetLock(index: Int) {
         val current = _state.value
         val wp = current.task.waypoints.getOrNull(index) ?: return
-        val existing = targetStateById[wp.id]
+        val key = TargetMemoryKey(index = index, waypointId = wp.id)
+        val existing = targetStateByKey[key]
         val locked = !(existing?.locked ?: false)
-        targetStateById[wp.id] = TargetMemory(existing?.param ?: 0.5, locked)
-        updateFrom(current.task, current.taskType)
+        targetStateByKey[key] = TargetMemory(
+            param = existing?.param ?: 0.5,
+            locked = locked,
+            target = if (locked) {
+                existing?.target ?: current.targets.getOrNull(index)?.target
+            } else {
+                existing?.target
+            }
+        )
+        updateFrom(current.task, current.taskType, current.stats.activeIndex)
     }
 
     fun setTargetLock(index: Int, locked: Boolean) {
         val current = _state.value
         val wp = current.task.waypoints.getOrNull(index) ?: return
-        val existing = targetStateById[wp.id]
-        targetStateById[wp.id] = TargetMemory(existing?.param ?: 0.5, locked)
-        updateFrom(current.task, current.taskType)
+        val key = TargetMemoryKey(index = index, waypointId = wp.id)
+        val existing = targetStateByKey[key]
+        targetStateByKey[key] = TargetMemory(
+            param = existing?.param ?: 0.5,
+            locked = locked,
+            target = if (locked) {
+                existing?.target ?: current.targets.getOrNull(index)?.target
+            } else {
+                existing?.target
+            }
+        )
+        updateFrom(current.task, current.taskType, current.stats.activeIndex)
     }
 
     fun shouldAutoAdvance(hasEntered: Boolean, closeToTarget: Boolean): Boolean =

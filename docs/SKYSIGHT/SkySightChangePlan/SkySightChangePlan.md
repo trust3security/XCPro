@@ -2,6 +2,10 @@
 
 Goal: integrate SkySight forecast overlays into XC Pro's MapLibre map, using the existing overlay architecture and repo rules.
 
+Note:
+- This file is the original forecast-track master plan.
+- Satellite imagery is tracked in `18_SATELLITE_OVERLAY_IMPLEMENTATION_PLAN.md`.
+
 This plan is split into focused documents:
 
 - `01_SCOPE_AND_MILESTONES.md` - what we will build (and what we will not)
@@ -12,6 +16,7 @@ This plan is split into focused documents:
 - `06_TEST_PLAN.md` - unit/integration/UI testing strategy
 - `07_CODEX_TASKS_PHASED.md` - executable work breakdown in required Phase 0..4 format
 - `08_RISKS_LEGAL_AND_COMPLIANCE.md` - ToS/privacy/security risks and mitigations
+- `18_SATELLITE_OVERLAY_IMPLEMENTATION_PLAN.md` - HighSight-backed satellite overlay implementation plan (separate track)
 
 Definition of done:
 - A user can enable a forecast overlay on the map, pick a parameter, pick a forecast time, and adjust opacity.
@@ -19,4 +24,3 @@ Definition of done:
 - Auth is handled securely (no secrets in logs, no plaintext storage of tokens).
 - All required repo gates pass: `enforceRules`, unit tests, debug assemble.
 - No architecture rule violations (SSOT ownership explicit, no ViewModel I/O, no MapLibre in ViewModels).
-

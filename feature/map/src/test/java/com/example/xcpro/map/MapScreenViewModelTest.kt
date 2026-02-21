@@ -4,11 +4,17 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.example.dfcards.CardPreferences
 import com.example.dfcards.FlightModeSelection
+import com.example.dfcards.calculations.ConfidenceLevel
 import com.example.xcpro.MapOrientationManagerFactory
 import com.example.xcpro.MapOrientationSettingsRepository
 import com.example.xcpro.OrientationDataSourceFactory
+import com.example.xcpro.common.geo.GeoPoint
+import com.example.xcpro.common.units.AltitudeM
+import com.example.xcpro.common.units.PressureHpa
+import com.example.xcpro.common.units.SpeedMs
 import com.example.xcpro.common.glider.GliderConfig
 import com.example.xcpro.common.glider.GliderModel
+import com.example.xcpro.common.units.VerticalSpeedMs
 import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.common.waypoint.WaypointLoader
 import com.example.xcpro.common.units.UnitsRepository
@@ -21,7 +27,9 @@ import com.example.xcpro.qnh.QnhSource
 import com.example.xcpro.qnh.QnhConfidence
 import com.example.xcpro.sensors.AttitudeData
 import com.example.xcpro.sensors.CompassData
+import com.example.xcpro.sensors.CompleteFlightData
 import com.example.xcpro.sensors.FlightStateSource
+import com.example.xcpro.sensors.GPSData
 import com.example.xcpro.sensors.GpsStatus
 import com.example.xcpro.sensors.SensorStatus
 import com.example.xcpro.sensors.UnifiedSensorManager
@@ -47,8 +55,6 @@ import com.example.xcpro.replay.ReplayEvent
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.map.trail.MapTrailPreferences
 import com.example.xcpro.map.trail.MapTrailSettingsUseCase
-import com.example.xcpro.map.trail.buildCompleteFlightData
-import com.example.xcpro.map.trail.defaultGps
 import com.example.xcpro.tasks.TaskFeatureFlags
 import com.example.xcpro.tasks.TaskNavigationController
 import com.example.xcpro.tasks.aat.AATTaskManager
@@ -85,6 +91,11 @@ import com.example.xcpro.ogn.OgnTrafficPreferencesRepository
 import com.example.xcpro.ogn.OgnTrafficRepository
 import com.example.xcpro.ogn.OgnTrafficSnapshot
 import com.example.xcpro.ogn.OgnTrafficTarget
+import com.example.xcpro.ogn.OgnThermalHotspot
+import com.example.xcpro.ogn.OgnThermalHotspotState
+import com.example.xcpro.ogn.OgnThermalRepository
+import com.example.xcpro.ogn.OgnGliderTrailRepository
+import com.example.xcpro.ogn.OgnGliderTrailSegment
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -388,6 +399,194 @@ class MapScreenViewModelTest {
     }
 
     @Test
+    fun ognCenter_updatesFromOwnshipGpsLocation() {
+        val ognRepository = FakeOgnTrafficRepository()
+        createViewModel(ognRepositoryOverride = ognRepository)
+        drainMain()
+
+        flightDataRepository.update(
+            buildCompleteFlightData(
+                gps = defaultGps(latitude = -34.5000, longitude = 150.5000)
+            )
+        )
+        drainMain()
+
+        assertEquals(-34.5000, ognRepository.lastCenterLat ?: Double.NaN, 1e-6)
+        assertEquals(150.5000, ognRepository.lastCenterLon ?: Double.NaN, 1e-6)
+    }
+
+    @Test
+    fun ognCenter_doesNotUpdateFromCameraSnapshotWithoutGps() {
+        val ognRepository = FakeOgnTrafficRepository()
+        val viewModel = createViewModel(ognRepositoryOverride = ognRepository)
+
+        viewModel.mapStateActions.updateCameraSnapshot(
+            target = MapStateStore.MapPoint(latitude = -35.1234, longitude = 149.1234),
+            zoom = 11.0,
+            bearing = 0.0
+        )
+        drainMain()
+
+        assertNull(ognRepository.lastCenterLat)
+        assertNull(ognRepository.lastCenterLon)
+    }
+
+    @Test
+    fun ognSelection_tracksSelectedTargetFromCurrentTargetList() = runBlocking {
+        val ognRepository = FakeOgnTrafficRepository()
+        val viewModel = createViewModel(ognRepositoryOverride = ognRepository)
+        val id = "OGN123"
+
+        ognRepository.targets.value = listOf(sampleOgnTarget(id))
+        drainMain()
+
+        viewModel.onOgnTargetSelected(id)
+        drainMain()
+
+        assertEquals(id, viewModel.selectedOgnTarget.value?.id)
+    }
+
+    @Test
+    fun ognSelection_clearsWhenSelectedTargetDisappears() = runBlocking {
+        val ognRepository = FakeOgnTrafficRepository()
+        val viewModel = createViewModel(ognRepositoryOverride = ognRepository)
+        val id = "OGN123"
+
+        ognRepository.targets.value = listOf(sampleOgnTarget(id))
+        drainMain()
+        viewModel.onOgnTargetSelected(id)
+        drainMain()
+        assertEquals(id, viewModel.selectedOgnTarget.value?.id)
+
+        ognRepository.targets.value = emptyList()
+        drainMain()
+
+        assertNull(viewModel.selectedOgnTarget.value)
+    }
+
+    @Test
+    fun selectingOgnTarget_clearsSelectedAdsbTarget() = runBlocking {
+        val adsbRepository = FakeAdsbTrafficRepository()
+        val ognRepository = FakeOgnTrafficRepository()
+        val viewModel = createViewModel(
+            adsbRepositoryOverride = adsbRepository,
+            ognRepositoryOverride = ognRepository
+        )
+        val adsbId = Icao24.from("abc123") ?: error("invalid adsb id")
+        val ognId = "OGN123"
+
+        adsbRepository.targets.value = listOf(sampleAdsbTarget(adsbId))
+        ognRepository.targets.value = listOf(sampleOgnTarget(ognId))
+        drainMain()
+        viewModel.onAdsbTargetSelected(adsbId)
+        drainMain()
+        assertEquals(adsbId, viewModel.selectedAdsbTarget.value?.id)
+
+        viewModel.onOgnTargetSelected(ognId)
+        drainMain()
+
+        assertEquals(ognId, viewModel.selectedOgnTarget.value?.id)
+        assertNull(viewModel.selectedAdsbTarget.value)
+    }
+
+    @Test
+    fun selectingAdsbTarget_clearsSelectedOgnTarget() = runBlocking {
+        val adsbRepository = FakeAdsbTrafficRepository()
+        val ognRepository = FakeOgnTrafficRepository()
+        val viewModel = createViewModel(
+            adsbRepositoryOverride = adsbRepository,
+            ognRepositoryOverride = ognRepository
+        )
+        val adsbId = Icao24.from("abc123") ?: error("invalid adsb id")
+        val ognId = "OGN123"
+
+        adsbRepository.targets.value = listOf(sampleAdsbTarget(adsbId))
+        ognRepository.targets.value = listOf(sampleOgnTarget(ognId))
+        drainMain()
+        viewModel.onOgnTargetSelected(ognId)
+        drainMain()
+        assertEquals(ognId, viewModel.selectedOgnTarget.value?.id)
+
+        viewModel.onAdsbTargetSelected(adsbId)
+        drainMain()
+
+        assertEquals(adsbId, viewModel.selectedAdsbTarget.value?.id)
+        assertNull(viewModel.selectedOgnTarget.value)
+    }
+
+    @Test
+    fun dismissSelectedOgnTarget_clearsSelectionState() = runBlocking {
+        val ognRepository = FakeOgnTrafficRepository()
+        val viewModel = createViewModel(ognRepositoryOverride = ognRepository)
+        val id = "OGN123"
+
+        ognRepository.targets.value = listOf(sampleOgnTarget(id))
+        drainMain()
+        viewModel.onOgnTargetSelected(id)
+        drainMain()
+        assertEquals(id, viewModel.selectedOgnTarget.value?.id)
+
+        viewModel.dismissSelectedOgnTarget()
+        drainMain()
+
+        assertNull(viewModel.selectedOgnTarget.value)
+    }
+
+    @Test
+    fun selectingThermal_clearsSelectedOgnAndAdsbTargets() = runBlocking {
+        val adsbRepository = FakeAdsbTrafficRepository()
+        val ognRepository = FakeOgnTrafficRepository()
+        val thermalRepository = FakeOgnThermalRepository()
+        val viewModel = createViewModel(
+            adsbRepositoryOverride = adsbRepository,
+            ognRepositoryOverride = ognRepository,
+            ognThermalRepositoryOverride = thermalRepository
+        )
+        val adsbId = Icao24.from("abc123") ?: error("invalid adsb id")
+        val ognId = "OGN123"
+        val thermalId = "OGN123-thermal-1"
+
+        adsbRepository.targets.value = listOf(sampleAdsbTarget(adsbId))
+        ognRepository.targets.value = listOf(sampleOgnTarget(ognId))
+        thermalRepository.hotspots.value = listOf(sampleThermalHotspot(thermalId, ognId))
+        drainMain()
+
+        viewModel.onAdsbTargetSelected(adsbId)
+        drainMain()
+        assertEquals(adsbId, viewModel.selectedAdsbTarget.value?.id)
+
+        viewModel.onOgnTargetSelected(ognId)
+        drainMain()
+        assertEquals(ognId, viewModel.selectedOgnTarget.value?.id)
+        assertNull(viewModel.selectedAdsbTarget.value)
+
+        viewModel.onOgnThermalSelected(thermalId)
+        drainMain()
+
+        assertEquals(thermalId, viewModel.selectedOgnThermal.value?.id)
+        assertNull(viewModel.selectedOgnTarget.value)
+        assertNull(viewModel.selectedAdsbTarget.value)
+    }
+
+    @Test
+    fun thermalSelection_clearsWhenHotspotDisappears() = runBlocking {
+        val thermalRepository = FakeOgnThermalRepository()
+        val viewModel = createViewModel(ognThermalRepositoryOverride = thermalRepository)
+        val thermalId = "OGN123-thermal-1"
+
+        thermalRepository.hotspots.value = listOf(sampleThermalHotspot(thermalId, "OGN123"))
+        drainMain()
+        viewModel.onOgnThermalSelected(thermalId)
+        drainMain()
+        assertEquals(thermalId, viewModel.selectedOgnThermal.value?.id)
+
+        thermalRepository.hotspots.value = emptyList()
+        drainMain()
+
+        assertNull(viewModel.selectedOgnThermal.value)
+    }
+
+    @Test
     fun ognIconSize_defaultsToConfiguredDefaultPx() {
         val viewModel = createViewModel()
 
@@ -403,6 +602,17 @@ class MapScreenViewModelTest {
         drainMain()
 
         assertEquals(OGN_ICON_SIZE_MAX_PX, viewModel.ognIconSizePx.value)
+    }
+
+    @Test
+    fun ognGliderTrails_readsPersistedPreferenceOnInit() = runBlocking {
+        val preferencesRepository = OgnTrafficPreferencesRepository(context)
+        preferencesRepository.setShowGliderTrailsEnabled(true)
+
+        val viewModel = createViewModel()
+        drainMain()
+
+        assertEquals(true, viewModel.showOgnGliderTrailsEnabled.value)
     }
 
     @Test
@@ -442,6 +652,8 @@ class MapScreenViewModelTest {
 
     private fun createViewModel(
         waypointLoader: WaypointLoader = SuccessfulWaypointLoader(emptyList()),
+        ognRepositoryOverride: OgnTrafficRepository? = null,
+        ognThermalRepositoryOverride: OgnThermalRepository? = null,
         adsbRepositoryOverride: AdsbTrafficRepository? = null
     ): MapScreenViewModel {
         val localTaskManager = com.example.xcpro.tasks.TaskManagerCoordinator(
@@ -479,41 +691,15 @@ class MapScreenViewModelTest {
         val mapFeatureFlagsUseCase = MapFeatureFlagsUseCase(mapFeatureFlags)
         val mapCardPreferencesUseCase = MapCardPreferencesUseCase(cardPreferences)
         val mapVarioPreferencesUseCase = MapVarioPreferencesUseCase(levoVarioPreferencesRepository)
-        val ognTrafficRepository = object : OgnTrafficRepository {
-            override val targets = MutableStateFlow<List<OgnTrafficTarget>>(emptyList())
-            override val snapshot = MutableStateFlow(
-                OgnTrafficSnapshot(
-                    targets = emptyList(),
-                    connectionState = OgnConnectionState.DISCONNECTED,
-                    lastError = null,
-                    subscriptionCenterLat = null,
-                    subscriptionCenterLon = null,
-                    receiveRadiusKm = 300,
-                    ddbCacheAgeMs = null,
-                    reconnectBackoffMs = null,
-                    lastReconnectWallMs = null
-                )
-            )
-            override val isEnabled = MutableStateFlow(false)
-
-            override fun setEnabled(enabled: Boolean) {
-                isEnabled.value = enabled
-            }
-
-            override fun updateCenter(latitude: Double, longitude: Double) = Unit
-
-            override fun start() {
-                setEnabled(true)
-            }
-
-            override fun stop() {
-                setEnabled(false)
-            }
-        }
+        val ognTrafficRepository = ognRepositoryOverride ?: FakeOgnTrafficRepository()
+        val ognThermalRepository = ognThermalRepositoryOverride ?: FakeOgnThermalRepository()
+        val ognGliderTrailRepository = FakeOgnGliderTrailRepository()
         val ognTrafficPreferencesRepository = OgnTrafficPreferencesRepository(context)
         val ognTrafficUseCase = OgnTrafficUseCase(
             repository = ognTrafficRepository,
-            preferencesRepository = ognTrafficPreferencesRepository
+            preferencesRepository = ognTrafficPreferencesRepository,
+            thermalRepository = ognThermalRepository,
+            gliderTrailRepository = ognGliderTrailRepository
         )
         val adsbTrafficRepository = adsbRepositoryOverride ?: object : AdsbTrafficRepository {
             override val targets = MutableStateFlow<List<AdsbTrafficUiModel>>(emptyList())
@@ -546,6 +732,12 @@ class MapScreenViewModelTest {
 
             override fun updateCenter(latitude: Double, longitude: Double) = Unit
             override fun updateOwnshipOrigin(latitude: Double, longitude: Double) = Unit
+            override fun updateOwnshipAltitudeMeters(altitudeMeters: Double?) = Unit
+            override fun updateDisplayFilters(
+                maxDistanceKm: Int,
+                verticalAboveMeters: Double,
+                verticalBelowMeters: Double
+            ) = Unit
             override fun reconnectNow() = Unit
 
             override fun start() {
@@ -620,6 +812,98 @@ class MapScreenViewModelTest {
         )
     }
 
+    private fun defaultGps(
+        latitude: Double = 46.0,
+        longitude: Double = 7.0,
+        altitudeMeters: Double = 1000.0,
+        speedMs: Double = 0.0,
+        bearingDeg: Double = 0.0,
+        accuracyMeters: Float = 5f,
+        timestampMillis: Long = 1_000L,
+        monotonicTimestampMillis: Long = 0L
+    ): GPSData = GPSData(
+        position = GeoPoint(latitude, longitude),
+        altitude = AltitudeM(altitudeMeters),
+        speed = SpeedMs(speedMs),
+        bearing = bearingDeg,
+        accuracy = accuracyMeters,
+        timestamp = timestampMillis,
+        monotonicTimestampMillis = monotonicTimestampMillis
+    )
+
+    private fun buildCompleteFlightData(
+        gps: GPSData? = defaultGps(),
+        baroAltitudeMeters: Double = 1_000.0,
+        verticalSpeedMs: Double = 0.0,
+        displayVarioMs: Double = 0.0,
+        nettoMs: Double = 0.0,
+        displayNettoMs: Double = 0.0,
+        nettoValid: Boolean = false,
+        baselineDisplayVarioMs: Double = 0.0,
+        baselineVarioValid: Boolean = false,
+        realIgcVarioMs: Double? = null,
+        isCircling: Boolean = false,
+        currentThermalValid: Boolean = false,
+        thermalAverageValid: Boolean = false,
+        timestampMillis: Long = 1_000L
+    ): CompleteFlightData {
+        return CompleteFlightData(
+            gps = gps,
+            baro = null,
+            compass = null,
+            baroAltitude = AltitudeM(baroAltitudeMeters),
+            qnh = PressureHpa(1_013.25),
+            isQNHCalibrated = false,
+            verticalSpeed = VerticalSpeedMs(verticalSpeedMs),
+            displayVario = VerticalSpeedMs(displayVarioMs),
+            displayNeedleVario = VerticalSpeedMs(0.0),
+            displayNeedleVarioFast = VerticalSpeedMs(0.0),
+            audioVario = VerticalSpeedMs(0.0),
+            baselineVario = VerticalSpeedMs(0.0),
+            baselineDisplayVario = VerticalSpeedMs(baselineDisplayVarioMs),
+            baselineVarioValid = baselineVarioValid,
+            bruttoVario = VerticalSpeedMs(0.0),
+            bruttoAverage30s = VerticalSpeedMs(0.0),
+            bruttoAverage30sValid = false,
+            nettoAverage30s = VerticalSpeedMs(0.0),
+            varioSource = "TEST",
+            varioValid = true,
+            pressureAltitude = AltitudeM(0.0),
+            baroGpsDelta = null,
+            baroConfidence = ConfidenceLevel.LOW,
+            qnhCalibrationAgeSeconds = -1,
+            agl = AltitudeM(0.0),
+            thermalAverage = VerticalSpeedMs(0.0),
+            thermalAverageCircle = VerticalSpeedMs(0.0),
+            thermalAverageTotal = VerticalSpeedMs(0.0),
+            thermalGain = AltitudeM(0.0),
+            thermalGainValid = false,
+            currentThermalLiftRate = VerticalSpeedMs(0.0),
+            currentThermalValid = currentThermalValid,
+            currentLD = 0f,
+            netto = VerticalSpeedMs(nettoMs),
+            displayNetto = VerticalSpeedMs(displayNettoMs),
+            nettoValid = nettoValid,
+            trueAirspeed = SpeedMs(0.0),
+            indicatedAirspeed = SpeedMs(0.0),
+            airspeedSource = "UNKNOWN",
+            tasValid = true,
+            varioOptimized = VerticalSpeedMs(0.0),
+            varioLegacy = VerticalSpeedMs(0.0),
+            varioRaw = VerticalSpeedMs(0.0),
+            varioGPS = VerticalSpeedMs(0.0),
+            varioComplementary = VerticalSpeedMs(0.0),
+            realIgcVario = realIgcVarioMs?.let { VerticalSpeedMs(it) },
+            teAltitude = AltitudeM(0.0),
+            macCready = 0.0,
+            macCreadyRisk = 0.0,
+            isCircling = isCircling,
+            thermalAverageValid = thermalAverageValid,
+            timestamp = timestampMillis,
+            dataQuality = "TEST"
+        )
+    }
+
     private fun sampleAdsbTarget(id: Icao24): AdsbTrafficUiModel = AdsbTrafficUiModel(
         id = id,
         callsign = "TEST01",
@@ -637,6 +921,92 @@ class MapScreenViewModelTest {
         category = 3,
         lastContactEpochSec = null
     )
+
+    private fun sampleOgnTarget(id: String): OgnTrafficTarget = OgnTrafficTarget(
+        id = id,
+        callsign = "OGNTEST",
+        destination = "APRS",
+        latitude = -35.0,
+        longitude = 149.0,
+        altitudeMeters = 1200.0,
+        trackDegrees = 180.0,
+        groundSpeedMps = 40.0,
+        verticalSpeedMps = 1.1,
+        deviceIdHex = "ABC123",
+        signalDb = 12.0,
+        displayLabel = id,
+        identity = null,
+        rawComment = "sample",
+        rawLine = "sample line",
+        timestampMillis = 1_000L,
+        lastSeenMillis = 1_000L
+    )
+
+    private fun sampleThermalHotspot(
+        id: String,
+        sourceTargetId: String
+    ): OgnThermalHotspot = OgnThermalHotspot(
+        id = id,
+        sourceTargetId = sourceTargetId,
+        sourceLabel = sourceTargetId,
+        latitude = -35.0,
+        longitude = 149.0,
+        startedAtMonoMs = 1_000L,
+        updatedAtMonoMs = 2_000L,
+        startAltitudeMeters = 900.0,
+        maxAltitudeMeters = 1200.0,
+        maxAltitudeAtMonoMs = 2_000L,
+        maxClimbRateMps = 2.3,
+        averageClimbRateMps = 1.6,
+        averageBottomToTopClimbRateMps = 1.2,
+        snailColorIndex = 15,
+        state = OgnThermalHotspotState.ACTIVE
+    )
+
+    private class FakeOgnTrafficRepository : OgnTrafficRepository {
+        override val targets = MutableStateFlow<List<OgnTrafficTarget>>(emptyList())
+        override val snapshot = MutableStateFlow(
+            OgnTrafficSnapshot(
+                targets = emptyList(),
+                connectionState = OgnConnectionState.DISCONNECTED,
+                lastError = null,
+                subscriptionCenterLat = null,
+                subscriptionCenterLon = null,
+                receiveRadiusKm = 150,
+                ddbCacheAgeMs = null,
+                reconnectBackoffMs = null,
+                lastReconnectWallMs = null
+            )
+        )
+        override val isEnabled = MutableStateFlow(false)
+        var lastCenterLat: Double? = null
+        var lastCenterLon: Double? = null
+
+        override fun setEnabled(enabled: Boolean) {
+            isEnabled.value = enabled
+        }
+
+        override fun updateCenter(latitude: Double, longitude: Double) {
+            lastCenterLat = latitude
+            lastCenterLon = longitude
+        }
+
+        override fun start() {
+            setEnabled(true)
+        }
+
+        override fun stop() {
+            setEnabled(false)
+        }
+    }
+
+    private class FakeOgnThermalRepository : OgnThermalRepository {
+        override val hotspots = MutableStateFlow<List<OgnThermalHotspot>>(emptyList())
+    }
+
+    private class FakeOgnGliderTrailRepository : OgnGliderTrailRepository {
+        override val segments = MutableStateFlow<List<OgnGliderTrailSegment>>(emptyList())
+    }
 
     private class FakeAdsbTrafficRepository : AdsbTrafficRepository {
         override val targets = MutableStateFlow<List<AdsbTrafficUiModel>>(emptyList())
@@ -682,6 +1052,14 @@ class MapScreenViewModelTest {
             lastOwnshipLat = latitude
             lastOwnshipLon = longitude
         }
+
+        override fun updateOwnshipAltitudeMeters(altitudeMeters: Double?) = Unit
+
+        override fun updateDisplayFilters(
+            maxDistanceKm: Int,
+            verticalAboveMeters: Double,
+            verticalBelowMeters: Double
+        ) = Unit
 
         override fun reconnectNow() = Unit
 

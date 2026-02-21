@@ -1,10 +1,6 @@
 package com.example.xcpro.map
 
 import com.example.xcpro.core.common.logging.AppLogger
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.runtime.*
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.xcpro.common.orientation.BearingSource
 import com.example.xcpro.common.orientation.MapOrientationMode
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -12,6 +8,7 @@ import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import kotlinx.coroutines.flow.StateFlow
+import kotlin.math.abs
 import kotlin.math.sign
 
 /**
@@ -50,9 +47,6 @@ class MapCameraManager(
 
     val targetZoom: StateFlow<Float?>
         get() = mapStateReader.targetZoom
-
-    // Camera state
-    private var lastCameraBearing: Double = 0.0
 
     // AAT Edit Mode: Saved camera position for restore on exit
     private var savedCameraPosition: CameraPosition? = null
@@ -111,24 +105,15 @@ class MapCameraManager(
     ) {
         mapState.mapLibreMap?.let { map ->
             try {
-                val targetBearing = if (orientationMode == MapOrientationMode.NORTH_UP) {
-                    0.0
-                } else {
-                    newBearing
-                }
+                val currentPosition = map.cameraPosition
+                val limitedBearing = resolveCameraBearingUpdate(
+                    currentBearing = currentPosition.bearing,
+                    requestedBearing = newBearing,
+                    orientationMode = orientationMode,
+                    maxBearingStepDeg = MAX_BEARING_STEP_DEG
+                )
 
-                // Clamp rotation step to smooth jitter.
-                val delta = shortestDeltaDegrees(lastCameraBearing, targetBearing)
-                val limitedBearing = if (kotlin.math.abs(delta) > MAX_BEARING_STEP_DEG) {
-                    lastCameraBearing + sign(delta) * MAX_BEARING_STEP_DEG
-                } else {
-                    targetBearing
-                }
-
-                val bearingChanged = kotlin.math.abs(shortestDeltaDegrees(lastCameraBearing, limitedBearing)) > 2.0
-
-                if (bearingChanged) {
-                    val currentPosition = map.cameraPosition
+                if (limitedBearing != null) {
 
                     val newCameraPosition = CameraPosition.Builder()
                         .target(currentPosition.target)
@@ -138,7 +123,6 @@ class MapCameraManager(
                         .build()
 
                     map.moveCamera(CameraUpdateFactory.newCameraPosition(newCameraPosition))
-                    lastCameraBearing = limitedBearing
                     AppLogger.d(
                         TAG,
                         "Bearing updated: mode=$orientationMode, source=$bearingSource, bearing=$limitedBearing (raw=$newBearing)"
@@ -148,13 +132,6 @@ class MapCameraManager(
                 AppLogger.e(TAG, "Error updating camera bearing: ${e.message}")
             }
         }
-    }
-
-    private fun shortestDeltaDegrees(from: Double, to: Double): Double {
-        var delta = (to - from) % 360.0
-        if (delta > 180) delta -= 360.0
-        if (delta < -180) delta += 360.0
-        return delta
     }
 
     private fun clampZoom(zoom: Double, latitude: Double? = null): Double {
@@ -365,92 +342,44 @@ class MapCameraManager(
     }
 }
 
-/**
- * Compose camera effects for MapScreen integration
- */
-object MapCameraEffects {
-
-    /**
-     * Animated zoom effect with smooth transitions
-     */
-    @Composable
-    fun AnimatedZoomEffect(
-        cameraManager: MapCameraManager,
-        targetZoom: Float?,
-        targetLatLng: MapStateStore.MapPoint?
-    ) {
-        val animatedZoom by animateFloatAsState(
-            targetValue = targetZoom ?: MapCameraManager.INITIAL_ZOOM.toFloat(),
-            animationSpec = tween(durationMillis = 300),
-            label = "zoom_animation"
-        )
-
-        DisposableEffect(animatedZoom, targetLatLng) {
-            cameraManager.mapState.mapLibreMap?.let { map ->
-                try {
-                    val latLng = targetLatLng?.let { LatLng(it.latitude, it.longitude) }
-                        ?: LatLng(MapCameraManager.INITIAL_LATITUDE, MapCameraManager.INITIAL_LONGITUDE)
-                    map.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, animatedZoom.toDouble()))
-                    AppLogger.d("MapCameraEffects", "Camera moved to lat=${latLng.latitude}, lon=${latLng.longitude}, zoom=$animatedZoom")
-                } catch (e: Exception) {
-                    AppLogger.e("MapCameraEffects", "Error moving camera: ${e.message}")
-                }
-            }
-            onDispose { }
-        }
+internal fun resolveCameraBearingUpdate(
+    currentBearing: Double,
+    requestedBearing: Double,
+    orientationMode: MapOrientationMode,
+    maxBearingStepDeg: Double,
+    minBearingChangeDeg: Double = 2.0
+): Double? {
+    val normalizedCurrent = normalizeBearingDegrees(currentBearing)
+    val targetBearing = if (orientationMode == MapOrientationMode.NORTH_UP) {
+        0.0
+    } else {
+        requestedBearing
     }
-
-    /**
-     * Orientation bearing effect for camera rotation
-     */
-    @Composable
-    fun OrientationBearingEffect(
-        cameraManager: MapCameraManager,
-        bearing: Double,
-        orientationMode: MapOrientationMode,
-        bearingSource: BearingSource,
-        replayPlaying: Boolean = false
-    ) {
-        // If map tracking is active or replay is playing, bearing is applied with position in MapPositionController.
-        if (replayPlaying || (cameraManager.isTrackingLocation && !cameraManager.showReturnButton)) {
-            return
-        }
-        DisposableEffect(bearing, orientationMode, bearingSource) {
-            cameraManager.updateBearing(bearing, orientationMode, bearingSource)
-            AppLogger.d(
-                "MapCameraEffects",
-                "Orientation updated: mode=$orientationMode, source=$bearingSource, bearing=$bearing"
-            )
-            onDispose { }
-        }
+    val normalizedTarget = normalizeBearingDegrees(targetBearing)
+    val delta = shortestDeltaDegrees(normalizedCurrent, normalizedTarget)
+    val limitedBearing = if (abs(delta) > maxBearingStepDeg) {
+        normalizeBearingDegrees(normalizedCurrent + sign(delta) * maxBearingStepDeg)
+    } else {
+        normalizedTarget
     }
-
-    /**
-     * Combined camera effects for easy integration
-     */
-    @Composable
-    fun AllCameraEffects(
-        cameraManager: MapCameraManager,
-        bearing: Double,
-        orientationMode: MapOrientationMode,
-        bearingSource: BearingSource,
-        replayPlaying: Boolean = false
-    ) {
-        val targetZoom by cameraManager.targetZoom.collectAsStateWithLifecycle()
-        val targetLatLng by cameraManager.targetLatLng.collectAsStateWithLifecycle()
-
-        AnimatedZoomEffect(
-            cameraManager = cameraManager,
-            targetZoom = targetZoom,
-            targetLatLng = targetLatLng
-        )
-
-        OrientationBearingEffect(
-            cameraManager = cameraManager,
-            bearing = bearing,
-            orientationMode = orientationMode,
-            bearingSource = bearingSource,
-            replayPlaying = replayPlaying
-        )
+    return if (abs(shortestDeltaDegrees(normalizedCurrent, limitedBearing)) > minBearingChangeDeg) {
+        limitedBearing
+    } else {
+        null
     }
+}
+
+private fun normalizeBearingDegrees(bearing: Double): Double {
+    var normalized = bearing % 360.0
+    if (normalized < 0.0) {
+        normalized += 360.0
+    }
+    return normalized
+}
+
+private fun shortestDeltaDegrees(from: Double, to: Double): Double {
+    var delta = (to - from) % 360.0
+    if (delta > 180.0) delta -= 360.0
+    if (delta < -180.0) delta += 360.0
+    return delta
 }

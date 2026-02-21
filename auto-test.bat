@@ -9,11 +9,20 @@ if %ERRORLEVEL% neq 0 (
     exit /b 1
 )
 
+echo [cleanup] Removing stale Gradle worker/wrapper processes for this repo...
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\scripts\dev\kill_stale_gradle_processes.ps1" -ProjectRoot "%CD%"
+
 echo [1/6] Cleaning project...
 call gradlew clean
 if %ERRORLEVEL% neq 0 (
-    echo ERROR: Clean failed
-    exit /b 1
+    echo Clean failed, stopping Gradle daemons and retrying once...
+    call gradlew --stop
+    powershell -NoProfile -ExecutionPolicy Bypass -File ".\scripts\dev\kill_stale_gradle_processes.ps1" -ProjectRoot "%CD%"
+    call gradlew clean
+    if %ERRORLEVEL% neq 0 (
+        echo ERROR: Clean failed after retry
+        exit /b 1
+    )
 )
 
 echo [2/6] Building debug version...

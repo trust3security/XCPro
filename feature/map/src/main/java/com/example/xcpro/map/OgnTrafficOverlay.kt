@@ -104,6 +104,7 @@ class OgnTrafficOverlay(
             val feature = Feature.fromGeometry(
                 Point.fromLngLat(target.longitude, target.latitude)
             )
+            feature.addStringProperty(PROP_TARGET_ID, target.id)
             feature.addStringProperty(PROP_LABEL, target.displayLabel)
             feature.addNumberProperty(
                 PROP_ALPHA,
@@ -116,6 +117,27 @@ class OgnTrafficOverlay(
         }
 
         source.setGeoJson(FeatureCollection.fromFeatures(features))
+    }
+
+    fun findTargetAt(tap: org.maplibre.android.geometry.LatLng): String? {
+        val style = map.style ?: return null
+        if (style.getSource(SOURCE_ID) == null) return null
+        val screenPoint = map.projection.toScreenLocation(tap)
+        val features = runCatching {
+            map.queryRenderedFeatures(
+                screenPoint,
+                ICON_LAYER_ID,
+                LABEL_LAYER_ID
+            )
+        }.getOrNull().orEmpty()
+
+        for (feature in features) {
+            if (!feature.hasProperty(PROP_TARGET_ID)) continue
+            val id = runCatching { feature.getStringProperty(PROP_TARGET_ID) }.getOrNull()
+            val normalized = id?.trim().orEmpty()
+            if (normalized.isNotEmpty()) return normalized
+        }
+        return null
     }
 
     fun clear() {
@@ -261,6 +283,7 @@ class OgnTrafficOverlay(
         private const val PROP_LABEL = "label"
         private const val PROP_ALPHA = "alpha"
         private const val PROP_TRACK_DEG = "track_deg"
+        private const val PROP_TARGET_ID = "target_id"
 
         private const val MAX_TARGETS = 500
         private const val STALE_VISUAL_AFTER_MS = 60_000L

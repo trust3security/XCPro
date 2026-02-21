@@ -34,9 +34,12 @@ import com.example.xcpro.screens.navdrawer.PolarSettingsScreen
 import com.example.xcpro.screens.navdrawer.UnitsSettingsScreen
 import com.example.xcpro.screens.navdrawer.OrientationSettingsScreen
 import com.example.xcpro.screens.navdrawer.AdsbSettingsScreen
+import com.example.xcpro.screens.navdrawer.ForecastSettingsScreen
 import com.example.xcpro.screens.navdrawer.OgnSettingsScreen
+import com.example.xcpro.screens.navdrawer.WeatherSettingsScreen
 import com.example.xcpro.screens.diagnostics.VarioDiagnosticsScreen
 import com.example.xcpro.screens.replay.IgcReplayScreen
+import com.example.xcpro.navigation.SettingsRoutes
 
 @Composable
 fun AppNavGraph(
@@ -112,7 +115,7 @@ fun AppNavGraph(
                 initialTab = "waypoints",
                 autoFocusHome = autoFocusHome,
                 activeProfile = profileUiState.activeProfile,
-                flightDataManager = mapViewModel.flightDataManager
+                flightDataManager = mapViewModel.runtimeDependencies.flightDataManager
             )
         }
         composable("flight_data") { backStackEntry ->
@@ -122,11 +125,11 @@ fun AppNavGraph(
                 navController = navController,
                 drawerState = drawerState,
                 activeProfile = profileUiState.activeProfile,
-                flightDataManager = mapViewModel.flightDataManager
+                flightDataManager = mapViewModel.runtimeDependencies.flightDataManager
             )
         }
-        composable("files") { FilesScreen(navController, drawerState) }
-        composable("profiles") { ProfilesScreen(navController, drawerState) }
+        composable(SettingsRoutes.FILES) { FilesScreen(navController, drawerState) }
+        composable(SettingsRoutes.PROFILES) { ProfilesScreen(navController, drawerState) }
         composable("profile_selection") { ProfileSelectionScreen(onProfileSelected = { navController.popBackStack() }) }
         composable("profile_settings/{profileId}") { backStackEntry ->
             val profileId = backStackEntry.arguments?.getString("profileId") ?: ""
@@ -140,6 +143,8 @@ fun AppNavGraph(
         composable("layouts") { LayoutScreen(navController, drawerState) }
         composable("adsb_settings") { AdsbSettingsScreen(navController, drawerState) }
         composable("ogn_settings") { OgnSettingsScreen(navController, drawerState) }
+        composable("forecast_settings") { ForecastSettingsScreen(navController, drawerState) }
+        composable(SettingsRoutes.WEATHER_SETTINGS) { WeatherSettingsScreen(navController, drawerState) }
         composable("dfnavboxes") { DFNavboxes(navController, drawerState) }
         composable("orientation_settings") { backStackEntry ->
             OrientationSettingsScreen(

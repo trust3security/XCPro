@@ -2,9 +2,13 @@ package com.example.xcpro.tasks.racing
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.example.xcpro.tasks.CupFormatUtils
+import com.example.xcpro.tasks.LegacyCupStorageCleanupPolicy
+import com.example.xcpro.tasks.core.TaskType
+import com.example.xcpro.tasks.core.WaypointRole
 import com.google.gson.Gson
 import java.io.File
-import java.util.UUID
+import java.nio.charset.StandardCharsets
 
 // Racing-specific imports - NO cross-contamination with AAT/DHT
 import com.example.xcpro.tasks.racing.models.RacingWaypoint
@@ -20,6 +24,8 @@ class RacingTaskStorage(private val context: Context) {
 
     private val prefs: SharedPreferences = context.getSharedPreferences("racing_task_prefs", Context.MODE_PRIVATE)
     private val gson = Gson()
+    private val legacyTasksDir = File(context.filesDir, LEGACY_TASKS_DIR)
+    private val scopedTasksDir = File(context.filesDir, RACING_TASKS_DIR)
 
     /**
      * Save Racing task to preferences
@@ -55,14 +61,19 @@ class RacingTaskStorage(private val context: Context) {
      */
     fun getSavedRacingTasks(): List<String> {
         return try {
-            val tasksDir = File(context.filesDir, "cup_tasks")
-            if (!tasksDir.exists()) {
-                tasksDir.mkdirs()
-            }
-            tasksDir.listFiles { file -> file.extension == "cup" }
-                ?.map { it.name }
-                ?.sorted()
-                ?: emptyList()
+            migrateLegacyTasksIfNeeded()
+            val names = linkedSetOf<String>()
+            ensureDir(scopedTasksDir)
+            ensureDir(legacyTasksDir)
+
+            scopedTasksDir.listFiles { file -> file.extension == "cup" }
+                ?.mapTo(names) { it.name }
+
+            legacyTasksDir.listFiles { file -> file.extension == "cup" }
+                ?.filter { isLikelyLegacyRacingCup(it) }
+                ?.mapTo(names) { it.name }
+
+            names.sorted()
         } catch (e: Exception) {
             emptyList()
         }
@@ -73,16 +84,13 @@ class RacingTaskStorage(private val context: Context) {
      */
     fun saveRacingTask(task: SimpleRacingTask, taskName: String): Boolean {
         return try {
-            val tasksDir = File(context.filesDir, "cup_tasks")
-            if (!tasksDir.exists()) {
-                tasksDir.mkdirs()
-            }
+            val tasksDir = ensureDir(scopedTasksDir)
             val fileName = if (taskName.endsWith(".cup")) taskName else "$taskName.cup"
             val file = File(tasksDir, fileName)
 
             // Convert task to CUP format
             val cupContent = racingTaskToCUP(task, taskName)
-            file.writeText(cupContent)
+            file.writeText(cupContent, StandardCharsets.UTF_8)
 
             true
         } catch (e: Exception) {
@@ -95,12 +103,13 @@ class RacingTaskStorage(private val context: Context) {
      */
     fun loadRacingTaskFromFile(taskName: String): SimpleRacingTask? {
         return try {
+            migrateLegacyTasksIfNeeded()
             val fileName = if (taskName.endsWith(".cup")) taskName else "$taskName.cup"
-            val file = File(context.filesDir, "cup_tasks/$fileName")
+            val file = resolveReadableTaskFile(fileName)
 
-            if (file.exists()) {
-                val cupContent = file.readText()
-                val task = parseCUPToRacingTask(cupContent)
+            if (file != null && file.exists()) {
+                val cupContent = file.readText(StandardCharsets.UTF_8)
+                val task = parseCUPToRacingTask(cupContent, fileName)
                 if (task != null) {
                     task
                 } else {
@@ -119,15 +128,13 @@ class RacingTaskStorage(private val context: Context) {
      */
     fun deleteRacingTask(taskName: String): Boolean {
         return try {
+            migrateLegacyTasksIfNeeded()
             val fileName = if (taskName.endsWith(".cup")) taskName else "$taskName.cup"
-            val file = File(context.filesDir, "cup_tasks/$fileName")
-
-            if (file.exists()) {
-                val deleted = file.delete()
-                deleted
-            } else {
-                false
-            }
+            val scopedFile = File(scopedTasksDir, fileName)
+            val legacyFile = File(legacyTasksDir, fileName)
+            val deletedScoped = scopedFile.exists() && scopedFile.delete()
+            val deletedLegacy = legacyFile.exists() && legacyFile.delete()
+            deletedScoped || deletedLegacy
         } catch (e: Exception) {
             false
         }
@@ -137,79 +144,91 @@ class RacingTaskStorage(private val context: Context) {
      * Convert Racing task to CUP format
      */
     private fun racingTaskToCUP(task: SimpleRacingTask, taskName: String): String {
-        val header = """
-            name,code,country,lat,lon,elev,style,rwdir,rwlen,freq,desc
-            "SeeYou task - $taskName","TASK","","","","","","","","","Created by Racing Task Manager"
-        """.trimIndent()
+        val headerRow = "name,code,country,lat,lon,elev,style,rwdir,rwlen,freq,desc"
+        val metadataRow = listOf(
+            CupFormatUtils.csvEscape("Racing task - $taskName"),
+            CupFormatUtils.csvEscape("TASK"),
+            CupFormatUtils.csvEscape(""),
+            CupFormatUtils.csvEscape(""),
+            CupFormatUtils.csvEscape(""),
+            CupFormatUtils.csvEscape(""),
+            CupFormatUtils.csvEscape(""),
+            CupFormatUtils.csvEscape(""),
+            CupFormatUtils.csvEscape(""),
+            CupFormatUtils.csvEscape(""),
+            CupFormatUtils.csvEscape("Created by Racing Task Manager")
+        ).joinToString(",")
 
-        val waypoints = StringBuilder()
-        task.waypoints.forEachIndexed { index, waypoint ->
-            val latDegrees = waypoint.lat.toInt()
-            val latMinutes = (kotlin.math.abs(waypoint.lat) - kotlin.math.abs(latDegrees)) * 60.0
-            val latHem = if (waypoint.lat >= 0) "N" else "S"
-            val latFormatted = "${kotlin.math.abs(latDegrees)}${String.format("%06.3f", latMinutes)}${latHem}"
-
-            val lonDegrees = waypoint.lon.toInt()
-            val lonMinutes = (kotlin.math.abs(waypoint.lon) - kotlin.math.abs(lonDegrees)) * 60.0
-            val lonHem = if (waypoint.lon >= 0) "E" else "W"
-            val lonFormatted = "${String.format("%03d", kotlin.math.abs(lonDegrees))}${String.format("%06.3f", lonMinutes)}${lonHem}"
-
-            val code = when (waypoint.role) {
-                RacingWaypointRole.START -> "START"
-                RacingWaypointRole.FINISH -> "FINISH"
-                RacingWaypointRole.TURNPOINT -> "TP${index}"
+        val rows = task.waypoints.mapIndexed { index, waypoint ->
+            val role = when (waypoint.role) {
+                RacingWaypointRole.START -> WaypointRole.START
+                RacingWaypointRole.FINISH -> WaypointRole.FINISH
+                RacingWaypointRole.TURNPOINT -> WaypointRole.TURNPOINT
             }
-
-            val style = "1" // Default to circle
-            val radiusMeters = (waypoint.gateWidth * 1000).toInt()
-
-            waypoints.append(
-                "\"${waypoint.title}\",\"$code\",\"\",\"$latFormatted\",\"$lonFormatted\",\"0m\",\"$style\",\"\",\"${radiusMeters}m\",\"\",\"${waypoint.subtitle}\"\n"
-            )
+            listOf(
+                CupFormatUtils.csvEscape(waypoint.title.take(80)),
+                CupFormatUtils.csvEscape(
+                    CupFormatUtils.exportCode(
+                        role = role,
+                        index = index,
+                        taskType = TaskType.RACING
+                    )
+                ),
+                CupFormatUtils.csvEscape(""),
+                CupFormatUtils.csvEscape(CupFormatUtils.formatLatitude(waypoint.lat)),
+                CupFormatUtils.csvEscape(CupFormatUtils.formatLongitude(waypoint.lon)),
+                CupFormatUtils.csvEscape("0m"),
+                CupFormatUtils.csvEscape("1"),
+                CupFormatUtils.csvEscape(""),
+                CupFormatUtils.csvEscape("${(waypoint.gateWidth * 1000).toInt()}m"),
+                CupFormatUtils.csvEscape(""),
+                CupFormatUtils.csvEscape(waypoint.subtitle.take(120))
+            ).joinToString(",")
         }
 
-        return header + "\n" + waypoints.toString()
+        return buildString {
+            appendLine(headerRow)
+            appendLine(metadataRow)
+            rows.forEach { appendLine(it) }
+        }
     }
 
     /**
      * Parse CUP format to Racing task
      */
-    private fun parseCUPToRacingTask(cupContent: String): SimpleRacingTask? {
+    private fun parseCUPToRacingTask(cupContent: String, taskNameHint: String): SimpleRacingTask? {
         return try {
-            val lines = cupContent.lines()
-            val waypoints = mutableListOf<RacingWaypoint>()
-
-            for (line in lines) {
-                if (line.startsWith("\"") && !line.contains("name,code")) {
-                    // Parse waypoint line
-                    val parts = line.split(",").map { it.trim('"') }
-                    if (parts.size >= 6) {
-                        val title = parts[0]
-                        val code = parts[1]
-                        val lat = parseLatitude(parts[3])
-                        val lon = parseLongitude(parts[4])
-
-                        val role = when {
-                            code.startsWith("START") -> RacingWaypointRole.START
-                            code == "FINISH" -> RacingWaypointRole.FINISH
-                            else -> RacingWaypointRole.TURNPOINT
-                        }
-
-                        waypoints.add(RacingWaypoint.createWithStandardizedDefaults(
-                            id = UUID.randomUUID().toString(),
-                            title = title,
-                            subtitle = "",
-                            lat = lat,
-                            lon = lon,
-                            role = role
-                        ))
+            val parsedWaypoints = CupFormatUtils.parseCupWaypoints(cupContent)
+            if (parsedWaypoints.isNotEmpty()) {
+                val waypoints = parsedWaypoints.mapIndexed { index, waypoint ->
+                    val role = when (
+                        CupFormatUtils.inferWaypointRole(
+                            index = index,
+                            total = parsedWaypoints.size,
+                            code = waypoint.code
+                        )
+                    ) {
+                        WaypointRole.START -> RacingWaypointRole.START
+                        WaypointRole.FINISH -> RacingWaypointRole.FINISH
+                        WaypointRole.TURNPOINT,
+                        WaypointRole.OPTIONAL -> RacingWaypointRole.TURNPOINT
                     }
+                    RacingWaypoint.createWithStandardizedDefaults(
+                        id = CupFormatUtils.stableWaypointId(
+                            prefix = "racing",
+                            index = index,
+                            code = waypoint.code,
+                            name = waypoint.name
+                        ),
+                        title = waypoint.name,
+                        subtitle = waypoint.description,
+                        lat = waypoint.latitude,
+                        lon = waypoint.longitude,
+                        role = role
+                    )
                 }
-            }
-
-            if (waypoints.isNotEmpty()) {
                 SimpleRacingTask(
-                    id = UUID.randomUUID().toString(),
+                    id = CupFormatUtils.stableTaskId("racing", taskNameHint),
                     waypoints = waypoints
                 )
             } else {
@@ -220,25 +239,70 @@ class RacingTaskStorage(private val context: Context) {
         }
     }
 
-    /**
-     * Parse latitude from CUP format (e.g., "5146.500N")
-     */
-    private fun parseLatitude(latStr: String): Double {
-        val hem = latStr.last()
-        val degrees = latStr.substring(0, 2).toDouble()
-        val minutes = latStr.substring(2, latStr.length - 1).toDouble()
-        val decimal = degrees + minutes / 60.0
-        return if (hem == 'S') -decimal else decimal
+    private fun ensureDir(dir: File): File {
+        if (!dir.exists()) {
+            dir.mkdirs()
+        }
+        return dir
     }
 
-    /**
-     * Parse longitude from CUP format (e.g., "00630.000E")
-     */
-    private fun parseLongitude(lonStr: String): Double {
-        val hem = lonStr.last()
-        val degrees = lonStr.substring(0, 3).toDouble()
-        val minutes = lonStr.substring(3, lonStr.length - 1).toDouble()
-        val decimal = degrees + minutes / 60.0
-        return if (hem == 'W') -decimal else decimal
+    private fun migrateLegacyTasksIfNeeded() {
+        if (prefs.getBoolean(KEY_LEGACY_MIGRATION_DONE, false)) {
+            LegacyCupStorageCleanupPolicy.runIfEligible(context)
+            return
+        }
+
+        ensureDir(scopedTasksDir)
+        ensureDir(legacyTasksDir)
+        legacyTasksDir.listFiles { file -> file.extension == "cup" }
+            ?.forEach { legacyFile ->
+                if (!isLikelyLegacyRacingCup(legacyFile)) {
+                    return@forEach
+                }
+                val scopedFile = File(scopedTasksDir, legacyFile.name)
+                runCatching {
+                    if (scopedFile.exists()) {
+                        val duplicate = runCatching {
+                            scopedFile.readText(StandardCharsets.UTF_8) == legacyFile.readText(StandardCharsets.UTF_8)
+                        }.getOrDefault(false)
+                        if (duplicate) {
+                            legacyFile.delete()
+                        }
+                    } else {
+                        legacyFile.copyTo(scopedFile, overwrite = false)
+                        legacyFile.delete()
+                    }
+                }
+            }
+
+        prefs.edit().putBoolean(KEY_LEGACY_MIGRATION_DONE, true).apply()
+        LegacyCupStorageCleanupPolicy.runIfEligible(context)
+    }
+
+    private fun resolveReadableTaskFile(fileName: String): File? {
+        val scopedFile = File(scopedTasksDir, fileName)
+        if (scopedFile.exists()) {
+            return scopedFile
+        }
+        val legacyFile = File(legacyTasksDir, fileName)
+        return legacyFile.takeIf { it.exists() }
+    }
+
+    private fun isLikelyLegacyRacingCup(file: File): Boolean {
+        return runCatching {
+            val content = file.readText(StandardCharsets.UTF_8)
+            val waypoints = CupFormatUtils.parseCupWaypoints(content)
+            if (waypoints.isNotEmpty()) {
+                CupFormatUtils.inferTaskType(waypoints) == TaskType.RACING
+            } else {
+                !file.name.contains("AAT", ignoreCase = true)
+            }
+        }.getOrDefault(!file.name.contains("AAT", ignoreCase = true))
+    }
+
+    private companion object {
+        const val LEGACY_TASKS_DIR = "cup_tasks"
+        const val RACING_TASKS_DIR = "cup_tasks/racing"
+        const val KEY_LEGACY_MIGRATION_DONE = "legacy_racing_storage_migration_done_v1"
     }
 }

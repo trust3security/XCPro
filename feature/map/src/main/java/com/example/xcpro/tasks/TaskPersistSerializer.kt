@@ -3,18 +3,23 @@ package com.example.xcpro.tasks
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.TaskWaypoint
+import com.example.xcpro.tasks.core.PersistedOzParams
+import com.example.xcpro.tasks.core.TargetStateCustomParams
+import com.example.xcpro.tasks.core.TaskWaypointParamKeys
 import com.example.xcpro.tasks.core.WaypointRole
+import com.example.xcpro.tasks.domain.model.GeoPoint
 import com.example.xcpro.tasks.domain.model.TaskTargetSnapshot
 import com.google.gson.Gson
 
 /**
- * Lossier-than-domain but faithful enough JSON snapshot for QR/export.
+ * Canonical JSON snapshot for QR/export.
  * AI-NOTE: CUP cannot carry OZ/targets; this serializer is the SSOT for full-fidelity round-trips.
  */
 object TaskPersistSerializer {
     private val gson = Gson()
 
     data class PersistedTask(
+        val taskId: String? = null,
         val taskType: TaskType,
         val waypoints: List<PersistedWaypoint>
     )
@@ -28,6 +33,9 @@ object TaskPersistSerializer {
         val role: WaypointRole,
         val ozType: String?,
         val ozParams: Map<String, Double?> = emptyMap(),
+        val customRadius: Double? = null,
+        val customPointType: String? = null,
+        val customParameters: Map<String, Any?> = emptyMap(),
         val targetParam: Double? = null,
         val targetLocked: Boolean? = null,
         val targetLat: Double? = null,
@@ -35,8 +43,18 @@ object TaskPersistSerializer {
     )
 
     fun serialize(task: Task, taskType: TaskType, targets: List<TaskTargetSnapshot>): String {
+        val targetsByIndex = targets.associateBy { it.index }
+        val targetsById = targets.associateBy { it.id }
         val wpDtos = task.waypoints.mapIndexed { idx, wp ->
-            val target = targets.getOrNull(idx)
+            val customOzType = (wp.customParameters[TaskWaypointParamKeys.OZ_TYPE] as? String)?.takeIf { it.isNotBlank() }
+            val customOzParams = extractOzParams(wp.customParameters[TaskWaypointParamKeys.OZ_PARAMS])
+            val ozType = customOzType ?: defaultOzType(taskType, wp.role)
+            val ozParams = if (customOzParams.isNotEmpty()) customOzParams else defaultOzParams(taskType, wp.role)
+
+            val target = targetsByIndex[idx] ?: targetsById[wp.id] ?: targets.getOrNull(idx)
+            val waypointHasTargetState = hasExplicitTargetState(wp.customParameters)
+            val waypointTargetState = TargetStateCustomParams.from(wp.customParameters)
+
             PersistedWaypoint(
                 id = wp.id,
                 title = wp.title,
@@ -44,15 +62,18 @@ object TaskPersistSerializer {
                 lat = wp.lat,
                 lon = wp.lon,
                 role = wp.role,
-                ozType = defaultOzType(taskType, wp.role),
-                ozParams = defaultOzParams(taskType, wp.role),
-                targetParam = target?.targetParam,
-                targetLocked = target?.isLocked,
-                targetLat = target?.target?.lat,
-                targetLon = target?.target?.lon
+                ozType = ozType,
+                ozParams = ozParams,
+                customRadius = wp.customRadius,
+                customPointType = wp.customPointType,
+                customParameters = sanitizeCustomParameters(wp.customParameters),
+                targetParam = target?.targetParam ?: if (waypointHasTargetState) waypointTargetState.targetParam else null,
+                targetLocked = target?.isLocked ?: if (waypointHasTargetState) waypointTargetState.targetLocked else null,
+                targetLat = target?.target?.lat ?: if (waypointHasTargetState) waypointTargetState.targetLat else null,
+                targetLon = target?.target?.lon ?: if (waypointHasTargetState) waypointTargetState.targetLon else null
             )
         }
-        return gson.toJson(PersistedTask(taskType, wpDtos))
+        return gson.toJson(PersistedTask(taskId = task.id, taskType = taskType, waypoints = wpDtos))
     }
 
     fun deserialize(json: String): PersistedTask =
@@ -62,41 +83,131 @@ object TaskPersistSerializer {
      * Convert persisted payload back into a core Task plus target overlays.
      */
     fun toTask(persisted: PersistedTask): Pair<Task, List<TaskTargetSnapshot>> {
-        val task = Task(
-            id = "imported",
-            waypoints = persisted.waypoints.mapIndexed { index, p ->
-                TaskWaypoint(
-                    id = p.id.ifBlank { "wp_$index" },
-                    title = p.title,
-                    subtitle = p.subtitle,
-                    lat = p.lat,
-                    lon = p.lon,
-                    role = p.role,
-                    customParameters = mapOf<String, Any>(
-                        "targetParam" to (p.targetParam ?: 0.5),
-                        "targetLocked" to (p.targetLocked ?: false),
-                        "targetLat" to (p.targetLat ?: p.lat),
-                        "targetLon" to (p.targetLon ?: p.lon),
-                        "ozType" to (p.ozType ?: ""),
-                        "ozParams" to (p.ozParams as Any)
-                    )
-                )
-            }
-        )
+        val waypoints = mutableListOf<TaskWaypoint>()
+        val targets = mutableListOf<TaskTargetSnapshot>()
 
-        val targets = persisted.waypoints.mapIndexed { idx, p ->
-            TaskTargetSnapshot(
+        persisted.waypoints.forEachIndexed { idx, p ->
+            val waypointId = p.id.ifBlank { "wp_$idx" }
+            val customParameters = restoreCustomParameters(p.customParameters).toMutableMap()
+            val ozType = p.ozType?.takeIf { it.isNotBlank() } ?: defaultOzType(persisted.taskType, p.role)
+            val ozParams = if (p.ozParams.isNotEmpty()) p.ozParams else defaultOzParams(persisted.taskType, p.role)
+            customParameters[TaskWaypointParamKeys.OZ_TYPE] = ozType
+            customParameters[TaskWaypointParamKeys.OZ_PARAMS] = compactOzParams(ozParams)
+
+            val targetFallback = TargetStateCustomParams.from(
+                source = customParameters,
+                fallbackTargetParam = p.targetParam ?: 0.5,
+                fallbackTargetLocked = p.targetLocked ?: false
+            )
+            val resolvedTargetParam = p.targetParam ?: targetFallback.targetParam
+            val resolvedTargetLocked = p.targetLocked ?: targetFallback.targetLocked
+            val resolvedTargetLat = p.targetLat ?: targetFallback.targetLat ?: p.lat
+            val resolvedTargetLon = p.targetLon ?: targetFallback.targetLon ?: p.lon
+
+            TargetStateCustomParams(
+                targetParam = resolvedTargetParam,
+                targetLocked = resolvedTargetLocked,
+                targetLat = resolvedTargetLat,
+                targetLon = resolvedTargetLon
+            ).applyTo(customParameters)
+
+            waypoints += TaskWaypoint(
+                id = waypointId,
+                title = p.title,
+                subtitle = p.subtitle,
+                lat = p.lat,
+                lon = p.lon,
+                role = p.role,
+                customRadius = p.customRadius,
+                customPointType = p.customPointType,
+                customParameters = customParameters
+            )
+
+            val allowsTarget = persisted.taskType == TaskType.AAT &&
+                (p.role == WaypointRole.TURNPOINT || p.role == WaypointRole.OPTIONAL)
+            val targetPoint = if (resolvedTargetLat.isFinite() && resolvedTargetLon.isFinite()) {
+                GeoPoint(resolvedTargetLat, resolvedTargetLon)
+            } else {
+                null
+            }
+
+            targets += TaskTargetSnapshot(
                 index = idx,
-                id = p.id,
+                id = waypointId,
                 name = p.title,
-                allowsTarget = true,
-                targetParam = p.targetParam ?: 0.5,
-                isLocked = p.targetLocked ?: false,
-                target = if (p.targetLat != null && p.targetLon != null)
-                    com.example.xcpro.tasks.domain.model.GeoPoint(p.targetLat, p.targetLon) else null
+                allowsTarget = allowsTarget,
+                targetParam = resolvedTargetParam,
+                isLocked = resolvedTargetLocked,
+                target = targetPoint
             )
         }
+
+        val task = Task(
+            id = persisted.taskId?.ifBlank { "imported" } ?: "imported",
+            waypoints = waypoints
+        )
+
         return task to targets
+    }
+
+    private fun hasExplicitTargetState(parameters: Map<String, Any>): Boolean {
+        return parameters.containsKey(TaskWaypointParamKeys.TARGET_PARAM) ||
+            parameters.containsKey(TaskWaypointParamKeys.TARGET_LOCKED) ||
+            parameters.containsKey(TaskWaypointParamKeys.TARGET_LAT) ||
+            parameters.containsKey(TaskWaypointParamKeys.TARGET_LON)
+    }
+
+    private fun extractOzParams(value: Any?): Map<String, Double?> {
+        val map = value as? Map<*, *> ?: return emptyMap()
+        return map.entries
+            .mapNotNull { entry ->
+                val key = entry.key as? String ?: return@mapNotNull null
+                val number = (entry.value as? Number)?.toDouble()
+                key to number
+            }
+            .toMap()
+    }
+
+    private fun compactOzParams(source: Map<String, Double?>): Map<String, Double> {
+        return source.mapNotNull { (key, value) ->
+            value?.let { key to it }
+        }.toMap()
+    }
+
+    private fun sanitizeCustomParameters(source: Map<String, Any>): Map<String, Any?> {
+        return source.mapValues { (_, value) -> sanitizeJsonValue(value) }
+    }
+
+    private fun sanitizeJsonValue(value: Any?): Any? = when (value) {
+        null -> null
+        is String, is Number, is Boolean -> value
+        is Map<*, *> -> value.entries
+            .mapNotNull { entry ->
+                val key = entry.key as? String ?: return@mapNotNull null
+                key to sanitizeJsonValue(entry.value)
+            }
+            .toMap()
+        is List<*> -> value.map { sanitizeJsonValue(it) }
+        else -> value.toString()
+    }
+
+    private fun restoreCustomParameters(source: Map<String, Any?>): Map<String, Any> {
+        return source.entries.mapNotNull { (key, value) ->
+            restoreJsonValue(value)?.let { key to it }
+        }.toMap()
+    }
+
+    private fun restoreJsonValue(value: Any?): Any? = when (value) {
+        null -> null
+        is String, is Number, is Boolean -> value
+        is Map<*, *> -> value.entries
+            .mapNotNull { entry ->
+                val key = entry.key as? String ?: return@mapNotNull null
+                restoreJsonValue(entry.value)?.let { key to it }
+            }
+            .toMap()
+        is List<*> -> value.mapNotNull { restoreJsonValue(it) }
+        else -> null
     }
 
     private fun defaultOzType(taskType: TaskType, role: WaypointRole): String = when (role) {
@@ -107,16 +218,23 @@ object TaskPersistSerializer {
     }
 
     private fun defaultOzParams(taskType: TaskType, role: WaypointRole): Map<String, Double?> = when (role) {
-        WaypointRole.START -> mapOf("lengthMeters" to 1000.0, "widthMeters" to 200.0)
-        WaypointRole.FINISH -> mapOf("radiusMeters" to 3000.0)
+        WaypointRole.START -> PersistedOzParams(
+            lengthMeters = 1000.0,
+            widthMeters = 200.0
+        ).toMap()
+        WaypointRole.FINISH -> PersistedOzParams(
+            radiusMeters = 3000.0
+        ).toMap()
         WaypointRole.TURNPOINT, WaypointRole.OPTIONAL -> {
-            if (taskType == TaskType.AAT) mapOf(
-                "radiusMeters" to 5000.0,
-                "outerRadiusMeters" to 5000.0,
-                "innerRadiusMeters" to 0.0,
-                "angleDeg" to 90.0
-            )
-            else mapOf("radiusMeters" to 500.0)
+            if (taskType == TaskType.AAT) PersistedOzParams(
+                radiusMeters = 5000.0,
+                outerRadiusMeters = 5000.0,
+                innerRadiusMeters = 0.0,
+                angleDeg = 90.0
+            ).toMap()
+            else PersistedOzParams(
+                radiusMeters = 500.0
+            ).toMap()
         }
     }
 }

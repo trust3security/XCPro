@@ -1,5 +1,9 @@
 package com.example.xcpro.adsb
 
+internal const val ADSB_ERROR_OFFLINE = "Network unavailable"
+internal const val ADSB_ERROR_CIRCUIT_BREAKER_OPEN = "ADS-B paused after repeated failures"
+internal const val ADSB_ERROR_CIRCUIT_BREAKER_PROBE = "ADS-B retry probe in progress"
+
 @JvmInline
 value class Icao24(val raw: String) {
     companion object {
@@ -41,6 +45,7 @@ data class AdsbTrafficUiModel(
     val isStale: Boolean,
     val distanceMeters: Double,
     val bearingDegFromUser: Double,
+    val usesOwnshipReference: Boolean = true,
     val positionSource: Int?,
     val category: Int?,
     val lastContactEpochSec: Long?,
@@ -71,12 +76,19 @@ data class AdsbTrafficSnapshot(
     val receiveRadiusKm: Int,
     val fetchedCount: Int,
     val withinRadiusCount: Int,
+    val withinVerticalCount: Int = 0,
+    val filteredByVerticalCount: Int = 0,
+    val cappedCount: Int = 0,
     val displayedCount: Int,
     val lastHttpStatus: Int?,
     val remainingCredits: Int?,
     val lastPollMonoMs: Long?,
     val lastSuccessMonoMs: Long?,
-    val lastError: String?
+    val lastError: String?,
+    val lastNetworkFailureKind: AdsbNetworkFailureKind? = null,
+    val consecutiveFailureCount: Int = 0,
+    val nextRetryMonoMs: Long? = null,
+    val lastFailureMonoMs: Long? = null
 )
 
 data class AdsbAuth(

@@ -50,8 +50,8 @@ When OGN traffic is enabled:
 1. UI toggle:
    - `MapActionButtons` toggles OGN overlay state.
 2. ViewModel:
-   - `MapScreenViewModel.observeOgnTraffic()` gates streaming with map visibility and user preference.
-   - camera snapshot drives subscription center updates.
+   - `MapScreenTrafficCoordinator` gates streaming with `allowSensorStart && mapVisible && ognOverlayEnabled`.
+   - ownship GPS (`mapLocation`) drives subscription center updates.
 3. Domain/use-case:
    - `OgnTrafficUseCase` exposes targets/snapshot and preference flows.
 4. Data/repository:

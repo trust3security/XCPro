@@ -12,7 +12,7 @@ class MapWidgetLayoutUseCase @Inject constructor(
         val side = repository.readOffset(MapWidgetId.SIDE_HAMBURGER)
             ?: OffsetPx(
                 x = HAMBURGER_DEFAULT_X,
-                y = hamburgerDefaultY(screenHeightPx, density)
+                y = hamburgerDefaultY(density)
             )
         val flightMode = repository.readOffset(MapWidgetId.FLIGHT_MODE)
             ?: OffsetPx(
@@ -36,10 +36,8 @@ class MapWidgetLayoutUseCase @Inject constructor(
         repository.saveOffset(widgetId, offset)
     }
 
-    private fun hamburgerDefaultY(screenHeightPx: Float, density: DensityScale): Float {
-        val offsetPx = density.dpToPx(HAMBURGER_OFFSET_DP)
-        return (screenHeightPx / 2f - offsetPx).coerceAtLeast(0f)
-    }
+    private fun hamburgerDefaultY(density: DensityScale): Float =
+        density.dpToPx(HAMBURGER_PADDING_TOP_DP)
 
     private fun flightModeDefaultY(density: DensityScale): Float =
         density.dpToPx(FLIGHT_MODE_OFFSET_DP)
@@ -56,7 +54,7 @@ class MapWidgetLayoutUseCase @Inject constructor(
     private companion object {
         private const val HAMBURGER_DEFAULT_X = 16f
         private const val FLIGHT_MODE_DEFAULT_X = 16f
-        private const val HAMBURGER_OFFSET_DP = 32f
+        private const val HAMBURGER_PADDING_TOP_DP = 16f
         private const val FLIGHT_MODE_OFFSET_DP = 80f
         private const val BALLAST_WIDTH_DP = 40f
         private const val BALLAST_PADDING_END_DP = 16f

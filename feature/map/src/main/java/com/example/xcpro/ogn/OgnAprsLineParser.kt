@@ -56,8 +56,14 @@ class OgnAprsLineParser @Inject constructor() {
         val trackDegrees = courseSpeedMatch
             ?.groupValues
             ?.getOrNull(1)
-            ?.toDoubleOrNull()
-            ?.takeIf { it > 0.0 }
+            ?.toIntOrNull()
+            ?.let { course ->
+                when {
+                    course == 0 -> null
+                    course in 1..360 -> course.toDouble()
+                    else -> null
+                }
+            }
         val groundSpeedMps = courseSpeedMatch
             ?.groupValues
             ?.getOrNull(2)

@@ -1,5 +1,8 @@
 # OGN File Manifest (what Codex should create/change)
 
+> Archived pre-implementation manifest. File lists and constants here are historical.
+> Use `docs/OGN/OGN.md`, `docs/OGN/OGN_PROTOCOL_NOTES.md`, and `docs/ARCHITECTURE/PIPELINE.md` for current behavior.
+
 This is a concrete file-level plan. Paths are examples; Codex must adapt to the actual module/package layout found in the repo.
 
 ---
@@ -103,3 +106,4 @@ Test resources:
 - Keep everything behind an explicit user toggle.
 - Be strict about cancellation and lifecycle; do not keep sockets open when map is not visible.
 - Ensure no non-ASCII in Kotlin sources.
+

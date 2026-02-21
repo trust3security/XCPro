@@ -80,13 +80,33 @@ class AdsbAircraftIconMapperTest {
     }
 
     @Test
-    fun prefersTypecodeWhenTypecodeConflictsWithIcaoAircraftType() {
+    fun prefersHelicopterClassWhenTypecodeConflictsWithIcaoAircraftType() {
         assertEquals(
-            AdsbAircraftIcon.PlaneLight,
+            AdsbAircraftIcon.Helicopter,
             iconForAircraft(
                 category = 3,
                 metadataTypecode = "C172",
                 metadataIcaoAircraftType = "H1P"
+            )
+        )
+    }
+
+    @Test
+    fun nonFixedWingCategoryIsAuthoritativeOverMetadata() {
+        assertEquals(
+            AdsbAircraftIcon.Helicopter,
+            iconForAircraft(
+                category = 8,
+                metadataTypecode = "B738",
+                metadataIcaoAircraftType = "L2J"
+            )
+        )
+        assertEquals(
+            AdsbAircraftIcon.Glider,
+            iconForAircraft(
+                category = 9,
+                metadataTypecode = "B738",
+                metadataIcaoAircraftType = "L2J"
             )
         )
     }
@@ -148,6 +168,95 @@ class AdsbAircraftIconMapperTest {
                 metadataTypecode = "AT76",
                 metadataIcaoAircraftType = null
             )
+        )
+    }
+
+    @Test
+    fun weakFallbackTypecodeDoesNotOverrideIcaoAircraftClass() {
+        assertEquals(
+            AdsbAircraftIcon.PlaneTwinProp,
+            iconForAircraft(
+                category = 0,
+                metadataTypecode = "ZZ99",
+                metadataIcaoAircraftType = "L2P"
+            )
+        )
+    }
+
+    @Test
+    fun classifiesCommonHelicopterTypecodesWithoutIcaoClass() {
+        assertEquals(
+            AdsbAircraftIcon.Helicopter,
+            iconForAircraft(
+                category = 0,
+                metadataTypecode = "B429",
+                metadataIcaoAircraftType = null
+            )
+        )
+        assertEquals(
+            AdsbAircraftIcon.Helicopter,
+            iconForAircraft(
+                category = 0,
+                metadataTypecode = "A139",
+                metadataIcaoAircraftType = null
+            )
+        )
+    }
+
+    @Test
+    fun classifiesAdditionalCommonHelicopterPrefixesWithoutIcaoClass() {
+        val helicopterTypecodes = listOf(
+            "B06",
+            "AS50",
+            "H269",
+            "B407",
+            "H500",
+            "A109",
+            "MI8",
+            "S76",
+            "B47G"
+        )
+
+        helicopterTypecodes.forEach { typecode ->
+            assertEquals(
+                AdsbAircraftIcon.Helicopter,
+                iconForAircraft(
+                    category = 0,
+                    metadataTypecode = typecode,
+                    metadataIcaoAircraftType = null
+                )
+            )
+        }
+    }
+
+    @Test
+    fun nonFixedWingCategoriesRemainAuthoritativeOverConflictingMetadata() {
+        val conflictingTypecode = "B738"
+        val conflictingIcaoClass = "L2J"
+
+        assertEquals(
+            AdsbAircraftIcon.Helicopter,
+            iconForAircraft(8, conflictingTypecode, conflictingIcaoClass)
+        )
+        assertEquals(
+            AdsbAircraftIcon.Glider,
+            iconForAircraft(9, conflictingTypecode, conflictingIcaoClass)
+        )
+        assertEquals(
+            AdsbAircraftIcon.Balloon,
+            iconForAircraft(10, conflictingTypecode, conflictingIcaoClass)
+        )
+        assertEquals(
+            AdsbAircraftIcon.Parachutist,
+            iconForAircraft(11, conflictingTypecode, conflictingIcaoClass)
+        )
+        assertEquals(
+            AdsbAircraftIcon.Hangglider,
+            iconForAircraft(12, conflictingTypecode, conflictingIcaoClass)
+        )
+        assertEquals(
+            AdsbAircraftIcon.Drone,
+            iconForAircraft(14, conflictingTypecode, conflictingIcaoClass)
         )
     }
 

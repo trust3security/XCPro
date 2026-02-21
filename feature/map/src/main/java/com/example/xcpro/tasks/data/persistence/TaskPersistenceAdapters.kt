@@ -16,6 +16,9 @@ import com.example.xcpro.tasks.aat.persistence.AATTaskFileIO
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.TaskWaypoint
+import com.example.xcpro.tasks.core.AATTaskTimeCustomParams
+import com.example.xcpro.tasks.core.AATWaypointCustomParams
+import com.example.xcpro.tasks.core.RacingWaypointCustomParams
 import com.example.xcpro.tasks.core.WaypointRole
 import com.example.xcpro.tasks.domain.persistence.AATTaskPersistence
 import com.example.xcpro.tasks.domain.persistence.RacingTaskPersistence
@@ -29,7 +32,7 @@ import com.example.xcpro.tasks.racing.models.RacingWaypoint
 import com.example.xcpro.tasks.racing.models.RacingWaypointRole
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.Duration
-import java.util.UUID
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,9 +41,6 @@ import kotlinx.coroutines.flow.asStateFlow
 
 private const val TASK_TYPE_PREFS = "task_coordinator_prefs"
 private const val KEY_CURRENT_TASK_TYPE = "current_task_type"
-private const val KEY_MIN_TIME_SECONDS = "aatMinimumTimeSeconds"
-private const val KEY_MAX_TIME_SECONDS = "aatMaximumTimeSeconds"
-
 @Singleton
 class SharedPrefsTaskTypeSettingsRepository @Inject constructor(
     @ApplicationContext context: Context
@@ -156,9 +156,7 @@ private fun Task.toSimpleRacingTask(): SimpleRacingTask {
         val turnType = waypoint.customPointType
             ?.let { runCatching { RacingTurnPointType.valueOf(it) }.getOrNull() }
             ?: RacingTurnPointType.TURN_POINT_CYLINDER
-        val keyholeInnerRadius = (waypoint.customParameters["keyholeInnerRadius"] as? Number)?.toDouble() ?: 0.5
-        val keyholeAngle = (waypoint.customParameters["keyholeAngle"] as? Number)?.toDouble() ?: 90.0
-        val faiQuadrantOuterRadius = (waypoint.customParameters["faiQuadrantOuterRadius"] as? Number)?.toDouble() ?: 10.0
+        val racingParams = RacingWaypointCustomParams.from(waypoint.customParameters)
 
         RacingWaypoint.createWithStandardizedDefaults(
             id = waypoint.id,
@@ -171,13 +169,13 @@ private fun Task.toSimpleRacingTask(): SimpleRacingTask {
             finishPointType = finishType,
             turnPointType = turnType,
             customGateWidth = waypoint.customRadius,
-            keyholeInnerRadius = keyholeInnerRadius,
-            keyholeAngle = keyholeAngle,
-            faiQuadrantOuterRadius = faiQuadrantOuterRadius
+            keyholeInnerRadius = racingParams.keyholeInnerRadius,
+            keyholeAngle = racingParams.keyholeAngle,
+            faiQuadrantOuterRadius = racingParams.faiQuadrantOuterRadius
         )
     }
     return SimpleRacingTask(
-        id = id.ifBlank { UUID.randomUUID().toString() },
+        id = deterministicFallbackId(prefix = "racing"),
         waypoints = racingWaypoints
     )
 }
@@ -203,19 +201,25 @@ private fun SimpleRacingTask.toCoreTask(): Task {
                     RacingWaypointRole.TURNPOINT -> waypoint.turnPointType.name
                     RacingWaypointRole.FINISH -> waypoint.finishPointType.name
                 },
-                customParameters = mapOf(
-                    "keyholeInnerRadius" to waypoint.keyholeInnerRadius,
-                    "keyholeAngle" to waypoint.keyholeAngle,
-                    "faiQuadrantOuterRadius" to waypoint.faiQuadrantOuterRadius
-                )
+                customParameters = RacingWaypointCustomParams(
+                    keyholeInnerRadius = waypoint.keyholeInnerRadius,
+                    keyholeAngle = waypoint.keyholeAngle,
+                    faiQuadrantOuterRadius = waypoint.faiQuadrantOuterRadius
+                ).toMap()
             )
         }
     )
 }
 
 private fun Task.toSimpleAATTask(): SimpleAATTask {
-    val minimumTime = extractDurationFromTask(KEY_MIN_TIME_SECONDS, Duration.ofHours(3))
-    val maximumTime = extractDurationFromTask(KEY_MAX_TIME_SECONDS, Duration.ofHours(6))
+    val firstParams = waypoints.firstOrNull()?.customParameters ?: emptyMap()
+    val timeParams = AATTaskTimeCustomParams.from(
+        source = firstParams,
+        fallbackMinimumTimeSeconds = Duration.ofHours(3).seconds.toDouble(),
+        fallbackMaximumTimeSeconds = Duration.ofHours(6).seconds.toDouble()
+    )
+    val minimumTime = Duration.ofSeconds(timeParams.minimumTimeSeconds.toLong())
+    val maximumTime = timeParams.maximumTimeSeconds?.toLong()?.let(Duration::ofSeconds)
     val aatWaypoints = waypoints.mapIndexed { index, waypoint ->
         val role = when {
             waypoints.size == 1 -> AATWaypointRole.START
@@ -233,18 +237,14 @@ private fun Task.toSimpleAATTask(): SimpleAATTask {
             ?.let { runCatching { AATTurnPointType.valueOf(it) }.getOrNull() }
             ?: AATTurnPointType.AAT_CYLINDER
 
-        val radiusMeters = (waypoint.customParameters["radiusMeters"] as? Number)?.toDouble()
-            ?: ((waypoint.customRadius ?: AATRadiusAuthority.getRadiusForRole(role)) * 1000.0)
-        val outerRadiusMeters = (waypoint.customParameters["outerRadiusMeters"] as? Number)?.toDouble()
-            ?: radiusMeters
-        val innerRadiusMeters = (waypoint.customParameters["innerRadiusMeters"] as? Number)?.toDouble() ?: 0.0
-        val startAngleDegrees = (waypoint.customParameters["startAngleDegrees"] as? Number)?.toDouble() ?: 0.0
-        val endAngleDegrees = (waypoint.customParameters["endAngleDegrees"] as? Number)?.toDouble() ?: 90.0
-        val lineWidthMeters = (waypoint.customParameters["lineWidthMeters"] as? Number)?.toDouble() ?: radiusMeters
-        val targetLat = (waypoint.customParameters["targetLat"] as? Number)?.toDouble() ?: waypoint.lat
-        val targetLon = (waypoint.customParameters["targetLon"] as? Number)?.toDouble() ?: waypoint.lon
-        val isTargetPointCustomized = (waypoint.customParameters["isTargetPointCustomized"] as? Boolean)
-            ?: (targetLat != waypoint.lat || targetLon != waypoint.lon)
+        val fallbackRadiusMeters =
+            (waypoint.customRadius ?: AATRadiusAuthority.getRadiusForRole(role)) * 1000.0
+        val aatParams = AATWaypointCustomParams.from(
+            source = waypoint.customParameters,
+            fallbackLat = waypoint.lat,
+            fallbackLon = waypoint.lon,
+            fallbackRadiusMeters = fallbackRadiusMeters
+        )
 
         val areaShape = when (role) {
             AATWaypointRole.START -> if (startType == AATStartPointType.AAT_START_LINE) AATAreaShape.LINE else AATAreaShape.CIRCLE
@@ -261,47 +261,72 @@ private fun Task.toSimpleAATTask(): SimpleAATTask {
             role = role,
             assignedArea = AATAssignedArea(
                 shape = areaShape,
-                radiusMeters = radiusMeters,
-                innerRadiusMeters = innerRadiusMeters,
-                outerRadiusMeters = outerRadiusMeters,
-                startAngleDegrees = startAngleDegrees,
-                endAngleDegrees = endAngleDegrees,
-                lineWidthMeters = lineWidthMeters
+                radiusMeters = aatParams.radiusMeters,
+                innerRadiusMeters = aatParams.innerRadiusMeters,
+                outerRadiusMeters = aatParams.outerRadiusMeters,
+                startAngleDegrees = aatParams.startAngleDegrees,
+                endAngleDegrees = aatParams.endAngleDegrees,
+                lineWidthMeters = aatParams.lineWidthMeters
             ),
             startPointType = startType,
             finishPointType = finishType,
             turnPointType = turnType,
-            targetPoint = AATLatLng(targetLat, targetLon),
-            isTargetPointCustomized = isTargetPointCustomized
+            targetPoint = AATLatLng(aatParams.targetLat, aatParams.targetLon),
+            isTargetPointCustomized = aatParams.isTargetPointCustomized
         )
     }
     return SimpleAATTask(
-        id = id.ifBlank { UUID.randomUUID().toString() },
+        id = deterministicFallbackId(prefix = "aat"),
         waypoints = aatWaypoints,
         minimumTime = minimumTime,
         maximumTime = maximumTime
     )
 }
 
+internal fun Task.deterministicFallbackId(prefix: String): String {
+    if (id.isNotBlank()) {
+        return id
+    }
+    val fingerprint = buildString {
+        waypoints.forEachIndexed { index, waypoint ->
+            append(index)
+            append('|')
+            append(waypoint.id.trim())
+            append('|')
+            append(waypoint.title.trim())
+            append('|')
+            append(String.format(Locale.US, "%.6f", waypoint.lat))
+            append('|')
+            append(String.format(Locale.US, "%.6f", waypoint.lon))
+            append('|')
+            append(waypoint.role.name)
+            append(';')
+        }
+    }
+    val suffix = fingerprint.hashCode().toUInt().toString(16).padStart(8, '0')
+    return "${prefix}_$suffix"
+}
+
 private fun SimpleAATTask.toCoreTask(): Task {
     return Task(
         id = id.ifBlank { "aat-task" },
         waypoints = waypoints.map { waypoint ->
-            val customParameters = mutableMapOf<String, Any>(
-                "radiusMeters" to waypoint.assignedArea.radiusMeters,
-                "outerRadiusMeters" to waypoint.assignedArea.outerRadiusMeters,
-                "innerRadiusMeters" to waypoint.assignedArea.innerRadiusMeters,
-                "startAngleDegrees" to waypoint.assignedArea.startAngleDegrees,
-                "endAngleDegrees" to waypoint.assignedArea.endAngleDegrees,
-                "lineWidthMeters" to waypoint.assignedArea.lineWidthMeters,
-                "targetLat" to waypoint.targetPoint.latitude,
-                "targetLon" to waypoint.targetPoint.longitude,
-                "isTargetPointCustomized" to waypoint.isTargetPointCustomized,
-                KEY_MIN_TIME_SECONDS to minimumTime.seconds.toDouble()
-            )
-            if (maximumTime != null) {
-                customParameters[KEY_MAX_TIME_SECONDS] = maximumTime.seconds.toDouble()
-            }
+            val customParameters = mutableMapOf<String, Any>()
+            AATWaypointCustomParams(
+                radiusMeters = waypoint.assignedArea.radiusMeters,
+                outerRadiusMeters = waypoint.assignedArea.outerRadiusMeters,
+                innerRadiusMeters = waypoint.assignedArea.innerRadiusMeters,
+                startAngleDegrees = waypoint.assignedArea.startAngleDegrees,
+                endAngleDegrees = waypoint.assignedArea.endAngleDegrees,
+                lineWidthMeters = waypoint.assignedArea.lineWidthMeters,
+                targetLat = waypoint.targetPoint.latitude,
+                targetLon = waypoint.targetPoint.longitude,
+                isTargetPointCustomized = waypoint.isTargetPointCustomized
+            ).applyTo(customParameters)
+            AATTaskTimeCustomParams(
+                minimumTimeSeconds = minimumTime.seconds.toDouble(),
+                maximumTimeSeconds = maximumTime?.seconds?.toDouble()
+            ).applyTo(customParameters)
             TaskWaypoint(
                 id = waypoint.id,
                 title = waypoint.title,
@@ -323,11 +348,4 @@ private fun SimpleAATTask.toCoreTask(): Task {
             )
         }
     )
-}
-
-private fun Task.extractDurationFromTask(key: String, fallback: Duration): Duration {
-    val first = waypoints.firstOrNull() ?: return fallback
-    val seconds = (first.customParameters[key] as? Number)?.toLong() ?: return fallback
-    if (seconds <= 0) return fallback
-    return Duration.ofSeconds(seconds)
 }

@@ -188,7 +188,11 @@ class FlightDataManager(
     val windIndicatorStateFlow: StateFlow<WindIndicatorState> =
         liveFlightDataFlow
             .scan(WindIndicatorState()) { previous, data ->
-                deriveWindIndicatorState(previous, data)
+                deriveWindIndicatorState(
+                    previous = previous,
+                    data = data,
+                    windValidMinSpeedMs = WIND_VALID_MIN_SPEED_MS
+                )
             }
             .distinctUntilChanged()
             .stateIn(
@@ -202,7 +206,15 @@ class FlightDataManager(
      */
     val cardFlightDataFlow: StateFlow<RealTimeFlightData?> =
         liveFlightDataFlow
-            .map { it?.toDisplayBucket() }
+            .map {
+                it?.toDisplayBucket(
+                    varioBucketMs = VARIO_BUCKET_MS,
+                    altitudeBucketM = ALTITUDE_BUCKET_M,
+                    windSpeedBucketKt = WIND_SPEED_BUCKET_KT,
+                    windDirBucketDeg = WIND_DIR_BUCKET_DEG,
+                    ldBucket = LD_BUCKET
+                )
+            }
             .stateIn(
                 scope = coroutineScope,
                 started = SharingStarted.WhileSubscribed(5_000),
@@ -256,18 +268,10 @@ class FlightDataManager(
     private var bufferedCardSample: RealTimeFlightData? = null
 
     fun mapToFlightModeSelection(mode: FlightMode): FlightModeSelection =
-        when (mode) {
-            FlightMode.CRUISE -> FlightModeSelection.CRUISE
-            FlightMode.THERMAL -> FlightModeSelection.THERMAL
-            FlightMode.FINAL_GLIDE -> FlightModeSelection.FINAL_GLIDE
-        }
+        mode.toFlightModeSelection()
 
     fun mapToFlightMode(modeSelection: FlightModeSelection): FlightMode =
-        when (modeSelection) {
-            FlightModeSelection.CRUISE -> FlightMode.CRUISE
-            FlightModeSelection.THERMAL -> FlightMode.THERMAL
-            FlightModeSelection.FINAL_GLIDE -> FlightMode.FINAL_GLIDE
-        }
+        modeSelection.toFlightMode()
 
     fun updateFlightMode(newMode: FlightModeSelection) {
         _currentFlightMode.value = newMode
@@ -327,54 +331,4 @@ class FlightDataManager(
         currentMode in _visibleModes.value
 
     fun getFallbackMode(): FlightMode = FlightMode.CRUISE
-
-    private fun RealTimeFlightData.toDisplayBucket(): RealTimeFlightData =
-        copy(
-            displayVario = displayVario.takeIf { it.isFinite() }?.bucket(VARIO_BUCKET_MS.toDouble()) ?: 0.0,
-            baselineDisplayVario = baselineDisplayVario.takeIf { it.isFinite() }?.bucket(VARIO_BUCKET_MS.toDouble()) ?: 0.0,
-            netto = netto.takeIf { it.isFinite() }?.bucket(VARIO_BUCKET_MS) ?: 0f,
-            displayNetto = displayNetto.takeIf { it.isFinite() }?.bucket(VARIO_BUCKET_MS.toDouble()) ?: 0.0,
-            baroAltitude = baroAltitude.takeIf { it.isFinite() }?.bucket(ALTITUDE_BUCKET_M) ?: 0.0,
-            gpsAltitude = gpsAltitude.takeIf { it.isFinite() }?.bucket(ALTITUDE_BUCKET_M) ?: 0.0,
-            agl = agl.takeIf { it.isFinite() }?.bucket(ALTITUDE_BUCKET_M) ?: 0.0,
-            windSpeed = windSpeed.takeIf { it.isFinite() }?.bucket(WIND_SPEED_BUCKET_KT) ?: 0f,
-            windDirection = windDirection.takeIf { it.isFinite() }?.bucket(WIND_DIR_BUCKET_DEG) ?: 0f,
-            currentLD = currentLD.takeIf { it.isFinite() }?.bucket(LD_BUCKET) ?: 0f
-        )
-
-    private fun deriveWindIndicatorState(
-        previous: WindIndicatorState,
-        data: RealTimeFlightData?
-    ): WindIndicatorState {
-        if (data == null) {
-            return previous.copy(
-                isValid = false,
-                quality = 0,
-                ageSeconds = -1
-            )
-        }
-        val quality = data.windQuality
-        val speed = data.windSpeed
-        val isValid = quality > 0 && speed > WIND_VALID_MIN_SPEED_MS
-        // AI-NOTE: Preserve last known wind direction when wind becomes invalid so the UI arrow
-        // stays stable (red) instead of snapping back to North.
-        val direction = if (isValid) {
-            normalizeAngleDeg(data.windDirection)
-        } else {
-            previous.directionFromDeg
-        }
-        return WindIndicatorState(
-            directionFromDeg = direction,
-            isValid = isValid,
-            quality = quality,
-            ageSeconds = data.windAgeSeconds
-        )
-    }
-
-    private fun normalizeAngleDeg(angle: Float): Float {
-        var normalized = angle % 360f
-        if (normalized < 0f) normalized += 360f
-        return normalized
-    }
-
 }

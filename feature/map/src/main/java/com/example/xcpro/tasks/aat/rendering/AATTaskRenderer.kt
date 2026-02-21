@@ -1,5 +1,7 @@
 package com.example.xcpro.tasks.aat.rendering
 
+import android.util.Log
+import com.example.xcpro.map.BuildConfig
 import com.example.xcpro.tasks.aat.SimpleAATTask
 import com.example.xcpro.tasks.aat.models.AATWaypoint
 import com.example.xcpro.tasks.aat.models.AATWaypointRole
@@ -61,7 +63,7 @@ class AATTaskRenderer(private val geometryGenerator: AATGeometryGenerator = AATG
                     mapRenderer.plotTargetPointPins(style, task.waypoints, editModeWaypointIndex)
 
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    logRenderFailure("plotTaskOnMap", e)
                 }
             } else {
                 // Clear AAT layers when no waypoints
@@ -228,5 +230,17 @@ class AATTaskRenderer(private val geometryGenerator: AATGeometryGenerator = AATG
             }
         } catch (e: Exception) {
         }
+    }
+
+    private fun logRenderFailure(stage: String, throwable: Throwable) {
+        if (!BuildConfig.DEBUG) {
+            return
+        }
+        val reason = throwable.message ?: throwable.javaClass.simpleName
+        Log.w(TAG, "$stage failed ($reason)")
+    }
+
+    private companion object {
+        const val TAG = "AATTaskRenderer"
     }
 }

@@ -11,9 +11,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DrawerState
@@ -40,8 +40,19 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.example.xcpro.adsb.ADSB_ICON_SIZE_MAX_PX
 import com.example.xcpro.adsb.ADSB_ICON_SIZE_MIN_PX
+import com.example.xcpro.adsb.ADSB_MAX_DISTANCE_MAX_KM
+import com.example.xcpro.adsb.ADSB_MAX_DISTANCE_MIN_KM
+import com.example.xcpro.adsb.ADSB_VERTICAL_FILTER_MAX_METERS
+import com.example.xcpro.adsb.ADSB_VERTICAL_FILTER_MIN_METERS
+import com.example.xcpro.adsb.clampAdsbVerticalFilterMeters
+import com.example.xcpro.common.units.AltitudeUnit
+import com.example.xcpro.common.units.UnitsConverter
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 import kotlin.math.roundToInt
+
+private const val VERTICAL_STEP_FEET = 100f
+private const val VERTICAL_STEP_METERS = 50f
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,14 +63,38 @@ fun AdsbSettingsScreen(
     val viewModel: AdsbSettingsViewModel = hiltViewModel()
     val scope = rememberCoroutineScope()
     val iconSizePx by viewModel.iconSizePx.collectAsStateWithLifecycle()
-    var sliderValue by remember { mutableStateOf(iconSizePx.toFloat()) }
+    val maxDistanceKm by viewModel.maxDistanceKm.collectAsStateWithLifecycle()
+    val verticalAboveMeters by viewModel.verticalAboveMeters.collectAsStateWithLifecycle()
+    val verticalBelowMeters by viewModel.verticalBelowMeters.collectAsStateWithLifecycle()
+    val units by viewModel.units.collectAsStateWithLifecycle()
+    val altitudeUnit = units.altitude
+
+    var iconSliderValue by remember { mutableStateOf(iconSizePx.toFloat()) }
+    var distanceSliderValue by remember { mutableStateOf(maxDistanceKm.toFloat()) }
+    var aboveSliderDisplayValue by remember {
+        mutableStateOf(verticalDisplayValue(verticalAboveMeters, altitudeUnit))
+    }
+    var belowSliderDisplayValue by remember {
+        mutableStateOf(verticalDisplayValue(verticalBelowMeters, altitudeUnit))
+    }
+
     var clientId by remember { mutableStateOf("") }
     var clientSecret by remember { mutableStateOf("") }
     var credentialsStatus by remember { mutableStateOf("OpenSky credentials not set") }
 
     LaunchedEffect(iconSizePx) {
-        sliderValue = iconSizePx.toFloat()
+        iconSliderValue = iconSizePx.toFloat()
     }
+    LaunchedEffect(maxDistanceKm) {
+        distanceSliderValue = maxDistanceKm.toFloat()
+    }
+    LaunchedEffect(verticalAboveMeters, altitudeUnit) {
+        aboveSliderDisplayValue = verticalDisplayValue(verticalAboveMeters, altitudeUnit)
+    }
+    LaunchedEffect(verticalBelowMeters, altitudeUnit) {
+        belowSliderDisplayValue = verticalDisplayValue(verticalBelowMeters, altitudeUnit)
+    }
+
     LaunchedEffect(Unit) {
         val credentials = viewModel.loadOpenSkyCredentials()
         clientId = credentials?.clientId.orEmpty()
@@ -116,23 +151,110 @@ fun AdsbSettingsScreen(
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text("ADS-b", style = MaterialTheme.typography.titleMedium)
                         Text(
-                            "Adjust the ADS-b aircraft icon size shown on the map.",
+                            "Configure display distance and vertical traffic filters.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(12.dp))
+
                         Text(
-                            text = "ADS-b icon size: ${sliderValue.roundToInt()} px",
+                            text = "Horizontal max distance: ${distanceSliderValue.roundToInt()} km",
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Slider(
-                            value = sliderValue,
+                            value = distanceSliderValue,
+                            onValueChange = { value ->
+                                distanceSliderValue = value.roundToInt()
+                                    .coerceIn(ADSB_MAX_DISTANCE_MIN_KM, ADSB_MAX_DISTANCE_MAX_KM)
+                                    .toFloat()
+                            },
+                            onValueChangeFinished = {
+                                val snapped = distanceSliderValue.roundToInt()
+                                    .coerceIn(ADSB_MAX_DISTANCE_MIN_KM, ADSB_MAX_DISTANCE_MAX_KM)
+                                if (snapped != maxDistanceKm) {
+                                    viewModel.setMaxDistanceKm(snapped)
+                                }
+                            },
+                            valueRange = ADSB_MAX_DISTANCE_MIN_KM.toFloat()..ADSB_MAX_DISTANCE_MAX_KM.toFloat(),
+                            steps = ADSB_MAX_DISTANCE_MAX_KM - ADSB_MAX_DISTANCE_MIN_KM - 1
+                        )
+                        Text(
+                            text = "Minimum ${ADSB_MAX_DISTANCE_MIN_KM}km, maximum ${ADSB_MAX_DISTANCE_MAX_KM}km.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Text(
+                            text = "Above ownship: ${verticalLabel(aboveSliderDisplayValue, altitudeUnit)}",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Slider(
+                            value = aboveSliderDisplayValue,
+                            onValueChange = { value ->
+                                aboveSliderDisplayValue = snapVerticalSliderValue(value, altitudeUnit)
+                            },
+                            onValueChangeFinished = {
+                                val meters = clampAdsbVerticalFilterMeters(
+                                    verticalMetersFromDisplay(aboveSliderDisplayValue, altitudeUnit)
+                                )
+                                if (abs(meters - verticalAboveMeters) > 1e-3) {
+                                    viewModel.setVerticalAboveMeters(meters)
+                                }
+                            },
+                            valueRange = verticalSliderRange(altitudeUnit),
+                            steps = verticalSliderSteps(altitudeUnit)
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            text = "Below ownship: ${verticalLabel(belowSliderDisplayValue, altitudeUnit)}",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Slider(
+                            value = belowSliderDisplayValue,
+                            onValueChange = { value ->
+                                belowSliderDisplayValue = snapVerticalSliderValue(value, altitudeUnit)
+                            },
+                            onValueChangeFinished = {
+                                val meters = clampAdsbVerticalFilterMeters(
+                                    verticalMetersFromDisplay(belowSliderDisplayValue, altitudeUnit)
+                                )
+                                if (abs(meters - verticalBelowMeters) > 1e-3) {
+                                    viewModel.setVerticalBelowMeters(meters)
+                                }
+                            },
+                            valueRange = verticalSliderRange(altitudeUnit),
+                            steps = verticalSliderSteps(altitudeUnit)
+                        )
+                        Text(
+                            text = "Vertical limits follow General -> Units altitude setting.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Text(
+                            text = "ADS-b icon size: ${iconSliderValue.roundToInt()} px",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Slider(
+                            value = iconSliderValue,
                             onValueChange = { value ->
                                 val snapped = value.roundToInt().coerceIn(
                                     ADSB_ICON_SIZE_MIN_PX,
                                     ADSB_ICON_SIZE_MAX_PX
                                 )
-                                sliderValue = snapped.toFloat()
+                                iconSliderValue = snapped.toFloat()
+                            },
+                            onValueChangeFinished = {
+                                val snapped = iconSliderValue.roundToInt().coerceIn(
+                                    ADSB_ICON_SIZE_MIN_PX,
+                                    ADSB_ICON_SIZE_MAX_PX
+                                )
                                 if (snapped != iconSizePx) {
                                     viewModel.setIconSizePx(snapped)
                                 }
@@ -147,6 +269,7 @@ fun AdsbSettingsScreen(
                         )
                     }
                 }
+
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -227,4 +350,43 @@ fun AdsbSettingsScreen(
             }
         }
     }
+}
+
+private fun verticalSliderRange(unit: AltitudeUnit): ClosedFloatingPointRange<Float> =
+    when (unit) {
+        AltitudeUnit.FEET -> 0f..UnitsConverter.metersToFeet(ADSB_VERTICAL_FILTER_MAX_METERS).toFloat()
+        AltitudeUnit.METERS -> ADSB_VERTICAL_FILTER_MIN_METERS.toFloat()..ADSB_VERTICAL_FILTER_MAX_METERS.toFloat()
+    }
+
+private fun verticalSliderSteps(unit: AltitudeUnit): Int {
+    val step = verticalStepValue(unit)
+    val range = verticalSliderRange(unit)
+    return (((range.endInclusive - range.start) / step).roundToInt() - 1).coerceAtLeast(0)
+}
+
+private fun verticalStepValue(unit: AltitudeUnit): Float = when (unit) {
+    AltitudeUnit.FEET -> VERTICAL_STEP_FEET
+    AltitudeUnit.METERS -> VERTICAL_STEP_METERS
+}
+
+private fun snapVerticalSliderValue(value: Float, unit: AltitudeUnit): Float {
+    val range = verticalSliderRange(unit)
+    val step = verticalStepValue(unit)
+    val snapped = (value / step).roundToInt() * step
+    return snapped.coerceIn(range.start, range.endInclusive)
+}
+
+private fun verticalMetersFromDisplay(displayValue: Float, unit: AltitudeUnit): Double = when (unit) {
+    AltitudeUnit.FEET -> UnitsConverter.feetToMeters(displayValue.toDouble())
+    AltitudeUnit.METERS -> displayValue.toDouble()
+}
+
+private fun verticalDisplayValue(meters: Double, unit: AltitudeUnit): Float = when (unit) {
+    AltitudeUnit.FEET -> UnitsConverter.metersToFeet(meters).toFloat()
+    AltitudeUnit.METERS -> meters.toFloat()
+}
+
+private fun verticalLabel(displayValue: Float, unit: AltitudeUnit): String = when (unit) {
+    AltitudeUnit.FEET -> "${displayValue.roundToInt()} ft"
+    AltitudeUnit.METERS -> "${displayValue.roundToInt()} m"
 }

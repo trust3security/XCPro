@@ -28,13 +28,11 @@ import com.example.xcpro.ui.theme.Baseui1Theme
 import com.example.xcpro.service.VarioForegroundService
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
 import org.maplibre.android.WellKnownTileServer
 
 private const val TAG = "MainActivity"
-private const val SPLASH_HOLD_DURATION_MS = 2_000L
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity(), StatusBarStyleApplier {
@@ -71,11 +69,7 @@ class MainActivity : ComponentActivity(), StatusBarStyleApplier {
         splashScreen.setKeepOnScreenCondition { keepSplashVisible }
 
         super.onCreate(savedInstanceState)
-
-        lifecycleScope.launch {
-            delay(SPLASH_HOLD_DURATION_MS)
-            keepSplashVisible = false
-        }
+        keepSplashVisible = false
 
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 

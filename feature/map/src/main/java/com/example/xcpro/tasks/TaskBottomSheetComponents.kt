@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskType
+import com.example.xcpro.tasks.domain.model.TaskTargetSnapshot
 import kotlinx.coroutines.flow.collectLatest
 
 enum class TaskCategory(val label: String) {
@@ -48,7 +49,11 @@ enum class TaskCategory(val label: String) {
 }
 
 @Composable
-fun TaskPreviewContent(task: Task, taskType: TaskType) {
+fun TaskPreviewContent(
+    task: Task,
+    taskType: TaskType,
+    targets: List<TaskTargetSnapshot> = emptyList()
+) {
     val context = LocalContext.current
     val filesViewModel: TaskFilesViewModel = hiltViewModel()
     var showQRDialog by remember { mutableStateOf(false) }
@@ -122,7 +127,7 @@ fun TaskPreviewContent(task: Task, taskType: TaskType) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedButton(
-                    onClick = { filesViewModel.exportTaskToDownloads(task) },
+                    onClick = { filesViewModel.exportTaskToDownloads(task, taskType, targets) },
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(Icons.Default.Download, contentDescription = null)
@@ -131,7 +136,7 @@ fun TaskPreviewContent(task: Task, taskType: TaskType) {
                 }
 
                 OutlinedButton(
-                    onClick = { filesViewModel.shareTask(task) },
+                    onClick = { filesViewModel.shareTask(task, taskType, targets) },
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(Icons.Default.Share, contentDescription = null)
@@ -153,8 +158,11 @@ fun TaskPreviewContent(task: Task, taskType: TaskType) {
 
     if (showQRDialog) {
         QRCodeDialog(
-            task = task,
-            taskType = taskType,
+            uiState = TaskUiState(
+                task = task,
+                taskType = taskType,
+                targets = targets
+            ),
             onDismiss = { showQRDialog = false }
         )
     }

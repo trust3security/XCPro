@@ -1,5 +1,7 @@
 package com.example.xcpro.tasks.aat.interaction
 
+import android.util.Log
+import com.example.xcpro.map.BuildConfig
 import com.example.xcpro.tasks.aat.SimpleAATTask
 import com.example.xcpro.tasks.aat.models.AATAreaShape
 import org.maplibre.android.maps.MapLibreMap
@@ -31,7 +33,7 @@ internal class AATEditOverlayRenderer(
 
             plotEditOverlayWithStyle(mapLibreMap.style!!, task, waypointIndex)
         } catch (e: Exception) {
-            e.printStackTrace()
+            logRenderFailure("plotEditOverlay", e)
         }
     }
 
@@ -44,7 +46,7 @@ internal class AATEditOverlayRenderer(
 
             clearEditOverlayInternal(style)
         } catch (e: Exception) {
-            e.printStackTrace()
+            logRenderFailure("clearEditOverlay", e)
         }
     }
 
@@ -127,7 +129,7 @@ internal class AATEditOverlayRenderer(
             )
 
         } catch (e: Exception) {
-            e.printStackTrace()
+            logRenderFailure("plotEditOverlayWithStyle", e)
         }
     }
 
@@ -144,5 +146,17 @@ internal class AATEditOverlayRenderer(
             }
         } catch (e: Exception) {
         }
+    }
+
+    private fun logRenderFailure(stage: String, throwable: Throwable) {
+        if (!BuildConfig.DEBUG) {
+            return
+        }
+        val reason = throwable.message ?: throwable.javaClass.simpleName
+        Log.w(TAG, "$stage failed ($reason)")
+    }
+
+    private companion object {
+        const val TAG = "AATEditOverlayRenderer"
     }
 }

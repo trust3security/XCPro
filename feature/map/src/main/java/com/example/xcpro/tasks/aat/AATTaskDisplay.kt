@@ -4,8 +4,6 @@ import com.example.xcpro.tasks.aat.areas.AreaBoundaryCalculator
 import com.example.xcpro.tasks.aat.models.AATLatLng
 import com.example.xcpro.tasks.aat.models.AATTask
 import com.example.xcpro.tasks.aat.models.AreaGeometry
-import kotlin.math.cos
-import kotlin.math.sin
 
 /**
  * Display utilities for AAT tasks on maps.
@@ -17,6 +15,7 @@ import kotlin.math.sin
 class AATTaskDisplay {
     
     private val areaBoundaryCalculator = AreaBoundaryCalculator()
+    private val geometryBuilder = AATTaskDisplayGeometryBuilder()
     
     /**
      * Generate polygon coordinates for all assigned areas in a task.
@@ -144,27 +143,7 @@ class AATTaskDisplay {
      * @return Display geometry for start
      */
     fun generateStartGeometry(task: AATTask): DisplayGeometry? {
-        return when (task.start.type) {
-            com.example.xcpro.tasks.aat.models.AATStartType.LINE -> {
-                task.start.lineLength?.let { length ->
-                    generateLineGeometry(
-                        center = task.start.position,
-                        length = length,
-                        bearing = calculatePerpendicularBearing(task)
-                    )
-                }
-            }
-            com.example.xcpro.tasks.aat.models.AATStartType.CIRCLE -> {
-                task.start.radius?.let { radius ->
-                    generateCircleGeometry(task.start.position, radius)
-                }
-            }
-            com.example.xcpro.tasks.aat.models.AATStartType.BGA_SECTOR -> {
-                task.start.sectorRadius?.let { radius ->
-                    generateBGASectorGeometry(task.start.position, radius, task)
-                }
-            }
-        }
+        return geometryBuilder.generateStartGeometry(task)
     }
     
     /**
@@ -174,22 +153,7 @@ class AATTaskDisplay {
      * @return Display geometry for finish
      */
     fun generateFinishGeometry(task: AATTask): DisplayGeometry? {
-        return when (task.finish.type) {
-            com.example.xcpro.tasks.aat.models.AATFinishType.LINE -> {
-                task.finish.lineLength?.let { length ->
-                    generateLineGeometry(
-                        center = task.finish.position,
-                        length = length,
-                        bearing = calculatePerpendicularBearing(task, isFinish = true)
-                    )
-                }
-            }
-            com.example.xcpro.tasks.aat.models.AATFinishType.CIRCLE -> {
-                task.finish.radius?.let { radius ->
-                    generateCircleGeometry(task.finish.position, radius)
-                }
-            }
-        }
+        return geometryBuilder.generateFinishGeometry(task)
     }
     
     /**
@@ -311,167 +275,4 @@ class AATTaskDisplay {
             )
         }
     }
-    
-    /**
-     * Helper function to calculate perpendicular bearing for start/finish lines.
-     */
-    private fun calculatePerpendicularBearing(task: AATTask, isFinish: Boolean = false): Double {
-        // Calculate bearing of first/last leg to make line perpendicular
-        val bearing = if (isFinish && task.assignedAreas.isNotEmpty()) {
-            // Finish line perpendicular to last leg
-            com.example.xcpro.tasks.aat.calculations.AATMathUtils.calculateBearing(
-                task.assignedAreas.last().centerPoint,
-                task.finish.position
-            )
-        } else if (!isFinish && task.assignedAreas.isNotEmpty()) {
-            // Start line perpendicular to first leg
-            com.example.xcpro.tasks.aat.calculations.AATMathUtils.calculateBearing(
-                task.start.position,
-                task.assignedAreas.first().centerPoint
-            )
-        } else {
-            0.0 // Default to north if no areas
-        }
-        
-        return (bearing + 90.0) % 360.0 // Perpendicular
-    }
-    
-    /**
-     * Generate line geometry for start/finish lines.
-     */
-    private fun generateLineGeometry(
-        center: AATLatLng,
-        length: Double,
-        bearing: Double
-    ): DisplayGeometry {
-        val halfLength = length / 2.0
-        
-        val point1 = com.example.xcpro.tasks.aat.calculations.AATMathUtils.calculatePointAtBearing(
-            center, bearing, halfLength
-        )
-        val point2 = com.example.xcpro.tasks.aat.calculations.AATMathUtils.calculatePointAtBearing(
-            center, (bearing + 180.0) % 360.0, halfLength
-        )
-        
-        return DisplayGeometry.Line(
-            points = listOf(point1, point2)
-        )
-    }
-    
-    /**
-     * Generate circle geometry.
-     */
-    private fun generateCircleGeometry(center: AATLatLng, radius: Double): DisplayGeometry {
-        val points = mutableListOf<AATLatLng>()
-        val numPoints = 36
-        
-        for (i in 0..numPoints) {
-            val bearing = i * 360.0 / numPoints
-            val point = com.example.xcpro.tasks.aat.calculations.AATMathUtils.calculatePointAtBearing(
-                center, bearing, radius
-            )
-            points.add(point)
-        }
-        
-        return DisplayGeometry.Polygon(points = points)
-    }
-    
-    /**
-     * Generate BGA Start Sector geometry (90-degree sector aligned with track to first turnpoint)
-     *  FIXED: Use AAT sector pattern - outer arc  center  close polygon properly
-     */
-    private fun generateBGASectorGeometry(center: AATLatLng, radius: Double, task: AATTask): DisplayGeometry {
-        val points = mutableListOf<AATLatLng>()
-        
-        // Calculate sector bisector aligned with track to first turnpoint
-        val bisectorBearing = if (task.assignedAreas.isNotEmpty()) {
-            com.example.xcpro.tasks.aat.calculations.AATMathUtils.calculateBearing(
-                center, task.assignedAreas.first().centerPoint
-            )
-        } else {
-            0.0 // Default to north if no areas
-        }
-        
-        // BGA sector: 90-degree sector (45 degrees each side of bisector)
-        val startAngle = (bisectorBearing - 45.0 + 360.0) % 360.0
-        val endAngle = (bisectorBearing + 45.0) % 360.0
-        
-        //  FIXED: Generate outer arc points (following AAT sector pattern)
-        val numPoints = 32
-        for (i in 0..numPoints) {
-            val angle = startAngle + (endAngle - startAngle) * i / numPoints
-            val point = com.example.xcpro.tasks.aat.calculations.AATMathUtils.calculatePointAtBearing(
-                center, angle, radius
-            )
-            points.add(point)
-        }
-        
-        //  FIXED: Add center point to close the sector polygon (like AAT sectors)
-        points.add(center)
-        
-        return DisplayGeometry.Polygon(points = points)
-    }
 }
-
-/**
- * Display polygon for area boundaries
- */
-data class DisplayPolygon(
-    val name: String,
-    val points: List<AATLatLng>,
-    val areaType: String,
-    val centerPoint: AATLatLng
-)
-
-/**
- * Display line string for paths
- */
-data class DisplayLineString(
-    val name: String,
-    val points: List<AATLatLng>,
-    val pathType: String
-)
-
-/**
- * Display marker for points of interest
- */
-data class DisplayMarker(
-    val name: String,
-    val position: AATLatLng,
-    val type: String,
-    val details: Map<String, String> = emptyMap()
-)
-
-/**
- * Display geometry for start/finish elements
- */
-sealed class DisplayGeometry {
-    data class Line(val points: List<AATLatLng>) : DisplayGeometry()
-    data class Polygon(val points: List<AATLatLng>) : DisplayGeometry()
-}
-
-/**
- * Color scheme for AAT display elements
- */
-data class DisplayColors(
-    val areaFill: String,
-    val areaBorder: String,
-    val taskPath: String,
-    val startMarker: String,
-    val finishMarker: String,
-    val areaCenter: String,
-    val startFinishLine: String,
-    val completedArea: String,
-    val activeArea: String,
-    val nextArea: String
-)
-
-/**
- * Map label for text overlay
- */
-data class MapLabel(
-    val text: String,
-    val position: AATLatLng,
-    val type: String,
-    val priority: Int = 0
-)

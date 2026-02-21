@@ -65,3 +65,14 @@ nul
 /.tmp/
 /TEMP/
 deep-research-report.md
+
+# Local tool caches / heavyweight artifacts
+/.gradle-user/
+/.sandbox-home/
+/.android/
+tmp_adsb_direct.csv
+tmp_adsb_direct_head.csv
+tmp_adsb_complete_5mb.csv
+tmp_adsb_complete_head.csv
+tmp_adsb_*.csv
+.tmp_phase*.log

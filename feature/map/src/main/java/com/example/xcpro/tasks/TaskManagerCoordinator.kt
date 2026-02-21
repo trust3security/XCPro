@@ -204,7 +204,15 @@ class TaskManagerCoordinator(
 
     fun getActiveLeg(): Int = currentLeg
 
-    fun calculateTaskDistanceForTask(task: Task): Double = currentDelegate().calculateDistance()
+    fun calculateTaskDistanceForTask(task: Task): Double {
+        if (task.waypoints.size < 2) {
+            return 0.0
+        }
+        val delegate = currentDelegate()
+        return task.waypoints
+            .zipWithNext()
+            .sumOf { (from, to) -> delegate.calculateSegmentDistance(from, to) }
+    }
 
     fun calculateSimpleSegmentDistance(from: TaskWaypoint, to: TaskWaypoint): Double =
         currentDelegate().calculateSegmentDistance(from, to)

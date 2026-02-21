@@ -1,0 +1,14 @@
+﻿HTTP/1.1 500 Internal Server Error
+Date: Sun, 15 Feb 2026 07:07:41 GMT
+Content-Type: application/json
+Content-Length: 35
+Connection: keep-alive
+server: cloudflare
+cf-cache-status: DYNAMIC
+set-cookie: __cflb<REDACTED>; HttpOnly; SameSite=None; Secure; Path=/; Expires=Mon, 16 Feb 2026 06:07:41 GMT
+Report-To: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=OQJGg45ddrEVH6xHKTxZs5q3JCgsiuZsuACzOnD1w9BXnpxwwyY9n%2BDfrwC%2FFAKjgjI2PnyB0VnqwAVqyh2E3FgQ%2FG1npdeoBNfVlQdX"}]}
+Nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+CF-RAY: 9ce2f83d6fdae7d1-SYD
+alt-svc: h3=":443"; ma=86400
+
+{"message":"Internal Server Error"}

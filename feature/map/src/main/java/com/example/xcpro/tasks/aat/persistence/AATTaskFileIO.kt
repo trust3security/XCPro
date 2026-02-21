@@ -2,17 +2,19 @@ package com.example.xcpro.tasks.aat.persistence
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.example.xcpro.tasks.CupFormatUtils
+import com.example.xcpro.tasks.LegacyCupStorageCleanupPolicy
 import com.example.xcpro.tasks.aat.SimpleAATTask
 import com.example.xcpro.tasks.aat.models.AATWaypoint
 import com.example.xcpro.tasks.aat.models.AATWaypointRole
 import com.example.xcpro.tasks.aat.models.AATAssignedArea
 import com.example.xcpro.tasks.aat.models.AATAreaShape
 import com.example.xcpro.tasks.aat.models.AATRadiusAuthority
+import com.example.xcpro.tasks.core.TaskType
 import com.google.gson.Gson
 import java.io.File
+import java.nio.charset.StandardCharsets
 import java.time.Duration
-import java.util.UUID
-import kotlin.math.abs
 
 /**
  * AAT Task File I/O Manager
@@ -28,6 +30,8 @@ class AATTaskFileIO(private val context: Context) {
 
     private val prefs: SharedPreferences = context.getSharedPreferences("aat_task_prefs", Context.MODE_PRIVATE)
     private val gson = Gson()
+    private val legacyTasksDir = File(context.filesDir, LEGACY_TASKS_DIR)
+    private val scopedTasksDir = File(context.filesDir, AAT_TASKS_DIR)
 
     // ==================== SharedPreferences Operations ====================
 
@@ -75,14 +79,19 @@ class AATTaskFileIO(private val context: Context) {
      */
     fun getSavedTaskFiles(): List<String> {
         return try {
-            val tasksDir = File(context.filesDir, "cup_tasks")
-            if (!tasksDir.exists()) {
-                tasksDir.mkdirs()
-            }
-            tasksDir.listFiles { file -> file.name.contains("AAT") && file.extension == "cup" }
-                ?.map { it.name }
-                ?.sorted()
-                ?: emptyList()
+            migrateLegacyTasksIfNeeded()
+            val names = linkedSetOf<String>()
+            ensureDir(scopedTasksDir)
+            ensureDir(legacyTasksDir)
+
+            scopedTasksDir.listFiles { file -> file.extension == "cup" }
+                ?.mapTo(names) { it.name }
+
+            legacyTasksDir.listFiles { file -> file.extension == "cup" }
+                ?.filter { isLikelyLegacyAatCup(it) }
+                ?.mapTo(names) { it.name }
+
+            names.sorted()
         } catch (e: Exception) {
             emptyList()
         }
@@ -100,17 +109,14 @@ class AATTaskFileIO(private val context: Context) {
      */
     fun saveTaskToFile(task: SimpleAATTask, taskName: String): Boolean {
         return try {
-            val tasksDir = File(context.filesDir, "cup_tasks")
-            if (!tasksDir.exists()) {
-                tasksDir.mkdirs()
-            }
+            val tasksDir = ensureDir(scopedTasksDir)
             val aatTaskName = if (taskName.contains("AAT")) taskName else "AAT_$taskName"
             val fileName = if (aatTaskName.endsWith(".cup")) aatTaskName else "$aatTaskName.cup"
             val file = File(tasksDir, fileName)
 
             // Convert task to CUP format
             val cupContent = taskToCUP(task, aatTaskName)
-            file.writeText(cupContent)
+            file.writeText(cupContent, StandardCharsets.UTF_8)
 
             true
         } catch (e: Exception) {
@@ -128,15 +134,16 @@ class AATTaskFileIO(private val context: Context) {
      */
     fun loadTaskFromFile(taskName: String): SimpleAATTask? {
         return try {
-            val fileName = if (taskName.endsWith(".cup")) taskName else "$taskName.cup"
-            val file = File(context.filesDir, "cup_tasks/$fileName")
+            migrateLegacyTasksIfNeeded()
+            val file = resolveReadableTaskFile(taskName)
 
-            if (file.exists()) {
-                val cupContent = file.readText()
+            if (file != null && file.exists()) {
+                val fileName = file.name
+                val cupContent = file.readText(StandardCharsets.UTF_8)
                 val waypoints = parseCUPBasicWaypoints(cupContent)
                 if (waypoints.isNotEmpty()) {
                     val task = SimpleAATTask(
-                        id = UUID.randomUUID().toString(),
+                        id = CupFormatUtils.stableTaskId(prefix = "aat", fileNameHint = fileName),
                         waypoints = waypoints,
                         minimumTime = Duration.ofHours(3),
                         maximumTime = Duration.ofHours(6)
@@ -163,15 +170,13 @@ class AATTaskFileIO(private val context: Context) {
      */
     fun deleteTaskFile(taskName: String): Boolean {
         return try {
-            val fileName = if (taskName.endsWith(".cup")) taskName else "$taskName.cup"
-            val file = File(context.filesDir, "cup_tasks/$fileName")
-
-            if (file.exists()) {
-                val deleted = file.delete()
-                deleted
-            } else {
-                false
+            migrateLegacyTasksIfNeeded()
+            val deletedAny = buildFileNameCandidates(taskName).any { fileName ->
+                val scopedFile = File(scopedTasksDir, fileName)
+                val legacyFile = File(legacyTasksDir, fileName)
+                (scopedFile.exists() && scopedFile.delete()) || (legacyFile.exists() && legacyFile.delete())
             }
+            deletedAny
         } catch (e: Exception) {
             false
         }
@@ -190,38 +195,48 @@ class AATTaskFileIO(private val context: Context) {
      * @return CUP format string
      */
     private fun taskToCUP(task: SimpleAATTask, taskName: String): String {
-        val header = """
-            name,code,country,lat,lon,elev,style,rwdir,rwlen,freq,desc
-            "SeeYou task - $taskName","TASK","","","","","","","","","Created by AAT Task Manager"
-        """.trimIndent()
+        val headerRow = "name,code,country,lat,lon,elev,style,rwdir,rwlen,freq,desc"
+        val metadataRow = listOf(
+            CupFormatUtils.csvEscape("AAT task - $taskName"),
+            CupFormatUtils.csvEscape("TASK"),
+            CupFormatUtils.csvEscape(""),
+            CupFormatUtils.csvEscape(""),
+            CupFormatUtils.csvEscape(""),
+            CupFormatUtils.csvEscape(""),
+            CupFormatUtils.csvEscape(""),
+            CupFormatUtils.csvEscape(""),
+            CupFormatUtils.csvEscape(""),
+            CupFormatUtils.csvEscape(""),
+            CupFormatUtils.csvEscape("Created by AAT Task Manager")
+        ).joinToString(",")
 
-        val waypoints = StringBuilder()
-        task.waypoints.forEachIndexed { index, waypoint ->
-            val latDegrees = waypoint.lat.toInt()
-            val latMinutes = (abs(waypoint.lat) - abs(latDegrees)) * 60.0
-            val latHem = if (waypoint.lat >= 0) "N" else "S"
-            val latFormatted = "${abs(latDegrees)}${String.format("%06.3f", latMinutes)}${latHem}"
-
-            val lonDegrees = waypoint.lon.toInt()
-            val lonMinutes = (abs(waypoint.lon) - abs(lonDegrees)) * 60.0
-            val lonHem = if (waypoint.lon >= 0) "E" else "W"
-            val lonFormatted = "${String.format("%03d", abs(lonDegrees))}${String.format("%06.3f", lonMinutes)}${lonHem}"
-
+        val rows = task.waypoints.mapIndexed { index, waypoint ->
             val code = when (waypoint.role) {
                 AATWaypointRole.START -> "START"
-                AATWaypointRole.TURNPOINT -> "AAT${index}"
+                AATWaypointRole.TURNPOINT -> "AAT$index"
                 AATWaypointRole.FINISH -> "FINISH"
             }
-
-            val style = "2" // AAT area style
             val radiusMeters = waypoint.effectiveRadiusMeters.toInt()
-
-            waypoints.append(
-                "\"${waypoint.title}\",\"$code\",\"\",\"$latFormatted\",\"$lonFormatted\",\"0m\",\"$style\",\"\",\"${radiusMeters}m\",\"\",\"${waypoint.subtitle}\"\n"
-            )
+            listOf(
+                CupFormatUtils.csvEscape(waypoint.title.take(80)),
+                CupFormatUtils.csvEscape(code),
+                CupFormatUtils.csvEscape(""),
+                CupFormatUtils.csvEscape(CupFormatUtils.formatLatitude(waypoint.lat)),
+                CupFormatUtils.csvEscape(CupFormatUtils.formatLongitude(waypoint.lon)),
+                CupFormatUtils.csvEscape("0m"),
+                CupFormatUtils.csvEscape("2"),
+                CupFormatUtils.csvEscape(""),
+                CupFormatUtils.csvEscape("${radiusMeters}m"),
+                CupFormatUtils.csvEscape(""),
+                CupFormatUtils.csvEscape(waypoint.subtitle.take(120))
+            ).joinToString(",")
         }
 
-        return header + "\n" + waypoints.toString()
+        return buildString {
+            appendLine(headerRow)
+            appendLine(metadataRow)
+            rows.forEach { appendLine(it) }
+        }
     }
 
     /**
@@ -233,79 +248,130 @@ class AATTaskFileIO(private val context: Context) {
      * @return List of AAT waypoints
      */
     private fun parseCUPBasicWaypoints(cupContent: String): List<AATWaypoint> {
-        val waypoints = mutableListOf<AATWaypoint>()
-        try {
-            val lines = cupContent.lines()
-            for (line in lines) {
-                if (line.startsWith("\"") && !line.contains("name,code")) {
-                    val parts = line.split(",").map { it.trim('"') }
-                    if (parts.size >= 6) {
-                        val title = parts[0]
-                        val code = parts[1]
-                        val lat = parseLatitude(parts[3])
-                        val lon = parseLongitude(parts[4])
+        return try {
+            val parsedWaypoints = CupFormatUtils.parseCupWaypoints(cupContent)
+            parsedWaypoints.mapIndexed { index, waypoint ->
+                val role = when (
+                    CupFormatUtils.inferWaypointRole(
+                        index = index,
+                        total = parsedWaypoints.size,
+                        code = waypoint.code
+                    )
+                ) {
+                    com.example.xcpro.tasks.core.WaypointRole.START -> AATWaypointRole.START
+                    com.example.xcpro.tasks.core.WaypointRole.FINISH -> AATWaypointRole.FINISH
+                    com.example.xcpro.tasks.core.WaypointRole.TURNPOINT,
+                    com.example.xcpro.tasks.core.WaypointRole.OPTIONAL -> AATWaypointRole.TURNPOINT
+                }
 
-                        val role = when {
-                            code.startsWith("START") -> AATWaypointRole.START
-                            code == "FINISH" -> AATWaypointRole.FINISH
-                            else -> AATWaypointRole.TURNPOINT
+                // COMPETITION-CRITICAL: Use AATRadiusAuthority for all AAT radii
+                val radiusKm = AATRadiusAuthority.getRadiusForRole(role)
+                val radiusMeters = radiusKm * 1000.0
+
+                AATWaypoint(
+                    id = CupFormatUtils.stableWaypointId(
+                        prefix = "aat",
+                        index = index,
+                        code = waypoint.code,
+                        name = waypoint.name
+                    ),
+                    title = waypoint.name,
+                    subtitle = waypoint.description,
+                    lat = waypoint.latitude,
+                    lon = waypoint.longitude,
+                    role = role,
+                    assignedArea = AATAssignedArea(
+                        shape = AATAreaShape.CIRCLE,
+                        radiusMeters = radiusMeters
+                    )
+                )
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    private fun ensureDir(dir: File): File {
+        if (!dir.exists()) {
+            dir.mkdirs()
+        }
+        return dir
+    }
+
+    private fun migrateLegacyTasksIfNeeded() {
+        if (prefs.getBoolean(KEY_LEGACY_MIGRATION_DONE, false)) {
+            LegacyCupStorageCleanupPolicy.runIfEligible(context)
+            return
+        }
+
+        ensureDir(scopedTasksDir)
+        ensureDir(legacyTasksDir)
+        legacyTasksDir.listFiles { file -> file.extension == "cup" }
+            ?.forEach { legacyFile ->
+                if (!isLikelyLegacyAatCup(legacyFile)) {
+                    return@forEach
+                }
+                val scopedFile = File(scopedTasksDir, legacyFile.name)
+                runCatching {
+                    if (scopedFile.exists()) {
+                        val duplicate = runCatching {
+                            scopedFile.readText(StandardCharsets.UTF_8) == legacyFile.readText(StandardCharsets.UTF_8)
+                        }.getOrDefault(false)
+                        if (duplicate) {
+                            legacyFile.delete()
                         }
-
-                        //  COMPETITION-CRITICAL: Use AATRadiusAuthority for all AAT radii
-                        val radiusKm = AATRadiusAuthority.getRadiusForRole(role)
-                        val radiusMeters = radiusKm * 1000.0
-
-                        waypoints.add(AATWaypoint(
-                            id = UUID.randomUUID().toString(),
-                            title = title,
-                            subtitle = "",
-                            lat = lat,
-                            lon = lon,
-                            role = role,
-                            assignedArea = AATAssignedArea(
-                                shape = AATAreaShape.CIRCLE,
-                                radiusMeters = radiusMeters // Use authority radius based on role
-                            )
-                        ))
+                    } else {
+                        legacyFile.copyTo(scopedFile, overwrite = false)
+                        legacyFile.delete()
                     }
                 }
             }
-        } catch (e: Exception) {
+
+        prefs.edit().putBoolean(KEY_LEGACY_MIGRATION_DONE, true).apply()
+        LegacyCupStorageCleanupPolicy.runIfEligible(context)
+    }
+
+    private fun buildFileNameCandidates(taskName: String): List<String> {
+        if (taskName.isBlank()) {
+            return emptyList()
         }
-        return waypoints
+        val normalized = if (taskName.endsWith(".cup")) taskName else "$taskName.cup"
+        val withAatPrefix = if (normalized.startsWith("AAT_")) normalized else "AAT_$normalized"
+        return listOf(normalized, withAatPrefix).distinct()
     }
 
-    /**
-     * Parse CUP latitude string to decimal degrees
-     *
-     * CUP format: DDMM.MMMh (e.g., "5230.500N")
-     * Where DD = degrees, MM.MMM = minutes, h = hemisphere (N/S)
-     *
-     * @param latStr The CUP latitude string
-     * @return Latitude in decimal degrees
-     */
-    private fun parseLatitude(latStr: String): Double {
-        val hem = latStr.last()
-        val degrees = latStr.substring(0, 2).toDouble()
-        val minutes = latStr.substring(2, latStr.length - 1).toDouble()
-        val decimal = degrees + minutes / 60.0
-        return if (hem == 'S') -decimal else decimal
+    private fun resolveReadableTaskFile(taskName: String): File? {
+        val names = buildFileNameCandidates(taskName)
+        names.forEach { fileName ->
+            val scopedFile = File(scopedTasksDir, fileName)
+            if (scopedFile.exists()) {
+                return scopedFile
+            }
+        }
+        names.forEach { fileName ->
+            val legacyFile = File(legacyTasksDir, fileName)
+            if (legacyFile.exists()) {
+                return legacyFile
+            }
+        }
+        return null
     }
 
-    /**
-     * Parse CUP longitude string to decimal degrees
-     *
-     * CUP format: DDDMM.MMMh (e.g., "00845.250E")
-     * Where DDD = degrees, MM.MMM = minutes, h = hemisphere (E/W)
-     *
-     * @param lonStr The CUP longitude string
-     * @return Longitude in decimal degrees
-     */
-    private fun parseLongitude(lonStr: String): Double {
-        val hem = lonStr.last()
-        val degrees = lonStr.substring(0, 3).toDouble()
-        val minutes = lonStr.substring(3, lonStr.length - 1).toDouble()
-        val decimal = degrees + minutes / 60.0
-        return if (hem == 'W') -decimal else decimal
+    private fun isLikelyLegacyAatCup(file: File): Boolean {
+        return runCatching {
+            val content = file.readText(StandardCharsets.UTF_8)
+            val waypoints = CupFormatUtils.parseCupWaypoints(content)
+            if (waypoints.isNotEmpty()) {
+                CupFormatUtils.inferTaskType(waypoints) == TaskType.AAT
+            } else {
+                file.name.contains("AAT", ignoreCase = true)
+            }
+        }.getOrDefault(file.name.contains("AAT", ignoreCase = true))
+    }
+
+    private companion object {
+        const val LEGACY_TASKS_DIR = "cup_tasks"
+        const val AAT_TASKS_DIR = "cup_tasks/aat"
+        const val KEY_LEGACY_MIGRATION_DONE = "legacy_aat_storage_migration_done_v1"
     }
 }

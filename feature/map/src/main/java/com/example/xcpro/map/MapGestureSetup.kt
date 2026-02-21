@@ -8,6 +8,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.gestures.CustomMapGestureHandler
@@ -29,6 +30,8 @@ import org.maplibre.android.geometry.LatLng
 object MapGestureSetup {
 
     private const val TAG = "MapGestureSetup"
+    private const val ATTRIBUTION_PASSTHROUGH_WIDTH_DP = 180f
+    private const val ATTRIBUTION_PASSTHROUGH_HEIGHT_DP = 72f
 
     /**
      * Setup custom gesture handler with task-type specific handling
@@ -52,10 +55,15 @@ object MapGestureSetup {
         onUpdateAATTargetPoint: (Int, Double, Double) -> Unit,
         onSyncTaskVisuals: () -> Unit,
         onMapTap: (LatLng) -> Unit = {},
+        onMapLongPress: (LatLng) -> Unit = {},
         gestureRegions: List<MapGestureRegion> = emptyList(),
         modifier: Modifier = Modifier
     ) {
-        val pixelRatio = mapState.mapView?.pixelRatio ?: LocalDensity.current.density
+        val density = LocalDensity.current
+        val pixelRatio = mapState.mapView?.pixelRatio ?: density.density
+        val attributionPassthroughWidthPx = with(density) { ATTRIBUTION_PASSTHROUGH_WIDTH_DP.dp.toPx() }
+        val attributionPassthroughHeightPx =
+            with(density) { ATTRIBUTION_PASSTHROUGH_HEIGHT_DP.dp.toPx() }
         val gestureCallbacks = remember(
             cameraManager,
             onEnterAATEditMode,
@@ -114,7 +122,10 @@ object MapGestureSetup {
                 taskGestureHandler = taskGestureHandler,
                 gestureRegions = gestureRegions,
                 onMapTap = onMapTap,
+                onMapLongPress = onMapLongPress,
                 mapViewPixelRatio = pixelRatio,
+                attributionTapPassthroughWidthPx = attributionPassthroughWidthPx,
+                attributionTapPassthroughHeightPx = attributionPassthroughHeightPx,
                 modifier = Modifier.fillMaxSize()
             )
         }

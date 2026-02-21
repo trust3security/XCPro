@@ -1,5 +1,13 @@
 # Profiles Modernization Plan
 
+Maintenance note (2026-02-17):
+
+1. Current shipped architecture reference: `docs/03_Features/Profiles_Current_Architecture.md`
+2. Active implementation tracker: `docs/03_Features/Profiles_Workboard.md`
+3. Phase 1 default-profile implementation plan: `docs/03_Features/Profiles_Default_Profile_Phase1_Plan.md`
+4. Deep-dive findings through eighth pass are documented in those feature docs (hydration, delete-cascade, null-active runtime behavior, selection-skip invariant, flight-mode restore ordering, storage/read recovery, parse-failure integrity, ownership/validation gaps, set-active contract clarity, clear-profile completeness, persistence atomicity, mutation serialization, mutation rollback semantics, active-invariant repair, loading-state action gating, dfcards visibility hydration consistency across profile switches, profile-settings editable-state freshness, and profile-entrypoint gaps).
+5. This file remains the long-term modernization target.
+
 This document describes how XCPro will evolve profile management so every user has a reliable default configuration, a single source of truth (SSOT) for all settings, and an intuitive import/export workflow.
 
 ---

@@ -18,8 +18,12 @@ data class ShareRequest(
     val mime: String,
     val subject: String? = null,
     val text: String? = null,
-    val chooserTitle: String = "Share Task File"
-)
+    val chooserTitle: String = "Share Task File",
+    val additionalDocuments: List<DocumentRef> = emptyList()
+) {
+    val allDocuments: List<DocumentRef>
+        get() = listOf(document) + additionalDocuments
+}
 
 data class TaskFilesUiState(
     val files: List<CupDownloadEntry> = emptyList(),

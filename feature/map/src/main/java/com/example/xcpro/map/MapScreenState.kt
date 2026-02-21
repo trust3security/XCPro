@@ -16,7 +16,13 @@ class MapScreenState {
     var blueLocationOverlay: BlueLocationOverlay? = null
     var distanceCirclesOverlay: DistanceCirclesOverlay? = null
     var ognTrafficOverlay: OgnTrafficOverlay? = null
+    var ognThermalOverlay: OgnThermalOverlay? = null
+    var ognGliderTrailOverlay: OgnGliderTrailOverlay? = null
     var adsbTrafficOverlay: AdsbTrafficOverlay? = null
+    var forecastOverlay: ForecastRasterOverlay? = null
+    var forecastSecondaryOverlay: ForecastRasterOverlay? = null
+    var forecastWindOverlay: ForecastRasterOverlay? = null
+    var weatherRainOverlay: WeatherRainOverlay? = null
     var snailTrailOverlay: SnailTrailOverlay? = null
     var scaleBarPlugin: ScaleBarPlugin? = null
     var scaleBarWidget: ScaleBarWidget? = null

@@ -1,0 +1,12 @@
+﻿HTTP/1.1 401 Unauthorized
+content-type: text/html; charset=utf-8
+cache-control: no-cache
+set-cookie: hl<REDACTED>; Max-Age=15724800; Path=/; expires=Sun, 16-Aug-2026 07:07:32 GMT
+x-cloud-trace-context: b53812a9df52e0c14611c54d97f6adfd
+date: Sun, 15 Feb 2026 07:07:32 GMT
+server: Google Frontend
+Content-Length: 91
+via: 1.1 google
+Alt-Svc: h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+
+{"message": "Email is not registered with SkySight or password is incorrect", "error": 401}

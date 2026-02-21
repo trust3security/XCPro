@@ -7,6 +7,7 @@ import java.io.InputStream
 import java.io.InputStreamReader
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.ceil
 import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ensureActive
@@ -31,6 +32,7 @@ class AircraftMetadataImporter @Inject constructor(
 
             database.withTransaction {
                 dao.clearStaging()
+                val activeRowCountBeforeImport = dao.countActive()
 
                 BufferedReader(InputStreamReader(inputStream, Charsets.UTF_8)).use { reader ->
                     val headerLine = reader.readLine()
@@ -69,6 +71,10 @@ class AircraftMetadataImporter @Inject constructor(
                 if (stagingCount <= 0) {
                     throw IllegalStateException("Metadata staging import produced zero rows")
                 }
+                validateImportHealth(
+                    activeRowCountBeforeImport = activeRowCountBeforeImport,
+                    stagingRowCount = stagingCount
+                )
                 importedRows = stagingCount
 
                 dao.clearActive()
@@ -79,4 +85,46 @@ class AircraftMetadataImporter @Inject constructor(
             AircraftMetadataImportResult(importedRowCount = importedRows)
         }
     }
+
+    private fun validateImportHealth(
+        activeRowCountBeforeImport: Int,
+        stagingRowCount: Int
+    ) {
+        val minExpectedRows = minimumExpectedRowsForPromotion(
+            activeRowCountBeforeImport = activeRowCountBeforeImport,
+            minRatio = AircraftMetadataSyncPolicy.IMPORT_HEALTH_GUARD_MIN_RATIO
+        )
+        if (
+            shouldRejectMetadataPromotion(
+                activeRowCountBeforeImport = activeRowCountBeforeImport,
+                stagingRowCount = stagingRowCount,
+                minBaselineRows = AircraftMetadataSyncPolicy.IMPORT_HEALTH_GUARD_MIN_BASELINE_ROWS,
+                minRatio = AircraftMetadataSyncPolicy.IMPORT_HEALTH_GUARD_MIN_RATIO
+            )
+        ) {
+            throw IllegalStateException(
+                "Metadata import health guard blocked promotion: " +
+                    "stagingRows=$stagingRowCount baselineRows=$activeRowCountBeforeImport " +
+                    "minimumExpectedRows=$minExpectedRows"
+            )
+        }
+    }
 }
+
+internal fun shouldRejectMetadataPromotion(
+    activeRowCountBeforeImport: Int,
+    stagingRowCount: Int,
+    minBaselineRows: Int,
+    minRatio: Double
+): Boolean {
+    if (activeRowCountBeforeImport < minBaselineRows) return false
+    return stagingRowCount < minimumExpectedRowsForPromotion(
+        activeRowCountBeforeImport = activeRowCountBeforeImport,
+        minRatio = minRatio
+    )
+}
+
+internal fun minimumExpectedRowsForPromotion(
+    activeRowCountBeforeImport: Int,
+    minRatio: Double
+): Int = ceil(activeRowCountBeforeImport * minRatio).toInt()

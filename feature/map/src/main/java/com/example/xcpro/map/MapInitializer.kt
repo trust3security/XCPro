@@ -3,7 +3,6 @@ package com.example.xcpro.map
 import android.content.Context
 import android.util.Log
 import com.example.xcpro.MapOrientationManager
-import com.example.xcpro.screens.overlays.getMapStyleUrl
 import com.example.xcpro.map.BlueLocationOverlay
 import com.example.xcpro.map.trail.SnailTrailManager
 import org.maplibre.android.camera.CameraPosition
@@ -14,6 +13,7 @@ import com.example.xcpro.airspace.AirspaceUseCase
 import com.example.xcpro.flightdata.WaypointFilesUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.resume
 
 class MapInitializer(
@@ -33,7 +33,10 @@ class MapInitializer(
         private const val INITIAL_LATITUDE = 46.52
         private const val INITIAL_LONGITUDE = 6.63
         private const val INITIAL_ZOOM = 8.0
+        private const val STYLE_LOAD_TIMEOUT_MS = 3_000L
     }
+
+    private var styleLoadToken: Long = 0L
 
     private val scaleBarController = MapScaleBarController(mapState)
     private val dataLoader = MapInitializerDataLoader(
@@ -47,6 +50,7 @@ class MapInitializer(
     suspend fun initializeMap(map: MapLibreMap): MapLibreMap {
         return try {
             Log.d(TAG, "Starting map initialization")
+            SkySightMapLibreNetworkConfigurator.ensureConfigured()
             mapState.mapLibreMap = map
             setupMapStyle(map)
             setupInitialPosition(map)
@@ -63,18 +67,49 @@ class MapInitializer(
 
     private suspend fun setupMapStyle(map: MapLibreMap) {
         val styleName = mapStateReader.mapStyleName.value
-        val styleUrl = getMapStyleUrl(styleName)
-        suspendCancellableCoroutine { continuation ->
-            map.setStyle(styleUrl) { _ ->
-                Log.d(TAG, "Map style loaded: $styleName")
+        val styleUrl = MapStyleUrlResolver.resolve(styleName)
+        val requestToken = ++styleLoadToken
+        var styleSetupApplied = false
 
-                // Initialize overlays after style is loaded
-                setupOverlays(map)
-
-                dataLoader.loadInitialData(map)
-                if (continuation.isActive) {
-                    continuation.resume(Unit)
+        fun applyStyleSetupIfNeeded(): Boolean {
+            if (styleSetupApplied || requestToken != styleLoadToken) {
+                return styleSetupApplied
+            }
+            if (mapState.mapLibreMap !== map) {
+                if (BuildConfig.DEBUG) {
+                    Log.d(TAG, "Skipping stale style callback for detached map instance")
                 }
+                return false
+            }
+            val hasLoadedStyle = map.style != null
+            if (!hasLoadedStyle) {
+                return false
+            }
+            styleSetupApplied = true
+            setupOverlays(map)
+            dataLoader.loadInitialData(map)
+            return true
+        }
+
+        val loadedInTime = withTimeoutOrNull(STYLE_LOAD_TIMEOUT_MS) {
+            suspendCancellableCoroutine<Boolean> { continuation ->
+                map.setStyle(styleUrl) { _ ->
+                    if (requestToken != styleLoadToken) {
+                        return@setStyle
+                    }
+                    Log.d(TAG, "Map style loaded: $styleName")
+                    val setupApplied = applyStyleSetupIfNeeded()
+                    if (continuation.isActive) {
+                        continuation.resume(setupApplied)
+                    }
+                }
+            }
+        } ?: false
+
+        if (!loadedInTime && requestToken == styleLoadToken) {
+            Log.w(TAG, "Map style load timeout for $styleName; checking fallback init")
+            if (!applyStyleSetupIfNeeded()) {
+                Log.w(TAG, "Style unavailable at timeout; waiting for async style callback")
             }
         }
     }
@@ -141,6 +176,8 @@ class MapInitializer(
         }
     }
     private fun setupGestures(map: MapLibreMap) {
+        // Keep provider attribution reachable even with custom gesture routing overlays.
+        map.uiSettings.isAttributionEnabled = true
         // Disable MapLibre standard gestures for custom gesture system
         map.uiSettings.isZoomGesturesEnabled = false
         map.uiSettings.isRotateGesturesEnabled = false
@@ -227,6 +264,7 @@ class MapInitializer(
         }
 
         // Show return button on user interaction
+        stateActions.setShowRecenterButton(false)
         stateActions.setShowReturnButton(true)
         stateActions.updateLastUserPanTime(System.currentTimeMillis())
         Log.d(TAG, "User interaction detected - return button shown")

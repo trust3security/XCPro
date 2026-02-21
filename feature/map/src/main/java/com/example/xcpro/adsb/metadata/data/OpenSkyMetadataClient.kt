@@ -1,11 +1,13 @@
 package com.example.xcpro.adsb.metadata.data
 
+import com.example.xcpro.adsb.awaitResponse
 import com.example.xcpro.common.di.IoDispatcher
 import java.io.IOException
 import java.io.InputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
@@ -24,10 +26,19 @@ class OpenSkyMetadataClient @Inject constructor(
 ) {
 
     suspend fun listMetadataKeys(): Result<List<String>> = withContext(ioDispatcher) {
-        runCatching {
-            val keys = mutableListOf<String>()
+        try {
+            val keys = linkedSetOf<String>()
             var continuationToken: String? = null
+            val seenTokens = linkedSetOf<String?>()
+            var pageCount = 0
             do {
+                if (!seenTokens.add(continuationToken)) {
+                    throw IOException("Bucket listing continuation token loop detected")
+                }
+                pageCount += 1
+                if (pageCount > MAX_LISTING_PAGES) {
+                    throw IOException("Bucket listing exceeded max page limit: $MAX_LISTING_PAGES")
+                }
                 val url = AircraftMetadataSyncPolicy.SOURCE_BUCKET_LISTING
                     .toHttpUrl()
                     .newBuilder()
@@ -44,7 +55,7 @@ class OpenSkyMetadataClient @Inject constructor(
                     .get()
                     .build()
 
-                httpClient.newCall(request).execute().use { response ->
+                httpClient.newCall(request).awaitResponse().use { response ->
                     if (!response.isSuccessful) {
                         throw IOException("Bucket listing failed with HTTP ${response.code}")
                     }
@@ -60,7 +71,11 @@ class OpenSkyMetadataClient @Inject constructor(
                     }
                 }
             } while (!continuationToken.isNullOrBlank())
-            keys
+            Result.success(keys.toList())
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 
@@ -68,14 +83,14 @@ class OpenSkyMetadataClient @Inject constructor(
         url: String,
         block: suspend (InputStream, String?) -> T
     ): Result<T> = withContext(ioDispatcher) {
-        runCatching {
+        try {
             val request = Request.Builder()
                 .url(url)
                 .header("Accept", "text/csv,*/*")
                 .get()
                 .build()
 
-            httpClient.newCall(request).execute().use { response ->
+            val value = httpClient.newCall(request).awaitResponse().use { response ->
                 if (!response.isSuccessful) {
                     throw IOException("Download failed with HTTP ${response.code}: $url")
                 }
@@ -86,11 +101,19 @@ class OpenSkyMetadataClient @Inject constructor(
                     block(input, etag)
                 }
             }
+            Result.success(value)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 
     private fun parseListingPage(xml: String): MetadataListingPage {
-        val keys = KEY_REGEX.findAll(xml).map { it.groupValues[1].trim() }.toList()
+        val keys = KEY_REGEX.findAll(xml)
+            .map { it.groupValues[1].trim() }
+            .filter { it.isNotBlank() }
+            .toList()
         val truncated = IS_TRUNCATED_REGEX.find(xml)
             ?.groupValues
             ?.getOrNull(1)
@@ -101,6 +124,11 @@ class OpenSkyMetadataClient @Inject constructor(
             ?.groupValues
             ?.getOrNull(1)
             ?.trim()
+            ?.takeIf { it.isNotBlank() }
+            ?: NEXT_MARKER_REGEX.find(xml)
+                ?.groupValues
+                ?.getOrNull(1)
+                ?.trim()
             ?.takeIf { it.isNotBlank() }
         return MetadataListingPage(
             keys = keys,
@@ -122,6 +150,11 @@ class OpenSkyMetadataClient @Inject constructor(
             "<NextContinuationToken>([^<]+)</NextContinuationToken>",
             setOf(RegexOption.IGNORE_CASE, RegexOption.MULTILINE)
         )
+        val NEXT_MARKER_REGEX = Regex(
+            "<NextMarker>([^<]+)</NextMarker>",
+            setOf(RegexOption.IGNORE_CASE, RegexOption.MULTILINE)
+        )
+        const val MAX_LISTING_PAGES = 200
     }
 }
 

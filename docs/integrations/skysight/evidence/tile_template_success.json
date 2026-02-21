@@ -1,0 +1,24 @@
+﻿{
+    "source":  "edge.skysight.io",
+    "region":  "WEST_US",
+    "date":  "20260213",
+    "time":  "0600",
+    "parameter":  "wstar_bsratio",
+    "urlTemplate":  "https://edge.skysight.io/WEST_US/20260213/0600/wstar_bsratio/{z}/{x}/{y}",
+    "minZoom":  3,
+    "maxZoom":  5,
+    "tileSizePx":  256,
+    "format":  "VECTOR_INDEXED_FILL",
+    "sourceLayer":  "bsratio",
+    "sourceLayerCandidates":  [
+                                  "bsratio",
+                                  "0600"
+                              ],
+    "originHeaderRequired":  true,
+    "zoomPolicy":  {
+                       "fillMaxZoom":  5,
+                       "windMaxZoom":  16
+                   },
+    "windUrlTemplateExample":  "https://edge.skysight.io/WEST_US/20260213/0600/wind/{z}/{x}/{y}/sfcwind0",
+    "valueProperty":  "idx"
+}

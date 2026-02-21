@@ -3,6 +3,9 @@ package com.example.xcpro.tasks
 import com.example.xcpro.common.documents.DocumentRef
 import com.example.xcpro.core.time.Clock
 import com.example.xcpro.tasks.core.Task
+import com.example.xcpro.tasks.core.TaskType
+import com.example.xcpro.tasks.core.TaskWaypoint
+import com.example.xcpro.tasks.domain.model.TaskTargetSnapshot
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -21,14 +24,47 @@ class TaskFilesUseCase @Inject constructor(
             ?: document.fileName()
             ?: return TaskImportResult.Failure("Unable to resolve file name")
 
-        return if (displayName.endsWith(".json", ignoreCase = true)) {
-            val json = repository.readText(document)
-                ?: return TaskImportResult.Failure("Unable to read task file")
-            TaskImportResult.Json(displayName = displayName, json = json)
-        } else {
-            val success = taskManager.loadTask(displayName)
-            TaskImportResult.Cup(displayName = displayName, success = success)
+        val fileText = repository.readText(document)
+            ?: return TaskImportResult.Failure("Unable to read task file")
+
+        if (displayName.endsWith(".json", ignoreCase = true)) {
+            return TaskImportResult.Json(displayName = displayName, json = fileText)
         }
+
+        val waypoints = CupFormatUtils.parseCupWaypoints(fileText)
+        if (waypoints.size < 2) {
+            return TaskImportResult.Failure("Import failed: CUP needs at least 2 valid waypoints")
+        }
+
+        val taskType = CupFormatUtils.inferTaskType(waypoints)
+        val task = Task(
+            id = CupFormatUtils.stableTaskId(prefix = "cup", fileNameHint = displayName),
+            waypoints = waypoints.mapIndexed { index, waypoint ->
+                TaskWaypoint(
+                    id = CupFormatUtils.stableWaypointId(
+                        prefix = "cup",
+                        index = index,
+                        code = waypoint.code,
+                        name = waypoint.name
+                    ),
+                    title = waypoint.name,
+                    subtitle = waypoint.description,
+                    lat = waypoint.latitude,
+                    lon = waypoint.longitude,
+                    role = CupFormatUtils.inferWaypointRole(
+                        index = index,
+                        total = waypoints.size,
+                        code = waypoint.code
+                    )
+                )
+            }
+        )
+        val json = TaskPersistSerializer.serialize(
+            task = task,
+            taskType = taskType,
+            targets = emptyList()
+        )
+        return TaskImportResult.Json(displayName = displayName, json = json)
     }
 
     fun buildShareRequest(document: DocumentRef, displayName: String): ShareRequest? {
@@ -42,17 +78,21 @@ class TaskFilesUseCase @Inject constructor(
         )
     }
 
-    fun exportTaskToDownloads(task: Task): TaskExportResult {
+    suspend fun exportTaskToDownloads(
+        task: Task,
+        taskType: TaskType = taskManager.taskType,
+        targets: List<TaskTargetSnapshot> = emptyList()
+    ): TaskExportResult {
         val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault())
             .format(Date(clock.nowWallMs()))
         val cupName = "task_${timestamp}.cup"
         val jsonName = "task_${timestamp}.xcp.json"
 
-        val cupContent = taskToCup(task)
+        val cupContent = taskToCup(task = task, taskType = taskType)
         val jsonContent = TaskPersistSerializer.serialize(
             task = task,
-            taskType = taskManager.taskType,
-            targets = emptyList()
+            taskType = taskType,
+            targets = targets
         )
 
         val saved = mutableListOf<String>()
@@ -69,87 +109,94 @@ class TaskFilesUseCase @Inject constructor(
         }
     }
 
-    fun shareTask(task: Task): List<ShareRequest> {
+    suspend fun shareTask(
+        task: Task,
+        taskType: TaskType = taskManager.taskType,
+        targets: List<TaskTargetSnapshot> = emptyList()
+    ): ShareRequest? {
         val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault())
             .format(Date(clock.nowWallMs()))
         val cupName = "task_${timestamp}.cup"
         val jsonName = "task_${timestamp}.xcp.json"
 
-        val cupContent = taskToCup(task)
+        val cupContent = taskToCup(task = task, taskType = taskType)
         val jsonContent = TaskPersistSerializer.serialize(
             task = task,
-            taskType = taskManager.taskType,
-            targets = emptyList()
+            taskType = taskType,
+            targets = targets
         )
 
-        val requests = mutableListOf<ShareRequest>()
-        val cupRef = repository.writeCacheFile(cupName, cupContent)
-        requests.add(buildShareRequest(cupRef, cupName)!!)
+        val cupRef = runCatching { repository.writeCacheFile(cupName, cupContent) }.getOrNull()
+        val jsonRef = runCatching { repository.writeCacheFile(jsonName, jsonContent) }.getOrNull()
 
-        val jsonRef = repository.writeCacheFile(jsonName, jsonContent)
-        requests.add(
-            ShareRequest(
-                document = jsonRef,
-                mime = "application/json",
-                subject = "Task: ${task.waypoints.size} waypoints",
-                text = buildShareText(task),
-                chooserTitle = "Share Task"
-            )
+        val primary = jsonRef ?: cupRef ?: return null
+        val additional = listOfNotNull(
+            if (primary.uri != jsonRef?.uri) jsonRef else null,
+            if (primary.uri != cupRef?.uri) cupRef else null
         )
 
-        return requests
+        return ShareRequest(
+            document = primary,
+            mime = if (additional.isNotEmpty()) "*/*" else if (primary.displayName?.endsWith(".json", ignoreCase = true) == true) "application/json" else "application/octet-stream",
+            subject = "Task: ${task.waypoints.size} waypoints",
+            text = buildShareText(task, taskType),
+            chooserTitle = "Share Task",
+            additionalDocuments = additional
+        )
     }
 
-    fun shareExistingDownload(displayName: String): ShareRequest? {
+    suspend fun shareExistingDownload(displayName: String): ShareRequest? {
         val document = repository.findDownloadFileRef(displayName) ?: return null
         return buildShareRequest(document, displayName)
     }
 
-    private fun taskToCup(task: Task): String {
-        val stringBuilder = StringBuilder()
+    private fun taskToCup(task: Task, taskType: TaskType): String {
+        val headerRow = "name,code,country,lat,lon,elev,style,rwdir,rwlen,freq,desc"
+        val metadataRow = listOf(
+            CupFormatUtils.csvEscape("XCPro task"),
+            CupFormatUtils.csvEscape("TASK"),
+            CupFormatUtils.csvEscape(""),
+            CupFormatUtils.csvEscape(""),
+            CupFormatUtils.csvEscape(""),
+            CupFormatUtils.csvEscape(""),
+            CupFormatUtils.csvEscape(""),
+            CupFormatUtils.csvEscape(""),
+            CupFormatUtils.csvEscape(""),
+            CupFormatUtils.csvEscape(""),
+            CupFormatUtils.csvEscape("Created by XCPro")
+        ).joinToString(",")
 
-        stringBuilder.appendLine("name,code,country,lat,lon,elev,style,rwdir,rwlen,freq,desc")
-
-        task.waypoints.forEachIndexed { index, waypoint ->
-            val name = waypoint.title.take(8)
-            val code = String.format("%03d", index + 1)
-            val country = "XX"
-            val lat = formatLatitude(waypoint.lat)
-            val lon = formatLongitude(waypoint.lon)
-            val elev = "0.0m"
-            val style = when (index) {
-                0 -> "2"  // Start
-                task.waypoints.lastIndex -> "3"  // Finish
-                else -> "1"  // Turnpoint
-            }
-            val rwdir = "0"
-            val rwlen = "0.0m"
-            val freq = "0.0"
-            val desc = waypoint.subtitle.take(20)
-
-            stringBuilder.appendLine("$name,$code,$country,$lat,$lon,$elev,$style,$rwdir,$rwlen,$freq,$desc")
+        val rows = task.waypoints.mapIndexed { index, waypoint ->
+            val code = CupFormatUtils.exportCode(
+                role = waypoint.role,
+                index = index,
+                taskType = taskType
+            )
+            val style = if (taskType == TaskType.AAT) "2" else "1"
+            listOf(
+                CupFormatUtils.csvEscape(waypoint.title.take(80)),
+                CupFormatUtils.csvEscape(code),
+                CupFormatUtils.csvEscape("XX"),
+                CupFormatUtils.csvEscape(CupFormatUtils.formatLatitude(waypoint.lat)),
+                CupFormatUtils.csvEscape(CupFormatUtils.formatLongitude(waypoint.lon)),
+                CupFormatUtils.csvEscape("0m"),
+                CupFormatUtils.csvEscape(style),
+                CupFormatUtils.csvEscape(""),
+                CupFormatUtils.csvEscape(""),
+                CupFormatUtils.csvEscape(""),
+                CupFormatUtils.csvEscape(waypoint.subtitle.take(120))
+            ).joinToString(",")
         }
-
-        return stringBuilder.toString()
+        return buildString {
+            appendLine(headerRow)
+            appendLine(metadataRow)
+            rows.forEach { appendLine(it) }
+        }
     }
 
-    private fun formatLatitude(lat: Double): String {
-        val degrees = kotlin.math.abs(lat).toInt()
-        val minutes = (kotlin.math.abs(lat) - degrees) * 60.0
-        val direction = if (lat >= 0) "N" else "S"
-        return String.format("%02d%06.3f%s", degrees, minutes, direction)
-    }
-
-    private fun formatLongitude(lon: Double): String {
-        val degrees = kotlin.math.abs(lon).toInt()
-        val minutes = (kotlin.math.abs(lon) - degrees) * 60.0
-        val direction = if (lon >= 0) "E" else "W"
-        return String.format("%03d%06.3f%s", degrees, minutes, direction)
-    }
-
-    private fun buildShareText(task: Task): String = buildString {
+    private fun buildShareText(task: Task, taskType: TaskType): String = buildString {
         appendLine("Task Details:")
-        appendLine("Type: ${taskManager.taskType}")
+        appendLine("Type: $taskType")
         appendLine("Waypoints: ${task.waypoints.size}")
         appendLine()
         task.waypoints.forEachIndexed { index, waypoint ->

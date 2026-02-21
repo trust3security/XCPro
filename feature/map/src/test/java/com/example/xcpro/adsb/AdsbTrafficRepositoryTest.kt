@@ -1,7 +1,11 @@
 package com.example.xcpro.adsb
 
+import com.example.xcpro.adsb.domain.AdsbNetworkAvailabilityPort
 import com.example.xcpro.core.time.FakeClock
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
@@ -52,8 +56,14 @@ class AdsbTrafficRepositoryTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val provider = SequenceProvider(
             listOf(
-                ProviderResult.NetworkError("Timeout"),
-                ProviderResult.NetworkError("Timeout"),
+                ProviderResult.NetworkError(
+                    kind = AdsbNetworkFailureKind.TIMEOUT,
+                    message = "Timeout"
+                ),
+                ProviderResult.NetworkError(
+                    kind = AdsbNetworkFailureKind.TIMEOUT,
+                    message = "Timeout"
+                ),
                 ProviderResult.Success(
                     response = OpenSkyResponse(timeSec = 1_710_000_000L, states = emptyList()),
                     httpCode = 200,
@@ -77,6 +87,253 @@ class AdsbTrafficRepositoryTest {
         runCurrent()
 
         assertTrue(provider.callCount >= 3)
+        assertTrue(repository.snapshot.value.connectionState is AdsbConnectionState.Active)
+        repository.stop()
+    }
+
+    @Test
+    fun repeatedFailures_openCircuitBreaker_andDelayProbe() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val provider = SequenceProvider(
+            listOf(
+                ProviderResult.NetworkError(
+                    kind = AdsbNetworkFailureKind.TIMEOUT,
+                    message = "Timeout"
+                ),
+                ProviderResult.NetworkError(
+                    kind = AdsbNetworkFailureKind.TIMEOUT,
+                    message = "Timeout"
+                ),
+                ProviderResult.NetworkError(
+                    kind = AdsbNetworkFailureKind.TIMEOUT,
+                    message = "Timeout"
+                ),
+                ProviderResult.Success(
+                    response = OpenSkyResponse(timeSec = 1_710_000_000L, states = emptyList()),
+                    httpCode = 200,
+                    remainingCredits = null
+                )
+            )
+        )
+        val repository = AdsbTrafficRepositoryImpl(
+            providerClient = provider,
+            tokenRepository = FakeTokenRepository(),
+            clock = FakeClock(monoMs = 0L, wallMs = 0L),
+            dispatcher = dispatcher
+        )
+
+        repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
+        repository.setEnabled(true)
+        runCurrent()
+        assertEquals(1, provider.callCount)
+
+        advanceTimeBy(20_000L)
+        runCurrent()
+        assertEquals(3, provider.callCount)
+
+        advanceTimeBy(25_000L)
+        runCurrent()
+        assertEquals(3, provider.callCount)
+
+        advanceTimeBy(6_000L)
+        runCurrent()
+        assertEquals(4, provider.callCount)
+        assertTrue(repository.snapshot.value.connectionState is AdsbConnectionState.Active)
+        repository.stop()
+    }
+
+    @Test
+    fun failedHalfOpenProbe_reopensCircuitBreaker_untilNextProbeWindow() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val provider = SequenceProvider(
+            listOf(
+                ProviderResult.NetworkError(
+                    kind = AdsbNetworkFailureKind.TIMEOUT,
+                    message = "Timeout"
+                ),
+                ProviderResult.NetworkError(
+                    kind = AdsbNetworkFailureKind.TIMEOUT,
+                    message = "Timeout"
+                ),
+                ProviderResult.NetworkError(
+                    kind = AdsbNetworkFailureKind.TIMEOUT,
+                    message = "Timeout"
+                ),
+                ProviderResult.NetworkError(
+                    kind = AdsbNetworkFailureKind.TIMEOUT,
+                    message = "Timeout"
+                ),
+                ProviderResult.Success(
+                    response = OpenSkyResponse(timeSec = 1_710_000_000L, states = emptyList()),
+                    httpCode = 200,
+                    remainingCredits = null
+                )
+            )
+        )
+        val repository = AdsbTrafficRepositoryImpl(
+            providerClient = provider,
+            tokenRepository = FakeTokenRepository(),
+            clock = FakeClock(monoMs = 0L, wallMs = 0L),
+            dispatcher = dispatcher
+        )
+
+        repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
+        repository.setEnabled(true)
+        runCurrent()
+        assertEquals(1, provider.callCount)
+
+        advanceTimeBy(50_000L)
+        runCurrent()
+        assertEquals(4, provider.callCount)
+
+        advanceTimeBy(25_000L)
+        runCurrent()
+        assertEquals(4, provider.callCount)
+
+        advanceTimeBy(2_000L)
+        runCurrent()
+        assertEquals(5, provider.callCount)
+        assertTrue(repository.snapshot.value.connectionState is AdsbConnectionState.Active)
+        repository.stop()
+    }
+
+    @Test
+    fun snapshotTelemetry_tracksFailureCountersAndRetryTimestamps() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val provider = SequenceProvider(
+            listOf(
+                ProviderResult.NetworkError(
+                    kind = AdsbNetworkFailureKind.TIMEOUT,
+                    message = "Timeout"
+                ),
+                ProviderResult.Success(
+                    response = OpenSkyResponse(timeSec = 1_710_000_000L, states = emptyList()),
+                    httpCode = 200,
+                    remainingCredits = null
+                )
+            )
+        )
+        val repository = AdsbTrafficRepositoryImpl(
+            providerClient = provider,
+            tokenRepository = FakeTokenRepository(),
+            clock = FakeClock(monoMs = 0L, wallMs = 0L),
+            dispatcher = dispatcher
+        )
+
+        repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
+        repository.setEnabled(true)
+        runCurrent()
+
+        val failedSnapshot = repository.snapshot.value
+        assertEquals(1, failedSnapshot.consecutiveFailureCount)
+        assertEquals(0L, failedSnapshot.lastFailureMonoMs)
+        assertTrue((failedSnapshot.nextRetryMonoMs ?: 0L) >= 8_000L)
+
+        advanceTimeBy(8_000L)
+        runCurrent()
+        val recoveredSnapshot = repository.snapshot.value
+        assertTrue(recoveredSnapshot.connectionState is AdsbConnectionState.Active)
+        assertEquals(0, recoveredSnapshot.consecutiveFailureCount)
+        assertEquals(0L, recoveredSnapshot.lastFailureMonoMs)
+        assertTrue(recoveredSnapshot.nextRetryMonoMs != null)
+
+        repository.stop()
+        runCurrent()
+        assertEquals(null, repository.snapshot.value.nextRetryMonoMs)
+        assertEquals(null, repository.snapshot.value.lastFailureMonoMs)
+    }
+
+    @Test
+    fun dnsFailure_appliesOfflineRetryFloor() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val provider = SequenceProvider(
+            listOf(
+                ProviderResult.NetworkError(
+                    kind = AdsbNetworkFailureKind.DNS,
+                    message = "UnknownHostException"
+                ),
+                ProviderResult.Success(
+                    response = OpenSkyResponse(timeSec = 1_710_000_000L, states = emptyList()),
+                    httpCode = 200,
+                    remainingCredits = null
+                )
+            )
+        )
+        val repository = AdsbTrafficRepositoryImpl(
+            providerClient = provider,
+            tokenRepository = FakeTokenRepository(),
+            clock = FakeClock(monoMs = 0L, wallMs = 0L),
+            dispatcher = dispatcher
+        )
+
+        repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
+        repository.setEnabled(true)
+        runCurrent()
+        assertEquals(1, provider.callCount)
+
+        advanceTimeBy(14_000L)
+        runCurrent()
+        assertEquals(1, provider.callCount)
+
+        advanceTimeBy(2_000L)
+        runCurrent()
+        assertTrue(provider.callCount >= 2)
+        assertTrue(repository.snapshot.value.connectionState is AdsbConnectionState.Active)
+        repository.stop()
+    }
+
+    @Test
+    fun unexpectedProviderException_doesNotKillPollingLoop() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val provider = ThrowThenSuccessProvider()
+        val repository = AdsbTrafficRepositoryImpl(
+            providerClient = provider,
+            tokenRepository = FakeTokenRepository(),
+            clock = FakeClock(monoMs = 0L, wallMs = 0L),
+            dispatcher = dispatcher
+        )
+
+        repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
+        repository.setEnabled(true)
+        runCurrent()
+        assertEquals(1, provider.callCount)
+        assertTrue(repository.snapshot.value.connectionState is AdsbConnectionState.Error)
+
+        advanceTimeBy(5_000L)
+        runCurrent()
+        assertTrue(provider.callCount >= 2)
+        assertTrue(repository.snapshot.value.connectionState is AdsbConnectionState.Active)
+        repository.stop()
+    }
+
+    @Test
+    fun unexpectedLoopException_recoversAndContinuesPolling() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val provider = SequenceProvider(
+            listOf(
+                ProviderResult.Success(
+                    response = OpenSkyResponse(timeSec = 1_710_000_000L, states = emptyList()),
+                    httpCode = 200,
+                    remainingCredits = null
+                )
+            )
+        )
+        val repository = AdsbTrafficRepositoryImpl(
+            providerClient = provider,
+            tokenRepository = FakeTokenRepository(),
+            clock = FakeClock(monoMs = 0L, wallMs = 0L),
+            dispatcher = dispatcher,
+            networkAvailabilityPort = ThrowingOnceNetworkAvailabilityPort()
+        )
+
+        repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
+        repository.setEnabled(true)
+        runCurrent()
+        assertTrue(repository.snapshot.value.connectionState is AdsbConnectionState.Error)
+
+        advanceTimeBy(10_000L)
+        runCurrent()
+        assertTrue(provider.callCount >= 1)
         assertTrue(repository.snapshot.value.connectionState is AdsbConnectionState.Active)
         repository.stop()
     }
@@ -309,6 +566,183 @@ class AdsbTrafficRepositoryTest {
     }
 
     @Test
+    fun offlineAtStart_pausesPollingUntilNetworkReturns() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val network = FakeNetworkAvailabilityPort(initialOnline = false)
+        val provider = SequenceProvider(
+            listOf(
+                ProviderResult.Success(
+                    response = OpenSkyResponse(timeSec = 1_710_000_000L, states = emptyList()),
+                    httpCode = 200,
+                    remainingCredits = null
+                )
+            )
+        )
+        val repository = AdsbTrafficRepositoryImpl(
+            providerClient = provider,
+            tokenRepository = FakeTokenRepository(),
+            clock = FakeClock(monoMs = 0L, wallMs = 0L),
+            dispatcher = dispatcher,
+            networkAvailabilityPort = network
+        )
+
+        repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
+        repository.setEnabled(true)
+        runCurrent()
+        assertEquals(0, provider.callCount)
+        assertTrue(repository.snapshot.value.connectionState is AdsbConnectionState.Error)
+
+        network.setOnline(true)
+        runCurrent()
+        assertTrue(provider.callCount >= 1)
+        assertTrue(repository.snapshot.value.connectionState is AdsbConnectionState.Active)
+        repository.stop()
+    }
+
+    @Test
+    fun dnsFailureWhenNetworkDrops_waitsForOnlineAndResumesImmediately() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val network = FakeNetworkAvailabilityPort(initialOnline = true)
+        var callCount = 0
+        val provider = object : AdsbProviderClient {
+            override suspend fun fetchStates(bbox: BBox, auth: AdsbAuth?): ProviderResult {
+                callCount += 1
+                return if (callCount == 1) {
+                    network.setOnline(false)
+                    ProviderResult.NetworkError(
+                        kind = AdsbNetworkFailureKind.DNS,
+                        message = "UnknownHostException"
+                    )
+                } else {
+                    ProviderResult.Success(
+                        response = OpenSkyResponse(timeSec = 1_710_000_000L, states = emptyList()),
+                        httpCode = 200,
+                        remainingCredits = null
+                    )
+                }
+            }
+        }
+        val repository = AdsbTrafficRepositoryImpl(
+            providerClient = provider,
+            tokenRepository = FakeTokenRepository(),
+            clock = FakeClock(monoMs = 0L, wallMs = 0L),
+            dispatcher = dispatcher,
+            networkAvailabilityPort = network
+        )
+
+        repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
+        repository.setEnabled(true)
+        runCurrent()
+        assertEquals(1, callCount)
+        assertTrue(repository.snapshot.value.connectionState is AdsbConnectionState.Error)
+
+        advanceTimeBy(60_000L)
+        runCurrent()
+        assertEquals(1, callCount)
+
+        network.setOnline(true)
+        runCurrent()
+        assertTrue(callCount >= 2)
+        assertTrue(repository.snapshot.value.connectionState is AdsbConnectionState.Active)
+        repository.stop()
+    }
+
+    @Test
+    fun networkDropDuringDelay_pausesTimerAndResumesImmediatelyOnReconnect() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val network = FakeNetworkAvailabilityPort(initialOnline = true)
+        val provider = SequenceProvider(
+            listOf(
+                ProviderResult.Success(
+                    response = OpenSkyResponse(timeSec = 1_710_000_000L, states = emptyList()),
+                    httpCode = 200,
+                    remainingCredits = null
+                ),
+                ProviderResult.Success(
+                    response = OpenSkyResponse(timeSec = 1_710_000_010L, states = emptyList()),
+                    httpCode = 200,
+                    remainingCredits = null
+                )
+            )
+        )
+        val repository = AdsbTrafficRepositoryImpl(
+            providerClient = provider,
+            tokenRepository = FakeTokenRepository(),
+            clock = FakeClock(monoMs = 0L, wallMs = 0L),
+            dispatcher = dispatcher,
+            networkAvailabilityPort = network
+        )
+
+        repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
+        repository.setEnabled(true)
+        runCurrent()
+        assertEquals(1, provider.callCount)
+
+        advanceTimeBy(5_000L)
+        network.setOnline(false)
+        runCurrent()
+        assertEquals(1, provider.callCount)
+
+        advanceTimeBy(5_000L)
+        network.setOnline(true)
+        runCurrent()
+        assertEquals(2, provider.callCount)
+        assertTrue(repository.snapshot.value.connectionState is AdsbConnectionState.Active)
+        repository.stop()
+    }
+
+    @Test
+    fun rapidOfflineOnlineFlapping_pausesWhileOffline_andResumesOnEachReconnect() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val network = FakeNetworkAvailabilityPort(initialOnline = true)
+        var callCount = 0
+        val provider = object : AdsbProviderClient {
+            override suspend fun fetchStates(bbox: BBox, auth: AdsbAuth?): ProviderResult {
+                callCount += 1
+                return ProviderResult.Success(
+                    response = OpenSkyResponse(timeSec = 1_710_000_000L, states = emptyList()),
+                    httpCode = 200,
+                    remainingCredits = null
+                )
+            }
+        }
+        val repository = AdsbTrafficRepositoryImpl(
+            providerClient = provider,
+            tokenRepository = FakeTokenRepository(),
+            clock = FakeClock(monoMs = 0L, wallMs = 0L),
+            dispatcher = dispatcher,
+            networkAvailabilityPort = network
+        )
+
+        repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
+        repository.setEnabled(true)
+        runCurrent()
+        assertEquals(1, callCount)
+
+        network.setOnline(false)
+        runCurrent()
+        advanceTimeBy(60_000L)
+        runCurrent()
+        assertEquals(1, callCount)
+
+        network.setOnline(true)
+        runCurrent()
+        assertEquals(2, callCount)
+
+        network.setOnline(false)
+        runCurrent()
+        advanceTimeBy(60_000L)
+        runCurrent()
+        assertEquals(2, callCount)
+
+        network.setOnline(true)
+        runCurrent()
+        assertEquals(3, callCount)
+        assertTrue(repository.snapshot.value.connectionState is AdsbConnectionState.Active)
+        repository.stop()
+    }
+
+    @Test
     fun disableStreaming_preservesTargets_untilExplicitClear() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val provider = SequenceProvider(
@@ -442,14 +876,291 @@ class AdsbTrafficRepositoryTest {
         repository.stop()
     }
 
+    @Test
+    fun updateDisplayFilters_reselectsFromCacheAndUpdatesRadiusSnapshot() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val provider = SequenceProvider(
+            listOf(
+                ProviderResult.Success(
+                    response = OpenSkyResponse(
+                        timeSec = 1_710_000_000L,
+                        states = listOf(
+                            state(
+                                icao24 = "abc123",
+                                latitude = -33.7688,
+                                longitude = 151.2093,
+                                altitudeM = 500.0,
+                                speedMps = 40.0
+                            )
+                        )
+                    ),
+                    httpCode = 200,
+                    remainingCredits = null
+                )
+            )
+        )
+        val repository = AdsbTrafficRepositoryImpl(
+            providerClient = provider,
+            tokenRepository = FakeTokenRepository(),
+            clock = FakeClock(monoMs = 0L, wallMs = 0L),
+            dispatcher = dispatcher
+        )
+
+        repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
+        repository.setEnabled(true)
+        runCurrent()
+        assertEquals(0, repository.targets.value.size)
+        assertEquals(10, repository.snapshot.value.receiveRadiusKm)
+        assertEquals(1, provider.callCount)
+
+        repository.updateDisplayFilters(
+            maxDistanceKm = 20,
+            verticalAboveMeters = 5_000.0,
+            verticalBelowMeters = 5_000.0
+        )
+        runCurrent()
+
+        assertEquals(1, repository.targets.value.size)
+        assertEquals(20, repository.snapshot.value.receiveRadiusKm)
+        assertEquals(1, provider.callCount)
+        repository.stop()
+    }
+
+    @Test
+    fun ownshipAltitudeUpdate_appliesVerticalFilterWithoutNewFetch() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val provider = SequenceProvider(
+            listOf(
+                ProviderResult.Success(
+                    response = OpenSkyResponse(
+                        timeSec = 1_710_000_000L,
+                        states = listOf(
+                            state(
+                                icao24 = "abc123",
+                                latitude = -33.8687,
+                                longitude = 151.2092,
+                                altitudeM = 1_050.0,
+                                speedMps = 40.0
+                            ),
+                            state(
+                                icao24 = "def456",
+                                latitude = -33.8686,
+                                longitude = 151.2094,
+                                altitudeM = 1_900.0,
+                                speedMps = 40.0
+                            )
+                        )
+                    ),
+                    httpCode = 200,
+                    remainingCredits = null
+                )
+            )
+        )
+        val repository = AdsbTrafficRepositoryImpl(
+            providerClient = provider,
+            tokenRepository = FakeTokenRepository(),
+            clock = FakeClock(monoMs = 0L, wallMs = 0L),
+            dispatcher = dispatcher
+        )
+
+        repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
+        repository.updateDisplayFilters(
+            maxDistanceKm = 20,
+            verticalAboveMeters = 100.0,
+            verticalBelowMeters = 100.0
+        )
+        repository.setEnabled(true)
+        runCurrent()
+
+        // Ownship altitude unknown -> fail-open vertical filtering.
+        assertEquals(2, repository.targets.value.size)
+        assertEquals(2, repository.snapshot.value.withinVerticalCount)
+        assertEquals(0, repository.snapshot.value.filteredByVerticalCount)
+        assertEquals(1, provider.callCount)
+
+        repository.updateOwnshipAltitudeMeters(1_000.0)
+        runCurrent()
+
+        assertEquals(1, repository.targets.value.size)
+        assertEquals("abc123", repository.targets.value.first().id.raw)
+        assertEquals(2, repository.snapshot.value.withinRadiusCount)
+        assertEquals(1, repository.snapshot.value.withinVerticalCount)
+        assertEquals(1, repository.snapshot.value.filteredByVerticalCount)
+        assertEquals(1, provider.callCount)
+        repository.stop()
+    }
+
+    @Test
+    fun tokenTransientFailure_usesAnonymousModeWithoutAuthFailedState() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val provider = SequenceProvider(
+            listOf(
+                ProviderResult.Success(
+                    response = OpenSkyResponse(timeSec = 1_710_000_000L, states = emptyList()),
+                    httpCode = 200,
+                    remainingCredits = null
+                )
+            )
+        )
+        val repository = AdsbTrafficRepositoryImpl(
+            providerClient = provider,
+            tokenRepository = FakeTokenRepository(
+                fixedState = OpenSkyTokenAccessState.TransientFailure("UnknownHostException")
+            ),
+            clock = FakeClock(monoMs = 0L, wallMs = 0L),
+            dispatcher = dispatcher
+        )
+
+        repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
+        repository.setEnabled(true)
+        runCurrent()
+
+        assertTrue(repository.snapshot.value.connectionState is AdsbConnectionState.Active)
+        assertEquals(AdsbAuthMode.Anonymous, repository.snapshot.value.authMode)
+        repository.stop()
+    }
+
+    @Test
+    fun tokenCredentialRejection_setsAuthFailedMode() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val provider = SequenceProvider(
+            listOf(
+                ProviderResult.Success(
+                    response = OpenSkyResponse(timeSec = 1_710_000_000L, states = emptyList()),
+                    httpCode = 200,
+                    remainingCredits = null
+                )
+            )
+        )
+        val repository = AdsbTrafficRepositoryImpl(
+            providerClient = provider,
+            tokenRepository = FakeTokenRepository(
+                fixedState = OpenSkyTokenAccessState.CredentialsRejected("HTTP 401")
+            ),
+            clock = FakeClock(monoMs = 0L, wallMs = 0L),
+            dispatcher = dispatcher
+        )
+
+        repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
+        repository.setEnabled(true)
+        runCurrent()
+
+        assertTrue(repository.snapshot.value.connectionState is AdsbConnectionState.Active)
+        assertEquals(AdsbAuthMode.AuthFailed, repository.snapshot.value.authMode)
+        repository.stop()
+    }
+
+    @Test
+    fun rapidDisableEnable_keepsPollingActive() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val provider = DelayedSuccessProvider(delayMs = 3_000L)
+        val repository = AdsbTrafficRepositoryImpl(
+            providerClient = provider,
+            tokenRepository = FakeTokenRepository(),
+            clock = FakeClock(monoMs = 0L, wallMs = 0L),
+            dispatcher = dispatcher
+        )
+
+        repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
+        repository.setEnabled(true)
+        runCurrent()
+        assertEquals(1, provider.callCount)
+
+        repository.setEnabled(false)
+        repository.setEnabled(true)
+        runCurrent()
+
+        advanceTimeBy(4_000L)
+        runCurrent()
+        assertTrue(repository.isEnabled.value)
+
+        advanceTimeBy(31_000L)
+        runCurrent()
+        assertTrue(provider.callCount >= 2)
+        repository.stop()
+    }
+
     private class FakeTokenRepository(
         private var token: String? = null,
-        private val hasCredentials: Boolean = false
+        private val hasCredentials: Boolean = false,
+        private val fixedState: OpenSkyTokenAccessState? = null
     ) : OpenSkyTokenRepository {
-        override suspend fun getValidTokenOrNull(): String? = token
+        override suspend fun getTokenAccessState(): OpenSkyTokenAccessState {
+            val fixed = fixedState
+            if (fixed != null) return fixed
+            val currentToken = token
+            return when {
+                !currentToken.isNullOrBlank() -> OpenSkyTokenAccessState.Available(currentToken)
+                hasCredentials -> OpenSkyTokenAccessState.CredentialsRejected("test")
+                else -> OpenSkyTokenAccessState.NoCredentials
+            }
+        }
+
+        override suspend fun getValidTokenOrNull(): String? =
+            (getTokenAccessState() as? OpenSkyTokenAccessState.Available)?.token
+
         override fun hasCredentials(): Boolean = hasCredentials || !token.isNullOrBlank()
         override fun invalidate() {
             token = null
+        }
+    }
+
+    private class FakeNetworkAvailabilityPort(
+        initialOnline: Boolean = true
+    ) : AdsbNetworkAvailabilityPort {
+        private val _isOnline = MutableStateFlow(initialOnline)
+        override val isOnline: StateFlow<Boolean> = _isOnline
+
+        fun setOnline(online: Boolean) {
+            _isOnline.value = online
+        }
+    }
+
+    private class ThrowingOnceNetworkAvailabilityPort : AdsbNetworkAvailabilityPort {
+        private val delegate = MutableStateFlow(true)
+        private var shouldThrow = true
+
+        override val isOnline: StateFlow<Boolean>
+            get() {
+                if (shouldThrow) {
+                    shouldThrow = false
+                    throw IllegalStateException("Injected network availability failure")
+                }
+                return delegate
+            }
+    }
+
+    private class DelayedSuccessProvider(
+        private val delayMs: Long
+    ) : AdsbProviderClient {
+        var callCount: Int = 0
+            private set
+
+        override suspend fun fetchStates(bbox: BBox, auth: AdsbAuth?): ProviderResult {
+            callCount += 1
+            delay(delayMs)
+            return ProviderResult.Success(
+                response = OpenSkyResponse(timeSec = 1_710_000_000L, states = emptyList()),
+                httpCode = 200,
+                remainingCredits = null
+            )
+        }
+    }
+
+    private class ThrowThenSuccessProvider : AdsbProviderClient {
+        var callCount: Int = 0
+            private set
+
+        override suspend fun fetchStates(bbox: BBox, auth: AdsbAuth?): ProviderResult {
+            callCount += 1
+            if (callCount == 1) {
+                throw IllegalStateException("Injected failure")
+            }
+            return ProviderResult.Success(
+                response = OpenSkyResponse(timeSec = 1_710_000_000L, states = emptyList()),
+                httpCode = 200,
+                remainingCredits = null
+            )
         }
     }
 

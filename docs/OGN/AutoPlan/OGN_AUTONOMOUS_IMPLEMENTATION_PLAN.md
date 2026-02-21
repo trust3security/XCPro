@@ -1,5 +1,8 @@
 # OGN Autonomous Implementation Plan for XCPro (Android)
 
+> Archived pre-implementation plan. This file does not reflect current runtime behavior.
+> Use `docs/OGN/OGN.md`, `docs/OGN/OGN_PROTOCOL_NOTES.md`, and `docs/ARCHITECTURE/PIPELINE.md` for current behavior.
+
 Last updated: 2026-02-09
 
 This document is a complete, implementation-ready spec intended for an autonomous coding agent (Codex) to integrate Open Glider Network (OGN) live traffic into the XCPro Android application so nearby gliders appear on the map.
@@ -526,3 +529,4 @@ OGN data usage rules exist. XCPro should:
 - Only request what it needs (radius filter).
 - Avoid storing or sharing OGN traffic data without user action.
 - Avoid logs containing precise lat/lon.
+

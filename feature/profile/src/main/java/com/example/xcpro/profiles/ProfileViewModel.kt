@@ -7,11 +7,14 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 data class ProfileUiState(
     val profiles: List<UserProfile> = emptyList(),
     val activeProfile: UserProfile? = null,
+    val isHydrated: Boolean = false,
+    val bootstrapError: String? = null,
     val isLoading: Boolean = false,
     val error: String? = null,
     val showCreateDialog: Boolean = false
@@ -27,16 +30,25 @@ class ProfileViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            useCase.profiles.collect { profiles ->
-                _uiState.value = _uiState.value.copy(
+            combine(
+                useCase.profiles,
+                useCase.activeProfile,
+                useCase.bootstrapComplete,
+                useCase.bootstrapError
+            ) { profiles, activeProfile, bootstrapComplete, bootstrapError ->
+                ProfileBootstrapSnapshot(
                     profiles = profiles,
-                    activeProfile = useCase.activeProfile.value ?: _uiState.value.activeProfile
+                    activeProfile = activeProfile,
+                    bootstrapComplete = bootstrapComplete,
+                    bootstrapError = bootstrapError
                 )
-            }
-        }
-        viewModelScope.launch {
-            useCase.activeProfile.collect { activeProfile ->
-                _uiState.value = _uiState.value.copy(activeProfile = activeProfile)
+            }.collect { snapshot ->
+                _uiState.value = _uiState.value.copy(
+                    profiles = snapshot.profiles,
+                    activeProfile = snapshot.activeProfile,
+                    isHydrated = snapshot.bootstrapComplete,
+                    bootstrapError = snapshot.bootstrapError
+                )
             }
         }
     }
@@ -122,6 +134,15 @@ class ProfileViewModel @Inject constructor(
     }
 
     fun needsProfileSelection(): Boolean =
-        _uiState.value.profiles.isNotEmpty() && _uiState.value.activeProfile == null
+        _uiState.value.isHydrated &&
+            _uiState.value.profiles.isNotEmpty() &&
+            _uiState.value.activeProfile == null
+
+    private data class ProfileBootstrapSnapshot(
+        val profiles: List<UserProfile>,
+        val activeProfile: UserProfile?,
+        val bootstrapComplete: Boolean,
+        val bootstrapError: String?
+    )
 }
 

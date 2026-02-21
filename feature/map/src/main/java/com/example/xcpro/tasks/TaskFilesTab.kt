@@ -86,7 +86,13 @@ fun FilesBTTab(
                     Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
                 }
                 is TaskFilesEvent.ApplyJson -> {
-                    taskViewModel.importPersistedTask(event.json)
+                    val imported = taskViewModel.tryImportPersistedTask(event.json)
+                    val message = if (imported) {
+                        "Imported ${event.displayName}"
+                    } else {
+                        "Import failed for ${event.displayName}"
+                    }
+                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                 }
                 is TaskFilesEvent.Share -> {
                     shareRequest(context, event.request)

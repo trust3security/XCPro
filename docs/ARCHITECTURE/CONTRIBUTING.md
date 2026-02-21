@@ -90,7 +90,14 @@ Fast local loop for feature/debug work:
 ```bat
 dev-fast.bat feature:map compile
 dev-fast.bat feature:map assemble
+dev-fast.bat feature:map test com.example.xcpro.ogn.OgnGliderTrailRepositoryTest
 dev-fast.bat app install
+```
+
+For fast test loops on Windows, use `dev-fast.bat ... test ...` (no clean by default).
+Use `test-clean` only when you explicitly need a clean build tree:
+```bat
+dev-fast.bat feature:map test-clean com.example.xcpro.ogn.OgnGliderTrailRepositoryTest
 ```
 
 Use `preflight.bat` before PR/release validation.
