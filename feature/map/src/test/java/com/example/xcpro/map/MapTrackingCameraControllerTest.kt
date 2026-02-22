@@ -5,6 +5,7 @@ import com.example.xcpro.map.config.MapFeatureFlags
 import com.example.xcpro.map.domain.MapShiftBiasCalculator
 import com.example.xcpro.map.domain.MapShiftBiasMode
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.maplibre.android.geometry.LatLng
@@ -115,6 +116,75 @@ class MapTrackingCameraControllerTest {
         }
     }
 
+    @Test
+    fun updateCamera_appliesPaddingChange_evenWhenMovementIsGated() {
+        val featureFlags = MapFeatureFlags()
+        val snapshot = snapshotFlags(featureFlags)
+        try {
+            featureFlags.useRenderFrameSync = false
+            featureFlags.useRuntimeReplayHeading = false
+
+            val mapState = MapScreenState()
+            val store = MapStateStore(initialStyleName = "Topo")
+            val actions = MapStateActionsDelegate(store)
+            actions.setHasInitiallyCentered(true)
+            val cameraController = FakeCameraController(
+                initial = MapCameraPositionSnapshot(
+                    target = LatLng(0.0, 0.0),
+                    zoom = 12.0,
+                    bearing = 0.0,
+                    tilt = 0.0
+                )
+            )
+            var dynamicPadding = intArrayOf(0, 20, 0, 40)
+            val deps = buildDeps(
+                mapState = mapState,
+                store = store,
+                actions = actions,
+                cameraController = cameraController,
+                featureFlags = featureFlags,
+                paddingProvider = { dynamicPadding.copyOf() }
+            )
+            deps.gate.acceptEnabled = false
+
+            deps.controller.updateCamera(
+                MapTrackingCameraController.FrameInput(
+                    location = LatLng(5.0, 6.0),
+                    trackDeg = 90.0,
+                    cameraTargetBearing = 0.0,
+                    speedMs = 25.0,
+                    orientationMode = MapOrientationMode.NORTH_UP,
+                    timeBase = DisplayClock.TimeBase.MONOTONIC,
+                    nowMs = 1_000L
+                )
+            )
+
+            val firstPadding = cameraController.lastPadding?.copyOf()
+            assertTrue(firstPadding?.contentEquals(intArrayOf(0, 20, 0, 40)) == true)
+            assertEquals(0, cameraController.animateCount)
+
+            dynamicPadding = intArrayOf(0, 80, 0, 10)
+            deps.controller.updateCamera(
+                MapTrackingCameraController.FrameInput(
+                    location = LatLng(5.0, 6.0),
+                    trackDeg = 90.0,
+                    cameraTargetBearing = 0.0,
+                    speedMs = 25.0,
+                    orientationMode = MapOrientationMode.NORTH_UP,
+                    timeBase = DisplayClock.TimeBase.MONOTONIC,
+                    nowMs = 1_010L
+                )
+            )
+
+            val secondPadding = cameraController.lastPadding
+            assertTrue(secondPadding != null)
+            assertFalse(secondPadding!!.contentEquals(firstPadding))
+            assertEquals(0, cameraController.animateCount)
+        } finally {
+            restoreFlags(featureFlags, snapshot)
+        }
+    }
+
     private data class ControllerDeps(
         val controller: MapTrackingCameraController,
         val gate: ResettableGate,
@@ -126,7 +196,8 @@ class MapTrackingCameraControllerTest {
         store: MapStateStore,
         actions: MapStateActions,
         cameraController: FakeCameraController,
-        featureFlags: MapFeatureFlags
+        featureFlags: MapFeatureFlags,
+        paddingProvider: () -> IntArray = { PADDING.copyOf() }
     ): ControllerDeps {
         val biasCalculator = MapShiftBiasCalculator()
         val positionController = MapPositionController(mapState = mapState)
@@ -151,7 +222,7 @@ class MapTrackingCameraControllerTest {
             mapStateReader = store,
             stateActions = actions,
             preferenceReader = FakePreferenceReader(),
-            paddingProvider = { PADDING.copyOf() },
+            paddingProvider = paddingProvider,
             positionController = positionController,
             cameraPolicy = cameraPolicy,
             cameraUpdateGate = gate,

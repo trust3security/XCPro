@@ -130,6 +130,13 @@ class MapPositionController(
             camera.moveCamera(newCameraPosition)
         }
 
+        applyPadding(camera, padding)
+    }
+
+    fun applyPadding(
+        camera: MapCameraController,
+        padding: IntArray?
+    ) {
         padding?.let {
             if (!it.contentEquals(lastPadding)) {
                 camera.setPadding(it[0], it[1], it[2], it[3])

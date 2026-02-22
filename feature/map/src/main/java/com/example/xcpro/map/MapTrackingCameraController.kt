@@ -65,6 +65,9 @@ class MapTrackingCameraController(
                     orientationMode = input.orientationMode
                 )
             )
+            // Keep glider vertical-position preference responsive even when camera movement
+            // is gated (for example stationary ownship after returning from settings).
+            positionController.applyPadding(cameraController, padding)
             val shouldUpdate = cameraPolicy.shouldUpdateCamera(
                 input = MapCameraPolicy.CameraUpdateInput(
                     timeBase = input.timeBase,
