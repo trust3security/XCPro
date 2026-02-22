@@ -1,7 +1,7 @@
 # SI Re-pass Findings
 
 Date: 2026-02-22
-Status: Complete (Re-pass #7)
+Status: Complete (Re-pass #8)
 
 ## Scope
 Deep re-pass across:
@@ -155,6 +155,28 @@ Start/finish cylinder fields are labeled and stored as radius (km/meters), but r
 - `feature/map/src/main/java/com/example/xcpro/tasks/aat/AATTaskQuickValidationEngine.kt:213`
 
 `validateFinish` computes distance with `AATMathUtils.calculateDistance` (km), then compares that value against meter-based contracts (`lineLength`, `radius`) plus meter tolerances (`+ 100.0`, `+ 50.0`). Prior findings called out the same defect family in area/start/start-finish quick checks, but this finish path was not explicitly captured.
+
+## Delta: Missed in Seventh Pass
+
+### 1) Distance-circles UI hard-codes metric labels and ignores unit preference boundary
+- `feature/map/src/main/java/com/example/xcpro/map/DistanceCirclesCanvas.kt:134`
+- `feature/map/src/main/java/com/example/xcpro/map/DistanceCirclesCanvas.kt:138`
+- `feature/map/src/main/java/com/example/xcpro/map/DistanceCirclesCanvas.kt:140`
+- `feature/map/src/main/java/com/example/xcpro/map/DistanceCirclesCanvas.kt:143`
+- `feature/map/src/main/java/com/example/xcpro/map/ui/OverlayPanels.kt:297`
+
+`DistanceCirclesCanvas` formats labels as `km`/`m` directly and is rendered from `DistanceCirclesLayer` without any `UnitsPreferences` input, so NM/mi preferences are not applied at this output boundary.
+
+### 2) Task UI distance outputs remain km-only across multiple production surfaces
+- `feature/map/src/main/java/com/example/xcpro/tasks/CommonTaskComponents.kt:40`
+- `feature/map/src/main/java/com/example/xcpro/tasks/CommonTaskComponents.kt:51`
+- `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingManageBTTab.kt:82`
+- `feature/map/src/main/java/com/example/xcpro/tasks/aat/AATManageContent.kt:41`
+- `feature/map/src/main/java/com/example/xcpro/tasks/BottomSheetState.kt:116`
+- `feature/map/src/main/java/com/example/xcpro/tasks/racing/ui/RacingStartPointSelector.kt:183`
+- `feature/map/src/main/java/com/example/xcpro/tasks/racing/ui/RacingTurnPointSelector.kt:247`
+
+Task stats/minimized-indicator/selector paths format live and nominal distances as `km` text directly and pass `distanceKm` values rather than SI distances through `UnitsFormatter`, bypassing the units-preference boundary.
 
 ## Previously Known but Re-confirmed
 1. AAT quick validation compares km distances to meter thresholds.

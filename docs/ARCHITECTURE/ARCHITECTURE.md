@@ -222,6 +222,33 @@ Forbidden:
 
 ---
 
+## 4B. Unit System Rules (SI)
+
+Internal calculations are SI-only. This is non-negotiable.
+
+Canonical internal units:
+- Distance: meters.
+- Altitude: meters.
+- Horizontal/airspeed/wind speed: m/s.
+- Vertical speed (vario/STF): m/s.
+- Acceleration: m/s^2.
+- Pressure: Pa or hPa (explicitly labeled).
+
+Rules:
+- Domain/fusion/task/scoring/replay logic must not mix km/h, knots, feet, NM, miles with SI internals.
+- Non-SI units are allowed only at explicit input/output boundaries (UI formatting, protocol/file adapters).
+- Convert once at ingress/egress and keep SI values throughout the internal flow.
+- Method and field names must encode units (`*Meters`, `*Ms`, `*Hpa`, `*Pa`, `*Deg`).
+- Unit-crossing comparisons are forbidden (example: km value compared against meter threshold).
+
+Why this is required in XCPro:
+- FAI task geometry and scoring rely on precise distance semantics (start lines, turnpoint cylinders, finish zones).
+- Typical competition constraints include 500 m turnpoint cylinders and finish rings >= 3 km.
+- Core sensors already provide SI-aligned data paths (GPS meters, accelerometer m/s^2, baro -> altitude in meters, vario in m/s).
+- Mixed units create subtle near-correct failures in start/finish crossing detection, zone intersection, STF, polar interpolation, conflict/near-miss logic, and scoring.
+
+---
+
 ## 5. Data Flow Contract
 
 ### Allowed Flow

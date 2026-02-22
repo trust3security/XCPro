@@ -27,6 +27,7 @@ If code violates this file, it is wrong -- even if it "works".
 
 The following checks must fail the build when violated:
 - Timebase: no System.currentTimeMillis, SystemClock, Date(), or Instant.now in domain or fusion logic.
+- Units: no non-SI internal math contracts in domain/fusion/task/scoring/replay paths.
 - DI: core pipeline components must be injected, not constructed inside managers.
 - ViewModel purity: no SharedPreferences and no androidx.compose.ui.* types in ViewModels.
 - ViewModel boundaries: no business geospatial math/policy (distance/radius/zone-entry logic) in ViewModels.
@@ -51,6 +52,19 @@ in domain/fusion paths (and ideally repo-wide, excluding tests):
 
 Acceptable: injected `Clock`/`TimeSource` interfaces.
 
+### 1A.2 Static Analysis Expectations (Units)
+
+CI should include static checks that detect unit-contract drift in internal logic:
+
+- Meter-labeled variables assigned from speed values (`*Meters = *Ms`).
+- km-returning helpers compared directly to meter thresholds.
+- Mixed-unit comparisons (`km`/`NM`/`mi`/`ft` against meter fields) in domain/fusion/task/replay logic.
+- New internal `kmh`/`kt`/`mph` arithmetic outside explicit boundary adapters.
+
+Acceptable:
+- Explicit conversion at adapter/UI boundaries.
+- SI-only values inside repositories/use-cases/engines after conversion.
+
 ## 1B. Exception Process
 
 Exceptions require:
@@ -68,6 +82,7 @@ Exceptions must be listed in `KNOWN_DEVIATIONS.md` and reviewed before expiry.
 Required tests:
 - Determinism: replay the same IGC twice and assert identical outputs.
 - Timebase: unit tests fail if wall time affects replay logic.
+- Units: unit tests fail when meter thresholds are evaluated using non-meter values.
 
 ## 2. Package Structure Rules
 
@@ -359,6 +374,27 @@ These rules prevent hidden timing bugs in sensor fusion and replay.
 - Fusion loops that combine sensors of different cadences must advance only
   when the primary sensor updates (example: baro-gated vario loop). High-rate
   only ticks are forbidden if they would reuse stale samples.
+
+---
+
+## 18. SI Unit Discipline Rules
+
+These rules prevent subtle "almost correct" behavior in competition-critical logic.
+
+- Internal canonical units:
+  - distance/altitude in meters
+  - speed/wind/vario in m/s
+  - acceleration in m/s^2
+  - pressure in Pa/hPa with explicit labels
+- Allowed non-SI values (km/h, knots, feet, NM, miles) are boundary-only.
+- Convert once at ingress/egress; do not chain repeated ad-hoc conversions.
+- Keep unit suffixes in APIs and fields (`*Meters`, `*Ms`, `*Kmh`, etc.).
+- Never compare values unless they are the same unit.
+
+XCPro-specific rationale:
+- FAI task geometry (start/finish zones, turnpoint cylinders) and scoring are unit-sensitive.
+- Typical constraints like 500 m cylinders and >= 3 km finish rings can be silently corrupted by mixed units.
+- Mixed-unit bugs can pass casual testing while breaking start crossing, OZ intersection, STF, polar interpolation, near-miss filtering, and distance scoring.
 
 ---
 

@@ -115,6 +115,11 @@ internal fun AdsbDebugPanel(
                 style = MaterialTheme.typography.bodySmall
             )
             Text(
+                text = "Ownship ref: ${if (snapshot.usesOwnshipReference) "YES" else "NO"}",
+                color = if (snapshot.usesOwnshipReference) Color(0xFF86EFAC) else Color(0xFFFDE68A),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
                 text = "Radius: ${snapshot.receiveRadiusKm} km",
                 color = Color(0xFFE5E7EB),
                 style = MaterialTheme.typography.bodySmall

@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -68,12 +67,16 @@ internal class MapScreenTrafficCoordinator(
             .launchIn(scope)
 
         mapLocation
-            .filterNotNull()
             .map { location ->
-                location.latitude to location.longitude
+                location?.let { it.latitude to it.longitude }
             }
             .distinctUntilChanged()
-            .onEach { (latitude, longitude) ->
+            .onEach { gpsPosition ->
+                if (gpsPosition == null) {
+                    adsbTrafficUseCase.clearOwnshipOrigin()
+                    return@onEach
+                }
+                val (latitude, longitude) = gpsPosition
                 ognTrafficUseCase.updateCenter(
                     latitude = latitude,
                     longitude = longitude

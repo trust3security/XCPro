@@ -399,6 +399,30 @@ class MapScreenViewModelTest {
     }
 
     @Test
+    fun adsbOwnshipReference_clearsWhenGpsBecomesUnavailable() {
+        val adsbRepository = FakeAdsbTrafficRepository()
+        createViewModel(adsbRepositoryOverride = adsbRepository)
+        drainMain()
+        val initialClearCalls = adsbRepository.clearOwnshipOriginCalls
+
+        flightDataRepository.update(
+            buildCompleteFlightData(
+                gps = defaultGps(latitude = -34.5000, longitude = 150.5000)
+            )
+        )
+        drainMain()
+        assertEquals(-34.5000, adsbRepository.lastOwnshipLat ?: Double.NaN, 1e-6)
+        assertEquals(150.5000, adsbRepository.lastOwnshipLon ?: Double.NaN, 1e-6)
+
+        flightDataRepository.update(buildCompleteFlightData(gps = null))
+        drainMain()
+
+        assertEquals(initialClearCalls + 1, adsbRepository.clearOwnshipOriginCalls)
+        assertNull(adsbRepository.lastOwnshipLat)
+        assertNull(adsbRepository.lastOwnshipLon)
+    }
+
+    @Test
     fun ognCenter_updatesFromOwnshipGpsLocation() {
         val ognRepository = FakeOgnTrafficRepository()
         createViewModel(ognRepositoryOverride = ognRepository)
@@ -732,6 +756,7 @@ class MapScreenViewModelTest {
 
             override fun updateCenter(latitude: Double, longitude: Double) = Unit
             override fun updateOwnshipOrigin(latitude: Double, longitude: Double) = Unit
+            override fun clearOwnshipOrigin() = Unit
             override fun updateOwnshipAltitudeMeters(altitudeMeters: Double?) = Unit
             override fun updateDisplayFilters(
                 maxDistanceKm: Int,
@@ -1032,6 +1057,7 @@ class MapScreenViewModelTest {
         var lastCenterLon: Double? = null
         var lastOwnshipLat: Double? = null
         var lastOwnshipLon: Double? = null
+        var clearOwnshipOriginCalls: Int = 0
         var clearTargetsCalls: Int = 0
 
         override fun setEnabled(enabled: Boolean) {
@@ -1051,6 +1077,12 @@ class MapScreenViewModelTest {
         override fun updateOwnshipOrigin(latitude: Double, longitude: Double) {
             lastOwnshipLat = latitude
             lastOwnshipLon = longitude
+        }
+
+        override fun clearOwnshipOrigin() {
+            clearOwnshipOriginCalls += 1
+            lastOwnshipLat = null
+            lastOwnshipLon = null
         }
 
         override fun updateOwnshipAltitudeMeters(altitudeMeters: Double?) = Unit

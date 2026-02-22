@@ -233,7 +233,7 @@ ADS-b lifecycle/visibility semantics:
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenTrafficCoordinator.kt`
   - Streaming enable is driven by `allowSensorStart && mapVisible && adsbOverlayEnabled`.
   - When streaming turns on, center is seeded from current GPS position (camera fallback when GPS is unavailable).
-  - Query-center and ownship-origin updates are GPS-driven from `mapLocation`.
+  - Query-center and ownship-origin updates are GPS-driven from `mapLocation`; ownship origin is cleared when GPS becomes unavailable.
   - Ownship altitude and ADS-b filter settings flows are forwarded to the ADS-b repository runtime.
   - Explicit ADS-b FAB off triggers immediate repository target clear.
 - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt`
@@ -249,7 +249,7 @@ ADS-b lifecycle/visibility semantics:
   - Callback events are normalized by `AdsbNetworkAvailabilityTracker` (including fail-open registration fallback).
 - `feature/map/src/main/java/com/example/xcpro/map/AdsbTrafficOverlay.kt`
   - Per-aircraft runtime interpolation smooths marker motion between provider samples.
-  - Proximity color expression is distance-based with emergency override priority.
+  - Proximity color expression is distance-tiered (`green`/`amber`/`red`) with neutral fallback when ownship reference is unavailable and emergency override priority.
   - Interpolation is visual-only and does not mutate repository SSOT.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
   - ADS-b overlay renders `emptyList()` when overlay preference is disabled.

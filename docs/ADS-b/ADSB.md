@@ -73,9 +73,9 @@ Reference:
 
 ### 2.4 Proximity coloring
 - Distance `> 5 km`: green
-- Distance `2..5 km`: gradient green -> red
+- Distance `2..5 km`: amber
 - Distance `<= 2 km`: red
-- Emergency collision-risk styling has priority and stays red.
+- Emergency collision-risk styling has priority and uses a distinct emergency color.
 
 ### 2.5 Polling behavior
 - Hot interval baseline is `10s`.

@@ -19,6 +19,7 @@ Status: Required
 1. Unit Contract Tests
 - Conversion in/out for km, NM, mi, km/h, kt, mph.
 - Round-trip SI conversion tolerances.
+- UI boundary tests for distance output paths (distance circles + task distance labels) across `KILOMETERS`, `NAUTICAL_MILES`, and `STATUTE_MILES`.
 
 2. Task/AAT/Racing Logic Tests
 - Distance threshold behavior around boundaries.
@@ -37,6 +38,7 @@ Status: Required
 - Search for meter thresholds compared against km return values.
 - Search for meter-labeled fields assigned from speed (`*Meters = *Ms`) in replay/domain paths.
 - Search for `AATMathUtils.calculateDistance(...)` values being compared directly against `lineLength`/`radius` without km->m conversion.
+- Search production UI for hard-coded distance-unit strings (`\" km\"`, `\" m\"`) that bypass `UnitsFormatter`/`UnitsPreferences`.
 
 ## Compliance Sign-Off Checklist
 - No unresolved P0 risks.

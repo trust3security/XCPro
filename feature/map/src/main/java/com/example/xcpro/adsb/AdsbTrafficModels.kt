@@ -73,6 +73,7 @@ data class AdsbTrafficSnapshot(
     val authMode: AdsbAuthMode = AdsbAuthMode.Anonymous,
     val centerLat: Double?,
     val centerLon: Double?,
+    val usesOwnshipReference: Boolean = false,
     val receiveRadiusKm: Int,
     val fetchedCount: Int,
     val withinRadiusCount: Int,

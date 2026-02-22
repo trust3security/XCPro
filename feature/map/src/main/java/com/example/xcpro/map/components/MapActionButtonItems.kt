@@ -197,7 +197,7 @@ internal fun OgnTrafficButton(
             elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp)
         ) {
             Icon(
-                painter = painterResource(id = R.drawable.glider_plus20_254x254),
+                painter = painterResource(id = R.drawable.ic_ogn_tug254),
                 contentDescription = "Toggle glider traffic",
                 modifier = Modifier.size(22.dp)
             )

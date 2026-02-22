@@ -34,6 +34,7 @@ interface AdsbTrafficRepository {
     fun clearTargets()
     fun updateCenter(latitude: Double, longitude: Double)
     fun updateOwnshipOrigin(latitude: Double, longitude: Double)
+    fun clearOwnshipOrigin()
     fun updateOwnshipAltitudeMeters(altitudeMeters: Double?)
     fun updateDisplayFilters(
         maxDistanceKm: Int,
@@ -80,6 +81,7 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
             authMode = AdsbAuthMode.Anonymous,
             centerLat = null,
             centerLon = null,
+            usesOwnshipReference = false,
             receiveRadiusKm = ADSB_MAX_DISTANCE_DEFAULT_KM,
             fetchedCount = 0,
             withinRadiusCount = 0,
@@ -222,6 +224,14 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
         val updatedOrigin = Center(latitude = latitude, longitude = longitude)
         if (ownshipOrigin == updatedOrigin) return
         ownshipOrigin = updatedOrigin
+        center?.let { activeCenter ->
+            publishFromStore(activeCenter)
+        }
+    }
+
+    override fun clearOwnshipOrigin() {
+        if (ownshipOrigin == null) return
+        ownshipOrigin = null
         center?.let { activeCenter ->
             publishFromStore(activeCenter)
         }
@@ -649,6 +659,7 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
             authMode = authMode,
             centerLat = activeCenter?.latitude,
             centerLon = activeCenter?.longitude,
+            usesOwnshipReference = ownshipOrigin != null,
             receiveRadiusKm = receiveRadiusKm,
             fetchedCount = fetchedCount,
             withinRadiusCount = withinRadiusCount,

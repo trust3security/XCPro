@@ -1,7 +1,7 @@
 # Execution Backlog: SI Migration
 
 Date: 2026-02-22
-Status: Updated after Re-pass #7
+Status: Updated after Re-pass #8
 
 ## Priority Legend
 - P0: correctness bug risk
@@ -24,10 +24,12 @@ Status: Updated after Re-pass #7
 12. P1 - Add fixture-based tests for racing/aat segment and total distance invariants.
 13. P1 - Add boundary adapter tests for ADS-B/OGN/replay conversions.
 14. P1 - Fix replay movement snapshot contract: `MovementSnapshot.distanceMeters` must store distance in meters (not speed in m/s) in `ReplayRuntimeInterpolator`, and add heading-gating regression tests for `ReplayHeadingResolver`.
-15. P2 - Decide polar model storage contract (keep km/h as boundary data or migrate to SI storage).
-16. P2 - Remove transitional km wrappers after caller migration.
-17. P2 - Add static checks to block new internal non-SI math in domain paths.
-18. P2 - Final doc sync and compliance sign-off.
+15. P1 - Fix distance-circles output boundary to use `UnitsPreferences`/`UnitsFormatter` (remove hard-coded `km`/`m` labels in `DistanceCirclesCanvas`).
+16. P1 - Fix task UI distance outputs (`TaskStatsSection`, minimized indicator, racing selector distance text) to use selected distance units instead of hard-coded `km`.
+17. P2 - Decide polar model storage contract (keep km/h as boundary data or migrate to SI storage).
+18. P2 - Remove transitional km wrappers after caller migration.
+19. P2 - Add static checks to block new internal non-SI math in domain paths and hard-coded production distance-unit labels.
+20. P2 - Final doc sync and compliance sign-off.
 
 ## Suggested PR Split
 1. PR-1: AAT P0 correctness fixes + tests.

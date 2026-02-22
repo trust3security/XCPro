@@ -36,7 +36,7 @@ Non-SI units remain only for:
 - Task/AAT/Racing still contains mixed km/km/h semantics and at least one meter-vs-km mismatch risk.
 
 ## Re-pass Critical Defects (2026-02-22)
-The seventh deep pass confirmed active correctness bugs that must be fixed first:
+The eighth deep pass confirmed active correctness bugs that must be fixed first:
 1. `AATPathOptimizerSupport` compares km path distances against meter-labeled target/tolerance values.
 2. `AATPathOptimizer` computes meter-labeled target distances then compares to km path distances.
 3. `AATFlightPathValidator` compares km distances to meter thresholds for start/finish checks.
@@ -53,6 +53,9 @@ The seventh deep pass confirmed active correctness bugs that must be fixed first
 14. AAT start/finish cylinder radius is entered/stored as radius but is divided by 2 in renderer/geometry/validation bridge paths (`AATTaskRenderer`, `AATGeometryGenerator`, `AATValidationBridge`), causing 2x scale error.
 15. Replay runtime interpolation assigns `MovementSnapshot.distanceMeters` from `speedMs` (`ReplayRuntimeInterpolator`), and `ReplayHeadingResolver` compares that value against `minDistanceM`, creating a meters-vs-m/s contract violation in heading gating.
 16. Re-pass #7 scope delta: `AATTaskQuickValidationEngine.validateFinish` (`AATMathUtils.calculateDistance` at line 202) compares km output against meter contracts/tolerances (`lineLength`/`radius` with `+ 100.0`/`+ 50.0`), and was not explicitly captured in earlier finding line coverage.
+17. Re-pass #8 found distance output boundaries that still bypass unit preferences:
+   - `DistanceCirclesCanvas` renders `km`/`m` labels directly without `UnitsPreferences`.
+   - Task stats/minimized-indicator/selector paths render `km` text directly (`TaskStatsSection`, `BottomSheetState`, racing selectors) instead of formatting SI values via `UnitsFormatter`.
 
 ## Implementation Phases
 
@@ -90,10 +93,11 @@ Definition of done:
 1. Convert racing internal distance contracts to meters.
 2. Keep any km formatting only in UI/presentation layers.
 3. Add tests for geometry/distance invariants.
+4. Route task/racing distance UI outputs through `UnitsPreferences` + `UnitsFormatter` (no hard-coded `km` text in production surfaces).
 
 Definition of done:
 - Racing manager/coordinator internal distance calculations are SI.
-- Output formatting remains unchanged to users.
+- Output formatting follows selected distance units (km/NM/mi) consistently.
 
 ### Phase 4: Boundary Adapter Hardening
 1. ADS-B/OGN/replay/polar boundaries must explicitly convert once at ingress/egress.

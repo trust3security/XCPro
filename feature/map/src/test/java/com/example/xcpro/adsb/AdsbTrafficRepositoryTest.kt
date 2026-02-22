@@ -877,6 +877,59 @@ class AdsbTrafficRepositoryTest {
     }
 
     @Test
+    fun clearOwnshipOrigin_fallsBackToQueryCenterWithoutNewFetch() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val provider = SequenceProvider(
+            listOf(
+                ProviderResult.Success(
+                    response = OpenSkyResponse(
+                        timeSec = 1_710_000_000L,
+                        states = listOf(
+                            state(
+                                icao24 = "abc123",
+                                latitude = -33.8687,
+                                longitude = 151.2092,
+                                altitudeM = 500.0,
+                                speedMps = 40.0
+                            )
+                        )
+                    ),
+                    httpCode = 200,
+                    remainingCredits = null
+                )
+            )
+        )
+        val repository = AdsbTrafficRepositoryImpl(
+            providerClient = provider,
+            tokenRepository = FakeTokenRepository(),
+            clock = FakeClock(monoMs = 0L, wallMs = 0L),
+            dispatcher = dispatcher
+        )
+
+        repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
+        repository.setEnabled(true)
+        runCurrent()
+        assertEquals(1, provider.callCount)
+
+        repository.updateOwnshipOrigin(latitude = -33.8600, longitude = 151.2000)
+        runCurrent()
+        val ownshipDistance = repository.targets.value.firstOrNull()?.distanceMeters ?: 0.0
+        assertTrue(ownshipDistance > 500.0)
+        assertTrue(repository.targets.value.firstOrNull()?.usesOwnshipReference == true)
+        assertTrue(repository.snapshot.value.usesOwnshipReference)
+
+        repository.clearOwnshipOrigin()
+        runCurrent()
+
+        val fallbackDistance = repository.targets.value.firstOrNull()?.distanceMeters ?: 0.0
+        assertTrue(fallbackDistance < 100.0)
+        assertTrue(repository.targets.value.firstOrNull()?.usesOwnshipReference == false)
+        assertTrue(repository.snapshot.value.usesOwnshipReference.not())
+        assertEquals(1, provider.callCount)
+        repository.stop()
+    }
+
+    @Test
     fun updateDisplayFilters_reselectsFromCacheAndUpdatesRadiusSnapshot() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val provider = SequenceProvider(
