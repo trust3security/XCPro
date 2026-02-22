@@ -8,14 +8,15 @@ import kotlin.math.abs
 
 internal object AATPathOptimizerSupport {
 
+    private const val METERS_PER_KILOMETER = 1000.0
     private const val OPTIMIZATION_TOLERANCE_METERS = 100.0
     private const val MAX_OPTIMIZATION_ITERATIONS = 20
 
-    fun optimizePathForDistance(
+    fun optimizePathForDistanceMeters(
         start: AATLatLng,
         finish: AATLatLng,
         areas: List<AssignedArea>,
-        targetDistance: Double,
+        targetDistanceMeters: Double,
         areaBoundaryCalculator: AreaBoundaryCalculator
     ): List<AATLatLng> {
         var minStrategy = 0.0
@@ -29,13 +30,13 @@ internal object AATPathOptimizerSupport {
                 strategy = bestStrategy,
                 areaBoundaryCalculator = areaBoundaryCalculator
             )
-            val testDistance = calculatePathDistance(listOf(start) + testPoints + finish)
+            val testDistanceMeters = calculatePathDistanceMeters(listOf(start) + testPoints + finish)
 
             when {
-                abs(testDistance - targetDistance) <= OPTIMIZATION_TOLERANCE_METERS -> {
+                abs(testDistanceMeters - targetDistanceMeters) <= OPTIMIZATION_TOLERANCE_METERS -> {
                     return testPoints
                 }
-                testDistance < targetDistance -> {
+                testDistanceMeters < targetDistanceMeters -> {
                     minStrategy = bestStrategy
                 }
                 else -> {
@@ -74,7 +75,7 @@ internal object AATPathOptimizerSupport {
         return points
     }
 
-    fun calculateShortestPathDistance(
+    fun calculateShortestPathDistanceMeters(
         start: AATLatLng,
         areas: List<AssignedArea>,
         finish: AATLatLng,
@@ -86,10 +87,10 @@ internal object AATPathOptimizerSupport {
             strategy = 0.0,
             areaBoundaryCalculator = areaBoundaryCalculator
         )
-        return calculatePathDistance(listOf(start) + shortestPoints + finish)
+        return calculatePathDistanceMeters(listOf(start) + shortestPoints + finish)
     }
 
-    fun calculateLongestPathDistance(
+    fun calculateLongestPathDistanceMeters(
         start: AATLatLng,
         areas: List<AssignedArea>,
         finish: AATLatLng,
@@ -101,17 +102,20 @@ internal object AATPathOptimizerSupport {
             strategy = 1.0,
             areaBoundaryCalculator = areaBoundaryCalculator
         )
-        return calculatePathDistance(listOf(start) + longestPoints + finish)
+        return calculatePathDistanceMeters(listOf(start) + longestPoints + finish)
     }
 
-    fun calculatePathDistance(waypoints: List<AATLatLng>): Double {
+    fun calculatePathDistanceMeters(waypoints: List<AATLatLng>): Double {
         if (waypoints.size < 2) return 0.0
 
-        var totalDistance = 0.0
+        var totalDistanceMeters = 0.0
         for (i in 1 until waypoints.size) {
-            totalDistance += AATMathUtils.calculateDistance(waypoints[i - 1], waypoints[i])
+            totalDistanceMeters += AATMathUtils.calculateDistance(
+                waypoints[i - 1],
+                waypoints[i]
+            ) * METERS_PER_KILOMETER
         }
-        return totalDistance
+        return totalDistanceMeters
     }
 
     fun interpolatePoints(point1: AATLatLng, point2: AATLatLng, fraction: Double): AATLatLng {

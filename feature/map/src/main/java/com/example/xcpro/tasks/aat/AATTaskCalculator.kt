@@ -12,6 +12,9 @@ import java.time.Duration
 import java.time.LocalDateTime
 
 class AATTaskCalculator {
+    private companion object {
+        const val METERS_PER_KILOMETER = 1000.0
+    }
 
     private val areaBoundaryCalculator = AreaBoundaryCalculator()
     private val speedCalculator = AATSpeedCalculator()
@@ -96,12 +99,31 @@ class AATTaskCalculator {
         areasCompleted
     )
 
+    fun calculatePathForDistanceMeters(
+        task: AATTask,
+        currentPosition: AATLatLng,
+        targetDistanceMeters: Double
+    ): List<AATLatLng> {
+        return pathOptimizer.calculatePathForTargetDistanceMeters(
+            task = task,
+            currentPosition = currentPosition,
+            targetDistanceMeters = targetDistanceMeters
+        )
+    }
+
+    @Deprecated(
+        message = "Use calculatePathForDistanceMeters for explicit units"
+    )
     fun calculatePathForDistance(
         task: AATTask,
         currentPosition: AATLatLng,
         targetDistance: Double
     ): List<AATLatLng> {
-        return pathOptimizer.calculatePathForTargetDistance(task, currentPosition, targetDistance)
+        return calculatePathForDistanceMeters(
+            task = task,
+            currentPosition = currentPosition,
+            targetDistanceMeters = targetDistance
+        )
     }
 
     fun calculateDistanceForTargetSpeed(
@@ -155,7 +177,7 @@ class AATTaskCalculator {
         return updatedTask
     }
 
-    fun calculateDistanceToTargetPoint(
+    fun calculateDistanceToTargetPointMeters(
         gpsLat: Double,
         gpsLon: Double,
         waypointIndex: Int,
@@ -174,8 +196,35 @@ class AATTaskCalculator {
             gpsLon,
             targetLat,
             targetLon
-        )
+        ) * METERS_PER_KILOMETER
     }
+
+    fun calculateDistanceToTargetPointKm(
+        gpsLat: Double,
+        gpsLon: Double,
+        waypointIndex: Int,
+        waypoints: List<AATWaypoint>
+    ): Double? = calculateDistanceToTargetPointMeters(
+        gpsLat = gpsLat,
+        gpsLon = gpsLon,
+        waypointIndex = waypointIndex,
+        waypoints = waypoints
+    )?.div(METERS_PER_KILOMETER)
+
+    @Deprecated(
+        message = "Use calculateDistanceToTargetPointMeters or calculateDistanceToTargetPointKm for explicit units"
+    )
+    fun calculateDistanceToTargetPoint(
+        gpsLat: Double,
+        gpsLon: Double,
+        waypointIndex: Int,
+        waypoints: List<AATWaypoint>
+    ): Double? = calculateDistanceToTargetPointKm(
+        gpsLat = gpsLat,
+        gpsLon = gpsLon,
+        waypointIndex = waypointIndex,
+        waypoints = waypoints
+    )
 
     fun generateDisplayElements(
         task: AATTask,

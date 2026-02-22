@@ -10,6 +10,9 @@ import kotlin.math.max
 
 class AATPathOptimizer {
     private val areaBoundaryCalculator = AreaBoundaryCalculator()
+    private companion object {
+        const val METERS_PER_KILOMETER = 1000.0
+    }
 
     fun calculateOptimalPath(
         task: AATTask,
@@ -21,21 +24,21 @@ class AATPathOptimizer {
         if (remainingTime <= Duration.ZERO) return calculateShortestRemainingPath(task, currentPosition)
 
         val remainingTimeHours = remainingTime.toMinutes() / 60.0
-        val targetDistanceMeters = expectedSpeed * remainingTimeHours * 1000.0
-        return calculatePathForTargetDistance(task, currentPosition, targetDistanceMeters)
+        val targetDistanceMeters = expectedSpeed * remainingTimeHours * METERS_PER_KILOMETER
+        return calculatePathForTargetDistanceMeters(task, currentPosition, targetDistanceMeters)
     }
 
-    fun calculatePathForTargetDistance(
+    fun calculatePathForTargetDistanceMeters(
         task: AATTask,
         currentPosition: AATLatLng,
-        targetDistance: Double
+        targetDistanceMeters: Double
     ): List<AATLatLng> {
         if (task.assignedAreas.isEmpty()) return listOf(task.finish.position)
-        return AATPathOptimizerSupport.optimizePathForDistance(
+        return AATPathOptimizerSupport.optimizePathForDistanceMeters(
             start = currentPosition,
             finish = task.finish.position,
             areas = task.assignedAreas,
-            targetDistance = targetDistance,
+            targetDistanceMeters = targetDistanceMeters,
             areaBoundaryCalculator = areaBoundaryCalculator
         )
     }
@@ -60,17 +63,20 @@ class AATPathOptimizer {
         if (remainingTime <= Duration.ZERO) return 0.0
 
         val remainingTimeHours = remainingTime.toMinutes() / 60.0
-        val targetDistance = expectedSpeed * remainingTimeHours * 1000.0
+        val targetDistanceMeters = expectedSpeed * remainingTimeHours * METERS_PER_KILOMETER
 
-        val shortestDistance = AATPathOptimizerSupport.calculatePathDistance(
+        val shortestDistanceMeters = AATPathOptimizerSupport.calculatePathDistanceMeters(
             calculateShortestRemainingPath(task, currentPosition)
         )
-        val longestDistance = AATPathOptimizerSupport.calculatePathDistance(
+        val longestDistanceMeters = AATPathOptimizerSupport.calculatePathDistanceMeters(
             calculateLongestRemainingPath(task, currentPosition)
         )
 
-        if (longestDistance <= shortestDistance) return 0.0
-        return ((targetDistance - shortestDistance) / (longestDistance - shortestDistance))
+        if (longestDistanceMeters <= shortestDistanceMeters) return 0.0
+        return (
+            (targetDistanceMeters - shortestDistanceMeters) /
+                (longestDistanceMeters - shortestDistanceMeters)
+            )
             .coerceIn(0.0, 1.0)
     }
 
@@ -114,17 +120,20 @@ class AATPathOptimizer {
                 nextWaypoint = task.finish.position,
                 recommendedStrategy = 0.0,
                 timeToMinimum = remainingTime,
-                distanceRemaining = AATMathUtils.calculateDistance(currentPosition, task.finish.position)
+                distanceRemainingMeters = AATMathUtils.calculateDistance(
+                    currentPosition,
+                    task.finish.position
+                ) * METERS_PER_KILOMETER
             )
         }
 
-        val shortestRemaining = AATPathOptimizerSupport.calculateShortestPathDistance(
+        val shortestRemainingMeters = AATPathOptimizerSupport.calculateShortestPathDistanceMeters(
             start = currentPosition,
             areas = remainingAreas,
             finish = task.finish.position,
             areaBoundaryCalculator = areaBoundaryCalculator
         )
-        val longestRemaining = AATPathOptimizerSupport.calculateLongestPathDistance(
+        val longestRemainingMeters = AATPathOptimizerSupport.calculateLongestPathDistanceMeters(
             start = currentPosition,
             areas = remainingAreas,
             finish = task.finish.position,
@@ -132,14 +141,15 @@ class AATPathOptimizer {
         )
 
         val remainingTimeHours = max(remainingTime.toMinutes() / 60.0, 0.0)
-        val targetDistance = if (remainingTimeHours > 0 && groundSpeed > 0) {
-            groundSpeed * remainingTimeHours * 1000.0
+        val targetDistanceMeters = if (remainingTimeHours > 0 && groundSpeed > 0) {
+            groundSpeed * remainingTimeHours * METERS_PER_KILOMETER
         } else {
-            shortestRemaining
+            shortestRemainingMeters
         }
 
-        val strategy = if (longestRemaining > shortestRemaining) {
-            (targetDistance - shortestRemaining) / (longestRemaining - shortestRemaining)
+        val strategy = if (longestRemainingMeters > shortestRemainingMeters) {
+            (targetDistanceMeters - shortestRemainingMeters) /
+                (longestRemainingMeters - shortestRemainingMeters)
         } else {
             0.0
         }.coerceIn(0.0, 1.0)
@@ -158,7 +168,7 @@ class AATPathOptimizer {
             currentPosition = currentPosition,
             strategy = strategy
         )
-        val remainingPathDistance = AATPathOptimizerSupport.calculatePathDistance(
+        val remainingPathDistanceMeters = AATPathOptimizerSupport.calculatePathDistanceMeters(
             listOf(currentPosition) + recommendedPath + task.finish.position
         )
 
@@ -166,7 +176,7 @@ class AATPathOptimizer {
             nextWaypoint = recommendedPoint,
             recommendedStrategy = strategy,
             timeToMinimum = remainingTime,
-            distanceRemaining = remainingPathDistance
+            distanceRemainingMeters = remainingPathDistanceMeters
         )
     }
 
@@ -191,5 +201,5 @@ data class PathRecommendation(
     val nextWaypoint: AATLatLng,
     val recommendedStrategy: Double,
     val timeToMinimum: Duration,
-    val distanceRemaining: Double
+    val distanceRemainingMeters: Double
 )
