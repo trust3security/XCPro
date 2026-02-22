@@ -25,6 +25,7 @@ internal fun WeatherMapConfidenceChip(
     if (!confidenceState.visible) return
 
     val (containerColor, contentColor) = when (confidenceState.level) {
+        WeatherMapConfidenceLevel.LOADING -> Color(0xCC1D4ED8) to Color.White
         WeatherMapConfidenceLevel.LIVE -> Color(0xCC166534) to Color.White
         WeatherMapConfidenceLevel.STALE -> Color(0xCC92400E) to Color.White
         WeatherMapConfidenceLevel.ERROR -> Color(0xCC991B1B) to Color.White

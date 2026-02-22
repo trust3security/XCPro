@@ -40,6 +40,7 @@ class ReplayPipeline(
     private var lastForwardLogTime = 0L
     private var sensorsSuspended = false
     private var latestAudioSettings: VarioAudioSettings = VarioAudioSettings()
+    private var latestTeCompensationEnabled: Boolean = true
 
     fun ensureScope(onScopeReset: () -> Unit) {
         if (scope.isActive) return
@@ -56,6 +57,7 @@ class ReplayPipeline(
         if (replayFusionRepository == null) {
             replayFusionRepository = createFusionRepository()
             replayFusionRepository?.updateAudioSettings(latestAudioSettings)
+            replayFusionRepository?.setTotalEnergyCompensationEnabled(latestTeCompensationEnabled)
         }
         ensureAudioSettingsObserver()
         if (forwardJob?.isActive != true) {
@@ -97,7 +99,9 @@ class ReplayPipeline(
         audioSettingsJob = scope.launch {
             levoVarioPreferencesRepository.config.collect { config ->
                 latestAudioSettings = config.audioSettings
+                latestTeCompensationEnabled = config.teCompensationEnabled
                 replayFusionRepository?.updateAudioSettings(config.audioSettings)
+                replayFusionRepository?.setTotalEnergyCompensationEnabled(config.teCompensationEnabled)
             }
         }
     }

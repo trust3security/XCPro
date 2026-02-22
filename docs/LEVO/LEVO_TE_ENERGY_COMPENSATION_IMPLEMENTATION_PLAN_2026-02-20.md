@@ -13,7 +13,10 @@
 - Problem statement:
   - TE compensation is not reliably active in production flow.
   - Current TE kinetic term timing can be computed against emit cadence instead of speed-sample cadence, which is physically incorrect during pull-up/slowdown maneuvers.
-  - External/replay airspeed paths exist but are not fully consumed by the TE/wind production pipeline.
+  - External/replay airspeed paths exist in repositories but are not consumed by the TE metrics path; current TE selection remains wind-derived TAS or GPS fallback.
+  - Live external airspeed ingress currently has no discovered callsite into `ExternalAirspeedRepository.updateAirspeed(...)`.
+  - GPS fallback airspeed currently overwrites previously held energy-eligible airspeed state, which collapses TE continuity across short wind-data gaps.
+  - Wind-derived TAS for TE has no explicit confidence threshold; low-confidence wind can still drive TE compensation.
   - Audio/UI consume adjacent vario channels with minor ordering mismatches.
 - Why now:
   - Pilot-facing trust issue for pull-up/turn thermalling cases where stick-thermal suppression is expected.
@@ -43,6 +46,7 @@
 |---|---|---|---|
 | External live airspeed sample | `ExternalAirspeedRepository` | `AirspeedDataSource.airspeedFlow` | ViewModel/UI local airspeed caches |
 | Replay airspeed sample | `ReplayAirspeedRepository` | `AirspeedDataSource.airspeedFlow` | Replay UI-side derived airspeed stores |
+| Metrics-ready airspeed sample/timebase | `FlightDataCalculatorEngine` -> `FlightDataEmitter` request | `FlightMetricsRequest` (new airspeed payload field(s)) | Pulling repos directly from `CalculateFlightMetricsUseCase` or UI |
 | Chosen TE airspeed estimate | `CalculateFlightMetricsUseCase` | `FlightMetricsResult.indicatedAirspeedMs/trueAirspeedMs/airspeedSourceLabel` | Re-selection logic in UI/manager |
 | TE vario output | `CalculateFlightMetricsUseCase` | `FlightMetricsResult.teVario` -> `CompleteFlightData.teVario` | Recomputed TE in audio/UI |
 | Audio input vario sample | `FlightDataCalculatorEngine` (`FlightDataEmissionState.latestAudioVario`) | `CompleteFlightData.audioVario` | Independent UI-side audio-input selection |
@@ -80,6 +84,7 @@ Dependency flow remains:
 |---|---|---|---|
 | `CalculateFlightMetricsUseCase` TE branch | Falls back to non-TE due unreachable warm-up path | Explicit seed and hold previous eligible speed sample | Phase 1 |
 | `CalculateFlightMetricsUseCase` TE dt | Uses emission dt independent of speed sample updates | Compute dt from speed sample clock deltas | Phase 1 |
+| `SensorFusionRepositoryFactory` / `FlightDataCalculator` / `FlightDataCalculatorEngine` | No airspeed dependency in metrics pipeline constructor chain | Inject source-aware `AirspeedDataSource` and forward sample/timestamp into metrics request | Phase 2 |
 | Wind fusion process | Ignores `input.airspeed` and `input.gLoad` in production | Integrate EKF candidate path with turn/g-load gating | Phase 3 |
 
 ### 2.3 Time Base
@@ -125,10 +130,31 @@ Explicitly forbidden comparisons:
 |---|---|---|---|
 | TE still unreachable after startup | SSOT/domain behavior correctness | Unit test | `CalculateFlightMetricsUseCaseTest` new positive TE activation case |
 | TE dt uses wrong timebase | Timebase rules | Unit test | `CalculateFlightMetricsUseCaseTest` dt-source assertion case |
+| Eligible airspeed hold overwritten by GPS fallback | Domain correctness / fallback behavior | Unit test | `FusionBlackboardTest` + `SensorFrontEndTest` fallback-overwrite cases |
+| TE engages from low-confidence wind vectors | Domain quality handling | Unit test | `CalculateFlightMetricsUseCaseTest` wind-confidence gating case |
+| External/replay TAS never reaches metrics | SSOT wiring and dependency direction | Integration/unit test | `FlightDataCalculatorEngine` + `FlightDataEmitter` wiring tests |
+| Live external TAS ingress missing | SSOT completeness | Integration test + code review gate | New ingress adapter test with `ExternalAirspeedRepository` updates |
 | Wind EKF path regression | Domain quality/uncertainty explicitness | Unit + integration tests | `WindSensorFusionRepositoryTest` EKF straight-flight cases |
 | Audio uses stale TE sample | Pipeline behavior regression | Unit/integration test | `LevoVarioPipelineTest` audio/TE alignment case |
 | Replay determinism drift | Determinism rule | Replay regression test | New replay determinism test (run twice, compare TE outputs) |
 | UI misreports netto channel | UI render source consistency | Unit test | `FlightDataManager` flow mapping test |
+
+### 2.7 Recursive Deep-Pass Delta (2026-02-21)
+
+| Confirmed Gap | Evidence | Impact | Planned Fix Hook |
+|---|---|---|---|
+| Metrics path cannot read repository airspeed | `CalculateFlightMetricsUseCase` chooses `airspeedFromWind ?: GPS_GROUND` only; request has no airspeed payload fields | TE unavailable when wind estimate missing even if TAS exists in repos | Add airspeed payload and timestamp to `FlightMetricsRequest`; prioritize external/replay TAS before wind fallback |
+| Fusion engine constructor chain lacks airspeed dependency | `SensorFusionRepositoryFactory` -> `FlightDataCalculator` -> `FlightDataCalculatorEngine` currently takes no `AirspeedDataSource` | Structural block: external/replay TAS never reaches metrics | Extend factory/engine constructors with source-aware airspeed flow and pass through to emitter/use-case |
+| Live external ingress is absent | `ExternalAirspeedRepository.updateAirspeed(...)` has no callsites | Live TE from external vario cannot activate | Add explicit ingress adapter and DI binding; define freshness/validity policy |
+| GPS fallback overwrites held eligible airspeed | `resolveAirspeedHold()` always remembers non-null sample; use-case always provides GPS fallback when wind estimate missing | Short wind dropouts immediately remove TE-eligible hold and reset TE warm-up | Preserve last eligible estimate when new sample source is non-eligible fallback, or separate hold lanes by source quality |
+| TE path has no wind confidence gate | Use-case passes `windState.vector` directly to wind estimator without confidence threshold | Low-confidence wind can inject TAS error into TE compensation | Gate wind-derived TAS with explicit confidence/quality threshold before TE eligibility |
+| Wind EKF exists but is orphaned | `WindEkfUseCase` present; `WindSensorFusionRepository` does not call it | No straight-flight TAS-assisted wind estimation | Integrate EKF candidate into `WindStore`/selection path with turn/g-load/blackout gates |
+| Audio update can lag one frame behind TE | `audioController.update(emissionState.latestTeVario, ...)` executes before `FlightDataEmitter` refreshes `latestTeVario` | Audible mismatch vs displayed TE source in transitions | Reorder loop or compute current-frame TE before audio selection |
+| UI netto display flow maps raw netto | `FlightDataManager.nettoDisplayFlow` uses `it?.netto` instead of `displayNetto` | UI inconsistency vs display pipeline smoothing intent | Map to `displayNetto` and add mapping regression test |
+| Existing test encodes missing EKF behavior | `WindSensorFusionRepositoryTest` currently asserts no straight-flight wind | Feature work can regress silently if test intent is not updated | Replace with positive EKF straight-flight publish test once Phase 3 lands |
+| `AirspeedSource.EXTERNAL` is never emitted | Only enum declaration exists; no constructor path currently yields EXTERNAL in metrics | UI/source labels and TE diagnostics cannot reflect true external source usage | Add explicit external sample mapping in metrics selection and source-label regression tests |
+| `WindEstimator.fromPolarSink()` is dead path | Function exists but has no production callsite | Hidden complexity with no runtime validation and stale test-only coverage | Either wire intentionally with clear eligibility semantics or remove/deprecate it |
+| Density ratio currently ignores QNH input | `WindEstimator.computeDensityRatio(..., qnhHpa)` does not use `qnhHpa` | Small but systematic IAS/TAS conversion mismatch under non-standard pressure | Decide and document whether to use pressure altitude only or include QNH-adjusted model; add unit tests |
 
 ## 3) Data Flow (Before -> After)
 
@@ -136,6 +162,7 @@ Before:
 
 ```
 GPS + WindState -> WindEstimator.fromWind -> chosenAirspeed
+External/Replay airspeed repositories -> used by FlightState/Wind inputs only (not metrics TE request)
 chosenAirspeed + request.deltaTimeSeconds -> TE calc gate
 TE often bypassed from cold start -> PRESSURE/BARO/GPS selected
 Audio loop reads previous-frame latestTeVario -> audio input
@@ -144,7 +171,7 @@ Audio loop reads previous-frame latestTeVario -> audio input
 After:
 
 ```
-GPS + External/Replay TAS/IAS + WindState -> chosenAirspeed (priority: EXTERNAL -> WIND -> GPS fallback)
+GPS + External/Replay TAS/IAS + WindState -> chosenAirspeed (priority: EXTERNAL/REPLAY -> WIND -> GPS fallback)
 chosenAirspeed + speedSampleClockDelta -> TE kinetic compensation
 Explicit TE warm-up state -> TE activates when eligible
 Emitter publishes current TE first -> audio selection uses same-frame TE input
@@ -165,6 +192,8 @@ UI consumes corrected display/audio/netto channels consistently
   - Positive TE activation test from cold start (currently expected to fail).
   - TE dt-source test with GPS cadence mismatch (currently expected to fail).
   - Audio uses same-frame TE sample test (currently expected to fail).
+  - Straight-flight TAS EKF expectation test (currently expected to fail).
+  - Fallback-overwrite test: eligible airspeed hold must survive non-eligible GPS fallback intervals.
 - Exit criteria:
   - Failing tests clearly reproduce each target bug before implementation.
 
@@ -177,10 +206,13 @@ UI consumes corrected display/audio/netto channels consistently
   - `feature/map/src/main/java/com/example/xcpro/sensors/domain/AirspeedModels.kt`
   - `feature/map/src/main/java/com/example/xcpro/sensors/domain/FusionBlackboard.kt`
   - `feature/map/src/main/java/com/example/xcpro/sensors/domain/SensorFrontEnd.kt`
+  - `feature/map/src/main/java/com/example/xcpro/sensors/domain/WindEstimator.kt` (if speed timestamp/source propagation is added to estimate model)
 - Tests to add/update:
   - TE engages after seeded eligible airspeed samples.
   - TE uses speed-sample time delta, not emit-frame delta.
   - Regression test for 100 kt -> 60 kt slowdown scenario (expected sign and bounded magnitude behavior).
+  - Wind-confidence gating test for TE eligibility.
+  - Hold-behavior test where GPS fallback does not clobber eligible hold state.
 - Exit criteria:
   - TE source appears when eligible.
   - No unreachable TE branch from reset/cold start.
@@ -191,15 +223,19 @@ UI consumes corrected display/audio/netto channels consistently
 - Goal:
   - Ensure valid IAS/TAS samples are consumable by TE path in production.
 - Files to change:
+  - `feature/map/src/main/java/com/example/xcpro/sensors/SensorFusionRepositoryFactory.kt`
+  - `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculator.kt`
   - `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngine.kt`
   - `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt`
   - `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataEmitter.kt`
   - `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt`
   - `feature/map/src/main/java/com/example/xcpro/weather/wind/data/ExternalAirspeedRepository.kt`
-  - Live external-air data ingress adapter file(s) (to be identified during implementation scan)
+  - Live external-air data ingress adapter file(s) (new; no current callsite found)
 - Tests to add/update:
   - Use-case prioritizes valid external/replay airspeed over wind-derived fallback.
   - Replay IAS/TAS fixture drives TE eligibility.
+  - Engine-level test: active-source-aware airspeed feed remains consistent for LIVE vs REPLAY.
+  - Source-label test: metrics emit `airspeedSourceLabel = "SENSOR"` for external airspeed path.
 - Exit criteria:
   - TE can run from external/replay airspeed without wind dependency.
   - No UI/domain duplicate ownership introduced for airspeed state.
@@ -216,6 +252,7 @@ UI consumes corrected display/audio/netto channels consistently
   - EKF candidate published during straight flight with valid TAS.
   - EKF blackout during circling/high-turn/high-g events.
   - Source selection precedence remains intact (auto vs manual vs external).
+  - Existing negative straight-flight test replaced with positive EKF expectation plus gating-specific negatives.
 - Exit criteria:
   - `input.airspeed` and `input.gLoad` are functionally consumed in production logic.
   - Wind confidence behavior remains explicit and stable.
@@ -239,6 +276,7 @@ UI consumes corrected display/audio/netto channels consistently
 
 - Goal:
   - Keep architecture docs synchronized with actual wiring and behavior.
+  - Remove documentation drift where docs imply airspeed/EKF paths are active before they are production-wired.
 - Files to change:
   - `docs/ARCHITECTURE/PIPELINE.md`
   - `docs/LEVO/levo.md`
@@ -257,8 +295,16 @@ UI consumes corrected display/audio/netto channels consistently
     - TE activation positive case.
     - TE dt-source correctness under mixed baro/GPS cadence.
     - Pull-up slowdown compensation case (100 kt to 60 kt profile).
+    - External/replay airspeed priority over wind-derived estimate.
+    - TE wind-confidence gating case.
   - `SensorFrontEndTest`:
     - Airspeed hold timestamp behavior with new sample-time fields.
+    - Hold survival when fallback GPS samples are present between eligible estimates.
+  - `FusionBlackboardTest`:
+    - Non-eligible fallback samples do not overwrite eligible hold lane.
+  - `FlightDataCalculatorEngine` / `FlightDataEmitter` tests:
+    - Active-source-aware airspeed wiring into metrics request.
+    - External source-label propagation (`SENSOR`) once external path is wired.
   - `WindSensorFusionRepositoryTest`:
     - EKF publish/drop behavior and source precedence.
 - Replay/regression tests:

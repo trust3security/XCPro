@@ -47,16 +47,6 @@ internal fun OgnDebugPanel(
                 style = MaterialTheme.typography.bodySmall
             )
             Text(
-                text = "Requested center: ${formatCoord(snapshot.subscriptionCenterLat)}, ${formatCoord(snapshot.subscriptionCenterLon)}",
-                color = Color(0xFFD1D5DB),
-                style = MaterialTheme.typography.bodySmall
-            )
-            Text(
-                text = "Active center: ${formatCoord(snapshot.activeSubscriptionCenterLat)}, ${formatCoord(snapshot.activeSubscriptionCenterLon)}",
-                color = Color(0xFFD1D5DB),
-                style = MaterialTheme.typography.bodySmall
-            )
-            Text(
                 text = "Radius: ${snapshot.receiveRadiusKm} km",
                 color = Color(0xFFD1D5DB),
                 style = MaterialTheme.typography.bodySmall

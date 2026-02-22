@@ -358,8 +358,13 @@ class VarioAudioEngine(
                 beepController.release()
             }
             toneGenerator.release()
-            internalScope.cancel()
+            // Keep the engine scope alive: this engine is reused by a DI singleton after
+            // foreground-service restarts, so cancellation here would make future beep loops inert.
             isInitialized = false
+            ensureAttemptCount = 0
+            lastEnsureAttemptElapsedMs = 0L
+            _currentMode.value = AudioMode.SILENCE
+            _currentFrequency.value = 0.0
             Log.i(TAG, "Audio engine released (total updates: $audioUpdatesCount)")
         } catch (e: Exception) {
             Log.e(TAG, "Error releasing audio engine", e)

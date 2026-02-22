@@ -7,6 +7,7 @@ import com.example.xcpro.hawk.HawkConfigRepository
 import com.example.xcpro.hawk.HawkVarioRepository
 import com.example.xcpro.sensors.FlightStateSource
 import com.example.xcpro.sensors.SensorFusionRepository
+import com.example.xcpro.sensors.SensorStatus
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.sensors.UnifiedSensorManager
 import javax.inject.Inject
@@ -58,7 +59,7 @@ open class VarioServiceManager @Inject constructor(
         // Always reset the data source to LIVE so live sensor updates are not gated out after a replay.
         flightDataRepository.setActiveSource(FlightDataRepository.Source.LIVE)
 
-        if (running && unifiedSensorManager.getSensorStatus().gpsStarted) {
+        if (running && isPipelineReady(unifiedSensorManager.getSensorStatus())) {
             Log.d(TAG, "Sensors already running")
             return true
         }
@@ -74,12 +75,19 @@ open class VarioServiceManager @Inject constructor(
 
         cancelSensorRetry()
         applyGpsUpdateInterval(GPS_UPDATE_INTERVAL_SLOW_MS)
-        val sensorsStarted = startSensorsOnMainThread()
-        if (!sensorsStarted) {
-            Log.w(TAG, "GPS listener not registered; scheduling retry every ${SENSOR_RETRY_DELAY_MS} ms")
+        startSensorsOnMainThread()
+        val startupStatus = unifiedSensorManager.getSensorStatus()
+        val pipelineReady = isPipelineReady(startupStatus)
+        if (!pipelineReady) {
+            Log.w(
+                TAG,
+                "Sensors not fully ready (gpsStarted=${startupStatus.gpsStarted}, " +
+                    "baroAvailable=${startupStatus.baroAvailable}, baroStarted=${startupStatus.baroStarted}); " +
+                    "scheduling retry every ${SENSOR_RETRY_DELAY_MS} ms"
+            )
             scheduleSensorRetry()
         }
-        return sensorsStarted
+        return pipelineReady
     }
 
     open fun stop() {
@@ -116,6 +124,7 @@ open class VarioServiceManager @Inject constructor(
                 sensorFusionRepository.setMacCreadySetting(config.macCready)
                 sensorFusionRepository.setMacCreadyRisk(config.macCreadyRisk)
                 sensorFusionRepository.setAutoMcEnabled(config.autoMcEnabled)
+                sensorFusionRepository.setTotalEnergyCompensationEnabled(config.teCompensationEnabled)
                 sensorFusionRepository.updateAudioSettings(config.audioSettings)
                 sensorFusionRepository.setHawkAudioEnabled(config.enableHawkUi)
                 hawkConfigRepository.setEnabled(config.showHawkCard || config.enableHawkUi)
@@ -146,13 +155,19 @@ open class VarioServiceManager @Inject constructor(
 
     private fun scheduleSensorRetry() {
         sensorRetryCoordinator.schedule {
-            val started = startSensorsOnMainThread()
-            if (started) {
+            startSensorsOnMainThread()
+            val status = unifiedSensorManager.getSensorStatus()
+            val ready = isPipelineReady(status)
+            if (ready) {
                 Log.d(TAG, "Sensor retry succeeded")
             } else {
-                Log.w(TAG, "Retry attempt could not start GPS listener; waiting for permissions")
+                Log.w(
+                    TAG,
+                    "Retry sensors not ready yet (gpsStarted=${status.gpsStarted}, " +
+                        "baroAvailable=${status.baroAvailable}, baroStarted=${status.baroStarted})"
+                )
             }
-            started
+            ready
         }
     }
 
@@ -191,6 +206,12 @@ open class VarioServiceManager @Inject constructor(
         }
         lastGpsIntervalMs = intervalMs
         Log.d(TAG, "GPS update interval set to ${intervalMs}ms")
+    }
+
+    private fun isPipelineReady(status: SensorStatus): Boolean {
+        val gpsReady = status.gpsStarted
+        val baroReady = !status.baroAvailable || status.baroStarted
+        return gpsReady && baroReady
     }
 }
 

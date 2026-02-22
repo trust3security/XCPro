@@ -59,6 +59,9 @@ class FlightDataCalculator(
 
     override fun setAutoMcEnabled(enabled: Boolean) = engine.setAutoMcEnabled(enabled)
 
+    override fun setTotalEnergyCompensationEnabled(enabled: Boolean) =
+        engine.setTotalEnergyCompensationEnabled(enabled)
+
     override fun setFlightMode(mode: com.example.xcpro.common.flight.FlightMode) = engine.setFlightMode(mode)
 
     override fun updateReplayRealVario(realVarioMs: Double?, timestampMillis: Long) =

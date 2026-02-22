@@ -22,6 +22,7 @@ import com.example.xcpro.map.MapModalManager
 import com.example.xcpro.map.MapOverlayManager
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapScreenViewModel
+import com.example.xcpro.map.MapTaskIntegration
 import com.example.xcpro.map.MapTaskScreenManager
 import com.example.xcpro.map.MapUiEvent
 import com.example.xcpro.map.MapUiState
@@ -131,6 +132,7 @@ internal data class MapScreenScaffoldInputs(
     val onBallastCommand: (BallastCommand) -> Unit,
     val onHamburgerTap: () -> Unit,
     val onHamburgerLongPress: () -> Unit,
+    val onOpenWeatherSettingsFromTab: () -> Unit,
     val cardStyle: CardStyle,
     val hiddenCardIds: Set<String>,
     val replayState: StateFlow<SessionState>,
@@ -206,6 +208,7 @@ internal fun rememberMapScreenScaffoldInputs(
         managers.overlayManager.reapplyForecastOverlay(); managers.overlayManager.reapplyWeatherRainOverlay()
     }
     val onMapViewBound: () -> Unit = { managers.lifecycleManager.syncCurrentOwnerState(lifecycleOwner.lifecycle.currentState) }
+    val shouldBlockDrawerOpen = MapTaskIntegration.shouldBlockDrawerGestures(taskType = bindings.taskType, isAATEditMode = bindings.isAATEditMode)
     return MapScreenScaffoldInputs(
         drawerState = drawerState,
         navController = navController,
@@ -292,8 +295,9 @@ internal fun rememberMapScreenScaffoldInputs(
         ballastUiState = mapViewModel.ballastUiState,
         isBallastPillHidden = mapUiState.hideBallastPill,
         onBallastCommand = mapViewModel::submitBallastCommand,
-        onHamburgerTap = { mapViewModel.onEvent(MapUiEvent.ToggleDrawer) },
+        onHamburgerTap = { if (!shouldBlockDrawerOpen || mapUiState.isDrawerOpen) mapViewModel.onEvent(MapUiEvent.ToggleDrawer) },
         onHamburgerLongPress = { mapViewModel.onEvent(MapUiEvent.ToggleUiEditMode) },
+        onOpenWeatherSettingsFromTab = { if (!shouldBlockDrawerOpen) { settingsExpanded.value = true; mapViewModel.onEvent(MapUiEvent.OpenDrawer) } },
         cardStyle = cardStyle,
         hiddenCardIds = hiddenCardIds,
         replayState = mapViewModel.replaySessionState,

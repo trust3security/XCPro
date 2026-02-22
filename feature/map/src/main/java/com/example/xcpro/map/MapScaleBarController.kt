@@ -16,6 +16,8 @@ internal class MapScaleBarController(
         private const val SCALE_BAR_TEXT_MARGIN_DP = 2f
         private const val SCALE_BAR_BORDER_WIDTH_DP = 1f
         private const val SCALE_BAR_TEXT_BORDER_WIDTH_DP = 2f
+        private const val SCALE_BAR_MARGIN_LEFT_DP = 16f
+        private const val SCALE_BAR_VERTICAL_OFFSET_DP = 36f
         private const val SCALE_BAR_REFRESH_INTERVAL_MS = 200
         private const val SCALE_BAR_DISTANCE_EPSILON = 1e-6
     }
@@ -77,7 +79,9 @@ internal class MapScaleBarController(
         val secondaryColor = mapView.context.getColor(secondaryColorRes)
 
         val contentHeightPx = textSizePx + textBarMarginPx + barHeightPx + borderWidthPx * 2f
-        val marginTopPx = max(0f, (height - contentHeightPx) / 2f)
+        val centeredTopPx = max(0f, (height - contentHeightPx) / 2f)
+        val maxTopPx = max(0f, height.toFloat() - contentHeightPx)
+        val marginTopPx = (centeredTopPx + SCALE_BAR_VERTICAL_OFFSET_DP * density).coerceAtMost(maxTopPx)
         val maxDistanceMeters = if (distancePerPixel.isFinite() && distancePerPixel > 0.0) {
             width * distancePerPixel * MapZoomConstraints.SCALE_BAR_MAX_WIDTH_RATIO
         } else {
@@ -89,7 +93,9 @@ internal class MapScaleBarController(
         } else {
             width * MapZoomConstraints.SCALE_BAR_MAX_WIDTH_RATIO
         }
-        val marginLeftPx = max(0f, (width - barWidthPx) / 2f)
+        val desiredLeftPx = SCALE_BAR_MARGIN_LEFT_DP * density
+        val maxLeftPx = max(0f, width.toFloat() - barWidthPx - borderWidthPx * 2f)
+        val marginLeftPx = desiredLeftPx.coerceIn(0f, maxLeftPx)
 
         val plugin = mapState.scaleBarPlugin ?: ScaleBarPlugin(mapView, map).also {
             mapState.scaleBarPlugin = it

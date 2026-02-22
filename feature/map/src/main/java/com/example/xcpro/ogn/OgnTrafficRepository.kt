@@ -128,6 +128,7 @@ class OgnTrafficRepositoryImpl @Inject constructor(
         if (!latitude.isFinite() || !longitude.isFinite()) return
         if (abs(latitude) > 90.0 || abs(longitude) > 180.0) return
         center = Center(latitude = latitude, longitude = longitude)
+        refreshTargetDistancesForCurrentCenter()
         if (_isEnabled.value) {
             ensureLoopRunning()
         }
@@ -233,6 +234,7 @@ class OgnTrafficRepositoryImpl @Inject constructor(
             writer.flush()
 
             activeSubscriptionCenter = centerAtConnect
+            refreshTargetDistancesForCurrentCenter()
             publishSnapshot()
             var connectionEstablished = false
 
@@ -351,7 +353,13 @@ class OgnTrafficRepositoryImpl @Inject constructor(
             displayLabel = label,
             identity = identity,
             trackDegrees = stabilizedTrackDegrees,
-            lastSeenMillis = nowMonoMs
+            lastSeenMillis = nowMonoMs,
+            distanceMeters = resolveDistanceMeters(
+                targetLat = parsed.latitude,
+                targetLon = parsed.longitude,
+                requestedCenter = requestedCenter,
+                subscriptionCenter = centerAtConnect
+            )
         )
         targetsByKey[enriched.id] = enriched
         publishTargets()
@@ -369,6 +377,45 @@ class OgnTrafficRepositoryImpl @Inject constructor(
         return identity.competitionNumber?.takeIf { it.isNotBlank() }
             ?: identity.registration?.takeIf { it.isNotBlank() }
             ?: fallback
+    }
+
+    private fun refreshTargetDistancesForCurrentCenter() {
+        val requestedCenter = center
+        val subscriptionCenter = activeSubscriptionCenter
+        if (requestedCenter == null && subscriptionCenter == null) return
+
+        var changed = false
+        for ((id, target) in targetsByKey.entries) {
+            val distanceMeters = resolveDistanceMeters(
+                targetLat = target.latitude,
+                targetLon = target.longitude,
+                requestedCenter = requestedCenter,
+                subscriptionCenter = subscriptionCenter
+            )
+            if (target.distanceMeters != distanceMeters) {
+                targetsByKey[id] = target.copy(distanceMeters = distanceMeters)
+                changed = true
+            }
+        }
+        if (changed) {
+            publishTargets()
+        }
+    }
+
+    private fun resolveDistanceMeters(
+        targetLat: Double,
+        targetLon: Double,
+        requestedCenter: Center?,
+        subscriptionCenter: Center?
+    ): Double? {
+        val reference = requestedCenter ?: subscriptionCenter ?: return null
+        val distanceKm = OgnSubscriptionPolicy.haversineKm(
+            lat1 = reference.latitude,
+            lon1 = reference.longitude,
+            lat2 = targetLat,
+            lon2 = targetLon
+        )
+        return if (distanceKm.isFinite()) distanceKm * METERS_PER_KILOMETER else null
     }
 
     private fun sweepStaleTargets(nowMonoMs: Long) {
@@ -480,6 +527,7 @@ class OgnTrafficRepositoryImpl @Inject constructor(
         private const val RECONNECT_BACKOFF_START_MS = 1_000L
         private const val RECONNECT_BACKOFF_MAX_MS = 60_000L
         private const val DDB_REFRESH_CHECK_INTERVAL_MS = 60L * 60L * 1000L
+        private const val METERS_PER_KILOMETER = 1_000.0
 
     }
 }

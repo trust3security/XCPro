@@ -47,6 +47,7 @@ internal class FlightDataEmitter(
         macCreadySetting: Double,
         macCreadyRisk: Double,
         autoMcEnabled: Boolean,
+        teCompensationEnabled: Boolean,
         flightMode: FlightMode
     ) {
         val replayIgcVario = if (isReplayMode && replayRealVarioTimestamp != 0L) {
@@ -83,6 +84,7 @@ internal class FlightDataEmitter(
                 isFlying = isFlying,
                 macCreadySetting = macCreadySetting,
                 autoMcEnabled = autoMcEnabled,
+                teCompensationEnabled = teCompensationEnabled,
                 flightMode = flightMode
             )
         )

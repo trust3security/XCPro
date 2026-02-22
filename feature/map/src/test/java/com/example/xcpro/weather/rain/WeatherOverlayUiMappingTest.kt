@@ -54,7 +54,7 @@ class WeatherOverlayUiMappingTest {
             WeatherOverlayRuntimeState(
                 enabled = true,
                 selectedFrame = null,
-                metadataStatus = WeatherRadarStatusCode.NO_METADATA,
+                metadataStatus = WeatherRadarStatusCode.NETWORK_ERROR,
                 metadataStale = true
             )
         )
@@ -62,6 +62,24 @@ class WeatherOverlayUiMappingTest {
         assertTrue(state.visible)
         assertEquals(WeatherMapConfidenceLevel.ERROR, state.level)
         assertEquals("Rain Error", state.label)
+    }
+
+    @Test
+    fun resolveWeatherMapConfidenceState_loadingWhenInitialBootstrapHasNoFrameYet() {
+        val state = resolveWeatherMapConfidenceState(
+            WeatherOverlayRuntimeState(
+                enabled = true,
+                selectedFrame = null,
+                metadataStatus = WeatherRadarStatusCode.NO_METADATA,
+                metadataDetail = null,
+                lastSuccessfulMetadataFetchWallMs = null,
+                metadataStale = true
+            )
+        )
+
+        assertTrue(state.visible)
+        assertEquals(WeatherMapConfidenceLevel.LOADING, state.level)
+        assertEquals("Rain Loading", state.label)
     }
 
     @Test

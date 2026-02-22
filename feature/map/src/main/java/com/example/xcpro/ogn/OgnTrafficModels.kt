@@ -47,7 +47,8 @@ data class OgnTrafficTarget(
     val rawComment: String?,
     val rawLine: String,
     val timestampMillis: Long,
-    val lastSeenMillis: Long
+    val lastSeenMillis: Long,
+    val distanceMeters: Double? = null
 ) {
     fun isStale(nowMillis: Long, staleAfterMillis: Long): Boolean =
         nowMillis - lastSeenMillis > staleAfterMillis

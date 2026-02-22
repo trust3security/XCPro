@@ -7,10 +7,12 @@ import android.os.SystemClock
 import androidx.core.content.ContextCompat
 import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.ogn.OGN_ICON_SIZE_DEFAULT_PX
+import com.example.xcpro.ogn.OgnAircraftIcon
 import com.example.xcpro.ogn.OgnSubscriptionPolicy
 import com.example.xcpro.ogn.OgnTrafficTarget
 import com.example.xcpro.ogn.OgnViewportBounds
 import com.example.xcpro.ogn.clampOgnIconSizePx
+import com.example.xcpro.ogn.iconForOgnAircraftTypeCode
 import org.maplibre.android.geometry.LatLngBounds
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.Style
@@ -106,6 +108,10 @@ class OgnTrafficOverlay(
             )
             feature.addStringProperty(PROP_TARGET_ID, target.id)
             feature.addStringProperty(PROP_LABEL, target.displayLabel)
+            feature.addStringProperty(
+                PROP_ICON_ID,
+                iconForOgnAircraftTypeCode(target.identity?.aircraftTypeCode).styleImageId
+            )
             feature.addNumberProperty(
                 PROP_ALPHA,
                 if (target.isStale(nowMonoMs, STALE_VISUAL_AFTER_MS)) STALE_ALPHA else LIVE_ALPHA
@@ -152,23 +158,32 @@ class OgnTrafficOverlay(
             style.removeLayer(LABEL_LAYER_ID)
             style.removeLayer(ICON_LAYER_ID)
             style.removeSource(SOURCE_ID)
-            style.removeImage(ICON_IMAGE_ID)
+            OgnAircraftIcon.values().forEach { icon ->
+                style.removeImage(icon.styleImageId)
+            }
         } catch (t: Throwable) {
             AppLogger.w(TAG, "Failed to cleanup OGN overlay: ${t.message}")
         }
     }
 
     private fun ensureStyleImage(style: Style) {
-        val existing = runCatching { style.getImage(ICON_IMAGE_ID) }.getOrNull()
-        if (existing != null) return
-        val bitmap = drawableToBitmap(R.drawable.ic_adsb_glider) ?: return
-        style.addImage(ICON_IMAGE_ID, bitmap)
+        OgnAircraftIcon.values().forEach { icon ->
+            val existing = runCatching { style.getImage(icon.styleImageId) }.getOrNull()
+            if (existing != null) return@forEach
+            val bitmap = drawableToBitmap(icon.resId) ?: return@forEach
+            style.addImage(icon.styleImageId, bitmap)
+        }
     }
 
     private fun createIconLayer(): SymbolLayer =
         SymbolLayer(ICON_LAYER_ID, SOURCE_ID)
             .withProperties(
-                iconImage(ICON_IMAGE_ID),
+                iconImage(
+                    Expression.coalesce(
+                        Expression.get(PROP_ICON_ID),
+                        Expression.literal(DEFAULT_ICON_IMAGE_ID)
+                    )
+                ),
                 iconSize(iconScaleForPx(currentIconSizePx)),
                 iconRotate(
                     Expression.coalesce(
@@ -278,12 +293,13 @@ class OgnTrafficOverlay(
         private const val SOURCE_ID = "ogn-traffic-source"
         private const val ICON_LAYER_ID = "ogn-traffic-icon-layer"
         private const val LABEL_LAYER_ID = "ogn-traffic-label-layer"
-        private const val ICON_IMAGE_ID = "ogn_icon_glider"
+        private const val DEFAULT_ICON_IMAGE_ID = "ogn_icon_glider"
 
         private const val PROP_LABEL = "label"
         private const val PROP_ALPHA = "alpha"
         private const val PROP_TRACK_DEG = "track_deg"
         private const val PROP_TARGET_ID = "target_id"
+        private const val PROP_ICON_ID = "icon_id"
 
         private const val MAX_TARGETS = 500
         private const val STALE_VISUAL_AFTER_MS = 60_000L

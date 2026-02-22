@@ -183,7 +183,7 @@ After:
   - Size reapply is verified on active runtime paths (`onMapReady`, `LaunchedEffect`, `onMapStyleChanged`), not only on `MapOverlayManager.initializeOverlays(...)`.
   - OGN viewport culling (`OgnSubscriptionPolicy.isInViewport`) remains in effect after overlay refactor.
   - OGN style image IDs are unique to OGN overlay, so OGN cleanup cannot remove ADS-B style images.
-  - Icon-size slider semantics are pixel-based (`124..512`) and converted to MapLibre `iconSize` scale via a fixed base bitmap size.
+  - Icon-size slider semantics are pixel-based (`124..248`) and converted to MapLibre `iconSize` scale via a fixed base bitmap size.
   - OGN target cap remains enforced after icon migration.
   - OGN label offset scales with icon size so labels remain readable at min/max values.
   - OGN layer insertion order remains stable relative to blue ownship layer.
@@ -213,7 +213,7 @@ After:
   - Style switch after size change; verify reapply behavior.
   - Confirm path-specific apply order: `MapInitializer.setupOverlays(...)` then `MapScreenScaffoldInputs.onMapReady(...)` reapply.
   - Verify OGN cleanup does not affect ADS-B icons when both overlays are active.
-  - Verify label readability and no overlap at slider min (`50`) and max (`124`).
+  - Verify label readability and no overlap at slider min (`124`) and max (`248`).
 - Boundary tests for removed bypasses:
   - Screen writes via VM/use-case only; no direct repository mutation in composables.
 
@@ -258,7 +258,7 @@ Execution compliance matrix for this change:
 |---|---|---|---|
 | CM-01 | Add `OGN` tile under `General` and route to dedicated screen | `Settings-df.kt`, `AppNavGraph.kt` | PASS |
 | CM-02 | OGN settings screen uses `SettingsTopAppBar` pattern | `OgnSettingsScreen.kt` | PASS |
-| CM-03 | Slider range exactly `124..512` and default `124` | `OgnIconSizing.kt`, `OgnSettingsScreen.kt`, `OgnTrafficPreferencesRepository.kt` | PASS |
+| CM-03 | Slider range exactly `124..248` and default `124` | `OgnIconSizing.kt`, `OgnSettingsScreen.kt`, `OgnTrafficPreferencesRepository.kt` | PASS |
 | CM-04 | OGN icon size persisted and restored from DataStore | `OgnTrafficPreferencesRepository.kt` | PASS |
 | CM-05 | Layer-correct path (`UI -> VM -> UseCase -> PreferencesRepository`) | `OgnSettingsViewModel.kt`, `OgnSettingsUseCase.kt`, `MapScreenUseCases.kt` | PASS |
 | CM-06 | OGN marker/icon size updates live without restart | `MapScreenViewModel.kt`, `MapScreenBindings.kt`, `MapScreenRoot.kt`, `MapOverlayManager.kt`, `OgnTrafficOverlay.kt` | CODE PASS / MANUAL PENDING |

@@ -132,7 +132,7 @@ Responsibilities:
 - Start and stop sensors on the main thread
 - Retry sensor start if permission is missing (SensorRetryCoordinator)
 - Collect flightDataFlow and push into FlightDataRepository
-- Observe Levo config (MacCready) and push into the fusion engine
+- Observe Levo config (MacCready, audio, TE enabled) and push into the fusion engine
 
 ------------------------------------------------------------------------------
 SENSOR LAYER (LIVE)
@@ -467,7 +467,8 @@ Levo settings UI:
 MacCready preferences:
 - LevoVarioPreferencesRepository (DataStore)
   feature/map/src/main/java/com/example/xcpro/vario/LevoVarioPreferencesRepository.kt
-- VarioServiceManager listens to config and updates the fusion engine.
+- VarioServiceManager listens to config and updates the fusion engine
+  (MacCready, auto-MC, TE enable, audio settings).
 
 Audio preferences:
 - Stored in VarioAudioEngine settings StateFlow.

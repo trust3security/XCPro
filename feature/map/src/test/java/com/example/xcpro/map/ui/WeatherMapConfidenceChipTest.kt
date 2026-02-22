@@ -80,7 +80,7 @@ class WeatherMapConfidenceChipTest {
                     runtimeState = WeatherOverlayRuntimeState(
                         enabled = true,
                         selectedFrame = null,
-                        metadataStatus = WeatherRadarStatusCode.NO_METADATA,
+                        metadataStatus = WeatherRadarStatusCode.NETWORK_ERROR,
                         metadataStale = true
                     )
                 )
@@ -88,6 +88,25 @@ class WeatherMapConfidenceChipTest {
         }
 
         composeTestRule.onNodeWithText("Rain Error").assertIsDisplayed()
+    }
+
+    @Test
+    fun showsLoadingLabelDuringInitialBootstrap() {
+        composeTestRule.setContent {
+            MaterialTheme {
+                WeatherMapConfidenceChip(
+                    runtimeState = WeatherOverlayRuntimeState(
+                        enabled = true,
+                        selectedFrame = null,
+                        metadataStatus = WeatherRadarStatusCode.NO_METADATA,
+                        metadataDetail = null,
+                        lastSuccessfulMetadataFetchWallMs = null
+                    )
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("Rain Loading").assertIsDisplayed()
     }
 
     private fun sampleFrame(): WeatherRainFrameSelection =

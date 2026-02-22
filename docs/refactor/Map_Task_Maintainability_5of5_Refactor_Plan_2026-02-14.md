@@ -80,6 +80,21 @@ Compliance correction (2026-02-18):
 - Map/task files hardening items in
   `docs/ARCHITECTURE/CHANGE_PLAN_MAP_TASK_SLICE_HARDENING_2026-02-18.md`
   are now completed and re-verified for release-path confidence.
+- Deep-pass refresh (2026-02-22, SI compliance re-pass #5) found a critical
+  AAT geometry contract defect:
+  - AAT start/finish cylinder UI + persistence contract is radius.
+  - runtime render/geometry/validation paths still divide that radius by 2.
+  - impact: rendered/validated cylinder size is half the configured value.
+- Hardening implementation pass #14 (planned) will close this defect:
+  - preserve radius authority from `AATRadiusAuthority` / point configurators.
+  - remove radius-halving (`/ 2.0`) in:
+    - `feature/map/src/main/java/com/example/xcpro/tasks/aat/rendering/AATTaskRenderer.kt`
+    - `feature/map/src/main/java/com/example/xcpro/tasks/aat/geometry/AATGeometryGenerator.kt`
+    - `feature/map/src/main/java/com/example/xcpro/tasks/aat/validation/AATValidationBridge.kt`
+  - lock parity with focused JVM coverage and map/task integration checks.
+- Tracking docs:
+  - `docs/UNITS/SI_REPASS_FINDINGS_2026-02-22.md`
+  - `docs/UNITS/CHANGE_PLAN_SI_UNITS_COMPLIANCE_2026-02-22.md`
 
 Execution update (2026-02-14):
 
@@ -576,9 +591,12 @@ Task UI intent -> ViewModel -> MapTasksUseCase -> task owner state
 - Tests to add/update:
   - deterministic geometry and boundary-policy tests
   - regression tests for racing/AAT transition logic
+  - AAT start/finish cylinder radius contract tests (configured radius must
+    match render/geometry/validation radius; no runtime halving)
 - Exit criteria:
   - each refactored file <= 350 LOC or exception documented with owner+expiry.
   - geometry/policy functions covered by pure JVM tests.
+  - AAT cylinder radius contract is consistent end-to-end.
 
 ### Phase 4: Test Net and Instrumentation Depth
 
@@ -613,6 +631,7 @@ Task UI intent -> ViewModel -> MapTasksUseCase -> task owner state
 
 - Unit tests:
   - decomposition behavior parity, geometry policy, render sync contracts.
+  - AAT radius contract parity across renderer/geometry/validation paths.
 - Replay/regression tests:
   - deterministic transition parity for racing/AAT map/task routes.
 - UI/instrumentation tests:
@@ -658,6 +677,8 @@ Local fast device-preserving loop:
 - No duplicate SSOT ownership introduced.
 - Time base handling explicit in code and tests.
 - Replay behavior deterministic on repeated inputs.
+- AAT start/finish cylinder radius semantics are consistent end-to-end (no
+  runtime `/2` on persisted/configured radius values).
 - `KNOWN_DEVIATIONS.md` updated only if explicitly approved.
 
 Quantitative gates for maintainability `5.0 / 5`:

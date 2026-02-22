@@ -36,7 +36,14 @@ class AdsbTrafficPreferencesRepositoryTest {
     }
 
     @Test
-    fun iconSizeFlow_defaultsTo56Px() = runTest {
+    fun iconSizePolicy_matches124To248Contract() {
+        assertEquals(124, ADSB_ICON_SIZE_MIN_PX)
+        assertEquals(124, ADSB_ICON_SIZE_DEFAULT_PX)
+        assertEquals(248, ADSB_ICON_SIZE_MAX_PX)
+    }
+
+    @Test
+    fun iconSizeFlow_defaultsToConfiguredDefaultPx() = runTest {
         val repository = AdsbTrafficPreferencesRepository(context)
 
         val current = repository.iconSizePxFlow.first()
@@ -68,10 +75,10 @@ class AdsbTrafficPreferencesRepositoryTest {
     fun setIconSizePx_persistsValidValue() = runTest {
         val repository = AdsbTrafficPreferencesRepository(context)
 
-        repository.setIconSizePx(92)
+        repository.setIconSizePx(160)
         val current = repository.iconSizePxFlow.first()
 
-        assertEquals(92, current)
+        assertEquals(160, current)
     }
 
     @Test

@@ -34,6 +34,13 @@ class OgnTrafficPreferencesRepositoryTest {
     }
 
     @Test
+    fun iconSizePolicy_matches124To248Contract() {
+        assertEquals(124, OGN_ICON_SIZE_MIN_PX)
+        assertEquals(124, OGN_ICON_SIZE_DEFAULT_PX)
+        assertEquals(248, OGN_ICON_SIZE_MAX_PX)
+    }
+
+    @Test
     fun iconSizeFlow_defaultsToConfiguredDefaultPx() = runTest {
         val repository = OgnTrafficPreferencesRepository(context)
 

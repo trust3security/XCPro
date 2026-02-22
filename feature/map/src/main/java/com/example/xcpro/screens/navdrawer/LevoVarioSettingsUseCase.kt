@@ -23,6 +23,10 @@ class LevoVarioSettingsUseCase @Inject constructor(
         preferencesRepository.setAutoMcEnabled(enabled)
     }
 
+    suspend fun setTeCompensationEnabled(enabled: Boolean) {
+        preferencesRepository.setTeCompensationEnabled(enabled)
+    }
+
     suspend fun setShowWindSpeedOnVario(enabled: Boolean) {
         preferencesRepository.setShowWindSpeedOnVario(enabled)
     }

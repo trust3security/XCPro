@@ -21,6 +21,7 @@ sealed interface MapUiEvent {
     data object ToggleUiEditMode : MapUiEvent
     data class SetUiEditMode(val enabled: Boolean) : MapUiEvent
     data object ToggleDrawer : MapUiEvent
+    data object OpenDrawer : MapUiEvent
     data class SetDrawerOpen(val isOpen: Boolean) : MapUiEvent
 }
 

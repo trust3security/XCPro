@@ -48,6 +48,22 @@ fun AdsbMarkerDetailsSheet(
             )
 
             Text(
+                text = "Live state",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+            DetailRow("ICAO24", target.id.raw.uppercase(Locale.US))
+            DetailRow("Altitude", target.altitudeM?.let { UnitsFormatter.altitude(AltitudeM(it), unitsPreferences).text } ?: "--")
+            DetailRow("Distance", UnitsFormatter.distance(DistanceM(target.distanceMeters), unitsPreferences).text)
+            DetailRow("Speed", target.speedMps?.let { UnitsFormatter.speed(SpeedMs(it), unitsPreferences).text } ?: "--")
+            DetailRow("Track", target.trackDeg?.let { "${it.roundToOneDecimal()}\u00B0" } ?: "--")
+            DetailRow(
+                "Vertical Rate",
+                AdsbDetailsFormatter.formatVerticalRate(target.climbMps, unitsPreferences)
+            )
+            DetailRow("Age", "${target.ageSec}s")
+
+            Text(
                 text = "Aircraft identification",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary
@@ -69,22 +85,6 @@ fun AdsbMarkerDetailsSheet(
                     else -> MaterialTheme.colorScheme.onSurfaceVariant
                 }
             )
-
-            Text(
-                text = "Live state",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary
-            )
-            DetailRow("ICAO24", target.id.raw.uppercase(Locale.US))
-            DetailRow("Altitude", target.altitudeM?.let { UnitsFormatter.altitude(AltitudeM(it), unitsPreferences).text } ?: "--")
-            DetailRow("Speed", target.speedMps?.let { UnitsFormatter.speed(SpeedMs(it), unitsPreferences).text } ?: "--")
-            DetailRow("Track", target.trackDeg?.let { "${it.roundToOneDecimal()}\u00B0" } ?: "--")
-            DetailRow(
-                "Vertical Rate",
-                AdsbDetailsFormatter.formatVerticalRate(target.climbMps, unitsPreferences)
-            )
-            DetailRow("Age", "${target.ageSec}s")
-            DetailRow("Distance", UnitsFormatter.distance(DistanceM(target.distanceMeters), unitsPreferences).text)
 
             Text(
                 text = "Emitter category",

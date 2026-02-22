@@ -5,8 +5,10 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -53,6 +55,8 @@ fun CustomMapGestureHandler(
     val hasSwitchedMode = remember { mutableStateOf(false) }
     val gestureStartPosition = remember { mutableStateOf(Offset.Zero) }
     val initialFingerCount = remember { mutableStateOf(1) }
+    val latestCurrentLocation by rememberUpdatedState(currentLocation)
+    val latestShowReturnButton by rememberUpdatedState(showReturnButton)
     val pixelRatio = if (mapViewPixelRatio > 0f) mapViewPixelRatio else 1f
 
     Box(
@@ -127,6 +131,9 @@ fun CustomMapGestureHandler(
                     var isFirstFrame = true
                     var handledGesture = false
                     var maxDistanceFromStartPx = 0f
+                    // AI-NOTE: Arm manual-pan state once per two-finger gesture so follow-mode
+                    // reliably disengages and the return FAB snapshot is stable.
+                    var hasArmedTwoFingerPan = false
 
                     val startContext = TaskGestureContext(
                         mapLibreMap = mapLibreMap,
@@ -245,15 +252,16 @@ fun CustomMapGestureHandler(
                                     if (abs(panDelta.x) > 1f || abs(panDelta.y) > 1f) {
                                         handledGesture = true
                                         consumeThisFrame = true
-                                        if (!showReturnButton) {
-                                            if (currentLocation != null) {
-                                                onSaveLocation(
-                                                    currentLocation,
-                                                    mapLibreMap?.cameraPosition?.zoom ?: 10.0,
-                                                    mapLibreMap?.cameraPosition?.bearing ?: 0.0
-                                                )
+                                        if (!hasArmedTwoFingerPan) {
+                                            hasArmedTwoFingerPan = true
+                                            onSaveLocation(
+                                                latestCurrentLocation,
+                                                mapLibreMap?.cameraPosition?.zoom ?: 10.0,
+                                                mapLibreMap?.cameraPosition?.bearing ?: 0.0
+                                            )
+                                            if (!latestShowReturnButton) {
+                                                onShowReturnButton(true)
                                             }
-                                            onShowReturnButton(true)
                                         }
 
                                         mapLibreMap?.let { map ->

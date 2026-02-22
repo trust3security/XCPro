@@ -21,6 +21,7 @@ class MapInitializer(
     private val mapState: MapScreenState,
     private val mapStateReader: MapStateReader,
     private val stateActions: MapStateActions,
+    private val overlayManager: MapOverlayManager,
     private val orientationManager: MapOrientationManager,
     private val taskRenderSyncCoordinator: TaskRenderSyncCoordinator,
     private val snailTrailManager: SnailTrailManager,
@@ -154,11 +155,7 @@ class MapInitializer(
             // Initialize blue location overlay
             mapState.blueLocationOverlay = BlueLocationOverlay(context, map)
             mapState.blueLocationOverlay?.initialize()
-            mapState.ognTrafficOverlay = OgnTrafficOverlay(context, map)
-            mapState.ognTrafficOverlay?.initialize()
-            mapState.adsbTrafficOverlay?.cleanup()
-            mapState.adsbTrafficOverlay = AdsbTrafficOverlay(context, map)
-            mapState.adsbTrafficOverlay?.initialize()
+            overlayManager.initializeTrafficOverlays(map)
             snailTrailManager.initialize(map)
             scaleBarController.setupScaleBar(map)
             Log.d(TAG, " Blue location overlay initialized")

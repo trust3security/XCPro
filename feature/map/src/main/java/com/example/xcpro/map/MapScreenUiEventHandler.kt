@@ -16,6 +16,7 @@ internal class MapScreenUiEventHandler(
             MapUiEvent.ToggleUiEditMode -> setUiEditMode(!uiState.value.isUiEditMode)
             is MapUiEvent.SetUiEditMode -> setUiEditMode(event.enabled)
             MapUiEvent.ToggleDrawer -> toggleDrawer()
+            MapUiEvent.OpenDrawer -> openDrawer()
             is MapUiEvent.SetDrawerOpen -> setDrawerOpen(event.isOpen)
         }
     }
@@ -38,5 +39,13 @@ internal class MapScreenUiEventHandler(
             return
         }
         uiState.update { it.copy(isDrawerOpen = isOpen) }
+    }
+
+    private fun openDrawer() {
+        if (uiState.value.isDrawerOpen) {
+            return
+        }
+        uiState.update { it.copy(isDrawerOpen = true) }
+        uiEffects.tryEmit(MapUiEffect.OpenDrawer)
     }
 }

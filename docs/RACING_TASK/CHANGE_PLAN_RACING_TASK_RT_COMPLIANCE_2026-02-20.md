@@ -30,7 +30,7 @@ Read first:
 - Date: 2026-02-20
 - Issue/PR: ARCH-20260220-RT-COMPLIANCE
 - Status: Draft (implementation not started)
-- Recheck update: 2026-02-21 (third-pass delta applied after code + plan re-audit)
+- Recheck update: 2026-02-22 (sixth-pass delta applied after code + plan re-audit)
 - Related decision: Item 7 from codebase review is **CHANGE**, not leave-as-is.
 - Why item 7 is change-required:
   - Runtime is centered on `SimpleRacingTask` (`feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskManager.kt`) while richer `RacingTask` (`feature/map/src/main/java/com/example/xcpro/tasks/racing/models/RacingTask.kt`) is not runtime-authoritative.
@@ -136,6 +136,64 @@ Third-pass audit (code + plan + `docs/RACING_TASK`) found additional misses stil
    - Straight-in exemption for below-min-altitude finish-line crossings is not modeled.
    - Post-finish `land without delay` outcome/evidence tracking is not modeled.
 
+## 1D) Missed Items from Fourth Recheck (Delta)
+
+Fourth-pass audit found additional behavior and contract gaps:
+
+1. Navigation transition logic still uses dual-trigger fallback paths that can bypass boundary interpolation.
+   - `RacingNavigationEngine` triggers transitions via `crossing != null || inside/outside-change` checks for start/turn/finish.
+   - When planner crossing is absent, timestamps fall back to raw fix time (`previousFix`/`currentFix`) instead of boundary-derived time.
+2. Navigation event contract still lacks crossing geometry evidence.
+   - `RacingNavigationEvent` carries only type/index/time and no crossing point or inside/outside anchors.
+   - Downstream replay/UI must infer geometry independently, increasing drift risk.
+3. Replay anchor generation still bypasses the crossing planner.
+   - `RacingReplayAnchorBuilder` composes anchors from independent calculators and `lineCrossOffsetMeters(...)` heuristics, not from `RacingBoundaryCrossingPlanner` outputs.
+4. Boundary planner rejects border-state transitions too aggressively.
+   - `RacingBoundaryCrossingPlanner.isTransition(...)` exits when either side is `BORDER`, which can drop valid exact/tangent boundary cases.
+5. Navigation event delivery can silently drop events under burst conditions.
+   - `RacingNavigationStateStore` emits via `MutableSharedFlow(extraBufferCapacity = 1)` + `tryEmit`, so competition-significant events are not guaranteed delivery.
+
+## 1E) Missed Items from Fifth Recheck (Delta)
+
+Fifth-pass audit found additional contract-level misses:
+
+1. RT validity is still decided by simplistic size checks in multiple runtime paths.
+   - `TaskManagerCoordinator.isTaskValid()` delegates to `RacingTaskManager.isRacingTaskValid()`, which returns `_currentRacingTask.waypoints.size >= 2`.
+   - `DefaultRacingTaskEngine.publish(...)` sets `isTaskValid` from `task.waypoints.size >= 2`.
+   - These bypass the intended RT structure contract (Start + >=2 TP + Finish + profile/rule constraints).
+2. `gateWidth` remains semantically overloaded and inconsistent for line geometry semantics.
+   - `RacingWaypoint.gateWidth` represents mixed concepts (line length, cylinder radius, sector radius).
+   - `RacingWaypoint.effectiveRadius` comments treat line value as half-width, while render/detector paths treat it as line length then divide by two (`StartLineDisplay`, `FinishLineDisplay`, `RacingZoneDetector.lineSectorRadiusKm`).
+   - This creates high drift risk for validation, UI labels, and planner integration.
+3. Navigation controller lifecycle still lacks listener cleanup path.
+   - `TaskNavigationController.bind(...)` registers `addLegChangeListener` once and sets `legChangeListenerAdded = true`, but has no corresponding remove/unbind path.
+   - This risks stale callbacks across lifecycle edges and can silently change auto/manual advance behavior over time.
+
+## 1F) Missed Items from Sixth Recheck (Delta)
+
+Sixth-pass audit found additional architecture and compliance misses:
+
+1. Task-type switch and restore handoff are still waypoint-only and bypass canonical task semantics.
+   - `TaskManagerCoordinator.switchToTaskType(...)` migrates only `currentTask.waypoints` and rebuilds via `initializeFromGenericWaypoints(...)`.
+   - `TaskCoordinatorPersistenceBridge.applyEngineTaskToManager(...)` also hydrates managers from `state.base.task.waypoints` only.
+   - These paths drop task-level fidelity (ID/rules/metadata) and rely on reinitializers that can churn IDs.
+2. RT structure validation still misses start/finish cardinality and ordering invariants.
+   - `TaskValidator` checks only `any START`, `any FINISH`, and total minimum points (`minPoints = 2`).
+   - No explicit guard currently enforces exactly one start, exactly one finish, start-first/finish-last ordering, and >=2 interior turnpoints.
+3. FAI quadrant turnpoint transitions still lack planner-grade crossing interpolation.
+   - `RacingNavigationEngine` sets `crossing = null` for `RacingTurnPointType.FAI_QUADRANT`.
+   - Progression then advances only on `!insidePrevious && insideNow`, which skips intersection-derived crossing time for sparse-fix entries.
+4. Racing course validation wiring remains effectively stubbed.
+   - `RacingTaskManager.validateRacingCourse()` returns valid for any task with >=2 waypoints.
+   - `RacingTaskValidator.validateCourseLineTouchesWaypoints(...)` is instantiated but not invoked in the manager/runtime path.
+5. Replay preconditions still rely on `>=2` waypoint shortcuts instead of RT validity contract.
+   - `RacingReplayTaskHelpers.currentRacingTaskOrNull(...)` gates on `<2` only.
+   - `RacingReplayLogBuilder.build(...)` requires `waypoints.size >= 2`.
+   - `MapScreenReplayCoordinator` surfaces the same `at least 2 waypoints` assumption in user-facing behavior.
+6. Navigation fix-stream binding still lacks duplicate-collector guardrails.
+   - `TaskNavigationController.bind(...)` launches `fixes.onEach { ... }.launchIn(scope)` per bind call.
+   - No tracked bind job/cancellation contract exists to enforce one active collector.
+
 ## 2) Architecture Contract
 
 ### 2.1 SSOT Ownership
@@ -150,6 +208,8 @@ Third-pass audit (code + plan + `docs/RACING_TASK`) found additional misses stil
 | Legacy CUP compatibility mapping | `CupFormatUtils` + task file adapters | import/export use-cases | Per-feature custom CUP parser/writer forks |
 | Rule profile (strict/compat) | `Task.rules.racing.profile` | canonical task rules | Hidden fallback behavior by implicit defaults |
 | Deterministic task identity | canonical `Task.id` + deterministic derivation utility | task model + serializer | random UUID generation in runtime init paths |
+| Task-type switch/restore fidelity | canonical `Task` handoff across coordinator + persistence bridge | full task snapshot transfer (`Task`) | waypoint-only handoff/rebuild paths that lose task-level semantics |
+| RT task validity status | domain validator contract + repository projection | `TaskUiState.validation` + engine-consistent state | ad-hoc `waypoints.size >= 2` booleans in managers/engines |
 
 ### 2.2 Dependency Direction
 
@@ -171,6 +231,13 @@ Required:
 | Start/finish tolerance outcomes | Implicit crossing logic only | Explicit rule outcome model in nav events/state | UI and replay need auditability | Event contract tests |
 | RT structure validation | Generic `TaskValidator` min=2 | RT-specific structure contract | Align with RT docs | Validator tests |
 | Persisted task hydration/import | `TaskSheetViewModel` clear + rebuild via `addWaypoint` | Canonical hydrate path (`setTask` + targets + rules) in domain/use-case boundary | Prevent role/type/rule loss from positional rebuild | Import fidelity + round-trip tests |
+| Crossing evidence distribution | Navigation engine internal math + replay helper heuristics | Typed `RacingNavigationEvent` crossing evidence payload reused by replay/UI | Prevent geometry/time drift and duplicate crossing logic | Event payload + replay parity tests |
+| RT validity decision wiring | manager/engine local booleans | validator-backed single validity contract | Prevent conflicting validity truth across layers | Consistency tests |
+| RT geometric dimensions | overloaded `gateWidth` on waypoint | typed line/radius/sector dimension fields in rules/projection | Prevent unit/meaning drift | Dimension contract tests |
+| Navigation leg listener lifecycle | ad-hoc registration in controller | explicit bind/unbind lifecycle contract | Prevent stale callbacks/leaks | Lifecycle tests |
+| Task-type switch/restore handoff | waypoint-only rebuild via `initializeFromGenericWaypoints(...)` | canonical `Task` transfer preserving ID/rules/metadata | Prevent semantic loss on mode switch/restore | Switch/restore fidelity tests |
+| Racing course validation wiring | manager-local `>=2` validity stub | validator/planner-backed course validation contract | Prevent false-positive "valid" output | Validation wiring tests |
+| Replay entry gating for RT | `>=2` waypoint shortcuts in replay helpers | validator-backed RT validity precondition | Prevent replay on structurally invalid RT | Replay contract tests |
 
 ### 2.2B Bypass Removal Plan (Mandatory)
 
@@ -180,9 +247,19 @@ Required:
 | `feature/map/src/main/java/com/example/xcpro/tasks/data/persistence/TaskPersistenceAdapters.kt` | Persists RT through simplified model | Persist canonical task/rules via versioned serializer | Phase 8 |
 | `feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt` | `Any?` point-type bridge APIs | Typed RT rule/geometry update commands | Phase 7 |
 | `feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt` (`importPersistedTask`) | Clear + `addWaypoint` reconstruction + best-effort OZ patching | Canonical import hydration command (preserve roles/types/rules/ids) | Phase 8 |
+| `feature/map/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt` (`switchToTaskType`) | Migrates only waypoint list between task types | Canonical task snapshot transfer preserving ID/rules/metadata | Phase 2 |
+| `feature/map/src/main/java/com/example/xcpro/tasks/TaskCoordinatorPersistenceBridge.kt` (`applyEngineTaskToManager`) | Hydrates managers from `state.base.task.waypoints` only | Canonical `setTask`/snapshot handoff path | Phase 2 |
 | `feature/map/src/main/java/com/example/xcpro/tasks/racing/models/RacingTask.kt` | Separate rich model not runtime-owner | Deprecate then remove after migration | Phase 2/9 |
 | `feature/map/src/main/java/com/example/xcpro/map/RacingReplayTaskHelpers.kt` | Replay converts canonical task to `SimpleRacingTask` | Replay consumes canonical->nav projection only | Phase 2 |
+| `feature/map/src/main/java/com/example/xcpro/map/replay/RacingReplayAnchorBuilder.kt` | Replay-specific boundary heuristics (`lineCrossOffsetMeters`, local calculators) | Planner/event-derived crossing evidence for anchors | Phase 5/9 |
 | `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskInitializer.kt` | Random UUID task IDs | Deterministic ID policy utility | Phase 2B |
+| `feature/map/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt` + `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskManager.kt` | `isTaskValid` via `waypoints.size >= 2` | validator-backed validity projection | Phase 3 |
+| `feature/map/src/main/java/com/example/xcpro/tasks/domain/engine/DefaultRacingTaskEngine.kt` | `isTaskValid` via `waypoints.size >= 2` | validator-backed engine validity mapping | Phase 3 |
+| `feature/map/src/main/java/com/example/xcpro/tasks/TaskNavigationController.kt` | listener add without lifecycle remove | explicit unbind/dispose path | Phase 2/9 |
+| `feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationEngine.kt` (`FAI_QUADRANT` path) | No planner crossing (inside-change trigger only) | Planner-backed sector/quadrant crossing with interpolation | Phase 5 |
+| `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskManager.kt` (`validateRacingCourse`) | course validation returns valid for any `>=2` task | validator-backed structural + geometry validation | Phase 3 |
+| `feature/map/src/main/java/com/example/xcpro/map/RacingReplayTaskHelpers.kt` + `feature/map/src/main/java/com/example/xcpro/map/replay/RacingReplayLogBuilder.kt` | Replay entry checks rely on `>=2` only | Replay entry uses RT validator contract | Phase 9 |
+| `feature/map/src/main/java/com/example/xcpro/tasks/TaskNavigationController.kt` (`bind`) | Unbounded repeat collectors on repeated bind | single-active-bind contract with tracked/cancelled job | Phase 9 |
 
 ### 2.3 Time Base Declaration
 
@@ -242,6 +319,20 @@ Explicitly forbidden:
 | Crossing times not nearest-second | RT start/finish timing contract | Unit + replay tests | `RacingCrossingTimeNearestSecondTest` |
 | PEV cadence constraints not represented | Start procedure compliance | Unit tests | `RacingPevCadenceRulesTest` |
 | Finish straight-in/landing-delay outcomes missing | Finish procedure compliance | Unit tests | `RacingFinishStraightInExceptionTest`, `RacingPostFinishLandingDelayTest` |
+| Transitions triggered by heuristic fallback path | RT crossing/time determinism | Unit + replay parity tests | `RacingNavigationTransitionEvidenceTest` |
+| Event payload lacks crossing geometry evidence | SSOT/replay parity | Contract tests | `RacingNavigationEventCrossingPayloadTest` |
+| Replay anchor builder bypasses planner outputs | Replay/live geometry parity | Replay parity tests | `RacingReplayAnchorPlannerParityTest` |
+| Border-state transition suppression drops valid crossings | Boundary correctness | Boundary tests | `RacingBoundaryBorderTransitionTest` |
+| SharedFlow tryEmit drops nav events | Event reliability | Unit/integration tests | `RacingNavigationStateStoreDeliveryTest` |
+| RT validity bypass via size-only checks | RT structure/rule contract | Unit + integration tests | `RacingValidityContractConsistencyTest` |
+| `gateWidth` meaning drift across line/cylinder/sector paths | Geometry contract correctness | Unit tests | `RacingDimensionSemanticContractTest` |
+| Navigation controller listener not removed on lifecycle end | Lifecycle correctness | Unit/integration tests | `TaskNavigationControllerLifecycleTest` |
+| Task-type switch/restore loses ID/rules/metadata | SSOT handoff contract | Unit/integration tests | `TaskTypeSwitchRestoreFidelityTest` |
+| RT validator misses start/finish cardinality/order invariants | RT structure contract | Unit tests | `TaskValidatorRacingRoleCardinalityOrderTest` |
+| FAI quadrant transitions skip planner interpolation | RT crossing-time correctness | Unit/replay tests | `RacingQuadrantCrossingInterpolationTest` |
+| Racing course validation path is stubbed and disconnected | Validation correctness | Unit tests | `RacingCourseValidationWiringTest` |
+| Replay starts from `>=2` shortcut instead of RT validity | RT validity parity | Unit/integration tests | `RacingReplayValidityPreconditionTest` |
+| Repeated navigation bind creates duplicate fix collectors | Lifecycle/cadence correctness | Unit/integration tests | `TaskNavigationControllerBindIdempotencyTest` |
 
 ## 3) Target Architecture (Before -> After)
 
@@ -280,6 +371,11 @@ Planned additions under `feature/map/src/main/java/com/example/xcpro/tasks/core/
   - `finish: RacingFinishRules`
   - `validation: RacingValidationRules`
   - `energy: RacingEnergyRules`
+
+Dimension normalization policy:
+- Canonical rules should represent line length and circle/sector radii as separate typed fields.
+- `gateWidth` remains adapter-only compatibility input until migration completes.
+- No new runtime logic may infer line semantics from overloaded `gateWidth` alone.
 
 Planned rule details:
 - `RacingStartRules`:
@@ -320,6 +416,11 @@ Extend `feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/`:
   - `penaltyFlags: Set<RacingPenaltyFlag>`
   - `lastFixBeforeFinishClose: RacingNavigationFix?`
 - Event additions:
+  - crossing evidence payload:
+    - `crossingPoint`
+    - `insideAnchor`
+    - `outsideAnchor`
+    - `detectionSource` (`PLANNER_INTERSECTION`, `HEURISTIC_FALLBACK`, `MANUAL`)
   - `START_VALID`
   - `START_TOLERANCE_500M`
   - `START_REJECTED_GATE_CLOSED`
@@ -350,6 +451,10 @@ Engine behavior targets:
   - post-finish `land without delay` outcome tracking
   - contest-boundary landing special case (when configured)
   - first finish only
+- Transition source policy:
+  - planner intersection evidence is primary for scoring-grade transitions.
+  - heuristic inside/outside fallback is explicit, policy-gated, and marked in event source metadata.
+  - fallback path must never silently replace planner-grade timestamp when planner evidence exists.
 
 ## 3D) Navigation Fix Contract Upgrade
 
@@ -424,6 +529,7 @@ CUP strategy:
   - `feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/` (new `RacingNavTask`, mapper)
   - `feature/map/src/main/java/com/example/xcpro/tasks/TaskNavigationController.kt`
   - `feature/map/src/main/java/com/example/xcpro/tasks/TaskMapRenderRouter.kt`
+  - `feature/map/src/main/java/com/example/xcpro/tasks/TaskCoordinatorPersistenceBridge.kt`
   - `feature/map/src/main/java/com/example/xcpro/map/RacingReplayTaskHelpers.kt`
   - `feature/map/src/main/java/com/example/xcpro/map/replay/RacingReplayLogBuilder.kt`
   - `feature/map/src/main/java/com/example/xcpro/tasks/data/persistence/TaskPersistenceAdapters.kt`
@@ -435,9 +541,12 @@ CUP strategy:
   - Mapper invariants and no-loss geometry checks.
   - Navigation engine parity tests against baseline for unchanged scenarios.
   - Steering-point/`OPTIONAL` role preservation tests across mapper/persistence/replay paths.
+  - Task-type switch/restore fidelity tests (preserve `Task.id` and task-level semantics across manager/engine handoff).
 - Exit criteria:
   - Canonical task is runtime-owner; projection-only nav DTO in use.
   - No role-by-index rewrite in RT runtime mappers.
+  - Navigation controller listener lifecycle has explicit bind/unbind semantics (no orphan listener registrations).
+  - Switch/restore paths no longer migrate waypoint lists in isolation; canonical `Task` handoff preserves ID/rules/metadata.
 
 ### Phase 2B: Deterministic Identity and Defaults
 
@@ -462,16 +571,24 @@ CUP strategy:
 ### Phase 3: RT Structural Validation Contract
 
 - Goal:
-  - Enforce Start + >=2 TP + Finish and key geometry constraints.
+  - Enforce exactly one Start, >=2 interior TPs, one Finish, start-first/finish-last ordering, and key geometry constraints; make validator-backed validity the only runtime truth.
 - Files:
   - `feature/map/src/main/java/com/example/xcpro/tasks/domain/logic/TaskValidator.kt`
   - `feature/map/src/main/java/com/example/xcpro/tasks/TaskRepository.kt`
+  - `feature/map/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt`
+  - `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskManager.kt`
+  - `feature/map/src/main/java/com/example/xcpro/tasks/domain/engine/DefaultRacingTaskEngine.kt`
   - UI validation rendering files in `feature/map/src/main/java/com/example/xcpro/tasks/`
 - Tests:
   - New RT validator tests for structure and role sequencing.
+  - Start/finish cardinality and ordering tests (exactly one each, fixed boundary positions).
+  - Validity consistency tests across manager/engine/repository projections.
+  - Racing course validation wiring test (manager path delegates to validator contract, not `>=2` shortcut).
   - 45-degree leg-angle warning tests (warning-level, non-blocking by default).
 - Exit criteria:
   - Invalid RT structures cannot be marked valid.
+  - No `waypoints.size >= 2` validity shortcuts remain in RT runtime decision paths.
+  - `validateRacingCourse` path is validator-backed and cannot return valid solely from waypoint count.
 
 ### Phase 4: Start Procedure Compliance
 
@@ -501,18 +618,23 @@ CUP strategy:
 ### Phase 5: Turnpoint Strict + Near-Miss Logic
 
 - Goal:
-  - Full strict TP achievement plus near-miss reporting, and boundary math hardening for sparse-fix crossings.
+  - Full strict TP achievement plus near-miss reporting, boundary math hardening for sparse-fix crossings (including FAI quadrant interpolation), and explicit transition-source handling.
 - Files:
   - `feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/`
   - `feature/map/src/main/java/com/example/xcpro/tasks/racing/boundary/`
 - Tests:
   - Segment intersection and boundary interpolation tests (including nearest-second timestamp normalization).
+  - FAI quadrant crossing tests with planner-derived intersection time under sparse-fix sampling.
   - Sparse-fix line crossing tests (intersection-first path, with explicit noise guards).
+  - Border/tangent crossing tests where one or both fixes classify as BORDER.
+  - Transition-source tests that validate planner evidence precedence over heuristic fallback.
   - Near-miss 500 m tests.
   - Sequence enforcement tests.
 - Exit criteria:
   - TP progress exposes strict achievement and near-miss flags.
   - Line/start/finish crossing planner no longer drops valid sparse-fix intersections by radius prefilter.
+  - BORDER-classified edge cases do not suppress valid crossings when geometric intersection exists.
+  - `FAI_QUADRANT` transitions use planner-backed evidence/timestamp path (no inside-change-only fallback).
 
 ### Phase 6: Finish Procedure Compliance
 
@@ -587,10 +709,15 @@ CUP strategy:
   - `docs/RACING_TASK/task_creation_ui_spec.md` (actual UI behavior)
   - `docs/ARCHITECTURE/KNOWN_DEVIATIONS.md` (only if exception approved)
   - `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingMapRenderer.kt` (role-color expression consistency fix if not already addressed earlier)
+  - `feature/map/src/main/java/com/example/xcpro/map/replay/RacingReplayAnchorBuilder.kt` (remove planner-bypass anchor heuristics once parity path lands)
+  - `feature/map/src/main/java/com/example/xcpro/map/RacingReplayTaskHelpers.kt` (replace `>=2` gate with validator-backed RT validity precondition)
+  - `feature/map/src/main/java/com/example/xcpro/map/replay/RacingReplayLogBuilder.kt` (align replay preconditions with RT structure contract)
+  - `feature/map/src/main/java/com/example/xcpro/tasks/TaskNavigationController.kt` (lifecycle-safe listener cleanup)
   - `scripts/ci/enforce_rules.ps1` (add deterministic-ID and role-rewrite guardrails when feasible)
   - Remove/deprecate old model files once fully unused.
 - Tests:
   - Full required checks + relevant instrumentation.
+  - Replay precondition contract tests and bind-idempotency lifecycle tests.
 - Exit criteria:
   - No architectural drift, no dead-path model split, documentation updated.
 
@@ -601,6 +728,7 @@ CUP strategy:
 - Add typed RT rule classes and constraints in core models.
 - Keep all defaults explicit and deterministic.
 - Enforce invariants with constructor `require(...)` and targeted tests.
+- Add explicit dimension types/fields for line length vs radius semantics (no overloaded geometry meaning at canonical layer).
 
 ### 5.2 Navigation Evaluator Refactor
 
@@ -612,6 +740,9 @@ CUP strategy:
 - Keep `RacingBoundaryCrossingPlanner` as geometry primitive layer.
 - Replace truncating interpolation with nearest-second normalized crossing timestamps where RT timing semantics require it.
 - Make line-crossing evaluation intersection-first, then apply policy/noise guards (instead of dropping by coarse prefilter alone).
+- Add a planner-backed FAI quadrant crossing path (no `crossing = null` branch) so sparse-fix entries keep interpolation semantics.
+- Remove implicit `crossing || insideChange` ambiguity by making transition evidence source explicit and testable.
+- Propagate crossing evidence through event contracts so replay/UI consume SSOT event geometry.
 
 ### 5.3 ViewModel and Use-Case Command Typing
 
@@ -659,12 +790,26 @@ CUP strategy:
 - Navigation fix contract must carry altitude and speed observables.
 - Altitude reference handling (`MSL`/`QNH`) must use explicit conversion adapters and documented fallback behavior.
 
+### 5.9 Switch/Replay Validity Contracts
+
+- Remove waypoint-only transfer in task-type switch/restore flows; hand off canonical `Task` snapshots.
+- Ensure manager restore paths do not regenerate task IDs when task identity already exists.
+- Align replay entry conditions with RT validator outputs (not waypoint-count shortcuts).
+- Add explicit single-active-bind contract in `TaskNavigationController` to prevent duplicate fix collectors.
+
 ## 6) Test Plan
 
 - Unit tests:
   - Rule model invariants.
   - Validator contract tests.
+  - Start/finish cardinality and ordering tests (exactly one start, exactly one finish, start-first/finish-last, >=2 interior TPs).
+  - Validity consistency tests (validator result equals manager/engine-reported validity).
+  - Task-type switch/restore fidelity tests (ID + task-level semantics preserved across coordinator/persistence handoffs).
+  - Dimension semantic tests (line length, line half-width derivation, cylinder/sector radii consistency).
   - Start/TP/Finish evaluator tests.
+  - FAI quadrant planner interpolation tests (sparse-fix entry cases).
+  - Transition source precedence tests (planner vs heuristic).
+  - Navigation event payload tests (crossing point/anchors/source).
   - Serializer compatibility tests.
   - Deterministic ID tests (no random runtime IDs).
   - Deterministic ID collision-resistance tests.
@@ -673,12 +818,16 @@ CUP strategy:
   - Role preservation tests for steering/optional waypoints.
   - Start-line unit contract tests (km input vs meter geometry conversions explicit and tested).
   - Crossing timestamp nearest-second tests.
+  - Border-state crossing acceptance tests.
   - PEV cadence tests (max presses/dedupe/min interval).
   - Finish straight-in exception and post-finish landing-delay tests.
+  - Racing course validation wiring tests (`RacingTaskManager.validateRacingCourse` delegates to validator contract).
 - Replay/regression tests:
   - Deterministic replay twice with identical event/state trace.
+  - Replay precondition tests that enforce RT validator-backed validity (no `>=2` shortcut entry).
   - Replay tests for gate-close and near-miss scenarios.
   - Replay tests that assert nearest-second crossing event time parity for start/finish.
+  - Replay anchor parity tests using event/planner-derived crossing evidence (no independent line-offset heuristics).
   - Replay-builder parity tests after removal of `SimpleRacingTask` coupling.
 - UI tests:
   - Rules editor rendering and intent dispatch.
@@ -689,10 +838,13 @@ CUP strategy:
   - Invalid imported rule payloads.
   - Unsupported PEV data availability path.
   - Missing altitude/speed in fixes (graceful degradation behavior).
+  - Navigation controller rebind/dispose lifecycle tests (no duplicate/stale leg listeners).
+  - TaskNavigationController bind idempotency tests (single active fix collector across repeated bind calls).
 - Boundary tests:
   - Line crossing directional edge cases.
   - Ring enter/leave with sparse fixes.
   - Line crossing sparse-fix segment intersection cases (including one endpoint outside radius).
+  - BORDER classification cases with valid segment intersection.
   - Finish close at exact boundary time.
   - Contest boundary stop detection (`stop + 5 min`) when configured.
 
@@ -700,17 +852,28 @@ CUP strategy:
 
 - No rule violations against `ARCHITECTURE.md` and `CODING_RULES.md`.
 - Item 7 resolved: no dual authoritative RT runtime models.
-- RT validator enforces Start + >=2 TP + Finish.
+- RT validator enforces exactly one Start, >=2 interior TPs, one Finish, and start-first/finish-last ordering.
 - Start/turn/finish outcomes explicitly encode strict/tolerance/near-miss/closure states.
 - Replay remains deterministic for identical input.
 - `TaskPersistSerializer` round-trips RT rules without silent data loss.
 - Task import path preserves role/type/rule/ID fidelity (no lossy rebuild via `addWaypoint`).
+- Task-type switch/restore flows preserve canonical task-level semantics (ID/rules/metadata), not waypoint-only rebuilds.
 - No random UUID-based RT task IDs in runtime initialization paths.
 - Deterministic fallback IDs are collision-resistant and include rule metadata in derivation input.
 - No role-by-index rewrites in RT runtime that erase explicit steering/optional semantics.
 - Crossing timestamps used for start/finish semantics are nearest-second normalized.
 - Start-line optimal crossing uses explicit unit-safe meter contract.
 - Sparse-fix valid line crossings are not dropped by coarse prefilter.
+- FAI quadrant transitions produce planner-grade crossing evidence/timestamp (not inside-change-only detection).
+- Transition events expose crossing geometry evidence and explicit detection source.
+- Planner-grade transition evidence is preferred and fallback transitions are explicitly marked.
+- Navigation event delivery path does not silently drop competition-relevant events.
+- RT validity state is validator-backed and consistent across manager/engine/repository.
+- Racing course validation path is validator-backed and cannot pass purely from `>=2` waypoint count.
+- Replay preconditions use validator-backed RT validity, not `>=2` waypoint shortcuts.
+- RT line geometry semantics are unambiguous (line length vs half-width derivation) across model/detector/rendering.
+- Navigation controller listener registration is lifecycle-safe and does not leak stale callbacks.
+- Navigation fix-stream binding is lifecycle-safe and idempotent (no duplicate collectors after repeated bind).
 - Navigation fix contract carries required altitude/speed data for RT rule checks.
 - PEV cadence constraints (max 3, 30-second dedupe, 10-minute interval where applicable) are explicit and tested.
 - Finish straight-in exception and post-finish landing-delay outcomes are explicit and tested.
@@ -733,7 +896,19 @@ CUP strategy:
 | Steering-point semantics lost by index rewrites | High | Remove rewrite paths and add role-preservation tests | XCPro Team |
 | Start-line unit mismatch in optimal crossing path | Medium/High | Explicit unit contract + unit tests | XCPro Team |
 | Sparse-fix crossings missed by planner prefilter | High | Intersection-first boundary evaluation + sparse-fix tests | XCPro Team |
+| BORDER classification suppresses valid intersections | Medium/High | Border-aware transition policy + boundary tests | XCPro Team |
 | Missing nearest-second normalization causes timing drift | High | Nearest-second rounding policy + replay parity tests | XCPro Team |
+| Heuristic fallback path bypasses interpolated evidence | High | Transition-source precedence policy + contract tests | XCPro Team |
+| Replay anchor builder geometry diverges from nav planner | High | Planner/event-driven anchor generation + parity tests | XCPro Team |
+| Nav event flow may drop events under load | Medium/High | Reliable emission strategy + delivery tests | XCPro Team |
+| RT validity drift from size-only shortcuts | High | Remove shortcuts + consistency tests + enforceRules guard | XCPro Team |
+| Task-type switch/restore drops task-level semantics | High | Canonical task handoff + switch/restore fidelity tests | XCPro Team |
+| Validator cardinality/order holes allow invalid RT layouts | High | Explicit cardinality/order contract + validator tests | XCPro Team |
+| FAI quadrant transitions skip interpolation under sparse fixes | Medium/High | Planner-backed quadrant crossing path + replay parity tests | XCPro Team |
+| Replay can start on structurally invalid RT via `>=2` shortcut | Medium/High | Validator-backed replay precondition + replay contract tests | XCPro Team |
+| Repeated bind creates duplicate navigation collectors | Medium | Bind idempotency contract + lifecycle tests | XCPro Team |
+| Overloaded `gateWidth` semantics cause line/radius drift | High | Typed dimensions + adapter migration + semantic tests | XCPro Team |
+| Nav controller listener lifecycle leaks | Medium/High | Explicit unbind cleanup + lifecycle tests | XCPro Team |
 | PEV cadence rules incompletely modeled | Medium | Typed cadence policy + dedicated tests | XCPro Team |
 | Finish straight-in/landing-delay semantics omitted | High | Explicit finish outcomes + policy tests | XCPro Team |
 

@@ -616,7 +616,7 @@ class MapScreenViewModelTest {
     }
 
     @Test
-    fun adsbIconSize_defaultsTo56Px() {
+    fun adsbIconSize_defaultsToConfiguredDefaultPx() {
         val viewModel = createViewModel()
 
         assertEquals(ADSB_ICON_SIZE_DEFAULT_PX, viewModel.adsbIconSizePx.value)

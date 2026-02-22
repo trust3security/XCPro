@@ -10,22 +10,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Map
 import androidx.compose.material3.Card
+import androidx.compose.material3.DrawerState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -38,48 +33,34 @@ import com.example.xcpro.common.units.SpeedUnit
 import com.example.xcpro.common.units.TemperatureUnit
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.units.VerticalSpeedUnit
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UnitsSettingsScreen(
-    navController: NavHostController
+    navController: NavHostController,
+    drawerState: DrawerState
 ) {
     val viewModel: UnitsSettingsViewModel = hiltViewModel()
     val units by viewModel.units.collectAsStateWithLifecycle(initialValue = UnitsPreferences())
     val scrollState = rememberScrollState()
+    val scope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
-                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
-                ),
-                title = {
-                    Text(
-                        text = "Units",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
+            SettingsTopAppBar(
+                title = "Units",
+                onNavigateUp = { navController.navigateUp() },
+                onSecondaryNavigate = {
+                    scope.launch {
+                        navController.popBackStack("map", inclusive = false)
+                        drawerState.open()
                     }
                 },
-                actions = {
-                    IconButton(onClick = {
+                onNavigateToMap = {
+                    scope.launch {
+                        drawerState.close()
                         navController.popBackStack("map", inclusive = false)
-                    }) {
-                        Icon(
-                            imageVector = Icons.Default.Map,
-                            contentDescription = "Go to Map"
-                        )
                     }
                 }
             )

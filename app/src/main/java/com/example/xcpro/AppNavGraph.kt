@@ -86,7 +86,7 @@ fun AppNavGraph(
             )
         }
         composable("look_and_feel") { LookAndFeelScreen(navController = navController, drawerState = drawerState) }
-        composable("units_settings") { UnitsSettingsScreen(navController = navController) }
+        composable("units_settings") { UnitsSettingsScreen(navController = navController, drawerState = drawerState) }
         composable("polar_settings") { PolarSettingsScreen(navController = navController, drawerState = drawerState) }
         composable("levo_vario_settings") { LevoVarioSettingsScreen(navController = navController, drawerState = drawerState) }
         composable("hawk_vario_settings") { HawkVarioSettingsScreen(navController = navController, drawerState = drawerState) }

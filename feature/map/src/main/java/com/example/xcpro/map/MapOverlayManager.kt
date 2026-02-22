@@ -163,25 +163,7 @@ class MapOverlayManager(
                 Log.d(TAG, "Blue location overlay initialized via style change")
             }
             if (map != null) {
-                mapState.ognTrafficOverlay?.cleanup()
-                mapState.ognTrafficOverlay = createOgnTrafficOverlay(map)
-                mapState.ognTrafficOverlay?.initialize()
-                mapState.ognTrafficOverlay?.render(latestOgnTargets)
-
-                mapState.ognThermalOverlay?.cleanup()
-                mapState.ognThermalOverlay = createOgnThermalOverlay(map)
-                mapState.ognThermalOverlay?.initialize()
-                mapState.ognThermalOverlay?.render(latestOgnThermalHotspots)
-
-                mapState.ognGliderTrailOverlay?.cleanup()
-                mapState.ognGliderTrailOverlay = createOgnGliderTrailOverlay(map)
-                mapState.ognGliderTrailOverlay?.initialize()
-                mapState.ognGliderTrailOverlay?.render(latestOgnGliderTrailSegments)
-
-                mapState.adsbTrafficOverlay?.cleanup()
-                mapState.adsbTrafficOverlay = createAdsbTrafficOverlay(map)
-                mapState.adsbTrafficOverlay?.initialize()
-                mapState.adsbTrafficOverlay?.render(latestAdsbTargets)
+                initializeTrafficOverlays(map)
 
                 mapState.forecastOverlay?.cleanup()
                 mapState.forecastSecondaryOverlay?.cleanup()
@@ -223,21 +205,7 @@ class MapOverlayManager(
             refreshWaypoints(map)
             taskRenderSyncCoordinator.onOverlayRefresh(map)
             if (map != null) {
-                mapState.ognTrafficOverlay = createOgnTrafficOverlay(map)
-                mapState.ognTrafficOverlay?.initialize()
-                mapState.ognTrafficOverlay?.render(latestOgnTargets)
-
-                mapState.ognThermalOverlay = createOgnThermalOverlay(map)
-                mapState.ognThermalOverlay?.initialize()
-                mapState.ognThermalOverlay?.render(latestOgnThermalHotspots)
-
-                mapState.ognGliderTrailOverlay = createOgnGliderTrailOverlay(map)
-                mapState.ognGliderTrailOverlay?.initialize()
-                mapState.ognGliderTrailOverlay?.render(latestOgnGliderTrailSegments)
-
-                mapState.adsbTrafficOverlay = createAdsbTrafficOverlay(map)
-                mapState.adsbTrafficOverlay?.initialize()
-                mapState.adsbTrafficOverlay?.render(latestAdsbTargets)
+                initializeTrafficOverlays(map)
 
                 mapState.forecastOverlay = ForecastRasterOverlay(
                     map = map,
@@ -262,6 +230,29 @@ class MapOverlayManager(
         } catch (e: Exception) {
             Log.e(TAG, "Error initializing overlays: ${e.message}", e)
         }
+    }
+
+    fun initializeTrafficOverlays(map: MapLibreMap?) {
+        if (map == null) return
+        mapState.ognTrafficOverlay?.cleanup()
+        mapState.ognTrafficOverlay = createOgnTrafficOverlay(map)
+        mapState.ognTrafficOverlay?.initialize()
+        mapState.ognTrafficOverlay?.render(latestOgnTargets)
+
+        mapState.ognThermalOverlay?.cleanup()
+        mapState.ognThermalOverlay = createOgnThermalOverlay(map)
+        mapState.ognThermalOverlay?.initialize()
+        mapState.ognThermalOverlay?.render(latestOgnThermalHotspots)
+
+        mapState.ognGliderTrailOverlay?.cleanup()
+        mapState.ognGliderTrailOverlay = createOgnGliderTrailOverlay(map)
+        mapState.ognGliderTrailOverlay?.initialize()
+        mapState.ognGliderTrailOverlay?.render(latestOgnGliderTrailSegments)
+
+        mapState.adsbTrafficOverlay?.cleanup()
+        mapState.adsbTrafficOverlay = createAdsbTrafficOverlay(map)
+        mapState.adsbTrafficOverlay?.initialize()
+        mapState.adsbTrafficOverlay?.render(latestAdsbTargets)
     }
 
     fun requestTaskRenderSync() {

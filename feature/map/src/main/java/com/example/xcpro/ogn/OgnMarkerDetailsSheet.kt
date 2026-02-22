@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.xcpro.adsb.AdsbDetailsFormatter
 import com.example.xcpro.common.units.AltitudeM
+import com.example.xcpro.common.units.DistanceM
 import com.example.xcpro.common.units.SpeedMs
 import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.UnitsPreferences
@@ -29,6 +30,10 @@ fun OgnMarkerDetailsSheet(
     unitsPreferences: UnitsPreferences,
     onDismiss: () -> Unit
 ) {
+    val competitionId = target.identity?.competitionNumber?.takeIf { it.isNotBlank() }
+        ?: target.displayLabel.ifBlank { target.callsign }
+    val aircraftModel = target.identity?.aircraftModel?.takeIf { it.isNotBlank() }
+
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
@@ -37,11 +42,24 @@ fun OgnMarkerDetailsSheet(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(
-                text = target.displayLabel.ifBlank { target.callsign },
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = competitionId,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f)
+                )
+                if (aircraftModel != null) {
+                    Text(
+                        text = aircraftModel,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
 
             Text(
                 text = "Flight state",
@@ -49,15 +67,13 @@ fun OgnMarkerDetailsSheet(
                 color = MaterialTheme.colorScheme.primary
             )
             DetailRow("Altitude", formatAltitude(target.altitudeMeters, unitsPreferences))
+            DetailRow("Distance", formatDistance(target.distanceMeters, unitsPreferences))
             DetailRow("Speed", formatSpeed(target.groundSpeedMps, unitsPreferences))
             DetailRow(
                 "Vertical Rate",
                 AdsbDetailsFormatter.formatVerticalRate(target.verticalSpeedMps, unitsPreferences)
             )
             DetailRow("Track", formatTrack(target.trackDegrees))
-            DetailRow("Signal", target.signalDb?.let { String.format(Locale.US, "%.1f dB", it) } ?: "--")
-            DetailRow("Latitude", String.format(Locale.US, "%.5f", target.latitude))
-            DetailRow("Longitude", String.format(Locale.US, "%.5f", target.longitude))
 
             Text(
                 text = "Identity",
@@ -116,6 +132,12 @@ private fun formatAltitude(altitudeMeters: Double?, unitsPreferences: UnitsPrefe
 
 private fun formatSpeed(speedMps: Double?, unitsPreferences: UnitsPreferences): String =
     speedMps?.let { UnitsFormatter.speed(SpeedMs(it), unitsPreferences).text } ?: "--"
+
+private fun formatDistance(distanceMeters: Double?, unitsPreferences: UnitsPreferences): String =
+    distanceMeters
+        ?.takeIf { it.isFinite() }
+        ?.let { UnitsFormatter.distance(DistanceM(it), unitsPreferences).text }
+        ?: "--"
 
 private fun formatTrack(trackDegrees: Double?): String =
     trackDegrees?.let { String.format(Locale.US, "%.1f\u00B0", it) } ?: "--"

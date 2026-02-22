@@ -118,6 +118,7 @@ internal fun MapScreenScaffold(inputs: MapScreenScaffoldInputs) {
                     onBallastCommand = inputs.onBallastCommand,
                     onHamburgerTap = inputs.onHamburgerTap,
                     onHamburgerLongPress = inputs.onHamburgerLongPress,
+                    onOpenWeatherSettingsFromTab = inputs.onOpenWeatherSettingsFromTab,
                     cardStyle = inputs.cardStyle,
                     hiddenCardIds = inputs.hiddenCardIds,
                     replayState = inputs.replayState,

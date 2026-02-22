@@ -19,6 +19,7 @@ interface SensorFusionRepository {
     fun setMacCreadySetting(value: Double)
     fun setMacCreadyRisk(value: Double)
     fun setAutoMcEnabled(enabled: Boolean)
+    fun setTotalEnergyCompensationEnabled(enabled: Boolean)
     fun setFlightMode(mode: com.example.xcpro.common.flight.FlightMode)
     fun updateReplayRealVario(realVarioMs: Double?, timestampMillis: Long)
     fun stop()

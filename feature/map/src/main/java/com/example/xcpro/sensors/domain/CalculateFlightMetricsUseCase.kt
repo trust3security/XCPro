@@ -111,6 +111,7 @@ internal class CalculateFlightMetricsUseCase(
 
         val teSpeed = chosenAirspeed?.trueMs
         val teVario = if (
+            request.teCompensationEnabled &&
             teSpeed != null &&
             chosenAirspeed.source.energyHeightEligible &&
             teSpeed > TE_MIN_SPEED_MS &&
@@ -229,7 +230,10 @@ internal class CalculateFlightMetricsUseCase(
             isValid = varioValid
         )
         if (!calibrationChanged) {
-            val thermalAltitude = if (snapshot.airspeedSource.energyHeightEligible) {
+            val thermalAltitude = if (
+                request.teCompensationEnabled &&
+                snapshot.airspeedSource.energyHeightEligible
+            ) {
                 teAltitude
             } else {
                 navAltitude
@@ -426,6 +430,7 @@ data class FlightMetricsRequest(
     val isFlying: Boolean,
     val macCreadySetting: Double,
     val autoMcEnabled: Boolean,
+    val teCompensationEnabled: Boolean = true,
     val flightMode: FlightMode
 )
 

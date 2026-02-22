@@ -119,7 +119,10 @@ Course parsing:
 
 ## On-Map Rendering Behavior
 
-- Icon: `R.drawable.ic_adsb_glider`
+- Icon:
+  - default: `R.drawable.ic_adsb_glider`
+  - DDB `aircraftTypeCode == 2` (tow/tug aircraft): `R.drawable.ic_ogn_tug`
+  - DDB `aircraftTypeCode == 6` (hang glider) or `== 7` (paraglider): `R.drawable.ic_ogn_hangglider`
 - OGN trails:
   - Source/layer IDs:
     - `ogn-glider-trail-source`

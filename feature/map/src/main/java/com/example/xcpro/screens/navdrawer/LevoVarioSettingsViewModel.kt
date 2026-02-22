@@ -15,6 +15,7 @@ data class LevoVarioUiState(
     val macCready: Double = 0.0,
     val macCreadyRisk: Double = 0.0,
     val autoMcEnabled: Boolean = true,
+    val teCompensationEnabled: Boolean = true,
     val showWindSpeedOnVario: Boolean = true,
     val audioSettings: VarioAudioSettings = VarioAudioSettings()
 )
@@ -31,6 +32,7 @@ class LevoVarioSettingsViewModel @Inject constructor(
             macCready = config.macCready,
             macCreadyRisk = config.macCreadyRisk,
             autoMcEnabled = config.autoMcEnabled,
+            teCompensationEnabled = config.teCompensationEnabled,
             showWindSpeedOnVario = config.showWindSpeedOnVario,
             audioSettings = config.audioSettings
         )
@@ -56,6 +58,12 @@ class LevoVarioSettingsViewModel @Inject constructor(
     fun setAutoMcEnabled(enabled: Boolean) {
         viewModelScope.launch {
             useCase.setAutoMcEnabled(enabled)
+        }
+    }
+
+    fun setTeCompensationEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            useCase.setTeCompensationEnabled(enabled)
         }
     }
 

@@ -10,6 +10,9 @@ import com.example.xcpro.common.units.SpeedMs
 import com.example.xcpro.glider.StillAirSinkProvider
 import com.example.xcpro.sensors.FlightCalculationHelpers
 import com.example.xcpro.sensors.GPSData
+import com.example.xcpro.weather.wind.model.WindSource
+import com.example.xcpro.weather.wind.model.WindState
+import com.example.xcpro.weather.wind.model.WindVector
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -201,6 +204,40 @@ class CalculateFlightMetricsUseCaseTest {
         )
 
         assertTrue(result.teVario == null || result.varioSource != "TE")
+    }
+
+    @Test
+    fun te_toggle_off_disables_te_even_with_valid_wind_airspeed() {
+        val teValue = 2.75
+        val useCase = newUseCase { teValue }
+        val wind = WindState(
+            vector = WindVector(east = 2.0, north = 0.0),
+            source = WindSource.MANUAL,
+            quality = 5,
+            stale = false,
+            confidence = 1.0
+        )
+        val altitude = 700.0
+
+        val result = useCase.execute(
+            FlightMetricsRequest(
+                gps = gpsSample(0L),
+                currentTimeMillis = 0L,
+                wallTimeMillis = 0L,
+                gpsTimestampMillis = 0L,
+                deltaTimeSeconds = 1.0,
+                varioResult = varioSample(0.6, altitude),
+                varioGpsValue = 0.6,
+                baroResult = null,
+                windState = wind,
+                varioValidUntil = 3_000L,
+                isFlying = true, macCreadySetting = 0.0, autoMcEnabled = false, flightMode = FlightMode.CRUISE,
+                teCompensationEnabled = false
+            )
+        )
+        assertEquals("WIND", result.airspeedSourceLabel)
+        assertTrue(result.teVario == null)
+        assertTrue(result.varioSource != "TE")
     }
 
     @Test

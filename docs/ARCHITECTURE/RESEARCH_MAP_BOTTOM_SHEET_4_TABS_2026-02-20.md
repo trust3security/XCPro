@@ -49,6 +49,14 @@ Locked defaults applied to plan:
    - keep explicit helper path copy in tab UX:
      - `Settings -> General -> RainViewer`,
    - and expand navdrawer `Settings` section before/while opening drawer when persisted collapsed.
+9. Drawer command policy:
+   - Weather advanced action should use dedicated explicit-open request path,
+   - preserve hamburger toggle semantics,
+   - treat discoverability expansion as transient unless user explicitly changes drawer section preference.
+10. Task-panel arbitration policy:
+   - treat panel non-hidden states (`COLLAPSED` + expanded) as panel-visible for modal/tab conflicts.
+11. Drawer/sheet sequencing policy:
+   - Weather advanced action must pass sheet-dismiss completion barrier before dispatching drawer-open command.
 
 ## Current Codebase Findings (Map Screen)
 
@@ -114,7 +122,8 @@ Implication:
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
   - Already very large; integration should be done via extracted layer composables.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
-  - Has existing drawer-open callback path (`onHamburgerTap`) that can support `2A` Weather MVP `More Weather Settings` action without adding new nav callback plumbing.
+  - Has existing drawer callback path (`onHamburgerTap`), but it is currently toggle-based and shared with hamburger widget semantics.
+  - Reusing it directly for `2A` Weather advanced action risks toggle misfire and block-bypass behavior in AAT edit mode.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
   - Bottom-start debug panels and bottom-end replay/demo buttons already occupy lower screen space.
 - No `feature/map/src/androidTest` folder currently exists; map UI interaction coverage is primarily JVM + Robolectric compose tests.
@@ -330,6 +339,38 @@ Implication:
    - Existing plan checks drawer-first behavior generally.
    - Needed explicit checks for `Weather`->`General`->`RainViewer` discoverability and collapsed-section start state.
 
+## Deep-Pass Gaps Found After Thirteenth Review
+
+1. Existing hamburger toggle path can bypass drawer block while mode is unchanged.
+   - `MapScreenRuntimeEffects` enforces drawer block only on `taskType`/`isAATEditMode` changes.
+   - `onHamburgerTap` still emits toggle-based open requests while blocked mode is active.
+   - Result: drawer can reopen in AAT edit mode after initial close, unless open commands are guarded at request-time.
+
+2. Weather advanced action should not reuse hamburger toggle callback.
+   - `onHamburgerTap` is a shared UI affordance with toggle semantics.
+   - Reusing it for deterministic `More Weather Settings` open behavior conflates intent and increases regression risk.
+
+3. Discoverability expansion policy lacked persistence semantics.
+   - Forcing `Settings` section expanded improves path discoverability.
+   - Without explicit policy, this can unintentionally overwrite persisted navdrawer expansion preference.
+   - Plan should lock whether expansion is transient (recommended) or persisted by design.
+
+## Deep-Pass Gaps Found After Fourteenth Review
+
+1. Task-panel state wording was too narrow in parts of plan.
+   - Current back-handler enables task handling whenever panel state is non-hidden, not only expanded.
+   - `COLLAPSED` state still participates in back-precedence logic.
+   - Contracts that mention only "expanded" can miss real conflict cases.
+
+2. Task-panel visibility sources are inconsistent today.
+   - `MapScreenRoot` uses non-hidden panel state for back behavior.
+   - `MapActionButtons` uses `showTaskBottomSheet` (expanded-only) for some button behavior.
+   - Plan should lock one policy for tabbed modal/task-panel arbitration based on panel non-hidden state.
+
+3. Drawer/sheet sequencing still lacked an explicit async completion barrier.
+   - Contract says "dismiss sheet first, then open drawer."
+   - Without awaiting dismissal completion (or equivalent deterministic barrier), open-drawer can race sheet-hide animation and briefly overlap surfaces.
+
 ## Weather Settings Ownership and Scope (Verified in Code)
 
 - Read path in map:
@@ -380,6 +421,44 @@ Implication:
 - Persisted discoverability variable:
   - `app/src/main/java/com/example/xcpro/AppNavGraph.kt`
   - `settingsExpanded` is restored from config and can be user-collapsed.
+
+## Drawer Block Enforcement Gap (Verified in Code)
+
+- Current enforcement location:
+  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRuntimeEffects.kt`
+  - Block/close logic runs in `LaunchedEffect(isAATEditMode, taskType)`.
+
+- Current open request path:
+  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt`
+  - hamburger sends `MapUiEvent.ToggleDrawer`.
+  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenUiEventHandler.kt`
+  - `toggleDrawer()` emits `MapUiEffect.OpenDrawer` when mirrored state says closed.
+  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenSideEffects.kt`
+  - `MapUiEffect.OpenDrawer -> drawerState.open()`.
+
+- Implication:
+  - While AAT edit mode remains unchanged, later explicit/toggle open requests are not automatically rejected by runtime effect.
+  - Blocking must be enforced at drawer-open request time, not only on mode-change effect.
+
+## Task-Panel Visibility Semantics Gap (Verified in Code)
+
+- Back-handler visibility predicate:
+  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
+  - `isTaskPanelVisible = panelState != MapTaskScreenManager.TaskPanelState.HIDDEN`.
+  - `MapScreenBackHandler` is enabled using that non-hidden predicate.
+
+- Task-panel states:
+  - `feature/map/src/main/java/com/example/xcpro/map/MapTaskScreenManager.kt`
+  - states include `HIDDEN`, `COLLAPSED`, `EXPANDED_PARTIAL`, `EXPANDED_FULL`.
+  - `handleBackGesture()` closes panel for any non-hidden state.
+
+- Button-path visibility source differs:
+  - `feature/map/src/main/java/com/example/xcpro/map/components/MapActionButtons.kt`
+  - reads `showTaskBottomSheet`, which is true only for expanded states.
+  - `COLLAPSED` is treated differently on this path.
+
+- Implication:
+  - Any tabbed-sheet/task-panel arbitration tied only to "expanded" state can diverge from actual back precedence and produce order surprises.
 
 ## SkySight Tab Option Mapping (Verified in Code)
 
@@ -520,8 +599,8 @@ Reason:
   - `SkySight` is fixed as tab 2.
 - Whether tapping the active tab should close the sheet.
 - Whether existing Forecast FAB should remain during rollout or be replaced by one tab.
-- Conflict policy when task panel is expanded:
-  - hide tabs, or keep tabs visible but disabled.
+- Conflict policy when task panel is non-hidden (including `COLLAPSED`):
+  - defaults now lock to panel-visible arbitration; remaining choice is hide vs disable visual treatment.
 - Conflict policy when traffic details sheet is visible:
   - dismiss details then open tabs, or block tabs while details are visible.
 - Locked defaults already chosen for this slice:
@@ -530,4 +609,5 @@ Reason:
   - `3B` deferred satellite option,
   - modal host strategy,
   - explicit drawer-open semantics for `More Weather Settings`,
-  - drawer-first route discoverability helper (`Settings -> General -> RainViewer`) with collapsed-settings expansion policy.
+  - drawer-first route discoverability helper (`Settings -> General -> RainViewer`) with collapsed-settings expansion policy,
+  - drawer command separation policy (dedicated weather-open request + preserved hamburger toggle + transient forced expansion).

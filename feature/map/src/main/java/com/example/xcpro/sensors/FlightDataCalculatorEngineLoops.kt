@@ -198,6 +198,7 @@ internal fun FlightDataCalculatorEngine.updateVarioFilter(baro: BaroData?, accel
                 macCreadySetting = macCreadySetting,
                 macCreadyRisk = macCreadyRisk,
                 autoMcEnabled = autoMcEnabled,
+                teCompensationEnabled = totalEnergyCompensationEnabled,
                 flightMode = flightMode
             )
         }
@@ -308,6 +309,7 @@ internal fun FlightDataCalculatorEngine.updateGPSData(gps: GPSData?, compass: Co
             macCreadySetting = macCreadySetting,
             macCreadyRisk = macCreadyRisk,
             autoMcEnabled = autoMcEnabled,
+            teCompensationEnabled = totalEnergyCompensationEnabled,
             flightMode = flightMode
         )
     }

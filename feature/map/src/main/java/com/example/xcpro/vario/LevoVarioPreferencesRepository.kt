@@ -20,6 +20,7 @@ private val Context.levoVarioDataStore: DataStore<Preferences> by preferencesDat
 private val KEY_MACCREADY = doublePreferencesKey("maccready_value")
 private val KEY_MACCREADY_RISK = doublePreferencesKey("maccready_risk_value")
 private val KEY_AUTO_MC_ENABLED = booleanPreferencesKey("auto_mc_enabled")
+private val KEY_TE_COMPENSATION_ENABLED = booleanPreferencesKey("te_compensation_enabled")
 private val KEY_SHOW_WIND_SPEED_ON_VARIO = booleanPreferencesKey("show_wind_speed_on_vario")
 private val KEY_SHOW_HAWK_CARD = booleanPreferencesKey("show_hawk_card")
 private val KEY_ENABLE_HAWK_UI = booleanPreferencesKey("enable_hawk_ui")
@@ -40,6 +41,7 @@ data class LevoVarioConfig(
     val macCready: Double = 0.0,
     val macCreadyRisk: Double = 0.0,
     val autoMcEnabled: Boolean = true,
+    val teCompensationEnabled: Boolean = true,
     val showWindSpeedOnVario: Boolean = true,
     val showHawkCard: Boolean = false,
     val enableHawkUi: Boolean = false,
@@ -62,6 +64,7 @@ class LevoVarioPreferencesRepository @Inject constructor(
             macCready = mac,
             macCreadyRisk = prefs[KEY_MACCREADY_RISK] ?: mac,
             autoMcEnabled = prefs[KEY_AUTO_MC_ENABLED] ?: true,
+            teCompensationEnabled = prefs[KEY_TE_COMPENSATION_ENABLED] ?: true,
             showWindSpeedOnVario = prefs[KEY_SHOW_WIND_SPEED_ON_VARIO] ?: true,
             showHawkCard = prefs[KEY_SHOW_HAWK_CARD] ?: false,
             enableHawkUi = prefs[KEY_ENABLE_HAWK_UI] ?: false,
@@ -89,6 +92,12 @@ class LevoVarioPreferencesRepository @Inject constructor(
     suspend fun setAutoMcEnabled(enabled: Boolean) {
         context.levoVarioDataStore.edit { prefs ->
             prefs[KEY_AUTO_MC_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setTeCompensationEnabled(enabled: Boolean) {
+        context.levoVarioDataStore.edit { prefs ->
+            prefs[KEY_TE_COMPENSATION_ENABLED] = enabled
         }
     }
 

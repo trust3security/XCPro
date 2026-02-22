@@ -6,7 +6,7 @@ Implementation plan for adding a compact 4-tab bottom sheet entry on MapScreen.
 This plan is intentionally UI-layer scoped and preserves existing map/task/sensor pipelines.
 
 Date: 2026-02-20
-Status: Draft (defaults locked: 1B, 2A, 3B, 4A + modal host + discoverability policy)
+Status: Draft (defaults locked: 1B, 2A, 3B, 4A + modal host + discoverability + drawer-command + task-panel policy)
 
 Read first:
 
@@ -22,7 +22,7 @@ Read first:
 - Owner: XCPro Team
 - Date: 2026-02-20
 - Issue/PR: TBD
-- Status: Draft (defaults locked: 1B, 2A, 3B, 4A + modal host + discoverability policy)
+- Status: Draft (defaults locked: 1B, 2A, 3B, 4A + modal host + discoverability + drawer-command + task-panel policy)
 
 ## 1) Scope
 
@@ -58,6 +58,9 @@ Read first:
   - Add explicit bottom inset handling so the tab strip is safe above system navigation bars.
   - Define deterministic behavior when `More Weather Settings` is invoked while drawer is blocked by task-edit mode.
   - Define deterministic V1 discoverability for drawer-first weather advanced path (`Settings -> General -> RainViewer`).
+  - Define drawer-command separation so Weather advanced action does not depend on hamburger toggle semantics.
+  - Define tabbed-sheet/task-panel arbitration using non-hidden panel semantics (not expanded-only wording).
+  - Define async sequencing barrier for Weather advanced flow: open drawer only after sheet-dismiss completion.
   - Keep initial integration line-budget safe by isolating new logic in new UI files.
 
 - Out of scope:
@@ -131,6 +134,9 @@ This plan iteration locks these defaults:
 4. `4A` Drawer-open determinism: use explicit open semantics for `More Weather Settings` (no ambiguous toggle path).
 5. Drawer-blocked fallback in V1: if drawer is blocked by task-edit mode, `More Weather Settings` is disabled with explanatory copy (no hidden no-op).
 6. Drawer-first discoverability fallback in V1: Weather tab helper copy explicitly calls out `Settings -> General -> RainViewer`.
+7. Drawer-command separation fallback in V1: Weather advanced action uses dedicated explicit-open request, not hamburger toggle callback reuse.
+8. Task-panel arbitration fallback in V1: treat panel non-hidden state (`COLLAPSED` or expanded) as blocking/conflicting for tabbed-sheet open paths.
+9. Weather advanced sequencing fallback in V1: dismiss sheet completion barrier is required before drawer open command dispatch.
 
 ### 1.0F Modal Host Policy (Locked)
 
@@ -171,6 +177,30 @@ Required for this slice:
 3. `More Weather Settings` action should ensure the navdrawer `Settings` section is expanded before/while opening drawer.
 4. Weather-tab helper copy must acknowledge current `RainViewer` label to avoid Weather-vs-RainViewer ambiguity.
 5. Discoverability behavior must be test-covered (manual + compose) and not rely on user memory of drawer hierarchy.
+
+### 1.0J Drawer Command Separation and Expansion Persistence Contract (Locked)
+
+Required for this slice:
+
+1. `More Weather Settings` must use a dedicated explicit drawer-open request path; it must not call shared hamburger toggle callback directly.
+2. Hamburger widget tap behavior remains toggle-based (no regression in existing close/open semantics for that control).
+3. Drawer block predicate must guard any drawer-open vector, including:
+   - dedicated weather advanced open request,
+   - hamburger toggle when current drawer state is closed,
+   - any future programmatic explicit-open effect path.
+4. Discoverability-driven `Settings` section expansion is transient by default:
+   - do not persist forced expansion as a user preference change unless user explicitly toggles the section.
+
+### 1.0K Task-Panel Visibility and Sequencing Contract (Locked)
+
+Required for this slice:
+
+1. Tabbed-sheet/task-panel arbitration must use panel non-hidden semantics:
+   - `COLLAPSED`, `EXPANDED_PARTIAL`, and `EXPANDED_FULL` are all treated as panel-visible for conflict policy.
+2. Any contracts/tests that currently refer to "expanded only" must be interpreted as non-hidden unless explicitly scoped otherwise.
+3. Weather advanced sequence must use an async completion barrier:
+   - do not dispatch drawer-open command until tab sheet dismissal is completed.
+4. If dismissal completion cannot be observed directly in this slice, define a deterministic one-shot callback barrier in host state helper and test it.
 
 ### 1.1 SkySight Tab Option Mapping (Required)
 
@@ -244,7 +274,11 @@ Explicitly out of this slice:
 | Weather runtime metadata/status (frame, freshness, staleness) | Existing weather runtime owner (`ObserveWeatherOverlayStateUseCase`/`WeatherOverlayViewModel`) | Existing `overlayState` flow | Parallel runtime models computed only in tab UI |
 | Weather attribution action | Shared weather attribution helper (weather package) | Explicit link handler contract aligned with existing Weather settings | Hardcoded duplicate attribution links/handlers with drift |
 | Weather advanced-route helper copy | Weather tab UI spec (single owner in tab host) | Static helper text + semantics tag | Hidden/implicit route assumptions that rely on user memory |
+| Drawer command intent (hamburger toggle vs weather advanced explicit open) | Map UI event/interaction boundary (single owner contract) | Distinct command paths with shared block predicate | Reusing hamburger toggle callback for weather advanced action |
 | Navdrawer `Settings` section expansion state | Existing navdrawer state owner (`settingsExpanded`) | Existing navdrawer config state + deterministic open-flow update | Local duplicated expansion flags detached from drawer owner |
+| Discoverability-driven `Settings` expansion override | Map UI temporary interaction state | Transient one-shot override semantics | Persisted preference mutation caused by forced expansion |
+| Task-panel visibility predicate for modal arbitration | Existing task panel owner (`MapTaskScreenManager.taskPanelState`) | Non-hidden predicate (collapsed+expanded) projected once into arbitration helper | Expanded-only checks that diverge from back-handler behavior |
+| Weather advanced sequencing barrier | Tab host interaction coordinator | Sheet-dismiss completion token/callback | Fire-and-forget open drawer before sheet dismissal completion |
 | Traffic detail selection state | Existing `MapScreenTrafficCoordinator`/`MapScreenViewModel` owners | Existing selected-target flows | New local mirrors of selected detail IDs in Compose |
 | Tab-specific future settings | Existing feature ViewModels/repos (per feature) | Existing flows/use-cases | New hidden global mutable state |
 
@@ -265,6 +299,7 @@ Likely touched files:
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentOverlays.kt`
 - New files under `feature/map/src/main/java/com/example/xcpro/map/ui/` for bottom tabs + sheet host state/arbiter.
 - New shared weather-settings contract files under `feature/map/src/main/java/com/example/xcpro/weather/rain/` (to avoid map->navdrawer coupling).
+- `feature/map/src/main/java/com/example/xcpro/navdrawer/DrawerMenuSections.kt` (if discoverability expansion behavior needs section-state wiring)
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenContract.kt` (if explicit drawer-open event is added)
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenUiEventHandler.kt` (if explicit drawer-open event is handled)
 - Optional migration files:
@@ -288,8 +323,12 @@ Likely touched files:
 | Weather attribution affordance | Navdrawer weather screen only | Weather tab contract with explicit attribution link action | Preserve provider attribution access after tab rollout | compose + manual link validation |
 | `More Weather Settings` drawer action | Toggle-based drawer path | Deterministic drawer-open contract (`1.0G`) | Avoid accidental drawer close or inconsistent behavior | state + compose tests |
 | Weather advanced-route discoverability | Implicit user memory of drawer hierarchy and labels | Explicit helper-copy + settings-section expansion contract (`1.0I`) | Prevent Weather-vs-RainViewer confusion and dead-end perception | compose + manual discoverability checks |
+| Drawer command separation | Shared hamburger toggle callback reused for multiple intents | Dedicated weather advanced explicit-open path + preserved hamburger toggle path (`1.0J`) | Prevent intent conflation and command regressions | state + compose tests |
 | Drawer open intent path from map UI | `ToggleDrawer` emits effects; `SetDrawerOpen(true)` updates state but does not open drawer UI | Add explicit open command path (`OpenDrawer` event/effect or direct open callback) | Avoid "explicit open" silently becoming no-op | event-handler tests + compose flow checks |
 | Drawer block enforcement | Runtime effect closes drawer on mode change but does not gate later programmatic `OpenDrawer` calls | Gate drawer-open commands with block predicate (`taskType` + `isAATEditMode`) | Ensure blocked mode cannot be bypassed by explicit open calls | state + compose tests |
+| Discoverability expansion persistence | Forced section expand could become persisted preference accidentally | Transient one-shot expansion override by default (`1.0J`) | Preserve user expansion preference unless explicitly changed | state + manual tests |
+| Task-panel arbitration predicate | Mixed expanded-only vs non-hidden checks across paths | Normalize to non-hidden predicate (`1.0K`) | Align modal arbitration with back-handler semantics | state + compose tests |
+| Weather advanced dismiss/open sequencing | "Dismiss then open" phrasing without completion barrier | Completion-gated open command (`1.0K`) | Prevent transient overlap/race between sheet and drawer | compose/manual sequencing tests |
 | Tab switching while modal is open | External launcher can be obscured by modal/scrim | In-sheet footer tabs bound to same selected-tab owner (`1.0H`) | Preserve discrete tab switching UX while sheet is visible | compose tests |
 | Tab host state continuity on config change | Implicit non-saveable local state | Saveable selected-tab policy in host state helper | Prevent avoidable tab-context resets | state tests |
 
@@ -310,6 +349,10 @@ Likely touched files:
 | Weather tab direct dependency on navdrawer weather use-case | Map UI importing navdrawer package contracts | Shared weather settings contract under weather package used by both entrypoints | Phase 1 |
 | `More Weather Settings` uses drawer toggle semantics | `ToggleDrawer` path may close instead of open under state drift | Explicit drawer-open path (or proven deterministic-open guard + tests) | Phase 1/2 |
 | Weather advanced route relies on implicit user memory | Drawer-first route requires extra taps and label translation (`Weather` vs `RainViewer`) | Explicit helper-copy contract + settings-section expansion flow | Phase 1/2 |
+| Weather advanced action reuses shared hamburger callback | Hamburger toggle semantics conflated with explicit advanced-open intent | Dedicated weather-open command path while preserving hamburger toggle behavior | Phase 1/2 |
+| Forced `Settings` section expansion persists unexpectedly | Discoverability expansion can overwrite user collapse preference via later config saves | Transient expansion override policy with explicit non-persistence checks | Phase 1/2 |
+| Task-panel conflict checks rely on expanded-only state | `COLLAPSED` panel can still affect back precedence but may be ignored by modal arbitration | Use non-hidden panel predicate for arbitration and tests | Phase 1/2 |
+| Drawer-open command dispatched before sheet dismiss completion | Fire-and-forget sequencing can overlap surfaces during animations | Completion-gated command barrier for weather advanced flow | Phase 1/2 |
 | Non-saveable tab context | Local `remember` state resets on config recreation | Saveable tab-state helper policy (`rememberSaveable`) | Phase 1 |
 
 ### 2.2C Modal and Panel Precedence Contract
@@ -317,7 +360,7 @@ Likely touched files:
 Required behavior:
 
 1. If airspace modal overlay is visible, bottom-tab interactions are disabled.
-2. If task panel is expanded, bottom-tab strip is hidden (or disabled per final UX choice).
+2. If task panel is non-hidden (`COLLAPSED` or expanded), bottom-tab strip is hidden (or disabled per final UX choice).
 3. If traffic details sheet is visible and user taps a tab, details are dismissed first, then tab sheet opens.
 4. When bottom-tab sheet is visible, detail-selection callbacks close tab sheet before selecting a detail target.
 5. Back press with bottom-tab sheet visible dismisses that sheet before task panel/back-stack handling.
@@ -327,6 +370,8 @@ Required behavior:
 9. If drawer-open is blocked by task-edit mode, `More Weather Settings` action must be disabled and explicit about why.
 10. Drawer-first weather path must remain discoverable in-place via helper copy (`Settings -> General -> RainViewer`).
 11. If navdrawer `Settings` section is collapsed, weather advanced action must expand it before/while opening drawer.
+12. While drawer-block predicate is active, hamburger toggle requests must not reopen drawer from closed state.
+13. Weather advanced action must dispatch drawer-open only after tab-sheet dismissal completion barrier is satisfied.
 
 ### 2.2D Layering and Input Routing Contract
 
@@ -398,6 +443,7 @@ Required:
 9. If drawer-open is blocked by task-edit mode, `More Weather Settings` action must be disabled with explicit reason text.
 10. Weather tab must provide helper copy for V1 drawer-first route (`Settings -> General -> RainViewer`).
 11. If navdrawer `Settings` is collapsed, weather advanced action must expand it before/while opening drawer.
+12. Weather advanced action must await sheet-dismiss completion barrier before drawer-open dispatch.
 
 ### 2.2J Single-Modal Surface Contract (Modal Strategy)
 
@@ -436,7 +482,8 @@ Required:
 1. Drawer-block predicate for map route must be explicit (`taskType == AAT && isAATEditMode` under current rules).
 2. Blocked state must gate explicit/programmatic drawer-open commands (not gesture path only).
 3. `More Weather Settings` action must honor the same predicate used by drawer-open guard.
-4. When blocked, UI must present deterministic behavior (disabled action + reason text), never silent no-op.
+4. Existing hamburger toggle open path must also honor the same predicate when drawer is currently closed.
+5. When blocked, UI must present deterministic behavior (disabled action + reason text), never silent no-op.
 
 ### 2.2N Tab Host State Persistence Contract
 
@@ -456,6 +503,24 @@ Required:
 3. `More Weather Settings` flow should expand navdrawer `Settings` section before/while opening drawer.
 4. Discoverability must be deterministic even when `settingsExpanded` was previously persisted as collapsed.
 5. Direct deep-link callback plumbing is not required in this slice as long as contract items above are met.
+
+### 2.2P Discoverability Expansion Persistence Contract
+
+Required:
+
+1. Any forced `Settings` section expansion used for discoverability is transient by default.
+2. Forced expansion must not be treated as a user preference mutation unless user explicitly toggles section state.
+3. Subsequent unrelated drawer-config saves must not accidentally persist forced expansion state as user intent.
+4. If persistence behavior differs from this default, document it explicitly and test expected UX.
+
+### 2.2Q Task-Panel Predicate and Drawer Sequencing Barrier Contract
+
+Required:
+
+1. Tabbed-sheet arbitration must use task-panel non-hidden predicate to align with map back-handler behavior.
+2. `COLLAPSED` task-panel state is treated as visible for conflict policy unless explicitly overridden in approved UX contract.
+3. Weather advanced flow must await sheet-dismiss completion (or equivalent deterministic barrier) before dispatching drawer-open command.
+4. Sequencing barrier implementation must be test-covered against fast repeated taps and animation-in-progress cases.
 
 ### 2.3 Time Base
 
@@ -514,6 +579,10 @@ Explicitly forbidden:
 | Selected tab resets unexpectedly on config recreation | UX continuity | enforce Section 2.2N saveable state policy + tests | tab-state persistence tests |
 | Drawer-first Weather advanced path is perceived as broken due no deep-link | UX expectation | explicit V1 contract + manual UX checks | drawer-first expectation checks |
 | Weather advanced path discoverability degrades due `Weather` vs `RainViewer` naming and collapsed `Settings` section | UX expectation | enforce Section 2.2O helper-copy + section-expansion contract | weather advanced-route discoverability tests |
+| Hamburger toggle reopens drawer while blocked mode is active | interaction determinism | enforce Section 2.2M guard on toggle-open branch | drawer-block toggle-path tests |
+| Forced discoverability expansion unintentionally persists as drawer preference | UX consistency | enforce Section 2.2P transient expansion policy + tests | settings-expansion persistence tests |
+| Task-panel arbitration ignores collapsed state while back handler treats it as visible | interaction determinism | enforce Section 2.2Q non-hidden predicate policy | task-panel predicate alignment tests |
+| Drawer opens before sheet-dismiss completion causing transient overlap | modal sequencing | enforce Section 2.2Q sequencing barrier | dismiss-open sequencing barrier tests |
 
 ## 3) Data Flow (Before -> After)
 
@@ -575,8 +644,9 @@ Weather advanced-settings flow (MVP):
 ```
 Weather tab "More Weather Settings" tap
 -> dismiss tab sheet
--> ensure drawer `Settings` section is expanded
--> trigger explicit drawer-open action (non-toggle semantics)
+-> await/confirm sheet dismissal completion barrier
+-> apply transient `Settings`-section discoverability expansion (no preference persist-by-default)
+-> trigger dedicated weather-advanced explicit drawer-open action (non-toggle semantics)
 -> user taps `General`
 -> user taps `RainViewer` (current weather settings card label)
 ```
@@ -596,6 +666,16 @@ Explicit open drawer request
 -> evaluate drawer-block predicate (`taskType`, `isAATEditMode`)
 -> if blocked: reject open + keep explanatory UI state
 -> if allowed: emit/open drawer command
+```
+
+Hamburger toggle flow with block guard (target):
+
+```
+Hamburger tap
+-> if drawer currently open: allow close path
+-> if drawer currently closed: evaluate drawer-block predicate
+   -> blocked: reject open
+   -> allowed: execute toggle-open path
 ```
 
 Legacy forecast flow while dual-entry remains (required arbitration):
@@ -656,9 +736,13 @@ Sensors -> Repository (SSOT) -> UseCases -> ViewModel -> UI
   - Fixed drawer-open determinism contract from Section 1.0G.
   - Fixed dual-tab-surface and drawer-blocked policy from Section 1.0H.
   - Fixed drawer-first discoverability contract from Section 1.0I.
+  - Fixed drawer command separation + expansion persistence contract from Section 1.0J.
+  - Fixed task-panel visibility + sequencing contract from Section 1.0K.
   - Fixed drawer-block enforcement contract from Section 2.2M.
   - Fixed tab-state persistence contract from Section 2.2N.
   - Fixed weather advanced-route discoverability contract from Section 2.2O.
+  - Fixed discoverability expansion persistence contract from Section 2.2P.
+  - Fixed task-panel predicate + sequencing barrier contract from Section 2.2Q.
   - Fixed forecast parity gate from Section 2.2H.
 
 - Exit criteria:
@@ -713,6 +797,9 @@ Sensors -> Repository (SSOT) -> UseCases -> ViewModel -> UI
   - Compact visuals maintain reliable tap targets.
   - Drawer-blocked state is surfaced in Weather tab (`More Weather Settings` disabled with reason).
   - Weather tab includes explicit drawer-first helper copy (`Settings -> General -> RainViewer`).
+  - Weather advanced action uses dedicated explicit drawer-open request path (no shared hamburger callback reuse).
+  - Discoverability-driven `Settings` section expansion follows transient (non-persist-by-default) policy.
+  - Weather advanced action enforces dismissal-completion barrier before drawer-open dispatch.
 
 - Exit criteria:
   - Host composables compile.
@@ -733,7 +820,7 @@ Sensors -> Repository (SSOT) -> UseCases -> ViewModel -> UI
   - Apply navigation-bar-safe bottom padding.
   - Ensure tab strip is composed above map gesture layer (no click-through).
   - Hide/disable external launcher tabs when sheet is open and use in-sheet footer tabs for tab switching.
-  - Hide/disable tabs when task panel is expanded (per approved contract).
+  - Hide/disable tabs when task panel is non-hidden (collapsed or expanded; per approved contract).
   - Resolve tab-sheet/detail-sheet coexistence via explicit wrappers.
   - Reserve bottom-end lane for existing AAT/replay/demo controls.
   - Handle DEBUG bottom-start debug panel coexistence.
@@ -744,13 +831,17 @@ Sensors -> Repository (SSOT) -> UseCases -> ViewModel -> UI
   - Do not remove existing navdrawer weather settings entrypoint in this phase.
   - For `2A`, do not add direct weather-route navigation callback plumbing in this slice; use existing drawer-open action for `More Weather Settings`.
   - `More Weather Settings` action sequence must be deterministic: dismiss sheet first, then open drawer.
+  - `More Weather Settings` action must await dismissal-completion barrier before drawer-open command dispatch.
   - `More Weather Settings` action should set/ensure navdrawer `Settings` section expanded before/while opening drawer.
+  - Forced `Settings` section expansion for discoverability must be transient by default (no preference persistence unless explicit user action).
+  - Preserve hamburger widget toggle semantics; do not repurpose hamburger callback as weather advanced explicit-open action.
   - Ensure single-modal arbitration across tabbed modal and existing detail/forecast modals.
   - Ensure legacy forecast FAB/detail modal paths also follow single-modal arbitration while dual-entry remains.
   - Ensure legacy forecast FAB open path is gated when task panel is visible.
   - Do not treat `MapModalManager.isAnyModalOpen()` as authoritative for modal-sheet visibility.
   - Do not rely on `SetDrawerOpen(true)` for explicit drawer open without effect emission; use an explicit open command path.
   - Do not rely on drawer-gesture blocking for safety; `NavigationDrawer` gestures are disabled, so explicit open commands must be block-guarded.
+  - Ensure drawer block guard is applied on hamburger toggle-open branch as well (not just dedicated explicit-open path).
 
 - Exit criteria:
   - Tapping each tab opens sheet and switches content.
@@ -814,7 +905,11 @@ Sensors -> Repository (SSOT) -> UseCases -> ViewModel -> UI
   - Drawer-open determinism tests: advanced-settings action cannot close drawer by toggle misfire.
   - Drawer-blocked behavior tests: weather advanced action is disabled with reason while drawer is task-blocked.
   - Drawer-block enforcement tests: explicit/programmatic open requests are rejected while block predicate is true.
+  - Drawer-block toggle-path tests: hamburger tap cannot reopen drawer from closed state while block predicate is true.
   - Weather advanced-route discoverability tests: helper copy and collapsed-settings-section path remain understandable and deterministic.
+  - Discoverability expansion persistence tests: forced section expansion does not persist as user preference by default.
+  - Task-panel predicate alignment tests: `COLLAPSED` state follows same modal arbitration policy as expanded states.
+  - Dismiss-open sequencing barrier tests: rapid `More Weather Settings` taps do not open drawer before sheet-dismiss completion.
   - Legacy forecast/task-panel gating tests: forecast modal cannot open while task panel is visible.
   - Tab-state persistence tests: selected tab follows saveable policy across configuration recreation.
   - Drawer-first Weather settings UX checks: behavior is intentional and discoverable in V1.
@@ -832,7 +927,7 @@ Sensors -> Repository (SSOT) -> UseCases -> ViewModel -> UI
     - `openTab()` selects and opens.
     - selecting same tab follows approved toggle policy.
     - dismiss clears visibility but preserves selected tab policy.
-    - conflict rules (task panel expanded/details modal visible) are enforced.
+    - conflict rules (task panel non-hidden/details modal visible) are enforced.
   - `feature/map/src/test/java/com/example/xcpro/map/ui/MapBottomSheetTabsHostTest.kt`
     - tab tap opens sheet.
     - selected tab changes visible content.
@@ -865,6 +960,11 @@ Sensors -> Repository (SSOT) -> UseCases -> ViewModel -> UI
     - `More Weather Settings` action is disabled with explicit reason when drawer is blocked by task-edit mode.
     - `Weather` tab shows helper copy for drawer-first route (`Settings -> General -> RainViewer`).
     - `More Weather Settings` action expands navdrawer `Settings` section before/while drawer open.
+    - `More Weather Settings` action uses dedicated explicit-open path and does not reuse hamburger toggle callback.
+    - Forced discoverability expansion does not persist as user preference by default.
+    - Hamburger tap while blocked mode is active cannot reopen drawer from closed state.
+    - Task panel `COLLAPSED` state is treated as panel-visible for tabbed-sheet conflict policy.
+    - Weather advanced action does not dispatch drawer-open before sheet-dismiss completion barrier.
     - legacy forecast FAB path cannot open forecast modal while task panel is visible.
   - Update/add map UI test for coexistence behavior with existing detail-sheet callbacks.
   - Add map UI test that validates modal arbitration does not depend on `MapModalManager` airspace-only flags.
@@ -875,25 +975,30 @@ Sensors -> Repository (SSOT) -> UseCases -> ViewModel -> UI
   - Small-screen portrait and landscape.
   - Gesture-navigation device (bottom nav bar overlap).
   - With task panel visible.
+  - With task panel collapsed (minimized bar visible) and with task panel expanded.
   - With OGN/ADS-B details sheets.
   - With airspace modal open.
   - With replay running.
   - With debug panels visible (DEBUG build) and demo/replay bottom-end buttons shown.
-  - Back press with task panel expanded + tab sheet open (sheet must dismiss first).
+  - Back press with task panel non-hidden (collapsed or expanded) + tab sheet open (sheet must dismiss first).
   - While sheet is open, in-sheet footer tabs switch tabs and stay in sync with launcher-tab selection.
   - With detail sheet open, tapping tab dismisses detail sheet before tabbed modal appears.
   - With detail sheet open, forecast FAB tap does not produce overlapping modal sheets.
   - With task panel visible, forecast FAB does not open forecast modal until panel policy is satisfied.
+  - With task panel collapsed (not hidden), tabbed-sheet open policy matches configured panel-visible contract.
   - With forecast modal open, selecting OGN/thermal/ADS-B detail does not produce overlapping modal sheets.
   - Existing forecast advanced controls remain reachable in initial slice.
   - Existing navdrawer Weather settings remain reachable in initial slice.
   - Change Weather in tab and verify navdrawer Weather screen reflects same value (and vice versa).
   - Weather attribution link opens successfully from tabbed flow.
   - `More Weather Settings` action closes tab sheet and opens drawer (no overlapping surfaces).
+  - Rapid repeated `More Weather Settings` taps still honor dismiss-completion barrier (no drawer-open before sheet dismissed).
   - In AAT edit mode (drawer blocked), `More Weather Settings` is disabled with clear reason text.
   - `More Weather Settings` drawer-first behavior is understandable in V1 (no direct weather deep-link expected).
   - Starting with navdrawer `Settings` collapsed, `More Weather Settings` still exposes a clear path to `General` then `RainViewer`.
   - Weather-tab helper copy explicitly references `RainViewer` naming to avoid ambiguity.
+  - In blocked mode with drawer closed, tapping hamburger does not reopen drawer.
+  - After discoverability-triggered section expansion, reopening app/route still respects original persisted `settingsExpanded` preference unless user explicitly changed it.
 
 Required checks:
 
@@ -942,6 +1047,10 @@ Note:
 | Drawer-open path closes drawer due toggle-state drift | Medium | Prefer explicit open command path + deterministic state tests | XCPro Team |
 | Drawer blocked in AAT edit mode makes advanced weather action appear broken | Medium | Disable action with reason while blocked; test blocked-state behavior | XCPro Team |
 | Drawer-first weather advanced path is unclear because UI label says `Weather` but settings entry says `RainViewer` | Medium | Add helper-copy contract + collapsed-settings expansion behavior + tests | XCPro Team |
+| Hamburger toggle path reopens drawer while blocked mode is active | High | Apply block guard to toggle-open branch and test blocked hamburger behavior | XCPro Team |
+| Discoverability-triggered section expansion unintentionally persists as user preference | Medium | Lock transient default policy and add persistence-behavior tests | XCPro Team |
+| Task-panel `COLLAPSED` state behaves differently from expanded states and causes back/modal conflicts | Medium | Normalize arbitration to non-hidden predicate and test collapsed-state paths | XCPro Team |
+| Drawer opens before sheet-dismiss completion under fast taps | Medium | Add completion-gated sequencing barrier with rapid-tap tests | XCPro Team |
 | Forecast FAB opens modal while task panel is visible, causing back-order confusion | Medium | Add deterministic forecast/task-panel gating and regression tests | XCPro Team |
 
 ## 7) Acceptance Gates
@@ -965,6 +1074,11 @@ Note:
 - `More Weather Settings` behavior is drawer-first in V1; direct weather deep-link is not required in this slice.
 - `Weather` tab includes drawer-first helper copy that references current labels: `Settings -> General -> RainViewer`.
 - When navdrawer `Settings` is collapsed, `More Weather Settings` flow expands it so `General` remains discoverable.
+- `More Weather Settings` action uses a dedicated explicit-open drawer request path (no shared hamburger-toggle callback reuse).
+- In blocked mode, hamburger toggle path cannot reopen drawer from closed state.
+- Discoverability-driven `Settings` expansion is transient by default and does not persist as user preference mutation unless explicitly changed by user.
+- Task-panel conflict policy uses non-hidden semantics (`COLLAPSED` and expanded states treated as panel-visible for arbitration).
+- Weather advanced flow awaits sheet-dismiss completion barrier before dispatching drawer-open command.
 - `SkySight` tab includes:
   - `Thermal Tops`
   - `Convergence`

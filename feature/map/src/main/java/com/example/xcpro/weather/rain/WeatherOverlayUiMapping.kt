@@ -1,6 +1,7 @@
 package com.example.xcpro.weather.rain
 
 enum class WeatherMapConfidenceLevel {
+    LOADING,
     LIVE,
     STALE,
     ERROR
@@ -31,6 +32,13 @@ fun resolveWeatherMapConfidenceState(
 
     val selectedFrame = runtimeState.selectedFrame
     if (selectedFrame == null) {
+        if (isInitialMetadataBootstrap(runtimeState)) {
+            return WeatherMapConfidenceState(
+                visible = true,
+                level = WeatherMapConfidenceLevel.LOADING,
+                label = "Rain Loading"
+            )
+        }
         return WeatherMapConfidenceState(
             visible = true,
             level = WeatherMapConfidenceLevel.ERROR,
@@ -70,3 +78,10 @@ private val HARD_ERROR_STATUSES: Set<WeatherRadarStatusCode> = setOf(
     WeatherRadarStatusCode.NO_FRAMES,
     WeatherRadarStatusCode.PARSE_ERROR
 )
+
+private fun isInitialMetadataBootstrap(
+    runtimeState: WeatherOverlayRuntimeState
+): Boolean =
+    runtimeState.metadataStatus == WeatherRadarStatusCode.NO_METADATA &&
+        runtimeState.lastSuccessfulMetadataFetchWallMs == null &&
+        runtimeState.metadataDetail.isNullOrBlank()

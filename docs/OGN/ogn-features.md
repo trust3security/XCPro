@@ -22,6 +22,16 @@
 
 ---
 
+## 0B) Policy Update (2026-02-22)
+
+- OGN and ADS-b icon-size policy is now aligned.
+- Effective range/default for both:
+  - min: `124 px`
+  - default: `124 px`
+  - max: `248 px`
+
+---
+
 ## 1) Objective
 
 Render OGN glider traffic targets on the map using `ic_adsb_glider.png` (instead of dot/circle markers), while preserving current OGN behavior:
@@ -115,7 +125,7 @@ This plan changes only runtime visual representation for OGN targets and keeps p
 - Keep OGN icon sizing contract:
   - min: `124 px`
   - default: `124 px`
-  - max: `512 px`
+  - max: `248 px`
 - Convert px value to MapLibre scale:
   - `iconScale = configuredPx / baseBitmapPx`
 - Scale label Y-offset with icon scale to keep text spacing stable.
@@ -198,7 +208,7 @@ Targeted tests:
 
 1. Enable OGN and verify icons are glider image, not circles.
 2. Verify icon rotation follows track where present.
-3. Move OGN slider to 124 and 512, verify live resizing.
+3. Move OGN slider to 124 and 248, verify live resizing.
 4. Switch map style and verify icon + size persist.
 5. Pan map and confirm viewport-culling behavior remains sane.
 6. Confirm stale targets fade and disappear on expected timings.
@@ -285,7 +295,7 @@ Use this section as the default execution contract for future OGN display work.
   - OGN preference clamp/read/write (`OgnTrafficPreferencesRepositoryTest`).
   - ViewModel exposure of persisted OGN size (`MapScreenViewModelTest`).
 - Manual:
-  - Screenshot evidence at `124 px`, `256 px`, and `512 px`.
+  - Screenshot evidence at `124 px`, `186 px`, and `248 px`.
   - One style-switch clip proving reapply behavior.
 
 ### 13.5 Safe Extension Strategy

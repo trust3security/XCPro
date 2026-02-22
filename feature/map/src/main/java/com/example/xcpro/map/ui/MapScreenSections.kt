@@ -5,6 +5,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.pointer.pointerInteropFilter
@@ -205,6 +206,8 @@ private fun MapViewHost(
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
+    val latestOnMapReady = rememberUpdatedState(onMapReady)
+    val latestMapInitializer = rememberUpdatedState(mapInitializer)
     AndroidView(
         factory = { ctx ->
             MapView(ctx).apply {
@@ -215,7 +218,7 @@ private fun MapViewHost(
                     if (!scope.isActive) {
                         return@getMapAsync
                     }
-                    runCatching { onMapReady(map) }
+                    runCatching { latestOnMapReady.value(map) }
                         .onFailure { callbackError ->
                             Log.e(
                                 "MapViewHost",
@@ -224,7 +227,7 @@ private fun MapViewHost(
                             )
                         }
                     scope.launch {
-                        runCatching { mapInitializer.initializeMap(map) }
+                        runCatching { latestMapInitializer.value.initializeMap(map) }
                             .onFailure { error ->
                                 if (error is CancellationException) {
                                     throw error
@@ -234,7 +237,7 @@ private fun MapViewHost(
                         if (!isActive) {
                             return@launch
                         }
-                        runCatching { onMapReady(map) }
+                        runCatching { latestOnMapReady.value(map) }
                             .onFailure { callbackError ->
                                 Log.e(
                                     "MapViewHost",

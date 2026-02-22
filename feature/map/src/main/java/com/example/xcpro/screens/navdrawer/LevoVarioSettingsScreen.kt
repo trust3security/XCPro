@@ -111,6 +111,8 @@ fun LevoVarioSettingsScreen(
             )
 
             VarioDisplayOptionsCard(
+                teCompensationEnabled = uiState.teCompensationEnabled,
+                onTeCompensationEnabledChange = viewModel::setTeCompensationEnabled,
                 showWindSpeedOnVario = uiState.showWindSpeedOnVario,
                 onShowWindSpeedOnVarioChange = viewModel::setShowWindSpeedOnVario
             )
@@ -250,6 +252,8 @@ private fun BulletText(text: String) {
 
 @Composable
 private fun VarioDisplayOptionsCard(
+    teCompensationEnabled: Boolean,
+    onTeCompensationEnabledChange: (Boolean) -> Unit,
     showWindSpeedOnVario: Boolean,
     onShowWindSpeedOnVarioChange: (Boolean) -> Unit
 ) {
@@ -264,7 +268,7 @@ private fun VarioDisplayOptionsCard(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "Variometer overlay",
+                text = "Variometer behavior",
                 style = MaterialTheme.typography.titleSmall
             )
             Row(
@@ -282,6 +286,29 @@ private fun VarioDisplayOptionsCard(
                     )
                     Text(
                         text = "Show wind speed above the needle when wind is available",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                Switch(
+                    checked = teCompensationEnabled,
+                    onCheckedChange = onTeCompensationEnabledChange
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "Total Energy compensation",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = "Use TE-compensated vario when eligible airspeed is available",
                         style = MaterialTheme.typography.bodySmall
                     )
                 }

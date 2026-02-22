@@ -105,6 +105,7 @@ Live forwarder:
     - audio settings
     - MacCready settings
     - auto-MC flag
+    - TE compensation enabled flag
 
 ## 4) Use Case -> ViewModel
 
@@ -156,6 +157,7 @@ OGN settings path:
   - Pushes OGN overlay targets, thermal hotspots, and OGN trail segments into runtime overlay manager.
 - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
   - Applies icon size for OGN traffic overlays and owns OGN thermal + OGN glider-trail overlay runtime lifecycle.
+  - Owns OGN/ADS-b traffic overlay creation on startup/style recreation (MapInitializer delegates traffic overlay construction to this runtime owner).
 - `feature/map/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
   - Updates SymbolLayer `iconSize` dynamically from configured pixel size.
 - `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalRepository.kt`
@@ -215,6 +217,7 @@ ADS-b settings path:
   - Pushes icon-size changes into overlay runtime controller.
 - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
   - Applies and re-applies icon size for existing and recreated overlays.
+  - Is the single runtime owner for ADS-b/OGN traffic overlay recreation so persisted icon size is applied consistently on cold start.
 - `feature/map/src/main/java/com/example/xcpro/map/AdsbTrafficOverlay.kt`
   - Updates SymbolLayer `iconSize` dynamically from configured pixel size.
 
@@ -401,6 +404,7 @@ Task map rendering bridge (2026-02-12):
   - `MapScaleBarController` (scale bar lifecycle/zoom constraints)
   - `MapInitializerDataLoader` (airspace/waypoint bootstrap and refresh)
   - `MapStyleUrlResolver` (canonical style-name -> URL resolution for runtime style paths)
+  - `MapOverlayManager` (traffic overlay creation owner for OGN/ADS-b on startup and style transitions)
 - `MapInitializer.setupMapStyle(...)` uses bounded style-load wait with fallback init to avoid startup hangs.
 - `MapRuntimeController` applies style commands with map-generation/request-token guards so stale callbacks do not mutate active overlays.
 - `MapScreenViewModel` now exposes task type and task gesture/edit operations through
@@ -462,6 +466,7 @@ Replay pipeline:
 - `feature/map/src/main/java/com/example/xcpro/replay/ReplayPipeline.kt`
   - Creates a replay `SensorFusionRepository` (isReplayMode = true).
   - Forwards fused `CompleteFlightData` into `FlightDataRepository` with Source.REPLAY.
+  - Observes `LevoVarioPreferencesRepository` and pushes replay audio settings and TE compensation enabled flag.
   - Suspends/resumes live sensors via `VarioServiceManager`.
 
 Controller:

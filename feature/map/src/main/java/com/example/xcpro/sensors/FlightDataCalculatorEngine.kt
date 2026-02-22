@@ -126,6 +126,7 @@ internal class FlightDataCalculatorEngine(
     internal var macCreadySetting = DEFAULT_MACCREADY
     internal var macCreadyRisk = DEFAULT_MACCREADY
     internal var autoMcEnabled: Boolean = true
+    internal var totalEnergyCompensationEnabled: Boolean = true
     internal var flightMode: FlightMode = FlightMode.CRUISE
     init {
         scope.launch { windStateFlow.collect { latestWindState = it } }
@@ -232,6 +233,12 @@ internal class FlightDataCalculatorEngine(
     }
     override fun setAutoMcEnabled(enabled: Boolean) {
         autoMcEnabled = enabled
+    }
+    override fun setTotalEnergyCompensationEnabled(enabled: Boolean) {
+        totalEnergyCompensationEnabled = enabled
+        if (!enabled) {
+            emissionState.latestTeVario = null
+        }
     }
     override fun setFlightMode(mode: FlightMode) {
         flightMode = mode

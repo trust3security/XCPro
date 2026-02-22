@@ -22,6 +22,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -57,6 +58,7 @@ import com.example.xcpro.map.MapModalManager
 import com.example.xcpro.map.MapOverlayManager
 import com.example.xcpro.map.ui.MapOverlayStack
 import com.example.xcpro.map.MapScreenState
+import com.example.xcpro.map.MapTaskIntegration
 import com.example.xcpro.map.MapTaskScreenManager
 import com.example.xcpro.map.ui.task.MapTaskScreenUi
 import com.example.xcpro.map.ui.widgets.MapUIWidgetManager
@@ -173,6 +175,7 @@ internal fun MapScreenContent(
     onBallastCommand: (BallastCommand) -> Unit,
     onHamburgerTap: () -> Unit,
     onHamburgerLongPress: () -> Unit,
+    onOpenWeatherSettingsFromTab: () -> Unit,
     cardStyle: CardStyle,
     hiddenCardIds: Set<String>,
     replayState: StateFlow<SessionState>,
@@ -201,9 +204,35 @@ internal fun MapScreenContent(
     var qnhError by remember { mutableStateOf<String?>(null) }
     var showQnhFab by remember { mutableStateOf(true) }
     var showForecastSheet by remember { mutableStateOf(false) }
+    var selectedBottomTabName by rememberSaveable { mutableStateOf(MapBottomTab.WEATHER.name) }
+    var isBottomTabsSheetVisible by rememberSaveable { mutableStateOf(false) }
     var tappedWindArrowCallout by remember { mutableStateOf<WindArrowTapCallout?>(null) }
     var windTapLabelSize by remember { mutableStateOf(IntSize.Zero) }
     var overlayViewportSize by remember { mutableStateOf(IntSize.Zero) }
+    val selectedBottomTab = remember(selectedBottomTabName) {
+        runCatching { MapBottomTab.valueOf(selectedBottomTabName) }
+            .getOrDefault(MapBottomTab.WEATHER)
+    }
+    val taskPanelState by taskScreenManager.taskPanelState.collectAsStateWithLifecycle()
+    val isTaskPanelVisible = taskPanelState != MapTaskScreenManager.TaskPanelState.HIDDEN
+    val isDrawerBlocked = remember(taskType, isAATEditMode) {
+        MapTaskIntegration.shouldBlockDrawerGestures(
+            taskType = taskType,
+            isAATEditMode = isAATEditMode
+        )
+    }
+    val selectedSkySightPrimaryIds = remember(
+        forecastOverlayState.selectedPrimaryParameterId,
+        forecastOverlayState.secondaryPrimaryOverlayEnabled,
+        forecastOverlayState.selectedSecondaryPrimaryParameterId
+    ) {
+        buildSet {
+            add(forecastOverlayState.selectedPrimaryParameterId)
+            if (forecastOverlayState.secondaryPrimaryOverlayEnabled) {
+                add(forecastOverlayState.selectedSecondaryPrimaryParameterId)
+            }
+        }
+    }
     // Temporarily suppress replay/debug FABs on MapScreen (REF/SIM/SIM2/SIM3/TASK).
     val hideReplayDebugFabs = true
     val isForecastWindArrowOverlayActive = forecastOverlayState.windOverlayEnabled &&
@@ -260,6 +289,16 @@ internal fun MapScreenContent(
         if (tappedWindArrowCallout != null) {
             delay(WIND_ARROW_SPEED_TAP_DISPLAY_MS)
             tappedWindArrowCallout = null
+        }
+    }
+
+    val hasTrafficDetailsOpen = selectedOgnTarget != null ||
+        selectedOgnThermal != null ||
+        selectedAdsbTarget != null
+
+    LaunchedEffect(isTaskPanelVisible, showForecastSheet, hasTrafficDetailsOpen) {
+        if (isTaskPanelVisible || showForecastSheet || hasTrafficDetailsOpen) {
+            isBottomTabsSheetVisible = false
         }
     }
 
@@ -403,7 +442,10 @@ internal fun MapScreenContent(
             onToggleOgnThermals = onToggleOgnThermals,
             onToggleOgnGliderTrails = onToggleOgnGliderTrails,
             onToggleAdsbTraffic = onToggleAdsbTraffic,
-            onShowForecastSheet = { showForecastSheet = true },
+            onShowForecastSheet = {
+                isBottomTabsSheetVisible = false
+                showForecastSheet = true
+            },
             onReturn = { locationManager.returnToSavedLocation() },
             onShowQnhDialog = {
                 val currentQnh = liveFlightData?.qnh ?: 1013.25
@@ -417,6 +459,35 @@ internal fun MapScreenContent(
             onVarioDemoSim2Click = onVarioDemoSim2Click,
             onVarioDemoSim3Click = onVarioDemoSim3Click,
             onRacingReplayClick = onRacingReplayClick
+        )
+
+        MapBottomTabsLayer(
+            selectedTab = selectedBottomTab,
+            isSheetVisible = isBottomTabsSheetVisible,
+            isTaskPanelVisible = isTaskPanelVisible,
+            onTabSelected = { tab ->
+                selectedBottomTabName = tab.name
+                if (hasTrafficDetailsOpen) {
+                    onDismissOgnTargetDetails()
+                    onDismissOgnThermalDetails()
+                    onDismissAdsbTargetDetails()
+                }
+                showForecastSheet = false
+                if (!isTaskPanelVisible) {
+                    isBottomTabsSheetVisible = true
+                }
+            },
+            onDismissSheet = { isBottomTabsSheetVisible = false },
+            weatherEnabled = weatherOverlayState.enabled,
+            weatherOpacity = weatherOverlayState.opacity,
+            onWeatherEnabledChanged = weatherOverlayViewModel::setEnabled,
+            onWeatherOpacityChanged = weatherOverlayViewModel::setOpacity,
+            isDrawerBlocked = isDrawerBlocked,
+            onOpenWeatherSettingsFromTab = onOpenWeatherSettingsFromTab,
+            showSkySightPrimaryEnabled = forecastOverlayState.enabled,
+            selectedPrimarySkySightIds = selectedSkySightPrimaryIds,
+            onShowSkySightPrimaryChanged = forecastViewModel::setEnabled,
+            onSkySightParameterToggle = forecastViewModel::togglePrimaryOverlayParameter
         )
 
         Column(
