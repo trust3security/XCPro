@@ -72,8 +72,8 @@ object MapGestureSetup {
             onSyncTaskVisuals
         ) {
             TaskGestureCallbacks(
-                onEnterEditMode = { waypointIndex, lat, lon, radiusKm ->
-                    cameraManager.zoomToAATAreaForEdit(lat, lon, radiusKm)
+                onEnterEditMode = { waypointIndex, lat, lon, radiusMeters ->
+                    cameraManager.zoomToAATAreaForEdit(lat, lon, radiusMeters)
                     onEnterAATEditMode(waypointIndex)
                     onSyncTaskVisuals()
                     Log.d(TAG, "Entered AAT edit mode for waypoint $waypointIndex")

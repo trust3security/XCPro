@@ -94,17 +94,17 @@ class DefaultRacingTaskEngine(
         val path = calculator.findOptimalFAIPath(racingWaypoints)
         if (path.size < 2) return 0.0
 
-        var totalKm = 0.0
+        var totalMeters = 0.0
         for (i in 0 until path.lastIndex) {
             val from = path[i]
             val to = path[i + 1]
-            totalKm += RacingGeometryUtils.haversineDistance(from.first, from.second, to.first, to.second)
+            totalMeters += RacingGeometryUtils.haversineDistanceMeters(from.first, from.second, to.first, to.second)
         }
-        return totalKm * 1000.0
+        return totalMeters
     }
 
     override fun calculateSegmentDistanceMeters(from: TaskWaypoint, to: TaskWaypoint): Double {
-        return RacingGeometryUtils.haversineDistance(from.lat, from.lon, to.lat, to.lon) * 1000.0
+        return RacingGeometryUtils.haversineDistanceMeters(from.lat, from.lon, to.lat, to.lon)
     }
 
     private fun publish(task: Task, requestedActiveLeg: Int) {
@@ -135,17 +135,18 @@ class DefaultRacingTaskEngine(
                 else -> WaypointRole.TURNPOINT
             }
             val normalizedType = normalizePointType(waypoint.customPointType, normalizedRole)
-            val defaultRadiusKm = defaultRadiusKm(normalizedRole, normalizedType)
-            val normalizedRadius = if (waypoint.role != normalizedRole) {
-                defaultRadiusKm
+            val defaultRadiusMeters = defaultRadiusMeters(normalizedRole, normalizedType)
+            val normalizedRadiusMeters = if (waypoint.role != normalizedRole) {
+                defaultRadiusMeters
             } else {
-                waypoint.customRadius?.takeIf { it > 0.0 } ?: defaultRadiusKm
+                waypoint.resolvedCustomRadiusMeters()?.takeIf { it > 0.0 } ?: defaultRadiusMeters
             }
-            waypoint.copy(
-                role = normalizedRole,
-                customPointType = normalizedType,
-                customRadius = normalizedRadius
-            )
+            waypoint
+                .withCustomRadiusMeters(normalizedRadiusMeters)
+                .copy(
+                    role = normalizedRole,
+                    customPointType = normalizedType
+                )
         }
     }
 
@@ -177,12 +178,12 @@ class DefaultRacingTaskEngine(
         }
     }
 
-    private fun defaultRadiusKm(role: WaypointRole, customPointType: String): Double {
+    private fun defaultRadiusMeters(role: WaypointRole, customPointType: String): Double {
         return when (role) {
-            WaypointRole.START -> 10.0
-            WaypointRole.FINISH -> 3.0
+            WaypointRole.START -> 10_000.0
+            WaypointRole.FINISH -> 3_000.0
             WaypointRole.TURNPOINT, WaypointRole.OPTIONAL -> {
-                if (customPointType == RacingTurnPointType.KEYHOLE.name) 10.0 else 0.5
+                if (customPointType == RacingTurnPointType.KEYHOLE.name) 10_000.0 else 500.0
             }
         }
     }
@@ -214,10 +215,10 @@ class DefaultRacingTaskEngine(
             startPointType = startType,
             finishPointType = finishType,
             turnPointType = turnType,
-            customGateWidth = customRadius?.takeIf { it > 0.0 },
-            keyholeInnerRadius = racingParams.keyholeInnerRadius,
+            customGateWidthMeters = resolvedCustomRadiusMeters()?.takeIf { it > 0.0 },
+            keyholeInnerRadiusMeters = racingParams.keyholeInnerRadiusMeters,
             keyholeAngle = racingParams.keyholeAngle,
-            faiQuadrantOuterRadius = racingParams.faiQuadrantOuterRadius
+            faiQuadrantOuterRadiusMeters = racingParams.faiQuadrantOuterRadiusMeters
         )
     }
 }

@@ -133,6 +133,8 @@ Responsibilities:
 - Retry sensor start if permission is missing (SensorRetryCoordinator)
 - Collect flightDataFlow and push into FlightDataRepository
 - Observe Levo config (MacCready, audio, TE enabled) and push into the fusion engine
+- Keep source-aware live/replay airspeed repositories wired into the fusion engine
+  via SensorFusionRepositoryFactory.
 
 ------------------------------------------------------------------------------
 SENSOR LAYER (LIVE)
@@ -188,6 +190,7 @@ Key responsibilities:
 - Compute metrics (TE vario, netto, thermal averages, AGL, LD)
 - Emit display frames and drive audio
 - Support replay mode with deterministic timestamps
+- Cache source-aware external/replay airspeed samples and forward them to metrics.
 
 The engine uses two loops with decoupled cadences:
 
@@ -371,8 +374,11 @@ Wind state is consumed by:
 Airspeed:
 - Live airspeed comes from ExternalAirspeedRepository (if present).
 - Replay airspeed comes from ReplayAirspeedRepository.
-- WindEstimator in CalculateFlightMetricsUseCase uses WindState to
-  compute true/indicated airspeed (or falls back to GPS ground speed).
+- CalculateFlightMetricsUseCase now selects airspeed with priority:
+  1) fresh valid external/replay sample (source label SENSOR),
+  2) wind-derived airspeed when wind is available and confidence-gated,
+  3) GPS ground-speed fallback.
+- WindEstimator uses QNH-aware density ratio when converting TAS/IAS.
 
 ------------------------------------------------------------------------------
 AUDIO PIPELINE
@@ -439,7 +445,7 @@ Purple needle note (audio input):
   so the purple needle tracks the blue/red needles closely.
 - Red vs blue divergence is subtle because their time constants are close
   (0.6s vs 0.4s), and both are throttled to ~30 Hz in FlightDataManager.
-- Full details: docs/LevoVario/PurpleNeedle.md
+- Full details: docs/LEVO/PurpleNeedle.md
 
 ------------------------------------------------------------------------------
 VARIOMETER WIDGET LAYOUT AND PERSISTENCE
@@ -555,7 +561,7 @@ RECOMMENDED ADDITIONS FOR FUTURE AGENTS
 These are not required but would reduce ramp up time and avoid regressions.
 
 Completed:
-- Architecture diagram added: docs/LevoVario/levo-architecture-diagram.svg
+- Architecture diagram added: docs/LEVO/levo-architecture-diagram.svg
 - Diagnostics flow wired in FlightDataCalculatorEngine using the optimized
   Kalman filter diagnostics.
 

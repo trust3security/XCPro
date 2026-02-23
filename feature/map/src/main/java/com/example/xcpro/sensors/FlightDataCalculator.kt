@@ -5,6 +5,7 @@ import com.example.xcpro.audio.AudioFocusManager
 import com.example.xcpro.audio.VarioAudioSettings
 import com.example.xcpro.core.time.Clock
 import com.example.xcpro.glider.StillAirSinkProvider
+import com.example.xcpro.weather.wind.data.AirspeedDataSource
 import com.example.xcpro.weather.wind.model.WindState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 class FlightDataCalculator(
     context: Context,
     sensorDataSource: SensorDataSource,
+    airspeedDataSource: AirspeedDataSource,
     scope: CoroutineScope,
     sinkProvider: StillAirSinkProvider,
     windStateFlow: StateFlow<WindState>,
@@ -29,6 +31,7 @@ class FlightDataCalculator(
     private val engine = FlightDataCalculatorEngine(
         context = context,
         sensorDataSource = sensorDataSource,
+        airspeedDataSource = airspeedDataSource,
         scope = scope,
         sinkProvider = sinkProvider,
         windStateFlow = windStateFlow,

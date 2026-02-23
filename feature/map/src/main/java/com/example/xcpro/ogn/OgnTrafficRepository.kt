@@ -21,6 +21,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,6 +33,7 @@ import kotlin.math.abs
 
 interface OgnTrafficRepository {
     val targets: StateFlow<List<OgnTrafficTarget>>
+    val suppressedTargetIds: StateFlow<Set<String>>
     val snapshot: StateFlow<OgnTrafficSnapshot>
     val isEnabled: StateFlow<Boolean>
 
@@ -44,6 +47,7 @@ interface OgnTrafficRepository {
 class OgnTrafficRepositoryImpl @Inject constructor(
     private val parser: OgnAprsLineParser,
     private val ddbRepository: OgnDdbRepository,
+    private val preferencesRepository: OgnTrafficPreferencesRepository,
     private val clock: Clock,
     @IoDispatcher dispatcher: CoroutineDispatcher
 ) : OgnTrafficRepository {
@@ -53,6 +57,9 @@ class OgnTrafficRepositoryImpl @Inject constructor(
 
     private val _targets = MutableStateFlow<List<OgnTrafficTarget>>(emptyList())
     override val targets: StateFlow<List<OgnTrafficTarget>> = _targets.asStateFlow()
+    private val suppressedTargetSeenMonoByKey = ConcurrentHashMap<String, Long>()
+    private val _suppressedTargetIds = MutableStateFlow<Set<String>>(emptySet())
+    override val suppressedTargetIds: StateFlow<Set<String>> = _suppressedTargetIds.asStateFlow()
 
     private val _snapshot = MutableStateFlow(
         OgnTrafficSnapshot(
@@ -71,6 +78,12 @@ class OgnTrafficRepositoryImpl @Inject constructor(
 
     private val _isEnabled = MutableStateFlow(false)
     override val isEnabled: StateFlow<Boolean> = _isEnabled.asStateFlow()
+
+    @Volatile
+    private var ownFlarmHex: String? = null
+
+    @Volatile
+    private var ownIcaoHex: String? = null
 
     @Volatile
     private var center: Center? = null
@@ -101,6 +114,22 @@ class OgnTrafficRepositoryImpl @Inject constructor(
     private val stateTransitionMutex = Mutex()
 
     internal var socketFactory: () -> Socket = { Socket() }
+
+    init {
+        scope.launch {
+            combine(
+                preferencesRepository.ownFlarmHexFlow,
+                preferencesRepository.ownIcaoHexFlow
+            ) { flarmHex, icaoHex ->
+                OwnshipFilterConfig(
+                    flarmHex = normalizeOgnHex6OrNull(flarmHex),
+                    icaoHex = normalizeOgnHex6OrNull(icaoHex)
+                )
+            }.collect { config ->
+                applyOwnshipFilterConfig(config)
+            }
+        }
+    }
 
     override fun start() {
         setEnabled(true)
@@ -134,6 +163,29 @@ class OgnTrafficRepositoryImpl @Inject constructor(
         }
     }
 
+    private fun applyOwnshipFilterConfig(config: OwnshipFilterConfig) {
+        ownFlarmHex = config.flarmHex
+        ownIcaoHex = config.icaoHex
+
+        val nowMonoMs = clock.nowMonoMs()
+        var targetsChanged = false
+        val iterator = targetsByKey.entries.iterator()
+        while (iterator.hasNext()) {
+            val entry = iterator.next()
+            if (!isOwnshipTarget(entry.value, config.flarmHex, config.icaoHex)) continue
+            iterator.remove()
+            suppressedTargetSeenMonoByKey[entry.key] = nowMonoMs
+            targetsChanged = true
+        }
+        pruneSuppressedTargets(nowMonoMs = nowMonoMs, config = config)
+
+        if (targetsChanged) {
+            publishTargets()
+        } else {
+            publishSuppressedTargetIds()
+        }
+    }
+
     private fun ensureLoopRunning() {
         synchronized(loopJobLock) {
             val existing = loopJob
@@ -153,7 +205,9 @@ class OgnTrafficRepositoryImpl @Inject constructor(
         jobToCancel?.cancelAndJoin()
         if (_isEnabled.value) return
         targetsByKey.clear()
+        suppressedTargetSeenMonoByKey.clear()
         _targets.value = emptyList()
+        _suppressedTargetIds.value = emptySet()
         activeSubscriptionCenter = null
         connectionState = OgnConnectionState.DISCONNECTED
         lastError = null
@@ -246,12 +300,12 @@ class OgnTrafficRepositoryImpl @Inject constructor(
                 val nowMonoMs = clock.nowMonoMs()
                 val activeCenter = center
                 if (activeCenter != null &&
-                    OgnSubscriptionPolicy.shouldReconnectByCenterMove(
+                    OgnSubscriptionPolicy.shouldReconnectByCenterMoveMeters(
                         previousLat = centerAtConnect.latitude,
                         previousLon = centerAtConnect.longitude,
                         nextLat = activeCenter.latitude,
                         nextLon = activeCenter.longitude,
-                        thresholdKm = FILTER_UPDATE_MIN_MOVE_KM
+                        thresholdMeters = FILTER_UPDATE_MIN_MOVE_METERS
                     )
                 ) {
                     AppLogger.d(TAG, "Subscription center moved; reconnecting with updated filter")
@@ -322,28 +376,40 @@ class OgnTrafficRepositoryImpl @Inject constructor(
     private fun handleIncomingLine(line: String, nowMonoMs: Long, centerAtConnect: Center): Boolean {
         val parsed = parser.parseTraffic(line, nowMonoMs) ?: return false
         val requestedCenter = center
-        if (!isWithinReceiveRadiusKm(
+        if (!isWithinReceiveRadiusMeters(
                 targetLat = parsed.latitude,
                 targetLon = parsed.longitude,
                 requestedCenterLat = requestedCenter?.latitude,
                 requestedCenterLon = requestedCenter?.longitude,
                 subscriptionCenterLat = centerAtConnect.latitude,
                 subscriptionCenterLon = centerAtConnect.longitude,
-                radiusKm = RECEIVE_RADIUS_KM
+                radiusMeters = RECEIVE_RADIUS_METERS
             )
         ) {
             return true
         }
 
-        val identity = parsed.deviceIdHex?.let(ddbRepository::lookup)
-        if (identity?.tracked == false) {
-            val removed = targetsByKey.remove(parsed.id)
-            if (removed != null) publishTargets()
+        val targetKey = parsed.canonicalKey
+        val ddbIdentity = parsed.deviceIdHex?.let { deviceIdHex ->
+            ddbRepository.lookup(
+                addressType = parsed.addressType,
+                deviceIdHex = deviceIdHex
+            )
+        }
+        if (ddbIdentity?.tracked == false) {
+            val removedTarget = targetsByKey.remove(targetKey)
+            val removedSuppressed = suppressedTargetSeenMonoByKey.remove(targetKey) != null
+            if (removedTarget != null) {
+                publishTargets()
+            } else if (removedSuppressed) {
+                publishSuppressedTargetIds()
+            }
             return true
         }
+        val identity = mergeOgnIdentity(ddbIdentity = ddbIdentity, parsedIdentity = parsed.identity)
 
         val label = resolveDisplayLabel(parsed, identity)
-        val previousTrackDegrees = targetsByKey[parsed.id]?.trackDegrees
+        val previousTrackDegrees = targetsByKey[targetKey]?.trackDegrees
         val stabilizedTrackDegrees = stabilizeTrackDegrees(
             incomingTrackDegrees = parsed.trackDegrees,
             groundSpeedMps = parsed.groundSpeedMps,
@@ -361,7 +427,21 @@ class OgnTrafficRepositoryImpl @Inject constructor(
                 subscriptionCenter = centerAtConnect
             )
         )
-        targetsByKey[enriched.id] = enriched
+        if (isOwnshipTarget(enriched, ownFlarmHex, ownIcaoHex)) {
+            val removed = targetsByKey.remove(targetKey)
+            suppressedTargetSeenMonoByKey[targetKey] = nowMonoMs
+            if (removed != null) {
+                publishTargets()
+            } else {
+                publishSuppressedTargetIds()
+            }
+            return true
+        }
+
+        if (suppressedTargetSeenMonoByKey.remove(targetKey) != null) {
+            publishSuppressedTargetIds()
+        }
+        targetsByKey[targetKey] = enriched
         publishTargets()
         return true
     }
@@ -409,13 +489,13 @@ class OgnTrafficRepositoryImpl @Inject constructor(
         subscriptionCenter: Center?
     ): Double? {
         val reference = requestedCenter ?: subscriptionCenter ?: return null
-        val distanceKm = OgnSubscriptionPolicy.haversineKm(
+        val distanceMeters = OgnSubscriptionPolicy.haversineMeters(
             lat1 = reference.latitude,
             lon1 = reference.longitude,
             lat2 = targetLat,
             lon2 = targetLon
         )
-        return if (distanceKm.isFinite()) distanceKm * METERS_PER_KILOMETER else null
+        return distanceMeters.takeIf { it.isFinite() }
     }
 
     private fun sweepStaleTargets(nowMonoMs: Long) {
@@ -428,16 +508,68 @@ class OgnTrafficRepositoryImpl @Inject constructor(
                 removed = true
             }
         }
+        val suppressedChanged = pruneSuppressedTargets(
+            nowMonoMs = nowMonoMs,
+            config = currentOwnshipFilterConfig()
+        )
         if (removed) {
             publishTargets()
+        } else if (suppressedChanged) {
+            publishSuppressedTargetIds()
         }
     }
 
     private fun publishTargets() {
         _targets.value = targetsByKey.values
-            .sortedBy { it.displayLabel }
+            .sortedWith(compareBy({ it.displayLabel }, { it.canonicalKey }))
+        publishSuppressedTargetIds()
+    }
+
+    private fun publishSuppressedTargetIds() {
+        val suppressed = suppressedTargetSeenMonoByKey.keys.toSet()
+        if (_suppressedTargetIds.value != suppressed) {
+            _suppressedTargetIds.value = suppressed
+        }
         publishSnapshot()
     }
+
+    private fun pruneSuppressedTargets(
+        nowMonoMs: Long,
+        config: OwnshipFilterConfig
+    ): Boolean {
+        if (suppressedTargetSeenMonoByKey.isEmpty()) return false
+        var changed = false
+        val iterator = suppressedTargetSeenMonoByKey.entries.iterator()
+        while (iterator.hasNext()) {
+            val entry = iterator.next()
+            val stale = nowMonoMs - entry.value > TARGET_STALE_AFTER_MS
+            val noLongerMatchesFilter = !matchesAnyOwnshipKey(entry.key, config)
+            if (stale || noLongerMatchesFilter) {
+                iterator.remove()
+                changed = true
+            }
+        }
+        return changed
+    }
+
+    private fun matchesAnyOwnshipKey(
+        canonicalKey: String,
+        config: OwnshipFilterConfig
+    ): Boolean {
+        val flarm = config.flarmHex
+        if (flarm != null && canonicalKey == "FLARM:$flarm") return true
+
+        val icao = config.icaoHex
+        if (icao != null && canonicalKey == "ICAO:$icao") return true
+
+        return false
+    }
+
+    private fun currentOwnshipFilterConfig(): OwnshipFilterConfig =
+        OwnshipFilterConfig(
+            flarmHex = ownFlarmHex,
+            icaoHex = ownIcaoHex
+        )
 
     private fun publishSnapshot() {
         val activeCenter = center
@@ -450,6 +582,7 @@ class OgnTrafficRepositoryImpl @Inject constructor(
         }
         _snapshot.value = OgnTrafficSnapshot(
             targets = _targets.value,
+            suppressedTargetIds = _suppressedTargetIds.value,
             connectionState = connectionState,
             lastError = lastError,
             subscriptionCenterLat = activeCenter?.latitude,
@@ -503,6 +636,11 @@ class OgnTrafficRepositoryImpl @Inject constructor(
         val longitude: Double
     )
 
+    private data class OwnshipFilterConfig(
+        val flarmHex: String?,
+        val icaoHex: String?
+    )
+
     private companion object {
         private const val TAG = "OgnTrafficRepository"
         private const val HOST = "aprs.glidernet.org"
@@ -512,8 +650,10 @@ class OgnTrafficRepositoryImpl @Inject constructor(
         private const val APP_VERSION = "0.1"
 
         // Product contract: 300 km diameter around user position -> 150 km radius.
-        private const val RECEIVE_RADIUS_KM = 150.0
-        private const val FILTER_UPDATE_MIN_MOVE_KM = 20.0
+        private const val METERS_PER_KILOMETER = 1_000.0
+        private const val RECEIVE_RADIUS_METERS = 150_000.0
+        private const val RECEIVE_RADIUS_KM = RECEIVE_RADIUS_METERS / METERS_PER_KILOMETER
+        private const val FILTER_UPDATE_MIN_MOVE_METERS = 20_000.0
 
         private const val SOCKET_CONNECT_TIMEOUT_MS = 10_000
         private const val SOCKET_READ_TIMEOUT_MS = 20_000
@@ -527,8 +667,6 @@ class OgnTrafficRepositoryImpl @Inject constructor(
         private const val RECONNECT_BACKOFF_START_MS = 1_000L
         private const val RECONNECT_BACKOFF_MAX_MS = 60_000L
         private const val DDB_REFRESH_CHECK_INTERVAL_MS = 60L * 60L * 1000L
-        private const val METERS_PER_KILOMETER = 1_000.0
-
     }
 }
 
@@ -549,25 +687,50 @@ internal fun parseLogrespStatus(line: String): OgnLogrespStatus? {
     }
 }
 
-internal fun isWithinReceiveRadiusKm(
+internal fun isWithinReceiveRadiusMeters(
     targetLat: Double,
     targetLon: Double,
     requestedCenterLat: Double?,
     requestedCenterLon: Double?,
     subscriptionCenterLat: Double,
     subscriptionCenterLon: Double,
-    radiusKm: Double
+    radiusMeters: Double
 ): Boolean {
     val hasRequestedCenter = requestedCenterLat != null && requestedCenterLon != null
     val centerLat = if (hasRequestedCenter) requestedCenterLat!! else subscriptionCenterLat
     val centerLon = if (hasRequestedCenter) requestedCenterLon!! else subscriptionCenterLon
-    val distanceKm = OgnSubscriptionPolicy.haversineKm(
+    val distanceMeters = OgnSubscriptionPolicy.haversineMeters(
         lat1 = centerLat,
         lon1 = centerLon,
         lat2 = targetLat,
         lon2 = targetLon
     )
-    return distanceKm <= radiusKm
+    return distanceMeters <= radiusMeters
+}
+
+internal fun isOwnshipTarget(
+    target: OgnTrafficTarget,
+    ownFlarmHex: String?,
+    ownIcaoHex: String?
+): Boolean {
+    val addressHex = normalizeOgnHex6OrNull(target.addressHex) ?: return false
+    return when (target.addressType) {
+        OgnAddressType.FLARM -> ownFlarmHex != null && addressHex == ownFlarmHex
+        OgnAddressType.ICAO -> ownIcaoHex != null && addressHex == ownIcaoHex
+        OgnAddressType.UNKNOWN -> false
+    }
+}
+
+internal fun mergeOgnIdentity(
+    ddbIdentity: OgnTrafficIdentity?,
+    parsedIdentity: OgnTrafficIdentity?
+): OgnTrafficIdentity? {
+    if (ddbIdentity == null) return parsedIdentity
+
+    val parsedAircraftTypeCode = parsedIdentity?.aircraftTypeCode
+    if (ddbIdentity.aircraftTypeCode != null || parsedAircraftTypeCode == null) return ddbIdentity
+
+    return ddbIdentity.copy(aircraftTypeCode = parsedAircraftTypeCode)
 }
 
 internal fun stabilizeTrackDegrees(

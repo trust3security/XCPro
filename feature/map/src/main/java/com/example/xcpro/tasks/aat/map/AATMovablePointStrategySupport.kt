@@ -3,11 +3,12 @@ package com.example.xcpro.tasks.aat.map
 import com.example.xcpro.tasks.aat.calculations.AATMathUtils
 import com.example.xcpro.tasks.aat.models.AATLatLng
 import com.example.xcpro.tasks.aat.models.AATWaypoint
-import kotlin.math.cos
 import kotlin.math.min
-import kotlin.math.sin
 
 internal object AATMovablePointStrategySupport {
+    private const val LONG_LEG_METERS = 100_000.0
+    private const val MEDIUM_LEG_METERS = 50_000.0
+    private const val SHORT_LEG_METERS = 20_000.0
 
     fun calculateOptimalPosition(
         waypoint: AATWaypoint,
@@ -15,7 +16,7 @@ internal object AATMovablePointStrategySupport {
         windSpeed: Double,
         nextWaypoint: AATWaypoint?
     ): AATLatLng {
-        val areaRadiusKm = waypoint.assignedArea.radiusMeters / 1000.0
+        val areaRadiusMeters = waypoint.assignedArea.radiusMeters
         val windOptimizationFactor = calculateWindOptimization(windSpeed)
         val routeOptimizationFactor = nextWaypoint?.let {
             calculateRouteOptimization(waypoint, it)
@@ -41,13 +42,13 @@ internal object AATMovablePointStrategySupport {
             else -> 0.6
         }
         val optimizationBoost = 1.0 + (windOptimizationFactor + routeOptimizationFactor) * 0.1
-        val optimalDistance = areaRadiusKm * optimalDistanceRatio * optimizationBoost.coerceAtMost(1.0)
+        val optimalDistanceMeters = areaRadiusMeters * optimalDistanceRatio * optimizationBoost.coerceAtMost(1.0)
 
-        val optimalLat = waypoint.lat + (optimalDistance / 111.0) * cos(Math.toRadians(optimalBearing))
-        val optimalLon =
-            waypoint.lon + (optimalDistance / (111.0 * cos(Math.toRadians(waypoint.lat)))) * sin(Math.toRadians(optimalBearing))
-
-        return AATLatLng(optimalLat, optimalLon)
+        return AATMathUtils.calculatePointAtBearingMeters(
+            from = AATLatLng(waypoint.lat, waypoint.lon),
+            bearing = optimalBearing,
+            distanceMeters = optimalDistanceMeters
+        )
     }
 
     fun getRecommendedPosition(
@@ -82,16 +83,17 @@ internal object AATMovablePointStrategySupport {
                     windSpeed = windSpeed,
                     nextWaypoint = null
                 )
-                val areaRadiusKm = waypoint.assignedArea.radiusMeters / 1000.0
+                val areaRadiusMeters = waypoint.assignedArea.radiusMeters
                 val bearing = AATMathUtils.calculateBearing(
                     AATLatLng(waypoint.lat, waypoint.lon),
                     AATLatLng(aggressivePos.latitude, aggressivePos.longitude)
                 )
-                val aggressiveDistance = areaRadiusKm * 0.9
-                val aggressiveLat = waypoint.lat + (aggressiveDistance / 111.0) * cos(Math.toRadians(bearing))
-                val aggressiveLon =
-                    waypoint.lon + (aggressiveDistance / (111.0 * cos(Math.toRadians(waypoint.lat)))) * sin(Math.toRadians(bearing))
-                AATLatLng(aggressiveLat, aggressiveLon)
+                val aggressiveDistanceMeters = areaRadiusMeters * 0.9
+                AATMathUtils.calculatePointAtBearingMeters(
+                    from = AATLatLng(waypoint.lat, waypoint.lon),
+                    bearing = bearing,
+                    distanceMeters = aggressiveDistanceMeters
+                )
             }
         }
     }
@@ -106,11 +108,11 @@ internal object AATMovablePointStrategySupport {
     }
 
     private fun calculateRouteOptimization(current: AATWaypoint, next: AATWaypoint): Double {
-        val distance = AATMathUtils.calculateDistanceKm(current.lat, current.lon, next.lat, next.lon)
+        val distanceMeters = AATMathUtils.calculateDistanceMeters(current.lat, current.lon, next.lat, next.lon)
         return when {
-            distance > 100.0 -> 1.0
-            distance > 50.0 -> 0.7
-            distance > 20.0 -> 0.4
+            distanceMeters > LONG_LEG_METERS -> 1.0
+            distanceMeters > MEDIUM_LEG_METERS -> 0.7
+            distanceMeters > SHORT_LEG_METERS -> 0.4
             else -> 0.1
         }
     }

@@ -6,6 +6,7 @@ import kotlin.math.PI
 import kotlin.math.abs
 
 internal object SectorAreaGeometrySupport {
+    private const val METERS_PER_KILOMETER = 1000.0
 
     fun nearestPointOnBoundary(
         from: AATLatLng,
@@ -15,7 +16,7 @@ internal object SectorAreaGeometrySupport {
         startBearing: Double,
         endBearing: Double
     ): AATLatLng {
-        val distanceToCenter = AATMathUtils.calculateDistance(from, center)
+        val distanceToCenterMeters = distanceMeters(from, center)
         val bearingToFrom = AATMathUtils.calculateBearing(center, from)
         val isInSectorAngle = AATMathUtils.isAngleBetween(bearingToFrom, startBearing, endBearing)
 
@@ -24,7 +25,7 @@ internal object SectorAreaGeometrySupport {
                 center = center,
                 innerRadius = innerRadius,
                 outerRadius = outerRadius,
-                distanceToCenter = distanceToCenter,
+                distanceToCenterMeters = distanceToCenterMeters,
                 bearingToFrom = bearingToFrom
             )
         }
@@ -33,12 +34,16 @@ internal object SectorAreaGeometrySupport {
         val distanceToEnd = abs(AATMathUtils.angleDifference(bearingToFrom, endBearing))
         val nearestBearing = if (distanceToStart < distanceToEnd) startBearing else endBearing
 
-        val clampedRadius = when {
-            distanceToCenter < (innerRadius ?: 0.0) -> innerRadius ?: outerRadius
-            distanceToCenter > outerRadius -> outerRadius
-            else -> distanceToCenter
+        val clampedRadiusMeters = when {
+            distanceToCenterMeters < (innerRadius ?: 0.0) -> innerRadius ?: outerRadius
+            distanceToCenterMeters > outerRadius -> outerRadius
+            else -> distanceToCenterMeters
         }
-        return AATMathUtils.calculatePointAtBearing(center, nearestBearing, clampedRadius)
+        return AATMathUtils.calculatePointAtBearing(
+            center,
+            nearestBearing,
+            metersToKilometers(clampedRadiusMeters)
+        )
     }
 
     fun farthestPointOnBoundary(
@@ -71,16 +76,24 @@ internal object SectorAreaGeometrySupport {
             )
         }
 
-        candidates.add(AATMathUtils.calculatePointAtBearing(center, startBearing, outerRadius))
-        candidates.add(AATMathUtils.calculatePointAtBearing(center, endBearing, outerRadius))
+        candidates.add(
+            AATMathUtils.calculatePointAtBearing(center, startBearing, metersToKilometers(outerRadius))
+        )
+        candidates.add(
+            AATMathUtils.calculatePointAtBearing(center, endBearing, metersToKilometers(outerRadius))
+        )
 
         if (innerRadius != null) {
-            candidates.add(AATMathUtils.calculatePointAtBearing(center, startBearing, innerRadius))
-            candidates.add(AATMathUtils.calculatePointAtBearing(center, endBearing, innerRadius))
+            candidates.add(
+                AATMathUtils.calculatePointAtBearing(center, startBearing, metersToKilometers(innerRadius))
+            )
+            candidates.add(
+                AATMathUtils.calculatePointAtBearing(center, endBearing, metersToKilometers(innerRadius))
+            )
         }
 
         return candidates.maxByOrNull { candidate ->
-            AATMathUtils.calculateDistance(from, candidate)
+            distanceMeters(from, candidate)
         } ?: candidates.first()
     }
 
@@ -99,14 +112,26 @@ internal object SectorAreaGeometrySupport {
         for (i in 0..actualPoints) {
             val fraction = i.toDouble() / actualPoints
             val bearing = bearingAtFraction(startBearing, endBearing, fraction)
-            points.add(AATMathUtils.calculatePointAtBearing(center, bearing, outerRadius))
+            points.add(
+                AATMathUtils.calculatePointAtBearing(
+                    center,
+                    bearing,
+                    metersToKilometers(outerRadius)
+                )
+            )
         }
 
         if (innerRadius != null) {
             for (i in actualPoints downTo 0) {
                 val fraction = i.toDouble() / actualPoints
                 val bearing = bearingAtFraction(startBearing, endBearing, fraction)
-                points.add(AATMathUtils.calculatePointAtBearing(center, bearing, innerRadius))
+                points.add(
+                    AATMathUtils.calculatePointAtBearing(
+                        center,
+                        bearing,
+                        metersToKilometers(innerRadius)
+                    )
+                )
             }
         } else {
             points.add(center)
@@ -115,16 +140,18 @@ internal object SectorAreaGeometrySupport {
         return points
     }
 
-    fun calculateAreaSizeKm2(
+    fun calculateAreaSizeMeters2(
         innerRadius: Double?,
         outerRadius: Double,
         startBearing: Double,
         endBearing: Double
     ): Double {
-        val outerRadiusKm = outerRadius / 1000.0
-        val innerRadiusKm = (innerRadius ?: 0.0) / 1000.0
+        val outerRadiusMeters = outerRadius
+        val innerRadiusMeters = innerRadius ?: 0.0
         val sectorFraction = sectorSpan(startBearing, endBearing) / 360.0
-        return sectorFraction * PI * (outerRadiusKm * outerRadiusKm - innerRadiusKm * innerRadiusKm)
+        return sectorFraction * PI * (
+            outerRadiusMeters * outerRadiusMeters - innerRadiusMeters * innerRadiusMeters
+        )
     }
 
     fun calculateOptimalBearing(
@@ -149,27 +176,47 @@ internal object SectorAreaGeometrySupport {
         center: AATLatLng,
         innerRadius: Double?,
         outerRadius: Double,
-        distanceToCenter: Double,
+        distanceToCenterMeters: Double,
         bearingToFrom: Double
     ): AATLatLng {
         return when {
-            distanceToCenter <= (innerRadius ?: 0.0) -> {
+            distanceToCenterMeters <= (innerRadius ?: 0.0) -> {
                 if (innerRadius != null) {
-                    AATMathUtils.calculatePointAtBearing(center, bearingToFrom, innerRadius)
+                    AATMathUtils.calculatePointAtBearing(
+                        center,
+                        bearingToFrom,
+                        metersToKilometers(innerRadius)
+                    )
                 } else {
-                    AATMathUtils.calculatePointAtBearing(center, bearingToFrom, outerRadius)
+                    AATMathUtils.calculatePointAtBearing(
+                        center,
+                        bearingToFrom,
+                        metersToKilometers(outerRadius)
+                    )
                 }
             }
-            distanceToCenter >= outerRadius -> {
-                AATMathUtils.calculatePointAtBearing(center, bearingToFrom, outerRadius)
+            distanceToCenterMeters >= outerRadius -> {
+                AATMathUtils.calculatePointAtBearing(
+                    center,
+                    bearingToFrom,
+                    metersToKilometers(outerRadius)
+                )
             }
             else -> {
-                val distanceToInner = innerRadius?.let { distanceToCenter - it } ?: Double.MAX_VALUE
-                val distanceToOuter = outerRadius - distanceToCenter
+                val distanceToInner = innerRadius?.let { distanceToCenterMeters - it } ?: Double.MAX_VALUE
+                val distanceToOuter = outerRadius - distanceToCenterMeters
                 if (innerRadius != null && distanceToInner < distanceToOuter) {
-                    AATMathUtils.calculatePointAtBearing(center, bearingToFrom, innerRadius)
+                    AATMathUtils.calculatePointAtBearing(
+                        center,
+                        bearingToFrom,
+                        metersToKilometers(innerRadius)
+                    )
                 } else {
-                    AATMathUtils.calculatePointAtBearing(center, bearingToFrom, outerRadius)
+                    AATMathUtils.calculatePointAtBearing(
+                        center,
+                        bearingToFrom,
+                        metersToKilometers(outerRadius)
+                    )
                 }
             }
         }
@@ -186,7 +233,13 @@ internal object SectorAreaGeometrySupport {
         for (i in 0..steps) {
             val fraction = i.toDouble() / steps
             val bearing = bearingAtFraction(startBearing, endBearing, fraction)
-            sink.add(AATMathUtils.calculatePointAtBearing(center, bearing, radius))
+            sink.add(
+                AATMathUtils.calculatePointAtBearing(
+                    center,
+                    bearing,
+                    metersToKilometers(radius)
+                )
+            )
         }
     }
 
@@ -205,5 +258,13 @@ internal object SectorAreaGeometrySupport {
         } else {
             AATMathUtils.normalizeAngle(startBearing + fraction * span)
         }
+    }
+
+    private fun distanceMeters(from: AATLatLng, to: AATLatLng): Double {
+        return AATMathUtils.calculateDistanceMeters(from, to)
+    }
+
+    private fun metersToKilometers(distanceMeters: Double): Double {
+        return distanceMeters / METERS_PER_KILOMETER
     }
 }

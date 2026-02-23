@@ -14,7 +14,7 @@ import kotlin.math.sqrt
  */
 internal object AATEditGeometry {
 
-    private const val EARTH_RADIUS_KM = 6371.0
+    private const val EARTH_RADIUS_METERS = 6371000.0
 
     fun calculateBearing(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
         val lat1Rad = Math.toRadians(lat1)
@@ -42,18 +42,18 @@ internal object AATEditGeometry {
         }
     }
 
-    fun generateCircleCoordinates(
+    fun generateCircleCoordinatesMeters(
         centerLat: Double,
         centerLon: Double,
-        radiusKm: Double,
+        radiusMeters: Double,
         points: Int = 64
     ): List<List<Double>> {
         val coords = mutableListOf<List<Double>>()
 
         for (i in 0 until points) {
             val angle = 2 * PI * i / points
-            val lat = centerLat + (radiusKm / EARTH_RADIUS_KM) * (180 / PI) * cos(angle)
-            val lon = centerLon + (radiusKm / EARTH_RADIUS_KM) * (180 / PI) * sin(angle) /
+            val lat = centerLat + (radiusMeters / EARTH_RADIUS_METERS) * (180 / PI) * cos(angle)
+            val lon = centerLon + (radiusMeters / EARTH_RADIUS_METERS) * (180 / PI) * sin(angle) /
                 cos(centerLat * PI / 180)
             coords.add(listOf(lon, lat)) // GeoJSON format: [longitude, latitude]
         }
@@ -65,17 +65,17 @@ internal object AATEditGeometry {
         return coords
     }
 
-    fun generateSectorCoordinates(
+    fun generateSectorCoordinatesMeters(
         centerLat: Double,
         centerLon: Double,
-        innerRadiusKm: Double,
-        outerRadiusKm: Double,
+        innerRadiusMeters: Double,
+        outerRadiusMeters: Double,
         startBearingDeg: Double,
         endBearingDeg: Double
     ): List<List<Double>> {
         val coords = mutableListOf<List<Double>>()
 
-        if (innerRadiusKm > 0.0) {
+        if (innerRadiusMeters > 0.0) {
             // Keyhole: cylinder plus sector extension.
             val cylinderPoints = 72
             val sectorPoints = 45
@@ -89,28 +89,28 @@ internal object AATEditGeometry {
                 val currentAngle = startDrawAngle + angleProgress * (endDrawAngle - startDrawAngle)
                 val normalizedAngle = currentAngle % 360.0
 
-                val point = calculateDestinationPoint(centerLat, centerLon, normalizedAngle, innerRadiusKm)
+                val point = calculateDestinationPointMeters(centerLat, centerLon, normalizedAngle, innerRadiusMeters)
                 coords.add(listOf(point.second, point.first))
             }
 
             // Connect to sector outer boundary at start angle.
-            val sectorOuterStart = calculateDestinationPoint(centerLat, centerLon, startBearingDeg, outerRadiusKm)
+            val sectorOuterStart = calculateDestinationPointMeters(centerLat, centerLon, startBearingDeg, outerRadiusMeters)
             coords.add(listOf(sectorOuterStart.second, sectorOuterStart.first))
 
             // Draw the sector outer arc.
             for (i in 1 until sectorPoints) {
                 val angleProgress = i.toDouble() / sectorPoints
                 val angle = startBearingDeg + angleProgress * (endBearingDeg - startBearingDeg)
-                val point = calculateDestinationPoint(centerLat, centerLon, angle, outerRadiusKm)
+                val point = calculateDestinationPointMeters(centerLat, centerLon, angle, outerRadiusMeters)
                 coords.add(listOf(point.second, point.first))
             }
 
             // Connect to sector outer boundary at end angle.
-            val sectorOuterEnd = calculateDestinationPoint(centerLat, centerLon, endBearingDeg, outerRadiusKm)
+            val sectorOuterEnd = calculateDestinationPointMeters(centerLat, centerLon, endBearingDeg, outerRadiusMeters)
             coords.add(listOf(sectorOuterEnd.second, sectorOuterEnd.first))
 
             // Connect back to cylinder edge at sector end angle (closes the keyhole).
-            val cylinderSectorEnd = calculateDestinationPoint(centerLat, centerLon, endBearingDeg, innerRadiusKm)
+            val cylinderSectorEnd = calculateDestinationPointMeters(centerLat, centerLon, endBearingDeg, innerRadiusMeters)
             coords.add(listOf(cylinderSectorEnd.second, cylinderSectorEnd.first))
         } else {
             // Sector: no inner radius, standard sector from center.
@@ -133,7 +133,7 @@ internal object AATEditGeometry {
                 } else {
                     (startBearingDeg + fraction * sectorSpan) % 360.0
                 }
-                val point = calculateDestinationPoint(centerLat, centerLon, bearing, outerRadiusKm)
+                val point = calculateDestinationPointMeters(centerLat, centerLon, bearing, outerRadiusMeters)
                 coords.add(listOf(point.second, point.first))
             }
 
@@ -148,36 +148,36 @@ internal object AATEditGeometry {
         return coords
     }
 
-    fun calculateDestinationPoint(
+    fun calculateDestinationPointMeters(
         centerLat: Double,
         centerLon: Double,
         bearingDeg: Double,
-        distanceKm: Double
+        distanceMeters: Double
     ): Pair<Double, Double> {
         val latRad = Math.toRadians(centerLat)
         val lonRad = Math.toRadians(centerLon)
         val bearingRad = Math.toRadians(bearingDeg)
 
         val newLatRad = asin(
-            sin(latRad) * cos(distanceKm / EARTH_RADIUS_KM) +
-                cos(latRad) * sin(distanceKm / EARTH_RADIUS_KM) * cos(bearingRad)
+            sin(latRad) * cos(distanceMeters / EARTH_RADIUS_METERS) +
+                cos(latRad) * sin(distanceMeters / EARTH_RADIUS_METERS) * cos(bearingRad)
         )
 
         val newLonRad = lonRad + atan2(
-            sin(bearingRad) * sin(distanceKm / EARTH_RADIUS_KM) * cos(latRad),
-            cos(distanceKm / EARTH_RADIUS_KM) - sin(latRad) * sin(newLatRad)
+            sin(bearingRad) * sin(distanceMeters / EARTH_RADIUS_METERS) * cos(latRad),
+            cos(distanceMeters / EARTH_RADIUS_METERS) - sin(latRad) * sin(newLatRad)
         )
 
         return Pair(Math.toDegrees(newLatRad), Math.toDegrees(newLonRad))
     }
 
-    fun haversineDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+    fun haversineDistanceMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
         val dLat = Math.toRadians(lat2 - lat1)
         val dLon = Math.toRadians(lon2 - lon1)
         val a = sin(dLat / 2) * sin(dLat / 2) +
             cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) *
             sin(dLon / 2) * sin(dLon / 2)
         val c = 2 * atan2(sqrt(a), sqrt(1 - a))
-        return EARTH_RADIUS_KM * c
+        return EARTH_RADIUS_METERS * c
     }
 }

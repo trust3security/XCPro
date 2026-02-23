@@ -180,8 +180,8 @@ class RacingNavigationEngineTest {
             lon = 0.0,
             role = RacingWaypointRole.TURNPOINT,
             turnPointType = RacingTurnPointType.KEYHOLE,
-            customGateWidth = 10.0,
-            keyholeInnerRadius = 0.5,
+            customGateWidthMeters = 10_000.0,
+            keyholeInnerRadiusMeters = 500.0,
             keyholeAngle = 90.0
         )
         val finish = RacingWaypoint.createWithStandardizedDefaults(

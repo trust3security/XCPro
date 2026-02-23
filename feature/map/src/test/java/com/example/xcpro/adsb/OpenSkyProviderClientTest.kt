@@ -16,6 +16,7 @@ import okhttp3.Protocol
 import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -117,6 +118,91 @@ class OpenSkyProviderClientTest {
         assertTrue(result is ProviderResult.NetworkError)
         val error = result as ProviderResult.NetworkError
         assertEquals(AdsbNetworkFailureKind.MALFORMED_RESPONSE, error.kind)
+    }
+
+    @Test
+    fun fetchStates_serializesQueryWithExpectedPrecisionAndExtendedFlag() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        var capturedRequest: okhttp3.Request? = null
+        val client = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                capturedRequest = chain.request()
+                Response.Builder()
+                    .request(chain.request())
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(200)
+                    .message("OK")
+                    .body("{\"time\":1710000000,\"states\":[]}".toResponseBody())
+                    .build()
+            }
+            .build()
+        val provider = OpenSkyProviderClient(
+            httpClient = client,
+            dispatcher = dispatcher
+        )
+
+        val result = provider.fetchStates(
+            bbox = BBox(
+                lamin = -33.9012349,
+                lomin = 151.1098764,
+                lamax = -33.8012349,
+                lomax = 151.3098764
+            ),
+            auth = null
+        )
+
+        assertTrue(result is ProviderResult.Success)
+        val request = capturedRequest
+        assertTrue(request != null)
+        assertEquals("-33.901235", request?.url?.queryParameter("lamin"))
+        assertEquals("151.109876", request?.url?.queryParameter("lomin"))
+        assertEquals("-33.801235", request?.url?.queryParameter("lamax"))
+        assertEquals("151.309876", request?.url?.queryParameter("lomax"))
+        assertEquals("1", request?.url?.queryParameter("extended"))
+    }
+
+    @Test
+    fun fetchStates_setsAuthorizationHeaderOnlyForNonBlankBearerTokens() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val capturedAuthHeaders = mutableListOf<String?>()
+        val client = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                capturedAuthHeaders += chain.request().header("Authorization")
+                Response.Builder()
+                    .request(chain.request())
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(200)
+                    .message("OK")
+                    .body("{\"time\":1710000000,\"states\":[]}".toResponseBody())
+                    .build()
+            }
+            .build()
+        val provider = OpenSkyProviderClient(
+            httpClient = client,
+            dispatcher = dispatcher
+        )
+
+        provider.fetchStates(
+            bbox = BBox(
+                lamin = -33.90,
+                lomin = 151.10,
+                lamax = -33.80,
+                lomax = 151.30
+            ),
+            auth = AdsbAuth("token-123")
+        )
+        provider.fetchStates(
+            bbox = BBox(
+                lamin = -33.90,
+                lomin = 151.10,
+                lamax = -33.80,
+                lomax = 151.30
+            ),
+            auth = AdsbAuth("   ")
+        )
+
+        assertEquals("Bearer token-123", capturedAuthHeaders[0])
+        assertNull(capturedAuthHeaders[1])
     }
 
     private suspend fun assertNetworkFailureKind(

@@ -113,12 +113,12 @@ class RacingReplayLogBuilder(
         stepMillis: Long,
         points: MutableList<IgcPoint>
     ): Long {
-        val distanceMeters = RacingGeometryUtils.haversineDistance(
+        val distanceMeters = RacingGeometryUtils.haversineDistanceMeters(
             from.lat,
             from.lon,
             to.lat,
             to.lon
-        ) * 1000.0
+        )
         val safeDistance = distanceMeters.coerceAtLeast(0.0)
         val expectedDurationMs = if (safeDistance == 0.0) {
             stepMillis.toDouble()

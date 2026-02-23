@@ -17,31 +17,28 @@ data class SpeedBoundsMs(
 
 internal object GliderSpeedBoundsResolver {
 
-    data class PolarRangeKmh(val minKmh: Double, val maxKmh: Double)
+    data class PolarRangeMs(val minMs: Double, val maxMs: Double)
 
     fun hasPolar(model: GliderModel?, config: GliderConfig): Boolean =
-        resolvePolarRangeKmh(model, config) != null
+        resolvePolarRangeMs(model, config) != null
 
     fun resolveIasBoundsMs(model: GliderModel?, config: GliderConfig): SpeedBoundsMs? {
-        val polarRange = resolvePolarRangeKmh(model, config) ?: return null
-        val minCandidate = config.iasMinKmh ?: polarRange.minKmh
-        val maxCandidate = config.iasMaxKmh ?: polarRange.maxKmh
-        val clampedMax = clampMaxToSpeedLimits(maxCandidate, model?.speedLimits)
-        val minKmh = minCandidate.coerceAtLeast(0.0)
-        val maxKmh = clampedMax.coerceAtLeast(0.0)
-        if (maxKmh <= 0.0 || minKmh <= 0.0 || minKmh >= maxKmh) return null
-        return SpeedBoundsMs(
-            minMs = UnitsConverter.kmhToMs(minKmh),
-            maxMs = UnitsConverter.kmhToMs(maxKmh)
-        )
+        val polarRange = resolvePolarRangeMs(model, config) ?: return null
+        val minCandidate = config.iasMinMs ?: polarRange.minMs
+        val maxCandidate = config.iasMaxMs ?: polarRange.maxMs
+        val clampedMax = clampMaxToSpeedLimitsMs(maxCandidate, model?.speedLimits)
+        val minMs = minCandidate.coerceAtLeast(0.0)
+        val maxMs = clampedMax.coerceAtLeast(0.0)
+        if (maxMs <= 0.0 || minMs <= 0.0 || minMs >= maxMs) return null
+        return SpeedBoundsMs(minMs = minMs, maxMs = maxMs)
     }
 
-    fun resolvePolarRangeKmh(model: GliderModel?, config: GliderConfig): PolarRangeKmh? {
+    fun resolvePolarRangeMs(model: GliderModel?, config: GliderConfig): PolarRangeMs? {
         config.threePointPolar?.let { polar ->
-            val minKmh = min(polar.lowKmh, min(polar.midKmh, polar.highKmh))
-            val maxKmh = max(polar.lowKmh, max(polar.midKmh, polar.highKmh))
-            if (minKmh > 0.0 && maxKmh > minKmh) {
-                return PolarRangeKmh(minKmh, maxKmh)
+            val minMs = min(polar.lowMs, min(polar.midMs, polar.highMs))
+            val maxMs = max(polar.lowMs, max(polar.midMs, polar.highMs))
+            if (minMs > 0.0 && maxMs > minMs) {
+                return PolarRangeMs(minMs, maxMs)
             }
         }
 
@@ -58,42 +55,42 @@ internal object GliderSpeedBoundsResolver {
 
         val coeff = modelValue.polar
         if (coeff != null && coeff.a != null && coeff.b != null && coeff.c != null) {
-            val minKmh = coeff.minKmh
-            val maxKmh = coeff.maxKmh
-            if (minKmh > 0.0 && maxKmh > minKmh) {
-                return PolarRangeKmh(minKmh, maxKmh)
+            val minMs = coeff.minMs
+            val maxMs = coeff.maxMs
+            if (minMs > 0.0 && maxMs > minMs) {
+                return PolarRangeMs(minMs, maxMs)
             }
         }
 
         return null
     }
 
-    private fun pointsRange(points: List<PolarPoint>): PolarRangeKmh {
-        var minKmh = Double.POSITIVE_INFINITY
-        var maxKmh = Double.NEGATIVE_INFINITY
+    private fun pointsRange(points: List<PolarPoint>): PolarRangeMs {
+        var minMs = Double.POSITIVE_INFINITY
+        var maxMs = Double.NEGATIVE_INFINITY
         points.forEach { point ->
-            minKmh = min(minKmh, point.kmh)
-            maxKmh = max(maxKmh, point.kmh)
+            minMs = min(minMs, point.speedMs)
+            maxMs = max(maxMs, point.speedMs)
         }
-        val safeMin = if (minKmh.isFinite()) minKmh else 0.0
-        val safeMax = if (maxKmh.isFinite()) maxKmh else 0.0
-        return PolarRangeKmh(safeMin, safeMax)
+        val safeMin = if (minMs.isFinite()) minMs else 0.0
+        val safeMax = if (maxMs.isFinite()) maxMs else 0.0
+        return PolarRangeMs(safeMin, safeMax)
     }
 
-    private fun clampMaxToSpeedLimits(maxKmh: Double, limits: SpeedLimits?): Double {
+    private fun clampMaxToSpeedLimitsMs(maxMs: Double, limits: SpeedLimits?): Double {
         val limit = limits?.let {
             listOfNotNull(
-                it.vneKmh?.toDouble(),
-                it.vraKmh?.toDouble(),
-                it.vaKmh?.toDouble(),
-                it.vwKmh?.toDouble(),
-                it.vtKmh?.toDouble()
+                it.vneKmh?.toDouble()?.let(UnitsConverter::kmhToMs),
+                it.vraKmh?.toDouble()?.let(UnitsConverter::kmhToMs),
+                it.vaKmh?.toDouble()?.let(UnitsConverter::kmhToMs),
+                it.vwKmh?.toDouble()?.let(UnitsConverter::kmhToMs),
+                it.vtKmh?.toDouble()?.let(UnitsConverter::kmhToMs)
             ).minOrNull()
         }
         return if (limit != null && limit > 0.0) {
-            min(maxKmh, limit)
+            min(maxMs, limit)
         } else {
-            maxKmh
+            maxMs
         }
     }
 }

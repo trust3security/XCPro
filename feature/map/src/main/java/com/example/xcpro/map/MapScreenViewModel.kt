@@ -115,8 +115,6 @@ class MapScreenViewModel @Inject constructor(
     val showOgnThermalsEnabled: StateFlow<Boolean> = ognTrafficUseCase.showThermalsEnabled
         .eagerState(scope = viewModelScope, initial = false)
     val ognGliderTrailSegments: StateFlow<List<OgnGliderTrailSegment>> = ognTrafficUseCase.gliderTrailSegments
-    val showOgnGliderTrailsEnabled: StateFlow<Boolean> = ognTrafficUseCase.showGliderTrailsEnabled
-        .eagerState(scope = viewModelScope, initial = false)
     private val rawAdsbTargets: StateFlow<List<AdsbTrafficUiModel>> = adsbTrafficUseCase.targets
     private val enrichedAdsbTargets: StateFlow<List<AdsbTrafficUiModel>> =
         adsbMetadataEnrichmentUseCase.targetsWithMetadata(rawAdsbTargets)
@@ -223,7 +221,6 @@ class MapScreenViewModel @Inject constructor(
         rawOgnTargets = ognTargets,
         selectedOgnId = _selectedOgnId,
         showThermalsEnabled = showOgnThermalsEnabled,
-        showGliderTrailsEnabled = showOgnGliderTrailsEnabled,
         thermalHotspots = ognThermalHotspots,
         selectedThermalId = _selectedOgnThermalId,
         rawAdsbTargets = rawAdsbTargets,
@@ -300,7 +297,6 @@ class MapScreenViewModel @Inject constructor(
     fun setMapVisible(isVisible: Boolean) = trafficCoordinator.setMapVisible(isVisible)
     fun onToggleOgnTraffic() = trafficCoordinator.onToggleOgnTraffic()
     fun onToggleOgnThermals() = trafficCoordinator.onToggleOgnThermals()
-    fun onToggleOgnGliderTrails() = trafficCoordinator.onToggleOgnGliderTrails()
     fun onToggleAdsbTraffic() = trafficCoordinator.onToggleAdsbTraffic()
     fun onOgnTargetSelected(id: String) = trafficCoordinator.onOgnTargetSelected(id)
     fun onOgnThermalSelected(id: String) = trafficCoordinator.onOgnThermalSelected(id)

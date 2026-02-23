@@ -1,6 +1,7 @@
 package com.example.xcpro.tasks.aat
 
 import androidx.compose.runtime.Composable
+import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.tasks.TaskSheetViewModel
 import com.example.xcpro.tasks.TaskUiState
@@ -18,6 +19,7 @@ fun AATManageBTTab(
     taskViewModel: TaskSheetViewModel,
     mapLibreMap: MapLibreMap?,
     allWaypoints: List<WaypointData> = emptyList(),
+    unitsPreferences: UnitsPreferences = UnitsPreferences(),
     onClearTask: () -> Unit,
     onSaveTask: () -> Unit,
     onDismiss: () -> Unit,
@@ -32,6 +34,7 @@ fun AATManageBTTab(
         taskViewModel = taskViewModel,
         mapLibreMap = mapLibreMap,
         allWaypoints = allWaypoints,
+        unitsPreferences = unitsPreferences,
         currentQNH = currentQNH
     )
 }

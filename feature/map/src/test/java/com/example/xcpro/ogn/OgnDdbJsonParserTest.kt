@@ -28,9 +28,12 @@ class OgnDdbJsonParserTest {
         """.trimIndent()
 
         val parsed = OgnDdbJsonParser.parse(json)
-        val identity = parsed["0123BC"]
+        val entry = parsed.singleOrNull()
+        val identity = entry?.identity
 
-        assertNotNull(identity)
+        assertNotNull(entry)
+        assertEquals(OgnAddressType.FLARM, entry?.addressType)
+        assertEquals("0123BC", entry?.deviceIdHex)
         assertEquals("X-0123", identity?.registration)
         assertEquals("23", identity?.competitionNumber)
         assertEquals("LS-4", identity?.aircraftModel)
@@ -54,9 +57,12 @@ class OgnDdbJsonParserTest {
         """.trimIndent()
 
         val parsed = OgnDdbJsonParser.parse(json)
-        val identity = parsed["ABC123"]
+        val entry = parsed.singleOrNull()
+        val identity = entry?.identity
 
-        assertNotNull(identity)
+        assertNotNull(entry)
+        assertEquals(OgnAddressType.UNKNOWN, entry?.addressType)
+        assertEquals("ABC123", entry?.deviceIdHex)
         assertFalse(identity?.tracked == true)
         assertFalse(identity?.identified == true)
     }

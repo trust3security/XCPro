@@ -106,6 +106,7 @@ class OgnTrafficOverlay(
             val feature = Feature.fromGeometry(
                 Point.fromLngLat(target.longitude, target.latitude)
             )
+            feature.addStringProperty(PROP_TARGET_KEY, target.canonicalKey)
             feature.addStringProperty(PROP_TARGET_ID, target.id)
             feature.addStringProperty(PROP_LABEL, target.displayLabel)
             feature.addStringProperty(
@@ -138,9 +139,14 @@ class OgnTrafficOverlay(
         }.getOrNull().orEmpty()
 
         for (feature in features) {
-            if (!feature.hasProperty(PROP_TARGET_ID)) continue
-            val id = runCatching { feature.getStringProperty(PROP_TARGET_ID) }.getOrNull()
-            val normalized = id?.trim().orEmpty()
+            val key = when {
+                feature.hasProperty(PROP_TARGET_KEY) ->
+                    runCatching { feature.getStringProperty(PROP_TARGET_KEY) }.getOrNull()
+                feature.hasProperty(PROP_TARGET_ID) ->
+                    runCatching { feature.getStringProperty(PROP_TARGET_ID) }.getOrNull()
+                else -> null
+            }
+            val normalized = key?.trim().orEmpty()
             if (normalized.isNotEmpty()) return normalized
         }
         return null
@@ -293,12 +299,13 @@ class OgnTrafficOverlay(
         private const val SOURCE_ID = "ogn-traffic-source"
         private const val ICON_LAYER_ID = "ogn-traffic-icon-layer"
         private const val LABEL_LAYER_ID = "ogn-traffic-label-layer"
-        private const val DEFAULT_ICON_IMAGE_ID = "ogn_icon_glider"
+        private const val DEFAULT_ICON_IMAGE_ID = "ogn_icon_unknown"
 
         private const val PROP_LABEL = "label"
         private const val PROP_ALPHA = "alpha"
         private const val PROP_TRACK_DEG = "track_deg"
         private const val PROP_TARGET_ID = "target_id"
+        private const val PROP_TARGET_KEY = "target_key"
         private const val PROP_ICON_ID = "icon_id"
 
         private const val MAX_TARGETS = 500

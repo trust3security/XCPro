@@ -290,8 +290,8 @@ private fun VarioDisplayOptionsCard(
                     )
                 }
                 Switch(
-                    checked = teCompensationEnabled,
-                    onCheckedChange = onTeCompensationEnabledChange
+                    checked = showWindSpeedOnVario,
+                    onCheckedChange = onShowWindSpeedOnVarioChange
                 )
             }
             Row(
@@ -313,8 +313,8 @@ private fun VarioDisplayOptionsCard(
                     )
                 }
                 Switch(
-                    checked = showWindSpeedOnVario,
-                    onCheckedChange = onShowWindSpeedOnVarioChange
+                    checked = teCompensationEnabled,
+                    onCheckedChange = onTeCompensationEnabledChange
                 )
             }
         }

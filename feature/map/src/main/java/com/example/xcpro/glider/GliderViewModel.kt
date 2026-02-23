@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.xcpro.common.glider.GliderConfig
 import com.example.xcpro.common.glider.GliderModel
 import com.example.xcpro.common.glider.ThreePointPolar
+import com.example.xcpro.common.units.UnitsConverter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -63,12 +64,20 @@ class GliderViewModel @Inject constructor(
         useCase.setReferenceWeightKg(weight)
     }
 
+    fun setIasMinMs(value: Double?) {
+        useCase.setIasMinMs(value?.coerceAtLeast(0.0))
+    }
+
+    fun setIasMaxMs(value: Double?) {
+        useCase.setIasMaxMs(value?.coerceAtLeast(0.0))
+    }
+
     fun setIasMinKmh(value: Double?) {
-        useCase.setIasMinKmh(value?.coerceAtLeast(0.0))
+        setIasMinMs(value?.coerceAtLeast(0.0)?.let(UnitsConverter::kmhToMs))
     }
 
     fun setIasMaxKmh(value: Double?) {
-        useCase.setIasMaxKmh(value?.coerceAtLeast(0.0))
+        setIasMaxMs(value?.coerceAtLeast(0.0)?.let(UnitsConverter::kmhToMs))
     }
 
     fun setHideBallastPill(enabled: Boolean) {

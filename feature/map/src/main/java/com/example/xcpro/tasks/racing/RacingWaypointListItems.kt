@@ -37,6 +37,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.xcpro.common.waypoint.SearchWaypoint
 import com.example.xcpro.common.waypoint.WaypointData
+import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.tasks.SearchableWaypointField
 import com.example.xcpro.tasks.TaskSheetViewModel
 import com.example.xcpro.tasks.core.RacingWaypointCustomParams
@@ -45,6 +46,8 @@ import com.example.xcpro.tasks.racing.models.RacingFinishPointType
 import com.example.xcpro.tasks.racing.models.RacingStartPointType
 import com.example.xcpro.tasks.racing.models.RacingTurnPointType
 import com.example.xcpro.tasks.racing.ui.RacingTaskPointTypeSelector
+
+private const val METERS_PER_KILOMETER = 1000.0
 
 @Composable
 internal fun RacingReorderableWaypointItem(
@@ -61,8 +64,17 @@ internal fun RacingReorderableWaypointItem(
     onMoveUp: (() -> Unit)?,
     onMoveDown: (() -> Unit)?,
     onRemove: () -> Unit,
-    onTaskPointTypeUpdate: (RacingStartPointType?, RacingFinishPointType?, RacingTurnPointType?, Double?, Double?, Double?, Double?) -> Unit,
+    onTaskPointTypeUpdate: (
+        RacingStartPointType?,
+        RacingFinishPointType?,
+        RacingTurnPointType?,
+        Double?,
+        Double?,
+        Double?,
+        Double?
+    ) -> Unit,
     onWaypointReplace: (SearchWaypoint) -> Unit,
+    unitsPreferences: UnitsPreferences,
     qnhValue: String? = null
 ) {
     val blue = Color(0xFF007AFF)
@@ -77,18 +89,18 @@ internal fun RacingReorderableWaypointItem(
         else -> "Turn Point"
     }
 
-    val gateWidthValue = remember(taskWaypoint.customRadius) {
-        taskWaypoint.customRadius ?: 0.0
+    val gateWidthValue = remember(taskWaypoint.customRadiusMeters) {
+        taskWaypoint.resolvedCustomRadiusMeters()?.div(METERS_PER_KILOMETER) ?: 0.0
     }
     val racingParams = remember(taskWaypoint.customParameters) {
         RacingWaypointCustomParams.from(taskWaypoint.customParameters)
     }
-    val keyholeInnerRadiusValue = racingParams.keyholeInnerRadius
+    val keyholeInnerRadiusValue = racingParams.keyholeInnerRadiusMeters / METERS_PER_KILOMETER
     val keyholeAngleValue = racingParams.keyholeAngle
-    val faiQuadrantOuterRadiusValue = racingParams.faiQuadrantOuterRadius
+    val faiQuadrantOuterRadiusValue = racingParams.faiQuadrantOuterRadiusMeters / METERS_PER_KILOMETER
 
-    val turnDistanceToNextKm = remember(taskWaypoint, nextWaypoint) {
-        nextWaypoint?.let { taskViewModel.calculateDistanceToNextWaypointKm(taskWaypoint, it) }
+    val turnDistanceToNextMeters = remember(taskWaypoint, nextWaypoint) {
+        nextWaypoint?.let { taskViewModel.calculateDistanceToNextWaypointMeters(taskWaypoint, it) }
     }
     val startDistanceUi = remember(taskWaypoint, nextWaypoint, selectedStartType) {
         nextWaypoint?.let {
@@ -224,16 +236,17 @@ internal fun RacingReorderableWaypointItem(
                     keyholeAngle = keyholeAngle,
                     faiQuadrantOuterRadius = faiQuadrantOuterRadius,
                     startDistanceUi = startDistanceUi,
-                    turnDistanceToNextKm = turnDistanceToNextKm,
+                    turnDistanceToNextMeters = turnDistanceToNextMeters,
+                    unitsPreferences = unitsPreferences,
                     onStartTypeChange = { newType ->
                         onTaskPointTypeUpdate(
                             newType,
                             selectedFinishType,
                             selectedTurnType,
-                            gateWidth.toDoubleOrNull(),
-                            keyholeInnerRadius.toDoubleOrNull(),
+                            gateWidth.toDoubleOrNull()?.times(METERS_PER_KILOMETER),
+                            keyholeInnerRadius.toDoubleOrNull()?.times(METERS_PER_KILOMETER),
                             keyholeAngle.toDoubleOrNull(),
-                            faiQuadrantOuterRadius.toDoubleOrNull()
+                            faiQuadrantOuterRadius.toDoubleOrNull()?.times(METERS_PER_KILOMETER)
                         )
                     },
                     onFinishTypeChange = { newType ->
@@ -241,10 +254,10 @@ internal fun RacingReorderableWaypointItem(
                             selectedStartType,
                             newType,
                             selectedTurnType,
-                            gateWidth.toDoubleOrNull(),
-                            keyholeInnerRadius.toDoubleOrNull(),
+                            gateWidth.toDoubleOrNull()?.times(METERS_PER_KILOMETER),
+                            keyholeInnerRadius.toDoubleOrNull()?.times(METERS_PER_KILOMETER),
                             keyholeAngle.toDoubleOrNull(),
-                            faiQuadrantOuterRadius.toDoubleOrNull()
+                            faiQuadrantOuterRadius.toDoubleOrNull()?.times(METERS_PER_KILOMETER)
                         )
                     },
                     onTurnTypeChange = { newType ->
@@ -262,25 +275,25 @@ internal fun RacingReorderableWaypointItem(
                             selectedStartType,
                             selectedFinishType,
                             newType,
-                            typeSpecificDefault,
+                            typeSpecificDefault * METERS_PER_KILOMETER,
                             null,
                             null,
-                            faiQuadrantDefault
+                            faiQuadrantDefault?.times(METERS_PER_KILOMETER)
                         )
                     },
                     onGateWidthChange = { newWidth ->
                         gateWidth = newWidth
                         try {
-                            val width = newWidth.toDouble()
-                            onTaskPointTypeUpdate(null, null, null, width, null, null, null)
+                            val widthMeters = newWidth.toDouble() * METERS_PER_KILOMETER
+                            onTaskPointTypeUpdate(null, null, null, widthMeters, null, null, null)
                         } catch (_: NumberFormatException) {
                         }
                     },
                     onKeyholeInnerRadiusChange = { newRadius ->
                         keyholeInnerRadius = newRadius
                         try {
-                            val radius = newRadius.toDouble()
-                            onTaskPointTypeUpdate(null, null, null, null, radius, null, null)
+                            val radiusMeters = newRadius.toDouble() * METERS_PER_KILOMETER
+                            onTaskPointTypeUpdate(null, null, null, null, radiusMeters, null, null)
                         } catch (_: NumberFormatException) {
                         }
                     },
@@ -295,8 +308,8 @@ internal fun RacingReorderableWaypointItem(
                     onFAIQuadrantOuterRadiusChange = { newRadius ->
                         faiQuadrantOuterRadius = newRadius
                         try {
-                            val radius = newRadius.toDouble()
-                            onTaskPointTypeUpdate(null, null, null, null, null, null, radius)
+                            val radiusMeters = newRadius.toDouble() * METERS_PER_KILOMETER
+                            onTaskPointTypeUpdate(null, null, null, null, null, null, radiusMeters)
                         } catch (_: NumberFormatException) {
                         }
                     }

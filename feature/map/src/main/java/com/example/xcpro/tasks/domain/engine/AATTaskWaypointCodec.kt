@@ -25,27 +25,28 @@ internal object AATTaskWaypointCodec {
                 else -> WaypointRole.TURNPOINT
             }
             val normalizedType = normalizePointType(waypoint.customPointType, normalizedRole)
-            val defaultRadius = defaultRadiusKm(normalizedRole)
-            val normalizedRadius = if (waypoint.role != normalizedRole) {
-                defaultRadius
+            val defaultRadiusMeters = defaultRadiusMeters(normalizedRole)
+            val normalizedRadiusMeters = if (waypoint.role != normalizedRole) {
+                defaultRadiusMeters
             } else {
-                waypoint.customRadius?.takeIf { it > 0.0 } ?: defaultRadius
+                waypoint.resolvedCustomRadiusMeters()?.takeIf { it > 0.0 } ?: defaultRadiusMeters
             }
             val typedParams = AATWaypointCustomParams.from(
                 source = waypoint.customParameters,
                 fallbackLat = waypoint.lat,
                 fallbackLon = waypoint.lon,
-                fallbackRadiusMeters = normalizedRadius * 1000.0
+                fallbackRadiusMeters = normalizedRadiusMeters
             )
             val normalizedParams = waypoint.customParameters.toMutableMap().apply {
                 typedParams.applyTo(this)
             }
-            waypoint.copy(
-                role = normalizedRole,
-                customPointType = normalizedType,
-                customRadius = normalizedRadius,
-                customParameters = normalizedParams
-            )
+            waypoint
+                .withCustomRadiusMeters(normalizedRadiusMeters)
+                .copy(
+                    role = normalizedRole,
+                    customPointType = normalizedType,
+                    customParameters = normalizedParams
+                )
         }
     }
 
@@ -66,7 +67,8 @@ internal object AATTaskWaypointCodec {
             ?: AATTurnPointType.AAT_CYLINDER
 
         val fallbackRadiusMeters =
-            (waypoint.customRadius?.takeIf { it > 0.0 } ?: AATRadiusAuthority.getRadiusForRole(normalizedRole)) * 1000.0
+            waypoint.resolvedCustomRadiusMeters()?.takeIf { it > 0.0 }
+                ?: AATRadiusAuthority.getRadiusMetersForRole(normalizedRole)
         val typedParams = AATWaypointCustomParams.from(
             source = waypoint.customParameters,
             fallbackLat = waypoint.lat,
@@ -146,12 +148,12 @@ internal object AATTaskWaypointCodec {
         }
     }
 
-    private fun defaultRadiusKm(role: WaypointRole): Double {
+    private fun defaultRadiusMeters(role: WaypointRole): Double {
         val aatRole = when (role) {
             WaypointRole.START -> AATWaypointRole.START
             WaypointRole.FINISH -> AATWaypointRole.FINISH
             WaypointRole.TURNPOINT, WaypointRole.OPTIONAL -> AATWaypointRole.TURNPOINT
         }
-        return AATRadiusAuthority.getRadiusForRole(aatRole)
+        return AATRadiusAuthority.getRadiusMetersForRole(aatRole)
     }
 }

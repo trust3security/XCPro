@@ -10,7 +10,6 @@ import com.example.xcpro.tasks.aat.models.AreaGeometry
  * Completely autonomous for the AAT module.
  */
 class AreaBoundaryCalculator {
-    
     private val circleCalculator = CircleAreaCalculator()
     private val sectorCalculator = SectorAreaCalculator()
     
@@ -144,22 +143,22 @@ class AreaBoundaryCalculator {
     }
     
     /**
-     * Calculate the area size in square kilometers for any type of assigned area
+     * Calculate area size in square meters for any type of assigned area.
      */
-    fun calculateAreaSizeKm2(area: AssignedArea): Double {
+    fun calculateAreaSizeMeters2(area: AssignedArea): Double {
         return when (area.geometry) {
             is AreaGeometry.Circle -> {
-                circleCalculator.calculateAreaSizeKm2(area.geometry.radius)
+                circleCalculator.calculateAreaSizeMeters2(area.geometry.radius)
             }
             is AreaGeometry.Sector -> {
-                sectorCalculator.calculateAreaSizeKm2(
+                sectorCalculator.calculateAreaSizeMeters2(
                     area.geometry.innerRadius, area.geometry.outerRadius,
                     area.geometry.startBearing, area.geometry.endBearing
                 )
             }
         }
     }
-    
+
     /**
      * Check if a track segment passes through any type of assigned area
      */
@@ -219,32 +218,6 @@ class AreaBoundaryCalculator {
         return transitions
     }
     
-    /**
-     * Calculate the total distance flown within an area
-     */
-    fun calculateDistanceInArea(track: List<AATLatLng>, area: AssignedArea): Double {
-        if (track.size < 2) return 0.0
-        
-        var totalDistance = 0.0
-        
-        for (i in 1 until track.size) {
-            val start = track[i - 1]
-            val end = track[i]
-            
-            val startInside = isInsideArea(start, area)
-            val endInside = isInsideArea(end, area)
-            
-            if (startInside && endInside) {
-                // Both points inside - add full segment distance
-                totalDistance += com.example.xcpro.tasks.aat.calculations.AATMathUtils.calculateDistance(start, end)
-            } else if (startInside || endInside) {
-                // One point inside - add partial distance (approximation)
-                totalDistance += com.example.xcpro.tasks.aat.calculations.AATMathUtils.calculateDistance(start, end) * 0.5
-            }
-        }
-        
-        return totalDistance
-    }
 }
 
 /**

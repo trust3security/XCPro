@@ -13,15 +13,15 @@ data class OgnViewportBounds(
 )
 
 object OgnSubscriptionPolicy {
-    fun shouldReconnectByCenterMove(
+    fun shouldReconnectByCenterMoveMeters(
         previousLat: Double,
         previousLon: Double,
         nextLat: Double,
         nextLon: Double,
-        thresholdKm: Double
-    ): Boolean = haversineKm(previousLat, previousLon, nextLat, nextLon) >= thresholdKm
+        thresholdMeters: Double
+    ): Boolean = haversineMeters(previousLat, previousLon, nextLat, nextLon) >= thresholdMeters
 
-    fun haversineKm(
+    fun haversineMeters(
         lat1: Double,
         lon1: Double,
         lat2: Double,
@@ -36,7 +36,7 @@ object OgnSubscriptionPolicy {
         val h = sin(dLat / 2.0) * sin(dLat / 2.0) +
             cos(radLat1) * cos(radLat2) * sin(dLon / 2.0) * sin(dLon / 2.0)
         val c = 2.0 * atan2(sqrt(h), sqrt(1.0 - h))
-        return EARTH_RADIUS_KM * c
+        return EARTH_RADIUS_METERS * c
     }
 
     fun isInViewport(
@@ -54,5 +54,5 @@ object OgnSubscriptionPolicy {
         }
     }
 
-    private const val EARTH_RADIUS_KM = 6371.0
+    private const val EARTH_RADIUS_METERS = 6_371_000.0
 }

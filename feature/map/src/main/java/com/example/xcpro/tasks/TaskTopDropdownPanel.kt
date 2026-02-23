@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.xcpro.common.waypoint.WaypointData
+import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.map.MapTaskScreenManager
 import kotlin.math.abs
 import org.maplibre.android.maps.MapLibreMap
@@ -59,6 +60,7 @@ fun TaskTopDropdownPanel(
     mapLibreMap: MapLibreMap?,
     taskViewModel: TaskSheetViewModel? = null,
     allWaypoints: List<WaypointData> = emptyList(),
+    unitsPreferences: UnitsPreferences = UnitsPreferences(),
     currentQNH: String? = null,
     modifier: Modifier = Modifier
 ) {
@@ -200,6 +202,7 @@ fun TaskTopDropdownPanel(
                         onCategorySelect = { selectedCategory = it },
                         currentQNH = currentQNH,
                         allWaypoints = allWaypoints,
+                        unitsPreferences = unitsPreferences,
                         onClearTask = onClearTask,
                         onSaveTask = onSaveTask,
                         onDismiss = onDismiss,
@@ -220,6 +223,7 @@ private fun TaskTopExpandedContent(
     onCategorySelect: (TaskCategory) -> Unit,
     currentQNH: String?,
     allWaypoints: List<WaypointData>,
+    unitsPreferences: UnitsPreferences,
     onClearTask: () -> Unit,
     onSaveTask: () -> Unit,
     onDismiss: () -> Unit,
@@ -267,6 +271,7 @@ private fun TaskTopExpandedContent(
                     taskViewModel = taskViewModel,
                     mapLibreMap = mapLibreMap,
                     allWaypoints = allWaypoints,
+                    unitsPreferences = unitsPreferences,
                     onClearTask = onClearTask,
                     onSaveTask = onSaveTask,
                     onDismiss = onDismiss,

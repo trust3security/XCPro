@@ -29,8 +29,8 @@ class FAIQuadrantDisplay : TurnPointDisplay {
                 return createFallbackGeometry(waypoint, context)
             }
 
-            // Use configurable display radius from waypoint (convert km to meters)
-            val displayRadiusMeters = waypoint.faiQuadrantOuterRadius * 1000.0
+            // Use configurable display radius from waypoint
+            val displayRadiusMeters = waypoint.faiQuadrantOuterRadiusMeters
 
             // CRASH FIX: Validate radius
             if (!displayRadiusMeters.isFinite() || displayRadiusMeters <= 0) {
@@ -126,7 +126,7 @@ class FAIQuadrantDisplay : TurnPointDisplay {
     override fun getDisplayRadius(waypoint: RacingWaypoint): Double {
         // Return sector radius for proper map bounds calculation
         // Note: waypoint marker circle size is controlled separately via MapLibre styling
-        return waypoint.faiQuadrantOuterRadius * 1000.0 // Use configurable sector radius for map display bounds
+        return waypoint.faiQuadrantOuterRadiusMeters
     }
     
     override fun getObservationZoneType(): String {

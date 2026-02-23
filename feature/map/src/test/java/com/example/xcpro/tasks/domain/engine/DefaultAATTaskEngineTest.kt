@@ -7,6 +7,7 @@ import com.example.xcpro.tasks.core.WaypointRole
 import java.time.Duration
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -43,7 +44,8 @@ class DefaultAATTaskEngineTest {
         val waypoint = engine.state.value.base.task.waypoints[1]
         assertEquals(45.1, (waypoint.customParameters[TaskWaypointParamKeys.TARGET_LAT] as Double), 0.0)
         assertEquals(7.2, (waypoint.customParameters[TaskWaypointParamKeys.TARGET_LON] as Double), 0.0)
-        assertEquals(15.0, waypoint.customRadius ?: 0.0, 1e-9)
+        assertEquals(15_000.0, waypoint.customRadiusMeters ?: 0.0, 1e-9)
+        assertNull(waypoint.customRadius)
     }
 
     @Test

@@ -13,10 +13,12 @@ data class RacingTaskResult(
     val finishTime: LocalDateTime?,
     val turnpointTimes: List<LocalDateTime>,
     val actualDistance: Double, // meters
-    val averageSpeed: Double?, // km/h
+    val averageSpeedMs: Double?, // m/s
     val isCompleted: Boolean,
     val penalties: List<RacingPenalty> = emptyList()
 ) {
+    fun getAverageSpeedKmh(): Double? = averageSpeedMs?.times(KMH_PER_MS)
+
     fun getTaskDuration(): Duration? {
         return if (startTime != null && finishTime != null) {
             Duration.between(startTime, finishTime)
@@ -31,6 +33,10 @@ data class RacingTaskResult(
         val minutes = duration.toMinutes() % 60
         val seconds = duration.seconds % 60
         return String.format("%02d:%02d:%02d", hours, minutes, seconds)
+    }
+
+    private companion object {
+        const val KMH_PER_MS = 3.6
     }
 }
 

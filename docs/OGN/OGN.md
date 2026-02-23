@@ -12,14 +12,16 @@ Authoritative references:
 Implemented:
 - Live OGN downlink from `aprs.glidernet.org:14580`.
 - Map overlay toggle and icon-size settings.
+- OGN ownship settings for `Own FLARM ID` and `Own ICAO24` (6-hex each).
 - Dedicated `Show Thermals` toggle and persisted preference.
-- Dedicated `Show OGN Trails (TR)` toggle and persisted preference.
+- Per-aircraft trail visibility selection in the bottom-sheet OGN tab (persisted).
 - On-map glider icons + labels, track rotation, stale fade, and stale eviction.
 - On-map thermal hotspot overlay derived from OGN glider climb data.
 - On-map per-glider OGN trail segments with sink/climb color + width encoding.
 - OGN marker tap details sheet (ADS-B-style bottom sheet).
 - OGN thermal hotspot tap details sheet (partial-sheet capable).
 - DDB enrichment for labels and privacy flags.
+- Typed ownship suppression in repository SSOT (ownship OGN target is filtered before UI/trail/thermal consumers).
 - Connection/reconnect snapshot shown in debug panel (debug builds only).
 
 Not implemented:
@@ -29,8 +31,9 @@ Not implemented:
 ## End-to-End Path
 
 1. UI toggle and settings:
-   - Map toggle: `feature/map/src/main/java/com/example/xcpro/map/components/MapActionButtons.kt`
+   - Scia bottom-sheet toggle: `feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabs.kt`
    - Preferences: `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
+   - Trail selection preferences: `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrailSelectionPreferencesRepository.kt`
 2. ViewModel/use-case orchestration:
    - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
    - `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt` (`OgnTrafficUseCase`)
@@ -112,6 +115,15 @@ OGN glider trail lifecycle:
 - Segment cap: `24,000` total in-memory segments.
 - Trails persist in-memory for app session lifetime and clear on app restart.
 
+Ownship self-filter lifecycle:
+- Match policy is typed and exact:
+  - FLARM targets match only configured own FLARM hex.
+  - ICAO targets match only configured own ICAO hex.
+  - UNKNOWN type never auto-matches (false-negative preferred over false-positive suppression).
+- Suppression happens in `OgnTrafficRepository` before `targets` publish.
+- Suppressed canonical keys are exposed in snapshot diagnostics (`suppressedTargetIds`).
+- Thermal/trail repositories consume suppression state and purge existing ownship-derived artifacts in-session.
+
 Course parsing:
 - `000` is treated as unknown track.
 - `001..360` are accepted.
@@ -120,9 +132,15 @@ Course parsing:
 ## On-Map Rendering Behavior
 
 - Icon:
-  - default: `R.drawable.ic_adsb_glider`
+  - DDB `aircraftTypeCode == 1` (glider/sailplane): `R.drawable.ic_adsb_glider`
   - DDB `aircraftTypeCode == 2` (tow/tug aircraft): `R.drawable.ic_ogn_tug`
-  - DDB `aircraftTypeCode == 6` (hang glider) or `== 7` (paraglider): `R.drawable.ic_ogn_hangglider`
+  - DDB `aircraftTypeCode == 3` (helicopter): `R.drawable.ic_adsb_helicopter`
+  - DDB `aircraftTypeCode == 4` (paraglider): `R.drawable.ic_ogn_hangglider`
+  - DDB `aircraftTypeCode == 5` (hang glider): `R.drawable.ic_ogn_hangglider`
+  - DDB `aircraftTypeCode == 6` (balloon): `R.drawable.ic_adsb_balloon`
+  - DDB `aircraftTypeCode == 7` (UAV): `R.drawable.ic_adsb_drone`
+  - DDB `aircraftTypeCode == 8` (static object): `R.drawable.ic_ogn_ufo`
+  - Unknown/unsupported type: `R.drawable.ic_ogn_ufo`
 - OGN trails:
   - Source/layer IDs:
     - `ogn-glider-trail-source`
@@ -141,9 +159,8 @@ Course parsing:
 - Overlay disabled state:
   - UI passes `emptyList()` to runtime overlay renderer.
 - OGN trail overlay visibility gate:
-  - Trails render only when both:
-    - OGN overlay is enabled
-    - `Show OGN Trails (TR)` is enabled
+  - Trails render when OGN overlay is enabled.
+  - Per-aircraft filtering is applied from selected aircraft keys (bottom-sheet OGN tab).
 
 Marker tap behavior:
 - OGN markers support hit testing on icon and label layers.
@@ -153,12 +170,16 @@ Marker tap behavior:
 - OGN thermal details are mutually exclusive with OGN marker and ADS-B details.
 - Selection clears when the target disappears or OGN overlay is disabled.
 - Thermal selection clears when hotspot disappears or `Show Thermals` is disabled.
+- Marker selection uses canonical typed target keys internally (`FLARM:HEX` / `ICAO:HEX` / fallback),
+  with legacy key compatibility during matching.
 
 ## Identity and Privacy Behavior
 
 - DDB refresh and cache are handled by `OgnDdbRepository`.
 - If DDB marks target as `tracked == false`, target is removed from displayed list.
+- DDB lookup is type-aware (`device_type + device_id`) when type is known, with unknown-safe fallback.
 - If DDB identity is missing or not identified, labels fall back to non-identifying id/callsign fields.
+- If DDB `aircraft_type` is missing, icon type falls back to APRS typed `idXXYYYYYY` decode when present.
 
 ## Tests
 
@@ -168,7 +189,11 @@ Parser and policy:
 - `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrackStabilizerTest.kt`
 - `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryPolicyTest.kt`
 - `feature/map/src/test/java/com/example/xcpro/ogn/OgnDdbJsonParserTest.kt`
+- `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
+- `feature/map/src/test/java/com/example/xcpro/ogn/OgnGliderTrailRepositoryTest.kt`
+- `feature/map/src/test/java/com/example/xcpro/ogn/OgnThermalRepositoryTest.kt`
 
 Preferences and VM wiring:
 - `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepositoryTest.kt`
+- `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrailSelectionPreferencesRepositoryTest.kt`
 - `feature/map/src/test/java/com/example/xcpro/map/MapScreenViewModelTest.kt`

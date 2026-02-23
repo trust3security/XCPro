@@ -15,7 +15,7 @@ internal class AATInteractiveDistanceCalculator {
         }
 
         val segments = mutableListOf<AATInteractiveDistanceSegment>()
-        var totalDistance = 0.0
+        var totalDistanceMeters = 0.0
 
         for (i in 0 until waypoints.size - 1) {
             val fromWaypoint = waypoints[i]
@@ -29,11 +29,11 @@ internal class AATInteractiveDistanceCalculator {
             )
 
             segments.add(segment)
-            totalDistance += segment.distance
+            totalDistanceMeters += segment.distanceMeters
         }
 
         return AATInteractiveTaskDistance(
-            totalDistance = totalDistance,
+            totalDistanceMeters = totalDistanceMeters,
             segments = segments,
             calculationTime = 0L
         )
@@ -74,7 +74,7 @@ internal class AATInteractiveDistanceCalculator {
     }
 
     private fun calculateSingleWaypointInteractiveTask(waypoint: AATWaypoint): AATInteractiveTaskDistance {
-        val distance = haversineDistance(
+        val distanceMeters = haversineDistanceMeters(
             waypoint.lat,
             waypoint.lon,
             waypoint.targetPoint.latitude,
@@ -84,14 +84,14 @@ internal class AATInteractiveDistanceCalculator {
         val segment = AATInteractiveDistanceSegment(
             fromPoint = AATLatLng(waypoint.lat, waypoint.lon),
             toPoint = waypoint.targetPoint,
-            distance = distance,
+            distanceMeters = distanceMeters,
             segmentType = AATInteractiveSegmentType.CENTER_TO_TARGET,
             fromWaypointIndex = 0,
             toWaypointIndex = 0
         )
 
         return AATInteractiveTaskDistance(
-            totalDistance = distance,
+            totalDistanceMeters = distanceMeters,
             segments = listOf(segment)
         )
     }
@@ -104,7 +104,7 @@ internal class AATInteractiveDistanceCalculator {
     ): AATInteractiveDistanceSegment {
         val fromPoint = fromWaypoint.targetPoint
         val toPoint = toWaypoint.targetPoint
-        val distance = haversineDistance(
+        val distanceMeters = haversineDistanceMeters(
             fromPoint.latitude,
             fromPoint.longitude,
             toPoint.latitude,
@@ -125,7 +125,7 @@ internal class AATInteractiveDistanceCalculator {
         return AATInteractiveDistanceSegment(
             fromPoint = fromPoint,
             toPoint = toPoint,
-            distance = distance,
+            distanceMeters = distanceMeters,
             segmentType = segmentType,
             fromWaypointIndex = fromIndex,
             toWaypointIndex = toIndex
@@ -137,7 +137,7 @@ internal class AATInteractiveDistanceCalculator {
         prevWaypoint: AATWaypoint?,
         nextWaypoint: AATWaypoint?
     ): AATLatLng {
-        val areaRadiusKm = waypoint.assignedArea.radiusMeters / 1000.0
+        val areaRadiusMeters = waypoint.assignedArea.radiusMeters
 
         return when {
             prevWaypoint == null && nextWaypoint != null -> {
@@ -147,7 +147,7 @@ internal class AATInteractiveDistanceCalculator {
                     waypoint.lat,
                     waypoint.lon
                 )
-                calculateDestination(waypoint.lat, waypoint.lon, bearing, areaRadiusKm * 0.8)
+                calculateDestinationMeters(waypoint.lat, waypoint.lon, bearing, areaRadiusMeters * 0.8)
             }
             prevWaypoint != null && nextWaypoint == null -> {
                 val bearing = calculateBearing(
@@ -156,7 +156,7 @@ internal class AATInteractiveDistanceCalculator {
                     waypoint.lat,
                     waypoint.lon
                 )
-                calculateDestination(waypoint.lat, waypoint.lon, bearing, areaRadiusKm * 0.8)
+                calculateDestinationMeters(waypoint.lat, waypoint.lon, bearing, areaRadiusMeters * 0.8)
             }
             prevWaypoint != null && nextWaypoint != null -> {
                 val bisectorBearing = calculateBisectorBearing(
@@ -167,7 +167,7 @@ internal class AATInteractiveDistanceCalculator {
                     nextWaypoint.lat,
                     nextWaypoint.lon
                 )
-                calculateDestination(waypoint.lat, waypoint.lon, bisectorBearing, areaRadiusKm * 0.8)
+                calculateDestinationMeters(waypoint.lat, waypoint.lon, bisectorBearing, areaRadiusMeters * 0.8)
             }
             else -> AATLatLng(waypoint.lat, waypoint.lon)
         }

@@ -265,8 +265,7 @@ class AATTaskFileIO(private val context: Context) {
                 }
 
                 // COMPETITION-CRITICAL: Use AATRadiusAuthority for all AAT radii
-                val radiusKm = AATRadiusAuthority.getRadiusForRole(role)
-                val radiusMeters = radiusKm * 1000.0
+                val radiusMeters = AATRadiusAuthority.getRadiusMetersForRole(role)
 
                 AATWaypoint(
                     id = CupFormatUtils.stableWaypointId(

@@ -15,18 +15,14 @@ import kotlin.math.*
  * - Much more flexible than fixed FAI implementation
  */
 class KeyholeCalculator : TurnPointCalculator {
-    
-    companion object {
-        private const val EARTH_RADIUS_KM = 6371.0 // FAI Earth model
-    }
-    
+
     override fun calculateOptimalTouchPoint(waypoint: RacingWaypoint, context: TaskContext): Pair<Double, Double> {
         val previousWaypoint = context.previousWaypoint
         val nextWaypoint = context.nextWaypoint ?: return Pair(waypoint.lat, waypoint.lon)
-        
+
         //  CONFIGURABLE: Use new flexible keyhole parameters
-        val cylinderRadiusKm = waypoint.keyholeInnerRadius // Inner cylinder radius
-        val sectorRadiusKm = waypoint.gateWidth // Outer sector radius
+        val cylinderRadiusMeters = waypoint.keyholeInnerRadiusMeters
+        val sectorRadiusMeters = waypoint.gateWidthMeters
         // Clamp tiny floating error (89.9999...) to a clean degree value
         val sectorAngleDegrees = waypoint.keyholeAngle.let { angle ->
             if (abs(angle - 90.0) < 1e-3) 90.0 else angle
@@ -34,10 +30,10 @@ class KeyholeCalculator : TurnPointCalculator {
 
         
         // Calculate optimal touch point for cylinder part
-        val optimalCylinder = calculateOptimalCylinderTouchPoint(waypoint, previousWaypoint, nextWaypoint, cylinderRadiusKm)
+        val optimalCylinder = calculateOptimalCylinderTouchPoint(waypoint, previousWaypoint, nextWaypoint, cylinderRadiusMeters)
         
         // Calculate optimal touch point for sector part (if sector provides shorter path)
-        val optimalSector = calculateOptimalSectorTouchPoint(waypoint, previousWaypoint, nextWaypoint, sectorRadiusKm, sectorAngleDegrees)
+        val optimalSector = calculateOptimalSectorTouchPoint(waypoint, previousWaypoint, nextWaypoint, sectorRadiusMeters, sectorAngleDegrees)
         
         // Compare total distances and choose the shorter path
         val cylinderDistance = calculateTotalDistance(optimalCylinder, previousWaypoint, nextWaypoint)
@@ -50,16 +46,16 @@ class KeyholeCalculator : TurnPointCalculator {
         }
     }
     
-    override fun calculateDistance(from: RacingWaypoint, to: RacingWaypoint): Double {
-        return RacingGeometryUtils.haversineDistance(from.lat, from.lon, to.lat, to.lon)
+    override fun calculateDistanceMeters(from: RacingWaypoint, to: RacingWaypoint): Double {
+        return RacingGeometryUtils.haversineDistanceMeters(from.lat, from.lon, to.lat, to.lon)
     }
     
     override fun isWithinObservationZone(position: Pair<Double, Double>, waypoint: RacingWaypoint): Boolean {
         // Check if within configurable cylinder part
-        val distanceToCenter = RacingGeometryUtils.haversineDistance(position.first, position.second, waypoint.lat, waypoint.lon)
-        val cylinderRadiusKm = waypoint.keyholeInnerRadius // Inner cylinder radius
+        val distanceToCenterMeters = RacingGeometryUtils.haversineDistanceMeters(position.first, position.second, waypoint.lat, waypoint.lon)
+        val cylinderRadiusMeters = waypoint.keyholeInnerRadiusMeters
 
-        if (distanceToCenter <= cylinderRadiusKm) {
+        if (distanceToCenterMeters <= cylinderRadiusMeters) {
             return true
         }
 
@@ -67,9 +63,9 @@ class KeyholeCalculator : TurnPointCalculator {
         // NOTE: This method lacks TaskContext needed for proper sector calculation
         // For now, assume positions beyond cylinder are valid if within outer radius
         // In practice, a context-aware version should be used
-        val sectorRadiusKm = waypoint.gateWidth // Outer sector radius
+        val sectorRadiusMeters = waypoint.gateWidthMeters
 
-        if (distanceToCenter <= sectorRadiusKm) {
+        if (distanceToCenterMeters <= sectorRadiusMeters) {
             // Context-free fallback: validate against outer radius only.
             // Angle validation requires previous/next leg context.
             return true
@@ -78,9 +74,9 @@ class KeyholeCalculator : TurnPointCalculator {
         return false
     }
     
-    override fun getEffectiveRadius(waypoint: RacingWaypoint): Double {
+    override fun getEffectiveRadiusMeters(waypoint: RacingWaypoint): Double {
         // Return outer radius for map bounds calculation
-        return waypoint.gateWidth // Outer sector radius
+        return waypoint.gateWidthMeters
     }
     
     /**
@@ -91,7 +87,7 @@ class KeyholeCalculator : TurnPointCalculator {
         waypoint: RacingWaypoint,
         previousWaypoint: RacingWaypoint?,
         nextWaypoint: RacingWaypoint,
-        radiusKm: Double
+        radiusMeters: Double
     ): Pair<Double, Double> {
         // Calculate optimal touch point using geometric approximation
         val fromPoint = if (previousWaypoint != null) {
@@ -108,11 +104,11 @@ class KeyholeCalculator : TurnPointCalculator {
             val testPoint = RacingGeometryUtils.calculateDestinationPoint(
                 waypoint.lat, waypoint.lon,
                 angle.toDouble(), // Already in degrees
-                radiusKm * 1000.0 // Convert km to meters
+                radiusMeters
             )
-            
-            val distFromPrev = RacingGeometryUtils.haversineDistance(fromPoint.first, fromPoint.second, testPoint.first, testPoint.second)
-            val distToNext = RacingGeometryUtils.haversineDistance(testPoint.first, testPoint.second, nextWaypoint.lat, nextWaypoint.lon)
+
+            val distFromPrev = RacingGeometryUtils.haversineDistanceMeters(fromPoint.first, fromPoint.second, testPoint.first, testPoint.second)
+            val distToNext = RacingGeometryUtils.haversineDistanceMeters(testPoint.first, testPoint.second, nextWaypoint.lat, nextWaypoint.lon)
             val totalDistance = distFromPrev + distToNext
             
             if (totalDistance < minTotalDistance) {
@@ -131,7 +127,7 @@ class KeyholeCalculator : TurnPointCalculator {
         waypoint: RacingWaypoint,
         previousWaypoint: RacingWaypoint?,
         nextWaypoint: RacingWaypoint,
-        sectorRadiusKm: Double,
+        sectorRadiusMeters: Double,
         sectorAngleDegrees: Double
     ): Pair<Double, Double> {
         if (previousWaypoint == null) {
@@ -166,11 +162,11 @@ class KeyholeCalculator : TurnPointCalculator {
             val testPoint = RacingGeometryUtils.calculateDestinationPoint(
                 waypoint.lat, waypoint.lon,
                 testAngle, // Already in degrees
-                sectorRadiusKm * 1000.0 // Convert km to meters
+                sectorRadiusMeters
             )
 
-            val distFromPrev = RacingGeometryUtils.haversineDistance(previousWaypoint.lat, previousWaypoint.lon, testPoint.first, testPoint.second)
-            val distToNext = RacingGeometryUtils.haversineDistance(testPoint.first, testPoint.second, nextWaypoint.lat, nextWaypoint.lon)
+            val distFromPrev = RacingGeometryUtils.haversineDistanceMeters(previousWaypoint.lat, previousWaypoint.lon, testPoint.first, testPoint.second)
+            val distToNext = RacingGeometryUtils.haversineDistanceMeters(testPoint.first, testPoint.second, nextWaypoint.lat, nextWaypoint.lon)
             val totalDistance = distFromPrev + distToNext
 
             if (totalDistance < minTotalDistance) {
@@ -191,10 +187,10 @@ class KeyholeCalculator : TurnPointCalculator {
         nextWaypoint: RacingWaypoint
     ): Double {
         val distFromPrev = if (previousWaypoint != null) {
-            RacingGeometryUtils.haversineDistance(previousWaypoint.lat, previousWaypoint.lon, touchPoint.first, touchPoint.second)
+            RacingGeometryUtils.haversineDistanceMeters(previousWaypoint.lat, previousWaypoint.lon, touchPoint.first, touchPoint.second)
         } else 0.0
-        
-        val distToNext = RacingGeometryUtils.haversineDistance(touchPoint.first, touchPoint.second, nextWaypoint.lat, nextWaypoint.lon)
+
+        val distToNext = RacingGeometryUtils.haversineDistanceMeters(touchPoint.first, touchPoint.second, nextWaypoint.lat, nextWaypoint.lon)
         
         return distFromPrev + distToNext
     }

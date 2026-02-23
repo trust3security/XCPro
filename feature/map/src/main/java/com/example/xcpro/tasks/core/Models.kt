@@ -26,21 +26,44 @@ data class TaskWaypoint(
 
     // Preservation fields for user customizations
     val role: WaypointRole,
-    val customRadius: Double? = null, // km; null means use default
+    val customRadius: Double? = null, // Legacy compatibility field (km)
+    val customRadiusMeters: Double? = null, // Canonical internal field (meters)
     val customPointType: String? = null, // e.g., "START_LINE", "CYLINDER"
     val customParameters: Map<String, Any> = emptyMap() // Additional task-specific custom settings
 ) {
-    fun getEffectiveRadius(taskSpecificTurnpointDefault: Double): Double {
-        return customRadius ?: when (role) {
-            WaypointRole.START -> 10.0
-            WaypointRole.FINISH -> 3.0
-            WaypointRole.TURNPOINT -> taskSpecificTurnpointDefault
-            WaypointRole.OPTIONAL -> taskSpecificTurnpointDefault
+    fun resolvedCustomRadiusMeters(): Double? {
+        return customRadiusMeters?.takeIf { it > 0.0 }
+            ?: customRadius?.takeIf { it > 0.0 }?.times(METERS_PER_KILOMETER)
+    }
+
+    fun withCustomRadiusMeters(radiusMeters: Double?): TaskWaypoint {
+        val normalized = radiusMeters?.takeIf { it > 0.0 }
+        return copy(
+            customRadiusMeters = normalized,
+            // Keep km compatibility as boundary-only state; internal normalization should not
+            // propagate/update legacy km mirrors.
+            customRadius = null
+        )
+    }
+
+    fun getEffectiveRadiusMeters(taskSpecificTurnpointDefaultMeters: Double): Double {
+        return resolvedCustomRadiusMeters() ?: when (role) {
+            WaypointRole.START -> 10_000.0
+            WaypointRole.FINISH -> 3_000.0
+            WaypointRole.TURNPOINT -> taskSpecificTurnpointDefaultMeters
+            WaypointRole.OPTIONAL -> taskSpecificTurnpointDefaultMeters
         }
     }
 
     val hasCustomizations: Boolean get() =
-        customRadius != null || customPointType != null || customParameters.isNotEmpty()
+        customRadius != null ||
+            customRadiusMeters != null ||
+            customPointType != null ||
+            customParameters.isNotEmpty()
+
+    private companion object {
+        const val METERS_PER_KILOMETER = 1000.0
+    }
 }
 
 enum class TaskType {

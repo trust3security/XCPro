@@ -60,14 +60,47 @@ class TaskWaypointCustomParamsTest {
     @Test
     fun `racing waypoint params round-trip through map`() {
         val expected = RacingWaypointCustomParams(
-            keyholeInnerRadius = 0.8,
+            keyholeInnerRadiusMeters = 800.0,
             keyholeAngle = 110.0,
-            faiQuadrantOuterRadius = 12.0
+            faiQuadrantOuterRadiusMeters = 12_000.0
+        )
+        val encoded = expected.toMap()
+        val decoded = RacingWaypointCustomParams.from(encoded)
+
+        assertFalse(encoded.containsKey(TaskWaypointParamKeys.LEGACY_KEYHOLE_INNER_RADIUS_KM))
+        assertFalse(encoded.containsKey(TaskWaypointParamKeys.LEGACY_FAI_QUADRANT_OUTER_RADIUS_KM))
+        assertEquals(expected, decoded)
+    }
+
+    @Test
+    fun `racing waypoint params parse legacy km keys`() {
+        val parsed = RacingWaypointCustomParams.from(
+            mapOf(
+                TaskWaypointParamKeys.LEGACY_KEYHOLE_INNER_RADIUS_KM to 0.5,
+                TaskWaypointParamKeys.KEYHOLE_ANGLE to 90.0,
+                TaskWaypointParamKeys.LEGACY_FAI_QUADRANT_OUTER_RADIUS_KM to 10.0
+            )
         )
 
-        val decoded = RacingWaypointCustomParams.from(expected.toMap())
+        assertEquals(500.0, parsed.keyholeInnerRadiusMeters, 0.0)
+        assertEquals(10_000.0, parsed.faiQuadrantOuterRadiusMeters, 0.0)
+    }
 
-        assertEquals(expected, decoded)
+    @Test
+    fun `racing waypoint params prefer meter keys over legacy km keys when both are present`() {
+        val parsed = RacingWaypointCustomParams.from(
+            mapOf(
+                TaskWaypointParamKeys.KEYHOLE_INNER_RADIUS_METERS to 900.0,
+                TaskWaypointParamKeys.FAI_QUADRANT_OUTER_RADIUS_METERS to 11_000.0,
+                TaskWaypointParamKeys.LEGACY_KEYHOLE_INNER_RADIUS_KM to 0.5,
+                TaskWaypointParamKeys.LEGACY_FAI_QUADRANT_OUTER_RADIUS_KM to 10.0,
+                TaskWaypointParamKeys.KEYHOLE_ANGLE to 95.0
+            )
+        )
+
+        assertEquals(900.0, parsed.keyholeInnerRadiusMeters, 0.0)
+        assertEquals(11_000.0, parsed.faiQuadrantOuterRadiusMeters, 0.0)
+        assertEquals(95.0, parsed.keyholeAngle, 0.0)
     }
 
     @Test

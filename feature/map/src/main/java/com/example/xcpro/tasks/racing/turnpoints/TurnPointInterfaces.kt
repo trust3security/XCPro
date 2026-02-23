@@ -29,9 +29,9 @@ interface TurnPointCalculator {
      * Calculate distance between two waypoints using this turnpoint's geometry
      * @param from Source waypoint
      * @param to Destination waypoint
-     * @return Distance in kilometers
+     * @return Distance in meters
      */
-    fun calculateDistance(from: RacingWaypoint, to: RacingWaypoint): Double
+    fun calculateDistanceMeters(from: RacingWaypoint, to: RacingWaypoint): Double
     
     /**
      * Check if a position is within this turnpoint's observation zone
@@ -44,9 +44,9 @@ interface TurnPointCalculator {
     /**
      * Get the effective radius for this turnpoint (null for unbounded sectors, if any)
      * @param waypoint The turnpoint waypoint
-     * @return Radius in kilometers, or null when unbounded
+     * @return Radius in meters, or null when unbounded
      */
-    fun getEffectiveRadius(waypoint: RacingWaypoint): Double?
+    fun getEffectiveRadiusMeters(waypoint: RacingWaypoint): Double?
 }
 
 /**

@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.map.MapTaskScreenManager
 import com.example.xcpro.map.model.MapLocationUiModel
@@ -37,6 +38,7 @@ object MapTaskScreenUi {
     fun TaskTopPanel(
         taskScreenManager: MapTaskScreenManager,
         allWaypoints: List<WaypointData>,
+        unitsPreferences: UnitsPreferences = UnitsPreferences(),
         currentQNH: String,
         modifier: Modifier = Modifier,
         panelContent: (@Composable BoxScope.() -> Unit)? = null
@@ -60,6 +62,7 @@ object MapTaskScreenUi {
                         panelState = panelState,
                         mapLibreMap = taskScreenManager.mapState.mapLibreMap,
                         allWaypoints = allWaypoints,
+                        unitsPreferences = unitsPreferences,
                         currentQNH = currentQNH,
                         onClearTask = taskScreenManager::handleTaskClear,
                         onSaveTask = taskScreenManager::handleTaskSave,
@@ -75,6 +78,7 @@ object MapTaskScreenUi {
     @Composable
     fun TaskMinimizedIndicatorOverlay(
         taskScreenManager: MapTaskScreenManager,
+        unitsPreferences: UnitsPreferences = UnitsPreferences(),
         modifier: Modifier = Modifier,
         indicatorContent: (@Composable BoxScope.() -> Unit)? = null,
         showBottomSheetOverride: Boolean? = null,
@@ -126,9 +130,10 @@ object MapTaskScreenUi {
                         task = currentTask,
                         activeLegIndex = activeLeg,
                         onSetActiveLeg = onSetActiveLeg,
-                        distanceToWaypointKm = resolvedTaskViewModel?.let { vm ->
-                            { lat, lon -> vm.distanceToActiveWaypointKm(lat, lon) }
+                        distanceToWaypointMeters = resolvedTaskViewModel?.let { vm ->
+                            { lat, lon -> vm.distanceToActiveWaypointMeters(lat, lon) }
                         },
+                        unitsPreferences = unitsPreferences,
                         currentGPSLocation = currentGpsLocation,
                         onClick = taskScreenManager::handleMinimizedIndicatorClick,
                         modifier = Modifier.padding(top = 8.dp)
@@ -142,6 +147,7 @@ object MapTaskScreenUi {
     fun AllTaskScreenComponents(
         taskScreenManager: MapTaskScreenManager,
         allWaypoints: List<WaypointData>,
+        unitsPreferences: UnitsPreferences = UnitsPreferences(),
         currentQNH: String,
         modifier: Modifier = Modifier,
         currentLocation: MapLocationUiModel? = null
@@ -149,12 +155,14 @@ object MapTaskScreenUi {
         TaskTopPanel(
             taskScreenManager = taskScreenManager,
             allWaypoints = allWaypoints,
+            unitsPreferences = unitsPreferences,
             currentQNH = currentQNH,
             modifier = modifier
         )
 
         TaskMinimizedIndicatorOverlay(
             taskScreenManager = taskScreenManager,
+            unitsPreferences = unitsPreferences,
             modifier = modifier,
             currentLocation = currentLocation
         )

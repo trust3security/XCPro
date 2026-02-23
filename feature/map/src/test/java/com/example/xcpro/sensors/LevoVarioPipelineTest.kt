@@ -66,7 +66,7 @@ private fun newUseCase(): CalculateFlightMetricsUseCase {
     return CalculateFlightMetricsUseCase(
         flightHelpers = helpers,
         sinkProvider = sink,
-        windEstimator = WindEstimator(sink)
+        windEstimator = WindEstimator()
     )
 }
 

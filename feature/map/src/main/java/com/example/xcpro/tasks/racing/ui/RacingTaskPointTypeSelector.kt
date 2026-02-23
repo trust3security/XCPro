@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import android.util.Log
+import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.tasks.racing.models.RacingStartPointType
 import com.example.xcpro.tasks.racing.models.RacingFinishPointType
 import com.example.xcpro.tasks.racing.models.RacingTurnPointType
@@ -37,7 +38,8 @@ fun RacingTaskPointTypeSelector(
     keyholeAngle: String,
     faiQuadrantOuterRadius: String,
     startDistanceUi: RacingStartDistanceUi?,
-    turnDistanceToNextKm: Double?,
+    turnDistanceToNextMeters: Double?,
+    unitsPreferences: UnitsPreferences,
     onStartTypeChange: (RacingStartPointType) -> Unit,
     onFinishTypeChange: (RacingFinishPointType) -> Unit,
     onTurnTypeChange: (RacingTurnPointType) -> Unit,
@@ -55,6 +57,7 @@ fun RacingTaskPointTypeSelector(
                     selectedStartType = selectedStartType,
                     gateWidth = gateWidth,
                     distanceToNext = startDistanceUi,
+                    unitsPreferences = unitsPreferences,
                     onStartTypeChange = onStartTypeChange,
                     onGateWidthChange = onGateWidthChange
                 )
@@ -76,7 +79,8 @@ fun RacingTaskPointTypeSelector(
                     keyholeInnerRadius = keyholeInnerRadius,
                     keyholeAngle = keyholeAngle,
                     faiQuadrantOuterRadius = faiQuadrantOuterRadius,
-                    distanceToNextKm = turnDistanceToNextKm,
+                    distanceToNextMeters = turnDistanceToNextMeters,
+                    unitsPreferences = unitsPreferences,
                     onTurnTypeChange = onTurnTypeChange,
                     onGateWidthChange = onGateWidthChange,
                     onKeyholeInnerRadiusChange = onKeyholeInnerRadiusChange,

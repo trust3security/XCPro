@@ -49,5 +49,5 @@ Policy:
 - Task/AAT/racing: Not SI compliant end-to-end.
 - AAT contains active meter-vs-km correctness bugs; re-pass #7 extended `AATTaskQuickValidationEngine` defect scope to include `validateFinish`.
 - Re-pass #8 found unit-boundary leaks in production UI distance outputs (distance circles + task distance labels hard-coded to metric text).
-- Polar domain still uses km/h internal data contracts.
+- Polar/glider storage and interpolation contracts are now SI-canonical (`m/s`) with legacy km/h compatibility-read at persistence boundary.
 - Overall status: Not compliant.

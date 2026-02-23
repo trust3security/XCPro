@@ -9,6 +9,9 @@ import com.example.xcpro.tasks.aat.models.AATWaypoint
  * split into focused helpers to keep this class stable and easy to review.
  */
 class AATMovablePointManager {
+    private companion object {
+        const val METERS_PER_KILOMETER = 1000.0
+    }
 
     fun isPointInsideArea(waypoint: AATWaypoint, point: AATLatLng): Boolean {
         return AATMovablePointGeometrySupport.isPointInsideArea(waypoint, point)
@@ -37,23 +40,29 @@ class AATMovablePointManager {
     }
 
     fun isTargetPointValid(waypoint: AATWaypoint, targetPoint: AATLatLng): Boolean {
-        val distance = AATMathUtils.calculateDistanceKm(
+        val distanceMeters = AATMathUtils.calculateDistanceMeters(
             waypoint.lat,
             waypoint.lon,
             targetPoint.latitude,
             targetPoint.longitude
         )
-        return distance <= (waypoint.assignedArea.radiusMeters / 1000.0)
+        return distanceMeters <= waypoint.assignedArea.radiusMeters
     }
 
-    fun getTargetPointOffset(waypoint: AATWaypoint): Double {
-        return AATMathUtils.calculateDistanceKm(
+    fun getTargetPointOffsetMeters(waypoint: AATWaypoint): Double {
+        return AATMathUtils.calculateDistanceMeters(
             waypoint.lat,
             waypoint.lon,
             waypoint.targetPoint.latitude,
             waypoint.targetPoint.longitude
         )
     }
+
+    @Deprecated(
+        message = "Use getTargetPointOffsetMeters for explicit units"
+    )
+    fun getTargetPointOffset(waypoint: AATWaypoint): Double =
+        getTargetPointOffsetMeters(waypoint) / METERS_PER_KILOMETER
 
     fun resetToCenter(waypoint: AATWaypoint): AATWaypoint {
         return waypoint.copy(

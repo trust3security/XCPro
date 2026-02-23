@@ -5,6 +5,7 @@ import com.example.xcpro.common.glider.GliderConfigRepository
 import com.example.xcpro.common.glider.GliderModel
 import com.example.xcpro.common.glider.ThreePointPolar
 import com.example.xcpro.common.glider.UserPolarCoefficients
+import com.example.xcpro.common.units.UnitsConverter
 import javax.inject.Inject
 import kotlinx.coroutines.flow.StateFlow
 
@@ -36,11 +37,19 @@ class GliderUseCase @Inject constructor(
         repository.updateConfig { it.copy(userCoefficients = coefficients) }
     }
 
+    fun setIasMinMs(value: Double?) {
+        repository.updateConfig { it.copy(iasMinMs = value) }
+    }
+
+    fun setIasMaxMs(value: Double?) {
+        repository.updateConfig { it.copy(iasMaxMs = value) }
+    }
+
     fun setIasMinKmh(value: Double?) {
-        repository.updateConfig { it.copy(iasMinKmh = value) }
+        setIasMinMs(value?.let(UnitsConverter::kmhToMs))
     }
 
     fun setIasMaxKmh(value: Double?) {
-        repository.updateConfig { it.copy(iasMaxKmh = value) }
+        setIasMaxMs(value?.let(UnitsConverter::kmhToMs))
     }
 }

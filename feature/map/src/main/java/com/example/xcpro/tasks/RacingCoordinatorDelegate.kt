@@ -17,8 +17,8 @@ internal class RacingCoordinatorDelegate(
         log("Cleared Racing task state")
     }
 
-    override fun calculateDistance(): Double = taskManager.calculateRacingTaskDistance()
+    override fun calculateDistanceMeters(): Double = taskManager.calculateRacingTaskDistanceMeters()
 
-    override fun calculateSegmentDistance(from: TaskWaypoint, to: TaskWaypoint): Double =
-        taskManager.calculateSegmentDistance(from.lat, from.lon, to.lat, to.lon)
+    override fun calculateSegmentDistanceMeters(from: TaskWaypoint, to: TaskWaypoint): Double =
+        taskManager.calculateSegmentDistanceMeters(from.lat, from.lon, to.lat, to.lon)
 }

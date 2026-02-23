@@ -30,7 +30,7 @@ class FAIStartSectorDisplay : TurnPointDisplay {
             return createFallbackCircle(waypoint)
         }
 
-        val radiusMeters = waypoint.gateWidth * 1000.0
+        val radiusMeters = waypoint.gateWidthMeters
         return generateSafeStartSector(waypoint, nextWaypoint, radiusMeters)
     }
 
@@ -153,8 +153,7 @@ class FAIStartSectorDisplay : TurnPointDisplay {
     }
 
     override fun getDisplayRadius(waypoint: RacingWaypoint): Double {
-        // Convert km to meters for display
-        return waypoint.gateWidth * 1000.0
+        return waypoint.gateWidthMeters
     }
 
     override fun getObservationZoneType(): String {

@@ -8,7 +8,7 @@ Required reading order:
 1) `ARCHITECTURE.md`
 2) `CODING_RULES.md`
 3) `CONTRIBUTING.md`
-4) `docs/LevoVario/levo.md`
+4) `docs/LEVO/levo.md`
 
 ------------------------------------------------------------------------------
 KEY RULES
@@ -17,6 +17,8 @@ KEY RULES
 - Do not mix replay timestamps with wall clock time.
 - Live monotonic timestamps are irrelevant in replay mode.
 - If you change cadence or validity windows, update tests and notes.
+- Replay IAS/TAS reconstruction (when only IAS or TAS exists in IGC extensions)
+  must use the current replay QNH in density-ratio conversion.
 
 ------------------------------------------------------------------------------
 ENTRY POINTS
@@ -24,6 +26,9 @@ ENTRY POINTS
 - `IgcReplayController` orchestrates replay start/stop and state.
 - `ReplaySensorSource` emits sensor flows.
 - `ReplaySampleEmitter` converts IGC points to sensor samples.
+  - Emits replay airspeed samples into `ReplayAirspeedRepository`.
+  - These samples are consumed directly by `FlightDataCalculatorEngine` metrics path
+    (airspeed priority: SENSOR -> WIND -> GPS fallback).
 
 ------------------------------------------------------------------------------
 KNOWN PITFALLS

@@ -63,11 +63,10 @@ class AATInteractiveTurnpointManagerValidationTest {
         assertFalse(outside.latitude == tp.latitude && outside.longitude == tp.longitude)
 
         // Geometry-based assert: within outer radius and (inside angle or inside inner cylinder)
-        val distance = AATMathUtils.calculateDistanceKm(0.0, 0.0, tp.latitude, tp.longitude)
-        assertTrue(distance <= stored.assignedArea.outerRadiusMeters / 1000.0 + 1e-6)
+        val distanceMeters = AATMathUtils.calculateDistanceMeters(0.0, 0.0, tp.latitude, tp.longitude)
+        assertTrue(distanceMeters <= stored.assignedArea.outerRadiusMeters + 1e-6)
         val bearing = AATMathUtils.calculateBearing(AATLatLng(0.0, 0.0), tp)
-        val innerRadiusKm = stored.assignedArea.innerRadiusMeters / 1000.0
-        val inInner = distance <= innerRadiusKm
+        val inInner = distanceMeters <= stored.assignedArea.innerRadiusMeters
         val inAngle = com.example.xcpro.tasks.aat.map.AATMovablePointManager()
             .let { mgr ->
                 val method = mgr.javaClass.getDeclaredMethod(

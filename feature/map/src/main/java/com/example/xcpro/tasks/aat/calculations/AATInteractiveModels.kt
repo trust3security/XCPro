@@ -6,19 +6,23 @@ import com.example.xcpro.tasks.aat.models.AATLatLng
  * Data classes for interactive distance calculations
  */
 data class AATInteractiveTaskDistance(
-    val totalDistance: Double, // km
+    val totalDistanceMeters: Double,
     val segments: List<AATInteractiveDistanceSegment>,
     val calculationTime: Long = 0L
 ) {
-    val isValid: Boolean get() = totalDistance > 0.0 && segments.isNotEmpty()
+    private companion object {
+        const val METERS_PER_KILOMETER = 1000.0
+    }
+
+    val isValid: Boolean get() = totalDistanceMeters > 0.0 && segments.isNotEmpty()
     val segmentCount: Int get() = segments.size
 
     fun getDistanceBreakdown(): String {
         val breakdown = StringBuilder()
-        breakdown.append("Total: ${String.format("%.2f", totalDistance)} km\n")
+        breakdown.append("Total: ${String.format("%.2f", totalDistanceMeters / METERS_PER_KILOMETER)} km\n")
 
         segments.forEachIndexed { index, segment ->
-            breakdown.append("Leg ${index + 1}: ${String.format("%.2f", segment.distance)} km\n")
+            breakdown.append("Leg ${index + 1}: ${String.format("%.2f", segment.distanceMeters / METERS_PER_KILOMETER)} km\n")
         }
 
         return breakdown.toString().trim()
@@ -28,7 +32,7 @@ data class AATInteractiveTaskDistance(
 data class AATInteractiveDistanceSegment(
     val fromPoint: AATLatLng,
     val toPoint: AATLatLng,
-    val distance: Double, // km
+    val distanceMeters: Double,
     val segmentType: AATInteractiveSegmentType,
     val fromWaypointIndex: Int,
     val toWaypointIndex: Int

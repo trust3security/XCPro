@@ -14,10 +14,6 @@ import kotlin.math.*
  */
 class FAIQuadrantCalculator : TurnPointCalculator {
 
-    companion object {
-        private const val EARTH_RADIUS_KM = 6371.0 // FAI Earth model
-    }
-
     /**
      * Calculate optimal touch point for FAI sectors.
      * By definition the optimal (shortest) touch point is the waypoint itself.
@@ -32,8 +28,8 @@ class FAIQuadrantCalculator : TurnPointCalculator {
         return Pair(waypoint.lat, waypoint.lon)
     }
 
-    override fun calculateDistance(from: RacingWaypoint, to: RacingWaypoint): Double {
-        return RacingGeometryUtils.haversineDistance(from.lat, from.lon, to.lat, to.lon)
+    override fun calculateDistanceMeters(from: RacingWaypoint, to: RacingWaypoint): Double {
+        return RacingGeometryUtils.haversineDistanceMeters(from.lat, from.lon, to.lat, to.lon)
     }
 
     /**
@@ -48,8 +44,8 @@ class FAIQuadrantCalculator : TurnPointCalculator {
         return true
     }
 
-    override fun getEffectiveRadius(waypoint: RacingWaypoint): Double? {
-        return waypoint.faiQuadrantOuterRadius
+    override fun getEffectiveRadiusMeters(waypoint: RacingWaypoint): Double? {
+        return waypoint.faiQuadrantOuterRadiusMeters
     }
 
     // ---------- Helpers ----------

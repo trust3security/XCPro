@@ -27,11 +27,11 @@ class AATEditGeometryValidatorTest {
 
         val result = validator.clampTarget(waypoint, outside)
 
-        val dist = AATMathUtils.calculateDistanceKm(
+        val distMeters = AATMathUtils.calculateDistanceMeters(
             waypoint.lat, waypoint.lon,
             result.targetPoint.latitude, result.targetPoint.longitude
         )
-        assertTrue("Distance should be clamped to <= 10km", dist <= 10.001)
+        assertTrue("Distance should be clamped to <= 10km", distMeters <= 10_001.0)
     }
 
     @Test

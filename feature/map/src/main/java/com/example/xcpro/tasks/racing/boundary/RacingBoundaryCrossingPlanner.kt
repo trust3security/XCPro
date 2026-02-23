@@ -222,8 +222,7 @@ class RacingBoundaryCrossingPlanner(
     }
 
     private fun distanceMeters(center: RacingBoundaryPoint, fix: RacingNavigationFix): Double {
-        val km = RacingGeometryUtils.haversineDistance(center.lat, center.lon, fix.lat, fix.lon)
-        return abs(km * 1000.0)
+        return abs(RacingGeometryUtils.haversineDistanceMeters(center.lat, center.lon, fix.lat, fix.lon))
     }
 
     private enum class ZoneRelation {

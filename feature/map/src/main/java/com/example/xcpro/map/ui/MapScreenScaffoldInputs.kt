@@ -82,7 +82,7 @@ internal data class MapScreenScaffoldInputs(
     val showDistanceCircles: Boolean,
     val ognSnapshot: OgnTrafficSnapshot, val ognOverlayEnabled: Boolean,
     val ognThermalHotspots: List<OgnThermalHotspot>, val showOgnThermalsEnabled: Boolean,
-    val ognGliderTrailSegments: List<OgnGliderTrailSegment>, val showOgnGliderTrailsEnabled: Boolean,
+    val ognGliderTrailSegments: List<OgnGliderTrailSegment>,
     val adsbSnapshot: AdsbTrafficSnapshot,
     val adsbOverlayEnabled: Boolean,
     val selectedOgnTarget: OgnTrafficTarget?,
@@ -120,7 +120,6 @@ internal data class MapScreenScaffoldInputs(
     val onAutoCalibrateQnh: () -> Unit,
     val onSetManualQnh: (Double) -> Unit,
     val onToggleOgnTraffic: () -> Unit, val onToggleOgnThermals: () -> Unit,
-    val onToggleOgnGliderTrails: () -> Unit,
     val onToggleAdsbTraffic: () -> Unit, val onOgnTargetSelected: (String) -> Unit,
     val onOgnThermalSelected: (String) -> Unit,
     val onAdsbTargetSelected: (Icao24) -> Unit,
@@ -202,7 +201,7 @@ internal fun rememberMapScreenScaffoldInputs(
         managers.overlayManager.setOgnIconSizePx(bindings.ognIconSizePx)
         managers.overlayManager.updateOgnTrafficTargets(if (bindings.ognOverlayEnabled) bindings.ognTargets else emptyList())
         managers.overlayManager.updateOgnThermalHotspots(if (bindings.ognOverlayEnabled && bindings.showOgnThermalsEnabled) bindings.ognThermalHotspots else emptyList())
-        managers.overlayManager.updateOgnGliderTrailSegments(if (bindings.ognOverlayEnabled && bindings.showOgnGliderTrailsEnabled) bindings.ognGliderTrailSegments else emptyList())
+        managers.overlayManager.updateOgnGliderTrailSegments(if (bindings.ognOverlayEnabled) bindings.ognGliderTrailSegments else emptyList())
         managers.overlayManager.setAdsbIconSizePx(bindings.adsbIconSizePx)
         managers.overlayManager.updateAdsbTrafficTargets(if (bindings.adsbOverlayEnabled) bindings.adsbTargets else emptyList())
         managers.overlayManager.reapplyForecastOverlay(); managers.overlayManager.reapplyWeatherRainOverlay()
@@ -245,7 +244,6 @@ internal fun rememberMapScreenScaffoldInputs(
         ognThermalHotspots = bindings.ognThermalHotspots,
         showOgnThermalsEnabled = bindings.showOgnThermalsEnabled,
         ognGliderTrailSegments = bindings.ognGliderTrailSegments,
-        showOgnGliderTrailsEnabled = bindings.showOgnGliderTrailsEnabled,
         adsbSnapshot = bindings.adsbSnapshot,
         adsbOverlayEnabled = bindings.adsbOverlayEnabled,
         selectedOgnTarget = bindings.selectedOgnTarget,
@@ -284,7 +282,6 @@ internal fun rememberMapScreenScaffoldInputs(
         onSetManualQnh = mapViewModel::onSetManualQnh,
         onToggleOgnTraffic = mapViewModel::onToggleOgnTraffic,
         onToggleOgnThermals = mapViewModel::onToggleOgnThermals,
-        onToggleOgnGliderTrails = mapViewModel::onToggleOgnGliderTrails,
         onToggleAdsbTraffic = mapViewModel::onToggleAdsbTraffic,
         onOgnTargetSelected = mapViewModel::onOgnTargetSelected,
         onOgnThermalSelected = mapViewModel::onOgnThermalSelected,

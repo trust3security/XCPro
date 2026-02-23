@@ -76,12 +76,12 @@ data class RacingTask(
             id = "${id}_start",
             title = "START",
             subtitle = start.name,
-            lat = start.position.latitude,
-            lon = start.position.longitude,
-            role = RacingWaypointRole.START,
-            startPointType = convertToRacingStartPointType(start.type),
-            gateWidth = start.getEffectiveRadius() / 1000.0 // Convert meters to km
-        ))
+                lat = start.position.latitude,
+                lon = start.position.longitude,
+                role = RacingWaypointRole.START,
+                startPointType = convertToRacingStartPointType(start.type),
+                gateWidthMeters = start.getEffectiveRadius()
+            ))
 
         // Add turnpoint waypoints
         turnpoints.forEachIndexed { index, tp ->
@@ -93,7 +93,7 @@ data class RacingTask(
                 lon = tp.position.longitude,
                 role = RacingWaypointRole.TURNPOINT,
                 turnPointType = tp.type, // Direct use since we're using the same enum now
-                gateWidth = (tp.getEffectiveRadius() ?: 5000.0) / 1000.0 // Convert meters to km, default 5km
+                gateWidthMeters = tp.getEffectiveRadius() ?: 5000.0
             ))
         }
 
@@ -103,11 +103,11 @@ data class RacingTask(
             title = "FINISH",
             subtitle = finish.name,
             lat = finish.position.latitude,
-            lon = finish.position.longitude,
-            role = RacingWaypointRole.FINISH,
-            finishPointType = convertToRacingFinishPointType(finish.type),
-            gateWidth = finish.getEffectiveRadius() / 1000.0 // Convert meters to km
-        ))
+                lon = finish.position.longitude,
+                role = RacingWaypointRole.FINISH,
+                finishPointType = convertToRacingFinishPointType(finish.type),
+                gateWidthMeters = finish.getEffectiveRadius()
+            ))
 
         return waypoints
     }
@@ -169,11 +169,11 @@ data class RacingTask(
         // Check for minimum distance between waypoints
         val allPositions = getAllWaypoints()
         for (i in 0 until allPositions.size - 1) {
-            val distance = RacingGeometryUtils.haversineDistance(
+            val distanceMeters = RacingGeometryUtils.haversineDistanceMeters(
                 allPositions[i].latitude, allPositions[i].longitude,
                 allPositions[i + 1].latitude, allPositions[i + 1].longitude
-            ) * 1000.0 // Convert km to meters
-            if (distance < 100) { // Less than 100 meters
+            )
+            if (distanceMeters < 100.0) { // Less than 100 meters
                 errors.add("Waypoints ${i} and ${i + 1} are too close together (< 100m)")
             }
         }

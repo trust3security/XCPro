@@ -15,11 +15,6 @@ import kotlin.math.*
  * REFACTORED: Now delegates to specialized turnpoint calculators for each type
  */
 class RacingTaskCalculator {
-    
-    companion object {
-        private const val EARTH_RADIUS_KM = 6371.0 // FAI Earth model
-    }
-    
     // Turnpoint calculators - each type has its own specialized implementation
     private val faiQuadrantCalculator = FAIQuadrantCalculator()
     private val cylinderCalculator = CylinderCalculator()
@@ -134,9 +129,9 @@ class RacingTaskCalculator {
      * @param gpsLon Current GPS longitude
      * @param waypointIndex Index of target waypoint in task
      * @param waypoints Complete list of task waypoints
-     * @return Distance in kilometers to optimal entry point, or null if calculation fails
+     * @return Distance in meters to optimal entry point, or null if calculation fails
      */
-    fun calculateDistanceToOptimalEntry(
+    fun calculateDistanceToOptimalEntryMeters(
         gpsLat: Double,
         gpsLon: Double,
         waypointIndex: Int,
@@ -217,7 +212,7 @@ class RacingTaskCalculator {
 
         // Calculate haversine distance from GPS to optimal entry point
         return optimalEntryPoint?.let { (entryLat, entryLon) ->
-            RacingGeometryUtils.haversineDistance(gpsLat, gpsLon, entryLat, entryLon)
+            RacingGeometryUtils.haversineDistanceMeters(gpsLat, gpsLon, entryLat, entryLon)
         }
     }
 

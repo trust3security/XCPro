@@ -18,6 +18,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.xcpro.adsb.Icao24
 import com.example.xcpro.common.flight.FlightMode
+import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.gestures.TaskGestureCallbacks
 import com.example.xcpro.gestures.TaskGestureHandler
 import com.example.xcpro.map.BuildConfig
@@ -61,6 +62,7 @@ internal fun MapOverlayStack(
     cameraManager: MapCameraManager,
     currentMode: FlightMode,
     currentZoom: Float,
+    unitsPreferences: UnitsPreferences,
     onModeChange: (FlightMode) -> Unit,
     currentLocation: MapLocationUiModel?,
     showReturnButton: Boolean,
@@ -262,7 +264,8 @@ internal fun MapOverlayStack(
             mapState = mapState,
             currentZoom = currentZoom,
             currentLocation = currentLocation,
-            showDistanceCircles = showDistanceCircles
+            showDistanceCircles = showDistanceCircles,
+            unitsPreferences = unitsPreferences
         )
 
         AatEditFab(

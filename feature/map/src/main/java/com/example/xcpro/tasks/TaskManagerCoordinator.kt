@@ -144,10 +144,10 @@ class TaskManagerCoordinator(
         startType: Any?,
         finishType: Any?,
         turnType: Any?,
-        gateWidth: Double?,
-        keyholeInnerRadius: Double?,
+        gateWidthMeters: Double?,
+        keyholeInnerRadiusMeters: Double?,
         keyholeAngle: Double?,
-        faiQuadrantOuterRadius: Double?
+        faiQuadrantOuterRadiusMeters: Double?
     ) {
         when (_taskType.value) {
             TaskType.RACING -> racingTaskManager.updateWaypointPointTypeBridge(
@@ -155,20 +155,20 @@ class TaskManagerCoordinator(
                 startType = startType,
                 finishType = finishType,
                 turnType = turnType,
-                gateWidth = gateWidth,
-                keyholeInnerRadius = keyholeInnerRadius,
+                gateWidthMeters = gateWidthMeters,
+                keyholeInnerRadiusMeters = keyholeInnerRadiusMeters,
                 keyholeAngle = keyholeAngle,
-                faiQuadrantOuterRadius = faiQuadrantOuterRadius
+                faiQuadrantOuterRadiusMeters = faiQuadrantOuterRadiusMeters
             )
             TaskType.AAT -> aatTaskManager.updateWaypointPointTypeBridge(
                 index = index,
                 startType = startType,
                 finishType = finishType,
                 turnType = turnType,
-                gateWidth = gateWidth,
-                keyholeInnerRadius = keyholeInnerRadius,
+                gateWidthMeters = gateWidthMeters,
+                keyholeInnerRadiusMeters = keyholeInnerRadiusMeters,
                 keyholeAngle = keyholeAngle,
-                sectorOuterRadius = faiQuadrantOuterRadius
+                sectorOuterRadiusMeters = faiQuadrantOuterRadiusMeters
             )
         }
     }
@@ -204,29 +204,34 @@ class TaskManagerCoordinator(
 
     fun getActiveLeg(): Int = currentLeg
 
-    fun calculateTaskDistanceForTask(task: Task): Double {
+    fun calculateTaskDistanceForTaskMeters(task: Task): Double {
         if (task.waypoints.size < 2) {
             return 0.0
         }
         val delegate = currentDelegate()
         return task.waypoints
             .zipWithNext()
-            .sumOf { (from, to) -> delegate.calculateSegmentDistance(from, to) }
+            .sumOf { (from, to) -> delegate.calculateSegmentDistanceMeters(from, to) }
     }
 
-    fun calculateSimpleSegmentDistance(from: TaskWaypoint, to: TaskWaypoint): Double =
-        currentDelegate().calculateSegmentDistance(from, to)
+    fun calculateSimpleSegmentDistanceMeters(from: TaskWaypoint, to: TaskWaypoint): Double =
+        currentDelegate().calculateSegmentDistanceMeters(from, to)
 
-    fun calculateDistanceToCurrentWaypoint(currentLat: Double, currentLon: Double): Double? = when (_taskType.value) {
-        TaskType.RACING -> racingTaskManager.calculateDistanceToCurrentWaypointEntry(currentLat, currentLon)
-        TaskType.AAT -> aatTaskManager.calculateDistanceToCurrentTargetPoint(currentLat, currentLon)
+    fun calculateDistanceToCurrentWaypointMeters(currentLat: Double, currentLon: Double): Double? = when (_taskType.value) {
+        TaskType.RACING -> racingTaskManager.calculateDistanceToCurrentWaypointEntryMeters(currentLat, currentLon)
+        TaskType.AAT -> aatTaskManager.calculateDistanceToCurrentTargetPointMeters(currentLat, currentLon)
     }
 
     fun calculateOptimalStartLineCrossingPoint(startWaypoint: TaskWaypoint, nextWaypoint: TaskWaypoint): Pair<Double, Double> {
         if (_taskType.value == TaskType.RACING) {
             racingTaskManager.currentRacingTask.waypoints.firstOrNull { it.id == startWaypoint.id }?.let { wp ->
+                val lineWidthMeters = wp.gateWidthMeters
                 return racingTaskManager.calculateOptimalLineCrossingPoint(
-                    wp.lat, wp.lon, nextWaypoint.lat, nextWaypoint.lon, wp.gateWidth
+                    wp.lat,
+                    wp.lon,
+                    nextWaypoint.lat,
+                    nextWaypoint.lon,
+                    lineWidthMeters
                 )
             }
         }
@@ -256,28 +261,28 @@ class TaskManagerCoordinator(
         _taskType.value = taskType
     }
 
-    fun updateAATWaypointPointType(
+    fun updateAATWaypointPointTypeMeters(
         index: Int,
         startType: Any?,
         finishType: Any?,
         turnType: Any?,
-        gateWidth: Double?,
-        keyholeInnerRadius: Double?,
+        gateWidthMeters: Double?,
+        keyholeInnerRadiusMeters: Double?,
         keyholeAngle: Double?,
-        sectorOuterRadius: Double?
+        sectorOuterRadiusMeters: Double?
     ) {
         if (_taskType.value != TaskType.AAT) {
             log("Cannot update AAT point type - current task type is ${_taskType.value}"); return
         }
-        aatDelegate.updateWaypointPointType(
+        aatDelegate.updateWaypointPointTypeMeters(
             index = index,
             startType = startType,
             finishType = finishType,
             turnType = turnType,
-            gateWidth = gateWidth,
-            keyholeInnerRadius = keyholeInnerRadius,
+            gateWidthMeters = gateWidthMeters,
+            keyholeInnerRadiusMeters = keyholeInnerRadiusMeters,
             keyholeAngle = keyholeAngle,
-            sectorOuterRadius = sectorOuterRadius
+            sectorOuterRadiusMeters = sectorOuterRadiusMeters
         )
     }
 

@@ -21,16 +21,16 @@ internal class RacingZoneDetector {
         return when (start.startPointType) {
             RacingStartPointType.START_LINE -> {
                 val sectorBearing = startLineSectorBearing(start, next) ?: return false
-                val radiusKm = lineSectorRadiusKm(start) ?: return false
-                isInsideLineSector(position, start, sectorBearing, radiusKm)
+                val radiusMeters = lineSectorRadiusMeters(start) ?: return false
+                isInsideLineSector(position, start, sectorBearing, radiusMeters)
             }
             RacingStartPointType.START_CYLINDER -> {
-                distanceKm(position, start) <= start.gateWidth
+                distanceMeters(position, start) <= start.gateWidthMeters
             }
             RacingStartPointType.FAI_START_SECTOR -> {
                 if (next == null) return false
                 val bearingToNext = RacingGeometryUtils.calculateBearing(start.lat, start.lon, next.lat, next.lon)
-                isWithinSector(position, start, bearingToNext, START_SECTOR_ANGLE_DEGREES / 2.0, start.gateWidth)
+                isWithinSector(position, start, bearingToNext, START_SECTOR_ANGLE_DEGREES / 2.0, start.gateWidthMeters)
             }
         }
     }
@@ -38,22 +38,22 @@ internal class RacingZoneDetector {
     fun isInsideTurnZone(position: NavPoint, turn: RacingWaypoint, previous: RacingWaypoint?, next: RacingWaypoint?): Boolean {
         return when (turn.turnPointType) {
             RacingTurnPointType.TURN_POINT_CYLINDER -> {
-                distanceKm(position, turn) <= turn.gateWidth
+                distanceMeters(position, turn) <= turn.gateWidthMeters
             }
             RacingTurnPointType.FAI_QUADRANT -> {
                 if (previous == null || next == null) return false
                 val sectorBisector = calculateFAISectorBisector(turn, previous, next)
-                isWithinSector(position, turn, sectorBisector, FAI_SECTOR_ANGLE_DEGREES / 2.0, turn.faiQuadrantOuterRadius)
+                isWithinSector(position, turn, sectorBisector, FAI_SECTOR_ANGLE_DEGREES / 2.0, turn.faiQuadrantOuterRadiusMeters)
             }
             RacingTurnPointType.KEYHOLE -> {
-                val distanceKm = distanceKm(position, turn)
-                if (distanceKm <= turn.keyholeInnerRadius) {
+                val distanceMeters = distanceMeters(position, turn)
+                if (distanceMeters <= turn.keyholeInnerRadiusMeters) {
                     true
                 } else {
                     if (previous == null || next == null) return false
                     val sectorBisector = calculateFAISectorBisector(turn, previous, next)
                     val halfAngle = turn.normalizedKeyholeAngle / 2.0
-                    isWithinSector(position, turn, sectorBisector, halfAngle, turn.gateWidth)
+                    isWithinSector(position, turn, sectorBisector, halfAngle, turn.gateWidthMeters)
                 }
             }
         }
@@ -63,23 +63,23 @@ internal class RacingZoneDetector {
         return when (finish.finishPointType) {
             RacingFinishPointType.FINISH_LINE -> {
                 val sectorBearing = finishLineSectorBearing(finish, previous) ?: return false
-                val radiusKm = lineSectorRadiusKm(finish) ?: return false
-                isInsideLineSector(position, finish, sectorBearing, radiusKm)
+                val radiusMeters = lineSectorRadiusMeters(finish) ?: return false
+                isInsideLineSector(position, finish, sectorBearing, radiusMeters)
             }
             RacingFinishPointType.FINISH_CYLINDER -> {
-                distanceKm(position, finish) <= finish.gateWidth
+                distanceMeters(position, finish) <= finish.gateWidthMeters
             }
         }
     }
 
     fun isLineTransitionAllowed(previous: NavPoint, current: NavPoint, center: RacingWaypoint): Boolean {
-        val radiusKm = lineSectorRadiusKm(center) ?: return false
-        return isWithinCircle(previous, center, radiusKm) &&
-            isWithinCircle(current, center, radiusKm)
+        val radiusMeters = lineSectorRadiusMeters(center) ?: return false
+        return isWithinCircle(previous, center, radiusMeters) &&
+            isWithinCircle(current, center, radiusMeters)
     }
 
-    private fun distanceKm(position: NavPoint, waypoint: RacingWaypoint): Double {
-        return RacingGeometryUtils.haversineDistance(
+    private fun distanceMeters(position: NavPoint, waypoint: RacingWaypoint): Double {
+        return RacingGeometryUtils.haversineDistanceMeters(
             position.lat,
             position.lon,
             waypoint.lat,
@@ -92,10 +92,10 @@ internal class RacingZoneDetector {
         center: RacingWaypoint,
         sectorCenterBearing: Double,
         halfAngleDeg: Double,
-        radiusKm: Double?
+        radiusMeters: Double?
     ): Boolean {
-        val distanceKm = distanceKm(position, center)
-        if (radiusKm != null && distanceKm > radiusKm) {
+        val distanceMeters = distanceMeters(position, center)
+        if (radiusMeters != null && distanceMeters > radiusMeters) {
             return false
         }
 
@@ -153,21 +153,21 @@ internal class RacingZoneDetector {
         return RacingGeometryUtils.calculateBearing(previous.lat, previous.lon, finish.lat, finish.lon)
     }
 
-    private fun lineSectorRadiusKm(waypoint: RacingWaypoint): Double? {
-        if (waypoint.gateWidth <= 0.0) return null
-        return waypoint.gateWidth / 2.0
+    private fun lineSectorRadiusMeters(waypoint: RacingWaypoint): Double? {
+        if (waypoint.gateWidthMeters <= 0.0) return null
+        return waypoint.gateWidthMeters / 2.0
     }
 
     private fun isInsideLineSector(
         position: NavPoint,
         center: RacingWaypoint,
         sectorBearing: Double,
-        radiusKm: Double
+        radiusMeters: Double
     ): Boolean {
-        return isWithinSector(position, center, sectorBearing, LINE_SECTOR_HALF_ANGLE_DEGREES, radiusKm)
+        return isWithinSector(position, center, sectorBearing, LINE_SECTOR_HALF_ANGLE_DEGREES, radiusMeters)
     }
 
-    private fun isWithinCircle(position: NavPoint, center: RacingWaypoint, radiusKm: Double): Boolean {
-        return distanceKm(position, center) <= radiusKm
+    private fun isWithinCircle(position: NavPoint, center: RacingWaypoint, radiusMeters: Double): Boolean {
+        return distanceMeters(position, center) <= radiusMeters
     }
 }

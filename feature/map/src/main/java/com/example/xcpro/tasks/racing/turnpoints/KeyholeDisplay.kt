@@ -21,8 +21,8 @@ class KeyholeDisplay : TurnPointDisplay {
         return try {
 
             // Configurable Keyhole: Use flexible parameters
-            val cylinderRadiusMeters = waypoint.keyholeInnerRadius * 1000.0 // Inner cylinder radius in meters
-            val sectorRadiusMeters = waypoint.gateWidth * 1000.0 // Outer sector radius in meters
+            val cylinderRadiusMeters = waypoint.keyholeInnerRadiusMeters
+            val sectorRadiusMeters = waypoint.gateWidthMeters
             val sectorAngleDegrees = waypoint.keyholeAngle.let { angle ->
                 if (abs(angle - 90.0) < 1e-3) 90.0 else angle
             } // Clean up float precision (89.9999 -> 90)
@@ -103,7 +103,7 @@ class KeyholeDisplay : TurnPointDisplay {
     
     override fun getDisplayRadius(waypoint: RacingWaypoint): Double {
         // Configurable Keyhole: Return outer sector radius for display bounds
-        return waypoint.gateWidth * 1000.0 // Convert km to meters
+        return waypoint.gateWidthMeters
     }
     
     override fun getObservationZoneType(): String {

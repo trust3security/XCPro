@@ -11,7 +11,7 @@ import com.example.xcpro.tasks.aat.models.AATStartPointType
 import com.example.xcpro.tasks.aat.models.AATTurnPointType
 import com.example.xcpro.tasks.aat.models.AATWaypoint
 import com.example.xcpro.tasks.aat.models.AATWaypointRole
-import com.example.xcpro.tasks.aat.models.getAuthorityRadius
+import com.example.xcpro.tasks.aat.models.getAuthorityRadiusMeters
 import com.example.xcpro.tasks.aat.persistence.AATTaskFileIO
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskType
@@ -168,10 +168,10 @@ private fun Task.toSimpleRacingTask(): SimpleRacingTask {
             startPointType = startType,
             finishPointType = finishType,
             turnPointType = turnType,
-            customGateWidth = waypoint.customRadius,
-            keyholeInnerRadius = racingParams.keyholeInnerRadius,
+            customGateWidthMeters = waypoint.resolvedCustomRadiusMeters(),
+            keyholeInnerRadiusMeters = racingParams.keyholeInnerRadiusMeters,
             keyholeAngle = racingParams.keyholeAngle,
-            faiQuadrantOuterRadius = racingParams.faiQuadrantOuterRadius
+            faiQuadrantOuterRadiusMeters = racingParams.faiQuadrantOuterRadiusMeters
         )
     }
     return SimpleRacingTask(
@@ -195,16 +195,17 @@ private fun SimpleRacingTask.toCoreTask(): Task {
                     RacingWaypointRole.TURNPOINT -> WaypointRole.TURNPOINT
                     RacingWaypointRole.FINISH -> WaypointRole.FINISH
                 },
-                customRadius = waypoint.gateWidth,
+                customRadius = null,
+                customRadiusMeters = waypoint.gateWidthMeters,
                 customPointType = when (waypoint.role) {
                     RacingWaypointRole.START -> waypoint.startPointType.name
                     RacingWaypointRole.TURNPOINT -> waypoint.turnPointType.name
                     RacingWaypointRole.FINISH -> waypoint.finishPointType.name
                 },
                 customParameters = RacingWaypointCustomParams(
-                    keyholeInnerRadius = waypoint.keyholeInnerRadius,
+                    keyholeInnerRadiusMeters = waypoint.keyholeInnerRadiusMeters,
                     keyholeAngle = waypoint.keyholeAngle,
-                    faiQuadrantOuterRadius = waypoint.faiQuadrantOuterRadius
+                    faiQuadrantOuterRadiusMeters = waypoint.faiQuadrantOuterRadiusMeters
                 ).toMap()
             )
         }
@@ -238,7 +239,7 @@ private fun Task.toSimpleAATTask(): SimpleAATTask {
             ?: AATTurnPointType.AAT_CYLINDER
 
         val fallbackRadiusMeters =
-            (waypoint.customRadius ?: AATRadiusAuthority.getRadiusForRole(role)) * 1000.0
+            waypoint.resolvedCustomRadiusMeters() ?: AATRadiusAuthority.getRadiusMetersForRole(role)
         val aatParams = AATWaypointCustomParams.from(
             source = waypoint.customParameters,
             fallbackLat = waypoint.lat,
@@ -312,6 +313,7 @@ private fun SimpleAATTask.toCoreTask(): Task {
         id = id.ifBlank { "aat-task" },
         waypoints = waypoints.map { waypoint ->
             val customParameters = mutableMapOf<String, Any>()
+            val authorityRadiusMeters = waypoint.getAuthorityRadiusMeters()
             AATWaypointCustomParams(
                 radiusMeters = waypoint.assignedArea.radiusMeters,
                 outerRadiusMeters = waypoint.assignedArea.outerRadiusMeters,
@@ -338,7 +340,8 @@ private fun SimpleAATTask.toCoreTask(): Task {
                     AATWaypointRole.TURNPOINT -> WaypointRole.TURNPOINT
                     AATWaypointRole.FINISH -> WaypointRole.FINISH
                 },
-                customRadius = waypoint.getAuthorityRadius(),
+                customRadius = null,
+                customRadiusMeters = authorityRadiusMeters,
                 customPointType = when (waypoint.role) {
                     AATWaypointRole.START -> waypoint.startPointType.name
                     AATWaypointRole.TURNPOINT -> waypoint.turnPointType.name

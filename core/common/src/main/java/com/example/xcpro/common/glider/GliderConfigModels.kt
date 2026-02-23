@@ -1,13 +1,40 @@
 package com.example.xcpro.common.glider
 
+import com.example.xcpro.common.units.UnitsConverter
+
 data class ThreePointPolar(
-    val lowKmh: Double = 80.0,
+    val lowMs: Double = UnitsConverter.kmhToMs(80.0),
     val lowSinkMs: Double = 0.5,
-    val midKmh: Double = 120.0,
+    val midMs: Double = UnitsConverter.kmhToMs(120.0),
     val midSinkMs: Double = 0.8,
-    val highKmh: Double = 180.0,
+    val highMs: Double = UnitsConverter.kmhToMs(180.0),
     val highSinkMs: Double = 2.0
-)
+) {
+    val lowKmh: Double
+        get() = UnitsConverter.msToKmh(lowMs)
+    val midKmh: Double
+        get() = UnitsConverter.msToKmh(midMs)
+    val highKmh: Double
+        get() = UnitsConverter.msToKmh(highMs)
+
+    companion object {
+        fun fromKmh(
+            lowKmh: Double,
+            lowSinkMs: Double,
+            midKmh: Double,
+            midSinkMs: Double,
+            highKmh: Double,
+            highSinkMs: Double
+        ): ThreePointPolar = ThreePointPolar(
+            lowMs = UnitsConverter.kmhToMs(lowKmh),
+            lowSinkMs = lowSinkMs,
+            midMs = UnitsConverter.kmhToMs(midKmh),
+            midSinkMs = midSinkMs,
+            highMs = UnitsConverter.kmhToMs(highKmh),
+            highSinkMs = highSinkMs
+        )
+    }
+}
 
 data class UserPolarCoefficients(
     val a: Double? = null,
@@ -20,10 +47,15 @@ data class GliderConfig(
     val waterBallastKg: Double = 0.0,
     val bugsPercent: Int = 0,
     val referenceWeightKg: Double? = null,
-    val iasMinKmh: Double? = null,
-    val iasMaxKmh: Double? = null,
+    val iasMinMs: Double? = null,
+    val iasMaxMs: Double? = null,
     val threePointPolar: ThreePointPolar? = null,
     val userCoefficients: UserPolarCoefficients? = null,
     val ballastDrainMinutes: Double = 5.0,
     val hideBallastPill: Boolean = false
-)
+) {
+    val iasMinKmh: Double?
+        get() = iasMinMs?.let(UnitsConverter::msToKmh)
+    val iasMaxKmh: Double?
+        get() = iasMaxMs?.let(UnitsConverter::msToKmh)
+}

@@ -307,7 +307,144 @@ $rawCustomParametersIndexArgs = @(
 )
 Assert-NoMatches -Name "Raw customParameters string-key indexing in task production code" -RgArgs $rawCustomParametersIndexArgs
 
-# 22) Maintainability size budget for map/task hotspots.
+# 22) SI drift: no km-returning AAT distance helper promoted to meters in task/replay internals.
+$aatKmDistancePromotionArgs = @(
+    "-n",
+    "AATMathUtils\.calculateDistance\([^\)]*\)\s*\*\s*METERS_PER_KILOMETER",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/**/*.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/replay/**/*.kt"
+)
+Assert-NoMatches -Name "SI drift: AAT km distance helper promoted to meter contract in internals" -RgArgs $aatKmDistancePromotionArgs
+
+# 23) Replay movement contract: distanceMeters must not be assigned from speedMs.
+$replayDistanceFieldArgs = @(
+    "-n",
+    "distanceMeters\s*=\s*speedMs",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/replay/**/*.kt"
+)
+Assert-NoMatches -Name "Replay movement contract: distanceMeters assigned from speedMs" -RgArgs $replayDistanceFieldArgs
+
+# 24) OGN internals must use meter-first helpers only.
+$ognKmHelperArgs = @(
+    "-n",
+    "(haversineKm\(|shouldReconnectByCenterMove\(|isWithinReceiveRadiusKm\()",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/ogn/**/*.kt"
+)
+Assert-NoMatches -Name "OGN km helper reintroduction in production internals" -RgArgs $ognKmHelperArgs
+
+# 25) Distance display surfaces must not hard-code non-SI distance labels.
+$hardCodedDistanceLabelsArgs = @(
+    "-n",
+    '\"[^\"]*(km|NM|mi)[^\"]*\"',
+    "--glob", "feature/map/src/main/java/com/example/xcpro/map/DistanceCirclesCanvas.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/CommonTaskComponents.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/BottomSheetState.kt"
+)
+Assert-NoMatches -Name "Hard-coded distance-unit labels in shared distance display surfaces" -RgArgs $hardCodedDistanceLabelsArgs
+
+# 26) Meter-labeled variables must not source from km-returning AAT helpers.
+$aatMeterVariableSourceArgs = @(
+    "-n",
+    "(distanceMeters|crossTrackDistanceMeters|alongTrackToCenterMeters)\s*=\s*AATMathUtils\.calculate(Distance|CrossTrackDistance|AlongTrackDistance)\(",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/**/*.kt"
+)
+Assert-NoMatches -Name "SI drift: meter-labeled variables assigned from km-returning AAT helpers" -RgArgs $aatMeterVariableSourceArgs
+
+# 27) Closed residual guard: dead legacy helper files must not reappear.
+$legacyHelperFilesArgs = @(
+    "-n",
+    ".",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/gestures/AirspaceGestureMath.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/KeyholeVerification.kt"
+)
+Assert-NoMatches -Name "Legacy dead helper files reintroduced (AirspaceGestureMath/KeyholeVerification)" -RgArgs $legacyHelperFilesArgs
+
+# 28) Closed residual guard: AATEditGeometry must remain meter-only.
+$aatEditGeometryKmWrappersArgs = @(
+    "-n",
+    "(fun\s+generateCircleCoordinates\(|fun\s+generateSectorCoordinates\(|fun\s+calculateDestinationPoint\(|fun\s+haversineDistance\()",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/interaction/AATEditGeometry.kt"
+)
+Assert-NoMatches -Name "AATEditGeometry km compatibility wrappers reintroduced" -RgArgs $aatEditGeometryKmWrappersArgs
+
+# 29) Closed residual guard: AATGeometryGenerator must remain meter-only internally.
+$aatGeometryGeneratorKmWrappersArgs = @(
+    "-n",
+    "(fun\s+generateCircleCoordinates\(|fun\s+generateStartLine\(|fun\s+generateFinishLine\(|fun\s+calculateDestinationPoint\()",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/geometry/AATGeometryGenerator.kt"
+)
+Assert-NoMatches -Name "AATGeometryGenerator km compatibility wrappers reintroduced" -RgArgs $aatGeometryGeneratorKmWrappersArgs
+
+# 30) Closed residual guard: no local km haversine helper in AATLongPressOverlay.
+$aatLongPressLocalHaversineArgs = @(
+    "-n",
+    "private\s+fun\s+haversineDistance\(",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/ui/AATLongPressOverlay.kt"
+)
+Assert-NoMatches -Name "AATLongPressOverlay local km haversine helper reintroduced" -RgArgs $aatLongPressLocalHaversineArgs
+
+# 31) Area-size validation must use SI-internal m2 contract (km2 only for display formatting).
+$aatQuickValidationKm2ContractArgs = @(
+    "-n",
+    "calculateAreaSizeKm2\(",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/AATTaskQuickValidationEngine.kt"
+)
+Assert-NoMatches -Name "AAT quick-validation area-size km2 internal contract reintroduced" -RgArgs $aatQuickValidationKm2ContractArgs
+
+# 32) Area-size warning labels must indicate squared distance units.
+$aatQuickValidationLinearKmLabelArgs = @(
+    "-n",
+    "areaSize\w*\)\}\s*km\)",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/AATTaskQuickValidationEngine.kt"
+)
+Assert-NoMatches -Name "AAT quick-validation area-size warnings missing squared unit label" -RgArgs $aatQuickValidationLinearKmLabelArgs
+
+# 32A) #18 closure guard: no legacy unsuffixed AAT point-type update route.
+$aatPointTypeLegacyRouteArgs = @(
+    "-n",
+    "(onUpdateAATWaypointPointType\(|updateAATWaypointPointType\()",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetCoordinatorUseCase.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/AATCoordinatorDelegate.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/AATTaskManager.kt"
+)
+Assert-NoMatches -Name "#18 guard: legacy AAT point-type wrapper route reintroduced" -RgArgs $aatPointTypeLegacyRouteArgs
+
+# 32B) #18 closure guard: AAT edit gesture/camera contracts must remain meter-first.
+$aatGestureRadiusKmContractArgs = @(
+    "-n",
+    "(\bradiusKm\b|turnpointRadiusKm\b)",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/gestures/TaskGestureHandler.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/gestures/AatGestureHandler.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/map/MapGestureSetup.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/map/MapCameraManager.kt"
+)
+Assert-NoMatches -Name "#18 guard: km-based AAT gesture/camera radius contracts reintroduced" -RgArgs $aatGestureRadiusKmContractArgs
+
+# 32C) #18 closure guard: dead km wrapper helpers must not reappear.
+$legacyKmWrapperSurfaceArgs = @(
+    "-n",
+    "(resolvedCustomRadiusKm\(|fun\s+calculateDistance\(|fun\s+calculateDistanceKm\(|fun\s+calculateCrossTrackDistance\(|fun\s+calculateAlongTrackDistance\(|fun\s+calculateAreaSizeKm2\(|fun\s+haversineDistance\()",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/core/Models.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/calculations/AATMathUtils.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/areas/AreaBoundaryCalculator.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/areas/CircleAreaCalculator.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/areas/SectorAreaCalculator.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/areas/SectorAreaGeometrySupport.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingGeometryUtils.kt"
+)
+Assert-NoMatches -Name "#18 guard: removed km compatibility wrapper surfaces reintroduced" -RgArgs $legacyKmWrapperSurfaceArgs
+
+# 32D) #18 closure guard: deprecated km-only racing waypoint view properties must remain removed.
+$racingWaypointKmViewArgs = @(
+    "-n",
+    "(val\s+gateWidth:\s*Double|val\s+keyholeInnerRadius:\s*Double|val\s+faiQuadrantOuterRadius:\s*Double)",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/racing/models/RacingWaypoint.kt"
+)
+Assert-NoMatches -Name "#18 guard: deprecated racing km view properties reintroduced" -RgArgs $racingWaypointKmViewArgs
+
+# 33) Maintainability size budget for map/task hotspots.
 Assert-MaxLines `
     -Name "MapCameraManager line budget" `
     -FilePath "feature/map/src/main/java/com/example/xcpro/map/MapCameraManager.kt" `

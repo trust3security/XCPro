@@ -25,10 +25,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import com.example.xcpro.map.R
 import com.example.ui1.icons.LocationSailplane
 
 @Composable
@@ -170,37 +168,6 @@ internal fun QnhButton(
                     modifier = Modifier.size(10.dp)
                 )
             }
-        }
-    }
-}
-
-@Composable
-internal fun OgnTrafficButton(
-    isEnabled: Boolean,
-    onToggle: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .size(48.dp)
-            .zIndex(50f)
-    ) {
-        FloatingActionButton(
-            onClick = onToggle,
-            modifier = Modifier.matchParentSize(),
-            containerColor = if (isEnabled) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.surfaceVariant
-            },
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-            elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp)
-        ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_ogn_tug254),
-                contentDescription = "Toggle glider traffic",
-                modifier = Modifier.size(22.dp)
-            )
         }
     }
 }

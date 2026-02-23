@@ -5,6 +5,9 @@ import com.example.xcpro.tasks.aat.models.AreaGeometry
 import com.example.xcpro.tasks.aat.models.AssignedArea
 
 internal object FAIComplianceAreaRules {
+    private const val METERS_PER_KILOMETER = 1000.0
+    private const val SQUARE_METERS_PER_SQUARE_KILOMETER = 1_000_000.0
+    private const val STRATEGIC_RANGE_MIN_METERS = 50_000.0
 
     fun validateAreaGeometry(
         areas: List<AssignedArea>,
@@ -37,29 +40,30 @@ internal object FAIComplianceAreaRules {
         }
 
         areas.forEachIndexed { index, area ->
-            val areaSizeKm2 = area.getApproximateAreaSizeKm2()
+            val areaSizeM2 = area.getApproximateAreaSizeM2()
+            val areaSizeKm2 = areaSizeM2 / SQUARE_METERS_PER_SQUARE_KILOMETER
 
-            if (areaSizeKm2 < FAIComplianceRules.CoreRequirements.MINIMUM_AREA_SIZE_KM2) {
+            if (areaSizeM2 < FAIComplianceRules.CoreRequirements.MINIMUM_AREA_SIZE_M2) {
                 issues.add(
                     AATValidationIssue.warning(
                         "AREA_TOO_SMALL",
                         ValidationCategory.AREA_GEOMETRY,
-                        "Area '${area.name}' (${String.format("%.1f", areaSizeKm2)} km) is very small for competitive AAT",
+                        "Area '${area.name}' (${String.format("%.1f", areaSizeKm2)} km2) is very small for competitive AAT",
                         "FAI 3.2.3",
-                        "Consider increasing area size to at least ${FAIComplianceRules.CoreRequirements.MINIMUM_AREA_SIZE_KM2} km",
+                        "Consider increasing area size to at least ${String.format("%.1f", FAIComplianceRules.CoreRequirements.MINIMUM_AREA_SIZE_M2 / SQUARE_METERS_PER_SQUARE_KILOMETER)} km2",
                         "Area ${index + 1}"
                     )
                 )
             }
 
-            if (areaSizeKm2 > FAIComplianceRules.CoreRequirements.MAXIMUM_AREA_SIZE_KM2) {
+            if (areaSizeM2 > FAIComplianceRules.CoreRequirements.MAXIMUM_AREA_SIZE_M2) {
                 issues.add(
                     AATValidationIssue.warning(
                         "AREA_TOO_LARGE",
                         ValidationCategory.AREA_GEOMETRY,
-                        "Area '${area.name}' (${String.format("%.1f", areaSizeKm2)} km) is very large",
+                        "Area '${area.name}' (${String.format("%.1f", areaSizeKm2)} km2) is very large",
                         "FAI 3.2.3",
-                        "Consider reducing area size to under ${FAIComplianceRules.CoreRequirements.MAXIMUM_AREA_SIZE_KM2} km",
+                        "Consider reducing area size to under ${String.format("%.1f", FAIComplianceRules.CoreRequirements.MAXIMUM_AREA_SIZE_M2 / SQUARE_METERS_PER_SQUARE_KILOMETER)} km2",
                         "Area ${index + 1}"
                     )
                 )
@@ -68,25 +72,25 @@ internal object FAIComplianceAreaRules {
             competitionClass?.let { cls ->
                 when (val geometry = area.geometry) {
                     is AreaGeometry.Circle -> {
-                        val radiusKm = geometry.radius / 1000.0
-                        if (radiusKm < cls.minAreaRadius) {
+                        val radiusMeters = geometry.radius
+                        if (radiusMeters < cls.minAreaRadiusMeters) {
                             issues.add(
                                 AATValidationIssue.info(
                                     "CLASS_AREA_SMALL",
                                     ValidationCategory.COMPETITION_RULES,
-                                    "${cls.displayName} areas typically ${cls.minAreaRadius}km+ radius, current: ${String.format("%.1f", radiusKm)}km",
-                                    fix = "Consider ${cls.minAreaRadius}km+ radius for ${cls.displayName}",
+                                    "${cls.displayName} areas typically ${String.format("%.1f", cls.minAreaRadiusMeters / METERS_PER_KILOMETER)}km+ radius, current: ${String.format("%.1f", radiusMeters / METERS_PER_KILOMETER)}km",
+                                    fix = "Consider ${String.format("%.1f", cls.minAreaRadiusMeters / METERS_PER_KILOMETER)}km+ radius for ${cls.displayName}",
                                     component = "Area ${index + 1}"
                                 )
                             )
                         }
-                        if (radiusKm > cls.maxAreaRadius) {
+                        if (radiusMeters > cls.maxAreaRadiusMeters) {
                             issues.add(
                                 AATValidationIssue.info(
                                     "CLASS_AREA_LARGE",
                                     ValidationCategory.COMPETITION_RULES,
-                                    "${cls.displayName} areas typically under ${cls.maxAreaRadius}km radius, current: ${String.format("%.1f", radiusKm)}km",
-                                    fix = "Consider reducing to under ${cls.maxAreaRadius}km for ${cls.displayName}",
+                                    "${cls.displayName} areas typically under ${String.format("%.1f", cls.maxAreaRadiusMeters / METERS_PER_KILOMETER)}km radius, current: ${String.format("%.1f", radiusMeters / METERS_PER_KILOMETER)}km",
+                                    fix = "Consider reducing to under ${String.format("%.1f", cls.maxAreaRadiusMeters / METERS_PER_KILOMETER)}km for ${cls.displayName}",
                                     component = "Area ${index + 1}"
                                 )
                             )
@@ -94,13 +98,13 @@ internal object FAIComplianceAreaRules {
                     }
 
                     is AreaGeometry.Sector -> {
-                        val outerRadiusKm = geometry.outerRadius / 1000.0
-                        if (outerRadiusKm < cls.minAreaRadius) {
+                        val outerRadiusMeters = geometry.outerRadius
+                        if (outerRadiusMeters < cls.minAreaRadiusMeters) {
                             issues.add(
                                 AATValidationIssue.info(
                                     "CLASS_SECTOR_SMALL",
                                     ValidationCategory.COMPETITION_RULES,
-                                    "${cls.displayName} sectors typically ${cls.minAreaRadius}km+ outer radius",
+                                    "${cls.displayName} sectors typically ${String.format("%.1f", cls.minAreaRadiusMeters / METERS_PER_KILOMETER)}km+ outer radius",
                                     component = "Area ${index + 1}"
                                 )
                             )
@@ -120,36 +124,36 @@ internal object FAIComplianceAreaRules {
             for (j in i + 1 until areas.size) {
                 val area1 = areas[i]
                 val area2 = areas[j]
-                val distanceKm = AATMathUtils.calculateDistanceKm(
+                val distanceMeters = AATMathUtils.calculateDistanceMeters(
                     area1.centerPoint.latitude,
                     area1.centerPoint.longitude,
                     area2.centerPoint.latitude,
                     area2.centerPoint.longitude
                 )
 
-                if (distanceKm < FAIComplianceRules.CoreRequirements.MINIMUM_AREA_SEPARATION_KM) {
+                if (distanceMeters < FAIComplianceRules.CoreRequirements.MINIMUM_AREA_SEPARATION_METERS) {
                     issues.add(
                         AATValidationIssue.critical(
                             "AREAS_TOO_CLOSE",
                             ValidationCategory.AREA_GEOMETRY,
-                            "Areas '${area1.name}' and '${area2.name}' are ${String.format("%.2f", distanceKm)}km apart (minimum ${FAIComplianceRules.CoreRequirements.MINIMUM_AREA_SEPARATION_KM}km)",
+                            "Areas '${area1.name}' and '${area2.name}' are ${String.format("%.2f", distanceMeters / METERS_PER_KILOMETER)}km apart (minimum ${FAIComplianceRules.CoreRequirements.MINIMUM_AREA_SEPARATION_METERS / METERS_PER_KILOMETER}km)",
                             "FAI 3.2.4",
-                            "Increase separation to at least ${FAIComplianceRules.CoreRequirements.MINIMUM_AREA_SEPARATION_KM}km",
+                            "Increase separation to at least ${FAIComplianceRules.CoreRequirements.MINIMUM_AREA_SEPARATION_METERS / METERS_PER_KILOMETER}km",
                             "Areas ${i + 1} and ${j + 1}"
                         )
                     )
                 }
 
-                val area1MaxRadius = when (area1.geometry) {
-                    is AreaGeometry.Circle -> area1.geometry.radius / 1000.0
-                    is AreaGeometry.Sector -> area1.geometry.outerRadius / 1000.0
+                val area1MaxRadiusMeters = when (area1.geometry) {
+                    is AreaGeometry.Circle -> area1.geometry.radius
+                    is AreaGeometry.Sector -> area1.geometry.outerRadius
                 }
-                val area2MaxRadius = when (area2.geometry) {
-                    is AreaGeometry.Circle -> area2.geometry.radius / 1000.0
-                    is AreaGeometry.Sector -> area2.geometry.outerRadius / 1000.0
+                val area2MaxRadiusMeters = when (area2.geometry) {
+                    is AreaGeometry.Circle -> area2.geometry.radius
+                    is AreaGeometry.Sector -> area2.geometry.outerRadius
                 }
 
-                if (distanceKm < (area1MaxRadius + area2MaxRadius)) {
+                if (distanceMeters < (area1MaxRadiusMeters + area2MaxRadiusMeters)) {
                     issues.add(
                         AATValidationIssue.warning(
                             "AREAS_MAY_OVERLAP",
@@ -168,15 +172,15 @@ internal object FAIComplianceAreaRules {
     }
 
     fun validateTaskDistance(
-        minDistance: Double,
-        maxDistance: Double,
+        minDistanceMeters: Double,
+        maxDistanceMeters: Double,
         competitionClass: FAIComplianceRules.CompetitionClass?
     ): List<AATValidationIssue> {
         val issues = mutableListOf<AATValidationIssue>()
-        val minDistanceKm = minDistance / 1000.0
-        val maxDistanceKm = maxDistance / 1000.0
+        val minDistanceKm = minDistanceMeters / METERS_PER_KILOMETER
+        val maxDistanceKm = maxDistanceMeters / METERS_PER_KILOMETER
 
-        if (maxDistanceKm < minDistanceKm) {
+        if (maxDistanceMeters < minDistanceMeters) {
             issues.add(
                 AATValidationIssue.critical(
                     "INVALID_DISTANCE_RANGE",
@@ -188,37 +192,38 @@ internal object FAIComplianceAreaRules {
             )
         }
 
-        val distanceRange = maxDistanceKm - minDistanceKm
-        if (distanceRange < 50.0) {
+        val distanceRangeMeters = maxDistanceMeters - minDistanceMeters
+        val distanceRangeKm = distanceRangeMeters / METERS_PER_KILOMETER
+        if (distanceRangeMeters < STRATEGIC_RANGE_MIN_METERS) {
             issues.add(
                 AATValidationIssue.warning(
                     "SMALL_DISTANCE_RANGE",
                     ValidationCategory.STRATEGIC_VALIDITY,
-                    "Distance range (${String.format("%.1f", distanceRange)}km) is small for strategic AAT flying",
+                    "Distance range (${String.format("%.1f", distanceRangeKm)}km) is small for strategic AAT flying",
                     fix = "Consider larger areas or different positioning for more strategic options"
                 )
             )
         }
 
         competitionClass?.let { cls ->
-            if (minDistanceKm < cls.minDistance) {
+            if (minDistanceMeters < cls.minDistanceMeters) {
                 issues.add(
                     AATValidationIssue.warning(
                         "CLASS_MIN_DISTANCE",
                         ValidationCategory.COMPETITION_RULES,
-                        "${cls.displayName} minimum distance typically ${cls.minDistance}km+, current: ${String.format("%.1f", minDistanceKm)}km",
+                        "${cls.displayName} minimum distance typically ${String.format("%.1f", cls.minDistanceMeters / METERS_PER_KILOMETER)}km+, current: ${String.format("%.1f", minDistanceKm)}km",
                         fix = "Consider increasing task distance for ${cls.displayName}"
                     )
                 )
             }
 
-            cls.maxDistance?.let { maxDist ->
-                if (maxDistanceKm > maxDist) {
+            cls.maxDistanceMeters?.let { maxDistMeters ->
+                if (maxDistanceMeters > maxDistMeters) {
                     issues.add(
                         AATValidationIssue.warning(
                             "CLASS_MAX_DISTANCE",
                             ValidationCategory.COMPETITION_RULES,
-                            "${cls.displayName} maximum distance typically ${maxDist}km, current: ${String.format("%.1f", maxDistanceKm)}km",
+                            "${cls.displayName} maximum distance typically ${String.format("%.1f", maxDistMeters / METERS_PER_KILOMETER)}km, current: ${String.format("%.1f", maxDistanceKm)}km",
                             fix = "Consider reducing task distance for ${cls.displayName}"
                         )
                     )

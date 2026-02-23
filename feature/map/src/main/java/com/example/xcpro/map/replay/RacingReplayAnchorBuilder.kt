@@ -28,7 +28,7 @@ internal class RacingReplayAnchorBuilder(
         val bearingToNext = RacingGeometryUtils.calculateBearing(start.lat, start.lon, next.lat, next.lon)
         when (start.startPointType) {
             RacingStartPointType.START_LINE -> {
-                val offset = lineCrossOffsetMeters(start.gateWidth)
+                val offset = lineCrossOffsetMeters(start.gateWidthMeters)
                 val pre = destination(start, bearingToNext + 180.0, offset)
                 val post = destination(start, bearingToNext, offset)
                 addPoint(pre.first, pre.second)
@@ -44,7 +44,7 @@ internal class RacingReplayAnchorBuilder(
             }
             RacingStartPointType.FAI_START_SECTOR -> {
                 val inside = start.lat to start.lon
-                val outsideDistance = outsideRadiusMeters(start.gateWidth)
+                val outsideDistance = outsideRadiusMeters(start.gateWidthMeters)
                 val outside = destination(start, bearingToNext, outsideDistance)
                 addPoint(inside.first, inside.second)
                 addPoint(outside.first, outside.second)
@@ -87,7 +87,7 @@ internal class RacingReplayAnchorBuilder(
         val inboundBearing = RacingGeometryUtils.calculateBearing(previous.lat, previous.lon, finish.lat, finish.lon)
         when (finish.finishPointType) {
             RacingFinishPointType.FINISH_LINE -> {
-                val offset = lineCrossOffsetMeters(finish.gateWidth)
+                val offset = lineCrossOffsetMeters(finish.gateWidthMeters)
                 val pre = destination(finish, inboundBearing + 180.0, offset)
                 val post = destination(finish, inboundBearing, offset)
                 addPoint(pre.first, pre.second)
@@ -174,7 +174,7 @@ internal class RacingReplayAnchorBuilder(
     ): Pair<RacingBoundaryPoint, RacingBoundaryPoint> {
         val center = RacingBoundaryPoint(waypoint.lat, waypoint.lon)
         val boundary = RacingBoundaryPoint(boundaryPoint.first, boundaryPoint.second)
-        val radiusMeters = waypoint.gateWidth * 1000.0
+        val radiusMeters = waypoint.gateWidthMeters
         val epsilonMeters = epsilonPolicy.epsilonMeters()
         return RacingBoundaryGeometry.anchorsForBoundaryPoint(
             center = center,
@@ -206,15 +206,15 @@ internal class RacingReplayAnchorBuilder(
     ): Pair<Double, Double> {
         return when (turn.turnPointType) {
             RacingTurnPointType.TURN_POINT_CYLINDER -> {
-                destination(turn, inboundBearing + 180.0, outsideRadiusMeters(turn.gateWidth))
+                destination(turn, inboundBearing + 180.0, outsideRadiusMeters(turn.gateWidthMeters))
             }
             RacingTurnPointType.KEYHOLE -> {
-                val distance = outsideRadiusMeters(turn.gateWidth)
+                val distance = outsideRadiusMeters(turn.gateWidthMeters)
                 destination(turn, inboundBearing + 180.0, distance)
             }
             RacingTurnPointType.FAI_QUADRANT -> {
                 if (next == null) {
-                    destination(turn, inboundBearing + 180.0, outsideRadiusMeters(turn.gateWidth))
+                    destination(turn, inboundBearing + 180.0, outsideRadiusMeters(turn.gateWidthMeters))
                 } else {
                     val sectorBearing = faiSectorBearing(turn, previous, next)
                     destination(turn, sectorBearing + 180.0, 500.0)
@@ -247,8 +247,8 @@ internal class RacingReplayAnchorBuilder(
         distanceMeters
     )
 
-    private fun lineCrossOffsetMeters(gateWidthKm: Double): Double {
-        val lineLengthMeters = max(0.0, gateWidthKm) * 1000.0
+    private fun lineCrossOffsetMeters(gateWidthMeters: Double): Double {
+        val lineLengthMeters = max(0.0, gateWidthMeters)
         if (lineLengthMeters <= 0.0) return 0.0
 
         val radiusMeters = lineLengthMeters / 2.0
@@ -264,9 +264,8 @@ internal class RacingReplayAnchorBuilder(
         }
     }
 
-    private fun outsideRadiusMeters(radiusKm: Double): Double {
-        val radiusMeters = max(0.0, radiusKm) * 1000.0
-        return radiusMeters + OUTSIDE_MARGIN_METERS
+    private fun outsideRadiusMeters(radiusMeters: Double): Double {
+        return max(0.0, radiusMeters) + OUTSIDE_MARGIN_METERS
     }
 
     private fun normalizeBearing(bearingDeg: Double): Double {

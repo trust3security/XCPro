@@ -14,7 +14,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import java.util.Locale
+import com.example.xcpro.common.units.DistanceM
+import com.example.xcpro.common.units.UnitsFormatter
+import com.example.xcpro.common.units.UnitsPreferences
 
 /**
  * Bottom sheet state enum for task UI components
@@ -35,7 +37,8 @@ fun TaskMinimizedIndicator(
     task: Task,
     activeLegIndex: Int,
     onSetActiveLeg: (Int) -> Unit,
-    distanceToWaypointKm: ((Double, Double) -> Double?)?,
+    distanceToWaypointMeters: ((Double, Double) -> Double?)?,
+    unitsPreferences: UnitsPreferences,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     currentGPSLocation: Pair<Double, Double>? = null // Real-time GPS position for live distance updates
@@ -103,17 +106,20 @@ fun TaskMinimizedIndicator(
                     )
 
                     // Show real-time distance to current waypoint (updates live as pilot flies)
-                    val distanceToWaypoint = if (currentGPSLocation != null && distanceToWaypointKm != null) {
-                        distanceToWaypointKm.invoke(
+                    val liveDistanceMeters = if (currentGPSLocation != null && distanceToWaypointMeters != null) {
+                        distanceToWaypointMeters.invoke(
                             currentGPSLocation.first,   // Current GPS latitude
                             currentGPSLocation.second   // Current GPS longitude
                         )
                     } else null
 
-                    // Display live distance (e.g., "12.3 km" - updates every second)
-                    if (distanceToWaypoint != null && distanceToWaypoint > 0) {
+                    if (liveDistanceMeters != null && liveDistanceMeters > 0) {
+                        val distanceLabel = UnitsFormatter.distance(
+                            distance = DistanceM(liveDistanceMeters),
+                            preferences = unitsPreferences
+                        ).text
                         Text(
-                            text = "${"%.1f".format(Locale.getDefault(), distanceToWaypoint)} km",
+                            text = distanceLabel,
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.Black.copy(alpha = 0.7f),
                             textAlign = TextAlign.Center

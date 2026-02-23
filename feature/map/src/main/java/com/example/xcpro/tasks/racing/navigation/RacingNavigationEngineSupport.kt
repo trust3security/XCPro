@@ -48,13 +48,13 @@ internal fun buildTaskSignature(task: SimpleRacingTask): String {
             append(":")
             append(waypoint.turnPointType.name)
             append(":")
-            append(waypoint.gateWidth)
+            append(waypoint.gateWidthMeters)
             append(":")
-            append(waypoint.keyholeInnerRadius)
+            append(waypoint.keyholeInnerRadiusMeters)
             append(":")
             append(waypoint.keyholeAngle)
             append(":")
-            append(waypoint.faiQuadrantOuterRadius)
+            append(waypoint.faiQuadrantOuterRadiusMeters)
             append(":")
             append(waypoint.lat)
             append(":")
@@ -104,12 +104,12 @@ private fun proximityRadiusMeters(
 }
 
 private fun lineRadiusMeters(waypoint: RacingWaypoint): Double {
-    val lengthMeters = waypoint.gateWidth * 1000.0
+    val lengthMeters = waypoint.gateWidthMeters
     return lengthMeters / 2.0
 }
 
 private fun cylinderRadiusMeters(waypoint: RacingWaypoint): Double {
-    return waypoint.gateWidth * 1000.0
+    return waypoint.gateWidthMeters
 }
 
 private fun sectorRadiusMeters(
@@ -117,7 +117,7 @@ private fun sectorRadiusMeters(
     nextWaypoint: RacingWaypoint?
 ): Double {
     if (nextWaypoint == null) return 0.0
-    return waypoint.gateWidth * 1000.0
+    return waypoint.gateWidthMeters
 }
 
 private fun keyholeRadiusMeters(
@@ -126,8 +126,8 @@ private fun keyholeRadiusMeters(
     nextWaypoint: RacingWaypoint?
 ): Double {
     if (previousWaypoint == null || nextWaypoint == null) return 0.0
-    val outer = waypoint.gateWidth * 1000.0
-    val inner = waypoint.keyholeInnerRadius * 1000.0
+    val outer = waypoint.gateWidthMeters
+    val inner = waypoint.keyholeInnerRadiusMeters
     return max(outer, inner)
 }
 
@@ -137,12 +137,11 @@ private fun faiQuadrantRadiusMeters(
     nextWaypoint: RacingWaypoint?
 ): Double {
     if (previousWaypoint == null || nextWaypoint == null) return 0.0
-    return waypoint.faiQuadrantOuterRadius * 1000.0
+    return waypoint.faiQuadrantOuterRadiusMeters
 }
 
 private fun waypointDistanceMeters(waypoint: RacingWaypoint, fix: RacingNavigationFix): Double {
-    val km = RacingGeometryUtils.haversineDistance(waypoint.lat, waypoint.lon, fix.lat, fix.lon)
-    return abs(km * 1000.0)
+    return abs(RacingGeometryUtils.haversineDistanceMeters(waypoint.lat, waypoint.lon, fix.lat, fix.lon))
 }
 
 internal fun detectCylinderCrossing(
@@ -153,7 +152,7 @@ internal fun detectCylinderCrossing(
     transition: RacingBoundaryTransition
 ): RacingBoundaryCrossing? {
     if (previousFix == null) return null
-    val radiusMeters = waypoint.gateWidth * 1000.0
+    val radiusMeters = waypoint.gateWidthMeters
     if (radiusMeters <= 0.0) return null
     return crossingPlanner.detectCylinderCrossing(
         center = RacingBoundaryPoint(waypoint.lat, waypoint.lon),
@@ -177,7 +176,7 @@ internal fun detectStartLineCrossing(
     val sectorBearing = (bearingToNext + 180.0) % 360.0
     return crossingPlanner.detectLineCrossing(
         center = RacingBoundaryPoint(waypoint.lat, waypoint.lon),
-        lineLengthMeters = waypoint.gateWidth * 1000.0,
+        lineLengthMeters = waypoint.gateWidthMeters,
         lineBearingDegrees = lineBearing,
         sectorBearingDegrees = sectorBearing,
         previousFix = previousFix,
@@ -199,7 +198,7 @@ internal fun detectFinishLineCrossing(
     val sectorBearing = inboundBearing % 360.0
     return crossingPlanner.detectLineCrossing(
         center = RacingBoundaryPoint(waypoint.lat, waypoint.lon),
-        lineLengthMeters = waypoint.gateWidth * 1000.0,
+        lineLengthMeters = waypoint.gateWidthMeters,
         lineBearingDegrees = lineBearing,
         sectorBearingDegrees = sectorBearing,
         previousFix = previousFix,
@@ -220,7 +219,7 @@ internal fun detectStartSectorCrossing(
     val halfAngle = 45.0
     return crossingPlanner.detectSectorCrossing(
         center = RacingBoundaryPoint(waypoint.lat, waypoint.lon),
-        radiusMeters = waypoint.gateWidth * 1000.0,
+        radiusMeters = waypoint.gateWidthMeters,
         sectorBearingDegrees = bearingToNext,
         halfAngleDegrees = halfAngle,
         previousFix = previousFix,
@@ -238,7 +237,7 @@ internal fun detectKeyholeCrossing(
     currentFix: RacingNavigationFix
 ): RacingBoundaryCrossing? {
     if (previousFix == null || previousWaypoint == null || nextWaypoint == null) return null
-    val innerRadiusMeters = waypoint.keyholeInnerRadius * 1000.0
+    val innerRadiusMeters = waypoint.keyholeInnerRadiusMeters
     val innerCrossing = if (innerRadiusMeters > 0.0) {
         crossingPlanner.detectCylinderCrossing(
             center = RacingBoundaryPoint(waypoint.lat, waypoint.lon),
@@ -256,7 +255,7 @@ internal fun detectKeyholeCrossing(
     val halfAngle = waypoint.normalizedKeyholeAngle / 2.0
     return crossingPlanner.detectSectorCrossing(
         center = RacingBoundaryPoint(waypoint.lat, waypoint.lon),
-        radiusMeters = waypoint.gateWidth * 1000.0,
+        radiusMeters = waypoint.gateWidthMeters,
         sectorBearingDegrees = sectorBearing,
         halfAngleDegrees = halfAngle,
         previousFix = previousFix,

@@ -14,8 +14,7 @@ import kotlin.math.*
 class StartLineDisplay : TurnPointDisplay {
 
     override fun generateVisualGeometry(waypoint: RacingWaypoint, context: TaskContext): String {
-        val gateWidthKm = waypoint.gateWidth
-        val gateWidthMeters = gateWidthKm * 1000.0
+        val gateWidthMeters = waypoint.gateWidthMeters
 
         // Calculate direction to next waypoint
         val bearing = if (context.nextWaypoint != null) {
@@ -63,7 +62,7 @@ class StartLineDisplay : TurnPointDisplay {
 
     override fun getDisplayRadius(waypoint: RacingWaypoint): Double {
         // For start lines, use half the line length as the "radius" for bounds calculation
-        return waypoint.gateWidth * 1000.0 / 2.0 // Convert km to meters and take half
+        return waypoint.gateWidthMeters / 2.0
     }
 
     override fun getObservationZoneType(): String {

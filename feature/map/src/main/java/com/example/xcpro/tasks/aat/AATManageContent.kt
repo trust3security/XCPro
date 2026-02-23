@@ -7,6 +7,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.tasks.TaskUiState
 import com.example.xcpro.tasks.TaskSheetViewModel
 import com.example.xcpro.tasks.QRCodeDialog
@@ -28,6 +29,7 @@ internal fun AATFullyExpandedContent(
     taskViewModel: TaskSheetViewModel,
     mapLibreMap: MapLibreMap?,
     allWaypoints: List<WaypointData>,
+    unitsPreferences: UnitsPreferences,
     currentQNH: String?
 ) {
     var showQRDialog by remember { mutableStateOf(false) }
@@ -38,7 +40,8 @@ internal fun AATFullyExpandedContent(
         TaskStatsSection(
             task = task,
             taskType = TaskType.AAT,
-            distanceKm = uiState.stats.distanceNominal / 1000.0,
+            distanceMeters = uiState.stats.distanceNominal,
+            unitsPreferences = unitsPreferences,
             onQRCodeClick = { showQRDialog = true }
         )
 

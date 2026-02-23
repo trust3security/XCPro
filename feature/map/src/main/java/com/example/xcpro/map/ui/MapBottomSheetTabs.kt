@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -40,9 +41,15 @@ import kotlinx.coroutines.launch
 internal enum class MapBottomTab(val label: String) {
     WEATHER("Weather"),
     SKYSIGHT("SkySight"),
-    TAB_3("Tab 3"),
+    OGN("Scia"),
     TAB_4("Tab 4")
 }
+
+internal data class OgnTrailAircraftRowUi(
+    val key: String,
+    val label: String,
+    val trailsEnabled: Boolean
+)
 
 private val THERMAL_TOPS_ID = ForecastParameterId("dwcrit")
 private val CONVERGENCE_ID = ForecastParameterId("wblmaxmin")
@@ -61,6 +68,10 @@ internal fun MapBottomTabsLayer(
     onWeatherOpacityChanged: (Float) -> Unit,
     isDrawerBlocked: Boolean,
     onOpenWeatherSettingsFromTab: () -> Unit,
+    ognEnabled: Boolean,
+    onOgnEnabledChanged: (Boolean) -> Unit,
+    ognTrailAircraftRows: List<OgnTrailAircraftRowUi>,
+    onOgnTrailAircraftToggled: (String, Boolean) -> Unit,
     showSkySightPrimaryEnabled: Boolean,
     selectedPrimarySkySightIds: Set<ForecastParameterId>,
     onShowSkySightPrimaryChanged: (Boolean) -> Unit,
@@ -78,7 +89,7 @@ internal fun MapBottomTabsLayer(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .navigationBarsPadding()
-                    .padding(bottom = 10.dp)
+                    .padding(bottom = FLOATING_TAB_STRIP_BOTTOM_PADDING)
             )
         }
     }
@@ -95,7 +106,14 @@ internal fun MapBottomTabsLayer(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(
+                        PaddingValues(
+                            start = SHEET_CONTENT_HORIZONTAL_PADDING,
+                            top = SHEET_CONTENT_TOP_PADDING,
+                            end = SHEET_CONTENT_HORIZONTAL_PADDING,
+                            bottom = SHEET_CONTENT_BOTTOM_PADDING
+                        )
+                    )
             ) {
                 Column(
                     modifier = Modifier
@@ -134,8 +152,13 @@ internal fun MapBottomTabsLayer(
                             )
                         }
 
-                        MapBottomTab.TAB_3 -> {
-                            PlaceholderTabContent(text = "Tab 3 options coming soon")
+                        MapBottomTab.OGN -> {
+                            OgnTabContent(
+                                ognEnabled = ognEnabled,
+                                onOgnEnabledChanged = onOgnEnabledChanged,
+                                aircraftRows = ognTrailAircraftRows,
+                                onAircraftTrailToggled = onOgnTrailAircraftToggled
+                            )
                         }
 
                         MapBottomTab.TAB_4 -> {
@@ -144,14 +167,19 @@ internal fun MapBottomTabsLayer(
                     }
                 }
 
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                HorizontalDivider(
+                    modifier = Modifier.padding(
+                        top = SHEET_DIVIDER_TOP_PADDING,
+                        bottom = SHEET_DIVIDER_BOTTOM_PADDING
+                    )
+                )
 
                 BottomTabStrip(
                     selectedTab = selectedTab,
                     onTabSelected = onTabSelected,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 2.dp)
+                        .padding(bottom = SHEET_TAB_STRIP_BOTTOM_PADDING)
                 )
             }
         }
@@ -286,6 +314,66 @@ private fun SkySightTabContent(
 }
 
 @Composable
+private fun OgnTabContent(
+    ognEnabled: Boolean,
+    onOgnEnabledChanged: (Boolean) -> Unit,
+    aircraftRows: List<OgnTrailAircraftRowUi>,
+    onAircraftTrailToggled: (String, Boolean) -> Unit
+) {
+    Text(
+        text = "Scia (trail/wake)",
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.SemiBold
+    )
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = "OGN Traffic")
+        Switch(
+            checked = ognEnabled,
+            onCheckedChange = onOgnEnabledChanged
+        )
+    }
+    if (!ognEnabled) {
+        Text(
+            text = "Enable OGN traffic to manage aircraft trail visibility.",
+            style = MaterialTheme.typography.bodySmall
+        )
+    } else if (aircraftRows.isEmpty()) {
+        Text(
+            text = "No OGN aircraft currently available.",
+            style = MaterialTheme.typography.bodySmall
+        )
+    } else {
+        Text(
+            text = "Aircraft trail visibility",
+            style = MaterialTheme.typography.labelLarge
+        )
+        aircraftRows.forEach { row ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = row.label,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Switch(
+                    checked = row.trailsEnabled,
+                    onCheckedChange = { enabled ->
+                        onAircraftTrailToggled(row.key, enabled)
+                    },
+                    enabled = ognEnabled
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun PlaceholderTabContent(text: String) {
     Column(
         modifier = Modifier
@@ -300,3 +388,11 @@ private fun PlaceholderTabContent(text: String) {
         )
     }
 }
+
+private val FLOATING_TAB_STRIP_BOTTOM_PADDING = 0.dp
+private val SHEET_CONTENT_HORIZONTAL_PADDING = 16.dp
+private val SHEET_CONTENT_TOP_PADDING = 8.dp
+private val SHEET_CONTENT_BOTTOM_PADDING = 0.dp
+private val SHEET_DIVIDER_TOP_PADDING = 4.dp
+private val SHEET_DIVIDER_BOTTOM_PADDING = 1.dp
+private val SHEET_TAB_STRIP_BOTTOM_PADDING = 0.dp

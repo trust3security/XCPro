@@ -7,6 +7,7 @@ import com.example.xcpro.flightdata.FlightDisplayMapper
 import com.example.xcpro.flightdata.FlightDisplaySnapshot
 import com.example.xcpro.sensors.domain.CalculateFlightMetricsUseCase
 import com.example.xcpro.sensors.domain.FlightMetricsRequest
+import com.example.xcpro.weather.wind.model.AirspeedSample
 import com.example.xcpro.weather.wind.model.WindState
 import com.example.xcpro.common.flight.FlightMode
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,6 +42,7 @@ internal class FlightDataEmitter(
         baro: BaroData?,
         cachedVarioResult: ModernVarioResult?,
         windState: WindState?,
+        externalAirspeedSample: AirspeedSample?,
         isFlying: Boolean,
         replayRealVarioMs: Double?,
         replayRealVarioTimestamp: Long,
@@ -80,6 +82,7 @@ internal class FlightDataEmitter(
                 varioGpsValue = varioGpsValueForMetrics,
                 baroResult = baroResult,
                 windState = windState,
+                externalAirspeedSample = externalAirspeedSample,
                 varioValidUntil = state.varioValidUntil,
                 isFlying = isFlying,
                 macCreadySetting = macCreadySetting,

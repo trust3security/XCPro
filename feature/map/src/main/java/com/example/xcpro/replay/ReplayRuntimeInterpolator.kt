@@ -50,8 +50,13 @@ internal class ReplayRuntimeInterpolator(
         }
 
         val bearing = computeBearingWithWindow(p0, p1, p2, p3, clampedTime)
-        val speedMs = computeSegmentSpeed(p1, p2)
-        val movement = movementFromSpeedBearing(speedMs, bearing)
+        val segmentDistanceMeters = haversine(p1.latitude, p1.longitude, p2.latitude, p2.longitude)
+        val speedMs = computeSegmentSpeedMetersPerSecond(
+            segmentDistanceMeters = segmentDistanceMeters,
+            t1Millis = p1.timestampMillis,
+            t2Millis = p2.timestampMillis
+        )
+        val movement = movementFromSpeedBearing(speedMs, bearing, segmentDistanceMeters)
 
         return ReplayInterpolatedFix(interpolated, movement)
     }
@@ -149,19 +154,26 @@ internal class ReplayRuntimeInterpolator(
         return bearing(before.latitude, before.longitude, after.latitude, after.longitude)
     }
 
-    private fun computeSegmentSpeed(p1: IgcPoint, p2: IgcPoint): Double {
-        val distance = haversine(p1.latitude, p1.longitude, p2.latitude, p2.longitude)
-        val dtSeconds = ((p2.timestampMillis - p1.timestampMillis) / 1000.0).coerceAtLeast(0.001)
-        return distance / dtSeconds
+    private fun computeSegmentSpeedMetersPerSecond(
+        segmentDistanceMeters: Double,
+        t1Millis: Long,
+        t2Millis: Long
+    ): Double {
+        val dtSeconds = ((t2Millis - t1Millis) / 1000.0).coerceAtLeast(0.001)
+        return segmentDistanceMeters / dtSeconds
     }
 
-    private fun movementFromSpeedBearing(speedMs: Double, bearingDeg: Double): MovementSnapshot {
+    private fun movementFromSpeedBearing(
+        speedMs: Double,
+        bearingDeg: Double,
+        segmentDistanceMeters: Double
+    ): MovementSnapshot {
         val rad = Math.toRadians(bearingDeg)
         val east = speedMs * sin(rad)
         val north = speedMs * cos(rad)
         return MovementSnapshot(
             speedMs = speedMs,
-            distanceMeters = speedMs,
+            distanceMeters = segmentDistanceMeters,
             east = east,
             north = north
         )

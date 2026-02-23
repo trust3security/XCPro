@@ -38,7 +38,7 @@ internal fun calculateAreaAchievementsForResult(
             creditedFix = creditedFix,
             entryTime = null,
             distanceFromCenter = creditedFix?.let {
-                AATMathUtils.calculateDistance(it, area.centerPoint)
+                AATMathUtils.calculateDistanceMeters(it, area.centerPoint)
             },
             timeSpentInArea = null,
             optimalPoint = null
@@ -71,10 +71,10 @@ internal fun calculateTimeAnalysisForResult(result: AATResult, task: AATTask): A
 
 internal fun calculateSpeedAnalysisForResult(result: AATResult): AATSpeedAnalysis {
     return AATSpeedAnalysis(
-        averageTaskSpeed = result.averageSpeed,
-        averageInterAreaSpeed = result.averageSpeed,
-        maxSpeedSegment = result.averageSpeed * 1.2,
-        minSpeedSegment = result.averageSpeed * 0.8,
+        averageTaskSpeedMs = result.averageSpeedMs,
+        averageInterAreaSpeedMs = result.averageSpeedMs,
+        maxSpeedSegmentMs = result.averageSpeedMs * 1.2,
+        minSpeedSegmentMs = result.averageSpeedMs * 0.8,
         speedConsistency = 0.1
     )
 }

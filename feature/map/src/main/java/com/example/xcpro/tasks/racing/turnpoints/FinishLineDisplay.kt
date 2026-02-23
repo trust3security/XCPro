@@ -14,13 +14,12 @@ import kotlin.math.*
 class FinishLineDisplay : TurnPointDisplay {
 
     override fun generateVisualGeometry(waypoint: RacingWaypoint, context: TaskContext): String {
-        val gateWidthKm = waypoint.gateWidth
-        val gateWidthMeters = gateWidthKm * 1000.0
+        val gateWidthMeters = waypoint.gateWidthMeters
 
         // Log waypoint information for FAI compliance verification
         Log.d("FinishLineDisplay", "=== FAI FINISH LINE CALCULATION ===")
         Log.d("FinishLineDisplay", "Finish waypoint: ${waypoint.title} at (${waypoint.lat}, ${waypoint.lon})")
-        Log.d("FinishLineDisplay", "Gate width: ${gateWidthKm}km (${gateWidthMeters}m)")
+        Log.d("FinishLineDisplay", "Gate width meters: $gateWidthMeters")
 
         if (context.previousWaypoint != null) {
             Log.d("FinishLineDisplay", "Previous waypoint: ${context.previousWaypoint.title} at (${context.previousWaypoint.lat}, ${context.previousWaypoint.lon})")
@@ -54,7 +53,7 @@ class FinishLineDisplay : TurnPointDisplay {
         Log.d("FinishLineDisplay", "Finish line Point2: (${String.format("%.6f", point2.first)}, ${String.format("%.6f", point2.second)})")
 
         // Validate line length
-        val calculatedLength = RacingGeometryUtils.haversineDistance(point1.first, point1.second, point2.first, point2.second) * 1000.0 // Convert km to meters
+        val calculatedLength = RacingGeometryUtils.haversineDistanceMeters(point1.first, point1.second, point2.first, point2.second)
         Log.d("FinishLineDisplay", "Calculated line length: ${String.format("%.2f", calculatedLength)}m (expected: ${gateWidthMeters}m)")
 
         if (Math.abs(calculatedLength - gateWidthMeters) < 1.0) {
@@ -102,7 +101,7 @@ class FinishLineDisplay : TurnPointDisplay {
 
     override fun getDisplayRadius(waypoint: RacingWaypoint): Double {
         // For finish lines, use half the line length as the "radius" for bounds calculation
-        return waypoint.gateWidth * 1000.0 / 2.0 // Convert km to meters and take half
+        return waypoint.gateWidthMeters / 2.0
     }
 
     override fun getObservationZoneType(): String {

@@ -1,5 +1,7 @@
 package com.example.xcpro.tasks
 
+import com.example.xcpro.tasks.aat.models.AATRadiusAuthority
+import com.example.xcpro.tasks.aat.models.AATWaypointRole
 import com.example.xcpro.tasks.core.AATWaypointCustomParams
 import com.example.xcpro.tasks.core.PersistedOzParams
 import com.example.xcpro.tasks.core.RacingWaypointCustomParams
@@ -84,13 +86,8 @@ internal object TaskObservationZoneResolver {
         role: WaypointRole,
         waypoint: TaskWaypoint
     ): OzFallback {
-        val defaultTurnpointRadiusKm = if (taskType == TaskType.AAT) 5.0 else 0.5
-        val radiusKm = waypoint.customRadius?.takeIf { it > 0.0 } ?: when (role) {
-            WaypointRole.START -> 10.0
-            WaypointRole.FINISH -> 3.0
-            WaypointRole.TURNPOINT, WaypointRole.OPTIONAL -> defaultTurnpointRadiusKm
-        }
-        val fallbackRadiusMeters = radiusKm * 1000.0
+        val fallbackRadiusMeters = waypoint.resolvedCustomRadiusMeters()?.takeIf { it > 0.0 }
+            ?: defaultRadiusMeters(taskType, role)
 
         val roleDefaults = when (role) {
             WaypointRole.START -> OzFallback(
@@ -130,11 +127,12 @@ internal object TaskObservationZoneResolver {
                     )
                 } else {
                     val racingParams = RacingWaypointCustomParams.from(waypoint.customParameters)
-                    val outerRadiusKm = waypoint.customRadius?.takeIf { it > 0.0 } ?: racingParams.faiQuadrantOuterRadius
+                    val outerRadiusMeters = waypoint.resolvedCustomRadiusMeters()?.takeIf { it > 0.0 }
+                        ?: racingParams.faiQuadrantOuterRadiusMeters.coerceAtLeast(1.0)
                     OzFallback(
                         radiusMeters = fallbackRadiusMeters,
-                        outerRadiusMeters = outerRadiusKm.coerceAtLeast(0.001) * 1000.0,
-                        innerRadiusMeters = racingParams.keyholeInnerRadius.coerceAtLeast(0.001) * 1000.0,
+                        outerRadiusMeters = outerRadiusMeters,
+                        innerRadiusMeters = racingParams.keyholeInnerRadiusMeters.coerceAtLeast(1.0),
                         angleDeg = racingParams.keyholeAngle.coerceAtLeast(1.0),
                         lengthMeters = 1000.0,
                         widthMeters = 200.0
@@ -150,6 +148,23 @@ internal object TaskObservationZoneResolver {
         }
 
         return roleDefaults.copy(innerRadiusMeters = safeInner)
+    }
+
+    private fun defaultRadiusMeters(taskType: TaskType, role: WaypointRole): Double {
+        if (taskType == TaskType.AAT) {
+            val aatRole = when (role) {
+                WaypointRole.START -> AATWaypointRole.START
+                WaypointRole.FINISH -> AATWaypointRole.FINISH
+                WaypointRole.TURNPOINT, WaypointRole.OPTIONAL -> AATWaypointRole.TURNPOINT
+            }
+            return AATRadiusAuthority.getRadiusMetersForRole(aatRole)
+        }
+
+        return when (role) {
+            WaypointRole.START -> 10_000.0
+            WaypointRole.FINISH -> 3_000.0
+            WaypointRole.TURNPOINT, WaypointRole.OPTIONAL -> 500.0
+        }
     }
 
     private fun parsePersistedOzParams(raw: Any?): PersistedOzParams? {

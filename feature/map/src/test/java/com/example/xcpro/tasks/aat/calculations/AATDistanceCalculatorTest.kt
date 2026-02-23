@@ -22,7 +22,7 @@ class AATDistanceCalculatorTest {
         val result = calculator.calculateInteractiveTaskDistance(waypoints)
 
         assertTrue("expected non-empty segments", result.segments.isNotEmpty())
-        assertTrue("expected positive distance", result.totalDistance > 0.0)
+        assertTrue("expected positive distance", result.totalDistanceMeters > 0.0)
         assertTrue("expected non-negative calculation time", result.calculationTime >= 0L)
     }
 

@@ -60,28 +60,34 @@ internal class AATEditOverlayRenderer(
 
             val highlightedGeometry = when (waypoint.assignedArea.shape) {
                 AATAreaShape.CIRCLE -> {
-                    val radiusKm = waypoint.assignedArea.radiusMeters / 1000.0
-                    geometry.generateCircleCoordinates(waypoint.lat, waypoint.lon, radiusKm)
+                    geometry.generateCircleCoordinatesMeters(
+                        waypoint.lat,
+                        waypoint.lon,
+                        waypoint.assignedArea.radiusMeters
+                    )
                 }
                 AATAreaShape.SECTOR -> {
-                    val innerRadiusKm = waypoint.assignedArea.innerRadiusMeters / 1000.0
-                    val outerRadiusKm = waypoint.assignedArea.outerRadiusMeters / 1000.0
+                    val innerRadiusMeters = waypoint.assignedArea.innerRadiusMeters
+                    val outerRadiusMeters = waypoint.assignedArea.outerRadiusMeters
                     val startAngle = waypoint.assignedArea.startAngleDegrees
                     val endAngle = waypoint.assignedArea.endAngleDegrees
 
-                    if (innerRadiusKm > 0.0) {
+                    if (innerRadiusMeters > 0.0) {
                     } else {
                     }
 
-                    geometry.generateSectorCoordinates(
+                    geometry.generateSectorCoordinatesMeters(
                         waypoint.lat, waypoint.lon,
-                        innerRadiusKm, outerRadiusKm,
+                        innerRadiusMeters, outerRadiusMeters,
                         startAngle, endAngle
                     )
                 }
                 AATAreaShape.LINE -> {
-                    val radiusKm = waypoint.assignedArea.radiusMeters / 1000.0
-                    geometry.generateCircleCoordinates(waypoint.lat, waypoint.lon, radiusKm)
+                    geometry.generateCircleCoordinatesMeters(
+                        waypoint.lat,
+                        waypoint.lon,
+                        waypoint.assignedArea.radiusMeters
+                    )
                 }
             }
 

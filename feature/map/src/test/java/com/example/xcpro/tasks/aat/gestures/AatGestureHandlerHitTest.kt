@@ -46,7 +46,7 @@ class AatGestureHandlerHitTest {
     @Test
     fun `uses custom radius for hit detection`() {
         val waypoints = listOf(
-            waypoint(id = "tp-1", lat = 0.03, lon = 0.0, role = WaypointRole.TURNPOINT, radiusKm = 1.0)
+            waypoint(id = "tp-1", lat = 0.03, lon = 0.0, role = WaypointRole.TURNPOINT, radiusMeters = 1000.0)
         )
 
         val hit = findAatWaypointHitForMapPoint(mapLat = 0.0, mapLon = 0.0, waypoints = waypoints)
@@ -59,7 +59,7 @@ class AatGestureHandlerHitTest {
         lat: Double,
         lon: Double,
         role: WaypointRole,
-        radiusKm: Double? = null
+        radiusMeters: Double? = null
     ): TaskWaypoint = TaskWaypoint(
         id = id,
         title = id,
@@ -67,6 +67,6 @@ class AatGestureHandlerHitTest {
         lat = lat,
         lon = lon,
         role = role,
-        customRadius = radiusKm
+        customRadiusMeters = radiusMeters
     )
 }

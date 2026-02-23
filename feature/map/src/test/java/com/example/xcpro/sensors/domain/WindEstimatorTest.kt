@@ -1,12 +1,10 @@
 package com.example.xcpro.sensors.domain
 
-import com.example.xcpro.glider.SpeedBoundsMs
-import com.example.xcpro.glider.StillAirSinkProvider
 import com.example.xcpro.weather.wind.model.WindVector
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.mockito.kotlin.mock
 
 class WindEstimatorTest {
 
@@ -58,22 +56,26 @@ class WindEstimatorTest {
     }
 
     @Test
-    fun fromPolarSink_uses_sink_provider() {
-        val sinkProvider = mock<StillAirSinkProvider> {
-            on { sinkAtSpeed(10.0) }.thenReturn(1.0)
-            on { sinkAtSpeed(10.5) }.thenReturn(1.05)
-            on { sinkAtSpeed(11.0) }.thenReturn(1.1)
-            on { iasBoundsMs() }.thenReturn(null)
-        }
-        val estimator = WindEstimator(sinkProvider)
-        val result = estimator.fromPolarSink(
-            netto = 0f,
-            verticalSpeed = -1.05,
-            altitudeMeters = 0.0,
-            qnhHpa = 1013.25
+    fun fromWind_higher_qnh_increases_indicated_for_same_tas() {
+        val estimator = WindEstimator()
+        val noWind = WindVector(east = 0.0, north = 0.0)
+        val lowQnh = estimator.fromWind(
+            gpsSpeed = 30.0,
+            gpsBearingDeg = 0.0,
+            altitudeMeters = 2000.0,
+            qnhHpa = 990.0,
+            windVector = noWind
         )
-        // Should pick the closest sink curve (~1.05 m/s) => around 10.5 m/s TAS
-        requireNotNull(result)
-        assertEquals(AirspeedSource.POLAR_SINK, result.source)
+        val highQnh = estimator.fromWind(
+            gpsSpeed = 30.0,
+            gpsBearingDeg = 0.0,
+            altitudeMeters = 2000.0,
+            qnhHpa = 1030.0,
+            windVector = noWind
+        )
+        requireNotNull(lowQnh)
+        requireNotNull(highQnh)
+        assertEquals(lowQnh.trueMs, highQnh.trueMs, 1e-6)
+        assertTrue(highQnh.indicatedMs > lowQnh.indicatedMs)
     }
 }

@@ -16,6 +16,8 @@ import com.example.xcpro.sensors.VarioDiagnosticsSample
 import com.example.xcpro.sensors.domain.CalculateFlightMetricsUseCase
 import com.example.xcpro.sensors.domain.FlyingState
 import com.example.xcpro.sensors.domain.WindEstimator
+import com.example.xcpro.weather.wind.data.AirspeedDataSource
+import com.example.xcpro.weather.wind.model.AirspeedSample
 import com.example.xcpro.weather.wind.model.WindState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.*
@@ -31,6 +33,7 @@ import kotlinx.coroutines.launch
 internal class FlightDataCalculatorEngine(
     private val context: Context,
     private val sensorDataSource: SensorDataSource,
+    private val airspeedDataSource: AirspeedDataSource,
     private val scope: CoroutineScope,
     private val sinkProvider: StillAirSinkProvider,
     private val windStateFlow: StateFlow<WindState>,
@@ -69,10 +72,11 @@ internal class FlightDataCalculatorEngine(
     internal val flightMetricsUseCase = CalculateFlightMetricsUseCase(
         flightHelpers = flightHelpers,
         sinkProvider = sinkProvider,
-        windEstimator = WindEstimator(sinkProvider)
+        windEstimator = WindEstimator()
     )
     internal var latestWindState: WindState? = null
     internal var latestFlightState: FlyingState? = null
+    internal var latestAirspeedSample: AirspeedSample? = null
     internal var lastGpsFixTimestampForGpsVario: Long = 0L
     internal val varioSuite = VarioSuite()
     internal val audioController = VarioAudioController(context, audioFocusManager, scope, enableAudio)
@@ -131,6 +135,7 @@ internal class FlightDataCalculatorEngine(
     init {
         scope.launch { windStateFlow.collect { latestWindState = it } }
         scope.launch { flightStateSource.flightState.collect { latestFlightState = it } }
+        scope.launch { airspeedDataSource.airspeedFlow.collect { latestAirspeedSample = it } }
         scope.launch {
             hawkVarioRepository.output.collect { output ->
                 val sample = output?.vAudioMps?.takeIf { it.isFinite() }
@@ -212,6 +217,7 @@ internal class FlightDataCalculatorEngine(
         cachedBaroResult = null
         cachedBaroData = null
         cachedCompassData = null
+        latestAirspeedSample = null
         lastGpsFixTimestampForGpsVario = 0L
         smoothedVerticalAccel = null
         lastAccelTimestamp = 0L

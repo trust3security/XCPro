@@ -137,7 +137,6 @@ internal fun MapScreenRoot(
         ognThermalHotspots = bindings.ognThermalHotspots,
         showOgnThermalsEnabled = bindings.showOgnThermalsEnabled,
         ognGliderTrailSegments = bindings.ognGliderTrailSegments,
-        showOgnGliderTrailsEnabled = bindings.showOgnGliderTrailsEnabled,
         ognIconSizePx = bindings.ognIconSizePx,
         adsbTargets = bindings.adsbTargets,
         adsbOverlayEnabled = bindings.adsbOverlayEnabled,

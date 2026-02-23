@@ -91,7 +91,7 @@ class RacingTaskInitializer {
             val racingParams = RacingWaypointCustomParams.from(genericWaypoint.customParameters)
 
             // Get user customized radius if available, otherwise let factory method apply proper defaults
-            val customGateWidth = genericWaypoint.customRadius?.takeIf { it > 0.0 }
+            val customGateWidthMeters = genericWaypoint.resolvedCustomRadiusMeters()?.takeIf { it > 0.0 }
 
             // Use factory method with proper role-based defaults instead of direct constructor
             RacingWaypoint.createWithStandardizedDefaults(
@@ -104,11 +104,11 @@ class RacingTaskInitializer {
                 startPointType = startPointType,
                 finishPointType = finishPointType,
                 turnPointType = turnPointType,
-                customGateWidth = customGateWidth, // Preserve user customization or apply role-based defaults
+                customGateWidthMeters = customGateWidthMeters, // Preserve user customization or apply role-based defaults
                 // Advanced parameters - preserved if available
-                keyholeInnerRadius = racingParams.keyholeInnerRadius,
+                keyholeInnerRadiusMeters = racingParams.keyholeInnerRadiusMeters,
                 keyholeAngle = racingParams.keyholeAngle,
-                faiQuadrantOuterRadius = racingParams.faiQuadrantOuterRadius
+                faiQuadrantOuterRadiusMeters = racingParams.faiQuadrantOuterRadiusMeters
             )
         }
 

@@ -12,7 +12,10 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import android.graphics.Paint
-import java.util.Locale
+import com.example.xcpro.common.units.DistanceM
+import com.example.xcpro.common.units.DistanceUnit
+import com.example.xcpro.common.units.UnitsFormatter
+import com.example.xcpro.common.units.UnitsPreferences
 import kotlin.math.*
 
 /**
@@ -23,6 +26,7 @@ import kotlin.math.*
 @Composable
 fun DistanceCirclesCanvas(
     distancePerPixelMeters: Double,
+    unitsPreferences: UnitsPreferences,
     isVisible: Boolean = true,
     modifier: Modifier = Modifier
 ) {
@@ -70,7 +74,10 @@ fun DistanceCirclesCanvas(
                     }
 
                     // Format distance text
-                    val text = formatDistanceLabel(distanceKm)
+                    val text = formatDistanceLabel(
+                        distanceMeters = distanceKm * 1000.0,
+                        unitsPreferences = unitsPreferences
+                    )
 
                     // Position label at top of circle with slight offset
                     canvas.nativeCanvas.drawText(
@@ -131,15 +138,22 @@ private fun getDistancesForScale(maxDistanceKm: Double): List<Double> {
     return distances
 }
 
-private fun formatDistanceLabel(distanceKm: Double): String {
-    return if (distanceKm >= 1.0) {
-        val whole = kotlin.math.abs(distanceKm % 1.0)
-        if (whole < 1e-6) {
-            "${distanceKm.toInt()} km"
-        } else {
-            String.format(Locale.getDefault(), "%.1f km", distanceKm)
-        }
-    } else {
-        "${(distanceKm * 1000).toInt()} m"
+private fun formatDistanceLabel(
+    distanceMeters: Double,
+    unitsPreferences: UnitsPreferences
+): String {
+    if (unitsPreferences.distance == DistanceUnit.KILOMETERS && distanceMeters < 1000.0) {
+        return "${distanceMeters.toInt()} m"
     }
+    val converted = unitsPreferences.distance.fromSi(DistanceM(distanceMeters))
+    val decimals = when {
+        converted >= 10.0 -> 0
+        converted >= 1.0 -> 1
+        else -> 2
+    }
+    return UnitsFormatter.distance(
+        distance = DistanceM(distanceMeters),
+        preferences = unitsPreferences,
+        decimals = decimals
+    ).text
 }

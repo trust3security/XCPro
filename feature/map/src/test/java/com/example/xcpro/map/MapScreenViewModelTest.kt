@@ -629,17 +629,6 @@ class MapScreenViewModelTest {
     }
 
     @Test
-    fun ognGliderTrails_readsPersistedPreferenceOnInit() = runBlocking {
-        val preferencesRepository = OgnTrafficPreferencesRepository(context)
-        preferencesRepository.setShowGliderTrailsEnabled(true)
-
-        val viewModel = createViewModel()
-        drainMain()
-
-        assertEquals(true, viewModel.showOgnGliderTrailsEnabled.value)
-    }
-
-    @Test
     fun adsbIconSize_defaultsToConfiguredDefaultPx() {
         val viewModel = createViewModel()
 
@@ -990,6 +979,7 @@ class MapScreenViewModelTest {
 
     private class FakeOgnTrafficRepository : OgnTrafficRepository {
         override val targets = MutableStateFlow<List<OgnTrafficTarget>>(emptyList())
+        override val suppressedTargetIds = MutableStateFlow<Set<String>>(emptySet())
         override val snapshot = MutableStateFlow(
             OgnTrafficSnapshot(
                 targets = emptyList(),

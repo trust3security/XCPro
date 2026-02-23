@@ -16,13 +16,81 @@ data class RacingWaypoint(
     val startPointType: RacingStartPointType = RacingStartPointType.START_LINE,
     val finishPointType: RacingFinishPointType = RacingFinishPointType.FINISH_CYLINDER,
     val turnPointType: RacingTurnPointType = RacingTurnPointType.TURN_POINT_CYLINDER,
-    val gateWidth: Double, // km, for start line/cylinder and finish dimensions (also outer radius for keyhole) - MUST be provided with standardized defaults
+    val gateWidthMeters: Double, // canonical storage in meters
     // Keyhole-specific parameters
-    val keyholeInnerRadius: Double = 0.5, // km, inner cylinder radius for keyhole (default 0.5km)
+    val keyholeInnerRadiusMeters: Double = 500.0, // canonical storage in meters
     val keyholeAngle: Double = 90.0, // degrees, sector angle for keyhole (default 90 deg)
     // FAI Quadrant-specific parameters
-    val faiQuadrantOuterRadius: Double = 10.0 // km, sector radius for FAI quadrant (default 10km)
+    val faiQuadrantOuterRadiusMeters: Double = 10_000.0 // canonical storage in meters
 ) {
+    companion object {
+        private const val METERS_PER_KILOMETER = 1000.0
+        private const val DEFAULT_KEYHOLE_INNER_RADIUS_METERS = 500.0
+        private const val DEFAULT_FAI_QUADRANT_OUTER_RADIUS_METERS = 10_000.0
+
+        /**
+         * Create a Racing waypoint with standardized defaults
+         * - Start waypoints: 10km default (matches PRD FAI standard)
+         * - Finish waypoints: 3km default
+         * - Turnpoints: 0.5km default for cylinders, 10km FAI quadrant radius, 10km for keyholes
+         */
+        fun createWithStandardizedDefaults(
+            id: String,
+            title: String,
+            subtitle: String,
+            lat: Double,
+            lon: Double,
+            role: RacingWaypointRole,
+            startPointType: RacingStartPointType = RacingStartPointType.START_LINE,
+            finishPointType: RacingFinishPointType = RacingFinishPointType.FINISH_CYLINDER,
+            turnPointType: RacingTurnPointType = RacingTurnPointType.TURN_POINT_CYLINDER,
+            customGateWidthMeters: Double? = null,
+            keyholeInnerRadiusMeters: Double? = null,
+            keyholeAngle: Double = 90.0,
+            faiQuadrantOuterRadiusMeters: Double? = null,
+            customGateWidth: Double? = null, // Allow override for user customizations
+            keyholeInnerRadius: Double = DEFAULT_KEYHOLE_INNER_RADIUS_METERS / METERS_PER_KILOMETER,
+            faiQuadrantOuterRadius: Double = DEFAULT_FAI_QUADRANT_OUTER_RADIUS_METERS / METERS_PER_KILOMETER
+        ): RacingWaypoint {
+            val standardizedGateWidthMeters = customGateWidthMeters
+                ?: customGateWidth?.takeIf { it > 0.0 }?.times(METERS_PER_KILOMETER)
+                ?: defaultGateWidthMeters(role = role, turnPointType = turnPointType)
+            val resolvedKeyholeInnerRadiusMeters = keyholeInnerRadiusMeters
+                ?: keyholeInnerRadius * METERS_PER_KILOMETER
+            val resolvedFaiQuadrantOuterRadiusMeters = faiQuadrantOuterRadiusMeters
+                ?: faiQuadrantOuterRadius * METERS_PER_KILOMETER
+
+            return RacingWaypoint(
+                id = id,
+                title = title,
+                subtitle = subtitle,
+                lat = lat,
+                lon = lon,
+                role = role,
+                startPointType = startPointType,
+                finishPointType = finishPointType,
+                turnPointType = turnPointType,
+                gateWidthMeters = standardizedGateWidthMeters,
+                keyholeInnerRadiusMeters = resolvedKeyholeInnerRadiusMeters,
+                keyholeAngle = keyholeAngle,
+                faiQuadrantOuterRadiusMeters = resolvedFaiQuadrantOuterRadiusMeters
+            )
+        }
+
+        private fun defaultGateWidthMeters(
+            role: RacingWaypointRole,
+            turnPointType: RacingTurnPointType
+        ): Double = when (role) {
+            RacingWaypointRole.START -> 10_000.0
+            RacingWaypointRole.FINISH -> 3_000.0
+            RacingWaypointRole.TURNPOINT -> when (turnPointType) {
+                RacingTurnPointType.KEYHOLE -> 10_000.0
+                RacingTurnPointType.TURN_POINT_CYLINDER,
+                RacingTurnPointType.FAI_QUADRANT -> 500.0
+            }
+        }
+    }
+
     /**
      * Normalized sector angle: clamp floating noise (e.g., 89.999999) to a clean 90.0 when close.
      */
@@ -42,76 +110,6 @@ data class RacingWaypoint(
         RacingWaypointRole.TURNPOINT -> turnPointType.displayName
     }
 
-    /**
-     * Get the effective radius/width for this waypoint based on its role and type
-     */
-    val effectiveRadius: Double get() = when (role) {
-        RacingWaypointRole.START -> when (startPointType) {
-            RacingStartPointType.START_LINE -> gateWidth // Line half-width
-            RacingStartPointType.START_CYLINDER -> gateWidth // Cylinder radius
-            RacingStartPointType.FAI_START_SECTOR -> gateWidth // Sector radius
-        }
-        RacingWaypointRole.FINISH -> when (finishPointType) {
-            RacingFinishPointType.FINISH_LINE -> gateWidth // Line half-width
-            RacingFinishPointType.FINISH_CYLINDER -> gateWidth // Cylinder radius
-        }
-        RacingWaypointRole.TURNPOINT -> when (turnPointType) {
-            RacingTurnPointType.TURN_POINT_CYLINDER -> gateWidth
-            RacingTurnPointType.FAI_QUADRANT -> faiQuadrantOuterRadius // Sector radius (finite, default 10km)
-            RacingTurnPointType.KEYHOLE -> gateWidth // Outer radius (sector part)
-        }
-    }
-
-    companion object {
-        /**
-         * Create a Racing waypoint with standardized defaults
-         * - Start waypoints: 10km default (matches PRD FAI standard)
-         * - Finish waypoints: 3km default
-         * - Turnpoints: 0.5km default for cylinders, 10km FAI quadrant radius, 10km for keyholes
-         */
-        fun createWithStandardizedDefaults(
-            id: String,
-            title: String,
-            subtitle: String,
-            lat: Double,
-            lon: Double,
-            role: RacingWaypointRole,
-            startPointType: RacingStartPointType = RacingStartPointType.START_LINE,
-            finishPointType: RacingFinishPointType = RacingFinishPointType.FINISH_CYLINDER,
-            turnPointType: RacingTurnPointType = RacingTurnPointType.TURN_POINT_CYLINDER,
-            customGateWidth: Double? = null, // Allow override for user customizations
-            keyholeInnerRadius: Double = 0.5,
-            keyholeAngle: Double = 90.0,
-            faiQuadrantOuterRadius: Double = 10.0
-        ): RacingWaypoint {
-            val standardizedGateWidth = customGateWidth ?: when (role) {
-                RacingWaypointRole.START -> 10.0   // 10km start lines/sectors/cylinders (FAI standard per PRD)
-                RacingWaypointRole.FINISH -> 3.0   // 3km finish cylinders (standardized)
-                RacingWaypointRole.TURNPOINT -> when (turnPointType) {
-                    RacingTurnPointType.KEYHOLE -> 10.0  // 10km keyhole outer radius default
-                    else -> 0.5 // 0.5km Racing turnpoint default for cylinder and FAI quadrant
-                }
-            }
-
-            // DEBUG: Log the default value calculation to prove fix is working
-
-            return RacingWaypoint(
-                id = id,
-                title = title,
-                subtitle = subtitle,
-                lat = lat,
-                lon = lon,
-                role = role,
-                startPointType = startPointType,
-                finishPointType = finishPointType,
-                turnPointType = turnPointType,
-                gateWidth = standardizedGateWidth,
-                keyholeInnerRadius = keyholeInnerRadius,
-                keyholeAngle = keyholeAngle,
-                faiQuadrantOuterRadius = faiQuadrantOuterRadius
-            )
-        }
-    }
 }
 
 /**

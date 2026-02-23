@@ -6,6 +6,9 @@ import com.example.xcpro.tasks.aat.models.AreaGeometry
 import com.example.xcpro.tasks.aat.models.AssignedArea
 
 class SectorAreaCalculator {
+    private companion object {
+        const val METERS_PER_KILOMETER = 1000.0
+    }
 
     fun isInsideArea(
         point: AATLatLng,
@@ -15,9 +18,9 @@ class SectorAreaCalculator {
         startBearing: Double,
         endBearing: Double
     ): Boolean {
-        val distance = AATMathUtils.calculateDistance(point, center)
-        if (distance > outerRadius) return false
-        if (innerRadius != null && distance < innerRadius) return false
+        val distanceMeters = distanceMeters(point, center)
+        if (distanceMeters > outerRadius) return false
+        if (innerRadius != null && distanceMeters < innerRadius) return false
 
         val bearingToPoint = AATMathUtils.calculateBearing(center, point)
         return AATMathUtils.isAngleBetween(bearingToPoint, startBearing, endBearing)
@@ -99,7 +102,7 @@ class SectorAreaCalculator {
         }
 
         return pointsInArea.maxByOrNull { point ->
-            AATMathUtils.calculateDistance(point, area.centerPoint)
+            distanceMeters(point, area.centerPoint)
         }
     }
 
@@ -122,7 +125,11 @@ class SectorAreaCalculator {
             endBearing = endBearing
         )
 
-        return AATMathUtils.calculatePointAtBearing(center, optimalBearing, outerRadius)
+        return AATMathUtils.calculatePointAtBearing(
+            center,
+            optimalBearing,
+            metersToKilometers(outerRadius)
+        )
     }
 
     fun generateBoundaryPoints(
@@ -143,13 +150,13 @@ class SectorAreaCalculator {
         )
     }
 
-    fun calculateAreaSizeKm2(
+    fun calculateAreaSizeMeters2(
         innerRadius: Double?,
         outerRadius: Double,
         startBearing: Double,
         endBearing: Double
     ): Double {
-        return SectorAreaGeometrySupport.calculateAreaSizeKm2(
+        return SectorAreaGeometrySupport.calculateAreaSizeMeters2(
             innerRadius = innerRadius,
             outerRadius = outerRadius,
             startBearing = startBearing,
@@ -172,5 +179,13 @@ class SectorAreaCalculator {
             return true
         }
         return false
+    }
+
+    private fun distanceMeters(from: AATLatLng, to: AATLatLng): Double {
+        return AATMathUtils.calculateDistanceMeters(from, to)
+    }
+
+    private fun metersToKilometers(distanceMeters: Double): Double {
+        return distanceMeters / METERS_PER_KILOMETER
     }
 }

@@ -37,10 +37,10 @@ internal fun Task.toSimpleRacingTask(): SimpleRacingTask {
             startPointType = startType,
             finishPointType = finishType,
             turnPointType = turnType,
-            customGateWidth = waypoint.customRadius,
-            keyholeInnerRadius = racingParams.keyholeInnerRadius,
+            customGateWidthMeters = waypoint.resolvedCustomRadiusMeters(),
+            keyholeInnerRadiusMeters = racingParams.keyholeInnerRadiusMeters,
             keyholeAngle = racingParams.keyholeAngle,
-            faiQuadrantOuterRadius = racingParams.faiQuadrantOuterRadius
+            faiQuadrantOuterRadiusMeters = racingParams.faiQuadrantOuterRadiusMeters
         )
     }
 

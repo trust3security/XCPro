@@ -45,16 +45,19 @@ class OgnGliderTrailRepositoryImpl @Inject constructor(
         scope.launch {
             combine(
                 ognTrafficRepository.targets,
-                ognTrafficRepository.isEnabled
-            ) { targets, streamingEnabled ->
+                ognTrafficRepository.isEnabled,
+                ognTrafficRepository.suppressedTargetIds
+            ) { targets, streamingEnabled, suppressedTargetKeys ->
                 TrailInput(
                     targets = targets,
-                    streamingEnabled = streamingEnabled
+                    streamingEnabled = streamingEnabled,
+                    suppressedTargetKeys = suppressedTargetKeys
                 )
             }.collect { input ->
                 processInput(
                     targets = input.targets,
-                    streamingEnabled = input.streamingEnabled
+                    streamingEnabled = input.streamingEnabled,
+                    suppressedTargetKeys = input.suppressedTargetKeys
                 )
             }
         }
@@ -62,7 +65,8 @@ class OgnGliderTrailRepositoryImpl @Inject constructor(
 
     private suspend fun processInput(
         targets: List<OgnTrafficTarget>,
-        streamingEnabled: Boolean
+        streamingEnabled: Boolean,
+        suppressedTargetKeys: Set<String>
     ) {
         processingMutex.withLock {
             latestTargetsSnapshot = targets
@@ -71,6 +75,7 @@ class OgnGliderTrailRepositoryImpl @Inject constructor(
             val changed = processTargets(
                 targets = targets,
                 streamingEnabled = streamingEnabled,
+                suppressedTargetKeys = suppressedTargetKeys,
                 nowMonoMs = nowMonoMs
             )
             if (changed) {
@@ -83,9 +88,11 @@ class OgnGliderTrailRepositoryImpl @Inject constructor(
     private fun processTargets(
         targets: List<OgnTrafficTarget>,
         streamingEnabled: Boolean,
+        suppressedTargetKeys: Set<String>,
         nowMonoMs: Long
     ): Boolean {
         var changed = pruneExpiredSegments(nowMonoMs)
+        changed = purgeSuppressedArtifacts(suppressedTargetKeys) || changed
 
         if (!streamingEnabled) {
             if (lastSampleByTargetId.isNotEmpty()) {
@@ -102,11 +109,12 @@ class OgnGliderTrailRepositoryImpl @Inject constructor(
     }
 
     private fun updateTrailForTarget(target: OgnTrafficTarget, nowMonoMs: Long): Boolean {
+        val normalizedTargetId = normalizeOgnAircraftKeyOrNull(target.canonicalKey) ?: return false
         if (!isValidThermalCoordinate(target.latitude, target.longitude)) return false
         val sourceSeenMonoMs = target.lastSeenMillis
-        val previous = lastSampleByTargetId[target.id]
+        val previous = lastSampleByTargetId[normalizedTargetId]
         if (previous == null) {
-            lastSampleByTargetId[target.id] = TrailSample(
+            lastSampleByTargetId[normalizedTargetId] = TrailSample(
                 anchorLatitude = target.latitude,
                 anchorLongitude = target.longitude,
                 lastSeenMonoMs = sourceSeenMonoMs
@@ -119,7 +127,7 @@ class OgnGliderTrailRepositoryImpl @Inject constructor(
         }
 
         if (sourceSeenMonoMs - previous.lastSeenMonoMs > MAX_SAMPLE_GAP_MS) {
-            lastSampleByTargetId[target.id] = TrailSample(
+            lastSampleByTargetId[normalizedTargetId] = TrailSample(
                 anchorLatitude = target.latitude,
                 anchorLongitude = target.longitude,
                 lastSeenMonoMs = sourceSeenMonoMs
@@ -127,23 +135,23 @@ class OgnGliderTrailRepositoryImpl @Inject constructor(
             return false
         }
 
-        val distanceMeters = OgnSubscriptionPolicy.haversineKm(
+        val distanceMeters = OgnSubscriptionPolicy.haversineMeters(
             lat1 = previous.anchorLatitude,
             lon1 = previous.anchorLongitude,
             lat2 = target.latitude,
             lon2 = target.longitude
-        ) * 1000.0
+        )
         if (!distanceMeters.isFinite()) {
             return false
         }
 
         if (distanceMeters < MIN_SEGMENT_DISTANCE_METERS) {
-            lastSampleByTargetId[target.id] = previous.copy(lastSeenMonoMs = sourceSeenMonoMs)
+            lastSampleByTargetId[normalizedTargetId] = previous.copy(lastSeenMonoMs = sourceSeenMonoMs)
             return false
         }
 
         if (distanceMeters > MAX_SEGMENT_DISTANCE_METERS) {
-            lastSampleByTargetId[target.id] = TrailSample(
+            lastSampleByTargetId[normalizedTargetId] = TrailSample(
                 anchorLatitude = target.latitude,
                 anchorLongitude = target.longitude,
                 lastSeenMonoMs = sourceSeenMonoMs
@@ -152,12 +160,12 @@ class OgnGliderTrailRepositoryImpl @Inject constructor(
         }
 
         val varioMps = target.verticalSpeedMps?.takeIf { it.isFinite() } ?: FALLBACK_VARIO_MPS
-        val segmentId = "${target.id}:$sourceSeenMonoMs"
+        val segmentId = "$normalizedTargetId:$sourceSeenMonoMs"
         var changed = false
         if (!segmentById.containsKey(segmentId)) {
             segmentById[segmentId] = OgnGliderTrailSegment(
                 id = segmentId,
-                sourceTargetId = target.id,
+                sourceTargetId = normalizedTargetId,
                 sourceLabel = target.displayLabel.ifBlank { target.callsign },
                 startLatitude = previous.anchorLatitude,
                 startLongitude = previous.anchorLongitude,
@@ -171,11 +179,34 @@ class OgnGliderTrailRepositoryImpl @Inject constructor(
             changed = true
         }
 
-        lastSampleByTargetId[target.id] = TrailSample(
+        lastSampleByTargetId[normalizedTargetId] = TrailSample(
             anchorLatitude = target.latitude,
             anchorLongitude = target.longitude,
             lastSeenMonoMs = sourceSeenMonoMs
         )
+        return changed
+    }
+
+    private fun purgeSuppressedArtifacts(suppressedTargetKeys: Set<String>): Boolean {
+        if (suppressedTargetKeys.isEmpty()) return false
+        var changed = false
+
+        val sampleIterator = lastSampleByTargetId.entries.iterator()
+        while (sampleIterator.hasNext()) {
+            val entry = sampleIterator.next()
+            if (!suppressedTargetKeys.contains(entry.key)) continue
+            sampleIterator.remove()
+            changed = true
+        }
+
+        val segmentIterator = segmentById.entries.iterator()
+        while (segmentIterator.hasNext()) {
+            val entry = segmentIterator.next()
+            if (!suppressedTargetKeys.contains(entry.value.sourceTargetId)) continue
+            segmentIterator.remove()
+            changed = true
+        }
+
         return changed
     }
 
@@ -234,6 +265,7 @@ class OgnGliderTrailRepositoryImpl @Inject constructor(
                 val changed = processTargets(
                     targets = latestTargetsSnapshot,
                     streamingEnabled = latestStreamingEnabled,
+                    suppressedTargetKeys = ognTrafficRepository.suppressedTargetIds.value,
                     nowMonoMs = now
                 )
                 if (changed) {
@@ -267,7 +299,8 @@ class OgnGliderTrailRepositoryImpl @Inject constructor(
 
     private data class TrailInput(
         val targets: List<OgnTrafficTarget>,
-        val streamingEnabled: Boolean
+        val streamingEnabled: Boolean,
+        val suppressedTargetKeys: Set<String>
     )
 
     private data class TrailSample(

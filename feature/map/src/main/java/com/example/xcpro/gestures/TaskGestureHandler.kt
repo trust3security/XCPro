@@ -18,7 +18,7 @@ data class TaskGestureContext(
 )
 
 data class TaskGestureCallbacks(
-    val onEnterEditMode: (index: Int, lat: Double, lon: Double, radiusKm: Double) -> Unit = { _, _, _, _ -> },
+    val onEnterEditMode: (index: Int, lat: Double, lon: Double, radiusMeters: Double) -> Unit = { _, _, _, _ -> },
     val onExitEditMode: () -> Unit = {},
     val onDragTarget: (index: Int, lat: Double, lon: Double) -> Unit = { _, _, _ -> }
 )

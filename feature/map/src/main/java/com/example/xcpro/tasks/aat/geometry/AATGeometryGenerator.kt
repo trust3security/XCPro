@@ -1,7 +1,7 @@
 package com.example.xcpro.tasks.aat.geometry
 
 import com.example.xcpro.tasks.aat.models.AATWaypoint
-import com.example.xcpro.tasks.aat.models.getAuthorityRadius
+import com.example.xcpro.tasks.aat.models.getAuthorityRadiusMeters
 import kotlin.math.*
 
 /**
@@ -14,30 +14,30 @@ import kotlin.math.*
  * DEPENDENCIES: None (pure math functions)
  */
 class AATGeometryGenerator {
+    private companion object {
+        const val EARTH_RADIUS_METERS = 6371000.0
+    }
 
     /**
-     * Generate circle coordinates for map polygon
-     *
-     * @param centerLat Center latitude in degrees
-     * @param centerLon Center longitude in degrees
-     * @param radiusKm Radius in kilometers
-     * @param points Number of points to generate (default 64 for smooth circle)
-     * @return List of [longitude, latitude] coordinate pairs in GeoJSON format
+     * Meter-first internal circle generator.
      */
-    fun generateCircleCoordinates(
+    fun generateCircleCoordinatesMeters(
         centerLat: Double,
         centerLon: Double,
-        radiusKm: Double,
+        radiusMeters: Double,
         points: Int = 64
     ): List<List<Double>> {
-        val earthRadius = 6371.0 // km
         val coords = mutableListOf<List<Double>>()
 
         for (i in 0 until points) {
-            val angle = 2 * PI * i / points
-            val lat = centerLat + (radiusKm / earthRadius) * (180 / PI) * cos(angle)
-            val lon = centerLon + (radiusKm / earthRadius) * (180 / PI) * sin(angle) / cos(centerLat * PI / 180)
-            coords.add(listOf(lon, lat)) // GeoJSON format: [longitude, latitude]
+            val bearing = 360.0 * i / points
+            val point = calculateDestinationPointMeters(
+                lat = centerLat,
+                lon = centerLon,
+                bearing = bearing,
+                distanceMeters = radiusMeters
+            )
+            coords.add(listOf(point.second, point.first))
         }
 
         // Close the polygon
@@ -48,21 +48,10 @@ class AATGeometryGenerator {
         return coords
     }
 
-    /**
-     * Generate perpendicular start line coordinates
-     *
-     * Creates a line perpendicular to the direction from start to next waypoint.
-     * If no next waypoint exists, defaults to east-west orientation.
-     *
-     * @param startWaypoint The start waypoint
-     * @param nextWaypoint The next waypoint (can be null)
-     * @param widthKm Width of the start line in kilometers
-     * @return List of two [longitude, latitude] coordinate pairs representing line endpoints
-     */
-    fun generateStartLine(
+    fun generateStartLineMeters(
         startWaypoint: AATWaypoint,
         nextWaypoint: AATWaypoint?,
-        widthKm: Double
+        widthMeters: Double
     ): List<List<Double>> {
         val bearing = if (nextWaypoint != null) {
             calculateBearing(startWaypoint.lat, startWaypoint.lon, nextWaypoint.lat, nextWaypoint.lon)
@@ -72,46 +61,30 @@ class AATGeometryGenerator {
 
         // Perpendicular to the bearing (add 90 degrees)
         val perpBearing = (bearing + 90) % 360
-        val perpBearingRad = Math.toRadians(perpBearing)
-
-        val halfWidthKm = widthKm / 2.0
-        val earthRadiusKm = 6371.0
-
-        // Calculate two end points of the line
-        val angularDistance = halfWidthKm / earthRadiusKm
-        val latRad = Math.toRadians(startWaypoint.lat)
-        val lonRad = Math.toRadians(startWaypoint.lon)
-
-        // Point 1 (left end)
-        val lat1Rad = asin(sin(latRad) * cos(angularDistance) + cos(latRad) * sin(angularDistance) * cos(perpBearingRad))
-        val lon1Rad = lonRad + atan2(sin(perpBearingRad) * sin(angularDistance) * cos(latRad), cos(angularDistance) - sin(latRad) * sin(lat1Rad))
-
-        // Point 2 (right end) - opposite direction
-        val oppositeBearingRad = Math.toRadians((perpBearing + 180) % 360)
-        val lat2Rad = asin(sin(latRad) * cos(angularDistance) + cos(latRad) * sin(angularDistance) * cos(oppositeBearingRad))
-        val lon2Rad = lonRad + atan2(sin(oppositeBearingRad) * sin(angularDistance) * cos(latRad), cos(angularDistance) - sin(latRad) * sin(lat2Rad))
+        val halfWidthMeters = widthMeters / 2.0
+        val point1 = calculateDestinationPointMeters(
+            lat = startWaypoint.lat,
+            lon = startWaypoint.lon,
+            bearing = perpBearing,
+            distanceMeters = halfWidthMeters
+        )
+        val point2 = calculateDestinationPointMeters(
+            lat = startWaypoint.lat,
+            lon = startWaypoint.lon,
+            bearing = (perpBearing + 180.0) % 360.0,
+            distanceMeters = halfWidthMeters
+        )
 
         return listOf(
-            listOf(Math.toDegrees(lon1Rad), Math.toDegrees(lat1Rad)),
-            listOf(Math.toDegrees(lon2Rad), Math.toDegrees(lat2Rad))
+            listOf(point1.second, point1.first),
+            listOf(point2.second, point2.first)
         )
     }
 
-    /**
-     * Generate perpendicular finish line coordinates
-     *
-     * Creates a line perpendicular to the direction from previous waypoint to finish.
-     * If no previous waypoint exists, defaults to east-west orientation.
-     *
-     * @param finishWaypoint The finish waypoint
-     * @param prevWaypoint The previous waypoint (can be null)
-     * @param widthKm Width of the finish line in kilometers
-     * @return List of two [longitude, latitude] coordinate pairs representing line endpoints
-     */
-    fun generateFinishLine(
+    fun generateFinishLineMeters(
         finishWaypoint: AATWaypoint,
         prevWaypoint: AATWaypoint?,
-        widthKm: Double
+        widthMeters: Double
     ): List<List<Double>> {
         val bearing = if (prevWaypoint != null) {
             calculateBearing(prevWaypoint.lat, prevWaypoint.lon, finishWaypoint.lat, finishWaypoint.lon)
@@ -121,28 +94,23 @@ class AATGeometryGenerator {
 
         // Perpendicular to the bearing (add 90 degrees)
         val perpBearing = (bearing + 90) % 360
-        val perpBearingRad = Math.toRadians(perpBearing)
-
-        val halfWidthKm = widthKm / 2.0
-        val earthRadiusKm = 6371.0
-
-        // Calculate two end points of the line
-        val angularDistance = halfWidthKm / earthRadiusKm
-        val latRad = Math.toRadians(finishWaypoint.lat)
-        val lonRad = Math.toRadians(finishWaypoint.lon)
-
-        // Point 1 (left end)
-        val lat1Rad = asin(sin(latRad) * cos(angularDistance) + cos(latRad) * sin(angularDistance) * cos(perpBearingRad))
-        val lon1Rad = lonRad + atan2(sin(perpBearingRad) * sin(angularDistance) * cos(latRad), cos(angularDistance) - sin(latRad) * sin(lat1Rad))
-
-        // Point 2 (right end) - opposite direction
-        val oppositeBearingRad = Math.toRadians((perpBearing + 180) % 360)
-        val lat2Rad = asin(sin(latRad) * cos(angularDistance) + cos(latRad) * sin(angularDistance) * cos(oppositeBearingRad))
-        val lon2Rad = lonRad + atan2(sin(oppositeBearingRad) * sin(angularDistance) * cos(latRad), cos(angularDistance) - sin(latRad) * sin(lat2Rad))
+        val halfWidthMeters = widthMeters / 2.0
+        val point1 = calculateDestinationPointMeters(
+            lat = finishWaypoint.lat,
+            lon = finishWaypoint.lon,
+            bearing = perpBearing,
+            distanceMeters = halfWidthMeters
+        )
+        val point2 = calculateDestinationPointMeters(
+            lat = finishWaypoint.lat,
+            lon = finishWaypoint.lon,
+            bearing = (perpBearing + 180.0) % 360.0,
+            distanceMeters = halfWidthMeters
+        )
 
         return listOf(
-            listOf(Math.toDegrees(lon1Rad), Math.toDegrees(lat1Rad)),
-            listOf(Math.toDegrees(lon2Rad), Math.toDegrees(lat2Rad))
+            listOf(point1.second, point1.first),
+            listOf(point2.second, point2.first)
         )
     }
 
@@ -181,9 +149,14 @@ class AATGeometryGenerator {
                         )
 
                         //  SSOT FIX: Calculate finish edge point - use authority radius
-                        val radiusKm = waypoint.getAuthorityRadius() / 2.0
+                        val radiusMeters = waypoint.getAuthorityRadiusMeters()
                         // Task ends at cylinder edge on approach side (opposite to approach bearing)
-                        val finishEdgePoint = calculateDestinationPoint(waypoint.lat, waypoint.lon, (bearing + 180.0) % 360.0, radiusKm)
+                        val finishEdgePoint = calculateDestinationPointMeters(
+                            lat = waypoint.lat,
+                            lon = waypoint.lon,
+                            bearing = (bearing + 180.0) % 360.0,
+                            distanceMeters = radiusMeters
+                        )
                         pathPoints.add(listOf(finishEdgePoint.second, finishEdgePoint.first))
                     } else {
                         // Fallback: use finish center if no previous waypoint
@@ -196,22 +169,14 @@ class AATGeometryGenerator {
         return pathPoints
     }
 
-    /**
-     * Calculate destination point from bearing and distance
-     *
-     * Uses great circle navigation to find a point at a given distance and bearing
-     * from a start point.
-     *
-     * @param lat Starting latitude in degrees
-     * @param lon Starting longitude in degrees
-     * @param bearing Bearing in degrees (0-360, where 0=north, 90=east)
-     * @param distance Distance in kilometers
-     * @return Pair of (latitude, longitude) in degrees
-     */
-    fun calculateDestinationPoint(lat: Double, lon: Double, bearing: Double, distance: Double): Pair<Double, Double> {
-        val earthRadius = 6371.0 // Earth's radius in kilometers
+    fun calculateDestinationPointMeters(
+        lat: Double,
+        lon: Double,
+        bearing: Double,
+        distanceMeters: Double
+    ): Pair<Double, Double> {
         val bearingRad = Math.toRadians(bearing)
-        val angularDistance = distance / earthRadius
+        val angularDistance = distanceMeters / EARTH_RADIUS_METERS
         val latRad = Math.toRadians(lat)
         val lonRad = Math.toRadians(lon)
 

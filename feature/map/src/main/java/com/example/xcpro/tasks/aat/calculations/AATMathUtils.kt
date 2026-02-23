@@ -9,11 +9,13 @@ import kotlin.math.*
  * All math functions are implemented from scratch for AAT use only.
  */
 object AATMathUtils {
-    
+    const val METERS_PER_KILOMETER = 1000.0
+
     /**
      * Earth radius in kilometers - AAT's own constant (matching Racing for consistency)
      */
     const val AAT_EARTH_RADIUS_KM = 6371.0
+    const val AAT_EARTH_RADIUS_METERS = AAT_EARTH_RADIUS_KM * METERS_PER_KILOMETER
     
     /**
      * Extension functions for AATLatLng to add math utilities
@@ -22,14 +24,9 @@ object AATMathUtils {
     private fun AATLatLng.longitudeRadians(): Double = Math.toRadians(longitude)
     
     /**
-     * Calculate distance between two points using haversine formula.
-     * AAT's own implementation - completely autonomous.
-     *
-     * @param from Starting coordinate
-     * @param to Ending coordinate
-     * @return Distance in kilometers (matching Racing for consistency)
+     * Meter-first internal distance contract.
      */
-    fun calculateDistance(from: AATLatLng, to: AATLatLng): Double {
+    fun calculateDistanceMeters(from: AATLatLng, to: AATLatLng): Double {
         val lat1Rad = from.latitudeRadians()
         val lon1Rad = from.longitudeRadians()
         val lat2Rad = to.latitudeRadians()
@@ -42,17 +39,11 @@ object AATMathUtils {
                 cos(lat1Rad) * cos(lat2Rad) * sin(deltaLon / 2).pow(2)
         val c = 2 * asin(sqrt(a))
 
-        return AAT_EARTH_RADIUS_KM * c
+        return AAT_EARTH_RADIUS_METERS * c
     }
 
-    /**
-     * Calculate distance between two points (simple lat/lon parameters).
-     * Convenience method for routing from TaskManagerCoordinator.
-     *
-     * @return Distance in kilometers
-     */
-    fun calculateDistanceKm(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
-        return calculateDistance(AATLatLng(lat1, lon1), AATLatLng(lat2, lon2))
+    fun calculateDistanceMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        return calculateDistanceMeters(AATLatLng(lat1, lon1), AATLatLng(lat2, lon2))
     }
     
     /**
@@ -110,7 +101,7 @@ object AATMathUtils {
      *
      * @param from Starting coordinate
      * @param bearing Bearing in degrees (0 = north)
-     * @param distance Distance in kilometers
+     * @param distance Distance in kilometers (compatibility API)
      * @return Calculated position
      */
     fun calculatePointAtBearing(
@@ -118,10 +109,22 @@ object AATMathUtils {
         bearing: Double,
         distance: Double
     ): AATLatLng {
+        return calculatePointAtBearingMeters(
+            from = from,
+            bearing = bearing,
+            distanceMeters = distance * METERS_PER_KILOMETER
+        )
+    }
+
+    fun calculatePointAtBearingMeters(
+        from: AATLatLng,
+        bearing: Double,
+        distanceMeters: Double
+    ): AATLatLng {
         val lat1Rad = from.latitudeRadians()
         val lon1Rad = from.longitudeRadians()
         val bearingRad = Math.toRadians(bearing)
-        val angularDistance = distance / AAT_EARTH_RADIUS_KM
+        val angularDistance = distanceMeters / AAT_EARTH_RADIUS_METERS
         
         val lat2Rad = asin(
             sin(lat1Rad) * cos(angularDistance) +
@@ -184,21 +187,12 @@ object AATMathUtils {
         }
     }
     
-    /**
-     * Calculate the cross track distance (perpendicular distance) from a point to a line.
-     * AAT's own implementation for track analysis.
-     *
-     * @param point The point to measure from
-     * @param lineStart Start of the line
-     * @param lineEnd End of the line
-     * @return Cross track distance in kilometers (positive = right of track)
-     */
-    fun calculateCrossTrackDistance(
+    fun calculateCrossTrackDistanceMeters(
         point: AATLatLng,
         lineStart: AATLatLng,
         lineEnd: AATLatLng
     ): Double {
-        val distanceStartToPoint = calculateDistance(lineStart, point) / AAT_EARTH_RADIUS_KM
+        val distanceStartToPoint = calculateDistanceMeters(lineStart, point) / AAT_EARTH_RADIUS_METERS
         val bearingStartToPoint = Math.toRadians(calculateBearing(lineStart, point))
         val bearingStartToEnd = Math.toRadians(calculateBearing(lineStart, lineEnd))
 
@@ -206,29 +200,22 @@ object AATMathUtils {
             sin(distanceStartToPoint) * sin(bearingStartToPoint - bearingStartToEnd)
         )
 
-        return crossTrackDistanceRadians * AAT_EARTH_RADIUS_KM
+        return crossTrackDistanceRadians * AAT_EARTH_RADIUS_METERS
     }
     
-    /**
-     * Calculate along track distance (distance along the line) from line start to the point
-     * perpendicular to the given point.
-     * AAT's own implementation for track analysis.
-     *
-     * @return Along track distance in kilometers
-     */
-    fun calculateAlongTrackDistance(
+    fun calculateAlongTrackDistanceMeters(
         point: AATLatLng,
         lineStart: AATLatLng,
         lineEnd: AATLatLng
     ): Double {
-        val distanceStartToPoint = calculateDistance(lineStart, point) / AAT_EARTH_RADIUS_KM
-        val crossTrackDistance = calculateCrossTrackDistance(point, lineStart, lineEnd) / AAT_EARTH_RADIUS_KM
+        val distanceStartToPoint = calculateDistanceMeters(lineStart, point) / AAT_EARTH_RADIUS_METERS
+        val crossTrackDistance = calculateCrossTrackDistanceMeters(point, lineStart, lineEnd) / AAT_EARTH_RADIUS_METERS
 
         val alongTrackDistanceRadians = acos(
             cos(distanceStartToPoint) / cos(crossTrackDistance)
         )
 
-        return alongTrackDistanceRadians * AAT_EARTH_RADIUS_KM
+        return alongTrackDistanceRadians * AAT_EARTH_RADIUS_METERS
     }
     
     /**

@@ -14,6 +14,11 @@ class OgnAprsLineParser @Inject constructor() {
         private const val FEET_TO_METERS = 0.3048
         private const val KNOTS_TO_MPS = 0.514444
         private const val FPM_TO_MPS = 0.00508
+        private const val OGN_DEVICE_ID_HEX_LENGTH = 6
+        private const val OGN_TYPED_ID_HEX_LENGTH = 8
+        private const val OGN_TYPE_MASK = 0x3C
+        private const val OGN_TYPE_SHIFT = 2
+        private const val OGN_MALFORMED_ID_HEX_LENGTH = 7
     }
 
     private val positionRegex =
@@ -22,7 +27,8 @@ class OgnAprsLineParser @Inject constructor() {
     private val altitudeRegex = Regex("""/A=(\d{1,6})\b""")
     private val verticalSpeedRegex = Regex("""([+-]?\d+(?:\.\d+)?)fpm\b""", RegexOption.IGNORE_CASE)
     private val signalRegex = Regex("""(\d+(?:\.\d+)?)dB\b""", RegexOption.IGNORE_CASE)
-    private val idRegex = Regex("""\bid([0-9A-Fa-f]{6,8})\b""")
+    private val idRegex = Regex("""\bid((?:[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8}))\b""")
+    private val malformedIdRegex = Regex("""\bid([0-9A-Fa-f]{7})\b""")
     private val callsignDeviceIdRegex = Regex("""^[A-Z]{3}[0-9A-F]{6}$""")
 
     fun parseTraffic(line: String, receivedAtMillis: Long): OgnTrafficTarget? {
@@ -90,14 +96,16 @@ class OgnAprsLineParser @Inject constructor() {
             ?.getOrNull(1)
             ?.toDoubleOrNull()
 
-        val deviceIdFromToken = idRegex
-            .find(info)
-            ?.groupValues
-            ?.getOrNull(1)
-            ?.uppercase(Locale.US)
-            ?.let { value ->
-                if (value.length == 8) value.takeLast(6) else value
-            }
+        if (malformedIdRegex.containsMatchIn(info)) return null
+
+        val parsedIdToken = parseOgnIdToken(info)
+        val sourceAddressTypeFallback = ognAddressTypeFromCallsignPrefix(header.source)
+        val addressType = when {
+            parsedIdToken?.hasExplicitTypeByte == true -> parsedIdToken.addressType
+            else -> sourceAddressTypeFallback
+        }
+        val deviceIdFromToken = parsedIdToken?.deviceIdHex
+        val aprsAircraftTypeCode = parsedIdToken?.aircraftTypeCode
         val deviceIdHex = deviceIdFromToken
             ?: extractDeviceIdFromCallsign(header.source)
         val stableId = deviceIdHex ?: header.source.uppercase()
@@ -116,11 +124,22 @@ class OgnAprsLineParser @Inject constructor() {
             deviceIdHex = deviceIdHex,
             signalDb = signalDb,
             displayLabel = displayLabel,
-            identity = null,
+            identity = aprsAircraftTypeCode?.let { aircraftTypeCode ->
+                OgnTrafficIdentity(
+                    registration = null,
+                    competitionNumber = null,
+                    aircraftModel = null,
+                    tracked = null,
+                    identified = null,
+                    aircraftTypeCode = aircraftTypeCode
+                )
+            },
             rawComment = comment,
             rawLine = line,
             timestampMillis = receivedAtMillis,
-            lastSeenMillis = receivedAtMillis
+            lastSeenMillis = receivedAtMillis,
+            addressType = addressType,
+            addressHex = deviceIdHex
         )
     }
 
@@ -162,13 +181,63 @@ class OgnAprsLineParser @Inject constructor() {
     }
 
     private fun extractDeviceIdFromCallsign(sourceCallsign: String): String? {
-        val normalized = sourceCallsign.trim().uppercase(Locale.US)
+        val normalized = sourceCallsign
+            .trim()
+            .uppercase(Locale.US)
+            .substringBefore("-")
         if (!callsignDeviceIdRegex.matches(normalized)) return null
         return normalized.takeLast(6)
+    }
+
+    private fun parseOgnIdToken(info: String): ParsedOgnIdToken? {
+        val token = idRegex
+            .find(info)
+            ?.groupValues
+            ?.getOrNull(1)
+            ?.uppercase(Locale.US)
+            ?: return null
+
+        return when (token.length) {
+            OGN_TYPED_ID_HEX_LENGTH -> {
+                val typeByteHex = token.take(2)
+                ParsedOgnIdToken(
+                    deviceIdHex = token.takeLast(OGN_DEVICE_ID_HEX_LENGTH),
+                    addressType = ognAddressTypeFromTypeByteHex(typeByteHex),
+                    hasExplicitTypeByte = true,
+                    aircraftTypeCode = decodeAircraftTypeCodeFromTypeByte(typeByteHex)
+                )
+            }
+            OGN_DEVICE_ID_HEX_LENGTH -> {
+                ParsedOgnIdToken(
+                    deviceIdHex = token,
+                    addressType = OgnAddressType.UNKNOWN,
+                    hasExplicitTypeByte = false,
+                    aircraftTypeCode = null
+                )
+            }
+            OGN_MALFORMED_ID_HEX_LENGTH -> null
+            else -> null
+        }
+    }
+
+    /**
+     * OGN typed id prefix encodes STttttaa where tttt is aircraft type.
+     */
+    private fun decodeAircraftTypeCodeFromTypeByte(typeByteHex: String): Int? {
+        val typeByte = typeByteHex.toIntOrNull(radix = 16) ?: return null
+        val aircraftTypeCode = (typeByte and OGN_TYPE_MASK) shr OGN_TYPE_SHIFT
+        return aircraftTypeCode.takeIf { it > 0 }
     }
 
     private data class ParsedHeader(
         val source: String,
         val destination: String
+    )
+
+    private data class ParsedOgnIdToken(
+        val deviceIdHex: String,
+        val addressType: OgnAddressType,
+        val hasExplicitTypeByte: Boolean,
+        val aircraftTypeCode: Int?
     )
 }

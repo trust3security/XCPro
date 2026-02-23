@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.example.xcpro.common.glider.ThreePointPolar
+import com.example.xcpro.common.units.UnitsConverter
 import com.example.xcpro.glider.GliderViewModel
 
 @Composable
@@ -55,7 +56,11 @@ fun ThreePointPolarCard() {
                 OutlinedTextField(
                     value = tpp.lowKmh.toString(),
                     onValueChange = { value ->
-                        value.toDoubleOrNull()?.let { viewModel.setThreePointPolar(tpp.copy(lowKmh = it)) }
+                        value.toDoubleOrNull()?.let { speedKmh ->
+                            viewModel.setThreePointPolar(
+                                tpp.copy(lowMs = UnitsConverter.kmhToMs(speedKmh))
+                            )
+                        }
                     },
                     label = { Text("Low Speed (km/h)") },
                     modifier = Modifier.weight(1f),
@@ -76,7 +81,11 @@ fun ThreePointPolarCard() {
                 OutlinedTextField(
                     value = tpp.midKmh.toString(),
                     onValueChange = { value ->
-                        value.toDoubleOrNull()?.let { viewModel.setThreePointPolar(tpp.copy(midKmh = it)) }
+                        value.toDoubleOrNull()?.let { speedKmh ->
+                            viewModel.setThreePointPolar(
+                                tpp.copy(midMs = UnitsConverter.kmhToMs(speedKmh))
+                            )
+                        }
                     },
                     label = { Text("Mid Speed (km/h)") },
                     modifier = Modifier.weight(1f),
@@ -97,7 +106,11 @@ fun ThreePointPolarCard() {
                 OutlinedTextField(
                     value = tpp.highKmh.toString(),
                     onValueChange = { value ->
-                        value.toDoubleOrNull()?.let { viewModel.setThreePointPolar(tpp.copy(highKmh = it)) }
+                        value.toDoubleOrNull()?.let { speedKmh ->
+                            viewModel.setThreePointPolar(
+                                tpp.copy(highMs = UnitsConverter.kmhToMs(speedKmh))
+                            )
+                        }
                     },
                     label = { Text("High Speed (km/h)") },
                     modifier = Modifier.weight(1f),

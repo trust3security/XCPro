@@ -15,6 +15,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.unit.dp
+import com.example.xcpro.common.units.DistanceM
+import com.example.xcpro.common.units.UnitsFormatter
+import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.tasks.racing.models.RacingTurnPointType
 
 /**
@@ -34,7 +37,8 @@ internal fun RacingTurnPointSelector(
     keyholeInnerRadius: String,
     keyholeAngle: String,
     faiQuadrantOuterRadius: String,
-    distanceToNextKm: Double?,
+    distanceToNextMeters: Double?,
+    unitsPreferences: UnitsPreferences,
     onTurnTypeChange: (RacingTurnPointType) -> Unit,
     onGateWidthChange: (String) -> Unit,
     onKeyholeInnerRadiusChange: (String) -> Unit,
@@ -223,7 +227,11 @@ internal fun RacingTurnPointSelector(
     }
 
     // Distance to next turnpoint
-    if (distanceToNextKm != null) {
+    if (distanceToNextMeters != null) {
+        val distanceLabel = UnitsFormatter.distance(
+            distance = DistanceM(distanceToNextMeters),
+            preferences = unitsPreferences
+        ).text
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
@@ -244,7 +252,7 @@ internal fun RacingTurnPointSelector(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Distance to next turnpoint: ${String.format("%.1f", distanceToNextKm)} km",
+                    text = "Distance to next turnpoint: $distanceLabel",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium
                 )

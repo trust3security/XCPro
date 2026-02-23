@@ -67,11 +67,10 @@ class TaskSheetCoordinatorUseCase @Inject constructor(
         taskManager.setActiveLeg(index)
     }
 
-    fun calculateSimpleSegmentDistance(from: TaskWaypoint, to: TaskWaypoint): Double {
-        return taskManager.calculateSimpleSegmentDistance(from, to)
-    }
+    fun calculateSimpleSegmentDistanceMeters(from: TaskWaypoint, to: TaskWaypoint): Double =
+        taskManager.calculateSimpleSegmentDistanceMeters(from, to)
 
-    fun calculateOptimalStartLineDistanceKm(startWaypoint: TaskWaypoint, nextWaypoint: TaskWaypoint): Double {
+    fun calculateOptimalStartLineDistanceMeters(startWaypoint: TaskWaypoint, nextWaypoint: TaskWaypoint): Double {
         val optimal = taskManager.calculateOptimalStartLineCrossingPoint(startWaypoint, nextWaypoint)
         val projectedStart = TaskWaypoint(
             id = "optimal-start",
@@ -81,21 +80,21 @@ class TaskSheetCoordinatorUseCase @Inject constructor(
             lon = optimal.second,
             role = WaypointRole.START
         )
-        return taskManager.calculateSimpleSegmentDistance(projectedStart, nextWaypoint)
+        return taskManager.calculateSimpleSegmentDistanceMeters(projectedStart, nextWaypoint)
     }
 
-    fun calculateDistanceToNextWaypointKm(
+    fun calculateDistanceToNextWaypointMeters(
         fromWaypoint: TaskWaypoint,
         nextWaypoint: TaskWaypoint,
         useOptimalStartLine: Boolean
     ): Double {
         return if (useOptimalStartLine) {
-            calculateOptimalStartLineDistanceKm(
+            calculateOptimalStartLineDistanceMeters(
                 startWaypoint = fromWaypoint,
                 nextWaypoint = nextWaypoint
             )
         } else {
-            calculateSimpleSegmentDistance(
+            calculateSimpleSegmentDistanceMeters(
                 from = fromWaypoint,
                 to = nextWaypoint
             )
@@ -107,42 +106,42 @@ class TaskSheetCoordinatorUseCase @Inject constructor(
         startType: Any?,
         finishType: Any?,
         turnType: Any?,
-        gateWidth: Double?,
-        keyholeInnerRadius: Double?,
+        gateWidthMeters: Double?,
+        keyholeInnerRadiusMeters: Double?,
         keyholeAngle: Double?,
-        faiQuadrantOuterRadius: Double?
+        faiQuadrantOuterRadiusMeters: Double?
     ) {
         taskManager.updateWaypointPointType(
             index = index,
             startType = startType,
             finishType = finishType,
             turnType = turnType,
-            gateWidth = gateWidth,
-            keyholeInnerRadius = keyholeInnerRadius,
+            gateWidthMeters = gateWidthMeters,
+            keyholeInnerRadiusMeters = keyholeInnerRadiusMeters,
             keyholeAngle = keyholeAngle,
-            faiQuadrantOuterRadius = faiQuadrantOuterRadius
+            faiQuadrantOuterRadiusMeters = faiQuadrantOuterRadiusMeters
         )
     }
 
-    fun updateAATWaypointPointType(
+    fun updateAATWaypointPointTypeMeters(
         index: Int,
         startType: Any?,
         finishType: Any?,
         turnType: Any?,
-        gateWidth: Double?,
-        keyholeInnerRadius: Double?,
+        gateWidthMeters: Double?,
+        keyholeInnerRadiusMeters: Double?,
         keyholeAngle: Double?,
-        sectorOuterRadius: Double?
+        sectorOuterRadiusMeters: Double?
     ) {
-        taskManager.updateAATWaypointPointType(
+        taskManager.updateAATWaypointPointTypeMeters(
             index = index,
             startType = startType,
             finishType = finishType,
             turnType = turnType,
-            gateWidth = gateWidth,
-            keyholeInnerRadius = keyholeInnerRadius,
+            gateWidthMeters = gateWidthMeters,
+            keyholeInnerRadiusMeters = keyholeInnerRadiusMeters,
             keyholeAngle = keyholeAngle,
-            sectorOuterRadius = sectorOuterRadius
+            sectorOuterRadiusMeters = sectorOuterRadiusMeters
         )
     }
 

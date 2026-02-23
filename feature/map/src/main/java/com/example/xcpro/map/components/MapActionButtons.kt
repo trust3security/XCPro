@@ -21,16 +21,12 @@ fun MapActionButtons(
     showRecenterButton: Boolean,
     showReturnButton: Boolean,
     showDistanceCircles: Boolean,
-    showOgnTraffic: Boolean,
     showOgnThermals: Boolean,
-    showOgnGliderTrails: Boolean,
     showAdsbTraffic: Boolean,
     showForecastOverlay: Boolean,
     onRecenter: () -> Unit,
     onToggleDistanceCircles: () -> Unit,
-    onToggleOgnTraffic: () -> Unit,
     onToggleOgnThermals: () -> Unit,
-    onToggleOgnGliderTrails: () -> Unit,
     onToggleAdsbTraffic: () -> Unit,
     onShowForecastSheet: () -> Unit,
     onReturn: () -> Unit,
@@ -71,10 +67,8 @@ fun MapActionButtons(
     val adsbIndex = 0
     val qnhIndex = if (showQnhFab) 1 else -1
     val distanceIndex = if (showQnhFab) 2 else 1
-    val ognIndex = distanceIndex + 1
-    val thermalIndex = ognIndex + 1
-    val trailsIndex = thermalIndex + 1
-    val topControlsCount = trailsIndex + 1
+    val thermalIndex = distanceIndex + 1
+    val topControlsCount = thermalIndex + 1
     val showRecenterControl = showRecenterButton && currentLocation != null && !showReturnButton
     val centerControlsCount = (if (showRecenterControl) 1 else 0) + if (showReturnButton) 1 else 0
 
@@ -117,11 +111,9 @@ fun MapActionButtons(
         val adsbTopPadding = topStackStart + topStep * adsbIndex
         val qnhTopPadding = if (qnhIndex >= 0) topStackStart + topStep * qnhIndex else 0.dp
         val distanceTopPadding = topStackStart + topStep * distanceIndex
-        val ognTopPadding = topStackStart + topStep * ognIndex
         val thermalTopPadding = topStackStart + topStep * thermalIndex
-        val trailsTopPadding = topStackStart + topStep * trailsIndex
         val maxFabTopPadding = (availableHeight - fabSize - fabSpacing).coerceAtLeast(0.dp)
-        val topStackBottom = trailsTopPadding + fabSize
+        val topStackBottom = thermalTopPadding + fabSize
         val forecastTopPadding = (topStackBottom + fabSpacing).coerceAtMost(maxFabTopPadding)
         val minCenterTop = (topStackBottom + fabSpacing).coerceAtLeast(0.dp)
         val maxCenterTop = (availableHeight - centerGroupHeight - fabSpacing).coerceAtLeast(0.dp)
@@ -185,28 +177,12 @@ fun MapActionButtons(
                 .padding(top = distanceTopPadding, end = 16.dp)
         )
 
-        OgnTrafficButton(
-            isEnabled = showOgnTraffic,
-            onToggle = onToggleOgnTraffic,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = ognTopPadding, end = 16.dp)
-        )
-
         OgnThermalsButton(
             isEnabled = showOgnThermals,
             onToggle = onToggleOgnThermals,
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(top = thermalTopPadding, end = 16.dp)
-        )
-
-        OgnGliderTrailsButton(
-            isEnabled = showOgnGliderTrails,
-            onToggle = onToggleOgnGliderTrails,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = trailsTopPadding, end = 16.dp)
         )
 
         ForecastOverlayButton(

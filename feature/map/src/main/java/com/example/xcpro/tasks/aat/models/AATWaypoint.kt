@@ -26,7 +26,7 @@ data class AATWaypoint(
     val isTargetPointCustomized: Boolean = false
 
     //  SSOT FIX: Removed duplicate radius properties (gateWidth, keyholeInnerRadius, sectorOuterRadius)
-    // All radius values now read from assignedArea via AATRadiusAuthority.getRadiusForWaypoint()
+    // All radius values now read from assignedArea via AATRadiusAuthority.getRadiusMetersForWaypoint()
 ) {
     /**
      * Get the center point of this waypoint
@@ -49,10 +49,10 @@ data class AATWaypoint(
 
     /**
      * Get distance from area center to target point
-     *  SSOT FIX: Use centralized AATMathUtils instead of duplicate haversine
+     *  SSOT FIX: Use centralized AATMathUtils instead of duplicate haversine.
      */
-    val targetPointOffset: Double get() =
-        com.example.xcpro.tasks.aat.calculations.AATMathUtils.calculateDistanceKm(
+    val targetPointOffsetMeters: Double get() =
+        com.example.xcpro.tasks.aat.calculations.AATMathUtils.calculateDistanceMeters(
             lat, lon, targetPoint.latitude, targetPoint.longitude
         )
 
@@ -60,8 +60,7 @@ data class AATWaypoint(
      * Check if target point is within assigned area bounds
      */
     fun isTargetPointValid(): Boolean {
-        val distance = targetPointOffset
-        return distance <= (assignedArea.radiusMeters / 1000.0) // Convert to km
+        return targetPointOffsetMeters <= assignedArea.radiusMeters
     }
 
     /**
@@ -74,7 +73,7 @@ data class AATWaypoint(
     }
 
     //  SSOT FIX: Removed duplicate haversineDistance function
-    // All distance calculations now use AATMathUtils.calculateDistanceKm()
+    // All distance calculations now use AATMathUtils.calculateDistanceMeters()
 }
 
 /**

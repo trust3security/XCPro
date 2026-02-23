@@ -5,7 +5,7 @@ import com.example.xcpro.map.BuildConfig
 import com.example.xcpro.tasks.aat.SimpleAATTask
 import com.example.xcpro.tasks.aat.models.AATWaypoint
 import com.example.xcpro.tasks.aat.models.AATWaypointRole
-import com.example.xcpro.tasks.aat.models.getAuthorityRadius  //  COMPETITION-CRITICAL import
+import com.example.xcpro.tasks.aat.models.getAuthorityRadiusMeters
 import com.example.xcpro.tasks.aat.geometry.AATGeometryGenerator
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.Style
@@ -153,21 +153,32 @@ class AATTaskRenderer(private val geometryGenerator: AATGeometryGenerator = AATG
                             com.example.xcpro.tasks.aat.models.AATStartPointType.AAT_START_LINE -> {
                                 val nextWaypoint = if (index + 1 < waypoints.size) waypoints[index + 1] else null
                                 //  SSOT FIX: Use authority instead of removed gateWidth property
-                                val lineWidth = waypoint.getAuthorityRadius()
-                                val lineCoordinates = geometryGenerator.generateStartLine(waypoint, nextWaypoint, lineWidth)
+                                val lineWidthMeters = waypoint.getAuthorityRadiusMeters()
+                                val lineCoordinates =
+                                    geometryGenerator.generateStartLineMeters(waypoint, nextWaypoint, lineWidthMeters)
                                 lineFeatures.add(featureFactory.createLineFeature(waypoint, lineCoordinates, "aat_start_line", "START"))
                             }
                             com.example.xcpro.tasks.aat.models.AATStartPointType.AAT_START_CYLINDER -> {
                                 //  SSOT FIX: Use authority instead of removed gateWidth property
-                                val radiusKm = waypoint.getAuthorityRadius() / 2.0
-                                val circleCoordinates = geometryGenerator.generateCircleCoordinates(waypoint.lat, waypoint.lon, radiusKm)
-                                areaFeatures.add(featureFactory.createCircleFeature(waypoint, circleCoordinates, radiusKm, "aat_start_cylinder", "START"))
+                                val radiusMeters = waypoint.getAuthorityRadiusMeters()
+                                val circleCoordinates =
+                                    geometryGenerator.generateCircleCoordinatesMeters(
+                                        waypoint.lat,
+                                        waypoint.lon,
+                                        radiusMeters
+                                    )
+                                areaFeatures.add(featureFactory.createCircleFeature(waypoint, circleCoordinates, radiusMeters, "aat_start_cylinder", "START"))
                             }
                             else -> {
                                 //  SSOT FIX: Use authority instead of removed gateWidth property
-                                val radiusKm = waypoint.getAuthorityRadius() / 2.0
-                                val circleCoordinates = geometryGenerator.generateCircleCoordinates(waypoint.lat, waypoint.lon, radiusKm)
-                                areaFeatures.add(featureFactory.createCircleFeature(waypoint, circleCoordinates, radiusKm, "aat_start_area", null))
+                                val radiusMeters = waypoint.getAuthorityRadiusMeters()
+                                val circleCoordinates =
+                                    geometryGenerator.generateCircleCoordinatesMeters(
+                                        waypoint.lat,
+                                        waypoint.lon,
+                                        radiusMeters
+                                    )
+                                areaFeatures.add(featureFactory.createCircleFeature(waypoint, circleCoordinates, radiusMeters, "aat_start_area", null))
                             }
                         }
                     }
@@ -176,15 +187,21 @@ class AATTaskRenderer(private val geometryGenerator: AATGeometryGenerator = AATG
                             com.example.xcpro.tasks.aat.models.AATFinishPointType.AAT_FINISH_LINE -> {
                                 val prevWaypoint = if (index > 0) waypoints[index - 1] else null
                                 //  SSOT FIX: Use authority instead of removed gateWidth property
-                                val lineWidth = waypoint.getAuthorityRadius()
-                                val lineCoordinates = geometryGenerator.generateFinishLine(waypoint, prevWaypoint, lineWidth)
+                                val lineWidthMeters = waypoint.getAuthorityRadiusMeters()
+                                val lineCoordinates =
+                                    geometryGenerator.generateFinishLineMeters(waypoint, prevWaypoint, lineWidthMeters)
                                 lineFeatures.add(featureFactory.createLineFeature(waypoint, lineCoordinates, "aat_finish_line", "FINISH"))
                             }
                             else -> {
                                 //  SSOT FIX: Use authority instead of removed gateWidth property
-                                val radiusKm = waypoint.getAuthorityRadius() / 2.0
-                                val circleCoordinates = geometryGenerator.generateCircleCoordinates(waypoint.lat, waypoint.lon, radiusKm)
-                                areaFeatures.add(featureFactory.createCircleFeature(waypoint, circleCoordinates, radiusKm, "aat_finish_cylinder", "FINISH"))
+                                val radiusMeters = waypoint.getAuthorityRadiusMeters()
+                                val circleCoordinates =
+                                    geometryGenerator.generateCircleCoordinatesMeters(
+                                        waypoint.lat,
+                                        waypoint.lon,
+                                        radiusMeters
+                                    )
+                                areaFeatures.add(featureFactory.createCircleFeature(waypoint, circleCoordinates, radiusMeters, "aat_finish_cylinder", "FINISH"))
                             }
                         }
                     }
@@ -192,17 +209,22 @@ class AATTaskRenderer(private val geometryGenerator: AATGeometryGenerator = AATG
                         //  COMPETITION-CRITICAL: Use AUTHORITATIVE radius from AATRadiusAuthority
                         when (waypoint.assignedArea.shape) {
                             com.example.xcpro.tasks.aat.models.AATAreaShape.CIRCLE -> {
-                                //  CRITICAL: Use waypoint.getAuthorityRadius() to guarantee UI/map consistency
-                                val radiusKm = waypoint.getAuthorityRadius()
-                                val circleCoordinates = geometryGenerator.generateCircleCoordinates(waypoint.lat, waypoint.lon, radiusKm)
-                                areaFeatures.add(featureFactory.createCircleFeature(waypoint, circleCoordinates, radiusKm, "aat_area", "TURNPOINT"))
+                                // Use waypoint.getAuthorityRadiusMeters() to guarantee UI/map consistency.
+                                val radiusMeters = waypoint.getAuthorityRadiusMeters()
+                                val circleCoordinates =
+                                    geometryGenerator.generateCircleCoordinatesMeters(
+                                        waypoint.lat,
+                                        waypoint.lon,
+                                        radiusMeters
+                                    )
+                                areaFeatures.add(featureFactory.createCircleFeature(waypoint, circleCoordinates, radiusMeters, "aat_area", "TURNPOINT"))
                             }
                             com.example.xcpro.tasks.aat.models.AATAreaShape.SECTOR -> {
                                 // Sector/Keyhole: Generate sector boundary points
                                 val sectorCoordinates = featureFactory.generateSectorCoordinates(
                                     waypoint.lat, waypoint.lon,
-                                    waypoint.assignedArea.innerRadiusMeters / 1000.0, // Convert to km
-                                    waypoint.assignedArea.outerRadiusMeters / 1000.0,
+                                    waypoint.assignedArea.innerRadiusMeters,
+                                    waypoint.assignedArea.outerRadiusMeters,
                                     waypoint.assignedArea.startAngleDegrees,
                                     waypoint.assignedArea.endAngleDegrees
                                 )
@@ -210,9 +232,14 @@ class AATTaskRenderer(private val geometryGenerator: AATGeometryGenerator = AATG
                             }
                             com.example.xcpro.tasks.aat.models.AATAreaShape.LINE -> {
                                 // Line (shouldn't happen for turnpoints, but handle gracefully)
-                                val radiusKm = waypoint.assignedArea.radiusMeters / 1000.0
-                                val circleCoordinates = geometryGenerator.generateCircleCoordinates(waypoint.lat, waypoint.lon, radiusKm)
-                                areaFeatures.add(featureFactory.createCircleFeature(waypoint, circleCoordinates, radiusKm, "aat_area", "TURNPOINT"))
+                                val radiusMeters = waypoint.assignedArea.radiusMeters
+                                val circleCoordinates =
+                                    geometryGenerator.generateCircleCoordinatesMeters(
+                                        waypoint.lat,
+                                        waypoint.lon,
+                                        waypoint.assignedArea.radiusMeters
+                                    )
+                                areaFeatures.add(featureFactory.createCircleFeature(waypoint, circleCoordinates, radiusMeters, "aat_area", "TURNPOINT"))
                             }
                         }
                     }

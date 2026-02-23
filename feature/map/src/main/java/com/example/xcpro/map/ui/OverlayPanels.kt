@@ -23,6 +23,7 @@ import android.util.Log
 import androidx.compose.material3.MaterialTheme
 import com.example.xcpro.common.units.SpeedMs
 import com.example.xcpro.common.units.UnitsFormatter
+import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.units.VerticalSpeedMs
 import com.example.xcpro.common.units.VerticalSpeedUnit
 import com.example.xcpro.map.DistanceCirclesCanvas
@@ -268,7 +269,8 @@ internal fun DistanceCirclesLayer(
     mapState: MapScreenState,
     currentZoom: Float,
     currentLocation: MapLocationUiModel?,
-    showDistanceCircles: Boolean
+    showDistanceCircles: Boolean,
+    unitsPreferences: UnitsPreferences
 ) {
     val zoom = currentZoom
     val density = LocalDensity.current
@@ -296,6 +298,7 @@ internal fun DistanceCirclesLayer(
       ) {
           DistanceCirclesCanvas(
               distancePerPixelMeters = distancePerPixelMeters,
+              unitsPreferences = unitsPreferences,
               modifier = Modifier.fillMaxSize()
           )
       }

@@ -6,7 +6,51 @@
 - Owner: XCPro Team
 - Date: 2026-02-20
 - Issue/PR: LEVO-20260220-TE-HARDENING
-- Status: Draft
+- Status: In Progress (Phase 2 item 1 and item 2 implemented on 2026-02-22)
+
+## 0A) Progress Update (2026-02-22)
+
+Completed in code and tests:
+- External/replay airspeed is now wired into metrics path:
+  `SensorFusionRepositoryFactory -> FlightDataCalculator -> FlightDataCalculatorEngine -> FlightDataEmitter -> FlightMetricsRequest`.
+- `CalculateFlightMetricsUseCase` now prioritizes airspeed as:
+  `SENSOR (fresh+valid external/replay) -> WIND (quality-gated) -> GPS fallback`.
+- `AirspeedSource.EXTERNAL` is now emitted (`airspeedSourceLabel = "SENSOR"`).
+- Dead path `WindEstimator.fromPolarSink()` removed.
+- Density ratio now uses QNH in:
+  - `WindEstimator.computeDensityRatio(altitude, qnh)`
+  - `ReplaySampleEmitter` IAS/TAS single-source reconstruction path.
+
+Still open:
+- Live external ingress adapter/callsite into `ExternalAirspeedRepository.updateAirspeed(...)`
+  remains pending (outside this patch set).
+
+## 0B) Current Execution Snapshot (2026-02-22)
+
+1. Done
+- External/replay airspeed is wired into TE metrics path and selected as
+  `SENSOR -> WIND -> GPS` with freshness/validity gates.
+- QNH-aware density ratio is active in both wind estimator and replay IAS/TAS reconstruction.
+- Dead `fromPolarSink` path removed.
+
+2. Next
+- Add the missing live ingress callsite into
+  `ExternalAirspeedRepository.updateAirspeed(...)` so real live TAS/IAS can drive TE.
+
+3. Then
+- Integrate/confirm straight-flight EKF wind path while preserving strict confidence gating
+  and deterministic fallback behavior.
+
+4. Validation
+- Keep replay + unit regressions green after each step.
+- Required checks:
+  - `./gradlew enforceRules`
+  - `./gradlew testDebugUnitTest`
+  - `./gradlew assembleDebug`
+
+5. Tracking
+- Update this plan document and `docs/ARCHITECTURE/PIPELINE.md` in the same change
+  whenever TE/airspeed/wind pipeline wiring changes.
 
 ## 1) Scope
 
@@ -156,6 +200,16 @@ Explicitly forbidden comparisons:
 | `WindEstimator.fromPolarSink()` is dead path | Function exists but has no production callsite | Hidden complexity with no runtime validation and stale test-only coverage | Either wire intentionally with clear eligibility semantics or remove/deprecate it |
 | Density ratio currently ignores QNH input | `WindEstimator.computeDensityRatio(..., qnhHpa)` does not use `qnhHpa` | Small but systematic IAS/TAS conversion mismatch under non-standard pressure | Decide and document whether to use pressure altitude only or include QNH-adjusted model; add unit tests |
 
+### 2.8 Recursive Deep-Pass Delta (2026-02-22)
+
+| Confirmed Gap | Evidence | Impact | Planned Fix Hook |
+|---|---|---|---|
+| TE and wind-speed switches are wired to the wrong settings keys | `LevoVarioSettingsScreen.VarioDisplayOptionsCard`: "Wind speed" row binds `teCompensationEnabled`; "Total Energy compensation" row binds `showWindSpeedOnVario` | Pilot-facing controls are misleading; TE may be toggled unintentionally while pilot expects wind-label toggle (and vice versa) | Swap `checked`/`onCheckedChange` bindings to match labels; add UI wiring regression test |
+| TE wind gating still bypasses `WindState.isAvailable` semantics | `CalculateFlightMetricsUseCase` passes `windState?.vector` directly to `WindEstimator.fromWind(...)` | Stale/invalid wind vectors can feed TE speed estimate despite `WindState.stale`/quality semantics | Gate TE wind path on `windState?.isAvailable == true` plus confidence threshold, then fallback |
+| Levo netto filter constants are fixed and sailplane-biased | `LevoNettoCalculator`: `WINDOW_METERS = 600.0`, `MIN_GLIDE_SPEED_MS = 12.0`, `MIN_WINDOW_SPEED_MS = 8.0` | Low-speed aircraft get laggy or invalid netto behavior; tuning mismatch vs paraglider/hang-glider regimes | Add aircraft-profile-aware speed gate/window parameters (v1 from profile/polar bounds; optional slider later) |
+| Replay IAS/TAS density conversion path is still standard-atmosphere only | `ReplaySampleEmitter.computeDensityRatio(altitudeMeters)` has no `qnhHpa` input | Replay IAS/TAS derived from single-source IAS or TAS can diverge under non-standard pressure scenarios | Decide explicit replay policy (pressure-altitude-only vs QNH-adjusted) and enforce with unit tests/docs |
+| Path drift in agent-facing docs caused onboarding/read-order failures | `AGENTS.md` and `docs/LEVO/levo-replay.md` previously referenced `docs/LevoVario/...` while repo path is `docs/LEVO/...` | Mandatory read-order instructions could fail for new contributors/agents | Fixed in 2026-02-22 doc pass by normalizing references to `docs/LEVO/...` |
+
 ## 3) Data Flow (Before -> After)
 
 Before:
@@ -201,18 +255,22 @@ UI consumes corrected display/audio/netto channels consistently
 
 - Goal:
   - Make TE mathematically and temporally correct for pull-up/slowdown compensation.
+  - Align TE/netto eligibility behavior with explicit wind availability semantics and aircraft-speed envelopes.
 - Files to change:
   - `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt`
   - `feature/map/src/main/java/com/example/xcpro/sensors/domain/AirspeedModels.kt`
   - `feature/map/src/main/java/com/example/xcpro/sensors/domain/FusionBlackboard.kt`
   - `feature/map/src/main/java/com/example/xcpro/sensors/domain/SensorFrontEnd.kt`
+  - `feature/map/src/main/java/com/example/xcpro/sensors/domain/LevoNettoCalculator.kt`
   - `feature/map/src/main/java/com/example/xcpro/sensors/domain/WindEstimator.kt` (if speed timestamp/source propagation is added to estimate model)
 - Tests to add/update:
   - TE engages after seeded eligible airspeed samples.
   - TE uses speed-sample time delta, not emit-frame delta.
   - Regression test for 100 kt -> 60 kt slowdown scenario (expected sign and bounded magnitude behavior).
   - Wind-confidence gating test for TE eligibility.
+  - Wind-availability gating test (`windState.isAvailable`) for TE eligibility.
   - Hold-behavior test where GPS fallback does not clobber eligible hold state.
+  - Low-speed aircraft regression test for Levo netto window/gate behavior (no extreme lag/invalid lockout in PG envelope).
 - Exit criteria:
   - TE source appears when eligible.
   - No unreachable TE branch from reset/cold start.
@@ -260,7 +318,7 @@ UI consumes corrected display/audio/netto channels consistently
 ### Phase 4: Audio and UI Channel Consistency
 
 - Goal:
-  - Remove one-frame TE lag in audio path and align displayed netto channel choice.
+  - Remove one-frame TE lag in audio path and align displayed netto channel and settings-control mapping.
 - Files to change:
   - `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt`
   - `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataEmitter.kt`
@@ -268,6 +326,7 @@ UI consumes corrected display/audio/netto channels consistently
 - Tests to add/update:
   - Audio input selection reflects current-frame TE sample when available.
   - `nettoDisplayFlow` consumes intended display netto signal.
+  - Settings screen regression test: TE toggle and wind-speed toggle each mutate the intended preference key.
 - Exit criteria:
   - Audio, TE arc, and selected vario streams are frame-consistent.
   - No business logic moved into Compose/UI layer.
@@ -297,11 +356,14 @@ UI consumes corrected display/audio/netto channels consistently
     - Pull-up slowdown compensation case (100 kt to 60 kt profile).
     - External/replay airspeed priority over wind-derived estimate.
     - TE wind-confidence gating case.
+    - TE wind-availability gating case (`WindState.isAvailable` respected).
   - `SensorFrontEndTest`:
     - Airspeed hold timestamp behavior with new sample-time fields.
     - Hold survival when fallback GPS samples are present between eligible estimates.
   - `FusionBlackboardTest`:
     - Non-eligible fallback samples do not overwrite eligible hold lane.
+  - `LevoNettoCalculatorTest`:
+    - Aircraft-profile-driven low-speed envelope test (PG/HG range) with bounded response lag.
   - `FlightDataCalculatorEngine` / `FlightDataEmitter` tests:
     - Active-source-aware airspeed wiring into metrics request.
     - External source-label propagation (`SENSOR`) once external path is wired.
@@ -315,6 +377,7 @@ UI consumes corrected display/audio/netto channels consistently
 - Degraded/failure-mode tests:
   - Invalid or stale airspeed sample should fail open to wind/GPS fallback without NaN spikes.
   - Missing wind should not claim TE availability unless external airspeed is valid.
+  - Replay IAS/TAS single-source conversion behavior remains deterministic and policy-consistent under non-standard QNH scenarios.
 - Boundary tests for removed bypasses:
   - Ensure no reintroduction of emit-dt TE path.
 

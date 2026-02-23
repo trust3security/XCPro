@@ -13,13 +13,12 @@ object PolarCalculator {
      */
     fun sinkMs(airspeedMs: Double, model: GliderModel, config: GliderConfig): Double {
         val v = max(airspeedMs, 0.0)
-        val vKmh = v * 3.6
         // If user provided 3-point polar, prefer its fitted coefficients
         config.threePointPolar?.let { tpp ->
             val coeff = coefficientsFromThreePoints(
-                v1Ms = tpp.lowKmh / 3.6, y1 = tpp.lowSinkMs,
-                v2Ms = tpp.midKmh / 3.6, y2 = tpp.midSinkMs,
-                v3Ms = tpp.highKmh / 3.6, y3 = tpp.highSinkMs
+                v1Ms = tpp.lowMs, y1 = tpp.lowSinkMs,
+                v2Ms = tpp.midMs, y2 = tpp.midSinkMs,
+                v3Ms = tpp.highMs, y3 = tpp.highSinkMs
             )
             val base = coeff.a + coeff.b * v + coeff.c * v * v
             val adjusted = applyAdjustments(base, config)
@@ -42,11 +41,11 @@ object PolarCalculator {
                 val minWL = model.minWingLoadingKgM2 ?: wl
                 val maxWL = model.maxWingLoadingKgM2 ?: wl
                 val alpha = if (maxWL > minWL) ((wl - minWL) / (maxWL - minWL)).coerceIn(0.0, 1.0) else 0.0
-                val sinkLight = sinkFromPoints(model.pointsLight!!, vKmh)
-                val sinkHeavy = sinkFromPoints(model.pointsHeavy!!, vKmh)
+                val sinkLight = sinkFromPoints(model.pointsLight!!, v)
+                val sinkHeavy = sinkFromPoints(model.pointsHeavy!!, v)
                 (1 - alpha) * sinkLight + alpha * sinkHeavy
             }
-            model.points != null && model.points!!.size >= 2 -> sinkFromPoints(model.points!!, vKmh)
+            model.points != null && model.points!!.size >= 2 -> sinkFromPoints(model.points!!, v)
             polynomialSink != null -> polynomialSink
             else -> {
                 val refV = 27.78 // 100 km/h
@@ -88,18 +87,18 @@ object PolarCalculator {
         return gross / area
     }
 
-    private fun sinkFromPoints(points: List<PolarPoint>, vKmh: Double): Double {
-        val sorted = points.sortedBy { it.kmh }
+    private fun sinkFromPoints(points: List<PolarPoint>, speedMs: Double): Double {
+        val sorted = points.sortedBy { it.speedMs }
         val first = sorted.first()
         val last = sorted.last()
         return when {
-            vKmh <= first.kmh -> first.sinkMs
-            vKmh >= last.kmh -> last.sinkMs
+            speedMs <= first.speedMs -> first.sinkMs
+            speedMs >= last.speedMs -> last.sinkMs
             else -> {
-                val idx = sorted.indexOfLast { it.kmh <= vKmh }.coerceAtLeast(0)
+                val idx = sorted.indexOfLast { it.speedMs <= speedMs }.coerceAtLeast(0)
                 val p0 = sorted[idx]
                 val p1 = sorted[idx + 1]
-                val t = ((vKmh - p0.kmh) / (p1.kmh - p0.kmh)).coerceIn(0.0, 1.0)
+                val t = ((speedMs - p0.speedMs) / (p1.speedMs - p0.speedMs)).coerceIn(0.0, 1.0)
                 p0.sinkMs + t * (p1.sinkMs - p0.sinkMs)
             }
         }

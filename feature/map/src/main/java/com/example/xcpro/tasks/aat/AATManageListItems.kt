@@ -69,12 +69,17 @@ internal fun AATReorderableWaypointItem(
 ) {
     val blue = Color(0xFF2196F3)
     val targetParam = remember(targetSnapshot?.targetParam) { mutableStateOf(targetSnapshot?.targetParam ?: 0.5) }
-    val typedParams = remember(taskWaypoint.customParameters, taskWaypoint.lat, taskWaypoint.lon, taskWaypoint.customRadius) {
+    val typedParams = remember(
+        taskWaypoint.customParameters,
+        taskWaypoint.lat,
+        taskWaypoint.lon,
+        taskWaypoint.customRadiusMeters
+    ) {
         AATWaypointCustomParams.from(
             source = taskWaypoint.customParameters,
             fallbackLat = taskWaypoint.lat,
             fallbackLon = taskWaypoint.lon,
-            fallbackRadiusMeters = (taskWaypoint.customRadius ?: 10.0) * 1000.0
+            fallbackRadiusMeters = taskWaypoint.resolvedCustomRadiusMeters() ?: 10_000.0
         )
     }
     val innerRadiusMeters = typedParams.innerRadiusMeters
@@ -219,41 +224,41 @@ internal fun AATReorderableWaypointItem(
                     nextWaypoint = nextWaypoint,
                     onStartTypeChange = { newType ->
                         selectedAATStartType = newType
-                        taskViewModel.onUpdateAATWaypointPointType(
+                        taskViewModel.onUpdateAATWaypointPointTypeMeters(
                             index = index,
                             startType = newType,
                             finishType = null,
                             turnType = null,
-                            gateWidth = null,
-                            keyholeInnerRadius = null,
+                            gateWidthMeters = null,
+                            keyholeInnerRadiusMeters = null,
                             keyholeAngle = null,
-                            sectorOuterRadius = null
+                            sectorOuterRadiusMeters = null
                         )
                     },
                     onFinishTypeChange = { newType ->
                         selectedAATFinishType = newType
-                        taskViewModel.onUpdateAATWaypointPointType(
+                        taskViewModel.onUpdateAATWaypointPointTypeMeters(
                             index = index,
                             startType = null,
                             finishType = newType,
                             turnType = null,
-                            gateWidth = null,
-                            keyholeInnerRadius = null,
+                            gateWidthMeters = null,
+                            keyholeInnerRadiusMeters = null,
                             keyholeAngle = null,
-                            sectorOuterRadius = null
+                            sectorOuterRadiusMeters = null
                         )
                     },
                     onTurnTypeChange = { newType ->
                         selectedAATTurnType = newType
-                        taskViewModel.onUpdateAATWaypointPointType(
+                        taskViewModel.onUpdateAATWaypointPointTypeMeters(
                             index = index,
                             startType = null,
                             finishType = null,
                             turnType = newType,
-                            gateWidth = null,
-                            keyholeInnerRadius = null,
+                            gateWidthMeters = null,
+                            keyholeInnerRadiusMeters = null,
                             keyholeAngle = null,
-                            sectorOuterRadius = null
+                            sectorOuterRadiusMeters = null
                         )
                     },
                     onGateWidthChange = { newWidth ->
@@ -265,45 +270,45 @@ internal fun AATReorderableWaypointItem(
                     onKeyholeInnerRadiusChange = { newRadius ->
                         aatKeyholeInnerRadius = newRadius
                         newRadius.toDoubleOrNull()?.let { radiusKm ->
-                            taskViewModel.onUpdateAATWaypointPointType(
+                            taskViewModel.onUpdateAATWaypointPointTypeMeters(
                                 index = index,
                                 startType = null,
                                 finishType = null,
                                 turnType = null,
-                                gateWidth = null,
-                                keyholeInnerRadius = radiusKm,
+                                gateWidthMeters = null,
+                                keyholeInnerRadiusMeters = radiusKm * 1000.0,
                                 keyholeAngle = null,
-                                sectorOuterRadius = null
+                                sectorOuterRadiusMeters = null
                             )
                         }
                     },
                     onKeyholeAngleChange = { newAngle ->
                         aatKeyholeAngle = newAngle
                         newAngle.toDoubleOrNull()?.let { angleDeg ->
-                            taskViewModel.onUpdateAATWaypointPointType(
+                            taskViewModel.onUpdateAATWaypointPointTypeMeters(
                                 index = index,
                                 startType = null,
                                 finishType = null,
                                 turnType = null,
-                                gateWidth = null,
-                                keyholeInnerRadius = null,
+                                gateWidthMeters = null,
+                                keyholeInnerRadiusMeters = null,
                                 keyholeAngle = angleDeg,
-                                sectorOuterRadius = null
+                                sectorOuterRadiusMeters = null
                             )
                         }
                     },
                     onSectorOuterRadiusChange = { newRadius ->
                         aatSectorOuterRadius = newRadius
                         newRadius.toDoubleOrNull()?.let { radiusKm ->
-                            taskViewModel.onUpdateAATWaypointPointType(
+                            taskViewModel.onUpdateAATWaypointPointTypeMeters(
                                 index = index,
                                 startType = null,
                                 finishType = null,
                                 turnType = null,
-                                gateWidth = null,
-                                keyholeInnerRadius = null,
+                                gateWidthMeters = null,
+                                keyholeInnerRadiusMeters = null,
                                 keyholeAngle = null,
-                                sectorOuterRadius = radiusKm
+                                sectorOuterRadiusMeters = radiusKm * 1000.0
                             )
                         }
                     }

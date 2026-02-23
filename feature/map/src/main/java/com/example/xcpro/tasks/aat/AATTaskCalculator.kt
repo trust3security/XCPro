@@ -12,10 +12,6 @@ import java.time.Duration
 import java.time.LocalDateTime
 
 class AATTaskCalculator {
-    private companion object {
-        const val METERS_PER_KILOMETER = 1000.0
-    }
-
     private val areaBoundaryCalculator = AreaBoundaryCalculator()
     private val speedCalculator = AATSpeedCalculator()
     private val pathOptimizer = AATPathOptimizer()
@@ -47,7 +43,7 @@ class AATTaskCalculator {
 
         val elapsedTime = Duration.between(startTime, finishTime)
         val scoringTime = maxOf(elapsedTime, task.minimumTaskTime)
-        val averageSpeed = speedCalculator.calculateAATSpeed(actualDistance, elapsedTime, task.minimumTaskTime)
+        val averageSpeedMs = speedCalculator.calculateAATSpeedMs(actualDistance, elapsedTime, task.minimumTaskTime)
 
         val taskStatus = when {
             !flightValidation.allAreasAchieved() -> AATFlightStatus.INCOMPLETE
@@ -61,7 +57,7 @@ class AATTaskCalculator {
             actualDistance = actualDistance,
             elapsedTime = elapsedTime,
             scoringTime = scoringTime,
-            averageSpeed = averageSpeed,
+            averageSpeedMs = averageSpeedMs,
             creditedFixes = creditedFixes,
             flightPath = flightPath,
             startTime = startTime,
@@ -111,28 +107,13 @@ class AATTaskCalculator {
         )
     }
 
-    @Deprecated(
-        message = "Use calculatePathForDistanceMeters for explicit units"
-    )
-    fun calculatePathForDistance(
-        task: AATTask,
-        currentPosition: AATLatLng,
-        targetDistance: Double
-    ): List<AATLatLng> {
-        return calculatePathForDistanceMeters(
-            task = task,
-            currentPosition = currentPosition,
-            targetDistanceMeters = targetDistance
-        )
-    }
-
-    fun calculateDistanceForTargetSpeed(
+    fun calculateDistanceForTargetSpeedMs(
         task: AATTask,
         elapsedTime: Duration,
-        targetSpeed: Double
+        targetSpeedMs: Double
     ): Double {
-        return speedCalculator.calculateDistanceForTargetSpeed(
-            targetSpeed,
+        return speedCalculator.calculateDistanceForTargetSpeedMs(
+            targetSpeedMs,
             elapsedTime,
             task.minimumTaskTime
         )
@@ -191,40 +172,13 @@ class AATTaskCalculator {
         val targetLat = currentWaypoint.targetPoint.latitude
         val targetLon = currentWaypoint.targetPoint.longitude
 
-        return com.example.xcpro.tasks.aat.calculations.AATMathUtils.calculateDistanceKm(
+        return com.example.xcpro.tasks.aat.calculations.AATMathUtils.calculateDistanceMeters(
             gpsLat,
             gpsLon,
             targetLat,
             targetLon
-        ) * METERS_PER_KILOMETER
+        )
     }
-
-    fun calculateDistanceToTargetPointKm(
-        gpsLat: Double,
-        gpsLon: Double,
-        waypointIndex: Int,
-        waypoints: List<AATWaypoint>
-    ): Double? = calculateDistanceToTargetPointMeters(
-        gpsLat = gpsLat,
-        gpsLon = gpsLon,
-        waypointIndex = waypointIndex,
-        waypoints = waypoints
-    )?.div(METERS_PER_KILOMETER)
-
-    @Deprecated(
-        message = "Use calculateDistanceToTargetPointMeters or calculateDistanceToTargetPointKm for explicit units"
-    )
-    fun calculateDistanceToTargetPoint(
-        gpsLat: Double,
-        gpsLon: Double,
-        waypointIndex: Int,
-        waypoints: List<AATWaypoint>
-    ): Double? = calculateDistanceToTargetPointKm(
-        gpsLat = gpsLat,
-        gpsLon = gpsLon,
-        waypointIndex = waypointIndex,
-        waypoints = waypoints
-    )
 
     fun generateDisplayElements(
         task: AATTask,

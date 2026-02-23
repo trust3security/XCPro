@@ -7,43 +7,40 @@ import org.junit.Test
 class OgnAircraftIconTest {
 
     @Test
-    fun tugTypeCode_usesTugplaneIcon() {
-        assertEquals(
-            OgnAircraftIcon.Tugplane,
-            iconForOgnAircraftTypeCode(2)
-        )
-    }
-
-    @Test
-    fun hangGliderTypeCode_usesHanggliderIcon() {
-        assertEquals(
-            OgnAircraftIcon.Hangglider,
-            iconForOgnAircraftTypeCode(6)
-        )
-    }
-
-    @Test
-    fun paragliderTypeCode_usesHanggliderIcon() {
-        assertEquals(
-            OgnAircraftIcon.Hangglider,
-            iconForOgnAircraftTypeCode(7)
-        )
-    }
-
-    @Test
-    fun unknownTypeCode_fallsBackToGliderIcon() {
-        assertEquals(OgnAircraftIcon.Glider, iconForOgnAircraftTypeCode(null))
+    fun knownTypeCodes_mapToExpectedIcons() {
         assertEquals(OgnAircraftIcon.Glider, iconForOgnAircraftTypeCode(1))
-        assertEquals(OgnAircraftIcon.Glider, iconForOgnAircraftTypeCode(99))
+        assertEquals(OgnAircraftIcon.Tugplane, iconForOgnAircraftTypeCode(2))
+        assertEquals(OgnAircraftIcon.Helicopter, iconForOgnAircraftTypeCode(3))
+        assertEquals(OgnAircraftIcon.Paraglider, iconForOgnAircraftTypeCode(4))
+        assertEquals(OgnAircraftIcon.Hangglider, iconForOgnAircraftTypeCode(5))
+        assertEquals(OgnAircraftIcon.Balloon, iconForOgnAircraftTypeCode(6))
+        assertEquals(OgnAircraftIcon.Uav, iconForOgnAircraftTypeCode(7))
+        assertEquals(OgnAircraftIcon.Unknown, iconForOgnAircraftTypeCode(8))
+    }
+
+    @Test
+    fun unknownTypeCode_fallsBackToUnknownIcon() {
+        assertEquals(OgnAircraftIcon.Unknown, iconForOgnAircraftTypeCode(null))
+        assertEquals(OgnAircraftIcon.Unknown, iconForOgnAircraftTypeCode(99))
     }
 
     @Test
     fun iconResources_matchExpectedAssets() {
         assertEquals(R.drawable.ic_adsb_glider, OgnAircraftIcon.Glider.resId)
         assertEquals(R.drawable.ic_ogn_tug, OgnAircraftIcon.Tugplane.resId)
+        assertEquals(R.drawable.ic_adsb_helicopter, OgnAircraftIcon.Helicopter.resId)
+        assertEquals(R.drawable.ic_ogn_hangglider, OgnAircraftIcon.Paraglider.resId)
         assertEquals(R.drawable.ic_ogn_hangglider, OgnAircraftIcon.Hangglider.resId)
+        assertEquals(R.drawable.ic_adsb_balloon, OgnAircraftIcon.Balloon.resId)
+        assertEquals(R.drawable.ic_adsb_drone, OgnAircraftIcon.Uav.resId)
+        assertEquals(R.drawable.ic_ogn_ufo, OgnAircraftIcon.Unknown.resId)
         assertEquals("ogn_icon_glider", OgnAircraftIcon.Glider.styleImageId)
         assertEquals("ogn_icon_tug", OgnAircraftIcon.Tugplane.styleImageId)
+        assertEquals("ogn_icon_helicopter", OgnAircraftIcon.Helicopter.styleImageId)
+        assertEquals("ogn_icon_paraglider", OgnAircraftIcon.Paraglider.styleImageId)
         assertEquals("ogn_icon_hangglider", OgnAircraftIcon.Hangglider.styleImageId)
+        assertEquals("ogn_icon_balloon", OgnAircraftIcon.Balloon.styleImageId)
+        assertEquals("ogn_icon_uav", OgnAircraftIcon.Uav.styleImageId)
+        assertEquals("ogn_icon_unknown", OgnAircraftIcon.Unknown.styleImageId)
     }
 }

@@ -10,7 +10,7 @@ import com.example.xcpro.tasks.aat.models.AATStartType
 import com.example.xcpro.tasks.aat.models.AATFinishType
 import com.example.xcpro.tasks.aat.models.AssignedArea
 import com.example.xcpro.tasks.aat.models.AreaGeometry
-import com.example.xcpro.tasks.aat.models.getAuthorityRadius
+import com.example.xcpro.tasks.aat.models.getAuthorityRadiusMeters
 import java.util.UUID
 
 /**
@@ -162,7 +162,7 @@ class AATValidationBridge {
                 ),
                 type = AATStartType.LINE,
                 //  SSOT FIX: Use authority radius instead of removed gateWidth property
-                lineLength = startWaypoint?.getAuthorityRadius()?.let { it * 1000.0 } ?: 5000.0 // Convert km to m
+                lineLength = startWaypoint?.getAuthorityRadiusMeters() ?: 5000.0
             ),
             assignedAreas = assignedAreas,
             finish = AATFinishPoint(
@@ -172,7 +172,7 @@ class AATValidationBridge {
                 ),
                 type = AATFinishType.CIRCLE,
                 //  SSOT FIX: Use authority radius instead of removed gateWidth property
-                radius = finishWaypoint?.getAuthorityRadius()?.let { (it / 2.0) * 1000.0 } ?: 3000.0 // Convert km to m
+                radius = finishWaypoint?.getAuthorityRadiusMeters() ?: 3000.0
             )
         )
     }

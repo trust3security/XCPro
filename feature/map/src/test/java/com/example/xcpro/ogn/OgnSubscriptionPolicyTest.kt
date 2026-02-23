@@ -1,6 +1,7 @@
 package com.example.xcpro.ogn
 
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -10,7 +11,7 @@ class OgnSubscriptionPolicyTest {
     fun shouldReconnectByCenterMove_respectsThreshold() {
         val currentLat = -33.8688
         val currentLon = 151.2093
-        val thresholdKm = 75.0
+        val thresholdMeters = 75_000.0
 
         val nearLat = -33.5000
         val nearLon = 151.3000
@@ -18,23 +19,29 @@ class OgnSubscriptionPolicyTest {
         val farLon = 151.5000
 
         assertFalse(
-            OgnSubscriptionPolicy.shouldReconnectByCenterMove(
+            OgnSubscriptionPolicy.shouldReconnectByCenterMoveMeters(
                 previousLat = currentLat,
                 previousLon = currentLon,
                 nextLat = nearLat,
                 nextLon = nearLon,
-                thresholdKm = thresholdKm
+                thresholdMeters = thresholdMeters
             )
         )
         assertTrue(
-            OgnSubscriptionPolicy.shouldReconnectByCenterMove(
+            OgnSubscriptionPolicy.shouldReconnectByCenterMoveMeters(
                 previousLat = currentLat,
                 previousLon = currentLon,
                 nextLat = farLat,
                 nextLon = farLon,
-                thresholdKm = thresholdKm
+                thresholdMeters = thresholdMeters
             )
         )
+    }
+
+    @Test
+    fun haversineMeters_matchesKnownDistance() {
+        val meters = OgnSubscriptionPolicy.haversineMeters(0.0, 0.0, 0.5, 0.5)
+        assertEquals(78_626.0, meters, 500.0)
     }
 
     @Test

@@ -13,7 +13,7 @@ import com.example.xcpro.tasks.aat.models.AATWaypoint
 import com.example.xcpro.tasks.aat.models.AATWaypointRole
 import com.example.xcpro.tasks.aat.models.AATAssignedArea
 import com.example.xcpro.tasks.aat.calculations.AATMathUtils
-import com.example.xcpro.tasks.aat.models.getAuthorityRadius
+import com.example.xcpro.tasks.aat.models.getAuthorityRadiusMeters
 
 import com.example.xcpro.tasks.aat.geometry.AATGeometryGenerator
 import com.example.xcpro.tasks.aat.persistence.AATTaskFileIO
@@ -98,7 +98,8 @@ class AATTaskManager(val context: Context? = null) {
                         com.example.xcpro.tasks.aat.models.AATWaypointRole.TURNPOINT -> WaypointRole.TURNPOINT
                         com.example.xcpro.tasks.aat.models.AATWaypointRole.FINISH -> WaypointRole.FINISH
                     },
-                    customRadius = waypoint.getAuthorityRadius(),
+                    customRadius = null,
+                    customRadiusMeters = waypoint.getAuthorityRadiusMeters(),
                     customPointType = when (waypoint.role) {
                         com.example.xcpro.tasks.aat.models.AATWaypointRole.START -> waypoint.startPointType.name
                         com.example.xcpro.tasks.aat.models.AATWaypointRole.TURNPOINT -> waypoint.turnPointType.name
@@ -137,7 +138,7 @@ class AATTaskManager(val context: Context? = null) {
         saveAATTask()
     }
 
-    fun calculateAATDistance(): Double {
+    fun calculateAATDistanceMeters(): Double {
         if (_currentAATTask.waypoints.size < 2) return 0.0
 
         val pathPoints = geometryGenerator.calculateOptimalAATPath(_currentAATTask.waypoints)
@@ -146,7 +147,7 @@ class AATTaskManager(val context: Context? = null) {
         for (i in 0 until pathPoints.size - 1) {
             val from = pathPoints[i] // [lon, lat]
             val to = pathPoints[i + 1] // [lon, lat]
-            totalDistance += AATMathUtils.calculateDistanceKm(from[1], from[0], to[1], to[0]) // Convert back to lat, lon
+            totalDistance += AATMathUtils.calculateDistanceMeters(from[1], from[0], to[1], to[0]) // Convert back to lat, lon
         }
         return totalDistance
     }
@@ -173,15 +174,15 @@ class AATTaskManager(val context: Context? = null) {
         saveAATTask()
     }
 
-    fun updateAATWaypointPointType(
+    fun updateAATWaypointPointTypeMeters(
         index: Int,
         startType: com.example.xcpro.tasks.aat.models.AATStartPointType?,
         finishType: com.example.xcpro.tasks.aat.models.AATFinishPointType?,
         turnType: com.example.xcpro.tasks.aat.models.AATTurnPointType?,
-        gateWidth: Double?,
-        keyholeInnerRadius: Double?,
+        gateWidthMeters: Double?,
+        keyholeInnerRadiusMeters: Double?,
         keyholeAngle: Double?,
-        sectorOuterRadius: Double?
+        sectorOuterRadiusMeters: Double?
     ) {
         val currentWaypoints = _currentAATTask.waypoints.toMutableList()
         if (index in currentWaypoints.indices) {
@@ -194,10 +195,10 @@ class AATTaskManager(val context: Context? = null) {
                 startType = startType,
                 finishType = finishType,
                 turnType = turnType,
-                gateWidth = gateWidth,
-                keyholeInnerRadius = keyholeInnerRadius,
+                gateWidthMeters = gateWidthMeters,
+                keyholeInnerRadiusMeters = keyholeInnerRadiusMeters,
                 keyholeAngle = keyholeAngle,
-                sectorOuterRadius = sectorOuterRadius
+                sectorOuterRadiusMeters = sectorOuterRadiusMeters
             )
 
             currentWaypoints[index] = updatedWaypoint
@@ -211,20 +212,20 @@ class AATTaskManager(val context: Context? = null) {
         startType: Any?,
         finishType: Any?,
         turnType: Any?,
-        gateWidth: Double?,
-        keyholeInnerRadius: Double?,
+        gateWidthMeters: Double?,
+        keyholeInnerRadiusMeters: Double?,
         keyholeAngle: Double?,
-        sectorOuterRadius: Double?
+        sectorOuterRadiusMeters: Double?
     ) {
-        updateAATWaypointPointType(
+        updateAATWaypointPointTypeMeters(
             index = index,
             startType = startType as? com.example.xcpro.tasks.aat.models.AATStartPointType,
             finishType = finishType as? com.example.xcpro.tasks.aat.models.AATFinishPointType,
             turnType = turnType as? com.example.xcpro.tasks.aat.models.AATTurnPointType,
-            gateWidth = gateWidth,
-            keyholeInnerRadius = keyholeInnerRadius,
+            gateWidthMeters = gateWidthMeters,
+            keyholeInnerRadiusMeters = keyholeInnerRadiusMeters,
             keyholeAngle = keyholeAngle,
-            sectorOuterRadius = sectorOuterRadius
+            sectorOuterRadiusMeters = sectorOuterRadiusMeters
         )
     }
 
@@ -269,16 +270,13 @@ class AATTaskManager(val context: Context? = null) {
         }
     }
 
-    fun calculateAATTaskDistance(): Double {
-        return calculateAATDistance()
-    }
+    fun calculateAATTaskDistanceMeters(): Double = calculateAATDistanceMeters()
 
-    fun calculateSegmentDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
-        return AATMathUtils.calculateDistanceKm(lat1, lon1, lat2, lon2)
-    }
+    fun calculateSegmentDistanceMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double =
+        AATMathUtils.calculateDistanceMeters(lat1, lon1, lat2, lon2)
 
-    fun calculateDistanceToCurrentTargetPoint(gpsLat: Double, gpsLon: Double): Double? {
-        return aatTaskCalculator.calculateDistanceToTargetPoint(
+    fun calculateDistanceToCurrentTargetPointMeters(gpsLat: Double, gpsLon: Double): Double? {
+        return aatTaskCalculator.calculateDistanceToTargetPointMeters(
             gpsLat = gpsLat,
             gpsLon = gpsLon,
             waypointIndex = _currentLeg,

@@ -67,11 +67,22 @@ Extracted fields:
 - altitude from `/A=xxxxxx` feet to meters
 - vertical speed from `fpm` token to m/s
 - signal from `dB` token
-- device id from `idXXXXXX` or callsign fallback pattern (`AAA123456` -> `123456`)
+- device id from `idXXXXXX` / `idXXYYYYYY` or callsign fallback pattern (`AAA123456` -> `123456`)
+- typed `idXXYYYYYY` aircraft type decode from `XX` (`STttttaa` -> `tttt`) used when DDB type is unavailable
+- address type (`FLARM` / `ICAO` / `UNKNOWN`) from:
+  - typed `idXXYYYYYY` low bits when explicit type byte is present
+  - callsign prefix fallback (`FLR*` -> FLARM, `ICA*` -> ICAO) when id token has no type byte
+  - unknown fallback otherwise
+- canonical transport key (`FLARM:HEX` / `ICAO:HEX` / `UNK:HEX` / fallback `ID:*`) for repository identity paths
 
 Drop conditions:
 - invalid coordinates
 - unparseable/unsupported payload formats
+- malformed 7-hex `id` token (`idXXXXXXX`) is rejected
+
+`id` token acceptance:
+- accepted: exactly 6 hex (`idYYYYYY`) or 8 hex (`idXXYYYYYY`)
+- rejected: any other length/non-hex form
 
 ## DDB Enrichment And Privacy
 
@@ -79,9 +90,31 @@ Drop conditions:
 - Refresh cadence:
   - load cache from disk if available
   - refresh due every 24h (checked hourly while running)
+- Identity/type precedence:
+  - DDB identity is primary
+  - typed APRS id aircraft type is fallback when DDB aircraft type is missing
+- DDB lookup precedence:
+  - typed lookup (`device_type + device_id`) when parsed target type is known
+  - unknown-safe fallback for untyped targets
 - Label resolution:
   - DDB competition number -> DDB registration -> fallback id/callsign
 - If DDB reports `tracked == false`, target is removed from output list.
+
+## Ownship Suppression
+
+Configured settings:
+- `Own FLARM ID` (6-hex, uppercase normalized)
+- `Own ICAO24` (6-hex, uppercase normalized)
+
+Match policy:
+- FLARM target matches only own FLARM setting.
+- ICAO target matches only own ICAO setting.
+- UNKNOWN target type does not match by default.
+
+Behavior:
+- Match is applied in `OgnTrafficRepository` before publishing target list.
+- Suppressed target canonical keys are emitted in snapshot diagnostics.
+- OGN trail and thermal repositories consume suppression keys and purge matching artifacts in-session.
 
 ## Tests
 

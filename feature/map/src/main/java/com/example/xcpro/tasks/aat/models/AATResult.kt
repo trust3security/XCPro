@@ -14,7 +14,7 @@ data class AATResult(
     val actualDistance: Double,        // meters - distance through credited fixes
     val elapsedTime: Duration,         // actual flight time
     val scoringTime: Duration,         // MAX(elapsed_time, minimum_time)
-    val averageSpeed: Double,          // km/h - actualDistance / scoringTime
+    val averageSpeedMs: Double,        // m/s - actualDistance / scoringTime
     val creditedFixes: List<AATLatLng>, // Points where areas were achieved
     val flightPath: List<AATLatLng> = emptyList(),
     val startTime: LocalDateTime? = null,
@@ -22,6 +22,9 @@ data class AATResult(
     val penalties: List<AATPenalty> = emptyList(),
     val taskStatus: AATFlightStatus = AATFlightStatus.INCOMPLETE
 ) {
+    private companion object {
+        const val KMH_PER_MS = 3.6
+    }
     
     /**
      * Get actual distance in kilometers
@@ -52,7 +55,7 @@ data class AATResult(
      * Get average speed formatted (0.0 km/h)
      */
     fun getAverageSpeedFormatted(): String {
-        return String.format("%.1f km/h", averageSpeed)
+        return String.format("%.1f km/h", averageSpeedMs * KMH_PER_MS)
     }
     
     /**
@@ -79,9 +82,9 @@ data class AATResult(
     /**
      * Get penalty-adjusted average speed
      */
-    fun getAdjustedAverageSpeed(): Double {
-        val adjustedScoringHours = getAdjustedScoringTime().toMinutes() / 60.0
-        return if (adjustedScoringHours > 0) getActualDistanceKm() / adjustedScoringHours else 0.0
+    fun getAdjustedAverageSpeedMs(): Double {
+        val adjustedScoringSeconds = getAdjustedScoringTime().toMillis() / 1000.0
+        return if (adjustedScoringSeconds > 0.0) actualDistance / adjustedScoringSeconds else 0.0
     }
     
     /**
@@ -89,8 +92,8 @@ data class AATResult(
      * Speed = distance / MAX(elapsed_time, minimum_time)
      */
     fun calculateSpeedPoints(minimumTaskTime: Duration): Double {
-        val scoringHours = maxOf(elapsedTime, minimumTaskTime).toMinutes() / 60.0
-        return if (scoringHours > 0) getActualDistanceKm() / scoringHours else 0.0
+        val scoringSeconds = maxOf(elapsedTime, minimumTaskTime).toMillis() / 1000.0
+        return if (scoringSeconds > 0.0) actualDistance / scoringSeconds else 0.0
     }
     
     /**
@@ -195,10 +198,10 @@ data class AATTimeAnalysis(
  * Speed-based analysis of AAT performance
  */
 data class AATSpeedAnalysis(
-    val averageTaskSpeed: Double,      // km/h
-    val averageInterAreaSpeed: Double, // km/h between areas
-    val maxSpeedSegment: Double,       // km/h fastest segment
-    val minSpeedSegment: Double,       // km/h slowest segment
+    val averageTaskSpeedMs: Double,      // m/s
+    val averageInterAreaSpeedMs: Double, // m/s between areas
+    val maxSpeedSegmentMs: Double,       // m/s fastest segment
+    val minSpeedSegmentMs: Double,       // m/s slowest segment
     val speedConsistency: Double       // Coefficient of variation (0-1, lower is more consistent)
 )
 

@@ -35,7 +35,7 @@ class OgnGliderTrailRepositoryTest {
 
         val segment = repository.segments.value.singleOrNull()
         assertTrue(segment != null)
-        assertEquals("ABCD01", segment?.sourceTargetId)
+        assertEquals("UNK:ABCD01", segment?.sourceTargetId)
         assertTrue((segment?.widthPx ?: 0f) > OGN_TRAIL_ZERO_WIDTH_PX)
 
         clock.setMonoMs(2_000_000L)
@@ -237,6 +237,83 @@ class OgnGliderTrailRepositoryTest {
         runCurrent()
     }
 
+    @Test
+    fun normalizesTargetIdForSegmentSourceAndConsecutiveSampling() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val clock = FakeClock(monoMs = 0L, wallMs = 0L)
+        val trafficRepository = FakeOgnTrafficRepository()
+        val repository = OgnGliderTrailRepositoryImpl(
+            ognTrafficRepository = trafficRepository,
+            clock = clock,
+            dispatcher = dispatcher
+        )
+
+        clock.setMonoMs(1_000L)
+        trafficRepository.targets.value = listOf(
+            sampleTarget(
+                id = " abcd01 ",
+                timestampMs = 1_000L,
+                latitude = -35.0000,
+                longitude = 149.0000
+            )
+        )
+        runCurrent()
+
+        clock.setMonoMs(11_000L)
+        trafficRepository.targets.value = listOf(
+            sampleTarget(
+                id = "ABCD01",
+                timestampMs = 11_000L,
+                latitude = -35.0004,
+                longitude = 149.0004
+            )
+        )
+        runCurrent()
+
+        val segment = repository.segments.value.singleOrNull()
+        assertTrue(segment != null)
+        assertEquals("UNK:ABCD01", segment?.sourceTargetId)
+        assertEquals("UNK:ABCD01:11000", segment?.id)
+
+        clock.setMonoMs(2_000_000L)
+        trafficRepository.targets.value = emptyList()
+        runCurrent()
+        shutdownRepository(trafficRepository)
+        runCurrent()
+    }
+
+    @Test
+    fun suppressedTargetKeys_purgeExistingTrailSegments() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val clock = FakeClock(monoMs = 0L, wallMs = 0L)
+        val trafficRepository = FakeOgnTrafficRepository()
+        val repository = OgnGliderTrailRepositoryImpl(
+            ognTrafficRepository = trafficRepository,
+            clock = clock,
+            dispatcher = dispatcher
+        )
+
+        clock.setMonoMs(1_000L)
+        trafficRepository.targets.value = listOf(
+            sampleTarget(timestampMs = 1_000L, latitude = -35.0, longitude = 149.0)
+        )
+        runCurrent()
+        clock.setMonoMs(11_000L)
+        trafficRepository.targets.value = listOf(
+            sampleTarget(timestampMs = 11_000L, latitude = -35.0004, longitude = 149.0004)
+        )
+        runCurrent()
+        assertEquals(1, repository.segments.value.size)
+
+        trafficRepository.suppressedTargetIds.value = setOf("UNK:ABCD01")
+        runCurrent()
+
+        assertTrue(repository.segments.value.isEmpty())
+
+        shutdownRepository(trafficRepository)
+        runCurrent()
+    }
+
     private fun sampleTarget(
         id: String = "ABCD01",
         timestampMs: Long,
@@ -253,7 +330,7 @@ class OgnGliderTrailRepositoryTest {
         trackDegrees = 120.0,
         groundSpeedMps = 26.0,
         verticalSpeedMps = verticalSpeedMps,
-        deviceIdHex = id.takeLast(6),
+        deviceIdHex = normalizeOgnHex6OrNull(id),
         signalDb = 12.0,
         displayLabel = id,
         identity = null,
@@ -269,6 +346,7 @@ class OgnGliderTrailRepositoryTest {
 
     private class FakeOgnTrafficRepository : OgnTrafficRepository {
         override val targets = MutableStateFlow<List<OgnTrafficTarget>>(emptyList())
+        override val suppressedTargetIds = MutableStateFlow<Set<String>>(emptySet())
         override val snapshot = MutableStateFlow(
             OgnTrafficSnapshot(
                 targets = emptyList(),

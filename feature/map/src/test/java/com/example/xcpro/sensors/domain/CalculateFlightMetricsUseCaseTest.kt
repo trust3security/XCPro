@@ -10,6 +10,7 @@ import com.example.xcpro.common.units.SpeedMs
 import com.example.xcpro.glider.StillAirSinkProvider
 import com.example.xcpro.sensors.FlightCalculationHelpers
 import com.example.xcpro.sensors.GPSData
+import com.example.xcpro.weather.wind.model.AirspeedSample
 import com.example.xcpro.weather.wind.model.WindSource
 import com.example.xcpro.weather.wind.model.WindState
 import com.example.xcpro.weather.wind.model.WindVector
@@ -38,6 +39,19 @@ private fun varioSample(vs: Double, alt: Double) = ModernVarioResult(
     confidence = 0.8
 )
 
+private fun airspeedSample(
+    trueMs: Double,
+    indicatedMs: Double,
+    clockMillis: Long,
+    valid: Boolean = true
+) = AirspeedSample(
+    trueMs = trueMs,
+    indicatedMs = indicatedMs,
+    timestampMillis = clockMillis,
+    clockMillis = clockMillis,
+    valid = valid
+)
+
 class CalculateFlightMetricsUseCaseTest {
 
     private fun newUseCase(
@@ -64,7 +78,7 @@ class CalculateFlightMetricsUseCaseTest {
         return CalculateFlightMetricsUseCase(
             flightHelpers = helpers,
             sinkProvider = sink,
-            windEstimator = WindEstimator(sink)
+            windEstimator = WindEstimator()
         )
     }
 
@@ -238,6 +252,220 @@ class CalculateFlightMetricsUseCaseTest {
         assertEquals("WIND", result.airspeedSourceLabel)
         assertTrue(result.teVario == null)
         assertTrue(result.varioSource != "TE")
+    }
+
+    @Test
+    fun te_wind_low_confidence_falls_back_to_gps_airspeed() {
+        val useCase = newUseCase()
+        val wind = WindState(
+            vector = WindVector(east = 3.0, north = 1.0),
+            source = WindSource.MANUAL,
+            quality = 5,
+            stale = false,
+            confidence = 0.05
+        )
+
+        val result = useCase.execute(
+            FlightMetricsRequest(
+                gps = gpsSample(1_000L),
+                currentTimeMillis = 1_000L,
+                wallTimeMillis = 1_000L,
+                gpsTimestampMillis = 1_000L,
+                deltaTimeSeconds = 0.1,
+                varioResult = varioSample(0.4, 600.0),
+                varioGpsValue = 0.4,
+                baroResult = null,
+                windState = wind,
+                varioValidUntil = 2_000L,
+                isFlying = true,
+                macCreadySetting = 0.0,
+                autoMcEnabled = false,
+                flightMode = FlightMode.CRUISE
+            )
+        )
+
+        assertEquals("GPS", result.airspeedSourceLabel)
+    }
+
+    @Test
+    fun te_wind_stale_vector_falls_back_to_gps_airspeed() {
+        val useCase = newUseCase()
+        val wind = WindState(
+            vector = WindVector(east = 3.0, north = 1.0),
+            source = WindSource.MANUAL,
+            quality = 5,
+            stale = true,
+            confidence = 1.0
+        )
+
+        val result = useCase.execute(
+            FlightMetricsRequest(
+                gps = gpsSample(1_000L),
+                currentTimeMillis = 1_000L,
+                wallTimeMillis = 1_000L,
+                gpsTimestampMillis = 1_000L,
+                deltaTimeSeconds = 0.1,
+                varioResult = varioSample(0.4, 600.0),
+                varioGpsValue = 0.4,
+                baroResult = null,
+                windState = wind,
+                varioValidUntil = 2_000L,
+                isFlying = true,
+                macCreadySetting = 0.0,
+                autoMcEnabled = false,
+                flightMode = FlightMode.CRUISE
+            )
+        )
+
+        assertEquals("GPS", result.airspeedSourceLabel)
+    }
+
+    @Test
+    fun fresh_external_airspeed_takes_priority_over_wind_and_gps() {
+        val useCase = newUseCase()
+        val wind = WindState(
+            vector = WindVector(east = 2.0, north = 1.0),
+            source = WindSource.MANUAL,
+            quality = 5,
+            stale = false,
+            confidence = 1.0
+        )
+
+        val result = useCase.execute(
+            FlightMetricsRequest(
+                gps = gpsSample(10_000L),
+                currentTimeMillis = 10_000L,
+                wallTimeMillis = 10_000L,
+                gpsTimestampMillis = 10_000L,
+                deltaTimeSeconds = 0.2,
+                varioResult = varioSample(0.4, 600.0),
+                varioGpsValue = 0.4,
+                baroResult = null,
+                windState = wind,
+                externalAirspeedSample = airspeedSample(
+                    trueMs = 26.0,
+                    indicatedMs = 24.0,
+                    clockMillis = 9_800L
+                ),
+                varioValidUntil = 12_000L,
+                isFlying = true,
+                macCreadySetting = 0.0,
+                autoMcEnabled = false,
+                flightMode = FlightMode.CRUISE
+            )
+        )
+
+        assertEquals("SENSOR", result.airspeedSourceLabel)
+        assertEquals(24.0, result.indicatedAirspeedMs, 1e-6)
+        assertEquals(26.0, result.trueAirspeedMs, 1e-6)
+    }
+
+    @Test
+    fun stale_external_airspeed_falls_back_to_wind_solution() {
+        val useCase = newUseCase()
+        val wind = WindState(
+            vector = WindVector(east = 2.0, north = 1.0),
+            source = WindSource.MANUAL,
+            quality = 5,
+            stale = false,
+            confidence = 1.0
+        )
+
+        val result = useCase.execute(
+            FlightMetricsRequest(
+                gps = gpsSample(10_000L),
+                currentTimeMillis = 10_000L,
+                wallTimeMillis = 10_000L,
+                gpsTimestampMillis = 10_000L,
+                deltaTimeSeconds = 0.2,
+                varioResult = varioSample(0.4, 600.0),
+                varioGpsValue = 0.4,
+                baroResult = null,
+                windState = wind,
+                externalAirspeedSample = airspeedSample(
+                    trueMs = 30.0,
+                    indicatedMs = 28.0,
+                    clockMillis = 6_000L
+                ),
+                varioValidUntil = 12_000L,
+                isFlying = true,
+                macCreadySetting = 0.0,
+                autoMcEnabled = false,
+                flightMode = FlightMode.CRUISE
+            )
+        )
+
+        assertEquals("WIND", result.airspeedSourceLabel)
+    }
+
+    @Test
+    fun reset_clears_baseline_display_smoother_state() {
+        val useCase = newUseCase()
+        var time = 1_000L
+        repeat(12) {
+            useCase.execute(
+                FlightMetricsRequest(
+                    gps = gpsSample(time),
+                    currentTimeMillis = time,
+                    wallTimeMillis = time,
+                    gpsTimestampMillis = time,
+                    deltaTimeSeconds = 0.1,
+                    varioResult = varioSample(4.0, 1_000.0 + it),
+                    varioGpsValue = 4.0,
+                    baroResult = null,
+                    windState = null,
+                    varioValidUntil = time + 1_000L,
+                    isFlying = true,
+                    macCreadySetting = 0.0,
+                    autoMcEnabled = false,
+                    flightMode = FlightMode.CRUISE
+                )
+            )
+            time += 100L
+        }
+
+        val preReset = useCase.execute(
+            FlightMetricsRequest(
+                gps = gpsSample(time),
+                currentTimeMillis = time,
+                wallTimeMillis = time,
+                gpsTimestampMillis = time,
+                deltaTimeSeconds = 0.1,
+                varioResult = varioSample(4.0, 1_100.0),
+                varioGpsValue = 4.0,
+                baroResult = null,
+                windState = null,
+                varioValidUntil = time + 1_000L,
+                isFlying = true,
+                macCreadySetting = 0.0,
+                autoMcEnabled = false,
+                flightMode = FlightMode.CRUISE
+            )
+        )
+        assertTrue(preReset.displayBaselineVario > 0.5)
+
+        useCase.reset()
+        time += 100L
+
+        val postReset = useCase.execute(
+            FlightMetricsRequest(
+                gps = gpsSample(time),
+                currentTimeMillis = time,
+                wallTimeMillis = time,
+                gpsTimestampMillis = time,
+                deltaTimeSeconds = 0.1,
+                varioResult = varioSample(0.0, 1_100.0),
+                varioGpsValue = 0.0,
+                baroResult = null,
+                windState = null,
+                varioValidUntil = time + 1_000L,
+                isFlying = true,
+                macCreadySetting = 0.0,
+                autoMcEnabled = false,
+                flightMode = FlightMode.CRUISE
+            )
+        )
+        assertTrue(kotlin.math.abs(postReset.displayBaselineVario) < 0.1)
     }
 
     @Test

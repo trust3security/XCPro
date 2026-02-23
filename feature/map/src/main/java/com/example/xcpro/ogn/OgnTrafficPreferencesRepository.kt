@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -19,7 +20,8 @@ private val Context.ognTrafficDataStore: DataStore<Preferences> by preferencesDa
 private val KEY_OGN_TRAFFIC_ENABLED = booleanPreferencesKey("ogn_traffic_enabled")
 private val KEY_OGN_ICON_SIZE_PX = intPreferencesKey("ogn_icon_size_px")
 private val KEY_OGN_SHOW_THERMALS_ENABLED = booleanPreferencesKey("ogn_show_thermals_enabled")
-private val KEY_OGN_SHOW_GLIDER_TRAILS_ENABLED = booleanPreferencesKey("ogn_show_glider_trails_enabled")
+private val KEY_OGN_OWN_FLARM_HEX = stringPreferencesKey("ogn_own_flarm_hex")
+private val KEY_OGN_OWN_ICAO_HEX = stringPreferencesKey("ogn_own_icao_hex")
 
 @Singleton
 class OgnTrafficPreferencesRepository @Inject constructor(
@@ -41,8 +43,16 @@ class OgnTrafficPreferencesRepository @Inject constructor(
         .map { preferences -> preferences[KEY_OGN_SHOW_THERMALS_ENABLED] ?: false }
         .distinctUntilChanged()
 
-    val showGliderTrailsEnabledFlow: Flow<Boolean> = context.ognTrafficDataStore.data
-        .map { preferences -> preferences[KEY_OGN_SHOW_GLIDER_TRAILS_ENABLED] ?: false }
+    val ownFlarmHexFlow: Flow<String?> = context.ognTrafficDataStore.data
+        .map { preferences ->
+            normalizeOgnHex6OrNull(preferences[KEY_OGN_OWN_FLARM_HEX])
+        }
+        .distinctUntilChanged()
+
+    val ownIcaoHexFlow: Flow<String?> = context.ognTrafficDataStore.data
+        .map { preferences ->
+            normalizeOgnHex6OrNull(preferences[KEY_OGN_OWN_ICAO_HEX])
+        }
         .distinctUntilChanged()
 
     suspend fun setEnabled(enabled: Boolean) {
@@ -64,9 +74,36 @@ class OgnTrafficPreferencesRepository @Inject constructor(
         }
     }
 
-    suspend fun setShowGliderTrailsEnabled(enabled: Boolean) {
+    suspend fun setOwnFlarmHex(value: String?) {
+        setNormalizedHexOrClear(
+            key = KEY_OGN_OWN_FLARM_HEX,
+            value = value
+        )
+    }
+
+    suspend fun setOwnIcaoHex(value: String?) {
+        setNormalizedHexOrClear(
+            key = KEY_OGN_OWN_ICAO_HEX,
+            value = value
+        )
+    }
+
+    private suspend fun setNormalizedHexOrClear(
+        key: Preferences.Key<String>,
+        value: String?
+    ) {
+        val trimmed = value?.trim().orEmpty()
+        val normalized = normalizeOgnHex6OrNull(trimmed)
+        if (trimmed.isNotEmpty() && normalized == null) {
+            // Invalid non-blank input is ignored to preserve previous valid persisted value.
+            return
+        }
         context.ognTrafficDataStore.edit { preferences ->
-            preferences[KEY_OGN_SHOW_GLIDER_TRAILS_ENABLED] = enabled
+            if (normalized == null) {
+                preferences.remove(key)
+            } else {
+                preferences[key] = normalized
+            }
         }
     }
 }

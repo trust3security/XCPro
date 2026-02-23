@@ -47,9 +47,9 @@ Internal logic must use SI. Any non-SI representation is allowed only at explici
 - Domain engines partially convert to SI at boundaries, but legacy manager paths remain mixed.
 
 ### Glider Polar Domain
-- Polar source models and limits are km/h-based (`PolarPoint.kmh`, `SpeedLimits.*Kmh`).
-- Runtime sink provider takes m/s but repeatedly converts to km/h internally.
-- This is a non-SI internal contract unless treated as strict data-source boundary.
+- Polar/config source contracts are SI-canonical internally (`*Ms`) for storage and runtime math.
+- Repository compatibility-read supports legacy persisted km/h keys and migrates to canonical SI fields on load.
+- km/h is retained only at explicit UI/input and selected model metadata boundaries.
 
 ## Target Contract (Post-Migration)
 - Domain and manager internals: SI-only.

@@ -2,6 +2,7 @@ package com.example.xcpro.tasks
 
 
 import androidx.compose.runtime.Composable
+import com.example.xcpro.common.units.UnitsPreferences
 import org.maplibre.android.maps.MapLibreMap
 import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.tasks.TaskUiState
@@ -21,6 +22,7 @@ fun ManageBTTabRouter(
     taskViewModel: TaskSheetViewModel,
     mapLibreMap: MapLibreMap?,
     allWaypoints: List<WaypointData> = emptyList(),
+    unitsPreferences: UnitsPreferences = UnitsPreferences(),
     onClearTask: () -> Unit,
     onSaveTask: () -> Unit,
     onDismiss: () -> Unit,
@@ -36,6 +38,7 @@ fun ManageBTTabRouter(
                 uiState = uiState,
                 mapLibreMap = mapLibreMap,
                 allWaypoints = allWaypoints,
+                unitsPreferences = unitsPreferences,
                 onClearTask = onClearTask,
                 onSaveTask = onSaveTask,
                 onDismiss = onDismiss,
@@ -49,6 +52,7 @@ fun ManageBTTabRouter(
                 uiState = uiState,
                 mapLibreMap = mapLibreMap,
                 allWaypoints = allWaypoints,
+                unitsPreferences = unitsPreferences,
                 onClearTask = onClearTask,
                 onSaveTask = onSaveTask,
                 onDismiss = onDismiss,

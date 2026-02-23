@@ -1,5 +1,7 @@
 package com.example.xcpro.tasks
 
+import com.example.xcpro.tasks.aat.models.AATRadiusAuthority
+import com.example.xcpro.tasks.aat.models.AATWaypointRole
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.TaskWaypoint
@@ -34,6 +36,7 @@ object TaskPersistSerializer {
         val ozType: String?,
         val ozParams: Map<String, Double?> = emptyMap(),
         val customRadius: Double? = null,
+        val customRadiusMeters: Double? = null,
         val customPointType: String? = null,
         val customParameters: Map<String, Any?> = emptyMap(),
         val targetParam: Double? = null,
@@ -64,7 +67,8 @@ object TaskPersistSerializer {
                 role = wp.role,
                 ozType = ozType,
                 ozParams = ozParams,
-                customRadius = wp.customRadius,
+                customRadius = wp.resolvedCustomRadiusMeters()?.div(1000.0),
+                customRadiusMeters = wp.resolvedCustomRadiusMeters(),
                 customPointType = wp.customPointType,
                 customParameters = sanitizeCustomParameters(wp.customParameters),
                 targetParam = target?.targetParam ?: if (waypointHasTargetState) waypointTargetState.targetParam else null,
@@ -111,6 +115,9 @@ object TaskPersistSerializer {
                 targetLon = resolvedTargetLon
             ).applyTo(customParameters)
 
+            val resolvedCustomRadiusMeters = p.customRadiusMeters?.takeIf { it > 0.0 }
+                ?: p.customRadius?.takeIf { it > 0.0 }?.times(1000.0)
+
             waypoints += TaskWaypoint(
                 id = waypointId,
                 title = p.title,
@@ -118,7 +125,8 @@ object TaskPersistSerializer {
                 lat = p.lat,
                 lon = p.lon,
                 role = p.role,
-                customRadius = p.customRadius,
+                customRadius = null,
+                customRadiusMeters = resolvedCustomRadiusMeters,
                 customPointType = p.customPointType,
                 customParameters = customParameters
             )
@@ -223,16 +231,22 @@ object TaskPersistSerializer {
             widthMeters = 200.0
         ).toMap()
         WaypointRole.FINISH -> PersistedOzParams(
-            radiusMeters = 3000.0
+            radiusMeters = if (taskType == TaskType.AAT) {
+                AATRadiusAuthority.getRadiusMetersForRole(AATWaypointRole.FINISH)
+            } else {
+                3000.0
+            }
         ).toMap()
         WaypointRole.TURNPOINT, WaypointRole.OPTIONAL -> {
-            if (taskType == TaskType.AAT) PersistedOzParams(
-                radiusMeters = 5000.0,
-                outerRadiusMeters = 5000.0,
-                innerRadiusMeters = 0.0,
-                angleDeg = 90.0
-            ).toMap()
-            else PersistedOzParams(
+            if (taskType == TaskType.AAT) {
+                val defaultRadiusMeters = AATRadiusAuthority.getRadiusMetersForRole(AATWaypointRole.TURNPOINT)
+                PersistedOzParams(
+                    radiusMeters = defaultRadiusMeters,
+                    outerRadiusMeters = defaultRadiusMeters,
+                    innerRadiusMeters = 0.0,
+                    angleDeg = 90.0
+                ).toMap()
+            } else PersistedOzParams(
                 radiusMeters = 500.0
             ).toMap()
         }

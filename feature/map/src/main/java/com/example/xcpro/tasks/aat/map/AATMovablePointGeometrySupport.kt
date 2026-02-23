@@ -5,26 +5,22 @@ import com.example.xcpro.tasks.aat.models.AATAreaShape
 import com.example.xcpro.tasks.aat.models.AATLatLng
 import com.example.xcpro.tasks.aat.models.AATWaypoint
 import kotlin.math.abs
-import kotlin.math.asin
-import kotlin.math.atan2
-import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.sin
 
 internal object AATMovablePointGeometrySupport {
 
     fun isPointInsideArea(waypoint: AATWaypoint, point: AATLatLng): Boolean {
         return when (waypoint.assignedArea.shape) {
             AATAreaShape.CIRCLE, AATAreaShape.LINE -> {
-                val radiusKm = waypoint.assignedArea.radiusMeters / 1000.0
-                val distance = AATMathUtils.calculateDistanceKm(
+                val radiusMeters = waypoint.assignedArea.radiusMeters
+                val distanceMeters = AATMathUtils.calculateDistanceMeters(
                     waypoint.lat,
                     waypoint.lon,
                     point.latitude,
                     point.longitude
                 )
-                distance <= radiusKm
+                distanceMeters <= radiusMeters
             }
 
             AATAreaShape.SECTOR -> isPointInSectorOrKeyhole(waypoint, point)
@@ -43,7 +39,7 @@ internal object AATMovablePointGeometrySupport {
             AATAreaShape.CIRCLE, AATAreaShape.LINE -> clampToCircle(
                 center = center,
                 point = candidate,
-                radiusKm = waypoint.assignedArea.radiusMeters / 1000.0
+                radiusMeters = waypoint.assignedArea.radiusMeters
             )
 
             AATAreaShape.SECTOR -> clampToSectorOrKeyhole(waypoint, candidate)
@@ -55,32 +51,32 @@ internal object AATMovablePointGeometrySupport {
         )
     }
 
-    private fun clampToCircle(center: AATLatLng, point: AATLatLng, radiusKm: Double): AATLatLng {
-        val distance = AATMathUtils.calculateDistanceKm(
+    private fun clampToCircle(center: AATLatLng, point: AATLatLng, radiusMeters: Double): AATLatLng {
+        val distanceMeters = AATMathUtils.calculateDistanceMeters(
             center.latitude,
             center.longitude,
             point.latitude,
             point.longitude
         )
 
-        if (radiusKm <= 0.0 || distance <= radiusKm) return point
+        if (radiusMeters <= 0.0 || distanceMeters <= radiusMeters) return point
         val bearing = AATMathUtils.calculateBearing(center, point)
-        return calculateDestination(center.latitude, center.longitude, bearing, radiusKm)
+        return calculateDestination(center.latitude, center.longitude, bearing, radiusMeters)
     }
 
     private fun clampToSectorOrKeyhole(waypoint: AATWaypoint, point: AATLatLng): AATLatLng {
         val center = AATLatLng(waypoint.lat, waypoint.lon)
-        val distanceKm = AATMathUtils.calculateDistanceKm(
+        val distanceMeters = AATMathUtils.calculateDistanceMeters(
             center.latitude,
             center.longitude,
             point.latitude,
             point.longitude
         )
 
-        val innerRadiusKm = max(0.0, waypoint.assignedArea.innerRadiusMeters / 1000.0)
-        val outerRadiusKm = waypoint.assignedArea.outerRadiusMeters / 1000.0
+        val innerRadiusMeters = max(0.0, waypoint.assignedArea.innerRadiusMeters)
+        val outerRadiusMeters = waypoint.assignedArea.outerRadiusMeters
 
-        if (innerRadiusKm > 0.0 && distanceKm <= innerRadiusKm) {
+        if (innerRadiusMeters > 0.0 && distanceMeters <= innerRadiusMeters) {
             return point
         }
 
@@ -101,8 +97,8 @@ internal object AATMovablePointGeometrySupport {
             )
         }
 
-        val clampedDistance = distanceKm.coerceIn(innerRadiusKm, outerRadiusKm)
-        return calculateDestination(center.latitude, center.longitude, clampedBearing, clampedDistance)
+        val clampedDistanceMeters = distanceMeters.coerceIn(innerRadiusMeters, outerRadiusMeters)
+        return calculateDestination(center.latitude, center.longitude, clampedBearing, clampedDistanceMeters)
     }
 
     private fun clampAngleToSector(angle: Double, startAngle: Double, endAngle: Double): Double {
@@ -124,26 +120,11 @@ internal object AATMovablePointGeometrySupport {
         return min(diff, 360.0 - diff)
     }
 
-    private fun calculateDestination(lat: Double, lon: Double, bearing: Double, distanceKm: Double): AATLatLng {
-        val earthRadiusKm = 6371.0
-        val bearingRad = Math.toRadians(bearing)
-        val latRad = Math.toRadians(lat)
-        val lonRad = Math.toRadians(lon)
-        val angularDistance = distanceKm / earthRadiusKm
-
-        val destLatRad = asin(
-            sin(latRad) * cos(angularDistance) +
-                cos(latRad) * sin(angularDistance) * cos(bearingRad)
-        )
-
-        val destLonRad = lonRad + atan2(
-            sin(bearingRad) * sin(angularDistance) * cos(latRad),
-            cos(angularDistance) - sin(latRad) * sin(destLatRad)
-        )
-
-        return AATLatLng(
-            latitude = Math.toDegrees(destLatRad),
-            longitude = Math.toDegrees(destLonRad)
+    private fun calculateDestination(lat: Double, lon: Double, bearing: Double, distanceMeters: Double): AATLatLng {
+        return AATMathUtils.calculatePointAtBearingMeters(
+            from = AATLatLng(latitude = lat, longitude = lon),
+            bearing = bearing,
+            distanceMeters = distanceMeters
         )
     }
 
@@ -154,21 +135,21 @@ internal object AATMovablePointGeometrySupport {
     }
 
     private fun isPointInSectorOrKeyhole(waypoint: AATWaypoint, point: AATLatLng): Boolean {
-        val distance = AATMathUtils.calculateDistanceKm(
+        val distanceMeters = AATMathUtils.calculateDistanceMeters(
             waypoint.lat,
             waypoint.lon,
             point.latitude,
             point.longitude
         )
 
-        val innerRadiusKm = waypoint.assignedArea.innerRadiusMeters / 1000.0
-        val outerRadiusKm = waypoint.assignedArea.outerRadiusMeters / 1000.0
+        val innerRadiusMeters = waypoint.assignedArea.innerRadiusMeters
+        val outerRadiusMeters = waypoint.assignedArea.outerRadiusMeters
 
-        if (innerRadiusKm > 0.0 && distance <= innerRadiusKm) {
+        if (innerRadiusMeters > 0.0 && distanceMeters <= innerRadiusMeters) {
             return true
         }
 
-        if (distance > outerRadiusKm) {
+        if (distanceMeters > outerRadiusMeters) {
             return false
         }
 

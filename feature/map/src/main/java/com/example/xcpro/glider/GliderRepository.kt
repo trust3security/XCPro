@@ -8,6 +8,7 @@ import com.example.xcpro.common.glider.GliderModel
 import com.example.xcpro.common.glider.ThreePointPolar
 import com.example.xcpro.common.glider.UserPolarCoefficients
 import com.example.xcpro.common.glider.defaultGliderModels
+import com.example.xcpro.common.units.UnitsConverter
 import com.google.gson.Gson
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -61,12 +62,20 @@ class GliderRepository @Inject constructor(
         updateConfig { it.copy(userCoefficients = coeff) }
     }
 
+    fun setIasMinMs(value: Double?) {
+        updateConfig { it.copy(iasMinMs = value) }
+    }
+
+    fun setIasMaxMs(value: Double?) {
+        updateConfig { it.copy(iasMaxMs = value) }
+    }
+
     fun setIasMinKmh(value: Double?) {
-        updateConfig { it.copy(iasMinKmh = value) }
+        setIasMinMs(value?.let(UnitsConverter::kmhToMs))
     }
 
     fun setIasMaxKmh(value: Double?) {
-        updateConfig { it.copy(iasMaxKmh = value) }
+        setIasMaxMs(value?.let(UnitsConverter::kmhToMs))
     }
 
     private fun load() {
@@ -77,7 +86,7 @@ class GliderRepository @Inject constructor(
         }
         if (json != null) {
             try {
-                _config.value = sanitizeConfig(gson.fromJson(json, GliderConfig::class.java))
+                _config.value = loadPersistedConfig(json)
             } catch (_: Exception) { /* keep defaults */ }
         }
     }
@@ -90,16 +99,96 @@ class GliderRepository @Inject constructor(
     }
 
     private fun sanitizeConfig(config: GliderConfig): GliderConfig {
-        val minKmh = config.iasMinKmh?.takeIf { it.isFinite() && it > 0.0 }
-        val maxKmh = config.iasMaxKmh?.takeIf { it.isFinite() && it > 0.0 }
+        val minMs = config.iasMinMs?.takeIf { it.isFinite() && it > 0.0 }
+        val maxMs = config.iasMaxMs?.takeIf { it.isFinite() && it > 0.0 }
         if (config.waterBallastKg > 0.0 && config.hideBallastPill) {
-            return config.copy(hideBallastPill = false, iasMinKmh = minKmh, iasMaxKmh = maxKmh)
+            return config.copy(hideBallastPill = false, iasMinMs = minMs, iasMaxMs = maxMs)
         }
-        return config.copy(iasMinKmh = minKmh, iasMaxKmh = maxKmh)
+        return config.copy(iasMinMs = minMs, iasMaxMs = maxMs)
+    }
+
+    private fun loadPersistedConfig(json: String): GliderConfig {
+        val defaults = GliderConfig()
+        val persisted = gson.fromJson(json, GliderConfigPersistence::class.java) ?: return defaults
+        val threePointPolar = restoreThreePointPolar(persisted.threePointPolar)
+        return sanitizeConfig(
+            GliderConfig(
+                pilotAndGearKg = persisted.pilotAndGearKg ?: defaults.pilotAndGearKg,
+                waterBallastKg = persisted.waterBallastKg ?: defaults.waterBallastKg,
+                bugsPercent = persisted.bugsPercent ?: defaults.bugsPercent,
+                referenceWeightKg = persisted.referenceWeightKg,
+                iasMinMs = restoreSpeedMs(persisted.iasMinMs, persisted.iasMinKmh),
+                iasMaxMs = restoreSpeedMs(persisted.iasMaxMs, persisted.iasMaxKmh),
+                threePointPolar = threePointPolar,
+                userCoefficients = persisted.userCoefficients,
+                ballastDrainMinutes = persisted.ballastDrainMinutes ?: defaults.ballastDrainMinutes,
+                hideBallastPill = persisted.hideBallastPill ?: defaults.hideBallastPill
+            )
+        )
+    }
+
+    private fun restoreSpeedMs(valueMs: Double?, legacyKmh: Double?): Double? =
+        valueMs ?: legacyKmh?.let(UnitsConverter::kmhToMs)
+
+    private fun restoreThreePointPolar(persisted: ThreePointPolarPersistence?): ThreePointPolar? {
+        if (persisted == null) return null
+        val hasAny = listOf(
+            persisted.lowMs,
+            persisted.lowSinkMs,
+            persisted.midMs,
+            persisted.midSinkMs,
+            persisted.highMs,
+            persisted.highSinkMs,
+            persisted.lowKmh,
+            persisted.midKmh,
+            persisted.highKmh
+        ).any { it != null }
+        if (!hasAny) return null
+
+        val defaults = ThreePointPolar()
+        val lowMs = restoreSpeedMs(persisted.lowMs, persisted.lowKmh) ?: defaults.lowMs
+        val midMs = restoreSpeedMs(persisted.midMs, persisted.midKmh) ?: defaults.midMs
+        val highMs = restoreSpeedMs(persisted.highMs, persisted.highKmh) ?: defaults.highMs
+
+        return ThreePointPolar(
+            lowMs = lowMs,
+            lowSinkMs = persisted.lowSinkMs ?: defaults.lowSinkMs,
+            midMs = midMs,
+            midSinkMs = persisted.midSinkMs ?: defaults.midSinkMs,
+            highMs = highMs,
+            highSinkMs = persisted.highSinkMs ?: defaults.highSinkMs
+        )
     }
 
     companion object {
         private const val KEY_SELECTED_ID = "selected_model_id"
         private const val KEY_CONFIG_JSON = "glider_config_json"
     }
+
+    private data class GliderConfigPersistence(
+        val pilotAndGearKg: Double? = null,
+        val waterBallastKg: Double? = null,
+        val bugsPercent: Int? = null,
+        val referenceWeightKg: Double? = null,
+        val iasMinMs: Double? = null,
+        val iasMaxMs: Double? = null,
+        val iasMinKmh: Double? = null,
+        val iasMaxKmh: Double? = null,
+        val threePointPolar: ThreePointPolarPersistence? = null,
+        val userCoefficients: UserPolarCoefficients? = null,
+        val ballastDrainMinutes: Double? = null,
+        val hideBallastPill: Boolean? = null
+    )
+
+    private data class ThreePointPolarPersistence(
+        val lowMs: Double? = null,
+        val lowSinkMs: Double? = null,
+        val midMs: Double? = null,
+        val midSinkMs: Double? = null,
+        val highMs: Double? = null,
+        val highSinkMs: Double? = null,
+        val lowKmh: Double? = null,
+        val midKmh: Double? = null,
+        val highKmh: Double? = null
+    )
 }

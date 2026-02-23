@@ -12,6 +12,10 @@ import kotlin.math.*
  * without dependencies on other task modules.
  */
 class CircleAreaCalculator {
+    private companion object {
+        const val METERS_PER_KILOMETER = 1000.0
+        const val CENTER_TOLERANCE_METERS = 1.0
+    }
     
     /**
      * Check if a point is inside a circular area
@@ -28,8 +32,8 @@ class CircleAreaCalculator {
         }
 
         try {
-            val distance = AATMathUtils.calculateDistance(point, center)
-            return distance <= radius
+            val distanceMeters = distanceMeters(point, center)
+            return distanceMeters <= radius
         } catch (e: Exception) {
             return false
         }
@@ -64,15 +68,15 @@ class CircleAreaCalculator {
         }
 
         try {
-            val distance = AATMathUtils.calculateDistance(from, center)
+            val distanceFromCenterMeters = distanceMeters(from, center)
 
-            if (distance < 0.001) {
+            if (distanceFromCenterMeters < CENTER_TOLERANCE_METERS) {
                 // Point is at the center, return arbitrary point on boundary (north)
-                return AATMathUtils.calculatePointAtBearing(center, 0.0, radius)
+                return AATMathUtils.calculatePointAtBearing(center, 0.0, metersToKilometers(radius))
             }
 
             val bearing = AATMathUtils.calculateBearing(center, from)
-            return AATMathUtils.calculatePointAtBearing(center, bearing, radius)
+            return AATMathUtils.calculatePointAtBearing(center, bearing, metersToKilometers(radius))
         } catch (e: Exception) {
             return center // Return center as safe fallback
         }
@@ -88,16 +92,20 @@ class CircleAreaCalculator {
      * @return Farthest point on the circle boundary
      */
     fun farthestPointOnBoundary(from: AATLatLng, center: AATLatLng, radius: Double): AATLatLng {
-        val distance = AATMathUtils.calculateDistance(from, center)
+        val distanceFromCenterMeters = distanceMeters(from, center)
         
-        if (distance < 0.001) {
+        if (distanceFromCenterMeters < CENTER_TOLERANCE_METERS) {
             // Point is at the center, return arbitrary point on boundary (south)
-            return AATMathUtils.calculatePointAtBearing(center, 180.0, radius)
+            return AATMathUtils.calculatePointAtBearing(center, 180.0, metersToKilometers(radius))
         }
         
         val bearing = AATMathUtils.calculateBearing(center, from)
         val oppositeBearing = (bearing + 180.0) % 360.0
-        return AATMathUtils.calculatePointAtBearing(center, oppositeBearing, radius)
+        return AATMathUtils.calculatePointAtBearing(
+            center,
+            oppositeBearing,
+            metersToKilometers(radius)
+        )
     }
     
     /**
@@ -126,7 +134,7 @@ class CircleAreaCalculator {
         // For AAT, we want the point that is deepest into the area
         // This is the point closest to the center
         return pointsInArea.minByOrNull { point ->
-            AATMathUtils.calculateDistance(point, area.centerPoint)
+            distanceMeters(point, area.centerPoint)
         }
     }
     
@@ -156,7 +164,7 @@ class CircleAreaCalculator {
         
         // For simplicity, we'll use the point that bisects the approach and exit bearings
         val averageBearing = calculateAverageBearing(approachBearing, exitBearing)
-        return AATMathUtils.calculatePointAtBearing(center, averageBearing, radius)
+        return AATMathUtils.calculatePointAtBearing(center, averageBearing, metersToKilometers(radius))
     }
     
     /**
@@ -178,36 +186,46 @@ class CircleAreaCalculator {
         // For AAT purposes, we'll use a simplified approach
         
         val bearing = AATMathUtils.calculateBearing(lineStart, lineEnd)
-        val distanceToCenter = AATMathUtils.calculateDistance(lineStart, center)
-        val bearingToCenter = AATMathUtils.calculateBearing(lineStart, center)
-        
-        val crossTrackDistance = abs(
-            AATMathUtils.calculateCrossTrackDistance(center, lineStart, lineEnd)
+        val crossTrackDistanceMeters = abs(
+            AATMathUtils.calculateCrossTrackDistanceMeters(center, lineStart, lineEnd)
         )
         
-        if (crossTrackDistance > radius) {
+        if (crossTrackDistanceMeters > radius) {
             // Line doesn't intersect circle
             return emptyList()
         }
         
         // Calculate along-track distance to intersection points
-        val alongTrackToCenter = AATMathUtils.calculateAlongTrackDistance(center, lineStart, lineEnd)
-        val halfChordLength = sqrt(radius * radius - crossTrackDistance * crossTrackDistance)
+        val alongTrackToCenterMeters = AATMathUtils.calculateAlongTrackDistanceMeters(
+            center,
+            lineStart,
+            lineEnd
+        )
+        val halfChordLengthMeters =
+            sqrt(radius * radius - crossTrackDistanceMeters * crossTrackDistanceMeters)
         
-        val intersection1Distance = alongTrackToCenter - halfChordLength
-        val intersection2Distance = alongTrackToCenter + halfChordLength
+        val intersection1DistanceMeters = alongTrackToCenterMeters - halfChordLengthMeters
+        val intersection2DistanceMeters = alongTrackToCenterMeters + halfChordLengthMeters
         
         val intersections = mutableListOf<AATLatLng>()
         
-        if (intersection1Distance >= 0) {
+        if (intersection1DistanceMeters >= 0) {
             intersections.add(
-                AATMathUtils.calculatePointAtBearing(lineStart, bearing, intersection1Distance)
+                AATMathUtils.calculatePointAtBearing(
+                    lineStart,
+                    bearing,
+                    metersToKilometers(intersection1DistanceMeters)
+                )
             )
         }
         
-        if (intersection2Distance >= 0 && intersection2Distance != intersection1Distance) {
+        if (intersection2DistanceMeters >= 0 && intersection2DistanceMeters != intersection1DistanceMeters) {
             intersections.add(
-                AATMathUtils.calculatePointAtBearing(lineStart, bearing, intersection2Distance)
+                AATMathUtils.calculatePointAtBearing(
+                    lineStart,
+                    bearing,
+                    metersToKilometers(intersection2DistanceMeters)
+                )
             )
         }
         
@@ -233,7 +251,11 @@ class CircleAreaCalculator {
         
         for (i in 0 until numPoints) {
             val bearing = i * angleStep
-            val point = AATMathUtils.calculatePointAtBearing(center, bearing, radius)
+            val point = AATMathUtils.calculatePointAtBearing(
+                center,
+                bearing,
+                metersToKilometers(radius)
+            )
             points.add(point)
         }
         
@@ -241,22 +263,21 @@ class CircleAreaCalculator {
     }
     
     /**
-     * Calculate the area of the circle in square kilometers
+     * Calculate the area of the circle in square meters.
      */
-    fun calculateAreaSizeKm2(radius: Double): Double {
+    fun calculateAreaSizeMeters2(radius: Double): Double {
         //  CRASH PREVENTION: Validate radius
         if (radius <= 0) {
             return 0.0
         }
 
         try {
-            val radiusKm = radius / 1000.0
-            return PI * radiusKm * radiusKm
+            return PI * radius * radius
         } catch (e: Exception) {
             return 0.0
         }
     }
-    
+
     /**
      * Helper function to calculate the average of two bearings, handling wrap-around
      */
@@ -270,8 +291,8 @@ class CircleAreaCalculator {
      * Returns negative if inside the area
      */
     fun distanceToBoundary(point: AATLatLng, center: AATLatLng, radius: Double): Double {
-        val distanceToCenter = AATMathUtils.calculateDistance(point, center)
-        return distanceToCenter - radius
+        val distanceToCenterMeters = distanceMeters(point, center)
+        return distanceToCenterMeters - radius
     }
     
     /**
@@ -292,5 +313,13 @@ class CircleAreaCalculator {
         // Check if track intersects the circle
         val intersections = calculateLineCircleIntersections(trackStart, trackEnd, center, radius)
         return intersections.isNotEmpty()
+    }
+
+    private fun distanceMeters(from: AATLatLng, to: AATLatLng): Double {
+        return AATMathUtils.calculateDistanceMeters(from, to)
+    }
+
+    private fun metersToKilometers(distanceMeters: Double): Double {
+        return distanceMeters / METERS_PER_KILOMETER
     }
 }

@@ -15,6 +15,9 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.unit.dp
 import android.util.Log
+import com.example.xcpro.common.units.DistanceM
+import com.example.xcpro.common.units.UnitsFormatter
+import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.tasks.racing.models.RacingStartPointType
 
 private const val TAG = "RacingStartPointSelector"
@@ -35,6 +38,7 @@ internal fun RacingStartPointSelector(
     selectedStartType: RacingStartPointType,
     gateWidth: String,
     distanceToNext: RacingStartDistanceUi?,
+    unitsPreferences: UnitsPreferences,
     onStartTypeChange: (RacingStartPointType) -> Unit,
     onGateWidthChange: (String) -> Unit
 ) {
@@ -160,6 +164,10 @@ internal fun RacingStartPointSelector(
 
     // Distance to next turnpoint (already resolved by ViewModel/use-case)
     if (distanceToNext != null) {
+        val distanceLabel = UnitsFormatter.distance(
+            distance = DistanceM(distanceToNext.distanceMeters),
+            preferences = unitsPreferences
+        ).text
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
@@ -180,7 +188,7 @@ internal fun RacingStartPointSelector(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Distance to next turnpoint: ${String.format("%.1f", distanceToNext.distanceKm)} km" +
+                    text = "Distance to next turnpoint: $distanceLabel" +
                         if (distanceToNext.isOptimalCrossing) " (optimal crossing)" else "",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium

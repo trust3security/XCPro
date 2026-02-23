@@ -8,6 +8,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -25,7 +26,6 @@ class OgnTrafficPreferencesRepositoryTest {
     fun setUp() = runBlocking {
         val repository = OgnTrafficPreferencesRepository(context)
         repository.setIconSizePx(OGN_ICON_SIZE_DEFAULT_PX)
-        repository.setShowGliderTrailsEnabled(false)
     }
 
     @After
@@ -80,21 +80,39 @@ class OgnTrafficPreferencesRepositoryTest {
     }
 
     @Test
-    fun showGliderTrailsEnabled_defaultsToFalse() = runTest {
+    fun ownshipHexFlows_defaultToNull() = runTest {
         val repository = OgnTrafficPreferencesRepository(context)
 
-        val current = repository.showGliderTrailsEnabledFlow.first()
-
-        assertEquals(false, current)
+        assertNull(repository.ownFlarmHexFlow.first())
+        assertNull(repository.ownIcaoHexFlow.first())
     }
 
     @Test
-    fun setShowGliderTrailsEnabled_persistsValue() = runTest {
+    fun setOwnFlarmHex_normalizesAndPersists() = runTest {
         val repository = OgnTrafficPreferencesRepository(context)
 
-        repository.setShowGliderTrailsEnabled(true)
-        val current = repository.showGliderTrailsEnabledFlow.first()
+        repository.setOwnFlarmHex("  ddA85c ")
 
-        assertEquals(true, current)
+        assertEquals("DDA85C", repository.ownFlarmHexFlow.first())
     }
+
+    @Test
+    fun setOwnIcaoHex_invalidNonBlankIsIgnored() = runTest {
+        val repository = OgnTrafficPreferencesRepository(context)
+        repository.setOwnIcaoHex("4ca6a4")
+
+        repository.setOwnIcaoHex("not-hex")
+
+        assertEquals("4CA6A4", repository.ownIcaoHexFlow.first())
+    }
+
+    @Test
+    fun setOwnFlarmHex_blankClearsValue() = runTest {
+        val repository = OgnTrafficPreferencesRepository(context)
+        repository.setOwnFlarmHex("dda85c")
+        repository.setOwnFlarmHex(" ")
+
+        assertNull(repository.ownFlarmHexFlow.first())
+    }
+
 }

@@ -160,10 +160,9 @@ class DefaultAATTaskEngine(
             this[TaskWaypointParamKeys.RADIUS_METERS] = radiusMeters
             this[TaskWaypointParamKeys.OUTER_RADIUS_METERS] = radiusMeters
         }
-        updatedWaypoints[index] = targetWaypoint.copy(
-            customRadius = radiusMeters / 1000.0,
-            customParameters = updatedParams
-        )
+        updatedWaypoints[index] = targetWaypoint
+            .withCustomRadiusMeters(radiusMeters)
+            .copy(customParameters = updatedParams)
         publish(
             task = current.copy(waypoints = AATTaskWaypointCodec.normalizeWaypointsForAAT(updatedWaypoints)),
             requestedActiveLeg = _state.value.base.activeLegIndex,
@@ -184,8 +183,7 @@ class DefaultAATTaskEngine(
         for (i in 0 until pathPoints.lastIndex) {
             val from = pathPoints[i]
             val to = pathPoints[i + 1]
-            val distanceKm = AATMathUtils.calculateDistanceKm(from[1], from[0], to[1], to[0])
-            totalMeters += distanceKm * 1000.0
+            totalMeters += AATMathUtils.calculateDistanceMeters(from[1], from[0], to[1], to[0])
         }
         return totalMeters
     }

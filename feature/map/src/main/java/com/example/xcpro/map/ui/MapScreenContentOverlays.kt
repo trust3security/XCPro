@@ -16,12 +16,14 @@ import com.example.xcpro.qnh.QnhCalibrationState
 internal fun MapTaskManagerLayer(
     taskScreenManager: MapTaskScreenManager,
     waypointData: List<WaypointData>,
+    unitsPreferences: UnitsPreferences,
     currentLocation: MapLocationUiModel?,
     currentQnh: String
 ) {
     MapTaskScreenUi.AllTaskScreenComponents(
         taskScreenManager = taskScreenManager,
         allWaypoints = waypointData,
+        unitsPreferences = unitsPreferences,
         currentQNH = currentQnh,
         currentLocation = currentLocation
     )
@@ -34,9 +36,7 @@ internal fun MapActionButtonsLayer(
     showRecenterButton: Boolean,
     showReturnButton: Boolean,
     showDistanceCircles: Boolean,
-    showOgnTraffic: Boolean,
     showOgnThermals: Boolean,
-    showOgnGliderTrails: Boolean,
     showAdsbTraffic: Boolean,
     showForecastOverlay: Boolean,
     showQnhFab: Boolean,
@@ -45,9 +45,7 @@ internal fun MapActionButtonsLayer(
     showRacingReplayFab: Boolean,
     onRecenter: () -> Unit,
     onToggleDistanceCircles: () -> Unit,
-    onToggleOgnTraffic: () -> Unit,
     onToggleOgnThermals: () -> Unit,
-    onToggleOgnGliderTrails: () -> Unit,
     onToggleAdsbTraffic: () -> Unit,
     onShowForecastSheet: () -> Unit,
     onReturn: () -> Unit,
@@ -66,16 +64,12 @@ internal fun MapActionButtonsLayer(
         showRecenterButton = showRecenterButton,
         showReturnButton = showReturnButton,
         showDistanceCircles = showDistanceCircles,
-        showOgnTraffic = showOgnTraffic,
         showOgnThermals = showOgnThermals,
-        showOgnGliderTrails = showOgnGliderTrails,
         showAdsbTraffic = showAdsbTraffic,
         showForecastOverlay = showForecastOverlay,
         onRecenter = onRecenter,
         onToggleDistanceCircles = onToggleDistanceCircles,
-        onToggleOgnTraffic = onToggleOgnTraffic,
         onToggleOgnThermals = onToggleOgnThermals,
-        onToggleOgnGliderTrails = onToggleOgnGliderTrails,
         onToggleAdsbTraffic = onToggleAdsbTraffic,
         onShowForecastSheet = onShowForecastSheet,
         onReturn = onReturn,

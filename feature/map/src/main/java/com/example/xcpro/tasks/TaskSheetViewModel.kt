@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.StateFlow
  * a domain TaskRepository for validation/stats.
  */
 data class RacingStartDistanceUi(
-    val distanceKm: Double,
+    val distanceMeters: Double,
     val isOptimalCrossing: Boolean
 )
 
@@ -108,18 +108,17 @@ class TaskSheetViewModel @Inject constructor(
         )
     }
 
-    fun distanceToActiveWaypointKm(lat: Double, lon: Double): Double? {
+    fun distanceToActiveWaypointMeters(lat: Double, lon: Double): Double? {
         val state = uiState.value
         val leg = state.stats.activeIndex
         val waypoint = state.task.waypoints.getOrNull(leg) ?: return null
         val target = state.targets.getOrNull(leg)?.target
-        val distanceMeters = useCase.distanceMeters(
+        return useCase.distanceMeters(
             fromLat = lat,
             fromLon = lon,
             toLat = target?.lat ?: waypoint.lat,
             toLon = target?.lon ?: waypoint.lon
         )
-        return distanceMeters / 1000.0
     }
 
     fun resolveRacingStartDistanceUi(
@@ -128,22 +127,22 @@ class TaskSheetViewModel @Inject constructor(
         nextWaypoint: TaskWaypoint
     ): RacingStartDistanceUi {
         val useOptimalCrossing = selectedStartType == RacingStartPointType.START_LINE
-        val distanceKm = taskCoordinator.calculateDistanceToNextWaypointKm(
+        val distanceMeters = taskCoordinator.calculateDistanceToNextWaypointMeters(
             fromWaypoint = startWaypoint,
             nextWaypoint = nextWaypoint,
             useOptimalStartLine = useOptimalCrossing
         )
         return RacingStartDistanceUi(
-            distanceKm = distanceKm,
+            distanceMeters = distanceMeters,
             isOptimalCrossing = useOptimalCrossing
         )
     }
 
-    fun calculateDistanceToNextWaypointKm(
+    fun calculateDistanceToNextWaypointMeters(
         fromWaypoint: TaskWaypoint,
         nextWaypoint: TaskWaypoint
     ): Double {
-        return taskCoordinator.calculateDistanceToNextWaypointKm(
+        return taskCoordinator.calculateDistanceToNextWaypointMeters(
             fromWaypoint = fromWaypoint,
             nextWaypoint = nextWaypoint,
             useOptimalStartLine = false
@@ -190,20 +189,20 @@ class TaskSheetViewModel @Inject constructor(
         startType: Any?,
         finishType: Any?,
         turnType: Any?,
-        gateWidth: Double?,
-        keyholeInnerRadius: Double?,
+        gateWidthMeters: Double?,
+        keyholeInnerRadiusMeters: Double?,
         keyholeAngle: Double?,
-        faiQuadrantOuterRadius: Double?
+        faiQuadrantOuterRadiusMeters: Double?
     ) = mutate {
         taskCoordinator.updateWaypointPointType(
             index = index,
             startType = startType,
             finishType = finishType,
             turnType = turnType,
-            gateWidth = gateWidth,
-            keyholeInnerRadius = keyholeInnerRadius,
+            gateWidthMeters = gateWidthMeters,
+            keyholeInnerRadiusMeters = keyholeInnerRadiusMeters,
             keyholeAngle = keyholeAngle,
-            faiQuadrantOuterRadius = faiQuadrantOuterRadius
+            faiQuadrantOuterRadiusMeters = faiQuadrantOuterRadiusMeters
         )
     }
 
@@ -211,25 +210,25 @@ class TaskSheetViewModel @Inject constructor(
         taskCoordinator.updateAATArea(index, radiusMeters)
     }
 
-    fun onUpdateAATWaypointPointType(
+    fun onUpdateAATWaypointPointTypeMeters(
         index: Int,
         startType: Any?,
         finishType: Any?,
         turnType: Any?,
-        gateWidth: Double?,
-        keyholeInnerRadius: Double?,
+        gateWidthMeters: Double?,
+        keyholeInnerRadiusMeters: Double?,
         keyholeAngle: Double?,
-        sectorOuterRadius: Double?
+        sectorOuterRadiusMeters: Double?
     ) = mutate {
-        taskCoordinator.updateAATWaypointPointType(
+        taskCoordinator.updateAATWaypointPointTypeMeters(
             index = index,
             startType = startType,
             finishType = finishType,
             turnType = turnType,
-            gateWidth = gateWidth,
-            keyholeInnerRadius = keyholeInnerRadius,
+            gateWidthMeters = gateWidthMeters,
+            keyholeInnerRadiusMeters = keyholeInnerRadiusMeters,
             keyholeAngle = keyholeAngle,
-            sectorOuterRadius = sectorOuterRadius
+            sectorOuterRadiusMeters = sectorOuterRadiusMeters
         )
     }
 
@@ -302,15 +301,15 @@ class TaskSheetViewModel @Inject constructor(
         if (radiusMeters != null) {
             taskCoordinator.updateAATArea(index, radiusMeters)
         }
-        taskCoordinator.updateAATWaypointPointType(
+        taskCoordinator.updateAATWaypointPointTypeMeters(
             index = index,
             startType = null,
             finishType = null,
             turnType = null,
-            gateWidth = radiusMeters?.div(1000.0),
-            keyholeInnerRadius = ozParams.innerRadiusMeters?.div(1000.0),
+            gateWidthMeters = radiusMeters,
+            keyholeInnerRadiusMeters = ozParams.innerRadiusMeters,
             keyholeAngle = ozParams.angleDeg,
-            sectorOuterRadius = ozParams.outerRadiusMeters?.div(1000.0)
+            sectorOuterRadiusMeters = ozParams.outerRadiusMeters
         )
     }
 
@@ -321,16 +320,16 @@ class TaskSheetViewModel @Inject constructor(
     ) {
         if (radiusMeters == null) return
         if (index <= 0 || index >= importedTask.waypoints.lastIndex) return
-        // best-effort: use gateWidth for turnpoints (km)
+        // Best-effort import for racing turnpoint cylinder radius.
         taskCoordinator.updateWaypointPointType(
             index = index,
             startType = null,
             finishType = null,
             turnType = null,
-            gateWidth = radiusMeters / 1000.0,
-            keyholeInnerRadius = null,
+            gateWidthMeters = radiusMeters,
+            keyholeInnerRadiusMeters = null,
             keyholeAngle = null,
-            faiQuadrantOuterRadius = null
+            faiQuadrantOuterRadiusMeters = null
         )
     }
 

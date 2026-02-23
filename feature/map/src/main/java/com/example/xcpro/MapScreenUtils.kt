@@ -69,7 +69,7 @@ fun convertToRealTimeFlightData(
     val compassReliable = compass != null && compass.accuracy != SensorManager.SENSOR_STATUS_UNRELIABLE
     val hasGpsFix = gps != null
     val windVector = windState?.vector
-    val hasWind = windVector != null && windState.quality > 0 && windVector.speed > 0.5
+    val hasWind = windState?.isAvailable == true && windVector != null && windVector.speed > 0.5
     val windFromDeg = if (hasWind) {
         ((windVector!!.directionFromDeg % 360.0) + 360.0) % 360.0
     } else {

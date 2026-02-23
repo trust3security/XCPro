@@ -29,7 +29,7 @@ internal class RacingGeometryCoordinator(
                 generateStartLine(index, waypoint, allWaypoints)
             }
             RacingStartPointType.START_CYLINDER -> {
-                generateCylinder(waypoint, waypoint.gateWidth * 1000.0, "start") // Convert km to meters
+                generateCylinder(waypoint, waypoint.gateWidthMeters, "start")
             }
             RacingStartPointType.FAI_START_SECTOR -> {
                 // Use dedicated FAIStartSectorDisplay class instead of inline geometry
@@ -67,7 +67,7 @@ internal class RacingGeometryCoordinator(
                 generateFinishLine(index, waypoint, allWaypoints)
             }
             RacingFinishPointType.FINISH_CYLINDER -> {
-                generateCylinder(waypoint, waypoint.gateWidth * 1000.0, "finish") // Convert km to meters
+                generateCylinder(waypoint, waypoint.gateWidthMeters, "finish")
             }
         }
     }
@@ -92,8 +92,7 @@ internal class RacingGeometryCoordinator(
     fun generateTurnpointGeometry(index: Int, waypoint: RacingWaypoint, allWaypoints: List<RacingWaypoint>): String? {
         return when (waypoint.turnPointType) {
             RacingTurnPointType.TURN_POINT_CYLINDER -> {
-                val radiusMeters = waypoint.gateWidth * 1000.0
-                generateCylinder(waypoint, radiusMeters, "turnpoint") // Convert km to meters
+                generateCylinder(waypoint, waypoint.gateWidthMeters, "turnpoint")
             }
             RacingTurnPointType.FAI_QUADRANT -> {
                 generateFAIQuadrant(index, waypoint, allWaypoints)

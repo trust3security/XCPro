@@ -7,13 +7,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalDensity
 import org.maplibre.android.maps.MapLibreMap
+import com.example.xcpro.tasks.aat.calculations.AATMathUtils
 import com.example.xcpro.tasks.aat.models.AATWaypoint
 import com.example.xcpro.tasks.aat.models.AATLatLng
 import com.example.xcpro.tasks.aat.map.AATMapCoordinateConverter
 import com.example.xcpro.tasks.aat.map.AATMapCoordinateConverterFactory
-import kotlin.math.*
 
 /**
  * AAT Long Press Overlay for Pin Dragging
@@ -112,29 +111,14 @@ private fun checkWaypointHit(
     val tapLatLng = converter.screenToMap(offset.x, offset.y) ?: return null
 
     waypoints.forEachIndexed { index, waypoint ->
-        val distance = haversineDistance(
-            tapLatLng.latitude, tapLatLng.longitude,
-            waypoint.lat, waypoint.lon
+        val distanceMeters = AATMathUtils.calculateDistanceMeters(
+            AATLatLng(tapLatLng.latitude, tapLatLng.longitude),
+            AATLatLng(waypoint.lat, waypoint.lon)
         )
-        val areaRadiusKm = waypoint.assignedArea.radiusMeters / 1000.0
 
-        if (distance <= areaRadiusKm) {
+        if (distanceMeters <= waypoint.assignedArea.radiusMeters) {
             return index
         }
     }
     return null
-}
-
-/**
- * Calculate haversine distance between two points in kilometers
- */
-private fun haversineDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
-    val earthRadius = 6371.0 // km
-    val dLat = Math.toRadians(lat2 - lat1)
-    val dLon = Math.toRadians(lon2 - lon1)
-    val a = sin(dLat / 2) * sin(dLat / 2) +
-            cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) *
-            sin(dLon / 2) * sin(dLon / 2)
-    val c = 2 * atan2(sqrt(a), sqrt(1 - a))
-    return earthRadius * c
 }

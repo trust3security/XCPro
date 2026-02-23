@@ -11,16 +11,12 @@ import kotlin.math.*
  * Uses geometric optimization to find the optimal touch point on cylinder edge.
  */
 class CylinderCalculator : TurnPointCalculator {
-    
-    companion object {
-        private const val EARTH_RADIUS_KM = 6371.0 // FAI Earth model
-    }
-    
+
     override fun calculateOptimalTouchPoint(waypoint: RacingWaypoint, context: TaskContext): Pair<Double, Double> {
         val previousWaypoint = context.previousWaypoint
         val nextWaypoint = context.nextWaypoint ?: return Pair(waypoint.lat, waypoint.lon)
-        
-        val radiusKm = waypoint.gateWidth
+
+        val radiusMeters = waypoint.gateWidthMeters
         
         // Calculate optimal touch point using geometric approximation
         val fromPoint = if (previousWaypoint != null) {
@@ -37,11 +33,11 @@ class CylinderCalculator : TurnPointCalculator {
             val testPoint = RacingGeometryUtils.calculateDestinationPoint(
                 waypoint.lat, waypoint.lon,
                 angle.toDouble(), // Already in degrees
-                radiusKm * 1000.0 // Convert km to meters
+                radiusMeters
             )
-            
-            val distFromPrev = RacingGeometryUtils.haversineDistance(fromPoint.first, fromPoint.second, testPoint.first, testPoint.second)
-            val distToNext = RacingGeometryUtils.haversineDistance(testPoint.first, testPoint.second, nextWaypoint.lat, nextWaypoint.lon)
+
+            val distFromPrev = RacingGeometryUtils.haversineDistanceMeters(fromPoint.first, fromPoint.second, testPoint.first, testPoint.second)
+            val distToNext = RacingGeometryUtils.haversineDistanceMeters(testPoint.first, testPoint.second, nextWaypoint.lat, nextWaypoint.lon)
             val totalDistance = distFromPrev + distToNext
             
             if (totalDistance < minTotalDistance) {
@@ -53,25 +49,25 @@ class CylinderCalculator : TurnPointCalculator {
         return optimalPoint
     }
     
-    override fun calculateDistance(from: RacingWaypoint, to: RacingWaypoint): Double {
-        return RacingGeometryUtils.haversineDistance(from.lat, from.lon, to.lat, to.lon)
+    override fun calculateDistanceMeters(from: RacingWaypoint, to: RacingWaypoint): Double {
+        return RacingGeometryUtils.haversineDistanceMeters(from.lat, from.lon, to.lat, to.lon)
     }
     
     override fun isWithinObservationZone(position: Pair<Double, Double>, waypoint: RacingWaypoint): Boolean {
-        val distance = RacingGeometryUtils.haversineDistance(position.first, position.second, waypoint.lat, waypoint.lon)
-        return distance <= waypoint.gateWidth
+        val distanceMeters = RacingGeometryUtils.haversineDistanceMeters(position.first, position.second, waypoint.lat, waypoint.lon)
+        return distanceMeters <= waypoint.gateWidthMeters
     }
     
-    override fun getEffectiveRadius(waypoint: RacingWaypoint): Double {
-        return waypoint.gateWidth
+    override fun getEffectiveRadiusMeters(waypoint: RacingWaypoint): Double {
+        return waypoint.gateWidthMeters
     }
     
     /**
      * Calculate optimal cylinder entry point for finish
      */
     fun calculateOptimalEntryPoint(cylinder: RacingWaypoint, fromWaypoint: RacingWaypoint): Pair<Double, Double> {
-        val radiusKm = cylinder.gateWidth
-        
+        val radiusMeters = cylinder.gateWidthMeters
+
         // Calculate bearing from previous waypoint to cylinder center
         val bearing = RacingGeometryUtils.calculateBearing(fromWaypoint.lat, fromWaypoint.lon, cylinder.lat, cylinder.lon)
         
@@ -79,7 +75,7 @@ class CylinderCalculator : TurnPointCalculator {
         return RacingGeometryUtils.calculateDestinationPoint(
             cylinder.lat, cylinder.lon,
             bearing + 180.0, // Already in degrees
-            radiusKm * 1000.0 // Convert km to meters
+            radiusMeters
         )
     }
     

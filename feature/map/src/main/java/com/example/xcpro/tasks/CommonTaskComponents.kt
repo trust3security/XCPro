@@ -22,6 +22,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.xcpro.common.units.DistanceM
+import com.example.xcpro.common.units.UnitsFormatter
+import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.waypoint.SearchWaypoint
 import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.common.waypoint.toSearchWaypoint
@@ -37,9 +40,15 @@ import com.example.xcpro.tasks.domain.logic.TaskAdvanceState
 fun TaskStatsSection(
     task: Task,
     taskType: TaskType,
-    distanceKm: Double,
+    distanceMeters: Double,
+    unitsPreferences: UnitsPreferences,
     onQRCodeClick: () -> Unit
 ) {
+    val formattedDistance = UnitsFormatter.distance(
+        distance = DistanceM(distanceMeters),
+        preferences = unitsPreferences
+    ).text
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -48,7 +57,7 @@ fun TaskStatsSection(
     ) {
         TaskStatItem(
             label = "Distance",
-            value = "${String.format("%.1f", distanceKm)} km",
+            value = formattedDistance,
             icon = Icons.Default.Straighten
         )
 

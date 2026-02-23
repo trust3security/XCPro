@@ -84,7 +84,7 @@ internal class ReplaySampleEmitter(
             accuracy = 3,
             timestamp = current.timestampMillis
         )
-        emitAirspeedSample(current)
+        emitAirspeedSample(current, qnhHpa)
         val igcVario = IgcReplayMath.verticalSpeed(current, previous)
         Log.d(
             TAG,
@@ -105,7 +105,7 @@ internal class ReplaySampleEmitter(
         return (timestampMillis - lastGpsEmitTimestamp) >= stepMs
     }
 
-    private fun emitAirspeedSample(point: IgcPoint) {
+    private fun emitAirspeedSample(point: IgcPoint, qnhHpa: Double) {
         val indicatedKmh = point.indicatedAirspeedKmh
         val trueKmh = point.trueAirspeedKmh
         if (indicatedKmh == null && trueKmh == null) {
@@ -114,7 +114,7 @@ internal class ReplaySampleEmitter(
         }
 
         val altitudeMeters = (point.pressureAltitude ?: point.gpsAltitude).takeIf { it.isFinite() } ?: 0.0
-        val densityRatio = computeDensityRatio(altitudeMeters)
+        val densityRatio = computeDensityRatio(altitudeMeters, qnhHpa)
         val indicatedMs: Double
         val trueMs: Double
 
@@ -144,13 +144,17 @@ internal class ReplaySampleEmitter(
 
     private fun kmhToMs(valueKmh: Double): Double = valueKmh * KMH_TO_MS
 
-    private fun computeDensityRatio(altitudeMeters: Double): Double {
+    private fun computeDensityRatio(altitudeMeters: Double, qnhHpa: Double): Double {
         val tempSeaLevelK = FlightMetricsConstants.SEA_LEVEL_TEMP_CELSIUS + 273.15
         val theta = 1.0 + (FlightMetricsConstants.TEMP_LAPSE_RATE_C_PER_M * altitudeMeters) / tempSeaLevelK
         if (theta <= 0.0) return 0.0
         val exponent = (-FlightMetricsConstants.GRAVITY /
             (FlightMetricsConstants.GAS_CONSTANT * FlightMetricsConstants.TEMP_LAPSE_RATE_C_PER_M)) - 1.0
-        return theta.pow(exponent)
+        val standardDensityRatio = theta.pow(exponent)
+        val qnhRatio = (qnhHpa / FlightMetricsConstants.SEA_LEVEL_PRESSURE_HPA)
+            .takeIf { it.isFinite() && it > 0.0 }
+            ?: 1.0
+        return standardDensityRatio * qnhRatio
     }
 
     companion object {

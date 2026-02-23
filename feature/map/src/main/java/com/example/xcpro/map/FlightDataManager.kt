@@ -132,7 +132,7 @@ class FlightDataManager(
 
     val nettoDisplayFlow: StateFlow<Float> =
         liveFlightDataFlow
-            .map { (it?.netto ?: 0f).bucket(VARIO_BUCKET_MS) }
+            .map { (it?.displayNetto ?: 0.0).toFloat().bucket(VARIO_BUCKET_MS) }
             .distinctUntilChanged()
             .throttleFrame(UI_NUMERIC_FRAME_MS)
             .stateIn(

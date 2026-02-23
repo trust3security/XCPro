@@ -28,13 +28,16 @@ internal fun calculateBisectorBearing(
     return (avgBearing + 90) % 360 // Perpendicular for maximum distance
 }
 
-/** Destination point given start, bearing, distance (km). */
-internal fun calculateDestination(lat: Double, lon: Double, bearing: Double, distanceKm: Double): AATLatLng {
-    val earthRadiusKm = 6371.0
+private const val EARTH_RADIUS_KM = 6371.0
+private const val METERS_PER_KILOMETER = 1000.0
+private const val EARTH_RADIUS_METERS = EARTH_RADIUS_KM * METERS_PER_KILOMETER
+
+/** Destination point given start, bearing, distance (meters). */
+internal fun calculateDestinationMeters(lat: Double, lon: Double, bearing: Double, distanceMeters: Double): AATLatLng {
     val bearingRad = Math.toRadians(bearing)
     val latRad = Math.toRadians(lat)
     val lonRad = Math.toRadians(lon)
-    val angularDistance = distanceKm / earthRadiusKm
+    val angularDistance = distanceMeters / EARTH_RADIUS_METERS
 
     val destLatRad = asin(
         sin(latRad) * cos(angularDistance) +
@@ -52,14 +55,13 @@ internal fun calculateDestination(lat: Double, lon: Double, bearing: Double, dis
     )
 }
 
-/** Haversine distance (km). */
-internal fun haversineDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
-    val earthRadiusKm = 6371.0
+/** Haversine distance (meters). */
+internal fun haversineDistanceMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
     val dLat = Math.toRadians(lat2 - lat1)
     val dLon = Math.toRadians(lon2 - lon1)
     val a = sin(dLat / 2) * sin(dLat / 2) +
         cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) *
         sin(dLon / 2) * sin(dLon / 2)
     val c = 2 * atan2(sqrt(a), sqrt(1 - a))
-    return earthRadiusKm * c
+    return EARTH_RADIUS_METERS * c
 }

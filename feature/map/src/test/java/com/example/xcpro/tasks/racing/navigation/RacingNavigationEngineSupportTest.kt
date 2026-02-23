@@ -20,10 +20,10 @@ class RacingNavigationEngineSupportTest {
     @Test
     fun buildTaskSignature_changesWhenWaypointParametersChange() {
         val base = buildTask(
-            turnpointGateWidthKm = 0.5
+            turnpointGateWidthMeters = 500.0
         )
         val modified = buildTask(
-            turnpointGateWidthKm = 1.2
+            turnpointGateWidthMeters = 1_200.0
         )
 
         val baseSignature = buildTaskSignature(base)
@@ -51,7 +51,7 @@ class RacingNavigationEngineSupportTest {
 
     @Test
     fun shouldEvaluateTransitions_falseWhenCurrentAndPreviousFixesAreFarOutsideRadius() {
-        val task = buildTask(turnpointGateWidthKm = 0.001)
+        val task = buildTask(turnpointGateWidthMeters = 1.0)
         val waypoint = task.waypoints[1]
         val previousFix = RacingNavigationFix(
             lat = waypoint.lat,
@@ -78,7 +78,7 @@ class RacingNavigationEngineSupportTest {
 
     @Test
     fun shouldEvaluateTransitions_trueWhenPreviousFixWasInsideRadiusWindow() {
-        val task = buildTask(turnpointGateWidthKm = 0.2)
+        val task = buildTask(turnpointGateWidthMeters = 200.0)
         val waypoint = task.waypoints[1]
         val previousFix = RacingNavigationFix(
             lat = waypoint.lat,
@@ -103,7 +103,7 @@ class RacingNavigationEngineSupportTest {
         assertTrue(shouldEvaluate)
     }
 
-    private fun buildTask(turnpointGateWidthKm: Double = 0.5): SimpleRacingTask {
+    private fun buildTask(turnpointGateWidthMeters: Double = 500.0): SimpleRacingTask {
         val start = RacingWaypoint.createWithStandardizedDefaults(
             id = "start",
             title = "Start",
@@ -121,7 +121,7 @@ class RacingNavigationEngineSupportTest {
             lon = 0.1,
             role = RacingWaypointRole.TURNPOINT,
             turnPointType = RacingTurnPointType.TURN_POINT_CYLINDER,
-            customGateWidth = turnpointGateWidthKm
+            customGateWidthMeters = turnpointGateWidthMeters
         )
         val finish = RacingWaypoint.createWithStandardizedDefaults(
             id = "finish",

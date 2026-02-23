@@ -15,7 +15,6 @@ import com.example.xcpro.tasks.aat.models.*
  * - Actual distance: Distance through pilot's chosen credited fixes
  */
 class AATDistanceCalculator {
-    
     private val areaBoundaryCalculator = AreaBoundaryCalculator()
     private val interactiveDistanceCalculator = AATInteractiveDistanceCalculator()
     
@@ -177,21 +176,21 @@ class AATDistanceCalculator {
      * just as the minimum task time is reached.
      * 
      * @param task The AAT task
-     * @param expectedAverageSpeed Expected average speed in km/h
+     * @param expectedAverageSpeedMs Expected average speed in m/s
      * @return Optimal distance in meters
      */
     fun calculateOptimalDistanceForMinimumTime(
         task: AATTask,
-        expectedAverageSpeed: Double
+        expectedAverageSpeedMs: Double
     ): Double {
-        val minimumTimeHours = task.minimumTaskTime.toMinutes() / 60.0
-        val targetDistance = expectedAverageSpeed * minimumTimeHours * 1000.0 // Convert to meters
-        
+        val minimumTimeSeconds = task.minimumTaskTime.toMillis() / 1000.0
+        val targetDistanceMeters = expectedAverageSpeedMs * minimumTimeSeconds
+
         val minimumDistance = calculateMinimumDistance(task)
         val maximumDistance = calculateMaximumDistance(task)
         
         // Clamp target distance to achievable range
-        return targetDistance.coerceIn(minimumDistance, maximumDistance)
+        return targetDistanceMeters.coerceIn(minimumDistance, maximumDistance)
     }
     
     /**
@@ -234,8 +233,8 @@ class AATDistanceCalculator {
         
         // Find the candidate that results in the longest total path
         return candidates.maxByOrNull { candidate ->
-            AATMathUtils.calculateDistance(previousPoint, candidate) +
-            AATMathUtils.calculateDistance(candidate, nextPoint)
+            AATMathUtils.calculateDistanceMeters(previousPoint, candidate) +
+            AATMathUtils.calculateDistanceMeters(candidate, nextPoint)
         } ?: area.centerPoint
     }
     
@@ -247,9 +246,12 @@ class AATDistanceCalculator {
         
         var totalDistance = 0.0
         for (i in 1 until waypoints.size) {
-            totalDistance += AATMathUtils.calculateDistance(waypoints[i - 1], waypoints[i])
+            totalDistance += AATMathUtils.calculateDistanceMeters(
+                waypoints[i - 1],
+                waypoints[i]
+            )
         }
-        
+
         return totalDistance
     }
     
@@ -261,7 +263,10 @@ class AATDistanceCalculator {
         
         val legDistances = mutableListOf<Double>()
         for (i in 1 until waypoints.size) {
-            val distance = AATMathUtils.calculateDistance(waypoints[i - 1], waypoints[i])
+            val distance = AATMathUtils.calculateDistanceMeters(
+                waypoints[i - 1],
+                waypoints[i]
+            )
             legDistances.add(distance)
         }
         

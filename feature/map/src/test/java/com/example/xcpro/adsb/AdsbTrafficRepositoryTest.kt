@@ -980,6 +980,71 @@ class AdsbTrafficRepositoryTest {
     }
 
     @Test
+    fun updateDisplayFilters_clampsMaxDistance_andPropagatesToProviderBbox() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val provider = CapturingBboxProvider()
+        val repository = AdsbTrafficRepositoryImpl(
+            providerClient = provider,
+            tokenRepository = FakeTokenRepository(),
+            clock = FakeClock(monoMs = 0L, wallMs = 0L),
+            dispatcher = dispatcher
+        )
+        val centerLat = -33.8688
+        val centerLon = 151.2093
+
+        repository.updateCenter(latitude = centerLat, longitude = centerLon)
+        repository.setEnabled(true)
+        runCurrent()
+
+        assertTrue(provider.capturedBboxes.isNotEmpty())
+        assertBboxApproximatelyEquals(
+            expected = AdsbGeoMath.computeBbox(
+                centerLat = centerLat,
+                centerLon = centerLon,
+                radiusKm = ADSB_MAX_DISTANCE_DEFAULT_KM.toDouble()
+            ),
+            actual = provider.capturedBboxes[0]
+        )
+
+        repository.updateDisplayFilters(
+            maxDistanceKm = ADSB_MAX_DISTANCE_MIN_KM - 100,
+            verticalAboveMeters = 5_000.0,
+            verticalBelowMeters = 5_000.0
+        )
+        repository.reconnectNow()
+        runCurrent()
+
+        assertTrue(provider.capturedBboxes.size >= 2)
+        assertBboxApproximatelyEquals(
+            expected = AdsbGeoMath.computeBbox(
+                centerLat = centerLat,
+                centerLon = centerLon,
+                radiusKm = ADSB_MAX_DISTANCE_MIN_KM.toDouble()
+            ),
+            actual = provider.capturedBboxes[1]
+        )
+
+        repository.updateDisplayFilters(
+            maxDistanceKm = ADSB_MAX_DISTANCE_MAX_KM + 100,
+            verticalAboveMeters = 5_000.0,
+            verticalBelowMeters = 5_000.0
+        )
+        repository.reconnectNow()
+        runCurrent()
+
+        assertTrue(provider.capturedBboxes.size >= 3)
+        assertBboxApproximatelyEquals(
+            expected = AdsbGeoMath.computeBbox(
+                centerLat = centerLat,
+                centerLon = centerLon,
+                radiusKm = ADSB_MAX_DISTANCE_MAX_KM.toDouble()
+            ),
+            actual = provider.capturedBboxes[2]
+        )
+        repository.stop()
+    }
+
+    @Test
     fun ownshipAltitudeUpdate_appliesVerticalFilterWithoutNewFetch() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val provider = SequenceProvider(
@@ -1156,6 +1221,26 @@ class AdsbTrafficRepositoryTest {
         override fun invalidate() {
             token = null
         }
+    }
+
+    private class CapturingBboxProvider : AdsbProviderClient {
+        val capturedBboxes = mutableListOf<BBox>()
+
+        override suspend fun fetchStates(bbox: BBox, auth: AdsbAuth?): ProviderResult {
+            capturedBboxes += bbox
+            return ProviderResult.Success(
+                response = OpenSkyResponse(timeSec = 1_710_000_000L, states = emptyList()),
+                httpCode = 200,
+                remainingCredits = null
+            )
+        }
+    }
+
+    private fun assertBboxApproximatelyEquals(expected: BBox, actual: BBox) {
+        assertEquals(expected.lamin, actual.lamin, 1e-6)
+        assertEquals(expected.lomin, actual.lomin, 1e-6)
+        assertEquals(expected.lamax, actual.lamax, 1e-6)
+        assertEquals(expected.lomax, actual.lomax, 1e-6)
     }
 
     private class FakeNetworkAvailabilityPort(

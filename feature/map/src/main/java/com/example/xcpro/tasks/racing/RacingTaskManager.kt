@@ -33,6 +33,9 @@ data class TouchPointResult(
 )
 
 class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInterface {
+    private companion object {
+        const val METERS_PER_KILOMETER = 1000.0
+    }
 
     private val racingTaskPersistence = context?.let { RacingTaskPersistence(it) }
 
@@ -76,7 +79,8 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
                         RacingWaypointRole.TURNPOINT -> WaypointRole.TURNPOINT
                         RacingWaypointRole.FINISH -> WaypointRole.FINISH
                     },
-                    customRadius = waypoint.gateWidth,
+                    customRadius = null,
+                    customRadiusMeters = waypoint.gateWidthMeters,
                     customPointType = when (waypoint.role) {
                         RacingWaypointRole.START -> waypoint.startPointType.name
                         RacingWaypointRole.FINISH -> waypoint.finishPointType.name
@@ -84,9 +88,9 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
                     },
                     customParameters = mutableMapOf<String, Any>().apply {
                         RacingWaypointCustomParams(
-                            keyholeInnerRadius = waypoint.keyholeInnerRadius,
+                            keyholeInnerRadiusMeters = waypoint.keyholeInnerRadiusMeters,
                             keyholeAngle = waypoint.keyholeAngle,
-                            faiQuadrantOuterRadius = waypoint.faiQuadrantOuterRadius
+                            faiQuadrantOuterRadiusMeters = waypoint.faiQuadrantOuterRadiusMeters
                         ).applyTo(this)
                     }
                 )
@@ -104,21 +108,24 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
         _currentLeg = 0
     }
 
-    fun calculateRacingDistance(): Double {
+    fun calculateRacingDistanceMeters(): Double {
         if (_currentRacingTask.waypoints.size < 2) return 0.0
 
         val optimalPath = racingTaskCalculator.findOptimalFAIPath(_currentRacingTask.waypoints)
 
         if (optimalPath.size < 2) return 0.0
 
-        var totalDistance = 0.0
+        var totalDistanceMeters = 0.0
         for (i in 0 until optimalPath.size - 1) {
             val from = optimalPath[i]
             val to = optimalPath[i + 1]
-            totalDistance += RacingGeometryUtils.haversineDistance(from.first, from.second, to.first, to.second)
+            totalDistanceMeters += RacingGeometryUtils.haversineDistanceMeters(from.first, from.second, to.first, to.second)
         }
-        return totalDistance
+        return totalDistanceMeters
     }
+
+    private fun calculateRacingDistanceKmBoundary(): Double =
+        calculateRacingDistanceMeters() / METERS_PER_KILOMETER
 
     fun getOptimalRacingPath(): List<Pair<Double, Double>> {
         return racingTaskCalculator.findOptimalFAIPath(_currentRacingTask.waypoints)
@@ -151,10 +158,10 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
         startType: RacingStartPointType? = null,
         finishType: RacingFinishPointType? = null,
         turnType: RacingTurnPointType? = null,
-        gateWidth: Double? = null,
-        keyholeInnerRadius: Double? = null,
+        gateWidthMeters: Double? = null,
+        keyholeInnerRadiusMeters: Double? = null,
         keyholeAngle: Double? = null,
-        faiQuadrantOuterRadius: Double? = null
+        faiQuadrantOuterRadiusMeters: Double? = null
     ) {
         _currentRacingTask = waypointManager.updateWaypointType(
             _currentRacingTask,
@@ -162,10 +169,10 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
             startType,
             finishType,
             turnType,
-            gateWidth,
-            keyholeInnerRadius,
+            gateWidthMeters,
+            keyholeInnerRadiusMeters,
             keyholeAngle,
-            faiQuadrantOuterRadius
+            faiQuadrantOuterRadiusMeters
         )
         saveRacingTask()
     }
@@ -175,20 +182,20 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
         startType: Any?,
         finishType: Any?,
         turnType: Any?,
-        gateWidth: Double?,
-        keyholeInnerRadius: Double?,
+        gateWidthMeters: Double?,
+        keyholeInnerRadiusMeters: Double?,
         keyholeAngle: Double?,
-        faiQuadrantOuterRadius: Double?
+        faiQuadrantOuterRadiusMeters: Double?
     ) {
         updateRacingWaypointType(
             index = index,
             startType = startType as? RacingStartPointType,
             finishType = finishType as? RacingFinishPointType,
             turnType = turnType as? RacingTurnPointType,
-            gateWidth = gateWidth,
-            keyholeInnerRadius = keyholeInnerRadius,
+            gateWidthMeters = gateWidthMeters,
+            keyholeInnerRadiusMeters = keyholeInnerRadiusMeters,
             keyholeAngle = keyholeAngle,
-            faiQuadrantOuterRadius = faiQuadrantOuterRadius
+            faiQuadrantOuterRadiusMeters = faiQuadrantOuterRadiusMeters
         )
     }
 
@@ -197,9 +204,15 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
         lineLon: Double,
         targetLat: Double,
         targetLon: Double,
-        lineWidth: Double
+        lineWidthMeters: Double
     ): Pair<Double, Double> {
-        return RacingGeometryUtils.calculateOptimalLineCrossingPoint(lineLat, lineLon, targetLat, targetLon, lineWidth)
+        return RacingGeometryUtils.calculateOptimalLineCrossingPoint(
+            lineLat = lineLat,
+            lineLon = lineLon,
+            targetLat = targetLat,
+            targetLon = targetLon,
+            lineWidthMeters = lineWidthMeters
+        )
     }
 
     fun replaceRacingWaypoint(index: Int, newWaypoint: SearchWaypoint) {
@@ -267,12 +280,11 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
     }
 
     fun getRacingTaskSummary(): String {
-        return racingTaskPersistence?.getRacingTaskSummary(_currentRacingTask) { calculateRacingDistance() } ?: "Racing Task: No persistence available"
+        return racingTaskPersistence?.getRacingTaskSummary(_currentRacingTask) { calculateRacingDistanceKmBoundary() } ?: "Racing Task: No persistence available"
     }
 
-    fun calculateRacingTaskDistance(): Double {
-        return racingTaskPersistence?.calculateRacingTaskDistance(_currentRacingTask) { calculateRacingDistance() } ?: 0.0
-    }
+    fun calculateRacingTaskDistanceMeters(): Double =
+        (racingTaskPersistence?.calculateRacingTaskDistance(_currentRacingTask) { calculateRacingDistanceKmBoundary() } ?: 0.0) * METERS_PER_KILOMETER
 
     fun getSavedRacingTasks(): List<String> {
         return racingTaskPersistence?.getSavedRacingTasks() ?: emptyList()
@@ -299,12 +311,11 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
         return _currentRacingTask.waypoints.size >= 2
     }
 
-    fun calculateSegmentDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
-        return RacingGeometryUtils.haversineDistance(lat1, lon1, lat2, lon2)
-    }
+    fun calculateSegmentDistanceMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double =
+        RacingGeometryUtils.haversineDistanceMeters(lat1, lon1, lat2, lon2)
 
-    fun calculateDistanceToCurrentWaypointEntry(gpsLat: Double, gpsLon: Double): Double? {
-        return racingTaskCalculator.calculateDistanceToOptimalEntry(
+    fun calculateDistanceToCurrentWaypointEntryMeters(gpsLat: Double, gpsLon: Double): Double? {
+        return racingTaskCalculator.calculateDistanceToOptimalEntryMeters(
             gpsLat = gpsLat,
             gpsLon = gpsLon,
             waypointIndex = currentLeg,
@@ -313,6 +324,6 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
     }
 
     fun getRacingTaskParameters(): String {
-        return racingTaskPersistence?.getRacingTaskParameters(_currentRacingTask) { calculateRacingDistance() } ?: "Racing Task: No persistence available"
+        return racingTaskPersistence?.getRacingTaskParameters(_currentRacingTask) { calculateRacingDistanceKmBoundary() } ?: "Racing Task: No persistence available"
     }
 }

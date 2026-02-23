@@ -7,7 +7,6 @@ import com.example.xcpro.tasks.aat.models.AATTaskDistance
  * Determines competition compliance from validation issues and task metrics.
  */
 internal class AATCompetitionComplianceEvaluator {
-
     fun assess(
         criticalErrors: List<AATValidationIssue>,
         warnings: List<AATValidationIssue>,
@@ -19,7 +18,7 @@ internal class AATCompetitionComplianceEvaluator {
 
         val minimumDistanceCompliant = taskDistance?.let { distance ->
             competitionClass?.let { cls ->
-                (distance.minimumDistance / 1000.0) >= cls.minDistance
+                distance.minimumDistance >= cls.minDistanceMeters
             } ?: true
         } ?: false
 

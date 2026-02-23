@@ -8,16 +8,16 @@ import java.util.Locale
 
 internal object OgnDdbJsonParser {
 
-    fun parse(json: String): Map<String, OgnTrafficIdentity> {
+    fun parse(json: String): List<OgnDdbEntry> {
         val rootElement = JsonParser.parseString(json)
         val devices = when {
             rootElement.isJsonObject -> parseDevicesArray(rootElement.asJsonObject)
             rootElement.isJsonArray -> rootElement.asJsonArray
             else -> JsonArray()
         }
-        if (devices.size() == 0) return emptyMap()
+        if (devices.size() == 0) return emptyList()
 
-        val identities = LinkedHashMap<String, OgnTrafficIdentity>(devices.size())
+        val entries = ArrayList<OgnDdbEntry>(devices.size())
         for (entry in devices) {
             val obj = entry.takeIf { it.isJsonObject }?.asJsonObject ?: continue
             val deviceId = obj.readString("device_id")
@@ -25,7 +25,7 @@ internal object OgnDdbJsonParser {
                 ?.takeIf { it.length == 6 && it.all { ch -> ch in '0'..'9' || ch in 'A'..'F' } }
                 ?: continue
 
-            identities[deviceId] = OgnTrafficIdentity(
+            val identity = OgnTrafficIdentity(
                 registration = obj.readString("registration"),
                 competitionNumber = obj.readString("cn"),
                 aircraftModel = obj.readString("aircraft_model"),
@@ -33,8 +33,13 @@ internal object OgnDdbJsonParser {
                 identified = obj.readBooleanFromYn("identified"),
                 aircraftTypeCode = obj.readString("aircraft_type")?.toIntOrNull()
             )
+            entries += OgnDdbEntry(
+                addressType = ognAddressTypeFromDdbDeviceType(obj.readString("device_type")),
+                deviceIdHex = deviceId,
+                identity = identity
+            )
         }
-        return identities
+        return entries
     }
 
     private fun parseDevicesArray(root: JsonObject): JsonArray {
@@ -65,3 +70,9 @@ internal object OgnDdbJsonParser {
         return runCatching { asString }.getOrNull()
     }
 }
+
+internal data class OgnDdbEntry(
+    val addressType: OgnAddressType,
+    val deviceIdHex: String,
+    val identity: OgnTrafficIdentity
+)

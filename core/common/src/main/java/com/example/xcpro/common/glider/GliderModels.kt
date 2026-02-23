@@ -1,17 +1,48 @@
 package com.example.xcpro.common.glider
 
+import com.example.xcpro.common.units.UnitsConverter
+
 data class PolarPoint(
-    val kmh: Double,
+    val speedMs: Double,
     val sinkMs: Double
-)
+) {
+    val kmh: Double
+        get() = UnitsConverter.msToKmh(speedMs)
+
+    companion object {
+        fun fromKmh(kmh: Double, sinkMs: Double): PolarPoint =
+            PolarPoint(speedMs = UnitsConverter.kmhToMs(kmh), sinkMs = sinkMs)
+    }
+}
 
 data class PolarCoefficients(
     val a: Double?,
     val b: Double?,
     val c: Double?,
-    val minKmh: Double = 50.0,
-    val maxKmh: Double = 200.0
-)
+    val minMs: Double = UnitsConverter.kmhToMs(50.0),
+    val maxMs: Double = UnitsConverter.kmhToMs(200.0)
+) {
+    val minKmh: Double
+        get() = UnitsConverter.msToKmh(minMs)
+    val maxKmh: Double
+        get() = UnitsConverter.msToKmh(maxMs)
+
+    companion object {
+        fun fromKmh(
+            a: Double?,
+            b: Double?,
+            c: Double?,
+            minKmh: Double = 50.0,
+            maxKmh: Double = 200.0
+        ): PolarCoefficients = PolarCoefficients(
+            a = a,
+            b = b,
+            c = c,
+            minMs = UnitsConverter.kmhToMs(minKmh),
+            maxMs = UnitsConverter.kmhToMs(maxKmh)
+        )
+    }
+}
 
 data class WaterBallastCapacity(
     val mainWingLiters: Int? = null,
@@ -49,9 +80,9 @@ data class GliderModel(
     val emptyWeightKg: Int? = null,
     val maxWeightKg: Int? = null,
     val bestLD: Double? = null,
-    val bestLDSpeedKmh: Double? = null,
+    val bestLDSpeedMs: Double? = null,
     val minSinkMs: Double? = null,
-    val minSinkSpeedKmh: Double? = null,
+    val minSinkSpeedMs: Double? = null,
     val polar: PolarCoefficients? = null,
     val points: List<PolarPoint>? = null,
     val pointsLight: List<PolarPoint>? = null,
@@ -62,7 +93,12 @@ data class GliderModel(
     val stallSpeeds: List<StallSpeedsAtWeight>? = null,
     val minWingLoadingKgM2: Double? = null,
     val maxWingLoadingKgM2: Double? = null
-)
+) {
+    val bestLDSpeedKmh: Double?
+        get() = bestLDSpeedMs?.let(UnitsConverter::msToKmh)
+    val minSinkSpeedKmh: Double?
+        get() = minSinkSpeedMs?.let(UnitsConverter::msToKmh)
+}
 
 fun defaultGliderModels(): List<GliderModel> = listOf(
     GliderModel(
@@ -72,26 +108,32 @@ fun defaultGliderModels(): List<GliderModel> = listOf(
         wingSpanM = 18.0,
         wingAreaM2 = 10.93,
         bestLD = 50.0,
-        bestLDSpeedKmh = 105.0,
+        bestLDSpeedMs = UnitsConverter.kmhToMs(105.0),
         minSinkMs = 0.51,
-        minSinkSpeedKmh = 75.0,
-        polar = PolarCoefficients(a = 0.389, b = -0.0137, c = 0.00074, minKmh = 60.0, maxKmh = 180.0),
+        minSinkSpeedMs = UnitsConverter.kmhToMs(75.0),
+        polar = PolarCoefficients.fromKmh(
+            a = 0.389,
+            b = -0.0137,
+            c = 0.00074,
+            minKmh = 60.0,
+            maxKmh = 180.0
+        ),
         points = listOf(
-            PolarPoint(60.0, 0.65),
-            PolarPoint(70.0, 0.53),
-            PolarPoint(75.0, 0.51),
-            PolarPoint(80.0, 0.52),
-            PolarPoint(90.0, 0.56),
-            PolarPoint(100.0, 0.65),
-            PolarPoint(105.0, 0.68),
-            PolarPoint(110.0, 0.72),
-            PolarPoint(120.0, 0.84),
-            PolarPoint(130.0, 0.99),
-            PolarPoint(140.0, 1.16),
-            PolarPoint(150.0, 1.36),
-            PolarPoint(160.0, 1.59),
-            PolarPoint(170.0, 1.85),
-            PolarPoint(180.0, 2.14)
+            PolarPoint.fromKmh(60.0, 0.65),
+            PolarPoint.fromKmh(70.0, 0.53),
+            PolarPoint.fromKmh(75.0, 0.51),
+            PolarPoint.fromKmh(80.0, 0.52),
+            PolarPoint.fromKmh(90.0, 0.56),
+            PolarPoint.fromKmh(100.0, 0.65),
+            PolarPoint.fromKmh(105.0, 0.68),
+            PolarPoint.fromKmh(110.0, 0.72),
+            PolarPoint.fromKmh(120.0, 0.84),
+            PolarPoint.fromKmh(130.0, 0.99),
+            PolarPoint.fromKmh(140.0, 1.16),
+            PolarPoint.fromKmh(150.0, 1.36),
+            PolarPoint.fromKmh(160.0, 1.59),
+            PolarPoint.fromKmh(170.0, 1.85),
+            PolarPoint.fromKmh(180.0, 2.14)
         ),
         water = WaterBallastCapacity(
             mainWingLiters = 192,
@@ -108,25 +150,25 @@ fun defaultGliderModels(): List<GliderModel> = listOf(
         emptyWeightKg = 330,
         maxWeightKg = 720,
         bestLD = 60.0,
-        bestLDSpeedKmh = 120.0,
+        bestLDSpeedMs = UnitsConverter.kmhToMs(120.0),
         minSinkMs = 0.48,
         polar = null,
         pointsLight = listOf(
-            PolarPoint(75.0, 0.55),
-            PolarPoint(90.0, 0.58),
-            PolarPoint(100.0, 0.60),
-            PolarPoint(120.0, 0.70),
-            PolarPoint(150.0, 1.20),
-            PolarPoint(180.0, 1.90)
+            PolarPoint.fromKmh(75.0, 0.55),
+            PolarPoint.fromKmh(90.0, 0.58),
+            PolarPoint.fromKmh(100.0, 0.60),
+            PolarPoint.fromKmh(120.0, 0.70),
+            PolarPoint.fromKmh(150.0, 1.20),
+            PolarPoint.fromKmh(180.0, 1.90)
         ),
         pointsHeavy = listOf(
-            PolarPoint(90.0, 0.70),
-            PolarPoint(110.0, 0.72),
-            PolarPoint(120.0, 0.75),
-            PolarPoint(150.0, 1.10),
-            PolarPoint(180.0, 1.60),
-            PolarPoint(200.0, 2.00),
-            PolarPoint(240.0, 3.50)
+            PolarPoint.fromKmh(90.0, 0.70),
+            PolarPoint.fromKmh(110.0, 0.72),
+            PolarPoint.fromKmh(120.0, 0.75),
+            PolarPoint.fromKmh(150.0, 1.10),
+            PolarPoint.fromKmh(180.0, 1.60),
+            PolarPoint.fromKmh(200.0, 2.00),
+            PolarPoint.fromKmh(240.0, 3.50)
         ),
         water = WaterBallastCapacity(
             mainWingLiters = 180,

@@ -28,6 +28,9 @@ class OgnAprsLineParserTest {
         assertEquals(-2.30632, parsed.verticalSpeedMps!!, 1e-5)
         assertEquals("DDDEAD", parsed.deviceIdHex)
         assertEquals(8.8, parsed.signalDb!!, 1e-6)
+        assertEquals(2, parsed.identity?.aircraftTypeCode)
+        assertEquals(OgnAddressType.FLARM, parsed.addressType)
+        assertEquals("FLARM:DDDEAD", parsed.canonicalKey)
     }
 
     @Test
@@ -66,6 +69,8 @@ class OgnAprsLineParserTest {
         assertEquals(84.88326, parsed.groundSpeedMps!!, 1e-3)
         assertEquals(-4.22656, parsed.verticalSpeedMps!!, 1e-5)
         assertEquals("4CA6A4", parsed.deviceIdHex)
+        assertEquals(OgnAddressType.ICAO, parsed.addressType)
+        assertEquals("ICAO:4CA6A4", parsed.canonicalKey)
     }
 
     @Test
@@ -76,6 +81,21 @@ class OgnAprsLineParserTest {
 
         assertNotNull(parsed)
         assertEquals("484D20", parsed?.deviceIdHex)
+        assertNull(parsed?.identity?.aircraftTypeCode)
+        assertEquals(OgnAddressType.ICAO, parsed?.addressType)
+    }
+
+    @Test
+    fun parseTraffic_doesNotInferAircraftTypeFromUntypedIdToken() {
+        val line =
+            "FLRDDDEAD>APRS,qAS,EDER:/114500h5029.86N/00956.98E'342/049/A=005524 idDDDEAD"
+
+        val parsed = parser.parseTraffic(line, receivedAtMillis = 1_700_000_000_000)
+
+        assertNotNull(parsed)
+        assertEquals("DDDEAD", parsed?.deviceIdHex)
+        assertNull(parsed?.identity?.aircraftTypeCode)
+        assertEquals(OgnAddressType.FLARM, parsed?.addressType)
     }
 
     @Test
@@ -109,5 +129,26 @@ class OgnAprsLineParserTest {
 
         assertNotNull(parsed)
         assertNull(parsed?.trackDegrees)
+    }
+
+    @Test
+    fun parseTraffic_rejectsMalformedSevenHexIdToken() {
+        val line =
+            "FLRABC123>APRS,qAS,EDER:/114500h5029.86N/00956.98E'342/049/A=005524 idABC1234"
+
+        val parsed = parser.parseTraffic(line, receivedAtMillis = 1_700_000_000_000)
+
+        assertNull(parsed)
+    }
+
+    @Test
+    fun parseTraffic_infersTypeFromCallsignWithSsidSuffix() {
+        val line = "ICA484D20-1>APRS,TCPIP*,qAC,GLIDERN1:!4903.50N/07201.75W^110/064/A=001000"
+
+        val parsed = parser.parseTraffic(line, receivedAtMillis = 1_700_000_000_000)
+
+        assertNotNull(parsed)
+        assertEquals("484D20", parsed?.deviceIdHex)
+        assertEquals(OgnAddressType.ICAO, parsed?.addressType)
     }
 }

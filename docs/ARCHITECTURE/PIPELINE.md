@@ -54,10 +54,13 @@ DI bindings:
 Fusion entry:
 - `feature/map/src/main/java/com/example/xcpro/sensors/SensorFusionRepositoryFactory.kt`
   - builds a `SensorFusionRepository` using a `SensorDataSource`.
+  - selects source-aware airspeed feed (`@LiveSource` vs `@ReplaySource` `AirspeedDataSource`)
+    and injects it into the fusion engine.
 - `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculator.kt`
   - thin wrapper around `FlightDataCalculatorEngine`.
 - `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngine.kt`
   - owns fusion loops, filters, metrics use case, and audio controller.
+  - caches latest external/replay airspeed sample from `AirspeedDataSource`.
 
 Loops (two decoupled loops):
 - `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt`
@@ -78,6 +81,8 @@ Filters and vario:
 Metrics use case:
 - `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt`
   - TE/netto, display smoothing, circling detection, LD, thermal metrics.
+  - airspeed selection priority is now:
+    `EXTERNAL/REPLAY (fresh+valid) -> WIND_VECTOR (quality-gated) -> GPS_GROUND fallback`.
   - Owns deterministic windows and is testable without Android.
 
 Mapping to SSOT model:
@@ -90,6 +95,7 @@ Emission:
 - `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataEmitter.kt`
   - builds `FlightDisplaySnapshot`, maps to `CompleteFlightData`,
     and publishes to `flightDataFlow`.
+  - forwards cached external/replay airspeed sample into `FlightMetricsRequest`.
 
 ## 3) SSOT Repository + Source Gating
 
@@ -145,10 +151,16 @@ Map bindings:
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenBindings.kt`
   - Binds `mapLocation` into UI state.
   - Binds `ognIconSizePx` and `adsbIconSizePx` from settings for runtime overlay sizing.
+  - Filters OGN glider-trail segments by selected OGN aircraft keys from trail-selection SSOT.
 
 OGN settings path:
 - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
-  - SSOT for OGN overlay enabled + icon size + `showThermalsEnabled` + `showGliderTrailsEnabled` preferences.
+  - SSOT for OGN overlay enabled + icon size + `showThermalsEnabled` + ownship IDs
+    (`ownFlarmHex`, `ownIcaoHex`) preferences.
+- `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrailSelectionPreferencesRepository.kt`
+  - SSOT for selected OGN aircraft keys used by trail display filtering.
+- `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrailSelectionViewModel.kt`
+  - Observes OGN suppressed-key stream and prunes suppressed keys from persisted trail selections.
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt`
   - `OgnTrafficUseCase` exposes OGN settings, thermal-hotspot flows, and OGN glider trail segment flows.
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
@@ -165,12 +177,14 @@ OGN settings path:
   - Applies thermal metrics only on fresh OGN samples per target (`lastSeenMillis` monotonic freshness gate).
   - Prunes freshness-cache entries for absent targets after timeout to avoid unbounded session growth while preserving stale-present target protection.
   - Runs repository-side housekeeping timers so thermal continuity/missing finalization occurs even when upstream target lists are quiet.
+  - Consumes repository suppression keys and purges ownship-derived trackers/hotspots in-session.
 - `feature/map/src/main/java/com/example/xcpro/map/OgnThermalOverlay.kt`
   - Renders color-coded thermal hotspots using snail-trail climb palette indexing.
 - `feature/map/src/main/java/com/example/xcpro/ogn/OgnGliderTrailRepository.kt`
   - Derives per-glider OGN trail segments from fresh OGN target samples.
   - Owns sink/climb style mapping (color index + asymmetric width) and bounded in-memory retention.
   - Uses injected monotonic clock for deterministic retention housekeeping.
+  - Consumes repository suppression keys and purges ownship-derived trail samples/segments in-session.
 - `feature/map/src/main/java/com/example/xcpro/map/OgnGliderTrailOverlay.kt`
   - Renders line segments using precomputed OGN trail style properties from repository output.
 
@@ -188,6 +202,10 @@ OGN lifecycle/position semantics:
 - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficRepository.kt`
   - Uses APRS radius filtering and client-side haversine filtering at 150 km radius
     (300 km diameter contract around user position).
+  - Applies ownship suppression by typed transport identity before publishing targets
+    (`FLARM:HEX` / `ICAO:HEX` match only).
+  - Exposes suppression diagnostics as canonical key set in snapshot (`suppressedTargetIds`).
+  - Uses canonical typed keys internally for target cache identity and collision-safe selection paths.
   - Client-side filtering is evaluated against latest requested GPS center so the
     300 km diameter policy stays user-centered between reconnects.
   - Socket subscription reconnects when requested center moves >= 20 km from
@@ -198,7 +216,7 @@ OGN lifecycle/position semantics:
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
   - OGN traffic overlay renders `emptyList()` when overlay preference is disabled.
   - Thermal overlay renders `emptyList()` unless `ognOverlayEnabled && showThermalsEnabled`.
-  - OGN glider-trail overlay renders `emptyList()` unless `ognOverlayEnabled && showGliderTrailsEnabled`.
+  - OGN glider-trail overlay renders `emptyList()` unless `ognOverlayEnabled`; per-aircraft filtering is applied from selected OGN aircraft keys.
 - `feature/map/src/main/java/com/example/xcpro/ogn/OgnMarkerDetailsSheet.kt`
   - Renders selected OGN target details in a `ModalBottomSheet`.
 - `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalDetailsSheet.kt`
@@ -461,6 +479,10 @@ Flight state:
 Replay sensors:
 - `feature/map/src/main/java/com/example/xcpro/replay/ReplaySensorSource.kt`
   - `SensorDataSource` implementation for replay samples.
+- `feature/map/src/main/java/com/example/xcpro/replay/ReplaySampleEmitter.kt`
+  - emits replay airspeed samples (IAS/TAS) into `ReplayAirspeedRepository`.
+  - when only IAS or only TAS is present in IGC extensions, reconstructs the missing
+    component using altitude + QNH-aware density ratio.
 
 Replay pipeline:
 - `feature/map/src/main/java/com/example/xcpro/replay/ReplayPipeline.kt`

@@ -67,7 +67,6 @@ internal fun MapScreenOverlayEffects(
     ognThermalHotspots: List<OgnThermalHotspot>,
     showOgnThermalsEnabled: Boolean,
     ognGliderTrailSegments: List<OgnGliderTrailSegment>,
-    showOgnGliderTrailsEnabled: Boolean,
     ognIconSizePx: Int,
     adsbTargets: List<AdsbTrafficUiModel>,
     adsbOverlayEnabled: Boolean,
@@ -86,9 +85,9 @@ internal fun MapScreenOverlayEffects(
             if (ognOverlayEnabled && showOgnThermalsEnabled) ognThermalHotspots else emptyList()
         )
     }
-    LaunchedEffect(ognGliderTrailSegments, ognOverlayEnabled, showOgnGliderTrailsEnabled) {
+    LaunchedEffect(ognGliderTrailSegments, ognOverlayEnabled) {
         overlayManager.updateOgnGliderTrailSegments(
-            if (ognOverlayEnabled && showOgnGliderTrailsEnabled) ognGliderTrailSegments else emptyList()
+            if (ognOverlayEnabled) ognGliderTrailSegments else emptyList()
         )
     }
     LaunchedEffect(ognIconSizePx) {

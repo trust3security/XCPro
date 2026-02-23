@@ -9,6 +9,7 @@ import com.example.xcpro.tasks.domain.model.GeoPoint
 import com.example.xcpro.tasks.domain.model.TaskTargetSnapshot
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -23,7 +24,7 @@ class TaskPersistSerializerFidelityTest {
             lat = 45.0,
             lon = 7.0,
             role = WaypointRole.TURNPOINT,
-            customRadius = 2.2,
+            customRadiusMeters = 2200.0,
             customPointType = "KEYHOLE",
             customParameters = mapOf(
                 TaskWaypointParamKeys.OZ_TYPE to "SEGMENT",
@@ -46,6 +47,7 @@ class TaskPersistSerializerFidelityTest {
 
         assertEquals("fidelity-task", persisted.taskId)
         assertEquals(2.2, persistedWaypoint.customRadius ?: Double.NaN, 1e-9)
+        assertEquals(2200.0, persistedWaypoint.customRadiusMeters ?: Double.NaN, 1e-9)
         assertEquals("KEYHOLE", persistedWaypoint.customPointType)
         assertEquals("SEGMENT", persistedWaypoint.ozType)
         assertEquals(6200.0, persistedWaypoint.ozParams["radiusMeters"] ?: Double.NaN, 1e-9)
@@ -98,7 +100,8 @@ class TaskPersistSerializerFidelityTest {
         val turnpoint = task.waypoints[1]
 
         assertEquals("reconstructed", task.id)
-        assertEquals(0.9, turnpoint.customRadius ?: Double.NaN, 1e-9)
+        assertNull(turnpoint.customRadius)
+        assertEquals(900.0, turnpoint.customRadiusMeters ?: Double.NaN, 1e-9)
         assertEquals("CYLINDER", turnpoint.customPointType)
         assertEquals(123.0, turnpoint.customParameters["foo"] as Double, 1e-9)
 
@@ -150,5 +153,33 @@ class TaskPersistSerializerFidelityTest {
         assertEquals(true, persistedWaypoint.targetLocked)
         assertEquals(45.09, persistedWaypoint.targetLat ?: Double.NaN, 1e-9)
         assertEquals(7.09, persistedWaypoint.targetLon ?: Double.NaN, 1e-9)
+    }
+
+    @Test
+    fun `toTask converts legacy km radius into canonical meters and clears legacy field`() {
+        val persisted = TaskPersistSerializer.PersistedTask(
+            taskId = "legacy-km",
+            taskType = TaskType.AAT,
+            waypoints = listOf(
+                TaskPersistSerializer.PersistedWaypoint(
+                    id = "tp1",
+                    title = "TP1",
+                    subtitle = "",
+                    lat = 45.0,
+                    lon = 7.0,
+                    role = WaypointRole.TURNPOINT,
+                    ozType = "SEGMENT",
+                    ozParams = mapOf("radiusMeters" to 2500.0),
+                    customRadius = 2.5,
+                    customRadiusMeters = null
+                )
+            )
+        )
+
+        val (task, _) = TaskPersistSerializer.toTask(persisted)
+        val waypoint = task.waypoints.single()
+
+        assertNull(waypoint.customRadius)
+        assertEquals(2500.0, waypoint.customRadiusMeters ?: Double.NaN, 1e-9)
     }
 }

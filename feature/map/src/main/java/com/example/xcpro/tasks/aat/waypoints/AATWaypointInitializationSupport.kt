@@ -55,8 +55,7 @@ internal object AATWaypointInitializationSupport {
                 WaypointRole.FINISH -> AATWaypointRole.FINISH
             }
 
-            val radiusKm = AATRadiusAuthority.getRadiusForRole(aatRole)
-            val radiusMeters = radiusKm * 1000.0
+            val radiusMeters = AATRadiusAuthority.getRadiusMetersForRole(aatRole)
 
             val aatShape = when (genericWaypoint.customPointType) {
                 "CIRCLE" -> AATAreaShape.CIRCLE

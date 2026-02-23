@@ -7,7 +7,6 @@ import com.example.xcpro.tasks.aat.models.AATStartType
 import com.example.xcpro.tasks.aat.models.AATTask
 
 internal class AATTaskDisplayGeometryBuilder {
-
     fun generateStartGeometry(task: AATTask): DisplayGeometry? {
         return when (task.start.type) {
             AATStartType.LINE -> {
@@ -76,12 +75,12 @@ internal class AATTaskDisplayGeometryBuilder {
     ): DisplayGeometry {
         val halfLength = length / 2.0
 
-        val point1 = AATMathUtils.calculatePointAtBearing(
+        val point1 = AATMathUtils.calculatePointAtBearingMeters(
             center,
             bearing,
             halfLength
         )
-        val point2 = AATMathUtils.calculatePointAtBearing(
+        val point2 = AATMathUtils.calculatePointAtBearingMeters(
             center,
             (bearing + 180.0) % 360.0,
             halfLength
@@ -98,7 +97,7 @@ internal class AATTaskDisplayGeometryBuilder {
 
         for (i in 0..numPoints) {
             val bearing = i * 360.0 / numPoints
-            val point = AATMathUtils.calculatePointAtBearing(
+            val point = AATMathUtils.calculatePointAtBearingMeters(
                 center,
                 bearing,
                 radius
@@ -127,7 +126,7 @@ internal class AATTaskDisplayGeometryBuilder {
         val numPoints = 32
         for (i in 0..numPoints) {
             val angle = startAngle + (endAngle - startAngle) * i / numPoints
-            val point = AATMathUtils.calculatePointAtBearing(
+            val point = AATMathUtils.calculatePointAtBearingMeters(
                 center,
                 angle,
                 radius

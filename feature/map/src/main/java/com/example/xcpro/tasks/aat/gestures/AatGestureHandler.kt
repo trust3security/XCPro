@@ -13,7 +13,7 @@ import com.example.xcpro.tasks.core.WaypointRole
 import kotlin.math.sqrt
 import org.maplibre.android.maps.MapLibreMap
 
-private const val DEFAULT_RADIUS_KM = 10.0
+private const val DEFAULT_RADIUS_METERS = 10_000.0
 
 fun findAatWaypointHitForMapPoint(
     mapLat: Double,
@@ -25,15 +25,15 @@ fun findAatWaypointHitForMapPoint(
 
     waypoints.forEachIndexed { index, waypoint ->
         if (waypoint.role != WaypointRole.TURNPOINT) return@forEachIndexed
-        val radiusKm = waypoint.customRadius ?: DEFAULT_RADIUS_KM
-        val distanceKm = AATMathUtils.calculateDistanceKm(
+        val radiusMeters = waypoint.resolvedCustomRadiusMeters() ?: DEFAULT_RADIUS_METERS
+        val distanceMeters = AATMathUtils.calculateDistanceMeters(
             mapLat,
             mapLon,
             waypoint.lat,
             waypoint.lon
         )
-        if (distanceKm <= radiusKm && distanceKm < closestDistance) {
-            closestDistance = distanceKm
+        if (distanceMeters <= radiusMeters && distanceMeters < closestDistance) {
+            closestDistance = distanceMeters
             closestIndex = index
         }
     }
@@ -132,8 +132,8 @@ class AatGestureHandler(
 
     private fun enterEditMode(index: Int) {
         val waypoint = waypointsProvider().getOrNull(index) ?: return
-        val radiusKm = waypoint.customRadius ?: DEFAULT_RADIUS_KM
-        callbacks.onEnterEditMode(index, waypoint.lat, waypoint.lon, radiusKm)
+        val radiusMeters = waypoint.resolvedCustomRadiusMeters() ?: DEFAULT_RADIUS_METERS
+        callbacks.onEnterEditMode(index, waypoint.lat, waypoint.lon, radiusMeters)
         editModeIndex = index
     }
 

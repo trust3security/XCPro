@@ -180,7 +180,7 @@ class RacingTaskStorage(private val context: Context) {
                 CupFormatUtils.csvEscape("0m"),
                 CupFormatUtils.csvEscape("1"),
                 CupFormatUtils.csvEscape(""),
-                CupFormatUtils.csvEscape("${(waypoint.gateWidth * 1000).toInt()}m"),
+                CupFormatUtils.csvEscape("${waypoint.gateWidthMeters.toInt()}m"),
                 CupFormatUtils.csvEscape(""),
                 CupFormatUtils.csvEscape(waypoint.subtitle.take(120))
             ).joinToString(",")

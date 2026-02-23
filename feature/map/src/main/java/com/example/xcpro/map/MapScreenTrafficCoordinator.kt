@@ -3,8 +3,10 @@ package com.example.xcpro.map
 import com.example.xcpro.adsb.AdsbTrafficUiModel
 import com.example.xcpro.adsb.Icao24
 import com.example.xcpro.map.model.MapLocationUiModel
+import com.example.xcpro.ogn.normalizeOgnAircraftKey
 import com.example.xcpro.ogn.OgnTrafficTarget
 import com.example.xcpro.ogn.OgnThermalHotspot
+import com.example.xcpro.ogn.selectionSetContainsOgnKey
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,7 +32,6 @@ internal class MapScreenTrafficCoordinator(
     private val rawOgnTargets: StateFlow<List<OgnTrafficTarget>>,
     private val selectedOgnId: MutableStateFlow<String?>,
     private val showThermalsEnabled: StateFlow<Boolean>,
-    private val showGliderTrailsEnabled: StateFlow<Boolean>,
     private val thermalHotspots: StateFlow<List<OgnThermalHotspot>>,
     private val selectedThermalId: MutableStateFlow<String?>,
     private val rawAdsbTargets: StateFlow<List<AdsbTrafficUiModel>>,
@@ -127,7 +128,14 @@ internal class MapScreenTrafficCoordinator(
         rawOgnTargets
             .onEach { targets ->
                 val selectedId = selectedOgnId.value ?: return@onEach
-                if (targets.none { it.id == selectedId }) {
+                val normalizedSelectedId = normalizeOgnAircraftKey(selectedId)
+                if (targets.none { target ->
+                        selectionSetContainsOgnKey(
+                            selectedKeys = setOf(normalizedSelectedId),
+                            candidateKey = target.canonicalKey
+                        ) || normalizeOgnAircraftKey(target.id) == normalizedSelectedId
+                    }
+                ) {
                     selectedOgnId.value = null
                 }
             }
@@ -174,13 +182,6 @@ internal class MapScreenTrafficCoordinator(
             if (!next) {
                 selectedThermalId.value = null
             }
-        }
-    }
-
-    fun onToggleOgnGliderTrails() {
-        scope.launch {
-            val next = !showGliderTrailsEnabled.value
-            ognTrafficUseCase.setShowGliderTrailsEnabled(next)
         }
     }
 

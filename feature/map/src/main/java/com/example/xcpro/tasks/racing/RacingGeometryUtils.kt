@@ -9,6 +9,7 @@ import kotlin.math.*
  * All geometry calculations are Racing-task specific
  */
 object RacingGeometryUtils {
+    private const val EARTH_RADIUS_METERS = 6_371_000.0
 
     /**
      * Generate circle coordinates for GeoJSON - SSOT Implementation
@@ -163,10 +164,9 @@ object RacingGeometryUtils {
     /**
      * Calculate destination point from bearing and distance
      */
-    fun calculateDestinationPoint(lat: Double, lon: Double, bearing: Double, distance: Double): Pair<Double, Double> {
-        val earthRadius = 6371000.0 // Earth's radius in meters
+    fun calculateDestinationPoint(lat: Double, lon: Double, bearing: Double, distanceMeters: Double): Pair<Double, Double> {
         val bearingRad = Math.toRadians(bearing)
-        val angularDistance = distance / earthRadius
+        val angularDistance = distanceMeters / EARTH_RADIUS_METERS
         val latRad = Math.toRadians(lat)
         val lonRad = Math.toRadians(lon)
 
@@ -192,17 +192,16 @@ object RacingGeometryUtils {
     }
 
     /**
-     * Calculate haversine distance between two points
+     * Calculate haversine distance between two points in meters.
      */
-    fun haversineDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
-        val R = 6371.0 // Earth's radius in kilometers
+    fun haversineDistanceMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
         val dLat = Math.toRadians(lat2 - lat1)
         val dLon = Math.toRadians(lon2 - lon1)
         val a = sin(dLat / 2) * sin(dLat / 2) +
                 cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) *
                 sin(dLon / 2) * sin(dLon / 2)
         val c = 2 * atan2(sqrt(a), sqrt(1 - a))
-        return R * c
+        return EARTH_RADIUS_METERS * c
     }
 
     /**
@@ -251,7 +250,7 @@ object RacingGeometryUtils {
         lineLon: Double,
         targetLat: Double,
         targetLon: Double,
-        lineWidth: Double
+        lineWidthMeters: Double
     ): Pair<Double, Double> {
         // Calculate bearing from line center to target
         val bearing = calculateBearing(lineLat, lineLon, targetLat, targetLon)
@@ -260,13 +259,13 @@ object RacingGeometryUtils {
         val lineBearing = (bearing + 90) % 360
 
         // Calculate the two endpoints of the line
-        val halfWidth = lineWidth / 2.0
+        val halfWidth = lineWidthMeters / 2.0
         val endpoint1 = calculateDestinationPoint(lineLat, lineLon, lineBearing, halfWidth)
         val endpoint2 = calculateDestinationPoint(lineLat, lineLon, (lineBearing + 180) % 360, halfWidth)
 
         // Find which endpoint is closer to the target
-        val dist1 = haversineDistance(endpoint1.first, endpoint1.second, targetLat, targetLon)
-        val dist2 = haversineDistance(endpoint2.first, endpoint2.second, targetLat, targetLon)
+        val dist1 = haversineDistanceMeters(endpoint1.first, endpoint1.second, targetLat, targetLon)
+        val dist2 = haversineDistanceMeters(endpoint2.first, endpoint2.second, targetLat, targetLon)
 
         return if (dist1 < dist2) endpoint1 else endpoint2
     }

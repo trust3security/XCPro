@@ -34,15 +34,15 @@ class AATCoordinatorDelegateTest {
         val taskManager = mock<AATTaskManager>()
         val delegate = delegate(taskManager)
 
-        delegate.updateWaypointPointType(
+        delegate.updateWaypointPointTypeMeters(
             index = 1,
             startType = "start",
             finishType = "finish",
             turnType = "turn",
-            gateWidth = 1.2,
-            keyholeInnerRadius = 3.4,
+            gateWidthMeters = 1200.0,
+            keyholeInnerRadiusMeters = 3400.0,
             keyholeAngle = 45.0,
-            sectorOuterRadius = 5.6
+            sectorOuterRadiusMeters = 5600.0
         )
 
         verify(taskManager).updateWaypointPointTypeBridge(
@@ -50,10 +50,10 @@ class AATCoordinatorDelegateTest {
             startType = "start",
             finishType = "finish",
             turnType = "turn",
-            gateWidth = 1.2,
-            keyholeInnerRadius = 3.4,
+            gateWidthMeters = 1200.0,
+            keyholeInnerRadiusMeters = 3400.0,
             keyholeAngle = 45.0,
-            sectorOuterRadius = 5.6
+            sectorOuterRadiusMeters = 5600.0
         )
     }
 
@@ -62,15 +62,15 @@ class AATCoordinatorDelegateTest {
         val taskManager = mock<AATTaskManager>()
         val delegate = delegate(taskManager)
 
-        delegate.updateWaypointPointType(
+        delegate.updateWaypointPointTypeMeters(
             index = 0,
             startType = null,
             finishType = null,
             turnType = null,
-            gateWidth = null,
-            keyholeInnerRadius = null,
+            gateWidthMeters = null,
+            keyholeInnerRadiusMeters = null,
             keyholeAngle = null,
-            sectorOuterRadius = null
+            sectorOuterRadiusMeters = null
         )
 
         verify(taskManager).updateWaypointPointTypeBridge(
@@ -78,10 +78,10 @@ class AATCoordinatorDelegateTest {
             startType = null,
             finishType = null,
             turnType = null,
-            gateWidth = null,
-            keyholeInnerRadius = null,
+            gateWidthMeters = null,
+            keyholeInnerRadiusMeters = null,
             keyholeAngle = null,
-            sectorOuterRadius = null
+            sectorOuterRadiusMeters = null
         )
     }
 

@@ -9,7 +9,6 @@ import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.charset.StandardCharsets
-import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -22,7 +21,14 @@ class OgnDdbRepository @Inject constructor(
     private val clock: Clock,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) {
-    private val identitiesByDeviceId = ConcurrentHashMap<String, OgnTrafficIdentity>()
+    private val identitiesByTypedKey = ConcurrentHashMap<String, OgnTrafficIdentity>()
+    private val fallbackIdentityByHex = ConcurrentHashMap<String, OgnTrafficIdentity>()
+
+    @Volatile
+    private var typedSingleIdentityByHex: Map<String, OgnTrafficIdentity> = emptyMap()
+
+    @Volatile
+    private var ambiguousTypedHexes: Set<String> = emptySet()
 
     @Volatile
     private var lastUpdateWallMs: Long = 0L
@@ -38,29 +44,80 @@ class OgnDdbRepository @Inject constructor(
                 ?: return@withContext
 
             if (parsed.isEmpty()) return@withContext
-            identitiesByDeviceId.clear()
-            identitiesByDeviceId.putAll(parsed)
+            applyParsedEntries(parsed)
             lastUpdateWallMs = clock.nowWallMs()
             writeCache(json, lastUpdateWallMs)
         }
     }
 
+    fun lookup(addressType: OgnAddressType, deviceIdHex: String): OgnTrafficIdentity? {
+        val normalized = normalizeOgnHex6OrNull(deviceIdHex) ?: return null
+        return when (addressType) {
+            OgnAddressType.FLARM,
+            OgnAddressType.ICAO -> {
+                val typedKey = canonicalOgnTargetKey(
+                    type = addressType,
+                    addressHex = normalized,
+                    fallbackId = normalized
+                )
+                identitiesByTypedKey[typedKey] ?: fallbackIdentityByHex[normalized]
+            }
+            OgnAddressType.UNKNOWN -> {
+                fallbackIdentityByHex[normalized]
+                    ?: if (ambiguousTypedHexes.contains(normalized)) null else typedSingleIdentityByHex[normalized]
+            }
+        }
+    }
+
     fun lookup(deviceIdHex: String): OgnTrafficIdentity? {
-        val normalized = deviceIdHex.trim().uppercase(Locale.US)
-        if (normalized.length != 6) return null
-        return identitiesByDeviceId[normalized]
+        return lookup(addressType = OgnAddressType.UNKNOWN, deviceIdHex = deviceIdHex)
     }
 
     fun lastUpdateWallMs(): Long = lastUpdateWallMs
 
     private fun loadFromDiskIfNeeded() {
-        if (identitiesByDeviceId.isNotEmpty()) return
+        if (identitiesByTypedKey.isNotEmpty() || fallbackIdentityByHex.isNotEmpty()) return
         val cacheFile = cacheFile()
         if (!cacheFile.exists()) return
         val json = runCatching { cacheFile.readText(StandardCharsets.UTF_8) }.getOrNull() ?: return
         val parsed = runCatching { OgnDdbJsonParser.parse(json) }.getOrNull() ?: return
-        identitiesByDeviceId.putAll(parsed)
+        applyParsedEntries(parsed)
         lastUpdateWallMs = readTimestampFile()
+    }
+
+    private fun applyParsedEntries(entries: List<OgnDdbEntry>) {
+        identitiesByTypedKey.clear()
+        fallbackIdentityByHex.clear()
+
+        val typedFirstIdentityByHex = HashMap<String, OgnTrafficIdentity>()
+        val typedAmbiguousHexes = HashSet<String>()
+
+        for (entry in entries) {
+            val normalizedHex = normalizeOgnHex6OrNull(entry.deviceIdHex) ?: continue
+            val identity = entry.identity
+            if (entry.addressType == OgnAddressType.UNKNOWN) {
+                fallbackIdentityByHex[normalizedHex] = identity
+                continue
+            }
+
+            val typedKey = canonicalOgnTargetKey(
+                type = entry.addressType,
+                addressHex = normalizedHex,
+                fallbackId = normalizedHex
+            )
+            identitiesByTypedKey[typedKey] = identity
+
+            val previous = typedFirstIdentityByHex[normalizedHex]
+            if (previous == null) {
+                typedFirstIdentityByHex[normalizedHex] = identity
+            } else if (previous != identity) {
+                typedAmbiguousHexes += normalizedHex
+            }
+        }
+
+        typedSingleIdentityByHex = typedFirstIdentityByHex
+            .filterKeys { hex -> !typedAmbiguousHexes.contains(hex) }
+        ambiguousTypedHexes = typedAmbiguousHexes
     }
 
     private fun isRefreshDue(): Boolean {

@@ -15,6 +15,11 @@ import com.example.xcpro.tasks.aat.models.AssignedArea
 internal class AATTaskQuickValidationEngine(
     private val areaBoundaryCalculator: AreaBoundaryCalculator
 ) {
+    private companion object {
+        const val METERS2_PER_KM2 = 1_000_000.0
+        const val SMALL_AREA_THRESHOLD_METERS2 = 10.0 * METERS2_PER_KM2
+        const val LARGE_AREA_THRESHOLD_METERS2 = 5000.0 * METERS2_PER_KM2
+    }
 
     fun validateTaskQuick(task: AATTask): AATTaskValidation {
         val errors = mutableListOf<String>()
@@ -98,11 +103,14 @@ internal class AATTaskQuickValidationEngine(
             for (j in i + 1 until task.assignedAreas.size) {
                 val area1 = task.assignedAreas[i]
                 val area2 = task.assignedAreas[j]
-                val distance = AATMathUtils.calculateDistance(area1.centerPoint, area2.centerPoint)
+                val distanceMeters = AATMathUtils.calculateDistanceMeters(
+                    area1.centerPoint,
+                    area2.centerPoint
+                )
 
-                if (distance < 1000.0) {
+                if (distanceMeters < 1000.0) {
                     errors.add(
-                        "Areas '${area1.name}' and '${area2.name}' are less than 1km apart (${String.format("%.0f", distance)}m)"
+                        "Areas '${area1.name}' and '${area2.name}' are less than 1km apart (${String.format("%.0f", distanceMeters)}m)"
                     )
                 }
             }
@@ -117,12 +125,13 @@ internal class AATTaskQuickValidationEngine(
         }
 
         task.assignedAreas.forEach { area ->
-            val areaSizeKm2 = areaBoundaryCalculator.calculateAreaSizeKm2(area)
+            val areaSizeMeters2 = areaBoundaryCalculator.calculateAreaSizeMeters2(area)
+            val areaSizeKm2 = areaSizeMeters2 / METERS2_PER_KM2
             when {
-                areaSizeKm2 < 10.0 ->
-                    warnings.add("Area '${area.name}' is very small (${String.format("%.1f", areaSizeKm2)} km)")
-                areaSizeKm2 > 5000.0 ->
-                    warnings.add("Area '${area.name}' is very large (${String.format("%.1f", areaSizeKm2)} km)")
+                areaSizeMeters2 < SMALL_AREA_THRESHOLD_METERS2 ->
+                    warnings.add("Area '${area.name}' is very small (${String.format("%.1f", areaSizeKm2)} km2)")
+                areaSizeMeters2 > LARGE_AREA_THRESHOLD_METERS2 ->
+                    warnings.add("Area '${area.name}' is very large (${String.format("%.1f", areaSizeKm2)} km2)")
             }
         }
     }
@@ -171,25 +180,25 @@ internal class AATTaskQuickValidationEngine(
 
     private fun validateStart(task: AATTask, startPoint: AATLatLng): ValidationResult {
         val errors = mutableListOf<String>()
-        val distance = AATMathUtils.calculateDistance(startPoint, task.start.position)
+        val distanceMeters = AATMathUtils.calculateDistanceMeters(startPoint, task.start.position)
 
         when (task.start.type) {
             AATStartType.LINE -> {
                 val lineLength = task.start.lineLength ?: 0.0
-                if (distance > lineLength / 2.0 + 100.0) {
-                    errors.add("Start point too far from start line (${String.format("%.0f", distance)}m)")
+                if (distanceMeters > lineLength / 2.0 + 100.0) {
+                    errors.add("Start point too far from start line (${String.format("%.0f", distanceMeters)}m)")
                 }
             }
             AATStartType.CIRCLE -> {
                 val radius = task.start.radius ?: 0.0
-                if (distance > radius + 50.0) {
-                    errors.add("Start point outside start circle (${String.format("%.0f", distance)}m from center)")
+                if (distanceMeters > radius + 50.0) {
+                    errors.add("Start point outside start circle (${String.format("%.0f", distanceMeters)}m from center)")
                 }
             }
             AATStartType.BGA_SECTOR -> {
                 val sectorRadius = task.start.sectorRadius ?: 0.0
-                if (distance > sectorRadius + 50.0) {
-                    errors.add("Start point outside BGA start sector (${String.format("%.0f", distance)}m from center)")
+                if (distanceMeters > sectorRadius + 50.0) {
+                    errors.add("Start point outside BGA start sector (${String.format("%.0f", distanceMeters)}m from center)")
                 }
             }
         }
@@ -199,19 +208,19 @@ internal class AATTaskQuickValidationEngine(
 
     private fun validateFinish(task: AATTask, finishPoint: AATLatLng): ValidationResult {
         val errors = mutableListOf<String>()
-        val distance = AATMathUtils.calculateDistance(finishPoint, task.finish.position)
+        val distanceMeters = AATMathUtils.calculateDistanceMeters(finishPoint, task.finish.position)
 
         when (task.finish.type) {
             AATFinishType.LINE -> {
                 val lineLength = task.finish.lineLength ?: 0.0
-                if (distance > lineLength / 2.0 + 100.0) {
-                    errors.add("Finish point too far from finish line (${String.format("%.0f", distance)}m)")
+                if (distanceMeters > lineLength / 2.0 + 100.0) {
+                    errors.add("Finish point too far from finish line (${String.format("%.0f", distanceMeters)}m)")
                 }
             }
             AATFinishType.CIRCLE -> {
                 val radius = task.finish.radius ?: 0.0
-                if (distance > radius + 50.0) {
-                    errors.add("Finish point outside finish circle (${String.format("%.0f", distance)}m from center)")
+                if (distanceMeters > radius + 50.0) {
+                    errors.add("Finish point outside finish circle (${String.format("%.0f", distanceMeters)}m from center)")
                 }
             }
         }
@@ -300,9 +309,12 @@ internal class AATTaskQuickValidationEngine(
             }
         }
 
-        val startFinishDistance = AATMathUtils.calculateDistance(task.start.position, task.finish.position)
-        if (startFinishDistance < 100.0) {
-            warnings.add("Start and finish are very close (${String.format("%.0f", startFinishDistance)}m)")
+        val startFinishDistanceMeters = AATMathUtils.calculateDistanceMeters(
+            task.start.position,
+            task.finish.position
+        )
+        if (startFinishDistanceMeters < 100.0) {
+            warnings.add("Start and finish are very close (${String.format("%.0f", startFinishDistanceMeters)}m)")
         }
     }
 }

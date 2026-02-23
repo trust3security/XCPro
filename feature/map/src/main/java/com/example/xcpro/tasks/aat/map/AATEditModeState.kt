@@ -8,6 +8,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import kotlinx.coroutines.flow.MutableStateFlow
 
+private const val TARGET_MOVE_TOLERANCE_METERS = 1.0
+
 /**
  * AAT Edit Mode State Management - Phase 1 Foundation
  *
@@ -53,11 +55,11 @@ data class AATEditSession(
      */
     val hasMovedTargetPoint: Boolean get() {
         if (originalTargetPoint == null || currentTargetPoint == null) return false
-        val distance = AATMathUtils.calculateDistanceKm(
+        val distanceMeters = AATMathUtils.calculateDistanceMeters(
             originalTargetPoint.latitude, originalTargetPoint.longitude,
             currentTargetPoint.latitude, currentTargetPoint.longitude
         )
-        return distance > 0.00001 // ~1 meter tolerance (km)
+        return distanceMeters > TARGET_MOVE_TOLERANCE_METERS
     }
 }
 
@@ -140,14 +142,14 @@ class AATEditModeStateManager(
         }
 
         // Validate new position is within area bounds
-        val distance = AATMathUtils.calculateDistanceKm(
+        val distanceMeters = AATMathUtils.calculateDistanceMeters(
             waypoint.lat, waypoint.lon,
             newPosition.latitude, newPosition.longitude
         )
 
-        val maxDistance = waypoint.assignedArea.radiusMeters / 1000.0
+        val maxDistanceMeters = waypoint.assignedArea.radiusMeters
 
-        if (distance > maxDistance) {
+        if (distanceMeters > maxDistanceMeters) {
             return false
         }
 

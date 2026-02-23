@@ -8,7 +8,6 @@ import kotlin.math.abs
 
 internal object AATPathOptimizerSupport {
 
-    private const val METERS_PER_KILOMETER = 1000.0
     private const val OPTIMIZATION_TOLERANCE_METERS = 100.0
     private const val MAX_OPTIMIZATION_ITERATIONS = 20
 
@@ -110,10 +109,10 @@ internal object AATPathOptimizerSupport {
 
         var totalDistanceMeters = 0.0
         for (i in 1 until waypoints.size) {
-            totalDistanceMeters += AATMathUtils.calculateDistance(
+            totalDistanceMeters += AATMathUtils.calculateDistanceMeters(
                 waypoints[i - 1],
                 waypoints[i]
-            ) * METERS_PER_KILOMETER
+            )
         }
         return totalDistanceMeters
     }

@@ -30,10 +30,10 @@ internal class AATPointTypeConfigurator {
      * @param startType New start point type (if waypoint is START)
      * @param finishType New finish point type (if waypoint is FINISH)
      * @param turnType New turnpoint type (if waypoint is TURNPOINT)
-     * @param gateWidth Gate width in km (for cylinders)
-     * @param keyholeInnerRadius Inner radius in km (for keyholes)
+     * @param gateWidthMeters Gate width in meters (for cylinders)
+     * @param keyholeInnerRadiusMeters Inner radius in meters (for keyholes)
      * @param keyholeAngle Sector angle in degrees (for sectors/keyholes)
-     * @param sectorOuterRadius Outer radius in km (for sectors/keyholes)
+     * @param sectorOuterRadiusMeters Outer radius in meters (for sectors/keyholes)
      * @return Updated waypoint with new geometry, or null if index invalid
      */
     fun updateWaypointPointType(
@@ -43,30 +43,31 @@ internal class AATPointTypeConfigurator {
         startType: com.example.xcpro.tasks.aat.models.AATStartPointType?,
         finishType: com.example.xcpro.tasks.aat.models.AATFinishPointType?,
         turnType: com.example.xcpro.tasks.aat.models.AATTurnPointType?,
-        gateWidth: Double?,
-        keyholeInnerRadius: Double?,
+        gateWidthMeters: Double?,
+        keyholeInnerRadiusMeters: Double?,
         keyholeAngle: Double?,
-        sectorOuterRadius: Double?
+        sectorOuterRadiusMeters: Double?
     ): AATWaypoint {
 
         //  SSOT FIX: Read current values from assignedArea (single source of truth)
-        val currentGateWidth = when (waypoint.assignedArea.shape) {
-            AATAreaShape.CIRCLE -> waypoint.assignedArea.radiusMeters / 1000.0
-            AATAreaShape.SECTOR -> waypoint.assignedArea.outerRadiusMeters / 1000.0
-            else -> waypoint.assignedArea.radiusMeters / 1000.0
+        val currentGateWidthMeters = when (waypoint.assignedArea.shape) {
+            AATAreaShape.CIRCLE -> waypoint.assignedArea.radiusMeters
+            AATAreaShape.SECTOR -> waypoint.assignedArea.outerRadiusMeters
+            else -> waypoint.assignedArea.radiusMeters
         }
-        val currentKeyholeInnerRadius = waypoint.assignedArea.innerRadiusMeters / 1000.0
-        val currentSectorOuterRadius = waypoint.assignedArea.outerRadiusMeters / 1000.0
+        val currentKeyholeInnerRadiusMeters = waypoint.assignedArea.innerRadiusMeters
+        val currentSectorOuterRadiusMeters = waypoint.assignedArea.outerRadiusMeters
 
         // Use UI-provided values or fall back to current assignedArea values
-        val newKeyholeInnerRadius = (keyholeInnerRadius ?: currentKeyholeInnerRadius).let { inner ->
-            if (inner > 0) inner else 0.5 // Default 0.5 km inner cylinder when unset/zero
+        val newKeyholeInnerRadiusMeters =
+            (keyholeInnerRadiusMeters ?: currentKeyholeInnerRadiusMeters).let { inner ->
+                if (inner > 0) inner else 500.0
         }
         val newKeyholeAngle = (keyholeAngle ?: 90.0).let { angle ->
             if (kotlin.math.abs(angle - 90.0) < 1e-2) 90.0 else angle
         }  // Default and clamp to a clean 90 when within tolerance
-        val newSectorOuterRadius = sectorOuterRadius ?: currentSectorOuterRadius
-        val newGateWidth = gateWidth ?: currentGateWidth
+        val newSectorOuterRadiusMeters = sectorOuterRadiusMeters ?: currentSectorOuterRadiusMeters
+        val newGateWidthMeters = gateWidthMeters ?: currentGateWidthMeters
         val newTurnType = turnType ?: waypoint.turnPointType
 
         //  BUG FIX: Convert TurnPointType to AssignedArea geometry
@@ -76,7 +77,7 @@ internal class AATPointTypeConfigurator {
                     // Cylinder: Use gateWidth as radius
                     AATAssignedArea(
                         shape = AATAreaShape.CIRCLE,
-                        radiusMeters = newGateWidth * 1000.0
+                        radiusMeters = newGateWidthMeters
                     )
                 }
                 com.example.xcpro.tasks.aat.models.AATTurnPointType.AAT_SECTOR -> {
@@ -91,9 +92,9 @@ internal class AATPointTypeConfigurator {
 
                     AATAssignedArea(
                         shape = AATAreaShape.SECTOR,
-                        radiusMeters = newSectorOuterRadius * 1000.0,
+                        radiusMeters = newSectorOuterRadiusMeters,
                         innerRadiusMeters = 0.0, // Full sector from center
-                        outerRadiusMeters = newSectorOuterRadius * 1000.0,
+                        outerRadiusMeters = newSectorOuterRadiusMeters,
                         startAngleDegrees = startBearing,
                         endAngleDegrees = endBearing
                     )
@@ -110,9 +111,9 @@ internal class AATPointTypeConfigurator {
 
                     AATAssignedArea(
                         shape = AATAreaShape.SECTOR,
-                        radiusMeters = newSectorOuterRadius * 1000.0,
-                        innerRadiusMeters = newKeyholeInnerRadius * 1000.0, //  Inner cylinder
-                        outerRadiusMeters = newSectorOuterRadius * 1000.0,
+                        radiusMeters = newSectorOuterRadiusMeters,
+                        innerRadiusMeters = newKeyholeInnerRadiusMeters, //  Inner cylinder
+                        outerRadiusMeters = newSectorOuterRadiusMeters,
                         startAngleDegrees = startBearing,
                         endAngleDegrees = endBearing
                     )
@@ -125,16 +126,16 @@ internal class AATPointTypeConfigurator {
                 AATAreaShape.CIRCLE -> {
                     // Cylinder: Update radiusMeters only
                     waypoint.assignedArea.copy(
-                        radiusMeters = newGateWidth * 1000.0
+                        radiusMeters = newGateWidthMeters
                     )
                 }
                 AATAreaShape.SECTOR -> {
                     // Sector/Keyhole: Update outerRadiusMeters, innerRadiusMeters
 
                     waypoint.assignedArea.copy(
-                        radiusMeters = newSectorOuterRadius * 1000.0,  // Update primary radius
-                        outerRadiusMeters = newSectorOuterRadius * 1000.0,  //  FIX: Update outer radius
-                        innerRadiusMeters = newKeyholeInnerRadius * 1000.0,  //  FIX: Update inner radius
+                        radiusMeters = newSectorOuterRadiusMeters,  // Update primary radius
+                        outerRadiusMeters = newSectorOuterRadiusMeters,  //  FIX: Update outer radius
+                        innerRadiusMeters = newKeyholeInnerRadiusMeters,  //  FIX: Update inner radius
                         // Keep existing angles (would need recalculation for orientation changes)
                         startAngleDegrees = waypoint.assignedArea.startAngleDegrees,
                         endAngleDegrees = waypoint.assignedArea.endAngleDegrees

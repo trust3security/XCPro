@@ -43,7 +43,7 @@ internal fun Task.toSimpleAATTask(): SimpleAATTask {
             ?: AATTurnPointType.AAT_CYLINDER
 
         val fallbackRadiusMeters =
-            (waypoint.customRadius ?: AATRadiusAuthority.getRadiusForRole(role)) * 1000.0
+            waypoint.resolvedCustomRadiusMeters() ?: AATRadiusAuthority.getRadiusMetersForRole(role)
         val typedParams = AATWaypointCustomParams.from(
             source = waypoint.customParameters,
             fallbackLat = waypoint.lat,

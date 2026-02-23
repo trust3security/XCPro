@@ -203,13 +203,13 @@ class MapCameraManager(
      *
      * @param turnpointLat Turnpoint center latitude
      * @param turnpointLon Turnpoint center longitude
-     * @param turnpointRadiusKm Turnpoint radius in kilometers (e.g., 5, 10, 20)
+     * @param turnpointRadiusMeters Turnpoint radius in meters
      * @param bottomSheetHeightPx Height of bottom sheet in pixels (optional, default 0)
      */
     fun zoomToAATAreaForEdit(
         turnpointLat: Double,
         turnpointLon: Double,
-        turnpointRadiusKm: Double,
+        turnpointRadiusMeters: Double,
         bottomSheetHeightPx: Int = 0
     ) {
         mapState.mapLibreMap?.let { map ->
@@ -246,22 +246,23 @@ class MapCameraManager(
                 // Z = log2((earthCircumference * 1000) / (256 * metersPerPixel))
                 // Z = log2((earthCircumference * 1000) / (256 * diameterMeters / pixelsAvailable))
 
-                val diameterKm = turnpointRadiusKm * 2.0
-                val diameterMeters = diameterKm * 1000.0
+                val turnpointDisplayKm = turnpointRadiusMeters / 1000.0
+                val diameterKm = turnpointDisplayKm * 2.0
+                val diameterMeters = turnpointRadiusMeters * 2.0
 
                 // Adaptive fraction: Larger circles need to occupy LESS of screen (more padding)
                 // This is because users need to see MORE context around larger circles
                 val circleFraction = when {
-                    turnpointRadiusKm <= 10.0 -> AAT_CIRCLE_SCREEN_FRACTION  // Small: use base fraction (0.125)
-                    turnpointRadiusKm <= 20.0 -> AAT_CIRCLE_SCREEN_FRACTION * 0.7  // Medium: 70% of base (0.0875)
-                    turnpointRadiusKm <= 30.0 -> AAT_CIRCLE_SCREEN_FRACTION * 0.5  // Large: 50% of base (0.0625)
-                    turnpointRadiusKm <= 40.0 -> AAT_CIRCLE_SCREEN_FRACTION * 0.35  // XL: 35% of base (0.044)
-                    turnpointRadiusKm <= 50.0 -> AAT_CIRCLE_SCREEN_FRACTION * 0.20  // XXL: 20% of base (0.025)
+                    turnpointRadiusMeters <= 10_000.0 -> AAT_CIRCLE_SCREEN_FRACTION  // Small: use base fraction (0.125)
+                    turnpointRadiusMeters <= 20_000.0 -> AAT_CIRCLE_SCREEN_FRACTION * 0.7  // Medium: 70% of base (0.0875)
+                    turnpointRadiusMeters <= 30_000.0 -> AAT_CIRCLE_SCREEN_FRACTION * 0.5  // Large: 50% of base (0.0625)
+                    turnpointRadiusMeters <= 40_000.0 -> AAT_CIRCLE_SCREEN_FRACTION * 0.35  // XL: 35% of base (0.044)
+                    turnpointRadiusMeters <= 50_000.0 -> AAT_CIRCLE_SCREEN_FRACTION * 0.20  // XXL: 20% of base (0.025)
                     else -> AAT_CIRCLE_SCREEN_FRACTION * 0.15  // Extreme: 15% of base (0.019)
                 }
 
                 val usableScreenPixels = minScreenDimension * circleFraction
-                AppLogger.d(TAG, "AAT: Radius=${turnpointRadiusKm}km, diameter=${String.format("%.1f", diameterKm)}km, fraction=${String.format("%.1f", circleFraction * 100)}%, usablePixels=${String.format("%.0f", usableScreenPixels)}px")
+                AppLogger.d(TAG, "AAT: Radius=${turnpointDisplayKm}km, diameter=${String.format("%.1f", diameterKm)}km, fraction=${String.format("%.1f", circleFraction * 100)}%, usablePixels=${String.format("%.0f", usableScreenPixels)}px")
 
                 // Meters per pixel needed to fit circle in available space
                 val requiredMetersPerPixel = diameterMeters / usableScreenPixels
@@ -293,7 +294,7 @@ class MapCameraManager(
                     location = MapStateStore.MapPoint(turnpointLatLng.latitude, turnpointLatLng.longitude),
                     zoom = editZoom.toFloat()
                 )
-                AppLogger.d(TAG, "AAT: Zooming to turnpoint - radius=${turnpointRadiusKm}km, diameter=${String.format("%.1f", diameterKm)}km, screen=${minScreenDimension}px, calculated zoom=${String.format("%.2f", editZoom)}, at: $turnpointLatLng")
+                AppLogger.d(TAG, "AAT: Zooming to turnpoint - radius=${turnpointDisplayKm}km, diameter=${String.format("%.1f", diameterKm)}km, screen=${minScreenDimension}px, calculated zoom=${String.format("%.2f", editZoom)}, at: $turnpointLatLng")
             } catch (e: Exception) {
                 AppLogger.e(TAG, "AAT: Error zooming to AAT area: ${e.message}")
             }

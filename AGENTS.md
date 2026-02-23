@@ -19,8 +19,8 @@ Read these files in order before making changes:
 
 If touching variometer/replay pipeline behavior, also read:
 
-1. `docs/LevoVario/levo.md`
-2. `docs/LevoVario/levo-replay.md`
+1. `docs/LEVO/levo.md`
+2. `docs/LEVO/levo-replay.md`
 
 ## Non-Negotiables
 

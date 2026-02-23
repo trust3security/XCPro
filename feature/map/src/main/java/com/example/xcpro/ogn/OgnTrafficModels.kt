@@ -18,6 +18,7 @@ enum class OgnConnectionState {
 
 data class OgnTrafficSnapshot(
     val targets: List<OgnTrafficTarget>,
+    val suppressedTargetIds: Set<String> = emptySet(),
     val connectionState: OgnConnectionState,
     val lastError: String?,
     val subscriptionCenterLat: Double?,
@@ -48,7 +49,14 @@ data class OgnTrafficTarget(
     val rawLine: String,
     val timestampMillis: Long,
     val lastSeenMillis: Long,
-    val distanceMeters: Double? = null
+    val distanceMeters: Double? = null,
+    val addressType: OgnAddressType = OgnAddressType.UNKNOWN,
+    val addressHex: String? = deviceIdHex,
+    val canonicalKey: String = canonicalOgnTargetKey(
+        type = addressType,
+        addressHex = addressHex,
+        fallbackId = id
+    )
 ) {
     fun isStale(nowMillis: Long, staleAfterMillis: Long): Boolean =
         nowMillis - lastSeenMillis > staleAfterMillis

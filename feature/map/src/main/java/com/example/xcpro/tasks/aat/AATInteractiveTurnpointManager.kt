@@ -178,14 +178,14 @@ class AATInteractiveTurnpointManager(
     /**
      * Calculate and get task distance limits (min/max)
      */
-    fun getDistanceLimits(): Pair<Double, Double> {
+    fun getDistanceLimitsMeters(): Pair<Double, Double> {
         if (currentWaypoints.isEmpty()) return Pair(0.0, 0.0)
 
         val minWaypoints = currentWaypoints.map { it.copy(targetPoint = AATLatLng(it.lat, it.lon)) }
         val maxWaypoints = distanceCalculator.optimizeTargetPointsForMaxDistance(currentWaypoints)
 
-        val minDistance = distanceCalculator.calculateInteractiveTaskDistance(minWaypoints).totalDistance
-        val maxDistance = distanceCalculator.calculateInteractiveTaskDistance(maxWaypoints).totalDistance
+        val minDistance = distanceCalculator.calculateInteractiveTaskDistance(minWaypoints).totalDistanceMeters
+        val maxDistance = distanceCalculator.calculateInteractiveTaskDistance(maxWaypoints).totalDistanceMeters
 
         return Pair(minDistance, maxDistance)
     }

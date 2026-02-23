@@ -59,7 +59,7 @@ class IgcReplayLevoNettoValidationTest {
         val useCase = CalculateFlightMetricsUseCase(
             flightHelpers = helpers,
             sinkProvider = sinkProvider,
-            windEstimator = WindEstimator(sinkProvider)
+            windEstimator = WindEstimator()
         )
 
         val windState = WindState(

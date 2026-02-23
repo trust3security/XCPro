@@ -32,7 +32,7 @@ class OgnThermalRepositoryTest {
         val hotspot = repository.hotspots.value.singleOrNull()
         assertNotNull(hotspot)
         hotspot!!
-        assertEquals("ABCD01", hotspot.sourceTargetId)
+        assertEquals("UNK:ABCD01", hotspot.sourceTargetId)
         assertEquals(OgnThermalHotspotState.ACTIVE, hotspot.state)
         assertEquals(1000.0, hotspot.startAltitudeMeters ?: Double.NaN, 0.1)
         assertEquals(1080.0, hotspot.maxAltitudeMeters ?: Double.NaN, 0.1)
@@ -82,6 +82,8 @@ class OgnThermalRepositoryTest {
         )
         val activeTargetId = "AAAA01"
         val staleTargetId = "BBBB02"
+        val activeTargetKey = "UNK:$activeTargetId"
+        val staleTargetKey = "UNK:$staleTargetId"
 
         for (timestampMs in listOf(0L, 10_000L, 20_000L, 30_000L)) {
             val altitudeStep = (timestampMs / 10_000L) * 20.0
@@ -108,7 +110,7 @@ class OgnThermalRepositoryTest {
         }
 
         val staleActive = repository.hotspots.value
-            .firstOrNull { it.sourceTargetId == staleTargetId }
+            .firstOrNull { it.sourceTargetId == staleTargetKey }
         assertEquals(OgnThermalHotspotState.ACTIVE, staleActive?.state)
 
         val frozenStaleTarget = sampleTarget(
@@ -136,9 +138,9 @@ class OgnThermalRepositoryTest {
         }
 
         val staleHotspot = repository.hotspots.value
-            .firstOrNull { it.sourceTargetId == staleTargetId }
+            .firstOrNull { it.sourceTargetId == staleTargetKey }
         val activeHotspot = repository.hotspots.value
-            .firstOrNull { it.sourceTargetId == activeTargetId }
+            .firstOrNull { it.sourceTargetId == activeTargetKey }
         assertEquals(OgnThermalHotspotState.FINALIZED, staleHotspot?.state)
         assertEquals(OgnThermalHotspotState.ACTIVE, activeHotspot?.state)
 
@@ -170,6 +172,30 @@ class OgnThermalRepositoryTest {
 
         val finalizedHotspot = repository.hotspots.value.singleOrNull()
         assertEquals(OgnThermalHotspotState.FINALIZED, finalizedHotspot?.state)
+
+        shutdownRepository(trafficRepository)
+        runCurrent()
+    }
+
+    @Test
+    fun suppressedTargetKeys_purgeExistingHotspots() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val clock = FakeClock(monoMs = 0L, wallMs = 0L)
+        val trafficRepository = FakeOgnTrafficRepository()
+        val repository = OgnThermalRepositoryImpl(
+            ognTrafficRepository = trafficRepository,
+            clock = clock,
+            dispatcher = dispatcher
+        )
+
+        emitClimbSamples(trafficRepository, clock) { runCurrent() }
+        runCurrent()
+        assertTrue(repository.hotspots.value.isNotEmpty())
+
+        trafficRepository.suppressedTargetIds.value = setOf("UNK:ABCD01")
+        runCurrent()
+
+        assertTrue(repository.hotspots.value.isEmpty())
 
         shutdownRepository(trafficRepository)
         runCurrent()
@@ -213,7 +239,7 @@ class OgnThermalRepositoryTest {
         trackDegrees = 120.0,
         groundSpeedMps = 26.0,
         verticalSpeedMps = climbMps,
-        deviceIdHex = id.takeLast(6),
+        deviceIdHex = normalizeOgnHex6OrNull(id),
         signalDb = 12.0,
         displayLabel = id,
         identity = null,
@@ -229,6 +255,7 @@ class OgnThermalRepositoryTest {
 
     private class FakeOgnTrafficRepository : OgnTrafficRepository {
         override val targets = MutableStateFlow<List<OgnTrafficTarget>>(emptyList())
+        override val suppressedTargetIds = MutableStateFlow<Set<String>>(emptySet())
         override val snapshot = MutableStateFlow(
             OgnTrafficSnapshot(
                 targets = emptyList(),

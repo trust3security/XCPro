@@ -30,25 +30,25 @@ internal class AATCoordinatorDelegate(
 
     private val editController = AATEditController(editOperations, log)
 
-    fun updateWaypointPointType(
+    fun updateWaypointPointTypeMeters(
         index: Int,
         startType: Any?,
         finishType: Any?,
         turnType: Any?,
-        gateWidth: Double?,
-        keyholeInnerRadius: Double?,
+        gateWidthMeters: Double?,
+        keyholeInnerRadiusMeters: Double?,
         keyholeAngle: Double?,
-        sectorOuterRadius: Double?
+        sectorOuterRadiusMeters: Double?
     ) {
         log("AAT waypoint point type update - Index: $index")
         listOf(
             "start" to startType,
             "finish" to finishType,
             "turn" to turnType,
-            "gateWidthKm" to gateWidth,
-            "keyholeInnerRadiusKm" to keyholeInnerRadius,
+            "gateWidthMeters" to gateWidthMeters,
+            "keyholeInnerRadiusMeters" to keyholeInnerRadiusMeters,
             "keyholeAngle" to keyholeAngle,
-            "sectorOuterRadiusKm" to sectorOuterRadius
+            "sectorOuterRadiusMeters" to sectorOuterRadiusMeters
         ).forEach { (label, value) ->
             if (value != null) {
                 log("AAT point type attr: $label=$value")
@@ -60,10 +60,10 @@ internal class AATCoordinatorDelegate(
             startType = startType,
             finishType = finishType,
             turnType = turnType,
-            gateWidth = gateWidth,
-            keyholeInnerRadius = keyholeInnerRadius,
+            gateWidthMeters = gateWidthMeters,
+            keyholeInnerRadiusMeters = keyholeInnerRadiusMeters,
             keyholeAngle = keyholeAngle,
-            sectorOuterRadius = sectorOuterRadius
+            sectorOuterRadiusMeters = sectorOuterRadiusMeters
         )
     }
 
@@ -103,8 +103,8 @@ internal class AATCoordinatorDelegate(
         log("Cleared AAT task state")
     }
 
-    override fun calculateDistance(): Double = taskManager.calculateAATTaskDistance()
+    override fun calculateDistanceMeters(): Double = taskManager.calculateAATTaskDistanceMeters()
 
-    override fun calculateSegmentDistance(from: TaskWaypoint, to: TaskWaypoint): Double =
-        taskManager.calculateSegmentDistance(from.lat, from.lon, to.lat, to.lon)
+    override fun calculateSegmentDistanceMeters(from: TaskWaypoint, to: TaskWaypoint): Double =
+        taskManager.calculateSegmentDistanceMeters(from.lat, from.lon, to.lat, to.lon)
 }

@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.tasks.AdvanceControls
 import com.example.xcpro.tasks.PersistentWaypointSearchBar
@@ -39,6 +40,7 @@ fun RacingManageBTTab(
     taskViewModel: TaskSheetViewModel,
     mapLibreMap: MapLibreMap?,
     allWaypoints: List<WaypointData> = emptyList(),
+    unitsPreferences: UnitsPreferences = UnitsPreferences(),
     onClearTask: () -> Unit,
     onSaveTask: () -> Unit,
     onDismiss: () -> Unit,
@@ -53,6 +55,7 @@ fun RacingManageBTTab(
         taskViewModel = taskViewModel,
         mapLibreMap = mapLibreMap,
         allWaypoints = allWaypoints,
+        unitsPreferences = unitsPreferences,
         currentQNH = currentQNH
     )
 }
@@ -67,6 +70,7 @@ private fun RacingFullyExpandedContent(
     taskViewModel: TaskSheetViewModel,
     mapLibreMap: MapLibreMap?,
     allWaypoints: List<WaypointData> = emptyList(),
+    unitsPreferences: UnitsPreferences,
     currentQNH: String? = null
 ) {
     var showQRDialog by remember { mutableStateOf(false) }
@@ -79,7 +83,8 @@ private fun RacingFullyExpandedContent(
         TaskStatsSection(
             task = task,
             taskType = com.example.xcpro.tasks.core.TaskType.RACING,
-            distanceKm = uiState.stats.distanceNominal / 1000.0,
+            distanceMeters = uiState.stats.distanceNominal,
+            unitsPreferences = unitsPreferences,
             onQRCodeClick = { showQRDialog = true }
         )
 
@@ -118,21 +123,30 @@ private fun RacingFullyExpandedContent(
                 onRemove = { index ->
                     taskViewModel.onRemoveWaypoint(index)
                 },
-                onTaskPointTypeUpdate = { index, startType, finishType, turnType, gateWidth, keyholeInnerRadius, keyholeAngle, faiQuadrantOuterRadius ->
+                onTaskPointTypeUpdate = {
+                        index,
+                        startType,
+                        finishType,
+                        turnType,
+                        gateWidthMeters,
+                        keyholeInnerRadiusMeters,
+                        keyholeAngle,
+                        faiQuadrantOuterRadiusMeters ->
                     taskViewModel.onUpdateWaypointPointType(
                         index,
                         startType,
                         finishType,
                         turnType,
-                        gateWidth,
-                        keyholeInnerRadius,
+                        gateWidthMeters,
+                        keyholeInnerRadiusMeters,
                         keyholeAngle,
-                        faiQuadrantOuterRadius
+                        faiQuadrantOuterRadiusMeters
                     )
                 },
                 onWaypointReplace = { index, newWaypoint ->
                     taskViewModel.onReplaceWaypoint(index, newWaypoint)
                 },
+                unitsPreferences = unitsPreferences,
                 modifier = Modifier.weight(1f)
             )
         } else {

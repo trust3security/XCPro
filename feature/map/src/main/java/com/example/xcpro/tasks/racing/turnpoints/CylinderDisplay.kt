@@ -13,7 +13,7 @@ import kotlin.math.*
 class CylinderDisplay : TurnPointDisplay {
     
     override fun generateVisualGeometry(waypoint: RacingWaypoint, context: TaskContext): String {
-        val radiusMeters = waypoint.gateWidth * 1000.0 // Convert km to meters
+        val radiusMeters = waypoint.gateWidthMeters
 
         // SSOT: Use RacingGeometryUtils - single source of truth for all circle generation
         val circleCoordinates = RacingGeometryUtils.generateCircleCoordinatesArray(
@@ -45,7 +45,7 @@ class CylinderDisplay : TurnPointDisplay {
     }
 
     override fun getDisplayRadius(waypoint: RacingWaypoint): Double {
-        return waypoint.gateWidth * 1000.0 // Convert km to meters
+        return waypoint.gateWidthMeters
     }
 
     override fun getObservationZoneType(): String {

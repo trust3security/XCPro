@@ -50,16 +50,19 @@ class OgnThermalRepositoryImpl @Inject constructor(
         scope.launch {
             combine(
                 ognTrafficRepository.targets,
-                ognTrafficRepository.isEnabled
-                ) { targets, streamingEnabled ->
+                ognTrafficRepository.isEnabled,
+                ognTrafficRepository.suppressedTargetIds
+            ) { targets, streamingEnabled, suppressedTargetKeys ->
                     ThermalInput(
                         targets = targets,
-                        streamingEnabled = streamingEnabled
+                        streamingEnabled = streamingEnabled,
+                        suppressedTargetKeys = suppressedTargetKeys
                     )
             }.collect { input ->
                 processInput(
                     targets = input.targets,
-                    streamingEnabled = input.streamingEnabled
+                    streamingEnabled = input.streamingEnabled,
+                    suppressedTargetKeys = input.suppressedTargetKeys
                 )
             }
         }
@@ -67,7 +70,8 @@ class OgnThermalRepositoryImpl @Inject constructor(
 
     private suspend fun processInput(
         targets: List<OgnTrafficTarget>,
-        streamingEnabled: Boolean
+        streamingEnabled: Boolean,
+        suppressedTargetKeys: Set<String>
     ) {
         processingMutex.withLock {
             latestTargetsSnapshot = targets
@@ -76,6 +80,7 @@ class OgnThermalRepositoryImpl @Inject constructor(
             processTargets(
                 targets = targets,
                 streamingEnabled = streamingEnabled,
+                suppressedTargetKeys = suppressedTargetKeys,
                 nowMonoMs = nowMonoMs
             )
             scheduleHousekeepingLocked(nowMonoMs)
@@ -85,9 +90,11 @@ class OgnThermalRepositoryImpl @Inject constructor(
     private fun processTargets(
         targets: List<OgnTrafficTarget>,
         streamingEnabled: Boolean,
+        suppressedTargetKeys: Set<String>,
         nowMonoMs: Long
     ) {
         var changed = false
+        changed = purgeSuppressedArtifacts(suppressedTargetKeys) || changed
 
         if (!streamingEnabled) {
             changed = finalizeAllTrackers(nowMonoMs) || changed
@@ -111,32 +118,34 @@ class OgnThermalRepositoryImpl @Inject constructor(
 
     private fun updateTracker(target: OgnTrafficTarget, nowMonoMs: Long): Boolean {
         if (!isValidThermalCoordinate(target.latitude, target.longitude)) return false
+        val targetKey = normalizeOgnAircraftKeyOrNull(target.canonicalKey) ?: return false
 
         val climbRateMps = target.verticalSpeedMps?.takeIf { it.isFinite() }
         val altitudeMeters = target.altitudeMeters?.takeIf { it.isFinite() }
         val sourceSeenMonoMs = target.lastSeenMillis
-        val previousSourceSeenMonoMs = processedSourceSeenMonoByTargetId[target.id]
+        val previousSourceSeenMonoMs = processedSourceSeenMonoByTargetId[targetKey]
         val hasFreshSourceSample = previousSourceSeenMonoMs == null ||
             sourceSeenMonoMs > previousSourceSeenMonoMs
 
-        var tracker = trackerByTargetId[target.id]
+        var tracker = trackerByTargetId[targetKey]
         if (tracker == null) {
             if (!hasFreshSourceSample) return false
             if (!isEntrySample(climbRateMps)) return false
             val entryClimbRateMps = climbRateMps ?: return false
             tracker = ThermalTracker.create(
+                sourceTargetId = targetKey,
                 target = target,
                 nowMonoMs = nowMonoMs,
                 climbRateMps = entryClimbRateMps,
                 altitudeMeters = altitudeMeters
             )
-            trackerByTargetId[target.id] = tracker
-            processedSourceSeenMonoByTargetId[target.id] = sourceSeenMonoMs
+            trackerByTargetId[targetKey] = tracker
+            processedSourceSeenMonoByTargetId[targetKey] = sourceSeenMonoMs
             return false
         }
 
         if (!hasFreshSourceSample) return false
-        processedSourceSeenMonoByTargetId[target.id] = sourceSeenMonoMs
+        processedSourceSeenMonoByTargetId[targetKey] = sourceSeenMonoMs
 
         tracker.lastSeenMonoMs = nowMonoMs
         tracker.sourceLabel = target.displayLabel.ifBlank { target.callsign }
@@ -165,12 +174,12 @@ class OgnThermalRepositoryImpl @Inject constructor(
         val outsideContinuityWindow =
             nowMonoMs - tracker.lastStrongClimbMonoMs >= THERMAL_CONTINUITY_GRACE_MS
         if (outsideContinuityWindow) {
-            return finalizeTracker(targetId = target.id, nowMonoMs = nowMonoMs)
+            return finalizeTracker(targetId = targetKey, nowMonoMs = nowMonoMs)
         }
 
         if (!tracker.confirmed && qualifiesAsThermal(tracker, nowMonoMs)) {
             tracker.confirmed = true
-            tracker.hotspotId = nextHotspotId(target.id)
+            tracker.hotspotId = nextHotspotId(targetKey)
         }
 
         if (!tracker.confirmed) return false
@@ -208,6 +217,33 @@ class OgnThermalRepositoryImpl @Inject constructor(
                 changed = true
             }
         }
+        return changed
+    }
+
+    private fun purgeSuppressedArtifacts(suppressedTargetKeys: Set<String>): Boolean {
+        if (suppressedTargetKeys.isEmpty()) return false
+        var changed = false
+
+        for (targetKey in suppressedTargetKeys) {
+            if (trackerByTargetId.remove(targetKey) != null) {
+                changed = true
+            }
+            if (processedSourceSeenMonoByTargetId.remove(targetKey) != null) {
+                changed = true
+            }
+            if (segmentIndexByTargetId.remove(targetKey) != null) {
+                changed = true
+            }
+        }
+
+        val hotspotIterator = hotspotById.entries.iterator()
+        while (hotspotIterator.hasNext()) {
+            val entry = hotspotIterator.next()
+            if (!suppressedTargetKeys.contains(entry.value.sourceTargetId)) continue
+            hotspotIterator.remove()
+            changed = true
+        }
+
         return changed
     }
 
@@ -250,7 +286,8 @@ class OgnThermalRepositoryImpl @Inject constructor(
 
         val activeTargetIds = HashSet<String>(targets.size)
         for (target in targets) {
-            activeTargetIds += target.id
+            val key = normalizeOgnAircraftKeyOrNull(target.canonicalKey) ?: continue
+            activeTargetIds += key
         }
 
         val iterator = processedSourceSeenMonoByTargetId.entries.iterator()
@@ -282,6 +319,7 @@ class OgnThermalRepositoryImpl @Inject constructor(
                 processTargets(
                     targets = latestTargetsSnapshot,
                     streamingEnabled = latestStreamingEnabled,
+                    suppressedTargetKeys = ognTrafficRepository.suppressedTargetIds.value,
                     nowMonoMs = now
                 )
                 scheduleHousekeepingLocked(now)
@@ -338,7 +376,8 @@ class OgnThermalRepositoryImpl @Inject constructor(
 
     private data class ThermalInput(
         val targets: List<OgnTrafficTarget>,
-        val streamingEnabled: Boolean
+        val streamingEnabled: Boolean,
+        val suppressedTargetKeys: Set<String>
     )
 
     private data class ThermalTracker(
@@ -410,13 +449,14 @@ class OgnThermalRepositoryImpl @Inject constructor(
 
         companion object {
             fun create(
+                sourceTargetId: String,
                 target: OgnTrafficTarget,
                 nowMonoMs: Long,
                 climbRateMps: Double,
                 altitudeMeters: Double?
             ): ThermalTracker {
                 return ThermalTracker(
-                    sourceTargetId = target.id,
+                    sourceTargetId = sourceTargetId,
                     sourceLabel = target.displayLabel.ifBlank { target.callsign },
                     startedAtMonoMs = nowMonoMs,
                     lastSeenMonoMs = nowMonoMs,

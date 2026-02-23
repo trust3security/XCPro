@@ -26,17 +26,16 @@ data class AssignedArea(
     }
     
     /**
-     * Calculate the approximate area size in square kilometers
+     * Calculate the approximate area size in square meters (SI canonical).
      */
-    fun getApproximateAreaSizeKm2(): Double {
+    fun getApproximateAreaSizeM2(): Double {
         return when (geometry) {
             is AreaGeometry.Circle -> {
-                val radiusKm = geometry.radius / 1000.0
-                kotlin.math.PI * radiusKm * radiusKm
+                kotlin.math.PI * geometry.radius * geometry.radius
             }
             is AreaGeometry.Sector -> {
-                val outerRadiusKm = geometry.outerRadius / 1000.0
-                val innerRadiusKm = geometry.innerRadius?.let { it / 1000.0 } ?: 0.0
+                val outerRadiusMeters = geometry.outerRadius
+                val innerRadiusMeters = geometry.innerRadius ?: 0.0
                 val sectorAngleRad = kotlin.math.abs(
                     (geometry.endBearing - geometry.startBearing) * kotlin.math.PI / 180.0
                 )
@@ -46,11 +45,16 @@ data class AssignedArea(
                 } else {
                     sectorAngleRad
                 }
-                (adjustedAngle / (2.0 * kotlin.math.PI)) * kotlin.math.PI * 
-                (outerRadiusKm * outerRadiusKm - innerRadiusKm * innerRadiusKm)
+                (adjustedAngle / (2.0 * kotlin.math.PI)) * kotlin.math.PI *
+                    (outerRadiusMeters * outerRadiusMeters - innerRadiusMeters * innerRadiusMeters)
             }
         }
     }
+
+    /**
+     * Boundary-only helper for display/reporting.
+     */
+    fun getApproximateAreaSizeKm2(): Double = getApproximateAreaSizeM2() / 1_000_000.0
 }
 
 /**

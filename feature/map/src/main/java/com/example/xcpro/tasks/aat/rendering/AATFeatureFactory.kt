@@ -1,7 +1,7 @@
 package com.example.xcpro.tasks.aat.rendering
 
 import com.example.xcpro.tasks.aat.models.AATWaypoint
-import com.example.xcpro.tasks.aat.models.getAuthorityRadius
+import com.example.xcpro.tasks.aat.models.getAuthorityRadiusMeters
 import com.example.xcpro.tasks.aat.geometry.AATGeometryGenerator
 
 /**
@@ -25,7 +25,7 @@ internal class AATFeatureFactory(
      */
     fun createLineFeature(waypoint: AATWaypoint, coordinates: List<List<Double>>, type: String, role: String): String {
         // SSOT FIX: Use authority instead of removed gateWidth property
-        val lineWidth = waypoint.getAuthorityRadius()
+        val lineWidthMeters = waypoint.getAuthorityRadiusMeters()
         return """
         {
             "type": "Feature",
@@ -33,7 +33,7 @@ internal class AATFeatureFactory(
                 "title": "${waypoint.title} ${if (role == "START") "Start" else "Finish"} Line",
                 "type": "$type",
                 "role": "$role",
-                "width": $lineWidth
+                "widthMeters": $lineWidthMeters
             },
             "geometry": {
                 "type": "LineString",
@@ -46,7 +46,7 @@ internal class AATFeatureFactory(
     /**
      * Create GeoJSON feature for a circle (cylinder, assigned area)
      */
-    fun createCircleFeature(waypoint: AATWaypoint, coordinates: List<List<Double>>, radius: Double, type: String, role: String?): String {
+    fun createCircleFeature(waypoint: AATWaypoint, coordinates: List<List<Double>>, radiusMeters: Double, type: String, role: String?): String {
         val roleProperty = role?.let { "\"role\": \"$it\"," } ?: ""
         return """
         {
@@ -55,7 +55,7 @@ internal class AATFeatureFactory(
                 "title": "${waypoint.title}",
                 "type": "$type",
                 $roleProperty
-                "radius": $radius
+                "radiusMeters": $radiusMeters
             },
             "geometry": {
                 "type": "Polygon",
@@ -71,8 +71,8 @@ internal class AATFeatureFactory(
      */
     fun createSectorFeature(waypoint: AATWaypoint, coordinates: List<List<Double>>, type: String, role: String?): String {
         val roleProperty = role?.let { "\"role\": \"$it\"," } ?: ""
-        val innerRadius = waypoint.assignedArea.innerRadiusMeters / 1000.0
-        val outerRadius = waypoint.assignedArea.outerRadiusMeters / 1000.0
+        val innerRadiusMeters = waypoint.assignedArea.innerRadiusMeters
+        val outerRadiusMeters = waypoint.assignedArea.outerRadiusMeters
         return """
         {
             "type": "Feature",
@@ -80,8 +80,8 @@ internal class AATFeatureFactory(
                 "title": "${waypoint.title}",
                 "type": "$type",
                 $roleProperty
-                "innerRadius": $innerRadius,
-                "outerRadius": $outerRadius,
+                "innerRadiusMeters": $innerRadiusMeters,
+                "outerRadiusMeters": $outerRadiusMeters,
                 "startBearing": ${waypoint.assignedArea.startAngleDegrees},
                 "endBearing": ${waypoint.assignedArea.endAngleDegrees}
             },
@@ -100,8 +100,8 @@ internal class AATFeatureFactory(
     fun generateSectorCoordinates(
         centerLat: Double,
         centerLon: Double,
-        innerRadiusKm: Double,
-        outerRadiusKm: Double,
+        innerRadiusMeters: Double,
+        outerRadiusMeters: Double,
         startBearingDeg: Double,
         endBearingDeg: Double
     ): List<List<Double>> {
@@ -112,15 +112,15 @@ internal class AATFeatureFactory(
             return (0..steps).map { i -> (start + range * (i.toDouble() / steps)) % 360.0 }
         }
 
-        if (innerRadiusKm > 0.0) {
+        if (innerRadiusMeters > 0.0) {
             // Annular sector ring (outer arc start->end, inner arc end->start) like racing keyhole
             val steps = 64
             sweepAngles(startBearingDeg, endBearingDeg, steps).forEach { ang ->
-                val p = geometryGenerator.calculateDestinationPoint(centerLat, centerLon, ang, outerRadiusKm)
+                val p = geometryGenerator.calculateDestinationPointMeters(centerLat, centerLon, ang, outerRadiusMeters)
                 coords.add(listOf(p.second, p.first))
             }
             sweepAngles(endBearingDeg, startBearingDeg, steps).forEach { ang ->
-                val p = geometryGenerator.calculateDestinationPoint(centerLat, centerLon, ang, innerRadiusKm)
+                val p = geometryGenerator.calculateDestinationPointMeters(centerLat, centerLon, ang, innerRadiusMeters)
                 coords.add(listOf(p.second, p.first))
             }
 
@@ -133,7 +133,7 @@ internal class AATFeatureFactory(
 
             // Generate outer arc
             sweepAngles(startBearingDeg, endBearingDeg, numPoints).forEach { bearing ->
-                val point = geometryGenerator.calculateDestinationPoint(centerLat, centerLon, bearing, outerRadiusKm)
+                val point = geometryGenerator.calculateDestinationPointMeters(centerLat, centerLon, bearing, outerRadiusMeters)
                 coords.add(listOf(point.second, point.first))
             }
 

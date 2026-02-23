@@ -39,21 +39,21 @@ internal fun TargetPointInfoCard(
     originalTargetPoint: AATLatLng
 ) {
     val distanceFromCenter = remember(currentTargetPoint, waypoint) {
-        AATMathUtils.calculateDistanceKm(
+        AATMathUtils.calculateDistanceMeters(
             waypoint.lat,
             waypoint.lon,
             currentTargetPoint.latitude,
             currentTargetPoint.longitude
-        )
+        ) / 1000.0
     }
 
     val distanceMoved = remember(currentTargetPoint, originalTargetPoint) {
-        AATMathUtils.calculateDistanceKm(
+        AATMathUtils.calculateDistanceMeters(
             originalTargetPoint.latitude,
             originalTargetPoint.longitude,
             currentTargetPoint.latitude,
             currentTargetPoint.longitude
-        )
+        ) / 1000.0
     }
 
     val areaRadiusKm = waypoint.assignedArea.radiusMeters / 1000.0

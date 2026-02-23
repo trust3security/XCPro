@@ -21,9 +21,11 @@ internal object TaskWaypointParamKeys {
     const val OZ_LENGTH_METERS = "lengthMeters"
     const val OZ_WIDTH_METERS = "widthMeters"
 
-    const val KEYHOLE_INNER_RADIUS = "keyholeInnerRadius"
+    const val KEYHOLE_INNER_RADIUS_METERS = "keyholeInnerRadiusMeters"
     const val KEYHOLE_ANGLE = "keyholeAngle"
-    const val FAI_QUADRANT_OUTER_RADIUS = "faiQuadrantOuterRadius"
+    const val FAI_QUADRANT_OUTER_RADIUS_METERS = "faiQuadrantOuterRadiusMeters"
+    const val LEGACY_KEYHOLE_INNER_RADIUS_KM = "keyholeInnerRadius"
+    const val LEGACY_FAI_QUADRANT_OUTER_RADIUS_KM = "faiQuadrantOuterRadius"
 }
 
 internal data class PersistedOzParams(
@@ -145,14 +147,16 @@ internal data class AATWaypointCustomParams(
 }
 
 internal data class RacingWaypointCustomParams(
-    val keyholeInnerRadius: Double,
+    val keyholeInnerRadiusMeters: Double,
     val keyholeAngle: Double,
-    val faiQuadrantOuterRadius: Double
+    val faiQuadrantOuterRadiusMeters: Double
 ) {
     fun applyTo(destination: MutableMap<String, Any>) {
-        destination[TaskWaypointParamKeys.KEYHOLE_INNER_RADIUS] = keyholeInnerRadius
+        destination[TaskWaypointParamKeys.KEYHOLE_INNER_RADIUS_METERS] = keyholeInnerRadiusMeters
         destination[TaskWaypointParamKeys.KEYHOLE_ANGLE] = keyholeAngle
-        destination[TaskWaypointParamKeys.FAI_QUADRANT_OUTER_RADIUS] = faiQuadrantOuterRadius
+        destination[TaskWaypointParamKeys.FAI_QUADRANT_OUTER_RADIUS_METERS] = faiQuadrantOuterRadiusMeters
+        destination.remove(TaskWaypointParamKeys.LEGACY_KEYHOLE_INNER_RADIUS_KM)
+        destination.remove(TaskWaypointParamKeys.LEGACY_FAI_QUADRANT_OUTER_RADIUS_KM)
     }
 
     fun toMap(): Map<String, Any> {
@@ -162,11 +166,23 @@ internal data class RacingWaypointCustomParams(
     }
 
     companion object {
+        private const val METERS_PER_KILOMETER = 1000.0
+        private const val DEFAULT_KEYHOLE_INNER_RADIUS_METERS = 500.0
+        private const val DEFAULT_FAI_QUADRANT_OUTER_RADIUS_METERS = 10_000.0
+
         fun from(source: Map<String, Any>): RacingWaypointCustomParams {
+            val legacyKeyholeInnerKm =
+                source.double(TaskWaypointParamKeys.LEGACY_KEYHOLE_INNER_RADIUS_KM)
+            val legacyFaiOuterKm =
+                source.double(TaskWaypointParamKeys.LEGACY_FAI_QUADRANT_OUTER_RADIUS_KM)
             return RacingWaypointCustomParams(
-                keyholeInnerRadius = source.double(TaskWaypointParamKeys.KEYHOLE_INNER_RADIUS) ?: 0.5,
+                keyholeInnerRadiusMeters = source.double(TaskWaypointParamKeys.KEYHOLE_INNER_RADIUS_METERS)
+                    ?: legacyKeyholeInnerKm?.times(METERS_PER_KILOMETER)
+                    ?: DEFAULT_KEYHOLE_INNER_RADIUS_METERS,
                 keyholeAngle = source.double(TaskWaypointParamKeys.KEYHOLE_ANGLE) ?: 90.0,
-                faiQuadrantOuterRadius = source.double(TaskWaypointParamKeys.FAI_QUADRANT_OUTER_RADIUS) ?: 10.0
+                faiQuadrantOuterRadiusMeters = source.double(TaskWaypointParamKeys.FAI_QUADRANT_OUTER_RADIUS_METERS)
+                    ?: legacyFaiOuterKm?.times(METERS_PER_KILOMETER)
+                    ?: DEFAULT_FAI_QUADRANT_OUTER_RADIUS_METERS
             )
         }
     }

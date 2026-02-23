@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.xcpro.common.waypoint.SearchWaypoint
 import com.example.xcpro.common.waypoint.WaypointData
+import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.tasks.TaskSheetViewModel
 import com.example.xcpro.tasks.core.TaskWaypoint
 import com.example.xcpro.tasks.racing.models.RacingFinishPointType
@@ -34,9 +35,19 @@ internal fun RacingReorderableWaypointList(
     allWaypoints: List<WaypointData> = emptyList(),
     onReorder: (Int, Int) -> Unit,
     onRemove: (Int) -> Unit,
-    onTaskPointTypeUpdate: (Int, RacingStartPointType?, RacingFinishPointType?, RacingTurnPointType?, Double?, Double?, Double?, Double?) -> Unit,
+    onTaskPointTypeUpdate: (
+        Int,
+        RacingStartPointType?,
+        RacingFinishPointType?,
+        RacingTurnPointType?,
+        Double?,
+        Double?,
+        Double?,
+        Double?
+    ) -> Unit,
     onWaypointReplace: (Int, SearchWaypoint) -> Unit,
     taskViewModel: TaskSheetViewModel,
+    unitsPreferences: UnitsPreferences,
     currentQNH: String? = null,
     modifier: Modifier = Modifier
 ) {
@@ -98,21 +109,29 @@ internal fun RacingReorderableWaypointList(
                 onMoveUp = if (index > 0) ({ onReorder(index, index - 1) }) else null,
                 onMoveDown = if (index < waypoints.lastIndex) ({ onReorder(index, index + 1) }) else null,
                 onRemove = { onRemove(index) },
-                onTaskPointTypeUpdate = { startType, finishType, turnType, gateWidth, keyholeInnerRadius, keyholeAngle, faiQuadrantOuterRadius ->
+                onTaskPointTypeUpdate = {
+                        startType,
+                        finishType,
+                        turnType,
+                        gateWidthMeters,
+                        keyholeInnerRadiusMeters,
+                        keyholeAngle,
+                        faiQuadrantOuterRadiusMeters ->
                     onTaskPointTypeUpdate(
                         index,
                         startType,
                         finishType,
                         turnType,
-                        gateWidth,
-                        keyholeInnerRadius,
+                        gateWidthMeters,
+                        keyholeInnerRadiusMeters,
                         keyholeAngle,
-                        faiQuadrantOuterRadius
+                        faiQuadrantOuterRadiusMeters
                     )
                 },
                 onWaypointReplace = { newWaypoint ->
                     onWaypointReplace(index, newWaypoint)
-                }
+                },
+                unitsPreferences = unitsPreferences
             )
         }
     }

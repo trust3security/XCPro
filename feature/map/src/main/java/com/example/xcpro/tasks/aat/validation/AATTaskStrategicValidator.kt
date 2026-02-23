@@ -7,39 +7,48 @@ import com.example.xcpro.tasks.aat.models.AATTaskDistance
  * Evaluates strategic validity of a task based on distance range and speeds.
  */
 internal class AATTaskStrategicValidator {
+    private companion object {
+        const val KMH_PER_MS = 3.6
+        const val LOW_COMPETITIVE_SPEED_MS = 40.0 / KMH_PER_MS
+        const val HIGH_COMPETITIVE_SPEED_MS = 150.0 / KMH_PER_MS
+    }
 
     fun validate(task: AATTask, taskDistance: AATTaskDistance?): List<AATValidationIssue> {
         val issues = mutableListOf<AATValidationIssue>()
 
         taskDistance?.let { distance ->
-            val minTimeHours = task.minimumTaskTime.toMinutes() / 60.0
-            val minSpeed = (distance.minimumDistance / 1000.0) / minTimeHours
-            val maxSpeed = (distance.maximumDistance / 1000.0) / minTimeHours
+            val minTimeSeconds = task.minimumTaskTime.seconds.toDouble().coerceAtLeast(1.0)
+            val minSpeedMs = distance.minimumDistance / minTimeSeconds
+            val maxSpeedMs = distance.maximumDistance / minTimeSeconds
 
-            if (maxSpeed < 40.0) {
+            if (maxSpeedMs < LOW_COMPETITIVE_SPEED_MS) {
                 issues.add(
                     AATValidationIssue.warning(
                         "MAX_SPEED_LOW",
                         ValidationCategory.STRATEGIC_VALIDITY,
-                        "Maximum achievable speed (${String.format("%.1f", maxSpeed)} km/h) is low for competitive gliding",
+                        "Maximum achievable speed (${String.format("%.1f", maxSpeedMs * KMH_PER_MS)} km/h) is low for competitive gliding",
                         fix = "Consider larger areas or longer distances"
                     )
                 )
             }
 
-            if (minSpeed > 150.0) {
+            if (minSpeedMs > HIGH_COMPETITIVE_SPEED_MS) {
                 issues.add(
                     AATValidationIssue.warning(
                         "MIN_SPEED_HIGH",
                         ValidationCategory.STRATEGIC_VALIDITY,
-                        "Minimum required speed (${String.format("%.1f", minSpeed)} km/h) is very high",
+                        "Minimum required speed (${String.format("%.1f", minSpeedMs * KMH_PER_MS)} km/h) is very high",
                         fix = "Consider shorter minimum distance or longer task time"
                     )
                 )
             }
 
-            val distanceRangeKm = (distance.maximumDistance - distance.minimumDistance) / 1000.0
-            val percentageRange = (distanceRangeKm / (distance.minimumDistance / 1000.0)) * 100.0
+            val distanceRangeMeters = (distance.maximumDistance - distance.minimumDistance).coerceAtLeast(0.0)
+            val percentageRange = if (distance.minimumDistance > 0.0) {
+                (distanceRangeMeters / distance.minimumDistance) * 100.0
+            } else {
+                0.0
+            }
 
             if (percentageRange < 15.0) {
                 issues.add(

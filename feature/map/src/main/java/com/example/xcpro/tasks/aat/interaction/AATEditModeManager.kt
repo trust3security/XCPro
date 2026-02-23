@@ -2,6 +2,7 @@ package com.example.xcpro.tasks.aat.interaction
 
 import com.example.xcpro.tasks.aat.SimpleAATTask
 import com.example.xcpro.tasks.aat.models.AATWaypoint
+import com.example.xcpro.tasks.aat.map.AATAreaTapDetector
 import com.example.xcpro.tasks.aat.map.AATMovablePointManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -52,64 +53,7 @@ class AATEditModeManager {
         if (task.waypoints.isEmpty()) {
             return null
         }
-
-        task.waypoints.forEachIndexed { index, waypoint ->
-            val distance = AATEditGeometry.haversineDistance(lat, lon, waypoint.lat, waypoint.lon)
-
-            //  FIX: Check area based on shape type
-            val isInArea = when (waypoint.assignedArea.shape) {
-                com.example.xcpro.tasks.aat.models.AATAreaShape.CIRCLE -> {
-                    // Simple circle check
-                    val radiusKm = waypoint.assignedArea.radiusMeters / 1000.0
-                    distance <= radiusKm
-                }
-                com.example.xcpro.tasks.aat.models.AATAreaShape.SECTOR -> {
-                    // Sector or Keyhole: Check if in inner cylinder OR outer sector
-                    val innerRadiusKm = waypoint.assignedArea.innerRadiusMeters / 1000.0
-                    val outerRadiusKm = waypoint.assignedArea.outerRadiusMeters / 1000.0
-
-                    if (innerRadiusKm > 0.0) {
-                        // KEYHOLE: Check inner cylinder OR sector
-                        if (distance <= innerRadiusKm) {
-                            true // Inside inner cylinder (always valid)
-                        } else if (distance <= outerRadiusKm) {
-                            // Check if within sector angles
-                            val bearing = AATEditGeometry.calculateBearing(waypoint.lat, waypoint.lon, lat, lon)
-                            AATEditGeometry.isAngleInSector(
-                                bearing,
-                                waypoint.assignedArea.startAngleDegrees,
-                                waypoint.assignedArea.endAngleDegrees
-                            )
-                        } else {
-                            false
-                        }
-                    } else {
-                        // SECTOR: Check if within outer radius AND sector angles
-                        if (distance <= outerRadiusKm) {
-                            val bearing = AATEditGeometry.calculateBearing(waypoint.lat, waypoint.lon, lat, lon)
-                            AATEditGeometry.isAngleInSector(
-                                bearing,
-                                waypoint.assignedArea.startAngleDegrees,
-                                waypoint.assignedArea.endAngleDegrees
-                            )
-                        } else {
-                            false
-                        }
-                    }
-                }
-                com.example.xcpro.tasks.aat.models.AATAreaShape.LINE -> {
-                    // Line check (for start/finish)
-                    val halfWidth = (waypoint.assignedArea.lineWidthMeters / 1000.0) / 2.0
-                    distance <= halfWidth
-                }
-            }
-
-            if (isInArea) {
-                return Pair(index, waypoint)
-            }
-        }
-
-        return null
+        return AATAreaTapDetector.findTappedArea(task.waypoints, lat, lon)
     }
 
     /**

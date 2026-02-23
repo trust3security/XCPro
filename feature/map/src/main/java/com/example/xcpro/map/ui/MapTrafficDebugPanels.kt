@@ -47,6 +47,11 @@ internal fun OgnDebugPanel(
                 style = MaterialTheme.typography.bodySmall
             )
             Text(
+                text = "Suppressed: ${snapshot.suppressedTargetIds.size}",
+                color = Color(0xFFD1D5DB),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
                 text = "Radius: ${snapshot.receiveRadiusKm} km",
                 color = Color(0xFFD1D5DB),
                 style = MaterialTheme.typography.bodySmall

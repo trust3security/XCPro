@@ -287,7 +287,6 @@ class OgnTrafficUseCase @Inject constructor(
     val thermalHotspots: StateFlow<List<OgnThermalHotspot>> = thermalRepository.hotspots
     val showThermalsEnabled: Flow<Boolean> = preferencesRepository.showThermalsEnabledFlow
     val gliderTrailSegments: StateFlow<List<OgnGliderTrailSegment>> = gliderTrailRepository.segments
-    val showGliderTrailsEnabled: Flow<Boolean> = preferencesRepository.showGliderTrailsEnabledFlow
 
     fun setStreamingEnabled(enabled: Boolean) {
         repository.setEnabled(enabled)
@@ -307,10 +306,6 @@ class OgnTrafficUseCase @Inject constructor(
 
     suspend fun setShowThermalsEnabled(enabled: Boolean) {
         preferencesRepository.setShowThermalsEnabled(enabled)
-    }
-
-    suspend fun setShowGliderTrailsEnabled(enabled: Boolean) {
-        preferencesRepository.setShowGliderTrailsEnabled(enabled)
     }
 
     fun stop() {

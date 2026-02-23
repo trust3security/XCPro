@@ -186,22 +186,29 @@ class AATTargetPointDragHandler(
      * Clamp position to area boundary
      */
     private fun clampToBoundary(position: AATLatLng): AATLatLng {
-        val distance = AATMathUtils.calculateDistanceKm(
+        val distanceMeters = AATMathUtils.calculateDistanceMeters(
             waypoint.lat, waypoint.lon,
             position.latitude, position.longitude
         )
 
-        val maxDistanceKm = waypoint.assignedArea.radiusMeters / 1000.0
+        val maxDistanceMeters = waypoint.assignedArea.radiusMeters
 
-        if (distance <= maxDistanceKm) {
+        if (distanceMeters <= maxDistanceMeters) {
             return position // Already within bounds
         }
 
         // Calculate bearing from center to position
-        val bearing = calculateBearing(waypoint.lat, waypoint.lon, position.latitude, position.longitude)
+        val bearing = AATMathUtils.calculateBearing(
+            AATLatLng(waypoint.lat, waypoint.lon),
+            position
+        )
 
         // Calculate new position at max distance
-        return calculateDestination(waypoint.lat, waypoint.lon, bearing, maxDistanceKm)
+        return AATMathUtils.calculatePointAtBearingMeters(
+            from = AATLatLng(waypoint.lat, waypoint.lon),
+            bearing = bearing,
+            distanceMeters = maxDistanceMeters
+        )
     }
 
     /**
@@ -220,48 +227,6 @@ class AATTargetPointDragHandler(
     fun getDragOffset(): IntOffset = IntOffset(
         _dragState.value.dragOffset.x.roundToInt(),
         _dragState.value.dragOffset.y.roundToInt()
-    )
-}
-
-/**
- * Calculate bearing between two points
- */
-private fun calculateBearing(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
-    val dLon = Math.toRadians(lon2 - lon1)
-    val lat1Rad = Math.toRadians(lat1)
-    val lat2Rad = Math.toRadians(lat2)
-
-    val y = sin(dLon) * cos(lat2Rad)
-    val x = cos(lat1Rad) * sin(lat2Rad) -
-            sin(lat1Rad) * cos(lat2Rad) * cos(dLon)
-
-    val bearing = atan2(y, x)
-    return (Math.toDegrees(bearing) + 360) % 360
-}
-
-/**
- * Calculate destination point given start point, bearing, and distance
- */
-private fun calculateDestination(lat: Double, lon: Double, bearing: Double, distanceKm: Double): AATLatLng {
-    val earthRadiusKm = 6371.0
-    val bearingRad = Math.toRadians(bearing)
-    val latRad = Math.toRadians(lat)
-    val lonRad = Math.toRadians(lon)
-    val angularDistance = distanceKm / earthRadiusKm
-
-    val destLatRad = asin(
-        sin(latRad) * cos(angularDistance) +
-        cos(latRad) * sin(angularDistance) * cos(bearingRad)
-    )
-
-    val destLonRad = lonRad + atan2(
-        sin(bearingRad) * sin(angularDistance) * cos(latRad),
-        cos(angularDistance) - sin(latRad) * sin(destLatRad)
-    )
-
-    return AATLatLng(
-        latitude = Math.toDegrees(destLatRad),
-        longitude = Math.toDegrees(destLonRad)
     )
 }
 

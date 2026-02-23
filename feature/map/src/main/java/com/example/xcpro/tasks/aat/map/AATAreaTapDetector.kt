@@ -15,21 +15,20 @@ internal object AATAreaTapDetector {
         lon: Double
     ): Pair<Int, AATWaypoint>? {
         waypoints.forEachIndexed { index, waypoint ->
-            val distance = AATMathUtils.calculateDistanceKm(lat, lon, waypoint.lat, waypoint.lon)
+            val distanceMeters = AATMathUtils.calculateDistanceMeters(lat, lon, waypoint.lat, waypoint.lon)
             val isInArea = when (waypoint.assignedArea.shape) {
                 AATAreaShape.CIRCLE -> {
-                    val radiusKm = waypoint.assignedArea.radiusMeters / 1000.0
-                    distance <= radiusKm
+                    distanceMeters <= waypoint.assignedArea.radiusMeters
                 }
 
                 AATAreaShape.SECTOR -> {
-                    val innerRadiusKm = waypoint.assignedArea.innerRadiusMeters / 1000.0
-                    val outerRadiusKm = waypoint.assignedArea.outerRadiusMeters / 1000.0
+                    val innerRadiusMeters = waypoint.assignedArea.innerRadiusMeters
+                    val outerRadiusMeters = waypoint.assignedArea.outerRadiusMeters
 
-                    if (innerRadiusKm > 0.0) {
-                        if (distance <= innerRadiusKm) {
+                    if (innerRadiusMeters > 0.0) {
+                        if (distanceMeters <= innerRadiusMeters) {
                             true
-                        } else if (distance <= outerRadiusKm) {
+                        } else if (distanceMeters <= outerRadiusMeters) {
                             val bearing = calculateBearing(waypoint.lat, waypoint.lon, lat, lon)
                             isAngleInSector(
                                 bearing,
@@ -39,7 +38,7 @@ internal object AATAreaTapDetector {
                         } else {
                             false
                         }
-                    } else if (distance <= outerRadiusKm) {
+                    } else if (distanceMeters <= outerRadiusMeters) {
                         val bearing = calculateBearing(waypoint.lat, waypoint.lon, lat, lon)
                         isAngleInSector(
                             bearing,
@@ -52,8 +51,8 @@ internal object AATAreaTapDetector {
                 }
 
                 AATAreaShape.LINE -> {
-                    val halfWidth = (waypoint.assignedArea.lineWidthMeters / 1000.0) / 2.0
-                    distance <= halfWidth
+                    val halfWidthMeters = waypoint.assignedArea.lineWidthMeters / 2.0
+                    distanceMeters <= halfWidthMeters
                 }
             }
 

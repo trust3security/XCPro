@@ -12,6 +12,5 @@ internal enum class AirspeedSource(
 ) {
     EXTERNAL("SENSOR", true),
     WIND_VECTOR("WIND", true),
-    POLAR_SINK("POLAR", false),
     GPS_GROUND("GPS", false)
 }

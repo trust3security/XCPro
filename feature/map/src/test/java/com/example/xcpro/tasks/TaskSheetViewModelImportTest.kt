@@ -71,7 +71,7 @@ class TaskSheetViewModelImportTest {
         Mockito.verify(coordinator).updateAATArea(1, 5500.0)
 
         val indexCaptor = ArgumentCaptor.forClass(Int::class.javaObjectType)
-        Mockito.verify(coordinator, Mockito.times(3)).updateAATWaypointPointType(
+        Mockito.verify(coordinator, Mockito.times(3)).updateAATWaypointPointTypeMeters(
             indexCaptor.capture(),
             Mockito.isNull(),
             Mockito.isNull(),
@@ -153,7 +153,7 @@ class TaskSheetViewModelImportTest {
             Mockito.isNull()
         )
         assertEquals(listOf(1, 2), indexCaptor.allValues)
-        assertEquals(listOf(0.8, 1.2), gateWidthCaptor.allValues)
+        assertEquals(listOf(800.0, 1200.0), gateWidthCaptor.allValues)
 
         Mockito.verify(coordinator, Mockito.times(0)).updateAATTargetPoint(
             Mockito.anyInt(),
@@ -161,7 +161,7 @@ class TaskSheetViewModelImportTest {
             Mockito.anyDouble()
         )
         Mockito.verify(coordinator, Mockito.times(0)).updateAATArea(Mockito.anyInt(), Mockito.anyDouble())
-        Mockito.verify(coordinator, Mockito.times(0)).updateAATWaypointPointType(
+        Mockito.verify(coordinator, Mockito.times(0)).updateAATWaypointPointTypeMeters(
             Mockito.anyInt(),
             Mockito.isNull(),
             Mockito.isNull(),

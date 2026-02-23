@@ -120,10 +120,10 @@ class AATPathOptimizer {
                 nextWaypoint = task.finish.position,
                 recommendedStrategy = 0.0,
                 timeToMinimum = remainingTime,
-                distanceRemainingMeters = AATMathUtils.calculateDistance(
+                distanceRemainingMeters = AATMathUtils.calculateDistanceMeters(
                     currentPosition,
                     task.finish.position
-                ) * METERS_PER_KILOMETER
+                )
             )
         }
 

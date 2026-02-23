@@ -41,27 +41,27 @@ class RacingBoundaryCrossingPlannerTest {
         )
 
         assertNotNull(crossing)
-        val distanceMeters = RacingGeometryUtils.haversineDistance(
+        val distanceMeters = RacingGeometryUtils.haversineDistanceMeters(
             center.lat,
             center.lon,
             crossing!!.crossingPoint.lat,
             crossing.crossingPoint.lon
-        ) * 1000.0
+        )
         assertTrue(abs(distanceMeters - radiusMeters) < 5.0)
         assertTrue(crossing.crossingTimeMillis in previousFix.timestampMillis..currentFix.timestampMillis)
 
-        val insideDistance = RacingGeometryUtils.haversineDistance(
+        val insideDistance = RacingGeometryUtils.haversineDistanceMeters(
             center.lat,
             center.lon,
             crossing.insideAnchor.lat,
             crossing.insideAnchor.lon
-        ) * 1000.0
-        val outsideDistance = RacingGeometryUtils.haversineDistance(
+        )
+        val outsideDistance = RacingGeometryUtils.haversineDistanceMeters(
             center.lat,
             center.lon,
             crossing.outsideAnchor.lat,
             crossing.outsideAnchor.lon
-        ) * 1000.0
+        )
         assertTrue(insideDistance < radiusMeters)
         assertTrue(outsideDistance > radiusMeters)
     }

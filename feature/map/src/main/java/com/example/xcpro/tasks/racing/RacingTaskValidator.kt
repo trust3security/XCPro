@@ -18,7 +18,6 @@ class RacingTaskValidator {
     private val calculator = RacingTaskCalculator()
     
     companion object {
-        private const val EARTH_RADIUS_KM = 6371.0
         private const val TOLERANCE_METERS = 10.0 // 10m tolerance for touch verification
     }
     
@@ -81,10 +80,10 @@ class RacingTaskValidator {
         waypoint: RacingWaypoint,
         courseLinePoint: Pair<Double, Double>
     ): TouchPointResult {
-        val distanceFromCenter = RacingGeometryUtils.haversineDistance(
+        val distanceFromCenter = RacingGeometryUtils.haversineDistanceMeters(
             waypoint.lat, waypoint.lon,
             courseLinePoint.first, courseLinePoint.second
-        ) * 1000.0 // Convert to meters
+        )
 
         return when (waypoint.role) {
             RacingWaypointRole.START -> {
@@ -105,7 +104,7 @@ class RacingTaskValidator {
     }
     
     private fun validateStartPoint(waypoint: RacingWaypoint, distanceFromCenter: Double): TouchPointResult {
-        val expectedRadius = waypoint.gateWidth * 1000.0 // Convert km to meters
+        val expectedRadius = waypoint.gateWidthMeters
 
         return when (waypoint.startPointType) {
             RacingStartPointType.START_CYLINDER -> {
@@ -140,7 +139,7 @@ class RacingTaskValidator {
     }
     
     private fun validateTurnPoint(waypoint: RacingWaypoint, distanceFromCenter: Double): TouchPointResult {
-        val expectedRadius = waypoint.gateWidth * 1000.0 // Convert km to meters
+        val expectedRadius = waypoint.gateWidthMeters
 
         return when (waypoint.turnPointType) {
             RacingTurnPointType.TURN_POINT_CYLINDER -> {
@@ -156,7 +155,7 @@ class RacingTaskValidator {
 
             RacingTurnPointType.FAI_QUADRANT -> {
                 // FAI quadrant uses a finite sector radius (default 10km)
-                val maxRadius = waypoint.faiQuadrantOuterRadius * 1000.0
+                val maxRadius = waypoint.faiQuadrantOuterRadiusMeters
                 val isValid = distanceFromCenter <= maxRadius + TOLERANCE_METERS
                 TouchPointResult(
                     isValid = isValid,
@@ -186,7 +185,7 @@ class RacingTaskValidator {
     }
     
     private fun validateFinishPoint(waypoint: RacingWaypoint, distanceFromCenter: Double): TouchPointResult {
-        val expectedRadius = waypoint.gateWidth * 1000.0 // Convert km to meters
+        val expectedRadius = waypoint.gateWidthMeters
 
         return when (waypoint.finishPointType) {
             RacingFinishPointType.FINISH_CYLINDER -> {

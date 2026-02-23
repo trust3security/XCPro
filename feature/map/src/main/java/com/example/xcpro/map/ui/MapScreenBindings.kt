@@ -2,6 +2,8 @@ package com.example.xcpro.map.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.adsb.AdsbTrafficSnapshot
@@ -16,6 +18,9 @@ import com.example.xcpro.ogn.OgnTrafficSnapshot
 import com.example.xcpro.ogn.OgnTrafficTarget
 import com.example.xcpro.ogn.OgnThermalHotspot
 import com.example.xcpro.ogn.OgnGliderTrailSegment
+import com.example.xcpro.ogn.OgnTrailSelectionViewModel
+import com.example.xcpro.ogn.normalizeOgnAircraftKey
+import com.example.xcpro.ogn.selectionSetContainsOgnKey
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.map.model.GpsStatusUiModel
@@ -40,7 +45,6 @@ internal data class MapScreenBindings(
     val ognThermalHotspots: List<OgnThermalHotspot>,
     val showOgnThermalsEnabled: Boolean,
     val ognGliderTrailSegments: List<OgnGliderTrailSegment>,
-    val showOgnGliderTrailsEnabled: Boolean,
     val adsbTargets: List<AdsbTrafficUiModel>,
     val adsbSnapshot: AdsbTrafficSnapshot,
     val adsbOverlayEnabled: Boolean,
@@ -62,6 +66,7 @@ internal fun rememberMapScreenBindings(
     mapViewModel: MapScreenViewModel,
     mapStateReader: MapStateReader
 ): MapScreenBindings {
+    val ognTrailSelectionViewModel: OgnTrailSelectionViewModel = hiltViewModel()
     val gpsStatus by mapViewModel.gpsStatusFlow.collectAsStateWithLifecycle()
     val showRecenterButton by mapStateReader.showRecenterButton.collectAsStateWithLifecycle()
     val showReturnButton by mapStateReader.showReturnButton.collectAsStateWithLifecycle()
@@ -79,8 +84,27 @@ internal fun rememberMapScreenBindings(
     val ognIconSizePx by mapViewModel.ognIconSizePx.collectAsStateWithLifecycle()
     val ognThermalHotspots by mapViewModel.ognThermalHotspots.collectAsStateWithLifecycle()
     val showOgnThermalsEnabled by mapViewModel.showOgnThermalsEnabled.collectAsStateWithLifecycle()
-    val ognGliderTrailSegments by mapViewModel.ognGliderTrailSegments.collectAsStateWithLifecycle()
-    val showOgnGliderTrailsEnabled by mapViewModel.showOgnGliderTrailsEnabled.collectAsStateWithLifecycle()
+    val rawOgnGliderTrailSegments by mapViewModel.ognGliderTrailSegments.collectAsStateWithLifecycle()
+    val selectedOgnTrailAircraftKeys by ognTrailSelectionViewModel.selectedTrailAircraftKeys
+        .collectAsStateWithLifecycle()
+    val ognGliderTrailSegments = remember(
+        rawOgnGliderTrailSegments,
+        selectedOgnTrailAircraftKeys
+    ) {
+        val normalizedSelectedKeys = selectedOgnTrailAircraftKeys
+            .map(::normalizeOgnAircraftKey)
+            .toSet()
+        if (normalizedSelectedKeys.isEmpty()) {
+            emptyList()
+        } else {
+            rawOgnGliderTrailSegments.filter { segment ->
+                selectionSetContainsOgnKey(
+                    selectedKeys = normalizedSelectedKeys,
+                    candidateKey = segment.sourceTargetId
+                )
+            }
+        }
+    }
     val adsbTargets by mapViewModel.adsbTargets.collectAsStateWithLifecycle()
     val adsbSnapshot by mapViewModel.adsbSnapshot.collectAsStateWithLifecycle()
     val adsbOverlayEnabled by mapViewModel.adsbOverlayEnabled.collectAsStateWithLifecycle()
@@ -115,7 +139,6 @@ internal fun rememberMapScreenBindings(
         ognThermalHotspots = ognThermalHotspots,
         showOgnThermalsEnabled = showOgnThermalsEnabled,
         ognGliderTrailSegments = ognGliderTrailSegments,
-        showOgnGliderTrailsEnabled = showOgnGliderTrailsEnabled,
         adsbTargets = adsbTargets,
         adsbSnapshot = adsbSnapshot,
         adsbOverlayEnabled = adsbOverlayEnabled,

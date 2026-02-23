@@ -34,8 +34,8 @@ class TaskPersistSerializerInstrumentedTest {
         val turnpoint = persisted.waypoints.first { it.role == WaypointRole.TURNPOINT }
 
         assertEquals("SEGMENT", turnpoint.ozType)
-        assertEquals(5000.0, turnpoint.ozParams["radiusMeters"] ?: Double.NaN, 0.0)
-        assertEquals(5000.0, turnpoint.ozParams["outerRadiusMeters"] ?: Double.NaN, 0.0)
+        assertEquals(10000.0, turnpoint.ozParams["radiusMeters"] ?: Double.NaN, 0.0)
+        assertEquals(10000.0, turnpoint.ozParams["outerRadiusMeters"] ?: Double.NaN, 0.0)
         assertEquals(0.0, turnpoint.ozParams["innerRadiusMeters"] ?: Double.NaN, 0.0)
         assertEquals(90.0, turnpoint.ozParams["angleDeg"] ?: Double.NaN, 0.0)
     }

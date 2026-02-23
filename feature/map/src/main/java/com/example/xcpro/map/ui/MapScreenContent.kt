@@ -75,8 +75,11 @@ import com.example.xcpro.ogn.OgnConnectionState
 import com.example.xcpro.ogn.OgnMarkerDetailsSheet
 import com.example.xcpro.ogn.OgnTrafficSnapshot
 import com.example.xcpro.ogn.OgnTrafficTarget
+import com.example.xcpro.ogn.OgnTrailSelectionViewModel
 import com.example.xcpro.ogn.OgnThermalDetailsSheet
 import com.example.xcpro.ogn.OgnThermalHotspot
+import com.example.xcpro.ogn.normalizeOgnAircraftKey
+import com.example.xcpro.ogn.selectionSetContainsOgnKey
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -123,7 +126,6 @@ internal fun MapScreenContent(
     ognOverlayEnabled: Boolean,
     ognThermalHotspots: List<OgnThermalHotspot>,
     showOgnThermalsEnabled: Boolean,
-    showOgnGliderTrailsEnabled: Boolean,
     adsbSnapshot: AdsbTrafficSnapshot,
     adsbOverlayEnabled: Boolean,
     selectedOgnTarget: OgnTrafficTarget?,
@@ -162,7 +164,6 @@ internal fun MapScreenContent(
     onSetManualQnh: (Double) -> Unit,
     onToggleOgnTraffic: () -> Unit,
     onToggleOgnThermals: () -> Unit,
-    onToggleOgnGliderTrails: () -> Unit,
     onToggleAdsbTraffic: () -> Unit,
     onOgnTargetSelected: (String) -> Unit,
     onOgnThermalSelected: (String) -> Unit,
@@ -194,6 +195,15 @@ internal fun MapScreenContent(
     val forecastQueryStatus by forecastViewModel.queryStatus.collectAsStateWithLifecycle()
     val weatherOverlayViewModel: WeatherOverlayViewModel = hiltViewModel()
     val weatherOverlayState by weatherOverlayViewModel.overlayState.collectAsStateWithLifecycle()
+    val ognTrailSelectionViewModel: OgnTrailSelectionViewModel = hiltViewModel()
+    val selectedOgnTrailAircraftKeys by ognTrailSelectionViewModel.selectedTrailAircraftKeys
+        .collectAsStateWithLifecycle()
+    val ognTrailAircraftRows = remember(ognSnapshot.targets, selectedOgnTrailAircraftKeys) {
+        buildOgnTrailAircraftRows(
+            targets = ognSnapshot.targets,
+            selectedAircraftKeys = selectedOgnTrailAircraftKeys
+        )
+    }
     val currentQnhLabel = remember(liveFlightData?.qnh) {
         val qnh = liveFlightData?.qnh ?: 1013.25
         String.format(Locale.US, "%.1f hPa", qnh)
@@ -351,6 +361,7 @@ internal fun MapScreenContent(
                         cameraManager = cameraManager,
                         currentMode = currentMode,
                         currentZoom = currentZoom,
+                        unitsPreferences = unitsPreferences,
                         onModeChange = onModeChange,
                         currentLocation = currentLocation,
                         showReturnButton = showReturnButton,
@@ -417,6 +428,7 @@ internal fun MapScreenContent(
         MapTaskManagerLayer(
             taskScreenManager = taskScreenManager,
             waypointData = waypointData,
+            unitsPreferences = unitsPreferences,
             currentLocation = currentLocation,
             currentQnh = currentQnhLabel
         )
@@ -427,9 +439,7 @@ internal fun MapScreenContent(
             showRecenterButton = showRecenterButton,
             showReturnButton = showReturnButton,
             showDistanceCircles = showDistanceCircles,
-            showOgnTraffic = ognOverlayEnabled,
             showOgnThermals = showOgnThermalsEnabled,
-            showOgnGliderTrails = showOgnGliderTrailsEnabled,
             showAdsbTraffic = adsbOverlayEnabled,
             showForecastOverlay = forecastOverlayState.enabled || forecastOverlayState.windOverlayEnabled,
             showQnhFab = showQnhFab,
@@ -438,9 +448,7 @@ internal fun MapScreenContent(
             showRacingReplayFab = showRacingReplayFab && !hideReplayDebugFabs,
             onRecenter = locationManager::recenterOnCurrentLocation,
             onToggleDistanceCircles = { overlayManager.toggleDistanceCircles() },
-            onToggleOgnTraffic = onToggleOgnTraffic,
             onToggleOgnThermals = onToggleOgnThermals,
-            onToggleOgnGliderTrails = onToggleOgnGliderTrails,
             onToggleAdsbTraffic = onToggleAdsbTraffic,
             onShowForecastSheet = {
                 isBottomTabsSheetVisible = false
@@ -484,6 +492,14 @@ internal fun MapScreenContent(
             onWeatherOpacityChanged = weatherOverlayViewModel::setOpacity,
             isDrawerBlocked = isDrawerBlocked,
             onOpenWeatherSettingsFromTab = onOpenWeatherSettingsFromTab,
+            ognEnabled = ognOverlayEnabled,
+            onOgnEnabledChanged = { enabled ->
+                if (enabled != ognOverlayEnabled) onToggleOgnTraffic()
+            },
+            ognTrailAircraftRows = ognTrailAircraftRows,
+            onOgnTrailAircraftToggled = { aircraftKey, enabled ->
+                ognTrailSelectionViewModel.setTrailAircraftSelected(aircraftKey, enabled)
+            },
             showSkySightPrimaryEnabled = forecastOverlayState.enabled,
             selectedPrimarySkySightIds = selectedSkySightPrimaryIds,
             onShowSkySightPrimaryChanged = forecastViewModel::setEnabled,
@@ -692,6 +708,36 @@ private fun WindArrowSpeedTapLabel(
 
 private fun formatWindSpeedForTap(speedKt: Double): String =
     String.format(Locale.US, "%.0f", speedKt)
+
+private fun buildOgnTrailAircraftRows(
+    targets: List<OgnTrafficTarget>,
+    selectedAircraftKeys: Set<String>
+): List<OgnTrailAircraftRowUi> {
+    val normalizedSelectedKeys = selectedAircraftKeys
+        .map(::normalizeOgnAircraftKey)
+        .toSet()
+    val seenKeys = HashSet<String>()
+    return targets.mapNotNull { target ->
+        val key = normalizeOgnAircraftKey(target.canonicalKey)
+        if (!seenKeys.add(key)) return@mapNotNull null
+
+        val label = target.identity?.registration
+            ?.takeIf { it.isNotBlank() }
+            ?: target.identity?.competitionNumber?.takeIf { it.isNotBlank() }
+            ?: target.callsign.takeIf { it.isNotBlank() }
+            ?: target.displayLabel.takeIf { it.isNotBlank() }
+            ?: key
+
+        OgnTrailAircraftRowUi(
+            key = key,
+            label = label,
+            trailsEnabled = selectionSetContainsOgnKey(
+                selectedKeys = normalizedSelectedKeys,
+                candidateKey = key
+            )
+        )
+    }.sortedBy { row -> row.label.lowercase(Locale.US) }
+}
 
 private data class WindArrowTapCallout(
     val tapLatLng: LatLng,

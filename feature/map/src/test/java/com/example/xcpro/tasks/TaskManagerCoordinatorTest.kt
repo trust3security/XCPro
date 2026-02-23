@@ -5,10 +5,12 @@ import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.TaskWaypoint
 import com.example.xcpro.tasks.core.WaypointRole
+import com.example.xcpro.tasks.aat.calculations.AATMathUtils
 import com.example.xcpro.tasks.domain.engine.AATTaskEngine
 import com.example.xcpro.tasks.domain.engine.RacingTaskEngine
 import com.example.xcpro.tasks.domain.persistence.TaskEnginePersistenceService
 import com.example.xcpro.tasks.aat.AATTaskManager
+import com.example.xcpro.tasks.racing.RacingGeometryUtils
 import com.example.xcpro.tasks.racing.RacingTaskManager
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -23,6 +25,12 @@ import org.mockito.kotlin.whenever
 import kotlinx.coroutines.test.runTest
 
 class TaskManagerCoordinatorTest {
+    private data class SegmentFixture(
+        val fromLat: Double,
+        val fromLon: Double,
+        val toLat: Double,
+        val toLon: Double
+    )
 
     private val aatDelegate: AATCoordinatorDelegate = mock()
     private val racingDelegate: RacingCoordinatorDelegate = mock()
@@ -79,21 +87,20 @@ class TaskManagerCoordinatorTest {
         val first = coreWaypoint(id = "w1", lat = 0.0, lon = 0.0, role = WaypointRole.START)
         val second = coreWaypoint(id = "w2", lat = 0.0, lon = 1.0, role = WaypointRole.TURNPOINT)
         val third = coreWaypoint(id = "w3", lat = 1.0, lon = 1.0, role = WaypointRole.FINISH)
-        whenever(racingDelegate.calculateSegmentDistance(eq(first), eq(second))).thenReturn(12.5)
-        whenever(racingDelegate.calculateSegmentDistance(eq(second), eq(third))).thenReturn(7.5)
+        whenever(racingDelegate.calculateSegmentDistanceMeters(eq(first), eq(second))).thenReturn(12_500.0)
+        whenever(racingDelegate.calculateSegmentDistanceMeters(eq(second), eq(third))).thenReturn(7_500.0)
 
-        val distance = coordinator.calculateTaskDistanceForTask(
-            Task(
-                id = "external-task",
-                waypoints = listOf(first, second, third)
-            )
+        val task = Task(
+            id = "external-task",
+            waypoints = listOf(first, second, third)
         )
+        val distanceMeters = coordinator.calculateTaskDistanceForTaskMeters(task)
 
-        assertEquals(20.0, distance, 0.0)
-        verify(racingDelegate, never()).calculateDistance()
-        verify(racingDelegate).calculateSegmentDistance(eq(first), eq(second))
-        verify(racingDelegate).calculateSegmentDistance(eq(second), eq(third))
-        verify(aatDelegate, never()).calculateSegmentDistance(any(), any())
+        assertEquals(20_000.0, distanceMeters, 0.0)
+        verify(racingDelegate, never()).calculateDistanceMeters()
+        verify(racingDelegate).calculateSegmentDistanceMeters(eq(first), eq(second))
+        verify(racingDelegate).calculateSegmentDistanceMeters(eq(second), eq(third))
+        verify(aatDelegate, never()).calculateSegmentDistanceMeters(any(), any())
     }
 
     @Test
@@ -152,12 +159,90 @@ class TaskManagerCoordinatorTest {
         val from = coreWaypoint(id = "a", lat = 0.0, lon = 0.0, role = WaypointRole.START)
         val to = coreWaypoint(id = "b", lat = 0.0, lon = 1.0, role = WaypointRole.TURNPOINT)
 
-        val forward = localCoordinator.calculateSimpleSegmentDistance(from, to)
-        val reverse = localCoordinator.calculateSimpleSegmentDistance(to, from)
+        val forward = localCoordinator.calculateSimpleSegmentDistanceMeters(from, to)
+        val reverse = localCoordinator.calculateSimpleSegmentDistanceMeters(to, from)
 
-        assertTrue(forward > 100.0)
-        assertTrue(forward < 120.0)
+        assertTrue(forward > 100_000.0)
+        assertTrue(forward < 120_000.0)
         assertEquals(forward, reverse, 1e-9)
+    }
+
+    @Test
+    fun `segment distance meter contract holds across racing and aat fixture matrix`() {
+        val localCoordinator = createCoordinatorWithoutPersistence()
+        val fixtures = listOf(
+            SegmentFixture(0.0, 0.0, 0.0, 1.0),
+            SegmentFixture(0.0, 0.0, 1.0, 0.0),
+            SegmentFixture(45.0, 7.0, 45.3, 7.4),
+            SegmentFixture(-34.90, 138.60, -35.00, 138.80)
+        )
+
+        fixtures.forEachIndexed { index, fixture ->
+            val from = coreWaypoint(
+                id = "from-$index",
+                lat = fixture.fromLat,
+                lon = fixture.fromLon,
+                role = WaypointRole.START
+            )
+            val to = coreWaypoint(
+                id = "to-$index",
+                lat = fixture.toLat,
+                lon = fixture.toLon,
+                role = WaypointRole.TURNPOINT
+            )
+
+            localCoordinator.setTaskTypeForTesting(TaskType.RACING)
+            val racingDistanceMeters = localCoordinator.calculateSimpleSegmentDistanceMeters(from, to)
+            val expectedRacingMeters = RacingGeometryUtils.haversineDistanceMeters(
+                fixture.fromLat,
+                fixture.fromLon,
+                fixture.toLat,
+                fixture.toLon
+            )
+            assertEquals(
+                "Racing fixture index $index should resolve SI meter distance",
+                expectedRacingMeters,
+                racingDistanceMeters,
+                1.0
+            )
+
+            localCoordinator.setTaskTypeForTesting(TaskType.AAT)
+            val aatDistanceMeters = localCoordinator.calculateSimpleSegmentDistanceMeters(from, to)
+            val expectedAatMeters = AATMathUtils.calculateDistanceMeters(
+                fixture.fromLat,
+                fixture.fromLon,
+                fixture.toLat,
+                fixture.toLon
+            )
+            assertEquals(
+                "AAT fixture index $index should resolve SI meter distance",
+                expectedAatMeters,
+                aatDistanceMeters,
+                1.0
+            )
+        }
+    }
+
+    @Test
+    fun `optimal start line crossing converts racing gate width from km to meters`() {
+        val localCoordinator = createCoordinatorWithoutPersistence()
+        localCoordinator.setTaskTypeForTesting(TaskType.RACING)
+        localCoordinator.addWaypoint(searchWaypoint("start", 0.0, 0.0))
+        localCoordinator.addWaypoint(searchWaypoint("next", 0.0, 1.0))
+
+        val start = localCoordinator.currentTask.waypoints.first()
+        val next = localCoordinator.currentTask.waypoints[1]
+        val crossing = localCoordinator.calculateOptimalStartLineCrossingPoint(start, next)
+        val offsetMeters = RacingGeometryUtils.haversineDistanceMeters(
+            start.lat,
+            start.lon,
+            crossing.first,
+            crossing.second
+        )
+
+        // Default racing start gate width is 10km; crossing is at half-width from center.
+        assertTrue(offsetMeters > 4_500.0)
+        assertTrue(offsetMeters < 5_500.0)
     }
 
     @Test

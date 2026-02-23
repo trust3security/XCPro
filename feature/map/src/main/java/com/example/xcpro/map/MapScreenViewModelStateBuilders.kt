@@ -7,6 +7,8 @@ import com.example.xcpro.map.model.GpsStatusUiModel
 import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.ogn.OgnTrafficTarget
 import com.example.xcpro.ogn.OgnThermalHotspot
+import com.example.xcpro.ogn.normalizeOgnAircraftKey
+import com.example.xcpro.ogn.selectionSetContainsOgnKey
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.replay.SessionStatus
 import kotlinx.coroutines.CoroutineScope
@@ -137,7 +139,15 @@ internal fun createSelectedOgnTargetState(
     ognTargets: StateFlow<List<OgnTrafficTarget>>
 ): StateFlow<OgnTrafficTarget?> =
     combine(selectedOgnId, ognTargets) { selectedId, targets ->
-        selectedId?.let { id -> targets.firstOrNull { it.id == id } }
+        selectedId?.let { key ->
+            val normalizedKey = normalizeOgnAircraftKey(key)
+            targets.firstOrNull { target ->
+                selectionSetContainsOgnKey(
+                    selectedKeys = setOf(normalizedKey),
+                    candidateKey = target.canonicalKey
+                ) || normalizeOgnAircraftKey(target.id) == normalizedKey
+            }
+        }
     }.stateIn(scope = scope, started = SharingStarted.Eagerly, initialValue = null)
 
 internal fun createSelectedOgnThermalState(

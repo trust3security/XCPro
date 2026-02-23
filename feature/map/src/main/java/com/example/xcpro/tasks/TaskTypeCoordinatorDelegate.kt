@@ -8,6 +8,6 @@ import com.example.xcpro.tasks.core.TaskWaypoint
  */
 internal interface TaskTypeCoordinatorDelegate {
     fun clearTask()
-    fun calculateDistance(): Double
-    fun calculateSegmentDistance(from: TaskWaypoint, to: TaskWaypoint): Double
+    fun calculateDistanceMeters(): Double
+    fun calculateSegmentDistanceMeters(from: TaskWaypoint, to: TaskWaypoint): Double
 }

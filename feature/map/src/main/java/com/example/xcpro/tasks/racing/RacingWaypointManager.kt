@@ -14,7 +14,6 @@ import com.example.xcpro.tasks.racing.models.RacingTurnPointType
  * Extracted from RacingTaskManager.kt to reduce file size and improve modularity
  */
 class RacingWaypointManager {
-
     /**
      * Add waypoint to Racing task
      */
@@ -59,10 +58,9 @@ class RacingWaypointManager {
                     startPointType = wp.startPointType,
                     finishPointType = wp.finishPointType,
                     turnPointType = wp.turnPointType,
-                    customGateWidth = null, // Let role change get new standardized defaults
-                    keyholeInnerRadius = wp.keyholeInnerRadius,
+                    keyholeInnerRadiusMeters = wp.keyholeInnerRadiusMeters,
                     keyholeAngle = wp.keyholeAngle,
-                    faiQuadrantOuterRadius = wp.faiQuadrantOuterRadius
+                    faiQuadrantOuterRadiusMeters = wp.faiQuadrantOuterRadiusMeters
                 )
 
             }
@@ -108,10 +106,10 @@ class RacingWaypointManager {
         startType: RacingStartPointType? = null,
         finishType: RacingFinishPointType? = null,
         turnType: RacingTurnPointType? = null,
-        gateWidth: Double? = null,
-        keyholeInnerRadius: Double? = null,
+        gateWidthMeters: Double? = null,
+        keyholeInnerRadiusMeters: Double? = null,
         keyholeAngle: Double? = null,
-        faiQuadrantOuterRadius: Double? = null
+        faiQuadrantOuterRadiusMeters: Double? = null
     ): SimpleRacingTask {
         val currentWaypoints = currentTask.waypoints.toMutableList()
         if (index in currentWaypoints.indices) {
@@ -126,33 +124,35 @@ class RacingWaypointManager {
 
             // Apply type-specific defaults when switching turnpoint types
 
-            val finalGateWidth = gateWidth ?: run {
+            val finalGateWidthMeters = gateWidthMeters ?: run {
                 // If turnpoint type is changing and no gateWidth provided, use type-specific defaults
                 if (turnType != null && turnType != waypoint.turnPointType) {
                     val defaultValue = when (turnType) {
-                        RacingTurnPointType.KEYHOLE -> 10.0  // 10km keyhole outer radius default
-                        RacingTurnPointType.TURN_POINT_CYLINDER, RacingTurnPointType.FAI_QUADRANT -> 0.5  // 0.5km default
+                        RacingTurnPointType.KEYHOLE -> 10_000.0
+                        RacingTurnPointType.TURN_POINT_CYLINDER, RacingTurnPointType.FAI_QUADRANT -> 500.0
                     }
                     defaultValue
                 } else {
-                    waypoint.gateWidth  // Keep existing value if not changing type
+                    waypoint.gateWidthMeters
                 }
             }
 
-            val finalFaiQuadrantOuterRadius = when {
-                faiQuadrantOuterRadius != null -> faiQuadrantOuterRadius
-                turnType == RacingTurnPointType.FAI_QUADRANT && turnType != waypoint.turnPointType -> 10.0
-                else -> waypoint.faiQuadrantOuterRadius
+            val finalFaiQuadrantOuterRadiusMeters = when {
+                faiQuadrantOuterRadiusMeters != null -> faiQuadrantOuterRadiusMeters
+                turnType == RacingTurnPointType.FAI_QUADRANT && turnType != waypoint.turnPointType -> 10_000.0
+                else -> waypoint.faiQuadrantOuterRadiusMeters
             }
+            val finalKeyholeInnerRadiusMeters = keyholeInnerRadiusMeters
+                ?: waypoint.keyholeInnerRadiusMeters
 
             currentWaypoints[index] = waypoint.copy(
                 startPointType = startType ?: waypoint.startPointType,
                 finishPointType = finishType ?: waypoint.finishPointType,
                 turnPointType = turnType ?: waypoint.turnPointType,
-                gateWidth = finalGateWidth,
-                keyholeInnerRadius = keyholeInnerRadius ?: waypoint.keyholeInnerRadius,
+                gateWidthMeters = finalGateWidthMeters,
+                keyholeInnerRadiusMeters = finalKeyholeInnerRadiusMeters,
                 keyholeAngle = keyholeAngle ?: waypoint.keyholeAngle,
-                faiQuadrantOuterRadius = finalFaiQuadrantOuterRadius
+                faiQuadrantOuterRadiusMeters = finalFaiQuadrantOuterRadiusMeters
             )
 
             val newWaypoint = currentWaypoints[index]
@@ -185,11 +185,11 @@ class RacingWaypointManager {
                 startPointType = existingWaypoint.startPointType,
                 finishPointType = existingWaypoint.finishPointType,
                 turnPointType = existingWaypoint.turnPointType,
-                gateWidth = existingWaypoint.gateWidth,
+                gateWidthMeters = existingWaypoint.gateWidthMeters,
                 // FIXED: Preserve keyhole-specific parameters when replacing waypoint
-                keyholeInnerRadius = existingWaypoint.keyholeInnerRadius,
+                keyholeInnerRadiusMeters = existingWaypoint.keyholeInnerRadiusMeters,
                 keyholeAngle = existingWaypoint.keyholeAngle,
-                faiQuadrantOuterRadius = existingWaypoint.faiQuadrantOuterRadius
+                faiQuadrantOuterRadiusMeters = existingWaypoint.faiQuadrantOuterRadiusMeters
             )
             return currentTask.copy(waypoints = currentWaypoints)
         }
@@ -215,17 +215,17 @@ class RacingWaypointManager {
 
                 // Recalculate gateWidth defaults for the new role
                 val newGateWidth = when (newRole) {
-                    RacingWaypointRole.START -> 10.0   // 10km start lines/sectors/cylinders
-                    RacingWaypointRole.FINISH -> 3.0   // 3km finish cylinders
+                    RacingWaypointRole.START -> 10_000.0
+                    RacingWaypointRole.FINISH -> 3_000.0
                     RacingWaypointRole.TURNPOINT -> when (wp.turnPointType) {
-                        RacingTurnPointType.KEYHOLE -> 10.0  // 10km keyhole outer radius
-                        RacingTurnPointType.TURN_POINT_CYLINDER, RacingTurnPointType.FAI_QUADRANT -> 0.5  // 0.5km default
+                        RacingTurnPointType.KEYHOLE -> 10_000.0
+                        RacingTurnPointType.TURN_POINT_CYLINDER, RacingTurnPointType.FAI_QUADRANT -> 500.0
                     }
                 }
 
                 currentWaypoints[index] = wp.copy(
                     role = newRole,
-                    gateWidth = newGateWidth
+                    gateWidthMeters = newGateWidth
                 )
             }
 

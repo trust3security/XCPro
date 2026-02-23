@@ -30,11 +30,11 @@ internal object AATWaypointMutationSupport {
             else -> {
                 val lastIndex = currentWaypoints.lastIndex
                 val previousFinish = currentWaypoints[lastIndex]
-                val newRadiusKm = AATRadiusAuthority.getRadiusForRole(AATWaypointRole.TURNPOINT)
+                val newRadiusMeters = AATRadiusAuthority.getRadiusMetersForRole(AATWaypointRole.TURNPOINT)
                 currentWaypoints[lastIndex] = previousFinish.copy(
                     role = AATWaypointRole.TURNPOINT,
                     assignedArea = previousFinish.assignedArea.copy(
-                        radiusMeters = newRadiusKm * 1000.0
+                        radiusMeters = newRadiusMeters
                     )
                 )
 
@@ -122,11 +122,11 @@ internal object AATWaypointMutationSupport {
                 index == waypoints.lastIndex -> AATWaypointRole.FINISH
                 else -> AATWaypointRole.TURNPOINT
             }
-            val newRadiusKm = AATRadiusAuthority.getRadiusForRole(newRole)
+            val newRadiusMeters = AATRadiusAuthority.getRadiusMetersForRole(newRole)
             waypoints[index] = waypoint.copy(
                 role = newRole,
                 assignedArea = waypoint.assignedArea.copy(
-                    radiusMeters = newRadiusKm * 1000.0
+                    radiusMeters = newRadiusMeters
                 )
             )
         }
