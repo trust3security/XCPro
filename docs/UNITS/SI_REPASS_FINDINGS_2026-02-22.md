@@ -1,7 +1,7 @@
 # SI Re-pass Findings
 
 Date: 2026-02-22
-Status: Updated (Run 44 `#18` implementation closeout complete)
+Status: Updated (Run 46 non-`#12` `enforce_rules` caveat closeout complete)
 
 ## Scope
 Deep re-pass across:
@@ -1343,3 +1343,42 @@ Implementation closeout for backlog `#18` (compatibility-wrapper cut).
 2. PARTIAL:
    - `./scripts/ci/enforce_rules.ps1` reports pre-existing unrelated failures in this repository state and aborts before full completion.
    - targeted `#18` guard patterns were validated directly via `rg` and returned no matches.
+
+## Re-pass #12 Findings (Run 45, 2026-02-23)
+
+### Scope
+Fixture-matrix closure pass for racing/AAT distance invariants.
+
+### Closures
+1. Closed residual fixture-coverage gap for backlog `#12`:
+   - added AAT nominal-distance fixture matrix coverage (`AATDistanceCalculatorUnitsTest`),
+   - added racing geodesic fixture matrix coverage (`RacingGeometryUtilsTest`),
+   - added coordinator cross-task fixture parity coverage (`TaskManagerCoordinatorTest`) asserting both racing and AAT segment APIs against canonical meter geometry for identical fixtures.
+2. Reconfirmed meter-contract parity across task types for known geodesic fixtures at equator, mid-latitude, and southern-hemisphere coordinates.
+
+### Verification Snapshot (Run 45)
+1. PASS:
+   - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.aat.calculations.AATDistanceCalculatorUnitsTest" --tests "com.example.xcpro.tasks.racing.RacingGeometryUtilsTest" --tests "com.example.xcpro.tasks.TaskManagerCoordinatorTest"`
+
+## Re-pass (Run 46, 2026-02-23)
+
+### Scope
+Closure pass for remaining non-`#12` static-rule caveat (`enforce_rules` false-positive + ripgrep no-file abort behavior).
+
+### Closures
+1. Closed task composable boundary false-positive:
+   - `scripts/ci/enforce_rules.ps1` composable-surface scan now excludes `feature/map/src/main/java/com/example/xcpro/tasks/TaskManagerCompat.kt` (approved compatibility DI host).
+2. Closed ripgrep no-file abort behavior:
+   - `Invoke-Rg` now uses `Start-Process` with captured stdout/stderr.
+   - ripgrep `No files were searched` is classified as non-fatal no-match.
+   - non-no-file ripgrep errors still fail enforcement.
+
+### Verification Snapshot (Run 46)
+1. PASS:
+   - `./scripts/ci/enforce_rules.ps1`.
+2. PASS:
+   - recursive pass x5 of `./scripts/ci/enforce_rules.ps1` (`exit=0` on all passes).
+3. PASS:
+   - `./gradlew --no-configuration-cache enforceRules`.
+4. NOTE:
+   - `./gradlew enforceRules` with configuration cache enabled still reports pre-existing configuration-cache policy violations in root build config (`where powershell`/`where pwsh` process start during configuration phase).

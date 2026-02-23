@@ -54,7 +54,7 @@ fun AdsbMarkerDetailsSheet(
             )
             DetailRow("ICAO24", target.id.raw.uppercase(Locale.US))
             DetailRow("Altitude", target.altitudeM?.let { UnitsFormatter.altitude(AltitudeM(it), unitsPreferences).text } ?: "--")
-            DetailRow("Distance", UnitsFormatter.distance(DistanceM(target.distanceMeters), unitsPreferences).text)
+            DetailRow("Distance from ownship", UnitsFormatter.distance(DistanceM(target.distanceMeters), unitsPreferences).text)
             DetailRow("Speed", target.speedMps?.let { UnitsFormatter.speed(SpeedMs(it), unitsPreferences).text } ?: "--")
             DetailRow("Track", target.trackDeg?.let { "${it.roundToOneDecimal()}\u00B0" } ?: "--")
             DetailRow(

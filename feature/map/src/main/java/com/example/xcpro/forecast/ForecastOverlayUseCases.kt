@@ -91,6 +91,86 @@ class ToggleForecastPrimaryOverlaySelectionUseCase @Inject constructor(
     }
 }
 
+class ToggleSkySightPrimaryOverlaySelectionUseCase @Inject constructor(
+    private val preferencesRepository: ForecastPreferencesRepository,
+    private val catalogPort: ForecastCatalogPort
+) {
+    suspend operator fun invoke(parameterId: ForecastParameterId) {
+        if (!isSkySightPrimaryParameterId(parameterId)) return
+
+        val availableParameters = catalogPort.getParameters()
+            .filter(::isPrimaryParameterMeta)
+        if (availableParameters.isEmpty()) return
+
+        val availableSkySightIds = SKY_SIGHT_PRIMARY_PARAMETER_IDS.mapNotNull { skySightId ->
+            availableParameters.firstOrNull { meta ->
+                matchesParameterId(meta.id, skySightId)
+            }?.id
+        }
+        val requestedId = availableSkySightIds.firstOrNull { availableId ->
+            matchesParameterId(availableId, parameterId)
+        } ?: return
+        val otherId = availableSkySightIds.firstOrNull { availableId ->
+            !matchesParameterId(availableId, requestedId)
+        }
+
+        val preferences = preferencesRepository.currentPreferences()
+        val selectedPrimaryId = resolveSelectedParameterId(
+            requested = preferences.selectedPrimaryParameterId,
+            availableParameters = availableParameters,
+            fallback = DEFAULT_FORECAST_PARAMETER_ID
+        ) ?: availableParameters.first().id
+        val secondaryCandidates = availableParameters.filterNot { meta ->
+            matchesParameterId(meta.id, selectedPrimaryId)
+        }
+        val selectedSecondaryId = resolveSelectedParameterId(
+            requested = preferences.selectedSecondaryPrimaryParameterId,
+            availableParameters = secondaryCandidates,
+            fallback = DEFAULT_FORECAST_SECONDARY_PRIMARY_PARAMETER_ID
+        )
+        val secondaryEnabled = preferences.secondaryPrimaryOverlayEnabled &&
+            selectedSecondaryId != null &&
+            secondaryCandidates.isNotEmpty()
+        val activeSecondaryId = if (secondaryEnabled) selectedSecondaryId else null
+
+        val requestedIsPrimary = matchesParameterId(selectedPrimaryId, requestedId)
+        val requestedIsSecondary = activeSecondaryId != null &&
+            matchesParameterId(activeSecondaryId, requestedId)
+        val requestedActive = requestedIsPrimary || requestedIsSecondary
+        val otherActive = otherId != null && (
+            matchesParameterId(selectedPrimaryId, otherId) ||
+                (activeSecondaryId != null && matchesParameterId(activeSecondaryId, otherId))
+            )
+
+        when {
+            requestedActive && otherActive -> {
+                val promotedPrimaryId = requireNotNull(otherId)
+                preferencesRepository.setSelectedPrimaryParameterId(promotedPrimaryId)
+                preferencesRepository.setSelectedSecondaryPrimaryParameterId(requestedId)
+                preferencesRepository.setSecondaryPrimaryOverlayEnabled(false)
+            }
+
+            requestedIsSecondary -> {
+                preferencesRepository.setSecondaryPrimaryOverlayEnabled(false)
+            }
+
+            requestedActive -> Unit
+
+            otherActive -> {
+                val keptPrimaryId = requireNotNull(otherId)
+                preferencesRepository.setSelectedPrimaryParameterId(keptPrimaryId)
+                preferencesRepository.setSelectedSecondaryPrimaryParameterId(requestedId)
+                preferencesRepository.setSecondaryPrimaryOverlayEnabled(true)
+            }
+
+            else -> {
+                preferencesRepository.setSelectedPrimaryParameterId(requestedId)
+                preferencesRepository.setSecondaryPrimaryOverlayEnabled(false)
+            }
+        }
+    }
+}
+
 class SetForecastSecondaryPrimaryOverlayEnabledUseCase @Inject constructor(
     private val preferencesRepository: ForecastPreferencesRepository
 ) {
@@ -222,6 +302,11 @@ private fun isWindParameterMeta(meta: ForecastParameterMeta): Boolean =
 private fun isPrimaryParameterMeta(meta: ForecastParameterMeta): Boolean =
     !isWindParameterMeta(meta)
 
+private fun isSkySightPrimaryParameterId(parameterId: ForecastParameterId): Boolean =
+    SKY_SIGHT_PRIMARY_PARAMETER_IDS.any { skySightId ->
+        matchesParameterId(skySightId, parameterId)
+    }
+
 private fun matchesParameterId(first: ForecastParameterId, second: ForecastParameterId): Boolean =
     first.value.equals(second.value, ignoreCase = true)
 
@@ -239,3 +324,8 @@ private fun resolveSelectedParameterId(
         matchesParameterId(meta.id, fallback)
     }?.id ?: availableParameters.first().id
 }
+
+private val SKY_SIGHT_PRIMARY_PARAMETER_IDS = listOf(
+    ForecastParameterId("dwcrit"),
+    ForecastParameterId("wblmaxmin")
+)

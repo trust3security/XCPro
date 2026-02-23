@@ -64,6 +64,8 @@ Reference:
 - Query center is used for provider fetch and horizontal radius filtering.
 - Ownship origin is used for displayed distance and bearing when available.
 - Ownship altitude is used for vertical filtering when available.
+- ADS-B proximity semantics are ownship-relative only (phone/glider current position).
+- OGN targets do not participate in ADS-B distance/bearing, color-tier, or details-distance calculations.
 - If ownship altitude is unavailable:
   - vertical filtering is fail-open (targets are not dropped by vertical limits).
 - If ownship position is unavailable:
@@ -144,6 +146,9 @@ Units contract:
 
 Metadata-not-ready contract:
 - show metadata sync state ("downloading", "importing", "error", or last updated state)
+
+Details semantics:
+- "Distance from ownship" is always ownship-relative and is independent from OGN overlay data.
 
 ## 4) Parser indexes (/states/all)
 

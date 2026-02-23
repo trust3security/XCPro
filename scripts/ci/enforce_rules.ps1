@@ -4,6 +4,9 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+if (Get-Variable -Name PSNativeCommandUseErrorActionPreference -ErrorAction SilentlyContinue) {
+    $PSNativeCommandUseErrorActionPreference = $false
+}
 
 function Require-Rg {
     $rg = Get-Command rg -ErrorAction SilentlyContinue
@@ -16,11 +19,49 @@ function Invoke-Rg {
     param(
         [string[]]$RgArgs
     )
-    $output = & rg @RgArgs 2>$null
-    $code = $LASTEXITCODE
+    $stdoutFile = [System.IO.Path]::GetTempFileName()
+    $stderrFile = [System.IO.Path]::GetTempFileName()
+    try {
+        $proc = Start-Process `
+            -FilePath "rg" `
+            -ArgumentList $RgArgs `
+            -NoNewWindow `
+            -Wait `
+            -PassThru `
+            -RedirectStandardOutput $stdoutFile `
+            -RedirectStandardError $stderrFile
+        $code = $proc.ExitCode
+        $output = @()
+        if (Test-Path $stdoutFile) {
+            $output = @(Get-Content $stdoutFile)
+        }
+        $stderr = @()
+        if (Test-Path $stderrFile) {
+            $stderr = @(Get-Content $stderrFile)
+        }
+    }
+    finally {
+        Remove-Item -Path $stdoutFile -ErrorAction SilentlyContinue
+        Remove-Item -Path $stderrFile -ErrorAction SilentlyContinue
+    }
+
+    $lines = @($output | ForEach-Object { "$_" })
+    $stderrLines = @($stderr | ForEach-Object { "$_" })
+    $noFilesMatches = @(@($lines + $stderrLines) | Where-Object { $_ -match "No files were searched" })
+    $noFilesSearched = $code -eq 2 -and $noFilesMatches.Count -gt 0
+    if ($noFilesSearched) {
+        return [pscustomobject]@{
+            Output          = @()
+            Code            = 1
+            NoFilesSearched = $true
+            ErrorOutput     = @()
+        }
+    }
     return [pscustomobject]@{
-        Output = $output
-        Code   = $code
+        Output          = $lines
+        Code            = $code
+        NoFilesSearched = $false
+        ErrorOutput     = $stderrLines
     }
 }
 
@@ -32,7 +73,8 @@ function Assert-NoMatches {
     )
     $result = Invoke-Rg -RgArgs $RgArgs
     if ($result.Code -gt 1) {
-        throw "rg failed for '$Name' (exit $($result.Code))."
+        $details = ($result.ErrorOutput -join "; ")
+        throw "rg failed for '$Name' (exit $($result.Code)). $details"
     }
     if ($result.Code -eq 0) {
         $lines = $result.Output
@@ -58,7 +100,11 @@ function Assert-NoMatchesInComposableFiles {
     $discoverArgs = @("-l", "@Composable") + $FileGlobs
     $discover = Invoke-Rg -RgArgs $discoverArgs
     if ($discover.Code -gt 1) {
-        throw "rg failed while discovering composable files for '$Name' (exit $($discover.Code))."
+        $details = ($discover.ErrorOutput -join "; ")
+        throw "rg failed while discovering composable files for '$Name' (exit $($discover.Code)). $details"
+    }
+    if ($discover.NoFilesSearched) {
+        return
     }
     if ($discover.Code -eq 1) {
         return
@@ -72,7 +118,8 @@ function Assert-NoMatchesInComposableFiles {
     $matchArgs = @("-n", $Pattern) + $files
     $matches = Invoke-Rg -RgArgs $matchArgs
     if ($matches.Code -gt 1) {
-        throw "rg failed while scanning composable files for '$Name' (exit $($matches.Code))."
+        $details = ($matches.ErrorOutput -join "; ")
+        throw "rg failed while scanning composable files for '$Name' (exit $($matches.Code)). $details"
     }
     if ($matches.Code -eq 0) {
         Write-Host ""
@@ -202,7 +249,8 @@ Assert-NoMatches -Name "Android/UI imports in task domain packages" -RgArgs $tas
 # 11) Task UI boundary: no TaskManagerCoordinator type leaks in composable task/map-task surfaces.
 $taskComposableGlobs = @(
     "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/**/*.kt",
-    "--glob", "feature/map/src/main/java/com/example/xcpro/map/ui/task/**/*.kt"
+    "--glob", "feature/map/src/main/java/com/example/xcpro/map/ui/task/**/*.kt",
+    "--glob", "!feature/map/src/main/java/com/example/xcpro/tasks/TaskManagerCompat.kt"
 )
 Assert-NoMatchesInComposableFiles `
     -Name "TaskManagerCoordinator type leaks in task composable surfaces" `

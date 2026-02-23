@@ -243,6 +243,8 @@ ADS-b lifecycle/visibility semantics:
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
   - Map overlay targets come from the raw ADS-b repository stream with metadata merged opportunistically.
   - Map marker positions are not gated by metadata-enrichment latency.
+  - Selected ADS-b details are sourced from raw ADS-b targets plus metadata; distance/bearing remain ownship-relative.
+  - OGN traffic streams do not influence ADS-b details distance/bearing or ADS-b proximity color tiers.
 - `feature/map/src/main/java/com/example/xcpro/adsb/metadata/data/AircraftMetadataRepositoryImpl.kt`
   - On-demand ICAO metadata upserts emit a metadata revision signal.
 - `feature/map/src/main/java/com/example/xcpro/adsb/metadata/domain/AdsbMetadataEnrichmentUseCase.kt`

@@ -23,12 +23,10 @@ fun MapActionButtons(
     showDistanceCircles: Boolean,
     showOgnThermals: Boolean,
     showAdsbTraffic: Boolean,
-    showForecastOverlay: Boolean,
     onRecenter: () -> Unit,
     onToggleDistanceCircles: () -> Unit,
     onToggleOgnThermals: () -> Unit,
     onToggleAdsbTraffic: () -> Unit,
-    onShowForecastSheet: () -> Unit,
     onReturn: () -> Unit,
     onShowQnhDialog: () -> Unit,
     showQnhFab: Boolean,
@@ -112,9 +110,7 @@ fun MapActionButtons(
         val qnhTopPadding = if (qnhIndex >= 0) topStackStart + topStep * qnhIndex else 0.dp
         val distanceTopPadding = topStackStart + topStep * distanceIndex
         val thermalTopPadding = topStackStart + topStep * thermalIndex
-        val maxFabTopPadding = (availableHeight - fabSize - fabSpacing).coerceAtLeast(0.dp)
         val topStackBottom = thermalTopPadding + fabSize
-        val forecastTopPadding = (topStackBottom + fabSpacing).coerceAtMost(maxFabTopPadding)
         val minCenterTop = (topStackBottom + fabSpacing).coerceAtLeast(0.dp)
         val maxCenterTop = (availableHeight - centerGroupHeight - fabSpacing).coerceAtLeast(0.dp)
         val resolvedCenterMin = minCenterTop.coerceAtMost(maxCenterTop)
@@ -183,14 +179,6 @@ fun MapActionButtons(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(top = thermalTopPadding, end = 16.dp)
-        )
-
-        ForecastOverlayButton(
-            isEnabled = showForecastOverlay,
-            onClick = onShowForecastSheet,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(top = forecastTopPadding, start = 16.dp)
         )
 
         if (showVarioDemoFab) {

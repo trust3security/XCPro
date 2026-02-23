@@ -49,6 +49,8 @@ import com.example.xcpro.adsb.AdsbSelectedTargetDetails
 import com.example.xcpro.forecast.ForecastTileFormat
 import com.example.xcpro.forecast.ForecastOverlayViewModel
 import com.example.xcpro.forecast.ForecastWindDisplayMode
+import com.example.xcpro.forecast.forecastRegionLabel
+import com.example.xcpro.forecast.forecastRegionLikelyContainsCoordinate
 import com.example.xcpro.gestures.TaskGestureCallbacks
 import com.example.xcpro.gestures.TaskGestureHandler
 import com.example.xcpro.map.BuildConfig
@@ -213,7 +215,6 @@ internal fun MapScreenContent(
     var qnhInput by remember { mutableStateOf("") }
     var qnhError by remember { mutableStateOf<String?>(null) }
     var showQnhFab by remember { mutableStateOf(true) }
-    var showForecastSheet by remember { mutableStateOf(false) }
     var selectedBottomTabName by rememberSaveable { mutableStateOf(MapBottomTab.WEATHER.name) }
     var isBottomTabsSheetVisible by rememberSaveable { mutableStateOf(false) }
     var tappedWindArrowCallout by remember { mutableStateOf<WindArrowTapCallout?>(null) }
@@ -231,18 +232,27 @@ internal fun MapScreenContent(
             isAATEditMode = isAATEditMode
         )
     }
-    val selectedSkySightPrimaryIds = remember(
-        forecastOverlayState.selectedPrimaryParameterId,
-        forecastOverlayState.secondaryPrimaryOverlayEnabled,
-        forecastOverlayState.selectedSecondaryPrimaryParameterId
+    val mapCenterLatitude = mapState.mapLibreMap?.cameraPosition?.target?.latitude
+        ?: currentLocation?.latitude
+    val mapCenterLongitude = mapState.mapLibreMap?.cameraPosition?.target?.longitude
+        ?: currentLocation?.longitude
+    val skySightRegionCoverageWarning = if (
+        mapCenterLatitude != null &&
+        mapCenterLongitude != null &&
+        !forecastRegionLikelyContainsCoordinate(
+            regionCode = forecastOverlayState.selectedRegionCode,
+            latitude = mapCenterLatitude,
+            longitude = mapCenterLongitude
+        )
     ) {
-        buildSet {
-            add(forecastOverlayState.selectedPrimaryParameterId)
-            if (forecastOverlayState.secondaryPrimaryOverlayEnabled) {
-                add(forecastOverlayState.selectedSecondaryPrimaryParameterId)
-            }
-        }
+        "Map center appears outside ${forecastRegionLabel(forecastOverlayState.selectedRegionCode)} coverage; SkySight overlays may be unavailable."
+    } else {
+        null
     }
+    val skySightWarningMessage = joinNonBlankMessages(
+        forecastOverlayState.warningMessage,
+        skySightRegionCoverageWarning
+    )
     // Temporarily suppress replay/debug FABs on MapScreen (REF/SIM/SIM2/SIM3/TASK).
     val hideReplayDebugFabs = true
     val isForecastWindArrowOverlayActive = forecastOverlayState.windOverlayEnabled &&
@@ -306,8 +316,8 @@ internal fun MapScreenContent(
         selectedOgnThermal != null ||
         selectedAdsbTarget != null
 
-    LaunchedEffect(isTaskPanelVisible, showForecastSheet, hasTrafficDetailsOpen) {
-        if (isTaskPanelVisible || showForecastSheet || hasTrafficDetailsOpen) {
+    LaunchedEffect(isTaskPanelVisible, hasTrafficDetailsOpen) {
+        if (isTaskPanelVisible || hasTrafficDetailsOpen) {
             isBottomTabsSheetVisible = false
         }
     }
@@ -441,7 +451,6 @@ internal fun MapScreenContent(
             showDistanceCircles = showDistanceCircles,
             showOgnThermals = showOgnThermalsEnabled,
             showAdsbTraffic = adsbOverlayEnabled,
-            showForecastOverlay = forecastOverlayState.enabled || forecastOverlayState.windOverlayEnabled,
             showQnhFab = showQnhFab,
             showVarioDemoFab = showVarioDemoFab && !hideReplayDebugFabs,
             showAatEditFab = isAATEditMode && taskType == TaskType.AAT,
@@ -450,10 +459,6 @@ internal fun MapScreenContent(
             onToggleDistanceCircles = { overlayManager.toggleDistanceCircles() },
             onToggleOgnThermals = onToggleOgnThermals,
             onToggleAdsbTraffic = onToggleAdsbTraffic,
-            onShowForecastSheet = {
-                isBottomTabsSheetVisible = false
-                showForecastSheet = true
-            },
             onReturn = { locationManager.returnToSavedLocation() },
             onShowQnhDialog = {
                 val currentQnh = liveFlightData?.qnh ?: 1013.25
@@ -480,7 +485,6 @@ internal fun MapScreenContent(
                     onDismissOgnThermalDetails()
                     onDismissAdsbTargetDetails()
                 }
-                showForecastSheet = false
                 if (!isTaskPanelVisible) {
                     isBottomTabsSheetVisible = true
                 }
@@ -500,10 +504,20 @@ internal fun MapScreenContent(
             onOgnTrailAircraftToggled = { aircraftKey, enabled ->
                 ognTrailSelectionViewModel.setTrailAircraftSelected(aircraftKey, enabled)
             },
-            showSkySightPrimaryEnabled = forecastOverlayState.enabled,
-            selectedPrimarySkySightIds = selectedSkySightPrimaryIds,
-            onShowSkySightPrimaryChanged = forecastViewModel::setEnabled,
-            onSkySightParameterToggle = forecastViewModel::togglePrimaryOverlayParameter
+            skySightUiState = forecastOverlayState,
+            onSkySightEnabledChanged = forecastViewModel::setEnabled,
+            onSkySightPrimaryParameterToggled = forecastViewModel::toggleSkySightPrimaryParameter,
+            onSkySightWindOverlayEnabledChanged = forecastViewModel::setWindOverlayEnabled,
+            onSkySightWindParameterSelected = forecastViewModel::selectWindParameter,
+            onSkySightAutoTimeEnabledChanged = forecastViewModel::setAutoTimeEnabled,
+            onSkySightFollowTimeOffsetChanged = forecastViewModel::setFollowTimeOffsetMinutes,
+            onSkySightJumpToNow = forecastViewModel::jumpToNow,
+            onSkySightTimeSelected = forecastViewModel::selectTime,
+            onSkySightOpacityChanged = forecastViewModel::setOpacity,
+            onSkySightWindOverlayScaleChanged = forecastViewModel::setWindOverlayScale,
+            onSkySightWindDisplayModeChanged = forecastViewModel::setWindDisplayMode,
+            skySightWarningMessage = skySightWarningMessage,
+            skySightErrorMessage = forecastOverlayState.errorMessage
         )
 
         Column(
@@ -654,23 +668,6 @@ internal fun MapScreenContent(
             }
         }
 
-        if (showForecastSheet) {
-            ForecastOverlayBottomSheet(
-                uiState = forecastOverlayState,
-                onDismiss = { showForecastSheet = false },
-                onEnabledChanged = forecastViewModel::setEnabled,
-                onPrimaryParameterToggled = forecastViewModel::togglePrimaryOverlayParameter,
-                onWindOverlayEnabledChanged = forecastViewModel::setWindOverlayEnabled,
-                onWindParameterSelected = forecastViewModel::selectWindParameter,
-                onAutoTimeEnabledChanged = forecastViewModel::setAutoTimeEnabled,
-                onFollowTimeOffsetChanged = forecastViewModel::setFollowTimeOffsetMinutes,
-                onJumpToNow = forecastViewModel::jumpToNow,
-                onTimeSelected = forecastViewModel::selectTime,
-                onOpacityChanged = forecastViewModel::setOpacity,
-                onWindOverlayScaleChanged = forecastViewModel::setWindOverlayScale,
-                onWindDisplayModeChanged = forecastViewModel::setWindDisplayMode
-            )
-        }
     }
 
     ReplayDiagnosticsLogger(
@@ -773,3 +770,11 @@ private const val WIND_TAP_LABEL_EDGE_PADDING_DP = 8
 private const val WIND_TAP_LABEL_ANCHOR_GAP_DP = 10
 private const val WIND_TAP_LABEL_ESTIMATED_WIDTH_DP = 136
 private const val WIND_TAP_LABEL_ESTIMATED_HEIGHT_DP = 42
+
+private fun joinNonBlankMessages(vararg messages: String?): String? {
+    val resolved = messages
+        .mapNotNull { message -> message?.trim()?.takeIf { it.isNotEmpty() } }
+        .distinct()
+    if (resolved.isEmpty()) return null
+    return resolved.joinToString(separator = " | ")
+}

@@ -139,7 +139,7 @@ Course parsing:
   - DDB `aircraftTypeCode == 5` (hang glider): `R.drawable.ic_ogn_hangglider`
   - DDB `aircraftTypeCode == 6` (balloon): `R.drawable.ic_adsb_balloon`
   - DDB `aircraftTypeCode == 7` (UAV): `R.drawable.ic_adsb_drone`
-  - DDB `aircraftTypeCode == 8` (static object): `R.drawable.ic_ogn_ufo`
+  - DDB `aircraftTypeCode == 8` (static object): `R.drawable.ic_ogn_static`
   - Unknown/unsupported type: `R.drawable.ic_ogn_ufo`
 - OGN trails:
   - Source/layer IDs:

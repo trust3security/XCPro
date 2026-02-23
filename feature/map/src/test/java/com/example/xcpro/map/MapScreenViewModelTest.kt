@@ -361,6 +361,38 @@ class MapScreenViewModelTest {
     }
 
     @Test
+    fun selectedAdsbDetails_distanceRemainsOwnshipRelativeAndIndependentOfOgnTargets() = runBlocking {
+        val adsbRepository = FakeAdsbTrafficRepository()
+        val ognRepository = FakeOgnTrafficRepository()
+        val viewModel = createViewModel(
+            adsbRepositoryOverride = adsbRepository,
+            ognRepositoryOverride = ognRepository
+        )
+        val id = Icao24.from("abc123") ?: error("invalid test id")
+
+        adsbRepository.targets.value = listOf(sampleAdsbTarget(id, distanceMeters = 4_321.0))
+        ognRepository.targets.value = listOf(sampleOgnTarget("OGN123"))
+        drainMain()
+
+        viewModel.onAdsbTargetSelected(id)
+        drainMain()
+        assertEquals(4_321.0, viewModel.selectedAdsbTarget.value?.distanceMeters ?: Double.NaN, 1e-6)
+        assertEquals(220.0, viewModel.selectedAdsbTarget.value?.bearingDegFromUser ?: Double.NaN, 1e-6)
+
+        ognRepository.targets.value = listOf(
+            sampleOgnTarget("OGN999").copy(
+                latitude = -34.0,
+                longitude = 151.0,
+                altitudeMeters = 2_600.0
+            )
+        )
+        drainMain()
+
+        assertEquals(4_321.0, viewModel.selectedAdsbTarget.value?.distanceMeters ?: Double.NaN, 1e-6)
+        assertEquals(220.0, viewModel.selectedAdsbTarget.value?.bearingDegFromUser ?: Double.NaN, 1e-6)
+    }
+
+    @Test
     fun onToggleAdsbTraffic_seedsCenterFromCameraSnapshotWhenGpsUnavailable() {
         val adsbRepository = FakeAdsbTrafficRepository()
         val viewModel = createViewModel(adsbRepositoryOverride = adsbRepository)
@@ -918,7 +950,10 @@ class MapScreenViewModelTest {
         )
     }
 
-    private fun sampleAdsbTarget(id: Icao24): AdsbTrafficUiModel = AdsbTrafficUiModel(
+    private fun sampleAdsbTarget(
+        id: Icao24,
+        distanceMeters: Double = 1500.0
+    ): AdsbTrafficUiModel = AdsbTrafficUiModel(
         id = id,
         callsign = "TEST01",
         lat = -35.0,
@@ -929,7 +964,7 @@ class MapScreenViewModelTest {
         climbMps = 0.5,
         ageSec = 2,
         isStale = false,
-        distanceMeters = 1500.0,
+        distanceMeters = distanceMeters,
         bearingDegFromUser = 220.0,
         positionSource = 0,
         category = 3,

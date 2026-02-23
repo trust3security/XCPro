@@ -1,7 +1,7 @@
 # Change Plan: SI Units Compliance
 
 Date: 2026-02-22
-Status: In progress (Run 44 `#18` implemented and closed; remaining focus is repo-wide verification hygiene)
+Status: In progress (Run 46 closed non-`#12` `enforce_rules` caveat; remaining focus is repo-wide verification hygiene)
 Scope: `feature/map`, `core/common`, `dfcards-library`, task modules
 
 ## Execution Progress
@@ -682,6 +682,33 @@ Implementation completed (`#18` compatibility-wrapper cut):
 Verification evidence:
 1. PASS: targeted `:feature:map:testDebugUnitTest` suite for all touched `#18` surfaces.
 2. PARTIAL: `enforce_rules` full-script run still fails on pre-existing unrelated repo issues; targeted `#18` guard patterns return clean (no matches).
+
+### Run 45 (2026-02-23)
+Implementation completed (`#12` fixture-matrix coverage closeout):
+1. Added broad known-distance fixture matrix coverage for AAT nominal-distance calculations:
+   - `AATDistanceCalculatorUnitsTest.calculateNominalDistance_matchesFixtureMatrixAcrossLatitudes`.
+2. Added broad known-distance fixture matrix coverage for racing geodesic calculations:
+   - `RacingGeometryUtilsTest.haversineDistanceMeters_matchesKnownFixtureMatrix`.
+3. Added coordinator-level cross-task fixture matrix checks:
+   - `TaskManagerCoordinatorTest.segment distance meter contract holds across racing and aat fixture matrix`.
+
+Verification evidence:
+1. PASS: `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.aat.calculations.AATDistanceCalculatorUnitsTest" --tests "com.example.xcpro.tasks.racing.RacingGeometryUtilsTest" --tests "com.example.xcpro.tasks.TaskManagerCoordinatorTest"`
+
+### Run 46 (2026-02-23)
+Implementation completed (remaining non-`#12` `enforce_rules` caveat closure):
+1. Removed false-positive hit on compatibility DI host from task composable boundary rule:
+   - exempted `TaskManagerCompat.kt` in composable-surface scans.
+2. Hardened static-rule runner reliability for glob edge cases:
+   - migrated ripgrep invocation to `Start-Process` with explicit stream capture,
+   - converted `No files were searched` from hard abort to explicit no-match skip,
+   - retained hard failures for other ripgrep errors.
+
+Verification evidence:
+1. PASS: `./scripts/ci/enforce_rules.ps1`.
+2. PASS: recursive stability pass x5 (`exit=0` on all five runs).
+3. PASS: `./gradlew --no-configuration-cache enforceRules`.
+4. NOTE: `./gradlew enforceRules` (configuration cache enabled) still fails due existing configuration-cache policy issues in root build configuration, not SI/rule logic regressions.
 
 ## Problem Statement
 The codebase is mixed-mode for units. Core flight pipelines are SI-first, but legacy task/AAT/racing paths still compute and compare values in km/km/h or mixed km-vs-meter semantics. This creates correctness risk and makes maintenance harder.

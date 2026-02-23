@@ -1,7 +1,7 @@
 # Verification Matrix: SI Compliance
 
 Date: 2026-02-22
-Status: In progress (Run 44 `#18` implementation verified with focused tests; full repo gate remains affected by pre-existing enforce-rules failures)
+Status: In progress (Run 46 closed `enforce_rules` caveat with 5 recursive passes; full matrix rerun still pending)
 
 ## Required Repo Gates
 - `./gradlew enforceRules`
@@ -88,6 +88,23 @@ Status: In progress (Run 44 `#18` implementation verified with focused tests; fu
 - Repo-gate status:
   - `./scripts/ci/enforce_rules.ps1` -> FAIL (pre-existing unrelated rule hit in `TaskManagerCompat.kt` and existing script no-files handling), so full-script green status is still pending outside this tranche.
 - Targeted static checks for new `#18` guard patterns were executed with `rg` and returned no matches.
+
+## Run 45 Note (`#12` Fixture-Matrix Closure Verification)
+- Run 45 added and verified the remaining racing/AAT fixture-matrix distance invariants for backlog `#12`.
+- Focused verification command:
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.aat.calculations.AATDistanceCalculatorUnitsTest" --tests "com.example.xcpro.tasks.racing.RacingGeometryUtilsTest" --tests "com.example.xcpro.tasks.TaskManagerCoordinatorTest"` -> PASS
+- Repo-gate status remains unchanged from Run 44 (`enforce_rules` still blocked by pre-existing unrelated issues).
+
+## Run 46 Note (Remaining Non-`#12` Caveat Closure)
+- Run 46 closed the static-rule caveat previously blocking `enforce_rules`:
+  - removed false-positive rule hit for `TaskManagerCompat.kt` in composable boundary scan,
+  - fixed ripgrep no-file abort behavior in `scripts/ci/enforce_rules.ps1`.
+- Verification commands:
+  - `./scripts/ci/enforce_rules.ps1` -> PASS.
+  - recursive `./scripts/ci/enforce_rules.ps1` x5 -> PASS (`exit=0` all runs).
+  - `./gradlew --no-configuration-cache enforceRules` -> PASS.
+- Additional note:
+  - `./gradlew enforceRules` (configuration cache enabled) still fails due existing configuration-cache policy issues in root build config (`where powershell` / `where pwsh`), unrelated to SI/rule regressions.
 
 ## SI-Specific Verification
 

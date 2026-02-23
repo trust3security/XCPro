@@ -91,11 +91,27 @@ class AdsbGeoJsonMapperTest {
         )
     }
 
+    @Test
+    fun toFeature_omitsDistanceWhenDistanceIsNotFinite() {
+        val target = sampleTarget(
+            category = 3,
+            trackDeg = 210.0,
+            distanceMeters = Double.NaN
+        )
+
+        val feature = AdsbGeoJsonMapper.toFeature(target)
+
+        assertNotNull(feature)
+        feature ?: return
+        assertFalse(feature.hasProperty(AdsbGeoJsonMapper.PROP_DISTANCE_M))
+    }
+
     private fun sampleTarget(
         category: Int?,
         trackDeg: Double?,
         isEmergencyCollisionRisk: Boolean = false,
-        usesOwnshipReference: Boolean = true
+        usesOwnshipReference: Boolean = true,
+        distanceMeters: Double = 1500.0
     ): AdsbTrafficUiModel {
         val id = Icao24.from("abc123") ?: error("invalid test id")
         return AdsbTrafficUiModel(
@@ -109,7 +125,7 @@ class AdsbGeoJsonMapperTest {
             climbMps = 0.5,
             ageSec = 3,
             isStale = false,
-            distanceMeters = 1500.0,
+            distanceMeters = distanceMeters,
             bearingDegFromUser = 220.0,
             usesOwnshipReference = usesOwnshipReference,
             positionSource = 0,

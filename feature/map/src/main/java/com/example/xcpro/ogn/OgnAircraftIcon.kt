@@ -38,6 +38,10 @@ enum class OgnAircraftIcon(
         resId = R.drawable.ic_adsb_drone,
         styleImageId = "ogn_icon_uav"
     ),
+    StaticObject(
+        resId = R.drawable.ic_ogn_static,
+        styleImageId = "ogn_icon_static_object"
+    ),
     Unknown(
         resId = R.drawable.ic_ogn_ufo,
         styleImageId = "ogn_icon_unknown"
@@ -64,7 +68,7 @@ fun iconForOgnAircraftTypeCode(aircraftTypeCode: Int?): OgnAircraftIcon = when (
     OGN_AIRCRAFT_TYPE_HANG_GLIDER -> OgnAircraftIcon.Hangglider
     OGN_AIRCRAFT_TYPE_BALLOON -> OgnAircraftIcon.Balloon
     OGN_AIRCRAFT_TYPE_UAV -> OgnAircraftIcon.Uav
-    OGN_AIRCRAFT_TYPE_STATIC_OBJECT -> OgnAircraftIcon.Unknown
+    OGN_AIRCRAFT_TYPE_STATIC_OBJECT -> OgnAircraftIcon.StaticObject
     else -> OgnAircraftIcon.Unknown
 }
 

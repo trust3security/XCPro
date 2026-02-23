@@ -16,7 +16,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -32,7 +31,9 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.example.xcpro.forecast.ForecastOverlayUiState
 import com.example.xcpro.forecast.ForecastParameterId
+import com.example.xcpro.forecast.ForecastWindDisplayMode
 import com.example.xcpro.weather.rain.WEATHER_RAIN_ATTRIBUTION_LINK_URL
 import com.example.xcpro.weather.rain.WEATHER_RAIN_OPACITY_MAX
 import com.example.xcpro.weather.rain.WEATHER_RAIN_OPACITY_MIN
@@ -50,9 +51,6 @@ internal data class OgnTrailAircraftRowUi(
     val label: String,
     val trailsEnabled: Boolean
 )
-
-private val THERMAL_TOPS_ID = ForecastParameterId("dwcrit")
-private val CONVERGENCE_ID = ForecastParameterId("wblmaxmin")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,10 +70,20 @@ internal fun MapBottomTabsLayer(
     onOgnEnabledChanged: (Boolean) -> Unit,
     ognTrailAircraftRows: List<OgnTrailAircraftRowUi>,
     onOgnTrailAircraftToggled: (String, Boolean) -> Unit,
-    showSkySightPrimaryEnabled: Boolean,
-    selectedPrimarySkySightIds: Set<ForecastParameterId>,
-    onShowSkySightPrimaryChanged: (Boolean) -> Unit,
-    onSkySightParameterToggle: (ForecastParameterId) -> Unit
+    skySightUiState: ForecastOverlayUiState,
+    onSkySightEnabledChanged: (Boolean) -> Unit,
+    onSkySightPrimaryParameterToggled: (ForecastParameterId) -> Unit,
+    onSkySightWindOverlayEnabledChanged: (Boolean) -> Unit,
+    onSkySightWindParameterSelected: (ForecastParameterId) -> Unit,
+    onSkySightAutoTimeEnabledChanged: (Boolean) -> Unit,
+    onSkySightFollowTimeOffsetChanged: (Int) -> Unit,
+    onSkySightJumpToNow: () -> Unit,
+    onSkySightTimeSelected: (Long) -> Unit,
+    onSkySightOpacityChanged: (Float) -> Unit,
+    onSkySightWindOverlayScaleChanged: (Float) -> Unit,
+    onSkySightWindDisplayModeChanged: (ForecastWindDisplayMode) -> Unit,
+    skySightWarningMessage: String?,
+    skySightErrorMessage: String?
 ) {
     if (!isSheetVisible && !isTaskPanelVisible) {
         Box(
@@ -144,11 +152,22 @@ internal fun MapBottomTabsLayer(
                         }
 
                         MapBottomTab.SKYSIGHT -> {
-                            SkySightTabContent(
-                                showPrimaryEnabled = showSkySightPrimaryEnabled,
-                                selectedIds = selectedPrimarySkySightIds,
-                                onShowPrimaryEnabledChanged = onShowSkySightPrimaryChanged,
-                                onParameterToggle = onSkySightParameterToggle
+                            ForecastOverlayControlsContent(
+                                uiState = skySightUiState,
+                                onEnabledChanged = onSkySightEnabledChanged,
+                                onPrimaryParameterToggled = onSkySightPrimaryParameterToggled,
+                                onWindOverlayEnabledChanged = onSkySightWindOverlayEnabledChanged,
+                                onWindParameterSelected = onSkySightWindParameterSelected,
+                                onAutoTimeEnabledChanged = onSkySightAutoTimeEnabledChanged,
+                                onFollowTimeOffsetChanged = onSkySightFollowTimeOffsetChanged,
+                                onJumpToNow = onSkySightJumpToNow,
+                                onTimeSelected = onSkySightTimeSelected,
+                                onOpacityChanged = onSkySightOpacityChanged,
+                                onWindOverlayScaleChanged = onSkySightWindOverlayScaleChanged,
+                                onWindDisplayModeChanged = onSkySightWindDisplayModeChanged,
+                                title = "SkySight",
+                                warningMessage = skySightWarningMessage,
+                                errorMessage = skySightErrorMessage
                             )
                         }
 
@@ -258,57 +277,6 @@ private fun WeatherTabContent(
     }
     Text(
         text = "Open drawer -> Settings -> General -> RainViewer",
-        style = MaterialTheme.typography.bodySmall
-    )
-}
-
-@Composable
-private fun SkySightTabContent(
-    showPrimaryEnabled: Boolean,
-    selectedIds: Set<ForecastParameterId>,
-    onShowPrimaryEnabledChanged: (Boolean) -> Unit,
-    onParameterToggle: (ForecastParameterId) -> Unit
-) {
-    Text(
-        text = "SkySight",
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.SemiBold
-    )
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(text = "Show non-wind overlays")
-        Switch(
-            checked = showPrimaryEnabled,
-            onCheckedChange = onShowPrimaryEnabledChanged
-        )
-    }
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        FilterChip(
-            selected = selectedIds.contains(THERMAL_TOPS_ID),
-            onClick = { onParameterToggle(THERMAL_TOPS_ID) },
-            enabled = showPrimaryEnabled,
-            label = { Text("Thermal Tops") }
-        )
-        FilterChip(
-            selected = selectedIds.contains(CONVERGENCE_ID),
-            onClick = { onParameterToggle(CONVERGENCE_ID) },
-            enabled = showPrimaryEnabled,
-            label = { Text("Convergence") }
-        )
-    }
-    FilterChip(
-        selected = false,
-        onClick = {},
-        enabled = false,
-        label = { Text("Satellite View") }
-    )
-    Text(
-        text = "Satellite View is coming soon.",
         style = MaterialTheme.typography.bodySmall
     )
 }

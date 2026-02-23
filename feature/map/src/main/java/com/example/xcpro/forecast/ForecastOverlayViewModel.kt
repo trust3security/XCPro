@@ -17,6 +17,7 @@ class ForecastOverlayViewModel @Inject constructor(
     private val setForecastEnabledUseCase: SetForecastEnabledUseCase,
     private val selectForecastParameterUseCase: SelectForecastParameterUseCase,
     private val toggleForecastPrimaryOverlaySelectionUseCase: ToggleForecastPrimaryOverlaySelectionUseCase,
+    private val toggleSkySightPrimaryOverlaySelectionUseCase: ToggleSkySightPrimaryOverlaySelectionUseCase,
     private val setForecastSecondaryPrimaryOverlayEnabledUseCase: SetForecastSecondaryPrimaryOverlayEnabledUseCase,
     private val selectForecastSecondaryPrimaryParameterUseCase: SelectForecastSecondaryPrimaryParameterUseCase,
     private val setForecastWindOverlayEnabledUseCase: SetForecastWindOverlayEnabledUseCase,
@@ -58,6 +59,12 @@ class ForecastOverlayViewModel @Inject constructor(
     fun togglePrimaryOverlayParameter(parameterId: ForecastParameterId) {
         viewModelScope.launch {
             toggleForecastPrimaryOverlaySelectionUseCase(parameterId)
+        }
+    }
+
+    fun toggleSkySightPrimaryParameter(parameterId: ForecastParameterId) {
+        viewModelScope.launch {
+            toggleSkySightPrimaryOverlaySelectionUseCase(parameterId)
         }
     }
 

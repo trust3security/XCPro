@@ -12,7 +12,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Flight
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.FloatingActionButton
@@ -197,37 +196,6 @@ internal fun AdsbTrafficButton(
             Icon(
                 imageVector = Icons.Filled.Flight,
                 contentDescription = "Toggle ADS-B traffic",
-                modifier = Modifier.size(22.dp)
-            )
-        }
-    }
-}
-
-@Composable
-internal fun ForecastOverlayButton(
-    isEnabled: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .size(48.dp)
-            .zIndex(50f)
-    ) {
-        FloatingActionButton(
-            onClick = onClick,
-            modifier = Modifier.matchParentSize(),
-            containerColor = if (isEnabled) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.surfaceVariant
-            },
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-            elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Cloud,
-                contentDescription = "Forecast overlays",
                 modifier = Modifier.size(22.dp)
             )
         }

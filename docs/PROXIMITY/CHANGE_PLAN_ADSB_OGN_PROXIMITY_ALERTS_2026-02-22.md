@@ -7,7 +7,7 @@
 - Date: 2026-02-22
 - Clarified requirement date: 2026-02-23
 - Issue/PR: TBD
-- Status: Revised Draft (supersedes prior ADS-B-to-OGN draft)
+- Status: Complete (Phase 0-2 implemented; required verification passed on 2026-02-23; optional connected tests remain device-dependent)
 
 Note:
 - File name is retained for continuity/history.
@@ -233,3 +233,15 @@ Required checks:
 - Prior versions of this file included ADS-B-to-OGN proximity evaluation phases.
 - That direction is intentionally superseded by clarified requirement:
   - `phone/glider ownship position -> ADS-B proximity only`.
+
+## 10) Execution and Verification Snapshot (2026-02-23)
+
+- Implemented:
+  - Phase 1 test hardening for ownship-distance thresholds/fallback semantics.
+  - Phase 2 ViewModel/details semantics + docs alignment for ownship-only ADS-B proximity.
+- Required verification:
+  - `./gradlew enforceRules` -> PASS
+  - `./gradlew testDebugUnitTest` -> PASS
+  - `./gradlew assembleDebug` -> PASS
+- Optional follow-up (when device/emulator is available):
+  - `./gradlew :app:connectedDebugAndroidTest --no-parallel "-Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true"`

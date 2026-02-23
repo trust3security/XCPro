@@ -141,6 +141,8 @@ class MapScreenViewModel @Inject constructor(
     val mapCommands: SharedFlow<MapCommand> = _mapCommands.asSharedFlow()
     private val _selectedAdsbId = MutableStateFlow<Icao24?>(null)
     val selectedAdsbId: StateFlow<Icao24?> = _selectedAdsbId.asStateFlow()
+    // AI-NOTE: Keep selected ADS-B details on the raw ADS-B stream so distance/bearing
+    // remain ownship-relative and are not coupled to OGN overlay behavior.
     val selectedAdsbTarget: StateFlow<AdsbSelectedTargetDetails?> = adsbMetadataEnrichmentUseCase
         .selectedTargetDetails(selectedIcao24 = _selectedAdsbId, adsbTargets = rawAdsbTargets)
         .eagerState(scope = viewModelScope, initial = null)

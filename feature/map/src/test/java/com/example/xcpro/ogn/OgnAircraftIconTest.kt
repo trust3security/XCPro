@@ -15,7 +15,7 @@ class OgnAircraftIconTest {
         assertEquals(OgnAircraftIcon.Hangglider, iconForOgnAircraftTypeCode(5))
         assertEquals(OgnAircraftIcon.Balloon, iconForOgnAircraftTypeCode(6))
         assertEquals(OgnAircraftIcon.Uav, iconForOgnAircraftTypeCode(7))
-        assertEquals(OgnAircraftIcon.Unknown, iconForOgnAircraftTypeCode(8))
+        assertEquals(OgnAircraftIcon.StaticObject, iconForOgnAircraftTypeCode(8))
     }
 
     @Test
@@ -33,6 +33,7 @@ class OgnAircraftIconTest {
         assertEquals(R.drawable.ic_ogn_hangglider, OgnAircraftIcon.Hangglider.resId)
         assertEquals(R.drawable.ic_adsb_balloon, OgnAircraftIcon.Balloon.resId)
         assertEquals(R.drawable.ic_adsb_drone, OgnAircraftIcon.Uav.resId)
+        assertEquals(R.drawable.ic_ogn_static, OgnAircraftIcon.StaticObject.resId)
         assertEquals(R.drawable.ic_ogn_ufo, OgnAircraftIcon.Unknown.resId)
         assertEquals("ogn_icon_glider", OgnAircraftIcon.Glider.styleImageId)
         assertEquals("ogn_icon_tug", OgnAircraftIcon.Tugplane.styleImageId)
@@ -41,6 +42,7 @@ class OgnAircraftIconTest {
         assertEquals("ogn_icon_hangglider", OgnAircraftIcon.Hangglider.styleImageId)
         assertEquals("ogn_icon_balloon", OgnAircraftIcon.Balloon.styleImageId)
         assertEquals("ogn_icon_uav", OgnAircraftIcon.Uav.styleImageId)
+        assertEquals("ogn_icon_static_object", OgnAircraftIcon.StaticObject.styleImageId)
         assertEquals("ogn_icon_unknown", OgnAircraftIcon.Unknown.styleImageId)
     }
 }
