@@ -483,11 +483,11 @@ fun calculateBearing(...) { ... }  // AAT's own copy
 
 ## " Related Documentation
 
-- [QUICK_REFERENCE.md](../../QUICK_REFERENCE.md) - Daily cheat sheet
+- [Quick_Reference.md](./Quick_Reference.md) - Daily cheat sheet
 - [Racing_Tasks.md](../02_Tasks/Racing_Tasks.md) - Racing implementation
 - [AAT_Tasks.md](../02_Tasks/AAT_Tasks.md) - AAT implementation
-- [aat/ARCHITECTURE.md](../../app/src/main/java/.../tasks/aat/ARCHITECTURE.md) - AAT module structure
-- [racing/ARCHITECTURE.md](../../app/src/main/java/.../tasks/racing/ARCHITECTURE.md) - Racing module structure
+- [aat/ARCHITECTURE.md](../../feature/map/src/main/java/com/example/xcpro/tasks/aat/ARCHITECTURE.md) - AAT module structure
+- [racing/ARCHITECTURE.md](../../feature/map/src/main/java/com/example/xcpro/tasks/racing/ARCHITECTURE.md) - Racing module structure
 
 ---
 
@@ -505,6 +505,6 @@ fun calculateBearing(...) { ... }  // AAT's own copy
 
 ---
 
-**Questions?** See [DOCS_INDEX.md](../../DOCS_INDEX.md) or [QUICK_REFERENCE.md](../../QUICK_REFERENCE.md)
+**Questions?** See [ARCHITECTURE README](../ARCHITECTURE/README.md) or [Quick_Reference.md](./Quick_Reference.md)
 
 

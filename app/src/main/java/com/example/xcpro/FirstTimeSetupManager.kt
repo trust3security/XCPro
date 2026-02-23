@@ -3,36 +3,33 @@ package com.example.xcpro
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
+import com.example.xcpro.common.di.IoDispatcher
+import com.example.xcpro.core.time.Clock
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
 
-class FirstTimeSetupManager private constructor(
-    private val context: Context,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+@Singleton
+class FirstTimeSetupManager @Inject constructor(
+    @ApplicationContext private val context: Context,
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+    private val clock: Clock
 ) {
-    
+
     companion object {
         private const val TAG = "FirstTimeSetup"
         private const val PREFS_NAME = "first_time_setup"
         private const val KEY_FIRST_LAUNCH = "is_first_launch"
         private const val KEY_SETUP_VERSION = "setup_version"
         private const val CURRENT_SETUP_VERSION = 1
-        
-        @Volatile
-        private var INSTANCE: FirstTimeSetupManager? = null
-        
-        fun getInstance(context: Context): FirstTimeSetupManager {
-            return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: FirstTimeSetupManager(context.applicationContext).also { INSTANCE = it }
-            }
-        }
     }
-    
+
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    
+
     suspend fun isFirstLaunch(): Boolean = withContext(ioDispatcher) {
         val isFirst = prefs.getBoolean(KEY_FIRST_LAUNCH, true)
         val setupVersion = prefs.getInt(KEY_SETUP_VERSION, 0)
@@ -132,7 +129,7 @@ class FirstTimeSetupManager private constructor(
         prefs.edit().apply {
             putBoolean(KEY_FIRST_LAUNCH, false)
             putInt(KEY_SETUP_VERSION, CURRENT_SETUP_VERSION)
-            putLong("setup_timestamp", System.currentTimeMillis())
+            putLong("setup_timestamp", clock.nowWallMs())
             apply()
         }
     }

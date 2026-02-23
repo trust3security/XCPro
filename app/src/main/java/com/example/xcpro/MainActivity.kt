@@ -40,6 +40,9 @@ class MainActivity : ComponentActivity(), StatusBarStyleApplier {
     @Inject
     lateinit var lookAndFeelPreferences: LookAndFeelPreferences
 
+    @Inject
+    lateinit var firstTimeSetupManager: FirstTimeSetupManager
+
     private var currentProfileId: String? = null
     private var hasStartedVarioService = false
     private var keepSplashVisible = true
@@ -76,10 +79,9 @@ class MainActivity : ComponentActivity(), StatusBarStyleApplier {
         val mapLibreKey = BuildConfig.MAPLIBRE_API_KEY.ifBlank { "nYDScLfnBm52GAc3jXEZ" }
         MapLibre.getInstance(this, mapLibreKey, WellKnownTileServer.MapTiler)
 
-        val setupManager = FirstTimeSetupManager.getInstance(this)
         lifecycleScope.launch {
-            setupManager.runIfNeeded()
-            Log.d(TAG, "Setup info: ${setupManager.getSetupInfo()}")
+            firstTimeSetupManager.runIfNeeded()
+            Log.d(TAG, "Setup info: ${firstTimeSetupManager.getSetupInfo()}")
         }
 
         setContent {

@@ -5,7 +5,7 @@
 **Status:** ... Current - Consolidated from multiple sources
 **Module:** `app/src/main/java/.../tasks/racing/`
 
-> **Quick Links:** [Task Separation Rules](../01_Core/Task_Type_Separation.md) | [Default Values](./Default_Values.md) | [Racing ARCHITECTURE](../../app/src/main/java/com/example/xcpro/tasks/racing/ARCHITECTURE.md) | [Racing Task Summary](./racingtask.md) | [XCSoar-Style Navigation](./Racing_XCSoar_Navigation.md)
+> **Quick Links:** [Task Separation Rules](./Task_Type_Separation.md) | [Default Values](./Default_Values.md) | [Racing ARCHITECTURE](../../feature/map/src/main/java/com/example/xcpro/tasks/racing/ARCHITECTURE.md) | [Racing Task Summary](./racingtask.md) | [XCSoar-Style Navigation](./Racing_XCSoar_Navigation.md)
 
 ---
 
@@ -153,7 +153,7 @@ app/src/main/java/.../tasks/racing/
 
 ### Architecture Rules
 
-See [Task_Type_Separation.md](../01_Core/Task_Type_Separation.md) for complete rules.
+See [Task_Type_Separation.md](./Task_Type_Separation.md) for complete rules.
 
 **Key Requirements:**
 - ... 100% autonomous (no AAT imports)
@@ -300,32 +300,32 @@ if (result.isValid) {
 ## " Related Documentation
 
 ### Core Docs
-- [Task_Type_Separation.md](../01_Core/Task_Type_Separation.md) - **MUST READ** separation rules
+- [Task_Type_Separation.md](./Task_Type_Separation.md) - **MUST READ** separation rules
 - [Default_Values.md](./Default_Values.md) - Default sizes and preservation
 - [AAT_Tasks.md](./AAT_Tasks.md) - Comparison with AAT
 
 ### Racing-Specific
-- [racing_task_spec.md](../../racing_task_spec.md) - Original specification
-- [PRDRacingTask.md](../../PRDRacingTask.md) - Product requirements
+- [racing_task_definition.md](../RACING_TASK/racing_task_definition.md) - Racing task definition
+- [racingtask.md](./racingtask.md) - Product and implementation summary
 - [keyhole_task_spec.md](../../keyhole_task_spec.md) - Keyhole geometry details
-- [racing/ARCHITECTURE.md](../../app/src/main/java/.../tasks/racing/ARCHITECTURE.md) - Module architecture
+- [racing/ARCHITECTURE.md](../../feature/map/src/main/java/com/example/xcpro/tasks/racing/ARCHITECTURE.md) - Module architecture
 
 ### Reference
-- [Quick_Reference.md](../04_Reference/Quick_Reference.md) - Command cheat sheet
-- [CLAUDE.md](../../CLAUDE.md) - Master development guide
+- [Quick_Reference.md](./Quick_Reference.md) - Command cheat sheet
+- [AGENTS.md](../../AGENTS.md) - Agent execution contract
 
 ---
 
 ##   Critical Reminders
 
-1. **NEVER import AAT code** - See [Task_Type_Separation.md](../01_Core/Task_Type_Separation.md)
+1. **NEVER import AAT code** - See [Task_Type_Separation.md](./Task_Type_Separation.md)
 2. **ALWAYS test finish radius changes** - Distance must update
 3. **Use RacingMathUtils** - Not shared utilities
 4. **Blue task lines only** - Racing = #0066FF, AAT = #4CAF50
 
 ---
 
-**Questions?** See [DOCS_INDEX.md](../../DOCS_INDEX.md) for complete documentation map.
+**Questions?** See [ARCHITECTURE README](../ARCHITECTURE/README.md) for documentation entrypoints.
 
 
 

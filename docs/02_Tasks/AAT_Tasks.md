@@ -5,7 +5,7 @@
 **Status:** ... Current - Consolidated from multiple sources
 **Module:** `app/src/main/java/.../tasks/aat/`
 
-> **Quick Links:** [Task_Separation Rules](../01_Core/Task_Type_Separation.md) | [Default Values](./Default_Values.md) | [AAT ARCHITECTURE](../../app/src/main/java/com/example/xcpro/tasks/aat/ARCHITECTURE.md)
+> **Quick Links:** [Task Separation Rules](./Task_Type_Separation.md) | [Default Values](./Default_Values.md) | [AAT ARCHITECTURE](../../feature/map/src/main/java/com/example/xcpro/tasks/aat/ARCHITECTURE.md)
 
 ---
 
@@ -215,7 +215,7 @@ app/src/main/java/.../tasks/aat/
 - Zero debug statements
 - Production-ready
 
-See [aat/ARCHITECTURE.md](../../app/src/main/java/.../tasks/aat/ARCHITECTURE.md) for details.
+See [aat/ARCHITECTURE.md](../../feature/map/src/main/java/com/example/xcpro/tasks/aat/ARCHITECTURE.md) for details.
 
 ---
 
@@ -235,7 +235,7 @@ See [aat/ARCHITECTURE.md](../../app/src/main/java/.../tasks/aat/ARCHITECTURE.md)
 - `ComprehensiveAATValidator.kt` - Full FAI compliance
 - `FAIComplianceRules.kt` - Official rule specifications
 
-See [aat/validation/README.md](../../app/src/main/java/.../tasks/aat/validation/README.md) for complete guide.
+See [aat/validation/README.md](../../feature/map/src/main/java/com/example/xcpro/tasks/aat/validation/README.md) for complete guide.
 
 ### Competition Classes
 
@@ -388,30 +388,30 @@ AAT pilots continuously optimize during flight:
 ## " Related Documentation
 
 ### Core Docs
-- [Task_Type_Separation.md](../01_Core/Task_Type_Separation.md) - **MUST READ** separation rules
+- [Task_Type_Separation.md](./Task_Type_Separation.md) - **MUST READ** separation rules
 - [Default_Values.md](./Default_Values.md) - Default sizes and preservation
 - [Racing_Tasks.md](./Racing_Tasks.md) - Comparison with Racing
 
 ### AAT-Specific
-- [aat_task_spec.md](../../aat_task_spec.md) - Original specification
-- [aat/ARCHITECTURE.md](../../app/src/main/java/.../tasks/aat/ARCHITECTURE.md) - Module architecture
-- [aat/validation/README.md](../../app/src/main/java/.../tasks/aat/validation/README.md) - Validation guide
+- [AAT_IMPLEMENTATION_SUMMARY.md](./AAT_IMPLEMENTATION_SUMMARY.md) - AAT implementation summary
+- [aat/ARCHITECTURE.md](../../feature/map/src/main/java/com/example/xcpro/tasks/aat/ARCHITECTURE.md) - Module architecture
+- [aat/validation/README.md](../../feature/map/src/main/java/com/example/xcpro/tasks/aat/validation/README.md) - Validation guide
 
 ### Reference
-- [Quick_Reference.md](../04_Reference/Quick_Reference.md) - Command cheat sheet
-- [CLAUDE.md](../../CLAUDE.md) - Master development guide
+- [Quick_Reference.md](./Quick_Reference.md) - Command cheat sheet
+- [AGENTS.md](../../AGENTS.md) - Agent execution contract
 
 ---
 
 ##   Critical Reminders
 
-1. **NEVER import Racing code** - See [Task_Type_Separation.md](../01_Core/Task_Type_Separation.md)
+1. **NEVER import Racing code** - See [Task_Type_Separation.md](./Task_Type_Separation.md)
 2. **ALWAYS use AATMathUtils** - Not shared utilities
 3. **Green task lines only** - AAT = #4CAF50, Racing = #0066FF
 4. **Validate minimum time** - Must be per-milleYen 30 minutes
 
 ---
 
-**Questions?** See [DOCS_INDEX.md](../../DOCS_INDEX.md) for complete documentation map.
+**Questions?** See [ARCHITECTURE README](../ARCHITECTURE/README.md) for documentation entrypoints.
 
 
