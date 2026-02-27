@@ -345,6 +345,97 @@ class AdsbMetadataEnrichmentUseCaseTest {
         assertEquals(listOf("def456", "fedcba", "abc123"), metadataRepository.lastLookupOrder)
     }
 
+    @Test
+    fun targetsWithMetadata_sameIcaoSetRawChurn_doesNotRepeatLookups() = runTest {
+        val syncRepository = FakeSyncRepository(MetadataSyncState.Idle)
+        val metadataRepository = FakeMetadataRepository(
+            mapOf(
+                "abc123" to AircraftMetadata(
+                    icao24 = "abc123",
+                    registration = "N123AB",
+                    typecode = "B738",
+                    model = null,
+                    manufacturerName = null,
+                    owner = null,
+                    operator = null,
+                    operatorCallsign = null,
+                    icaoAircraftType = "L2J"
+                )
+            )
+        )
+        val useCase = AdsbMetadataEnrichmentUseCase(
+            aircraftMetadataRepository = metadataRepository,
+            metadataSyncRepository = syncRepository,
+            ioDispatcher = StandardTestDispatcher(testScheduler)
+        )
+        val targets = MutableStateFlow(
+            listOf(
+                target("abc123").copy(distanceMeters = 1_000.0, ageSec = 1),
+                target("def456").copy(distanceMeters = 2_000.0, ageSec = 1)
+            )
+        )
+        val shared = useCase.targetsWithMetadata(targets).shareIn(
+            scope = backgroundScope,
+            started = SharingStarted.Eagerly,
+            replay = 1
+        )
+        advanceUntilIdle()
+        shared.first()
+        assertEquals(1, metadataRepository.lookupCallCount)
+
+        targets.value = listOf(
+            target("abc123").copy(distanceMeters = 1_100.0, ageSec = 2),
+            target("def456").copy(distanceMeters = 2_100.0, ageSec = 2)
+        )
+        advanceUntilIdle()
+        shared.first()
+        assertEquals(1, metadataRepository.lookupCallCount)
+    }
+
+    @Test
+    fun selectedTargetDetails_sameSelectionRawChurn_doesNotRepeatLookups() = runTest {
+        val syncRepository = FakeSyncRepository(MetadataSyncState.Idle)
+        val metadataRepository = FakeMetadataRepository(
+            mapOf(
+                "abc123" to AircraftMetadata(
+                    icao24 = "abc123",
+                    registration = "N123AB",
+                    typecode = "B738",
+                    model = null,
+                    manufacturerName = null,
+                    owner = null,
+                    operator = null,
+                    operatorCallsign = null,
+                    icaoAircraftType = "L2J"
+                )
+            )
+        )
+        val useCase = AdsbMetadataEnrichmentUseCase(
+            aircraftMetadataRepository = metadataRepository,
+            metadataSyncRepository = syncRepository,
+            ioDispatcher = StandardTestDispatcher(testScheduler)
+        )
+        val selectedId = MutableStateFlow(Icao24.from("abc123"))
+        val targets = MutableStateFlow(
+            listOf(target("abc123").copy(distanceMeters = 1_000.0, ageSec = 1))
+        )
+        val shared = useCase.selectedTargetDetails(selectedId, targets)
+            .filterNotNull()
+            .shareIn(
+                scope = backgroundScope,
+                started = SharingStarted.Eagerly,
+                replay = 1
+            )
+        advanceUntilIdle()
+        shared.first()
+        assertEquals(1, metadataRepository.lookupCallCount)
+
+        targets.value = listOf(target("abc123").copy(distanceMeters = 1_200.0, ageSec = 3))
+        advanceUntilIdle()
+        shared.first()
+        assertEquals(1, metadataRepository.lookupCallCount)
+    }
+
     private fun target(rawIcao24: String, category: Int = 2): AdsbTrafficUiModel {
         val id = Icao24.from(rawIcao24) ?: error("invalid ICAO24")
         return AdsbTrafficUiModel(
@@ -373,8 +464,11 @@ class AdsbMetadataEnrichmentUseCaseTest {
         private val metadataByIcao24 = values.toMutableMap()
         var lastLookupOrder: List<String> = emptyList()
             private set
+        var lookupCallCount: Int = 0
+            private set
 
         override suspend fun getMetadataFor(icao24s: List<String>): Map<String, AircraftMetadata> {
+            lookupCallCount += 1
             lastLookupOrder = icao24s
             return metadataByIcao24.filterKeys { it in icao24s }
         }

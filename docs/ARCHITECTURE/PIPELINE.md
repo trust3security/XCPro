@@ -83,6 +83,8 @@ Metrics use case:
   - TE/netto, display smoothing, circling detection, LD, thermal metrics.
   - airspeed selection priority is now:
     `EXTERNAL/REPLAY (fresh+valid) -> WIND_VECTOR (quality-gated) -> GPS_GROUND fallback`.
+  - Replay requests explicitly disable online terrain fetch updates to keep replay deterministic
+    and avoid network-driven memory pressure.
   - Owns deterministic windows and is testable without Android.
 
 Mapping to SSOT model:
@@ -131,6 +133,7 @@ Observers:
   - Combines flight data + wind + flying state.
   - Converts `CompleteFlightData` to `RealTimeFlightData`.
   - Pushes to `FlightDataManager` and trail processor.
+  - Gates trail processing by trail settings (`TrailLength.OFF` resets trail processor and clears trail updates).
 
 Mapping for cards:
 - `feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt`
@@ -151,14 +154,23 @@ Map bindings:
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenBindings.kt`
   - Binds `mapLocation` into UI state.
   - Binds `ognIconSizePx` and `adsbIconSizePx` from settings for runtime overlay sizing.
-  - Filters OGN glider-trail segments by selected OGN aircraft keys from trail-selection SSOT.
+- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootHelpers.kt`
+  - Hydrates and persists draggable map widget offsets via `MapWidgetLayoutViewModel`
+    (`SIDE_HAMBURGER`, `FLIGHT_MODE`, `SETTINGS_SHORTCUT`, `BALLAST`).
+- `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt`
+  - Renders `SettingsShortcut` with existing widget gesture registry; drag is edit-mode
+    only, tap delegates to `SettingsRoutes.GENERAL` through scaffold callback wiring.
 
 OGN settings path:
 - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
-  - SSOT for OGN overlay enabled + icon size + `showThermalsEnabled` + ownship IDs
+  - SSOT for OGN overlay enabled + icon size + receive radius (`20..300 km`, default `150`) + advanced auto-radius toggle + display update mode (`real_time` / `balanced` / `battery`) + `showSciaEnabled` +
+    `showThermalsEnabled` + `thermalRetentionHours` + `hotspotsDisplayPercent` + ownship IDs
     (`ownFlarmHex`, `ownIcaoHex`) preferences.
 - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrailSelectionPreferencesRepository.kt`
   - SSOT for selected OGN aircraft keys used by trail display filtering.
+- `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt`
+  - `OgnTrafficUseCase` combines trail segments with selected OGN aircraft keys
+    from trail-selection SSOT before ViewModel/UI collection.
 - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrailSelectionViewModel.kt`
   - Observes OGN suppressed-key stream and prunes suppressed keys from persisted trail selections.
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt`
@@ -169,12 +181,17 @@ OGN settings path:
   - Pushes OGN overlay targets, thermal hotspots, and OGN trail segments into runtime overlay manager.
 - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
   - Applies icon size for OGN traffic overlays and owns OGN thermal + OGN glider-trail overlay runtime lifecycle.
+  - Applies display-update mode (`real_time` / `balanced` / `battery`) as map-render throttling only for OGN traffic/thermal/trail overlays (ingest is unchanged).
   - Owns OGN/ADS-b traffic overlay creation on startup/style recreation (MapInitializer delegates traffic overlay construction to this runtime owner).
 - `feature/map/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
   - Updates SymbolLayer `iconSize` dynamically from configured pixel size.
 - `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalRepository.kt`
-  - Derives session-lifetime thermal hotspots from OGN targets (in-memory until app restart).
+  - Derives thermal hotspots from OGN targets and applies retention policy from
+    `thermalRetentionHours` (`1h..23h` rolling window, `all day` until local midnight).
+  - Applies strongest-first display share filtering from `hotspotsDisplayPercent` (`5..100`).
   - Applies thermal metrics only on fresh OGN samples per target (`lastSeenMillis` monotonic freshness gate).
+  - Rejects fake climbs by requiring cumulative turn `>730` degrees before thermal confirmation.
+  - Publishes one best hotspot per local area radius (best-climb winner) to reduce crowded duplicates.
   - Prunes freshness-cache entries for absent targets after timeout to avoid unbounded session growth while preserving stale-present target protection.
   - Runs repository-side housekeeping timers so thermal continuity/missing finalization occurs even when upstream target lists are quiet.
   - Consumes repository suppression keys and purges ownship-derived trackers/hotspots in-session.
@@ -187,11 +204,13 @@ OGN settings path:
   - Consumes repository suppression keys and purges ownship-derived trail samples/segments in-session.
 - `feature/map/src/main/java/com/example/xcpro/map/OgnGliderTrailOverlay.kt`
   - Renders line segments using precomputed OGN trail style properties from repository output.
+  - Applies a map-side safety render cap (newest 12,000 segments) to bound allocation pressure.
 
 OGN lifecycle/position semantics:
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenTrafficCoordinator.kt`
   - Streaming enable is driven by `allowSensorStart && mapVisible && ognOverlayEnabled`.
   - Query center updates are GPS-driven from `mapLocation` (user position), not camera center.
+  - Pushes auto-radius context (`currentZoom`, ownship speed, ownship flying-state) into OGN traffic use-case.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt`
   - Tap routing resolves traffic markers before wind callouts.
   - OGN marker taps are resolved before thermal and ADS-b taps.
@@ -200,23 +219,27 @@ OGN lifecycle/position semantics:
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
   - Owns selected OGN/thermal/ADS-b selection state and enforces mutual exclusion across these details sheets.
 - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficRepository.kt`
-  - Uses APRS radius filtering and client-side haversine filtering at 150 km radius
-    (300 km diameter contract around user position).
+  - Uses APRS radius filtering and client-side haversine filtering with user-configurable
+    radius (`20..300 km`, default `150`).
+  - Optional auto-radius mode computes effective radius from flight context first and zoom second
+    using coarse buckets (`40/80/150/220`) with dwell/cooldown gating before apply.
   - Applies ownship suppression by typed transport identity before publishing targets
     (`FLARM:HEX` / `ICAO:HEX` match only).
   - Exposes suppression diagnostics as canonical key set in snapshot (`suppressedTargetIds`).
   - Uses canonical typed keys internally for target cache identity and collision-safe selection paths.
   - Client-side filtering is evaluated against latest requested GPS center so the
-    300 km diameter policy stays user-centered between reconnects.
+    configured radius policy stays user-centered between reconnects.
   - Socket subscription reconnects when requested center moves >= 20 km from
-    active subscription center.
+    active subscription center or when receive radius changes.
   - Connection state remains `CONNECTING` until server `logresp verified` or
     first valid traffic frame.
   - If no center is available yet, repository waits before opening the stream.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
   - OGN traffic overlay renders `emptyList()` when overlay preference is disabled.
   - Thermal overlay renders `emptyList()` unless `ognOverlayEnabled && showThermalsEnabled`.
-  - OGN glider-trail overlay renders `emptyList()` unless `ognOverlayEnabled`; per-aircraft filtering is applied from selected OGN aircraft keys.
+  - OGN glider-trail overlay renders `emptyList()` unless
+    `ognOverlayEnabled && showSciaEnabled`; per-aircraft filtering is applied
+    from selected OGN aircraft keys.
 - `feature/map/src/main/java/com/example/xcpro/ogn/OgnMarkerDetailsSheet.kt`
   - Renders selected OGN target details in a `ModalBottomSheet`.
 - `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalDetailsSheet.kt`
@@ -279,6 +302,7 @@ Forecast overlay (SkySight-backed) path:
   - SSOT for forecast overlay preferences (`enabled`, `opacity`, `autoTimeEnabled`, `selectedPrimaryParameterId`, `selectedTimeUtcMs`, `selectedRegion`).
   - Optional secondary primary overlay prefs (`secondaryPrimaryOverlayEnabled`, `selectedSecondaryPrimaryParameterId`).
   - Wind-overlay prefs are separate (`windOverlayEnabled`, `selectedWindParameterId`, `windOverlayScale`, `windDisplayMode`).
+  - SkySight satellite prefs are SSOT-managed (`skySightSatelliteOverlayEnabled`, imagery/radar/lightning toggles, animation, history-frame count).
 - `feature/map/src/main/java/com/example/xcpro/di/ForecastModule.kt`
   - Binds forecast ports to `SkySightForecastProviderAdapter` in production runtime.
 - `feature/map/src/main/java/com/example/xcpro/forecast/SkySightForecastProviderAdapter.kt`
@@ -293,21 +317,25 @@ Forecast overlay (SkySight-backed) path:
     (primary tile failure is fatal; secondary-primary and wind-layer failures are warning-only).
 - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayViewModel.kt`
   - ViewModel-intent boundary for enable/time/opacity and long-press point query.
-  - Non-wind parameter selection is a single multi-select intent (max 2) mapped to
-    internal primary + optional secondary-primary preferences.
+  - SkySight-tab non-wind parameter selection is single-select (primary only) and
+    clears legacy secondary-primary enable state for SkySight parity.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
   - Collects forecast state, opens forecast sheet, dispatches long-press point queries
     (disabled during AAT edit mode), and renders callout/status.
-  - Forecast sheet exposes one non-wind parameter list (max 2 selected) plus separate
-    wind overlay controls.
+  - Forecast sheet exposes one non-wind primary selector plus separate wind overlay controls.
+  - Also forwards SkySight satellite runtime intent/state (`enabled`, layer toggles, animation, frame count, selected time) to map overlay runtime owner.
 - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
   - Runtime owner for forecast raster overlay lifecycle and style-reload reapplication.
   - Hosts three runtime overlay instances: primary forecast layer + optional secondary-primary layer + optional wind overlay layer.
+  - Owns SkySight satellite runtime config and style-reload reapply path.
 - `feature/map/src/main/java/com/example/xcpro/map/ForecastRasterOverlay.kt`
   - MapLibre runtime controller for forecast vector layers.
   - Uses namespace-scoped layer/source IDs so multiple forecast overlays can render together.
   - Supports indexed-fill overlays and wind-point overlays with branch-specific layer cleanup.
   - Wind-point rendering supports `ARROW` and `BARB` display modes from forecast preferences SSOT.
+- `feature/map/src/main/java/com/example/xcpro/map/SkySightSatelliteOverlay.kt`
+  - MapLibre runtime controller for SkySight satellite imagery/radar/lightning layers.
+  - Uses `satellite.skysight.io` tile templates with `date=YYYY/MM/DD/HHmm` contract and bounded history-frame loop (1-3, 10-minute steps).
 
 Weather rain overlay path:
 - `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherOverlayPreferencesRepository.kt`
@@ -473,7 +501,8 @@ Wind fusion:
 
 Flight state:
 - `feature/map/src/main/java/com/example/xcpro/sensors/FlightStateRepository.kt`
-  - Derives `FlyingState` from GPS/baro/airspeed.
+  - Derives `FlyingState` from GPS/baro/airspeed and SSOT AGL from `FlightDataRepository.flightData`.
+  - Does not perform independent terrain-network fetches; AGL authority remains in fusion output.
   - Used by metrics and map observers.
 
 ## 8) Replay Pipeline (High-Level)

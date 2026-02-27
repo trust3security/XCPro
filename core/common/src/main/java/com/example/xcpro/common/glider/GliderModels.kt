@@ -229,3 +229,23 @@ fun defaultGliderModels(): List<GliderModel> = listOf(
         points = null
     )
 )
+
+fun defaultClubFallbackGliderModel(): GliderModel = GliderModel(
+    id = "club-default-fallback",
+    name = "Club Class (Default)",
+    classLabel = "Club",
+    wingSpanM = 15.0,
+    bestLD = 38.0,
+    bestLDSpeedMs = UnitsConverter.kmhToMs(95.0),
+    minSinkMs = 0.68,
+    minSinkSpeedMs = UnitsConverter.kmhToMs(82.0),
+    points = listOf(
+        PolarPoint.fromKmh(70.0, 0.78),
+        PolarPoint.fromKmh(82.0, 0.68),
+        PolarPoint.fromKmh(95.0, 0.72),
+        PolarPoint.fromKmh(110.0, 0.86),
+        PolarPoint.fromKmh(130.0, 1.15),
+        PolarPoint.fromKmh(150.0, 1.52),
+        PolarPoint.fromKmh(170.0, 1.96)
+    )
+)

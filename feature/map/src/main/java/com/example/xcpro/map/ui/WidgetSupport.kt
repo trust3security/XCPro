@@ -33,6 +33,7 @@ class MapGestureRegistry {
         MapOverlayGestureTarget.CARD_GRID -> 0
         MapOverlayGestureTarget.FLIGHT_MODE -> 1
         MapOverlayGestureTarget.SIDE_HAMBURGER,
+        MapOverlayGestureTarget.SETTINGS_SHORTCUT,
         MapOverlayGestureTarget.VARIOMETER,
         MapOverlayGestureTarget.BALLAST -> 2
     }

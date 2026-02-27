@@ -22,10 +22,15 @@ private val KEY_OGN_TRAIL_SELECTED_AIRCRAFT_KEYS = stringSetPreferencesKey(
 )
 
 @Singleton
-class OgnTrailSelectionPreferencesRepository @Inject constructor(
-    @ApplicationContext private val context: Context
+class OgnTrailSelectionPreferencesRepository internal constructor(
+    private val dataStore: DataStore<Preferences>
 ) {
-    val selectedAircraftKeysFlow: Flow<Set<String>> = context.ognTrailSelectionDataStore.data
+    @Inject
+    constructor(
+        @ApplicationContext context: Context
+    ) : this(context.ognTrailSelectionDataStore)
+
+    val selectedAircraftKeysFlow: Flow<Set<String>> = dataStore.data
         .map { preferences ->
             preferences[KEY_OGN_TRAIL_SELECTED_AIRCRAFT_KEYS]
                 ?.mapNotNull(::normalizeOgnAircraftKeyOrNull)
@@ -38,7 +43,7 @@ class OgnTrailSelectionPreferencesRepository @Inject constructor(
         val normalizedKey = normalizeOgnAircraftKeyOrNull(aircraftKey) ?: return
         val keyAliases = expandOgnSelectionAliases(normalizedKey)
 
-        context.ognTrailSelectionDataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             val updated = preferences[KEY_OGN_TRAIL_SELECTED_AIRCRAFT_KEYS]
                 ?.toMutableSet()
                 ?: mutableSetOf()
@@ -59,7 +64,7 @@ class OgnTrailSelectionPreferencesRepository @Inject constructor(
         val normalizedKeys = aircraftKeys.mapNotNull(::normalizeOgnAircraftKeyOrNull).toSet()
         if (normalizedKeys.isEmpty()) return
 
-        context.ognTrailSelectionDataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             val updated = preferences[KEY_OGN_TRAIL_SELECTED_AIRCRAFT_KEYS]
                 ?.toMutableSet()
                 ?: mutableSetOf()
@@ -80,7 +85,7 @@ class OgnTrailSelectionPreferencesRepository @Inject constructor(
     }
 
     suspend fun clearSelectedAircraft() {
-        context.ognTrailSelectionDataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             preferences[KEY_OGN_TRAIL_SELECTED_AIRCRAFT_KEYS] = emptySet()
         }
     }

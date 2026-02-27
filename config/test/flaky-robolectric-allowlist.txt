@@ -1,0 +1,3 @@
+# Flaky Robolectric classes allowed to retry in CI (maxRetries=1).
+# Keep this list narrow and remove entries once stabilized.
+com.example.xcpro.map.MapScreenViewModelTest

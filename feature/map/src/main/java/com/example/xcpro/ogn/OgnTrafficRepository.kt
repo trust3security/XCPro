@@ -18,6 +18,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -39,6 +40,11 @@ interface OgnTrafficRepository {
 
     fun setEnabled(enabled: Boolean)
     fun updateCenter(latitude: Double, longitude: Double)
+    fun updateAutoReceiveRadiusContext(
+        zoomLevel: Float,
+        groundSpeedMs: Double,
+        isFlying: Boolean
+    ) = Unit
     fun start()
     fun stop()
 }
@@ -68,7 +74,7 @@ class OgnTrafficRepositoryImpl @Inject constructor(
             lastError = null,
             subscriptionCenterLat = null,
             subscriptionCenterLon = null,
-            receiveRadiusKm = RECEIVE_RADIUS_KM.toInt(),
+            receiveRadiusKm = OGN_RECEIVE_RADIUS_DEFAULT_KM,
             ddbCacheAgeMs = null,
             reconnectBackoffMs = null,
             lastReconnectWallMs = null
@@ -84,6 +90,9 @@ class OgnTrafficRepositoryImpl @Inject constructor(
 
     @Volatile
     private var ownIcaoHex: String? = null
+
+    @Volatile
+    private var clientCallsign: String = generateOgnClientCallsign()
 
     @Volatile
     private var center: Center? = null
@@ -109,7 +118,39 @@ class OgnTrafficRepositoryImpl @Inject constructor(
     private var lastReconnectWallMs: Long? = null
 
     @Volatile
+    private var receiveRadiusKm: Int = OGN_RECEIVE_RADIUS_DEFAULT_KM
+
+    @Volatile
+    private var manualReceiveRadiusKm: Int = OGN_RECEIVE_RADIUS_DEFAULT_KM
+
+    @Volatile
+    private var autoReceiveRadiusEnabled: Boolean = false
+
+    @Volatile
+    private var latestAutoReceiveRadiusContext: OgnAutoReceiveRadiusContext? = null
+
+    @Volatile
+    private var pendingAutoRadiusKm: Int? = null
+
+    @Volatile
+    private var pendingAutoRadiusSinceMonoMs: Long = 0L
+
+    @Volatile
+    private var lastAutoRadiusApplyMonoMs: Long = Long.MIN_VALUE
+
+    @Volatile
     private var activeSubscriptionCenter: Center? = null
+
+    @Volatile
+    private var reconnectRequestedForRadiusChange: Boolean = false
+    @Volatile
+    private var lastDistanceRefreshCenter: Center? = null
+    @Volatile
+    private var lastDistanceRefreshMonoMs: Long = Long.MIN_VALUE
+    @Volatile
+    private var droppedOutOfOrderSourceFrames: Long = 0L
+    @Volatile
+    private var droppedImplausibleMotionFrames: Long = 0L
 
     private val stateTransitionMutex = Mutex()
 
@@ -127,6 +168,28 @@ class OgnTrafficRepositoryImpl @Inject constructor(
                 )
             }.collect { config ->
                 applyOwnshipFilterConfig(config)
+            }
+        }
+
+        scope.launch {
+            preferencesRepository.receiveRadiusKmFlow.collect { radiusKm ->
+                applyManualReceiveRadiusKm(radiusKm)
+            }
+        }
+
+        scope.launch {
+            preferencesRepository.autoReceiveRadiusEnabledFlow.collect { enabled ->
+                applyAutoReceiveRadiusEnabled(enabled)
+            }
+        }
+
+        scope.launch {
+            preferencesRepository.clientCallsignFlow.collect { persistedCallsign ->
+                val resolvedCallsign = persistedCallsign ?: clientCallsign
+                if (persistedCallsign == null) {
+                    preferencesRepository.setClientCallsign(resolvedCallsign)
+                }
+                clientCallsign = resolvedCallsign
             }
         }
     }
@@ -156,10 +219,41 @@ class OgnTrafficRepositoryImpl @Inject constructor(
     override fun updateCenter(latitude: Double, longitude: Double) {
         if (!latitude.isFinite() || !longitude.isFinite()) return
         if (abs(latitude) > 90.0 || abs(longitude) > 180.0) return
-        center = Center(latitude = latitude, longitude = longitude)
-        refreshTargetDistancesForCurrentCenter()
+        val updatedCenter = Center(latitude = latitude, longitude = longitude)
+        val previousCenter = center
+        if (previousCenter == updatedCenter) return
+        center = updatedCenter
+
+        val nowMonoMs = clock.nowMonoMs()
+        if (shouldRefreshTargetDistancesForCenterUpdate(
+                previousCenter = previousCenter,
+                updatedCenter = updatedCenter,
+                nowMonoMs = nowMonoMs
+            )
+        ) {
+            refreshTargetDistancesForCurrentCenter(nowMonoMs)
+        } else {
+            publishSnapshot()
+        }
         if (_isEnabled.value) {
             ensureLoopRunning()
+        }
+    }
+
+    override fun updateAutoReceiveRadiusContext(
+        zoomLevel: Float,
+        groundSpeedMs: Double,
+        isFlying: Boolean
+    ) {
+        if (!zoomLevel.isFinite() || !groundSpeedMs.isFinite()) return
+        scope.launch {
+            applyAutoReceiveRadiusContext(
+                OgnAutoReceiveRadiusContext(
+                    zoomLevel = zoomLevel,
+                    groundSpeedMs = groundSpeedMs.coerceAtLeast(0.0),
+                    isFlying = isFlying
+                )
+            )
         }
     }
 
@@ -209,6 +303,10 @@ class OgnTrafficRepositoryImpl @Inject constructor(
         _targets.value = emptyList()
         _suppressedTargetIds.value = emptySet()
         activeSubscriptionCenter = null
+        lastDistanceRefreshCenter = null
+        lastDistanceRefreshMonoMs = Long.MIN_VALUE
+        droppedOutOfOrderSourceFrames = 0L
+        droppedImplausibleMotionFrames = 0L
         connectionState = OgnConnectionState.DISCONNECTED
         lastError = null
         publishSnapshot()
@@ -221,12 +319,16 @@ class OgnTrafficRepositoryImpl @Inject constructor(
             while (_isEnabled.value) {
                 refreshDdbIfDue()
                 val centerAtConnect = waitForCenter() ?: break
+                var reconnectRequestedByPolicy = false
                 try {
-                    connectAndRead(centerAtConnect)
+                    reconnectRequestedByPolicy =
+                        connectAndRead(centerAtConnect) == ConnectionExitReason.ReconnectRequested
                     connectionState = OgnConnectionState.DISCONNECTED
                     activeSubscriptionCenter = null
                     backoffMs = RECONNECT_BACKOFF_START_MS
                     reconnectBackoffMs = null
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (t: Throwable) {
                     connectionState = OgnConnectionState.ERROR
                     lastError = sanitizeError(t)
@@ -236,6 +338,9 @@ class OgnTrafficRepositoryImpl @Inject constructor(
 
                 sweepStaleTargets(clock.nowMonoMs())
                 if (!_isEnabled.value) break
+                if (reconnectRequestedByPolicy) {
+                    continue
+                }
                 reconnectBackoffMs = backoffMs
                 lastReconnectWallMs = clock.nowWallMs()
                 publishSnapshot()
@@ -263,7 +368,7 @@ class OgnTrafficRepositoryImpl @Inject constructor(
         return null
     }
 
-    private fun connectAndRead(centerAtConnect: Center) {
+    private fun connectAndRead(centerAtConnect: Center): ConnectionExitReason {
         val socket = socketFactory()
         var reader: BufferedReader? = null
         var writer: BufferedWriter? = null
@@ -288,17 +393,22 @@ class OgnTrafficRepositoryImpl @Inject constructor(
             writer.flush()
 
             activeSubscriptionCenter = centerAtConnect
-            refreshTargetDistancesForCurrentCenter()
+            refreshTargetDistancesForCurrentCenter(clock.nowMonoMs())
             publishSnapshot()
             var connectionEstablished = false
 
             var lastSweepMonoMs = clock.nowMonoMs()
             var lastKeepaliveMonoMs = lastSweepMonoMs
-            var lastReceiveMonoMs = lastSweepMonoMs
+            var lastStreamActivityMonoMs = lastSweepMonoMs
 
             while (_isEnabled.value) {
                 val nowMonoMs = clock.nowMonoMs()
                 val activeCenter = center
+                if (reconnectRequestedForRadiusChange) {
+                    reconnectRequestedForRadiusChange = false
+                    AppLogger.d(TAG, "Receive radius changed; reconnecting with updated filter")
+                    return ConnectionExitReason.ReconnectRequested
+                }
                 if (activeCenter != null &&
                     OgnSubscriptionPolicy.shouldReconnectByCenterMoveMeters(
                         previousLat = centerAtConnect.latitude,
@@ -309,12 +419,12 @@ class OgnTrafficRepositoryImpl @Inject constructor(
                     )
                 ) {
                     AppLogger.d(TAG, "Subscription center moved; reconnecting with updated filter")
-                    return
+                    return ConnectionExitReason.ReconnectRequested
                 }
 
                 try {
-                    val line = reader.readLine() ?: return
-                    lastReceiveMonoMs = nowMonoMs
+                    val line = reader.readLine() ?: return ConnectionExitReason.StreamEnded
+                    lastStreamActivityMonoMs = clock.nowMonoMs()
                     when (parseLogrespStatus(line)) {
                         OgnLogrespStatus.VERIFIED -> {
                             if (!connectionEstablished) {
@@ -323,7 +433,7 @@ class OgnTrafficRepositoryImpl @Inject constructor(
                                 publishSnapshot()
                                 AppLogger.i(
                                     TAG,
-                                    "Connected to OGN traffic feed with ${RECEIVE_RADIUS_KM.toInt()}km radius"
+                                    "Connected to OGN traffic feed with ${receiveRadiusKm}km radius"
                                 )
                             }
                         }
@@ -340,7 +450,7 @@ class OgnTrafficRepositoryImpl @Inject constructor(
                                 publishSnapshot()
                                 AppLogger.i(
                                     TAG,
-                                    "Connected to OGN traffic feed with ${RECEIVE_RADIUS_KM.toInt()}km radius"
+                                    "Connected to OGN traffic feed with ${receiveRadiusKm}km radius"
                                 )
                             }
                         }
@@ -349,22 +459,26 @@ class OgnTrafficRepositoryImpl @Inject constructor(
                     // Expected timeout so we can evaluate keepalive/reconnect conditions.
                 }
 
-                if (nowMonoMs - lastReceiveMonoMs >= STALL_TIMEOUT_MS) {
+                val loopNowMonoMs = clock.nowMonoMs()
+                if (loopNowMonoMs - lastStreamActivityMonoMs >= STALL_TIMEOUT_MS) {
                     throw IllegalStateException("OGN stream stalled")
                 }
 
-                if (nowMonoMs - lastSweepMonoMs >= STALE_SWEEP_INTERVAL_MS) {
-                    sweepStaleTargets(nowMonoMs)
-                    lastSweepMonoMs = nowMonoMs
+                if (loopNowMonoMs - lastSweepMonoMs >= STALE_SWEEP_INTERVAL_MS) {
+                    sweepStaleTargets(loopNowMonoMs)
+                    lastSweepMonoMs = loopNowMonoMs
                 }
 
-                if (nowMonoMs - lastKeepaliveMonoMs >= KEEPALIVE_INTERVAL_MS) {
+                if (loopNowMonoMs - lastKeepaliveMonoMs >= KEEPALIVE_INTERVAL_MS) {
                     writer.write("#keepalive")
                     writer.newLine()
                     writer.flush()
-                    lastKeepaliveMonoMs = nowMonoMs
+                    lastKeepaliveMonoMs = loopNowMonoMs
+                    // AI-NOTE: Successful keepalive writes prove a live stream path even when no APRS frames arrive.
+                    lastStreamActivityMonoMs = loopNowMonoMs
                 }
             }
+            return ConnectionExitReason.StreamEnded
         } finally {
             activeSubscriptionCenter = null
             runCatching { reader?.close() }
@@ -374,7 +488,11 @@ class OgnTrafficRepositoryImpl @Inject constructor(
     }
 
     private fun handleIncomingLine(line: String, nowMonoMs: Long, centerAtConnect: Center): Boolean {
-        val parsed = parser.parseTraffic(line, nowMonoMs) ?: return false
+        val parsed = parser.parseTraffic(
+            line = line,
+            receivedAtMillis = nowMonoMs,
+            receivedAtWallMillis = clock.nowWallMs()
+        ) ?: return false
         val requestedCenter = center
         if (!isWithinReceiveRadiusMeters(
                 targetLat = parsed.latitude,
@@ -383,13 +501,38 @@ class OgnTrafficRepositoryImpl @Inject constructor(
                 requestedCenterLon = requestedCenter?.longitude,
                 subscriptionCenterLat = centerAtConnect.latitude,
                 subscriptionCenterLon = centerAtConnect.longitude,
-                radiusMeters = RECEIVE_RADIUS_METERS
+                radiusMeters = currentReceiveRadiusMeters()
             )
         ) {
             return true
         }
 
         val targetKey = parsed.canonicalKey
+        val previousCommittedTarget = targetsByKey[targetKey]
+        if (!shouldAcceptOgnSourceTimestamp(
+                previousSourceTimestampWallMs = previousCommittedTarget?.sourceTimestampWallMs,
+                incomingSourceTimestampWallMs = parsed.sourceTimestampWallMs,
+                rewindToleranceMs = SOURCE_TIME_REWIND_TOLERANCE_MS
+            )
+        ) {
+            droppedOutOfOrderSourceFrames += 1L
+            publishSnapshot()
+            return true
+        }
+        if (!isPlausibleOgnMotion(
+                previousLatitude = previousCommittedTarget?.latitude,
+                previousLongitude = previousCommittedTarget?.longitude,
+                previousSourceTimestampWallMs = previousCommittedTarget?.sourceTimestampWallMs,
+                incomingLatitude = parsed.latitude,
+                incomingLongitude = parsed.longitude,
+                incomingSourceTimestampWallMs = parsed.sourceTimestampWallMs,
+                maxPlausibleSpeedMps = MAX_PLAUSIBLE_SPEED_MPS
+            )
+        ) {
+            droppedImplausibleMotionFrames += 1L
+            publishSnapshot()
+            return true
+        }
         val ddbIdentity = parsed.deviceIdHex?.let { deviceIdHex ->
             ddbRepository.lookup(
                 addressType = parsed.addressType,
@@ -409,7 +552,7 @@ class OgnTrafficRepositoryImpl @Inject constructor(
         val identity = mergeOgnIdentity(ddbIdentity = ddbIdentity, parsedIdentity = parsed.identity)
 
         val label = resolveDisplayLabel(parsed, identity)
-        val previousTrackDegrees = targetsByKey[targetKey]?.trackDegrees
+        val previousTrackDegrees = previousCommittedTarget?.trackDegrees
         val stabilizedTrackDegrees = stabilizeTrackDegrees(
             incomingTrackDegrees = parsed.trackDegrees,
             groundSpeedMps = parsed.groundSpeedMps,
@@ -459,7 +602,26 @@ class OgnTrafficRepositoryImpl @Inject constructor(
             ?: fallback
     }
 
-    private fun refreshTargetDistancesForCurrentCenter() {
+    private fun shouldRefreshTargetDistancesForCenterUpdate(
+        previousCenter: Center?,
+        updatedCenter: Center,
+        nowMonoMs: Long
+    ): Boolean {
+        val lastRefreshCenter = lastDistanceRefreshCenter ?: previousCenter
+        return shouldRefreshOgnDistanceForCenterUpdate(
+            hasTargets = targetsByKey.isNotEmpty(),
+            previousRefreshLat = lastRefreshCenter?.latitude,
+            previousRefreshLon = lastRefreshCenter?.longitude,
+            nextCenterLat = updatedCenter.latitude,
+            nextCenterLon = updatedCenter.longitude,
+            lastRefreshMonoMs = lastDistanceRefreshMonoMs,
+            nowMonoMs = nowMonoMs,
+            minMoveMeters = CENTER_DISTANCE_REFRESH_MIN_MOVE_METERS,
+            minIntervalMs = CENTER_DISTANCE_REFRESH_MIN_INTERVAL_MS
+        )
+    }
+
+    private fun refreshTargetDistancesForCurrentCenter(nowMonoMs: Long = clock.nowMonoMs()) {
         val requestedCenter = center
         val subscriptionCenter = activeSubscriptionCenter
         if (requestedCenter == null && subscriptionCenter == null) return
@@ -477,8 +639,12 @@ class OgnTrafficRepositoryImpl @Inject constructor(
                 changed = true
             }
         }
+        lastDistanceRefreshCenter = requestedCenter ?: subscriptionCenter
+        lastDistanceRefreshMonoMs = nowMonoMs
         if (changed) {
             publishTargets()
+        } else {
+            publishSnapshot()
         }
     }
 
@@ -571,6 +737,113 @@ class OgnTrafficRepositoryImpl @Inject constructor(
             icaoHex = ownIcaoHex
         )
 
+    private fun applyManualReceiveRadiusKm(radiusKm: Int) {
+        manualReceiveRadiusKm = clampOgnReceiveRadiusKm(radiusKm)
+        if (autoReceiveRadiusEnabled) return
+        applyEffectiveReceiveRadiusKm(manualReceiveRadiusKm)
+    }
+
+    private fun applyAutoReceiveRadiusEnabled(enabled: Boolean) {
+        if (autoReceiveRadiusEnabled == enabled) return
+        autoReceiveRadiusEnabled = enabled
+        pendingAutoRadiusKm = null
+        pendingAutoRadiusSinceMonoMs = 0L
+        if (!enabled) {
+            applyEffectiveReceiveRadiusKm(manualReceiveRadiusKm)
+            return
+        }
+        evaluateAutoReceiveRadius(
+            nowMonoMs = clock.nowMonoMs(),
+            forceApply = true
+        )
+    }
+
+    private fun applyAutoReceiveRadiusContext(context: OgnAutoReceiveRadiusContext) {
+        latestAutoReceiveRadiusContext = context
+        if (!autoReceiveRadiusEnabled) return
+        evaluateAutoReceiveRadius(
+            nowMonoMs = clock.nowMonoMs(),
+            forceApply = false
+        )
+    }
+
+    private fun evaluateAutoReceiveRadius(
+        nowMonoMs: Long,
+        forceApply: Boolean
+    ) {
+        val context = latestAutoReceiveRadiusContext ?: return
+        val targetRadiusKm = OgnAutoReceiveRadiusPolicy.resolveRadiusKm(context)
+        if (targetRadiusKm == receiveRadiusKm) {
+            pendingAutoRadiusKm = null
+            pendingAutoRadiusSinceMonoMs = 0L
+            return
+        }
+        if (forceApply || lastAutoRadiusApplyMonoMs == Long.MIN_VALUE) {
+            pendingAutoRadiusKm = null
+            pendingAutoRadiusSinceMonoMs = 0L
+            applyEffectiveReceiveRadiusKm(targetRadiusKm)
+            lastAutoRadiusApplyMonoMs = nowMonoMs
+            return
+        }
+        if (pendingAutoRadiusKm != targetRadiusKm) {
+            pendingAutoRadiusKm = targetRadiusKm
+            pendingAutoRadiusSinceMonoMs = nowMonoMs
+            return
+        }
+        val stableForMs = nowMonoMs - pendingAutoRadiusSinceMonoMs
+        if (stableForMs < OgnAutoReceiveRadiusPolicy.STABLE_DURATION_MS) return
+        val sinceLastApplyMs = nowMonoMs - lastAutoRadiusApplyMonoMs
+        if (sinceLastApplyMs < OgnAutoReceiveRadiusPolicy.MIN_APPLY_INTERVAL_MS) return
+        pendingAutoRadiusKm = null
+        pendingAutoRadiusSinceMonoMs = 0L
+        applyEffectiveReceiveRadiusKm(targetRadiusKm)
+        lastAutoRadiusApplyMonoMs = nowMonoMs
+    }
+
+    private fun applyEffectiveReceiveRadiusKm(radiusKm: Int) {
+        val clampedRadiusKm = clampOgnReceiveRadiusKm(radiusKm)
+        if (receiveRadiusKm == clampedRadiusKm) return
+        receiveRadiusKm = clampedRadiusKm
+        pruneTargetsOutsideReceiveRadius()
+        publishSnapshot()
+        if (_isEnabled.value) {
+            reconnectRequestedForRadiusChange = true
+        }
+    }
+
+    private fun pruneTargetsOutsideReceiveRadius() {
+        if (targetsByKey.isEmpty()) return
+        val requestedCenter = center
+        val fallbackCenter = activeSubscriptionCenter ?: requestedCenter ?: return
+        val radiusMeters = currentReceiveRadiusMeters()
+        var changed = false
+
+        val iterator = targetsByKey.entries.iterator()
+        while (iterator.hasNext()) {
+            val entry = iterator.next()
+            val withinRadius = isWithinReceiveRadiusMeters(
+                targetLat = entry.value.latitude,
+                targetLon = entry.value.longitude,
+                requestedCenterLat = requestedCenter?.latitude,
+                requestedCenterLon = requestedCenter?.longitude,
+                subscriptionCenterLat = fallbackCenter.latitude,
+                subscriptionCenterLon = fallbackCenter.longitude,
+                radiusMeters = radiusMeters
+            )
+            if (!withinRadius) {
+                iterator.remove()
+                changed = true
+            }
+        }
+
+        if (changed) {
+            publishTargets()
+        }
+    }
+
+    private fun currentReceiveRadiusMeters(): Double =
+        receiveRadiusKm.toDouble() * METERS_PER_KILOMETER
+
     private fun publishSnapshot() {
         val activeCenter = center
         val nowWallMs = clock.nowWallMs()
@@ -587,12 +860,14 @@ class OgnTrafficRepositoryImpl @Inject constructor(
             lastError = lastError,
             subscriptionCenterLat = activeCenter?.latitude,
             subscriptionCenterLon = activeCenter?.longitude,
-            receiveRadiusKm = RECEIVE_RADIUS_KM.toInt(),
+            receiveRadiusKm = receiveRadiusKm,
             ddbCacheAgeMs = ddbAge,
             reconnectBackoffMs = reconnectBackoffMs,
             lastReconnectWallMs = lastReconnectWallMs,
             activeSubscriptionCenterLat = activeSubscriptionCenter?.latitude,
-            activeSubscriptionCenterLon = activeSubscriptionCenter?.longitude
+            activeSubscriptionCenterLon = activeSubscriptionCenter?.longitude,
+            droppedOutOfOrderSourceFrames = droppedOutOfOrderSourceFrames,
+            droppedImplausibleMotionFrames = droppedImplausibleMotionFrames
         )
     }
 
@@ -605,9 +880,10 @@ class OgnTrafficRepositoryImpl @Inject constructor(
     }
 
     private fun buildLogin(center: Center): String {
-        val passcode = generateAprsPasscode(CLIENT_CALLSIGN)
-        val filter = "r/${formatCoord(center.latitude)}/${formatCoord(center.longitude)}/${RECEIVE_RADIUS_KM.toInt()}"
-        return "user $CLIENT_CALLSIGN pass $passcode vers $APP_NAME $APP_VERSION filter $filter"
+        val loginCallsign = clientCallsign
+        val passcode = generateAprsPasscode(loginCallsign)
+        val filter = "r/${formatCoord(center.latitude)}/${formatCoord(center.longitude)}/${receiveRadiusKm}"
+        return "user $loginCallsign pass $passcode vers $APP_NAME $APP_VERSION filter $filter"
     }
 
     private fun generateAprsPasscode(callsign: String): Int {
@@ -641,18 +917,19 @@ class OgnTrafficRepositoryImpl @Inject constructor(
         val icaoHex: String?
     )
 
+    private enum class ConnectionExitReason {
+        StreamEnded,
+        ReconnectRequested
+    }
+
     private companion object {
         private const val TAG = "OgnTrafficRepository"
         private const val HOST = "aprs.glidernet.org"
         private const val FILTER_PORT = 14580
-        private const val CLIENT_CALLSIGN = "OGNXC1"
         private const val APP_NAME = "XCPro"
         private const val APP_VERSION = "0.1"
 
-        // Product contract: 300 km diameter around user position -> 150 km radius.
         private const val METERS_PER_KILOMETER = 1_000.0
-        private const val RECEIVE_RADIUS_METERS = 150_000.0
-        private const val RECEIVE_RADIUS_KM = RECEIVE_RADIUS_METERS / METERS_PER_KILOMETER
         private const val FILTER_UPDATE_MIN_MOVE_METERS = 20_000.0
 
         private const val SOCKET_CONNECT_TIMEOUT_MS = 10_000
@@ -663,6 +940,10 @@ class OgnTrafficRepositoryImpl @Inject constructor(
 
         private const val TARGET_STALE_AFTER_MS = 120_000L
         private const val STALE_SWEEP_INTERVAL_MS = 10_000L
+        private const val CENTER_DISTANCE_REFRESH_MIN_MOVE_METERS = 200.0
+        private const val CENTER_DISTANCE_REFRESH_MIN_INTERVAL_MS = 5_000L
+        private const val SOURCE_TIME_REWIND_TOLERANCE_MS = 0L
+        private const val MAX_PLAUSIBLE_SPEED_MPS = 250.0
 
         private const val RECONNECT_BACKOFF_START_MS = 1_000L
         private const val RECONNECT_BACKOFF_MAX_MS = 60_000L
@@ -685,6 +966,33 @@ internal fun parseLogrespStatus(line: String): OgnLogrespStatus? {
         normalized.contains("verified") -> OgnLogrespStatus.VERIFIED
         else -> null
     }
+}
+
+internal fun shouldRefreshOgnDistanceForCenterUpdate(
+    hasTargets: Boolean,
+    previousRefreshLat: Double?,
+    previousRefreshLon: Double?,
+    nextCenterLat: Double,
+    nextCenterLon: Double,
+    lastRefreshMonoMs: Long,
+    nowMonoMs: Long,
+    minMoveMeters: Double,
+    minIntervalMs: Long
+): Boolean {
+    if (!hasTargets) return false
+    if (previousRefreshLat == null || previousRefreshLon == null) return true
+    if (lastRefreshMonoMs == Long.MIN_VALUE) return true
+
+    val movementMeters = OgnSubscriptionPolicy.haversineMeters(
+        lat1 = previousRefreshLat,
+        lon1 = previousRefreshLon,
+        lat2 = nextCenterLat,
+        lon2 = nextCenterLon
+    )
+    if (movementMeters >= minMoveMeters) return true
+
+    val elapsedMs = nowMonoMs - lastRefreshMonoMs
+    return elapsedMs >= minIntervalMs
 }
 
 internal fun isWithinReceiveRadiusMeters(
@@ -731,6 +1039,43 @@ internal fun mergeOgnIdentity(
     if (ddbIdentity.aircraftTypeCode != null || parsedAircraftTypeCode == null) return ddbIdentity
 
     return ddbIdentity.copy(aircraftTypeCode = parsedAircraftTypeCode)
+}
+
+internal fun shouldAcceptOgnSourceTimestamp(
+    previousSourceTimestampWallMs: Long?,
+    incomingSourceTimestampWallMs: Long?,
+    rewindToleranceMs: Long
+): Boolean {
+    if (previousSourceTimestampWallMs == null || incomingSourceTimestampWallMs == null) {
+        return true
+    }
+    return incomingSourceTimestampWallMs + rewindToleranceMs >= previousSourceTimestampWallMs
+}
+
+internal fun isPlausibleOgnMotion(
+    previousLatitude: Double?,
+    previousLongitude: Double?,
+    previousSourceTimestampWallMs: Long?,
+    incomingLatitude: Double,
+    incomingLongitude: Double,
+    incomingSourceTimestampWallMs: Long?,
+    maxPlausibleSpeedMps: Double
+): Boolean {
+    if (previousLatitude == null || previousLongitude == null) return true
+    if (previousSourceTimestampWallMs == null || incomingSourceTimestampWallMs == null) return true
+    val dtMs = incomingSourceTimestampWallMs - previousSourceTimestampWallMs
+    if (dtMs <= 0L) return true
+    if (maxPlausibleSpeedMps <= 0.0 || !maxPlausibleSpeedMps.isFinite()) return true
+
+    val distanceMeters = OgnSubscriptionPolicy.haversineMeters(
+        lat1 = previousLatitude,
+        lon1 = previousLongitude,
+        lat2 = incomingLatitude,
+        lon2 = incomingLongitude
+    )
+    if (!distanceMeters.isFinite()) return false
+    val speedMps = distanceMeters / (dtMs / 1000.0)
+    return speedMps <= maxPlausibleSpeedMps
 }
 
 internal fun stabilizeTrackDegrees(

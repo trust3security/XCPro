@@ -66,6 +66,31 @@ class MapOverlayWidgetGesturesTest {
             .performTouchInput { longClick() }
         assertTrue("Hamburger long press should invoke callback", longPressTriggered.value)
     }
+
+    @Test
+    fun settingsShortcutTapTriggersCallback() {
+        val mapState = MapScreenState()
+        val widgetManager = MapUIWidgetManager(mapState)
+        val tapTriggered = mutableStateOf(false)
+
+        composeRule.setContent {
+            MapUIWidgets.SettingsShortcut(
+                widgetManager = widgetManager,
+                settingsOffset = Offset(16f, 260f),
+                screenWidthPx = 1080f,
+                screenHeightPx = 1920f,
+                onSettingsTap = { tapTriggered.value = true },
+                onOffsetChange = {},
+                isEditMode = false,
+                modifier = Modifier.testTag("settings_shortcut")
+            )
+        }
+
+        composeRule.onNodeWithTag("settings_shortcut")
+            .performClick()
+
+        assertTrue("Settings shortcut tap should invoke callback", tapTriggered.value)
+    }
 }
 
 private class ActivityRegistrationRule : ExternalResource() {

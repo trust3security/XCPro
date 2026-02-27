@@ -34,6 +34,7 @@ class MapWidgetLayoutRepository @Inject constructor(
     private fun keyPrefix(widgetId: MapWidgetId): String = when (widgetId) {
         MapWidgetId.SIDE_HAMBURGER -> KEY_SIDE_HAMBURGER
         MapWidgetId.FLIGHT_MODE -> KEY_FLIGHT_MODE
+        MapWidgetId.SETTINGS_SHORTCUT -> KEY_SETTINGS_SHORTCUT
         MapWidgetId.BALLAST -> KEY_BALLAST
     }
 
@@ -41,6 +42,7 @@ class MapWidgetLayoutRepository @Inject constructor(
         private const val PREFS_NAME = "MapPrefs"
         private const val KEY_SIDE_HAMBURGER = "side_hamburger"
         private const val KEY_FLIGHT_MODE = "flight_mode_menu"
+        private const val KEY_SETTINGS_SHORTCUT = "settings_shortcut"
         private const val KEY_BALLAST = "ballast_pill"
     }
 }

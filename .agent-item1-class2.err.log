@@ -1,0 +1,26 @@
+
+33 tests completed, 2 failed
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':feature:map:testDebugUnitTest'.
+> There were failing tests. See the report at: file:///C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/build/reports/tests/testDebugUnitTest/index.html
+
+* Try:
+> Run with --scan to get full insights.
+
+BUILD FAILED in 38s
+
+33 tests completed, 2 failed
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':feature:map:testDebugUnitTest'.
+> There were failing tests. See the report at: file:///C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/build/reports/tests/testDebugUnitTest/index.html
+
+* Try:
+> Run with --scan to get full insights.
+
+BUILD FAILED in 26s

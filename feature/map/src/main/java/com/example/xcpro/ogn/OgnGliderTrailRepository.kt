@@ -101,11 +101,30 @@ class OgnGliderTrailRepositoryImpl @Inject constructor(
             return changed
         }
 
-        for (target in targets.sortedBy { it.id }) {
+        val freshTargets = collectFreshTargets(targets)
+        if (freshTargets.isEmpty()) {
+            pruneStaleSamples(nowMonoMs)
+            return changed
+        }
+
+        for (target in freshTargets.sortedBy { it.id }) {
             changed = updateTrailForTarget(target, nowMonoMs) || changed
         }
         pruneStaleSamples(nowMonoMs)
         return changed
+    }
+
+    private fun collectFreshTargets(targets: List<OgnTrafficTarget>): List<OgnTrafficTarget> {
+        if (targets.isEmpty()) return emptyList()
+        val freshTargets = ArrayList<OgnTrafficTarget>(targets.size)
+        for (target in targets) {
+            val normalizedTargetId = normalizeOgnAircraftKeyOrNull(target.canonicalKey) ?: continue
+            val lastSeenMonoMs = lastSampleByTargetId[normalizedTargetId]?.lastSeenMonoMs
+            if (lastSeenMonoMs == null || target.lastSeenMillis > lastSeenMonoMs) {
+                freshTargets += target
+            }
+        }
+        return freshTargets
     }
 
     private fun updateTrailForTarget(target: OgnTrafficTarget, nowMonoMs: Long): Boolean {

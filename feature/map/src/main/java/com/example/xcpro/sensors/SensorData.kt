@@ -143,6 +143,7 @@ data class CompleteFlightData(
 
     // AGL (Above Ground Level) - from network service
     val agl: AltitudeM,            // meters above ground (GPS altitude - terrain elevation)
+    val aglTimestampMonoMs: Long = 0L, // monotonic timestamp of last successful AGL update (0 = unknown)
 
     // Thermal metrics for cards/infobox parity
     val thermalAverage: VerticalSpeedMs,  // m/s (TC 30s average climb)

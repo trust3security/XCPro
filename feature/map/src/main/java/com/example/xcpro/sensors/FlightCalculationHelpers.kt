@@ -3,9 +3,17 @@ package com.example.xcpro.sensors
 import android.location.Location
 import com.example.dfcards.dfcards.calculations.SimpleAglCalculator
 import com.example.xcpro.glider.StillAirSinkProvider
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicLong
+import kotlin.math.abs
+import kotlin.math.atan2
+import kotlin.math.cos
 import kotlin.math.min
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 /**
  * Flight Calculation Helpers
@@ -26,9 +34,23 @@ internal class FlightCalculationHelpers(
     private val scope: CoroutineScope,
     private val aglCalculator: SimpleAglCalculator,
     private val locationHistory: MutableList<LocationWithTime>,
-    private val sinkProvider: StillAirSinkProvider
+    private val sinkProvider: StillAirSinkProvider,
+    private val nowMonoMsProvider: () -> Long = { 0L }
 ) {
     data class NettoComputation(val value: Double, val valid: Boolean)
+    data class AglWorkerMetrics(
+        val processedUpdates: Long,
+        val droppedUpdates: Long,
+        val errorUpdates: Long,
+        val workerActive: Boolean,
+        val hasPendingUpdate: Boolean
+    )
+
+    private data class PendingAglUpdate(
+        val baroAltitude: Double,
+        val gps: GPSData,
+        val speed: Double
+    )
 
     companion object {
         private const val MAX_LOCATION_HISTORY = 20
@@ -37,6 +59,10 @@ internal class FlightCalculationHelpers(
         private const val DEFAULT_FALLBACK_SPEED_MS = 27.78 // 100 km/h
         private const val MIN_MOVING_SPEED_MS = 0.5         // ~1 kt; below this we treat as stationary
         private const val NETTO_VALID_WARMUP_MS = 20_000L
+        private const val AGL_BASE_SUBMISSION_INTERVAL_MS = 20_000L
+        private const val AGL_TRIGGER_DISTANCE_METERS = 200.0
+        private const val AGL_TRIGGER_ALTITUDE_DELTA_M = 25.0
+        private const val AGL_MOVING_SPEED_TRIGGER_MS = 2.0
     }
 
     private val thermalTracker = ThermalTracker()
@@ -59,8 +85,23 @@ internal class FlightCalculationHelpers(
     private var currentLD = 0f
 
     // AGL state
-    var currentAGL: Double = 0.0
+    @Volatile
+    var currentAGL: Double = Double.NaN
         private set
+    @Volatile
+    var lastSuccessfulAglUpdateMonoMs: Long = 0L
+        private set
+    private val aglUpdateLock = Any()
+    private var pendingAglUpdate: PendingAglUpdate? = null
+    private var aglWorkerJob: Job? = null
+    private var lastSubmittedAglMonoMs: Long = 0L
+    private var lastSubmittedAglLat: Double? = null
+    private var lastSubmittedAglLon: Double? = null
+    private var lastSubmittedAglAltitude: Double? = null
+    private var lastSubmittedMovingState: Boolean? = null
+    private val aglProcessedUpdates = AtomicLong(0L)
+    private val aglDroppedUpdates = AtomicLong(0L)
+    private val aglErrorUpdates = AtomicLong(0L)
 
     // Last known speeds for dropout resilience
     private var lastValidTAS: Double? = null
@@ -77,22 +118,129 @@ internal class FlightCalculationHelpers(
      *  NON-BLOCKING: Launches async fetch, doesn't freeze GPS loop
      */
     fun updateAGL(baroAltitude: Double, gps: GPSData, speed: Double) {
-        //  FIXED: Launch async coroutine instead of runBlocking
-        // GPS loop continues immediately, AGL updates when fetch completes
-        scope.launch {
-            val newAGL = aglCalculator.calculateAgl(
-                altitude = baroAltitude,  // Use baro for stability
-                lat = gps.position.latitude,
-                lon = gps.position.longitude,
+        val nowMonoMs = nowMonoMsProvider()
+        val movingNow = speed.isFinite() && speed >= AGL_MOVING_SPEED_TRIGGER_MS
+        synchronized(aglUpdateLock) {
+            if (!shouldSubmitAglLocked(
+                    nowMonoMs = nowMonoMs,
+                    baroAltitude = baroAltitude,
+                    gps = gps,
+                    movingNow = movingNow
+                )
+            ) {
+                return
+            }
+            if (pendingAglUpdate != null) {
+                aglDroppedUpdates.incrementAndGet()
+            }
+            pendingAglUpdate = PendingAglUpdate(
+                baroAltitude = baroAltitude,
+                gps = gps,
                 speed = speed
             )
-
-            // Update cached value (or keep existing if fetch failed)
-            if (newAGL != null) {
-                currentAGL = newAGL
+            lastSubmittedAglMonoMs = nowMonoMs
+            lastSubmittedAglLat = gps.position.latitude
+            lastSubmittedAglLon = gps.position.longitude
+            lastSubmittedAglAltitude = baroAltitude
+            lastSubmittedMovingState = movingNow
+            if (aglWorkerJob?.isActive != true) {
+                aglWorkerJob = scope.launch {
+                    processPendingAglUpdates()
+                }
             }
-            // If fetch failed (null), keep previous AGL value
         }
+    }
+
+    private suspend fun processPendingAglUpdates() {
+        while (true) {
+            val request = synchronized(aglUpdateLock) {
+                val next = pendingAglUpdate
+                if (next == null) {
+                    aglWorkerJob = null
+                    null
+                } else {
+                    pendingAglUpdate = null
+                    next
+                }
+            } ?: return
+
+            aglProcessedUpdates.incrementAndGet()
+            val newAgl = try {
+                aglCalculator.calculateAgl(
+                    altitude = request.baroAltitude,
+                    lat = request.gps.position.latitude,
+                    lon = request.gps.position.longitude,
+                    speed = request.speed
+                )
+            } catch (throwable: Throwable) {
+                if (throwable is CancellationException) throw throwable
+                aglErrorUpdates.incrementAndGet()
+                null
+            }
+
+            if (newAgl != null) {
+                currentAGL = newAgl
+                lastSuccessfulAglUpdateMonoMs = nowMonoMsProvider()
+            }
+        }
+    }
+
+    private fun shouldSubmitAglLocked(
+        nowMonoMs: Long,
+        baroAltitude: Double,
+        gps: GPSData,
+        movingNow: Boolean
+    ): Boolean {
+        if (lastSubmittedAglMonoMs <= 0L) return true
+
+        val dueByTime = nowMonoMs - lastSubmittedAglMonoMs >= AGL_BASE_SUBMISSION_INTERVAL_MS
+        if (dueByTime) return true
+
+        val movedEnough = lastSubmittedAglLat != null &&
+            lastSubmittedAglLon != null &&
+            haversineDistanceMeters(
+                lat1 = lastSubmittedAglLat ?: gps.position.latitude,
+                lon1 = lastSubmittedAglLon ?: gps.position.longitude,
+                lat2 = gps.position.latitude,
+                lon2 = gps.position.longitude
+            ) >= AGL_TRIGGER_DISTANCE_METERS
+        if (movedEnough) return true
+
+        val altitudeDelta = lastSubmittedAglAltitude?.let { previousAltitude ->
+            abs(baroAltitude - previousAltitude)
+        } ?: 0.0
+        if (altitudeDelta >= AGL_TRIGGER_ALTITUDE_DELTA_M) return true
+
+        val transitionCandidate = lastSubmittedMovingState?.let { it != movingNow } ?: false
+        if (transitionCandidate) return true
+
+        return false
+    }
+
+    private fun haversineDistanceMeters(
+        lat1: Double,
+        lon1: Double,
+        lat2: Double,
+        lon2: Double
+    ): Double {
+        val earthRadiusMeters = 6_371_000.0
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+        val a = sin(dLat / 2.0) * sin(dLat / 2.0) +
+            cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) *
+            sin(dLon / 2.0) * sin(dLon / 2.0)
+        val c = 2.0 * atan2(sqrt(a), sqrt(1.0 - a))
+        return earthRadiusMeters * c
+    }
+
+    internal fun getAglWorkerMetrics(): AglWorkerMetrics = synchronized(aglUpdateLock) {
+        AglWorkerMetrics(
+            processedUpdates = aglProcessedUpdates.get(),
+            droppedUpdates = aglDroppedUpdates.get(),
+            errorUpdates = aglErrorUpdates.get(),
+            workerActive = aglWorkerJob?.isActive == true,
+            hasPendingUpdate = pendingAglUpdate != null
+        )
     }
 
     /**
@@ -281,12 +429,26 @@ internal class FlightCalculationHelpers(
     }
 
     internal fun resetAll() {
+        synchronized(aglUpdateLock) {
+            pendingAglUpdate = null
+            aglWorkerJob?.cancel()
+            aglWorkerJob = null
+            lastSubmittedAglMonoMs = 0L
+            lastSubmittedAglLat = null
+            lastSubmittedAglLon = null
+            lastSubmittedAglAltitude = null
+            lastSubmittedMovingState = null
+        }
+        aglProcessedUpdates.set(0L)
+        aglDroppedUpdates.set(0L)
+        aglErrorUpdates.set(0L)
         resetThermalTracking()
         locationHistory.clear()
         lastLDCalculationTime = 0L
         lastLDAltitude = 0.0
         currentLD = 0f
-        currentAGL = 0.0
+        currentAGL = Double.NaN
+        lastSuccessfulAglUpdateMonoMs = 0L
         lastValidTAS = null
         lastValidGnd = null
         lastSpeedTimestamp = 0L

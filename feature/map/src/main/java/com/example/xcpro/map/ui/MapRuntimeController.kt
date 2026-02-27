@@ -30,6 +30,7 @@ class MapRuntimeController(
     }
 
     fun clearMap() {
+        overlayManager.onMapDetached()
         map = null
         pendingStyleName = null
         mapGeneration++

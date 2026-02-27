@@ -2,6 +2,7 @@ package com.example.xcpro.screens.navdrawer
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.xcpro.ogn.OgnDisplayUpdateMode
 import com.example.xcpro.ogn.normalizeOgnHex6OrNull
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -36,20 +37,38 @@ class OgnSettingsViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            combine(
-                useCase.iconSizePxFlow,
+            val ownshipFlow = combine(
                 useCase.ownFlarmHexFlow,
                 useCase.ownIcaoHexFlow
-            ) { iconSizePx, ownFlarmHex, ownIcaoHex ->
-                Triple(iconSizePx, ownFlarmHex, ownIcaoHex)
-            }.collect { (iconSizePx, ownFlarmHex, ownIcaoHex) ->
+            ) { ownFlarmHex, ownIcaoHex ->
+                ownFlarmHex to ownIcaoHex
+            }
+            combine(
+                useCase.iconSizePxFlow,
+                useCase.receiveRadiusKmFlow,
+                useCase.autoReceiveRadiusEnabledFlow,
+                useCase.displayUpdateModeFlow,
+                ownshipFlow
+            ) { iconSizePx, receiveRadiusKm, autoReceiveRadiusEnabled, displayUpdateMode, ownship ->
+                OgnSettingsPreferencesSnapshot(
+                    iconSizePx = iconSizePx,
+                    receiveRadiusKm = receiveRadiusKm,
+                    autoReceiveRadiusEnabled = autoReceiveRadiusEnabled,
+                    displayUpdateMode = displayUpdateMode,
+                    ownFlarmHex = ownship.first,
+                    ownIcaoHex = ownship.second
+                )
+            }.collect { snapshot ->
                 _uiState.update { state ->
                     state.copy(
-                        iconSizePx = iconSizePx,
-                        ownFlarmDraft = if (flarmDraftDirty) state.ownFlarmDraft else ownFlarmHex.orEmpty(),
-                        ownIcaoDraft = if (icaoDraftDirty) state.ownIcaoDraft else ownIcaoHex.orEmpty(),
-                        savedOwnFlarmHex = ownFlarmHex,
-                        savedOwnIcaoHex = ownIcaoHex
+                        iconSizePx = snapshot.iconSizePx,
+                        receiveRadiusKm = snapshot.receiveRadiusKm,
+                        autoReceiveRadiusEnabled = snapshot.autoReceiveRadiusEnabled,
+                        displayUpdateMode = snapshot.displayUpdateMode,
+                        ownFlarmDraft = if (flarmDraftDirty) state.ownFlarmDraft else snapshot.ownFlarmHex.orEmpty(),
+                        ownIcaoDraft = if (icaoDraftDirty) state.ownIcaoDraft else snapshot.ownIcaoHex.orEmpty(),
+                        savedOwnFlarmHex = snapshot.ownFlarmHex,
+                        savedOwnIcaoHex = snapshot.ownIcaoHex
                     )
                 }
             }
@@ -59,6 +78,24 @@ class OgnSettingsViewModel @Inject constructor(
     fun setIconSizePx(iconSizePx: Int) {
         viewModelScope.launch {
             useCase.setIconSizePx(iconSizePx)
+        }
+    }
+
+    fun setReceiveRadiusKm(radiusKm: Int) {
+        viewModelScope.launch {
+            useCase.setReceiveRadiusKm(radiusKm)
+        }
+    }
+
+    fun setAutoReceiveRadiusEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            useCase.setAutoReceiveRadiusEnabled(enabled)
+        }
+    }
+
+    fun setDisplayUpdateMode(mode: OgnDisplayUpdateMode) {
+        viewModelScope.launch {
+            useCase.setDisplayUpdateMode(mode)
         }
     }
 
@@ -156,4 +193,13 @@ class OgnSettingsViewModel @Inject constructor(
     private companion object {
         private const val OWN_HEX_VALIDATION_ERROR = "Enter exactly 6 hex characters (0-9, A-F)."
     }
+
+    private data class OgnSettingsPreferencesSnapshot(
+        val iconSizePx: Int,
+        val receiveRadiusKm: Int,
+        val autoReceiveRadiusEnabled: Boolean,
+        val displayUpdateMode: OgnDisplayUpdateMode,
+        val ownFlarmHex: String?,
+        val ownIcaoHex: String?
+    )
 }

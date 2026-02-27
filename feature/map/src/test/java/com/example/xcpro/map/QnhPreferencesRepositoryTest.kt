@@ -2,10 +2,11 @@ package com.example.xcpro.map
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Before
@@ -23,13 +24,9 @@ class QnhPreferencesRepositoryTest {
     private lateinit var repository: QnhPreferencesRepository
 
     @Before
-    fun setUp() {
+    fun setUp() = runBlocking(Dispatchers.IO) {
         repository = QnhPreferencesRepository(context)
-    }
-
-    @After
-    fun tearDown() {
-        context.filesDir.resolve("datastore")?.takeIf { it.exists() }?.deleteRecursively()
+        repository.clearManualQnh()
     }
 
     @Test

@@ -1,7 +1,10 @@
 package com.example.xcpro.ogn
 
-import javax.inject.Inject
+import java.time.Instant
+import java.time.YearMonth
+import java.time.ZoneOffset
 import java.util.Locale
+import javax.inject.Inject
 import kotlin.math.abs
 
 /**
@@ -19,6 +22,8 @@ class OgnAprsLineParser @Inject constructor() {
         private const val OGN_TYPE_MASK = 0x3C
         private const val OGN_TYPE_SHIFT = 2
         private const val OGN_MALFORMED_ID_HEX_LENGTH = 7
+        private const val APRS_TIMESTAMP_TOKEN_LENGTH = 7
+        private const val SOURCE_TIMESTAMP_MAX_SKEW_MS = 36L * 60L * 60L * 1000L
     }
 
     private val positionRegex =
@@ -31,7 +36,11 @@ class OgnAprsLineParser @Inject constructor() {
     private val malformedIdRegex = Regex("""\bid([0-9A-Fa-f]{7})\b""")
     private val callsignDeviceIdRegex = Regex("""^[A-Z]{3}[0-9A-F]{6}$""")
 
-    fun parseTraffic(line: String, receivedAtMillis: Long): OgnTrafficTarget? {
+    fun parseTraffic(
+        line: String,
+        receivedAtMillis: Long,
+        receivedAtWallMillis: Long = receivedAtMillis
+    ): OgnTrafficTarget? {
         if (line.isBlank() || line.startsWith("#")) return null
 
         val payloadSplit = line.split(":", limit = 2)
@@ -43,6 +52,10 @@ class OgnAprsLineParser @Inject constructor() {
         val info = payloadSplit[1]
         val payloadType = info.firstOrNull() ?: return null
         if (payloadType !in setOf('!', '=', '/', '@')) return null
+        val sourceTimestampWallMs = parseSourceTimestampWallMs(
+            info = info,
+            receivedAtWallMillis = receivedAtWallMillis
+        )
 
         val positionMatch = positionRegex.find(info) ?: return null
         val latitude = parseLatitude(
@@ -138,9 +151,101 @@ class OgnAprsLineParser @Inject constructor() {
             rawLine = line,
             timestampMillis = receivedAtMillis,
             lastSeenMillis = receivedAtMillis,
+            sourceTimestampWallMs = sourceTimestampWallMs,
             addressType = addressType,
             addressHex = deviceIdHex
         )
+    }
+
+    private fun parseSourceTimestampWallMs(info: String, receivedAtWallMillis: Long): Long? {
+        if (info.length < 1 + APRS_TIMESTAMP_TOKEN_LENGTH) return null
+        val payloadType = info.first()
+        if (payloadType != '/' && payloadType != '@') return null
+        val token = info.substring(1, 1 + APRS_TIMESTAMP_TOKEN_LENGTH)
+        if (token.length != APRS_TIMESTAMP_TOKEN_LENGTH) return null
+        val suffix = token.last()
+        return when (suffix) {
+            'h' -> parseZuluHourMinuteSecondTimestamp(token, receivedAtWallMillis)
+            'z' -> parseZuluDayHourMinuteTimestamp(token, receivedAtWallMillis)
+            else -> null
+        }
+    }
+
+    private fun parseZuluHourMinuteSecondTimestamp(
+        token: String,
+        receivedAtWallMillis: Long
+    ): Long? {
+        val hour = token.substring(0, 2).toIntOrNull() ?: return null
+        val minute = token.substring(2, 4).toIntOrNull() ?: return null
+        val second = token.substring(4, 6).toIntOrNull() ?: return null
+        if (hour !in 0..23 || minute !in 0..59 || second !in 0..59) return null
+
+        val receivedDayUtc = Instant.ofEpochMilli(receivedAtWallMillis)
+            .atZone(ZoneOffset.UTC)
+            .toLocalDate()
+        val candidates = listOf(
+            receivedDayUtc.minusDays(1),
+            receivedDayUtc,
+            receivedDayUtc.plusDays(1)
+        ).map { day ->
+            day.atTime(hour, minute, second)
+                .toInstant(ZoneOffset.UTC)
+                .toEpochMilli()
+        }
+        return nearestTimestampCandidate(
+            candidates = candidates,
+            receivedAtWallMillis = receivedAtWallMillis
+        )
+    }
+
+    private fun parseZuluDayHourMinuteTimestamp(
+        token: String,
+        receivedAtWallMillis: Long
+    ): Long? {
+        val dayOfMonth = token.substring(0, 2).toIntOrNull() ?: return null
+        val hour = token.substring(2, 4).toIntOrNull() ?: return null
+        val minute = token.substring(4, 6).toIntOrNull() ?: return null
+        if (dayOfMonth !in 1..31 || hour !in 0..23 || minute !in 0..59) return null
+
+        val receivedMonthUtc = YearMonth.from(
+            Instant.ofEpochMilli(receivedAtWallMillis).atZone(ZoneOffset.UTC)
+        )
+        val monthCandidates = listOf(
+            receivedMonthUtc.minusMonths(1),
+            receivedMonthUtc,
+            receivedMonthUtc.plusMonths(1)
+        )
+        val candidates = ArrayList<Long>(monthCandidates.size)
+        for (month in monthCandidates) {
+            if (dayOfMonth > month.lengthOfMonth()) continue
+            candidates += month
+                .atDay(dayOfMonth)
+                .atTime(hour, minute)
+                .toInstant(ZoneOffset.UTC)
+                .toEpochMilli()
+        }
+        if (candidates.isEmpty()) return null
+        return nearestTimestampCandidate(
+            candidates = candidates,
+            receivedAtWallMillis = receivedAtWallMillis
+        )
+    }
+
+    private fun nearestTimestampCandidate(
+        candidates: List<Long>,
+        receivedAtWallMillis: Long
+    ): Long? {
+        var bestCandidate: Long? = null
+        var bestDeltaMs = Long.MAX_VALUE
+        for (candidate in candidates) {
+            val deltaMs = abs(candidate - receivedAtWallMillis)
+            if (deltaMs < bestDeltaMs) {
+                bestDeltaMs = deltaMs
+                bestCandidate = candidate
+            }
+        }
+        if (bestDeltaMs > SOURCE_TIMESTAMP_MAX_SKEW_MS) return null
+        return bestCandidate
     }
 
     private fun parseHeader(headerText: String): ParsedHeader? {

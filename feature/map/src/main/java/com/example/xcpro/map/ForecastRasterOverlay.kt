@@ -783,6 +783,8 @@ class ForecastRasterOverlay(
             "aat-areas-layer",
             "aat-waypoints",
             "adsb-traffic-icon-layer",
+            "ogn-thermal-label-layer",
+            "ogn-thermal-circle-layer",
             "ogn-traffic-icon-layer",
             BlueLocationOverlay.LAYER_ID
         )

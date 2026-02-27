@@ -46,15 +46,26 @@ SkySight hosts a TileServer instance (`airspace.skysight.io`) that explicitly pr
 
 This is **not** proof that the SkySight *forecast* layers use the same infrastructure, but it strongly suggests SkySight is comfortable delivering data using industry-standard web map tiling conventions.
 
-### 1.4 SkySight also operates a satellite/radar tile product with explicit “tile quotas” (HighSight)
-HighSight (operated by “SkySight Weather Pty Ltd”) markets a “standard XYZ tile API” and publishes plan quotas in “tiles per month”.
+### 1.4 SkySight Satellite View exists in product UX, but API contract is still unconfirmed
+SkySight product docs and manuals reference a `Sat View` user feature for comparing forecast vs observed imagery.
 
-**Implication:** SkySight/adjacent services likely enforce **entitlements** and may expose rate/usage behavior as:
-- request throttling (HTTP 429),
-- plan/entitlement errors (HTTP 402/403),
-- quota headers or structured error payloads.
+**Implication for XCPro:** treat Satellite View as a SkySight feature track, but do not assume a public, stable
+satellite API contract until authenticated endpoint evidence is captured.
 
-Again: **this is a clue, not confirmation** for the SkySight forecast API.
+### 1.5 Captured SkySight satellite tile settings (runtime evidence)
+Captured bundle evidence in-repo (`tmp_sat_chunk.txt`) confirms these tile template contracts:
+
+- Satellite imagery:
+  - `https://satellite.skysight.io/tiles/{z}/{x}/{y}@2x?date=YYYY/MM/DD/HHmm&mtg=true`
+- Radar:
+  - `https://satellite.skysight.io/radar/{z}/{x}/{y}@2x?date=YYYY/MM/DD/HHmm`
+- Lightning:
+  - `https://satellite.skysight.io/lightning/{z}/{x}/{y}@2x?date=YYYY/MM/DD/HHmm`
+  - source-layer: `lightning`
+
+Observed runtime timing:
+- 10-minute stepping.
+- short history loop with up to 3 frames.
 
 ---
 
@@ -283,5 +294,5 @@ These sources do **not** contain the full private SkySight forecast API contract
 - SkySight airspace TileServer instance (shows WMTS/TMS/XYZ + TileJSON distribution patterns):  
   https://airspace.skysight.io/
 
-- HighSight product marketing (standard XYZ tiles + tile quotas, operated by SkySight Weather Pty Ltd):  
-  https://highsight.dev/
+- SkySight product site and docs (for Satellite View UX context):  
+  https://skysight.io/

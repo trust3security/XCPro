@@ -7,6 +7,7 @@ import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.common.orientation.MapOrientationMode
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
+import org.maplibre.android.maps.Style
 import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.layers.PropertyFactory.*
@@ -40,24 +41,22 @@ class BlueLocationOverlay(
 
     fun initialize() {
         try {
-            val style = map.style ?: return
+            val style = map.style ?: run {
+                isLayerAdded = false
+                return
+            }
             AppLogger.d(TAG, "Initializing aircraft location overlay")
 
-            val triangleIcon = createSailplaneIconBitmap()
-
-            style.addImage(ICON_ID, triangleIcon)
-
-            val source = GeoJsonSource(SOURCE_ID)
-            style.addSource(source)
-
-            val layer = createLocationLayer()
-
-            style.addLayer(layer)
-            isLayerAdded = true
-
-            AppLogger.d(TAG, "Sailplane location overlay initialized successfully")
+            ensureRuntimeObjects(style)
+            isLayerAdded = hasRuntimeObjects(style)
+            if (isLayerAdded) {
+                AppLogger.d(TAG, "Sailplane location overlay initialized successfully")
+            } else {
+                AppLogger.w(TAG, "Sailplane location overlay initialize incomplete")
+            }
 
         } catch (e: Exception) {
+            isLayerAdded = false
             AppLogger.e(TAG, "Error initializing blue location overlay: ${e.message}", e)
         }
     }
@@ -82,14 +81,13 @@ class BlueLocationOverlay(
         mapBearing: Double = 0.0,
         orientationMode: MapOrientationMode = MapOrientationMode.NORTH_UP
     ) {
-        if (!isLayerAdded) {
-            AppLogger.w(TAG, "Overlay not initialized, cannot update location")
-            return
-        }
-
         try {
             if (!isValidCoordinate(location.latitude, location.longitude)) {
                 AppLogger.w(TAG, "Invalid coordinates - update skipped")
+                return
+            }
+            if (!ensureOverlayReadyForUpdate()) {
+                AppLogger.w(TAG, "Overlay runtime missing, cannot update location")
                 return
             }
 
@@ -102,8 +100,13 @@ class BlueLocationOverlay(
             currentOrientationMode = orientationMode
 
             val style = map.style ?: return
-            val source = style.getSourceAs<GeoJsonSource>(SOURCE_ID) ?: return
-            val layer = style.getLayerAs<SymbolLayer>(LAYER_ID) ?: return
+            val source = style.getSourceAs<GeoJsonSource>(SOURCE_ID)
+            val layer = style.getLayerAs<SymbolLayer>(LAYER_ID)
+            if (source == null || layer == null) {
+                isLayerAdded = false
+                AppLogger.w(TAG, "Overlay source/layer missing after readiness check")
+                return
+            }
 
             val point = Point.fromLngLat(location.longitude, location.latitude)
             val feature = Feature.fromGeometry(point)
@@ -191,23 +194,22 @@ class BlueLocationOverlay(
 
     fun cleanup() {
         try {
-            val style = map.style ?: return
-
-            if (isLayerAdded) {
+            val style = map.style
+            if (style != null && isLayerAdded) {
                 style.removeLayer(LAYER_ID)
                 style.removeSource(SOURCE_ID)
                 style.removeImage(ICON_ID)
-                isLayerAdded = false
                 AppLogger.d(TAG, "Location overlay cleaned up")
             }
-
+            isLayerAdded = false
         } catch (e: Exception) {
+            isLayerAdded = false
             AppLogger.e(TAG, "Error cleaning up location overlay: ${e.message}", e)
         }
     }
 
     fun bringToFront() {
-        if (!isLayerAdded) return
+        if (!ensureOverlayReadyForUpdate()) return
         try {
             val style = map.style ?: return
             val topId = style.layers.lastOrNull()?.id
@@ -226,5 +228,40 @@ class BlueLocationOverlay(
 
     private fun createSailplaneIconBitmap(): Bitmap {
         return SailplaneIconBitmapFactory.create(ICON_SIZE_PX)
+    }
+
+    private fun ensureOverlayReadyForUpdate(): Boolean {
+        val style = map.style ?: run {
+            isLayerAdded = false
+            return false
+        }
+        if (!hasRuntimeObjects(style)) {
+            if (AppLogger.rateLimit(TAG, "overlay_recovery", 2_000L)) {
+                AppLogger.w(TAG, "Overlay runtime missing, attempting self-heal")
+            }
+            ensureRuntimeObjects(style)
+        }
+        isLayerAdded = hasRuntimeObjects(style)
+        return isLayerAdded
+    }
+
+    private fun ensureRuntimeObjects(style: Style) {
+        val hasIcon = runCatching { style.getImage(ICON_ID) }.getOrNull() != null
+        if (!hasIcon) {
+            style.addImage(ICON_ID, createSailplaneIconBitmap())
+        }
+        if (style.getSourceAs<GeoJsonSource>(SOURCE_ID) == null) {
+            style.addSource(GeoJsonSource(SOURCE_ID))
+        }
+        if (style.getLayerAs<SymbolLayer>(LAYER_ID) == null) {
+            style.addLayer(createLocationLayer())
+        }
+    }
+
+    private fun hasRuntimeObjects(style: Style): Boolean {
+        val hasIcon = runCatching { style.getImage(ICON_ID) }.getOrNull() != null
+        return hasIcon &&
+            style.getSourceAs<GeoJsonSource>(SOURCE_ID) != null &&
+            style.getLayerAs<SymbolLayer>(LAYER_ID) != null
     }
 }

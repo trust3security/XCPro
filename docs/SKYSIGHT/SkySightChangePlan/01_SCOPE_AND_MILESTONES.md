@@ -1,36 +1,41 @@
 # Scope and milestones
 
 ## Primary user value
-Show SkySight forecast layers on top of XC Pro maps so pilots can plan and (optionally) analyze flights with forecast context.
+Show SkySight forecast and satellite-derived weather context directly on XCPro maps while preserving map readability and runtime stability.
 
-## In-scope (MVP)
-M0 - Account linking + authentication
-- UI to enter credentials (or a token) and verify login.
-- Secure token/session storage owned by a repository.
+## Status snapshot (2026-02-24)
+Completed in code:
+- Forecast overlay provider integration (Stage A + Stage B).
+- Multi-overlay behavior for forecast/wind.
+- Convergence parameter support.
+- SkySight satellite API overlay runtime (imagery/radar/lightning) with SkySight-tab controls.
 
-M1 - Map overlay rendering (raster tiles)
-- Toggle forecast overlay on/off.
-- Parameter selection (e.g., thermal strength, cloudbase, winds, etc. - whatever the API exposes).
-- Time-of-day selection (forecast timestamp) with a slider or stepper.
-- Opacity control (0..1), matching SkySight's "colour transparency" concept.
+## In scope (current)
+M1 - Forecast overlays
+- Enable/disable forecast overlays.
+- Select non-wind parameter.
+- Select wind parameter + wind display behavior.
+- Time selection and auto-time follow.
 
-M2 - Point query ("what is the value here?")
-- Long-press on the map triggers a point query for the active parameter/time.
-- Display a small sheet/callout with the numeric value + units + "valid time".
+M2 - Forecast value query
+- Long-press map to query selected forecast parameter value.
+- Show callout/status.
 
-M3 - Basic legend support
-- Display a legend/scale for the current parameter (if API provides it).
-- Units toggle (metric/imperial) if supported.
+M3 - Forecast legends and warnings
+- Show legends for active overlays.
+- Show warning/error state with non-fatal vs fatal distinction.
 
-## Optional follow-ons (not required for MVP)
-M4 - Replay/time sync mode
-- When IGC replay is running, optionally sync the forecast time to replay time (useful for analysis).
+M4 - SkySight satellite overlays
+- SkySight-tab options:
+  - satellite overlay master toggle
+  - imagery (clouds) toggle
+  - radar toggle
+  - lightning toggle
+  - animation toggle
+  - history frames (1-3)
+- Keep `Sat View` map-style toggle as separate behavior.
 
-M5 - Route forecast / cross sections / skew-T / windgrams
-- These are large features (charts, route editing, server-side compute). Only implement if the API explicitly supports them and the product wants it.
-
-## Explicit non-goals (for initial integration)
-- Re-implementing the full SkySight web UI.
-- Scraping the web app or reverse engineering private endpoints without permission.
-- Offline bulk download of tiles/forecasts (unless SkySight explicitly allows it).
-
+## Explicit non-goals (for this track)
+- Re-implement full SkySight web UI.
+- Add unsupported backend proxy/gateway by default.
+- Add bulk offline tile download behavior without explicit provider permission.

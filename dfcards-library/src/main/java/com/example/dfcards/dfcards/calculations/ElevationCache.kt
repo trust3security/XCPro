@@ -1,6 +1,7 @@
 package com.example.dfcards.dfcards.calculations
 
 import android.util.Log
+import java.util.LinkedHashMap
 import kotlin.math.roundToInt
 
 /**
@@ -25,10 +26,28 @@ class ElevationCache {
     companion object {
         private const val TAG = "ElevationCache"
         private const val GRID_RESOLUTION = 0.01 // ~1km at equator
+        private const val MAX_CACHE_ENTRIES = 4_096
+        private const val LOOKUP_LOG_INTERVAL = 250
+        private const val STORE_LOG_INTERVAL = 100
     }
 
-    // In-memory cache: "lat,lon" -> elevation (meters)
-    private val cache = mutableMapOf<String, Double>()
+    private inline fun debug(message: () -> String) {
+        if (Log.isLoggable(TAG, Log.DEBUG)) {
+            Log.d(TAG, message())
+        }
+    }
+
+    // In-memory cache with bounded size to avoid unbounded session growth.
+    private var evictions = 0
+    private val cache = object : LinkedHashMap<String, Double>(MAX_CACHE_ENTRIES + 1, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Double>?): Boolean {
+            val shouldEvict = size > MAX_CACHE_ENTRIES
+            if (shouldEvict) {
+                evictions++
+            }
+            return shouldEvict
+        }
+    }
 
     // Cache statistics
     private var hits = 0
@@ -41,16 +60,22 @@ class ElevationCache {
      * @param lon Longitude
      * @return Cached elevation in meters, or null if not cached
      */
+    @Synchronized
     fun get(lat: Double, lon: Double): Double? {
         val key = getCacheKey(lat, lon)
         val elevation = cache[key]
 
         if (elevation != null) {
             hits++
-            Log.d(TAG, " Cache HIT: ${elevation.toInt()}m at ($lat, $lon) [hit rate: ${getHitRate()}%]")
         } else {
             misses++
-            Log.d(TAG, " Cache MISS at ($lat, $lon) [hit rate: ${getHitRate()}%]")
+        }
+
+        val lookups = hits + misses
+        if (lookups % LOOKUP_LOG_INTERVAL == 0) {
+            debug {
+                "Lookup stats: size=${cache.size}, hitRate=${getHitRate()}%, evictions=$evictions"
+            }
         }
 
         return elevation
@@ -63,10 +88,15 @@ class ElevationCache {
      * @param lon Longitude
      * @param elevation Elevation in meters
      */
+    @Synchronized
     fun store(lat: Double, lon: Double, elevation: Double) {
         val key = getCacheKey(lat, lon)
         cache[key] = elevation
-        Log.d(TAG, " Cached: ${elevation.toInt()}m at ($lat, $lon) [total: ${cache.size} locations]")
+        if (cache.size % STORE_LOG_INTERVAL == 0) {
+            debug {
+                "Store stats: size=${cache.size}, hitRate=${getHitRate()}%, evictions=$evictions"
+            }
+        }
     }
 
     /**
@@ -92,17 +122,20 @@ class ElevationCache {
     /**
      * Clear all cached elevations
      */
+    @Synchronized
     fun clear() {
         val size = cache.size
         cache.clear()
         hits = 0
         misses = 0
-        Log.d(TAG, " Cache cleared ($size locations removed)")
+        evictions = 0
+        debug { "Cache cleared ($size locations removed)" }
     }
 
     /**
      * Get cache statistics
      */
+    @Synchronized
     fun getStats(): CacheStats {
         return CacheStats(
             size = cache.size,
@@ -115,6 +148,7 @@ class ElevationCache {
     /**
      * Calculate cache hit rate percentage
      */
+    @Synchronized
     private fun getHitRate(): Int {
         val total = hits + misses
         return if (total > 0) {
@@ -127,6 +161,7 @@ class ElevationCache {
     /**
      * Check if location is in cache
      */
+    @Synchronized
     fun contains(lat: Double, lon: Double): Boolean {
         val key = getCacheKey(lat, lon)
         return cache.containsKey(key)
@@ -135,6 +170,7 @@ class ElevationCache {
     /**
      * Get cache size (number of unique locations)
      */
+    @Synchronized
     fun size(): Int = cache.size
 }
 

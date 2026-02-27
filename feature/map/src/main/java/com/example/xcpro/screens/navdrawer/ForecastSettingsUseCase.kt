@@ -18,6 +18,7 @@ class ForecastSettingsUseCase @Inject constructor(
 ) {
     val overlayEnabledFlow: Flow<Boolean> = preferencesRepository.overlayEnabledFlow
     val opacityFlow: Flow<Float> = preferencesRepository.opacityFlow
+    val windOverlayScaleFlow: Flow<Float> = preferencesRepository.windOverlayScaleFlow
     val windDisplayModeFlow: Flow<ForecastWindDisplayMode> = preferencesRepository.windDisplayModeFlow
     val selectedRegionFlow: Flow<String> = preferencesRepository.selectedRegionFlow
     val availableRegions: List<ForecastRegionOption> = FORECAST_REGION_OPTIONS
@@ -29,6 +30,10 @@ class ForecastSettingsUseCase @Inject constructor(
 
     suspend fun setOpacity(opacity: Float) {
         preferencesRepository.setOpacity(opacity)
+    }
+
+    suspend fun setWindOverlayScale(scale: Float) {
+        preferencesRepository.setWindOverlayScale(scale)
     }
 
     suspend fun setWindDisplayMode(mode: ForecastWindDisplayMode) {

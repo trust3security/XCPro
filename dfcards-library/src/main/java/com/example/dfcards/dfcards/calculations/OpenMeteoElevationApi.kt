@@ -40,6 +40,12 @@ class OpenMeteoElevationApi(private val context: Context) {
         private const val TIMEOUT_MS = 10000 // 10 seconds
     }
 
+    private inline fun debug(message: () -> String) {
+        if (Log.isLoggable(TAG, Log.DEBUG)) {
+            Log.d(TAG, message())
+        }
+    }
+
     /**
      * Check if INTERNET permission is granted (KISS safety check)
      */
@@ -86,6 +92,18 @@ class OpenMeteoElevationApi(private val context: Context) {
      * @return Elevation in meters above sea level, or null if request fails
      */
     suspend fun fetchElevation(lat: Double, lon: Double): Double? = withContext(Dispatchers.IO) {
+        // Reject invalid numeric input before any permission/network work.
+        if (!lat.isFinite() || !lon.isFinite()) {
+            Log.e(TAG, "Invalid coordinates (non-finite): lat=$lat, lon=$lon")
+            return@withContext null
+        }
+
+        // Validate bounds before network work.
+        if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+            Log.e(TAG, "Invalid coordinates: lat=$lat, lon=$lon")
+            return@withContext null
+        }
+
         // KISS Safety Check #1: Permission
         if (!hasInternetPermission()) {
             return@withContext null
@@ -96,20 +114,16 @@ class OpenMeteoElevationApi(private val context: Context) {
             return@withContext null
         }
 
-        // Validate coordinates
-        if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
-            Log.e(TAG, "Invalid coordinates: lat=$lat, lon=$lon")
-            return@withContext null
-        }
-
         // Build request URL
         val urlString = "$BASE_URL?latitude=$lat&longitude=$lon"
 
+        var connection: HttpURLConnection? = null
+
         return@withContext try {
-            Log.d(TAG, "Fetching elevation for ($lat, $lon)")
+            debug { "Fetching elevation for ($lat, $lon)" }
 
             val url = URL(urlString)
-            val connection = url.openConnection() as HttpURLConnection
+            connection = url.openConnection() as HttpURLConnection
 
             // Configure connection
             connection.requestMethod = "GET"
@@ -121,7 +135,6 @@ class OpenMeteoElevationApi(private val context: Context) {
             val responseCode = connection.responseCode
             if (responseCode != HttpURLConnection.HTTP_OK) {
                 Log.e(TAG, "HTTP error: $responseCode")
-                connection.disconnect()
                 return@withContext null
             }
 
@@ -130,15 +143,13 @@ class OpenMeteoElevationApi(private val context: Context) {
                 reader.readText()
             }
 
-            connection.disconnect()
-
             // Parse JSON response
             val json = JSONObject(response)
             val elevationArray = json.getJSONArray("elevation")
 
             if (elevationArray.length() > 0) {
                 val elevation = elevationArray.getDouble(0)
-                Log.d(TAG, " Elevation: ${elevation.toInt()}m at ($lat, $lon)")
+                debug { "Elevation: ${elevation.toInt()}m at ($lat, $lon)" }
                 elevation
             } else {
                 Log.e(TAG, " No elevation data in response")
@@ -148,6 +159,8 @@ class OpenMeteoElevationApi(private val context: Context) {
         } catch (e: Exception) {
             Log.e(TAG, " Failed to fetch elevation: ${e.message}", e)
             null
+        } finally {
+            connection?.disconnect()
         }
     }
 

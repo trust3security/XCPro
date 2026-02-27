@@ -21,6 +21,14 @@ class WeatherOverlayViewModel @Inject constructor(
             initialValue = WeatherOverlayRuntimeState()
         )
 
+    val animatePastWindow: StateFlow<Boolean> = weatherOverlayTabSettingsUseCase
+        .animatePastWindowFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = false
+        )
+
     fun setEnabled(enabled: Boolean) {
         viewModelScope.launch {
             weatherOverlayTabSettingsUseCase.setEnabled(enabled)
@@ -30,6 +38,12 @@ class WeatherOverlayViewModel @Inject constructor(
     fun setOpacity(opacity: Float) {
         viewModelScope.launch {
             weatherOverlayTabSettingsUseCase.setOpacity(opacity)
+        }
+    }
+
+    fun setAnimatePastWindow(enabled: Boolean) {
+        viewModelScope.launch {
+            weatherOverlayTabSettingsUseCase.setAnimatePastWindow(enabled)
         }
     }
 }

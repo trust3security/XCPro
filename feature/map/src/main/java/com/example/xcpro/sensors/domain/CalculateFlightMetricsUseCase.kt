@@ -178,7 +178,9 @@ internal class CalculateFlightMetricsUseCase(
         } else {
             currentTime
         }
-        flightHelpers.updateAGL(baroAltitude, gps, gps.speed.value)
+        if (request.allowOnlineTerrainLookup) {
+            flightHelpers.updateAGL(baroAltitude, gps, gps.speed.value)
+        }
         flightHelpers.recordLocationSample(gps, sampleTimeMillis)
         val calculatedLD = flightHelpers.calculateCurrentLD(gps, baroAltitude, sampleTimeMillis)
 
@@ -469,6 +471,7 @@ data class FlightMetricsRequest(
     val baroResult: BarometricAltitudeData?,
     val windState: WindState?,
     val externalAirspeedSample: AirspeedSample? = null,
+    val allowOnlineTerrainLookup: Boolean = true,
     val varioValidUntil: Long,
     val isFlying: Boolean,
     val macCreadySetting: Double,

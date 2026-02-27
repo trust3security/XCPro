@@ -22,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -44,6 +45,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.example.xcpro.ogn.OGN_ICON_SIZE_MAX_PX
 import com.example.xcpro.ogn.OGN_ICON_SIZE_MIN_PX
+import com.example.xcpro.ogn.OGN_RECEIVE_RADIUS_MAX_KM
+import com.example.xcpro.ogn.OGN_RECEIVE_RADIUS_MIN_KM
+import com.example.xcpro.ogn.OgnDisplayUpdateMode
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -57,10 +61,25 @@ fun OgnSettingsScreen(
     val scope = rememberCoroutineScope()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val iconSizePx = uiState.iconSizePx
+    val receiveRadiusKm = uiState.receiveRadiusKm
+    val autoReceiveRadiusEnabled = uiState.autoReceiveRadiusEnabled
+    val displayUpdateMode = uiState.displayUpdateMode
+    val displayModes = OgnDisplayUpdateMode.sliderModes
     var sliderValue by remember { mutableStateOf(iconSizePx.toFloat()) }
+    var receiveRadiusSliderValue by remember { mutableStateOf(receiveRadiusKm.toFloat()) }
+    var displayModeSliderValue by remember {
+        mutableStateOf(OgnDisplayUpdateMode.toSliderIndex(displayUpdateMode).toFloat())
+    }
+    val displayModeDraft = OgnDisplayUpdateMode.fromSliderIndex(displayModeSliderValue.roundToInt())
 
     LaunchedEffect(iconSizePx) {
         sliderValue = iconSizePx.toFloat()
+    }
+    LaunchedEffect(receiveRadiusKm) {
+        receiveRadiusSliderValue = receiveRadiusKm.toFloat()
+    }
+    LaunchedEffect(displayUpdateMode) {
+        displayModeSliderValue = OgnDisplayUpdateMode.toSliderIndex(displayUpdateMode).toFloat()
     }
 
     Scaffold(
@@ -125,6 +144,12 @@ fun OgnSettingsScreen(
                                     OGN_ICON_SIZE_MAX_PX
                                 )
                                 sliderValue = snapped.toFloat()
+                            },
+                            onValueChangeFinished = {
+                                val snapped = sliderValue.roundToInt().coerceIn(
+                                    OGN_ICON_SIZE_MIN_PX,
+                                    OGN_ICON_SIZE_MAX_PX
+                                )
                                 if (snapped != iconSizePx) {
                                     viewModel.setIconSizePx(snapped)
                                 }
@@ -134,6 +159,128 @@ fun OgnSettingsScreen(
                         )
                         Text(
                             text = "Minimum ${OGN_ICON_SIZE_MIN_PX}px, maximum ${OGN_ICON_SIZE_MAX_PX}px.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.onSurface
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("Receive radius", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "Controls OGN traffic search radius around your position.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Auto radius (Advanced)", style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    "Uses flight context first, then zoom, with 40/80/150/220 km buckets.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = autoReceiveRadiusEnabled,
+                                onCheckedChange = viewModel::setAutoReceiveRadiusEnabled
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = if (autoReceiveRadiusEnabled) {
+                                "Manual fallback: ${receiveRadiusSliderValue.roundToInt()} km"
+                            } else {
+                                "Radius: ${receiveRadiusSliderValue.roundToInt()} km"
+                            },
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Slider(
+                            value = receiveRadiusSliderValue,
+                            enabled = !autoReceiveRadiusEnabled,
+                            onValueChange = { value ->
+                                val snapped = snapRadiusKm(value)
+                                receiveRadiusSliderValue = snapped.toFloat()
+                            },
+                            onValueChangeFinished = {
+                                if (autoReceiveRadiusEnabled) return@Slider
+                                val snapped = snapRadiusKm(receiveRadiusSliderValue).coerceIn(
+                                    OGN_RECEIVE_RADIUS_MIN_KM,
+                                    OGN_RECEIVE_RADIUS_MAX_KM
+                                )
+                                if (snapped != receiveRadiusKm) {
+                                    viewModel.setReceiveRadiusKm(snapped)
+                                }
+                            },
+                            valueRange = OGN_RECEIVE_RADIUS_MIN_KM.toFloat()..OGN_RECEIVE_RADIUS_MAX_KM.toFloat(),
+                            steps = ((OGN_RECEIVE_RADIUS_MAX_KM - OGN_RECEIVE_RADIUS_MIN_KM) / OGN_RADIUS_STEP_KM) - 1
+                        )
+                        Text(
+                            text = if (autoReceiveRadiusEnabled) {
+                                "Auto mode updates ingest radius with cooldown/hysteresis. Manual value is kept as fallback."
+                            } else {
+                                "Lower radius reduces traffic volume and can save battery. Range ${OGN_RECEIVE_RADIUS_MIN_KM}-${OGN_RECEIVE_RADIUS_MAX_KM} km."
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.onSurface
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("Display update speed", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "Controls map draw cadence only. OGN ingest remains live.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "Mode: ${displayModeDraft.displayLabel}",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Slider(
+                            value = displayModeSliderValue,
+                            onValueChange = { value ->
+                                val snappedIndex = value.roundToInt()
+                                    .coerceIn(0, displayModes.lastIndex)
+                                displayModeSliderValue = snappedIndex.toFloat()
+                            },
+                            onValueChangeFinished = {
+                                val snappedIndex = displayModeSliderValue.roundToInt()
+                                    .coerceIn(0, displayModes.lastIndex)
+                                val mode = OgnDisplayUpdateMode.fromSliderIndex(snappedIndex)
+                                if (mode != displayUpdateMode) {
+                                    viewModel.setDisplayUpdateMode(mode)
+                                }
+                            },
+                            valueRange = 0f..displayModes.lastIndex.toFloat(),
+                            steps = displayModes.size - 2
+                        )
+                        Text(
+                            text = displayModeDescription(displayModeDraft),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -250,4 +397,19 @@ fun OgnSettingsScreen(
             }
         }
     }
+}
+
+private fun displayModeDescription(mode: OgnDisplayUpdateMode): String =
+    when (mode) {
+        OgnDisplayUpdateMode.REAL_TIME -> "Fastest visual updates."
+        OgnDisplayUpdateMode.BALANCED -> "Limits redraws to about once per second."
+        OgnDisplayUpdateMode.BATTERY -> "Limits redraws to about once every three seconds."
+    }
+
+private const val OGN_RADIUS_STEP_KM = 5
+
+private fun snapRadiusKm(rawValue: Float): Int {
+    val rounded = rawValue.roundToInt()
+    val snapped = ((rounded + (OGN_RADIUS_STEP_KM / 2)) / OGN_RADIUS_STEP_KM) * OGN_RADIUS_STEP_KM
+    return snapped.coerceIn(OGN_RECEIVE_RADIUS_MIN_KM, OGN_RECEIVE_RADIUS_MAX_KM)
 }

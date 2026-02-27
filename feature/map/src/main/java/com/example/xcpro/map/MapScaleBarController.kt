@@ -1,5 +1,6 @@
 package com.example.xcpro.map
 
+import android.view.View
 import android.view.ViewGroup
 import kotlin.math.max
 import org.maplibre.android.maps.MapLibreMap
@@ -22,26 +23,52 @@ internal class MapScaleBarController(
         private const val SCALE_BAR_DISTANCE_EPSILON = 1e-6
     }
 
-    private var scaleBarLayoutListenerInstalled = false
+    private var observedMapView: MapView? = null
+    private var scaleBarLayoutListener: View.OnLayoutChangeListener? = null
     private var lastScaleBarWidth = 0
     private var lastScaleBarHeight = 0
     private var lastScaleBarDistancePerPixel = 0.0
 
     fun setupScaleBar(map: MapLibreMap) {
         val mapView = mapState.mapView ?: return
+        attachLayoutListenerIfNeeded(mapView, map)
         mapView.post { updateScaleBar(map, forceCreate = true) }
-        if (!scaleBarLayoutListenerInstalled) {
-            scaleBarLayoutListenerInstalled = true
-            mapView.addOnLayoutChangeListener { _, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
-                if (right - left != oldRight - oldLeft || bottom - top != oldBottom - oldTop) {
-                    updateScaleBar(map, forceCreate = true)
-                }
-            }
-        }
     }
 
     fun onCameraIdle(map: MapLibreMap) {
         updateScaleBar(map)
+    }
+
+    fun clear() {
+        detachLayoutListener()
+        lastScaleBarWidth = 0
+        lastScaleBarHeight = 0
+        lastScaleBarDistancePerPixel = 0.0
+    }
+
+    private fun attachLayoutListenerIfNeeded(mapView: MapView, map: MapLibreMap) {
+        if (observedMapView === mapView && scaleBarLayoutListener != null) {
+            return
+        }
+        detachLayoutListener()
+        val listener = View.OnLayoutChangeListener { _, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
+            if (right - left != oldRight - oldLeft || bottom - top != oldBottom - oldTop) {
+                updateScaleBar(map, forceCreate = true)
+            }
+        }
+        mapView.addOnLayoutChangeListener(listener)
+        observedMapView = mapView
+        scaleBarLayoutListener = listener
+    }
+
+    private fun detachLayoutListener() {
+        val mapView = observedMapView
+        val listener = scaleBarLayoutListener
+        if (mapView != null && listener != null) {
+            mapView.removeOnLayoutChangeListener(listener)
+        }
+        observedMapView = null
+        scaleBarLayoutListener = null
     }
 
     private fun updateScaleBar(map: MapLibreMap, forceCreate: Boolean = false) {

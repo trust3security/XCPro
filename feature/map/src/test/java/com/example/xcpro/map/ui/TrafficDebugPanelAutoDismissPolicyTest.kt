@@ -59,6 +59,97 @@ class TrafficDebugPanelAutoDismissPolicyTest {
         )
     }
 
+    @Test
+    fun ogn_surfaceOnlyOnError() {
+        assertFalse(shouldSurfaceOgnDebugPanel(ognSnapshot(OgnConnectionState.DISCONNECTED)))
+        assertFalse(shouldSurfaceOgnDebugPanel(ognSnapshot(OgnConnectionState.CONNECTING)))
+        assertFalse(shouldSurfaceOgnDebugPanel(ognSnapshot(OgnConnectionState.CONNECTED)))
+        assertTrue(shouldSurfaceOgnDebugPanel(ognSnapshot(OgnConnectionState.ERROR)))
+    }
+
+    @Test
+    fun adsb_surfaceOnlyOnError() {
+        assertFalse(
+            shouldSurfaceAdsbDebugPanel(
+                adsbSnapshot(
+                    connectionState = AdsbConnectionState.Disabled,
+                    authMode = AdsbAuthMode.Anonymous
+                )
+            )
+        )
+        assertFalse(
+            shouldSurfaceAdsbDebugPanel(
+                adsbSnapshot(
+                    connectionState = AdsbConnectionState.Active,
+                    authMode = AdsbAuthMode.Authenticated
+                )
+            )
+        )
+        assertFalse(
+            shouldSurfaceAdsbDebugPanel(
+                adsbSnapshot(
+                    connectionState = AdsbConnectionState.BackingOff(retryAfterSec = 5),
+                    authMode = AdsbAuthMode.Authenticated
+                )
+            )
+        )
+        assertTrue(
+            shouldSurfaceAdsbDebugPanel(
+                adsbSnapshot(
+                    connectionState = AdsbConnectionState.Error("Network unavailable"),
+                    authMode = AdsbAuthMode.Authenticated
+                )
+            )
+        )
+    }
+
+    @Test
+    fun ogn_debugPanelHiddenWhileStartupStates() {
+        assertTrue(
+            shouldHideOgnDebugPanelWhileConnecting(
+                ognSnapshot(OgnConnectionState.CONNECTING)
+            )
+        )
+        assertTrue(
+            shouldHideOgnDebugPanelWhileConnecting(
+                ognSnapshot(OgnConnectionState.DISCONNECTED)
+            )
+        )
+        assertFalse(
+            shouldHideOgnDebugPanelWhileConnecting(
+                ognSnapshot(OgnConnectionState.CONNECTED)
+            )
+        )
+    }
+
+    @Test
+    fun adsb_debugPanelHiddenWhileStartupStates() {
+        assertTrue(
+            shouldHideAdsbDebugPanelWhileConnecting(
+                adsbSnapshot(
+                    connectionState = AdsbConnectionState.Disabled,
+                    authMode = AdsbAuthMode.Anonymous
+                )
+            )
+        )
+        assertTrue(
+            shouldHideAdsbDebugPanelWhileConnecting(
+                adsbSnapshot(
+                    connectionState = AdsbConnectionState.BackingOff(retryAfterSec = 5),
+                    authMode = AdsbAuthMode.Anonymous
+                )
+            )
+        )
+        assertFalse(
+            shouldHideAdsbDebugPanelWhileConnecting(
+                adsbSnapshot(
+                    connectionState = AdsbConnectionState.Active,
+                    authMode = AdsbAuthMode.Anonymous
+                )
+            )
+        )
+    }
+
     private fun ognSnapshot(connectionState: OgnConnectionState): OgnTrafficSnapshot =
         OgnTrafficSnapshot(
             targets = emptyList(),

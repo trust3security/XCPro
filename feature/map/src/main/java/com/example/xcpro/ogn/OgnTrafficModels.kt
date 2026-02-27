@@ -28,7 +28,9 @@ data class OgnTrafficSnapshot(
     val reconnectBackoffMs: Long?,
     val lastReconnectWallMs: Long?,
     val activeSubscriptionCenterLat: Double? = null,
-    val activeSubscriptionCenterLon: Double? = null
+    val activeSubscriptionCenterLon: Double? = null,
+    val droppedOutOfOrderSourceFrames: Long = 0L,
+    val droppedImplausibleMotionFrames: Long = 0L
 )
 
 data class OgnTrafficTarget(
@@ -50,6 +52,7 @@ data class OgnTrafficTarget(
     val timestampMillis: Long,
     val lastSeenMillis: Long,
     val distanceMeters: Double? = null,
+    val sourceTimestampWallMs: Long? = null,
     val addressType: OgnAddressType = OgnAddressType.UNKNOWN,
     val addressHex: String? = deviceIdHex,
     val canonicalKey: String = canonicalOgnTargetKey(

@@ -12,6 +12,8 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import org.mockito.kotlin.any
+import org.mockito.kotlin.atLeast
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
@@ -213,6 +215,35 @@ class AircraftMetadataRepositoryImplTest {
         assertNull(stillCoolingDown["abcdef"])
         assertEquals("N757F", retried["abcdef"]?.registration)
         verify(client, times(2)).fetchByIcao24("abcdef")
+    }
+
+    @Test
+    fun onDemandAttemptCache_prunesOldestEntriesWhenCapExceeded() = runTest {
+        val dao = mock<AircraftMetadataDao>()
+        val client = mock<OpenSkyIcaoMetadataClient>()
+        val clock = FakeClock(monoMs = 100_000L)
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        whenever(dao.getActiveByIcao24s(any())).thenReturn(emptyList())
+        whenever(client.fetchByIcao24(any())).thenReturn(Result.success(null))
+
+        val repository = AircraftMetadataRepositoryImpl(
+            dao = dao,
+            onDemandClient = client,
+            clock = clock,
+            ioDispatcher = dispatcher
+        )
+
+        val ids = (0 until (AircraftMetadataRepositoryImpl.ON_DEMAND_ATTEMPT_CACHE_MAX_ENTRIES + 16))
+            .map { value -> value.toString(16).padStart(6, '0') }
+        val rounds = (ids.size / AircraftMetadataRepositoryImpl.ON_DEMAND_MAX_BATCH_SIZE) + 6
+
+        repeat(rounds) {
+            clock.advanceMonoMs(1L)
+            repository.getMetadataFor(ids)
+            advanceUntilIdle()
+        }
+
+        verify(client, atLeast(2)).fetchByIcao24(ids.first())
     }
 
     private fun sampleEntity(

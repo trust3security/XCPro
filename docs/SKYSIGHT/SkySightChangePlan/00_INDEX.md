@@ -2,11 +2,17 @@
 
 This folder contains everything needed to implement SkySight forecast overlays in XCPro without guessing.
 
-## Current status (2026-02-18)
+## Current status (2026-02-25)
 - Stage A is complete in code.
 - Stage B is complete in code and bound in DI (`SkySightForecastProviderAdapter`).
 - Evidence pack exists at `docs/integrations/skysight/evidence/`.
-- Active next track: satellite imagery overlay plan (`18_SATELLITE_OVERLAY_IMPLEMENTATION_PLAN.md`).
+- SkySight satellite overlay runtime is implemented:
+  - API-backed satellite imagery/radar/lightning overlays in map runtime.
+  - SkySight tab controls for layer toggles, animation, and history-frame count.
+  - `Sat View` remains as a separate transient map-style toggle.
+  - OGN glider readability coupling is implemented:
+    - when satellite overlays are active, glider icons use white-contrast mode.
+    - icon changes refresh immediately on mode transition, then return to normal OGN update cadence.
 
 ## 1) Execution order (read this first)
 - `SKYSIGHT_MVP_EXECUTION_ORDER.md`
@@ -52,12 +58,12 @@ Evidence files live here (commit redacted):
 ## 10) Multi overlay research notes
 - `../SKYSIGHT_MULTI_OVERLAY_IMPLEMENTATION_NOTES.md`
   - Research-backed notes on SkySight simultaneous overlays (primary + wind),
-    supported options, and XCPro architecture guidance.
+    plus XCPro extended multi-overlay contract notes and known regression status.
 
 ## 11) Multi overlay execution contract
 - `14_SKYSIGHT_MULTI_OVERLAY_EXECUTION_CONTRACT.md`
-  - Phase-by-phase implementation contract for adding primary+wind concurrent
-    overlay behavior in XCPro with architecture/test gates.
+  - Phase-by-phase implementation contract for primary + secondary non-wind +
+    optional wind concurrent overlay behavior in XCPro with architecture/test gates.
 
 ## 12) Arrow speed color plan
 - `15_WIND_ARROW_SPEED_COLOR_IMPLEMENTATION_PLAN.md`
@@ -76,14 +82,15 @@ Evidence files live here (commit redacted):
 
 ## 15) Satellite overlay implementation plan
 - `18_SATELLITE_OVERLAY_IMPLEMENTATION_PLAN.md`
-  - Architecture-compliant implementation plan for HighSight-backed satellite
-    overlay integration (with compliance and rollout gates).
+  - Architecture-compliant SkySight satellite overlay plan and implementation
+    details (satellite/radar/lightning layers + time-step behavior).
 
 ---
 
 ## Quick "what to do today"
 1) If changing forecast contracts:
    - Start from `SKYSIGHT_API_CONTRACT_REQUIRED.md` and refresh the evidence pack first.
-2) For satellite imagery implementation:
+2) If changing satellite layer behavior or options:
    - Follow `18_SATELLITE_OVERLAY_IMPLEMENTATION_PLAN.md`.
+   - Keep `09_SKYSIGHT_API_CONTRACT_DETAILS.md` in sync with captured tile contract evidence.
 3) Keep architecture docs in sync for pipeline/runtime wiring updates.

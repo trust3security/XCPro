@@ -10,6 +10,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -17,12 +18,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.xcpro.map.model.GpsStatusUiModel
 import com.example.xcpro.navdrawer.NavigationDrawer
+import com.example.xcpro.navigation.SettingsRoutes
+import kotlinx.coroutines.launch
 
 /**
  * Drawer + content scaffold for the map screen, with GPS status and loading overlay.
  */
 @Composable
 internal fun MapScreenScaffold(inputs: MapScreenScaffoldInputs) {
+    val scope = rememberCoroutineScope()
     NavigationDrawer(
         drawerState = inputs.drawerState,
         navController = inputs.navController,
@@ -58,6 +62,8 @@ internal fun MapScreenScaffold(inputs: MapScreenScaffoldInputs) {
                     currentMode = inputs.currentMode,
                     currentZoom = inputs.currentZoom,
                     onModeChange = inputs.onModeChange,
+                    currentMapStyleName = inputs.currentMapStyleName,
+                    onTransientMapStyleSelected = inputs.onTransientMapStyleSelected,
                     currentLocation = inputs.currentLocation,
                     showRecenterButton = inputs.showRecenterButton,
                     showReturnButton = inputs.showReturnButton,
@@ -65,6 +71,7 @@ internal fun MapScreenScaffold(inputs: MapScreenScaffoldInputs) {
                     ognSnapshot = inputs.ognSnapshot,
                     ognOverlayEnabled = inputs.ognOverlayEnabled,
                     ognThermalHotspots = inputs.ognThermalHotspots,
+                    showOgnSciaEnabled = inputs.showOgnSciaEnabled,
                     showOgnThermalsEnabled = inputs.showOgnThermalsEnabled,
                     adsbSnapshot = inputs.adsbSnapshot,
                     adsbOverlayEnabled = inputs.adsbOverlayEnabled,
@@ -92,9 +99,11 @@ internal fun MapScreenScaffold(inputs: MapScreenScaffoldInputs) {
                     onVariometerEditFinished = inputs.onVariometerEditFinished,
                     hamburgerOffset = inputs.hamburgerOffset,
                     flightModeOffset = inputs.flightModeOffset,
+                    settingsOffset = inputs.settingsOffset,
                     ballastOffset = inputs.ballastOffset,
                     onHamburgerOffsetChange = inputs.onHamburgerOffsetChange,
                     onFlightModeOffsetChange = inputs.onFlightModeOffsetChange,
+                    onSettingsOffsetChange = inputs.onSettingsOffsetChange,
                     onBallastOffsetChange = inputs.onBallastOffsetChange,
                     taskScreenManager = inputs.taskScreenManager,
                     waypointData = inputs.waypointData,
@@ -103,6 +112,7 @@ internal fun MapScreenScaffold(inputs: MapScreenScaffoldInputs) {
                     onAutoCalibrateQnh = inputs.onAutoCalibrateQnh,
                     onSetManualQnh = inputs.onSetManualQnh,
                     onToggleOgnTraffic = inputs.onToggleOgnTraffic,
+                    onToggleOgnScia = inputs.onToggleOgnScia,
                     onToggleOgnThermals = inputs.onToggleOgnThermals,
                     onToggleAdsbTraffic = inputs.onToggleAdsbTraffic,
                     onOgnTargetSelected = inputs.onOgnTargetSelected,
@@ -116,7 +126,18 @@ internal fun MapScreenScaffold(inputs: MapScreenScaffoldInputs) {
                     onBallastCommand = inputs.onBallastCommand,
                     onHamburgerTap = inputs.onHamburgerTap,
                     onHamburgerLongPress = inputs.onHamburgerLongPress,
-                    onOpenWeatherSettingsFromTab = inputs.onOpenWeatherSettingsFromTab,
+                    onSettingsTap = inputs.onSettingsTap,
+                    onOpenWeatherSettingsFromTab = {
+                        inputs.settingsExpanded.value = true
+                        scope.launch {
+                            if (inputs.drawerState.isOpen) {
+                                inputs.drawerState.close()
+                            }
+                            if (inputs.navController.currentDestination?.route != SettingsRoutes.WEATHER_SETTINGS) {
+                                inputs.navController.navigate(SettingsRoutes.WEATHER_SETTINGS)
+                            }
+                        }
+                    },
                     cardStyle = inputs.cardStyle,
                     hiddenCardIds = inputs.hiddenCardIds,
                     replayState = inputs.replayState,

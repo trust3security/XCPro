@@ -26,14 +26,19 @@ private val KEY_ADSB_VERTICAL_ABOVE_M = doublePreferencesKey("adsb_vertical_abov
 private val KEY_ADSB_VERTICAL_BELOW_M = doublePreferencesKey("adsb_vertical_below_m")
 
 @Singleton
-class AdsbTrafficPreferencesRepository @Inject constructor(
-    @ApplicationContext private val context: Context
+class AdsbTrafficPreferencesRepository internal constructor(
+    private val dataStore: DataStore<Preferences>
 ) {
-    val enabledFlow: Flow<Boolean> = context.adsbTrafficDataStore.data
+    @Inject
+    constructor(
+        @ApplicationContext context: Context
+    ) : this(context.adsbTrafficDataStore)
+
+    val enabledFlow: Flow<Boolean> = dataStore.data
         .map { preferences -> preferences[KEY_ADSB_TRAFFIC_ENABLED] ?: false }
         .distinctUntilChanged()
 
-    val iconSizePxFlow: Flow<Int> = context.adsbTrafficDataStore.data
+    val iconSizePxFlow: Flow<Int> = dataStore.data
         .map { preferences ->
             clampAdsbIconSizePx(
                 preferences[KEY_ADSB_ICON_SIZE_PX] ?: ADSB_ICON_SIZE_DEFAULT_PX
@@ -41,7 +46,7 @@ class AdsbTrafficPreferencesRepository @Inject constructor(
         }
         .distinctUntilChanged()
 
-    val maxDistanceKmFlow: Flow<Int> = context.adsbTrafficDataStore.data
+    val maxDistanceKmFlow: Flow<Int> = dataStore.data
         .map { preferences ->
             clampAdsbMaxDistanceKm(
                 preferences[KEY_ADSB_MAX_DISTANCE_KM] ?: ADSB_MAX_DISTANCE_DEFAULT_KM
@@ -49,7 +54,7 @@ class AdsbTrafficPreferencesRepository @Inject constructor(
         }
         .distinctUntilChanged()
 
-    val verticalAboveMetersFlow: Flow<Double> = context.adsbTrafficDataStore.data
+    val verticalAboveMetersFlow: Flow<Double> = dataStore.data
         .map { preferences ->
             clampAdsbVerticalFilterMeters(
                 preferences[KEY_ADSB_VERTICAL_ABOVE_M] ?: ADSB_VERTICAL_FILTER_ABOVE_DEFAULT_METERS
@@ -57,7 +62,7 @@ class AdsbTrafficPreferencesRepository @Inject constructor(
         }
         .distinctUntilChanged()
 
-    val verticalBelowMetersFlow: Flow<Double> = context.adsbTrafficDataStore.data
+    val verticalBelowMetersFlow: Flow<Double> = dataStore.data
         .map { preferences ->
             clampAdsbVerticalFilterMeters(
                 preferences[KEY_ADSB_VERTICAL_BELOW_M] ?: ADSB_VERTICAL_FILTER_BELOW_DEFAULT_METERS
@@ -66,35 +71,35 @@ class AdsbTrafficPreferencesRepository @Inject constructor(
         .distinctUntilChanged()
 
     suspend fun setEnabled(enabled: Boolean) {
-        context.adsbTrafficDataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             preferences[KEY_ADSB_TRAFFIC_ENABLED] = enabled
         }
     }
 
     suspend fun setIconSizePx(iconSizePx: Int) {
         val clamped = clampAdsbIconSizePx(iconSizePx)
-        context.adsbTrafficDataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             preferences[KEY_ADSB_ICON_SIZE_PX] = clamped
         }
     }
 
     suspend fun setMaxDistanceKm(maxDistanceKm: Int) {
         val clamped = clampAdsbMaxDistanceKm(maxDistanceKm)
-        context.adsbTrafficDataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             preferences[KEY_ADSB_MAX_DISTANCE_KM] = clamped
         }
     }
 
     suspend fun setVerticalAboveMeters(aboveMeters: Double) {
         val clamped = clampAdsbVerticalFilterMeters(aboveMeters)
-        context.adsbTrafficDataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             preferences[KEY_ADSB_VERTICAL_ABOVE_M] = clamped
         }
     }
 
     suspend fun setVerticalBelowMeters(belowMeters: Double) {
         val clamped = clampAdsbVerticalFilterMeters(belowMeters)
-        context.adsbTrafficDataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             preferences[KEY_ADSB_VERTICAL_BELOW_M] = clamped
         }
     }

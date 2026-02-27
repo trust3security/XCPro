@@ -7,6 +7,7 @@ import java.net.NoRouteToHostException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import javax.net.ssl.SSLException
+import com.example.xcpro.testing.OkHttpClientRegistry
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestDispatcher
@@ -15,6 +16,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -22,6 +24,12 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class OpenSkyProviderClientTest {
+    private val okHttpClients = OkHttpClientRegistry()
+
+    @After
+    fun tearDown() {
+        okHttpClients.shutdownAll()
+    }
 
     @Test
     fun unknownHost_mapsToDnsFailureKind() = runTest {
@@ -89,17 +97,19 @@ class OpenSkyProviderClientTest {
     @Test
     fun malformedJson_mapsToMalformedResponseKind() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
-        val client = OkHttpClient.Builder()
-            .addInterceptor { chain ->
-                Response.Builder()
-                    .request(chain.request())
-                    .protocol(Protocol.HTTP_1_1)
-                    .code(200)
-                    .message("OK")
-                    .body("not-json".toResponseBody())
-                    .build()
-            }
-            .build()
+        val client = okHttpClients.register(
+            OkHttpClient.Builder()
+                .addInterceptor { chain ->
+                    Response.Builder()
+                        .request(chain.request())
+                        .protocol(Protocol.HTTP_1_1)
+                        .code(200)
+                        .message("OK")
+                        .body("not-json".toResponseBody())
+                        .build()
+                }
+                .build()
+        )
         val provider = OpenSkyProviderClient(
             httpClient = client,
             dispatcher = dispatcher
@@ -124,18 +134,20 @@ class OpenSkyProviderClientTest {
     fun fetchStates_serializesQueryWithExpectedPrecisionAndExtendedFlag() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         var capturedRequest: okhttp3.Request? = null
-        val client = OkHttpClient.Builder()
-            .addInterceptor { chain ->
-                capturedRequest = chain.request()
-                Response.Builder()
-                    .request(chain.request())
-                    .protocol(Protocol.HTTP_1_1)
-                    .code(200)
-                    .message("OK")
-                    .body("{\"time\":1710000000,\"states\":[]}".toResponseBody())
-                    .build()
-            }
-            .build()
+        val client = okHttpClients.register(
+            OkHttpClient.Builder()
+                .addInterceptor { chain ->
+                    capturedRequest = chain.request()
+                    Response.Builder()
+                        .request(chain.request())
+                        .protocol(Protocol.HTTP_1_1)
+                        .code(200)
+                        .message("OK")
+                        .body("{\"time\":1710000000,\"states\":[]}".toResponseBody())
+                        .build()
+                }
+                .build()
+        )
         val provider = OpenSkyProviderClient(
             httpClient = client,
             dispatcher = dispatcher
@@ -165,18 +177,20 @@ class OpenSkyProviderClientTest {
     fun fetchStates_setsAuthorizationHeaderOnlyForNonBlankBearerTokens() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val capturedAuthHeaders = mutableListOf<String?>()
-        val client = OkHttpClient.Builder()
-            .addInterceptor { chain ->
-                capturedAuthHeaders += chain.request().header("Authorization")
-                Response.Builder()
-                    .request(chain.request())
-                    .protocol(Protocol.HTTP_1_1)
-                    .code(200)
-                    .message("OK")
-                    .body("{\"time\":1710000000,\"states\":[]}".toResponseBody())
-                    .build()
-            }
-            .build()
+        val client = okHttpClients.register(
+            OkHttpClient.Builder()
+                .addInterceptor { chain ->
+                    capturedAuthHeaders += chain.request().header("Authorization")
+                    Response.Builder()
+                        .request(chain.request())
+                        .protocol(Protocol.HTTP_1_1)
+                        .code(200)
+                        .message("OK")
+                        .body("{\"time\":1710000000,\"states\":[]}".toResponseBody())
+                        .build()
+                }
+                .build()
+        )
         val provider = OpenSkyProviderClient(
             httpClient = client,
             dispatcher = dispatcher
@@ -210,11 +224,13 @@ class OpenSkyProviderClientTest {
         throwable: IOException,
         dispatcher: TestDispatcher
     ) {
-        val client = OkHttpClient.Builder()
-            .addInterceptor {
-                throw throwable
-            }
-            .build()
+        val client = okHttpClients.register(
+            OkHttpClient.Builder()
+                .addInterceptor {
+                    throw throwable
+                }
+                .build()
+        )
         val provider = OpenSkyProviderClient(
             httpClient = client,
             dispatcher = dispatcher

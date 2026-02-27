@@ -142,6 +142,30 @@ fun WeatherSettingsScreen(
                     title = "Rain Overlay",
                     description = "Enable rain radar tiles and tune opacity."
                 ) {
+                    Text(
+                        text = "Opacity: ${(rainSliderValue * 100f).roundToInt()}%",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Slider(
+                        value = rainSliderValue,
+                        onValueChange = { value ->
+                            rainSliderValue = value.coerceIn(
+                                WEATHER_RAIN_OPACITY_MIN,
+                                WEATHER_RAIN_OPACITY_MAX
+                            )
+                        },
+                        onValueChangeFinished = {
+                            val clamped = rainSliderValue.coerceIn(
+                                WEATHER_RAIN_OPACITY_MIN,
+                                WEATHER_RAIN_OPACITY_MAX
+                            )
+                            if (clamped != rainOpacity) {
+                                viewModel.setOpacity(clamped)
+                            }
+                        },
+                        valueRange = WEATHER_RAIN_OPACITY_MIN..WEATHER_RAIN_OPACITY_MAX
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
@@ -398,30 +422,6 @@ fun WeatherSettingsScreen(
                         text = WEATHER_RAIN_ATTRIBUTION_LINK_URL,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = "Opacity: ${(rainSliderValue * 100f).roundToInt()}%",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Slider(
-                        value = rainSliderValue,
-                        onValueChange = { value ->
-                            rainSliderValue = value.coerceIn(
-                                WEATHER_RAIN_OPACITY_MIN,
-                                WEATHER_RAIN_OPACITY_MAX
-                            )
-                        },
-                        onValueChangeFinished = {
-                            val clamped = rainSliderValue.coerceIn(
-                                WEATHER_RAIN_OPACITY_MIN,
-                                WEATHER_RAIN_OPACITY_MAX
-                            )
-                            if (clamped != rainOpacity) {
-                                viewModel.setOpacity(clamped)
-                            }
-                        },
-                        valueRange = WEATHER_RAIN_OPACITY_MIN..WEATHER_RAIN_OPACITY_MAX
                     )
                 }
             }

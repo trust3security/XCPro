@@ -1,6 +1,10 @@
 package com.example.xcpro.map
 
 import android.content.Context
+import android.os.Looper
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.Preferences
 import androidx.test.core.app.ApplicationProvider
 import com.example.dfcards.CardPreferences
 import com.example.dfcards.FlightModeSelection
@@ -39,8 +43,13 @@ import com.example.xcpro.vario.LevoVarioPreferencesRepository
 import com.example.xcpro.weather.wind.data.WindSensorFusionRepository
 import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.testing.MainDispatcherRule
+import java.io.File
+import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import com.example.xcpro.map.domain.MapWaypointError
@@ -72,6 +81,9 @@ import com.example.xcpro.hawk.HawkVarioUseCase
 import com.example.xcpro.adsb.AdsbConnectionState
 import com.example.xcpro.adsb.ADSB_ICON_SIZE_DEFAULT_PX
 import com.example.xcpro.adsb.ADSB_ICON_SIZE_MAX_PX
+import com.example.xcpro.adsb.ADSB_MAX_DISTANCE_DEFAULT_KM
+import com.example.xcpro.adsb.ADSB_VERTICAL_FILTER_ABOVE_DEFAULT_METERS
+import com.example.xcpro.adsb.ADSB_VERTICAL_FILTER_BELOW_DEFAULT_METERS
 import com.example.xcpro.adsb.AdsbTrafficPreferencesRepository
 import com.example.xcpro.adsb.AdsbTrafficRepository
 import com.example.xcpro.adsb.AdsbTrafficSnapshot
@@ -85,6 +97,7 @@ import com.example.xcpro.adsb.metadata.domain.AircraftMetadataSyncScheduler
 import com.example.xcpro.adsb.metadata.domain.MetadataSyncRunResult
 import com.example.xcpro.adsb.metadata.domain.MetadataSyncState
 import com.example.xcpro.ogn.OgnConnectionState
+import com.example.xcpro.ogn.OgnDisplayUpdateMode
 import com.example.xcpro.ogn.OGN_ICON_SIZE_DEFAULT_PX
 import com.example.xcpro.ogn.OGN_ICON_SIZE_MAX_PX
 import com.example.xcpro.ogn.OgnTrafficPreferencesRepository
@@ -96,15 +109,17 @@ import com.example.xcpro.ogn.OgnThermalHotspotState
 import com.example.xcpro.ogn.OgnThermalRepository
 import com.example.xcpro.ogn.OgnGliderTrailRepository
 import com.example.xcpro.ogn.OgnGliderTrailSegment
-import org.junit.After
+import com.example.xcpro.ogn.OgnTrailSelectionPreferencesRepository
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.Shadows.shadowOf
 import org.mockito.Mockito
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -189,12 +204,7 @@ class MapScreenViewModelTest {
     private val levoVarioPreferencesRepository = LevoVarioPreferencesRepository(context)
     private val hawkVarioUseCase = Mockito.mock(HawkVarioUseCase::class.java)
     private val hawkVarioUiStateFlow = MutableStateFlow(HawkVarioUiState())
-
-    @After
-    fun tearDown() {
-        // Clean up DataStore artifacts created by the test run.
-        context.filesDir.resolve("datastore")?.takeIf { it.exists() }?.deleteRecursively()
-    }
+    private val testPrefsCounter = AtomicInteger(0)
 
     init {
         Mockito.`when`(replayController.session).thenReturn(replaySessionFlow)
@@ -211,6 +221,12 @@ class MapScreenViewModelTest {
         Mockito.`when`(hawkVarioUseCase.hawkVarioUiState).thenReturn(hawkVarioUiStateFlow)
         windStateUseCase = WindStateUseCase(windRepository)
         gliderConfigUseCase = GliderConfigUseCase(gliderRepository)
+    }
+
+    @Before
+    fun resetTrafficPreferences() {
+        // Individual tests explicitly drive ADS-B/OGN state via ensure* helpers.
+        // Avoid per-test DataStore writes here because they can stall Robolectric workers on Windows.
     }
 
     @Test
@@ -396,6 +412,8 @@ class MapScreenViewModelTest {
     fun onToggleAdsbTraffic_seedsCenterFromCameraSnapshotWhenGpsUnavailable() {
         val adsbRepository = FakeAdsbTrafficRepository()
         val viewModel = createViewModel(adsbRepositoryOverride = adsbRepository)
+        ensureAdsbOverlayDisabled(viewModel)
+        awaitCondition { viewModel.adsbOverlayEnabled.value.not() }
 
         viewModel.mapStateActions.updateCameraSnapshot(
             target = MapStateStore.MapPoint(latitude = -35.1234, longitude = 149.1234),
@@ -414,7 +432,8 @@ class MapScreenViewModelTest {
     @Test
     fun adsbCenter_updatesFromOwnshipGpsLocation() {
         val adsbRepository = FakeAdsbTrafficRepository()
-        createViewModel(adsbRepositoryOverride = adsbRepository)
+        val viewModel = createViewModel(adsbRepositoryOverride = adsbRepository)
+        ensureAdsbOverlayEnabled(viewModel)
         drainMain()
 
         flightDataRepository.update(
@@ -433,7 +452,8 @@ class MapScreenViewModelTest {
     @Test
     fun adsbOwnshipReference_clearsWhenGpsBecomesUnavailable() {
         val adsbRepository = FakeAdsbTrafficRepository()
-        createViewModel(adsbRepositoryOverride = adsbRepository)
+        val viewModel = createViewModel(adsbRepositoryOverride = adsbRepository)
+        ensureAdsbOverlayEnabled(viewModel)
         drainMain()
         val initialClearCalls = adsbRepository.clearOwnshipOriginCalls
 
@@ -650,14 +670,96 @@ class MapScreenViewModelTest {
     }
 
     @Test
+    fun ognDisplayUpdateMode_defaultsToRealTime() {
+        val viewModel = createViewModel()
+
+        assertEquals(OgnDisplayUpdateMode.REAL_TIME, viewModel.ognDisplayUpdateMode.value)
+    }
+
+    @Test
+    fun showOgnScia_defaultsToDisabled() {
+        val viewModel = createViewModel()
+
+        assertTrue(viewModel.showOgnSciaEnabled.value.not())
+    }
+
+    @Test
+    fun onToggleOgnScia_enablingForcesOgnTrafficOn() = runBlocking {
+        resetOgnTrafficTogglePreferences()
+        val viewModel = createViewModel()
+        awaitCondition { viewModel.showOgnSciaEnabled.value.not() }
+        awaitCondition { viewModel.ognOverlayEnabled.value.not() }
+
+        viewModel.onToggleOgnScia()
+        awaitCondition { viewModel.showOgnSciaEnabled.value }
+        awaitCondition { viewModel.ognOverlayEnabled.value }
+
+        assertTrue(viewModel.showOgnSciaEnabled.value)
+        assertTrue(viewModel.ognOverlayEnabled.value)
+    }
+
+    @Test
+    fun onToggleOgnThermals_enablingForcesOgnTrafficOn() = runBlocking {
+        resetOgnTrafficTogglePreferences()
+        val viewModel = createViewModel()
+        awaitCondition { viewModel.showOgnThermalsEnabled.value.not() }
+        awaitCondition { viewModel.ognOverlayEnabled.value.not() }
+
+        viewModel.onToggleOgnThermals()
+        awaitCondition { viewModel.showOgnThermalsEnabled.value }
+        awaitCondition { viewModel.ognOverlayEnabled.value }
+
+        assertTrue(viewModel.showOgnThermalsEnabled.value)
+        assertTrue(viewModel.ognOverlayEnabled.value)
+    }
+
+    @Test
+    fun onToggleOgnTraffic_ignoredWhileSciaIsEnabled() = runBlocking {
+        resetOgnTrafficTogglePreferences()
+        val viewModel = createViewModel()
+        awaitCondition { viewModel.showOgnSciaEnabled.value.not() }
+        awaitCondition { viewModel.ognOverlayEnabled.value.not() }
+
+        viewModel.onToggleOgnScia()
+        awaitCondition { viewModel.showOgnSciaEnabled.value }
+        awaitCondition { viewModel.ognOverlayEnabled.value }
+        assertTrue(viewModel.showOgnSciaEnabled.value)
+        assertTrue(viewModel.ognOverlayEnabled.value)
+
+        viewModel.onToggleOgnTraffic()
+        drainMain()
+
+        assertTrue(viewModel.ognOverlayEnabled.value)
+    }
+
+    @Test
     fun ognIconSize_readsPersistedPreferenceOnInit() = runBlocking {
-        val preferencesRepository = OgnTrafficPreferencesRepository(context)
+        val preferencesRepository = OgnTrafficPreferencesRepository(
+            newTestPreferencesDataStore("ogn_traffic_seed")
+        )
         preferencesRepository.setIconSizePx(OGN_ICON_SIZE_MAX_PX)
 
-        val viewModel = createViewModel()
+        val viewModel = createViewModel(
+            ognPreferencesRepositoryOverride = preferencesRepository
+        )
         drainMain()
 
         assertEquals(OGN_ICON_SIZE_MAX_PX, viewModel.ognIconSizePx.value)
+    }
+
+    @Test
+    fun ognDisplayUpdateMode_readsPersistedPreferenceOnInit() = runBlocking {
+        val preferencesRepository = OgnTrafficPreferencesRepository(
+            newTestPreferencesDataStore("ogn_traffic_seed")
+        )
+        preferencesRepository.setDisplayUpdateMode(OgnDisplayUpdateMode.BATTERY)
+
+        val viewModel = createViewModel(
+            ognPreferencesRepositoryOverride = preferencesRepository
+        )
+        drainMain()
+
+        assertEquals(OgnDisplayUpdateMode.BATTERY, viewModel.ognDisplayUpdateMode.value)
     }
 
     @Test
@@ -669,10 +771,14 @@ class MapScreenViewModelTest {
 
     @Test
     fun adsbIconSize_readsPersistedPreferenceOnInit() = runBlocking {
-        val preferencesRepository = AdsbTrafficPreferencesRepository(context)
+        val preferencesRepository = AdsbTrafficPreferencesRepository(
+            newTestPreferencesDataStore("adsb_traffic_seed")
+        )
         preferencesRepository.setIconSizePx(ADSB_ICON_SIZE_MAX_PX)
 
-        val viewModel = createViewModel()
+        val viewModel = createViewModel(
+            adsbPreferencesRepositoryOverride = preferencesRepository
+        )
         drainMain()
 
         assertEquals(ADSB_ICON_SIZE_MAX_PX, viewModel.adsbIconSizePx.value)
@@ -693,13 +799,65 @@ class MapScreenViewModelTest {
 
     private fun drainMain() {
         mainDispatcherRule.dispatcher.scheduler.runCurrent()
+        shadowOf(Looper.getMainLooper()).idle()
+    }
+
+    private suspend fun resetOgnTrafficTogglePreferences() {
+        // No-op: tests now use isolated per-view-model DataStores.
+    }
+
+    private fun ensureAdsbOverlayDisabled(viewModel: MapScreenViewModel) {
+        drainMain()
+        if (viewModel.adsbOverlayEnabled.value) {
+            viewModel.setMapVisible(true)
+            viewModel.onToggleAdsbTraffic()
+            awaitCondition { viewModel.adsbOverlayEnabled.value.not() }
+            viewModel.setMapVisible(false)
+            drainMain()
+        }
+    }
+
+    private fun ensureAdsbOverlayEnabled(viewModel: MapScreenViewModel) {
+        viewModel.setMapVisible(true)
+        drainMain()
+        if (viewModel.adsbOverlayEnabled.value.not()) {
+            viewModel.onToggleAdsbTraffic()
+        }
+        awaitCondition(maxIterations = 5_000) { viewModel.adsbOverlayEnabled.value }
+        drainMain()
+    }
+
+    private fun awaitCondition(
+        maxIterations: Int = 500,
+        condition: () -> Boolean
+    ) {
+        repeat(maxIterations) {
+            drainMain()
+            if (condition()) return
+            Thread.sleep(1)
+        }
+        throw AssertionError("Timed out waiting for condition")
+    }
+
+    private fun newTestPreferencesDataStore(prefix: String): DataStore<Preferences> {
+        val uniqueId = testPrefsCounter.incrementAndGet()
+        val backingFile = File(context.cacheDir, "${prefix}_${uniqueId}.preferences_pb")
+        if (backingFile.exists()) {
+            backingFile.delete()
+        }
+        return PreferenceDataStoreFactory.create(
+            scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+            produceFile = { backingFile }
+        )
     }
 
     private fun createViewModel(
         waypointLoader: WaypointLoader = SuccessfulWaypointLoader(emptyList()),
         ognRepositoryOverride: OgnTrafficRepository? = null,
         ognThermalRepositoryOverride: OgnThermalRepository? = null,
-        adsbRepositoryOverride: AdsbTrafficRepository? = null
+        adsbRepositoryOverride: AdsbTrafficRepository? = null,
+        ognPreferencesRepositoryOverride: OgnTrafficPreferencesRepository? = null,
+        adsbPreferencesRepositoryOverride: AdsbTrafficPreferencesRepository? = null
     ): MapScreenViewModel {
         val localTaskManager = com.example.xcpro.tasks.TaskManagerCoordinator(
             taskEnginePersistenceService = null,
@@ -739,12 +897,17 @@ class MapScreenViewModelTest {
         val ognTrafficRepository = ognRepositoryOverride ?: FakeOgnTrafficRepository()
         val ognThermalRepository = ognThermalRepositoryOverride ?: FakeOgnThermalRepository()
         val ognGliderTrailRepository = FakeOgnGliderTrailRepository()
-        val ognTrafficPreferencesRepository = OgnTrafficPreferencesRepository(context)
+        val ognTrafficPreferencesRepository = ognPreferencesRepositoryOverride
+            ?: OgnTrafficPreferencesRepository(newTestPreferencesDataStore("ogn_traffic"))
+        val ognTrailSelectionPreferencesRepository = OgnTrailSelectionPreferencesRepository(
+            newTestPreferencesDataStore("ogn_trail_selection")
+        )
         val ognTrafficUseCase = OgnTrafficUseCase(
             repository = ognTrafficRepository,
             preferencesRepository = ognTrafficPreferencesRepository,
             thermalRepository = ognThermalRepository,
-            gliderTrailRepository = ognGliderTrailRepository
+            gliderTrailRepository = ognGliderTrailRepository,
+            trailSelectionRepository = ognTrailSelectionPreferencesRepository
         )
         val adsbTrafficRepository = adsbRepositoryOverride ?: object : AdsbTrafficRepository {
             override val targets = MutableStateFlow<List<AdsbTrafficUiModel>>(emptyList())
@@ -794,7 +957,8 @@ class MapScreenViewModelTest {
                 setEnabled(false)
             }
         }
-        val adsbTrafficPreferencesRepository = AdsbTrafficPreferencesRepository(context)
+        val adsbTrafficPreferencesRepository = adsbPreferencesRepositoryOverride
+            ?: AdsbTrafficPreferencesRepository(newTestPreferencesDataStore("adsb_traffic"))
         val metadataRepository = object : AircraftMetadataRepository {
             override val metadataRevision = MutableStateFlow(0L)
 
@@ -1001,7 +1165,9 @@ class MapScreenViewModelTest {
         latitude = -35.0,
         longitude = 149.0,
         startedAtMonoMs = 1_000L,
+        startedAtWallMs = 1_000L,
         updatedAtMonoMs = 2_000L,
+        updatedAtWallMs = 2_000L,
         startAltitudeMeters = 900.0,
         maxAltitudeMeters = 1200.0,
         maxAltitudeAtMonoMs = 2_000L,

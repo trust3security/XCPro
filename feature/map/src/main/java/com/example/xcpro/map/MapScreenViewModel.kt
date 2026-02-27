@@ -30,6 +30,7 @@ import com.example.xcpro.map.trail.domain.TrailUpdateResult
 import com.example.xcpro.ogn.OgnTrafficTarget
 import com.example.xcpro.ogn.OgnTrafficSnapshot
 import com.example.xcpro.ogn.OGN_ICON_SIZE_DEFAULT_PX
+import com.example.xcpro.ogn.OgnDisplayUpdateMode
 import com.example.xcpro.ogn.OgnThermalHotspot
 import com.example.xcpro.ogn.OgnGliderTrailSegment
 import com.example.xcpro.qnh.CalibrateQnhUseCase
@@ -45,6 +46,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 @HiltViewModel
 class MapScreenViewModel @Inject constructor(
@@ -103,6 +105,9 @@ class MapScreenViewModel @Inject constructor(
     val suppressLiveGps: StateFlow<Boolean> = replaySensorGates.suppressLiveGps
     val allowSensorStart: StateFlow<Boolean> = replaySensorGates.allowSensorStart
     val mapLocation: StateFlow<MapLocationUiModel?> = createMapLocationState(viewModelScope, flightDataUseCase)
+    private val isFlying: StateFlow<Boolean> = sensorsUseCase.flightStateFlow
+        .map { state -> state.isFlying }
+        .eagerState(scope = viewModelScope, initial = false)
     private val ownshipAltitudeMeters: StateFlow<Double?> =
         createOwnshipAltitudeState(viewModelScope, flightDataUseCase)
     val ognTargets: StateFlow<List<OgnTrafficTarget>> = ognTrafficUseCase.targets
@@ -111,10 +116,14 @@ class MapScreenViewModel @Inject constructor(
         .eagerState(scope = viewModelScope, initial = false)
     val ognIconSizePx: StateFlow<Int> = ognTrafficUseCase.iconSizePx
         .eagerState(scope = viewModelScope, initial = OGN_ICON_SIZE_DEFAULT_PX)
+    val ognDisplayUpdateMode: StateFlow<OgnDisplayUpdateMode> = ognTrafficUseCase.displayUpdateMode
+        .eagerState(scope = viewModelScope, initial = OgnDisplayUpdateMode.DEFAULT)
+    val showOgnSciaEnabled: StateFlow<Boolean> = ognTrafficUseCase.showSciaEnabled
+        .eagerState(scope = viewModelScope, initial = false)
     val ognThermalHotspots: StateFlow<List<OgnThermalHotspot>> = ognTrafficUseCase.thermalHotspots
     val showOgnThermalsEnabled: StateFlow<Boolean> = ognTrafficUseCase.showThermalsEnabled
         .eagerState(scope = viewModelScope, initial = false)
-    val ognGliderTrailSegments: StateFlow<List<OgnGliderTrailSegment>> = ognTrafficUseCase.gliderTrailSegments
+    val ognGliderTrailSegments: StateFlow<List<OgnGliderTrailSegment>> = ognTrafficUseCase.gliderTrailSegments.eagerState(scope = viewModelScope, initial = emptyList())
     private val rawAdsbTargets: StateFlow<List<AdsbTrafficUiModel>> = adsbTrafficUseCase.targets
     private val enrichedAdsbTargets: StateFlow<List<AdsbTrafficUiModel>> =
         adsbMetadataEnrichmentUseCase.targetsWithMetadata(rawAdsbTargets)
@@ -207,6 +216,7 @@ class MapScreenViewModel @Inject constructor(
         adsbOverlayEnabled = adsbOverlayEnabled,
         mapState = mapState,
         mapLocation = mapLocation,
+        isFlying = isFlying,
         ownshipAltitudeMeters = ownshipAltitudeMeters,
         adsbMaxDistanceKm = adsbTrafficUseCase.maxDistanceKm.eagerState(
             scope = viewModelScope,
@@ -222,13 +232,15 @@ class MapScreenViewModel @Inject constructor(
         ),
         rawOgnTargets = ognTargets,
         selectedOgnId = _selectedOgnId,
+        showSciaEnabled = showOgnSciaEnabled,
         showThermalsEnabled = showOgnThermalsEnabled,
         thermalHotspots = ognThermalHotspots,
         selectedThermalId = _selectedOgnThermalId,
         rawAdsbTargets = rawAdsbTargets,
         selectedAdsbId = _selectedAdsbId,
         ognTrafficUseCase = ognTrafficUseCase,
-        adsbTrafficUseCase = adsbTrafficUseCase
+        adsbTrafficUseCase = adsbTrafficUseCase,
+        emitUiEffect = { effect -> _uiEffects.emit(effect) }
     )
     val isAATEditMode: StateFlow<Boolean> = _isAATEditMode.asStateFlow()
     val taskType: StateFlow<TaskType> = mapTasksUseCase.taskTypeFlow
@@ -298,6 +310,7 @@ class MapScreenViewModel @Inject constructor(
     fun onEvent(event: MapUiEvent) = uiEventHandler.onEvent(event)
     fun setMapVisible(isVisible: Boolean) = trafficCoordinator.setMapVisible(isVisible)
     fun onToggleOgnTraffic() = trafficCoordinator.onToggleOgnTraffic()
+    fun onToggleOgnScia() = trafficCoordinator.onToggleOgnScia()
     fun onToggleOgnThermals() = trafficCoordinator.onToggleOgnThermals()
     fun onToggleAdsbTraffic() = trafficCoordinator.onToggleAdsbTraffic()
     fun onOgnTargetSelected(id: String) = trafficCoordinator.onOgnTargetSelected(id)
@@ -307,22 +320,12 @@ class MapScreenViewModel @Inject constructor(
     fun dismissSelectedOgnThermal() = trafficCoordinator.dismissSelectedOgnThermal()
     fun dismissSelectedAdsbTarget() = trafficCoordinator.dismissSelectedAdsbTarget()
     private fun loadWaypoints() = waypointQnhCoordinator.loadWaypoints()
-    fun ensureVariometerLayout(
-        screenWidthPx: Float,
-        screenHeightPx: Float,
-        defaultSizePx: Float,
-        minSizePx: Float,
-        maxSizePx: Float
-    ) = variometerLayoutUseCase.ensureLayout(screenWidthPx, screenHeightPx, defaultSizePx, minSizePx, maxSizePx)
+    fun ensureVariometerLayout(screenWidthPx: Float, screenHeightPx: Float, defaultSizePx: Float, minSizePx: Float, maxSizePx: Float) =
+        variometerLayoutUseCase.ensureLayout(screenWidthPx, screenHeightPx, defaultSizePx, minSizePx, maxSizePx)
     fun onVariometerOffsetCommitted(offset: OffsetPx, screenWidthPx: Float, screenHeightPx: Float) =
         variometerLayoutUseCase.onOffsetCommitted(offset, screenWidthPx, screenHeightPx)
-    fun onVariometerSizeCommitted(
-        sizePx: Float,
-        screenWidthPx: Float,
-        screenHeightPx: Float,
-        minSizePx: Float,
-        maxSizePx: Float
-    ) = variometerLayoutUseCase.onSizeCommitted(sizePx, screenWidthPx, screenHeightPx, minSizePx, maxSizePx)
+    fun onVariometerSizeCommitted(sizePx: Float, screenWidthPx: Float, screenHeightPx: Float, minSizePx: Float, maxSizePx: Float) =
+        variometerLayoutUseCase.onSizeCommitted(sizePx, screenWidthPx, screenHeightPx, minSizePx, maxSizePx)
     fun setAATEditMode(enabled: Boolean) { _isAATEditMode.value = enabled }
     fun createTaskGestureHandler(callbacks: TaskGestureCallbacks): TaskGestureHandler =
         mapTasksUseCase.createGestureHandler(callbacks)

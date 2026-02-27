@@ -154,6 +154,10 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
 
     @Volatile
     private var ownshipAltitudeMeters: Double? = null
+    @Volatile
+    private var lastOwnshipAltitudeReselectMonoMs: Long = Long.MIN_VALUE
+    @Volatile
+    private var lastOwnshipAltitudeReselectMeters: Double? = null
 
     @Volatile
     private var receiveRadiusKm: Int = ADSB_MAX_DISTANCE_DEFAULT_KM
@@ -214,7 +218,11 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
         if (center == updatedCenter) return
         center = updatedCenter
         centerState.value = updatedCenter
-        publishFromStore(updatedCenter)
+        if (_isEnabled.value) {
+            publishFromStore(updatedCenter)
+        } else {
+            publishSnapshot()
+        }
         if (_isEnabled.value) ensureLoopRunning()
     }
 
@@ -224,26 +232,34 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
         val updatedOrigin = Center(latitude = latitude, longitude = longitude)
         if (ownshipOrigin == updatedOrigin) return
         ownshipOrigin = updatedOrigin
-        center?.let { activeCenter ->
-            publishFromStore(activeCenter)
-        }
+        if (!_isEnabled.value) return
+        center?.let { activeCenter -> publishFromStore(activeCenter) }
     }
 
     override fun clearOwnshipOrigin() {
         if (ownshipOrigin == null) return
         ownshipOrigin = null
-        center?.let { activeCenter ->
-            publishFromStore(activeCenter)
-        }
+        if (!_isEnabled.value) return
+        center?.let { activeCenter -> publishFromStore(activeCenter) }
     }
 
     override fun updateOwnshipAltitudeMeters(altitudeMeters: Double?) {
         val normalizedAltitude = altitudeMeters?.takeIf { it.isFinite() }
         if (ownshipAltitudeMeters == normalizedAltitude) return
         ownshipAltitudeMeters = normalizedAltitude
-        center?.let { activeCenter ->
-            publishFromStore(activeCenter)
+        if (!_isEnabled.value) return
+        val activeCenter = center ?: return
+        val nowMonoMs = clock.nowMonoMs()
+        if (!shouldReselectForOwnshipAltitude(
+                nowMonoMs = nowMonoMs,
+                nextOwnshipAltitudeMeters = normalizedAltitude
+            )
+        ) {
+            return
         }
+        publishFromStore(activeCenter, nowMonoMs)
+        lastOwnshipAltitudeReselectMonoMs = nowMonoMs
+        lastOwnshipAltitudeReselectMeters = normalizedAltitude
     }
 
     override fun updateDisplayFilters(
@@ -263,7 +279,11 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
         this.verticalFilterAboveMeters = clampedAboveMeters
         this.verticalFilterBelowMeters = clampedBelowMeters
         center?.let { activeCenter ->
-            publishFromStore(activeCenter)
+            if (_isEnabled.value) {
+                publishFromStore(activeCenter)
+            } else {
+                publishSnapshot()
+            }
         } ?: publishSnapshot()
     }
 
@@ -319,6 +339,8 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
         cappedCount = 0
         consecutiveEmptyPolls = 0
         lastPolledCenter = null
+        lastOwnshipAltitudeReselectMonoMs = Long.MIN_VALUE
+        lastOwnshipAltitudeReselectMeters = ownshipAltitudeMeters
     }
 
     private suspend fun runLoop() {
@@ -536,10 +558,10 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
         }
     }
 
-    private fun publishFromStore(centerAtPoll: Center) {
+    private fun publishFromStore(centerAtPoll: Center, nowMonoMs: Long = clock.nowMonoMs()) {
         val ownshipReference = ownshipReference(centerAtPoll)
         val selection = store.select(
-            nowMonoMs = clock.nowMonoMs(),
+            nowMonoMs = nowMonoMs,
             queryCenterLat = centerAtPoll.latitude,
             queryCenterLon = centerAtPoll.longitude,
             referenceLat = ownshipReference.latitude,
@@ -558,6 +580,35 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
         cappedCount = selection.cappedCount
         _targets.value = selection.displayed
         publishSnapshot()
+    }
+
+    private fun shouldReselectForOwnshipAltitude(
+        nowMonoMs: Long,
+        nextOwnshipAltitudeMeters: Double?
+    ): Boolean {
+        val lastMonoMs = lastOwnshipAltitudeReselectMonoMs
+        if (lastMonoMs == Long.MIN_VALUE) return true
+
+        val deltaMeters = ownshipAltitudeDeltaMeters(
+            previousAltitudeMeters = lastOwnshipAltitudeReselectMeters,
+            nextAltitudeMeters = nextOwnshipAltitudeMeters
+        )
+        if (deltaMeters >= OWN_ALTITUDE_RESELECT_FORCE_DELTA_METERS) return true
+
+        val elapsedMs = nowMonoMs - lastMonoMs
+        if (elapsedMs < OWN_ALTITUDE_RESELECT_MIN_INTERVAL_MS) return false
+        if (deltaMeters >= OWN_ALTITUDE_RESELECT_MIN_DELTA_METERS) return true
+
+        return elapsedMs >= OWN_ALTITUDE_RESELECT_MAX_INTERVAL_MS && deltaMeters > 0.0
+    }
+
+    private fun ownshipAltitudeDeltaMeters(
+        previousAltitudeMeters: Double?,
+        nextAltitudeMeters: Double?
+    ): Double {
+        if (previousAltitudeMeters == null && nextAltitudeMeters == null) return 0.0
+        if (previousAltitudeMeters == null || nextAltitudeMeters == null) return Double.MAX_VALUE
+        return abs(nextAltitudeMeters - previousAltitudeMeters)
     }
 
     private fun ownshipReference(fallbackCenter: Center): ReferencePoint {
@@ -885,5 +936,9 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
         private const val RETRY_FLOOR_PROTOCOL_MS = 20_000L
         private const val CIRCUIT_BREAKER_FAILURE_THRESHOLD = 3
         private const val CIRCUIT_BREAKER_OPEN_WINDOW_MS = 30_000L
+        private const val OWN_ALTITUDE_RESELECT_MIN_INTERVAL_MS = 1_000L
+        private const val OWN_ALTITUDE_RESELECT_MAX_INTERVAL_MS = 10_000L
+        private const val OWN_ALTITUDE_RESELECT_MIN_DELTA_METERS = 1.0
+        private const val OWN_ALTITUDE_RESELECT_FORCE_DELTA_METERS = 25.0
     }
 }

@@ -60,28 +60,38 @@ class OgnGliderTrailOverlay(
         val style = map.style ?: return
         val source = style.getSourceAs<GeoJsonSource>(SOURCE_ID) ?: return
 
-        val features = ArrayList<Feature>(segments.size)
-        for (segment in segments) {
-            if (
-                !isValidThermalCoordinate(segment.startLatitude, segment.startLongitude) ||
-                !isValidThermalCoordinate(segment.endLatitude, segment.endLongitude)
-            ) {
-                continue
-            }
-            val feature = Feature.fromGeometry(
-                LineString.fromLngLats(
-                    listOf(
-                        Point.fromLngLat(segment.startLongitude, segment.startLatitude),
-                        Point.fromLngLat(segment.endLongitude, segment.endLatitude)
+        try {
+            val renderSegments = trimSegmentsForRender(segments)
+            val features = ArrayList<Feature>(renderSegments.size)
+            for (segment in renderSegments) {
+                if (
+                    !isValidThermalCoordinate(segment.startLatitude, segment.startLongitude) ||
+                    !isValidThermalCoordinate(segment.endLatitude, segment.endLongitude)
+                ) {
+                    continue
+                }
+                val feature = Feature.fromGeometry(
+                    LineString.fromLngLats(
+                        listOf(
+                            Point.fromLngLat(segment.startLongitude, segment.startLatitude),
+                            Point.fromLngLat(segment.endLongitude, segment.endLatitude)
+                        )
                     )
                 )
-            )
-            feature.addStringProperty(PROP_SEGMENT_ID, segment.id)
-            feature.addNumberProperty(PROP_COLOR_INDEX, segment.colorIndex)
-            feature.addNumberProperty(PROP_WIDTH_PX, segment.widthPx)
-            features.add(feature)
+                feature.addStringProperty(PROP_SEGMENT_ID, segment.id)
+                feature.addNumberProperty(PROP_COLOR_INDEX, segment.colorIndex)
+                feature.addNumberProperty(PROP_WIDTH_PX, segment.widthPx)
+                features.add(feature)
+            }
+            source.setGeoJson(FeatureCollection.fromFeatures(features))
+        } catch (t: Throwable) {
+            AppLogger.e(TAG, "Failed to render OGN glider trail overlay: ${t.message}", t)
+            runCatching {
+                source.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
+            }.onFailure { clearFailure ->
+                AppLogger.w(TAG, "Failed to clear OGN glider trail overlay after render failure: ${clearFailure.message}")
+            }
         }
-        source.setGeoJson(FeatureCollection.fromFeatures(features))
     }
 
     fun clear() {
@@ -120,7 +130,7 @@ class OgnGliderTrailOverlay(
             )
     }
 
-    private companion object {
+    internal companion object {
         private const val TAG = "OgnGliderTrailOverlay"
 
         private const val SOURCE_ID = "ogn-glider-trail-source"
@@ -135,5 +145,19 @@ class OgnGliderTrailOverlay(
 
         private const val LINE_OPACITY = 0.92f
         private const val DEFAULT_COLOR = "#FFF4B0"
+        // AI-NOTE: Keep map-side feature creation bounded even if repository history is large.
+        private const val MAX_RENDER_SEGMENTS = 12_000
+
+        internal fun trimSegmentsForRender(
+            segments: List<OgnGliderTrailSegment>,
+            maxSegments: Int = MAX_RENDER_SEGMENTS
+        ): List<OgnGliderTrailSegment> {
+            if (maxSegments <= 0) return emptyList()
+            return if (segments.size <= maxSegments) {
+                segments
+            } else {
+                segments.takeLast(maxSegments)
+            }
+        }
     }
 }

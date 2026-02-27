@@ -2,6 +2,7 @@ package com.example.xcpro.ogn
 
 import androidx.annotation.DrawableRes
 import com.example.xcpro.map.R
+import java.util.Locale
 
 /**
  * UI-level OGN icon model used by MapLibre style image registration.
@@ -15,8 +16,16 @@ enum class OgnAircraftIcon(
         styleImageId = "ogn_icon_glider"
     ),
     Tugplane(
-        resId = R.drawable.ic_ogn_tug,
+        resId = R.drawable.ic_ogn_redtug,
         styleImageId = "ogn_icon_tug"
+    ),
+    TugplaneYellow(
+        resId = R.drawable.ic_ogn_yellowtug,
+        styleImageId = "ogn_icon_tug_yellow"
+    ),
+    TugplaneWhite(
+        resId = R.drawable.ic_ogn_whitetug,
+        styleImageId = "ogn_icon_tug_white"
     ),
     Helicopter(
         resId = R.drawable.ic_adsb_helicopter,
@@ -72,6 +81,21 @@ fun iconForOgnAircraftTypeCode(aircraftTypeCode: Int?): OgnAircraftIcon = when (
     else -> OgnAircraftIcon.Unknown
 }
 
+fun iconForOgnAircraftIdentity(
+    aircraftTypeCode: Int?,
+    competitionNumber: String?
+): OgnAircraftIcon {
+    if (aircraftTypeCode != OGN_AIRCRAFT_TYPE_TUGPLANE) {
+        return iconForOgnAircraftTypeCode(aircraftTypeCode)
+    }
+
+    return when (competitionNumber?.trim()?.uppercase(Locale.US)) {
+        TUG_COMPETITION_NUMBER_MRP -> OgnAircraftIcon.TugplaneYellow
+        TUG_COMPETITION_NUMBER_FOO -> OgnAircraftIcon.TugplaneWhite
+        else -> OgnAircraftIcon.Tugplane
+    }
+}
+
 private const val OGN_AIRCRAFT_TYPE_GLIDER = 1
 private const val OGN_AIRCRAFT_TYPE_TUGPLANE = 2
 private const val OGN_AIRCRAFT_TYPE_HELICOPTER = 3
@@ -80,3 +104,5 @@ private const val OGN_AIRCRAFT_TYPE_HANG_GLIDER = 5
 private const val OGN_AIRCRAFT_TYPE_BALLOON = 6
 private const val OGN_AIRCRAFT_TYPE_UAV = 7
 private const val OGN_AIRCRAFT_TYPE_STATIC_OBJECT = 8
+private const val TUG_COMPETITION_NUMBER_MRP = "MRP"
+private const val TUG_COMPETITION_NUMBER_FOO = "FOO"

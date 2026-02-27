@@ -11,9 +11,9 @@ import kotlin.collections.ArrayDeque
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.kotlin.mock
@@ -65,11 +65,9 @@ class OgnTrafficRepositoryConnectionTest {
         repository.setEnabled(true)
         runCurrent()
 
-        advanceTimeBy(1_000L)
-        runCurrent()
-
         val firstLogin = firstSocket.loginLine()
         val secondLogin = secondSocket.loginLine()
+        assertNotNull(secondLogin)
         assertTrue(firstLogin?.contains("filter r/0.00000/0.00000/150") == true)
         assertTrue(secondLogin?.contains("filter r/0.50000/0.00000/150") == true)
 
@@ -77,11 +75,131 @@ class OgnTrafficRepositoryConnectionTest {
         runCurrent()
     }
 
-    private fun newRepository(dispatcher: kotlinx.coroutines.CoroutineDispatcher): OgnTrafficRepositoryImpl {
+    @Test
+    fun changedRadius_isAppliedToLoginFilter() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val radiusFlow = MutableStateFlow(OGN_RECEIVE_RADIUS_DEFAULT_KM)
+        val repository = newRepository(
+            dispatcher = dispatcher,
+            receiveRadiusKmFlow = radiusFlow
+        )
+        val socket = ScriptedSocket(
+            script = "# logresp OGNXC1 verified, server GLIDERN1\n"
+        )
+        repository.socketFactory = { socket }
+
+        radiusFlow.value = 200
+        repository.updateCenter(latitude = 46.0, longitude = 7.0)
+        repository.setEnabled(true)
+        runCurrent()
+
+        val loginLine = socket.loginLine()
+        assertTrue(loginLine != null)
+        assertTrue(loginLine?.contains("filter r/46.00000/7.00000/200") == true)
+
+        repository.stop()
+        runCurrent()
+    }
+
+    @Test
+    fun autoRadiusEnabled_usesFlightContextForLoginFilter() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val autoReceiveRadiusEnabledFlow = MutableStateFlow(true)
+        val repository = newRepository(
+            dispatcher = dispatcher,
+            autoReceiveRadiusEnabledFlow = autoReceiveRadiusEnabledFlow
+        )
+        val socket = ScriptedSocket(
+            script = "# logresp OGNXC1 verified, server GLIDERN1\n"
+        )
+        repository.socketFactory = { socket }
+
+        repository.updateAutoReceiveRadiusContext(
+            zoomLevel = 6.0f,
+            groundSpeedMs = 40.0,
+            isFlying = true
+        )
+        repository.updateCenter(latitude = 46.0, longitude = 7.0)
+        repository.setEnabled(true)
+        runCurrent()
+
+        val loginLine = socket.loginLine()
+        assertTrue(loginLine != null)
+        assertTrue(loginLine?.contains("filter r/46.00000/7.00000/220") == true)
+
+        repository.stop()
+        runCurrent()
+    }
+
+    @Test
+    fun connect_usesPersistedClientCallsignInLogin() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val clientCallsignFlow = MutableStateFlow<String?>("XCPA1B2C3")
+        val repository = newRepository(
+            dispatcher = dispatcher,
+            clientCallsignFlow = clientCallsignFlow
+        )
+        val socket = ScriptedSocket(
+            script = "# logresp XCPA1B2C3 verified, server GLIDERN1\n"
+        )
+        repository.socketFactory = { socket }
+
+        repository.updateCenter(latitude = 46.0, longitude = 7.0)
+        repository.setEnabled(true)
+        runCurrent()
+
+        val loginLine = socket.loginLine()
+        assertTrue(loginLine != null)
+        assertTrue(loginLine?.startsWith("user XCPA1B2C3 pass ") == true)
+
+        repository.stop()
+        runCurrent()
+    }
+
+    @Test
+    fun connect_withoutPersistedCallsign_usesGeneratedClientCallsignImmediately() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val clientCallsignFlow = MutableStateFlow<String?>(null)
+        val repository = newRepository(
+            dispatcher = dispatcher,
+            clientCallsignFlow = clientCallsignFlow
+        )
+        val socket = ScriptedSocket(
+            script = "# logresp XCPABC123 verified, server GLIDERN1\n"
+        )
+        repository.socketFactory = { socket }
+
+        repository.updateCenter(latitude = 46.0, longitude = 7.0)
+        repository.setEnabled(true)
+        runCurrent()
+
+        val loginLine = socket.loginLine()
+        assertNotNull(loginLine)
+        assertTrue(loginLine?.startsWith("user ") == true)
+        assertTrue(
+            loginLine
+                ?.substringAfter("user ")
+                ?.substringBefore(' ')
+                ?.matches(Regex("^[A-Z][A-Z0-9]{2,8}$")) == true
+        )
+
+        repository.stop()
+        runCurrent()
+    }
+
+    private fun newRepository(
+        dispatcher: kotlinx.coroutines.CoroutineDispatcher,
+        receiveRadiusKmFlow: MutableStateFlow<Int> = MutableStateFlow(OGN_RECEIVE_RADIUS_DEFAULT_KM),
+        autoReceiveRadiusEnabledFlow: MutableStateFlow<Boolean> = MutableStateFlow(false),
+        clientCallsignFlow: MutableStateFlow<String?> = MutableStateFlow("XCPTEST01")
+    ): OgnTrafficRepositoryImpl {
         val ddbRepository: OgnDdbRepository = mock()
         val preferencesRepository: OgnTrafficPreferencesRepository = mock()
         whenever(preferencesRepository.ownFlarmHexFlow).thenReturn(MutableStateFlow(null))
         whenever(preferencesRepository.ownIcaoHexFlow).thenReturn(MutableStateFlow(null))
+        whenever(preferencesRepository.receiveRadiusKmFlow).thenReturn(receiveRadiusKmFlow)
+        whenever(preferencesRepository.autoReceiveRadiusEnabledFlow).thenReturn(autoReceiveRadiusEnabledFlow)
+        whenever(preferencesRepository.clientCallsignFlow).thenReturn(clientCallsignFlow)
         return OgnTrafficRepositoryImpl(
             parser = OgnAprsLineParser(),
             ddbRepository = ddbRepository,

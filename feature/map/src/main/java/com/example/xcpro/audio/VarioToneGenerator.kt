@@ -51,6 +51,7 @@ class VarioToneGenerator {
      * Initialize the AudioTrack
      * Must be called before playing tones
      */
+    @Synchronized
     fun initialize(): Boolean {
         if (isInitialized) {
             Log.w(TAG, "Already initialized")
@@ -116,6 +117,7 @@ class VarioToneGenerator {
      * @param durationMs Duration in milliseconds
      * @param volume Volume 0.0 to 1.0
      */
+    @Synchronized
     fun playTone(
         frequencyHz: Double,
         durationMs: Long,
@@ -210,6 +212,7 @@ class VarioToneGenerator {
      * Play silence for specified duration
      * Used for beep pattern off-time
      */
+    @Synchronized
     fun playSilence(durationMs: Long) {
         if (!isInitialized) return
 
@@ -276,16 +279,19 @@ class VarioToneGenerator {
      * Set volume
      * @param volume 0.0 (mute) to 1.0 (full)
      */
+    @Synchronized
     fun setVolume(volume: Float) {
         currentVolume = volume.coerceIn(0f, 1f)
         audioTrack?.setVolume(currentVolume)
     }
 
+    @Synchronized
     fun getVolume(): Float = currentVolume
 
     /**
      * Stop playback and flush buffer
      */
+    @Synchronized
     fun stop() {
         try {
             audioTrack?.pause()
@@ -298,6 +304,7 @@ class VarioToneGenerator {
     /**
      * Resume playback
      */
+    @Synchronized
     fun resume() {
         if (!isInitialized) return
 
@@ -312,6 +319,7 @@ class VarioToneGenerator {
      * Release AudioTrack resources
      * Must be called when done
      */
+    @Synchronized
     fun release() {
         try {
             resetAudioTrack("release")
@@ -324,6 +332,7 @@ class VarioToneGenerator {
     /**
      * Check if audio system is ready
      */
+    @Synchronized
     fun isReady(): Boolean {
         val track = audioTrack ?: return false
         return isInitialized && track.state == AudioTrack.STATE_INITIALIZED
@@ -332,14 +341,17 @@ class VarioToneGenerator {
     /**
      * Get current playback state
      */
+    @Synchronized
     fun getPlaybackState(): Int {
         return audioTrack?.playState ?: AudioTrack.PLAYSTATE_STOPPED
     }
 
+    @Synchronized
     fun resetPhase() {
         phaseAccumulator = 0.0
     }
 
+    @Synchronized
     private fun resetAudioTrack(reason: String, errorCode: Int? = null) {
         val suffix = errorCode?.let { " code=$it" } ?: ""
         Log.w(TAG, "Resetting AudioTrack ($reason)$suffix")

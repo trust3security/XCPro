@@ -54,7 +54,6 @@ import com.example.xcpro.forecast.forecastRegionLikelyContainsCoordinate
 import com.example.xcpro.gestures.TaskGestureCallbacks
 import com.example.xcpro.gestures.TaskGestureHandler
 import com.example.xcpro.map.BuildConfig
-import com.example.xcpro.map.components.MapActionButtons
 import com.example.xcpro.map.MapCameraManager
 import com.example.xcpro.map.MapModalManager
 import com.example.xcpro.map.MapOverlayManager
@@ -80,8 +79,9 @@ import com.example.xcpro.ogn.OgnTrafficTarget
 import com.example.xcpro.ogn.OgnTrailSelectionViewModel
 import com.example.xcpro.ogn.OgnThermalDetailsSheet
 import com.example.xcpro.ogn.OgnThermalHotspot
+import com.example.xcpro.ogn.buildOgnSelectionLookup
 import com.example.xcpro.ogn.normalizeOgnAircraftKey
-import com.example.xcpro.ogn.selectionSetContainsOgnKey
+import com.example.xcpro.ogn.selectionLookupContainsOgnKey
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -120,6 +120,8 @@ internal fun MapScreenContent(
     currentMode: FlightMode,
     currentZoom: Float,
     onModeChange: (FlightMode) -> Unit,
+    currentMapStyleName: String,
+    onTransientMapStyleSelected: (String) -> Unit,
     currentLocation: MapLocationUiModel?,
     showRecenterButton: Boolean,
     showReturnButton: Boolean,
@@ -127,6 +129,7 @@ internal fun MapScreenContent(
     ognSnapshot: OgnTrafficSnapshot,
     ognOverlayEnabled: Boolean,
     ognThermalHotspots: List<OgnThermalHotspot>,
+    showOgnSciaEnabled: Boolean,
     showOgnThermalsEnabled: Boolean,
     adsbSnapshot: AdsbTrafficSnapshot,
     adsbOverlayEnabled: Boolean,
@@ -154,9 +157,11 @@ internal fun MapScreenContent(
     onVariometerEditFinished: () -> Unit,
     hamburgerOffset: MutableState<Offset>,
     flightModeOffset: MutableState<Offset>,
+    settingsOffset: MutableState<Offset>,
     ballastOffset: MutableState<Offset>,
     onHamburgerOffsetChange: (Offset) -> Unit,
     onFlightModeOffsetChange: (Offset) -> Unit,
+    onSettingsOffsetChange: (Offset) -> Unit,
     onBallastOffsetChange: (Offset) -> Unit,
     taskScreenManager: MapTaskScreenManager,
     waypointData: List<WaypointData>,
@@ -165,6 +170,7 @@ internal fun MapScreenContent(
     onAutoCalibrateQnh: () -> Unit,
     onSetManualQnh: (Double) -> Unit,
     onToggleOgnTraffic: () -> Unit,
+    onToggleOgnScia: () -> Unit,
     onToggleOgnThermals: () -> Unit,
     onToggleAdsbTraffic: () -> Unit,
     onOgnTargetSelected: (String) -> Unit,
@@ -178,6 +184,7 @@ internal fun MapScreenContent(
     onBallastCommand: (BallastCommand) -> Unit,
     onHamburgerTap: () -> Unit,
     onHamburgerLongPress: () -> Unit,
+    onSettingsTap: () -> Unit,
     onOpenWeatherSettingsFromTab: () -> Unit,
     cardStyle: CardStyle,
     hiddenCardIds: Set<String>,
@@ -200,10 +207,13 @@ internal fun MapScreenContent(
     val ognTrailSelectionViewModel: OgnTrailSelectionViewModel = hiltViewModel()
     val selectedOgnTrailAircraftKeys by ognTrailSelectionViewModel.selectedTrailAircraftKeys
         .collectAsStateWithLifecycle()
-    val ognTrailAircraftRows = remember(ognSnapshot.targets, selectedOgnTrailAircraftKeys) {
+    val trailSelectionLookup = remember(selectedOgnTrailAircraftKeys) {
+        buildOgnSelectionLookup(selectedOgnTrailAircraftKeys)
+    }
+    val ognTrailAircraftRows = remember(ognSnapshot.targets, trailSelectionLookup) {
         buildOgnTrailAircraftRows(
             targets = ognSnapshot.targets,
-            selectedAircraftKeys = selectedOgnTrailAircraftKeys
+            selectionLookup = trailSelectionLookup
         )
     }
     val currentQnhLabel = remember(liveFlightData?.qnh) {
@@ -214,9 +224,9 @@ internal fun MapScreenContent(
     var showQnhDialog by remember { mutableStateOf(false) }
     var qnhInput by remember { mutableStateOf("") }
     var qnhError by remember { mutableStateOf<String?>(null) }
-    var showQnhFab by remember { mutableStateOf(true) }
     var selectedBottomTabName by rememberSaveable { mutableStateOf(MapBottomTab.WEATHER.name) }
     var isBottomTabsSheetVisible by rememberSaveable { mutableStateOf(false) }
+    var lastNonSatelliteMapStyleName by rememberSaveable { mutableStateOf<String?>(null) }
     var tappedWindArrowCallout by remember { mutableStateOf<WindArrowTapCallout?>(null) }
     var windTapLabelSize by remember { mutableStateOf(IntSize.Zero) }
     var overlayViewportSize by remember { mutableStateOf(IntSize.Zero) }
@@ -258,6 +268,22 @@ internal fun MapScreenContent(
     val isForecastWindArrowOverlayActive = forecastOverlayState.windOverlayEnabled &&
         forecastOverlayState.windDisplayMode == ForecastWindDisplayMode.ARROW &&
         forecastOverlayState.windTileSpec?.format == ForecastTileFormat.VECTOR_WIND_POINTS
+    val skySightSatViewEnabled = currentMapStyleName.equals(
+        SATELLITE_MAP_STYLE_NAME,
+        ignoreCase = true
+    )
+    val openQnhDialog: () -> Unit = {
+        val currentQnh = liveFlightData?.qnh ?: 1013.25
+        qnhInput = seedQnhInputValue(currentQnh, unitsPreferences)
+        qnhError = null
+        showQnhDialog = true
+    }
+
+    LaunchedEffect(currentMapStyleName) {
+        if (!currentMapStyleName.equals(SATELLITE_MAP_STYLE_NAME, ignoreCase = true)) {
+            lastNonSatelliteMapStyleName = currentMapStyleName
+        }
+    }
 
     LaunchedEffect(
         mapState.mapLibreMap,
@@ -298,6 +324,27 @@ internal fun MapScreenContent(
         )
     }
 
+    LaunchedEffect(
+        mapState.mapLibreMap,
+        forecastOverlayState.skySightSatelliteOverlayEnabled,
+        forecastOverlayState.skySightSatelliteImageryEnabled,
+        forecastOverlayState.skySightSatelliteRadarEnabled,
+        forecastOverlayState.skySightSatelliteLightningEnabled,
+        forecastOverlayState.skySightSatelliteAnimateEnabled,
+        forecastOverlayState.skySightSatelliteHistoryFrames,
+        forecastOverlayState.selectedTimeUtcMs
+    ) {
+        overlayManager.setSkySightSatelliteOverlay(
+            enabled = forecastOverlayState.skySightSatelliteOverlayEnabled,
+            showSatelliteImagery = forecastOverlayState.skySightSatelliteImageryEnabled,
+            showRadar = forecastOverlayState.skySightSatelliteRadarEnabled,
+            showLightning = forecastOverlayState.skySightSatelliteLightningEnabled,
+            animate = forecastOverlayState.skySightSatelliteAnimateEnabled,
+            historyFrameCount = forecastOverlayState.skySightSatelliteHistoryFrames,
+            referenceTimeUtcMs = forecastOverlayState.selectedTimeUtcMs
+        )
+    }
+
     LaunchedEffect(isForecastWindArrowOverlayActive) {
         if (!isForecastWindArrowOverlayActive) {
             tappedWindArrowCallout = null
@@ -315,6 +362,14 @@ internal fun MapScreenContent(
     val hasTrafficDetailsOpen = selectedOgnTarget != null ||
         selectedOgnThermal != null ||
         selectedAdsbTarget != null
+    val selectedOgnTargetSciaEnabled = remember(selectedOgnTarget, trailSelectionLookup) {
+        selectedOgnTarget?.let { target ->
+            selectionLookupContainsOgnKey(
+                lookup = trailSelectionLookup,
+                candidateKey = target.canonicalKey
+            )
+        } ?: false
+    }
 
     LaunchedEffect(isTaskPanelVisible, hasTrafficDetailsOpen) {
         if (isTaskPanelVisible || hasTrafficDetailsOpen) {
@@ -323,12 +378,16 @@ internal fun MapScreenContent(
     }
 
     val showOgnDebugPanel = rememberTrafficDebugPanelVisibility(
-        enabled = BuildConfig.DEBUG && ognOverlayEnabled,
+        enabled = BuildConfig.DEBUG &&
+            ognOverlayEnabled &&
+            shouldSurfaceOgnDebugPanel(ognSnapshot),
         readyForAutoDismiss = isOgnReadyForAutoDismiss(ognSnapshot),
         autoDismissDelayMs = TRAFFIC_DEBUG_PANEL_AUTO_DISMISS_MS
     )
     val showAdsbDebugPanel = rememberTrafficDebugPanelVisibility(
-        enabled = BuildConfig.DEBUG && adsbOverlayEnabled,
+        enabled = BuildConfig.DEBUG &&
+            adsbOverlayEnabled &&
+            shouldSurfaceAdsbDebugPanel(adsbSnapshot),
         readyForAutoDismiss = isAdsbReadyForAutoDismiss(adsbSnapshot),
         autoDismissDelayMs = TRAFFIC_DEBUG_PANEL_AUTO_DISMISS_MS
     )
@@ -414,9 +473,11 @@ internal fun MapScreenContent(
                         onVariometerEditFinished = onVariometerEditFinished,
                         hamburgerOffset = hamburgerOffset,
                         flightModeOffset = flightModeOffset,
+                        settingsOffset = settingsOffset,
                         ballastOffset = ballastOffset,
                         onHamburgerOffsetChange = onHamburgerOffsetChange,
                         onFlightModeOffsetChange = onFlightModeOffsetChange,
+                        onSettingsOffsetChange = onSettingsOffsetChange,
                         onBallastOffsetChange = onBallastOffsetChange,
                         widgetManager = widgetManager,
                         screenWidthPx = screenWidthPx,
@@ -427,6 +488,7 @@ internal fun MapScreenContent(
                         onBallastCommand = onBallastCommand,
                         onHamburgerTap = onHamburgerTap,
                         onHamburgerLongPress = onHamburgerLongPress,
+                        onSettingsTap = onSettingsTap,
                         cardStyle = cardStyle,
                         hiddenCardIds = hiddenCardIds,
                         replayState = replayState
@@ -444,29 +506,14 @@ internal fun MapScreenContent(
         )
 
         MapActionButtonsLayer(
-            taskScreenManager = taskScreenManager,
             currentLocation = currentLocation,
             showRecenterButton = showRecenterButton,
             showReturnButton = showReturnButton,
-            showDistanceCircles = showDistanceCircles,
-            showOgnThermals = showOgnThermalsEnabled,
-            showAdsbTraffic = adsbOverlayEnabled,
-            showQnhFab = showQnhFab,
             showVarioDemoFab = showVarioDemoFab && !hideReplayDebugFabs,
             showAatEditFab = isAATEditMode && taskType == TaskType.AAT,
             showRacingReplayFab = showRacingReplayFab && !hideReplayDebugFabs,
             onRecenter = locationManager::recenterOnCurrentLocation,
-            onToggleDistanceCircles = { overlayManager.toggleDistanceCircles() },
-            onToggleOgnThermals = onToggleOgnThermals,
-            onToggleAdsbTraffic = onToggleAdsbTraffic,
             onReturn = { locationManager.returnToSavedLocation() },
-            onShowQnhDialog = {
-                val currentQnh = liveFlightData?.qnh ?: 1013.25
-                qnhInput = seedQnhInputValue(currentQnh, unitsPreferences)
-                qnhError = null
-                showQnhDialog = true
-            },
-            onDismissQnhFab = { showQnhFab = false },
             onVarioDemoReferenceClick = onVarioDemoReferenceClick,
             onVarioDemoSimClick = onVarioDemoSimClick,
             onVarioDemoSim2Click = onVarioDemoSim2Click,
@@ -492,32 +539,77 @@ internal fun MapScreenContent(
             onDismissSheet = { isBottomTabsSheetVisible = false },
             weatherEnabled = weatherOverlayState.enabled,
             weatherOpacity = weatherOverlayState.opacity,
+            weatherCyclePastWindow = weatherOverlayState.animatePastWindow,
             onWeatherEnabledChanged = weatherOverlayViewModel::setEnabled,
             onWeatherOpacityChanged = weatherOverlayViewModel::setOpacity,
+            onWeatherCyclePastWindowChanged = weatherOverlayViewModel::setAnimatePastWindow,
             isDrawerBlocked = isDrawerBlocked,
             onOpenWeatherSettingsFromTab = onOpenWeatherSettingsFromTab,
             ognEnabled = ognOverlayEnabled,
+            showSciaEnabled = showOgnSciaEnabled,
             onOgnEnabledChanged = { enabled ->
                 if (enabled != ognOverlayEnabled) onToggleOgnTraffic()
             },
+            onShowSciaEnabledChanged = { enabled ->
+                if (enabled != showOgnSciaEnabled) onToggleOgnScia()
+            },
+            adsbTrafficEnabled = adsbOverlayEnabled,
+            showOgnThermalsEnabled = showOgnThermalsEnabled,
+            showDistanceCircles = showDistanceCircles,
+            currentQnhLabel = currentQnhLabel,
+            onAdsbTrafficEnabledChanged = { enabled ->
+                if (enabled != adsbOverlayEnabled) onToggleAdsbTraffic()
+            },
+            onShowOgnThermalsEnabledChanged = { enabled ->
+                if (enabled != showOgnThermalsEnabled) onToggleOgnThermals()
+            },
+            onShowDistanceCirclesChanged = { enabled ->
+                if (enabled != showDistanceCircles) {
+                    overlayManager.toggleDistanceCircles()
+                }
+            },
+            onOpenQnhDialogFromTab = openQnhDialog,
             ognTrailAircraftRows = ognTrailAircraftRows,
             onOgnTrailAircraftToggled = { aircraftKey, enabled ->
                 ognTrailSelectionViewModel.setTrailAircraftSelected(aircraftKey, enabled)
             },
             skySightUiState = forecastOverlayState,
             onSkySightEnabledChanged = forecastViewModel::setEnabled,
-            onSkySightPrimaryParameterToggled = forecastViewModel::toggleSkySightPrimaryParameter,
+            onSkySightPrimaryParameterToggled = forecastViewModel::selectSkySightPrimaryParameter,
+            onSkySightSecondaryPrimaryOverlayEnabledChanged =
+                forecastViewModel::setSecondaryPrimaryOverlayEnabled,
+            onSkySightSecondaryPrimaryParameterSelected =
+                forecastViewModel::selectSecondaryPrimaryParameter,
             onSkySightWindOverlayEnabledChanged = forecastViewModel::setWindOverlayEnabled,
             onSkySightWindParameterSelected = forecastViewModel::selectWindParameter,
             onSkySightAutoTimeEnabledChanged = forecastViewModel::setAutoTimeEnabled,
             onSkySightFollowTimeOffsetChanged = forecastViewModel::setFollowTimeOffsetMinutes,
             onSkySightJumpToNow = forecastViewModel::jumpToNow,
             onSkySightTimeSelected = forecastViewModel::selectTime,
-            onSkySightOpacityChanged = forecastViewModel::setOpacity,
-            onSkySightWindOverlayScaleChanged = forecastViewModel::setWindOverlayScale,
-            onSkySightWindDisplayModeChanged = forecastViewModel::setWindDisplayMode,
+            onSkySightSatelliteOverlayEnabledChanged = forecastViewModel::setSkySightSatelliteOverlayEnabled,
+            onSkySightSatelliteImageryEnabledChanged = forecastViewModel::setSkySightSatelliteImageryEnabled,
+            onSkySightSatelliteRadarEnabledChanged = forecastViewModel::setSkySightSatelliteRadarEnabled,
+            onSkySightSatelliteLightningEnabledChanged = forecastViewModel::setSkySightSatelliteLightningEnabled,
+            onSkySightSatelliteAnimateEnabledChanged = forecastViewModel::setSkySightSatelliteAnimateEnabled,
+            onSkySightSatelliteHistoryFramesChanged = forecastViewModel::setSkySightSatelliteHistoryFrames,
             skySightWarningMessage = skySightWarningMessage,
-            skySightErrorMessage = forecastOverlayState.errorMessage
+            skySightErrorMessage = forecastOverlayState.errorMessage,
+            skySightSatViewEnabled = skySightSatViewEnabled,
+            onSkySightSatViewEnabledChanged = { enabled ->
+                if (enabled) {
+                    if (!skySightSatViewEnabled) {
+                        lastNonSatelliteMapStyleName = currentMapStyleName
+                        onTransientMapStyleSelected(SATELLITE_MAP_STYLE_NAME)
+                    }
+                } else {
+                    val restoreStyle = lastNonSatelliteMapStyleName
+                        ?.takeIf { style ->
+                            !style.equals(SATELLITE_MAP_STYLE_NAME, ignoreCase = true)
+                        }
+                        ?: DEFAULT_NON_SATELLITE_MAP_STYLE_NAME
+                    onTransientMapStyleSelected(restoreStyle)
+                }
+            }
         )
 
         Column(
@@ -646,6 +738,20 @@ internal fun MapScreenContent(
             selectedOgnTarget != null -> {
                 OgnMarkerDetailsSheet(
                     target = selectedOgnTarget,
+                    sciaEnabledForAircraft = selectedOgnTargetSciaEnabled,
+                    onSciaEnabledForAircraftChanged = { enabled ->
+                        ognTrailSelectionViewModel.setTrailAircraftSelected(
+                            aircraftKey = selectedOgnTarget.canonicalKey,
+                            selected = enabled
+                        )
+                        if (enabled) {
+                            if (!showOgnSciaEnabled) {
+                                onToggleOgnScia()
+                            } else if (!ognOverlayEnabled) {
+                                onToggleOgnTraffic()
+                            }
+                        }
+                    },
                     unitsPreferences = unitsPreferences,
                     onDismiss = onDismissOgnTargetDetails
                 )
@@ -708,19 +814,16 @@ private fun formatWindSpeedForTap(speedKt: Double): String =
 
 private fun buildOgnTrailAircraftRows(
     targets: List<OgnTrafficTarget>,
-    selectedAircraftKeys: Set<String>
+    selectionLookup: com.example.xcpro.ogn.OgnSelectionLookup
 ): List<OgnTrailAircraftRowUi> {
-    val normalizedSelectedKeys = selectedAircraftKeys
-        .map(::normalizeOgnAircraftKey)
-        .toSet()
     val seenKeys = HashSet<String>()
     return targets.mapNotNull { target ->
         val key = normalizeOgnAircraftKey(target.canonicalKey)
         if (!seenKeys.add(key)) return@mapNotNull null
 
-        val label = target.identity?.registration
+        val label = target.identity?.competitionNumber
             ?.takeIf { it.isNotBlank() }
-            ?: target.identity?.competitionNumber?.takeIf { it.isNotBlank() }
+            ?: target.identity?.registration?.takeIf { it.isNotBlank() }
             ?: target.callsign.takeIf { it.isNotBlank() }
             ?: target.displayLabel.takeIf { it.isNotBlank() }
             ?: key
@@ -728,8 +831,8 @@ private fun buildOgnTrailAircraftRows(
         OgnTrailAircraftRowUi(
             key = key,
             label = label,
-            trailsEnabled = selectionSetContainsOgnKey(
-                selectedKeys = normalizedSelectedKeys,
+            trailsEnabled = selectionLookupContainsOgnKey(
+                lookup = selectionLookup,
                 candidateKey = key
             )
         )
@@ -766,6 +869,8 @@ private fun rememberTrafficDebugPanelVisibility(
 private const val WIND_ARROW_SPEED_TAP_DISPLAY_MS = 4_000L
 private const val TRAFFIC_DEBUG_PANEL_AUTO_DISMISS_MS = 3_000L
 private const val DEFAULT_WIND_SPEED_UNIT_LABEL = "kt"
+private const val SATELLITE_MAP_STYLE_NAME = "Satellite"
+private const val DEFAULT_NON_SATELLITE_MAP_STYLE_NAME = "Topo"
 private const val WIND_TAP_LABEL_EDGE_PADDING_DP = 8
 private const val WIND_TAP_LABEL_ANCHOR_GAP_DP = 10
 private const val WIND_TAP_LABEL_ESTIMATED_WIDTH_DP = 136

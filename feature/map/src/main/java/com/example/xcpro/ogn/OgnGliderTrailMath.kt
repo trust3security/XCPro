@@ -3,7 +3,7 @@ package com.example.xcpro.ogn
 import kotlin.math.abs
 
 private const val KNOTS_TO_MPS = 0.514444
-private const val MAX_ABS_VARIO_KTS = 12.0
+private const val MAX_ABS_VARIO_KTS = 30.0
 private const val MAX_ABS_VARIO_MPS = MAX_ABS_VARIO_KTS * KNOTS_TO_MPS
 
 internal const val OGN_TRAIL_ZERO_WIDTH_PX = 2.0f

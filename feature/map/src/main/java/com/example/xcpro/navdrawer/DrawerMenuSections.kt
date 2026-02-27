@@ -20,6 +20,7 @@ import com.example.ui1.icons.Hangglider
 import com.example.ui1.icons.Task
 import com.example.xcpro.common.orientation.MapOrientationMode
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.example.xcpro.navigation.SettingsRoutes
 import com.example.xcpro.screens.flightdata.HomeWaypointViewModel
 import com.example.xcpro.profiles.ProfileViewModel
 import com.example.xcpro.profiles.ui.icon
@@ -266,7 +267,7 @@ fun SettingsSection(
             onClick = {
                 scope.launch {
                     drawerState.close()
-                    navController.navigate("settings")
+                    navController.navigate(SettingsRoutes.GENERAL)
                 }
             }
         )

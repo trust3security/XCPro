@@ -32,7 +32,7 @@ internal fun RealTimeFlightData.toDisplayBucket(
         displayNetto = displayNetto.takeIf { it.isFinite() }?.bucket(varioBucketMs.toDouble()) ?: 0.0,
         baroAltitude = baroAltitude.takeIf { it.isFinite() }?.bucket(altitudeBucketM) ?: 0.0,
         gpsAltitude = gpsAltitude.takeIf { it.isFinite() }?.bucket(altitudeBucketM) ?: 0.0,
-        agl = agl.takeIf { it.isFinite() }?.bucket(altitudeBucketM) ?: 0.0,
+        agl = agl.takeIf { it.isFinite() }?.bucket(altitudeBucketM) ?: Double.NaN,
         windSpeed = windSpeed.takeIf { it.isFinite() }?.bucket(windSpeedBucketKt) ?: 0f,
         windDirection = windDirection.takeIf { it.isFinite() }?.bucket(windDirBucketDeg) ?: 0f,
         currentLD = currentLD.takeIf { it.isFinite() }?.bucket(ldBucket) ?: 0f

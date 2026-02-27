@@ -45,7 +45,7 @@ class SnailTrailManager(
         displayLocation: LatLng? = null,
         displayTimeMillis: Long? = null
     ) {
-        val overlay = mapState.snailTrailOverlay ?: return
+        val overlay = mapState.snailTrailOverlay
         if (update == null) {
             clearRenderState(overlay)
             return
@@ -92,7 +92,7 @@ class SnailTrailManager(
             currentZoom = currentZoom
         )
 
-        if (update.sampleAdded || settingsChanged || zoomChanged || update.modeChanged || update.storeReset) {
+        if (overlay != null && (update.sampleAdded || settingsChanged || zoomChanged || update.modeChanged || update.storeReset)) {
             render(overlay)
         }
     }
@@ -172,8 +172,10 @@ class SnailTrailManager(
         renderLast()
     }
 
-    private fun clearRenderState(overlay: SnailTrailOverlay) {
-        overlay.clear()
+    private fun clearRenderState(overlay: SnailTrailOverlay?) {
+        overlay?.clear()
+        lastIsReplay = null
+        lastPoints = emptyList()
         lastContext = null
         lastRenderPoseTimeMs = null
         lastRenderPoseLocation = null

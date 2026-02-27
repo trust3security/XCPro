@@ -18,8 +18,12 @@ import com.example.xcpro.ogn.OgnTrafficSnapshot
 import com.example.xcpro.ogn.OgnTrafficTarget
 import com.example.xcpro.ogn.OgnGliderTrailRepository
 import com.example.xcpro.ogn.OgnGliderTrailSegment
+import com.example.xcpro.ogn.OgnDisplayUpdateMode
 import com.example.xcpro.ogn.OgnThermalHotspot
 import com.example.xcpro.ogn.OgnThermalRepository
+import com.example.xcpro.ogn.OgnTrailSelectionPreferencesRepository
+import com.example.xcpro.ogn.buildOgnSelectionLookup
+import com.example.xcpro.ogn.selectionLookupContainsOgnKey
 import com.example.xcpro.qnh.QnhRepository
 import com.example.xcpro.sensors.CompleteFlightData
 import com.example.xcpro.weather.wind.data.WindSensorFusionRepository
@@ -51,6 +55,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.CoroutineScope
@@ -277,16 +283,34 @@ class OgnTrafficUseCase @Inject constructor(
     private val repository: OgnTrafficRepository,
     private val preferencesRepository: OgnTrafficPreferencesRepository,
     private val thermalRepository: OgnThermalRepository,
-    private val gliderTrailRepository: OgnGliderTrailRepository
+    private val gliderTrailRepository: OgnGliderTrailRepository,
+    private val trailSelectionRepository: OgnTrailSelectionPreferencesRepository
 ) {
     val targets: StateFlow<List<OgnTrafficTarget>> = repository.targets
     val snapshot: StateFlow<OgnTrafficSnapshot> = repository.snapshot
     val isStreamingEnabled: StateFlow<Boolean> = repository.isEnabled
     val overlayEnabled: Flow<Boolean> = preferencesRepository.enabledFlow
     val iconSizePx: Flow<Int> = preferencesRepository.iconSizePxFlow
+    val displayUpdateMode: Flow<OgnDisplayUpdateMode> = preferencesRepository.displayUpdateModeFlow
+    val showSciaEnabled: Flow<Boolean> = preferencesRepository.showSciaEnabledFlow
     val thermalHotspots: StateFlow<List<OgnThermalHotspot>> = thermalRepository.hotspots
     val showThermalsEnabled: Flow<Boolean> = preferencesRepository.showThermalsEnabledFlow
-    val gliderTrailSegments: StateFlow<List<OgnGliderTrailSegment>> = gliderTrailRepository.segments
+    val gliderTrailSegments: Flow<List<OgnGliderTrailSegment>> = combine(
+        gliderTrailRepository.segments,
+        trailSelectionRepository.selectedAircraftKeysFlow
+    ) { segments, selectedKeys ->
+        val lookup = buildOgnSelectionLookup(selectedKeys)
+        if (lookup.normalizedSelectedKeys.isEmpty()) {
+            emptyList()
+        } else {
+            segments.filter { segment ->
+                selectionLookupContainsOgnKey(
+                    lookup = lookup,
+                    candidateKey = segment.sourceTargetId
+                )
+            }
+        }
+    }.distinctUntilChanged()
 
     fun setStreamingEnabled(enabled: Boolean) {
         repository.setEnabled(enabled)
@@ -296,12 +320,42 @@ class OgnTrafficUseCase @Inject constructor(
         repository.updateCenter(latitude, longitude)
     }
 
+    fun updateAutoReceiveRadiusContext(
+        zoomLevel: Float,
+        groundSpeedMs: Double,
+        isFlying: Boolean
+    ) {
+        repository.updateAutoReceiveRadiusContext(
+            zoomLevel = zoomLevel,
+            groundSpeedMs = groundSpeedMs,
+            isFlying = isFlying
+        )
+    }
+
     suspend fun setOverlayEnabled(enabled: Boolean) {
         preferencesRepository.setEnabled(enabled)
     }
 
     suspend fun setIconSizePx(iconSizePx: Int) {
         preferencesRepository.setIconSizePx(iconSizePx)
+    }
+
+    suspend fun setDisplayUpdateMode(mode: OgnDisplayUpdateMode) {
+        preferencesRepository.setDisplayUpdateMode(mode)
+    }
+
+    suspend fun setShowSciaEnabled(enabled: Boolean) {
+        preferencesRepository.setShowSciaEnabled(enabled)
+    }
+
+    suspend fun setOverlayAndShowSciaEnabled(
+        overlayEnabled: Boolean,
+        showSciaEnabled: Boolean
+    ) {
+        preferencesRepository.setOverlayAndSciaEnabled(
+            overlayEnabled = overlayEnabled,
+            showSciaEnabled = showSciaEnabled
+        )
     }
 
     suspend fun setShowThermalsEnabled(enabled: Boolean) {

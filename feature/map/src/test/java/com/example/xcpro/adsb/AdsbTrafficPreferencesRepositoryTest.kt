@@ -2,11 +2,11 @@ package com.example.xcpro.adsb
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
-import org.junit.After
 import org.junit.Before
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -22,17 +22,12 @@ class AdsbTrafficPreferencesRepositoryTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
 
     @Before
-    fun setUp() = runBlocking {
+    fun setUp() = runBlocking(Dispatchers.IO) {
         val repository = AdsbTrafficPreferencesRepository(context)
         repository.setIconSizePx(ADSB_ICON_SIZE_DEFAULT_PX)
         repository.setMaxDistanceKm(ADSB_MAX_DISTANCE_DEFAULT_KM)
         repository.setVerticalAboveMeters(ADSB_VERTICAL_FILTER_ABOVE_DEFAULT_METERS)
         repository.setVerticalBelowMeters(ADSB_VERTICAL_FILTER_BELOW_DEFAULT_METERS)
-    }
-
-    @After
-    fun tearDown() {
-        context.filesDir.resolve("datastore")?.takeIf { it.exists() }?.deleteRecursively()
     }
 
     @Test

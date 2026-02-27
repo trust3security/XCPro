@@ -1,6 +1,8 @@
 package com.example.xcpro.weather.rain
 
 import com.example.xcpro.core.time.FakeClock
+import com.example.xcpro.testing.OkHttpClientRegistry
+import com.example.xcpro.testing.shutdownForTests
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
@@ -13,6 +15,8 @@ import okhttp3.Protocol
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
+import org.junit.After
+import org.junit.Before
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -25,12 +29,25 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 class WeatherRadarMetadataRepositoryTest {
+    private val okHttpClients = OkHttpClientRegistry()
+    private lateinit var parserClient: OkHttpClient
+    private lateinit var parserRepository: WeatherRadarMetadataRepository
 
-    private val parserRepository = WeatherRadarMetadataRepository(
-        clock = FakeClock(),
-        httpClient = OkHttpClient(),
-        ioDispatcher = Dispatchers.Unconfined
-    )
+    @Before
+    fun setUp() {
+        parserClient = OkHttpClient()
+        parserRepository = WeatherRadarMetadataRepository(
+            clock = FakeClock(),
+            httpClient = parserClient,
+            ioDispatcher = Dispatchers.Unconfined
+        )
+    }
+
+    @After
+    fun tearDown() {
+        parserClient.shutdownForTests()
+        okHttpClients.shutdownAll()
+    }
 
     @Test
     fun parseMetadataPayload_parsesAndSortsPastFrames() {
@@ -159,15 +176,17 @@ class WeatherRadarMetadataRepositoryTest {
     fun refreshMetadata_coalescesRapidParallelRequests() = runBlocking {
         val requestCount = AtomicInteger(0)
         val testClock = FakeClock(monoMs = 1_000L, wallMs = 1_000L)
-        val countingClient = OkHttpClient.Builder()
-            .addInterceptor { chain ->
-                requestCount.incrementAndGet()
-                metadataResponse(
-                    request = chain.request(),
-                    generatedEpochSec = 1_771_554_638L
-                )
-            }
-            .build()
+        val countingClient = okHttpClients.register(
+            OkHttpClient.Builder()
+                .addInterceptor { chain ->
+                    requestCount.incrementAndGet()
+                    metadataResponse(
+                        request = chain.request(),
+                        generatedEpochSec = 1_771_554_638L
+                    )
+                }
+                .build()
+        )
         val refreshRepository = WeatherRadarMetadataRepository(
             clock = testClock,
             httpClient = countingClient,
@@ -185,15 +204,17 @@ class WeatherRadarMetadataRepositoryTest {
     fun refreshMetadata_allowsSubsequentRequestAfterMinGap() = runBlocking {
         val requestCount = AtomicInteger(0)
         val testClock = FakeClock(monoMs = 1_000L, wallMs = 1_000L)
-        val countingClient = OkHttpClient.Builder()
-            .addInterceptor { chain ->
-                requestCount.incrementAndGet()
-                metadataResponse(
-                    request = chain.request(),
-                    generatedEpochSec = 1_771_554_638L
-                )
-            }
-            .build()
+        val countingClient = okHttpClients.register(
+            OkHttpClient.Builder()
+                .addInterceptor { chain ->
+                    requestCount.incrementAndGet()
+                    metadataResponse(
+                        request = chain.request(),
+                        generatedEpochSec = 1_771_554_638L
+                    )
+                }
+                .build()
+        )
         val refreshRepository = WeatherRadarMetadataRepository(
             clock = testClock,
             httpClient = countingClient,
@@ -211,14 +232,16 @@ class WeatherRadarMetadataRepositoryTest {
     @Test
     fun refreshMetadata_updatesLastSuccessTimestampOnEachSuccessfulFetch() = runBlocking {
         val testClock = FakeClock(monoMs = 1_000L, wallMs = 1_000L)
-        val stableClient = OkHttpClient.Builder()
-            .addInterceptor { chain ->
-                metadataResponse(
-                    request = chain.request(),
-                    generatedEpochSec = 1_771_554_638L
-                )
-            }
-            .build()
+        val stableClient = okHttpClients.register(
+            OkHttpClient.Builder()
+                .addInterceptor { chain ->
+                    metadataResponse(
+                        request = chain.request(),
+                        generatedEpochSec = 1_771_554_638L
+                    )
+                }
+                .build()
+        )
         val refreshRepository = WeatherRadarMetadataRepository(
             clock = testClock,
             httpClient = stableClient,
@@ -239,14 +262,16 @@ class WeatherRadarMetadataRepositoryTest {
     @Test
     fun refreshMetadata_preservesLastContentChangeWhenPayloadIsUnchanged() = runBlocking {
         val testClock = FakeClock(monoMs = 1_000L, wallMs = 1_000L)
-        val stableClient = OkHttpClient.Builder()
-            .addInterceptor { chain ->
-                metadataResponse(
-                    request = chain.request(),
-                    generatedEpochSec = 1_771_554_638L
-                )
-            }
-            .build()
+        val stableClient = okHttpClients.register(
+            OkHttpClient.Builder()
+                .addInterceptor { chain ->
+                    metadataResponse(
+                        request = chain.request(),
+                        generatedEpochSec = 1_771_554_638L
+                    )
+                }
+                .build()
+        )
         val refreshRepository = WeatherRadarMetadataRepository(
             clock = testClock,
             httpClient = stableClient,
@@ -266,19 +291,21 @@ class WeatherRadarMetadataRepositoryTest {
     fun refreshMetadata_updatesLastSuccessAndContentChangeWhenGenerationChanges() = runBlocking {
         val testClock = FakeClock(monoMs = 1_000L, wallMs = 1_000L)
         val callCount = AtomicInteger(0)
-        val rotatingClient = OkHttpClient.Builder()
-            .addInterceptor { chain ->
-                val nextGenerated = if (callCount.getAndIncrement() == 0) {
-                    1_771_554_638L
-                } else {
-                    1_771_555_238L
+        val rotatingClient = okHttpClients.register(
+            OkHttpClient.Builder()
+                .addInterceptor { chain ->
+                    val nextGenerated = if (callCount.getAndIncrement() == 0) {
+                        1_771_554_638L
+                    } else {
+                        1_771_555_238L
+                    }
+                    metadataResponse(
+                        request = chain.request(),
+                        generatedEpochSec = nextGenerated
+                    )
                 }
-                metadataResponse(
-                    request = chain.request(),
-                    generatedEpochSec = nextGenerated
-                )
-            }
-            .build()
+                .build()
+        )
         val refreshRepository = WeatherRadarMetadataRepository(
             clock = testClock,
             httpClient = rotatingClient,
@@ -301,19 +328,21 @@ class WeatherRadarMetadataRepositoryTest {
         val ifNoneMatchHeaders = mutableListOf<String?>()
         val ifModifiedSinceHeaders = mutableListOf<String?>()
         val testClock = FakeClock(monoMs = 1_000L, wallMs = 1_000L)
-        val client = OkHttpClient.Builder()
-            .addInterceptor { chain ->
-                val request = chain.request()
-                ifNoneMatchHeaders.add(request.header("If-None-Match"))
-                ifModifiedSinceHeaders.add(request.header("If-Modified-Since"))
-                metadataResponse(
-                    request = request,
-                    generatedEpochSec = 1_771_554_638L,
-                    etag = "etag-1",
-                    lastModified = "Thu, 01 Jan 1970 00:00:00 GMT"
-                )
-            }
-            .build()
+        val client = okHttpClients.register(
+            OkHttpClient.Builder()
+                .addInterceptor { chain ->
+                    val request = chain.request()
+                    ifNoneMatchHeaders.add(request.header("If-None-Match"))
+                    ifModifiedSinceHeaders.add(request.header("If-Modified-Since"))
+                    metadataResponse(
+                        request = request,
+                        generatedEpochSec = 1_771_554_638L,
+                        etag = "etag-1",
+                        lastModified = "Thu, 01 Jan 1970 00:00:00 GMT"
+                    )
+                }
+                .build()
+        )
         val refreshRepository = WeatherRadarMetadataRepository(
             clock = testClock,
             httpClient = client,
@@ -336,21 +365,23 @@ class WeatherRadarMetadataRepositoryTest {
     fun refreshMetadata_handlesNotModifiedAsSuccessfulFetch() = runBlocking {
         val testClock = FakeClock(monoMs = 1_000L, wallMs = 1_000L)
         val callCount = AtomicInteger(0)
-        val client = OkHttpClient.Builder()
-            .addInterceptor { chain ->
-                val request = chain.request()
-                if (callCount.getAndIncrement() == 0) {
-                    metadataResponse(
-                        request = request,
-                        generatedEpochSec = 1_771_554_638L,
-                        etag = "etag-1",
-                        lastModified = "Thu, 01 Jan 1970 00:00:00 GMT"
-                    )
-                } else {
-                    notModifiedResponse(request)
+        val client = okHttpClients.register(
+            OkHttpClient.Builder()
+                .addInterceptor { chain ->
+                    val request = chain.request()
+                    if (callCount.getAndIncrement() == 0) {
+                        metadataResponse(
+                            request = request,
+                            generatedEpochSec = 1_771_554_638L,
+                            etag = "etag-1",
+                            lastModified = "Thu, 01 Jan 1970 00:00:00 GMT"
+                        )
+                    } else {
+                        notModifiedResponse(request)
+                    }
                 }
-            }
-            .build()
+                .build()
+        )
         val refreshRepository = WeatherRadarMetadataRepository(
             clock = testClock,
             httpClient = client,
@@ -372,9 +403,11 @@ class WeatherRadarMetadataRepositoryTest {
     @Test
     fun refreshMetadata_returnsNoMetadataWhenNotModifiedWithoutCache() = runBlocking {
         val testClock = FakeClock(monoMs = 1_000L, wallMs = 1_000L)
-        val client = OkHttpClient.Builder()
-            .addInterceptor { chain -> notModifiedResponse(chain.request()) }
-            .build()
+        val client = okHttpClients.register(
+            OkHttpClient.Builder()
+                .addInterceptor { chain -> notModifiedResponse(chain.request()) }
+                .build()
+        )
         val refreshRepository = WeatherRadarMetadataRepository(
             clock = testClock,
             httpClient = client,
@@ -393,14 +426,16 @@ class WeatherRadarMetadataRepositoryTest {
     @Test
     fun refreshMetadata_returnsNoFramesWhenPayloadHasNoPastFrames() = runBlocking {
         val testClock = FakeClock(monoMs = 1_000L, wallMs = 1_000L)
-        val client = OkHttpClient.Builder()
-            .addInterceptor { chain ->
-                noFramesMetadataResponse(
-                    request = chain.request(),
-                    generatedEpochSec = 1_771_554_638L
-                )
-            }
-            .build()
+        val client = okHttpClients.register(
+            OkHttpClient.Builder()
+                .addInterceptor { chain ->
+                    noFramesMetadataResponse(
+                        request = chain.request(),
+                        generatedEpochSec = 1_771_554_638L
+                    )
+                }
+                .build()
+        )
         val refreshRepository = WeatherRadarMetadataRepository(
             clock = testClock,
             httpClient = client,
@@ -420,22 +455,24 @@ class WeatherRadarMetadataRepositoryTest {
     fun refreshMetadata_preservesCachedMetadataWhenNoFramesAfterSuccess() = runBlocking {
         val testClock = FakeClock(monoMs = 1_000L, wallMs = 1_000L)
         val callCount = AtomicInteger(0)
-        val client = OkHttpClient.Builder()
-            .addInterceptor { chain ->
-                val request = chain.request()
-                if (callCount.getAndIncrement() == 0) {
-                    metadataResponse(
-                        request = request,
-                        generatedEpochSec = 1_771_554_638L
-                    )
-                } else {
-                    noFramesMetadataResponse(
-                        request = request,
-                        generatedEpochSec = 1_771_555_238L
-                    )
+        val client = okHttpClients.register(
+            OkHttpClient.Builder()
+                .addInterceptor { chain ->
+                    val request = chain.request()
+                    if (callCount.getAndIncrement() == 0) {
+                        metadataResponse(
+                            request = request,
+                            generatedEpochSec = 1_771_554_638L
+                        )
+                    } else {
+                        noFramesMetadataResponse(
+                            request = request,
+                            generatedEpochSec = 1_771_555_238L
+                        )
+                    }
                 }
-            }
-            .build()
+                .build()
+        )
         val refreshRepository = WeatherRadarMetadataRepository(
             clock = testClock,
             httpClient = client,

@@ -17,7 +17,6 @@ import com.example.xcpro.adsb.ADSB_ERROR_CIRCUIT_BREAKER_OPEN
 import com.example.xcpro.adsb.ADSB_ERROR_CIRCUIT_BREAKER_PROBE
 import com.example.xcpro.ogn.OgnConnectionState
 import com.example.xcpro.ogn.OgnTrafficSnapshot
-import java.util.Locale
 
 @Composable
 internal fun OgnDebugPanel(
@@ -25,7 +24,7 @@ internal fun OgnDebugPanel(
     snapshot: OgnTrafficSnapshot,
     modifier: Modifier = Modifier
 ) {
-    if (!visible) return
+    if (!visible || shouldHideOgnDebugPanelWhileConnecting(snapshot)) return
     Surface(
         modifier = modifier,
         color = Color(0xCC111827),
@@ -83,7 +82,7 @@ internal fun AdsbDebugPanel(
     snapshot: AdsbTrafficSnapshot,
     modifier: Modifier = Modifier
 ) {
-    if (!visible) return
+    if (!visible || shouldHideAdsbDebugPanelWhileConnecting(snapshot)) return
     Surface(
         modifier = modifier,
         color = Color(0xCC1F2937),
@@ -169,93 +168,13 @@ internal fun AdsbDebugPanel(
 
 internal fun isOgnReadyForAutoDismiss(snapshot: OgnTrafficSnapshot): Boolean =
     snapshot.connectionState == OgnConnectionState.CONNECTED
-
 internal fun isAdsbReadyForAutoDismiss(snapshot: AdsbTrafficSnapshot): Boolean =
-    snapshot.connectionState is AdsbConnectionState.Active &&
-        snapshot.authMode != AdsbAuthMode.AuthFailed
-
-private fun OgnConnectionState.toDebugLabel(): String = when (this) {
-    OgnConnectionState.DISCONNECTED -> "DISCONNECTED"
-    OgnConnectionState.CONNECTING -> "CONNECTING"
-    OgnConnectionState.CONNECTED -> "CONNECTED"
-    OgnConnectionState.ERROR -> "ERROR"
-}
-
-private fun AdsbConnectionState.toDebugLabel(): String = when (this) {
-    AdsbConnectionState.Disabled -> "DISABLED"
-    AdsbConnectionState.Active -> "ACTIVE"
-    is AdsbConnectionState.BackingOff -> "BACKOFF ${retryAfterSec}s"
-    is AdsbConnectionState.Error -> "ERROR"
-}
-
-private fun AdsbAuthMode.toDebugLabel(): String = when (this) {
-    AdsbAuthMode.Anonymous -> "ANONYMOUS"
-    AdsbAuthMode.Authenticated -> "AUTHENTICATED"
-    AdsbAuthMode.AuthFailed -> "AUTH FAILED"
-}
-
-internal fun AdsbTrafficSnapshot.debugReasonLabel(): String? {
-    if (connectionState is AdsbConnectionState.Error && lastError == ADSB_ERROR_CIRCUIT_BREAKER_OPEN) {
-        return "Circuit breaker open"
-    }
-    if (connectionState is AdsbConnectionState.Error && lastError == ADSB_ERROR_CIRCUIT_BREAKER_PROBE) {
-        return "Circuit breaker half-open probe"
-    }
-    if (authMode == AdsbAuthMode.AuthFailed && lastHttpStatus != 429) {
-        return "Credential auth failed; using anonymous fallback"
-    }
-    if (connectionState is AdsbConnectionState.Error && lastNetworkFailureKind != null) {
-        return "Network: ${lastNetworkFailureKind.toDebugLabel()}"
-    }
-    if (connectionState !is AdsbConnectionState.BackingOff) return null
-    return when {
-        lastHttpStatus == 429 && authMode == AdsbAuthMode.Anonymous ->
-            "Anonymous quota exceeded (OpenSky 429)"
-        lastHttpStatus == 429 && authMode == AdsbAuthMode.Authenticated ->
-            "Account quota exceeded (OpenSky 429)"
-        lastHttpStatus == 429 && authMode == AdsbAuthMode.AuthFailed ->
-            "Credential auth failed; anonymous quota exceeded"
-        lastHttpStatus == 429 ->
-            "OpenSky request quota exceeded"
-        authMode == AdsbAuthMode.AuthFailed ->
-            "Credential auth failed; using anonymous fallback"
-        lastNetworkFailureKind != null ->
-            "Network: ${lastNetworkFailureKind.toDebugLabel()}"
-        else -> null
-    }
-}
-
-private fun AdsbNetworkFailureKind.toDebugLabel(): String = when (this) {
-    AdsbNetworkFailureKind.DNS -> "DNS lookup failed"
-    AdsbNetworkFailureKind.TIMEOUT -> "Socket timeout"
-    AdsbNetworkFailureKind.CONNECT -> "Connection refused/unreachable"
-    AdsbNetworkFailureKind.NO_ROUTE -> "No route to host"
-    AdsbNetworkFailureKind.TLS -> "TLS handshake failure"
-    AdsbNetworkFailureKind.MALFORMED_RESPONSE -> "Malformed provider payload"
-    AdsbNetworkFailureKind.UNKNOWN -> "Unknown network failure"
-}
-
-private fun formatCoord(value: Double?): String {
-    if (value == null || !value.isFinite()) return "--"
-    return String.format(Locale.US, "%.4f", value)
-}
-
-private fun formatAge(ageMs: Long?): String {
-    if (ageMs == null || ageMs < 0L) return "--"
-    val seconds = ageMs / 1000L
-    return when {
-        seconds < 60L -> "${seconds}s"
-        seconds < 3600L -> "${seconds / 60L}m"
-        else -> "${seconds / 3600L}h"
-    }
-}
-
-private fun formatBackoff(backoffMs: Long?): String {
-    if (backoffMs == null || backoffMs <= 0L) return "--"
-    return "${backoffMs / 1000L}s"
-}
-
-private fun formatMonoMs(monoMs: Long?): String {
-    if (monoMs == null || monoMs < 0L) return "--"
-    return "$monoMs"
-}
+    snapshot.connectionState is AdsbConnectionState.Active && snapshot.authMode != AdsbAuthMode.AuthFailed
+internal fun shouldSurfaceOgnDebugPanel(snapshot: OgnTrafficSnapshot): Boolean =
+    snapshot.connectionState == OgnConnectionState.ERROR
+internal fun shouldSurfaceAdsbDebugPanel(snapshot: AdsbTrafficSnapshot): Boolean =
+    snapshot.connectionState is AdsbConnectionState.Error
+internal fun shouldHideOgnDebugPanelWhileConnecting(snapshot: OgnTrafficSnapshot): Boolean =
+    snapshot.connectionState == OgnConnectionState.CONNECTING || snapshot.connectionState == OgnConnectionState.DISCONNECTED
+internal fun shouldHideAdsbDebugPanelWhileConnecting(snapshot: AdsbTrafficSnapshot): Boolean =
+    snapshot.connectionState is AdsbConnectionState.Disabled || snapshot.connectionState is AdsbConnectionState.BackingOff

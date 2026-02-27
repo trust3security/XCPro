@@ -4,6 +4,8 @@ import kotlinx.coroutines.flow.StateFlow
 
 interface GliderConfigRepository {
     val selectedModel: StateFlow<GliderModel?>
+    val effectiveModel: StateFlow<GliderModel>
+    val isFallbackPolarActive: StateFlow<Boolean>
     val config: StateFlow<GliderConfig>
 
     fun listModels(): List<GliderModel>

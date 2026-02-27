@@ -34,6 +34,16 @@ class OgnGliderTrailMathTest {
     }
 
     @Test
+    fun widthMapping_clampsAtPlusMinus30KtBounds() {
+        val maxAbsMps = 30.0 * 0.514444
+        val strongestSink = ognTrailWidthPx(-maxAbsMps - 5.0)
+        val strongestClimb = ognTrailWidthPx(maxAbsMps + 5.0)
+
+        assertEquals(OGN_TRAIL_SINK_MIN_WIDTH_PX, strongestSink, 1e-6f)
+        assertEquals(OGN_TRAIL_CLIMB_MAX_WIDTH_PX, strongestClimb, 1e-6f)
+    }
+
+    @Test
     fun colorMapping_clampsToSnailPaletteBounds() {
         val sinkIndex = ognTrailColorIndex(-99.0)
         val climbIndex = ognTrailColorIndex(99.0)

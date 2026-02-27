@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.onEach
 data class GliderUiState(
     val config: GliderConfig = GliderConfig(),
     val selectedModel: GliderModel? = null,
+    val effectiveModel: GliderModel? = null,
+    val isFallbackPolarActive: Boolean = false,
     val models: List<GliderModel> = emptyList()
 )
 
@@ -32,8 +34,19 @@ class GliderViewModel @Inject constructor(
     val uiState: StateFlow<GliderUiState> = _uiState.asStateFlow()
 
     init {
-        combine(useCase.config, useCase.selectedModel) { config, model ->
-            GliderUiState(config = config, selectedModel = model, models = models)
+        combine(
+            useCase.config,
+            useCase.selectedModel,
+            useCase.effectiveModel,
+            useCase.isFallbackPolarActive
+        ) { config, selectedModel, effectiveModel, fallbackActive ->
+            GliderUiState(
+                config = config,
+                selectedModel = selectedModel,
+                effectiveModel = effectiveModel,
+                isFallbackPolarActive = fallbackActive,
+                models = models
+            )
         }.onEach { state ->
             _uiState.value = state
         }.launchIn(viewModelScope)

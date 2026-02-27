@@ -51,7 +51,7 @@ internal class DisplayPoseRenderCoordinator(
         val mode = mapStateReader.displayPoseMode.value
         val smoothingProfile = mapStateReader.displaySmoothingProfile.value
         val pose = poseCoordinator.selectPose(nowMs, mode, smoothingProfile) ?: return
-        if (mapState.mapLibreMap == null) return
+        val map = mapState.mapLibreMap ?: return
         val orientation = latestOrientation
         val forceTrackHeading = featureFlags.forceReplayTrackHeading &&
             poseCoordinator.timeBase == DisplayClock.TimeBase.REPLAY
@@ -120,12 +120,14 @@ internal class DisplayPoseRenderCoordinator(
                 timeBase = poseCoordinator.timeBase,
                 nowMs = nowMs
             )
-        ) ?: return
-        trackingResult.initialCenteredZoom?.let { zoom ->
+        )
+        trackingResult?.initialCenteredZoom?.let { zoom ->
             onInitialCenteredZoom(poseLocation, zoom)
         }
 
-        val cameraBearing = trackingResult.cameraBearing
+        val cameraBearing = trackingResult?.cameraBearing
+            ?: map.cameraPosition?.bearing
+            ?: orientation.bearing
         val overlayBearing = if (cameraBearing.isFinite()) cameraBearing else orientation.bearing
         positionController.updateOverlay(
             location = poseLocation,

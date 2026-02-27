@@ -7,6 +7,7 @@ import com.example.xcpro.common.glider.GliderConfigRepository
 import com.example.xcpro.common.glider.GliderModel
 import com.example.xcpro.common.glider.ThreePointPolar
 import com.example.xcpro.common.glider.UserPolarCoefficients
+import com.example.xcpro.common.glider.defaultClubFallbackGliderModel
 import com.example.xcpro.common.glider.defaultGliderModels
 import com.example.xcpro.common.units.UnitsConverter
 import com.google.gson.Gson
@@ -25,9 +26,14 @@ class GliderRepository @Inject constructor(
     private val gson = Gson()
 
     private val models: List<GliderModel> = defaultGliderModels()
+    private val fallbackModel: GliderModel = defaultClubFallbackGliderModel()
 
     private val _selectedModel = MutableStateFlow<GliderModel?>(null)
     override val selectedModel: StateFlow<GliderModel?> = _selectedModel.asStateFlow()
+    private val _effectiveModel = MutableStateFlow(fallbackModel)
+    override val effectiveModel: StateFlow<GliderModel> = _effectiveModel.asStateFlow()
+    private val _isFallbackPolarActive = MutableStateFlow(true)
+    override val isFallbackPolarActive: StateFlow<Boolean> = _isFallbackPolarActive.asStateFlow()
 
     private val _config = MutableStateFlow(GliderConfig())
     override val config: StateFlow<GliderConfig> = _config.asStateFlow()
@@ -41,12 +47,14 @@ class GliderRepository @Inject constructor(
     override fun selectModelById(id: String) {
         val model = models.find { it.id == id }
         _selectedModel.value = model
+        refreshDerivedModelState()
         save()
     }
 
     override fun updateConfig(update: (GliderConfig) -> GliderConfig) {
         val next = sanitizeConfig(update(_config.value))
         _config.value = next
+        refreshDerivedModelState()
         save()
     }
 
@@ -89,6 +97,7 @@ class GliderRepository @Inject constructor(
                 _config.value = loadPersistedConfig(json)
             } catch (_: Exception) { /* keep defaults */ }
         }
+        refreshDerivedModelState()
     }
 
     private fun save() {
@@ -105,6 +114,19 @@ class GliderRepository @Inject constructor(
             return config.copy(hideBallastPill = false, iasMinMs = minMs, iasMaxMs = maxMs)
         }
         return config.copy(iasMinMs = minMs, iasMaxMs = maxMs)
+    }
+
+    private fun refreshDerivedModelState() {
+        val configValue = _config.value
+        val selectedValue = _selectedModel.value
+        val selectedHasUsablePolar = selectedValue != null && GliderSpeedBoundsResolver.hasPolar(selectedValue, configValue)
+        val fallbackPolarActive = !selectedHasUsablePolar && !GliderSpeedBoundsResolver.hasPolar(null, configValue)
+        _effectiveModel.value = if (selectedHasUsablePolar) {
+            selectedValue ?: fallbackModel
+        } else {
+            fallbackModel
+        }
+        _isFallbackPolarActive.value = fallbackPolarActive
     }
 
     private fun loadPersistedConfig(json: String): GliderConfig {

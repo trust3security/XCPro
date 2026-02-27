@@ -212,14 +212,14 @@ class WeatherOverlaySettingsTest {
     }
 
     @Test
-    fun resolveWeatherRainPlaybackFrameIndex_usesPingPongSequence() {
+    fun resolveWeatherRainPlaybackFrameIndex_usesForwardLoopSequence() {
         val sequence = (0L..7L).map { tick ->
             resolveWeatherRainPlaybackFrameIndex(
                 animationTick = tick,
                 frameCount = 4
             )
         }
-        assertEquals(listOf(0, 1, 2, 3, 2, 1, 0, 1), sequence)
+        assertEquals(listOf(0, 1, 2, 3, 0, 1, 2, 3), sequence)
     }
 
     @Test

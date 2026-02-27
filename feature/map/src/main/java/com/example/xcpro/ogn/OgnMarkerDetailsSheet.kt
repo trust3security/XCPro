@@ -10,6 +10,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -27,6 +28,8 @@ import java.util.Locale
 @Composable
 fun OgnMarkerDetailsSheet(
     target: OgnTrafficTarget,
+    sciaEnabledForAircraft: Boolean,
+    onSciaEnabledForAircraftChanged: (Boolean) -> Unit,
     unitsPreferences: UnitsPreferences,
     onDismiss: () -> Unit
 ) {
@@ -42,6 +45,21 @@ fun OgnMarkerDetailsSheet(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Show Scia for this aircraft",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Switch(
+                    checked = sciaEnabledForAircraft,
+                    onCheckedChange = onSciaEnabledForAircraftChanged
+                )
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -90,14 +108,6 @@ fun OgnMarkerDetailsSheet(
             DetailRow("Aircraft type code", target.identity?.aircraftTypeCode?.toString() ?: "--")
             DetailRow("Tracked", formatBoolean(target.identity?.tracked))
             DetailRow("Identified", formatBoolean(target.identity?.identified))
-
-            Text(
-                text = "Raw OGN payload",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary
-            )
-            DetailRow("Comment", sanitizeOgnRawText(target.rawComment, RAW_COMMENT_MAX_LEN))
-            DetailRow("Line", sanitizeOgnRawText(target.rawLine, RAW_LINE_MAX_LEN))
 
             Text(
                 text = "Informational only. Not for collision avoidance or separation.",
@@ -170,5 +180,3 @@ internal fun sanitizeOgnRawText(raw: String?, maxLen: Int): String {
     }
 }
 
-private const val RAW_COMMENT_MAX_LEN = 220
-private const val RAW_LINE_MAX_LEN = 320

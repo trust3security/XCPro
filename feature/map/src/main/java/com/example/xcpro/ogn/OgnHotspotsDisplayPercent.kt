@@ -1,0 +1,8 @@
+package com.example.xcpro.ogn
+
+const val OGN_HOTSPOTS_DISPLAY_PERCENT_MIN = 5
+const val OGN_HOTSPOTS_DISPLAY_PERCENT_MAX = 100
+const val OGN_HOTSPOTS_DISPLAY_PERCENT_DEFAULT = OGN_HOTSPOTS_DISPLAY_PERCENT_MAX
+
+fun clampOgnHotspotsDisplayPercent(percent: Int): Int =
+    percent.coerceIn(OGN_HOTSPOTS_DISPLAY_PERCENT_MIN, OGN_HOTSPOTS_DISPLAY_PERCENT_MAX)

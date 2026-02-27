@@ -28,7 +28,8 @@ class AirspaceRepository(
 
     private data class ClassCacheEntry(
         val lastModified: Long,
-        val classes: Set<String>
+        val classes: Set<String>,
+        val cachedAtWallMs: Long
     )
 
     private data class GeoJsonCacheKey(
@@ -37,9 +38,17 @@ class AirspaceRepository(
         val selectedKey: Int
     )
 
+    private data class GeoJsonCacheEntry(
+        val geoJson: String,
+        val cachedAtWallMs: Long
+    )
+
     private companion object {
-        private val classCache = mutableMapOf<String, ClassCacheEntry>()
-        private val geoJsonCache = mutableMapOf<GeoJsonCacheKey, String>()
+        private const val CLASS_CACHE_MAX_ENTRIES = 32
+        private const val GEO_JSON_CACHE_MAX_ENTRIES = 32
+        private const val CACHE_ENTRY_TTL_MS = 6L * 60L * 60L * 1000L
+        private val classCache = linkedMapOf<String, ClassCacheEntry>()
+        private val geoJsonCache = linkedMapOf<GeoJsonCacheKey, GeoJsonCacheEntry>()
         private val cacheLock = Any()
     }
 
@@ -131,6 +140,11 @@ class AirspaceRepository(
 
     private fun parseClassesInternal(files: List<DocumentRef>): List<String> {
         val classes = mutableSetOf<String>()
+        val selectedFileNames = files.map { it.fileName() }.toSet()
+        val nowWallMs = System.currentTimeMillis()
+        synchronized(cacheLock) {
+            pruneCachesLocked(nowWallMs = nowWallMs, selectedFileNames = selectedFileNames)
+        }
         files.forEach { ref ->
             val fileName = ref.fileName()
             val file = File(appContext.filesDir, fileName)
@@ -155,7 +169,13 @@ class AirspaceRepository(
                 .toSet()
 
             synchronized(cacheLock) {
-                classCache[fileName] = ClassCacheEntry(lastModified, parsed)
+                classCache.remove(fileName)
+                classCache[fileName] = ClassCacheEntry(
+                    lastModified = lastModified,
+                    classes = parsed,
+                    cachedAtWallMs = nowWallMs
+                )
+                pruneCachesLocked(nowWallMs = nowWallMs, selectedFileNames = selectedFileNames)
             }
             classes.addAll(parsed)
         }
@@ -165,6 +185,11 @@ class AirspaceRepository(
     private fun buildGeoJsonInternal(files: List<DocumentRef>, selectedClasses: Set<String>): String {
         val features = JSONArray()
         val selectedKey = selectedClassesKey(selectedClasses)
+        val selectedFileNames = files.map { it.fileName() }.toSet()
+        val nowWallMs = System.currentTimeMillis()
+        synchronized(cacheLock) {
+            pruneCachesLocked(nowWallMs = nowWallMs, selectedFileNames = selectedFileNames)
+        }
 
         files.forEach { ref ->
             val fileName = ref.fileName()
@@ -174,14 +199,21 @@ class AirspaceRepository(
             val cacheKey = GeoJsonCacheKey(fileName, lastModified, selectedKey)
 
             val geoJsonData = synchronized(cacheLock) {
-                geoJsonCache[cacheKey]
+                geoJsonCache.remove(cacheKey)?.also {
+                    geoJsonCache[cacheKey] = it
+                }?.geoJson
             } ?: run {
                 val parsed = parseOpenAirToGeoJson(file.readText(), selectedClasses)
                 synchronized(cacheLock) {
                     geoJsonCache.keys.removeIf { key ->
                         key.fileName == fileName && key.lastModified != lastModified
                     }
-                    geoJsonCache[cacheKey] = parsed
+                    geoJsonCache.remove(cacheKey)
+                    geoJsonCache[cacheKey] = GeoJsonCacheEntry(
+                        geoJson = parsed,
+                        cachedAtWallMs = nowWallMs
+                    )
+                    pruneCachesLocked(nowWallMs = nowWallMs, selectedFileNames = selectedFileNames)
                 }
                 parsed
             }
@@ -202,6 +234,26 @@ class AirspaceRepository(
     private fun selectedClassesKey(selectedClasses: Set<String>): Int {
         if (selectedClasses.isEmpty()) return 0
         return selectedClasses.sorted().joinToString("|").hashCode()
+    }
+
+    private fun pruneCachesLocked(nowWallMs: Long, selectedFileNames: Set<String>) {
+        classCache.entries.removeIf { (fileName, entry) ->
+            fileName !in selectedFileNames ||
+                nowWallMs - entry.cachedAtWallMs >= CACHE_ENTRY_TTL_MS
+        }
+        geoJsonCache.entries.removeIf { (key, entry) ->
+            key.fileName !in selectedFileNames ||
+                nowWallMs - entry.cachedAtWallMs >= CACHE_ENTRY_TTL_MS
+        }
+
+        while (classCache.size > CLASS_CACHE_MAX_ENTRIES) {
+            val eldestKey = classCache.entries.first().key
+            classCache.remove(eldestKey)
+        }
+        while (geoJsonCache.size > GEO_JSON_CACHE_MAX_ENTRIES) {
+            val eldestKey = geoJsonCache.entries.first().key
+            geoJsonCache.remove(eldestKey)
+        }
     }
 
     private fun DocumentRef.toUriOrNull(): Uri? =

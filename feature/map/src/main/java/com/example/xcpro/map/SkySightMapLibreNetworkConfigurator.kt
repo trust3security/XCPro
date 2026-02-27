@@ -11,7 +11,8 @@ object SkySightMapLibreNetworkConfigurator {
 
     private val skySightHosts: Set<String> = setOf(
         "edge.skysight.io",
-        "apig2.skysight.io"
+        "apig2.skysight.io",
+        "satellite.skysight.io"
     )
 
     fun ensureConfigured() {

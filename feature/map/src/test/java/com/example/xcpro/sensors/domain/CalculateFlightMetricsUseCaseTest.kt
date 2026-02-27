@@ -21,6 +21,8 @@ import org.mockito.invocation.InvocationOnMock
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
 private fun gpsSample(timeMs: Long) = GPSData(
@@ -56,7 +58,11 @@ class CalculateFlightMetricsUseCaseTest {
 
     private fun newUseCase(
         teAnswer: (InvocationOnMock) -> Double = { invocation -> invocation.getArgument<Double>(0) }
-    ): CalculateFlightMetricsUseCase {
+    ): CalculateFlightMetricsUseCase = newUseCaseWithHelpers(teAnswer).first
+
+    private fun newUseCaseWithHelpers(
+        teAnswer: (InvocationOnMock) -> Double = { invocation -> invocation.getArgument<Double>(0) }
+    ): Pair<CalculateFlightMetricsUseCase, FlightCalculationHelpers> {
         val sink = mock<StillAirSinkProvider> {
             on { sinkAtSpeed(any()) }.thenReturn(0.0)
             on { iasBoundsMs() }.thenReturn(null)
@@ -75,11 +81,12 @@ class CalculateFlightMetricsUseCaseTest {
         whenever(helpers.thermalGainCurrent).thenReturn(0.0)
         whenever(helpers.thermalGainValid).thenReturn(false)
 
-        return CalculateFlightMetricsUseCase(
+        val useCase = CalculateFlightMetricsUseCase(
             flightHelpers = helpers,
             sinkProvider = sink,
             windEstimator = WindEstimator()
         )
+        return useCase to helpers
     }
 
     @Test
@@ -218,6 +225,33 @@ class CalculateFlightMetricsUseCaseTest {
         )
 
         assertTrue(result.teVario == null || result.varioSource != "TE")
+    }
+
+    @Test
+    fun replayRequest_disablesOnlineTerrainLookupUpdates() {
+        val (useCase, helpers) = newUseCaseWithHelpers()
+        val result = useCase.execute(
+            FlightMetricsRequest(
+                gps = gpsSample(1_000L),
+                currentTimeMillis = 1_000L,
+                wallTimeMillis = 1_000L,
+                gpsTimestampMillis = 1_000L,
+                deltaTimeSeconds = 0.1,
+                varioResult = varioSample(0.4, 600.0),
+                varioGpsValue = 0.4,
+                baroResult = null,
+                windState = null,
+                allowOnlineTerrainLookup = false,
+                varioValidUntil = 2_000L,
+                isFlying = true,
+                macCreadySetting = 0.0,
+                autoMcEnabled = false,
+                flightMode = FlightMode.CRUISE
+            )
+        )
+
+        assertTrue(result.verticalSpeed.isFinite())
+        verify(helpers, times(0)).updateAGL(any(), any(), any())
     }
 
     @Test

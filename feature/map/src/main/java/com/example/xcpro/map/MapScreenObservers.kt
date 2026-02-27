@@ -4,6 +4,7 @@ import android.util.Log
 import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.convertToRealTimeFlightData
 import com.example.xcpro.hawk.HawkVarioUiState
+import com.example.xcpro.map.trail.TrailLength
 import com.example.xcpro.weather.wind.model.WindState
 import com.example.xcpro.replay.IgcReplayController
 import com.example.xcpro.replay.ReplayEvent
@@ -42,6 +43,7 @@ internal class MapScreenObservers(
 ) {
 
     private var flightStartTimestampMillis: Long? = null
+    private var trailEnabledBySettings: Boolean = true
 
     fun start() {
         observeFlightDataRepository()
@@ -59,8 +61,17 @@ internal class MapScreenObservers(
             igcReplayController.session.map { it.selection != null }
         ) { data, wind, flightState, hawkState, isReplay ->
             Quintuple(data, wind, flightState, hawkState, isReplay)
+        }.combine(mapStateStore.trailSettings.map { it.length != TrailLength.OFF }) { tuple, trailEnabled ->
+            Sextuple(
+                tuple.first,
+                tuple.second,
+                tuple.third,
+                tuple.fourth,
+                tuple.fifth,
+                trailEnabled
+            )
         }
-            .onEach { (data, wind, flightState, hawkState, isReplay) ->
+            .onEach { (data, wind, flightState, hawkState, isReplay, trailEnabled) ->
                 if (data != null) {
                     if (!liveDataReady.value) {
                         liveDataReady.value = true
@@ -87,15 +98,28 @@ internal class MapScreenObservers(
                     ).applyWindState(wind)
                     flightDataManager.updateLiveFlightData(liveData)
 
-                    val trailResult = trailProcessor.update(
-                        TrailUpdateInput(
-                            data = data,
-                            windState = wind,
-                            isFlying = flightState.isFlying,
-                            isReplay = isReplay
+                    if (!trailEnabled) {
+                        if (trailEnabledBySettings) {
+                            trailProcessor.resetAll()
+                            trailEnabledBySettings = false
+                        }
+                        if (trailUpdates.value != null) {
+                            trailUpdates.value = null
+                        }
+                    } else {
+                        trailEnabledBySettings = true
+                        val trailResult = trailProcessor.update(
+                            TrailUpdateInput(
+                                data = data,
+                                windState = wind,
+                                isFlying = flightState.isFlying,
+                                isReplay = isReplay
+                            )
                         )
-                    )
-                    trailUpdates.value = trailResult
+                        if (trailResult != null) {
+                            trailUpdates.value = trailResult
+                        }
+                    }
                 } else {
                     flightStartTimestampMillis = null
                     flightDataManager.updateLiveFlightData(null)
@@ -183,4 +207,13 @@ private data class Quintuple<A, B, C, D, E>(
     val third: C,
     val fourth: D,
     val fifth: E
+)
+
+private data class Sextuple<A, B, C, D, E, F>(
+    val first: A,
+    val second: B,
+    val third: C,
+    val fourth: D,
+    val fifth: E,
+    val sixth: F
 )

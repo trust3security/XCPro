@@ -27,7 +27,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -46,6 +45,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.example.xcpro.forecast.FORECAST_OPACITY_MAX
 import com.example.xcpro.forecast.FORECAST_OPACITY_MIN
+import com.example.xcpro.forecast.FORECAST_WIND_OVERLAY_SCALE_MAX
+import com.example.xcpro.forecast.FORECAST_WIND_OVERLAY_SCALE_MIN
 import com.example.xcpro.forecast.forecastRegionLabel
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -58,14 +59,15 @@ fun ForecastSettingsScreen(
 ) {
     val viewModel: ForecastSettingsViewModel = hiltViewModel()
     val scope = rememberCoroutineScope()
-    val overlayEnabled by viewModel.overlayEnabled.collectAsStateWithLifecycle()
     val opacity by viewModel.opacity.collectAsStateWithLifecycle()
+    val windOverlayScale by viewModel.windOverlayScale.collectAsStateWithLifecycle()
     val windDisplayMode by viewModel.windDisplayMode.collectAsStateWithLifecycle()
     val selectedRegion by viewModel.selectedRegion.collectAsStateWithLifecycle()
     val authConfirmation by viewModel.authConfirmation.collectAsStateWithLifecycle()
     val authReturnCode by viewModel.authReturnCode.collectAsStateWithLifecycle()
     val authChecking by viewModel.authChecking.collectAsStateWithLifecycle()
     var sliderValue by remember { mutableStateOf(opacity) }
+    var windOverlayScaleSlider by remember { mutableStateOf(windOverlayScale) }
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var credentialsStatus by remember { mutableStateOf("Credentials not set") }
@@ -73,6 +75,9 @@ fun ForecastSettingsScreen(
 
     LaunchedEffect(opacity) {
         sliderValue = opacity
+    }
+    LaunchedEffect(windOverlayScale) {
+        windOverlayScaleSlider = windOverlayScale
     }
     LaunchedEffect(Unit) {
         val credentials = viewModel.loadCredentials()
@@ -88,7 +93,7 @@ fun ForecastSettingsScreen(
     Scaffold(
         topBar = {
             SettingsTopAppBar(
-                title = "Forecast",
+                title = "SkySight",
                 onNavigateUp = { navController.navigateUp() },
                 onSecondaryNavigate = {
                     scope.launch {
@@ -128,27 +133,12 @@ fun ForecastSettingsScreen(
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Forecast Overlay", style = MaterialTheme.typography.titleMedium)
+                        Text("SkySight", style = MaterialTheme.typography.titleMedium)
                         Text(
-                            "Enable forecast layers and tune map opacity.",
+                            "Tune overlay display behavior used by SkySight on the map.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Overlay enabled",
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.weight(1f)
-                            )
-                            Switch(
-                                checked = overlayEnabled,
-                                onCheckedChange = viewModel::setOverlayEnabled
-                            )
-                        }
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
                             text = "Opacity: ${(sliderValue * 100f).roundToInt()}%",
@@ -194,14 +184,38 @@ fun ForecastSettingsScreen(
                                 )
                             }
                         }
+                        Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = "Used by wind parameters in map forecast overlays.",
+                            text = "Wind marker size ${(windOverlayScaleSlider * 100f).roundToInt()}%",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Slider(
+                            value = windOverlayScaleSlider,
+                            onValueChange = { value ->
+                                windOverlayScaleSlider = value.coerceIn(
+                                    FORECAST_WIND_OVERLAY_SCALE_MIN,
+                                    FORECAST_WIND_OVERLAY_SCALE_MAX
+                                )
+                            },
+                            onValueChangeFinished = {
+                                val clamped = windOverlayScaleSlider.coerceIn(
+                                    FORECAST_WIND_OVERLAY_SCALE_MIN,
+                                    FORECAST_WIND_OVERLAY_SCALE_MAX
+                                )
+                                if (clamped != windOverlayScale) {
+                                    viewModel.setWindOverlayScale(clamped)
+                                }
+                            },
+                            valueRange = FORECAST_WIND_OVERLAY_SCALE_MIN..FORECAST_WIND_OVERLAY_SCALE_MAX
+                        )
+                        Text(
+                            text = "Used by wind parameters in SkySight overlays.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = "Forecast region",
+                            text = "SkySight region",
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Box {
@@ -228,7 +242,7 @@ fun ForecastSettingsScreen(
                             }
                         }
                         Text(
-                            text = "Used for provider region-targeted forecast requests.",
+                            text = "Used for provider region-targeted SkySight requests.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

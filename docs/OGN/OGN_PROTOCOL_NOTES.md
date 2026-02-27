@@ -8,15 +8,19 @@ Define protocol and runtime behavior currently implemented by XCPro OGN traffic.
 - Host: `aprs.glidernet.org`
 - Port: `14580`
 - Transport: TCP, line-oriented APRS-IS style feed
-- Client callsign: `OGNXC1`
+- Client callsign: per-install generated APRS callsign (`^[A-Z][A-Z0-9]{2,8}$`)
 - App version token in login: `XCPro 0.1`
 
 Login line format:
-`user OGNXC1 pass <APRS_PASSCODE> vers XCPro 0.1 filter r/<lat>/<lon>/150`
+`user <client_callsign> pass <APRS_PASSCODE> vers XCPro 0.1 filter r/<lat>/<lon>/<radius_km>`
 
 Notes:
-- `<APRS_PASSCODE>` is generated in code from `OGNXC1` using APRS hash logic.
-- Radius `150` is kilometers (300 km diameter contract).
+- `<APRS_PASSCODE>` is generated in code from the active client callsign using APRS hash logic.
+- Client callsign is persisted once and reused across app restarts.
+- `<radius_km>` is kilometers.
+- Configurable receive radius range: `20..300 km` (`150 km` default).
+- Advanced auto-radius mode (optional) chooses effective radius from
+  `40 / 80 / 150 / 220 km` buckets.
 
 ## Stream Gate And Center Source
 
@@ -24,6 +28,8 @@ Streaming is enabled only when all are true:
 - `allowSensorStart`
 - `mapVisible`
 - `ognOverlayEnabled`
+- `mapVisible` tracks screen lifecycle at `STARTED` level (not dropped on transient `ON_PAUSE`)
+  to avoid unnecessary stop/start reconnect churn while returning from overlays/settings.
 
 Center source:
 - ownship GPS (`mapLocation`) only
@@ -32,14 +38,26 @@ Center source:
 
 ## Filtering And Reconnect Policy
 
-- Server filter radius: `150 km`
-- Client haversine filter: `<= 150 km` around latest requested GPS center
+- Server filter radius: `radius_km` from settings (`20..300`, default `150`)
+- Client haversine filter: `<= radius_km` around latest requested GPS center
   (fallback to active subscription center when requested center is unavailable)
 - Reconnect when center moves `>= 20 km`
+- Reconnect when effective receive radius changes
+- Policy reconnects (center/radius changes) are immediate and bypass error backoff.
+- Auto-radius source inputs:
+  - map zoom level
+  - ownship ground speed
+  - ownship flying-state flag
+- Auto-radius policy:
+  - flight context has priority over zoom
+  - bucket set: `40 / 80 / 150 / 220 km`
+  - candidate dwell: `30_000 ms`
+  - minimum apply interval: `60_000 ms`
 - Stream state remains `CONNECTING` until `logresp ... verified` or first valid traffic frame
 - Keepalive every `60_000 ms`
 - Read timeout: `20_000 ms`
 - Stall timeout: `120_000 ms`
+- Successful keepalive writes count as stream activity; low/no-traffic periods do not force false stall reconnects.
 - Reconnect backoff: `1_000 -> 2_000 -> ... -> 60_000 ms` max
 
 ## Target Lifecycle And Display
@@ -47,7 +65,10 @@ Center source:
 - Stale visual threshold: `60_000 ms`
 - Eviction threshold: `120_000 ms`
 - Overlay render cap: `500 targets`
+- OGN glider trail render cap: newest `12,000` segments
 - Overlay disabled behavior: UI renders `emptyList()` into OGN overlay runtime
+- Trail overlay visibility gate: trails render only when both `ognOverlayEnabled` and
+  `showSciaEnabled` are true
 
 ## Parsing Rules Implemented
 
@@ -74,6 +95,11 @@ Extracted fields:
   - callsign prefix fallback (`FLR*` -> FLARM, `ICA*` -> ICAO) when id token has no type byte
   - unknown fallback otherwise
 - canonical transport key (`FLARM:HEX` / `ICAO:HEX` / `UNK:HEX` / fallback `ID:*`) for repository identity paths
+- timing behavior:
+  - parser extracts source-time candidates from `/hhmmssh` and `@ddhhmmz` timestamp forms.
+  - repository applies source-time anti-rewind policy before committing target position.
+  - repository applies motion plausibility validation (distance/time speed gate).
+  - dropped-frame diagnostics are published via OGN snapshot counters.
 
 Drop conditions:
 - invalid coordinates
@@ -116,6 +142,15 @@ Behavior:
 - Suppressed target canonical keys are emitted in snapshot diagnostics.
 - OGN trail and thermal repositories consume suppression keys and purge matching artifacts in-session.
 
+## Display Update Mode (UI-Only)
+
+Configured setting:
+- `OGN display update mode`: `real_time` / `balanced` / `battery`
+
+Behavior:
+- Applies only to map overlay redraw cadence for OGN traffic/thermal/trail layers.
+- Does not change OGN socket ingest, parsing, or repository publish semantics.
+
 ## Tests
 
 - Parser coverage:
@@ -126,6 +161,9 @@ Behavior:
   - `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrackStabilizerTest.kt`
 - Repository policy helpers:
   - `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryPolicyTest.kt`
+- Repository connection and login identity:
+  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
+  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnClientCallsignTest.kt`
 - DDB parser:
   - `feature/map/src/test/java/com/example/xcpro/ogn/OgnDdbJsonParserTest.kt`
 - Preferences and VM center wiring:

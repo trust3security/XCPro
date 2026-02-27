@@ -27,6 +27,12 @@ Not confirmed as user-selectable behavior:
 - Multiple independent primary weather layers at the same time
   (example: rain + thermal + cloud as three primary layers).
 
+Important distinction for XCPro:
+- SkySight parity is one primary + optional wind.
+- XCPro currently contains a secondary non-wind overlay architecture path
+  (primary + secondary + optional wind), with unit tests that assert
+  pair behavior such as Convergence + Rain.
+
 ## Evidence Snapshot
 
 Research source bundles (public web app assets):
@@ -102,7 +108,7 @@ Routes/products currently exposed include:
 
 ## What This Means For XCPro
 
-For MVP parity, XCPro should implement:
+For strict SkySight parity, XCPro should implement:
 
 - Exactly one selected primary forecast parameter.
 - A separate optional wind overlay layer that can be shown simultaneously.
@@ -113,6 +119,30 @@ For MVP parity, XCPro should implement:
 
 This keeps behavior aligned with SkySight without introducing unsupported
 multi-primary overlay complexity.
+
+For XCPro extended mode (current code-path capability), allow:
+- One selected primary non-wind overlay.
+- One optional secondary non-wind overlay.
+- One optional wind overlay.
+- Maximum concurrent forecast branches: 3.
+
+This extended mode is valid only if UI and use-case wiring preserve secondary
+selection behavior.
+
+## Confirmed XCPro regression (2026-02-25)
+
+Root cause:
+- SkySight tab chip actions currently route through a single-select ViewModel
+  method that always disables secondary primary state.
+
+Impact:
+- Users cannot keep intended non-wind pair combinations from SkySight tab
+  (example: Convergence + Rain), even though repository/runtime paths support it.
+
+Required correction:
+- Route SkySight tab non-wind chip actions through toggle selection use-cases.
+- Expose explicit secondary non-wind controls in SkySight tab UI.
+- Keep map runtime branch composition unchanged (primary + secondary + wind).
 
 ## Recommended XCPro Architecture Shape
 

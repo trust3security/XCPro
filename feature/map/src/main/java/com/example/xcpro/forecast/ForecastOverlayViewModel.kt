@@ -17,7 +17,6 @@ class ForecastOverlayViewModel @Inject constructor(
     private val setForecastEnabledUseCase: SetForecastEnabledUseCase,
     private val selectForecastParameterUseCase: SelectForecastParameterUseCase,
     private val toggleForecastPrimaryOverlaySelectionUseCase: ToggleForecastPrimaryOverlaySelectionUseCase,
-    private val toggleSkySightPrimaryOverlaySelectionUseCase: ToggleSkySightPrimaryOverlaySelectionUseCase,
     private val setForecastSecondaryPrimaryOverlayEnabledUseCase: SetForecastSecondaryPrimaryOverlayEnabledUseCase,
     private val selectForecastSecondaryPrimaryParameterUseCase: SelectForecastSecondaryPrimaryParameterUseCase,
     private val setForecastWindOverlayEnabledUseCase: SetForecastWindOverlayEnabledUseCase,
@@ -28,6 +27,12 @@ class ForecastOverlayViewModel @Inject constructor(
     private val setForecastOpacityUseCase: SetForecastOpacityUseCase,
     private val setForecastWindOverlayScaleUseCase: SetForecastWindOverlayScaleUseCase,
     private val setForecastWindDisplayModeUseCase: SetForecastWindDisplayModeUseCase,
+    private val setSkySightSatelliteOverlayEnabledUseCase: SetSkySightSatelliteOverlayEnabledUseCase,
+    private val setSkySightSatelliteImageryEnabledUseCase: SetSkySightSatelliteImageryEnabledUseCase,
+    private val setSkySightSatelliteRadarEnabledUseCase: SetSkySightSatelliteRadarEnabledUseCase,
+    private val setSkySightSatelliteLightningEnabledUseCase: SetSkySightSatelliteLightningEnabledUseCase,
+    private val setSkySightSatelliteAnimateEnabledUseCase: SetSkySightSatelliteAnimateEnabledUseCase,
+    private val setSkySightSatelliteHistoryFramesUseCase: SetSkySightSatelliteHistoryFramesUseCase,
     private val queryForecastValueAtPointUseCase: QueryForecastValueAtPointUseCase
 ) : ViewModel() {
 
@@ -56,15 +61,9 @@ class ForecastOverlayViewModel @Inject constructor(
         }
     }
 
-    fun togglePrimaryOverlayParameter(parameterId: ForecastParameterId) {
+    fun selectSkySightPrimaryParameter(parameterId: ForecastParameterId) {
         viewModelScope.launch {
             toggleForecastPrimaryOverlaySelectionUseCase(parameterId)
-        }
-    }
-
-    fun toggleSkySightPrimaryParameter(parameterId: ForecastParameterId) {
-        viewModelScope.launch {
-            toggleSkySightPrimaryOverlaySelectionUseCase(parameterId)
         }
     }
 
@@ -131,6 +130,42 @@ class ForecastOverlayViewModel @Inject constructor(
     fun setWindDisplayMode(mode: ForecastWindDisplayMode) {
         viewModelScope.launch {
             setForecastWindDisplayModeUseCase(mode)
+        }
+    }
+
+    fun setSkySightSatelliteOverlayEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            setSkySightSatelliteOverlayEnabledUseCase(enabled)
+        }
+    }
+
+    fun setSkySightSatelliteImageryEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            setSkySightSatelliteImageryEnabledUseCase(enabled)
+        }
+    }
+
+    fun setSkySightSatelliteRadarEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            setSkySightSatelliteRadarEnabledUseCase(enabled)
+        }
+    }
+
+    fun setSkySightSatelliteLightningEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            setSkySightSatelliteLightningEnabledUseCase(enabled)
+        }
+    }
+
+    fun setSkySightSatelliteAnimateEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            setSkySightSatelliteAnimateEnabledUseCase(enabled)
+        }
+    }
+
+    fun setSkySightSatelliteHistoryFrames(frameCount: Int) {
+        viewModelScope.launch {
+            setSkySightSatelliteHistoryFramesUseCase(frameCount)
         }
     }
 

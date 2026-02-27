@@ -39,7 +39,9 @@ class MapInitializer(
 
     private var styleLoadToken: Long = 0L
 
-    private val scaleBarController = MapScaleBarController(mapState)
+    private val scaleBarController = MapScaleBarController(mapState).also {
+        mapState.scaleBarController = it
+    }
     private val dataLoader = MapInitializerDataLoader(
         context = context,
         mapState = mapState,
@@ -152,6 +154,7 @@ class MapInitializer(
 
     private fun setupOverlays(map: MapLibreMap) {
         try {
+            mapState.scaleBarController = scaleBarController
             // Initialize blue location overlay
             mapState.blueLocationOverlay = BlueLocationOverlay(context, map)
             mapState.blueLocationOverlay?.initialize()

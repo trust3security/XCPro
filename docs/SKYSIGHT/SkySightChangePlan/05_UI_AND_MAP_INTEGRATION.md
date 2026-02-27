@@ -30,6 +30,29 @@ Decide a stable z-order relative to:
 
 Typical: forecast raster under airspace boundaries and under task lines, so those remain readable.
 
+## Cross-overlay readability (SkySight satellite <-> OGN traffic)
+
+When SkySight satellite overlays are active, map readability for OGN glider icons degrades on
+dark/complex backgrounds. Current runtime contract adds a map-only coupling:
+
+- Source of truth for this coupling: `MapOverlayManager` runtime state.
+- Condition:
+  - `satellite overlay enabled` AND
+  - at least one satellite layer active (`imagery` OR `radar` OR `lightning`).
+- Effect:
+  - OGN glider icon id resolves to a white-contrast variant.
+- Non-glider OGN icons are unchanged.
+
+Important boundary:
+- This is a UI/runtime rendering concern only.
+- No domain/repository/business policy is added.
+- No ViewModel dependency on MapLibre or render internals.
+
+Refresh policy:
+- One-shot immediate refresh on contrast mode transition.
+- Existing markers are refreshed once when satellite contrast mode changes.
+- After transition refresh, normal OGN update cadence resumes.
+
 ## Gesture: point query
 Implement long-press (2s on mobile) to match SkySight behavior:
 - Convert screen point to lat/lon.
@@ -44,4 +67,3 @@ Do NOT store point selection state in multiple places:
 Add setting: "Sync forecast time to replay time"
 - When enabled and replay is active, derive ForecastTime from replay clock.
 - When disabled, preserve manual time selection.
-

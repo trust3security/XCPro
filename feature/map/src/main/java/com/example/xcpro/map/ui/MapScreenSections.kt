@@ -218,14 +218,6 @@ private fun MapViewHost(
                     if (!scope.isActive) {
                         return@getMapAsync
                     }
-                    runCatching { latestOnMapReady.value(map) }
-                        .onFailure { callbackError ->
-                            Log.e(
-                                "MapViewHost",
-                                "onMapReady callback failed before initialization: ${callbackError.message}",
-                                callbackError
-                            )
-                        }
                     scope.launch {
                         runCatching { latestMapInitializer.value.initializeMap(map) }
                             .onFailure { error ->

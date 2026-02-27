@@ -122,6 +122,29 @@ object MapUIWidgets {
     )
 
     @Composable
+    fun SettingsShortcut(
+        widgetManager: MapUIWidgetManager,
+        settingsOffset: Offset,
+        screenWidthPx: Float,
+        screenHeightPx: Float,
+        onSettingsTap: () -> Unit,
+        onOffsetChange: (Offset) -> Unit,
+        isEditMode: Boolean,
+        modifier: Modifier = Modifier,
+        sizeDp: Float = 56f
+    ) = SettingsShortcutWidgetImpl(
+        widgetManager = widgetManager,
+        settingsOffset = settingsOffset,
+        screenWidthPx = screenWidthPx,
+        screenHeightPx = screenHeightPx,
+        onSettingsTap = onSettingsTap,
+        onOffsetChange = onOffsetChange,
+        isEditMode = isEditMode,
+        modifier = modifier,
+        sizeDp = sizeDp
+    )
+
+    @Composable
     fun FlightModeMenu(
         widgetManager: MapUIWidgetManager,
         currentMode: FlightMode,

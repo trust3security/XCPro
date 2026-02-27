@@ -3,7 +3,8 @@
 import kotlin.math.abs
 
 private const val KNOTS_TO_MPS = 0.514444
-private const val MAX_ABS_VARIO_KTS = 12.0
+// Color mapping range is defined in pilot-facing knot units and converted to SI for math.
+private const val MAX_ABS_VARIO_KTS = 30.0
 private const val MAX_ABS_VARIO_MPS = MAX_ABS_VARIO_KTS * KNOTS_TO_MPS
 
 const val OGN_THERMAL_SNAIL_COLOR_COUNT = 19

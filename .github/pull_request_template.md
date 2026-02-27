@@ -24,6 +24,13 @@ Commands run (paste output or summarize):
 - [ ] `./gradlew assembleDebug`
 - [ ] (If relevant) `./gradlew connectedDebugAndroidTest`
 
+## Rollback Plan (MANDATORY for non-trivial changes)
+- [ ] One-step rollback command documented: `git revert <merge_or_commit_sha>`
+- [ ] Post-rollback checks listed:
+  - [ ] `./gradlew enforceRules`
+  - [ ] `./gradlew testDebugUnitTest` (or focused test scope if justified)
+  - [ ] `./gradlew assembleDebug`
+
 ## Docs
 - [ ] `docs/ARCHITECTURE/PIPELINE.md` updated if wiring changed.
 - [ ] `docs/ARCHITECTURE/ARCHITECTURE.md` / `docs/ARCHITECTURE/CODING_RULES.md` updated if rules changed.

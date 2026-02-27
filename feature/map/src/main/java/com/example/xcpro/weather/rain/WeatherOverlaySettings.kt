@@ -101,12 +101,6 @@ fun resolveWeatherRainPlaybackFrameIndex(
     frameCount: Int
 ): Int {
     if (frameCount <= 1) return 0
-    val cycleLength = (frameCount - 1) * 2
-    if (cycleLength <= 0) return 0
-    val normalizedTick = (animationTick % cycleLength).toInt()
-    return if (normalizedTick < frameCount) {
-        normalizedTick
-    } else {
-        cycleLength - normalizedTick
-    }
+    val normalizedTick = (animationTick % frameCount.toLong()).toInt()
+    return if (normalizedTick >= 0) normalizedTick else normalizedTick + frameCount
 }

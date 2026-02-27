@@ -101,6 +101,26 @@ dev-fast.bat feature:map test-clean com.example.xcpro.ogn.OgnGliderTrailReposito
 ```
 
 Use `preflight.bat` before PR/release validation.
+For fast daily local verification, use `check-quick.bat`:
+```bat
+check-quick.bat
+check-quick.bat :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.MapScreenViewModelTest"
+```
+For Windows test file-lock resilience (`output.bin`/`.lck`), use
+`test-safe.bat` for ad-hoc test runs:
+```bat
+test-safe.bat
+test-safe.bat :feature:map:testDebugUnitTest
+test-safe.bat testDebugUnitTest --tests "com.example.xcpro.sensors.domain.CalculateFlightMetricsUseCaseTest"
+```
+`test-safe.bat` defaults to faster daemon/cache mode and sets
+`-Pxcpro.test.maxParallelForks=2` unless overridden by
+`XC_TEST_PARALLEL_FORKS`.
+
+Unit-test hang protection policy:
+- Default per-test timeout is `60s` (override via `-Pxcpro.test.timeout.seconds=<10..120>`).
+- Known flaky Robolectric retries are CI-only (`CI=true`) with `maxRetries=1`,
+  scoped to `config/test/flaky-robolectric-allowlist.txt`.
 
 **Android Studio:** Latest stable + Kotlin plugin. Enable `Preview` and `Layout Inspector` for Compose. Use `Analyze > Inspect Code` before PR.
 

@@ -1,4 +1,4 @@
-﻿package com.example.xcpro.map
+package com.example.xcpro.map
 
 import android.graphics.Color
 import com.example.xcpro.core.common.logging.AppLogger
@@ -68,6 +68,7 @@ class OgnThermalOverlay(
 
         val features = ArrayList<Feature>(hotspots.size)
         for (hotspot in hotspots) {
+            if (!isValidCoordinate(hotspot.latitude, hotspot.longitude)) continue
             val feature = Feature.fromGeometry(
                 Point.fromLngLat(hotspot.longitude, hotspot.latitude)
             )
@@ -78,7 +79,11 @@ class OgnThermalOverlay(
             features.add(feature)
         }
 
-        source.setGeoJson(FeatureCollection.fromFeatures(features))
+        try {
+            source.setGeoJson(FeatureCollection.fromFeatures(features))
+        } catch (t: Throwable) {
+            AppLogger.e(TAG, "Failed to render OGN thermal overlay: ${t.message}", t)
+        }
     }
 
     fun findTargetAt(tap: LatLng): String? {
@@ -166,6 +171,13 @@ class OgnThermalOverlay(
         if (!climb.isFinite()) return hotspot.sourceLabel
         val signed = if (climb >= 0.0) "+" else ""
         return "${signed}${String.format(java.util.Locale.US, "%.1f", climb)}"
+    }
+
+    private fun isValidCoordinate(latitude: Double, longitude: Double): Boolean {
+        return latitude.isFinite() &&
+            longitude.isFinite() &&
+            latitude in -90.0..90.0 &&
+            longitude in -180.0..180.0
     }
 
     private companion object {

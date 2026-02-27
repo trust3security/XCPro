@@ -1,19 +1,16 @@
 package com.example.xcpro.sensors
 
-import android.content.Context
-import com.example.dfcards.dfcards.calculations.SimpleAglCalculator
 import com.example.xcpro.common.di.DefaultDispatcher
-import com.example.xcpro.common.di.IoDispatcher
 import com.example.xcpro.di.LiveSource
 import com.example.xcpro.di.ReplaySource
 import com.example.xcpro.flightdata.FlightDataRepository
+import com.example.xcpro.core.time.Clock
 import com.example.xcpro.sensors.domain.FlyingState
 import com.example.xcpro.sensors.domain.FlyingStateDetector
 import com.example.xcpro.weather.wind.data.AirspeedDataSource
 import com.example.xcpro.weather.wind.model.AirspeedSample
 import javax.inject.Inject
 import javax.inject.Singleton
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlin.math.pow
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -23,21 +20,18 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 @Singleton
 class FlightStateRepository @Inject constructor(
-    @ApplicationContext context: Context,
     @LiveSource private val liveSensors: SensorDataSource,
     @ReplaySource private val replaySensors: SensorDataSource,
     @LiveSource private val liveAirspeedSource: AirspeedDataSource,
     @ReplaySource private val replayAirspeedSource: AirspeedDataSource,
     private val flightDataRepository: FlightDataRepository,
-    @DefaultDispatcher defaultDispatcher: CoroutineDispatcher,
-    @IoDispatcher private val ioDispatcher: CoroutineDispatcher
+    private val clock: Clock,
+    @DefaultDispatcher defaultDispatcher: CoroutineDispatcher
 ) : FlightStateSource {
 
     private data class FlightStateInput(
@@ -48,7 +42,6 @@ class FlightStateRepository @Inject constructor(
     )
 
     private val scope = CoroutineScope(SupervisorJob() + defaultDispatcher)
-    private val aglCalculator = SimpleAglCalculator(context)
     private val detector = FlyingStateDetector()
 
     private val _flightState = MutableStateFlow(FlyingState())
@@ -70,26 +63,13 @@ class FlightStateRepository @Inject constructor(
                         liveAirspeedSource
                     }
 
-                    val aglFlow = sensors.gpsFlow
-                        .mapLatest { gps ->
-                            if (gps == null) return@mapLatest null
-                            val altitude = gps.altitude.value
-                            if (!altitude.isFinite()) return@mapLatest null
-                            aglCalculator.calculateAgl(
-                                altitude = altitude,
-                                lat = gps.position.latitude,
-                                lon = gps.position.longitude,
-                                speed = gps.speed.value
-                            )
-                        }
-                        .flowOn(ioDispatcher)
-
                     combine(
                         sensors.gpsFlow,
                         sensors.baroFlow,
                         airspeedSource.airspeedFlow,
-                        aglFlow
-                    ) { gps, baro, airspeed, agl ->
+                        flightDataRepository.flightData
+                    ) { gps, baro, airspeed, flightData ->
+                        val agl = extractFreshAglMeters(flightData)
                         FlightStateInput(
                             gps = gps,
                             baro = baro,
@@ -131,6 +111,15 @@ class FlightStateRepository @Inject constructor(
         _flightState.value = state
     }
 
+    private fun extractFreshAglMeters(flightData: CompleteFlightData?): Double? {
+        val agl = flightData?.agl?.value?.takeIf { it.isFinite() } ?: return null
+        val updatedAtMonoMs = flightData.aglTimestampMonoMs
+        if (updatedAtMonoMs <= 0L) return null
+        val ageMs = clock.nowMonoMs() - updatedAtMonoMs
+        if (ageMs < 0L || ageMs > AGL_STALE_AFTER_MS) return null
+        return agl
+    }
+
     private fun resolveAltitudeMeters(gps: GPSData, baro: BaroData?): Double? {
         val baroAltitude = baro?.let { pressureToAltitudeMeters(it.pressureHPa.value) }
             ?.takeIf { it.isFinite() }
@@ -145,5 +134,6 @@ class FlightStateRepository @Inject constructor(
 
     private companion object {
         private const val SEA_LEVEL_PRESSURE_HPA = 1013.25
+        private const val AGL_STALE_AFTER_MS = 15_000L
     }
 }

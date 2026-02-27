@@ -26,11 +26,17 @@ import com.example.xcpro.glider.PolarCalculator
 fun PreviewCard() {
     val viewModel: GliderViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val model = uiState.selectedModel
+    val selectedModel = uiState.selectedModel
+    val effectiveModel = uiState.effectiveModel
+    val fallbackActive = uiState.isFallbackPolarActive
     val cfg = uiState.config
 
     val speedKmh = remember { mutableStateOf(100f) }
-    val sink = model?.let { m -> PolarCalculator.sinkMs(speedKmh.value.toDouble() / 3.6, m, cfg) }
+    val sink = effectiveModel?.let { model ->
+        runCatching {
+            PolarCalculator.sinkMs(speedKmh.value.toDouble() / 3.6, model, cfg)
+        }.getOrNull()?.takeIf { it.isFinite() }
+    }
 
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
@@ -50,10 +56,12 @@ fun PreviewCard() {
                 fontWeight = FontWeight.SemiBold
             )
             Text(
-                text = if (model == null) {
+                text = if (selectedModel == null && !fallbackActive) {
                     "Select an aircraft to preview polar"
+                } else if (fallbackActive) {
+                    "Fallback active: ${effectiveModel?.name ?: "Default club"} - ${speedKmh.value.toInt()} km/h"
                 } else {
-                    "Model: ${model.name} - ${speedKmh.value.toInt()} km/h"
+                    "Model: ${selectedModel?.name ?: effectiveModel?.name.orEmpty()} - ${speedKmh.value.toInt()} km/h"
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -66,12 +74,23 @@ fun PreviewCard() {
             if (sink != null) {
                 Text(String.format("Estimated sink: %.2f m/s", sink))
             }
-            val hint = if (cfg.threePointPolar != null) "Using 3-point polar" else "Using model polar"
+            val hint = when {
+                fallbackActive -> "Using default club fallback polar"
+                cfg.threePointPolar != null -> "Using 3-point polar"
+                else -> "Using model polar"
+            }
             Text(
                 text = hint,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            if (fallbackActive) {
+                Text(
+                    text = "Select a glider or enter a 3-point polar to replace fallback.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
             Text(
                 text = "Netto/audio use this polar instantly (with bugs + ballast).",
                 style = MaterialTheme.typography.bodySmall,

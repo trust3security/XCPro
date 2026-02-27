@@ -36,6 +36,7 @@ class MapWidgetLayoutViewModel @Inject constructor(
     ): MapWidgetOffsets = when (widgetId) {
         MapWidgetId.SIDE_HAMBURGER -> current.copy(sideHamburger = offset)
         MapWidgetId.FLIGHT_MODE -> current.copy(flightMode = offset)
+        MapWidgetId.SETTINGS_SHORTCUT -> current.copy(settingsShortcut = offset)
         MapWidgetId.BALLAST -> current.copy(ballast = offset)
     }
 }

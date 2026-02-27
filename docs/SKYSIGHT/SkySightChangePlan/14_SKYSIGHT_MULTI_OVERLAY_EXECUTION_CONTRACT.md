@@ -6,9 +6,14 @@ Status: Ready for implementation
 
 ## Purpose
 
-Implement SkySight-style concurrent overlays in XCPro where one primary
-forecast product can be displayed together with an optional wind overlay,
+Implement concurrent forecast overlays in XCPro where up to two non-wind
+forecast products can be displayed together with an optional wind overlay,
 without violating MVVM + UDF + SSOT architecture rules.
+
+Contract update (2026-02-25):
+- A SkySight tab wiring regression currently prevents intended non-wind pair
+  selection from the active UI path.
+- This contract locks expected behavior and remediation scope.
 
 ## Read order before coding
 
@@ -21,8 +26,9 @@ without violating MVVM + UDF + SSOT architecture rules.
 
 ## Non-negotiables
 
-- Keep a single primary parameter selected at a time.
-- Add wind as a secondary optional overlay, not as a second primary stack.
+- Keep exactly one selected primary non-wind parameter at a time.
+- Allow one optional secondary non-wind parameter in parallel with primary.
+- Add wind as an additional optional overlay branch.
 - Keep all MapLibre runtime layer operations in map runtime classes only.
 - Keep ViewModel/use-case boundaries intact.
 - Keep replay and flight-data pipelines unchanged.
@@ -31,25 +37,33 @@ without violating MVVM + UDF + SSOT architecture rules.
 
 In scope:
 
-- Primary + wind concurrent display in map runtime.
+- Primary + secondary non-wind + wind concurrent display in map runtime.
+- Stable selection state transitions for non-wind pairing from SkySight tab UI.
 - Wind enable toggle and mode selection (arrow/barb; streams optional by flag).
 - Stable z-ordering and cleanup across parameter/time/style changes.
 - Error handling where wind failure does not clear valid primary layer.
 
 Out of scope (this contract):
 
-- Multi-primary stacking (example: rain + thermal + cloud at once).
+- More than two concurrent non-wind primary products
+  (example: rain + thermal + cloud all at once).
 - New backend/proxy services.
 - Replay/domain algorithm changes.
 
 ## Target behavior
 
 - User selects one primary forecast parameter.
-- User can enable wind overlay at the same time.
+- User can optionally add one secondary non-wind forecast parameter.
+- User can optionally enable wind overlay at the same time.
+- Convergence + Rain works.
 - Rain + wind works.
-- Thermal + wind works.
-- Thermal height + wind works.
-- Wind mode switch updates wind symbols without breaking primary layer.
+- Convergence + Rain + wind works.
+- Wind mode switch updates wind symbols without breaking non-wind overlays.
+
+Regression fix requirement (2026-02-25):
+- SkySight tab parameter chip actions must use toggle selection use-cases, not a
+  single-select path that force-disables secondary non-wind state.
+- SkySight tab UI must surface secondary non-wind state explicitly.
 
 ## Phase plan
 
@@ -73,14 +87,17 @@ Exit criteria:
 Tasks:
 
 - Ensure forecast state carries both:
-  - primary selection
+  - primary non-wind selection
+  - secondary non-wind selection + enabled state
   - wind overlay enabled/mode state
 - Add missing use-case methods if any for wind toggle/mode intent path.
+- Ensure SkySight tab intent path invokes toggle use-case behavior for non-wind
+  pair selection transitions.
 - Keep SSOT in `ForecastPreferencesRepository` and emitted UI state.
 
 Exit criteria:
 
-- One authoritative overlay state flow provides primary + wind config.
+- One authoritative overlay state flow provides primary + secondary + wind config.
 
 ### Phase 2 - Runtime renderer composition
 
@@ -88,6 +105,7 @@ Tasks:
 
 - Split runtime render path into composable branches:
   - primary branch
+  - secondary non-wind branch
   - wind branch
 - Ensure both branches can coexist on the map style simultaneously.
 - Implement deterministic cleanup for:
@@ -98,7 +116,7 @@ Tasks:
 
 Exit criteria:
 
-- Primary+wind can render together and switch without orphan layers.
+- Primary+secondary+wind can render together and switch without orphan layers.
 
 ### Phase 3 - UI controls and interaction
 
@@ -106,13 +124,15 @@ Tasks:
 
 - Confirm Forecast UI exposes:
   - primary parameter selector
+  - secondary non-wind selector/toggle
   - wind enable toggle
   - wind mode selector
 - Ensure controls map to SSOT and survive process restart.
 
 Exit criteria:
 
-- UI can consistently reproduce rain+wind and thermal+wind states.
+- UI can consistently reproduce convergence+rain, rain+wind, and
+  convergence+rain+wind states.
 
 ### Phase 4 - Tests and hardening
 
@@ -156,9 +176,9 @@ When device/emulator is available:
 
 ## Acceptance checklist
 
+- [ ] Primary + secondary render together (convergence + rain).
 - [ ] Primary + wind render together (rain + wind).
-- [ ] Primary + wind render together (thermal + wind).
-- [ ] Primary + wind render together (thermal height + wind).
+- [ ] Primary + secondary + wind render together (convergence + rain + wind).
 - [ ] Wind mode change does not clear primary overlay.
 - [ ] Wind failure does not clear valid primary overlay.
 - [ ] Style reload restores both overlay branches.
@@ -168,7 +188,7 @@ When device/emulator is available:
 
 If regression occurs:
 
-1. Disable secondary wind overlay composition path via feature flag or guarded branch.
+1. Disable secondary non-wind overlay composition path via feature flag or guarded branch.
 2. Keep single-primary rendering path active.
 3. Re-run required verification commands.
 4. Re-introduce multi-overlay path only after failing case is covered by tests.

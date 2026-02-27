@@ -13,6 +13,8 @@ class GliderUseCase @Inject constructor(
     private val repository: GliderConfigRepository
 ) {
     val selectedModel: StateFlow<GliderModel?> = repository.selectedModel
+    val effectiveModel: StateFlow<GliderModel> = repository.effectiveModel
+    val isFallbackPolarActive: StateFlow<Boolean> = repository.isFallbackPolarActive
     val config: StateFlow<GliderConfig> = repository.config
 
     fun listModels(): List<GliderModel> = repository.listModels()

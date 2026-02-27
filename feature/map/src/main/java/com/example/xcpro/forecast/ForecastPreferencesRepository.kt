@@ -36,6 +36,12 @@ private val KEY_FORECAST_SELECTED_SECONDARY_PRIMARY_PARAMETER_ID = stringPrefere
 private val KEY_FORECAST_WIND_OVERLAY_ENABLED = booleanPreferencesKey("forecast_wind_overlay_enabled")
 private val KEY_FORECAST_SELECTED_WIND_PARAMETER_ID = stringPreferencesKey("forecast_selected_wind_parameter_id")
 private val KEY_FORECAST_WIND_DISPLAY_MODE = stringPreferencesKey("forecast_wind_display_mode")
+private val KEY_FORECAST_SKYSIGHT_SATELLITE_OVERLAY_ENABLED = booleanPreferencesKey("forecast_skysight_satellite_overlay_enabled")
+private val KEY_FORECAST_SKYSIGHT_SATELLITE_IMAGERY_ENABLED = booleanPreferencesKey("forecast_skysight_satellite_imagery_enabled")
+private val KEY_FORECAST_SKYSIGHT_SATELLITE_RADAR_ENABLED = booleanPreferencesKey("forecast_skysight_satellite_radar_enabled")
+private val KEY_FORECAST_SKYSIGHT_SATELLITE_LIGHTNING_ENABLED = booleanPreferencesKey("forecast_skysight_satellite_lightning_enabled")
+private val KEY_FORECAST_SKYSIGHT_SATELLITE_ANIMATE_ENABLED = booleanPreferencesKey("forecast_skysight_satellite_animate_enabled")
+private val KEY_FORECAST_SKYSIGHT_SATELLITE_HISTORY_FRAMES = intPreferencesKey("forecast_skysight_satellite_history_frames")
 
 data class ForecastPreferences(
     val overlayEnabled: Boolean = false,
@@ -44,6 +50,12 @@ data class ForecastPreferences(
     val secondaryPrimaryOverlayEnabled: Boolean = FORECAST_SECONDARY_PRIMARY_OVERLAY_ENABLED_DEFAULT,
     val windOverlayEnabled: Boolean = FORECAST_WIND_OVERLAY_ENABLED_DEFAULT,
     val windDisplayMode: ForecastWindDisplayMode = FORECAST_WIND_DISPLAY_MODE_DEFAULT,
+    val skySightSatelliteOverlayEnabled: Boolean = FORECAST_SKYSIGHT_SATELLITE_OVERLAY_ENABLED_DEFAULT,
+    val skySightSatelliteImageryEnabled: Boolean = FORECAST_SKYSIGHT_SATELLITE_IMAGERY_ENABLED_DEFAULT,
+    val skySightSatelliteRadarEnabled: Boolean = FORECAST_SKYSIGHT_SATELLITE_RADAR_ENABLED_DEFAULT,
+    val skySightSatelliteLightningEnabled: Boolean = FORECAST_SKYSIGHT_SATELLITE_LIGHTNING_ENABLED_DEFAULT,
+    val skySightSatelliteAnimateEnabled: Boolean = FORECAST_SKYSIGHT_SATELLITE_ANIMATE_ENABLED_DEFAULT,
+    val skySightSatelliteHistoryFrames: Int = FORECAST_SKYSIGHT_SATELLITE_HISTORY_FRAMES_DEFAULT,
     val selectedPrimaryParameterId: ForecastParameterId = DEFAULT_FORECAST_PARAMETER_ID,
     val selectedSecondaryPrimaryParameterId: ForecastParameterId = DEFAULT_FORECAST_SECONDARY_PRIMARY_PARAMETER_ID,
     val selectedWindParameterId: ForecastParameterId = DEFAULT_FORECAST_WIND_PARAMETER_ID,
@@ -83,6 +95,30 @@ class ForecastPreferencesRepository @Inject constructor(
 
     val windDisplayModeFlow: Flow<ForecastWindDisplayMode> = preferencesFlow
         .map { forecastPreferences -> forecastPreferences.windDisplayMode }
+        .distinctUntilChanged()
+
+    val skySightSatelliteOverlayEnabledFlow: Flow<Boolean> = preferencesFlow
+        .map { forecastPreferences -> forecastPreferences.skySightSatelliteOverlayEnabled }
+        .distinctUntilChanged()
+
+    val skySightSatelliteImageryEnabledFlow: Flow<Boolean> = preferencesFlow
+        .map { forecastPreferences -> forecastPreferences.skySightSatelliteImageryEnabled }
+        .distinctUntilChanged()
+
+    val skySightSatelliteRadarEnabledFlow: Flow<Boolean> = preferencesFlow
+        .map { forecastPreferences -> forecastPreferences.skySightSatelliteRadarEnabled }
+        .distinctUntilChanged()
+
+    val skySightSatelliteLightningEnabledFlow: Flow<Boolean> = preferencesFlow
+        .map { forecastPreferences -> forecastPreferences.skySightSatelliteLightningEnabled }
+        .distinctUntilChanged()
+
+    val skySightSatelliteAnimateEnabledFlow: Flow<Boolean> = preferencesFlow
+        .map { forecastPreferences -> forecastPreferences.skySightSatelliteAnimateEnabled }
+        .distinctUntilChanged()
+
+    val skySightSatelliteHistoryFramesFlow: Flow<Int> = preferencesFlow
+        .map { forecastPreferences -> forecastPreferences.skySightSatelliteHistoryFrames }
         .distinctUntilChanged()
 
     val selectedPrimaryParameterIdFlow: Flow<ForecastParameterId> = preferencesFlow
@@ -152,6 +188,43 @@ class ForecastPreferencesRepository @Inject constructor(
     suspend fun setWindDisplayMode(mode: ForecastWindDisplayMode) {
         context.forecastDataStore.edit { preferences ->
             preferences[KEY_FORECAST_WIND_DISPLAY_MODE] = mode.storageValue
+        }
+    }
+
+    suspend fun setSkySightSatelliteOverlayEnabled(enabled: Boolean) {
+        context.forecastDataStore.edit { preferences ->
+            preferences[KEY_FORECAST_SKYSIGHT_SATELLITE_OVERLAY_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setSkySightSatelliteImageryEnabled(enabled: Boolean) {
+        context.forecastDataStore.edit { preferences ->
+            preferences[KEY_FORECAST_SKYSIGHT_SATELLITE_IMAGERY_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setSkySightSatelliteRadarEnabled(enabled: Boolean) {
+        context.forecastDataStore.edit { preferences ->
+            preferences[KEY_FORECAST_SKYSIGHT_SATELLITE_RADAR_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setSkySightSatelliteLightningEnabled(enabled: Boolean) {
+        context.forecastDataStore.edit { preferences ->
+            preferences[KEY_FORECAST_SKYSIGHT_SATELLITE_LIGHTNING_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setSkySightSatelliteAnimateEnabled(enabled: Boolean) {
+        context.forecastDataStore.edit { preferences ->
+            preferences[KEY_FORECAST_SKYSIGHT_SATELLITE_ANIMATE_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setSkySightSatelliteHistoryFrames(frameCount: Int) {
+        val clamped = clampSkySightSatelliteHistoryFrames(frameCount)
+        context.forecastDataStore.edit { preferences ->
+            preferences[KEY_FORECAST_SKYSIGHT_SATELLITE_HISTORY_FRAMES] = clamped
         }
     }
 
@@ -286,6 +359,25 @@ class ForecastPreferencesRepository @Inject constructor(
             windOverlayEnabled = preferences[KEY_FORECAST_WIND_OVERLAY_ENABLED]
                 ?: FORECAST_WIND_OVERLAY_ENABLED_DEFAULT,
             windDisplayMode = windDisplayMode,
+            skySightSatelliteOverlayEnabled =
+                preferences[KEY_FORECAST_SKYSIGHT_SATELLITE_OVERLAY_ENABLED]
+                    ?: FORECAST_SKYSIGHT_SATELLITE_OVERLAY_ENABLED_DEFAULT,
+            skySightSatelliteImageryEnabled =
+                preferences[KEY_FORECAST_SKYSIGHT_SATELLITE_IMAGERY_ENABLED]
+                    ?: FORECAST_SKYSIGHT_SATELLITE_IMAGERY_ENABLED_DEFAULT,
+            skySightSatelliteRadarEnabled =
+                preferences[KEY_FORECAST_SKYSIGHT_SATELLITE_RADAR_ENABLED]
+                    ?: FORECAST_SKYSIGHT_SATELLITE_RADAR_ENABLED_DEFAULT,
+            skySightSatelliteLightningEnabled =
+                preferences[KEY_FORECAST_SKYSIGHT_SATELLITE_LIGHTNING_ENABLED]
+                    ?: FORECAST_SKYSIGHT_SATELLITE_LIGHTNING_ENABLED_DEFAULT,
+            skySightSatelliteAnimateEnabled =
+                preferences[KEY_FORECAST_SKYSIGHT_SATELLITE_ANIMATE_ENABLED]
+                    ?: FORECAST_SKYSIGHT_SATELLITE_ANIMATE_ENABLED_DEFAULT,
+            skySightSatelliteHistoryFrames = clampSkySightSatelliteHistoryFrames(
+                preferences[KEY_FORECAST_SKYSIGHT_SATELLITE_HISTORY_FRAMES]
+                    ?: FORECAST_SKYSIGHT_SATELLITE_HISTORY_FRAMES_DEFAULT
+            ),
             selectedPrimaryParameterId = selectedPrimaryParameter,
             selectedSecondaryPrimaryParameterId = selectedSecondaryPrimaryParameter,
             selectedWindParameterId = selectedWindParameter,

@@ -238,6 +238,45 @@ class OgnGliderTrailRepositoryTest {
     }
 
     @Test
+    fun noFreshSamplesAcrossManyTargets_doNotAddSegments() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val clock = FakeClock(monoMs = 0L, wallMs = 0L)
+        val trafficRepository = FakeOgnTrafficRepository()
+        val repository = OgnGliderTrailRepositoryImpl(
+            ognTrafficRepository = trafficRepository,
+            clock = clock,
+            dispatcher = dispatcher
+        )
+
+        clock.setMonoMs(1_000L)
+        trafficRepository.targets.value = (1..40).map { index ->
+            sampleTarget(
+                id = "ID${index.toString().padStart(4, '0')}",
+                timestampMs = 1_000L,
+                latitude = -35.0 - (index * 0.0001),
+                longitude = 149.0 + (index * 0.0001)
+            )
+        }
+        runCurrent()
+
+        clock.setMonoMs(2_000L)
+        trafficRepository.targets.value = (1..40).map { index ->
+            sampleTarget(
+                id = "ID${index.toString().padStart(4, '0')}",
+                timestampMs = 1_000L,
+                latitude = -35.0 - (index * 0.0001),
+                longitude = 149.0 + (index * 0.0001)
+            )
+        }
+        runCurrent()
+
+        assertTrue(repository.segments.value.isEmpty())
+
+        shutdownRepository(trafficRepository)
+        runCurrent()
+    }
+
+    @Test
     fun normalizesTargetIdForSegmentSourceAndConsecutiveSampling() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val clock = FakeClock(monoMs = 0L, wallMs = 0L)

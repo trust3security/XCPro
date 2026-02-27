@@ -1,0 +1,389 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.13/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+Configuration on demand is an incubating feature.
+Reusing configuration cache.
+> Task :app:preBuild UP-TO-DATE
+> Task :core:ui:preBuild UP-TO-DATE
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :dfcards-library:preBuild UP-TO-DATE
+> Task :core:common:preBuild UP-TO-DATE
+> Task :core:geometry:preBuild UP-TO-DATE
+> Task :core:time:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :core:geometry:preDebugBuild UP-TO-DATE
+> Task :dfcards-library:preDebugBuild UP-TO-DATE
+> Task :feature:map:preBuild UP-TO-DATE
+> Task :core:time:preDebugBuild UP-TO-DATE
+> Task :core:common:preDebugBuild UP-TO-DATE
+> Task :core:ui:preDebugBuild UP-TO-DATE
+> Task :feature:map:preDebugBuild UP-TO-DATE
+> Task :feature:variometer:cleanTest UP-TO-DATE
+> Task :core:ui:cleanTest UP-TO-DATE
+> Task :app:cleanTest UP-TO-DATE
+> Task :core:geometry:cleanTest UP-TO-DATE
+> Task :feature:profile:cleanTest UP-TO-DATE
+> Task :core:time:cleanTest UP-TO-DATE
+> Task :core:common:cleanTest UP-TO-DATE
+> Task :feature:map:cleanTest UP-TO-DATE
+> Task :dfcards-library:cleanTest UP-TO-DATE
+> Task :feature:profile:preBuild UP-TO-DATE
+> Task :feature:variometer:preBuild UP-TO-DATE
+> Task :feature:profile:preDebugBuild UP-TO-DATE
+> Task :feature:variometer:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugResValues
+> Task :core:common:processDebugNavigationResources
+> Task :core:geometry:processDebugNavigationResources
+> Task :dfcards-library:processDebugNavigationResources
+> Task :core:ui:processDebugNavigationResources
+> Task :feature:map:processDebugNavigationResources
+> Task :core:time:processDebugNavigationResources
+> Task :app:generateDebugBuildConfig
+> Task :feature:variometer:processDebugNavigationResources
+> Task :core:common:generateDebugResValues
+> Task :feature:profile:processDebugNavigationResources
+> Task :core:ui:generateDebugResValues
+> Task :core:time:generateDebugResValues
+> Task :feature:map:generateDebugResValues
+> Task :feature:profile:generateDebugResValues
+> Task :dfcards-library:generateDebugResValues
+> Task :core:geometry:generateDebugResValues
+> Task :core:ui:generateDebugResources
+> Task :core:common:generateDebugResources
+> Task :feature:profile:generateDebugResources
+> Task :feature:map:generateDebugResources
+> Task :core:time:generateDebugResources
+> Task :dfcards-library:generateDebugResources
+> Task :core:geometry:generateDebugResources
+> Task :feature:profile:writeDebugAarMetadata
+> Task :core:common:writeDebugAarMetadata
+> Task :core:geometry:writeDebugAarMetadata
+> Task :core:ui:writeDebugAarMetadata
+> Task :dfcards-library:writeDebugAarMetadata
+> Task :feature:map:writeDebugAarMetadata
+> Task :feature:variometer:writeDebugAarMetadata
+> Task :core:time:writeDebugAarMetadata
+> Task :feature:variometer:generateDebugResValues
+> Task :app:generateDebugResources
+> Task :app:createDebugCompatibleScreenManifests
+> Task :feature:variometer:generateDebugResources
+> Task :dfcards-library:extractDeepLinksDebug
+> Task :core:geometry:extractDeepLinksDebug
+> Task :core:common:extractDeepLinksDebug
+> Task :app:extractDeepLinksDebug
+> Task :core:time:extractDeepLinksDebug
+> Task :core:ui:extractDeepLinksDebug
+> Task :feature:map:extractDeepLinksDebug
+> Task :feature:profile:packageDebugResources
+> Task :core:common:packageDebugResources
+> Task :core:geometry:packageDebugResources
+> Task :core:ui:packageDebugResources
+> Task :core:time:packageDebugResources
+> Task :feature:variometer:extractDeepLinksDebug
+> Task :dfcards-library:packageDebugResources
+> Task :core:common:compileDebugLibraryResources
+> Task :feature:profile:extractDeepLinksDebug
+> Task :feature:map:packageDebugResources
+> Task :core:geometry:compileDebugLibraryResources
+> Task :core:geometry:processDebugManifest
+> Task :feature:variometer:packageDebugResources
+> Task :app:packageDebugResources
+> Task :core:geometry:parseDebugLocalResources
+> Task :dfcards-library:parseDebugLocalResources
+> Task :core:geometry:generateDebugRFile
+> Task :feature:profile:processDebugManifest
+> Task :core:ui:compileDebugLibraryResources
+> Task :dfcards-library:compileDebugLibraryResources
+> Task :core:common:processDebugManifest
+> Task :core:time:compileDebugLibraryResources
+> Task :feature:variometer:processDebugManifest
+> Task :core:ui:processDebugManifest
+> Task :dfcards-library:processDebugManifest
+> Task :core:common:parseDebugLocalResources
+> Task :feature:map:processDebugManifest
+> Task :feature:profile:compileDebugLibraryResources
+> Task :core:time:parseDebugLocalResources
+> Task :dfcards-library:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:geometry:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :feature:variometer:compileDebugLibraryResources
+> Task :core:ui:parseDebugLocalResources
+> Task :core:time:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :feature:profile:parseDebugLocalResources
+> Task :dfcards-library:generateDebugRFile
+> Task :feature:variometer:parseDebugLocalResources
+> Task :core:time:processDebugManifest
+> Task :app:mapDebugSourceSetPaths
+> Task :core:common:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:geometry:javaPreCompileDebug
+> Task :core:common:generateDebugRFile
+> Task :feature:map:parseDebugLocalResources
+> Task :core:ui:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:time:generateDebugRFile
+> Task :core:ui:generateDebugRFile
+> Task :core:time:javaPreCompileDebug
+> Task :feature:map:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:processDebugNavigationResources
+> Task :core:common:generateDebugBuildConfig
+> Task :feature:profile:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :feature:map:generateDebugBuildConfig
+> Task :feature:variometer:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :feature:map:generateDebugRFile
+> Task :dfcards-library:javaPreCompileDebug
+> Task :feature:profile:generateDebugRFile
+> Task :feature:variometer:javaPreCompileDebug
+> Task :feature:profile:javaPreCompileDebug
+> Task :app:parseDebugLocalResources
+> Task :app:javaPreCompileDebug
+> Task :app:compileDebugNavigationResources
+> Task :core:common:javaPreCompileDebug
+> Task :core:ui:javaPreCompileDebug
+> Task :core:time:mergeDebugShaders
+> Task :dfcards-library:mergeDebugShaders
+> Task :app:mergeDebugShaders
+> Task :dfcards-library:compileDebugShaders NO-SOURCE
+> Task :core:time:compileDebugShaders NO-SOURCE
+> Task :app:checkDebugAarMetadata
+> Task :dfcards-library:generateDebugAssets UP-TO-DATE
+> Task :core:time:generateDebugAssets UP-TO-DATE
+> Task :core:common:mergeDebugShaders
+> Task :core:geometry:mergeDebugShaders
+> Task :feature:map:mergeDebugShaders
+> Task :feature:profile:mergeDebugShaders
+> Task :core:ui:mergeDebugShaders
+> Task :feature:variometer:generateDebugRFile
+> Task :app:preDebugUnitTestBuild UP-TO-DATE
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :feature:map:compileDebugShaders NO-SOURCE
+> Task :core:geometry:compileDebugShaders NO-SOURCE
+> Task :core:ui:compileDebugShaders NO-SOURCE
+> Task :core:ui:generateDebugAssets UP-TO-DATE
+> Task :feature:profile:compileDebugShaders NO-SOURCE
+> Task :feature:profile:generateDebugAssets UP-TO-DATE
+> Task :core:common:compileDebugShaders NO-SOURCE
+> Task :core:geometry:generateDebugAssets UP-TO-DATE
+> Task :feature:map:generateDebugAssets UP-TO-DATE
+> Task :core:common:generateDebugAssets UP-TO-DATE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :dfcards-library:preDebugUnitTestBuild UP-TO-DATE
+> Task :core:geometry:mergeDebugAssets
+> Task :feature:map:compileDebugLibraryResources
+> Task :core:time:mergeDebugAssets
+> Task :feature:variometer:mergeDebugShaders
+> Task :core:common:preDebugUnitTestBuild UP-TO-DATE
+> Task :feature:variometer:compileDebugShaders NO-SOURCE
+> Task :feature:variometer:generateDebugAssets UP-TO-DATE
+> Task :feature:variometer:mergeDebugAssets
+> Task :feature:map:mergeDebugAssets
+> Task :core:common:javaPreCompileDebugUnitTest
+> Task :core:geometry:preDebugUnitTestBuild UP-TO-DATE
+> Task :feature:map:javaPreCompileDebug
+> Task :core:ui:mergeDebugAssets
+> Task :core:common:mergeDebugAssets
+> Task :core:ui:preDebugUnitTestBuild UP-TO-DATE
+> Task :core:time:preDebugUnitTestBuild UP-TO-DATE
+> Task :feature:map:generateDebugUnitTestAssets UP-TO-DATE
+> Task :app:javaPreCompileDebugUnitTest
+> Task :feature:map:preDebugUnitTestBuild UP-TO-DATE
+> Task :dfcards-library:javaPreCompileDebugUnitTest
+> Task :feature:profile:mergeDebugAssets
+> Task :core:ui:javaPreCompileDebugUnitTest
+> Task :dfcards-library:mergeDebugAssets
+> Task :core:geometry:javaPreCompileDebugUnitTest
+> Task :feature:map:generateDebugUnitTestResValues
+> Task :core:geometry:generateDebugUnitTestStubRFile
+> Task :feature:map:generateDebugUnitTestResources
+> Task :core:time:generateDebugUnitTestStubRFile
+> Task :feature:profile:generateDebugUnitTestAssets UP-TO-DATE
+> Task :feature:profile:preDebugUnitTestBuild UP-TO-DATE
+> Task :feature:map:javaPreCompileDebugUnitTest
+> Task :core:time:javaPreCompileDebugUnitTest
+> Task :feature:map:mergeDebugUnitTestAssets
+> Task :feature:profile:generateDebugUnitTestResValues
+> Task :core:common:generateDebugUnitTestStubRFile
+> Task :feature:profile:mapDebugUnitTestSourceSetPaths
+> Task :feature:profile:checkDebugUnitTestAarMetadata
+> Task :feature:variometer:generateDebugUnitTestAssets UP-TO-DATE
+> Task :feature:variometer:preDebugUnitTestBuild UP-TO-DATE
+> Task :feature:profile:generateDebugUnitTestResources
+> Task :feature:profile:javaPreCompileDebugUnitTest
+> Task :core:ui:generateDebugUnitTestStubRFile
+> Task :feature:map:checkDebugUnitTestAarMetadata
+> Task :feature:map:mapDebugUnitTestSourceSetPaths
+> Task :feature:variometer:generateDebugUnitTestResValues
+> Task :app:mergeDebugAssets
+> Task :dfcards-library:generateDebugUnitTestStubRFile
+> Task :feature:variometer:javaPreCompileDebugUnitTest
+> Task :feature:profile:mergeDebugUnitTestAssets
+> Task :feature:variometer:generateDebugUnitTestResources
+> Task :feature:variometer:mergeDebugUnitTestAssets
+> Task :feature:variometer:mapDebugUnitTestSourceSetPaths
+> Task :feature:variometer:checkDebugUnitTestAarMetadata
+> Task :feature:profile:processDebugUnitTestManifest
+> Task :feature:variometer:processDebugUnitTestManifest
+> Task :feature:map:processDebugUnitTestManifest
+> Task :app:processDebugMainManifest
+> Task :app:processDebugUnitTestManifest
+> Task :app:processDebugManifest
+> Task :app:processDebugManifestForPackage
+> Task :feature:map:mergeDebugUnitTestResources
+> Task :feature:profile:mergeDebugUnitTestResources
+> Task :feature:variometer:mergeDebugUnitTestResources
+> Task :app:mergeDebugResources
+> Task :feature:variometer:processDebugUnitTestResources
+> Task :feature:profile:processDebugUnitTestResources
+> Task :feature:profile:packageDebugUnitTestForUnitTest
+> Task :feature:variometer:packageDebugUnitTestForUnitTest
+> Task :feature:map:processDebugUnitTestResources
+> Task :feature:variometer:generateDebugUnitTestConfig
+> Task :feature:profile:generateDebugUnitTestConfig
+> Task :feature:map:packageDebugUnitTestForUnitTest
+> Task :feature:map:generateDebugUnitTestConfig
+> Task :app:processDebugResources
+> Task :app:packageDebugUnitTestForUnitTest
+> Task :app:generateDebugUnitTestConfig
+> Task :core:geometry:compileDebugKotlin
+> Task :core:geometry:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:time:compileDebugKotlin
+> Task :core:time:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:geometry:processDebugJavaRes
+> Task :core:time:processDebugJavaRes
+> Task :core:time:bundleLibRuntimeToJarDebug
+> Task :core:geometry:bundleLibRuntimeToJarDebug
+> Task :core:time:bundleLibCompileToJarDebug
+> Task :core:geometry:bundleLibCompileToJarDebug
+> Task :core:time:compileDebugUnitTestKotlin NO-SOURCE
+> Task :core:geometry:compileDebugUnitTestKotlin NO-SOURCE
+> Task :core:geometry:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:time:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:time:processDebugUnitTestJavaRes NO-SOURCE
+> Task :core:geometry:processDebugUnitTestJavaRes NO-SOURCE
+> Task :core:geometry:testDebugUnitTest NO-SOURCE
+> Task :core:time:testDebugUnitTest NO-SOURCE
+> Task :dfcards-library:kspDebugKotlin
+> Task :dfcards-library:compileDebugKotlin
+> Task :dfcards-library:processDebugJavaRes
+> Task :dfcards-library:compileDebugJavaWithJavac
+> Task :dfcards-library:transformDebugClassesWithAsm
+> Task :dfcards-library:bundleLibRuntimeToJarDebug
+> Task :dfcards-library:bundleLibCompileToJarDebug
+> Task :dfcards-library:kspDebugUnitTestKotlin
+> Task :core:common:compileDebugKotlin
+> Task :core:common:processDebugJavaRes
+> Task :core:common:compileDebugJavaWithJavac
+> Task :core:common:bundleLibCompileToJarDebug
+> Task :core:common:bundleLibRuntimeToJarDebug
+> Task :core:common:compileDebugUnitTestKotlin NO-SOURCE
+> Task :core:common:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:common:processDebugUnitTestJavaRes NO-SOURCE
+> Task :dfcards-library:compileDebugUnitTestKotlin
+> Task :core:common:testDebugUnitTest NO-SOURCE
+> Task :dfcards-library:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :dfcards-library:hiltAggregateDepsDebugUnitTest
+> Task :dfcards-library:hiltJavaCompileDebugUnitTest NO-SOURCE
+> Task :dfcards-library:processDebugUnitTestJavaRes
+> Task :dfcards-library:transformDebugUnitTestClassesWithAsm
+> Task :core:ui:compileDebugKotlin
+> Task :core:ui:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:ui:bundleLibRuntimeToJarDebug
+> Task :core:ui:bundleLibCompileToJarDebug
+> Task :core:ui:processDebugJavaRes
+> Task :core:ui:compileDebugUnitTestKotlin NO-SOURCE
+> Task :core:ui:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:ui:processDebugUnitTestJavaRes NO-SOURCE
+> Task :core:ui:testDebugUnitTest NO-SOURCE
+> Task :dfcards-library:testDebugUnitTest
+> Task :feature:variometer:kspDebugKotlin
+> Task :feature:profile:kspDebugKotlin
+> Task :feature:variometer:compileDebugKotlin
+> Task :feature:variometer:processDebugJavaRes
+> Task :feature:variometer:compileDebugJavaWithJavac
+> Task :feature:variometer:transformDebugClassesWithAsm
+> Task :feature:variometer:bundleLibCompileToJarDebug
+> Task :feature:variometer:bundleLibRuntimeToJarDebug
+> Task :feature:variometer:kspDebugUnitTestKotlin NO-SOURCE
+> Task :feature:variometer:compileDebugUnitTestKotlin NO-SOURCE
+> Task :feature:variometer:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :feature:variometer:hiltAggregateDepsDebugUnitTest
+> Task :feature:variometer:hiltJavaCompileDebugUnitTest NO-SOURCE
+> Task :feature:variometer:processDebugUnitTestJavaRes NO-SOURCE
+> Task :feature:variometer:transformDebugUnitTestClassesWithAsm
+> Task :feature:variometer:testDebugUnitTest
+> Task :feature:profile:compileDebugKotlin
+> Task :feature:profile:processDebugJavaRes
+> Task :feature:profile:compileDebugJavaWithJavac
+> Task :feature:profile:transformDebugClassesWithAsm
+> Task :feature:profile:bundleLibCompileToJarDebug
+> Task :feature:profile:bundleLibRuntimeToJarDebug
+> Task :feature:profile:kspDebugUnitTestKotlin NO-SOURCE
+> Task :feature:profile:compileDebugUnitTestKotlin NO-SOURCE
+> Task :feature:profile:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :feature:profile:hiltAggregateDepsDebugUnitTest
+> Task :feature:profile:hiltJavaCompileDebugUnitTest NO-SOURCE
+> Task :feature:profile:processDebugUnitTestJavaRes NO-SOURCE
+> Task :feature:profile:transformDebugUnitTestClassesWithAsm
+> Task :feature:profile:testDebugUnitTest
+> Task :feature:map:kspDebugKotlin
+> Task :feature:map:compileDebugKotlin
+w: file:///C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/flightdata/FlightMgmtPreferencesViewModel.kt:30:10 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/gestures/CustomMapGestures.kt:278:53 Condition is always 'true'.
+w: file:///C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/gestures/CustomMapGestures.kt:278:77 Condition is always 'true'.
+w: file:///C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/hawk/HawkVarioUseCase.kt:23:33 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/map/MapCameraController.kt:89:13 'fun setPadding(p0: Int, p1: Int, p2: Int, p3: Int): Unit' is deprecated. Deprecated in Java.
+w: file:///C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/map/helpers/GliderPaddingHelper.kt:18:13 'fun setPadding(p0: Int, p1: Int, p2: Int, p3: Int): Unit' is deprecated. Deprecated in Java.
+w: file:///C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/map/ui/OverlayPanels.kt:171:17 Condition is always 'false'.
+w: file:///C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ColorsViewModel.kt:29:10 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ColorsViewModel.kt:31:18 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/screens/navdrawer/OrientationSettingsScreen.kt:44:47 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/screens/navdrawer/lookandfeel/LookAndFeelViewModel.kt:29:10 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/sensors/FlightStateRepository.kt:54:18 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/ui/theme/ThemeViewModel.kt:28:10 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/ui/theme/ThemeViewModel.kt:30:18 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/utils/AirspaceParser.kt:58:27 Only safe (?.) or non-null asserted (!!.) calls are allowed on a nullable receiver of type 'kotlin.String?'.
+w: file:///C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/weather/wind/data/WindOverrideRepository.kt:84:16 Condition is always 'true'.
+w: file:///C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/weather/wind/data/WindSensorFusionRepository.kt:84:18 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+
+> Task :feature:map:processDebugJavaRes
+> Task :feature:map:compileDebugJavaWithJavac
+> Task :feature:map:transformDebugClassesWithAsm
+> Task :feature:map:bundleLibCompileToJarDebug
+> Task :feature:map:bundleLibRuntimeToJarDebug
+> Task :feature:map:kspDebugUnitTestKotlin
+> Task :app:kspDebugKotlin
+> Task :app:compileDebugKotlin
+> Task :app:compileDebugJavaWithJavac
+> Task :app:hiltAggregateDepsDebug
+
+> Task :feature:map:compileDebugUnitTestKotlin
+w: file:///C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/test/java/com/example/xcpro/sensors/FlightStateRepositoryAglFreshnessTest.kt:70:13 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/test/java/com/example/xcpro/sensors/FlightStateRepositoryAglFreshnessTest.kt:110:13 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+
+> Task :feature:map:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :feature:map:hiltAggregateDepsDebugUnitTest
+> Task :feature:map:hiltJavaCompileDebugUnitTest NO-SOURCE
+> Task :app:hiltJavaCompileDebug
+> Task :feature:map:processDebugUnitTestJavaRes
+> Task :app:processDebugJavaRes
+> Task :app:bundleDebugClassesToCompileJar
+> Task :app:transformDebugClassesWithAsm
+> Task :app:bundleDebugClassesToRuntimeJar
+> Task :app:kspDebugUnitTestKotlin
+> Task :feature:map:transformDebugUnitTestClassesWithAsm
+> Task :app:compileDebugUnitTestKotlin
+> Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:hiltAggregateDepsDebugUnitTest
+> Task :app:hiltJavaCompileDebugUnitTest NO-SOURCE
+> Task :app:processDebugUnitTestJavaRes
+> Task :app:transformDebugUnitTestClassesWithAsm
+> Task :app:testDebugUnitTest
+> Task :feature:map:testDebugUnitTest
+
+[Incubating] Problems report is available at: file:///C:/Users/Asus/AndroidStudioProjects/XCPro/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.13/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 2m 16s
+259 actionable tasks: 250 executed, 9 up-to-date
+Configuration cache entry reused.

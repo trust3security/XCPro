@@ -54,11 +54,24 @@ class AdsbTrafficOverlay(
     private var currentIconSizePx: Int = clampAdsbIconSizePx(initialIconSizePx)
     private val motionSmoother = AdsbDisplayMotionSmoother()
     private var frameScheduled = false
-    private val frameCallback = Choreographer.FrameCallback { frameTimeNanos ->
+    private var lastRenderedFrameMonoMs: Long = Long.MIN_VALUE
+    private val frameCallback = Choreographer.FrameCallback frame@{ _ ->
         frameScheduled = false
-        val nowMonoMs = frameTimeNanos / 1_000_000L
+        // Use one monotonic clock source for both immediate and choreographer frames.
+        val nowMonoMs = nowMonoMs()
+        val hasActiveAnimations = motionSmoother.hasActiveAnimations(nowMonoMs)
+        if (!hasActiveAnimations) {
+            return@frame
+        }
+        if (!shouldRenderAnimationFrame(nowMonoMs)) {
+            if (map.style != null) {
+                scheduleFrameLoop()
+            }
+            return@frame
+        }
         renderFrame(nowMonoMs)
-        if (motionSmoother.hasActiveAnimations(nowMonoMs) && map.style != null) {
+        lastRenderedFrameMonoMs = nowMonoMs
+        if (map.style != null && motionSmoother.hasActiveAnimations(nowMonoMs)) {
             scheduleFrameLoop()
         }
     }
@@ -139,6 +152,7 @@ class AdsbTrafficOverlay(
             return
         }
         renderFrame(nowMonoMs)
+        lastRenderedFrameMonoMs = nowMonoMs
         if (hasAnimation) {
             scheduleFrameLoop()
         } else {
@@ -172,6 +186,7 @@ class AdsbTrafficOverlay(
     fun clear() {
         stopFrameLoop()
         motionSmoother.clear()
+        lastRenderedFrameMonoMs = Long.MIN_VALUE
         val style = map.style ?: return
         val source = style.getSourceAs<GeoJsonSource>(SOURCE_ID) ?: return
         source.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
@@ -180,6 +195,7 @@ class AdsbTrafficOverlay(
     fun cleanup() {
         stopFrameLoop()
         motionSmoother.clear()
+        lastRenderedFrameMonoMs = Long.MIN_VALUE
         val style = map.style ?: return
         try {
             style.removeLayer(LABEL_LAYER_ID)
@@ -282,6 +298,12 @@ class AdsbTrafficOverlay(
         frameScheduled = false
     }
 
+    private fun shouldRenderAnimationFrame(nowMonoMs: Long): Boolean {
+        val lastRendered = lastRenderedFrameMonoMs
+        if (lastRendered == Long.MIN_VALUE) return true
+        return nowMonoMs - lastRendered >= ANIMATION_FRAME_INTERVAL_MS
+    }
+
     private fun iconScaleForPx(iconSizePx: Int): Float =
         iconSizePx.toFloat() / ICON_BITMAP_BASE_SIZE_PX.toFloat()
 
@@ -306,6 +328,7 @@ class AdsbTrafficOverlay(
         private const val LABEL_TEXT_OFFSET_BASE_X = 0.9f
         private const val LABEL_TEXT_COLOR = "#FFF3D4"
         private const val LABEL_HALO_COLOR = "#2B1204"
+        private const val ANIMATION_FRAME_INTERVAL_MS = 66L
         private val EMERGENCY_ICON_COLOR: Int = Color.parseColor(AdsbProximityColorPolicy.EMERGENCY_HEX)
     }
 }

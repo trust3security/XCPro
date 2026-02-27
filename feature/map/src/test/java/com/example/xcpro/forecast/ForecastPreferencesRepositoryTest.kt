@@ -2,11 +2,11 @@ package com.example.xcpro.forecast
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -24,7 +24,7 @@ class ForecastPreferencesRepositoryTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
 
     @Before
-    fun setUp() = runBlocking {
+    fun setUp() = runBlocking(Dispatchers.IO) {
         val repository = ForecastPreferencesRepository(context)
         repository.setOverlayEnabled(false)
         repository.setOpacity(FORECAST_OPACITY_DEFAULT)
@@ -43,11 +43,6 @@ class ForecastPreferencesRepositoryTest {
         repository.setSelectedRegion(DEFAULT_FORECAST_REGION_CODE)
         repository.setFollowTimeOffsetMinutes(FORECAST_FOLLOW_TIME_OFFSET_MINUTES_DEFAULT)
         repository.setAutoTimeEnabled(FORECAST_AUTO_TIME_DEFAULT)
-    }
-
-    @After
-    fun tearDown() {
-        context.filesDir.resolve("datastore")?.takeIf { it.exists() }?.deleteRecursively()
     }
 
     @Test

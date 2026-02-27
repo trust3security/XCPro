@@ -7,7 +7,8 @@ $escapedRoot = [Regex]::Escape($resolvedRoot)
 
 $candidatePatterns = @(
     "GradleWorkerMain",
-    "GradleWrapperMain"
+    "GradleWrapperMain",
+    "org.gradle.launcher.daemon.bootstrap.GradleDaemon"
 )
 
 $javaProcesses = Get-CimInstance Win32_Process -Filter "Name='java.exe'" -ErrorAction SilentlyContinue

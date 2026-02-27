@@ -32,6 +32,7 @@ import kotlin.math.roundToInt
 internal data class MapWidgetOffsetStates(
     val hamburgerOffset: MutableState<Offset>,
     val flightModeOffset: MutableState<Offset>,
+    val settingsOffset: MutableState<Offset>,
     val ballastOffset: MutableState<Offset>
 )
 
@@ -46,9 +47,11 @@ internal data class MapScreenWidgetLayoutBinding(
     val screenHeightPx: Float,
     val hamburgerOffsetState: MutableState<Offset>,
     val flightModeOffsetState: MutableState<Offset>,
+    val settingsOffsetState: MutableState<Offset>,
     val ballastOffsetState: MutableState<Offset>,
     val onHamburgerOffsetChange: (Offset) -> Unit,
     val onFlightModeOffsetChange: (Offset) -> Unit,
+    val onSettingsOffsetChange: (Offset) -> Unit,
     val onBallastOffsetChange: (Offset) -> Unit
 )
 
@@ -67,6 +70,7 @@ internal fun rememberMapScreenWidgetLayoutBinding(
     val resolvedWidgetOffsets = widgetOffsets ?: MapWidgetOffsets(
         sideHamburger = OffsetPx.Zero,
         flightMode = OffsetPx.Zero,
+        settingsShortcut = OffsetPx.Zero,
         ballast = OffsetPx.Zero
     )
     val offsetStates = rememberMapWidgetOffsets(resolvedWidgetOffsets)
@@ -78,6 +82,10 @@ internal fun rememberMapScreenWidgetLayoutBinding(
         offsetStates.flightModeOffset.value = offset
         widgetLayoutViewModel.updateOffset(MapWidgetId.FLIGHT_MODE, offset.toOffsetPx())
     }
+    val onSettingsOffsetChange: (Offset) -> Unit = { offset ->
+        offsetStates.settingsOffset.value = offset
+        widgetLayoutViewModel.updateOffset(MapWidgetId.SETTINGS_SHORTCUT, offset.toOffsetPx())
+    }
     val onBallastOffsetChange: (Offset) -> Unit = { offset ->
         offsetStates.ballastOffset.value = offset
         widgetLayoutViewModel.updateOffset(MapWidgetId.BALLAST, offset.toOffsetPx())
@@ -87,9 +95,11 @@ internal fun rememberMapScreenWidgetLayoutBinding(
         screenHeightPx = screenHeightPx,
         hamburgerOffsetState = offsetStates.hamburgerOffset,
         flightModeOffsetState = offsetStates.flightModeOffset,
+        settingsOffsetState = offsetStates.settingsOffset,
         ballastOffsetState = offsetStates.ballastOffset,
         onHamburgerOffsetChange = onHamburgerOffsetChange,
         onFlightModeOffsetChange = onFlightModeOffsetChange,
+        onSettingsOffsetChange = onSettingsOffsetChange,
         onBallastOffsetChange = onBallastOffsetChange
     )
 }
@@ -100,6 +110,7 @@ internal fun rememberMapWidgetOffsets(
 ): MapWidgetOffsetStates {
     val hamburgerOffsetState = remember { mutableStateOf(widgetOffsets.sideHamburger.toComposeOffset()) }
     val flightModeOffsetState = remember { mutableStateOf(widgetOffsets.flightMode.toComposeOffset()) }
+    val settingsOffsetState = remember { mutableStateOf(widgetOffsets.settingsShortcut.toComposeOffset()) }
     val ballastOffsetState = remember { mutableStateOf(widgetOffsets.ballast.toComposeOffset()) }
 
     LaunchedEffect(widgetOffsets.sideHamburger) {
@@ -108,6 +119,9 @@ internal fun rememberMapWidgetOffsets(
     LaunchedEffect(widgetOffsets.flightMode) {
         flightModeOffsetState.value = widgetOffsets.flightMode.toComposeOffset()
     }
+    LaunchedEffect(widgetOffsets.settingsShortcut) {
+        settingsOffsetState.value = widgetOffsets.settingsShortcut.toComposeOffset()
+    }
     LaunchedEffect(widgetOffsets.ballast) {
         ballastOffsetState.value = widgetOffsets.ballast.toComposeOffset()
     }
@@ -115,6 +129,7 @@ internal fun rememberMapWidgetOffsets(
     return MapWidgetOffsetStates(
         hamburgerOffset = hamburgerOffsetState,
         flightModeOffset = flightModeOffsetState,
+        settingsOffset = settingsOffsetState,
         ballastOffset = ballastOffsetState
     )
 }

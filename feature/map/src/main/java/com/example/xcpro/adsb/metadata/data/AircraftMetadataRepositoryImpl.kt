@@ -49,7 +49,9 @@ class AircraftMetadataRepositoryImpl @Inject constructor(
         }
 
         val missing = normalized.filterNot(fromDb::containsKey)
-        scheduleOnDemandLookup(missing = missing, nowMonoMs = clock.nowMonoMs())
+        val nowMonoMs = clock.nowMonoMs()
+        pruneOnDemandAttemptCache(nowMonoMs)
+        scheduleOnDemandLookup(missing = missing, nowMonoMs = nowMonoMs)
         return fromDb
     }
 
@@ -114,11 +116,33 @@ class AircraftMetadataRepositoryImpl @Inject constructor(
         }
     }
 
-    private companion object {
+    private fun pruneOnDemandAttemptCache(nowMonoMs: Long) {
+        if (onDemandAttemptByIcao24.isEmpty()) return
+
+        onDemandAttemptByIcao24.entries.removeIf { (_, attempt) ->
+            val ageMs = nowMonoMs - attempt.attemptedAtMonoMs
+            ageMs >= ON_DEMAND_ATTEMPT_ENTRY_TTL_MS
+        }
+
+        val overflow = onDemandAttemptByIcao24.size - ON_DEMAND_ATTEMPT_CACHE_MAX_ENTRIES
+        if (overflow <= 0) return
+
+        val oldestKeys = onDemandAttemptByIcao24.entries
+            .asSequence()
+            .sortedBy { it.value.attemptedAtMonoMs }
+            .take(overflow)
+            .map { it.key }
+            .toList()
+        oldestKeys.forEach(onDemandAttemptByIcao24::remove)
+    }
+
+    companion object {
         val ICAO24_REGEX = Regex("[0-9a-f]{6}")
-        const val ON_DEMAND_MAX_BATCH_SIZE = 8
-        const val ON_DEMAND_NOT_FOUND_RETRY_COOLDOWN_MS = 10L * 60L * 1000L
-        const val ON_DEMAND_ERROR_RETRY_COOLDOWN_MS = 60L * 1000L
+        internal const val ON_DEMAND_MAX_BATCH_SIZE = 8
+        internal const val ON_DEMAND_NOT_FOUND_RETRY_COOLDOWN_MS = 10L * 60L * 1000L
+        internal const val ON_DEMAND_ERROR_RETRY_COOLDOWN_MS = 60L * 1000L
+        internal const val ON_DEMAND_ATTEMPT_ENTRY_TTL_MS = 6L * 60L * 60L * 1000L
+        internal const val ON_DEMAND_ATTEMPT_CACHE_MAX_ENTRIES = 2_048
     }
 
     private val onDemandInFlightByIcao24 = ConcurrentHashMap.newKeySet<String>()

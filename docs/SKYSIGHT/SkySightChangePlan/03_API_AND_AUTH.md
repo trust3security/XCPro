@@ -1,65 +1,44 @@
-# API and auth contract (stub)
+# API and Auth (Current Status)
 
-This document intentionally avoids hardcoding secrets. Do NOT embed API keys, usernames, or passwords in code.
+Date: 2026-02-24
+Owner: XCPro Team
+Status: Updated to match implemented runtime
 
-## Known auth endpoint (from integration notes)
-POST https://skysight.io/api/auth
-Headers:
-- Content-Type: application/json
-- X-API-KEY: <partner key>
+## Purpose
 
-Body (example):
-{
-  "username": "<user email or username>",
-  "password": "<password>"
-}
+Document the API and auth assumptions currently used by XCPro SkySight forecast and
+satellite overlays, and define the boundaries for future auth hardening work.
 
-TODO: Confirm response shape (examples)
-Option A (token):
-{ "token": "...", "expiresAt": 1234567890 }
+## Current Implementation Summary
 
-Option B (cookie/session):
-- Set-Cookie headers
-- A short JSON body
+Forecast adapter:
+- Provider adapter: `SkySightForecastProviderAdapter`.
+- Contract details and parameter mappings are maintained in:
+  - `docs/SKYSIGHT/SkySightChangePlan/09_SKYSIGHT_API_CONTRACT_DETAILS.md`.
+- Runtime uses captured endpoint and field contracts for catalog, tiles, legends, and point values.
 
-Codex must:
-- Implement the auth call with Retrofit/OkHttp.
-- Capture the response safely (never log secrets).
-- Store the resulting session in secure storage owned by the auth repository.
-- Expose AuthState via StateFlow.
+Satellite overlay:
+- Runtime overlay owner: `MapOverlayManager` -> `SkySightSatelliteOverlay`.
+- Tile contract is maintained in:
+  - `docs/SKYSIGHT/SkySightChangePlan/18_SATELLITE_OVERLAY_IMPLEMENTATION_PLAN.md`.
+- Hosts are allowlisted in MapLibre network configuration, including `satellite.skysight.io`.
 
-## Required API capabilities for XC Pro integration
-To render raster tiles, we need:
-1) A way to list available forecast layers/parameters for a region and/or subscription.
-2) For a chosen parameter + time, a raster tile URL template suitable for MapLibre (XYZ/WMTS/TMS) OR a WMS endpoint convertible to tiles.
-3) Optional: a legend/scale endpoint for the chosen parameter.
-4) Optional: a point-query endpoint returning the numeric value at (lat, lon, time, parameter).
+## Auth Posture (Current)
 
-### Contract placeholders (fill in once confirmed)
-GET /api/forecast/parameters
--> returns list of parameters, units, availability window, etc.
+- No user-entered SkySight credential flow is implemented in XCPro runtime.
+- No session-cookie login path is implemented for overlays.
+- Runtime behavior depends on captured contract compatibility and configured app key/header policy.
 
-GET /api/forecast/tileTemplate?parameterId=...&time=...
--> returns:
-{
-  "urlTemplate": "https://.../{z}/{x}/{y}.png?...",
-  "minZoom": 0,
-  "maxZoom": 12,
-  "attribution": "...",
-  "requiresAuthHeader": true/false
-}
+## Security and Compliance Guardrails
 
-GET /api/forecast/legend?parameterId=...
--> returns color stops + labels + unit
+- Do not log secrets, tokens, or sensitive headers.
+- Keep provider-specific literals and legal attribution handling limited to required integration internals.
+- Any move to credentialed auth/session flow must be documented first and reviewed against:
+  - `docs/SKYSIGHT/SkySightChangePlan/08_RISKS_LEGAL_AND_COMPLIANCE.md`
+  - `docs/SKYSIGHT/SkySightChangePlan/SKYSIGHT_RISK_AND_GATES.md`
 
-GET /api/forecast/value?parameterId=...&time=...&lat=...&lon=...
--> returns { "value": 3.2, "unit": "m/s", "validTime": ... }
+## Follow-up Work (If Needed)
 
-## Critical integration detail: headers vs URL tokens
-MapLibre raster tile fetch may not support per-source custom headers cleanly.
-
-Preferred solutions (choose based on SkySight API support):
-A) Signed URL / query-token tiles (no custom headers required by MapLibre).
-B) Configure MapLibre/OkHttp globally to attach auth headers for SkySight tile domains only.
-C) If neither works, use an approved gateway/proxy that injects headers (ensure ToS/permission).
-
+1. Add explicit token/session contract evidence if SkySight requires authenticated map tile access.
+2. Add failure-mode matrix for auth-expired vs network-failed vs coverage-unavailable.
+3. Add tests for auth header presence/absence policy per build variant.

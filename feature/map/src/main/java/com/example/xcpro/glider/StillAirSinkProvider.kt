@@ -32,15 +32,16 @@ class PolarStillAirSinkProvider @Inject constructor(
 ) : StillAirSinkProvider {
 
     override fun sinkAtSpeed(airspeedMs: Double): Double? {
-        val model: GliderModel = gliderRepository.selectedModel.value ?: return null
+        val model: GliderModel = gliderRepository.effectiveModel.value
         val config: GliderConfig = gliderRepository.config.value
         if (!GliderSpeedBoundsResolver.hasPolar(model, config)) return null
         return runCatching { PolarCalculator.sinkMs(airspeedMs, model, config) }
             .getOrNull()
+            ?.takeIf { it.isFinite() }
     }
 
     override fun iasBoundsMs(): SpeedBoundsMs? {
-        val model: GliderModel = gliderRepository.selectedModel.value ?: return null
+        val model: GliderModel = gliderRepository.effectiveModel.value
         val config: GliderConfig = gliderRepository.config.value
         return GliderSpeedBoundsResolver.resolveIasBoundsMs(model, config)
     }

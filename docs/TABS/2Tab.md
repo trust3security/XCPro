@@ -15,22 +15,39 @@ Status: Implemented (tab-hosted controls)
 - Tab 3: `Scia`
 - Tab 4: placeholder (`Tab 4`)
 
-2. SkySight tab now hosts the full forecast controls previously shown in the separate forecast FAB sheet:
+2. SkySight tab now hosts in-flight overlay controls:
 - non-wind overlays enable/toggle
 - wind overlay enable + wind parameter selection
+- `Sat View` toggle (switches map to `Satellite` style while enabled)
+- SkySight satellite API overlay controls:
+  - enable/disable satellite overlays
+  - imagery (clouds) toggle
+  - radar toggle
+  - lightning toggle
+  - animation toggle
+  - history frames (1-3, 10-minute stepping)
 - time selection, auto-time, and follow-time offset
-- opacity
-- wind marker display mode + size
 - legends, loading state, warning, and error messaging
 
-3. The MapScreen forecast FAB shortcut was removed.
-4. SkySight controls are available only in the bottom tabs sheet (`SkySight` tab), keeping one control surface.
+3. General SkySight settings own:
+- opacity
+- wind display mode (Arrow/Barb)
+- wind marker size
+4. The MapScreen forecast FAB shortcut was removed.
+5. SkySight controls are available only in the bottom tabs sheet (`SkySight` tab), keeping one control surface.
 
 ## Current Product Behavior
 
 1. SkySight options are managed from the bottom tabs sheet (`SkySight` tab).
 2. SkySight warning/error messages are visible inside the tab, including map-center region coverage warnings.
 3. Forecast overlay runtime rendering still follows existing forecast SSOT and overlay manager wiring.
+4. `Sat View` toggle remains transient map-style behavior from SkySight tab:
+- On enable: apply `Satellite` style.
+- On disable: restore last non-satellite style (fallback `Topo`).
+5. SkySight satellite API overlays are rendered through dedicated runtime overlay wiring
+   (`MapOverlayManager` -> `SkySightSatelliteOverlay`) and can run in parallel with forecast/wind overlays.
+6. When SkySight satellite overlays are active, OGN glider markers use a white-contrast icon mode
+   for map readability. This switch is applied lazily on each target's next normal OGN update.
 
 ## Architecture and SSOT
 
@@ -49,9 +66,10 @@ Status: Implemented (tab-hosted controls)
 1. `feature/map/src/main/java/com/example/xcpro/map/ui/ForecastOverlayBottomSheet.kt`
 2. `feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabs.kt`
 3. `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
-4. `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentOverlays.kt`
-5. `feature/map/src/main/java/com/example/xcpro/map/components/MapActionButtons.kt`
-6. `feature/map/src/main/java/com/example/xcpro/map/components/MapActionButtonItems.kt`
+4. `feature/map/src/main/java/com/example/xcpro/map/SkySightSatelliteOverlay.kt`
+5. `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
+6. `feature/map/src/main/java/com/example/xcpro/map/MapScreenState.kt`
+7. `feature/map/src/main/java/com/example/xcpro/map/MapLifecycleManager.kt`
 
 ## Verification
 

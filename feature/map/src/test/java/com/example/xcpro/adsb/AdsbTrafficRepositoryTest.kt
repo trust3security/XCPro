@@ -787,6 +787,101 @@ class AdsbTrafficRepositoryTest {
     }
 
     @Test
+    fun disabledState_centerAndOwnshipUpdates_doNotReselectCachedTargets() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val provider = SequenceProvider(
+            listOf(
+                ProviderResult.Success(
+                    response = OpenSkyResponse(
+                        timeSec = 1_710_000_000L,
+                        states = listOf(
+                            state(
+                                icao24 = "abc123",
+                                latitude = -33.8687,
+                                longitude = 151.2092,
+                                altitudeM = 500.0,
+                                speedMps = 40.0
+                            )
+                        )
+                    ),
+                    httpCode = 200,
+                    remainingCredits = null
+                )
+            )
+        )
+        val repository = AdsbTrafficRepositoryImpl(
+            providerClient = provider,
+            tokenRepository = FakeTokenRepository(),
+            clock = FakeClock(monoMs = 0L, wallMs = 0L),
+            dispatcher = dispatcher
+        )
+
+        repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
+        repository.setEnabled(true)
+        runCurrent()
+        assertEquals(1, repository.targets.value.size)
+
+        repository.setEnabled(false)
+        runCurrent()
+        repository.updateCenter(latitude = -34.2000, longitude = 150.5000)
+        repository.updateOwnshipOrigin(latitude = -34.2000, longitude = 150.5000)
+        repository.updateOwnshipAltitudeMeters(3_000.0)
+        runCurrent()
+
+        assertEquals(1, repository.targets.value.size)
+        assertEquals("abc123", repository.targets.value.first().id.raw)
+        assertEquals(1, provider.callCount)
+    }
+
+    @Test
+    fun reenable_afterDeferredCenterUpdate_reselectsImmediatelyFromCache() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val provider = SequenceProvider(
+            listOf(
+                ProviderResult.Success(
+                    response = OpenSkyResponse(
+                        timeSec = 1_710_000_000L,
+                        states = listOf(
+                            state(
+                                icao24 = "abc123",
+                                latitude = -33.8687,
+                                longitude = 151.2092,
+                                altitudeM = 500.0,
+                                speedMps = 40.0
+                            )
+                        )
+                    ),
+                    httpCode = 200,
+                    remainingCredits = null
+                )
+            )
+        )
+        val repository = AdsbTrafficRepositoryImpl(
+            providerClient = provider,
+            tokenRepository = FakeTokenRepository(),
+            clock = FakeClock(monoMs = 0L, wallMs = 0L),
+            dispatcher = dispatcher
+        )
+
+        repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
+        repository.setEnabled(true)
+        runCurrent()
+        assertEquals(1, repository.targets.value.size)
+
+        repository.setEnabled(false)
+        runCurrent()
+        repository.updateCenter(latitude = -34.2000, longitude = 150.5000)
+        runCurrent()
+        assertEquals(1, repository.targets.value.size)
+
+        repository.setEnabled(true)
+        runCurrent()
+
+        assertTrue(repository.targets.value.isEmpty())
+        repository.stop()
+    }
+
+    @Test
     fun centerUpdate_reselectsCachedTargetsWithoutWaitingForNextPoll() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val provider = SequenceProvider(
@@ -1104,6 +1199,65 @@ class AdsbTrafficRepositoryTest {
         assertEquals(2, repository.snapshot.value.withinRadiusCount)
         assertEquals(1, repository.snapshot.value.withinVerticalCount)
         assertEquals(1, repository.snapshot.value.filteredByVerticalCount)
+        assertEquals(1, provider.callCount)
+        repository.stop()
+    }
+
+    @Test
+    fun ownshipAltitudeJitter_isThrottledUntilMinInterval() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val clock = FakeClock(monoMs = 0L, wallMs = 0L)
+        val provider = SequenceProvider(
+            listOf(
+                ProviderResult.Success(
+                    response = OpenSkyResponse(
+                        timeSec = 1_710_000_000L,
+                        states = listOf(
+                            state(
+                                icao24 = "abc123",
+                                latitude = -33.8687,
+                                longitude = 151.2092,
+                                altitudeM = 1_100.0,
+                                speedMps = 40.0
+                            )
+                        )
+                    ),
+                    httpCode = 200,
+                    remainingCredits = null
+                )
+            )
+        )
+        val repository = AdsbTrafficRepositoryImpl(
+            providerClient = provider,
+            tokenRepository = FakeTokenRepository(),
+            clock = clock,
+            dispatcher = dispatcher
+        )
+
+        repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
+        repository.updateDisplayFilters(
+            maxDistanceKm = 20,
+            verticalAboveMeters = 100.0,
+            verticalBelowMeters = 100.0
+        )
+        repository.setEnabled(true)
+        runCurrent()
+        assertEquals(1, repository.targets.value.size)
+
+        clock.setMonoMs(0L)
+        repository.updateOwnshipAltitudeMeters(990.0)
+        runCurrent()
+        assertTrue(repository.targets.value.isEmpty())
+
+        clock.setMonoMs(100L)
+        repository.updateOwnshipAltitudeMeters(1_005.0)
+        runCurrent()
+        assertTrue(repository.targets.value.isEmpty())
+
+        clock.setMonoMs(1_100L)
+        repository.updateOwnshipAltitudeMeters(1_006.0)
+        runCurrent()
+        assertEquals(1, repository.targets.value.size)
         assertEquals(1, provider.callCount)
         repository.stop()
     }

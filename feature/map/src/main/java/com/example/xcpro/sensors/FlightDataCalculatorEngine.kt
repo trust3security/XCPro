@@ -60,14 +60,18 @@ internal class FlightDataCalculatorEngine(
         internal const val DIAGNOSTICS_EMIT_MIN_INTERVAL_MS = 100L
     }
     internal val locationHistory = mutableListOf<LocationWithTime>()
-    internal val aglCalculator = SimpleAglCalculator(context)  // KISS: SRTM terrain database
+    internal val aglCalculator = SimpleAglCalculator(
+        context = context,
+        nowMonoMsProvider = { clock.nowMonoMs() }
+    )  // KISS: SRTM terrain database
     internal val baroCalculator = BarometricAltitudeCalculator()
     internal val filters = FlightFilters()
     internal val flightHelpers = FlightCalculationHelpers(
         scope = scope,
         aglCalculator = aglCalculator,
         locationHistory = locationHistory,
-        sinkProvider = sinkProvider
+        sinkProvider = sinkProvider,
+        nowMonoMsProvider = { clock.nowMonoMs() }
     )
     internal val flightMetricsUseCase = CalculateFlightMetricsUseCase(
         flightHelpers = flightHelpers,

@@ -58,3 +58,27 @@ internal fun BoxScope.HamburgerMenu(
             .zIndex(12f)
     )
 }
+
+@Composable
+internal fun BoxScope.SettingsShortcut(
+    widgetManager: MapUIWidgetManager,
+    settingsOffset: MutableState<Offset>,
+    screenWidthPx: Float,
+    screenHeightPx: Float,
+    onSettingsTap: () -> Unit,
+    onOffsetChange: (Offset) -> Unit,
+    isUiEditMode: Boolean
+) {
+    MapUIWidgets.SettingsShortcut(
+        widgetManager = widgetManager,
+        settingsOffset = settingsOffset.value,
+        screenWidthPx = screenWidthPx,
+        screenHeightPx = screenHeightPx,
+        onSettingsTap = onSettingsTap,
+        onOffsetChange = onOffsetChange,
+        isEditMode = isUiEditMode,
+        modifier = Modifier
+            .align(Alignment.TopStart)
+            .zIndex(12f)
+    )
+}

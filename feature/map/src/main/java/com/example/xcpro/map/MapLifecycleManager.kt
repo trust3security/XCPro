@@ -47,6 +47,7 @@ class MapLifecycleManager(
             Lifecycle.Event.ON_RESUME -> {
                 dispatchMapViewResumeIfNeeded()
                 restartSensorsIfAllowed()
+                locationManager.onDisplayFrame()
                 Log.d(TAG, "Map view onResume - sensors checked for restart")
             }
             Lifecycle.Event.ON_PAUSE -> {
@@ -98,6 +99,7 @@ class MapLifecycleManager(
         }
         if (state.isAtLeast(Lifecycle.State.RESUMED)) {
             restartSensorsIfAllowed()
+            locationManager.onDisplayFrame()
         }
     }
 
@@ -226,6 +228,8 @@ class MapLifecycleManager(
         mapState.forecastSecondaryOverlay = null
         mapState.forecastWindOverlay?.cleanup()
         mapState.forecastWindOverlay = null
+        mapState.skySightSatelliteOverlay?.cleanup()
+        mapState.skySightSatelliteOverlay = null
         mapState.weatherRainOverlay?.cleanup()
         mapState.weatherRainOverlay = null
         mapState.blueLocationOverlay?.cleanup()
@@ -234,6 +238,8 @@ class MapLifecycleManager(
         mapState.snailTrailOverlay = null
         mapState.distanceCirclesOverlay?.cleanup()
         mapState.distanceCirclesOverlay = null
+        mapState.scaleBarController?.clear()
+        mapState.scaleBarController = null
         mapState.scaleBarPlugin = null
         mapState.scaleBarWidget = null
     }

@@ -89,6 +89,12 @@ class ForecastOverlayRepository @Inject constructor(
                 secondaryPrimaryOverlayEnabled = secondaryPrimaryEnabled,
                 windOverlayEnabled = windEnabled,
                 windDisplayMode = preferences.windDisplayMode,
+                skySightSatelliteOverlayEnabled = preferences.skySightSatelliteOverlayEnabled,
+                skySightSatelliteImageryEnabled = preferences.skySightSatelliteImageryEnabled,
+                skySightSatelliteRadarEnabled = preferences.skySightSatelliteRadarEnabled,
+                skySightSatelliteLightningEnabled = preferences.skySightSatelliteLightningEnabled,
+                skySightSatelliteAnimateEnabled = preferences.skySightSatelliteAnimateEnabled,
+                skySightSatelliteHistoryFrames = preferences.skySightSatelliteHistoryFrames,
                 selectedRegionCode = normalizedRegionCode,
                 autoTimeEnabled = preferences.autoTimeEnabled,
                 followTimeOffsetMinutes = preferences.followTimeOffsetMinutes,
@@ -582,7 +588,9 @@ class ForecastOverlayRepository @Inject constructor(
     private fun selectionInputFlow(): Flow<SelectionInput> =
         preferencesRepository.preferencesFlow.flatMapLatest { preferences ->
             val tickFlow: Flow<Long> = if (
-                preferences.overlayEnabled || preferences.windOverlayEnabled
+                preferences.overlayEnabled ||
+                    preferences.windOverlayEnabled ||
+                    preferences.skySightSatelliteOverlayEnabled
             ) {
                 autoTimeTickerFlow()
             } else {

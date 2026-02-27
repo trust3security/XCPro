@@ -9,6 +9,64 @@ import org.junit.Test
 class OgnTrafficRepositoryPolicyTest {
 
     @Test
+    fun shouldRefreshOgnDistanceForCenterUpdate_returnsFalseWithoutTargets() {
+        val shouldRefresh = shouldRefreshOgnDistanceForCenterUpdate(
+            hasTargets = false,
+            previousRefreshLat = 0.0,
+            previousRefreshLon = 0.0,
+            nextCenterLat = 0.001,
+            nextCenterLon = 0.0,
+            lastRefreshMonoMs = 1_000L,
+            nowMonoMs = 2_000L,
+            minMoveMeters = 200.0,
+            minIntervalMs = 5_000L
+        )
+
+        assertFalse(shouldRefresh)
+    }
+
+    @Test
+    fun shouldRefreshOgnDistanceForCenterUpdate_usesMovementOrIntervalGate() {
+        val smallMoveAndShortInterval = shouldRefreshOgnDistanceForCenterUpdate(
+            hasTargets = true,
+            previousRefreshLat = 0.0,
+            previousRefreshLon = 0.0,
+            nextCenterLat = 0.0005,
+            nextCenterLon = 0.0,
+            lastRefreshMonoMs = 1_000L,
+            nowMonoMs = 2_000L,
+            minMoveMeters = 200.0,
+            minIntervalMs = 5_000L
+        )
+        val largeMove = shouldRefreshOgnDistanceForCenterUpdate(
+            hasTargets = true,
+            previousRefreshLat = 0.0,
+            previousRefreshLon = 0.0,
+            nextCenterLat = 0.01,
+            nextCenterLon = 0.0,
+            lastRefreshMonoMs = 1_000L,
+            nowMonoMs = 2_000L,
+            minMoveMeters = 200.0,
+            minIntervalMs = 5_000L
+        )
+        val elapsedInterval = shouldRefreshOgnDistanceForCenterUpdate(
+            hasTargets = true,
+            previousRefreshLat = 0.0,
+            previousRefreshLon = 0.0,
+            nextCenterLat = 0.0005,
+            nextCenterLon = 0.0,
+            lastRefreshMonoMs = 1_000L,
+            nowMonoMs = 6_500L,
+            minMoveMeters = 200.0,
+            minIntervalMs = 5_000L
+        )
+
+        assertFalse(smallMoveAndShortInterval)
+        assertTrue(largeMove)
+        assertTrue(elapsedInterval)
+    }
+
+    @Test
     fun isWithinReceiveRadiusMeters_prefersRequestedCenterWhenAvailable() {
         val within = isWithinReceiveRadiusMeters(
             targetLat = -1.34,
@@ -168,6 +226,58 @@ class OgnTrafficRepositoryPolicyTest {
         val merged = mergeOgnIdentity(ddbIdentity = ddb, parsedIdentity = parsed)
 
         assertEquals(1, merged?.aircraftTypeCode)
+    }
+
+    @Test
+    fun shouldAcceptOgnSourceTimestamp_rejectsSourceTimeRewind() {
+        val accepted = shouldAcceptOgnSourceTimestamp(
+            previousSourceTimestampWallMs = 10_000L,
+            incomingSourceTimestampWallMs = 9_000L,
+            rewindToleranceMs = 0L
+        )
+
+        assertFalse(accepted)
+    }
+
+    @Test
+    fun shouldAcceptOgnSourceTimestamp_acceptsWhenSourceTimestampMissing() {
+        val accepted = shouldAcceptOgnSourceTimestamp(
+            previousSourceTimestampWallMs = 10_000L,
+            incomingSourceTimestampWallMs = null,
+            rewindToleranceMs = 0L
+        )
+
+        assertTrue(accepted)
+    }
+
+    @Test
+    fun isPlausibleOgnMotion_rejectsTeleportLikeSpeed() {
+        val plausible = isPlausibleOgnMotion(
+            previousLatitude = 0.0,
+            previousLongitude = 0.0,
+            previousSourceTimestampWallMs = 1_000L,
+            incomingLatitude = 1.0,
+            incomingLongitude = 0.0,
+            incomingSourceTimestampWallMs = 2_000L,
+            maxPlausibleSpeedMps = 250.0
+        )
+
+        assertFalse(plausible)
+    }
+
+    @Test
+    fun isPlausibleOgnMotion_acceptsReasonableSpeed() {
+        val plausible = isPlausibleOgnMotion(
+            previousLatitude = 0.0,
+            previousLongitude = 0.0,
+            previousSourceTimestampWallMs = 1_000L,
+            incomingLatitude = 0.001,
+            incomingLongitude = 0.0,
+            incomingSourceTimestampWallMs = 2_000L,
+            maxPlausibleSpeedMps = 250.0
+        )
+
+        assertTrue(plausible)
     }
 
     @Test

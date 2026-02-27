@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.xcpro.forecast.ForecastAuthCheckResult
 import com.example.xcpro.forecast.FORECAST_OPACITY_DEFAULT
+import com.example.xcpro.forecast.FORECAST_WIND_OVERLAY_SCALE_DEFAULT
 import com.example.xcpro.forecast.FORECAST_WIND_DISPLAY_MODE_DEFAULT
 import com.example.xcpro.forecast.DEFAULT_FORECAST_REGION_CODE
 import com.example.xcpro.forecast.ForecastRegionOption
@@ -47,6 +48,13 @@ class ForecastSettingsViewModel @Inject constructor(
             initialValue = FORECAST_OPACITY_DEFAULT
         )
 
+    val windOverlayScale: StateFlow<Float> = useCase.windOverlayScaleFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = FORECAST_WIND_OVERLAY_SCALE_DEFAULT
+        )
+
     val windDisplayMode: StateFlow<ForecastWindDisplayMode> = useCase.windDisplayModeFlow
         .stateIn(
             scope = viewModelScope,
@@ -70,6 +78,12 @@ class ForecastSettingsViewModel @Inject constructor(
     fun setOpacity(opacity: Float) {
         viewModelScope.launch {
             useCase.setOpacity(opacity)
+        }
+    }
+
+    fun setWindOverlayScale(scale: Float) {
+        viewModelScope.launch {
+            useCase.setWindOverlayScale(scale)
         }
     }
 

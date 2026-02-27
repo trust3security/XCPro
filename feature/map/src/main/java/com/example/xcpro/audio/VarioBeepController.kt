@@ -26,6 +26,7 @@ class VarioBeepController(
         private const val TRANSITION_SMOOTHING = 0.3  // Smooth frequency transitions
         private const val TONE_ATTACK_MS = 5L
         private const val TONE_RELEASE_MS = 5L
+        private const val STOP_JOIN_TIMEOUT_MS = 250L
     }
 
     // Current audio state
@@ -67,11 +68,26 @@ class VarioBeepController(
      * Stop the beep controller
      */
     fun stop() {
-        isRunning = false
-        beepJob?.cancel()
-        beepJob = null
-        toneGenerator.stop()
+        stopInternal(awaitLoopQuiescence = true)
         Log.i(TAG, "Beep controller stopped")
+    }
+
+    private fun stopInternal(awaitLoopQuiescence: Boolean) {
+        isRunning = false
+        val runningJob = beepJob
+        beepJob = null
+        runningJob?.cancel()
+        if (awaitLoopQuiescence && runningJob != null) {
+            runCatching {
+                runBlocking {
+                    withTimeoutOrNull(STOP_JOIN_TIMEOUT_MS) {
+                        runningJob.join()
+                    }
+                }
+            }
+        }
+        toneGenerator.stop()
+        lastMode = null
     }
 
     /**
@@ -274,7 +290,7 @@ class VarioBeepController(
      * Release resources
      */
     fun release() {
-        stop()
+        stopInternal(awaitLoopQuiescence = true)
         internalScope.cancel()
     }
 }

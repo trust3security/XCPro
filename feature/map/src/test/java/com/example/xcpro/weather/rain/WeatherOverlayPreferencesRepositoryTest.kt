@@ -2,11 +2,11 @@ package com.example.xcpro.weather.rain
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -24,7 +24,7 @@ class WeatherOverlayPreferencesRepositoryTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
 
     @Before
-    fun setUp() = runBlocking {
+    fun setUp() = runBlocking(Dispatchers.IO) {
         val repository = WeatherOverlayPreferencesRepository(context)
         repository.setEnabled(false)
         repository.setOpacity(WEATHER_RAIN_OPACITY_DEFAULT)
@@ -32,11 +32,6 @@ class WeatherOverlayPreferencesRepositoryTest {
         repository.setAnimationWindow(WeatherRainAnimationWindow.TEN_MINUTES)
         repository.setAnimationSpeed(WeatherRainAnimationSpeed.NORMAL)
         repository.setTransitionQuality(WeatherRainTransitionQuality.BALANCED)
-    }
-
-    @After
-    fun tearDown() {
-        context.filesDir.resolve("datastore")?.takeIf { it.exists() }?.deleteRecursively()
     }
 
     @Test

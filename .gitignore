@@ -29,6 +29,7 @@ local.properties
 
 # Local build/test transcripts
 build-*.txt
+build-*.log
 run.log
 test-run.log
 logs/
@@ -75,4 +76,6 @@ tmp_adsb_direct_head.csv
 tmp_adsb_complete_5mb.csv
 tmp_adsb_complete_head.csv
 tmp_adsb_*.csv
+tmp_*
+tmp_*/
 .tmp_phase*.log

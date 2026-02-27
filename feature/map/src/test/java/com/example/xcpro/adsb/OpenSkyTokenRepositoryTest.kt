@@ -2,16 +2,20 @@ package com.example.xcpro.adsb
 
 import com.example.xcpro.core.time.FakeClock
 import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import com.example.xcpro.testing.OkHttpClientRegistry
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -20,6 +24,12 @@ import org.mockito.kotlin.whenever
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class OpenSkyTokenRepositoryTest {
+    private val okHttpClients = OkHttpClientRegistry()
+
+    @After
+    fun tearDown() {
+        okHttpClients.shutdownAll()
+    }
 
     @Test
     fun concurrentRequests_shareSingleTokenFetch() = runTest {
@@ -31,10 +41,14 @@ class OpenSkyTokenRepositoryTest {
             )
         )
         val networkFetchCount = AtomicInteger(0)
-        val client = OkHttpClient.Builder()
+        val requestStarted = CompletableDeferred<Unit>()
+        val allowResponse = CompletableDeferred<Unit>()
+        val client = okHttpClients.register(
+            OkHttpClient.Builder()
             .addInterceptor { chain ->
                 networkFetchCount.incrementAndGet()
-                Thread.sleep(200L)
+                requestStarted.complete(Unit)
+                runBlocking { allowResponse.await() }
                 Response.Builder()
                     .request(chain.request())
                     .protocol(Protocol.HTTP_1_1)
@@ -44,6 +58,7 @@ class OpenSkyTokenRepositoryTest {
                     .build()
             }
             .build()
+        )
 
         val repository = OpenSkyTokenRepositoryImpl(
             credentialsRepository = credentialsRepository,
@@ -53,11 +68,14 @@ class OpenSkyTokenRepositoryTest {
         )
 
         val tokens = coroutineScope {
-            (1..8).map {
+            val inFlight = (1..8).map {
                 async(Dispatchers.Default) {
                     repository.getValidTokenOrNull()
                 }
-            }.awaitAll()
+            }
+            requestStarted.await()
+            allowResponse.complete(Unit)
+            inFlight.awaitAll()
         }
 
         assertTrue(tokens.all { it == "token-123" })

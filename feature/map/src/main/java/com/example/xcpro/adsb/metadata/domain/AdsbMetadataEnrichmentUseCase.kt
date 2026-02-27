@@ -9,6 +9,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.withContext
@@ -23,32 +24,24 @@ class AdsbMetadataEnrichmentUseCase @Inject constructor(
     fun targetsWithMetadata(
         adsbTargets: Flow<List<AdsbTrafficUiModel>>
     ): Flow<List<AdsbTrafficUiModel>> {
-        return combine(adsbTargets, aircraftMetadataRepository.metadataRevision) { targets, _ ->
-            targets
-        }.mapLatest { targets ->
-            if (targets.isEmpty()) {
-                return@mapLatest emptyList()
+        val lookupOrder = adsbTargets
+            .map(::prioritizedLookupOrder)
+            .distinctUntilChanged()
+
+        val metadataByIcao24 = combine(
+            lookupOrder,
+            aircraftMetadataRepository.metadataRevision
+        ) { orderedIcao24s, _ ->
+            orderedIcao24s
+        }.mapLatest { orderedIcao24s ->
+            if (orderedIcao24s.isEmpty()) return@mapLatest emptyMap()
+            withContext(ioDispatcher) {
+                aircraftMetadataRepository.getMetadataFor(orderedIcao24s)
             }
-            val lookupOrder = prioritizedLookupOrder(targets)
-            val metadataByIcao24 = withContext(ioDispatcher) {
-                aircraftMetadataRepository.getMetadataFor(lookupOrder)
-            }
-            targets.map { target ->
-                val metadata = metadataByIcao24[target.id.raw]
-                val resolvedTypecode = metadata?.typecode
-                val resolvedIcaoAircraftType = metadata?.icaoAircraftType
-                if (
-                    target.metadataTypecode == resolvedTypecode &&
-                    target.metadataIcaoAircraftType == resolvedIcaoAircraftType
-                ) {
-                    target
-                } else {
-                    target.copy(
-                        metadataTypecode = resolvedTypecode,
-                        metadataIcaoAircraftType = resolvedIcaoAircraftType
-                    )
-                }
-            }
+        }
+
+        return combine(adsbTargets, metadataByIcao24) { targets, metadata ->
+            applyMetadataToTargets(targets = targets, metadataByIcao24 = metadata)
         }
     }
 
@@ -59,21 +52,39 @@ class AdsbMetadataEnrichmentUseCase @Inject constructor(
         val selectedTarget = combine(selectedIcao24, adsbTargets) { selected, targets ->
             selected?.let { id -> targets.firstOrNull { it.id == id } }
         }
+        val selectedIcao24Raw = selectedTarget
+            .map { target -> target?.id?.raw }
+            .distinctUntilChanged()
+
+        val selectedMetadata = combine(
+            selectedIcao24Raw,
+            aircraftMetadataRepository.metadataRevision
+        ) { selectedRawIcao24, _ ->
+            selectedRawIcao24
+        }.mapLatest { selectedRawIcao24 ->
+            if (selectedRawIcao24 == null) {
+                return@mapLatest null
+            }
+            val metadata = withContext(ioDispatcher) {
+                aircraftMetadataRepository.getMetadataFor(listOf(selectedRawIcao24))[selectedRawIcao24]
+            }
+            SelectedMetadataLookup(
+                selectedRawIcao24 = selectedRawIcao24,
+                metadata = metadata
+            )
+        }
 
         return combine(
             selectedTarget,
-            metadataSyncRepository.syncState,
-            aircraftMetadataRepository.metadataRevision
-        ) { target, syncState, _ ->
-            target to syncState
-        }.mapLatest { (target, syncState) ->
+            selectedMetadata,
+            metadataSyncRepository.syncState
+        ) { target, metadataLookup, syncState ->
             if (target == null) {
-                return@mapLatest null
+                return@combine null
             }
-
-            val metadata = withContext(ioDispatcher) {
-                aircraftMetadataRepository.getMetadataFor(listOf(target.id.raw))[target.id.raw]
-            }
+            val metadata = metadataLookup
+                ?.takeIf { it.selectedRawIcao24 == target.id.raw }
+                ?.metadata
 
             val availability = when {
                 metadata != null -> MetadataAvailability.Ready
@@ -113,7 +124,7 @@ class AdsbMetadataEnrichmentUseCase @Inject constructor(
                 metadataAvailability = availability,
                 metadataSyncState = syncState
             )
-        }
+        }.distinctUntilChanged()
     }
 
     private fun prioritizedLookupOrder(targets: List<AdsbTrafficUiModel>): List<String> {
@@ -139,11 +150,39 @@ class AdsbMetadataEnrichmentUseCase @Inject constructor(
         }
 
         return buildList(highPriority.size + regular.size + metadataHinted.size) {
-            addAll(highPriority)
-            addAll(regular)
-            addAll(metadataHinted)
+            addAll(highPriority.sorted())
+            addAll(regular.sorted())
+            addAll(metadataHinted.sorted())
         }
     }
+
+    private fun applyMetadataToTargets(
+        targets: List<AdsbTrafficUiModel>,
+        metadataByIcao24: Map<String, AircraftMetadata>
+    ): List<AdsbTrafficUiModel> {
+        if (targets.isEmpty()) return emptyList()
+        return targets.map { target ->
+            val metadata = metadataByIcao24[target.id.raw]
+            val resolvedTypecode = metadata?.typecode
+            val resolvedIcaoAircraftType = metadata?.icaoAircraftType
+            if (
+                target.metadataTypecode == resolvedTypecode &&
+                target.metadataIcaoAircraftType == resolvedIcaoAircraftType
+            ) {
+                target
+            } else {
+                target.copy(
+                    metadataTypecode = resolvedTypecode,
+                    metadataIcaoAircraftType = resolvedIcaoAircraftType
+                )
+            }
+        }
+    }
+
+    private data class SelectedMetadataLookup(
+        val selectedRawIcao24: String,
+        val metadata: AircraftMetadata?
+    )
 
     private companion object {
         val AMBIGUOUS_CATEGORY_VALUES = setOf(0, 1, 13)

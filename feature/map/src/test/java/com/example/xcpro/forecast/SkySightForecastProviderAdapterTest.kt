@@ -5,10 +5,12 @@ import java.time.ZoneId
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import okhttp3.OkHttpClient
+import com.example.xcpro.testing.OkHttpClientRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -17,10 +19,16 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 class SkySightForecastProviderAdapterTest {
+    private val okHttpClients = OkHttpClientRegistry()
+
+    @After
+    fun tearDown() {
+        okHttpClients.shutdownAll()
+    }
 
     private fun createAdapter(): SkySightForecastProviderAdapter {
         return SkySightForecastProviderAdapter(
-            httpClient = OkHttpClient(),
+            httpClient = okHttpClients.register(OkHttpClient()),
             dispatcher = Dispatchers.IO
         )
     }

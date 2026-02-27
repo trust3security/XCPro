@@ -2,10 +2,10 @@ package com.example.xcpro.forecast
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -23,7 +23,7 @@ class ToggleForecastPrimaryOverlaySelectionUseCaseTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
 
     @Before
-    fun setUp() = runBlocking {
+    fun setUp() = runBlocking(Dispatchers.IO) {
         val repository = ForecastPreferencesRepository(context)
         repository.setOverlayEnabled(false)
         repository.setOpacity(FORECAST_OPACITY_DEFAULT)
@@ -38,11 +38,6 @@ class ToggleForecastPrimaryOverlaySelectionUseCaseTest {
         repository.setSelectedRegion(DEFAULT_FORECAST_REGION_CODE)
         repository.setFollowTimeOffsetMinutes(FORECAST_FOLLOW_TIME_OFFSET_MINUTES_DEFAULT)
         repository.setAutoTimeEnabled(FORECAST_AUTO_TIME_DEFAULT)
-    }
-
-    @After
-    fun tearDown() {
-        context.filesDir.resolve("datastore")?.takeIf { it.exists() }?.deleteRecursively()
     }
 
     @Test
@@ -134,6 +129,25 @@ class ToggleForecastPrimaryOverlaySelectionUseCaseTest {
         val current = repository.currentPreferences()
 
         assertEquals("wstar_bsratio", current.selectedPrimaryParameterId.value)
+        assertTrue(current.secondaryPrimaryOverlayEnabled)
+        assertEquals("accrain", current.selectedSecondaryPrimaryParameterId.value)
+    }
+
+    @Test
+    fun toggle_convergenceThenRain_enablesTwoOverlayPair() = runTest {
+        val repository = ForecastPreferencesRepository(context)
+        val useCase = ToggleForecastPrimaryOverlaySelectionUseCase(
+            preferencesRepository = repository,
+            catalogPort = PrimaryOnlyCatalogPort()
+        )
+
+        repository.setSelectedPrimaryParameterId(ForecastParameterId("wblmaxmin"))
+        repository.setSecondaryPrimaryOverlayEnabled(false)
+
+        useCase(ForecastParameterId("accrain"))
+        val current = repository.currentPreferences()
+
+        assertEquals("wblmaxmin", current.selectedPrimaryParameterId.value)
         assertTrue(current.secondaryPrimaryOverlayEnabled)
         assertEquals("accrain", current.selectedSecondaryPrimaryParameterId.value)
     }

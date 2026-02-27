@@ -21,6 +21,7 @@ internal class TrailProcessor(
     private val replayStore: TrailStore = TrailStore(minDeltaMillis = 0L)
 ) {
     private var lastIsReplay: Boolean? = null
+    private var lastLiveTimeBase: TrailTimeBase? = null
 
     fun resetAll() {
         liveStore.clear()
@@ -29,6 +30,7 @@ internal class TrailProcessor(
         replayWindSmoother.reset()
         circlingResolver.reset()
         lastIsReplay = null
+        lastLiveTimeBase = null
     }
 
     fun update(input: TrailUpdateInput): TrailUpdateResult? {
@@ -39,9 +41,9 @@ internal class TrailProcessor(
         }
         lastIsReplay = input.isReplay
 
-        val gps = input.data.gps
-        val lat = gps?.position?.latitude ?: 0.0
-        val lon = gps?.position?.longitude ?: 0.0
+        val gps = input.data.gps ?: return null
+        val lat = gps.position.latitude
+        val lon = gps.position.longitude
         if (!TrailGeo.isValidCoordinate(lat, lon)) {
             return null
         }
@@ -68,6 +70,16 @@ internal class TrailProcessor(
 
         val store = if (input.isReplay) replayStore else liveStore
         var storeReset = false
+        if (!input.isReplay) {
+            val liveTimeBaseChanged = lastLiveTimeBase != null && lastLiveTimeBase != sampleTime.timeBase
+            if (liveTimeBaseChanged) {
+                liveStore.clear()
+                storeReset = true
+            }
+            lastLiveTimeBase = sampleTime.timeBase
+        } else {
+            lastLiveTimeBase = null
+        }
         var sampleAdded = false
         if ((input.isFlying || input.isReplay) && timestamp > 0L) {
             val sample = TrailSample(
@@ -121,6 +133,7 @@ internal class TrailProcessor(
         replayInterpolator.reset()
         replayWindSmoother.reset()
         circlingResolver.reset()
+        lastLiveTimeBase = null
     }
 
     private fun resolveSampleTime(input: TrailUpdateInput): SampleTime {

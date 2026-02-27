@@ -29,6 +29,7 @@ import com.example.xcpro.adsb.AdsbTrafficUiModel
 import com.example.xcpro.ogn.OgnGliderTrailSegment
 import com.example.xcpro.ogn.OgnTrafficTarget
 import com.example.xcpro.ogn.OgnThermalHotspot
+import com.example.xcpro.ogn.OgnDisplayUpdateMode
 import com.example.xcpro.map.ui.effects.MapComposeEffects
 import com.example.xcpro.profiles.ProfileUiState
 import com.example.xcpro.replay.SessionState
@@ -65,38 +66,48 @@ internal fun MapScreenOverlayEffects(
     ognTargets: List<OgnTrafficTarget>,
     ognOverlayEnabled: Boolean,
     ognThermalHotspots: List<OgnThermalHotspot>,
+    showOgnSciaEnabled: Boolean,
     showOgnThermalsEnabled: Boolean,
+    ognDisplayUpdateMode: OgnDisplayUpdateMode,
     ognGliderTrailSegments: List<OgnGliderTrailSegment>,
     ognIconSizePx: Int,
     adsbTargets: List<AdsbTrafficUiModel>,
     adsbOverlayEnabled: Boolean,
     adsbIconSizePx: Int
 ) {
+    val renderedOgnTargets = if (ognOverlayEnabled) ognTargets else emptyList()
+    val renderedOgnThermals = if (ognOverlayEnabled && showOgnThermalsEnabled) {
+        ognThermalHotspots
+    } else {
+        emptyList()
+    }
+    val renderedOgnTrails = if (ognOverlayEnabled && showOgnSciaEnabled) {
+        ognGliderTrailSegments
+    } else {
+        emptyList()
+    }
+    val renderedAdsbTargets = if (adsbOverlayEnabled) adsbTargets else emptyList()
+
     LaunchedEffect(mapState.mapLibreMap, airspaceState.enabledFiles, airspaceState.classStates) {
         overlayManager.refreshAirspace(mapState.mapLibreMap)
     }
-    LaunchedEffect(ognTargets, ognOverlayEnabled) {
-        overlayManager.updateOgnTrafficTargets(
-            if (ognOverlayEnabled) ognTargets else emptyList()
-        )
+    LaunchedEffect(ognDisplayUpdateMode) {
+        overlayManager.setOgnDisplayUpdateMode(ognDisplayUpdateMode)
     }
-    LaunchedEffect(ognThermalHotspots, ognOverlayEnabled, showOgnThermalsEnabled) {
-        overlayManager.updateOgnThermalHotspots(
-            if (ognOverlayEnabled && showOgnThermalsEnabled) ognThermalHotspots else emptyList()
-        )
+    LaunchedEffect(renderedOgnTargets) {
+        overlayManager.updateOgnTrafficTargets(renderedOgnTargets)
     }
-    LaunchedEffect(ognGliderTrailSegments, ognOverlayEnabled) {
-        overlayManager.updateOgnGliderTrailSegments(
-            if (ognOverlayEnabled) ognGliderTrailSegments else emptyList()
-        )
+    LaunchedEffect(renderedOgnThermals) {
+        overlayManager.updateOgnThermalHotspots(renderedOgnThermals)
+    }
+    LaunchedEffect(renderedOgnTrails) {
+        overlayManager.updateOgnGliderTrailSegments(renderedOgnTrails)
     }
     LaunchedEffect(ognIconSizePx) {
         overlayManager.setOgnIconSizePx(ognIconSizePx)
     }
-    LaunchedEffect(adsbTargets, adsbOverlayEnabled) {
-        overlayManager.updateAdsbTrafficTargets(
-            if (adsbOverlayEnabled) adsbTargets else emptyList()
-        )
+    LaunchedEffect(renderedAdsbTargets) {
+        overlayManager.updateAdsbTrafficTargets(renderedAdsbTargets)
     }
     LaunchedEffect(adsbIconSizePx) {
         overlayManager.setAdsbIconSizePx(adsbIconSizePx)
@@ -115,7 +126,6 @@ internal fun MapVisibilityLifecycleEffect(mapViewModel: MapScreenViewModel) {
                 Lifecycle.Event.ON_START,
                 Lifecycle.Event.ON_RESUME -> mapViewModel.setMapVisible(true)
 
-                Lifecycle.Event.ON_PAUSE,
                 Lifecycle.Event.ON_STOP -> mapViewModel.setMapVisible(false)
 
                 else -> Unit

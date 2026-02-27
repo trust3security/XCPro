@@ -3,13 +3,13 @@ package com.example.xcpro.forecast
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.example.xcpro.core.time.FakeClock
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -33,7 +33,7 @@ class ForecastOverlayRepositoryTest {
     private val testDispatcher = StandardTestDispatcher()
 
     @Before
-    fun setUp() = runBlocking {
+    fun setUp() = runBlocking(Dispatchers.IO) {
         val preferencesRepository = ForecastPreferencesRepository(context)
         preferencesRepository.setOverlayEnabled(false)
         preferencesRepository.setOpacity(FORECAST_OPACITY_DEFAULT)
@@ -51,11 +51,6 @@ class ForecastOverlayRepositoryTest {
         preferencesRepository.setSelectedTimeUtcMs(null)
         preferencesRepository.setFollowTimeOffsetMinutes(FORECAST_FOLLOW_TIME_OFFSET_MINUTES_DEFAULT)
         preferencesRepository.setAutoTimeEnabled(FORECAST_AUTO_TIME_DEFAULT)
-    }
-
-    @After
-    fun tearDown() {
-        context.filesDir.resolve("datastore")?.takeIf { it.exists() }?.deleteRecursively()
     }
 
     @Test

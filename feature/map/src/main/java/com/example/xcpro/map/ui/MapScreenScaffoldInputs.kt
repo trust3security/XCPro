@@ -34,14 +34,13 @@ import com.example.xcpro.qnh.QnhCalibrationState
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.map.model.GpsStatusUiModel
+import com.example.xcpro.navigation.SettingsRoutes
 import com.example.xcpro.adsb.Icao24
 import com.example.xcpro.adsb.AdsbTrafficSnapshot
-import com.example.xcpro.adsb.AdsbTrafficUiModel
 import com.example.xcpro.adsb.AdsbSelectedTargetDetails
 import com.example.xcpro.ogn.OgnTrafficSnapshot
 import com.example.xcpro.ogn.OgnTrafficTarget
 import com.example.xcpro.ogn.OgnThermalHotspot
-import com.example.xcpro.ogn.OgnGliderTrailSegment
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.variometer.layout.VariometerUiState
@@ -56,8 +55,10 @@ internal data class MapScreenScaffoldInputs(
     val mapStyleExpanded: MutableState<Boolean>,
     val settingsExpanded: MutableState<Boolean>,
     val initialMapStyle: String,
+    val currentMapStyleName: String,
     val onDrawerItemSelected: (String) -> Unit,
     val onMapStyleSelected: (String) -> Unit,
+    val onTransientMapStyleSelected: (String) -> Unit,
     val gpsStatus: GpsStatusUiModel,
     val isLoadingWaypoints: Boolean,
     val density: Density,
@@ -81,12 +82,10 @@ internal data class MapScreenScaffoldInputs(
     val showReturnButton: Boolean,
     val showDistanceCircles: Boolean,
     val ognSnapshot: OgnTrafficSnapshot, val ognOverlayEnabled: Boolean,
-    val ognThermalHotspots: List<OgnThermalHotspot>, val showOgnThermalsEnabled: Boolean,
-    val ognGliderTrailSegments: List<OgnGliderTrailSegment>,
-    val adsbSnapshot: AdsbTrafficSnapshot,
-    val adsbOverlayEnabled: Boolean,
-    val selectedOgnTarget: OgnTrafficTarget?,
-    val selectedOgnThermal: OgnThermalHotspot?,
+    val ognThermalHotspots: List<OgnThermalHotspot>, val showOgnSciaEnabled: Boolean,
+    val showOgnThermalsEnabled: Boolean,
+    val adsbSnapshot: AdsbTrafficSnapshot, val adsbOverlayEnabled: Boolean,
+    val selectedOgnTarget: OgnTrafficTarget?, val selectedOgnThermal: OgnThermalHotspot?,
     val selectedAdsbTarget: AdsbSelectedTargetDetails?,
     val isUiEditMode: Boolean,
     val onEditModeChange: (Boolean) -> Unit,
@@ -109,9 +108,11 @@ internal data class MapScreenScaffoldInputs(
     val onVariometerEditFinished: () -> Unit,
     val hamburgerOffset: MutableState<Offset>,
     val flightModeOffset: MutableState<Offset>,
+    val settingsOffset: MutableState<Offset>,
     val ballastOffset: MutableState<Offset>,
     val onHamburgerOffsetChange: (Offset) -> Unit,
     val onFlightModeOffsetChange: (Offset) -> Unit,
+    val onSettingsOffsetChange: (Offset) -> Unit,
     val onBallastOffsetChange: (Offset) -> Unit,
     val taskScreenManager: MapTaskScreenManager,
     val waypointData: List<WaypointData>,
@@ -119,27 +120,25 @@ internal data class MapScreenScaffoldInputs(
     val qnhCalibrationState: QnhCalibrationState,
     val onAutoCalibrateQnh: () -> Unit,
     val onSetManualQnh: (Double) -> Unit,
-    val onToggleOgnTraffic: () -> Unit, val onToggleOgnThermals: () -> Unit,
+    val onToggleOgnTraffic: () -> Unit, val onToggleOgnScia: () -> Unit,
+    val onToggleOgnThermals: () -> Unit,
     val onToggleAdsbTraffic: () -> Unit, val onOgnTargetSelected: (String) -> Unit,
     val onOgnThermalSelected: (String) -> Unit,
     val onAdsbTargetSelected: (Icao24) -> Unit,
-    val onDismissOgnTargetDetails: () -> Unit,
-    val onDismissOgnThermalDetails: () -> Unit,
+    val onDismissOgnTargetDetails: () -> Unit, val onDismissOgnThermalDetails: () -> Unit,
     val onDismissAdsbTargetDetails: () -> Unit,
     val ballastUiState: StateFlow<BallastUiState>,
     val isBallastPillHidden: Boolean,
     val onBallastCommand: (BallastCommand) -> Unit,
     val onHamburgerTap: () -> Unit,
     val onHamburgerLongPress: () -> Unit,
-    val onOpenWeatherSettingsFromTab: () -> Unit,
+    val onSettingsTap: () -> Unit,
     val cardStyle: CardStyle,
     val hiddenCardIds: Set<String>,
     val replayState: StateFlow<SessionState>,
     val showVarioDemoFab: Boolean,
-    val onVarioDemoReferenceClick: () -> Unit,
-    val onVarioDemoSimClick: () -> Unit,
-    val onVarioDemoSim2Click: () -> Unit,
-    val onVarioDemoSim3Click: () -> Unit,
+    val onVarioDemoReferenceClick: () -> Unit, val onVarioDemoSimClick: () -> Unit,
+    val onVarioDemoSim2Click: () -> Unit, val onVarioDemoSim3Click: () -> Unit,
     val showRacingReplayFab: Boolean,
     val onRacingReplayClick: () -> Unit
 )
@@ -169,45 +168,50 @@ internal fun rememberMapScreenScaffoldInputs(
     safeContainerSizeState: MutableState<IntSize>,
     hamburgerOffsetState: MutableState<Offset>,
     flightModeOffsetState: MutableState<Offset>,
+    settingsOffsetState: MutableState<Offset>,
     ballastOffsetState: MutableState<Offset>,
     onHamburgerOffsetChange: (Offset) -> Unit,
     onFlightModeOffsetChange: (Offset) -> Unit,
+    onSettingsOffsetChange: (Offset) -> Unit,
     onBallastOffsetChange: (Offset) -> Unit,
     flightViewModel: FlightDataViewModel,
     flightDataManager: FlightDataManager,
     windArrowState: WindArrowUiState,
     showWindSpeedOnVario: Boolean,
-    cardStyle: CardStyle,
-    hiddenCardIds: Set<String>
+    cardStyle: CardStyle, hiddenCardIds: Set<String>
 ): MapScreenScaffoldInputs {
     val lifecycleOwner = LocalLifecycleOwner.current
     val onDrawerItemSelected: (String) -> Unit = { item ->
         Log.d(MapScreenScaffoldInputsTag, "Navigation drawer item selected: $item")
-        coroutineScope.launch {
-            drawerState.close()
-            managers.taskScreenManager.handleNavigationTaskSelection(item)
-        }
+        coroutineScope.launch { drawerState.close(); managers.taskScreenManager.handleNavigationTaskSelection(item) }
     }
     val onResolvedMapStyleSelected: (String) -> Unit = { style ->
         mapViewModel.setMapStyle(style)
-        coroutineScope.launch {
-            mapViewModel.persistMapStyle(style)
-        }
+        coroutineScope.launch { mapViewModel.persistMapStyle(style) }
         Log.d(MapScreenScaffoldInputsTag, "Map style selected: $style")
         onMapStyleSelected(style)
     }
+    val onTransientMapStyleSelected: (String) -> Unit = { style -> mapViewModel.setMapStyle(style) }
     val onMapReady: (MapLibreMap) -> Unit = { map ->
-        if (mapState.mapLibreMap != null) mapRuntimeController.onMapReady(map)
+        mapRuntimeController.onMapReady(map)
+        managers.overlayManager.setOgnDisplayUpdateMode(bindings.ognDisplayUpdateMode)
         managers.overlayManager.setOgnIconSizePx(bindings.ognIconSizePx)
-        managers.overlayManager.updateOgnTrafficTargets(if (bindings.ognOverlayEnabled) bindings.ognTargets else emptyList())
-        managers.overlayManager.updateOgnThermalHotspots(if (bindings.ognOverlayEnabled && bindings.showOgnThermalsEnabled) bindings.ognThermalHotspots else emptyList())
-        managers.overlayManager.updateOgnGliderTrailSegments(if (bindings.ognOverlayEnabled) bindings.ognGliderTrailSegments else emptyList())
         managers.overlayManager.setAdsbIconSizePx(bindings.adsbIconSizePx)
-        managers.overlayManager.updateAdsbTrafficTargets(if (bindings.adsbOverlayEnabled) bindings.adsbTargets else emptyList())
-        managers.overlayManager.reapplyForecastOverlay(); managers.overlayManager.reapplyWeatherRainOverlay()
+        managers.overlayManager.reapplyForecastOverlay()
+        managers.overlayManager.reapplySkySightSatelliteOverlay()
+        managers.overlayManager.reapplyWeatherRainOverlay()
     }
     val onMapViewBound: () -> Unit = { managers.lifecycleManager.syncCurrentOwnerState(lifecycleOwner.lifecycle.currentState) }
     val shouldBlockDrawerOpen = MapTaskIntegration.shouldBlockDrawerGestures(taskType = bindings.taskType, isAATEditMode = bindings.isAATEditMode)
+    val onSettingsTap: () -> Unit = {
+        if (!shouldBlockDrawerOpen) {
+            settingsExpanded.value = true
+            coroutineScope.launch {
+                if (drawerState.isOpen) drawerState.close()
+                if (navController.currentDestination?.route != SettingsRoutes.GENERAL) navController.navigate(SettingsRoutes.GENERAL)
+            }
+        }
+    }
     return MapScreenScaffoldInputs(
         drawerState = drawerState,
         navController = navController,
@@ -215,8 +219,10 @@ internal fun rememberMapScreenScaffoldInputs(
         mapStyleExpanded = mapStyleExpanded,
         settingsExpanded = settingsExpanded,
         initialMapStyle = initialMapStyle,
+        currentMapStyleName = bindings.mapStyleName,
         onDrawerItemSelected = onDrawerItemSelected,
         onMapStyleSelected = onResolvedMapStyleSelected,
+        onTransientMapStyleSelected = onTransientMapStyleSelected,
         gpsStatus = bindings.gpsStatus,
         isLoadingWaypoints = mapUiState.isLoadingWaypoints,
         density = density,
@@ -242,8 +248,8 @@ internal fun rememberMapScreenScaffoldInputs(
         ognSnapshot = bindings.ognSnapshot,
         ognOverlayEnabled = bindings.ognOverlayEnabled,
         ognThermalHotspots = bindings.ognThermalHotspots,
+        showOgnSciaEnabled = bindings.showOgnSciaEnabled,
         showOgnThermalsEnabled = bindings.showOgnThermalsEnabled,
-        ognGliderTrailSegments = bindings.ognGliderTrailSegments,
         adsbSnapshot = bindings.adsbSnapshot,
         adsbOverlayEnabled = bindings.adsbOverlayEnabled,
         selectedOgnTarget = bindings.selectedOgnTarget,
@@ -270,9 +276,11 @@ internal fun rememberMapScreenScaffoldInputs(
         onVariometerEditFinished = {},
         hamburgerOffset = hamburgerOffsetState,
         flightModeOffset = flightModeOffsetState,
+        settingsOffset = settingsOffsetState,
         ballastOffset = ballastOffsetState,
         onHamburgerOffsetChange = onHamburgerOffsetChange,
         onFlightModeOffsetChange = onFlightModeOffsetChange,
+        onSettingsOffsetChange = onSettingsOffsetChange,
         onBallastOffsetChange = onBallastOffsetChange,
         taskScreenManager = managers.taskScreenManager,
         waypointData = mapUiState.waypoints,
@@ -281,6 +289,7 @@ internal fun rememberMapScreenScaffoldInputs(
         onAutoCalibrateQnh = mapViewModel::onAutoCalibrateQnh,
         onSetManualQnh = mapViewModel::onSetManualQnh,
         onToggleOgnTraffic = mapViewModel::onToggleOgnTraffic,
+        onToggleOgnScia = mapViewModel::onToggleOgnScia,
         onToggleOgnThermals = mapViewModel::onToggleOgnThermals,
         onToggleAdsbTraffic = mapViewModel::onToggleAdsbTraffic,
         onOgnTargetSelected = mapViewModel::onOgnTargetSelected,
@@ -294,7 +303,7 @@ internal fun rememberMapScreenScaffoldInputs(
         onBallastCommand = mapViewModel::submitBallastCommand,
         onHamburgerTap = { if (!shouldBlockDrawerOpen || mapUiState.isDrawerOpen) mapViewModel.onEvent(MapUiEvent.ToggleDrawer) },
         onHamburgerLongPress = { mapViewModel.onEvent(MapUiEvent.ToggleUiEditMode) },
-        onOpenWeatherSettingsFromTab = { if (!shouldBlockDrawerOpen) { settingsExpanded.value = true; mapViewModel.onEvent(MapUiEvent.OpenDrawer) } },
+        onSettingsTap = onSettingsTap,
         cardStyle = cardStyle,
         hiddenCardIds = hiddenCardIds,
         replayState = mapViewModel.replaySessionState,

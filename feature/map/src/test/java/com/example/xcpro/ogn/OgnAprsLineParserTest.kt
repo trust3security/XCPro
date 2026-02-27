@@ -1,5 +1,6 @@
 package com.example.xcpro.ogn
 
+import java.time.Instant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -31,6 +32,60 @@ class OgnAprsLineParserTest {
         assertEquals(2, parsed.identity?.aircraftTypeCode)
         assertEquals(OgnAddressType.FLARM, parsed.addressType)
         assertEquals("FLARM:DDDEAD", parsed.canonicalKey)
+    }
+
+    @Test
+    fun parseTraffic_parsesSourceTimestampFromHForm() {
+        val line =
+            "FLRDDDEAD>APRS,qAS,EDER:/114500h5029.86N/00956.98E'342/049/A=005524 id0ADDDEAD"
+        val receivedAtWallMs = Instant.parse("2026-02-27T12:00:00Z").toEpochMilli()
+
+        val parsed = parser.parseTraffic(
+            line = line,
+            receivedAtMillis = 123_456L,
+            receivedAtWallMillis = receivedAtWallMs
+        )
+
+        assertNotNull(parsed)
+        assertEquals(
+            Instant.parse("2026-02-27T11:45:00Z").toEpochMilli(),
+            parsed?.sourceTimestampWallMs
+        )
+    }
+
+    @Test
+    fun parseTraffic_parsesSourceTimestampFromZForm() {
+        val line =
+            "FLRABC123>APRS,qAS,EDER:@241145z5029.86N/00956.98E'342/049/A=005524 id0AABC123"
+        val receivedAtWallMs = Instant.parse("2026-02-24T12:00:00Z").toEpochMilli()
+
+        val parsed = parser.parseTraffic(
+            line = line,
+            receivedAtMillis = 654_321L,
+            receivedAtWallMillis = receivedAtWallMs
+        )
+
+        assertNotNull(parsed)
+        assertEquals(
+            Instant.parse("2026-02-24T11:45:00Z").toEpochMilli(),
+            parsed?.sourceTimestampWallMs
+        )
+    }
+
+    @Test
+    fun parseTraffic_invalidTimestampTokenFallsBackToNullSourceTimestamp() {
+        val line =
+            "FLRABC123>APRS,qAS,EDER:/996199h5029.86N/00956.98E'342/049/A=005524 id0AABC123"
+        val receivedAtWallMs = Instant.parse("2026-02-24T12:00:00Z").toEpochMilli()
+
+        val parsed = parser.parseTraffic(
+            line = line,
+            receivedAtMillis = 111L,
+            receivedAtWallMillis = receivedAtWallMs
+        )
+
+        assertNotNull(parsed)
+        assertNull(parsed?.sourceTimestampWallMs)
     }
 
     @Test

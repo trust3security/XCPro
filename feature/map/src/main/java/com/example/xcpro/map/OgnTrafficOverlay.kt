@@ -3,8 +3,10 @@ package com.example.xcpro.map
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Color
 import android.os.SystemClock
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.DrawableCompat
 import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.ogn.OGN_ICON_SIZE_DEFAULT_PX
 import com.example.xcpro.ogn.OgnAircraftIcon
@@ -12,7 +14,7 @@ import com.example.xcpro.ogn.OgnSubscriptionPolicy
 import com.example.xcpro.ogn.OgnTrafficTarget
 import com.example.xcpro.ogn.OgnViewportBounds
 import com.example.xcpro.ogn.clampOgnIconSizePx
-import com.example.xcpro.ogn.iconForOgnAircraftTypeCode
+import com.example.xcpro.ogn.iconForOgnAircraftIdentity
 import org.maplibre.android.geometry.LatLngBounds
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.Style
@@ -49,9 +51,11 @@ import kotlin.math.abs
 class OgnTrafficOverlay(
     private val context: Context,
     private val map: MapLibreMap,
-    initialIconSizePx: Int = OGN_ICON_SIZE_DEFAULT_PX
+    initialIconSizePx: Int = OGN_ICON_SIZE_DEFAULT_PX,
+    initialUseSatelliteContrastIcons: Boolean = false
 ) {
     private var currentIconSizePx: Int = clampOgnIconSizePx(initialIconSizePx)
+    private var useSatelliteContrastIcons: Boolean = initialUseSatelliteContrastIcons
 
     fun initialize() {
         val style = map.style ?: return
@@ -91,6 +95,10 @@ class OgnTrafficOverlay(
         applyIconSizeToStyle()
     }
 
+    fun setUseSatelliteContrastIcons(enabled: Boolean) {
+        useSatelliteContrastIcons = enabled
+    }
+
     fun render(targets: List<OgnTrafficTarget>) {
         initialize()
         val style = map.style ?: return
@@ -109,10 +117,11 @@ class OgnTrafficOverlay(
             feature.addStringProperty(PROP_TARGET_KEY, target.canonicalKey)
             feature.addStringProperty(PROP_TARGET_ID, target.id)
             feature.addStringProperty(PROP_LABEL, target.displayLabel)
-            feature.addStringProperty(
-                PROP_ICON_ID,
-                iconForOgnAircraftTypeCode(target.identity?.aircraftTypeCode).styleImageId
+            val icon = iconForOgnAircraftIdentity(
+                aircraftTypeCode = target.identity?.aircraftTypeCode,
+                competitionNumber = target.identity?.competitionNumber
             )
+            feature.addStringProperty(PROP_ICON_ID, resolveStyleImageId(icon))
             feature.addNumberProperty(
                 PROP_ALPHA,
                 if (target.isStale(nowMonoMs, STALE_VISUAL_AFTER_MS)) STALE_ALPHA else LIVE_ALPHA
@@ -167,6 +176,7 @@ class OgnTrafficOverlay(
             OgnAircraftIcon.values().forEach { icon ->
                 style.removeImage(icon.styleImageId)
             }
+            style.removeImage(SATELLITE_GLIDER_ICON_IMAGE_ID)
         } catch (t: Throwable) {
             AppLogger.w(TAG, "Failed to cleanup OGN overlay: ${t.message}")
         }
@@ -179,6 +189,7 @@ class OgnTrafficOverlay(
             val bitmap = drawableToBitmap(icon.resId) ?: return@forEach
             style.addImage(icon.styleImageId, bitmap)
         }
+        ensureSatelliteGliderStyleImage(style)
     }
 
     private fun createIconLayer(): SymbolLayer =
@@ -240,8 +251,29 @@ class OgnTrafficOverlay(
         style.addLayerAbove(createLabelLayer(), ICON_LAYER_ID)
     }
 
-    private fun drawableToBitmap(drawableId: Int): Bitmap? {
-        val drawable = ContextCompat.getDrawable(context, drawableId) ?: return null
+    private fun ensureSatelliteGliderStyleImage(style: Style) {
+        val existing = runCatching { style.getImage(SATELLITE_GLIDER_ICON_IMAGE_ID) }.getOrNull()
+        if (existing != null) return
+        val bitmap = drawableToBitmap(
+            drawableId = OgnAircraftIcon.Glider.resId,
+            tintColor = Color.WHITE
+        ) ?: return
+        style.addImage(SATELLITE_GLIDER_ICON_IMAGE_ID, bitmap)
+    }
+
+    private fun resolveStyleImageId(icon: OgnAircraftIcon): String {
+        if (useSatelliteContrastIcons && icon == OgnAircraftIcon.Glider) {
+            return SATELLITE_GLIDER_ICON_IMAGE_ID
+        }
+        return icon.styleImageId
+    }
+
+    private fun drawableToBitmap(drawableId: Int, tintColor: Int? = null): Bitmap? {
+        val baseDrawable = ContextCompat.getDrawable(context, drawableId) ?: return null
+        val drawable = baseDrawable.mutate()
+        if (tintColor != null) {
+            DrawableCompat.setTint(drawable, tintColor)
+        }
         val bitmap = Bitmap.createBitmap(
             ICON_BITMAP_BASE_SIZE_PX,
             ICON_BITMAP_BASE_SIZE_PX,
@@ -300,6 +332,7 @@ class OgnTrafficOverlay(
         private const val ICON_LAYER_ID = "ogn-traffic-icon-layer"
         private const val LABEL_LAYER_ID = "ogn-traffic-label-layer"
         private const val DEFAULT_ICON_IMAGE_ID = "ogn_icon_unknown"
+        private const val SATELLITE_GLIDER_ICON_IMAGE_ID = "ogn_icon_glider_satellite"
 
         private const val PROP_LABEL = "label"
         private const val PROP_ALPHA = "alpha"

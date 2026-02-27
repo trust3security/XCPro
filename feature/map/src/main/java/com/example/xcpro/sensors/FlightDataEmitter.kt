@@ -83,6 +83,7 @@ internal class FlightDataEmitter(
                 baroResult = baroResult,
                 windState = windState,
                 externalAirspeedSample = externalAirspeedSample,
+                allowOnlineTerrainLookup = !isReplayMode,
                 varioValidUntil = state.varioValidUntil,
                 isFlying = isFlying,
                 macCreadySetting = macCreadySetting,
@@ -103,7 +104,7 @@ internal class FlightDataEmitter(
             if (cachedVarioResult != null) append("+IMU")
             append("+VARIO:")
             append(metrics.varioSource)
-            if (flightHelpers.currentAGL > 0) append("+AGL")
+            if (flightHelpers.currentAGL.isFinite()) append("+AGL")
             append("+50Hz")
         }
 
@@ -113,6 +114,7 @@ internal class FlightDataEmitter(
             compass = compass,
             metrics = metrics,
             aglMeters = flightHelpers.currentAGL,
+            aglUpdatedAtMonoMs = flightHelpers.lastSuccessfulAglUpdateMonoMs,
             varioResults = varioResults,
             replayIgcVario = replayIgcVario,
             audioVario = state.latestAudioVario,
@@ -152,6 +154,7 @@ internal class FlightDataEmitter(
         if (currentTime % 1000 < 100) {
             val gpsVarioMs = metrics.verticalSpeed.takeIf { metrics.varioSource == "GPS" }
             val pressureVarioMs = metrics.verticalSpeed.takeIf { metrics.varioSource == "PRESSURE" }
+            val aglLabel = flightHelpers.currentAGL.takeIf { it.isFinite() }?.toInt()?.toString() ?: "NA"
             Log.d(
                 tag,
                 "[SLOW] " +
@@ -163,7 +166,7 @@ internal class FlightDataEmitter(
                     "GPSv=${gpsVarioMs?.let { String.format(Locale.US, "%.2f", it) } ?: "--"} " +
                     "PressV=${pressureVarioMs?.let { String.format(Locale.US, "%.2f", it) } ?: "--"} " +
                     "Spd=${String.format(Locale.US, "%.1f", gps.speed.value)} " +
-                    "AGL=${flightHelpers.currentAGL.toInt()} " +
+                    "AGL=$aglLabel " +
                     "QNH=${String.format(Locale.US, "%.1f", baroResult?.qnh ?: Double.NaN)} " +
                     "cal=${baroResult?.isCalibrated == true}"
             )

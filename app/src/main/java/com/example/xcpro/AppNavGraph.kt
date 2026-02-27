@@ -35,6 +35,7 @@ import com.example.xcpro.screens.navdrawer.UnitsSettingsScreen
 import com.example.xcpro.screens.navdrawer.OrientationSettingsScreen
 import com.example.xcpro.screens.navdrawer.AdsbSettingsScreen
 import com.example.xcpro.screens.navdrawer.ForecastSettingsScreen
+import com.example.xcpro.screens.navdrawer.HotspotsSettingsScreen
 import com.example.xcpro.screens.navdrawer.OgnSettingsScreen
 import com.example.xcpro.screens.navdrawer.WeatherSettingsScreen
 import com.example.xcpro.screens.diagnostics.VarioDiagnosticsScreen
@@ -76,7 +77,7 @@ fun AppNavGraph(
                 mapViewModel = mapViewModel
             )
         }
-        composable("settings") { backStackEntry ->
+        composable(SettingsRoutes.GENERAL) { backStackEntry ->
             val mapEntry = remember(backStackEntry) { navController.getBackStackEntry("map") }
             val mapViewModel: MapScreenViewModel = hiltViewModel(mapEntry)
             SettingsScreen(
@@ -145,6 +146,7 @@ fun AppNavGraph(
         composable("ogn_settings") { OgnSettingsScreen(navController, drawerState) }
         composable("forecast_settings") { ForecastSettingsScreen(navController, drawerState) }
         composable(SettingsRoutes.WEATHER_SETTINGS) { WeatherSettingsScreen(navController, drawerState) }
+        composable(SettingsRoutes.HOTSPOTS_SETTINGS) { HotspotsSettingsScreen(navController, drawerState) }
         composable("dfnavboxes") { DFNavboxes(navController, drawerState) }
         composable("orientation_settings") { backStackEntry ->
             OrientationSettingsScreen(

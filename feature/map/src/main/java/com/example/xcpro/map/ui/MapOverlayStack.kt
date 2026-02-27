@@ -91,9 +91,11 @@ internal fun MapOverlayStack(
     onVariometerEditFinished: () -> Unit,
     hamburgerOffset: MutableState<Offset>,
     flightModeOffset: MutableState<Offset>,
+    settingsOffset: MutableState<Offset>,
     ballastOffset: MutableState<Offset>,
     onHamburgerOffsetChange: (Offset) -> Unit,
     onFlightModeOffsetChange: (Offset) -> Unit,
+    onSettingsOffsetChange: (Offset) -> Unit,
     onBallastOffsetChange: (Offset) -> Unit,
     widgetManager: MapUIWidgetManager,
     screenWidthPx: Float,
@@ -104,6 +106,7 @@ internal fun MapOverlayStack(
     onBallastCommand: (BallastCommand) -> Unit,
     onHamburgerTap: () -> Unit,
     onHamburgerLongPress: () -> Unit,
+    onSettingsTap: () -> Unit,
     cardStyle: CardStyle,
     hiddenCardIds: Set<String>,
     replayState: StateFlow<SessionState>
@@ -284,6 +287,16 @@ internal fun MapOverlayStack(
             onHamburgerTap = onHamburgerTap,
             onHamburgerLongPress = onHamburgerLongPress,
             onOffsetChange = onHamburgerOffsetChange,
+            isUiEditMode = isUiEditMode
+        )
+
+        SettingsShortcut(
+            widgetManager = widgetManager,
+            settingsOffset = settingsOffset,
+            screenWidthPx = screenWidthPx,
+            screenHeightPx = screenHeightPx,
+            onSettingsTap = onSettingsTap,
+            onOffsetChange = onSettingsOffsetChange,
             isUiEditMode = isUiEditMode
         )
 

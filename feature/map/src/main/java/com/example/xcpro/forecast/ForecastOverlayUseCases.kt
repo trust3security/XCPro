@@ -287,6 +287,54 @@ class SetForecastWindDisplayModeUseCase @Inject constructor(
     }
 }
 
+class SetSkySightSatelliteOverlayEnabledUseCase @Inject constructor(
+    private val preferencesRepository: ForecastPreferencesRepository
+) {
+    suspend operator fun invoke(enabled: Boolean) {
+        preferencesRepository.setSkySightSatelliteOverlayEnabled(enabled)
+    }
+}
+
+class SetSkySightSatelliteImageryEnabledUseCase @Inject constructor(
+    private val preferencesRepository: ForecastPreferencesRepository
+) {
+    suspend operator fun invoke(enabled: Boolean) {
+        preferencesRepository.setSkySightSatelliteImageryEnabled(enabled)
+    }
+}
+
+class SetSkySightSatelliteRadarEnabledUseCase @Inject constructor(
+    private val preferencesRepository: ForecastPreferencesRepository
+) {
+    suspend operator fun invoke(enabled: Boolean) {
+        preferencesRepository.setSkySightSatelliteRadarEnabled(enabled)
+    }
+}
+
+class SetSkySightSatelliteLightningEnabledUseCase @Inject constructor(
+    private val preferencesRepository: ForecastPreferencesRepository
+) {
+    suspend operator fun invoke(enabled: Boolean) {
+        preferencesRepository.setSkySightSatelliteLightningEnabled(enabled)
+    }
+}
+
+class SetSkySightSatelliteAnimateEnabledUseCase @Inject constructor(
+    private val preferencesRepository: ForecastPreferencesRepository
+) {
+    suspend operator fun invoke(enabled: Boolean) {
+        preferencesRepository.setSkySightSatelliteAnimateEnabled(enabled)
+    }
+}
+
+class SetSkySightSatelliteHistoryFramesUseCase @Inject constructor(
+    private val preferencesRepository: ForecastPreferencesRepository
+) {
+    suspend operator fun invoke(frameCount: Int) {
+        preferencesRepository.setSkySightSatelliteHistoryFrames(frameCount)
+    }
+}
+
 class QueryForecastValueAtPointUseCase @Inject constructor(
     private val repository: ForecastOverlayRepository
 ) {

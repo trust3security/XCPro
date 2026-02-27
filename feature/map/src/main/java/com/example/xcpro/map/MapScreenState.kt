@@ -22,8 +22,10 @@ class MapScreenState {
     var forecastOverlay: ForecastRasterOverlay? = null
     var forecastSecondaryOverlay: ForecastRasterOverlay? = null
     var forecastWindOverlay: ForecastRasterOverlay? = null
+    var skySightSatelliteOverlay: SkySightSatelliteOverlay? = null
     var weatherRainOverlay: WeatherRainOverlay? = null
     var snailTrailOverlay: SnailTrailOverlay? = null
     var scaleBarPlugin: ScaleBarPlugin? = null
     var scaleBarWidget: ScaleBarWidget? = null
+    internal var scaleBarController: MapScaleBarController? = null
 }

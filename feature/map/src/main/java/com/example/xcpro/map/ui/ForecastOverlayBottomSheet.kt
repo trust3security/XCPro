@@ -42,13 +42,11 @@ import androidx.compose.ui.unit.dp
 import com.example.xcpro.forecast.ForecastOverlayUiState
 import com.example.xcpro.forecast.ForecastParameterId
 import com.example.xcpro.forecast.ForecastPointCallout
-import com.example.xcpro.forecast.ForecastWindDisplayMode
 import com.example.xcpro.forecast.FORECAST_FOLLOW_TIME_OFFSET_MINUTES_DEFAULT
 import com.example.xcpro.forecast.FORECAST_FOLLOW_TIME_OFFSET_OPTIONS_MINUTES
-import com.example.xcpro.forecast.FORECAST_WIND_OVERLAY_SCALE_MAX
-import com.example.xcpro.forecast.FORECAST_WIND_OVERLAY_SCALE_MIN
-import com.example.xcpro.forecast.clampForecastOpacity
-import com.example.xcpro.forecast.clampForecastWindOverlayScale
+import com.example.xcpro.forecast.FORECAST_SKYSIGHT_SATELLITE_HISTORY_FRAMES_MAX
+import com.example.xcpro.forecast.FORECAST_SKYSIGHT_SATELLITE_HISTORY_FRAMES_MIN
+import com.example.xcpro.forecast.clampSkySightSatelliteHistoryFrames
 import com.example.xcpro.forecast.forecastRegionLabel
 import com.example.xcpro.forecast.forecastRegionZoneId
 import java.time.Instant
@@ -63,15 +61,20 @@ internal fun ForecastOverlayBottomSheet(
     onDismiss: () -> Unit,
     onEnabledChanged: (Boolean) -> Unit,
     onPrimaryParameterToggled: (ForecastParameterId) -> Unit,
+    onSecondaryPrimaryOverlayEnabledChanged: (Boolean) -> Unit,
+    onSecondaryPrimaryParameterSelected: (ForecastParameterId) -> Unit,
     onWindOverlayEnabledChanged: (Boolean) -> Unit,
     onWindParameterSelected: (ForecastParameterId) -> Unit,
     onAutoTimeEnabledChanged: (Boolean) -> Unit,
     onFollowTimeOffsetChanged: (Int) -> Unit,
     onJumpToNow: () -> Unit,
     onTimeSelected: (Long) -> Unit,
-    onOpacityChanged: (Float) -> Unit,
-    onWindOverlayScaleChanged: (Float) -> Unit,
-    onWindDisplayModeChanged: (ForecastWindDisplayMode) -> Unit
+    onSkySightSatelliteOverlayEnabledChanged: (Boolean) -> Unit,
+    onSkySightSatelliteImageryEnabledChanged: (Boolean) -> Unit,
+    onSkySightSatelliteRadarEnabledChanged: (Boolean) -> Unit,
+    onSkySightSatelliteLightningEnabledChanged: (Boolean) -> Unit,
+    onSkySightSatelliteAnimateEnabledChanged: (Boolean) -> Unit,
+    onSkySightSatelliteHistoryFramesChanged: (Int) -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -83,15 +86,20 @@ internal fun ForecastOverlayBottomSheet(
             uiState = uiState,
             onEnabledChanged = onEnabledChanged,
             onPrimaryParameterToggled = onPrimaryParameterToggled,
+            onSecondaryPrimaryOverlayEnabledChanged = onSecondaryPrimaryOverlayEnabledChanged,
+            onSecondaryPrimaryParameterSelected = onSecondaryPrimaryParameterSelected,
             onWindOverlayEnabledChanged = onWindOverlayEnabledChanged,
             onWindParameterSelected = onWindParameterSelected,
             onAutoTimeEnabledChanged = onAutoTimeEnabledChanged,
             onFollowTimeOffsetChanged = onFollowTimeOffsetChanged,
             onJumpToNow = onJumpToNow,
             onTimeSelected = onTimeSelected,
-            onOpacityChanged = onOpacityChanged,
-            onWindOverlayScaleChanged = onWindOverlayScaleChanged,
-            onWindDisplayModeChanged = onWindDisplayModeChanged,
+            onSkySightSatelliteOverlayEnabledChanged = onSkySightSatelliteOverlayEnabledChanged,
+            onSkySightSatelliteImageryEnabledChanged = onSkySightSatelliteImageryEnabledChanged,
+            onSkySightSatelliteRadarEnabledChanged = onSkySightSatelliteRadarEnabledChanged,
+            onSkySightSatelliteLightningEnabledChanged = onSkySightSatelliteLightningEnabledChanged,
+            onSkySightSatelliteAnimateEnabledChanged = onSkySightSatelliteAnimateEnabledChanged,
+            onSkySightSatelliteHistoryFramesChanged = onSkySightSatelliteHistoryFramesChanged,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -106,15 +114,22 @@ internal fun ForecastOverlayControlsContent(
     uiState: ForecastOverlayUiState,
     onEnabledChanged: (Boolean) -> Unit,
     onPrimaryParameterToggled: (ForecastParameterId) -> Unit,
+    onSecondaryPrimaryOverlayEnabledChanged: (Boolean) -> Unit,
+    onSecondaryPrimaryParameterSelected: (ForecastParameterId) -> Unit,
     onWindOverlayEnabledChanged: (Boolean) -> Unit,
     onWindParameterSelected: (ForecastParameterId) -> Unit,
     onAutoTimeEnabledChanged: (Boolean) -> Unit,
     onFollowTimeOffsetChanged: (Int) -> Unit,
     onJumpToNow: () -> Unit,
     onTimeSelected: (Long) -> Unit,
-    onOpacityChanged: (Float) -> Unit,
-    onWindOverlayScaleChanged: (Float) -> Unit,
-    onWindDisplayModeChanged: (ForecastWindDisplayMode) -> Unit,
+    onSkySightSatelliteOverlayEnabledChanged: (Boolean) -> Unit,
+    onSkySightSatelliteImageryEnabledChanged: (Boolean) -> Unit,
+    onSkySightSatelliteRadarEnabledChanged: (Boolean) -> Unit,
+    onSkySightSatelliteLightningEnabledChanged: (Boolean) -> Unit,
+    onSkySightSatelliteAnimateEnabledChanged: (Boolean) -> Unit,
+    onSkySightSatelliteHistoryFramesChanged: (Int) -> Unit,
+    satViewEnabled: Boolean = false,
+    onSatViewEnabledChanged: (Boolean) -> Unit = {},
     warningMessage: String? = uiState.warningMessage,
     errorMessage: String? = uiState.errorMessage,
     showTitle: Boolean = true,
@@ -164,34 +179,28 @@ internal fun ForecastOverlayControlsContent(
     val displayFollowOffsetMinutes = followOffsetOptions
         .getOrNull(displayFollowOffsetIndex)
         ?: FORECAST_FOLLOW_TIME_OFFSET_MINUTES_DEFAULT
-    var opacityDraft by remember { mutableFloatStateOf(uiState.opacity) }
-    var windOverlayScaleDraft by remember { mutableFloatStateOf(uiState.windOverlayScale) }
-    LaunchedEffect(uiState.opacity) {
-        opacityDraft = uiState.opacity
+    val clampedHistoryFrames = clampSkySightSatelliteHistoryFrames(
+        uiState.skySightSatelliteHistoryFrames
+    )
+    var satelliteHistoryFramesSlider by remember(clampedHistoryFrames) {
+        mutableFloatStateOf(clampedHistoryFrames.toFloat())
     }
-    LaunchedEffect(uiState.windOverlayScale) {
-        windOverlayScaleDraft = uiState.windOverlayScale
+    LaunchedEffect(clampedHistoryFrames) {
+        satelliteHistoryFramesSlider = clampedHistoryFrames.toFloat()
     }
-    val selectedPrimaryOverlayIds = remember(
-        uiState.selectedPrimaryParameterId,
-        uiState.secondaryPrimaryOverlayEnabled,
-        uiState.selectedSecondaryPrimaryParameterId
+    val secondaryPrimaryParameters = remember(
+        uiState.primaryParameters,
+        uiState.selectedPrimaryParameterId
     ) {
-        buildList {
-            add(uiState.selectedPrimaryParameterId)
-            if (
-                uiState.secondaryPrimaryOverlayEnabled &&
-                !uiState.selectedSecondaryPrimaryParameterId.value.equals(
-                    uiState.selectedPrimaryParameterId.value,
-                    ignoreCase = true
-                )
-            ) {
-                add(uiState.selectedSecondaryPrimaryParameterId)
-            }
+        uiState.primaryParameters.filterNot { parameter ->
+            parameter.id.value.equals(
+                uiState.selectedPrimaryParameterId.value,
+                ignoreCase = true
+            )
         }
     }
-    val selectedPrimaryOverlayCount = selectedPrimaryOverlayIds.size
-
+    val canShowSecondaryPrimaryOverlay = uiState.enabled &&
+        secondaryPrimaryParameters.isNotEmpty()
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -208,7 +217,50 @@ internal fun ForecastOverlayControlsContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Show non-wind overlays",
+                text = "Show second non-wind overlay",
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f)
+            )
+            Switch(
+                checked = uiState.secondaryPrimaryOverlayEnabled,
+                onCheckedChange = onSecondaryPrimaryOverlayEnabledChanged,
+                enabled = canShowSecondaryPrimaryOverlay
+            )
+        }
+        if (uiState.secondaryPrimaryOverlayEnabled) {
+            if (secondaryPrimaryParameters.isEmpty()) {
+                Text(
+                    text = "No second overlay options available",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            } else {
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    secondaryPrimaryParameters.forEach { parameter ->
+                        FilterChip(
+                            selected = uiState.selectedSecondaryPrimaryParameterId.value.equals(
+                                parameter.id.value,
+                                ignoreCase = true
+                            ),
+                            onClick = { onSecondaryPrimaryParameterSelected(parameter.id) },
+                            label = { Text(parameter.name) },
+                            enabled = canShowSecondaryPrimaryOverlay
+                        )
+                    }
+                }
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Show non-wind overlay",
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f)
             )
@@ -218,8 +270,142 @@ internal fun ForecastOverlayControlsContent(
             )
         }
 
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Sat View",
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f)
+            )
+            Switch(
+                checked = satViewEnabled,
+                onCheckedChange = onSatViewEnabledChanged
+            )
+        }
         Text(
-            text = "Select up to 2 non-wind overlays",
+            text = "Uses map Satellite style while enabled.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Text(
+            text = "SkySight Satellite API overlays",
+            style = MaterialTheme.typography.titleMedium
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Enable SkySight satellite overlays",
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f)
+            )
+            Switch(
+                checked = uiState.skySightSatelliteOverlayEnabled,
+                onCheckedChange = onSkySightSatelliteOverlayEnabledChanged
+            )
+        }
+        Text(
+            text = "Cloud imagery, radar, and lightning from satellite.skysight.io.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        if (uiState.skySightSatelliteOverlayEnabled) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Satellite imagery (clouds)",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                Switch(
+                    checked = uiState.skySightSatelliteImageryEnabled,
+                    onCheckedChange = onSkySightSatelliteImageryEnabledChanged
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Rain radar",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                Switch(
+                    checked = uiState.skySightSatelliteRadarEnabled,
+                    onCheckedChange = onSkySightSatelliteRadarEnabledChanged
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Lightning",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                Switch(
+                    checked = uiState.skySightSatelliteLightningEnabled,
+                    onCheckedChange = onSkySightSatelliteLightningEnabledChanged
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Animate loop",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                Switch(
+                    checked = uiState.skySightSatelliteAnimateEnabled,
+                    onCheckedChange = onSkySightSatelliteAnimateEnabledChanged
+                )
+            }
+            Text(
+                text = "History frames $clampedHistoryFrames (10-minute step)",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Slider(
+                value = satelliteHistoryFramesSlider,
+                onValueChange = { raw ->
+                    satelliteHistoryFramesSlider = raw.coerceIn(
+                        FORECAST_SKYSIGHT_SATELLITE_HISTORY_FRAMES_MIN.toFloat(),
+                        FORECAST_SKYSIGHT_SATELLITE_HISTORY_FRAMES_MAX.toFloat()
+                    )
+                },
+                onValueChangeFinished = {
+                    val selected = clampSkySightSatelliteHistoryFrames(
+                        satelliteHistoryFramesSlider.roundToInt()
+                    )
+                    if (selected != uiState.skySightSatelliteHistoryFrames) {
+                        onSkySightSatelliteHistoryFramesChanged(selected)
+                    }
+                },
+                valueRange = FORECAST_SKYSIGHT_SATELLITE_HISTORY_FRAMES_MIN.toFloat()..
+                    FORECAST_SKYSIGHT_SATELLITE_HISTORY_FRAMES_MAX.toFloat(),
+                steps = (
+                    FORECAST_SKYSIGHT_SATELLITE_HISTORY_FRAMES_MAX -
+                        FORECAST_SKYSIGHT_SATELLITE_HISTORY_FRAMES_MIN - 1
+                    ).coerceAtLeast(0)
+            )
+            Text(
+                text = "Live sources typically update around 10-15 minutes.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        Text(
+            text = "Select non-wind overlay",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -236,16 +422,15 @@ internal fun ForecastOverlayControlsContent(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 uiState.primaryParameters.forEach { parameter ->
-                    val isSelected = selectedPrimaryOverlayIds.any { selected ->
-                        selected.value.equals(parameter.id.value, ignoreCase = true)
-                    }
+                    val isSelected = uiState.selectedPrimaryParameterId.value.equals(
+                        parameter.id.value,
+                        ignoreCase = true
+                    )
                     FilterChip(
                         selected = isSelected,
                         onClick = { onPrimaryParameterToggled(parameter.id) },
                         label = { Text(parameter.name) },
-                        enabled = uiState.enabled && (
-                            isSelected || selectedPrimaryOverlayCount < MAX_PRIMARY_OVERLAY_SELECTIONS
-                        )
+                        enabled = uiState.enabled
                     )
                 }
             }
@@ -375,63 +560,6 @@ internal fun ForecastOverlayControlsContent(
             enabled = uiState.autoTimeEnabled,
             valueRange = 0f..maxFollowOffsetIndex.toFloat(),
             steps = (maxFollowOffsetIndex - 1).coerceAtLeast(0)
-        )
-
-        Text(
-            text = "Opacity ${(opacityDraft * 100f).roundToInt()}%",
-            style = MaterialTheme.typography.titleMedium
-        )
-        Slider(
-            value = opacityDraft,
-            onValueChange = { value ->
-                opacityDraft = clampForecastOpacity(value)
-            },
-            onValueChangeFinished = {
-                if (opacityDraft != uiState.opacity) {
-                    onOpacityChanged(opacityDraft)
-                }
-            },
-            enabled = true,
-            valueRange = 0f..1f
-        )
-
-        Text(
-            text = "Wind marker size ${(windOverlayScaleDraft * 100f).roundToInt()}%",
-            style = MaterialTheme.typography.titleMedium
-        )
-        Text(
-            text = "Applies to wind overlays only",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        LazyRow(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(
-                items = ForecastWindDisplayMode.entries,
-                key = { mode -> mode.storageValue }
-            ) { mode ->
-                FilterChip(
-                    selected = uiState.windDisplayMode == mode,
-                    onClick = { onWindDisplayModeChanged(mode) },
-                    label = { Text(mode.label) },
-                    enabled = uiState.windOverlayEnabled
-                )
-            }
-        }
-        Slider(
-            value = windOverlayScaleDraft,
-            onValueChange = { value ->
-                windOverlayScaleDraft = clampForecastWindOverlayScale(value)
-            },
-            onValueChangeFinished = {
-                if (windOverlayScaleDraft != uiState.windOverlayScale) {
-                    onWindOverlayScaleChanged(windOverlayScaleDraft)
-                }
-            },
-            enabled = uiState.windOverlayEnabled,
-            valueRange = FORECAST_WIND_OVERLAY_SCALE_MIN..FORECAST_WIND_OVERLAY_SCALE_MAX
         )
 
         uiState.primaryLegend?.let { legend ->
@@ -612,5 +740,3 @@ private fun formatDirectionDegrees(value: Double): String {
     val normalized = ((value % 360.0) + 360.0) % 360.0
     return String.format(Locale.US, "%.0f%c", normalized, '\u00B0')
 }
-
-private const val MAX_PRIMARY_OVERLAY_SELECTIONS = 2

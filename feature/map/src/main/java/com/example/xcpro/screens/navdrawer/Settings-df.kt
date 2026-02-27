@@ -27,7 +27,6 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.outlined.Insights
 import androidx.compose.material.icons.outlined.Style
 import androidx.compose.material3.*
 import androidx.compose.foundation.text.KeyboardOptions
@@ -148,24 +147,7 @@ fun SettingsScreen(
                         }
                     }
 
-                    // Row 2b: Orientation (single)
-                    item {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            CategoryItem(
-                                title = "Orientation",
-                                icon = Icons.Default.Explore,
-                                onClick = { navController.navigate("orientation_settings") },
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    }
-
-                    // Row 2c: Polar | Levo Vario
+                    // Row 2b: Polar | Levo Vario
                     item {
                         Row(
                             modifier = Modifier
@@ -188,7 +170,7 @@ fun SettingsScreen(
                         }
                     }
 
-                    // Row 2d: HAWK Vario | Diagnostics
+                    // Row 2c: HAWK Vario | Orientation
                     item {
                         Row(
                             modifier = Modifier
@@ -203,9 +185,9 @@ fun SettingsScreen(
                                 modifier = Modifier.weight(1f)
                             )
                             CategoryItem(
-                                title = "Diagnostics",
-                                icon = Icons.Outlined.Insights,
-                                onClick = { navController.navigate("vario_diagnostics") },
+                                title = "Orientation",
+                                icon = Icons.Default.Explore,
+                                onClick = { navController.navigate("orientation_settings") },
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -234,20 +216,26 @@ fun SettingsScreen(
                         }
                     }
 
-                    // Row 3b: SkySight (right column)
+                    // Row 3b: SkySight | Hotspots
                     item {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 8.dp),
-                            horizontalArrangement = Arrangement.End
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             CategoryItemDrawable(
                                 title = "SkySight",
                                 iconResId = R.drawable.ic_skysight,
                                 iconSize = 26.4.dp,
                                 onClick = { navController.navigate("forecast_settings") },
-                                modifier = Modifier.fillMaxWidth(0.5f)
+                                modifier = Modifier.weight(1f)
+                            )
+                            CategoryItem(
+                                title = "Hotspots",
+                                icon = Icons.Default.Speed,
+                                onClick = { navController.navigate(SettingsRoutes.HOTSPOTS_SETTINGS) },
+                                modifier = Modifier.weight(1f)
                             )
                         }
                     }

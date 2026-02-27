@@ -81,15 +81,33 @@ internal fun expandOgnSelectionAliases(key: String): Set<String> {
     return aliases
 }
 
-internal fun selectionSetContainsOgnKey(selectedKeys: Set<String>, candidateKey: String): Boolean {
-    val normalizedSelected = selectedKeys.map(::normalizeOgnAircraftKey).toSet()
+internal data class OgnSelectionLookup(
+    val normalizedSelectedKeys: Set<String>
+)
+
+internal fun buildOgnSelectionLookup(selectedKeys: Set<String>): OgnSelectionLookup =
+    OgnSelectionLookup(
+        normalizedSelectedKeys = selectedKeys.map(::normalizeOgnAircraftKey).toSet()
+    )
+
+internal fun selectionLookupContainsOgnKey(
+    lookup: OgnSelectionLookup,
+    candidateKey: String
+): Boolean {
+    if (lookup.normalizedSelectedKeys.isEmpty()) return false
     val aliases = expandOgnSelectionAliases(candidateKey)
-    if (normalizedSelected.any { aliases.contains(it) }) return true
+    if (aliases.any { alias -> lookup.normalizedSelectedKeys.contains(alias) }) return true
 
     val candidateLegacy = legacyOgnKeyFromCanonicalOrNull(candidateKey)
     if (candidateLegacy != null) {
-        return normalizedSelected.contains(candidateLegacy)
+        return lookup.normalizedSelectedKeys.contains(candidateLegacy)
     }
     return false
 }
 
+internal fun selectionSetContainsOgnKey(selectedKeys: Set<String>, candidateKey: String): Boolean {
+    return selectionLookupContainsOgnKey(
+        lookup = buildOgnSelectionLookup(selectedKeys),
+        candidateKey = candidateKey
+    )
+}
