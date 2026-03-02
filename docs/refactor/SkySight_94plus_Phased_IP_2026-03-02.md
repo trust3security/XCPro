@@ -17,15 +17,15 @@ Read first (required):
 ## 0) Baseline and Goal
 
 Baseline (current):
-- Architecture boundary compliance: 89
-- Runtime correctness (forecast + satellite): 85
-- Reliability/resilience: 83
+- Architecture boundary compliance: 88
+- Runtime correctness (forecast + satellite): 83
+- Reliability/resilience: 80
 - Auth and credential robustness: 68
 - Network/API contract resilience: 77
-- UI responsiveness risk: 83
-- Test coverage on risky paths: 84
+- UI responsiveness risk: 82
+- Test coverage on risky paths: 83
 - Docs/tooling reliability: 78
-- Overall SkySight slice: 84
+- Overall SkySight slice: 82
 
 Goal (hard gate: every category must be >=94):
 - Architecture boundary compliance: 95
@@ -147,6 +147,19 @@ First phase where each category reaches >=94 (planned):
 - Multiple SkySight plan docs exist; status drift risk remains.
 - `docs/03_Features/SkySight_Weather.md` documents non-existent components.
 
+16. Forecast apply exception-isolation gap (newly confirmed):
+- Forecast apply/reapply calls are not wrapped in failure isolation (`runCatching`/error-state channel) unlike satellite/weather paths.
+- Files:
+  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
+- Risk: runtime map/style layer exceptions from forecast overlay can escape and destabilize map UI path.
+
+17. Forecast refresh continuity gap (newly confirmed):
+- UI effect clears forecast overlays whenever both active tile specs are temporarily null; during refresh windows this can produce blank/flicker behavior.
+- Files:
+  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
+  - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayRepository.kt`
+- Risk: avoidable visual discontinuity and user perception of unstable overlay behavior.
+
 ## 2) Architecture Contract for This IP
 
 SSOT ownership:
@@ -172,6 +185,8 @@ Work:
 - Add missing regression tests before behavior changes:
   - `ForecastAuthRepositoryTest` (missing credentials, API key, http success/error, network error, cancellation).
   - `MapOverlayManager` SkySight last-good/clear behavior tests.
+  - `MapOverlayManager` forecast apply failure isolation tests.
+  - forecast refresh continuity tests (no blanking on transient loading windows).
   - Satellite config dedupe and no-op reapply tests.
   - OGN contrast-icon rollback tests on satellite apply failure.
   - warning-message normalization tests for manager + UI message policy contract.
@@ -180,21 +195,22 @@ Work:
 Files:
 - `feature/map/src/test/java/com/example/xcpro/forecast/ForecastAuthRepositoryTest.kt` (new)
 - `feature/map/src/test/java/com/example/xcpro/map/MapOverlayManagerSkySightSatelliteErrorTest.kt` (extend)
+- `feature/map/src/test/java/com/example/xcpro/map/MapOverlayManagerForecastWarningTest.kt` (extend with failure-isolation cases)
 - `feature/map/src/test/java/com/example/xcpro/map/SkySightSatelliteOverlayTemporalPolicyTest.kt` (extend)
 - `feature/map/src/test/java/com/example/xcpro/map/ui/SkySightUiMessagePolicyTest.kt` (extend)
 - `feature/map/src/test/java/com/example/xcpro/forecast/ForecastOverlayRepositoryTest.kt` (test-fixture reset update)
 - `feature/map/src/test/java/com/example/xcpro/forecast/ForecastPreferencesRepositoryTest.kt` (test-fixture reset update)
 
 Expected score after phase:
-- Architecture 89
-- Runtime 86
-- Reliability 85
+- Architecture 88
+- Runtime 84
+- Reliability 82
 - Auth 70
 - Network 79
-- UI 83
-- Tests 89
+- UI 82
+- Tests 87
 - Docs/tooling 79
-- Overall 86
+- Overall 84
 
 ### Phase 1 - Auth and Credential Security Closure
 
@@ -218,15 +234,15 @@ Files:
 - tests under `feature/map/src/test/java/com/example/xcpro/forecast/` and `.../screens/navdrawer/`
 
 Expected score after phase:
-- Architecture 90
-- Runtime 87
-- Reliability 87
+- Architecture 89
+- Runtime 85
+- Reliability 84
 - Auth 82
 - Network 80
-- UI 84
-- Tests 90
+- UI 83
+- Tests 88
 - Docs/tooling 81
-- Overall 88
+- Overall 86
 
 ### Phase 2 - SkySight Network Contract Hardening
 
@@ -250,21 +266,23 @@ Files:
 - `feature/map/src/test/java/com/example/xcpro/forecast/SkySightForecastProviderAdapterTest.kt` (extend)
 
 Expected score after phase:
-- Architecture 91
-- Runtime 89
-- Reliability 90
+- Architecture 90
+- Runtime 88
+- Reliability 88
 - Auth 87
 - Network 88
-- UI 85
-- Tests 92
+- UI 84
+- Tests 90
 - Docs/tooling 83
-- Overall 90
+- Overall 88
 
 ### Phase 3 - Runtime Correctness and Resilience Closure
 
 Work:
 - Add step-aligned config dedupe in satellite runtime to avoid unnecessary source/layer rebuilds (compare effective stepped bucket, not raw wall time).
 - Add "last-known-good" runtime config rollback behavior for apply failures (including OGN contrast icon-state rollback).
+- Add forecast apply failure isolation in `MapOverlayManager` (mirror satellite/weather guarded apply behavior).
+- Preserve forecast visual continuity during transient loading/null-tile windows (no unnecessary clear/flicker).
 - Harden warning/error channel precedence for repeated mixed-failure states.
 - Add explicit render invariants:
   - frame order remains `1,2,3,4,5,6,1,2,...`,
@@ -274,20 +292,22 @@ Files:
 - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
 - `feature/map/src/main/java/com/example/xcpro/map/SkySightSatelliteOverlay.kt`
 - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayRepository.kt`
+- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
 - `feature/map/src/test/java/com/example/xcpro/map/MapOverlayManagerSkySightSatelliteErrorTest.kt`
+- `feature/map/src/test/java/com/example/xcpro/map/MapOverlayManagerForecastWarningTest.kt`
 - `feature/map/src/test/java/com/example/xcpro/map/SkySightSatelliteOverlayTemporalPolicyTest.kt`
 - `feature/map/src/test/java/com/example/xcpro/forecast/ForecastOverlayRepositoryTest.kt`
 
 Expected score after phase:
-- Architecture 93
-- Runtime 93
-- Reliability 93
+- Architecture 92
+- Runtime 92
+- Reliability 92
 - Auth 89
-- Network 91
+- Network 90
 - UI 90
-- Tests 93
+- Tests 92
 - Docs/tooling 85
-- Overall 92
+- Overall 91
 
 ### Phase 4 - UI Performance and Interaction Stability
 
@@ -382,15 +402,15 @@ Phase 6 exit criteria (mandatory):
 
 ## 4) Net Score Increase Plan (Baseline -> Target)
 
-- Architecture boundary compliance: `89 -> 95` (+6)
-- Runtime correctness (forecast + satellite): `85 -> 95` (+10)
-- Reliability/resilience: `83 -> 95` (+12)
+- Architecture boundary compliance: `88 -> 95` (+7)
+- Runtime correctness (forecast + satellite): `83 -> 95` (+12)
+- Reliability/resilience: `80 -> 95` (+15)
 - Auth and credential robustness: `68 -> 95` (+27)
 - Network/API contract resilience: `77 -> 95` (+18)
-- UI responsiveness risk: `83 -> 95` (+12)
-- Test coverage on risky paths: `84 -> 95` (+11)
+- UI responsiveness risk: `82 -> 95` (+13)
+- Test coverage on risky paths: `83 -> 95` (+12)
 - Docs/tooling reliability: `78 -> 95` (+17)
-- Overall SkySight slice: `84 -> 95` (+11)
+- Overall SkySight slice: `82 -> 95` (+13)
 
 ## 5) Required Verification Gates Per Phase
 
