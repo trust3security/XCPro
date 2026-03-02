@@ -495,6 +495,18 @@ Red flags in review (reject changes):
 
 ---
 
+## 14A. Kotlin File Size Budget
+
+These rules keep files reviewable and refactor-safe.
+
+Rules:
+- Kotlin source files in this repo must be `<= 500` lines by default.
+- Stricter per-file budgets may be enforced in `scripts/ci/enforce_rules.ps1` for hotspot files.
+- Splits must preserve architecture boundaries and behavior contracts.
+- Temporary budget violations require a time-boxed exception in `docs/ARCHITECTURE/KNOWN_DEVIATIONS.md` with issue ID, owner, and expiry.
+
+---
+
 ## Related Docs
 - `CHANGE_PLAN_TEMPLATE.md`: neutral plan template for new features and refactors.
 - `../../mapposition.md`: map display update flow and time-base rules.

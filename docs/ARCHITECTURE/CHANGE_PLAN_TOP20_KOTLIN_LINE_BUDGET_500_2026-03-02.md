@@ -6,7 +6,7 @@
 - Owner: XCPro Team
 - Date: 2026-03-02
 - Issue/PR: RULES-20260302-LINEBUDGET500
-- Status: Draft
+- Status: Executed for enforced top-20 scope (2026-03-02)
 
 ## 1) Scope
 

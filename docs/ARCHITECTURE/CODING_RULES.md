@@ -40,6 +40,7 @@ The following checks must fail the build when violated:
 - App identity stability: `app/build.gradle.kts` must keep the approved
   `applicationId` and debug `applicationIdSuffix` unless an explicit migration
   plan is documented and approved.
+- File size budget: Kotlin source files must be `<= 500` lines by default, with stricter hotspot caps enforced in `scripts/ci/enforce_rules.ps1`.
 
 ---
 
@@ -87,6 +88,17 @@ When adding or tightening a gate rule:
 - Add the corresponding static check in `scripts/arch_gate.py` or `enforceRules`.
 - Update affected architecture docs in the same change set.
 - If immediate compliance is not possible, add a time-boxed entry in `KNOWN_DEVIATIONS.md`.
+
+### 1A.4 Static Analysis Expectations (Line Budget)
+
+CI should include static checks that fail when Kotlin files exceed allowed line budgets:
+
+- Global default: `<= 500` lines per Kotlin file.
+- Hotspot files may define stricter caps (`<= 450`, `<= 350`, `<= 320`, or `<= 300`) in `scripts/ci/enforce_rules.ps1`.
+- Budget checks must name the file and configured cap in failure output.
+
+Exception rule:
+- If a file must temporarily exceed budget, record a time-boxed exception in `KNOWN_DEVIATIONS.md` (issue ID, owner, expiry, removal plan).
 
 ## 1B. Exception Process
 

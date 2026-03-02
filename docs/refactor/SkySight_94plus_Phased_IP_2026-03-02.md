@@ -2,7 +2,7 @@
 
 Date: 2026-03-02
 Owner: XCPro Team
-Status: Updated after comprehensive repass #5 (SkySight slice)
+Status: Updated after comprehensive repass #6 (SkySight slice)
 Scope: Raise every SkySight score category to >=94 (hard gate) and overall slice to >=95
 
 Read first (required):
