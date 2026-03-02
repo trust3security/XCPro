@@ -28,31 +28,31 @@ import kotlin.coroutines.coroutineContext
 
 
 open class IgcReplayControllerRuntime(
-    @ApplicationContext private val appContext: Context,
+    @ApplicationContext internal val appContext: Context,
     private val flightDataRepository: FlightDataRepository,
-    private val replaySensorSource: ReplaySensorSource,
-    private val replayAirspeedRepository: ReplayAirspeedRepository,
+    internal val replaySensorSource: ReplaySensorSource,
+    internal val replayAirspeedRepository: ReplayAirspeedRepository,
     private val replayPipelineFactory: ReplayPipelineFactory,
-    private val igcParser: IgcParser
+    internal val igcParser: IgcParser
 ) {
     private var replayJob: Job? = null
     private var seekJob: Job? = null
     private var points: List<IgcPoint> = emptyList()
     private var currentIndex = 0
-    private var simConfig = DEFAULT_SIM_CONFIG
-    private var sampleEmitter = ReplaySampleEmitter(replaySensorSource, replayAirspeedRepository, simConfig)
+    internal var simConfig = DEFAULT_SIM_CONFIG
+    internal var sampleEmitter = ReplaySampleEmitter(replaySensorSource, replayAirspeedRepository, simConfig)
     private var runtimeInterpolator: ReplayRuntimeInterpolator? = null
-    private var uiRuntimeInterpolator: ReplayRuntimeInterpolator? = null
+    internal var uiRuntimeInterpolator: ReplayRuntimeInterpolator? = null
     private var runtimeTimestampMs: Long = 0L
-    private var resetModeAfterSession = false
-    private var autoStopAfterFinish = false
-    private val uiInterpolatorLock = Any()
+    internal var resetModeAfterSession = false
+    internal var autoStopAfterFinish = false
+    internal val uiInterpolatorLock = Any()
 
 
-    private val _session = MutableStateFlow(SessionState())
+    internal val _session = MutableStateFlow(SessionState())
     val session: StateFlow<SessionState> = _session.asStateFlow()
 
-    private val _events = MutableSharedFlow<ReplayEvent>(extraBufferCapacity = 1)
+    internal val _events = MutableSharedFlow<ReplayEvent>(extraBufferCapacity = 1)
     val events: SharedFlow<ReplayEvent> = _events.asSharedFlow()
 
     private val pipeline = replayPipelineFactory.create(
@@ -60,7 +60,7 @@ open class IgcReplayControllerRuntime(
         tag = TAG
     )
 
-    private val scope: CoroutineScope
+    internal val scope: CoroutineScope
         get() = pipeline.scope
 
     private fun ensureScopeActive() {
@@ -70,246 +70,53 @@ open class IgcReplayControllerRuntime(
         }
     }
 
-    private fun ensureReplayPipelineActive() {
+    internal fun ensureReplayPipelineActive() {
         pipeline.ensureActive {
             replayJob = null
             seekJob = null
         }
     }
 
-    suspend fun loadDocument(document: DocumentRef) {
-        val uri = Uri.parse(document.uri)
-        loadFile(uri, document.displayName)
-    }
+    suspend fun loadDocument(document: DocumentRef) = loadDocumentRuntime(document)
 
-    suspend fun loadFile(uri: Uri, displayName: String?) {
-        ensureReplayPipelineActive()
-        var failure: Throwable? = null
-        val document = DocumentRef(uri = uri.toString(), displayName = displayName)
-        withContext(scope.coroutineContext) {
-            try {
-                val log = appContext.loadIgcLog(uri, igcParser)
-                AppLogger.i(
-                    TAG,
-                    "REPLY_LOAD Loaded IGC file ${document.displayName ?: document.uri} " +
-                        "with ${log.points.size} raw points (qnh=${log.metadata.qnhHpa})"
-                )
-                prepareSession(
-                    log = log,
-                    selection = Selection(document)
-                )
-            } catch (c: CancellationException) {
-                throw c
-            } catch (t: Throwable) {
-                failure = t
-            }
-        }
-        failure?.let { t ->
-            AppLogger.e(TAG, "Failed to load IGC file ${document.displayName ?: document.uri}", t)
-            _events.tryEmit(ReplayEvent.Failed(t))
-            throw t
-        }
-    }
+    suspend fun loadFile(uri: Uri, displayName: String?) = loadFileRuntime(uri, displayName)
 
-    suspend fun loadAsset(assetPath: String, displayName: String? = null) {
-        ensureReplayPipelineActive()
-        var failure: Throwable? = null
-        withContext(scope.coroutineContext) {
-            try {
-                val log = appContext.loadIgcAssetLog(assetPath, igcParser)
-                val name = displayName ?: assetPath.substringAfterLast('/')
-                val uri = Uri.parse("$ASSET_URI_PREFIX$assetPath")
-                val document = DocumentRef(uri = uri.toString(), displayName = name)
-                AppLogger.i(TAG, "REPLY_LOAD Loaded IGC asset $assetPath with ${log.points.size} raw points (qnh=${log.metadata.qnhHpa})")
-                prepareSession(
-                    log = log,
-                    selection = Selection(document)
-                )
-            } catch (c: CancellationException) {
-                throw c
-            } catch (t: Throwable) {
-                failure = t
-            }
-        }
-        failure?.let { t ->
-            AppLogger.e(TAG, "Failed to load IGC asset $assetPath", t)
-            _events.tryEmit(ReplayEvent.Failed(t))
-            throw t
-        }
-    }
+    suspend fun loadAsset(assetPath: String, displayName: String? = null) =
+        loadAssetRuntime(assetPath, displayName)
 
-    suspend fun loadLog(log: IgcLog, displayName: String? = null) {
-        ensureReplayPipelineActive()
-        var failure: Throwable? = null
-        withContext(scope.coroutineContext) {
-            try {
-                val name = displayName ?: "Replay log"
-                val uri = Uri.parse("memory://replay/${name.replace(' ', '_')}")
-                val document = DocumentRef(uri = uri.toString(), displayName = name)
-                AppLogger.i(TAG, "REPLY_LOAD Loaded synthetic IGC log with ${log.points.size} raw points (qnh=${log.metadata.qnhHpa})")
-                prepareSession(
-                    log = log,
-                    selection = Selection(document)
-                )
-            } catch (c: CancellationException) {
-                throw c
-            } catch (t: Throwable) {
-                failure = t
-            }
-        }
-        failure?.let { t ->
-            AppLogger.e(TAG, "Failed to load synthetic IGC log", t)
-            _events.tryEmit(ReplayEvent.Failed(t))
-            throw t
-        }
-    }
+    suspend fun loadLog(log: IgcLog, displayName: String? = null) = loadLogRuntime(log, displayName)
 
-    fun setReplayMode(mode: ReplayMode, resetAfterSession: Boolean = false) {
-        if (_session.value.status == SessionStatus.PLAYING) {
-            AppLogger.w(TAG, "Replay mode change ignored while playing")
-            return
-        }
-        if (simConfig.mode == mode) {
-            resetModeAfterSession = resetAfterSession
-            return
-        }
-        simConfig = simConfig.copy(mode = mode)
-        sampleEmitter = ReplaySampleEmitter(replaySensorSource, replayAirspeedRepository, simConfig)
-        resetModeAfterSession = resetAfterSession
-        AppLogger.i(TAG, "Replay mode set to ${mode.name} (resetAfterSession=$resetAfterSession)")
-    }
+    fun setReplayMode(mode: ReplayMode, resetAfterSession: Boolean = false) =
+        setReplayModeRuntime(mode, resetAfterSession)
 
-    fun getReplayCadence(): ReplayCadenceProfile = ReplayCadenceProfile(
-        referenceStepMs = simConfig.referenceStepMs,
-        gpsStepMs = simConfig.gpsStepMs
-    )
+    fun getReplayCadence(): ReplayCadenceProfile = getReplayCadenceRuntime()
 
-    fun getReplayBaroStepMs(): Long = simConfig.baroStepMs
+    fun getReplayBaroStepMs(): Long = getReplayBaroStepMsRuntime()
 
-    fun getReplayNoiseProfile(): ReplayNoiseProfile = ReplayNoiseProfile(
-        pressureNoiseSigmaHpa = simConfig.pressureNoiseSigmaHpa,
-        gpsAltitudeNoiseSigmaM = simConfig.gpsAltitudeNoiseSigmaM,
-        jitterMs = simConfig.jitterMs
-    )
+    fun getReplayNoiseProfile(): ReplayNoiseProfile = getReplayNoiseProfileRuntime()
 
-    fun getReplayGpsAccuracyMeters(): Float = simConfig.gpsAccuracyMeters
+    fun getReplayGpsAccuracyMeters(): Float = getReplayGpsAccuracyMetersRuntime()
 
-    fun getReplayInterpolation(): ReplayInterpolation = simConfig.interpolation
+    fun getReplayInterpolation(): ReplayInterpolation = getReplayInterpolationRuntime()
 
-    fun setReplayCadence(profile: ReplayCadenceProfile) {
-        if (_session.value.status == SessionStatus.PLAYING) {
-            AppLogger.w(TAG, "Replay cadence change ignored while playing")
-            return
-        }
-        val referenceStepMs = profile.referenceStepMs.coerceAtLeast(1L)
-        val gpsStepMs = profile.gpsStepMs.coerceAtLeast(0L)
-        if (simConfig.referenceStepMs == referenceStepMs && simConfig.gpsStepMs == gpsStepMs) return
-        simConfig = simConfig.copy(
-            referenceStepMs = referenceStepMs,
-            gpsStepMs = gpsStepMs
-        )
-        sampleEmitter = ReplaySampleEmitter(replaySensorSource, replayAirspeedRepository, simConfig)
-        AppLogger.i(TAG, "Replay cadence set referenceStepMs=$referenceStepMs gpsStepMs=$gpsStepMs")
-    }
+    fun setReplayCadence(profile: ReplayCadenceProfile) = setReplayCadenceRuntime(profile)
 
-    fun setReplayBaroStepMs(stepMs: Long) {
-        if (_session.value.status == SessionStatus.PLAYING) {
-            AppLogger.w(TAG, "Replay baro step change ignored while playing")
-            return
-        }
-        val clamped = stepMs.coerceAtLeast(1L)
-        if (simConfig.baroStepMs == clamped) return
-        simConfig = simConfig.copy(baroStepMs = clamped)
-        sampleEmitter = ReplaySampleEmitter(replaySensorSource, replayAirspeedRepository, simConfig)
-        AppLogger.i(TAG, "Replay baro step set baroStepMs=$clamped")
-    }
+    fun setReplayBaroStepMs(stepMs: Long) = setReplayBaroStepMsRuntime(stepMs)
 
-    fun setReplayNoiseProfile(profile: ReplayNoiseProfile) {
-        if (_session.value.status == SessionStatus.PLAYING) {
-            AppLogger.w(TAG, "Replay noise profile change ignored while playing")
-            return
-        }
-        val jitterMs = profile.jitterMs.coerceAtLeast(0L)
-        val pressureSigma = profile.pressureNoiseSigmaHpa.coerceAtLeast(0.0)
-        val gpsSigma = profile.gpsAltitudeNoiseSigmaM.coerceAtLeast(0.0)
-        if (simConfig.pressureNoiseSigmaHpa == pressureSigma &&
-            simConfig.gpsAltitudeNoiseSigmaM == gpsSigma &&
-            simConfig.jitterMs == jitterMs
-        ) return
-        simConfig = simConfig.copy(
-            pressureNoiseSigmaHpa = pressureSigma,
-            gpsAltitudeNoiseSigmaM = gpsSigma,
-            jitterMs = jitterMs
-        )
-        sampleEmitter = ReplaySampleEmitter(replaySensorSource, replayAirspeedRepository, simConfig)
-        AppLogger.i(
-            TAG,
-            "Replay noise profile set pressureSigma=$pressureSigma gpsSigma=$gpsSigma jitterMs=$jitterMs"
-        )
-    }
+    fun setReplayNoiseProfile(profile: ReplayNoiseProfile) = setReplayNoiseProfileRuntime(profile)
 
-    fun setReplayGpsAccuracyMeters(accuracyMeters: Float) {
-        if (_session.value.status == SessionStatus.PLAYING) {
-            AppLogger.w(TAG, "Replay GPS accuracy change ignored while playing")
-            return
-        }
-        val clamped = accuracyMeters.coerceIn(MIN_GPS_ACCURACY_M, MAX_GPS_ACCURACY_M)
-        if (simConfig.gpsAccuracyMeters == clamped) return
-        simConfig = simConfig.copy(gpsAccuracyMeters = clamped)
-        sampleEmitter = ReplaySampleEmitter(replaySensorSource, replayAirspeedRepository, simConfig)
-        AppLogger.i(TAG, "Replay GPS accuracy set accuracyMeters=$clamped")
-    }
+    fun setReplayGpsAccuracyMeters(accuracyMeters: Float) = setReplayGpsAccuracyMetersRuntime(accuracyMeters)
 
-    fun setReplayInterpolation(interpolation: ReplayInterpolation) {
-        if (_session.value.status == SessionStatus.PLAYING) {
-            AppLogger.w(TAG, "Replay interpolation change ignored while playing")
-            return
-        }
-        if (simConfig.interpolation == interpolation) return
-        simConfig = simConfig.copy(interpolation = interpolation)
-        sampleEmitter = ReplaySampleEmitter(replaySensorSource, replayAirspeedRepository, simConfig)
-        AppLogger.i(TAG, "Replay interpolation set to ${interpolation.name}")
-    }
+    fun setReplayInterpolation(interpolation: ReplayInterpolation) =
+        setReplayInterpolationRuntime(interpolation)
 
-    fun setAutoStopAfterFinish(enabled: Boolean) {
-        autoStopAfterFinish = enabled
-    }
+    fun setAutoStopAfterFinish(enabled: Boolean) = setAutoStopAfterFinishRuntime(enabled)
 
-    fun getInterpolatedReplayHeadingDeg(timestampMs: Long): Double? {
-        if (simConfig.interpolation != ReplayInterpolation.CATMULL_ROM_RUNTIME) return null
-        val session = _session.value
-        if (session.selection == null) return null
-        val start = session.startTimestampMillis
-        val end = start + session.durationMillis
-        if (end <= start) return null
-        val clamped = timestampMs.coerceIn(start, end)
-        val interpolator = uiRuntimeInterpolator ?: return null
-        val fix = synchronized(uiInterpolatorLock) {
-            interpolator.interpolate(clamped)
-        } ?: return null
-        return fix.movement.bearingDeg.toDouble()
-    }
+    fun getInterpolatedReplayHeadingDeg(timestampMs: Long): Double? =
+        getInterpolatedReplayHeadingDegRuntime(timestampMs)
 
-    fun getInterpolatedReplayPose(timestampMs: Long): ReplayDisplayPose? {
-        if (simConfig.interpolation != ReplayInterpolation.CATMULL_ROM_RUNTIME) return null
-        val session = _session.value
-        if (session.selection == null) return null
-        val start = session.startTimestampMillis
-        val end = start + session.durationMillis
-        if (end <= start) return null
-        val clamped = timestampMs.coerceIn(start, end)
-        val interpolator = uiRuntimeInterpolator ?: return null
-        val fix = synchronized(uiInterpolatorLock) {
-            interpolator.interpolate(clamped)
-        } ?: return null
-        return ReplayDisplayPose(
-            latitude = fix.point.latitude,
-            longitude = fix.point.longitude,
-            timestampMillis = fix.point.timestampMillis,
-            bearingDeg = fix.movement.bearingDeg.toDouble(),
-            speedMs = fix.movement.speedMs
-        )
-    }
+    fun getInterpolatedReplayPose(timestampMs: Long): ReplayDisplayPose? =
+        getInterpolatedReplayPoseRuntime(timestampMs)
 
     fun play() {
         ensureReplayPipelineActive()
@@ -631,16 +438,16 @@ open class IgcReplayControllerRuntime(
 
 
     companion object {
-        private const val TAG = "IgcReplayController"
+        internal const val TAG = "IgcReplayController"
         private const val MIN_FRAME_INTERVAL_MS = 1L  // allow sub-second replay cadence
-        private const val MAX_SPEED = 20.0
-        private const val MIN_GPS_ACCURACY_M = 1f
-        private const val MAX_GPS_ACCURACY_M = 50f
-        private const val ASSET_URI_PREFIX = "asset:///"
-        private val DEFAULT_SIM_CONFIG = ReplaySimConfig()
+        internal const val MAX_SPEED = 20.0
+        internal const val MIN_GPS_ACCURACY_M = 1f
+        internal const val MAX_GPS_ACCURACY_M = 50f
+        internal const val ASSET_URI_PREFIX = "asset:///"
+        internal val DEFAULT_SIM_CONFIG = ReplaySimConfig()
     }
 
-    private fun prepareSession(log: IgcLog, selection: Selection) {
+    internal fun prepareSession(log: IgcLog, selection: Selection) {
         val prepared = prepareReplaySession(
             log = log,
             selection = selection,

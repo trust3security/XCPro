@@ -1,5 +1,4 @@
 package com.example.xcpro.weather.rain
-
 import com.example.xcpro.core.time.FakeClock
 import com.example.xcpro.testing.OkHttpClientRegistry
 import com.example.xcpro.testing.shutdownForTests
@@ -25,14 +24,12 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 class WeatherRadarMetadataRepositoryTest {
     private val okHttpClients = OkHttpClientRegistry()
     private lateinit var parserClient: OkHttpClient
     private lateinit var parserRepository: WeatherRadarMetadataRepository
-
     @Before
     fun setUp() {
         parserClient = OkHttpClient()
@@ -42,13 +39,11 @@ class WeatherRadarMetadataRepositoryTest {
             ioDispatcher = Dispatchers.Unconfined
         )
     }
-
     @After
     fun tearDown() {
         parserClient.shutdownForTests()
         okHttpClients.shutdownAll()
     }
-
     @Test
     fun parseMetadataPayload_parsesAndSortsPastFrames() {
         val payload = """
@@ -63,16 +58,13 @@ class WeatherRadarMetadataRepositoryTest {
               }
             }
         """.trimIndent()
-
         val parsed = parserRepository.parseMetadataPayload(payload)
-
         assertEquals("https://tilecache.rainviewer.com", parsed.hostUrl)
         assertEquals(1771554638L, parsed.generatedEpochSec)
         assertEquals(2, parsed.pastFrames.size)
         assertEquals(1771554000L, parsed.pastFrames.first().timeEpochSec)
         assertEquals("/v2/radar/1771554600", parsed.pastFrames.last().path)
     }
-
     @Test
     fun parseMetadataPayload_toleratesMissingOptionalBlocks() {
         val payload = """
@@ -492,67 +484,4 @@ class WeatherRadarMetadataRepositoryTest {
         assertEquals("radar.past is empty", secondState.detail)
     }
 
-    private fun metadataResponse(
-        request: Request,
-        generatedEpochSec: Long,
-        etag: String? = null,
-        lastModified: String? = null
-    ): Response {
-        val responseBuilder = Response.Builder()
-            .request(request)
-            .protocol(Protocol.HTTP_1_1)
-            .code(200)
-            .message("OK")
-            .body(
-                """
-                {
-                  "generated": $generatedEpochSec,
-                  "host": "https://tilecache.rainviewer.com",
-                  "radar": {
-                    "past": [
-                      {"time": 1771554600, "path": "/v2/radar/1771554600"}
-                    ]
-                  }
-                }
-                """.trimIndent().toResponseBody("application/json".toMediaType())
-            )
-        if (!etag.isNullOrBlank()) {
-            responseBuilder.header("ETag", etag)
-        }
-        if (!lastModified.isNullOrBlank()) {
-            responseBuilder.header("Last-Modified", lastModified)
-        }
-        return responseBuilder.build()
-    }
-
-    private fun noFramesMetadataResponse(
-        request: Request,
-        generatedEpochSec: Long
-    ): Response =
-        Response.Builder()
-            .request(request)
-            .protocol(Protocol.HTTP_1_1)
-            .code(200)
-            .message("OK")
-            .body(
-                """
-                {
-                  "generated": $generatedEpochSec,
-                  "host": "https://tilecache.rainviewer.com",
-                  "radar": {
-                    "past": []
-                  }
-                }
-                """.trimIndent().toResponseBody("application/json".toMediaType())
-            )
-            .build()
-
-    private fun notModifiedResponse(request: Request): Response =
-        Response.Builder()
-            .request(request)
-            .protocol(Protocol.HTTP_1_1)
-            .code(304)
-            .message("Not Modified")
-            .body("".toResponseBody("application/json".toMediaType()))
-            .build()
 }

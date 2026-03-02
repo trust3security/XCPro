@@ -1,24 +1,14 @@
 package com.example.xcpro.forecast
-
 import com.example.xcpro.common.di.IoDispatcher
 import com.example.xcpro.core.time.Clock
-import javax.inject.Inject
-import javax.inject.Singleton
-import kotlin.math.abs
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
-
-
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class ForecastOverlayRuntime(
     private val preferencesRepository: ForecastPreferencesRepository,
@@ -30,33 +20,31 @@ internal class ForecastOverlayRuntime(
     @IoDispatcher private val dispatcher: CoroutineDispatcher
 ) {
     val overlayState: Flow<ForecastOverlayUiState> = loadingOverlayState()
-
     fun loadingOverlayState(): Flow<ForecastOverlayUiState> = flow {
         var cachedPrimaryTileKey: OverlayTileKey? = null
         var cachedPrimaryTileSpec: ForecastTileSpec? = null
         var primaryTileErrorKey: OverlayTileKey? = null
         var primaryTileErrorMessage: String? = null
         var lastPrimaryTileAttemptMs: Long = 0L
-
         var cachedPrimaryLegendKey: OverlayLegendKey? = null
         var cachedPrimaryLegend: ForecastLegendSpec? = null
         var primaryLegendErrorKey: OverlayLegendKey? = null
         var primaryLegendErrorMessage: String? = null
         var lastPrimaryLegendAttemptMs: Long = 0L
-
         var cachedWindTileKey: OverlayTileKey? = null
         var cachedWindTileSpec: ForecastTileSpec? = null
         var windTileErrorKey: OverlayTileKey? = null
         var windTileErrorMessage: String? = null
         var lastWindTileAttemptMs: Long = 0L
-
         var cachedWindLegendKey: OverlayLegendKey? = null
         var cachedWindLegend: ForecastLegendSpec? = null
         var windLegendErrorKey: OverlayLegendKey? = null
         var windLegendErrorMessage: String? = null
         var lastWindLegendAttemptMs: Long = 0L
-
-        selectionInputFlow().collect { input ->
+        selectionInputFlow(
+            preferencesFlow = preferencesRepository.preferencesFlow,
+            clock = clock
+        ).collect { input ->
             val preferences = input.preferences
             val nowUtcMs = input.nowUtcMs
             val selection = if (preferences.overlayEnabled || preferences.windOverlayEnabled) {
@@ -74,7 +62,6 @@ internal class ForecastOverlayRuntime(
             val anyOverlayEnabled = primaryEnabled || windEnabled
             val selectedTimeForState = selection?.selectedTimeSlot?.validTimeUtcMs
                 ?: if (preferences.skySightSatelliteOverlayEnabled) nowUtcMs else null
-
             val baseState = ForecastOverlayUiState(
                 enabled = primaryEnabled,
                 opacity = preferences.opacity,
@@ -455,33 +442,6 @@ internal class ForecastOverlayRuntime(
         }
     }
 
-    private fun selectionInputFlow(): Flow<SelectionInput> =
-        preferencesRepository.preferencesFlow.flatMapLatest { preferences ->
-            val tickFlow: Flow<Long> = if (
-                preferences.overlayEnabled ||
-                    preferences.windOverlayEnabled ||
-                    preferences.skySightSatelliteOverlayEnabled
-            ) {
-                autoTimeTickerFlow()
-            } else {
-                flowOf(clock.nowWallMs())
-            }
-            tickFlow.map { nowUtcMs ->
-                SelectionInput(
-                    preferences = preferences,
-                    nowUtcMs = nowUtcMs
-                )
-            }
-        }
-
-    private fun autoTimeTickerFlow(): Flow<Long> = flow {
-        emit(clock.nowWallMs())
-        while (true) {
-            delay(AUTO_TIME_TICK_MS)
-            emit(clock.nowWallMs())
-        }
-    }
-
     private suspend fun resolveSelection(
         preferences: ForecastPreferences,
         nowUtcMs: Long
@@ -534,116 +494,7 @@ internal class ForecastOverlayRuntime(
         )
     }
 
-    private fun selectParameterId(
-        requested: ForecastParameterId,
-        parameters: List<ForecastParameterMeta>,
-        fallback: ForecastParameterId
-    ): ForecastParameterId {
-        val matched = parameters.firstOrNull { meta ->
-            meta.id.value.equals(requested.value, ignoreCase = true)
-        }?.id
-        if (matched != null) return matched
-        return parameters.firstOrNull()?.id ?: fallback
-    }
-
-    private fun selectTimeSlot(
-        requestedUtcMs: Long?,
-        timeSlots: List<ForecastTimeSlot>,
-        nowUtcMs: Long
-    ): ForecastTimeSlot {
-        if (timeSlots.isEmpty()) {
-            return ForecastTimeSlot(roundDownToHour(nowUtcMs))
-        }
-        val targetUtcMs = requestedUtcMs ?: nowUtcMs
-        if (requestedUtcMs == null) {
-            return timeSlots.lastOrNull { it.validTimeUtcMs <= nowUtcMs } ?: timeSlots.first()
-        }
-        return timeSlots.minByOrNull { slot ->
-            abs(slot.validTimeUtcMs - targetUtcMs)
-        } ?: timeSlots.first()
-    }
-
-    private fun defaultPrimaryParameters(): List<ForecastParameterMeta> = listOf(
-        ForecastParameterMeta(
-            id = DEFAULT_FORECAST_PARAMETER_ID,
-            name = "Thermal",
-            category = "Thermal",
-            unitLabel = "m/s"
-        )
-    )
-
-    private fun shouldRetry(
-        errorKeyMatches: Boolean,
-        lastAttemptMs: Long,
-        nowUtcMs: Long
-    ): Boolean {
-        if (!errorKeyMatches) return false
-        if (lastAttemptMs <= 0L) return true
-        return (nowUtcMs - lastAttemptMs) >= RETRY_AFTER_FAILURE_MS
-    }
-
-    private fun joinMessages(vararg messages: String?): String? {
-        val filtered = messages
-            .mapNotNull { message -> message?.trim()?.takeIf { it.isNotEmpty() } }
-            .distinct()
-        if (filtered.isEmpty()) return null
-        return filtered.joinToString(separator = " | ")
-    }
-
-    private fun subtractMessages(source: String?, toRemove: String?): String? {
-        val sourceMessages = splitMessages(source)
-        if (sourceMessages.isEmpty()) return null
-        val removedMessages = splitMessages(toRemove)
-        if (removedMessages.isEmpty()) return sourceMessages.joinToString(separator = " | ")
-        val filtered = sourceMessages.filter { sourceMessage ->
-            removedMessages.none { removedMessage ->
-                sourceMessage.equals(removedMessage, ignoreCase = true)
-            }
-        }
-        if (filtered.isEmpty()) return null
-        return filtered.joinToString(separator = " | ")
-    }
-
-    private fun splitMessages(message: String?): List<String> = message
-        ?.split("|")
-        ?.mapNotNull { part -> part.trim().takeIf { it.isNotEmpty() } }
-        ?: emptyList()
-
-    private fun isWindMeta(meta: ForecastParameterMeta): Boolean =
-        isForecastWindCategory(meta.category) || isForecastWindParameterId(meta.id)
-
-    private fun roundDownToHour(wallUtcMs: Long): Long = (wallUtcMs / HOUR_MS) * HOUR_MS
-
-    private data class ResolvedSelection(
-        val primaryParameters: List<ForecastParameterMeta>,
-        val selectedPrimaryParameterId: ForecastParameterId,
-        val windParameters: List<ForecastParameterMeta>,
-        val selectedWindParameterId: ForecastParameterId,
-        val timeSlots: List<ForecastTimeSlot>,
-        val selectedTimeSlot: ForecastTimeSlot
-    )
-
-    private data class SelectionInput(
-        val preferences: ForecastPreferences,
-        val nowUtcMs: Long
-    )
-
-    private data class OverlayTileKey(
-        val regionCode: String,
-        val parameterId: ForecastParameterId,
-        val timeUtcMs: Long
-    )
-
-    private data class OverlayLegendKey(
-        val regionCode: String,
-        val parameterId: ForecastParameterId,
-        val dayBucket: Long
-    )
-
     private companion object {
-        private const val HOUR_MS = 3_600_000L
         private const val MINUTE_MS = 60_000L
-        private const val AUTO_TIME_TICK_MS = 60_000L
-        private const val RETRY_AFTER_FAILURE_MS = 30_000L
     }
 }
