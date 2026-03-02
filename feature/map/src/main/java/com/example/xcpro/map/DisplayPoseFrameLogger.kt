@@ -1,7 +1,7 @@
 package com.example.xcpro.map
 
-import android.os.SystemClock
 import android.util.Log
+import com.example.xcpro.core.time.TimeBridge
 import com.example.xcpro.map.config.MapFeatureFlags
 import org.maplibre.android.geometry.LatLng
 
@@ -10,7 +10,7 @@ class DisplayPoseFrameLogger(
     private val defaultIntervalMs: Long,
     private val timeBaseProvider: () -> DisplayClock.TimeBase?,
     private val featureFlags: MapFeatureFlags,
-    private val nowElapsedMs: () -> Long = { SystemClock.elapsedRealtime() },
+    private val nowElapsedMs: () -> Long = { TimeBridge.nowMonoMs() },
     private val intervalProvider: () -> Long = { featureFlags.sim2FrameLogIntervalMs }
 ) {
     private var lastFrameLogMs: Long = 0L

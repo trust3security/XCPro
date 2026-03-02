@@ -74,10 +74,19 @@ Reference:
   - emergency collision-risk classification is disabled
 
 ### 2.4 Proximity coloring
-- Distance `> 5 km`: green
-- Distance `2..5 km`: amber
-- Distance `<= 2 km`: red
-- Emergency collision-risk styling has priority and uses a distinct emergency color.
+- Policy is trend-aware, not distance-only.
+- Distance tier base:
+  - Distance `> 5 km`: green
+  - Distance `2..5 km`: amber
+  - Distance `<= 2 km`: red
+- Alert colors (`amber`/`red`) are shown only while closing trend is active.
+- If a target is no longer closing (steady or diverging), color de-escalates to green
+  after a short recovery dwell (`4 s`) to avoid flicker.
+- First in-range sample is treated as alert-eligible until trend is established.
+- Emergency collision-risk styling has highest priority and requires:
+  - emergency geometry match,
+  - active closing trend,
+  - fresh sample age (`<= 20 s`).
 
 ### 2.5 Polling behavior
 - Hot interval baseline is `10s`.
@@ -104,11 +113,15 @@ Reference:
 - Snapshot diagnostics (debug panel):
   - publishes `consecutiveFailureCount`, `nextRetryMonoMs`, and `lastFailureMonoMs`
   - reason labels include circuit-breaker and network-failure categories
+  - issue-state UI policy treats both `Error` and `BackingOff` as degraded connectivity episodes
 - Token-auth behavior:
   - explicit credential rejection from token endpoint (`400/401/403`) enters `AuthFailed` mode
   - transient token-fetch network failures fall back to anonymous mode (not `AuthFailed`)
 - HTTP bridge cancellation hardening:
   - coroutine/OkHttp bridge closes pending responses on cancel/resume races to avoid leaked sockets
+- Metadata transport hardening:
+  - metadata CSV download and DB import are decoupled via temp-file staging; import runs after HTTP response closure
+  - ADS-B polling HTTP client and ADS-B metadata HTTP client use separate timeout profiles
 - Network callback hardening:
   - `AdsbNetworkAvailabilityTracker` normalizes callback flaps and keeps fail-open behavior when callback registration is unavailable
 
@@ -136,6 +149,11 @@ Show sections:
 - track
 - vertical rate
 - distance
+- ownship reference status
+- proximity tier
+- trend state (closing / recovery dwell / not closing)
+- range rate (+ closing)
+- proximity reason
 
 Units contract:
 - altitude, speed, vertical rate, and distance follow `General -> Units`
@@ -149,6 +167,7 @@ Metadata-not-ready contract:
 
 Details semantics:
 - "Distance from ownship" is always ownship-relative and is independent from OGN overlay data.
+- When ownship reference is unavailable, details explicitly show query-center fallback semantics.
 
 ## 4) Parser indexes (/states/all)
 
@@ -179,14 +198,34 @@ Closed in current implementation:
 6. Token refresh single-flight dedupe under concurrent stale-token requests.
 7. Metadata listing robustness guardrails (`NextMarker` fallback, token-loop guard, bounded page guard, dedicated tests).
 8. Icon classification precedence hardening for non-fixed-wing categories with expanded helicopter prefix/conflict tests.
+9. Offline wait stale/expiry progression:
+   - repository now advances housekeeping while waiting for network restoration, so stale dim and expiry purge continue during long offline periods.
+10. Cache reselection expiry safety:
+   - `publishFromStore(...)` now purges expired targets before select/publish.
+   - regression coverage added for offline stale->expiry progression and center-update reselection while offline.
+11. Reconnect monotonic timestamp freshness:
+   - success path now stamps `lastPollMonoMs`/`lastSuccessMonoMs` using current post-wait monotonic time.
+   - fixes stale pre-wait timestamp carryover after long offline/circuit waits.
+   - regression coverage added for offline-wait reconnect success timestamp correctness.
 
 Still open:
 
 1. Metadata import must continue supporting both direct CSV and complete snapshot format differences (`icaoAircraftClass` alias and quoted-field variations).
+2. ADS-B degraded-state UX and transition observability were implemented in the connectivity score-lift pass:
+   - persistent release-safe degraded status surface in map UI
+   - typed transition telemetry in snapshot (`networkOnline`, transition counters, transition timestamp, offline dwell)
+   Remaining gap: stronger release/e2e network-transition coverage is tracked in:
+   - `docs/ADS-b/CHANGE_PLAN_ADSB_CONNECTIVITY_SCORE_LIFT_2026-03-01.md`
+   - `docs/ADS-b/CHANGE_PLAN_ADSB_NETWORK_TRANSITION_E2E_COVERAGE_2026-03-01.md`
+   - `docs/ADS-b/CHANGE_PLAN_ADSB_CONNECTIVITY_UX_STALE_HOUSEKEEPING_OBSERVABILITY_2026-03-01.md`
 
 ## 6) Improvement and implementation references
 
 - `docs/ADS-b/README.md`
+- `docs/ADS-b/CHANGE_PLAN_ADSB_CONNECTIVITY_SCORE_LIFT_2026-03-01.md`
+- `docs/ADS-b/CHANGE_PLAN_ADSB_NETWORK_TRANSITION_E2E_COVERAGE_2026-03-01.md`
+- `docs/ADS-b/CHANGE_PLAN_ADSB_CONNECTIVITY_UX_STALE_HOUSEKEEPING_OBSERVABILITY_2026-03-01.md`
+- `docs/ADS-b/CHANGE_PLAN_ADSB_SOCKET_ERROR_HARDENING_2026-03-01.md`
 - `docs/ADS-b/ADSB_Improvement_Plan.md`
 - `docs/ADS-b/ADSB_AircraftMetadata.md`
 - `docs/ADS-b/ADSB_CategoryIconMapping.md`

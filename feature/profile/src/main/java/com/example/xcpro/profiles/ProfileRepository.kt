@@ -1,7 +1,11 @@
 package com.example.xcpro.profiles
 
 import android.util.Log
+import com.example.xcpro.core.time.TimeBridge
 import com.google.gson.GsonBuilder
+import com.google.gson.JsonParser
+import java.util.Locale
+import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -119,8 +123,22 @@ class ProfileRepository @Inject constructor(
         }
 
         val parsed = runCatching {
-            val type = object : com.google.gson.reflect.TypeToken<List<UserProfile?>>() {}.type
-            gson.fromJson<List<UserProfile?>>(json, type) ?: emptyList()
+            val rootElement = JsonParser.parseString(json)
+            if (!rootElement.isJsonArray) {
+                error("Profile payload must be a JSON array")
+            }
+            val parsedProfiles = mutableListOf<UserProfile?>()
+            rootElement.asJsonArray.forEach { element ->
+                if (element == null || element.isJsonNull) {
+                    parsedProfiles += null
+                    return@forEach
+                }
+                val parsedProfile = runCatching {
+                    gson.fromJson(element, UserProfile::class.java)
+                }.getOrNull()
+                parsedProfiles += parsedProfile
+            }
+            parsedProfiles
         }.getOrElse { error ->
             logError("Failed to parse profiles JSON", error)
             return ParseProfilesResult(
@@ -244,6 +262,104 @@ class ProfileRepository @Inject constructor(
         }
     }
 
+    suspend fun importProfiles(request: ProfileImportRequest): Result<ProfileImportResult> = mutationMutex.withLock {
+        runCatching {
+            val currentProfiles = _profiles.value
+            val activeBeforeId = _activeProfile.value?.id
+            if (request.profiles.isEmpty()) {
+                return@runCatching ProfileImportResult(
+                    requestedCount = 0,
+                    importedCount = 0,
+                    skippedCount = 0,
+                    failures = emptyList(),
+                    activeProfileBefore = activeBeforeId,
+                    activeProfileAfter = activeBeforeId
+                )
+            }
+
+            val failures = mutableListOf<ProfileImportFailure>()
+            val knownIds = currentProfiles.map { it.id }.toMutableSet()
+            val knownNames = currentProfiles
+                .map { it.name.trim().lowercase(Locale.ROOT) }
+                .filter { it.isNotBlank() }
+                .toMutableSet()
+            val importedProfiles = mutableListOf<UserProfile>()
+
+            request.profiles.forEach { incoming ->
+                val normalizedName = incoming.name.trim()
+                if (normalizedName.isBlank()) {
+                    failures += ProfileImportFailure(
+                        sourceName = incoming.name,
+                        reason = ProfileImportFailureReason.INVALID_PROFILE,
+                        detail = "Profile name cannot be blank."
+                    )
+                    return@forEach
+                }
+
+                val preferredId = incoming.id.trim()
+                val generatedId = generateUniqueId(knownIds, preferredId)
+                val resolvedName = resolveImportedName(
+                    baseName = normalizedName,
+                    knownNames = knownNames,
+                    policy = request.nameCollisionPolicy
+                )
+
+                val imported = incoming.copy(
+                    id = generatedId,
+                    name = resolvedName,
+                    preferences = if (request.preserveImportedPreferences) {
+                        incoming.preferences
+                    } else {
+                        ProfilePreferences()
+                    },
+                    isActive = false,
+                    createdAt = if (request.preserveImportedPreferences) {
+                        incoming.createdAt
+                    } else {
+                        TimeBridge.nowWallMs()
+                    },
+                    lastUsed = if (request.preserveImportedPreferences) {
+                        incoming.lastUsed
+                    } else {
+                        0L
+                    }
+                )
+                importedProfiles += imported
+            }
+
+            if (importedProfiles.isEmpty()) {
+                return@runCatching ProfileImportResult(
+                    requestedCount = request.profiles.size,
+                    importedCount = 0,
+                    skippedCount = request.profiles.size,
+                    failures = failures.toList(),
+                    activeProfileBefore = activeBeforeId,
+                    activeProfileAfter = activeBeforeId
+                )
+            }
+
+            val mergedProfiles = currentProfiles + importedProfiles
+            val resolvedActive = resolveImportActiveProfile(
+                profiles = mergedProfiles,
+                currentActiveId = activeBeforeId,
+                importedProfiles = importedProfiles,
+                keepCurrentActive = request.keepCurrentActive
+            )
+
+            persistState(mergedProfiles, resolvedActive?.id)
+            commitState(mergedProfiles, resolvedActive)
+
+            ProfileImportResult(
+                requestedCount = request.profiles.size,
+                importedCount = importedProfiles.size,
+                skippedCount = request.profiles.size - importedProfiles.size,
+                failures = failures.toList(),
+                activeProfileBefore = activeBeforeId,
+                activeProfileAfter = resolvedActive?.id
+            )
+        }
+    }
+
     suspend fun setActiveProfile(profile: UserProfile): Result<Unit> = mutationMutex.withLock {
         runCatching {
             val currentProfiles = _profiles.value
@@ -305,6 +421,81 @@ class ProfileRepository @Inject constructor(
     fun hasProfiles(): Boolean = _profiles.value.isNotEmpty()
 
     fun hasActiveProfile(): Boolean = _activeProfile.value != null
+
+    private fun generateUniqueId(knownIds: MutableSet<String>, preferredId: String): String {
+        if (preferredId.isNotBlank() && knownIds.add(preferredId)) {
+            return preferredId
+        }
+        var generatedId: String
+        do {
+            generatedId = UUID.randomUUID().toString()
+        } while (!knownIds.add(generatedId))
+        return generatedId
+    }
+
+    private fun resolveImportedName(
+        baseName: String,
+        knownNames: MutableSet<String>,
+        policy: ProfileNameCollisionPolicy
+    ): String {
+        val normalizedBase = baseName.trim()
+        val baseKey = normalizedBase.lowercase(Locale.ROOT)
+        if (knownNames.add(baseKey)) {
+            return normalizedBase
+        }
+
+        return when (policy) {
+            ProfileNameCollisionPolicy.KEEP_BOTH_SUFFIX ->
+                resolveImportedNameWithSuffix(normalizedBase, knownNames)
+        }
+    }
+
+    private fun resolveImportedNameWithSuffix(
+        normalizedBase: String,
+        knownNames: MutableSet<String>
+    ): String {
+        var suffix = 1
+        while (true) {
+            val candidate = if (suffix == 1) {
+                "$normalizedBase (Imported)"
+            } else {
+                "$normalizedBase (Imported $suffix)"
+            }
+            val candidateKey = candidate.lowercase(Locale.ROOT)
+            if (knownNames.add(candidateKey)) {
+                return candidate
+            }
+            suffix++
+        }
+    }
+
+    private fun resolveImportActiveProfile(
+        profiles: List<UserProfile>,
+        currentActiveId: String?,
+        importedProfiles: List<UserProfile>,
+        keepCurrentActive: Boolean
+    ): UserProfile? {
+        if (profiles.isEmpty()) {
+            return null
+        }
+
+        if (keepCurrentActive && !currentActiveId.isNullOrBlank()) {
+            return profiles.find { it.id == currentActiveId } ?: profiles.firstOrNull()
+        }
+
+        if (!keepCurrentActive) {
+            val newestImportedId = importedProfiles.lastOrNull()?.id
+            if (!newestImportedId.isNullOrBlank()) {
+                return profiles.find { it.id == newestImportedId } ?: profiles.firstOrNull()
+            }
+        }
+
+        return if (!currentActiveId.isNullOrBlank()) {
+            profiles.find { it.id == currentActiveId } ?: profiles.firstOrNull()
+        } else {
+            profiles.firstOrNull()
+        }
+    }
 
     private data class ParseProfilesResult(
         val profiles: List<UserProfile>,

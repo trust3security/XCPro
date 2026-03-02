@@ -1,0 +1,228 @@
+package com.example.xcpro.map
+
+import com.example.dfcards.calculations.ConfidenceLevel
+import com.example.xcpro.common.flight.FlightMode
+import com.example.xcpro.common.geo.GeoPoint
+import com.example.xcpro.common.units.AltitudeM
+import com.example.xcpro.common.units.PressureHpa
+import com.example.xcpro.common.units.SpeedMs
+import com.example.xcpro.common.units.VerticalSpeedMs
+import com.example.xcpro.core.time.FakeClock
+import com.example.xcpro.sensors.CompleteFlightData
+import com.example.xcpro.sensors.GPSData
+import com.example.xcpro.thermalling.ThermallingModeAction
+import com.example.xcpro.thermalling.ThermallingModeCoordinator
+import com.example.xcpro.thermalling.ThermallingModeInput
+import com.example.xcpro.thermalling.ThermallingModeSettings
+import com.example.xcpro.thermalling.ThermallingModeState
+import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
+import kotlin.coroutines.coroutineContext
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class ThermallingModeRuntimeWiringTest {
+
+    @Test
+    fun enterAndExit_applyModeAndZoomActions() = runTest {
+        val controller = TestRuntimeController()
+        val settings = MutableStateFlow(
+            ThermallingModeSettings(
+                enabled = true,
+                enterDelaySeconds = 0,
+                exitDelaySeconds = 0,
+                thermalZoomLevel = 13.0f
+            )
+        )
+        val flightData = MutableStateFlow<CompleteFlightData?>(flightSample(isCircling = false))
+        val thermalModeVisible = MutableStateFlow(true)
+        val currentMode = MutableStateFlow(FlightMode.CRUISE)
+        val currentZoom = MutableStateFlow(10f)
+        val modeActions = mutableListOf<FlightMode>()
+        val zoomActions = mutableListOf<Float>()
+
+        val wiring = ThermallingModeRuntimeWiring(
+            scope = this,
+            controller = controller,
+            settings = settings,
+            flightData = flightData,
+            thermalModeVisible = thermalModeVisible,
+            currentMode = currentMode,
+            currentZoom = currentZoom,
+            applyFlightMode = { mode ->
+                modeActions += mode
+                currentMode.value = mode
+            },
+            applyZoom = { zoom ->
+                zoomActions += zoom
+                currentZoom.value = zoom
+            }
+        )
+        try {
+            wiring.bind()
+            advanceUntilIdle()
+
+            flightData.value = flightSample(isCircling = true)
+            advanceUntilIdle()
+
+            assertEquals(listOf(FlightMode.THERMAL), modeActions)
+            assertEquals(listOf(13.0f), zoomActions)
+
+            flightData.value = flightSample(isCircling = false)
+            advanceUntilIdle()
+
+            assertEquals(listOf(FlightMode.THERMAL, FlightMode.CRUISE), modeActions)
+            assertEquals(listOf(13.0f, 10.0f), zoomActions)
+        } finally {
+            coroutineContext.cancelChildren()
+        }
+    }
+
+    @Test
+    fun manualZoom_isForwardedOnlyWhenSessionActive() = runTest {
+        val controller = TestRuntimeController()
+        val settings = MutableStateFlow(
+            ThermallingModeSettings(
+                enabled = true,
+                enterDelaySeconds = 0,
+                exitDelaySeconds = 8,
+                rememberManualThermalZoomInSession = true
+            )
+        )
+        val flightData = MutableStateFlow<CompleteFlightData?>(flightSample(isCircling = false))
+        val thermalModeVisible = MutableStateFlow(true)
+        val currentMode = MutableStateFlow(FlightMode.CRUISE)
+        val currentZoom = MutableStateFlow(10f)
+
+        val wiring = ThermallingModeRuntimeWiring(
+            scope = this,
+            controller = controller,
+            settings = settings,
+            flightData = flightData,
+            thermalModeVisible = thermalModeVisible,
+            currentMode = currentMode,
+            currentZoom = currentZoom,
+            applyFlightMode = { mode -> currentMode.value = mode },
+            applyZoom = { zoom -> currentZoom.value = zoom }
+        )
+        try {
+            wiring.bind()
+            advanceUntilIdle()
+
+            currentZoom.value = 11.0f
+            advanceUntilIdle()
+            assertTrue(controller.userZoomEvents.isEmpty())
+
+            flightData.value = flightSample(isCircling = true)
+            advanceUntilIdle()
+            controller.userZoomEvents.clear()
+
+            currentZoom.value = 14.6f
+            advanceUntilIdle()
+
+            assertEquals(listOf(14.6f), controller.userZoomEvents)
+        } finally {
+            coroutineContext.cancelChildren()
+        }
+    }
+
+    @Test
+    fun bind_isIdempotent_actionsNotDuplicated() = runTest {
+        val controller = TestRuntimeController()
+        val settings = MutableStateFlow(
+            ThermallingModeSettings(
+                enabled = true,
+                enterDelaySeconds = 0,
+                exitDelaySeconds = 8
+            )
+        )
+        val flightData = MutableStateFlow<CompleteFlightData?>(flightSample(isCircling = false))
+        val thermalModeVisible = MutableStateFlow(true)
+        val currentMode = MutableStateFlow(FlightMode.CRUISE)
+        val currentZoom = MutableStateFlow(10f)
+        val modeActions = mutableListOf<FlightMode>()
+
+        val wiring = ThermallingModeRuntimeWiring(
+            scope = this,
+            controller = controller,
+            settings = settings,
+            flightData = flightData,
+            thermalModeVisible = thermalModeVisible,
+            currentMode = currentMode,
+            currentZoom = currentZoom,
+            applyFlightMode = { mode ->
+                modeActions += mode
+                currentMode.value = mode
+            },
+            applyZoom = { zoom -> currentZoom.value = zoom }
+        )
+        try {
+            wiring.bind()
+            wiring.bind()
+            advanceUntilIdle()
+
+            flightData.value = flightSample(isCircling = true)
+            advanceUntilIdle()
+
+            assertEquals(1, modeActions.size)
+            assertEquals(FlightMode.THERMAL, modeActions.first())
+        } finally {
+            coroutineContext.cancelChildren()
+        }
+    }
+
+    private class TestRuntimeController : ThermallingModeRuntimeController {
+        private val clock = FakeClock(monoMs = 0L, wallMs = 0L)
+        private val coordinator = ThermallingModeCoordinator(clock)
+        val userZoomEvents = mutableListOf<Float>()
+
+        override fun update(input: ThermallingModeInput): List<ThermallingModeAction> =
+            coordinator.update(input)
+
+        override fun onUserZoomChanged(currentZoom: Float, settings: ThermallingModeSettings) {
+            userZoomEvents += currentZoom
+            coordinator.onUserZoomChanged(currentZoom, settings)
+        }
+
+        override fun state(): ThermallingModeState = coordinator.state()
+
+        override fun reset() {
+            coordinator.reset()
+        }
+    }
+
+    private fun flightSample(isCircling: Boolean): CompleteFlightData =
+        CompleteFlightData(
+            gps = GPSData(
+                position = GeoPoint(46.0, 7.0),
+                altitude = AltitudeM(1200.0),
+                speed = SpeedMs(22.0),
+                bearing = 180.0,
+                accuracy = 5f,
+                timestamp = 1_000L,
+                monotonicTimestampMillis = 1_000L
+            ),
+            baro = null,
+            compass = null,
+            baroAltitude = AltitudeM(1200.0),
+            qnh = PressureHpa(1_013.25),
+            isQNHCalibrated = false,
+            verticalSpeed = VerticalSpeedMs(0.0),
+            pressureAltitude = AltitudeM(1200.0),
+            baroGpsDelta = null,
+            baroConfidence = ConfidenceLevel.LOW,
+            qnhCalibrationAgeSeconds = 0L,
+            agl = AltitudeM(400.0),
+            thermalAverage = VerticalSpeedMs(0.0),
+            currentLD = 0f,
+            netto = VerticalSpeedMs(0.0),
+            isCircling = isCircling,
+            timestamp = 1_000L,
+            dataQuality = "TEST"
+        )
+}

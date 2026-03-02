@@ -142,9 +142,9 @@ private fun DiagnosticsSummaryCard(latest: VarioDiagnosticsSample?) {
                 MetricRow("Tau", latest.diagnostics.adaptiveTauSeconds.format(2) + " s")
                 MetricRow("Confidence", latest.diagnostics.confidence.format(2))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ElevatedAssistChip(onClick = { }, label = { Text("Baro ${'$'}{latest.diagnostics.baroHealthScore.format(2)}") })
-                    ElevatedAssistChip(onClick = { }, label = { Text("IMU ${'$'}{latest.diagnostics.imuHealthScore.format(2)}") })
-                    ElevatedAssistChip(onClick = { }, label = { Text("GPS ${'$'}{latest.diagnostics.gpsHealthScore.format(2)}") })
+                    ElevatedAssistChip(onClick = { }, label = { Text("Baro ${latest.diagnostics.baroHealthScore.format(2)}") })
+                    ElevatedAssistChip(onClick = { }, label = { Text("IMU ${latest.diagnostics.imuHealthScore.format(2)}") })
+                    ElevatedAssistChip(onClick = { }, label = { Text("GPS ${latest.diagnostics.gpsHealthScore.format(2)}") })
                 }
             }
         }
@@ -196,13 +196,13 @@ private fun DiagnosticsChart(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Min ${'$'}{minValue.format(2)} $unit", style = MaterialTheme.typography.labelSmall)
+                    Text("Min ${minValue.format(2)} $unit", style = MaterialTheme.typography.labelSmall)
                     Text(
-                        "Now ${'$'}{latestValue.format(2)} $unit",
+                        "Now ${latestValue.format(2)} $unit",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold
                     )
-                    Text("Max ${'$'}{maxValue.format(2)} $unit", style = MaterialTheme.typography.labelSmall)
+                    Text("Max ${maxValue.format(2)} $unit", style = MaterialTheme.typography.labelSmall)
                 }
             }
         }

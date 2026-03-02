@@ -1,8 +1,8 @@
 package com.example.dfcards.dfcards.calculations
 
 import android.content.Context
-import android.os.SystemClock
 import android.util.Log
+import com.example.xcpro.core.time.TimeBridge
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
@@ -15,7 +15,7 @@ import kotlin.math.sqrt
  */
 class SimpleAglCalculator(
     context: Context,
-    private val nowMonoMsProvider: () -> Long = { SystemClock.elapsedRealtime() }
+    private val nowMonoMsProvider: () -> Long = { TimeBridge.nowMonoMs() }
 ) {
 
     companion object {

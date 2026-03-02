@@ -27,10 +27,12 @@ class MapOverlayManagerWeatherRainTest {
         val fixture = createFixture()
         val map: MapLibreMap = mock()
         val weatherOverlay: WeatherRainOverlay = mock()
+        val blueOverlay: BlueLocationOverlay = mock()
         val frame = frameSelection(1_000L)
 
         fixture.mapState.mapLibreMap = map
         fixture.mapState.weatherRainOverlay = weatherOverlay
+        fixture.mapState.blueLocationOverlay = blueOverlay
 
         fixture.manager.setWeatherRainOverlay(
             enabled = true,
@@ -54,6 +56,7 @@ class MapOverlayManagerWeatherRainTest {
             opacity = eq(0.60f),
             transitionDurationMs = eq(180L)
         )
+        verify(blueOverlay, times(1)).bringToFront()
         assertTrue(fixture.manager.getOverlayStatus().contains("Weather Rain Status: NETWORK_ERROR"))
     }
 

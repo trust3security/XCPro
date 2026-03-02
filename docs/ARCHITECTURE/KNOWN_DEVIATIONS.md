@@ -9,6 +9,25 @@ Each entry must include an issue ID, owner, and expiry date.
 Active remediation plan:
 - `docs/refactor/Map_Task_Maintainability_5of5_Refactor_Plan_2026-02-14.md`
 
+README consistency rule:
+- `docs/ARCHITECTURE/README.md` must never duplicate or summarize deviation status.
+- This file is the only authoritative deviation ledger.
+
+## Entry template
+
+Use this template for every new deviation entry:
+
+1) `<short title>`
+- Rule:
+- Issue:
+- Owner:
+- Expiry:
+- Scope:
+- Risk:
+- Mitigation:
+- Removal steps:
+- Exit criteria:
+
 ## Current deviations
 
 1) Legally required weather provider literals and attribution link usage in implementation internals

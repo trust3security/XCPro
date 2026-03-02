@@ -12,6 +12,7 @@ import com.example.xcpro.map.trail.domain.TrailProcessor
 import com.example.xcpro.map.trail.domain.TrailUpdateInput
 import com.example.xcpro.map.trail.domain.TrailUpdateResult
 import com.example.xcpro.sensors.CompleteFlightData
+import com.example.xcpro.sensors.domain.LiveWindValidityPolicy
 import com.example.xcpro.sensors.domain.FlyingState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -176,11 +177,19 @@ internal class MapScreenObservers(
     }
 
     private fun RealTimeFlightData.applyWindState(windState: WindState): RealTimeFlightData {
-        if (!windState.isAvailable) {
-            return this
+        val windConfidence = windState.confidence.coerceIn(0.0, 1.0)
+        val hasWind = LiveWindValidityPolicy.isLiveWindUsable(
+            windState = windState,
+            airspeedSourceLabel = airspeedSource
+        )
+        if (!hasWind) {
+            return copy(
+                windConfidence = windConfidence,
+                windValid = false
+            )
         }
 
-        val vector = windState.vector ?: return this
+        val vector = windState.vector ?: return copy(windConfidence = windConfidence, windValid = false)
         val directionFrom = ((vector.directionFromDeg % 360.0) + 360.0) % 360.0
         val windAgeSeconds = if (windState.lastUpdatedMillis > 0L) {
             val ageMs = (timestamp - windState.lastUpdatedMillis).coerceAtLeast(0L)
@@ -193,6 +202,8 @@ internal class MapScreenObservers(
             windSpeed = vector.speed.toFloat(),
             windDirection = directionFrom.toFloat(),
             windQuality = windState.quality,
+            windConfidence = windConfidence,
+            windValid = true,
             windSource = windState.source.name,
             windHeadwind = windState.headwind,
             windCrosswind = windState.crosswind,

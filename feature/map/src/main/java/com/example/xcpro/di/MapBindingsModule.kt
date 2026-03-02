@@ -3,8 +3,12 @@ package com.example.xcpro.di
 import com.example.xcpro.common.waypoint.WaypointLoader
 import com.example.xcpro.common.glider.GliderConfigRepository
 import com.example.xcpro.adsb.AdsbProviderClient
+import com.example.xcpro.adsb.AdsbEmergencyAudioOutputPort
+import com.example.xcpro.adsb.AdsbEmergencyAudioSettingsPort
+import com.example.xcpro.adsb.AdsbTrafficPreferencesRepository
 import com.example.xcpro.adsb.AdsbTrafficRepository
 import com.example.xcpro.adsb.AdsbTrafficRepositoryImpl
+import com.example.xcpro.adsb.AndroidAdsbEmergencyAudioOutputAdapter
 import com.example.xcpro.adsb.OpenSkyProviderClient
 import com.example.xcpro.adsb.OpenSkyTokenRepository
 import com.example.xcpro.adsb.OpenSkyTokenRepositoryImpl
@@ -67,6 +71,16 @@ abstract class AdsbBindingsModule {
     abstract fun bindAdsbNetworkAvailabilityPort(
         impl: AndroidAdsbNetworkAvailabilityAdapter
     ): AdsbNetworkAvailabilityPort
+
+    @Binds
+    abstract fun bindAdsbEmergencyAudioSettingsPort(
+        impl: AdsbTrafficPreferencesRepository
+    ): AdsbEmergencyAudioSettingsPort
+
+    @Binds
+    abstract fun bindAdsbEmergencyAudioOutputPort(
+        impl: AndroidAdsbEmergencyAudioOutputAdapter
+    ): AdsbEmergencyAudioOutputPort
 
     @Binds
     abstract fun bindAdsbTrafficRepository(impl: AdsbTrafficRepositoryImpl): AdsbTrafficRepository

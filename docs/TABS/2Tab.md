@@ -16,7 +16,7 @@ Status: Implemented (tab-hosted controls)
 - Tab 4: placeholder (`Tab 4`)
 
 2. SkySight tab now hosts in-flight overlay controls:
-- non-wind overlays enable/toggle
+- non-wind overlay enable + single-parameter selection
 - wind overlay enable + wind parameter selection
 - `Sat View` toggle (switches map to `Satellite` style while enabled)
 - SkySight satellite API overlay controls:
@@ -25,7 +25,7 @@ Status: Implemented (tab-hosted controls)
   - radar toggle
   - lightning toggle
   - animation toggle
-  - history frames (1-3, 10-minute stepping)
+  - history frames (1-6, 10-minute stepping)
 - time selection, auto-time, and follow-time offset
 - legends, loading state, warning, and error messaging
 

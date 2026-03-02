@@ -1,5 +1,6 @@
 package com.example.xcpro.adsb.metadata
 
+import com.example.xcpro.adsb.AdsbProximityTier
 import com.example.xcpro.adsb.AdsbTrafficUiModel
 import com.example.xcpro.adsb.Icao24
 import com.example.xcpro.adsb.metadata.domain.AdsbMetadataEnrichmentUseCase
@@ -54,7 +55,16 @@ class AdsbMetadataEnrichmentUseCaseTest {
         )
 
         val selectedId = MutableStateFlow(Icao24.from("abc123"))
-        val targets = MutableStateFlow(listOf(target("abc123")))
+        val targets = MutableStateFlow(
+            listOf(
+                target("abc123").copy(
+                    proximityTier = AdsbProximityTier.RED,
+                    isClosing = true,
+                    closingRateMps = 1.8,
+                    isEmergencyCollisionRisk = true
+                )
+            )
+        )
         val flow = useCase.selectedTargetDetails(selectedId, targets)
 
         advanceUntilIdle()
@@ -65,6 +75,11 @@ class AdsbMetadataEnrichmentUseCaseTest {
         assertEquals("C208", latest.typecode)
         assertEquals("CESSNA 208 Caravan", latest.model)
         assertEquals(MetadataAvailability.Ready, latest.metadataAvailability)
+        assertEquals(true, latest.usesOwnshipReference)
+        assertEquals(AdsbProximityTier.RED, latest.proximityTier)
+        assertEquals(true, latest.isClosing)
+        assertEquals(1.8, latest.closingRateMps ?: Double.NaN, 1e-6)
+        assertEquals(true, latest.isEmergencyCollisionRisk)
     }
 
     @Test
@@ -78,7 +93,16 @@ class AdsbMetadataEnrichmentUseCaseTest {
         )
 
         val selectedId = MutableStateFlow(Icao24.from("abc123"))
-        val targets = MutableStateFlow(listOf(target("abc123")))
+        val targets = MutableStateFlow(
+            listOf(
+                target("abc123").copy(
+                    proximityTier = AdsbProximityTier.RED,
+                    isClosing = true,
+                    closingRateMps = 1.8,
+                    isEmergencyCollisionRisk = true
+                )
+            )
+        )
         val latest = useCase.selectedTargetDetails(selectedId, targets).first()
 
         requireNotNull(latest)

@@ -43,7 +43,7 @@ Pipeline overview: `PIPELINE.md` (diagram: `PIPELINE.svg`).
 ## Compliance Status (tracked)
 
 Compliance is tracked in `KNOWN_DEVIATIONS.md`.
-Current listed deviations: `None` (last verified in that file on 2026-02-04).
+This README intentionally does not duplicate deviation status.
 Refactor checklist: `../refactor/Agent-Execution-Contract-LevoCompliance.md`.
 
 CI rule enforcement (local):
@@ -59,6 +59,14 @@ gradlew enforceRules
 Preflight (rules + build + unit tests):
 ```
 preflight.bat
+```
+
+How to validate locally:
+```bash
+python scripts/arch_gate.py
+./gradlew enforceRules
+./gradlew testDebugUnitTest
+./gradlew assembleDebug
 ```
 
 ---
@@ -146,6 +154,13 @@ Key files:
 - Profile storage:
   - DataStore name: `profile_preferences`
   - Keys: `profiles_json`, `active_profile_id`
+- Profile sandbox contract:
+  - App identity is storage-critical. Keep `applicationId = "com.example.openxcpro"`
+    and debug `applicationIdSuffix = ".debug"` unless a migration plan is approved.
+  - Changing either value creates a new Android app sandbox and appears as an empty
+    profile store to users.
+  - Before any intentional app identity change, export profiles and document migration
+    and rollback steps in-repo.
 - App runtime/file config:
   - `configuration.json` in app internal storage (`context.filesDir`)
 - Build/local key used for map API:

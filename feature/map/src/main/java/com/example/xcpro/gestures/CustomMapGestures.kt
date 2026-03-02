@@ -15,6 +15,7 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.changedToDown
 import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerInput
+import com.example.xcpro.core.time.TimeBridge
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.map.MapGestureRegion
 import com.example.xcpro.map.MapZoomConstraints
@@ -126,7 +127,7 @@ fun CustomMapGestureHandler(
                     totalDragY.value = 0f
                     hasSwitchedMode.value = false
 
-                    val gestureStartTimeMs = System.currentTimeMillis()
+                    val gestureStartTimeMs = TimeBridge.nowMonoMs()
                     var fingerCount = 1
                     var isFirstFrame = true
                     var handledGesture = false
@@ -161,7 +162,7 @@ fun CustomMapGestureHandler(
                             gestureStartPosition = gestureStartPosition.value,
                             activePointers = activePointers,
                             gestureStartTimeMs = gestureStartTimeMs,
-                            currentTimeMs = System.currentTimeMillis()
+                            currentTimeMs = TimeBridge.nowMonoMs()
                         )
 
                         if (taskGestureHandler?.onGestureMove(gestureContext) == TaskGestureConsume.Consume) {
@@ -302,11 +303,11 @@ fun CustomMapGestureHandler(
                         gestureStartPosition = gestureStartPosition.value,
                         activePointers = emptyList(),
                         gestureStartTimeMs = gestureStartTimeMs,
-                        currentTimeMs = System.currentTimeMillis()
+                        currentTimeMs = TimeBridge.nowMonoMs()
                     )
                     taskGestureHandler?.onGestureEnd(endContext)
 
-                    val gestureDurationMs = System.currentTimeMillis() - gestureStartTimeMs
+                    val gestureDurationMs = TimeBridge.nowMonoMs() - gestureStartTimeMs
                     val isTap = initialFingerCount.value == 1 &&
                         !handledGesture &&
                         gestureDurationMs <= TAP_MAX_DURATION_MS &&

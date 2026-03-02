@@ -12,6 +12,7 @@ import com.example.xcpro.hawk.HawkVarioUiState
 import com.example.xcpro.orientation.HeadingResolver
 import com.example.xcpro.orientation.HeadingResolverInput
 import com.example.xcpro.sensors.CompleteFlightData
+import com.example.xcpro.sensors.domain.LiveWindValidityPolicy
 import com.example.xcpro.weather.wind.model.WindState
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -69,7 +70,10 @@ fun convertToRealTimeFlightData(
     val compassReliable = compass != null && compass.accuracy != SensorManager.SENSOR_STATUS_UNRELIABLE
     val hasGpsFix = gps != null
     val windVector = windState?.vector
-    val hasWind = windState?.isAvailable == true && windVector != null && windVector.speed > 0.5
+    val hasWind = LiveWindValidityPolicy.isLiveWindUsable(
+        windState = windState,
+        airspeedSourceLabel = completeData.airspeedSource
+    ) && windVector != null
     val windFromDeg = if (hasWind) {
         ((windVector!!.directionFromDeg % 360.0) + 360.0) % 360.0
     } else {
@@ -135,6 +139,8 @@ fun convertToRealTimeFlightData(
         trueAirspeed = completeData.trueAirspeed.value,
         indicatedAirspeed = completeData.indicatedAirspeed.value,
         windQuality = 0,
+        windConfidence = 0.0,
+        windValid = false,
         windSource = "",
         windHeadwind = 0.0,
         windCrosswind = 0.0,

@@ -1,6 +1,9 @@
 package com.example.xcpro.core.time
 
 import android.os.SystemClock
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
 import javax.inject.Inject
 
 interface Clock {
@@ -43,4 +46,15 @@ class FakeClock(
     fun setWallMs(value: Long) {
         wallMs = value
     }
+}
+
+object TimeBridge {
+    fun nowMonoMs(): Long = SystemClock.elapsedRealtime()
+
+    fun nowWallMs(): Long = System.currentTimeMillis()
+
+    fun nowUptimeMs(): Long = SystemClock.uptimeMillis()
+
+    fun nowLocalDateTime(): LocalDateTime =
+        LocalDateTime.ofInstant(Instant.ofEpochMilli(nowWallMs()), ZoneId.systemDefault())
 }

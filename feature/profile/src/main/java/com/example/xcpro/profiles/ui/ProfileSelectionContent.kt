@@ -18,6 +18,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -36,12 +37,14 @@ fun ProfileSelectionContent(
     onSelectProfile: (UserProfile) -> Unit,
     onDeleteProfile: (String) -> Unit,
     onCreateProfile: (ProfileCreationRequest) -> Unit,
+    onShowImportDialog: () -> Unit,
     onShowCreateDialog: () -> Unit,
     onHideCreateDialog: () -> Unit,
     onClearError: () -> Unit,
     onSkip: () -> Unit,
     onContinue: () -> Unit,
-    onEditProfile: (UserProfile) -> Unit = {}
+    onEditProfile: (UserProfile) -> Unit = {},
+    storageNamespaceLabel: String? = null
 ) {
     Column(
         modifier = Modifier
@@ -58,7 +61,9 @@ fun ProfileSelectionContent(
 
             state.profiles.isEmpty() -> ProfileEmptyState(
                 modifier = Modifier.weight(1f),
-                onCreateFirstProfile = onShowCreateDialog
+                onCreateFirstProfile = onShowCreateDialog,
+                onImportProfiles = onShowImportDialog,
+                storageNamespaceLabel = storageNamespaceLabel
             )
 
             else -> ProfileListSection(
@@ -146,7 +151,9 @@ private fun ProfileSelectionLoading(
 @Composable
 private fun ProfileEmptyState(
     modifier: Modifier = Modifier,
-    onCreateFirstProfile: () -> Unit
+    onCreateFirstProfile: () -> Unit,
+    onImportProfiles: () -> Unit,
+    storageNamespaceLabel: String?
 ) {
     Card(
         modifier = modifier
@@ -186,6 +193,22 @@ private fun ProfileEmptyState(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Create Your First Profile")
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = onImportProfiles,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Import Profile Backup")
+            }
+            if (!storageNamespaceLabel.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Profiles are scoped to app package: $storageNamespaceLabel",
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }

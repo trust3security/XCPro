@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -40,8 +41,8 @@ import com.example.xcpro.ogn.OGN_THERMAL_RETENTION_MIN_HOURS
 import com.example.xcpro.ogn.clampOgnHotspotsDisplayPercent
 import com.example.xcpro.ogn.clampOgnThermalRetentionHours
 import com.example.xcpro.ogn.isOgnThermalRetentionAllDay
-import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,8 +54,61 @@ fun HotspotsSettingsScreen(
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    ModalBottomSheet(
+        onDismissRequest = { navController.navigateUp() },
+        sheetState = sheetState,
+        dragHandle = null,
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight()
+        ) {
+            SettingsTopAppBar(
+                title = "Hotspots",
+                onNavigateUp = { navController.navigateUp() },
+                onSecondaryNavigate = {
+                    scope.launch {
+                        navController.popBackStack("map", inclusive = false)
+                        drawerState.open()
+                    }
+                },
+                onNavigateToMap = {
+                    scope.launch {
+                        drawerState.close()
+                        navController.popBackStack("map", inclusive = false)
+                    }
+                }
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                HotspotsSettingsContent(
+                    uiState = uiState,
+                    onSetRetentionHours = viewModel::setRetentionHours,
+                    onSetDisplayPercent = viewModel::setDisplayPercent
+                )
+            }
+        }
+    }
+}
+
+@Composable
+internal fun HotspotsSettingsContent(
+    uiState: HotspotsSettingsUiState,
+    onSetRetentionHours: (Int) -> Unit,
+    onSetDisplayPercent: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
     val retentionHours = uiState.retentionHours
     val displayPercent = uiState.displayPercent
+
     var retentionSliderValue by remember { mutableFloatStateOf(retentionHours.toFloat()) }
     var displayPercentSliderValue by remember { mutableFloatStateOf(displayPercent.toFloat()) }
 
@@ -63,106 +117,76 @@ fun HotspotsSettingsScreen(
         displayPercentSliderValue = displayPercent.toFloat()
     }
 
-    ModalBottomSheet(
-        onDismissRequest = { navController.navigateUp() },
-        sheetState = sheetState,
-        dragHandle = null,
-        containerColor = MaterialTheme.colorScheme.surface
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        SettingsTopAppBar(
-            title = "Hotspots",
-            onNavigateUp = { navController.navigateUp() },
-            onSecondaryNavigate = {
-                scope.launch {
-                    navController.popBackStack("map", inclusive = false)
-                    drawerState.open()
-                }
-            },
-            onNavigateToMap = {
-                scope.launch {
-                    drawerState.close()
-                    navController.popBackStack("map", inclusive = false)
-                }
-            }
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 8.dp),
-            contentAlignment = Alignment.TopCenter
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface
+            ),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        contentColor = MaterialTheme.colorScheme.onSurface
-                    ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Hotspots", style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            "Choose how long thermal hotspots remain on the map.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = "Visibility window: ${retentionLabel(retentionSliderValue.roundToInt())}",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Slider(
-                            value = retentionSliderValue,
-                            onValueChange = { value ->
-                                retentionSliderValue = clampOgnThermalRetentionHours(value.roundToInt()).toFloat()
-                            },
-                            onValueChangeFinished = {
-                                val snapped = clampOgnThermalRetentionHours(retentionSliderValue.roundToInt())
-                                if (snapped != retentionHours) {
-                                    viewModel.setRetentionHours(snapped)
-                                }
-                            },
-                            valueRange = OGN_THERMAL_RETENTION_MIN_HOURS.toFloat()..OGN_THERMAL_RETENTION_ALL_DAY_HOURS.toFloat(),
-                            steps = OGN_THERMAL_RETENTION_ALL_DAY_HOURS - OGN_THERMAL_RETENTION_MIN_HOURS - 1
-                        )
-                        Text(
-                            text = "1 hour removes hotspots older than 1 hour. All day keeps hotspots until local midnight (12:00 AM).",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "Hotspots shown: ${displayPercentSliderValue.roundToInt()}%",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Slider(
-                            value = displayPercentSliderValue,
-                            onValueChange = { value ->
-                                displayPercentSliderValue = clampOgnHotspotsDisplayPercent(value.roundToInt()).toFloat()
-                            },
-                            onValueChangeFinished = {
-                                val snapped = clampOgnHotspotsDisplayPercent(displayPercentSliderValue.roundToInt())
-                                if (snapped != displayPercent) {
-                                    viewModel.setDisplayPercent(snapped)
-                                }
-                            },
-                            valueRange = OGN_HOTSPOTS_DISPLAY_PERCENT_MIN.toFloat()..OGN_HOTSPOTS_DISPLAY_PERCENT_MAX.toFloat(),
-                            steps = OGN_HOTSPOTS_DISPLAY_PERCENT_MAX - OGN_HOTSPOTS_DISPLAY_PERCENT_MIN - 1
-                        )
-                        Text(
-                            text = "Lower percentages keep only the strongest climbs. Example: 5% shows only the top 5% strongest hotspots.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("Hotspots", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Choose how long thermal hotspots remain on the map.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "Visibility window: ${retentionLabel(retentionSliderValue.roundToInt())}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Slider(
+                    value = retentionSliderValue,
+                    onValueChange = { value ->
+                        retentionSliderValue = clampOgnThermalRetentionHours(value.roundToInt()).toFloat()
+                    },
+                    onValueChangeFinished = {
+                        val snapped = clampOgnThermalRetentionHours(retentionSliderValue.roundToInt())
+                        if (snapped != retentionHours) {
+                            onSetRetentionHours(snapped)
+                        }
+                    },
+                    valueRange = OGN_THERMAL_RETENTION_MIN_HOURS.toFloat()..OGN_THERMAL_RETENTION_ALL_DAY_HOURS.toFloat(),
+                    steps = OGN_THERMAL_RETENTION_ALL_DAY_HOURS - OGN_THERMAL_RETENTION_MIN_HOURS - 1
+                )
+                Text(
+                    text = "1 hour removes hotspots older than 1 hour. All day keeps hotspots until local midnight (12:00 AM).",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Hotspots shown: ${displayPercentSliderValue.roundToInt()}%",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Slider(
+                    value = displayPercentSliderValue,
+                    onValueChange = { value ->
+                        displayPercentSliderValue = clampOgnHotspotsDisplayPercent(value.roundToInt()).toFloat()
+                    },
+                    onValueChangeFinished = {
+                        val snapped = clampOgnHotspotsDisplayPercent(displayPercentSliderValue.roundToInt())
+                        if (snapped != displayPercent) {
+                            onSetDisplayPercent(snapped)
+                        }
+                    },
+                    valueRange = OGN_HOTSPOTS_DISPLAY_PERCENT_MIN.toFloat()..OGN_HOTSPOTS_DISPLAY_PERCENT_MAX.toFloat(),
+                    steps = OGN_HOTSPOTS_DISPLAY_PERCENT_MAX - OGN_HOTSPOTS_DISPLAY_PERCENT_MIN - 1
+                )
+                Text(
+                    text = "Lower percentages keep only the strongest climbs. Example: 5% shows only the top 5% strongest hotspots.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }

@@ -95,7 +95,9 @@ Reconnect behavior:
 - Exponential backoff: `1s -> 2s -> ... -> 60s`.
 - Keepalive interval: `60s`.
 - Stall timeout: `120s`.
-- Successful keepalive writes are treated as stream activity, so low-traffic periods do not trigger false stall reconnects.
+- Stall/liveness authority is inbound-only:
+  - any inbound line (traffic or server comment) updates stream activity
+  - outbound keepalive writes do not reset stall timer
 
 Target lifecycle:
 - Stale visual threshold: `60s` (lower alpha).
@@ -103,8 +105,16 @@ Target lifecycle:
 - Source-time ordering behavior:
   - Parser extracts APRS source-time candidates for `/hhmmssh` and `@ddhhmmz` forms.
   - Repository applies anti-rewind guard against older source-time frames.
+  - Repository keeps per-target latest accepted timed-source timestamp authority,
+    so delayed older timed frames are rejected even after an untimed fallback commit.
+  - Repository enforces timed-source lock for untimed frames:
+    - if a target has recent timed history, untimed frames are non-authoritative
+    - untimed fallback is allowed only after timed-source silence window (`30s`)
   - Frames that imply implausible motion are dropped before position commit.
+    - motion plausibility uses source-time deltas when available, with monotonic
+      fallback deltas when source time is missing.
   - Snapshot diagnostics expose dropped-frame counters for both policies.
+    - debug panel shows both counters as `Drops (order/motion)`.
 
 Display update mode (UI-only):
 - `Real-time`: no OGN map redraw throttling.
@@ -139,7 +149,7 @@ OGN glider trail lifecycle:
 - Trails are derived only from fresh OGN samples (`lastSeenMillis` strictly increasing per target).
 - Segment creation requires:
   - valid start/end coordinates
-  - finite vertical speed
+  - vertical speed uses finite sample when available; otherwise neutral fallback (`0.0 m/s`)
   - minimum movement distance (`>= 15 m`)
   - anti-jump guard (`<= 25 km` between consecutive samples)
 - Color mapping uses snail trail 19-step vario ramp (deep navy sink -> yellow zero -> dark purple climb).
@@ -181,9 +191,10 @@ Course parsing:
     (`imagery` or `radar` or `lightning`) is active.
   - Effect: glider icon mapping uses white contrast style image id `ogn_icon_glider_satellite`.
   - Non-glider icon mappings remain unchanged.
-  - Update semantics are lazy: no forced bulk redraw on toggle; icon switches are
-    applied on each target's next normal OGN render update.
-  - On disable, glider icon mapping returns to default using the same lazy update semantics.
+  - Update semantics are immediate for OGN traffic targets: contrast toggle forces
+    an immediate OGN traffic overlay rerender.
+  - On disable, glider icon mapping returns to default through the same immediate
+    forced rerender path.
 - OGN trails:
   - Source/layer IDs:
     - `ogn-glider-trail-source`
@@ -191,7 +202,13 @@ Course parsing:
   - Rendered below OGN thermal circles/icons for readability.
 - Layers:
   - `ogn-traffic-icon-layer`
-  - `ogn-traffic-label-layer`
+  - `ogn-traffic-label-top-layer`
+  - `ogn-traffic-label-bottom-layer`
+- Overlay initialization lifecycle:
+  - OGN overlay initialization is manager-owned (`MapOverlayManager`) and occurs
+    on overlay creation/style lifecycle, not on every render call.
+  - Pending throttled OGN render jobs are canceled on map detach to avoid
+    stale post-detach renders.
 - Viewport culling: only targets inside visible map bounds render.
 - Render cap: 500 targets.
 - Label resolution priority:
@@ -216,9 +233,23 @@ Marker tap behavior:
 - Marker selection uses canonical typed target keys internally (`FLARM:HEX` / `ICAO:HEX` / fallback),
   with legacy key compatibility during matching.
 
+## Reliability Hardening Status
+
+- Connectivity reliability hardening (ordering + liveness + DDB cadence) implemented
+  per:
+  - `docs/OGN/CHANGE_PLAN_OGN_CONNECTIVITY_RELIABILITY_2026-03-01.md`
+
 ## Identity and Privacy Behavior
 
 - DDB refresh and cache are handled by `OgnDdbRepository`.
+- DDB refresh due-check runs during active sessions (not reconnect-only), with
+  repository-side cadence check.
+- DDB refresh outcome semantics:
+  - successful refresh keeps normal cadence checks
+  - `NotDue` responses advance the repository-side cadence anchor to avoid
+    repeated minute-level relaunch attempts while DDB is already fresh
+  - failed refresh (HTTP/transport/parser/empty-payload failure) retries on a
+    bounded short window (`2..5 minutes`) instead of waiting for hourly cadence
 - If DDB marks target as `tracked == false`, target is removed from displayed list.
 - DDB lookup is type-aware (`device_type + device_id`) when type is known, with unknown-safe fallback.
 - If DDB identity is missing or not identified, labels fall back to non-identifying id/callsign fields.
@@ -235,6 +266,11 @@ Parser and policy:
 - `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
 - `feature/map/src/test/java/com/example/xcpro/ogn/OgnGliderTrailRepositoryTest.kt`
 - `feature/map/src/test/java/com/example/xcpro/ogn/OgnThermalRepositoryTest.kt`
+
+Map runtime lifecycle:
+- `feature/map/src/test/java/com/example/xcpro/map/MapOverlayManagerOgnLifecycleTest.kt`
+- `feature/map/src/test/java/com/example/xcpro/map/OgnGliderTrailOverlayRenderPolicyTest.kt`
+- `feature/map/src/test/java/com/example/xcpro/map/ui/MapRuntimeControllerWeatherStyleTest.kt`
 
 Preferences and VM wiring:
 - `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepositoryTest.kt`

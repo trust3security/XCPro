@@ -129,6 +129,13 @@ fun MainActivityScreen(
     val showProfileSelection =
         profileUiState.profiles.isEmpty() || profileUiState.activeProfile == null
     if (showProfileSelection) {
+        Log.i(
+            TAG,
+            "Profile selection required: package=${context.packageName}, " +
+                "profileCount=${profileUiState.profiles.size}, " +
+                "hasActive=${profileUiState.activeProfile != null}, " +
+                "bootstrapError=${profileUiState.bootstrapError}"
+        )
         ProfileSelectionScreen(
             onProfileSelected = {}
         )

@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithTag
@@ -90,6 +91,81 @@ class MapOverlayWidgetGesturesTest {
             .performClick()
 
         assertTrue("Settings shortcut tap should invoke callback", tapTriggered.value)
+    }
+
+    @Test
+    fun hamburgerCornerDragInEditModeTriggersResize() {
+        val mapState = MapScreenState()
+        val widgetManager = MapUIWidgetManager(mapState)
+        val defaultSize = 90f
+        val resizedSize = mutableStateOf(defaultSize)
+
+        composeRule.setContent {
+            MapUIWidgets.SideHamburgerMenu(
+                widgetManager = widgetManager,
+                hamburgerOffset = Offset(16f, 200f),
+                screenWidthPx = 1080f,
+                screenHeightPx = 1920f,
+                sizePx = defaultSize,
+                onHamburgerTap = {},
+                onHamburgerLongPress = {},
+                onOffsetChange = {},
+                onSizeChange = { resizedSize.value = it },
+                isEditMode = true,
+                modifier = Modifier.testTag("side_hamburger_resize")
+            )
+        }
+
+        composeRule.onNodeWithContentDescription("Hamburger resize handle")
+            .performTouchInput {
+                down(center)
+                advanceEventTime(120L)
+                moveBy(Offset(52f, 52f))
+                advanceEventTime(120L)
+                up()
+            }
+
+        assertTrue(
+            "Hamburger corner drag should increase size in edit mode",
+            resizedSize.value > defaultSize
+        )
+    }
+
+    @Test
+    fun settingsCornerDragInEditModeTriggersResize() {
+        val mapState = MapScreenState()
+        val widgetManager = MapUIWidgetManager(mapState)
+        val defaultSize = 56f
+        val resizedSize = mutableStateOf(defaultSize)
+
+        composeRule.setContent {
+            MapUIWidgets.SettingsShortcut(
+                widgetManager = widgetManager,
+                settingsOffset = Offset(16f, 260f),
+                screenWidthPx = 1080f,
+                screenHeightPx = 1920f,
+                sizePx = defaultSize,
+                onSettingsTap = {},
+                onOffsetChange = {},
+                onSizeChange = { resizedSize.value = it },
+                isEditMode = true,
+                modifier = Modifier.testTag("settings_shortcut_resize")
+            )
+        }
+
+        composeRule.onNodeWithContentDescription("Settings resize handle")
+            .performTouchInput {
+                down(center)
+                advanceEventTime(120L)
+                moveBy(Offset(44f, 44f))
+                advanceEventTime(120L)
+                up()
+            }
+
+        assertTrue(
+            "Settings corner drag should increase size in edit mode",
+            resizedSize.value > defaultSize
+        )
     }
 }
 

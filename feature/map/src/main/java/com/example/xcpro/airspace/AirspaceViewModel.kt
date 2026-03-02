@@ -160,7 +160,7 @@ class AirspaceViewModel @Inject constructor(
         enabledFiles: List<DocumentRef>,
         existing: Map<String, Boolean>
     ): Map<String, Boolean> {
-        if (enabledFiles.isEmpty()) return emptyMap()
+        if (enabledFiles.isEmpty()) return existing
         val latestClasses = useCase.parseClasses(enabledFiles).toSet()
         val updated = existing.filterKeys { it in latestClasses }.toMutableMap()
         latestClasses.forEach { className ->

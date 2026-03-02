@@ -143,11 +143,12 @@ class OgnThermalRepositoryImpl @Inject constructor(
         if (targets.isEmpty()) return false
         for (target in targets) {
             val targetKey = normalizeOgnAircraftKeyOrNull(target.canonicalKey) ?: continue
-            val sourceSeenWallMs = target.lastSeenMillis
+            val sourceSeenMonoMs = target.lastSeenMillis
             val previousSourceState = processedSourceStateByTargetId[targetKey]
             val hasFreshSourceSample = previousSourceState == null ||
-                sourceSeenWallMs > previousSourceState.lastSourceSeenWallMs ||
-                sourceSeenWallMs + SOURCE_SEEN_RESET_THRESHOLD_MS < previousSourceState.lastSourceSeenWallMs
+                sourceSeenMonoMs > previousSourceState.lastSourceSeenMonoMs ||
+                sourceSeenMonoMs + SOURCE_SEEN_MONO_RESET_THRESHOLD_MS <
+                previousSourceState.lastSourceSeenMonoMs
             if (hasFreshSourceSample) {
                 return true
             }
@@ -197,11 +198,12 @@ class OgnThermalRepositoryImpl @Inject constructor(
 
         val climbRateMps = target.verticalSpeedMps?.takeIf { it.isFinite() }
         val altitudeMeters = target.altitudeMeters?.takeIf { it.isFinite() }
-        val sourceSeenWallMs = target.lastSeenMillis
+        val sourceSeenMonoMs = target.lastSeenMillis
         val previousSourceState = processedSourceStateByTargetId[targetKey]
         val hasFreshSourceSample = previousSourceState == null ||
-            sourceSeenWallMs > previousSourceState.lastSourceSeenWallMs ||
-            sourceSeenWallMs + SOURCE_SEEN_RESET_THRESHOLD_MS < previousSourceState.lastSourceSeenWallMs
+            sourceSeenMonoMs > previousSourceState.lastSourceSeenMonoMs ||
+            sourceSeenMonoMs + SOURCE_SEEN_MONO_RESET_THRESHOLD_MS <
+            previousSourceState.lastSourceSeenMonoMs
 
         var tracker = trackerByTargetId[targetKey]
         if (tracker == null) {
@@ -218,7 +220,7 @@ class OgnThermalRepositoryImpl @Inject constructor(
             )
             trackerByTargetId[targetKey] = tracker
             processedSourceStateByTargetId[targetKey] = ProcessedSourceState(
-                lastSourceSeenWallMs = sourceSeenWallMs,
+                lastSourceSeenMonoMs = sourceSeenMonoMs,
                 lastProcessedMonoMs = nowMonoMs
             )
             return false
@@ -226,7 +228,7 @@ class OgnThermalRepositoryImpl @Inject constructor(
 
         if (!hasFreshSourceSample) return false
         processedSourceStateByTargetId[targetKey] = ProcessedSourceState(
-            lastSourceSeenWallMs = sourceSeenWallMs,
+            lastSourceSeenMonoMs = sourceSeenMonoMs,
             lastProcessedMonoMs = nowMonoMs
         )
 
@@ -682,7 +684,7 @@ class OgnThermalRepositoryImpl @Inject constructor(
     )
 
     private data class ProcessedSourceState(
-        val lastSourceSeenWallMs: Long,
+        val lastSourceSeenMonoMs: Long,
         val lastProcessedMonoMs: Long
     )
 
@@ -823,7 +825,7 @@ class OgnThermalRepositoryImpl @Inject constructor(
         private const val THERMAL_CONTINUITY_GRACE_MS = 20_000L
         private const val TARGET_MISSING_TIMEOUT_MS = 45_000L
         private const val PROCESSED_SOURCE_SEEN_RETENTION_MS = TARGET_MISSING_TIMEOUT_MS
-        private const val SOURCE_SEEN_RESET_THRESHOLD_MS = 60_000L
+        private const val SOURCE_SEEN_MONO_RESET_THRESHOLD_MS = 60_000L
         private const val MILLIS_PER_HOUR = 3_600_000L
         private const val AREA_WINNER_RECENT_WINDOW_MS = 300_000L
         private const val AREA_DEDUP_RADIUS_METERS = 700.0

@@ -181,11 +181,33 @@ class CardDataFormatterTest {
         val strings = TestCardStrings(degUnit = "degx")
         val result = CardDataFormatter.mapLiveDataToCard(
             cardId = "wind_dir",
-            liveData = RealTimeFlightData(windQuality = 1, windSpeed = 2f, windDirection = 90f),
+            liveData = RealTimeFlightData(
+                windQuality = 1,
+                windSpeed = 2f,
+                windDirection = 90f,
+                windValid = true
+            ),
             units = UnitsPreferences(),
             strings = strings
         )
         assertEquals("90 degx", result.first)
+    }
+
+    @Test
+    fun windSpeed_invalidWindFlag_showsNoWindEvenWhenQualityAndSpeedPresent() {
+        val strings = TestCardStrings(noWind = "NOWIND")
+        val result = CardDataFormatter.mapLiveDataToCard(
+            cardId = "wind_spd",
+            liveData = RealTimeFlightData(
+                windQuality = 5,
+                windSpeed = 8f,
+                windConfidence = 0.9,
+                windValid = false
+            ),
+            units = UnitsPreferences(),
+            strings = strings
+        )
+        assertEquals("NOWIND", result.second)
     }
 
     private inline fun <T> withLocale(locale: Locale, block: () -> T): T {

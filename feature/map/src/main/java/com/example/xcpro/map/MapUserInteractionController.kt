@@ -1,6 +1,7 @@
 package com.example.xcpro.map
 
 import android.util.Log
+import com.example.xcpro.core.time.TimeBridge
 import com.example.xcpro.map.model.MapLocationUiModel
 import org.maplibre.android.geometry.LatLng
 
@@ -10,7 +11,7 @@ class MapUserInteractionController(
     private val paddingProvider: () -> IntArray,
     private val cameraControllerProvider: MapCameraControllerProvider,
     private val logTag: String,
-    private val nowWallMs: () -> Long = { System.currentTimeMillis() }
+    private val nowWallMs: () -> Long = { TimeBridge.nowWallMs() }
 ) {
     private var returnZoomSnapshot: Double? = null
     private var returnBearingSnapshot: Double? = null

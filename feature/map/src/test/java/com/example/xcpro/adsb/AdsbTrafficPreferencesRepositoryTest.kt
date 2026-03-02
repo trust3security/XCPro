@@ -28,6 +28,8 @@ class AdsbTrafficPreferencesRepositoryTest {
         repository.setMaxDistanceKm(ADSB_MAX_DISTANCE_DEFAULT_KM)
         repository.setVerticalAboveMeters(ADSB_VERTICAL_FILTER_ABOVE_DEFAULT_METERS)
         repository.setVerticalBelowMeters(ADSB_VERTICAL_FILTER_BELOW_DEFAULT_METERS)
+        repository.setEmergencyAudioEnabled(false)
+        repository.setEmergencyAudioCooldownMs(ADSB_EMERGENCY_AUDIO_DEFAULT_COOLDOWN_MS)
     }
 
     @Test
@@ -137,5 +139,44 @@ class AdsbTrafficPreferencesRepositoryTest {
         repository.setVerticalBelowMeters(678.9)
         assertEquals(1234.5, repository.verticalAboveMetersFlow.first(), 1e-6)
         assertEquals(678.9, repository.verticalBelowMetersFlow.first(), 1e-6)
+    }
+
+    @Test
+    fun emergencyAudio_defaultsDisabledWithDefaultCooldown() = runTest {
+        val repository = AdsbTrafficPreferencesRepository(context)
+
+        assertEquals(false, repository.emergencyAudioEnabledFlow.first())
+        assertEquals(
+            ADSB_EMERGENCY_AUDIO_DEFAULT_COOLDOWN_MS,
+            repository.emergencyAudioCooldownMsFlow.first()
+        )
+    }
+
+    @Test
+    fun emergencyAudioCooldown_clampsAndPersists() = runTest {
+        val repository = AdsbTrafficPreferencesRepository(context)
+
+        repository.setEmergencyAudioCooldownMs(1_000L)
+        assertEquals(
+            ADSB_EMERGENCY_AUDIO_MIN_COOLDOWN_MS,
+            repository.emergencyAudioCooldownMsFlow.first()
+        )
+
+        repository.setEmergencyAudioCooldownMs(999_999L)
+        assertEquals(
+            ADSB_EMERGENCY_AUDIO_MAX_COOLDOWN_MS,
+            repository.emergencyAudioCooldownMsFlow.first()
+        )
+
+        repository.setEmergencyAudioCooldownMs(66_000L)
+        assertEquals(66_000L, repository.emergencyAudioCooldownMsFlow.first())
+    }
+
+    @Test
+    fun emergencyAudioEnabled_persists() = runTest {
+        val repository = AdsbTrafficPreferencesRepository(context)
+
+        repository.setEmergencyAudioEnabled(true)
+        assertEquals(true, repository.emergencyAudioEnabledFlow.first())
     }
 }

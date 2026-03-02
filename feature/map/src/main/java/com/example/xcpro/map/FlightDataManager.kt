@@ -39,7 +39,6 @@ class FlightDataManager(
         private const val WIND_SPEED_BUCKET_KT = 1f
         private const val WIND_DIR_BUCKET_DEG = 5f
         private const val LD_BUCKET = 0.1f
-        private const val WIND_VALID_MIN_SPEED_MS = 0.2f
     }
 
     private val _liveFlightData = MutableStateFlow<RealTimeFlightData?>(null)
@@ -190,8 +189,7 @@ class FlightDataManager(
             .scan(WindIndicatorState()) { previous, data ->
                 deriveWindIndicatorState(
                     previous = previous,
-                    data = data,
-                    windValidMinSpeedMs = WIND_VALID_MIN_SPEED_MS
+                    data = data
                 )
             }
             .distinctUntilChanged()

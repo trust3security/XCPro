@@ -21,6 +21,8 @@ class AdsbSettingsUseCase @Inject constructor(
     val maxDistanceKmFlow: Flow<Int> = repository.maxDistanceKmFlow
     val verticalAboveMetersFlow: Flow<Double> = repository.verticalAboveMetersFlow
     val verticalBelowMetersFlow: Flow<Double> = repository.verticalBelowMetersFlow
+    val emergencyAudioEnabledFlow: Flow<Boolean> = repository.emergencyAudioEnabledFlow
+    val emergencyAudioCooldownMsFlow: Flow<Long> = repository.emergencyAudioCooldownMsFlow
     val unitsFlow: Flow<UnitsPreferences> = unitsRepository.unitsFlow
 
     suspend fun setIconSizePx(iconSizePx: Int) {
@@ -39,6 +41,14 @@ class AdsbSettingsUseCase @Inject constructor(
 
     suspend fun setVerticalBelowMeters(belowMeters: Double) {
         repository.setVerticalBelowMeters(belowMeters)
+    }
+
+    suspend fun setEmergencyAudioEnabled(enabled: Boolean) {
+        repository.setEmergencyAudioEnabled(enabled)
+    }
+
+    suspend fun setEmergencyAudioCooldownMs(cooldownMs: Long) {
+        repository.setEmergencyAudioCooldownMs(cooldownMs)
     }
 
     fun loadOpenSkyCredentials(): OpenSkyClientCredentials? =

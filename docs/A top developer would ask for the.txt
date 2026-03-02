@@ -1,0 +1,14 @@
+• A top developer would ask for the same thing, but with tighter constraints and measurable outcomes.
+
+  They’d ask me to:
+
+  1. Define success metrics first (missed threats, false alerts/hour, pilot disable rate).
+  2. Produce 2-3 design options with tradeoffs before coding.
+  3. Write a phased implementation plan with explicit acceptance tests per phase.
+  4. Implement only Phase 0/1 first, behind a feature flag.
+  5. Add telemetry, replay determinism tests, and rollback plan before rollout.
+
+  Example “genius” prompt:
+  Create a phased implementation plan for ADS-B emergency audio alerts (EMERGENCY only, no RED), with FSM transitions, anti-nuisance
+  cooldown, user settings, deterministic replay tests, telemetry KPIs, feature-flag rollout, and rollback criteria. Then implement
+  only Phase 1 and run enforceRules/testDebugUnitTest/assembleDebug.

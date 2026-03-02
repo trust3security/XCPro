@@ -22,7 +22,6 @@ import com.example.xcpro.adsb.metadata.domain.MetadataAvailability
 import com.example.xcpro.adsb.metadata.domain.MetadataSyncState
 import com.example.xcpro.adsb.ui.openSkyCategoryLabel
 import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,7 +53,15 @@ fun AdsbMarkerDetailsSheet(
             )
             DetailRow("ICAO24", target.id.raw.uppercase(Locale.US))
             DetailRow("Altitude", target.altitudeM?.let { UnitsFormatter.altitude(AltitudeM(it), unitsPreferences).text } ?: "--")
-            DetailRow("Distance from ownship", UnitsFormatter.distance(DistanceM(target.distanceMeters), unitsPreferences).text)
+            DetailRow(
+                distanceLabelForDetails(target.usesOwnshipReference),
+                UnitsFormatter.distance(DistanceM(target.distanceMeters), unitsPreferences).text
+            )
+            DetailRow("Ownship reference", ownshipReferenceText(target.usesOwnshipReference))
+            DetailRow("Proximity tier", proximityTierText(target.proximityTier))
+            DetailRow("Trend", proximityTrendText(target))
+            DetailRow("Range rate (+ closing)", closingRateText(target.closingRateMps))
+            DetailRow("Proximity reason", proximityReasonText(target))
             DetailRow("Speed", target.speedMps?.let { UnitsFormatter.speed(SpeedMs(it), unitsPreferences).text } ?: "--")
             DetailRow("Track", target.trackDeg?.let { "${it.roundToOneDecimal()}\u00B0" } ?: "--")
             DetailRow(
@@ -123,6 +130,52 @@ private fun DetailRow(label: String, value: String) {
 
 private fun Double.roundToOneDecimal(): String = String.format(Locale.US, "%.1f", this)
 
+internal fun distanceLabelForDetails(usesOwnshipReference: Boolean): String =
+    if (usesOwnshipReference) {
+        "Distance from ownship"
+    } else {
+        "Distance (query-center fallback)"
+    }
+
+internal fun ownshipReferenceText(usesOwnshipReference: Boolean): String =
+    if (usesOwnshipReference) {
+        "Available"
+    } else {
+        "Unavailable (fallback active)"
+    }
+
+internal fun proximityTierText(tier: AdsbProximityTier): String = when (tier) {
+    AdsbProximityTier.NEUTRAL -> "Neutral"
+    AdsbProximityTier.GREEN -> "Green"
+    AdsbProximityTier.AMBER -> "Amber"
+    AdsbProximityTier.RED -> "Red"
+    AdsbProximityTier.EMERGENCY -> "Emergency"
+}
+
+internal fun proximityTrendText(target: AdsbSelectedTargetDetails): String = when {
+    !target.usesOwnshipReference -> "Unknown (no ownship reference)"
+    target.isClosing -> "Closing"
+    target.proximityTier == AdsbProximityTier.RED || target.proximityTier == AdsbProximityTier.AMBER ->
+        "Recovery dwell active"
+
+    else -> "Not closing"
+}
+
+internal fun closingRateText(closingRateMps: Double?): String {
+    val rate = closingRateMps?.takeIf { it.isFinite() } ?: return "--"
+    return String.format(Locale.US, "%+.1f m/s", rate)
+}
+
+internal fun proximityReasonText(target: AdsbSelectedTargetDetails): String = when {
+    !target.usesOwnshipReference -> "Neutral fallback while ownship reference is unavailable"
+    target.isEmergencyCollisionRisk -> "Emergency geometry and active closing"
+    target.isClosing -> "Approaching ownship"
+    target.proximityTier == AdsbProximityTier.RED || target.proximityTier == AdsbProximityTier.AMBER ->
+        "Holding alert during recovery dwell"
+
+    else -> "Steady or diverging"
+}
+
 private fun metadataStatusText(
     availability: MetadataAvailability,
     syncState: MetadataSyncState
@@ -151,5 +204,5 @@ private fun formatWallTime(wallMs: Long?): String {
         return "--"
     }
     val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US)
-    return formatter.format(Date(wallMs))
+    return formatter.format(wallMs)
 }

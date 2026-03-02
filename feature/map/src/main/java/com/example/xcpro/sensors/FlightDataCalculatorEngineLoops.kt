@@ -216,7 +216,11 @@ internal fun FlightDataCalculatorEngine.updateVarioFilter(baro: BaroData?, accel
             timestamp = diagnosticsTime,
             teVerticalSpeed = emissionState.latestTeVario,
             rawVerticalSpeed = diagnostics.filteredVerticalSpeed,
-            diagnostics = diagnostics
+            diagnostics = diagnostics,
+            windAirspeedDecisionCounts = flightMetricsUseCase.windAirspeedDecisionCounts()
+                .mapKeys { it.key.name },
+            windAirspeedTransitionCounts = flightMetricsUseCase.windAirspeedTransitionCounts()
+                .mapKeys { it.key.name }
         )
         lastDiagnosticsEmitTime = diagnosticsTime
     }

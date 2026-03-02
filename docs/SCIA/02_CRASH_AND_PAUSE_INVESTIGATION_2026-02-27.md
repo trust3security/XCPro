@@ -91,7 +91,8 @@ Additional contributors (found in third code pass):
   - causing extra large-list compare/work on heavy sessions.
 - Initial selected-aircraft state starts empty:
   - `OgnTrailSelectionViewModel` uses `initialValue = emptySet()` (`OgnTrailSelectionViewModel.kt:21`),
-  - while persisted keys load asynchronously; this can briefly suppress trails on startup.
+  - and app-start reset now clears persisted selected keys on fresh process launch,
+  - so startup should begin with no selected aircraft/trails until user re-enables and selects.
 - Duplicate trail-selection collection in UI layer:
   - `OgnTrailSelectionViewModel` is collected in both `MapScreenBindings.kt` and `MapScreenContent.kt`,
   - increasing redundant state reads/recompositions on heavy traffic updates.

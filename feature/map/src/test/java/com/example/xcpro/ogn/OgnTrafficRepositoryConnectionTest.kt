@@ -1,22 +1,30 @@
 package com.example.xcpro.ogn
 
+import com.example.xcpro.core.time.Clock
 import com.example.xcpro.core.time.FakeClock
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.Socket
 import java.net.SocketAddress
+import java.net.SocketTimeoutException
 import java.nio.charset.StandardCharsets
 import kotlin.collections.ArrayDeque
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.mockito.kotlin.atLeast
+import org.mockito.kotlin.atMost
+import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -187,13 +195,241 @@ class OgnTrafficRepositoryConnectionTest {
         runCurrent()
     }
 
+    @Test
+    fun timedTarget_thenUntimedRewindCandidate_keepsLatestTimedPosition() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val repository = newRepository(dispatcher = dispatcher)
+        val socket = ScriptedSocket(
+            script = buildString {
+                append("# logresp XCPTEST01 verified, server GLIDERN1\n")
+                append("FLRABC123>APRS,qAS,EDER:/114500h5029.86N/00956.98E'342/049/A=005524 id0AABC123\n")
+                append("FLRABC123>APRS,qAS,EDER:!5020.00N/00920.00E'342/049/A=005524 id0AABC123\n")
+            }
+        )
+        repository.socketFactory = { socket }
+
+        repository.updateCenter(latitude = 50.49, longitude = 9.95)
+        repository.setEnabled(true)
+        runCurrent()
+
+        val target = repository.targets.value.firstOrNull()
+        assertNotNull(target)
+        assertTrue(target?.latitude?.let { kotlin.math.abs(it - 50.497666) < 1e-5 } == true)
+        assertTrue(target?.longitude?.let { kotlin.math.abs(it - 9.949666) < 1e-5 } == true)
+        assertTrue(repository.snapshot.value.droppedOutOfOrderSourceFrames >= 1L)
+
+        repository.stop()
+        runCurrent()
+    }
+
+    @Test
+    fun timedThenUntimedFallback_thenOlderTimedFrame_keepsUntimedPosition() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val clock = StepClock(
+            monoMs = 0L,
+            wallMs = 1_730_000_000_000L,
+            monoStepMs = 20_000L,
+            wallStepMs = 1_000L
+        )
+        val repository = newRepository(
+            dispatcher = dispatcher,
+            clock = clock
+        )
+        val socket = ScriptedSocket(
+            script = buildString {
+                append("# logresp XCPTEST01 verified, server GLIDERN1\n")
+                append("FLRABC123>APRS,qAS,EDER:/114500h5029.86N/00956.98E'342/049/A=005524 id0AABC123\n")
+                append("FLRABC123>APRS,qAS,EDER:!5029.88N/00957.00E'342/049/A=005524 id0AABC123\n")
+                append("FLRABC123>APRS,qAS,EDER:/114400h5029.91N/00957.03E'342/049/A=005524 id0AABC123\n")
+            }
+        )
+        repository.socketFactory = { socket }
+
+        try {
+            repository.updateCenter(latitude = 50.49, longitude = 9.95)
+            repository.setEnabled(true)
+            runCurrent()
+
+            val target = repository.targets.value.firstOrNull()
+            assertNotNull(target)
+            assertTrue(target?.latitude?.let { kotlin.math.abs(it - 50.498000) < 1e-5 } == true)
+            assertTrue(target?.longitude?.let { kotlin.math.abs(it - 9.950000) < 1e-5 } == true)
+            assertTrue(repository.snapshot.value.droppedOutOfOrderSourceFrames >= 1L)
+        } finally {
+            repository.stop()
+            runCurrent()
+        }
+    }
+
+    @Test
+    fun stalledInboundStream_errorsEvenWhenKeepaliveWritesOccur() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val clock = StepClock(
+            monoMs = 0L,
+            wallMs = 3_700_000L,
+            monoStepMs = 30_000L,
+            wallStepMs = 0L
+        )
+        val repository = newRepository(
+            dispatcher = dispatcher,
+            clock = clock
+        )
+        val socket = TimeoutSocket()
+        repository.socketFactory = { socket }
+
+        repository.updateCenter(latitude = 46.0, longitude = 7.0)
+        repository.setEnabled(true)
+        runCurrent()
+
+        val snapshot = repository.snapshot.value
+        assertTrue(snapshot.connectionState == OgnConnectionState.ERROR)
+        assertTrue(snapshot.lastError == "IllegalStateException")
+        assertTrue(socket.writtenLines().any { line -> line == "#keepalive" })
+
+        repository.stop()
+        runCurrent()
+    }
+
+    @Test
+    fun connectedSession_rechecksDdbRefreshWhileStreamActive() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val clock = StepClock(
+            monoMs = 0L,
+            wallMs = 3_700_000L,
+            monoStepMs = 70_000L,
+            wallStepMs = 3_700_000L
+        )
+        val ddbRepository: OgnDdbRepository = mock()
+        whenever(ddbRepository.refreshIfNeeded()).thenReturn(OgnDdbRefreshResult.Updated)
+        val repository = newRepository(
+            dispatcher = dispatcher,
+            clock = clock,
+            ddbRepository = ddbRepository
+        )
+        val socket = ScriptedSocket(
+            script = buildString {
+                append("# logresp XCPTEST01 verified, server GLIDERN1\n")
+                append("# aprsc 2.1.20\n")
+                append("# keepalive from server\n")
+                append("# trace line\n")
+            }
+        )
+        repository.socketFactory = { socket }
+
+        try {
+            repository.updateCenter(latitude = 46.0, longitude = 7.0)
+            repository.setEnabled(true)
+            runCurrent()
+
+            verify(ddbRepository, atLeast(1)).refreshIfNeeded()
+        } finally {
+            repository.stop()
+            runCurrent()
+        }
+    }
+
+    @Test
+    fun ddbRefreshFailure_retriesWithinMinutes_notHourly() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val clock = StepClock(
+            monoMs = 0L,
+            wallMs = 0L,
+            monoStepMs = 70_000L,
+            wallStepMs = 1_000L
+        )
+        val ddbRepository: OgnDdbRepository = mock()
+        doThrow(IllegalStateException("network"))
+            .whenever(ddbRepository)
+            .refreshIfNeeded()
+        val repository = newRepository(
+            dispatcher = dispatcher,
+            clock = clock,
+            ddbRepository = ddbRepository
+        )
+        val socket = ScriptedSocket(
+            script = buildString {
+                append("# logresp XCPTEST01 verified, server GLIDERN1\n")
+                append("# aprsc 2.1.20\n")
+                append("# keepalive from server\n")
+                append("# trace line 1\n")
+                append("# trace line 2\n")
+                append("# trace line 3\n")
+                append("# trace line 4\n")
+            }
+        )
+        repository.socketFactory = { socket }
+
+        try {
+            repository.updateCenter(latitude = 46.0, longitude = 7.0)
+            repository.setEnabled(true)
+            runCurrent()
+            advanceTimeBy(10_000L)
+            runCurrent()
+
+            verify(ddbRepository, atLeast(2)).refreshIfNeeded()
+        } finally {
+            repository.stop()
+            runCurrent()
+        }
+    }
+
+    @Test
+    fun ddbRefreshNotDue_doesNotRelaunchEveryActiveCheckTick() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val clock = StepClock(
+            monoMs = 0L,
+            wallMs = 0L,
+            monoStepMs = 70_000L,
+            wallStepMs = 1_000L
+        )
+        val ddbRepository: OgnDdbRepository = mock()
+        whenever(ddbRepository.refreshIfNeeded()).thenReturn(OgnDdbRefreshResult.NotDue)
+        val repository = newRepository(
+            dispatcher = dispatcher,
+            clock = clock,
+            ddbRepository = ddbRepository
+        )
+        val socket = ScriptedSocket(
+            script = buildString {
+                append("# logresp XCPTEST01 verified, server GLIDERN1\n")
+                append("# line 1\n")
+                append("# line 2\n")
+                append("# line 3\n")
+                append("# line 4\n")
+                append("# line 5\n")
+                append("# line 6\n")
+            }
+        )
+        repository.socketFactory = { socket }
+
+        try {
+            repository.updateCenter(latitude = 46.0, longitude = 7.0)
+            repository.setEnabled(true)
+            runCurrent()
+            advanceTimeBy(10_000L)
+            runCurrent()
+
+            verify(ddbRepository, atLeast(1)).refreshIfNeeded()
+            verify(ddbRepository, atMost(2)).refreshIfNeeded()
+        } finally {
+            repository.stop()
+            runCurrent()
+        }
+    }
+
     private fun newRepository(
         dispatcher: kotlinx.coroutines.CoroutineDispatcher,
         receiveRadiusKmFlow: MutableStateFlow<Int> = MutableStateFlow(OGN_RECEIVE_RADIUS_DEFAULT_KM),
         autoReceiveRadiusEnabledFlow: MutableStateFlow<Boolean> = MutableStateFlow(false),
-        clientCallsignFlow: MutableStateFlow<String?> = MutableStateFlow("XCPTEST01")
+        clientCallsignFlow: MutableStateFlow<String?> = MutableStateFlow("XCPTEST01"),
+        clock: Clock = FakeClock(monoMs = 0L, wallMs = 0L),
+        ddbRepository: OgnDdbRepository? = null
     ): OgnTrafficRepositoryImpl {
-        val ddbRepository: OgnDdbRepository = mock()
+        val resolvedDdbRepository = ddbRepository ?: mock<OgnDdbRepository>().also { repository ->
+            runBlocking {
+                whenever(repository.refreshIfNeeded()).thenReturn(OgnDdbRefreshResult.Updated)
+            }
+        }
         val preferencesRepository: OgnTrafficPreferencesRepository = mock()
         whenever(preferencesRepository.ownFlarmHexFlow).thenReturn(MutableStateFlow(null))
         whenever(preferencesRepository.ownIcaoHexFlow).thenReturn(MutableStateFlow(null))
@@ -202,9 +438,9 @@ class OgnTrafficRepositoryConnectionTest {
         whenever(preferencesRepository.clientCallsignFlow).thenReturn(clientCallsignFlow)
         return OgnTrafficRepositoryImpl(
             parser = OgnAprsLineParser(),
-            ddbRepository = ddbRepository,
+            ddbRepository = resolvedDdbRepository,
             preferencesRepository = preferencesRepository,
-            clock = FakeClock(monoMs = 0L, wallMs = 0L),
+            clock = clock,
             dispatcher = dispatcher
         )
     }
@@ -243,6 +479,49 @@ class OgnTrafficRepositoryConnectionTest {
                 .toString(StandardCharsets.ISO_8859_1.name())
                 .lineSequence()
                 .firstOrNull { it.startsWith("user ") }
+        }
+    }
+
+    private class TimeoutSocket : Socket() {
+        private val outputBytes = ByteArrayOutputStream()
+
+        override fun setTcpNoDelay(on: Boolean) = Unit
+        override fun setKeepAlive(on: Boolean) = Unit
+        override fun setSoTimeout(timeout: Int) = Unit
+        override fun connect(endpoint: SocketAddress?, timeout: Int) = Unit
+        override fun close() = Unit
+
+        override fun getOutputStream(): OutputStream = outputBytes
+
+        override fun getInputStream(): InputStream = object : InputStream() {
+            override fun read(): Int {
+                throw SocketTimeoutException("read timeout")
+            }
+        }
+
+        fun writtenLines(): List<String> =
+            outputBytes
+                .toString(StandardCharsets.ISO_8859_1.name())
+                .lineSequence()
+                .toList()
+    }
+
+    private class StepClock(
+        private var monoMs: Long,
+        private var wallMs: Long,
+        private val monoStepMs: Long,
+        private val wallStepMs: Long
+    ) : Clock {
+        override fun nowMonoMs(): Long {
+            val value = monoMs
+            monoMs += monoStepMs
+            return value
+        }
+
+        override fun nowWallMs(): Long {
+            val value = wallMs
+            wallMs += wallStepMs
+            return value
         }
     }
 }

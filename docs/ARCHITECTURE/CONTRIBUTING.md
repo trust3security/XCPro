@@ -86,6 +86,29 @@ Use this checklist for any task/map refactor before opening a PR.
 ./gradlew :app:assembleDebug
 ```
 
+### 4A) Role-Based Command Sets
+
+Fast loop (before push):
+```bash
+python scripts/arch_gate.py
+./gradlew enforceRules
+./gradlew :feature:map:compileDebugKotlin
+```
+
+PR loop (matches CI quality gates):
+```bash
+python scripts/arch_gate.py
+./gradlew enforceRules
+./gradlew testDebugUnitTest
+./gradlew assembleDebug
+```
+
+Release loop:
+```bash
+preflight.bat
+./gradlew connectedDebugAndroidTest --no-parallel
+```
+
 Fast local loop for feature/debug work:
 ```bat
 dev-fast.bat feature:map compile

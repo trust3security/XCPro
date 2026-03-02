@@ -13,5 +13,7 @@ data class MapWidgetOffsets(
     val sideHamburger: OffsetPx,
     val flightMode: OffsetPx,
     val settingsShortcut: OffsetPx,
-    val ballast: OffsetPx
+    val ballast: OffsetPx,
+    val sideHamburgerSizePx: Float,
+    val settingsShortcutSizePx: Float
 )

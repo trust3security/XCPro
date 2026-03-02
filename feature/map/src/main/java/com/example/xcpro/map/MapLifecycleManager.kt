@@ -224,8 +224,6 @@ class MapLifecycleManager(
         mapState.adsbTrafficOverlay = null
         mapState.forecastOverlay?.cleanup()
         mapState.forecastOverlay = null
-        mapState.forecastSecondaryOverlay?.cleanup()
-        mapState.forecastSecondaryOverlay = null
         mapState.forecastWindOverlay?.cleanup()
         mapState.forecastWindOverlay = null
         mapState.skySightSatelliteOverlay?.cleanup()

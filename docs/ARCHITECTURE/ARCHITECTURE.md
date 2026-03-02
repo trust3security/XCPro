@@ -217,7 +217,7 @@ Forbidden:
 ### Rules
 - Never compare monotonic timestamps to wall time.
 - All live SensorDataSource implementations must populate monotonic timestamps.
-- If a source cannot provide monotonic time, use `0` and ensure all related inputs fall back to wall time consistently.
+- If a source cannot provide monotonic time, treat that source as invalid for fusion timing unless an explicit adapter policy is documented.
 - Time sources must be injected (Clock interface). Domain logic must not call SystemClock/System.currentTimeMillis directly.
 
 ---
@@ -279,7 +279,7 @@ write back smoothed values.
 - Display smoothing is visual-only and must not alter SSOT data.
 - MapLibre types are owned by UI/runtime controllers, not ViewModels.
 - Display time must match the fix time base:
-  - Live: monotonic if present, otherwise wall time.
+  - Live: monotonic source timestamps for fusion/display provenance; do not silently fall back to wall time in fusion paths.
   - Replay: IGC timestamps as the simulation clock.
 - Camera updates are gated and short-animated to avoid jumps.
 
@@ -312,6 +312,22 @@ Task UI (Compose)
 - Composables reading manager internals as state (for example currentTask/currentLeg/currentAATTask).
 - ViewModels exposing raw manager/controller handles as public API.
 - Non-UI manager/domain classes using Compose runtime state primitives.
+
+---
+
+## 5C. Live Wind IAS/TAS Source Contract
+
+This contract applies to the live flight path.
+
+### Rules
+- Wind-derived IAS/TAS source switching must be stateful and deterministic.
+- Live WIND vs GPS switching must use explicit hysteresis, minimum dwell, and transient grace in domain logic.
+- Frame-local source flip-flop logic (`WIND` else `GPS` per sample) is forbidden.
+- `tasValid`, airspeed source label, and TE eligibility must be derived from the same stabilized source decision.
+- Domain is the authority for source reliability policy; UI/trail/heading code must not use independent ad-hoc thresholds.
+- Threshold values must be centralized in one domain policy/constants location; scattered literals are forbidden.
+- Live correctness must not require an external device path; phone-only operation is a supported baseline.
+- Replay behavior must remain unchanged unless a replay-specific plan explicitly changes it.
 
 ---
 

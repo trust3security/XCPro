@@ -40,8 +40,7 @@ internal fun RealTimeFlightData.toDisplayBucket(
 
 internal fun deriveWindIndicatorState(
     previous: WindIndicatorState,
-    data: RealTimeFlightData?,
-    windValidMinSpeedMs: Float
+    data: RealTimeFlightData?
 ): WindIndicatorState {
     if (data == null) {
         return previous.copy(
@@ -51,14 +50,13 @@ internal fun deriveWindIndicatorState(
         )
     }
     val quality = data.windQuality
-    val speed = data.windSpeed
-    val isValid = quality > 0 && speed > windValidMinSpeedMs
+    val isValid = data.windValid
     // AI-NOTE: Keep last valid direction when wind is invalid so the UI arrow does not snap to north.
     val direction = if (isValid) normalizeAngleDeg(data.windDirection) else previous.directionFromDeg
     return WindIndicatorState(
         directionFromDeg = direction,
         isValid = isValid,
-        quality = quality,
+        quality = if (isValid) quality else 0,
         ageSeconds = data.windAgeSeconds
     )
 }

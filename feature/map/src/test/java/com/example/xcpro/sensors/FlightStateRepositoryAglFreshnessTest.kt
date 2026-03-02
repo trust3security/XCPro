@@ -10,6 +10,7 @@ import com.example.xcpro.common.units.SpeedMs
 import com.example.xcpro.common.units.VerticalSpeedMs
 import com.example.xcpro.weather.wind.data.AirspeedDataSource
 import com.example.xcpro.weather.wind.model.AirspeedSample
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -19,6 +20,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class FlightStateRepositoryAglFreshnessTest {
 
     private class FakeSensorDataSource : SensorDataSource {
@@ -38,7 +40,6 @@ class FlightStateRepositoryAglFreshnessTest {
     fun staleAglOverride_doesNotForceFlyingStateTrue() = runTest {
         val liveSensors = FakeSensorDataSource()
         val replaySensors = FakeSensorDataSource()
-        val liveAirspeed = FakeAirspeedDataSource()
         val replayAirspeed = FakeAirspeedDataSource()
         val flightDataRepository = FlightDataRepository()
         val clock = FakeClock(monoMs = 50_000L, wallMs = 50_000L)
@@ -46,7 +47,6 @@ class FlightStateRepositoryAglFreshnessTest {
         val repository = FlightStateRepository(
             liveSensors = liveSensors,
             replaySensors = replaySensors,
-            liveAirspeedSource = liveAirspeed,
             replayAirspeedSource = replayAirspeed,
             flightDataRepository = flightDataRepository,
             clock = clock,
@@ -77,7 +77,6 @@ class FlightStateRepositoryAglFreshnessTest {
     fun freshAglOverride_allowsFlyingStateTakeoffWhenSpeedIsLow() = runTest {
         val liveSensors = FakeSensorDataSource()
         val replaySensors = FakeSensorDataSource()
-        val liveAirspeed = FakeAirspeedDataSource()
         val replayAirspeed = FakeAirspeedDataSource()
         val flightDataRepository = FlightDataRepository()
         val clock = FakeClock(monoMs = 0L, wallMs = 0L)
@@ -85,7 +84,6 @@ class FlightStateRepositoryAglFreshnessTest {
         val repository = FlightStateRepository(
             liveSensors = liveSensors,
             replaySensors = replaySensors,
-            liveAirspeedSource = liveAirspeed,
             replayAirspeedSource = replayAirspeed,
             flightDataRepository = flightDataRepository,
             clock = clock,
@@ -102,6 +100,84 @@ class FlightStateRepositoryAglFreshnessTest {
                 ),
                 FlightDataRepository.Source.LIVE
             )
+            liveSensors.gpsFlow.value = gpsSample(
+                timestampMillis = timestampMs,
+                monotonicTimestampMillis = timestampMs,
+                speedMs = 1.0
+            )
+            advanceUntilIdle()
+        }
+
+        assertTrue(repository.flightState.value.isFlying)
+    }
+
+    @Test
+    fun unknown_stabilized_airspeed_source_is_treated_as_non_real() = runTest {
+        val liveSensors = FakeSensorDataSource()
+        val replaySensors = FakeSensorDataSource()
+        val replayAirspeed = FakeAirspeedDataSource()
+        val flightDataRepository = FlightDataRepository()
+        val clock = FakeClock(monoMs = 0L, wallMs = 0L)
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val repository = FlightStateRepository(
+            liveSensors = liveSensors,
+            replaySensors = replaySensors,
+            replayAirspeedSource = replayAirspeed,
+            flightDataRepository = flightDataRepository,
+            clock = clock,
+            defaultDispatcher = dispatcher
+        )
+
+        val liveData = buildCompleteFlightDataForTest(gps = null).copy(
+            trueAirspeed = SpeedMs(15.0),
+            indicatedAirspeed = SpeedMs(13.0),
+            airspeedSource = "UNKNOWN",
+            tasValid = true
+        )
+        flightDataRepository.update(liveData, FlightDataRepository.Source.LIVE)
+
+        repeat(12) { index ->
+            val timestampMs = (index + 1) * 1_000L
+            clock.setMonoMs(timestampMs)
+            liveSensors.gpsFlow.value = gpsSample(
+                timestampMillis = timestampMs,
+                monotonicTimestampMillis = timestampMs,
+                speedMs = 1.0
+            )
+            advanceUntilIdle()
+        }
+
+        assertFalse(repository.flightState.value.isFlying)
+    }
+
+    @Test
+    fun trusted_stabilized_airspeed_source_allows_low_speed_takeoff_detection() = runTest {
+        val liveSensors = FakeSensorDataSource()
+        val replaySensors = FakeSensorDataSource()
+        val replayAirspeed = FakeAirspeedDataSource()
+        val flightDataRepository = FlightDataRepository()
+        val clock = FakeClock(monoMs = 0L, wallMs = 0L)
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val repository = FlightStateRepository(
+            liveSensors = liveSensors,
+            replaySensors = replaySensors,
+            replayAirspeedSource = replayAirspeed,
+            flightDataRepository = flightDataRepository,
+            clock = clock,
+            defaultDispatcher = dispatcher
+        )
+
+        val liveData = buildCompleteFlightDataForTest(gps = null).copy(
+            trueAirspeed = SpeedMs(15.0),
+            indicatedAirspeed = SpeedMs(13.0),
+            airspeedSource = "WIND",
+            tasValid = true
+        )
+        flightDataRepository.update(liveData, FlightDataRepository.Source.LIVE)
+
+        repeat(12) { index ->
+            val timestampMs = (index + 1) * 1_000L
+            clock.setMonoMs(timestampMs)
             liveSensors.gpsFlow.value = gpsSample(
                 timestampMillis = timestampMs,
                 monotonicTimestampMillis = timestampMs,

@@ -11,11 +11,14 @@ internal data class AdsbStoreSelection(
     val displayed: List<AdsbTrafficUiModel>
 )
 
-internal class AdsbTrafficStore {
+internal class AdsbTrafficStore(
+    private val proximityTrendEvaluator: AdsbProximityTrendEvaluator = AdsbProximityTrendEvaluator()
+) {
     private val targetsById = ConcurrentHashMap<Icao24, AdsbTarget>()
 
     fun clear() {
         targetsById.clear()
+        proximityTrendEvaluator.clear()
     }
 
     fun upsertAll(targets: List<AdsbTarget>) {
@@ -32,6 +35,7 @@ internal class AdsbTrafficStore {
             val ageSec = ((nowMonoMs - entry.value.receivedMonoMs) / 1_000L).toInt()
             if (ageSec >= expiryAfterSec) {
                 iterator.remove()
+                proximityTrendEvaluator.removeTarget(entry.key)
                 removed = true
             }
         }
@@ -91,6 +95,26 @@ internal class AdsbTrafficStore {
                     toLat = target.lat,
                     toLon = target.lon
                 )
+                val trendAssessment = proximityTrendEvaluator.evaluate(
+                    id = target.id,
+                    distanceMeters = distanceMeters,
+                    nowMonoMs = nowMonoMs,
+                    hasOwnshipReference = usesOwnshipReference
+                )
+                val isEmergencyCollisionRisk = isEmergencyCollisionRisk(
+                    distanceMeters = distanceMeters,
+                    trackDeg = target.trackDeg,
+                    bearingDegFromUser = bearingDegFromUser,
+                    enabled = usesOwnshipReference &&
+                        trendAssessment.isClosing &&
+                        ageSec <= EMERGENCY_MAX_AGE_SEC
+                )
+                val proximityTier = proximityTier(
+                    distanceMeters = distanceMeters,
+                    hasOwnshipReference = usesOwnshipReference,
+                    showClosingAlert = trendAssessment.showClosingAlert,
+                    isEmergencyCollisionRisk = isEmergencyCollisionRisk
+                )
                 add(
                     AdsbTrafficUiModel(
                         id = target.id,
@@ -109,12 +133,10 @@ internal class AdsbTrafficStore {
                         positionSource = target.positionSource,
                         category = target.category,
                         lastContactEpochSec = target.lastContactEpochSec,
-                        isEmergencyCollisionRisk = isEmergencyCollisionRisk(
-                            distanceMeters = distanceMeters,
-                            trackDeg = target.trackDeg,
-                            bearingDegFromUser = bearingDegFromUser,
-                            enabled = usesOwnshipReference
-                        )
+                        proximityTier = proximityTier,
+                        isClosing = trendAssessment.isClosing,
+                        closingRateMps = trendAssessment.closingRateMps,
+                        isEmergencyCollisionRisk = isEmergencyCollisionRisk
                     )
                 )
             }
@@ -154,6 +176,23 @@ internal class AdsbTrafficStore {
         return headingError <= COLLISION_HEADING_TOLERANCE_DEG
     }
 
+    private fun proximityTier(
+        distanceMeters: Double,
+        hasOwnshipReference: Boolean,
+        showClosingAlert: Boolean,
+        isEmergencyCollisionRisk: Boolean
+    ): AdsbProximityTier {
+        if (!hasOwnshipReference) return AdsbProximityTier.NEUTRAL
+        if (isEmergencyCollisionRisk) return AdsbProximityTier.EMERGENCY
+        if (!showClosingAlert) return AdsbProximityTier.GREEN
+        if (!distanceMeters.isFinite()) return AdsbProximityTier.GREEN
+        return when {
+            distanceMeters <= RED_DISTANCE_METERS -> AdsbProximityTier.RED
+            distanceMeters <= AMBER_DISTANCE_METERS -> AdsbProximityTier.AMBER
+            else -> AdsbProximityTier.GREEN
+        }
+    }
+
     private fun normalizeDegrees(value: Double): Double {
         val normalized = value % 360.0
         return if (normalized < 0.0) normalized + 360.0 else normalized
@@ -167,5 +206,8 @@ internal class AdsbTrafficStore {
     private companion object {
         private const val EMERGENCY_DISTANCE_METERS = 1_000.0
         private const val COLLISION_HEADING_TOLERANCE_DEG = 20.0
+        private const val EMERGENCY_MAX_AGE_SEC = 20
+        private const val RED_DISTANCE_METERS = 2_000.0
+        private const val AMBER_DISTANCE_METERS = 5_000.0
     }
 }

@@ -23,4 +23,11 @@ internal object FlightMetricsConstants {
     const val MIN_MOVING_SPEED_MS = 0.5
     const val VARIO_SPIKE_THRESHOLD_MS = 10.0
     const val QNH_JUMP_THRESHOLD_HPA = 0.5
+    const val WIND_AIRSPEED_ENTER_CONF_MIN = 0.15
+    const val WIND_AIRSPEED_EXIT_CONF_MIN = 0.08
+    const val WIND_AIRSPEED_MIN_GPS_SPEED_MS = 5.0
+    const val WIND_SOURCE_MIN_DWELL_MS = 2_500L
+    const val WIND_TRANSIENT_GRACE_MS = 1_500L
+    const val LIVE_WIND_VALID_MIN_SPEED_MS = 0.5
+    const val GPS_AIRSPEED_FALLBACK_MIN_SPEED_MS = 0.1
 }

@@ -243,8 +243,8 @@ class OrientationDataSource(
                 groundSpeedMs = currentFlightData.groundSpeed,
                 hasGpsFix = hasGpsFix(),
                 windFromDeg = currentFlightData.windDirection.toDouble()
-                    .takeIf { currentFlightData.windSpeed > 0f },
-                windSpeedMs = currentFlightData.windSpeed.toDouble(),
+                    .takeIf { currentFlightData.windValid },
+                windSpeedMs = if (currentFlightData.windValid) currentFlightData.windSpeed.toDouble() else 0.0,
                 minTrackSpeedMs = minSpeedThresholdMs,
                 isFlying = isFlying
             )
@@ -257,8 +257,8 @@ class OrientationDataSource(
             isGPSValid = hasGpsFix(),
             hasValidHeading = headingSolution.isValid,
             compassReliable = primaryReliable,
-            windDirectionFrom = currentFlightData.windDirection.toDouble(),
-            windSpeed = currentFlightData.windSpeed.toDouble(),
+            windDirectionFrom = if (currentFlightData.windValid) currentFlightData.windDirection.toDouble() else 0.0,
+            windSpeed = if (currentFlightData.windValid) currentFlightData.windSpeed.toDouble() else 0.0,
             headingSolution = headingSolution,
             timestamp = nowWall
         )

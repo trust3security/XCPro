@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.xcpro.common.flight.FlightMode
+import com.example.xcpro.common.units.AltitudeUnit
 import com.example.xcpro.adsb.AdsbTrafficSnapshot
 import com.example.xcpro.adsb.AdsbTrafficUiModel
 import com.example.xcpro.adsb.AdsbSelectedTargetDetails
@@ -44,6 +45,8 @@ internal data class MapScreenBindings(
     val showOgnSciaEnabled: Boolean,
     val showOgnThermalsEnabled: Boolean,
     val ognGliderTrailSegments: List<OgnGliderTrailSegment>,
+    val ownshipAltitudeMetersForOgn: Double?,
+    val ognAltitudeUnit: AltitudeUnit,
     val adsbTargets: List<AdsbTrafficUiModel>,
     val adsbSnapshot: AdsbTrafficSnapshot,
     val adsbOverlayEnabled: Boolean,
@@ -86,6 +89,8 @@ internal fun rememberMapScreenBindings(
     val showOgnSciaEnabled by mapViewModel.showOgnSciaEnabled.collectAsStateWithLifecycle()
     val showOgnThermalsEnabled by mapViewModel.showOgnThermalsEnabled.collectAsStateWithLifecycle()
     val ognGliderTrailSegments by mapViewModel.ognGliderTrailSegments.collectAsStateWithLifecycle()
+    val ownshipAltitudeMetersForOgn by mapViewModel.ownshipAltitudeMeters.collectAsStateWithLifecycle()
+    val ognAltitudeUnit by mapViewModel.ognAltitudeUnit.collectAsStateWithLifecycle()
     val adsbTargets by mapViewModel.adsbTargets.collectAsStateWithLifecycle()
     val adsbSnapshot by mapViewModel.adsbSnapshot.collectAsStateWithLifecycle()
     val adsbOverlayEnabled by mapViewModel.adsbOverlayEnabled.collectAsStateWithLifecycle()
@@ -123,6 +128,8 @@ internal fun rememberMapScreenBindings(
         showOgnSciaEnabled = showOgnSciaEnabled,
         showOgnThermalsEnabled = showOgnThermalsEnabled,
         ognGliderTrailSegments = ognGliderTrailSegments,
+        ownshipAltitudeMetersForOgn = ownshipAltitudeMetersForOgn,
+        ognAltitudeUnit = ognAltitudeUnit,
         adsbTargets = adsbTargets,
         adsbSnapshot = adsbSnapshot,
         adsbOverlayEnabled = adsbOverlayEnabled,

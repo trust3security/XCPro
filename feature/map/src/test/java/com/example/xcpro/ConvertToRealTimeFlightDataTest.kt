@@ -156,4 +156,54 @@ class ConvertToRealTimeFlightDataTest {
 
         assertEquals("TRACK", result.headingSource)
     }
+
+    @Test
+    fun wind_not_selected_by_airspeed_source_is_not_used_for_heading_resolution() {
+        val gps = GPSData(
+            position = GeoPoint(latitude = 37.5, longitude = -122.4),
+            altitude = AltitudeM(1000.0),
+            speed = SpeedMs(22.0),
+            bearing = 100.0,
+            accuracy = 5f,
+            timestamp = 2_000L,
+            monotonicTimestampMillis = 2_000L
+        )
+        val complete = CompleteFlightData(
+            gps = gps,
+            baro = null,
+            compass = null,
+            baroAltitude = AltitudeM(1200.0),
+            qnh = PressureHpa(1015.0),
+            isQNHCalibrated = true,
+            verticalSpeed = VerticalSpeedMs(0.8),
+            bruttoVario = VerticalSpeedMs(0.8),
+            pressureAltitude = AltitudeM(1100.0),
+            baroGpsDelta = null,
+            baroConfidence = ConfidenceLevel.MEDIUM,
+            qnhCalibrationAgeSeconds = 5L,
+            agl = AltitudeM(100.0),
+            thermalAverage = VerticalSpeedMs(0.0),
+            currentLD = 20f,
+            netto = VerticalSpeedMs(0.0),
+            airspeedSource = "GPS",
+            timestamp = 2_000L,
+            dataQuality = "GPS",
+            thermalAverageValid = false
+        )
+        val availableWind = WindState(
+            vector = WindVector(east = 6.0, north = 0.0),
+            source = WindSource.MANUAL,
+            quality = 5,
+            stale = false,
+            confidence = 1.0
+        )
+
+        val result = convertToRealTimeFlightData(
+            completeData = complete,
+            windState = availableWind,
+            isFlying = true
+        )
+
+        assertEquals("TRACK", result.headingSource)
+    }
 }

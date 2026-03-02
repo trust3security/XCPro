@@ -25,6 +25,18 @@ object AdsbNetworkModule {
 
     @Provides
     @Singleton
+    @AdsbMetadataHttpClient
+    fun provideAdsbMetadataOkHttpClient(): OkHttpClient {
+        return OkHttpClient.Builder()
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .callTimeout(180, TimeUnit.SECONDS)
+            .build()
+    }
+
+    @Provides
+    @Singleton
     @WeatherMetadataHttpClient
     fun provideWeatherMetadataOkHttpClient(): OkHttpClient {
         return OkHttpClient.Builder()

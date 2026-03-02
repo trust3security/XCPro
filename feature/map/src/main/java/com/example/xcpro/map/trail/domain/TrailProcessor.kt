@@ -4,6 +4,8 @@ import com.example.xcpro.map.trail.TrailGeo
 import com.example.xcpro.map.trail.TrailGeoPoint
 import com.example.xcpro.map.trail.TrailSample
 import com.example.xcpro.map.trail.TrailStore
+import com.example.xcpro.sensors.domain.FlightMetricsConstants
+import com.example.xcpro.sensors.domain.LiveWindValidityPolicy
 import com.example.xcpro.weather.wind.model.WindState
 
 /**
@@ -57,7 +59,14 @@ internal class TrailProcessor(
         }
         val vario = varioResolver.resolve(input.data, input.isReplay)
         val isCircling = circlingResolver.resolve(input.data, input.isReplay)
-        val baseWind = resolveWindSample(input.windState)
+        val baseWind = if (input.isReplay) {
+            resolveReplayWindSample(input.windState)
+        } else {
+            resolveLiveWindSample(
+                windState = input.windState,
+                airspeedSourceLabel = input.data.airspeedSource
+            )
+        }
         val wind = if (input.isReplay) {
             replayWindSmoother.update(
                 speedMs = baseWind.speedMs,
@@ -158,7 +167,7 @@ internal class TrailProcessor(
         }
     }
 
-    private fun resolveWindSample(windState: WindState?): TrailWindSample {
+    private fun resolveReplayWindSample(windState: WindState?): TrailWindSample {
         val vector = windState?.vector
         val hasWind = vector != null &&
             windState.quality > 0 &&
@@ -171,6 +180,22 @@ internal class TrailProcessor(
         return TrailWindSample(vector.speed, directionFrom)
     }
 
+    private fun resolveLiveWindSample(
+        windState: WindState?,
+        airspeedSourceLabel: String
+    ): TrailWindSample {
+        val hasWind = LiveWindValidityPolicy.isLiveWindUsable(
+            windState = windState,
+            airspeedSourceLabel = airspeedSourceLabel
+        )
+        val vector = windState?.vector
+        if (!hasWind || vector == null) {
+            return TrailWindSample(0.0, 0.0)
+        }
+        val directionFrom = ((vector.directionFromDeg % 360.0) + 360.0) % 360.0
+        return TrailWindSample(vector.speed, directionFrom)
+    }
+
     private data class SampleTime(
         val timestampMillis: Long,
         val timeBase: TrailTimeBase
@@ -179,8 +204,8 @@ internal class TrailProcessor(
     private companion object {
         private const val LIVE_MIN_DELTA_MS = 2_000L
         private const val REPLAY_WIND_SMOOTH_MS = 4_000L
-        private const val REPLAY_WIND_VALID_MIN_SPEED_MS = 0.5
-        private const val WIND_VALID_MIN_SPEED_MS = 0.5
+        private const val REPLAY_WIND_VALID_MIN_SPEED_MS = FlightMetricsConstants.LIVE_WIND_VALID_MIN_SPEED_MS
+        private const val WIND_VALID_MIN_SPEED_MS = FlightMetricsConstants.LIVE_WIND_VALID_MIN_SPEED_MS
     }
 }
 

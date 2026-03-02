@@ -5,6 +5,7 @@ import android.util.Log
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.map.BlueLocationOverlay
 import com.example.xcpro.map.trail.SnailTrailManager
+import com.example.xcpro.core.time.TimeBridge
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.gestures.MoveGestureDetector
@@ -159,6 +160,9 @@ class MapInitializer(
             mapState.blueLocationOverlay = BlueLocationOverlay(context, map)
             mapState.blueLocationOverlay?.initialize()
             overlayManager.initializeTrafficOverlays(map)
+            overlayManager.reapplyForecastOverlay()
+            overlayManager.reapplySkySightSatelliteOverlay()
+            overlayManager.reapplyWeatherRainOverlay()
             snailTrailManager.initialize(map)
             scaleBarController.setupScaleBar(map)
             Log.d(TAG, " Blue location overlay initialized")
@@ -266,7 +270,7 @@ class MapInitializer(
         // Show return button on user interaction
         stateActions.setShowRecenterButton(false)
         stateActions.setShowReturnButton(true)
-        stateActions.updateLastUserPanTime(System.currentTimeMillis())
+        stateActions.updateLastUserPanTime(TimeBridge.nowWallMs())
         Log.d(TAG, "User interaction detected - return button shown")
     }
 

@@ -1,84 +1,42 @@
 package com.example.xcpro.map
 
+import com.example.xcpro.adsb.AdsbProximityTier
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class AdsbProximityColorPolicyTest {
 
     @Test
-    fun colorHexFor_returnsEmergencyColorWhenEmergencyFlagSet() {
-        val color = AdsbProximityColorPolicy.colorHexFor(
-            distanceMeters = 10_000.0,
-            hasOwnshipReference = false,
-            isEmergency = true
-        )
+    fun colorHexFor_returnsEmergencyColorForEmergencyTier() {
+        val color = AdsbProximityColorPolicy.colorHexFor(AdsbProximityTier.EMERGENCY)
 
         assertEquals(AdsbProximityColorPolicy.EMERGENCY_HEX, color)
     }
 
     @Test
-    fun colorHexFor_returnsNeutralWhenOwnshipReferenceUnavailable() {
-        val color = AdsbProximityColorPolicy.colorHexFor(
-            distanceMeters = 1_000.0,
-            hasOwnshipReference = false,
-            isEmergency = false
-        )
+    fun colorHexFor_returnsNeutralForNeutralTier() {
+        val color = AdsbProximityColorPolicy.colorHexFor(AdsbProximityTier.NEUTRAL)
 
         assertEquals(AdsbProximityColorPolicy.NEUTRAL_HEX, color)
     }
 
     @Test
-    fun colorHexFor_returnsRedAtAndBelowTwoKilometers() {
-        val belowThreshold = AdsbProximityColorPolicy.colorHexFor(
-            distanceMeters = 1_999.0,
-            hasOwnshipReference = true,
-            isEmergency = false
-        )
-        val atThreshold = AdsbProximityColorPolicy.colorHexFor(
-            distanceMeters = 2_000.0,
-            hasOwnshipReference = true,
-            isEmergency = false
-        )
+    fun colorHexFor_returnsRedForRedTier() {
+        val color = AdsbProximityColorPolicy.colorHexFor(AdsbProximityTier.RED)
 
-        assertEquals(AdsbProximityColorPolicy.RED_HEX, belowThreshold)
-        assertEquals(AdsbProximityColorPolicy.RED_HEX, atThreshold)
+        assertEquals(AdsbProximityColorPolicy.RED_HEX, color)
     }
 
     @Test
-    fun colorHexFor_returnsAmberAboveTwoKilometersThroughFiveKilometers() {
-        val aboveRedThreshold = AdsbProximityColorPolicy.colorHexFor(
-            distanceMeters = 2_001.0,
-            hasOwnshipReference = true,
-            isEmergency = false
-        )
-        val atAmberThreshold = AdsbProximityColorPolicy.colorHexFor(
-            distanceMeters = 5_000.0,
-            hasOwnshipReference = true,
-            isEmergency = false
-        )
+    fun colorHexFor_returnsAmberForAmberTier() {
+        val color = AdsbProximityColorPolicy.colorHexFor(AdsbProximityTier.AMBER)
 
-        assertEquals(AdsbProximityColorPolicy.AMBER_HEX, aboveRedThreshold)
-        assertEquals(AdsbProximityColorPolicy.AMBER_HEX, atAmberThreshold)
+        assertEquals(AdsbProximityColorPolicy.AMBER_HEX, color)
     }
 
     @Test
-    fun colorHexFor_returnsGreenBeyondFiveKilometers() {
-        val color = AdsbProximityColorPolicy.colorHexFor(
-            distanceMeters = 5_001.0,
-            hasOwnshipReference = true,
-            isEmergency = false
-        )
-
-        assertEquals(AdsbProximityColorPolicy.GREEN_HEX, color)
-    }
-
-    @Test
-    fun colorHexFor_returnsGreenWhenDistanceMissingButOwnshipReferenceExists() {
-        val color = AdsbProximityColorPolicy.colorHexFor(
-            distanceMeters = Double.NaN,
-            hasOwnshipReference = true,
-            isEmergency = false
-        )
+    fun colorHexFor_returnsGreenForGreenTier() {
+        val color = AdsbProximityColorPolicy.colorHexFor(AdsbProximityTier.GREEN)
 
         assertEquals(AdsbProximityColorPolicy.GREEN_HEX, color)
     }

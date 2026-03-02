@@ -24,9 +24,12 @@ class MapRuntimeController(
     fun onMapReady(map: MapLibreMap) {
         this.map = map
         mapGeneration++
-        // Initial style is owned by MapInitializer. Drop any stale pre-ready command
-        // to avoid double style loads during cold start.
+        // Replay the latest style command that arrived before map readiness.
+        val queuedStyleName = pendingStyleName
         pendingStyleName = null
+        if (!queuedStyleName.isNullOrBlank()) {
+            applyStyle(queuedStyleName)
+        }
     }
 
     fun clearMap() {

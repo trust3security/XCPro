@@ -37,6 +37,9 @@ The following checks must fail the build when violated:
 - Manager state model: non-UI managers/domain classes must not use Compose runtime state (mutableStateOf, derivedStateOf, remember).
 - Vendor strings: no "xcsoar" or "XCSoar" literals in production Kotlin source.
 - Encoding: no non-ASCII characters in production Kotlin source.
+- App identity stability: `app/build.gradle.kts` must keep the approved
+  `applicationId` and debug `applicationIdSuffix` unless an explicit migration
+  plan is documented and approved.
 
 ---
 
@@ -64,6 +67,26 @@ CI should include static checks that detect unit-contract drift in internal logi
 Acceptable:
 - Explicit conversion at adapter/UI boundaries.
 - SI-only values inside repositories/use-cases/engines after conversion.
+
+### 1A.3 Automated Enforcement Entry Points
+
+Enforcement artifacts:
+- Local static gate: `scripts/arch_gate.py`
+- CI workflow: `.github/workflows/quality-gates.yml`
+- Canonical time abstraction for production code: `core/time/src/main/java/com/example/xcpro/core/time/Clock.kt`
+- DI binding anchor: `app/src/main/java/com/example/xcpro/di/TimeModule.kt`
+
+Local validation minimum:
+- `python scripts/arch_gate.py`
+- `./gradlew enforceRules`
+- `./gradlew testDebugUnitTest`
+- `./gradlew assembleDebug`
+
+When adding or tightening a gate rule:
+- Document the rationale in this file first.
+- Add the corresponding static check in `scripts/arch_gate.py` or `enforceRules`.
+- Update affected architecture docs in the same change set.
+- If immediate compliance is not possible, add a time-boxed entry in `KNOWN_DEVIATIONS.md`.
 
 ## 1B. Exception Process
 

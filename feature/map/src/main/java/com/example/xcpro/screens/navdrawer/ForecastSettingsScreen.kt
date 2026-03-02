@@ -47,6 +47,7 @@ import com.example.xcpro.forecast.FORECAST_OPACITY_MAX
 import com.example.xcpro.forecast.FORECAST_OPACITY_MIN
 import com.example.xcpro.forecast.FORECAST_WIND_OVERLAY_SCALE_MAX
 import com.example.xcpro.forecast.FORECAST_WIND_OVERLAY_SCALE_MIN
+import com.example.xcpro.forecast.ForecastCredentialStorageMode
 import com.example.xcpro.forecast.forecastRegionLabel
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -66,11 +67,14 @@ fun ForecastSettingsScreen(
     val authConfirmation by viewModel.authConfirmation.collectAsStateWithLifecycle()
     val authReturnCode by viewModel.authReturnCode.collectAsStateWithLifecycle()
     val authChecking by viewModel.authChecking.collectAsStateWithLifecycle()
+    val savedCredentials by viewModel.savedCredentials.collectAsStateWithLifecycle()
+    val credentialsStatus by viewModel.credentialsStatus.collectAsStateWithLifecycle()
+    val credentialStorageMode by viewModel.credentialStorageMode.collectAsStateWithLifecycle()
     var sliderValue by remember { mutableStateOf(opacity) }
     var windOverlayScaleSlider by remember { mutableStateOf(windOverlayScale) }
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var credentialsStatus by remember { mutableStateOf("Credentials not set") }
+    var credentialValidationMessage by remember { mutableStateOf<String?>(null) }
     var regionMenuExpanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(opacity) {
@@ -79,15 +83,9 @@ fun ForecastSettingsScreen(
     LaunchedEffect(windOverlayScale) {
         windOverlayScaleSlider = windOverlayScale
     }
-    LaunchedEffect(Unit) {
-        val credentials = viewModel.loadCredentials()
-        username = credentials?.username.orEmpty()
-        password = credentials?.password.orEmpty()
-        credentialsStatus = if (credentials == null) {
-            "Credentials not set"
-        } else {
-            "Credentials saved"
-        }
+    LaunchedEffect(savedCredentials) {
+        username = savedCredentials?.username.orEmpty()
+        password = savedCredentials?.password.orEmpty()
     }
 
     Scaffold(
@@ -265,6 +263,14 @@ fun ForecastSettingsScreen(
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        if (credentialStorageMode == ForecastCredentialStorageMode.PLAINTEXT_FALLBACK) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Secure encrypted storage unavailable on this device; using fallback storage.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
                         Spacer(modifier = Modifier.height(12.dp))
                         OutlinedTextField(
                             value = username,
@@ -284,7 +290,7 @@ fun ForecastSettingsScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = credentialsStatus,
+                            text = credentialValidationMessage ?: credentialsStatus,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -298,14 +304,13 @@ fun ForecastSettingsScreen(
                                     val trimmedUsername = username.trim()
                                     val trimmedPassword = password.trim()
                                     if (trimmedUsername.isBlank() || trimmedPassword.isBlank()) {
-                                        credentialsStatus = "Username and password are required"
+                                        credentialValidationMessage = "Username and password are required"
                                     } else {
+                                        credentialValidationMessage = null
                                         viewModel.saveCredentials(
                                             username = trimmedUsername,
                                             password = trimmedPassword
                                         )
-                                        credentialsStatus = "Credentials saved"
-                                        viewModel.verifyCredentials()
                                     }
                                 },
                                 modifier = Modifier.weight(1f)
@@ -314,10 +319,10 @@ fun ForecastSettingsScreen(
                             }
                             TextButton(
                                 onClick = {
+                                    credentialValidationMessage = null
                                     username = ""
                                     password = ""
                                     viewModel.clearCredentials()
-                                    credentialsStatus = "Credentials cleared"
                                 },
                                 modifier = Modifier.weight(1f)
                             ) {

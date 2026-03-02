@@ -26,6 +26,7 @@ UI to persistence:
 
 Persistence to render:
 - SCIA preference flow: `OgnTrafficPreferencesRepository.showSciaEnabledFlow`.
+- App-start reset: `XCProApplication.onCreate()` forces SCIA OFF and clears selected trail-aircraft keys on fresh process launch.
 - ViewModel state: `MapScreenViewModel.showOgnSciaEnabled`.
 - Bindings: `MapScreenBindings.kt` and selected-aircraft filtering (`MapScreenBindings.kt:94-109`).
 - Map effect gate: only render trails when `ognOverlayEnabled && showOgnSciaEnabled` in `MapScreenRootEffects.kt:84`.
@@ -42,7 +43,7 @@ High-level behavior:
 Trail visibility behavior:
 - Trails render only for selected OGN aircraft keys.
 - If no aircraft keys are selected, the map receives `emptyList()` trails (`MapScreenBindings.kt:101-105`).
-- Selection is SSOT in `OgnTrailSelectionPreferencesRepository`; default is empty set (`OgnTrailSelectionViewModel.kt:21`).
+- Selection is SSOT in `OgnTrailSelectionPreferencesRepository`; default is empty set (`OgnTrailSelectionViewModel.kt:21`) and is reset to empty on app restart.
 - User can select per-aircraft trail visibility:
   - In OGN tab rows (`MapBottomSheetTabs.kt`).
   - In marker detail sheet (`OgnMarkerDetailsSheet.kt:53-59`, wired in `MapScreenContent.kt:732-741`).
@@ -112,8 +113,9 @@ Additional implementation notes from third pass:
 - Startup path can push trails twice:
   - map-ready immediate push (`MapScreenScaffoldInputs.kt:207-210`),
   - then overlay effect push (`MapScreenRootEffects.kt:103-104`).
-- Trail selection state starts empty before persisted load:
+- Trail selection state starts empty before DataStore emission:
   - `OgnTrailSelectionViewModel.kt:21`.
+  - App startup reset also clears persisted selected keys on fresh process launch.
 - Trail-selection flow is collected in two UI locations:
   - `MapScreenBindings.kt` and `MapScreenContent.kt`.
 

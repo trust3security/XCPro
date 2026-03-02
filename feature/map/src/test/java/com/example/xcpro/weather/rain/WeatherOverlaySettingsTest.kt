@@ -117,12 +117,36 @@ class WeatherOverlaySettingsTest {
             WeatherRainAnimationWindow.fromStorage("30m")
         )
         assertEquals(
+            WeatherRainAnimationWindow.ONE_HUNDRED_TWENTY_MINUTES,
+            WeatherRainAnimationWindow.fromStorage("120m")
+        )
+        assertEquals(
             WeatherRainAnimationWindow.TEN_MINUTES,
             WeatherRainAnimationWindow.fromStorage("unknown")
         )
         assertEquals(
             WeatherRainAnimationWindow.TEN_MINUTES,
             WeatherRainAnimationWindow.fromStorage(null)
+        )
+    }
+
+    @Test
+    fun maxSelectableFrameCount_matchesWindowContract() {
+        assertEquals(
+            2,
+            WeatherRainAnimationWindow.TEN_MINUTES.maxSelectableFrameCount()
+        )
+        assertEquals(
+            3,
+            WeatherRainAnimationWindow.TWENTY_MINUTES.maxSelectableFrameCount()
+        )
+        assertEquals(
+            4,
+            WeatherRainAnimationWindow.THIRTY_MINUTES.maxSelectableFrameCount()
+        )
+        assertEquals(
+            13,
+            WeatherRainAnimationWindow.ONE_HUNDRED_TWENTY_MINUTES.maxSelectableFrameCount()
         )
     }
 
@@ -194,6 +218,15 @@ class WeatherOverlaySettingsTest {
                 frameIntervalMs = WEATHER_RAIN_ANIMATION_FRAME_INTERVAL_NORMAL_MS,
                 animatePastWindow = true,
                 animationWindow = WeatherRainAnimationWindow.THIRTY_MINUTES
+            )
+        )
+        assertEquals(
+            196L,
+            resolveWeatherRainEffectiveTransitionDurationMs(
+                preferredDurationMs = WEATHER_RAIN_TRANSITION_DURATION_BALANCED_MS,
+                frameIntervalMs = WEATHER_RAIN_ANIMATION_FRAME_INTERVAL_NORMAL_MS,
+                animatePastWindow = true,
+                animationWindow = WeatherRainAnimationWindow.ONE_HUNDRED_TWENTY_MINUTES
             )
         )
     }

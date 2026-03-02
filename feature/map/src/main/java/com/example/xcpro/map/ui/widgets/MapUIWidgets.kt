@@ -102,23 +102,25 @@ object MapUIWidgets {
         hamburgerOffset: Offset,
         screenWidthPx: Float,
         screenHeightPx: Float,
+        sizePx: Float = 90f,
         onHamburgerTap: () -> Unit,
         onHamburgerLongPress: () -> Unit,
         onOffsetChange: (Offset) -> Unit,
+        onSizeChange: (Float) -> Unit = {},
         isEditMode: Boolean,
-        modifier: Modifier = Modifier,
-        sizeDp: Float = 90f
+        modifier: Modifier = Modifier
     ) = SideHamburgerMenuImpl(
         widgetManager = widgetManager,
         hamburgerOffset = hamburgerOffset,
         screenWidthPx = screenWidthPx,
         screenHeightPx = screenHeightPx,
+        sizePx = sizePx,
         onHamburgerTap = onHamburgerTap,
         onHamburgerLongPress = onHamburgerLongPress,
         onOffsetChange = onOffsetChange,
+        onSizeChange = onSizeChange,
         isEditMode = isEditMode,
-        modifier = modifier,
-        sizeDp = sizeDp
+        modifier = modifier
     )
 
     @Composable
@@ -127,21 +129,23 @@ object MapUIWidgets {
         settingsOffset: Offset,
         screenWidthPx: Float,
         screenHeightPx: Float,
+        sizePx: Float = 56f,
         onSettingsTap: () -> Unit,
         onOffsetChange: (Offset) -> Unit,
+        onSizeChange: (Float) -> Unit = {},
         isEditMode: Boolean,
-        modifier: Modifier = Modifier,
-        sizeDp: Float = 56f
+        modifier: Modifier = Modifier
     ) = SettingsShortcutWidgetImpl(
         widgetManager = widgetManager,
         settingsOffset = settingsOffset,
         screenWidthPx = screenWidthPx,
         screenHeightPx = screenHeightPx,
+        sizePx = sizePx,
         onSettingsTap = onSettingsTap,
         onOffsetChange = onOffsetChange,
+        onSizeChange = onSizeChange,
         isEditMode = isEditMode,
-        modifier = modifier,
-        sizeDp = sizeDp
+        modifier = modifier
     )
 
     @Composable

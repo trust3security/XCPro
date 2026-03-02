@@ -27,7 +27,6 @@ import kotlinx.coroutines.launch
 class FlightStateRepository @Inject constructor(
     @LiveSource private val liveSensors: SensorDataSource,
     @ReplaySource private val replaySensors: SensorDataSource,
-    @LiveSource private val liveAirspeedSource: AirspeedDataSource,
     @ReplaySource private val replayAirspeedSource: AirspeedDataSource,
     private val flightDataRepository: FlightDataRepository,
     private val clock: Clock,
@@ -38,6 +37,8 @@ class FlightStateRepository @Inject constructor(
         val gps: GPSData?,
         val baro: BaroData?,
         val airspeed: AirspeedSample?,
+        val flightData: CompleteFlightData?,
+        val useStabilizedAirspeed: Boolean,
         val aglMeters: Double?
     )
 
@@ -57,25 +58,39 @@ class FlightStateRepository @Inject constructor(
                     } else {
                         liveSensors
                     }
-                    val airspeedSource = if (source == FlightDataRepository.Source.REPLAY) {
-                        replayAirspeedSource
+                    if (source == FlightDataRepository.Source.REPLAY) {
+                        combine(
+                            sensors.gpsFlow,
+                            sensors.baroFlow,
+                            replayAirspeedSource.airspeedFlow,
+                            flightDataRepository.flightData
+                        ) { gps, baro, airspeed, flightData ->
+                            val agl = extractFreshAglMeters(flightData)
+                            FlightStateInput(
+                                gps = gps,
+                                baro = baro,
+                                airspeed = airspeed,
+                                flightData = flightData,
+                                useStabilizedAirspeed = false,
+                                aglMeters = agl
+                            )
+                        }
                     } else {
-                        liveAirspeedSource
-                    }
-
-                    combine(
-                        sensors.gpsFlow,
-                        sensors.baroFlow,
-                        airspeedSource.airspeedFlow,
-                        flightDataRepository.flightData
-                    ) { gps, baro, airspeed, flightData ->
-                        val agl = extractFreshAglMeters(flightData)
-                        FlightStateInput(
-                            gps = gps,
-                            baro = baro,
-                            airspeed = airspeed,
-                            aglMeters = agl
-                        )
+                        combine(
+                            sensors.gpsFlow,
+                            sensors.baroFlow,
+                            flightDataRepository.flightData
+                        ) { gps, baro, flightData ->
+                            val agl = extractFreshAglMeters(flightData)
+                            FlightStateInput(
+                                gps = gps,
+                                baro = baro,
+                                airspeed = null,
+                                flightData = flightData,
+                                useStabilizedAirspeed = true,
+                                aglMeters = agl
+                            )
+                        }
                     }
                 }
                 .collect { input ->
@@ -96,14 +111,23 @@ class FlightStateRepository @Inject constructor(
             return
         }
 
-        val airspeed = input.airspeed
-        val airspeedReal = airspeed?.valid == true && airspeed.trueMs.isFinite()
+        val liveFlightData = input.flightData
+        val (trueAirspeedMs, airspeedReal) = if (input.useStabilizedAirspeed) {
+            val stabilizedTrue = liveFlightData?.trueAirspeed?.value?.takeIf { it.isFinite() }
+            val sourceLabel = liveFlightData?.airspeedSource.orEmpty()
+            val sourceReal = liveFlightData?.tasValid == true && isTrustedAirspeedSource(sourceLabel)
+            stabilizedTrue to (sourceReal && stabilizedTrue != null)
+        } else {
+            val sample = input.airspeed
+            val sampleTrue = sample?.trueMs
+            sampleTrue to (sample?.valid == true && sampleTrue?.isFinite() == true)
+        }
         val altitudeMeters = resolveAltitudeMeters(gps, input.baro)
 
         val state = detector.update(
             timestampMillis = gps.timeForCalculationsMillis,
             groundSpeedMs = gps.speed.value,
-            trueAirspeedMs = airspeed?.trueMs,
+            trueAirspeedMs = trueAirspeedMs,
             airspeedReal = airspeedReal,
             altitudeMeters = altitudeMeters,
             aglMeters = input.aglMeters
@@ -135,5 +159,10 @@ class FlightStateRepository @Inject constructor(
     private companion object {
         private const val SEA_LEVEL_PRESSURE_HPA = 1013.25
         private const val AGL_STALE_AFTER_MS = 15_000L
+    }
+
+    private fun isTrustedAirspeedSource(sourceLabel: String): Boolean {
+        return sourceLabel.equals("WIND", ignoreCase = true) ||
+            sourceLabel.equals("SENSOR", ignoreCase = true)
     }
 }

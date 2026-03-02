@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.util.Log
+import com.example.xcpro.core.time.TimeBridge
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
@@ -15,9 +16,12 @@ fun copyFileToInternalStorage(context: Context, uri: Uri): String {
     val contentResolver = context.contentResolver
     val fileName = contentResolver.query(uri, null, null, null, null)?.use { cursor ->
         val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-        cursor.moveToFirst()
-        cursor.getString(nameIndex) ?: "file_${System.currentTimeMillis()}.txt"
-    } ?: "file_${System.currentTimeMillis()}.txt"
+        if (nameIndex >= 0 && cursor.moveToFirst()) {
+            cursor.getString(nameIndex)?.takeIf { it.isNotBlank() }
+        } else {
+            null
+        }
+    } ?: "file_${TimeBridge.nowWallMs()}.txt"
 
     val outputFile = File(context.filesDir, fileName)
     contentResolver.openInputStream(uri)?.use { input ->

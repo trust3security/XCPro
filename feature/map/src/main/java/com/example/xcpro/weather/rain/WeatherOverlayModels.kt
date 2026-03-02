@@ -64,20 +64,59 @@ enum class WeatherRainAnimationSpeed(
 
 enum class WeatherRainAnimationWindow(
     val storageKey: String,
-    val windowSeconds: Long
+    val windowMinutes: Int
 ) {
     TEN_MINUTES(
         storageKey = "10m",
-        windowSeconds = WEATHER_RAIN_ANIMATION_WINDOW_10_MIN_SECONDS
+        windowMinutes = 10
     ),
     TWENTY_MINUTES(
         storageKey = "20m",
-        windowSeconds = WEATHER_RAIN_ANIMATION_WINDOW_20_MIN_SECONDS
+        windowMinutes = 20
     ),
     THIRTY_MINUTES(
         storageKey = "30m",
-        windowSeconds = WEATHER_RAIN_ANIMATION_WINDOW_30_MIN_SECONDS
+        windowMinutes = 30
+    ),
+    FORTY_MINUTES(
+        storageKey = "40m",
+        windowMinutes = 40
+    ),
+    FIFTY_MINUTES(
+        storageKey = "50m",
+        windowMinutes = 50
+    ),
+    SIXTY_MINUTES(
+        storageKey = "60m",
+        windowMinutes = 60
+    ),
+    SEVENTY_MINUTES(
+        storageKey = "70m",
+        windowMinutes = 70
+    ),
+    EIGHTY_MINUTES(
+        storageKey = "80m",
+        windowMinutes = 80
+    ),
+    NINETY_MINUTES(
+        storageKey = "90m",
+        windowMinutes = 90
+    ),
+    ONE_HUNDRED_MINUTES(
+        storageKey = "100m",
+        windowMinutes = 100
+    ),
+    ONE_HUNDRED_TEN_MINUTES(
+        storageKey = "110m",
+        windowMinutes = 110
+    ),
+    ONE_HUNDRED_TWENTY_MINUTES(
+        storageKey = "120m",
+        windowMinutes = 120
     );
+
+    val windowSeconds: Long
+        get() = windowMinutes * 60L
 
     companion object {
         fun fromStorage(value: String?): WeatherRainAnimationWindow =

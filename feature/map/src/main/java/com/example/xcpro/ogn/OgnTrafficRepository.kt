@@ -64,6 +64,8 @@ class OgnTrafficRepositoryImpl @Inject constructor(
     private val _targets = MutableStateFlow<List<OgnTrafficTarget>>(emptyList())
     override val targets: StateFlow<List<OgnTrafficTarget>> = _targets.asStateFlow()
     private val suppressedTargetSeenMonoByKey = ConcurrentHashMap<String, Long>()
+    private val lastTimedSourceSeenMonoByKey = ConcurrentHashMap<String, Long>()
+    private val lastAcceptedTimedSourceTimestampWallByKey = ConcurrentHashMap<String, Long>()
     private val _suppressedTargetIds = MutableStateFlow<Set<String>>(emptySet())
     override val suppressedTargetIds: StateFlow<Set<String>> = _suppressedTargetIds.asStateFlow()
 
@@ -109,7 +111,16 @@ class OgnTrafficRepositoryImpl @Inject constructor(
     private var lastError: String? = null
 
     @Volatile
-    private var lastDdbRefreshAttemptWallMs: Long = 0L
+    private var lastDdbRefreshSuccessWallMs: Long = Long.MIN_VALUE
+
+    @Volatile
+    private var ddbRefreshNextFailureRetryMonoMs: Long = Long.MIN_VALUE
+
+    @Volatile
+    private var ddbRefreshFailureRetryDelayMs: Long = DDB_REFRESH_FAILURE_RETRY_START_MS
+
+    @Volatile
+    private var ddbRefreshInFlight: Boolean = false
 
     @Volatile
     private var reconnectBackoffMs: Long? = null
@@ -153,6 +164,7 @@ class OgnTrafficRepositoryImpl @Inject constructor(
     private var droppedImplausibleMotionFrames: Long = 0L
 
     private val stateTransitionMutex = Mutex()
+    private val ddbRefreshLock = Any()
 
     internal var socketFactory: () -> Socket = { Socket() }
 
@@ -300,6 +312,8 @@ class OgnTrafficRepositoryImpl @Inject constructor(
         if (_isEnabled.value) return
         targetsByKey.clear()
         suppressedTargetSeenMonoByKey.clear()
+        lastTimedSourceSeenMonoByKey.clear()
+        lastAcceptedTimedSourceTimestampWallByKey.clear()
         _targets.value = emptyList()
         _suppressedTargetIds.value = emptySet()
         activeSubscriptionCenter = null
@@ -307,6 +321,8 @@ class OgnTrafficRepositoryImpl @Inject constructor(
         lastDistanceRefreshMonoMs = Long.MIN_VALUE
         droppedOutOfOrderSourceFrames = 0L
         droppedImplausibleMotionFrames = 0L
+        ddbRefreshNextFailureRetryMonoMs = Long.MIN_VALUE
+        ddbRefreshFailureRetryDelayMs = DDB_REFRESH_FAILURE_RETRY_START_MS
         connectionState = OgnConnectionState.DISCONNECTED
         lastError = null
         publishSnapshot()
@@ -317,7 +333,10 @@ class OgnTrafficRepositoryImpl @Inject constructor(
         var backoffMs = RECONNECT_BACKOFF_START_MS
         try {
             while (_isEnabled.value) {
-                refreshDdbIfDue()
+                requestDdbRefreshIfDue(
+                    nowMonoMs = clock.nowMonoMs(),
+                    nowWallMs = clock.nowWallMs()
+                )
                 val centerAtConnect = waitForCenter() ?: break
                 var reconnectRequestedByPolicy = false
                 try {
@@ -327,6 +346,7 @@ class OgnTrafficRepositoryImpl @Inject constructor(
                     activeSubscriptionCenter = null
                     backoffMs = RECONNECT_BACKOFF_START_MS
                     reconnectBackoffMs = null
+                    publishSnapshot()
                 } catch (e: CancellationException) {
                     throw e
                 } catch (t: Throwable) {
@@ -368,7 +388,7 @@ class OgnTrafficRepositoryImpl @Inject constructor(
         return null
     }
 
-    private fun connectAndRead(centerAtConnect: Center): ConnectionExitReason {
+    private suspend fun connectAndRead(centerAtConnect: Center): ConnectionExitReason {
         val socket = socketFactory()
         var reader: BufferedReader? = null
         var writer: BufferedWriter? = null
@@ -399,10 +419,10 @@ class OgnTrafficRepositoryImpl @Inject constructor(
 
             var lastSweepMonoMs = clock.nowMonoMs()
             var lastKeepaliveMonoMs = lastSweepMonoMs
-            var lastStreamActivityMonoMs = lastSweepMonoMs
+            var lastInboundActivityMonoMs = lastSweepMonoMs
+            var lastActiveDdbCheckMonoMs = lastSweepMonoMs
 
             while (_isEnabled.value) {
-                val nowMonoMs = clock.nowMonoMs()
                 val activeCenter = center
                 if (reconnectRequestedForRadiusChange) {
                     reconnectRequestedForRadiusChange = false
@@ -424,7 +444,8 @@ class OgnTrafficRepositoryImpl @Inject constructor(
 
                 try {
                     val line = reader.readLine() ?: return ConnectionExitReason.StreamEnded
-                    lastStreamActivityMonoMs = clock.nowMonoMs()
+                    val receivedMonoMs = clock.nowMonoMs()
+                    lastInboundActivityMonoMs = receivedMonoMs
                     when (parseLogrespStatus(line)) {
                         OgnLogrespStatus.VERIFIED -> {
                             if (!connectionEstablished) {
@@ -443,7 +464,11 @@ class OgnTrafficRepositoryImpl @Inject constructor(
                         }
 
                         null -> {
-                            val sawTraffic = handleIncomingLine(line, nowMonoMs, centerAtConnect)
+                            val sawTraffic = handleIncomingLine(
+                                line = line,
+                                nowMonoMs = receivedMonoMs,
+                                centerAtConnect = centerAtConnect
+                            )
                             if (sawTraffic && !connectionEstablished) {
                                 connectionEstablished = true
                                 connectionState = OgnConnectionState.CONNECTED
@@ -460,8 +485,15 @@ class OgnTrafficRepositoryImpl @Inject constructor(
                 }
 
                 val loopNowMonoMs = clock.nowMonoMs()
-                if (loopNowMonoMs - lastStreamActivityMonoMs >= STALL_TIMEOUT_MS) {
+                if (loopNowMonoMs - lastInboundActivityMonoMs >= STALL_TIMEOUT_MS) {
                     throw IllegalStateException("OGN stream stalled")
+                }
+                if (loopNowMonoMs - lastActiveDdbCheckMonoMs >= DDB_ACTIVE_REFRESH_CHECK_INTERVAL_MS) {
+                    requestDdbRefreshIfDue(
+                        nowMonoMs = loopNowMonoMs,
+                        nowWallMs = clock.nowWallMs()
+                    )
+                    lastActiveDdbCheckMonoMs = loopNowMonoMs
                 }
 
                 if (loopNowMonoMs - lastSweepMonoMs >= STALE_SWEEP_INTERVAL_MS) {
@@ -474,8 +506,6 @@ class OgnTrafficRepositoryImpl @Inject constructor(
                     writer.newLine()
                     writer.flush()
                     lastKeepaliveMonoMs = loopNowMonoMs
-                    // AI-NOTE: Successful keepalive writes prove a live stream path even when no APRS frames arrive.
-                    lastStreamActivityMonoMs = loopNowMonoMs
                 }
             }
             return ConnectionExitReason.StreamEnded
@@ -509,8 +539,23 @@ class OgnTrafficRepositoryImpl @Inject constructor(
 
         val targetKey = parsed.canonicalKey
         val previousCommittedTarget = targetsByKey[targetKey]
+        val lastAcceptedTimedSourceTimestampWallMs =
+            lastAcceptedTimedSourceTimestampWallByKey[targetKey]
+        val lastTimedSourceSeenMonoMs = lastTimedSourceSeenMonoByKey[targetKey]
+        if (!shouldAcceptUntimedAfterTimedSourceLock(
+                lastTimedSourceSeenMonoMs = lastTimedSourceSeenMonoMs,
+                incomingSourceTimestampWallMs = parsed.sourceTimestampWallMs,
+                nowMonoMs = nowMonoMs,
+                fallbackAfterMs = UNTIMED_SOURCE_FALLBACK_AFTER_MS
+            )
+        ) {
+            droppedOutOfOrderSourceFrames += 1L
+            publishSnapshot()
+            return true
+        }
         if (!shouldAcceptOgnSourceTimestamp(
-                previousSourceTimestampWallMs = previousCommittedTarget?.sourceTimestampWallMs,
+                previousSourceTimestampWallMs =
+                lastAcceptedTimedSourceTimestampWallMs ?: previousCommittedTarget?.sourceTimestampWallMs,
                 incomingSourceTimestampWallMs = parsed.sourceTimestampWallMs,
                 rewindToleranceMs = SOURCE_TIME_REWIND_TOLERANCE_MS
             )
@@ -523,9 +568,11 @@ class OgnTrafficRepositoryImpl @Inject constructor(
                 previousLatitude = previousCommittedTarget?.latitude,
                 previousLongitude = previousCommittedTarget?.longitude,
                 previousSourceTimestampWallMs = previousCommittedTarget?.sourceTimestampWallMs,
+                previousSeenMonoMs = previousCommittedTarget?.lastSeenMillis,
                 incomingLatitude = parsed.latitude,
                 incomingLongitude = parsed.longitude,
                 incomingSourceTimestampWallMs = parsed.sourceTimestampWallMs,
+                incomingSeenMonoMs = nowMonoMs,
                 maxPlausibleSpeedMps = MAX_PLAUSIBLE_SPEED_MPS
             )
         ) {
@@ -542,6 +589,8 @@ class OgnTrafficRepositoryImpl @Inject constructor(
         if (ddbIdentity?.tracked == false) {
             val removedTarget = targetsByKey.remove(targetKey)
             val removedSuppressed = suppressedTargetSeenMonoByKey.remove(targetKey) != null
+            lastTimedSourceSeenMonoByKey.remove(targetKey)
+            lastAcceptedTimedSourceTimestampWallByKey.remove(targetKey)
             if (removedTarget != null) {
                 publishTargets()
             } else if (removedSuppressed) {
@@ -573,6 +622,8 @@ class OgnTrafficRepositoryImpl @Inject constructor(
         if (isOwnshipTarget(enriched, ownFlarmHex, ownIcaoHex)) {
             val removed = targetsByKey.remove(targetKey)
             suppressedTargetSeenMonoByKey[targetKey] = nowMonoMs
+            lastTimedSourceSeenMonoByKey.remove(targetKey)
+            lastAcceptedTimedSourceTimestampWallByKey.remove(targetKey)
             if (removed != null) {
                 publishTargets()
             } else {
@@ -583,6 +634,10 @@ class OgnTrafficRepositoryImpl @Inject constructor(
 
         if (suppressedTargetSeenMonoByKey.remove(targetKey) != null) {
             publishSuppressedTargetIds()
+        }
+        if (parsed.sourceTimestampWallMs != null) {
+            lastTimedSourceSeenMonoByKey[targetKey] = nowMonoMs
+            lastAcceptedTimedSourceTimestampWallByKey[targetKey] = parsed.sourceTimestampWallMs
         }
         targetsByKey[targetKey] = enriched
         publishTargets()
@@ -671,6 +726,8 @@ class OgnTrafficRepositoryImpl @Inject constructor(
             val entry = iterator.next()
             if (entry.value.isStale(nowMonoMs, TARGET_STALE_AFTER_MS)) {
                 iterator.remove()
+                lastTimedSourceSeenMonoByKey.remove(entry.key)
+                lastAcceptedTimedSourceTimestampWallByKey.remove(entry.key)
                 removed = true
             }
         }
@@ -712,6 +769,8 @@ class OgnTrafficRepositoryImpl @Inject constructor(
             val noLongerMatchesFilter = !matchesAnyOwnshipKey(entry.key, config)
             if (stale || noLongerMatchesFilter) {
                 iterator.remove()
+                lastTimedSourceSeenMonoByKey.remove(entry.key)
+                lastAcceptedTimedSourceTimestampWallByKey.remove(entry.key)
                 changed = true
             }
         }
@@ -832,6 +891,8 @@ class OgnTrafficRepositoryImpl @Inject constructor(
             )
             if (!withinRadius) {
                 iterator.remove()
+                lastTimedSourceSeenMonoByKey.remove(entry.key)
+                lastAcceptedTimedSourceTimestampWallByKey.remove(entry.key)
                 changed = true
             }
         }
@@ -871,12 +932,59 @@ class OgnTrafficRepositoryImpl @Inject constructor(
         )
     }
 
-    private suspend fun refreshDdbIfDue() {
-        val nowWallMs = clock.nowWallMs()
-        if (nowWallMs - lastDdbRefreshAttemptWallMs < DDB_REFRESH_CHECK_INTERVAL_MS) return
-        lastDdbRefreshAttemptWallMs = nowWallMs
-        runCatching { ddbRepository.refreshIfNeeded() }
-            .onFailure { AppLogger.w(TAG, "DDB refresh failed: ${it.message}") }
+    private fun requestDdbRefreshIfDue(nowMonoMs: Long, nowWallMs: Long) {
+        val shouldLaunch = synchronized(ddbRefreshLock) {
+            if (ddbRefreshInFlight) return@synchronized false
+            val hasPendingFailure = ddbRefreshNextFailureRetryMonoMs != Long.MIN_VALUE
+            val due = if (hasPendingFailure) {
+                nowMonoMs >= ddbRefreshNextFailureRetryMonoMs
+            } else {
+                lastDdbRefreshSuccessWallMs == Long.MIN_VALUE ||
+                    nowWallMs - lastDdbRefreshSuccessWallMs >= DDB_REFRESH_CHECK_INTERVAL_MS
+            }
+            if (!due) return@synchronized false
+            ddbRefreshInFlight = true
+            true
+        }
+        if (!shouldLaunch) return
+
+        scope.launch {
+            try {
+                when (ddbRepository.refreshIfNeeded()) {
+                    OgnDdbRefreshResult.Updated -> synchronized(ddbRefreshLock) {
+                        lastDdbRefreshSuccessWallMs = clock.nowWallMs()
+                        ddbRefreshNextFailureRetryMonoMs = Long.MIN_VALUE
+                        ddbRefreshFailureRetryDelayMs = DDB_REFRESH_FAILURE_RETRY_START_MS
+                    }
+
+                    OgnDdbRefreshResult.NotDue -> synchronized(ddbRefreshLock) {
+                        // Keep repository-side cadence aligned with DDB's internal "not due" decision
+                        // so we do not relaunch refresh attempts every active-session check tick.
+                        val nowWallMs = clock.nowWallMs()
+                        if (nowWallMs > lastDdbRefreshSuccessWallMs) {
+                            lastDdbRefreshSuccessWallMs = nowWallMs
+                        }
+                        ddbRefreshNextFailureRetryMonoMs = Long.MIN_VALUE
+                        ddbRefreshFailureRetryDelayMs = DDB_REFRESH_FAILURE_RETRY_START_MS
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (throwable: Throwable) {
+                AppLogger.w(TAG, "DDB refresh failed: ${throwable.message}")
+                synchronized(ddbRefreshLock) {
+                    val failureNowMonoMs = clock.nowMonoMs()
+                    val retryDelayMs = ddbRefreshFailureRetryDelayMs
+                    ddbRefreshNextFailureRetryMonoMs = failureNowMonoMs + retryDelayMs
+                    ddbRefreshFailureRetryDelayMs = (retryDelayMs * 2L)
+                        .coerceAtMost(DDB_REFRESH_FAILURE_RETRY_MAX_MS)
+                }
+            } finally {
+                synchronized(ddbRefreshLock) {
+                    ddbRefreshInFlight = false
+                }
+            }
+        }
     }
 
     private fun buildLogin(center: Center): String {
@@ -942,12 +1050,16 @@ class OgnTrafficRepositoryImpl @Inject constructor(
         private const val STALE_SWEEP_INTERVAL_MS = 10_000L
         private const val CENTER_DISTANCE_REFRESH_MIN_MOVE_METERS = 200.0
         private const val CENTER_DISTANCE_REFRESH_MIN_INTERVAL_MS = 5_000L
+        private const val UNTIMED_SOURCE_FALLBACK_AFTER_MS = 30_000L
         private const val SOURCE_TIME_REWIND_TOLERANCE_MS = 0L
         private const val MAX_PLAUSIBLE_SPEED_MPS = 250.0
+        private const val DDB_ACTIVE_REFRESH_CHECK_INTERVAL_MS = 60_000L
 
         private const val RECONNECT_BACKOFF_START_MS = 1_000L
         private const val RECONNECT_BACKOFF_MAX_MS = 60_000L
         private const val DDB_REFRESH_CHECK_INTERVAL_MS = 60L * 60L * 1000L
+        private const val DDB_REFRESH_FAILURE_RETRY_START_MS = 2L * 60L * 1000L
+        private const val DDB_REFRESH_FAILURE_RETRY_MAX_MS = 5L * 60L * 1000L
     }
 }
 
@@ -1052,18 +1164,37 @@ internal fun shouldAcceptOgnSourceTimestamp(
     return incomingSourceTimestampWallMs + rewindToleranceMs >= previousSourceTimestampWallMs
 }
 
+internal fun shouldAcceptUntimedAfterTimedSourceLock(
+    lastTimedSourceSeenMonoMs: Long?,
+    incomingSourceTimestampWallMs: Long?,
+    nowMonoMs: Long,
+    fallbackAfterMs: Long
+): Boolean {
+    if (incomingSourceTimestampWallMs != null) return true
+    if (lastTimedSourceSeenMonoMs == null) return true
+    if (fallbackAfterMs <= 0L) return false
+    return nowMonoMs - lastTimedSourceSeenMonoMs >= fallbackAfterMs
+}
+
 internal fun isPlausibleOgnMotion(
     previousLatitude: Double?,
     previousLongitude: Double?,
     previousSourceTimestampWallMs: Long?,
+    previousSeenMonoMs: Long?,
     incomingLatitude: Double,
     incomingLongitude: Double,
     incomingSourceTimestampWallMs: Long?,
+    incomingSeenMonoMs: Long?,
     maxPlausibleSpeedMps: Double
 ): Boolean {
     if (previousLatitude == null || previousLongitude == null) return true
-    if (previousSourceTimestampWallMs == null || incomingSourceTimestampWallMs == null) return true
-    val dtMs = incomingSourceTimestampWallMs - previousSourceTimestampWallMs
+    val dtMs = when {
+        previousSourceTimestampWallMs != null && incomingSourceTimestampWallMs != null ->
+            incomingSourceTimestampWallMs - previousSourceTimestampWallMs
+        previousSeenMonoMs != null && incomingSeenMonoMs != null ->
+            incomingSeenMonoMs - previousSeenMonoMs
+        else -> return true
+    }
     if (dtMs <= 0L) return true
     if (maxPlausibleSpeedMps <= 0.0 || !maxPlausibleSpeedMps.isFinite()) return true
 

@@ -81,4 +81,150 @@ class OpenSkyTokenRepositoryTest {
         assertTrue(tokens.all { it == "token-123" })
         assertEquals(1, networkFetchCount.get())
     }
+
+    @Test
+    fun transientFailure_entersCooldownAndSkipsImmediateRefetch() = runTest {
+        val credentialsRepository = mock<OpenSkyCredentialsRepository>()
+        whenever(credentialsRepository.loadCredentials()).thenReturn(
+            OpenSkyClientCredentials(
+                clientId = "client-id",
+                clientSecret = "client-secret"
+            )
+        )
+        val fetchCount = AtomicInteger(0)
+        val client = okHttpClients.register(
+            OkHttpClient.Builder()
+                .addInterceptor { chain ->
+                    fetchCount.incrementAndGet()
+                    Response.Builder()
+                        .request(chain.request())
+                        .protocol(Protocol.HTTP_1_1)
+                        .code(500)
+                        .message("Server Error")
+                        .body("""{"error":"temporary"}""".toResponseBody())
+                        .build()
+                }
+                .build()
+        )
+        val clock = FakeClock(monoMs = 10_000L, wallMs = 0L)
+        val repository = OpenSkyTokenRepositoryImpl(
+            credentialsRepository = credentialsRepository,
+            clock = clock,
+            httpClient = client,
+            dispatcher = Dispatchers.IO
+        )
+
+        val first = repository.getTokenAccessState()
+        val second = repository.getTokenAccessState()
+
+        assertTrue(first is OpenSkyTokenAccessState.TransientFailure)
+        assertTrue(second is OpenSkyTokenAccessState.TransientFailure)
+        assertEquals(1, fetchCount.get())
+    }
+
+    @Test
+    fun transientFailure_retriesAfterCooldownWindow() = runTest {
+        val credentialsRepository = mock<OpenSkyCredentialsRepository>()
+        whenever(credentialsRepository.loadCredentials()).thenReturn(
+            OpenSkyClientCredentials(
+                clientId = "client-id",
+                clientSecret = "client-secret"
+            )
+        )
+        val fetchCount = AtomicInteger(0)
+        val client = okHttpClients.register(
+            OkHttpClient.Builder()
+                .addInterceptor { chain ->
+                    val call = fetchCount.incrementAndGet()
+                    if (call == 1) {
+                        Response.Builder()
+                            .request(chain.request())
+                            .protocol(Protocol.HTTP_1_1)
+                            .code(500)
+                            .message("Server Error")
+                            .body("""{"error":"temporary"}""".toResponseBody())
+                            .build()
+                    } else {
+                        Response.Builder()
+                            .request(chain.request())
+                            .protocol(Protocol.HTTP_1_1)
+                            .code(200)
+                            .message("OK")
+                            .body("""{"access_token":"token-123","expires_in":1800}""".toResponseBody())
+                            .build()
+                    }
+                }
+                .build()
+        )
+        val clock = FakeClock(monoMs = 100_000L, wallMs = 0L)
+        val repository = OpenSkyTokenRepositoryImpl(
+            credentialsRepository = credentialsRepository,
+            clock = clock,
+            httpClient = client,
+            dispatcher = Dispatchers.IO
+        )
+
+        val first = repository.getTokenAccessState()
+        val duringCooldown = repository.getTokenAccessState()
+        clock.advanceMonoMs(30_001L)
+        val afterCooldown = repository.getTokenAccessState()
+
+        assertTrue(first is OpenSkyTokenAccessState.TransientFailure)
+        assertTrue(duringCooldown is OpenSkyTokenAccessState.TransientFailure)
+        assertTrue(afterCooldown is OpenSkyTokenAccessState.Available)
+        assertEquals(2, fetchCount.get())
+    }
+
+    @Test
+    fun invalidate_clearsTransientFailureCooldown_andAllowsImmediateRetry() = runTest {
+        val credentialsRepository = mock<OpenSkyCredentialsRepository>()
+        whenever(credentialsRepository.loadCredentials()).thenReturn(
+            OpenSkyClientCredentials(
+                clientId = "client-id",
+                clientSecret = "client-secret"
+            )
+        )
+        val fetchCount = AtomicInteger(0)
+        val client = okHttpClients.register(
+            OkHttpClient.Builder()
+                .addInterceptor { chain ->
+                    val call = fetchCount.incrementAndGet()
+                    if (call == 1) {
+                        Response.Builder()
+                            .request(chain.request())
+                            .protocol(Protocol.HTTP_1_1)
+                            .code(500)
+                            .message("Server Error")
+                            .body("""{"error":"temporary"}""".toResponseBody())
+                            .build()
+                    } else {
+                        Response.Builder()
+                            .request(chain.request())
+                            .protocol(Protocol.HTTP_1_1)
+                            .code(200)
+                            .message("OK")
+                            .body("""{"access_token":"token-123","expires_in":1800}""".toResponseBody())
+                            .build()
+                    }
+                }
+                .build()
+        )
+        val clock = FakeClock(monoMs = 300_000L, wallMs = 0L)
+        val repository = OpenSkyTokenRepositoryImpl(
+            credentialsRepository = credentialsRepository,
+            clock = clock,
+            httpClient = client,
+            dispatcher = Dispatchers.IO
+        )
+
+        val first = repository.getTokenAccessState()
+        val duringCooldown = repository.getTokenAccessState()
+        repository.invalidate()
+        val afterInvalidate = repository.getTokenAccessState()
+
+        assertTrue(first is OpenSkyTokenAccessState.TransientFailure)
+        assertTrue(duringCooldown is OpenSkyTokenAccessState.TransientFailure)
+        assertTrue(afterInvalidate is OpenSkyTokenAccessState.Available)
+        assertEquals(2, fetchCount.get())
+    }
 }

@@ -2,6 +2,7 @@
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.xcpro.MapOrientationManager
+import com.example.xcpro.common.units.AltitudeUnit
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.flow.inVm
 import com.example.xcpro.core.common.geometry.OffsetPx
@@ -62,7 +63,8 @@ class MapScreenViewModel @Inject constructor(
     private val variometerLayoutUseCase: VariometerLayoutUseCase,
     private val mapVarioPreferencesUseCase: MapVarioPreferencesUseCase, private val hawkVarioUseCase: HawkVarioUseCase,
     private val ognTrafficUseCase: OgnTrafficUseCase, private val adsbTrafficUseCase: AdsbTrafficUseCase,
-    private val adsbMetadataEnrichmentUseCase: AdsbMetadataEnrichmentUseCase
+    private val adsbMetadataEnrichmentUseCase: AdsbMetadataEnrichmentUseCase,
+    private val thermallingModeUseCase: ThermallingModeRuntimeUseCase
 ) : ViewModel() {
     private val initialStyleName = mapStyleUseCase.initialStyle()
     private val mapStateStore: MapStateStore = MapStateStore(initialStyleName)
@@ -108,8 +110,7 @@ class MapScreenViewModel @Inject constructor(
     private val isFlying: StateFlow<Boolean> = sensorsUseCase.flightStateFlow
         .map { state -> state.isFlying }
         .eagerState(scope = viewModelScope, initial = false)
-    private val ownshipAltitudeMeters: StateFlow<Double?> =
-        createOwnshipAltitudeState(viewModelScope, flightDataUseCase)
+    val ownshipAltitudeMeters: StateFlow<Double?> = createOwnshipAltitudeState(viewModelScope, flightDataUseCase)
     val ognTargets: StateFlow<List<OgnTrafficTarget>> = ognTrafficUseCase.targets
     val ognSnapshot: StateFlow<OgnTrafficSnapshot> = ognTrafficUseCase.snapshot
     val ognOverlayEnabled: StateFlow<Boolean> = ognTrafficUseCase.overlayEnabled
@@ -244,11 +245,9 @@ class MapScreenViewModel @Inject constructor(
     )
     val isAATEditMode: StateFlow<Boolean> = _isAATEditMode.asStateFlow()
     val taskType: StateFlow<TaskType> = mapTasksUseCase.taskTypeFlow
-    private val unitsState = unitsUseCase.unitsFlow.inVm(
-        scope = viewModelScope,
-        initial = UnitsPreferences()
-    )
+    private val unitsState = unitsUseCase.unitsFlow.inVm(scope = viewModelScope, initial = UnitsPreferences())
     val unitsPreferencesFlow: StateFlow<UnitsPreferences> = unitsState
+    val ognAltitudeUnit: StateFlow<AltitudeUnit> = unitsState.map { it.altitude }.eagerState(scope = viewModelScope, initial = unitsState.value.altitude)
     val cardIngestionCoordinator: CardIngestionCoordinator by lazy {
         CardIngestionCoordinator(
             scope = viewModelScope,
@@ -278,6 +277,7 @@ class MapScreenViewModel @Inject constructor(
             mapStateStore = mapStateStore
         )
         trafficCoordinator.bind()
+        bindThermallingRuntimeWiring(viewModelScope, thermallingModeUseCase, thermallingModeUseCase.settingsFlow, flightDataUseCase.flightData, flightDataManager.visibleModesFlow, mapStateStore, mapStateActions, ::setFlightMode)
         flightDataUiAdapter.start()
         replayCoordinator.start()
         viewModelScope.launch {
@@ -343,6 +343,7 @@ class MapScreenViewModel @Inject constructor(
     override fun onCleared() {
         ognTrafficUseCase.stop()
         adsbTrafficUseCase.stop()
+        thermallingModeUseCase.reset()
         ballastController.dispose()
         super.onCleared()
     }

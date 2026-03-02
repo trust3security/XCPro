@@ -62,7 +62,6 @@ class OgnThermalOverlay(
     }
 
     fun render(hotspots: List<OgnThermalHotspot>) {
-        initialize()
         val style = map.style ?: return
         val source = style.getSourceAs<GeoJsonSource>(SOURCE_ID) ?: return
 

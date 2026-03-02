@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -159,6 +160,225 @@ class ProfileRepositoryTest {
         assertEquals(baselineStateWrites + 1, writeStateCalls)
         assertEquals(baselineProfilesWrites, writeProfilesCalls)
         assertEquals(baselineActiveWrites, writeActiveCalls)
+    }
+
+    @Test
+    fun importProfiles_preservesActiveProfile_whenKeepCurrentActive() = runTest {
+        val existing = repository.createProfile(
+            ProfileCreationRequest(
+                name = "Existing Pilot",
+                aircraftType = AircraftType.SAILPLANE
+            )
+        ).getOrThrow()
+        repository.setActiveProfile(existing).getOrThrow()
+
+        val incoming = UserProfile(
+            name = "Imported Pilot",
+            aircraftType = AircraftType.GLIDER
+        )
+        val result = repository.importProfiles(
+            ProfileImportRequest(
+                profiles = listOf(incoming),
+                keepCurrentActive = true
+            )
+        ).getOrThrow()
+
+        assertEquals(1, result.importedCount)
+        assertEquals(existing.id, repository.activeProfile.value?.id)
+        assertEquals(existing.id, result.activeProfileAfter)
+    }
+
+    @Test
+    fun importProfiles_preservesImportedPreferencesAndMetadata() = runTest {
+        val imported = UserProfile(
+            name = "Preference Import",
+            aircraftType = AircraftType.GLIDER,
+            preferences = ProfilePreferences(
+                units = UnitSystem.IMPERIAL,
+                autoSwitchModes = false,
+                cardAnimations = false
+            ),
+            createdAt = 1234L,
+            lastUsed = 5678L
+        )
+
+        repository.importProfiles(ProfileImportRequest(profiles = listOf(imported))).getOrThrow()
+
+        val stored = repository.profiles.value.first { it.name == "Preference Import" }
+        assertEquals(UnitSystem.IMPERIAL, stored.preferences.units)
+        assertEquals(false, stored.preferences.autoSwitchModes)
+        assertEquals(false, stored.preferences.cardAnimations)
+        assertEquals(1234L, stored.createdAt)
+        assertEquals(5678L, stored.lastUsed)
+    }
+
+    @Test
+    fun importProfiles_usesSingleAtomicWrite() = runTest {
+        val baselineProfilesWrites = writeProfilesCalls
+        val baselineActiveWrites = writeActiveCalls
+        val baselineStateWrites = writeStateCalls
+        val imports = listOf(
+            UserProfile(name = "Import A", aircraftType = AircraftType.SAILPLANE),
+            UserProfile(name = "Import B", aircraftType = AircraftType.GLIDER)
+        )
+
+        repository.importProfiles(ProfileImportRequest(profiles = imports)).getOrThrow()
+
+        assertEquals(baselineStateWrites + 1, writeStateCalls)
+        assertEquals(baselineProfilesWrites, writeProfilesCalls)
+        assertEquals(baselineActiveWrites, writeActiveCalls)
+    }
+
+    @Test
+    fun importProfiles_skipsInvalidEntriesAndReportsFailure() = runTest {
+        val imports = listOf(
+            UserProfile(name = " ", aircraftType = AircraftType.SAILPLANE),
+            UserProfile(name = "Valid Import", aircraftType = AircraftType.GLIDER)
+        )
+
+        val result = repository.importProfiles(ProfileImportRequest(profiles = imports)).getOrThrow()
+
+        assertEquals(2, result.requestedCount)
+        assertEquals(1, result.importedCount)
+        assertEquals(1, result.skippedCount)
+        assertEquals(1, result.failures.size)
+        assertTrue(repository.profiles.value.any { it.name == "Valid Import" })
+    }
+
+    @Test
+    fun importProfiles_canSelectNewestImported_whenKeepCurrentActiveFalse() = runTest {
+        val existing = repository.createProfile(
+            ProfileCreationRequest(
+                name = "Existing Pilot",
+                aircraftType = AircraftType.SAILPLANE
+            )
+        ).getOrThrow()
+        repository.setActiveProfile(existing).getOrThrow()
+
+        val firstImported = UserProfile(name = "Imported One", aircraftType = AircraftType.GLIDER)
+        val secondImported = UserProfile(name = "Imported Two", aircraftType = AircraftType.PARAGLIDER)
+
+        val result = repository.importProfiles(
+            ProfileImportRequest(
+                profiles = listOf(firstImported, secondImported),
+                keepCurrentActive = false
+            )
+        ).getOrThrow()
+
+        val active = repository.activeProfile.value
+        assertNotNull(active)
+        assertEquals("Imported Two", active?.name)
+        assertEquals(active?.id, result.activeProfileAfter)
+    }
+
+    @Test
+    fun importProfiles_appliesDeterministicNameCollisionSuffixPolicy() = runTest {
+        repository.createProfile(
+            ProfileCreationRequest(
+                name = "Pilot",
+                aircraftType = AircraftType.SAILPLANE
+            )
+        ).getOrThrow()
+
+        repository.importProfiles(
+            ProfileImportRequest(
+                profiles = listOf(
+                    UserProfile(name = "Pilot", aircraftType = AircraftType.GLIDER),
+                    UserProfile(name = "Pilot", aircraftType = AircraftType.PARAGLIDER)
+                )
+            )
+        ).getOrThrow()
+
+        val names = repository.profiles.value.map { it.name }
+        assertTrue(names.contains("Pilot"))
+        assertTrue(names.contains("Pilot (Imported)"))
+        assertTrue(names.contains("Pilot (Imported 2)"))
+    }
+
+    @Test
+    fun importProfiles_withAllInvalidItems_isNoOp() = runTest {
+        val existing = repository.createProfile(
+            ProfileCreationRequest(
+                name = "Baseline",
+                aircraftType = AircraftType.SAILPLANE
+            )
+        ).getOrThrow()
+        repository.setActiveProfile(existing).getOrThrow()
+        val baselineStateWrites = writeStateCalls
+        val baselineActiveId = repository.activeProfile.value?.id
+        val baselineProfiles = repository.profiles.value
+
+        val result = repository.importProfiles(
+            ProfileImportRequest(
+                profiles = listOf(
+                    UserProfile(name = " ", aircraftType = AircraftType.GLIDER),
+                    UserProfile(name = "\t", aircraftType = AircraftType.PARAGLIDER)
+                )
+            )
+        ).getOrThrow()
+
+        assertEquals(0, result.importedCount)
+        assertEquals(2, result.skippedCount)
+        assertEquals(2, result.failures.size)
+        assertEquals(baselineStateWrites, writeStateCalls)
+        assertEquals(baselineActiveId, repository.activeProfile.value?.id)
+        assertEquals(baselineProfiles, repository.profiles.value)
+    }
+
+    @Test
+    fun importProfiles_preserveImportedPreferencesFalse_appliesDefaults() = runTest {
+        val imported = UserProfile(
+            name = "Defaults Import",
+            aircraftType = AircraftType.GLIDER,
+            preferences = ProfilePreferences(
+                units = UnitSystem.IMPERIAL,
+                autoSwitchModes = false,
+                cardAnimations = false
+            ),
+            createdAt = 1234L,
+            lastUsed = 5678L
+        )
+
+        repository.importProfiles(
+            ProfileImportRequest(
+                profiles = listOf(imported),
+                preserveImportedPreferences = false
+            )
+        ).getOrThrow()
+
+        val stored = repository.profiles.value.first { it.name == "Defaults Import" }
+        assertEquals(UnitSystem.METRIC, stored.preferences.units)
+        assertTrue(stored.preferences.autoSwitchModes)
+        assertTrue(stored.preferences.cardAnimations)
+        assertFalse(stored.createdAt == 1234L)
+        assertEquals(0L, stored.lastUsed)
+    }
+
+    @Test
+    fun importProfiles_duplicateIdsAreRegeneratedWithoutFailure() = runTest {
+        val duplicateId = "duplicate-id"
+        val first = UserProfile(
+            id = duplicateId,
+            name = "Duplicate One",
+            aircraftType = AircraftType.SAILPLANE
+        )
+        val second = UserProfile(
+            id = duplicateId,
+            name = "Duplicate Two",
+            aircraftType = AircraftType.GLIDER
+        )
+
+        val result = repository.importProfiles(
+            ProfileImportRequest(profiles = listOf(first, second))
+        ).getOrThrow()
+
+        val stored = repository.profiles.value.filter {
+            it.name == "Duplicate One" || it.name == "Duplicate Two"
+        }
+        assertEquals(2, result.importedCount)
+        assertEquals(0, result.failures.size)
+        assertEquals(2, stored.size)
+        assertTrue(stored.map { it.id }.toSet().size == 2)
     }
 
     @Test

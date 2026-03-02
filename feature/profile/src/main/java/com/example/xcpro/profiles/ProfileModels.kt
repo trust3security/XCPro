@@ -1,6 +1,7 @@
 package com.example.xcpro.profiles
 
 import com.example.xcpro.common.flight.FlightMode
+import com.example.xcpro.core.time.TimeBridge
 import java.util.UUID
 
 enum class AircraftType(
@@ -57,8 +58,8 @@ data class UserProfile(
     val description: String? = null,
     val preferences: ProfilePreferences = ProfilePreferences(),
     val isActive: Boolean = false,
-    val createdAt: Long = System.currentTimeMillis(),
-    val lastUsed: Long = System.currentTimeMillis()
+    val createdAt: Long = TimeBridge.nowWallMs(),
+    val lastUsed: Long = TimeBridge.nowWallMs()
 ) {
     fun getDisplayName(): String {
         return if (aircraftModel != null) {
@@ -75,5 +76,35 @@ data class ProfileCreationRequest(
     val aircraftModel: String? = null,
     val description: String? = null,
     val copyFromProfile: UserProfile? = null
+)
+
+enum class ProfileNameCollisionPolicy {
+    KEEP_BOTH_SUFFIX
+}
+
+enum class ProfileImportFailureReason {
+    INVALID_PROFILE
+}
+
+data class ProfileImportFailure(
+    val sourceName: String?,
+    val reason: ProfileImportFailureReason,
+    val detail: String
+)
+
+data class ProfileImportRequest(
+    val profiles: List<UserProfile>,
+    val keepCurrentActive: Boolean = true,
+    val nameCollisionPolicy: ProfileNameCollisionPolicy = ProfileNameCollisionPolicy.KEEP_BOTH_SUFFIX,
+    val preserveImportedPreferences: Boolean = true
+)
+
+data class ProfileImportResult(
+    val requestedCount: Int,
+    val importedCount: Int,
+    val skippedCount: Int,
+    val failures: List<ProfileImportFailure>,
+    val activeProfileBefore: String?,
+    val activeProfileAfter: String?
 )
 

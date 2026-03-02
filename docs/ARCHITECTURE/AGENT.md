@@ -161,6 +161,21 @@ Agent must report: - Commands run - Pass/fail - Fixes applied
 
 ------------------------------------------------------------------------
 
+# 4A) Minimum Evidence Per Gate
+
+For each required gate, include concrete evidence:
+
+- `scripts/arch_gate.py` result (pass/fail plus the first failing file paths if failed).
+- Real code path citations for time abstraction decisions:
+  - `core/time/src/main/java/com/example/xcpro/core/time/Clock.kt`
+  - `app/src/main/java/com/example/xcpro/di/TimeModule.kt`
+- File paths for every modified artifact (docs, workflow, scripts, production code).
+- Verification command outputs summarized with explicit pass/fail status.
+
+Do not claim compliance without path-based evidence.
+
+------------------------------------------------------------------------
+
 # 5) Architecture Drift Detection (MANDATORY SELF-AUDIT)
 
 Before marking complete, the agent must verify:

@@ -1,20 +1,25 @@
 package com.example.xcpro.map.ui
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.example.xcpro.adsb.AdsbAuthMode
 import com.example.xcpro.adsb.AdsbConnectionState
-import com.example.xcpro.adsb.AdsbNetworkFailureKind
 import com.example.xcpro.adsb.AdsbTrafficSnapshot
-import com.example.xcpro.adsb.ADSB_ERROR_CIRCUIT_BREAKER_OPEN
-import com.example.xcpro.adsb.ADSB_ERROR_CIRCUIT_BREAKER_PROBE
 import com.example.xcpro.ogn.OgnConnectionState
 import com.example.xcpro.ogn.OgnTrafficSnapshot
 
@@ -62,6 +67,11 @@ internal fun OgnDebugPanel(
             )
             Text(
                 text = "Backoff: ${formatBackoff(snapshot.reconnectBackoffMs)}",
+                color = Color(0xFFD1D5DB),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = "Drops (order/motion): ${snapshot.droppedOutOfOrderSourceFrames}/${snapshot.droppedImplausibleMotionFrames}",
                 color = Color(0xFFD1D5DB),
                 style = MaterialTheme.typography.bodySmall
             )
@@ -166,15 +176,66 @@ internal fun AdsbDebugPanel(
     }
 }
 
+@Composable
+internal fun AdsbIssueFlashBadge(
+    visible: Boolean,
+    snapshot: AdsbTrafficSnapshot,
+    modifier: Modifier = Modifier
+) {
+    if (!visible || !shouldFlashAdsbIssue(snapshot)) return
+    val flashTransition = rememberInfiniteTransition(label = "adsbIssueFlash")
+    val alpha by flashTransition.animateFloat(
+        initialValue = ADSB_ISSUE_FLASH_ALPHA_LOW,
+        targetValue = ADSB_ISSUE_FLASH_ALPHA_HIGH,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = ADSB_ISSUE_FLASH_PERIOD_MS),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "adsbIssueFlashAlpha"
+    )
+    Surface(
+        modifier = modifier.alpha(alpha).testTag(ADSB_ISSUE_FLASH_BADGE_TAG),
+        color = Color(0xFFEAB308),
+        tonalElevation = 4.dp,
+        shadowElevation = 4.dp,
+        shape = MaterialTheme.shapes.small
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+        ) {
+            Text(
+                text = "ADS-B ISSUE",
+                color = Color(0xFF111827),
+                style = MaterialTheme.typography.labelMedium
+            )
+            val reason = snapshot.debugReasonLabel()
+                ?: snapshot.lastError?.takeIf { it.isNotBlank() }
+            reason?.let {
+                Text(
+                    text = it,
+                    color = Color(0xFF1F2937),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        }
+    }
+}
+
 internal fun isOgnReadyForAutoDismiss(snapshot: OgnTrafficSnapshot): Boolean =
     snapshot.connectionState == OgnConnectionState.CONNECTED
 internal fun isAdsbReadyForAutoDismiss(snapshot: AdsbTrafficSnapshot): Boolean =
     snapshot.connectionState is AdsbConnectionState.Active && snapshot.authMode != AdsbAuthMode.AuthFailed
+internal fun shouldFlashAdsbIssue(snapshot: AdsbTrafficSnapshot): Boolean =
+    snapshot.connectionState is AdsbConnectionState.Error || snapshot.connectionState is AdsbConnectionState.BackingOff
 internal fun shouldSurfaceOgnDebugPanel(snapshot: OgnTrafficSnapshot): Boolean =
     snapshot.connectionState == OgnConnectionState.ERROR
 internal fun shouldSurfaceAdsbDebugPanel(snapshot: AdsbTrafficSnapshot): Boolean =
-    snapshot.connectionState is AdsbConnectionState.Error
+    snapshot.connectionState is AdsbConnectionState.Error || snapshot.connectionState is AdsbConnectionState.BackingOff
 internal fun shouldHideOgnDebugPanelWhileConnecting(snapshot: OgnTrafficSnapshot): Boolean =
     snapshot.connectionState == OgnConnectionState.CONNECTING || snapshot.connectionState == OgnConnectionState.DISCONNECTED
 internal fun shouldHideAdsbDebugPanelWhileConnecting(snapshot: AdsbTrafficSnapshot): Boolean =
-    snapshot.connectionState is AdsbConnectionState.Disabled || snapshot.connectionState is AdsbConnectionState.BackingOff
+    snapshot.connectionState is AdsbConnectionState.Disabled
+
+private const val ADSB_ISSUE_FLASH_PERIOD_MS = 260
+private const val ADSB_ISSUE_FLASH_ALPHA_LOW = 0.35f
+private const val ADSB_ISSUE_FLASH_ALPHA_HIGH = 1.0f

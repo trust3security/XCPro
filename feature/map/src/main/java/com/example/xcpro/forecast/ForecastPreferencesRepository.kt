@@ -31,8 +31,7 @@ private val KEY_FORECAST_SELECTED_REGION = stringPreferencesKey("forecast_select
 private val KEY_FORECAST_AUTO_TIME_ENABLED = booleanPreferencesKey("forecast_auto_time_enabled")
 private val KEY_FORECAST_FOLLOW_TIME_OFFSET_MINUTES = intPreferencesKey("forecast_follow_time_offset_minutes")
 private val KEY_FORECAST_WIND_OVERLAY_SCALE = floatPreferencesKey("forecast_wind_overlay_scale")
-private val KEY_FORECAST_SECONDARY_PRIMARY_OVERLAY_ENABLED = booleanPreferencesKey("forecast_secondary_primary_overlay_enabled")
-private val KEY_FORECAST_SELECTED_SECONDARY_PRIMARY_PARAMETER_ID = stringPreferencesKey("forecast_selected_secondary_primary_parameter_id")
+private val LEGACY_KEY_FORECAST_SELECTED_SECONDARY_PRIMARY_PARAMETER_ID = stringPreferencesKey("forecast_selected_secondary_primary_parameter_id")
 private val KEY_FORECAST_WIND_OVERLAY_ENABLED = booleanPreferencesKey("forecast_wind_overlay_enabled")
 private val KEY_FORECAST_SELECTED_WIND_PARAMETER_ID = stringPreferencesKey("forecast_selected_wind_parameter_id")
 private val KEY_FORECAST_WIND_DISPLAY_MODE = stringPreferencesKey("forecast_wind_display_mode")
@@ -47,7 +46,6 @@ data class ForecastPreferences(
     val overlayEnabled: Boolean = false,
     val opacity: Float = FORECAST_OPACITY_DEFAULT,
     val windOverlayScale: Float = FORECAST_WIND_OVERLAY_SCALE_DEFAULT,
-    val secondaryPrimaryOverlayEnabled: Boolean = FORECAST_SECONDARY_PRIMARY_OVERLAY_ENABLED_DEFAULT,
     val windOverlayEnabled: Boolean = FORECAST_WIND_OVERLAY_ENABLED_DEFAULT,
     val windDisplayMode: ForecastWindDisplayMode = FORECAST_WIND_DISPLAY_MODE_DEFAULT,
     val skySightSatelliteOverlayEnabled: Boolean = FORECAST_SKYSIGHT_SATELLITE_OVERLAY_ENABLED_DEFAULT,
@@ -57,7 +55,6 @@ data class ForecastPreferences(
     val skySightSatelliteAnimateEnabled: Boolean = FORECAST_SKYSIGHT_SATELLITE_ANIMATE_ENABLED_DEFAULT,
     val skySightSatelliteHistoryFrames: Int = FORECAST_SKYSIGHT_SATELLITE_HISTORY_FRAMES_DEFAULT,
     val selectedPrimaryParameterId: ForecastParameterId = DEFAULT_FORECAST_PARAMETER_ID,
-    val selectedSecondaryPrimaryParameterId: ForecastParameterId = DEFAULT_FORECAST_SECONDARY_PRIMARY_PARAMETER_ID,
     val selectedWindParameterId: ForecastParameterId = DEFAULT_FORECAST_WIND_PARAMETER_ID,
     val selectedTimeUtcMs: Long? = null,
     val selectedRegion: String = DEFAULT_FORECAST_REGION_CODE,
@@ -83,10 +80,6 @@ class ForecastPreferencesRepository @Inject constructor(
 
     val windOverlayScaleFlow: Flow<Float> = preferencesFlow
         .map { forecastPreferences -> forecastPreferences.windOverlayScale }
-        .distinctUntilChanged()
-
-    val secondaryPrimaryOverlayEnabledFlow: Flow<Boolean> = preferencesFlow
-        .map { forecastPreferences -> forecastPreferences.secondaryPrimaryOverlayEnabled }
         .distinctUntilChanged()
 
     val windOverlayEnabledFlow: Flow<Boolean> = preferencesFlow
@@ -123,10 +116,6 @@ class ForecastPreferencesRepository @Inject constructor(
 
     val selectedPrimaryParameterIdFlow: Flow<ForecastParameterId> = preferencesFlow
         .map { forecastPreferences -> forecastPreferences.selectedPrimaryParameterId }
-        .distinctUntilChanged()
-
-    val selectedSecondaryPrimaryParameterIdFlow: Flow<ForecastParameterId> = preferencesFlow
-        .map { forecastPreferences -> forecastPreferences.selectedSecondaryPrimaryParameterId }
         .distinctUntilChanged()
 
     val selectedWindParameterIdFlow: Flow<ForecastParameterId> = preferencesFlow
@@ -170,12 +159,6 @@ class ForecastPreferencesRepository @Inject constructor(
         val clamped = clampForecastWindOverlayScale(scale)
         context.forecastDataStore.edit { preferences ->
             preferences[KEY_FORECAST_WIND_OVERLAY_SCALE] = clamped
-        }
-    }
-
-    suspend fun setSecondaryPrimaryOverlayEnabled(enabled: Boolean) {
-        context.forecastDataStore.edit { preferences ->
-            preferences[KEY_FORECAST_SECONDARY_PRIMARY_OVERLAY_ENABLED] = enabled
         }
     }
 
@@ -240,12 +223,6 @@ class ForecastPreferencesRepository @Inject constructor(
         }
     }
 
-    suspend fun setSelectedSecondaryPrimaryParameterId(parameterId: ForecastParameterId) {
-        context.forecastDataStore.edit { preferences ->
-            preferences[KEY_FORECAST_SELECTED_SECONDARY_PRIMARY_PARAMETER_ID] = parameterId.value
-        }
-    }
-
     suspend fun setSelectedParameterId(parameterId: ForecastParameterId) {
         setSelectedPrimaryParameterId(parameterId)
     }
@@ -289,34 +266,21 @@ class ForecastPreferencesRepository @Inject constructor(
                 .orEmpty()
                 .ifBlank { DEFAULT_FORECAST_PARAMETER_ID.value }
         )
-        val selectedPrimaryParameter = ForecastParameterId(
-            preferences[KEY_FORECAST_SELECTED_PRIMARY_PARAMETER_ID]
-                ?.trim()
-                .orEmpty()
-                .ifBlank {
-                    if (isForecastWindParameterId(legacySelectedParameter)) {
-                        DEFAULT_FORECAST_PARAMETER_ID.value
-                    } else {
-                        legacySelectedParameter.value
-                    }
-                }
-        ).let { parameterId ->
+        val legacySelectedSecondaryPrimaryRaw = preferences[
+            LEGACY_KEY_FORECAST_SELECTED_SECONDARY_PRIMARY_PARAMETER_ID
+        ]?.trim().orEmpty()
+        val selectedPrimaryRaw = preferences[KEY_FORECAST_SELECTED_PRIMARY_PARAMETER_ID]
+            ?.trim()
+            .orEmpty()
+        val selectedPrimaryCandidate = when {
+            selectedPrimaryRaw.isNotBlank() -> selectedPrimaryRaw
+            !isForecastWindParameterId(legacySelectedParameter) -> legacySelectedParameter.value
+            legacySelectedSecondaryPrimaryRaw.isNotBlank() -> legacySelectedSecondaryPrimaryRaw
+            else -> DEFAULT_FORECAST_PARAMETER_ID.value
+        }
+        val selectedPrimaryParameter = ForecastParameterId(selectedPrimaryCandidate).let { parameterId ->
             if (isForecastWindParameterId(parameterId)) {
                 DEFAULT_FORECAST_PARAMETER_ID
-            } else {
-                parameterId
-            }
-        }
-        val selectedSecondaryPrimaryParameter = ForecastParameterId(
-            preferences[KEY_FORECAST_SELECTED_SECONDARY_PRIMARY_PARAMETER_ID]
-                ?.trim()
-                .orEmpty()
-                .ifBlank {
-                    DEFAULT_FORECAST_SECONDARY_PRIMARY_PARAMETER_ID.value
-                }
-        ).let { parameterId ->
-            if (isForecastWindParameterId(parameterId)) {
-                DEFAULT_FORECAST_SECONDARY_PRIMARY_PARAMETER_ID
             } else {
                 parameterId
             }
@@ -353,9 +317,6 @@ class ForecastPreferencesRepository @Inject constructor(
             windOverlayScale = clampForecastWindOverlayScale(
                 preferences[KEY_FORECAST_WIND_OVERLAY_SCALE] ?: FORECAST_WIND_OVERLAY_SCALE_DEFAULT
             ),
-            secondaryPrimaryOverlayEnabled =
-                preferences[KEY_FORECAST_SECONDARY_PRIMARY_OVERLAY_ENABLED]
-                    ?: FORECAST_SECONDARY_PRIMARY_OVERLAY_ENABLED_DEFAULT,
             windOverlayEnabled = preferences[KEY_FORECAST_WIND_OVERLAY_ENABLED]
                 ?: FORECAST_WIND_OVERLAY_ENABLED_DEFAULT,
             windDisplayMode = windDisplayMode,
@@ -379,7 +340,6 @@ class ForecastPreferencesRepository @Inject constructor(
                     ?: FORECAST_SKYSIGHT_SATELLITE_HISTORY_FRAMES_DEFAULT
             ),
             selectedPrimaryParameterId = selectedPrimaryParameter,
-            selectedSecondaryPrimaryParameterId = selectedSecondaryPrimaryParameter,
             selectedWindParameterId = selectedWindParameter,
             selectedTimeUtcMs = preferences[KEY_FORECAST_SELECTED_TIME_UTC_MS],
             selectedRegion = selectedRegion,

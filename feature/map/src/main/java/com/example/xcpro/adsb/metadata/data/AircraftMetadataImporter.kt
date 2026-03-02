@@ -38,6 +38,9 @@ class AircraftMetadataImporter @Inject constructor(
                     val headerLine = reader.readLine()
                         ?: throw IllegalArgumentException("Metadata CSV is empty")
                     val headerMapping = parser.parseHeader(headerLine)
+                    val stagingBatch = ArrayList<AircraftMetadataStagingEntity>(
+                        AircraftMetadataSyncPolicy.INSERT_BATCH_SIZE
+                    )
 
                     while (true) {
                         coroutineContext.ensureActive()
@@ -51,19 +54,15 @@ class AircraftMetadataImporter @Inject constructor(
                             mapping = headerMapping,
                             sourceRowOrder = sourceRowOrder
                         ) ?: continue
-                        dao.upsertStagingRow(
-                            icao24 = row.icao24,
-                            registration = row.registration,
-                            typecode = row.typecode,
-                            model = row.model,
-                            manufacturerName = row.manufacturerName,
-                            owner = row.owner,
-                            operator = row.operator,
-                            operatorCallsign = row.operatorCallsign,
-                            icaoAircraftType = row.icaoAircraftType,
-                            qualityScore = row.qualityScore,
-                            sourceRowOrder = row.sourceRowOrder
-                        )
+                        stagingBatch += row.toStagingEntity()
+                        if (stagingBatch.size >= AircraftMetadataSyncPolicy.INSERT_BATCH_SIZE) {
+                            dao.upsertStagingBatch(stagingBatch)
+                            stagingBatch.clear()
+                        }
+                    }
+                    if (stagingBatch.isNotEmpty()) {
+                        dao.upsertStagingBatch(stagingBatch)
+                        stagingBatch.clear()
                     }
                 }
 
@@ -84,6 +83,22 @@ class AircraftMetadataImporter @Inject constructor(
 
             AircraftMetadataImportResult(importedRowCount = importedRows)
         }
+    }
+
+    private fun ParsedMetadataRecord.toStagingEntity(): AircraftMetadataStagingEntity {
+        return AircraftMetadataStagingEntity(
+            icao24 = icao24,
+            registration = registration,
+            typecode = typecode,
+            model = model,
+            manufacturerName = manufacturerName,
+            owner = owner,
+            operator = operator,
+            operatorCallsign = operatorCallsign,
+            icaoAircraftType = icaoAircraftType,
+            qualityScore = qualityScore,
+            sourceRowOrder = sourceRowOrder
+        )
     }
 
     private fun validateImportHealth(

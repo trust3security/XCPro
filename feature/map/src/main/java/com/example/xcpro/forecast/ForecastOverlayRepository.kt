@@ -5,6 +5,7 @@ import com.example.xcpro.core.time.Clock
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.abs
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -43,18 +44,6 @@ class ForecastOverlayRepository @Inject constructor(
         var primaryLegendErrorMessage: String? = null
         var lastPrimaryLegendAttemptMs: Long = 0L
 
-        var cachedSecondaryPrimaryTileKey: OverlayTileKey? = null
-        var cachedSecondaryPrimaryTileSpec: ForecastTileSpec? = null
-        var secondaryPrimaryTileErrorKey: OverlayTileKey? = null
-        var secondaryPrimaryTileErrorMessage: String? = null
-        var lastSecondaryPrimaryTileAttemptMs: Long = 0L
-
-        var cachedSecondaryPrimaryLegendKey: OverlayLegendKey? = null
-        var cachedSecondaryPrimaryLegend: ForecastLegendSpec? = null
-        var secondaryPrimaryLegendErrorKey: OverlayLegendKey? = null
-        var secondaryPrimaryLegendErrorMessage: String? = null
-        var lastSecondaryPrimaryLegendAttemptMs: Long = 0L
-
         var cachedWindTileKey: OverlayTileKey? = null
         var cachedWindTileSpec: ForecastTileSpec? = null
         var windTileErrorKey: OverlayTileKey? = null
@@ -70,23 +59,26 @@ class ForecastOverlayRepository @Inject constructor(
         selectionInputFlow().collect { input ->
             val preferences = input.preferences
             val nowUtcMs = input.nowUtcMs
-            val selection = resolveSelection(
-                preferences = preferences,
-                nowUtcMs = nowUtcMs
-            )
+            val selection = if (preferences.overlayEnabled || preferences.windOverlayEnabled) {
+                resolveSelection(
+                    preferences = preferences,
+                    nowUtcMs = nowUtcMs
+                )
+            } else {
+                null
+            }
             val normalizedRegionCode = normalizeForecastRegionCode(preferences.selectedRegion)
-            val primaryEnabled = preferences.overlayEnabled
-            val secondaryPrimaryEnabled = primaryEnabled &&
-                preferences.secondaryPrimaryOverlayEnabled &&
-                selection.primaryParameters.size > 1
-            val windEnabled = preferences.windOverlayEnabled && selection.windParameters.isNotEmpty()
+            val primaryEnabled = preferences.overlayEnabled && selection != null
+            val windEnabled = preferences.windOverlayEnabled &&
+                selection?.windParameters?.isNotEmpty() == true
             val anyOverlayEnabled = primaryEnabled || windEnabled
+            val selectedTimeForState = selection?.selectedTimeSlot?.validTimeUtcMs
+                ?: if (preferences.skySightSatelliteOverlayEnabled) nowUtcMs else null
 
             val baseState = ForecastOverlayUiState(
                 enabled = primaryEnabled,
                 opacity = preferences.opacity,
                 windOverlayScale = preferences.windOverlayScale,
-                secondaryPrimaryOverlayEnabled = secondaryPrimaryEnabled,
                 windOverlayEnabled = windEnabled,
                 windDisplayMode = preferences.windDisplayMode,
                 skySightSatelliteOverlayEnabled = preferences.skySightSatelliteOverlayEnabled,
@@ -98,13 +90,14 @@ class ForecastOverlayRepository @Inject constructor(
                 selectedRegionCode = normalizedRegionCode,
                 autoTimeEnabled = preferences.autoTimeEnabled,
                 followTimeOffsetMinutes = preferences.followTimeOffsetMinutes,
-                primaryParameters = selection.primaryParameters,
-                selectedPrimaryParameterId = selection.selectedPrimaryParameterId,
-                selectedSecondaryPrimaryParameterId = selection.selectedSecondaryPrimaryParameterId,
-                windParameters = selection.windParameters,
-                selectedWindParameterId = selection.selectedWindParameterId,
-                timeSlots = selection.timeSlots,
-                selectedTimeUtcMs = selection.selectedTimeSlot.validTimeUtcMs
+                primaryParameters = selection?.primaryParameters ?: emptyList(),
+                selectedPrimaryParameterId = selection?.selectedPrimaryParameterId
+                    ?: preferences.selectedPrimaryParameterId,
+                windParameters = selection?.windParameters ?: emptyList(),
+                selectedWindParameterId = selection?.selectedWindParameterId
+                    ?: preferences.selectedWindParameterId,
+                timeSlots = selection?.timeSlots ?: emptyList(),
+                selectedTimeUtcMs = selectedTimeForState
             )
             if (!primaryEnabled) {
                 cachedPrimaryTileKey = null
@@ -118,18 +111,6 @@ class ForecastOverlayRepository @Inject constructor(
                 primaryLegendErrorKey = null
                 primaryLegendErrorMessage = null
                 lastPrimaryLegendAttemptMs = 0L
-
-                cachedSecondaryPrimaryTileKey = null
-                cachedSecondaryPrimaryTileSpec = null
-                secondaryPrimaryTileErrorKey = null
-                secondaryPrimaryTileErrorMessage = null
-                lastSecondaryPrimaryTileAttemptMs = 0L
-
-                cachedSecondaryPrimaryLegendKey = null
-                cachedSecondaryPrimaryLegend = null
-                secondaryPrimaryLegendErrorKey = null
-                secondaryPrimaryLegendErrorMessage = null
-                lastSecondaryPrimaryLegendAttemptMs = 0L
             }
 
             if (!anyOverlayEnabled) {
@@ -149,7 +130,12 @@ class ForecastOverlayRepository @Inject constructor(
                 return@collect
             }
 
-            val selectedTimeUtcMs = selection.selectedTimeSlot.validTimeUtcMs
+            val resolvedSelection = selection ?: run {
+                emit(baseState)
+                return@collect
+            }
+
+            val selectedTimeUtcMs = resolvedSelection.selectedTimeSlot.validTimeUtcMs
             val dayBucket = forecastRegionLocalDayBucket(
                 utcMs = selectedTimeUtcMs,
                 regionCode = preferences.selectedRegion
@@ -157,37 +143,19 @@ class ForecastOverlayRepository @Inject constructor(
 
             val primaryTileKey = OverlayTileKey(
                 regionCode = normalizedRegionCode,
-                parameterId = selection.selectedPrimaryParameterId,
+                parameterId = resolvedSelection.selectedPrimaryParameterId,
                 timeUtcMs = selectedTimeUtcMs
             )
             val primaryLegendKey = OverlayLegendKey(
                 regionCode = normalizedRegionCode,
-                parameterId = selection.selectedPrimaryParameterId,
+                parameterId = resolvedSelection.selectedPrimaryParameterId,
                 dayBucket = dayBucket
             )
-            val secondaryPrimaryTileKey = if (secondaryPrimaryEnabled) {
-                OverlayTileKey(
-                    regionCode = normalizedRegionCode,
-                    parameterId = selection.selectedSecondaryPrimaryParameterId,
-                    timeUtcMs = selectedTimeUtcMs
-                )
-            } else {
-                null
-            }
-            val secondaryPrimaryLegendKey = if (secondaryPrimaryEnabled) {
-                OverlayLegendKey(
-                    regionCode = normalizedRegionCode,
-                    parameterId = selection.selectedSecondaryPrimaryParameterId,
-                    dayBucket = dayBucket
-                )
-            } else {
-                null
-            }
 
             val windTileKey = if (windEnabled) {
                 OverlayTileKey(
                     regionCode = normalizedRegionCode,
-                    parameterId = selection.selectedWindParameterId,
+                    parameterId = resolvedSelection.selectedWindParameterId,
                     timeUtcMs = selectedTimeUtcMs
                 )
             } else {
@@ -196,25 +164,11 @@ class ForecastOverlayRepository @Inject constructor(
             val windLegendKey = if (windEnabled) {
                 OverlayLegendKey(
                     regionCode = normalizedRegionCode,
-                    parameterId = selection.selectedWindParameterId,
+                    parameterId = resolvedSelection.selectedWindParameterId,
                     dayBucket = dayBucket
                 )
             } else {
                 null
-            }
-
-            if (!secondaryPrimaryEnabled) {
-                cachedSecondaryPrimaryTileKey = null
-                cachedSecondaryPrimaryTileSpec = null
-                secondaryPrimaryTileErrorKey = null
-                secondaryPrimaryTileErrorMessage = null
-                lastSecondaryPrimaryTileAttemptMs = 0L
-
-                cachedSecondaryPrimaryLegendKey = null
-                cachedSecondaryPrimaryLegend = null
-                secondaryPrimaryLegendErrorKey = null
-                secondaryPrimaryLegendErrorMessage = null
-                lastSecondaryPrimaryLegendAttemptMs = 0L
             }
 
             if (!windEnabled) {
@@ -233,20 +187,6 @@ class ForecastOverlayRepository @Inject constructor(
 
             val currentPrimaryTile = if (cachedPrimaryTileKey == primaryTileKey) cachedPrimaryTileSpec else null
             val currentPrimaryLegend = if (cachedPrimaryLegendKey == primaryLegendKey) cachedPrimaryLegend else null
-            val currentSecondaryPrimaryTile = if (
-                secondaryPrimaryTileKey != null && cachedSecondaryPrimaryTileKey == secondaryPrimaryTileKey
-            ) {
-                cachedSecondaryPrimaryTileSpec
-            } else {
-                null
-            }
-            val currentSecondaryPrimaryLegend = if (
-                secondaryPrimaryLegendKey != null && cachedSecondaryPrimaryLegendKey == secondaryPrimaryLegendKey
-            ) {
-                cachedSecondaryPrimaryLegend
-            } else {
-                null
-            }
             val currentWindTile = if (windTileKey != null && cachedWindTileKey == windTileKey) {
                 cachedWindTileSpec
             } else {
@@ -274,22 +214,6 @@ class ForecastOverlayRepository @Inject constructor(
                         nowUtcMs = nowUtcMs
                     )
                 )
-            val shouldFetchSecondaryPrimaryTile = secondaryPrimaryTileKey != null && (
-                currentSecondaryPrimaryTile == null ||
-                    shouldRetry(
-                        errorKeyMatches = secondaryPrimaryTileErrorKey == secondaryPrimaryTileKey,
-                        lastAttemptMs = lastSecondaryPrimaryTileAttemptMs,
-                        nowUtcMs = nowUtcMs
-                    )
-                )
-            val shouldFetchSecondaryPrimaryLegend = secondaryPrimaryLegendKey != null && (
-                currentSecondaryPrimaryLegend == null ||
-                    shouldRetry(
-                        errorKeyMatches = secondaryPrimaryLegendErrorKey == secondaryPrimaryLegendKey,
-                        lastAttemptMs = lastSecondaryPrimaryLegendAttemptMs,
-                        nowUtcMs = nowUtcMs
-                    )
-                )
             val shouldFetchWindTile = windTileKey != null && (
                 currentWindTile == null ||
                     shouldRetry(
@@ -310,8 +234,6 @@ class ForecastOverlayRepository @Inject constructor(
             if (
                 shouldFetchPrimaryTile ||
                 shouldFetchPrimaryLegend ||
-                shouldFetchSecondaryPrimaryTile ||
-                shouldFetchSecondaryPrimaryLegend ||
                 shouldFetchWindTile ||
                 shouldFetchWindLegend
             ) {
@@ -320,8 +242,6 @@ class ForecastOverlayRepository @Inject constructor(
                         isLoading = true,
                         primaryTileSpec = if (primaryEnabled) currentPrimaryTile else null,
                         primaryLegend = if (primaryEnabled) currentPrimaryLegend else null,
-                        secondaryPrimaryTileSpec = currentSecondaryPrimaryTile,
-                        secondaryPrimaryLegend = currentSecondaryPrimaryLegend,
                         windTileSpec = currentWindTile,
                         windLegend = currentWindLegend
                     )
@@ -332,8 +252,8 @@ class ForecastOverlayRepository @Inject constructor(
                 lastPrimaryTileAttemptMs = nowUtcMs
                 try {
                     val tileSpec = tilesPort.getTileSpec(
-                        parameterId = selection.selectedPrimaryParameterId,
-                        timeSlot = selection.selectedTimeSlot,
+                        parameterId = resolvedSelection.selectedPrimaryParameterId,
+                        timeSlot = resolvedSelection.selectedTimeSlot,
                         regionCode = preferences.selectedRegion
                     )
                     cachedPrimaryTileKey = primaryTileKey
@@ -343,6 +263,7 @@ class ForecastOverlayRepository @Inject constructor(
                         primaryTileErrorMessage = null
                     }
                 } catch (t: Throwable) {
+                    if (t is CancellationException) throw t
                     primaryTileErrorKey = primaryTileKey
                     primaryTileErrorMessage = t.message ?: "Failed to load forecast tiles"
                 }
@@ -352,8 +273,8 @@ class ForecastOverlayRepository @Inject constructor(
                 lastPrimaryLegendAttemptMs = nowUtcMs
                 try {
                     val legend = legendPort.getLegend(
-                        parameterId = selection.selectedPrimaryParameterId,
-                        timeSlot = selection.selectedTimeSlot,
+                        parameterId = resolvedSelection.selectedPrimaryParameterId,
+                        timeSlot = resolvedSelection.selectedTimeSlot,
                         regionCode = preferences.selectedRegion
                     )
                     cachedPrimaryLegendKey = primaryLegendKey
@@ -363,52 +284,9 @@ class ForecastOverlayRepository @Inject constructor(
                         primaryLegendErrorMessage = null
                     }
                 } catch (t: Throwable) {
+                    if (t is CancellationException) throw t
                     primaryLegendErrorKey = primaryLegendKey
                     primaryLegendErrorMessage = t.message ?: "Failed to load forecast legend"
-                }
-            }
-
-            if (shouldFetchSecondaryPrimaryTile) {
-                val requiredSecondaryPrimaryTileKey = requireNotNull(secondaryPrimaryTileKey)
-                lastSecondaryPrimaryTileAttemptMs = nowUtcMs
-                try {
-                    val tileSpec = tilesPort.getTileSpec(
-                        parameterId = selection.selectedSecondaryPrimaryParameterId,
-                        timeSlot = selection.selectedTimeSlot,
-                        regionCode = preferences.selectedRegion
-                    )
-                    cachedSecondaryPrimaryTileKey = requiredSecondaryPrimaryTileKey
-                    cachedSecondaryPrimaryTileSpec = tileSpec
-                    if (secondaryPrimaryTileErrorKey == requiredSecondaryPrimaryTileKey) {
-                        secondaryPrimaryTileErrorKey = null
-                        secondaryPrimaryTileErrorMessage = null
-                    }
-                } catch (t: Throwable) {
-                    secondaryPrimaryTileErrorKey = requiredSecondaryPrimaryTileKey
-                    secondaryPrimaryTileErrorMessage = t.message
-                        ?: "Failed to load secondary forecast tiles"
-                }
-            }
-
-            if (shouldFetchSecondaryPrimaryLegend) {
-                val requiredSecondaryPrimaryLegendKey = requireNotNull(secondaryPrimaryLegendKey)
-                lastSecondaryPrimaryLegendAttemptMs = nowUtcMs
-                try {
-                    val legend = legendPort.getLegend(
-                        parameterId = selection.selectedSecondaryPrimaryParameterId,
-                        timeSlot = selection.selectedTimeSlot,
-                        regionCode = preferences.selectedRegion
-                    )
-                    cachedSecondaryPrimaryLegendKey = requiredSecondaryPrimaryLegendKey
-                    cachedSecondaryPrimaryLegend = legend
-                    if (secondaryPrimaryLegendErrorKey == requiredSecondaryPrimaryLegendKey) {
-                        secondaryPrimaryLegendErrorKey = null
-                        secondaryPrimaryLegendErrorMessage = null
-                    }
-                } catch (t: Throwable) {
-                    secondaryPrimaryLegendErrorKey = requiredSecondaryPrimaryLegendKey
-                    secondaryPrimaryLegendErrorMessage = t.message
-                        ?: "Failed to load secondary forecast legend"
                 }
             }
 
@@ -417,8 +295,8 @@ class ForecastOverlayRepository @Inject constructor(
                 lastWindTileAttemptMs = nowUtcMs
                 try {
                     val tileSpec = tilesPort.getTileSpec(
-                        parameterId = selection.selectedWindParameterId,
-                        timeSlot = selection.selectedTimeSlot,
+                        parameterId = resolvedSelection.selectedWindParameterId,
+                        timeSlot = resolvedSelection.selectedTimeSlot,
                         regionCode = preferences.selectedRegion
                     )
                     cachedWindTileKey = requiredWindTileKey
@@ -428,6 +306,7 @@ class ForecastOverlayRepository @Inject constructor(
                         windTileErrorMessage = null
                     }
                 } catch (t: Throwable) {
+                    if (t is CancellationException) throw t
                     windTileErrorKey = requiredWindTileKey
                     windTileErrorMessage = t.message ?: "Failed to load wind overlay tiles"
                 }
@@ -438,8 +317,8 @@ class ForecastOverlayRepository @Inject constructor(
                 lastWindLegendAttemptMs = nowUtcMs
                 try {
                     val legend = legendPort.getLegend(
-                        parameterId = selection.selectedWindParameterId,
-                        timeSlot = selection.selectedTimeSlot,
+                        parameterId = resolvedSelection.selectedWindParameterId,
+                        timeSlot = resolvedSelection.selectedTimeSlot,
                         regionCode = preferences.selectedRegion
                     )
                     cachedWindLegendKey = requiredWindLegendKey
@@ -449,6 +328,7 @@ class ForecastOverlayRepository @Inject constructor(
                         windLegendErrorMessage = null
                     }
                 } catch (t: Throwable) {
+                    if (t is CancellationException) throw t
                     windLegendErrorKey = requiredWindLegendKey
                     windLegendErrorMessage = t.message ?: "Failed to load wind overlay legend"
                 }
@@ -460,21 +340,6 @@ class ForecastOverlayRepository @Inject constructor(
             } else {
                 null
             }
-            val secondaryPrimaryTileForState =
-                if (secondaryPrimaryTileKey != null && cachedSecondaryPrimaryTileKey == secondaryPrimaryTileKey) {
-                    cachedSecondaryPrimaryTileSpec
-                } else {
-                    null
-                }
-            val secondaryPrimaryLegendForState =
-                if (
-                    secondaryPrimaryLegendKey != null &&
-                    cachedSecondaryPrimaryLegendKey == secondaryPrimaryLegendKey
-                ) {
-                    cachedSecondaryPrimaryLegend
-                } else {
-                    null
-                }
             val windTileForState = if (windTileKey != null && cachedWindTileKey == windTileKey) {
                 cachedWindTileSpec
             } else {
@@ -497,26 +362,18 @@ class ForecastOverlayRepository @Inject constructor(
                 } else {
                     null
                 },
-                if (
-                    secondaryPrimaryLegendKey != null &&
-                    secondaryPrimaryLegendErrorKey == secondaryPrimaryLegendKey
-                ) {
-                    secondaryPrimaryLegendErrorMessage
-                } else {
-                    null
-                },
-                if (
-                    secondaryPrimaryTileKey != null &&
-                    secondaryPrimaryTileErrorKey == secondaryPrimaryTileKey
-                ) {
-                    secondaryPrimaryTileErrorMessage
-                } else {
-                    null
-                },
                 if (windLegendKey != null && windLegendErrorKey == windLegendKey) windLegendErrorMessage else null,
-                if (windTileKey != null && windTileErrorKey == windTileKey) windTileErrorMessage else null
+                if (
+                    windTileKey != null &&
+                    windTileErrorKey == windTileKey &&
+                    windTileForState != null
+                ) {
+                    windTileErrorMessage
+                } else {
+                    null
+                }
             )
-            val fatalError = if (
+            val primaryFatalError = if (
                 primaryEnabled &&
                 primaryTileForState == null &&
                 primaryTileErrorKey == primaryTileKey
@@ -525,18 +382,30 @@ class ForecastOverlayRepository @Inject constructor(
             } else {
                 null
             }
+            val windFatalError = if (
+                windTileKey != null &&
+                windTileForState == null &&
+                windTileErrorKey == windTileKey
+            ) {
+                windTileErrorMessage ?: "Failed to load wind overlay tiles"
+            } else {
+                null
+            }
+            val fatalError = joinMessages(primaryFatalError, windFatalError)
+            val warningWithoutFatalDupes = subtractMessages(
+                source = warningMessage,
+                toRemove = fatalError
+            )
 
             emit(
                 baseState.copy(
                     isLoading = false,
                     primaryTileSpec = if (primaryEnabled) primaryTileForState else null,
                     primaryLegend = if (primaryEnabled) primaryLegendForState else null,
-                    secondaryPrimaryTileSpec = if (secondaryPrimaryEnabled) secondaryPrimaryTileForState else null,
-                    secondaryPrimaryLegend = if (secondaryPrimaryEnabled) secondaryPrimaryLegendForState else null,
                     windTileSpec = if (windEnabled) windTileForState else null,
                     windLegend = if (windEnabled) windLegendForState else null,
                     errorMessage = fatalError,
-                    warningMessage = warningMessage
+                    warningMessage = warningWithoutFatalDupes
                 )
             )
         }
@@ -579,6 +448,7 @@ class ForecastOverlayRepository @Inject constructor(
                 pointValue = pointValue
             )
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             ForecastPointQueryResult.Error(
                 message = t.message ?: "Failed to query forecast value"
             )
@@ -626,12 +496,6 @@ class ForecastOverlayRepository @Inject constructor(
             parameters = primaryParameters,
             fallback = DEFAULT_FORECAST_PARAMETER_ID
         )
-        val selectedSecondaryPrimaryParameterId = selectDistinctParameterId(
-            requested = preferences.selectedSecondaryPrimaryParameterId,
-            parameters = primaryParameters,
-            excluded = selectedPrimaryParameterId,
-            fallback = DEFAULT_FORECAST_SECONDARY_PRIMARY_PARAMETER_ID
-        )
         val selectedWindParameterId = selectParameterId(
             requested = preferences.selectedWindParameterId,
             parameters = windParameters,
@@ -663,7 +527,6 @@ class ForecastOverlayRepository @Inject constructor(
         return ResolvedSelection(
             primaryParameters = primaryParameters,
             selectedPrimaryParameterId = selectedPrimaryParameterId,
-            selectedSecondaryPrimaryParameterId = selectedSecondaryPrimaryParameterId,
             windParameters = windParameters,
             selectedWindParameterId = selectedWindParameterId,
             timeSlots = timeSlots,
@@ -681,22 +544,6 @@ class ForecastOverlayRepository @Inject constructor(
         }?.id
         if (matched != null) return matched
         return parameters.firstOrNull()?.id ?: fallback
-    }
-
-    private fun selectDistinctParameterId(
-        requested: ForecastParameterId,
-        parameters: List<ForecastParameterMeta>,
-        excluded: ForecastParameterId,
-        fallback: ForecastParameterId
-    ): ForecastParameterId {
-        val distinctParameters = parameters.filterNot { meta ->
-            meta.id.value.equals(excluded.value, ignoreCase = true)
-        }
-        val matched = distinctParameters.firstOrNull { meta ->
-            meta.id.value.equals(requested.value, ignoreCase = true)
-        }?.id
-        if (matched != null) return matched
-        return distinctParameters.firstOrNull()?.id ?: fallback
     }
 
     private fun selectTimeSlot(
@@ -743,12 +590,30 @@ class ForecastOverlayRepository @Inject constructor(
         return filtered.joinToString(separator = " | ")
     }
 
+    private fun subtractMessages(source: String?, toRemove: String?): String? {
+        val sourceMessages = splitMessages(source)
+        if (sourceMessages.isEmpty()) return null
+        val removedMessages = splitMessages(toRemove)
+        if (removedMessages.isEmpty()) return sourceMessages.joinToString(separator = " | ")
+        val filtered = sourceMessages.filter { sourceMessage ->
+            removedMessages.none { removedMessage ->
+                sourceMessage.equals(removedMessage, ignoreCase = true)
+            }
+        }
+        if (filtered.isEmpty()) return null
+        return filtered.joinToString(separator = " | ")
+    }
+
+    private fun splitMessages(message: String?): List<String> = message
+        ?.split("|")
+        ?.mapNotNull { part -> part.trim().takeIf { it.isNotEmpty() } }
+        ?: emptyList()
+
     private fun roundDownToHour(wallUtcMs: Long): Long = (wallUtcMs / HOUR_MS) * HOUR_MS
 
     private data class ResolvedSelection(
         val primaryParameters: List<ForecastParameterMeta>,
         val selectedPrimaryParameterId: ForecastParameterId,
-        val selectedSecondaryPrimaryParameterId: ForecastParameterId,
         val windParameters: List<ForecastParameterMeta>,
         val selectedWindParameterId: ForecastParameterId,
         val timeSlots: List<ForecastTimeSlot>,

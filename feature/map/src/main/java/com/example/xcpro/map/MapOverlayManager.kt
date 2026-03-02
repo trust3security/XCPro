@@ -1,9 +1,11 @@
 package com.example.xcpro.map
 
 import android.content.Context
-import android.os.SystemClock
 import android.util.Log
+import com.example.xcpro.core.time.TimeBridge
 import com.example.xcpro.adsb.Icao24
+import com.example.xcpro.common.units.AltitudeUnit
+import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.adsb.ADSB_ICON_SIZE_DEFAULT_PX
 import com.example.xcpro.adsb.clampAdsbIconSizePx
 import com.example.xcpro.airspace.AirspaceUseCase
@@ -41,9 +43,14 @@ import com.example.xcpro.weather.rain.clampWeatherRainOpacity
 import com.example.xcpro.loadAndApplyAirspace
 import com.example.xcpro.loadAndApplyWaypoints
 import com.example.xcpro.map.trail.SnailTrailManager
+import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
@@ -62,27 +69,51 @@ class MapOverlayManager(
     private val snailTrailManager: SnailTrailManager,
     private val coroutineScope: CoroutineScope,
     private val airspaceUseCase: AirspaceUseCase,
-    private val waypointFilesUseCase: WaypointFilesUseCase
+    private val waypointFilesUseCase: WaypointFilesUseCase,
+    private val ognTrafficOverlayFactory: (MapLibreMap, Int, Boolean) -> OgnTrafficOverlay =
+        { map, iconSizePx, useSatelliteContrastIcons ->
+            OgnTrafficOverlay(
+                context = context,
+                map = map,
+                initialIconSizePx = iconSizePx,
+                initialUseSatelliteContrastIcons = useSatelliteContrastIcons
+            )
+        },
+    private val ognThermalOverlayFactory: (MapLibreMap) -> OgnThermalOverlay =
+        { map -> OgnThermalOverlay(map = map) },
+    private val ognGliderTrailOverlayFactory: (MapLibreMap) -> OgnGliderTrailOverlay =
+        { map -> OgnGliderTrailOverlay(map = map) },
+    private val adsbTrafficOverlayFactory: (MapLibreMap, Int) -> AdsbTrafficOverlay =
+        { map, iconSizePx ->
+            AdsbTrafficOverlay(
+                context = context,
+                map = map,
+                initialIconSizePx = iconSizePx
+            )
+        }
 ) {
     companion object {
         private const val TAG = "MapOverlayManager"
+        private const val OWN_ALTITUDE_RENDER_RESOLUTION_SCALE = 10.0
     }
 
     private var latestOgnTargets: List<OgnTrafficTarget> = emptyList()
+    private var latestOgnOwnshipAltitudeMeters: Double? = null
+    private var latestOgnAltitudeUnit: AltitudeUnit = AltitudeUnit.METERS
+    private var latestOgnUnitsPreferences: UnitsPreferences = UnitsPreferences()
     private var latestOgnThermalHotspots: List<OgnThermalHotspot> = emptyList()
     private var latestOgnGliderTrailSegments: List<OgnGliderTrailSegment> = emptyList()
     private var latestAdsbTargets: List<AdsbTrafficUiModel> = emptyList()
+    private var latestAdsbOwnshipAltitudeMeters: Double? = null
+    private var latestAdsbUnitsPreferences: UnitsPreferences = UnitsPreferences()
     private var ognIconSizePx: Int = OGN_ICON_SIZE_DEFAULT_PX
     private var ognDisplayUpdateMode: OgnDisplayUpdateMode = OgnDisplayUpdateMode.DEFAULT
     private var ognSatelliteContrastIconsEnabled: Boolean = false
     private var adsbIconSizePx: Int = ADSB_ICON_SIZE_DEFAULT_PX
     private var forecastOverlayEnabled: Boolean = false
-    private var forecastSecondaryPrimaryOverlayEnabled: Boolean = false
     private var forecastWindOverlayEnabled: Boolean = false
     private var latestForecastPrimaryTileSpec: ForecastTileSpec? = null
     private var latestForecastPrimaryLegend: ForecastLegendSpec? = null
-    private var latestForecastSecondaryPrimaryTileSpec: ForecastTileSpec? = null
-    private var latestForecastSecondaryPrimaryLegend: ForecastLegendSpec? = null
     private var latestForecastWindTileSpec: ForecastTileSpec? = null
     private var latestForecastWindLegend: ForecastLegendSpec? = null
     private var forecastOpacity: Float = FORECAST_OPACITY_DEFAULT
@@ -103,6 +134,13 @@ class MapOverlayManager(
     private var weatherRainStatusCode: WeatherRadarStatusCode = WeatherRadarStatusCode.NO_METADATA
     private var weatherRainStale: Boolean = true
     private var lastWeatherRainConfig: WeatherRainRuntimeConfig? = null
+    private val _forecastRuntimeWarningMessage = MutableStateFlow<String?>(null)
+    val forecastRuntimeWarningMessage: StateFlow<String?> = _forecastRuntimeWarningMessage.asStateFlow()
+    private val _skySightSatelliteRuntimeErrorMessage = MutableStateFlow<String?>(null)
+    val skySightSatelliteRuntimeErrorMessage: StateFlow<String?> =
+        _skySightSatelliteRuntimeErrorMessage.asStateFlow()
+    private var refreshAirspaceJob: Job? = null
+    private val refreshAirspaceRequestId = AtomicLong(0L)
     private val ognTrafficRenderState = OgnRenderThrottleState()
     private val ognThermalRenderState = OgnRenderThrottleState()
     private val ognTrailRenderState = OgnRenderThrottleState()
@@ -119,15 +157,26 @@ class MapOverlayManager(
     }
 
     fun refreshAirspace(map: MapLibreMap?) {
-        try {
-            coroutineScope.launch {
+        val requestId = refreshAirspaceRequestId.incrementAndGet()
+        refreshAirspaceJob?.cancel()
+        refreshAirspaceJob = coroutineScope.launch {
+            try {
                 loadAndApplyAirspace(map, airspaceUseCase)
+                if (BuildConfig.DEBUG) {
+                    Log.d(TAG, "Airspace overlays refreshed (requestId=$requestId)")
+                }
+            } catch (cancellation: CancellationException) {
+                if (BuildConfig.DEBUG) {
+                    Log.d(TAG, "Airspace refresh canceled (requestId=$requestId)")
+                }
+                throw cancellation
+            } catch (e: Exception) {
+                Log.e(TAG, "Error refreshing airspace: ${e.message}", e)
+            } finally {
+                if (refreshAirspaceRequestId.get() == requestId) {
+                    refreshAirspaceJob = null
+                }
             }
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "Airspace overlays refreshed")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error refreshing airspace: ${e.message}", e)
         }
     }
 
@@ -190,15 +239,10 @@ class MapOverlayManager(
                 initializeTrafficOverlays(map)
 
                 mapState.forecastOverlay?.cleanup()
-                mapState.forecastSecondaryOverlay?.cleanup()
                 mapState.forecastWindOverlay?.cleanup()
                 mapState.forecastOverlay = ForecastRasterOverlay(
                     map = map,
                     idNamespace = "primary"
-                )
-                mapState.forecastSecondaryOverlay = ForecastRasterOverlay(
-                    map = map,
-                    idNamespace = "secondary"
                 )
                 mapState.forecastWindOverlay = ForecastRasterOverlay(
                     map = map,
@@ -216,6 +260,7 @@ class MapOverlayManager(
             }
             snailTrailManager.onMapStyleChanged(map)
             mapState.blueLocationOverlay?.bringToFront()
+            bringTrafficOverlaysToFront()
             if (BuildConfig.DEBUG) {
                 Log.d(TAG, "All overlays reloaded for new style")
             }
@@ -238,10 +283,6 @@ class MapOverlayManager(
                 mapState.forecastOverlay = ForecastRasterOverlay(
                     map = map,
                     idNamespace = "primary"
-                )
-                mapState.forecastSecondaryOverlay = ForecastRasterOverlay(
-                    map = map,
-                    idNamespace = "secondary"
                 )
                 mapState.forecastWindOverlay = ForecastRasterOverlay(
                     map = map,
@@ -269,7 +310,12 @@ class MapOverlayManager(
         mapState.ognTrafficOverlay?.cleanup()
         mapState.ognTrafficOverlay = createOgnTrafficOverlay(map)
         mapState.ognTrafficOverlay?.initialize()
-        mapState.ognTrafficOverlay?.render(latestOgnTargets)
+        mapState.ognTrafficOverlay?.render(
+            targets = latestOgnTargets,
+            ownshipAltitudeMeters = latestOgnOwnshipAltitudeMeters,
+            altitudeUnit = latestOgnAltitudeUnit,
+            unitsPreferences = latestOgnUnitsPreferences
+        )
 
         mapState.ognThermalOverlay?.cleanup()
         mapState.ognThermalOverlay = createOgnThermalOverlay(map)
@@ -284,8 +330,13 @@ class MapOverlayManager(
         mapState.adsbTrafficOverlay?.cleanup()
         mapState.adsbTrafficOverlay = createAdsbTrafficOverlay(map)
         mapState.adsbTrafficOverlay?.initialize()
-        mapState.adsbTrafficOverlay?.render(latestAdsbTargets)
-        val nowMonoMs = SystemClock.elapsedRealtime()
+        mapState.adsbTrafficOverlay?.render(
+            targets = latestAdsbTargets,
+            ownshipAltitudeMeters = latestAdsbOwnshipAltitudeMeters,
+            unitsPreferences = latestAdsbUnitsPreferences
+        )
+        bringTrafficOverlaysToFront()
+        val nowMonoMs = TimeBridge.nowMonoMs()
         ognTrafficRenderState.lastRenderMonoMs = nowMonoMs
         ognThermalRenderState.lastRenderMonoMs = nowMonoMs
         ognTrailRenderState.lastRenderMonoMs = nowMonoMs
@@ -306,20 +357,45 @@ class MapOverlayManager(
         renderOgnTargetsNow()
         renderOgnThermalsNow()
         renderOgnTrailsNow()
-        val nowMonoMs = SystemClock.elapsedRealtime()
+        val nowMonoMs = TimeBridge.nowMonoMs()
         ognTrafficRenderState.lastRenderMonoMs = nowMonoMs
         ognThermalRenderState.lastRenderMonoMs = nowMonoMs
         ognTrailRenderState.lastRenderMonoMs = nowMonoMs
     }
 
     fun onMapDetached() {
+        refreshAirspaceJob?.cancel()
+        refreshAirspaceJob = null
         cancelOgnPendingRenders()
+        _forecastRuntimeWarningMessage.value = null
+        _skySightSatelliteRuntimeErrorMessage.value = null
     }
 
-    fun updateOgnTrafficTargets(targets: List<OgnTrafficTarget>, forceImmediate: Boolean = false) {
+    fun updateOgnTrafficTargets(
+        targets: List<OgnTrafficTarget>,
+        ownshipAltitudeMeters: Double?,
+        altitudeUnit: AltitudeUnit,
+        unitsPreferences: UnitsPreferences = UnitsPreferences(),
+        forceImmediate: Boolean = false
+    ) {
+        val normalizedOwnshipAltitude = normalizeOwnshipAltitudeForRender(ownshipAltitudeMeters)
         val sameTargets = latestOgnTargets == targets
-        if (sameTargets && !forceImmediate && mapState.ognTrafficOverlay != null) return
+        val sameOwnshipAltitude = latestOgnOwnshipAltitudeMeters == normalizedOwnshipAltitude
+        val sameAltitudeUnit = latestOgnAltitudeUnit == altitudeUnit
+        val sameUnitsPreferences = latestOgnUnitsPreferences == unitsPreferences
+        if (sameTargets &&
+            sameOwnshipAltitude &&
+            sameAltitudeUnit &&
+            sameUnitsPreferences &&
+            !forceImmediate &&
+            mapState.ognTrafficOverlay != null
+        ) {
+            return
+        }
         latestOgnTargets = targets
+        latestOgnOwnshipAltitudeMeters = normalizedOwnshipAltitude
+        latestOgnAltitudeUnit = altitudeUnit
+        latestOgnUnitsPreferences = unitsPreferences
         scheduleOgnRender(
             state = ognTrafficRenderState,
             forceImmediate = forceImmediate || targets.isEmpty()
@@ -356,14 +432,21 @@ class MapOverlayManager(
         val map = mapState.mapLibreMap ?: return
         if (mapState.ognTrafficOverlay == null) {
             mapState.ognTrafficOverlay = createOgnTrafficOverlay(map)
+            mapState.ognTrafficOverlay?.initialize()
         }
-        mapState.ognTrafficOverlay?.render(latestOgnTargets)
+        mapState.ognTrafficOverlay?.render(
+            targets = latestOgnTargets,
+            ownshipAltitudeMeters = latestOgnOwnshipAltitudeMeters,
+            altitudeUnit = latestOgnAltitudeUnit,
+            unitsPreferences = latestOgnUnitsPreferences
+        )
     }
 
     private fun renderOgnThermalsNow() {
         val map = mapState.mapLibreMap ?: return
         if (mapState.ognThermalOverlay == null) {
             mapState.ognThermalOverlay = createOgnThermalOverlay(map)
+            mapState.ognThermalOverlay?.initialize()
         }
         runCatching {
             mapState.ognThermalOverlay?.render(latestOgnThermalHotspots)
@@ -376,6 +459,7 @@ class MapOverlayManager(
         val map = mapState.mapLibreMap ?: return
         if (mapState.ognGliderTrailOverlay == null) {
             mapState.ognGliderTrailOverlay = createOgnGliderTrailOverlay(map)
+            mapState.ognGliderTrailOverlay?.initialize()
         }
         runCatching {
             mapState.ognGliderTrailOverlay?.render(latestOgnGliderTrailSegments)
@@ -396,11 +480,11 @@ class MapOverlayManager(
             state.pendingJob?.cancel()
             state.pendingJob = null
             renderNow()
-            state.lastRenderMonoMs = SystemClock.elapsedRealtime()
+            state.lastRenderMonoMs = TimeBridge.nowMonoMs()
             return
         }
 
-        val nowMonoMs = SystemClock.elapsedRealtime()
+        val nowMonoMs = TimeBridge.nowMonoMs()
         val elapsedMs = nowMonoMs - state.lastRenderMonoMs
         if (elapsedMs >= intervalMs && state.pendingJob == null) {
             renderNow()
@@ -416,7 +500,7 @@ class MapOverlayManager(
             state.pendingJob = null
             if (mapState.mapLibreMap != map || mapState.mapLibreMap == null) return@launch
             renderNow()
-            state.lastRenderMonoMs = SystemClock.elapsedRealtime()
+            state.lastRenderMonoMs = TimeBridge.nowMonoMs()
         }
     }
 
@@ -429,24 +513,41 @@ class MapOverlayManager(
         ognTrailRenderState.pendingJob = null
     }
 
-    fun updateAdsbTrafficTargets(targets: List<AdsbTrafficUiModel>) {
+    fun updateAdsbTrafficTargets(
+        targets: List<AdsbTrafficUiModel>,
+        ownshipAltitudeMeters: Double?,
+        unitsPreferences: UnitsPreferences
+    ) {
+        val normalizedOwnshipAltitude = normalizeOwnshipAltitudeForRender(ownshipAltitudeMeters)
         val sameTargets = latestAdsbTargets == targets
-        if (sameTargets && mapState.adsbTrafficOverlay != null) return
+        val sameOwnshipAltitude = latestAdsbOwnshipAltitudeMeters == normalizedOwnshipAltitude
+        val sameUnitsPreferences = latestAdsbUnitsPreferences == unitsPreferences
+        if (sameTargets &&
+            sameOwnshipAltitude &&
+            sameUnitsPreferences &&
+            mapState.adsbTrafficOverlay != null
+        ) {
+            return
+        }
         latestAdsbTargets = targets
+        latestAdsbOwnshipAltitudeMeters = normalizedOwnshipAltitude
+        latestAdsbUnitsPreferences = unitsPreferences
         val map = mapState.mapLibreMap ?: return
         if (mapState.adsbTrafficOverlay == null) {
             mapState.adsbTrafficOverlay = createAdsbTrafficOverlay(map)
         }
-        mapState.adsbTrafficOverlay?.render(targets)
+        mapState.adsbTrafficOverlay?.render(
+            targets = targets,
+            ownshipAltitudeMeters = normalizedOwnshipAltitude,
+            unitsPreferences = unitsPreferences
+        )
+        bringTrafficOverlaysToFront()
     }
 
     fun setForecastOverlay(
         enabled: Boolean,
         primaryTileSpec: ForecastTileSpec?,
         primaryLegendSpec: ForecastLegendSpec?,
-        secondaryPrimaryOverlayEnabled: Boolean,
-        secondaryPrimaryTileSpec: ForecastTileSpec?,
-        secondaryPrimaryLegendSpec: ForecastLegendSpec?,
         windOverlayEnabled: Boolean,
         windTileSpec: ForecastTileSpec?,
         windLegendSpec: ForecastLegendSpec?,
@@ -456,34 +557,28 @@ class MapOverlayManager(
     ) {
         val primaryOverlayEnabled = enabled
         forecastOverlayEnabled = primaryOverlayEnabled || windOverlayEnabled
-        forecastSecondaryPrimaryOverlayEnabled = primaryOverlayEnabled && secondaryPrimaryOverlayEnabled
         forecastWindOverlayEnabled = windOverlayEnabled
         latestForecastPrimaryTileSpec = primaryTileSpec
         latestForecastPrimaryLegend = primaryLegendSpec
-        latestForecastSecondaryPrimaryTileSpec = secondaryPrimaryTileSpec
-        latestForecastSecondaryPrimaryLegend = secondaryPrimaryLegendSpec
         latestForecastWindTileSpec = windTileSpec
         latestForecastWindLegend = windLegendSpec
         forecastOpacity = clampForecastOpacity(opacity)
         forecastWindOverlayScale = clampForecastWindOverlayScale(windOverlayScale)
         forecastWindDisplayMode = windDisplayMode
-        val map = mapState.mapLibreMap ?: return
         if (!forecastOverlayEnabled) {
             mapState.forecastOverlay?.clear()
-            mapState.forecastSecondaryOverlay?.clear()
             mapState.forecastWindOverlay?.clear()
+            _forecastRuntimeWarningMessage.value = null
+            return
+        }
+        val map = mapState.mapLibreMap ?: run {
+            _forecastRuntimeWarningMessage.value = null
             return
         }
         if (mapState.forecastOverlay == null) {
             mapState.forecastOverlay = ForecastRasterOverlay(
                 map = map,
                 idNamespace = "primary"
-            )
-        }
-        if (mapState.forecastSecondaryOverlay == null) {
-            mapState.forecastSecondaryOverlay = ForecastRasterOverlay(
-                map = map,
-                idNamespace = "secondary"
             )
         }
         if (mapState.forecastWindOverlay == null) {
@@ -503,17 +598,6 @@ class MapOverlayManager(
         } else {
             mapState.forecastOverlay?.clear()
         }
-        if (forecastSecondaryPrimaryOverlayEnabled && secondaryPrimaryTileSpec != null) {
-            mapState.forecastSecondaryOverlay?.render(
-                tileSpec = secondaryPrimaryTileSpec,
-                opacity = forecastOpacity,
-                windOverlayScale = forecastWindOverlayScale,
-                windDisplayMode = forecastWindDisplayMode,
-                legendSpec = secondaryPrimaryLegendSpec
-            )
-        } else {
-            mapState.forecastSecondaryOverlay?.clear()
-        }
         if (windOverlayEnabled && windTileSpec != null) {
             mapState.forecastWindOverlay?.render(
                 tileSpec = windTileSpec,
@@ -525,21 +609,21 @@ class MapOverlayManager(
         } else {
             mapState.forecastWindOverlay?.clear()
         }
+        refreshForecastRuntimeWarningMessage()
+        mapState.blueLocationOverlay?.bringToFront()
+        bringTrafficOverlaysToFront()
     }
 
     fun clearForecastOverlay() {
         forecastOverlayEnabled = false
-        forecastSecondaryPrimaryOverlayEnabled = false
         forecastWindOverlayEnabled = false
         latestForecastPrimaryTileSpec = null
         latestForecastPrimaryLegend = null
-        latestForecastSecondaryPrimaryTileSpec = null
-        latestForecastSecondaryPrimaryLegend = null
         latestForecastWindTileSpec = null
         latestForecastWindLegend = null
         mapState.forecastOverlay?.clear()
-        mapState.forecastSecondaryOverlay?.clear()
         mapState.forecastWindOverlay?.clear()
+        _forecastRuntimeWarningMessage.value = null
     }
 
     fun setSkySightSatelliteOverlay(
@@ -555,8 +639,17 @@ class MapOverlayManager(
         val previousContrastIconsEnabled = ognSatelliteContrastIconsEnabled
         ognSatelliteContrastIconsEnabled = enabled && hasAnySatelliteLayer
         mapState.ognTrafficOverlay?.setUseSatelliteContrastIcons(ognSatelliteContrastIconsEnabled)
-        if (previousContrastIconsEnabled != ognSatelliteContrastIconsEnabled) {
-            updateOgnTrafficTargets(latestOgnTargets, forceImmediate = true)
+        val shouldRefreshOgnTargetsForContrast =
+            previousContrastIconsEnabled != ognSatelliteContrastIconsEnabled &&
+                (mapState.ognTrafficOverlay != null || latestOgnTargets.isNotEmpty())
+        if (shouldRefreshOgnTargetsForContrast) {
+            updateOgnTrafficTargets(
+                targets = latestOgnTargets,
+                ownshipAltitudeMeters = latestOgnOwnshipAltitudeMeters,
+                altitudeUnit = latestOgnAltitudeUnit,
+                unitsPreferences = latestOgnUnitsPreferences,
+                forceImmediate = true
+            )
         }
 
         val resolvedHistoryFrames = clampSkySightSatelliteHistoryFrames(historyFrameCount)
@@ -577,11 +670,21 @@ class MapOverlayManager(
             historyFrameCount = resolvedHistoryFrames,
             referenceTimeUtcMs = referenceTimeUtcMs
         )
+        if (!enabled || !hasAnySatelliteLayer) {
+            mapState.skySightSatelliteOverlay?.clear()
+            _skySightSatelliteRuntimeErrorMessage.value = null
+            lastSkySightSatelliteConfig = nextConfig
+            return
+        }
         if (nextConfig == lastSkySightSatelliteConfig) return
-        lastSkySightSatelliteConfig = nextConfig
 
-        val map = mapState.mapLibreMap ?: return
-        applySkySightSatelliteOverlay(map, nextConfig)
+        val map = mapState.mapLibreMap ?: run {
+            _skySightSatelliteRuntimeErrorMessage.value = null
+            return
+        }
+        if (applySkySightSatelliteOverlay(map, nextConfig)) {
+            lastSkySightSatelliteConfig = nextConfig
+        }
     }
 
     fun clearSkySightSatelliteOverlay() {
@@ -596,10 +699,17 @@ class MapOverlayManager(
         lastSkySightSatelliteConfig = null
         ognSatelliteContrastIconsEnabled = false
         mapState.ognTrafficOverlay?.setUseSatelliteContrastIcons(false)
-        if (previousContrastIconsEnabled) {
-            updateOgnTrafficTargets(latestOgnTargets, forceImmediate = true)
+        if (previousContrastIconsEnabled && (mapState.ognTrafficOverlay != null || latestOgnTargets.isNotEmpty())) {
+            updateOgnTrafficTargets(
+                targets = latestOgnTargets,
+                ownshipAltitudeMeters = latestOgnOwnshipAltitudeMeters,
+                altitudeUnit = latestOgnAltitudeUnit,
+                unitsPreferences = latestOgnUnitsPreferences,
+                forceImmediate = true
+            )
         }
         mapState.skySightSatelliteOverlay?.clear()
+        _skySightSatelliteRuntimeErrorMessage.value = null
     }
 
     fun setWeatherRainOverlay(
@@ -673,25 +783,20 @@ class MapOverlayManager(
     }
 
     private fun createOgnTrafficOverlay(map: MapLibreMap): OgnTrafficOverlay =
-        OgnTrafficOverlay(
-            context = context,
-            map = map,
-            initialIconSizePx = ognIconSizePx,
-            initialUseSatelliteContrastIcons = ognSatelliteContrastIconsEnabled
+        ognTrafficOverlayFactory(
+            map,
+            ognIconSizePx,
+            ognSatelliteContrastIconsEnabled
         )
 
     private fun createOgnThermalOverlay(map: MapLibreMap): OgnThermalOverlay =
-        OgnThermalOverlay(map = map)
+        ognThermalOverlayFactory(map)
 
     private fun createOgnGliderTrailOverlay(map: MapLibreMap): OgnGliderTrailOverlay =
-        OgnGliderTrailOverlay(map = map)
+        ognGliderTrailOverlayFactory(map)
 
     private fun createAdsbTrafficOverlay(map: MapLibreMap): AdsbTrafficOverlay =
-        AdsbTrafficOverlay(
-            context = context,
-            map = map,
-            initialIconSizePx = adsbIconSizePx
-        )
+        adsbTrafficOverlayFactory(map, adsbIconSizePx)
 
     fun findAdsbTargetAt(tap: LatLng): Icao24? {
         return mapState.adsbTrafficOverlay?.findTargetAt(tap)
@@ -766,16 +871,10 @@ class MapOverlayManager(
             )
             append("- ADS-B Targets: ${latestAdsbTargets.size}\n")
             append("- Forecast Overlay Enabled: $forecastOverlayEnabled\n")
-            append("- Forecast Secondary Overlay Enabled: $forecastSecondaryPrimaryOverlayEnabled\n")
             append("- Forecast Wind Overlay Enabled: $forecastWindOverlayEnabled\n")
             append(
                 "- Forecast Raster Overlay: ${
                     if (mapState.forecastOverlay != null) "Initialized" else "Not Initialized"
-                }\n"
-            )
-            append(
-                "- Forecast Secondary Overlay: ${
-                    if (mapState.forecastSecondaryOverlay != null) "Initialized" else "Not Initialized"
                 }\n"
             )
             append(
@@ -811,20 +910,14 @@ class MapOverlayManager(
     private fun reapplyForecastOverlay(map: MapLibreMap) {
         if (!forecastOverlayEnabled) {
             mapState.forecastOverlay?.clear()
-            mapState.forecastSecondaryOverlay?.clear()
             mapState.forecastWindOverlay?.clear()
+            _forecastRuntimeWarningMessage.value = null
             return
         }
         if (mapState.forecastOverlay == null) {
             mapState.forecastOverlay = ForecastRasterOverlay(
                 map = map,
                 idNamespace = "primary"
-            )
-        }
-        if (mapState.forecastSecondaryOverlay == null) {
-            mapState.forecastSecondaryOverlay = ForecastRasterOverlay(
-                map = map,
-                idNamespace = "secondary"
             )
         }
         if (mapState.forecastWindOverlay == null) {
@@ -845,18 +938,6 @@ class MapOverlayManager(
         } else {
             mapState.forecastOverlay?.clear()
         }
-        val secondaryPrimaryTileSpec = latestForecastSecondaryPrimaryTileSpec
-        if (forecastSecondaryPrimaryOverlayEnabled && secondaryPrimaryTileSpec != null) {
-            mapState.forecastSecondaryOverlay?.render(
-                tileSpec = secondaryPrimaryTileSpec,
-                opacity = forecastOpacity,
-                windOverlayScale = forecastWindOverlayScale,
-                windDisplayMode = forecastWindDisplayMode,
-                legendSpec = latestForecastSecondaryPrimaryLegend
-            )
-        } else {
-            mapState.forecastSecondaryOverlay?.clear()
-        }
         val windTileSpec = latestForecastWindTileSpec
         if (forecastWindOverlayEnabled && windTileSpec != null) {
             mapState.forecastWindOverlay?.render(
@@ -869,6 +950,26 @@ class MapOverlayManager(
         } else {
             mapState.forecastWindOverlay?.clear()
         }
+        refreshForecastRuntimeWarningMessage()
+        mapState.blueLocationOverlay?.bringToFront()
+        bringTrafficOverlaysToFront()
+    }
+
+    private fun refreshForecastRuntimeWarningMessage() {
+        _forecastRuntimeWarningMessage.value = joinNonBlankMessages(
+            mapState.forecastOverlay?.runtimeWarningMessage(),
+            mapState.forecastWindOverlay?.runtimeWarningMessage()
+        )
+    }
+
+    private fun joinNonBlankMessages(vararg messages: String?): String? {
+        val joined = messages.asSequence()
+            .filterNotNull()
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .distinct()
+            .joinToString(" ")
+        return joined.takeIf { it.isNotBlank() }
     }
 
     private fun reapplySkySightSatelliteOverlay(map: MapLibreMap) {
@@ -881,7 +982,9 @@ class MapOverlayManager(
             historyFrameCount = skySightSatelliteHistoryFrames,
             referenceTimeUtcMs = skySightSatelliteReferenceTimeUtcMs
         )
-        applySkySightSatelliteOverlay(map, config)
+        if (applySkySightSatelliteOverlay(map, config)) {
+            lastSkySightSatelliteConfig = config
+        }
     }
 
     private fun reapplyWeatherRainOverlay(map: MapLibreMap) {
@@ -898,16 +1001,17 @@ class MapOverlayManager(
     private fun applySkySightSatelliteOverlay(
         map: MapLibreMap,
         config: SkySightSatelliteRuntimeConfig
-    ) {
+    ): Boolean {
         val hasAnySatelliteLayer = config.showSatelliteImagery || config.showRadar || config.showLightning
         if (!config.enabled || !hasAnySatelliteLayer) {
             mapState.skySightSatelliteOverlay?.clear()
-            return
+            _skySightSatelliteRuntimeErrorMessage.value = null
+            return true
         }
         if (mapState.skySightSatelliteOverlay == null) {
             mapState.skySightSatelliteOverlay = SkySightSatelliteOverlay(map)
         }
-        runCatching {
+        return runCatching {
             mapState.skySightSatelliteOverlay?.render(
                 SkySightSatelliteRenderConfig(
                     enabled = config.enabled,
@@ -919,8 +1023,16 @@ class MapOverlayManager(
                     referenceTimeUtcMs = config.referenceTimeUtcMs
                 )
             )
-        }.onFailure { throwable ->
+            _skySightSatelliteRuntimeErrorMessage.value = null
+            mapState.blueLocationOverlay?.bringToFront()
+            bringTrafficOverlaysToFront()
+            true
+        }.getOrElse { throwable ->
+            _skySightSatelliteRuntimeErrorMessage.value =
+                throwable.message?.trim()?.takeIf { it.isNotEmpty() }
+                    ?: "SkySight satellite overlay failed to apply"
             Log.e(TAG, "SkySight satellite overlay apply failed: ${throwable.message}", throwable)
+            false
         }
     }
 
@@ -947,9 +1059,16 @@ class MapOverlayManager(
                 opacity = effectiveOpacity,
                 transitionDurationMs = config.transitionDurationMs
             )
+            mapState.blueLocationOverlay?.bringToFront()
+            bringTrafficOverlaysToFront()
         }.onFailure { throwable ->
             Log.e(TAG, "Weather rain overlay apply failed: ${throwable.message}", throwable)
         }
+    }
+
+    private fun bringTrafficOverlaysToFront() {
+        mapState.ognTrafficOverlay?.bringToFront()
+        mapState.adsbTrafficOverlay?.bringToFront()
     }
 
     private data class WeatherRainRuntimeConfig(
@@ -965,6 +1084,12 @@ class MapOverlayManager(
         var pendingJob: Job? = null
     )
 
+    private fun normalizeOwnshipAltitudeForRender(altitudeMeters: Double?): Double? {
+        val altitude = altitudeMeters?.takeIf { it.isFinite() } ?: return null
+        return kotlin.math.round(altitude * OWN_ALTITUDE_RENDER_RESOLUTION_SCALE) /
+            OWN_ALTITUDE_RENDER_RESOLUTION_SCALE
+    }
+
     private data class SkySightSatelliteRuntimeConfig(
         val enabled: Boolean,
         val showSatelliteImagery: Boolean,
@@ -975,3 +1100,4 @@ class MapOverlayManager(
         val referenceTimeUtcMs: Long?
     )
 }
+

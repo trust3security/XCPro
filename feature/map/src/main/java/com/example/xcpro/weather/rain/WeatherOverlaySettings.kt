@@ -13,6 +13,9 @@ const val WEATHER_RAIN_ANIMATION_WINDOW_10_MIN_SECONDS = 10 * 60L
 const val WEATHER_RAIN_ANIMATION_WINDOW_20_MIN_SECONDS = 20 * 60L
 const val WEATHER_RAIN_ANIMATION_WINDOW_30_MIN_SECONDS = 30 * 60L
 const val WEATHER_RAIN_ANIMATION_WINDOW_DEFAULT_SECONDS = WEATHER_RAIN_ANIMATION_WINDOW_10_MIN_SECONDS
+const val WEATHER_RAIN_ANIMATION_WINDOW_STEP_MINUTES = 10
+const val WEATHER_RAIN_ANIMATION_WINDOW_MAX_MINUTES = 120
+const val WEATHER_RAIN_FRAME_CADENCE_SECONDS = 10 * 60L
 const val WEATHER_RAIN_ANIMATION_FRAME_INTERVAL_SLOW_MS = 1600L
 const val WEATHER_RAIN_ANIMATION_FRAME_INTERVAL_NORMAL_MS = 1200L
 const val WEATHER_RAIN_ANIMATION_FRAME_INTERVAL_FAST_MS = 700L
@@ -32,6 +35,11 @@ const val WEATHER_RAIN_COLOR_SCHEME_UNIVERSAL_BLUE = 2
 
 fun clampWeatherRainOpacity(value: Float): Float =
     value.coerceIn(WEATHER_RAIN_OPACITY_MIN, WEATHER_RAIN_OPACITY_MAX)
+
+fun WeatherRainAnimationWindow.maxSelectableFrameCount(): Int =
+    ((windowSeconds / WEATHER_RAIN_FRAME_CADENCE_SECONDS) + 1L)
+        .toInt()
+        .coerceAtLeast(1)
 
 fun resolveWeatherRainMetadataRefreshIntervalMs(
     status: WeatherRadarStatusCode
@@ -91,7 +99,7 @@ fun resolveWeatherRainEffectiveTransitionDurationMs(
     val windowScale = when (animationWindow) {
         WeatherRainAnimationWindow.TEN_MINUTES -> 1.0f
         WeatherRainAnimationWindow.TWENTY_MINUTES -> WEATHER_RAIN_TRANSITION_WINDOW_SCALE_20_MIN
-        WeatherRainAnimationWindow.THIRTY_MINUTES -> WEATHER_RAIN_TRANSITION_WINDOW_SCALE_30_MIN
+        else -> WEATHER_RAIN_TRANSITION_WINDOW_SCALE_30_MIN
     }
     return (baseDurationMs * windowScale).toLong().coerceAtMost(baseDurationMs).coerceAtLeast(0L)
 }

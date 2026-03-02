@@ -7,8 +7,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -28,11 +26,9 @@ class ToggleSkySightPrimaryOverlaySelectionUseCaseTest {
         repository.setOverlayEnabled(false)
         repository.setOpacity(FORECAST_OPACITY_DEFAULT)
         repository.setWindOverlayScale(FORECAST_WIND_OVERLAY_SCALE_DEFAULT)
-        repository.setSecondaryPrimaryOverlayEnabled(false)
         repository.setWindOverlayEnabled(false)
         repository.setWindDisplayMode(FORECAST_WIND_DISPLAY_MODE_DEFAULT)
         repository.setSelectedPrimaryParameterId(DEFAULT_FORECAST_PARAMETER_ID)
-        repository.setSelectedSecondaryPrimaryParameterId(DEFAULT_FORECAST_SECONDARY_PRIMARY_PARAMETER_ID)
         repository.setSelectedWindParameterId(DEFAULT_FORECAST_WIND_PARAMETER_ID)
         repository.setSelectedTimeUtcMs(null)
         repository.setSelectedRegion(DEFAULT_FORECAST_REGION_CODE)
@@ -41,7 +37,7 @@ class ToggleSkySightPrimaryOverlaySelectionUseCaseTest {
     }
 
     @Test
-    fun toggle_hiddenPrimaryAndThermal_promotesSkySightPair() = runTest {
+    fun toggle_hiddenPrimaryAndThermal_setsRequestedAsSinglePrimary() = runTest {
         val repository = ForecastPreferencesRepository(context)
         val useCase = ToggleSkySightPrimaryOverlaySelectionUseCase(
             preferencesRepository = repository,
@@ -49,19 +45,15 @@ class ToggleSkySightPrimaryOverlaySelectionUseCaseTest {
         )
 
         repository.setSelectedPrimaryParameterId(ForecastParameterId("wstar_bsratio"))
-        repository.setSelectedSecondaryPrimaryParameterId(ForecastParameterId("dwcrit"))
-        repository.setSecondaryPrimaryOverlayEnabled(true)
 
         useCase(ForecastParameterId("wblmaxmin"))
         val current = repository.currentPreferences()
 
-        assertEquals("dwcrit", current.selectedPrimaryParameterId.value)
-        assertTrue(current.secondaryPrimaryOverlayEnabled)
-        assertEquals("wblmaxmin", current.selectedSecondaryPrimaryParameterId.value)
+        assertEquals("wblmaxmin", current.selectedPrimaryParameterId.value)
     }
 
     @Test
-    fun toggle_bothSkySightSelected_removesRequestedSelection() = runTest {
+    fun toggle_bothSkySightSelected_keepsSingleRequestedPrimary() = runTest {
         val repository = ForecastPreferencesRepository(context)
         val useCase = ToggleSkySightPrimaryOverlaySelectionUseCase(
             preferencesRepository = repository,
@@ -69,18 +61,15 @@ class ToggleSkySightPrimaryOverlaySelectionUseCaseTest {
         )
 
         repository.setSelectedPrimaryParameterId(ForecastParameterId("dwcrit"))
-        repository.setSelectedSecondaryPrimaryParameterId(ForecastParameterId("wblmaxmin"))
-        repository.setSecondaryPrimaryOverlayEnabled(true)
 
         useCase(ForecastParameterId("wblmaxmin"))
         val current = repository.currentPreferences()
 
-        assertEquals("dwcrit", current.selectedPrimaryParameterId.value)
-        assertFalse(current.secondaryPrimaryOverlayEnabled)
+        assertEquals("wblmaxmin", current.selectedPrimaryParameterId.value)
     }
 
     @Test
-    fun toggle_onlySkySightSecondarySelected_disablesSecondaryOverlay() = runTest {
+    fun toggle_onlySkySightSecondarySelected_promotesRequestedToPrimary() = runTest {
         val repository = ForecastPreferencesRepository(context)
         val useCase = ToggleSkySightPrimaryOverlaySelectionUseCase(
             preferencesRepository = repository,
@@ -88,14 +77,11 @@ class ToggleSkySightPrimaryOverlaySelectionUseCaseTest {
         )
 
         repository.setSelectedPrimaryParameterId(ForecastParameterId("wstar_bsratio"))
-        repository.setSelectedSecondaryPrimaryParameterId(ForecastParameterId("wblmaxmin"))
-        repository.setSecondaryPrimaryOverlayEnabled(true)
 
         useCase(ForecastParameterId("wblmaxmin"))
         val current = repository.currentPreferences()
 
-        assertEquals("wstar_bsratio", current.selectedPrimaryParameterId.value)
-        assertFalse(current.secondaryPrimaryOverlayEnabled)
+        assertEquals("wblmaxmin", current.selectedPrimaryParameterId.value)
     }
 
     @Test
@@ -107,18 +93,15 @@ class ToggleSkySightPrimaryOverlaySelectionUseCaseTest {
         )
 
         repository.setSelectedPrimaryParameterId(ForecastParameterId("accrain"))
-        repository.setSelectedSecondaryPrimaryParameterId(ForecastParameterId("wstar_bsratio"))
-        repository.setSecondaryPrimaryOverlayEnabled(true)
 
         useCase(ForecastParameterId("wblmaxmin"))
         val current = repository.currentPreferences()
 
         assertEquals("wblmaxmin", current.selectedPrimaryParameterId.value)
-        assertFalse(current.secondaryPrimaryOverlayEnabled)
     }
 
     @Test
-    fun toggle_nonSkySightParameter_isIgnored() = runTest {
+    fun toggle_rainParameter_updatesPrimarySelection() = runTest {
         val repository = ForecastPreferencesRepository(context)
         val useCase = ToggleSkySightPrimaryOverlaySelectionUseCase(
             preferencesRepository = repository,
@@ -126,15 +109,27 @@ class ToggleSkySightPrimaryOverlaySelectionUseCaseTest {
         )
 
         repository.setSelectedPrimaryParameterId(ForecastParameterId("dwcrit"))
-        repository.setSelectedSecondaryPrimaryParameterId(ForecastParameterId("wblmaxmin"))
-        repository.setSecondaryPrimaryOverlayEnabled(true)
 
         useCase(ForecastParameterId("accrain"))
         val current = repository.currentPreferences()
 
+        assertEquals("accrain", current.selectedPrimaryParameterId.value)
+    }
+
+    @Test
+    fun toggle_windParameter_isIgnored() = runTest {
+        val repository = ForecastPreferencesRepository(context)
+        val useCase = ToggleSkySightPrimaryOverlaySelectionUseCase(
+            preferencesRepository = repository,
+            catalogPort = SkySightPrimaryCatalogPort()
+        )
+
+        repository.setSelectedPrimaryParameterId(ForecastParameterId("dwcrit"))
+
+        useCase(ForecastParameterId("sfcwind0"))
+        val current = repository.currentPreferences()
+
         assertEquals("dwcrit", current.selectedPrimaryParameterId.value)
-        assertTrue(current.secondaryPrimaryOverlayEnabled)
-        assertEquals("wblmaxmin", current.selectedSecondaryPrimaryParameterId.value)
     }
 
     private class SkySightPrimaryCatalogPort : ForecastCatalogPort {

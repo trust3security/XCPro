@@ -62,6 +62,46 @@ Expected:
 - parsed target emitted
 - device id extracted from callsign suffix: `484D20`
 
+## Vector 6 - Source Timestamp (`/hhmmssh`) Extraction
+
+Frame:
+`FLRDDDEAD>APRS,qAS,EDER:/114500h5029.86N/00956.98E'342/049/A=005524 id0ADDDEAD`
+
+Expected:
+- parsed target emitted
+- `sourceTimestampWallMs` resolves to nearest UTC candidate for `11:45:00` against receive wall time
+
+## Vector 7 - Source Timestamp (`@ddhhmmz`) Extraction
+
+Frame:
+`FLRABC123>APRS,qAS,EDER:@241145z5029.86N/00956.98E'342/049/A=005524 id0AABC123`
+
+Expected:
+- parsed target emitted
+- `sourceTimestampWallMs` resolves to nearest UTC candidate for day/hour/minute token
+
+## Vector 8 - Invalid Timestamp Token Fallback
+
+Frame:
+`FLRABC123>APRS,qAS,EDER:/996199h5029.86N/00956.98E'342/049/A=005524 id0AABC123`
+
+Expected:
+- parsed target emitted
+- `sourceTimestampWallMs == null`
+
+## Repository Reliability Vectors (Non-Parser)
+
+These are repository-level scenarios tracked in OGN repository tests:
+
+- Timed frame then delayed untimed frame for same target:
+  - expected target policy: no visible position rewind after timed authority lock
+  - implemented by repository hardening:
+    `docs/OGN/CHANGE_PLAN_OGN_CONNECTIVITY_RELIABILITY_2026-03-01.md`
+- Inbound stall while keepalive writes continue:
+  - expected target policy: reconnect on inbound inactivity timeout
+  - implemented by repository hardening:
+    `docs/OGN/CHANGE_PLAN_OGN_CONNECTIVITY_RELIABILITY_2026-03-01.md`
+
 ## Notes
 
 - Parser is intentionally conservative:

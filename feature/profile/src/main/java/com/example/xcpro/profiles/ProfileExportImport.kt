@@ -4,9 +4,18 @@ import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import com.example.xcpro.core.time.TimeBridge
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -19,7 +28,8 @@ import java.util.*
 
 data class ProfileExport(
     val version: String = "1.0",
-    val exportDate: String = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date()),
+    val exportDate: String = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
+        .format(TimeBridge.nowWallMs()),
     val profiles: List<UserProfile>
 )
 
@@ -41,6 +51,11 @@ class ProfileExportImport(private val context: Context) {
     suspend fun exportAllProfiles(profiles: List<UserProfile>): Result<String> {
         return withContext(Dispatchers.IO) {
             try {
+                if (profiles.isEmpty()) {
+                    return@withContext Result.failure(
+                        IllegalArgumentException("No profiles available to export.")
+                    )
+                }
                 val export = ProfileExport(profiles = profiles)
                 val json = gson.toJson(export)
                 Result.success(json)
@@ -64,9 +79,7 @@ class ProfileExportImport(private val context: Context) {
                 val importedProfiles = export.profiles.map { profile ->
                     profile.copy(
                         id = UUID.randomUUID().toString(),
-                        isActive = false, // Don't import as active
-                        createdAt = System.currentTimeMillis(),
-                        lastUsed = 0L
+                        isActive = false // Don't import as active
                     )
                 }
                 
@@ -78,7 +91,7 @@ class ProfileExportImport(private val context: Context) {
     }
     
     fun generateFileName(profile: UserProfile?): String {
-        val timestamp = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+        val timestamp = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(TimeBridge.nowWallMs())
         return if (profile != null) {
             "profile_${profile.name.replace(" ", "_")}_$timestamp.json"
         } else {
@@ -90,6 +103,7 @@ class ProfileExportImport(private val context: Context) {
 @Composable
 fun ProfileExportDialog(
     profile: UserProfile?,
+    allProfiles: List<UserProfile> = emptyList(),
     onDismiss: () -> Unit,
     onExport: (String) -> Unit
 ) {
@@ -136,14 +150,12 @@ fun ProfileExportDialog(
             TextButton(
                 onClick = {
                     isExporting = true
-                    // Note: In a real implementation, you'd get all profiles from repository
-                    val profiles = if (profile != null) listOf(profile) else emptyList()
                     
                     coroutineScope.launch {
                         val result = if (profile != null) {
                             exportImport.exportProfile(profile)
                         } else {
-                            exportImport.exportAllProfiles(profiles)
+                            exportImport.exportAllProfiles(allProfiles)
                         }
                         exportResult = result
                         isExporting = false
@@ -178,13 +190,14 @@ fun ProfileExportDialog(
 @Composable  
 fun ProfileImportDialog(
     onDismiss: () -> Unit,
-    onImport: (List<UserProfile>) -> Unit,
+    onImport: (List<UserProfile>, Boolean) -> Unit,
     onError: (String) -> Unit
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val exportImport = remember { ProfileExportImport(context) }
     var isImporting by remember { mutableStateOf(false) }
+    var keepCurrentActive by remember { mutableStateOf(true) }
     
     val documentLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -214,7 +227,7 @@ fun ProfileImportDialog(
                 isImporting = false
 
                 if (result.isSuccess) {
-                    onImport(result.getOrNull()!!)
+                    onImport(result.getOrNull()!!, keepCurrentActive)
                 } else {
                     onError("Import failed: ${result.exceptionOrNull()?.message}")
                 }
@@ -226,10 +239,25 @@ fun ProfileImportDialog(
         onDismissRequest = onDismiss,
         title = { Text("Import Profiles") },
         text = {
-            if (isImporting) {
-                Text("Importing profiles...")
-            } else {
-                Text("Select a profile export file to import configurations.")
+            Column {
+                if (isImporting) {
+                    Text("Importing profiles...")
+                } else {
+                    Text("Select a profile export file to import configurations.")
+                    Spacer(modifier = androidx.compose.ui.Modifier.height(12.dp))
+                    Row(
+                        modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Switch(
+                            checked = keepCurrentActive,
+                            onCheckedChange = { keepCurrentActive = it },
+                            enabled = !isImporting
+                        )
+                        Spacer(modifier = androidx.compose.ui.Modifier.width(8.dp))
+                        Text("Keep current active profile")
+                    }
+                }
             }
         },
         confirmButton = {

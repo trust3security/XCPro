@@ -56,7 +56,6 @@ class OgnGliderTrailOverlay(
     }
 
     fun render(segments: List<OgnGliderTrailSegment>) {
-        initialize()
         val style = map.style ?: return
         val source = style.getSourceAs<GeoJsonSource>(SOURCE_ID) ?: return
 

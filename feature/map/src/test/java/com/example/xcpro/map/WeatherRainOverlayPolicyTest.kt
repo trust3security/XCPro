@@ -104,6 +104,29 @@ class WeatherRainOverlayPolicyTest {
         }
     }
 
+    @Test
+    fun render_whenOnlySkySightLayersExist_placesRainAboveSkySight() {
+        val map: MapLibreMap = mock()
+        val style: Style = mock()
+        val skySightLayer: org.maplibre.android.style.layers.Layer = mock()
+        whenever(map.style).thenReturn(style)
+        whenever(skySightLayer.id).thenReturn("skysight-sat-layer-0")
+        whenever(style.layers).thenReturn(mutableListOf(skySightLayer))
+
+        withLayerAndSourceConstructionMocks { layerConstruction ->
+            whenever(style.getLayer(any())).thenReturn(null)
+
+            val overlay = WeatherRainOverlay(map)
+            overlay.render(
+                frameSelection = frameSelection(9_000L),
+                opacity = 0.65f,
+                transitionDurationMs = 0L
+            )
+
+            verify(style, atLeastOnce()).addLayerAbove(any(), org.mockito.kotlin.eq("skysight-sat-layer-0"))
+        }
+    }
+
     private fun frameSelection(epochSec: Long): WeatherRainFrameSelection {
         val framePath = "/v2/radar/$epochSec"
         return WeatherRainFrameSelection(

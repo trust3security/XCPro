@@ -215,7 +215,23 @@ class WeatherRainOverlay(
                 return
             }
         }
+        val skySightAnchor = highestSkySightLayerId(style)
+        if (skySightAnchor != null) {
+            style.addLayerAbove(layer, skySightAnchor)
+            return
+        }
         style.addLayer(layer)
+    }
+
+    private fun highestSkySightLayerId(style: Style): String? {
+        val layers = runCatching { style.layers.toList() }.getOrElse { emptyList() }
+        for (index in layers.indices.reversed()) {
+            val id = layers[index].id
+            if (SKY_SIGHT_LAYER_ID_PREFIXES.any { prefix -> id.startsWith(prefix) }) {
+                return id
+            }
+        }
+        return null
     }
 
     private fun pruneFrameCache(
@@ -290,13 +306,19 @@ class WeatherRainOverlay(
         private const val WEATHER_RAIN_LAYER_ID_PREFIX = "weather-rain-layer"
         private const val WEATHER_RAIN_LEGACY_SOURCE_ID = "weather-rain-source"
         private const val WEATHER_RAIN_LEGACY_LAYER_ID = "weather-rain-layer"
+        private val SKY_SIGHT_LAYER_ID_PREFIXES = listOf(
+            "skysight-sat-layer-",
+            "skysight-radar-layer-",
+            "skysight-lightning-layer-"
+        )
         private val WEATHER_ANCHOR_LAYER_IDS: List<String> = buildList {
             addAll(forecastLayerAnchors())
             addAll(baseOverlayAnchors())
         }
 
         private fun forecastLayerAnchors(): List<String> = buildList {
-            val namespaces = listOf("primary", "secondary", "wind")
+            // Secondary forecast namespace was removed; keep anchors aligned with active overlays.
+            val namespaces = listOf("primary", "wind")
             val barbBuckets = listOf(0, 5, 10, 15, 20, 25, 30, 35, 40, 50, 60)
             for (namespace in namespaces) {
                 add("forecast-$namespace-raster-layer")

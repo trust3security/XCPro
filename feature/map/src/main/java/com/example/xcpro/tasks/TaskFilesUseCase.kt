@@ -7,7 +7,6 @@ import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.TaskWaypoint
 import com.example.xcpro.tasks.domain.model.TaskTargetSnapshot
 import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
 
@@ -84,7 +83,7 @@ class TaskFilesUseCase @Inject constructor(
         targets: List<TaskTargetSnapshot> = emptyList()
     ): TaskExportResult {
         val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault())
-            .format(Date(clock.nowWallMs()))
+            .format(clock.nowWallMs())
         val cupName = "task_${timestamp}.cup"
         val jsonName = "task_${timestamp}.xcp.json"
 
@@ -115,7 +114,7 @@ class TaskFilesUseCase @Inject constructor(
         targets: List<TaskTargetSnapshot> = emptyList()
     ): ShareRequest? {
         val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault())
-            .format(Date(clock.nowWallMs()))
+            .format(clock.nowWallMs())
         val cupName = "task_${timestamp}.cup"
         val jsonName = "task_${timestamp}.xcp.json"
 

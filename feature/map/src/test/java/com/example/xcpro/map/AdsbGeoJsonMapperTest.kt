@@ -1,7 +1,9 @@
 package com.example.xcpro.map
 
+import com.example.xcpro.adsb.AdsbProximityTier
 import com.example.xcpro.adsb.AdsbTrafficUiModel
 import com.example.xcpro.adsb.Icao24
+import com.example.xcpro.common.units.UnitsPreferences
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -14,7 +16,11 @@ class AdsbGeoJsonMapperTest {
     fun toFeature_includesIconIdAndTrackWhenTrackPresent() {
         val target = sampleTarget(category = 10, trackDeg = 273.5)
 
-        val feature = AdsbGeoJsonMapper.toFeature(target)
+        val feature = AdsbGeoJsonMapper.toFeature(
+            target = target,
+            ownshipAltitudeMeters = 900.0,
+            unitsPreferences = UnitsPreferences()
+        )
 
         assertNotNull(feature)
         feature ?: return
@@ -36,9 +42,22 @@ class AdsbGeoJsonMapperTest {
             1e-6
         )
         assertEquals(
+            AdsbProximityTier.AMBER.code.toDouble(),
+            feature.getNumberProperty(AdsbGeoJsonMapper.PROP_PROXIMITY_TIER).toDouble(),
+            1e-6
+        )
+        assertEquals(
             273.5,
             feature.getNumberProperty(AdsbGeoJsonMapper.PROP_TRACK_DEG).toDouble(),
             1e-6
+        )
+        assertEquals(
+            "+100 m",
+            feature.getStringProperty(AdsbGeoJsonMapper.PROP_LABEL_TOP)
+        )
+        assertEquals(
+            "1.5 km",
+            feature.getStringProperty(AdsbGeoJsonMapper.PROP_LABEL_BOTTOM)
         )
     }
 
@@ -46,7 +65,11 @@ class AdsbGeoJsonMapperTest {
     fun toFeature_omitsTrackWhenTrackMissing() {
         val target = sampleTarget(category = 14, trackDeg = null)
 
-        val feature = AdsbGeoJsonMapper.toFeature(target)
+        val feature = AdsbGeoJsonMapper.toFeature(
+            target = target,
+            ownshipAltitudeMeters = 1100.0,
+            unitsPreferences = UnitsPreferences()
+        )
 
         assertNotNull(feature)
         feature ?: return
@@ -55,13 +78,25 @@ class AdsbGeoJsonMapperTest {
             feature.getStringProperty(AdsbGeoJsonMapper.PROP_ICON_ID)
         )
         assertFalse(feature.hasProperty(AdsbGeoJsonMapper.PROP_TRACK_DEG))
+        assertEquals(
+            "1.5 km",
+            feature.getStringProperty(AdsbGeoJsonMapper.PROP_LABEL_TOP)
+        )
+        assertEquals(
+            "-100 m",
+            feature.getStringProperty(AdsbGeoJsonMapper.PROP_LABEL_BOTTOM)
+        )
     }
 
     @Test
     fun toFeature_usesEmergencyIconWhenCollisionRiskIsTrue() {
         val target = sampleTarget(category = 9, trackDeg = 180.0, isEmergencyCollisionRisk = true)
 
-        val feature = AdsbGeoJsonMapper.toFeature(target)
+        val feature = AdsbGeoJsonMapper.toFeature(
+            target = target,
+            ownshipAltitudeMeters = 900.0,
+            unitsPreferences = UnitsPreferences()
+        )
 
         assertNotNull(feature)
         feature ?: return
@@ -74,13 +109,22 @@ class AdsbGeoJsonMapperTest {
             feature.getNumberProperty(AdsbGeoJsonMapper.PROP_IS_EMERGENCY).toDouble(),
             1e-6
         )
+        assertEquals(
+            AdsbProximityTier.EMERGENCY.code.toDouble(),
+            feature.getNumberProperty(AdsbGeoJsonMapper.PROP_PROXIMITY_TIER).toDouble(),
+            1e-6
+        )
     }
 
     @Test
     fun toFeature_marksOwnshipReferenceAvailabilityFlag() {
         val target = sampleTarget(category = 2, trackDeg = 95.0, usesOwnshipReference = false)
 
-        val feature = AdsbGeoJsonMapper.toFeature(target)
+        val feature = AdsbGeoJsonMapper.toFeature(
+            target = target,
+            ownshipAltitudeMeters = 900.0,
+            unitsPreferences = UnitsPreferences()
+        )
 
         assertNotNull(feature)
         feature ?: return
@@ -88,6 +132,14 @@ class AdsbGeoJsonMapperTest {
             0.0,
             feature.getNumberProperty(AdsbGeoJsonMapper.PROP_HAS_OWNSHIP_REF).toDouble(),
             1e-6
+        )
+        assertEquals(
+            AdsbMarkerLabelMapper.UNKNOWN_TEXT,
+            feature.getStringProperty(AdsbGeoJsonMapper.PROP_LABEL_TOP)
+        )
+        assertEquals(
+            "1.5 km",
+            feature.getStringProperty(AdsbGeoJsonMapper.PROP_LABEL_BOTTOM)
         )
     }
 
@@ -99,11 +151,23 @@ class AdsbGeoJsonMapperTest {
             distanceMeters = Double.NaN
         )
 
-        val feature = AdsbGeoJsonMapper.toFeature(target)
+        val feature = AdsbGeoJsonMapper.toFeature(
+            target = target,
+            ownshipAltitudeMeters = 900.0,
+            unitsPreferences = UnitsPreferences()
+        )
 
         assertNotNull(feature)
         feature ?: return
         assertFalse(feature.hasProperty(AdsbGeoJsonMapper.PROP_DISTANCE_M))
+        assertEquals(
+            "+100 m",
+            feature.getStringProperty(AdsbGeoJsonMapper.PROP_LABEL_TOP)
+        )
+        assertEquals(
+            AdsbMarkerLabelMapper.UNKNOWN_TEXT,
+            feature.getStringProperty(AdsbGeoJsonMapper.PROP_LABEL_BOTTOM)
+        )
     }
 
     private fun sampleTarget(
@@ -114,6 +178,11 @@ class AdsbGeoJsonMapperTest {
         distanceMeters: Double = 1500.0
     ): AdsbTrafficUiModel {
         val id = Icao24.from("abc123") ?: error("invalid test id")
+        val tier = when {
+            !usesOwnshipReference -> AdsbProximityTier.NEUTRAL
+            isEmergencyCollisionRisk -> AdsbProximityTier.EMERGENCY
+            else -> AdsbProximityTier.AMBER
+        }
         return AdsbTrafficUiModel(
             id = id,
             callsign = "TEST01",
@@ -131,6 +200,7 @@ class AdsbGeoJsonMapperTest {
             positionSource = 0,
             category = category,
             lastContactEpochSec = null,
+            proximityTier = tier,
             isEmergencyCollisionRisk = isEmergencyCollisionRisk
         )
     }

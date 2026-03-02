@@ -64,7 +64,8 @@ internal class FusionBlackboard {
             rememberAirspeed(it, now)
             return it
         }
-        val withinHold = now - lastAirspeedTimestamp <= FlightMetricsConstants.SPEED_HOLD_MS
+        val ageMs = now - lastAirspeedTimestamp
+        val withinHold = ageMs in 0..FlightMetricsConstants.SPEED_HOLD_MS
         return if (withinHold && lastIndicatedMs.isFinite() && lastTrueMs.isFinite()) {
             AirspeedEstimate(lastIndicatedMs, lastTrueMs, lastAirspeedSource)
         } else null

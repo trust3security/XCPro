@@ -9,7 +9,8 @@ import androidx.compose.ui.unit.dp
  * Shared theme tokens for map overlay widgets.
  */
 internal object MapWidgetTheme {
-    val editBorderColor: Color = Color.Red
+    val editAccentColor: Color = Color(0xFFB71C1C)
+    val editBorderColor: Color = editAccentColor
     val editBorderWidth: Dp = 2.dp
     val widgetCorner: RoundedCornerShape = RoundedCornerShape(12.dp)
     val pillCorner: RoundedCornerShape = RoundedCornerShape(18.dp)

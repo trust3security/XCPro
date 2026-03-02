@@ -1,8 +1,14 @@
 package com.example.xcpro.profiles
 
+import android.widget.Toast
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.example.xcpro.profiles.ui.ProfileSelectionContent
 
@@ -11,17 +17,45 @@ fun ProfileSelectionScreen(
     onProfileSelected: () -> Unit,
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var showImportDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(uiState.importResult) {
+        val result = uiState.importResult ?: return@LaunchedEffect
+        val message = formatProfileImportFeedback(result)
+        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+        viewModel.clearImportResult()
+    }
 
     ProfileSelectionContent(
         state = uiState,
         onSelectProfile = { viewModel.selectProfile(it) },
         onDeleteProfile = { viewModel.deleteProfile(it) },
         onCreateProfile = { viewModel.createProfile(it) },
+        onShowImportDialog = { showImportDialog = true },
         onShowCreateDialog = viewModel::showCreateDialog,
         onHideCreateDialog = viewModel::hideCreateDialog,
         onClearError = viewModel::clearError,
         onSkip = onProfileSelected,
-        onContinue = onProfileSelected
+        onContinue = onProfileSelected,
+        storageNamespaceLabel = context.packageName
     )
+
+    if (showImportDialog) {
+        ProfileImportDialog(
+            onDismiss = { showImportDialog = false },
+            onImport = { importedProfiles, keepCurrentActive ->
+                viewModel.importProfiles(
+                    profiles = importedProfiles,
+                    keepCurrentActive = keepCurrentActive
+                )
+                showImportDialog = false
+            },
+            onError = { error ->
+                showImportDialog = false
+                Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+            }
+        )
+    }
 }

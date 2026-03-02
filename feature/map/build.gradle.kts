@@ -34,6 +34,7 @@ android {
 
     defaultConfig {
         minSdk = 30
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -142,6 +143,8 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.ui.test.junit4)
 }
 
 val hasAndroidTests = file("src/androidTest").walkTopDown().any { entry ->

@@ -73,6 +73,9 @@ All new feature work must:
 3) Prefer persistent, slow-changing state when instant estimates are unreliable.
 4) Use anti-flicker behavior (dwell/hysteresis/hold) for user-visible quality states.
 5) Preserve backward-compatible behavior where intent says "must preserve."
+6) Keep source-label contracts explicit and fail-safe:
+   unknown/unsupported source labels must degrade to GPS-safe behavior, not be treated as trusted real sources.
+7) For reliability telemetry, count transition episodes (state changes/contiguous blocks), not per-sample loop cadence.
 
 ---
 
@@ -104,6 +107,24 @@ Cross-layer leakage is not allowed.
 3) Do not add global mutable singletons when DI should be used.
 4) Do not use scattered undocumented thresholds.
 5) Do not use non-deterministic time sources in deterministic domain paths.
+
+---
+
+## Enforceable Invariants
+
+These invariants are policy and are also expected to be machine-enforced:
+
+1) Forbidden direct time APIs in production code are blocked by:
+- `scripts/arch_gate.py` (local)
+- `.github/workflows/quality-gates.yml` (CI)
+
+2) Time abstraction references must use real in-repo anchors:
+- `core/time/src/main/java/com/example/xcpro/core/time/Clock.kt`
+- `app/src/main/java/com/example/xcpro/di/TimeModule.kt`
+
+3) Deviation status has one source of truth:
+- `KNOWN_DEVIATIONS.md` is authoritative.
+- `README.md` must not claim explicit deviation counts or "none" status lines.
 
 ---
 

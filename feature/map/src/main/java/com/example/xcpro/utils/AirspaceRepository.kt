@@ -3,6 +3,7 @@ package com.example.xcpro
 import android.content.Context
 import android.net.Uri
 import com.example.xcpro.common.documents.DocumentRef
+import com.example.xcpro.core.time.TimeBridge
 import java.io.File
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -35,7 +36,7 @@ class AirspaceRepository(
     private data class GeoJsonCacheKey(
         val fileName: String,
         val lastModified: Long,
-        val selectedKey: Int
+        val selectedKey: String
     )
 
     private data class GeoJsonCacheEntry(
@@ -141,7 +142,7 @@ class AirspaceRepository(
     private fun parseClassesInternal(files: List<DocumentRef>): List<String> {
         val classes = mutableSetOf<String>()
         val selectedFileNames = files.map { it.fileName() }.toSet()
-        val nowWallMs = System.currentTimeMillis()
+        val nowWallMs = TimeBridge.nowWallMs()
         synchronized(cacheLock) {
             pruneCachesLocked(nowWallMs = nowWallMs, selectedFileNames = selectedFileNames)
         }
@@ -186,7 +187,7 @@ class AirspaceRepository(
         val features = JSONArray()
         val selectedKey = selectedClassesKey(selectedClasses)
         val selectedFileNames = files.map { it.fileName() }.toSet()
-        val nowWallMs = System.currentTimeMillis()
+        val nowWallMs = TimeBridge.nowWallMs()
         synchronized(cacheLock) {
             pruneCachesLocked(nowWallMs = nowWallMs, selectedFileNames = selectedFileNames)
         }
@@ -231,9 +232,9 @@ class AirspaceRepository(
         }.toString()
     }
 
-    private fun selectedClassesKey(selectedClasses: Set<String>): Int {
-        if (selectedClasses.isEmpty()) return 0
-        return selectedClasses.sorted().joinToString("|").hashCode()
+    private fun selectedClassesKey(selectedClasses: Set<String>): String {
+        if (selectedClasses.isEmpty()) return ""
+        return selectedClasses.sorted().joinToString("|")
     }
 
     private fun pruneCachesLocked(nowWallMs: Long, selectedFileNames: Set<String>) {

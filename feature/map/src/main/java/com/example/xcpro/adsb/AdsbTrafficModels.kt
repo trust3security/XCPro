@@ -49,10 +49,26 @@ data class AdsbTrafficUiModel(
     val positionSource: Int?,
     val category: Int?,
     val lastContactEpochSec: Long?,
+    val proximityTier: AdsbProximityTier = AdsbProximityTier.NEUTRAL,
+    val isClosing: Boolean = false,
+    val closingRateMps: Double? = null,
     val isEmergencyCollisionRisk: Boolean = false,
     val metadataTypecode: String? = null,
     val metadataIcaoAircraftType: String? = null
 )
+
+enum class AdsbProximityTier(val code: Int) {
+    NEUTRAL(0),
+    GREEN(1),
+    AMBER(2),
+    RED(3),
+    EMERGENCY(4);
+
+    companion object {
+        fun fromCode(code: Int?): AdsbProximityTier =
+            values().firstOrNull { tier -> tier.code == code } ?: NEUTRAL
+    }
+}
 
 sealed interface AdsbConnectionState {
     data object Disabled : AdsbConnectionState
@@ -89,7 +105,22 @@ data class AdsbTrafficSnapshot(
     val lastNetworkFailureKind: AdsbNetworkFailureKind? = null,
     val consecutiveFailureCount: Int = 0,
     val nextRetryMonoMs: Long? = null,
-    val lastFailureMonoMs: Long? = null
+    val lastFailureMonoMs: Long? = null,
+    val networkOnline: Boolean = true,
+    val networkOfflineTransitionCount: Int = 0,
+    val networkOnlineTransitionCount: Int = 0,
+    val lastNetworkTransitionMonoMs: Long? = null,
+    val currentOfflineDwellMs: Long = 0L,
+    val emergencyAudioState: AdsbEmergencyAudioAlertState = AdsbEmergencyAudioAlertState.DISABLED,
+    val emergencyAudioEnabledBySetting: Boolean = false,
+    val emergencyAudioFeatureGateOn: Boolean = false,
+    val emergencyAudioCooldownMs: Long = ADSB_EMERGENCY_AUDIO_DEFAULT_COOLDOWN_MS,
+    val emergencyAudioAlertTriggerCount: Int = 0,
+    val emergencyAudioCooldownBlockEpisodeCount: Int = 0,
+    val emergencyAudioTransitionEventCount: Int = 0,
+    val emergencyAudioLastAlertMonoMs: Long? = null,
+    val emergencyAudioCooldownRemainingMs: Long = 0L,
+    val emergencyAudioActiveTargetId: String? = null
 )
 
 data class AdsbAuth(

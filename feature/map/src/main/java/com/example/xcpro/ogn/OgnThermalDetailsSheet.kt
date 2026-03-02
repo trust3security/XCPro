@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.xcpro.common.units.AltitudeM
+import com.example.xcpro.common.units.DistanceM
 import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.units.VerticalSpeedMs
@@ -23,6 +24,7 @@ import com.example.xcpro.common.units.VerticalSpeedMs
 @Composable
 fun OgnThermalDetailsSheet(
     hotspot: OgnThermalHotspot,
+    distanceMeters: Double?,
     unitsPreferences: UnitsPreferences,
     onDismiss: () -> Unit
 ) {
@@ -48,6 +50,7 @@ fun OgnThermalDetailsSheet(
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary
             )
+            DetailRow("Distance", formatDistance(distanceMeters, unitsPreferences))
             DetailRow("Start Height", formatAltitude(hotspot.startAltitudeMeters, unitsPreferences))
             DetailRow("Max Height", formatAltitude(hotspot.maxAltitudeMeters, unitsPreferences))
             DetailRow("Max Climb", formatClimbRate(hotspot.maxClimbRateMps, unitsPreferences))
@@ -98,4 +101,10 @@ private fun formatClimbRate(climbRateMps: Double?, unitsPreferences: UnitsPrefer
     climbRateMps
         ?.takeIf { it.isFinite() }
         ?.let { UnitsFormatter.verticalSpeed(VerticalSpeedMs(it), unitsPreferences).text }
+        ?: "--"
+
+private fun formatDistance(distanceMeters: Double?, unitsPreferences: UnitsPreferences): String =
+    distanceMeters
+        ?.takeIf { it.isFinite() }
+        ?.let { UnitsFormatter.distance(DistanceM(it), unitsPreferences).text }
         ?: "--"

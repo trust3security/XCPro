@@ -71,7 +71,23 @@ class ObserveWeatherOverlayStateUseCaseTest {
         val state = createUseCase().invoke().first()
 
         assertNotNull(state.selectedFrame)
-        assertEquals(600L, state.selectedFrame?.frameTimeEpochSec)
+        assertEquals(0L, state.selectedFrame?.frameTimeEpochSec)
+    }
+
+    @Test
+    fun invoke_selectsFrameWithinOneHundredTwentyMinuteWindow() = runTest {
+        val metadataState = metadataState(lastSuccessfulFetchWallMs = 999_000L)
+        val preferences = basePreferences.copy(
+            animationWindow = WeatherRainAnimationWindow.ONE_HUNDRED_TWENTY_MINUTES
+        )
+        whenever(preferencesRepository.preferencesFlow).thenReturn(flowOf(preferences))
+        whenever(preferencesRepository.enabledFlow).thenReturn(flowOf(false))
+        whenever(metadataRepository.currentState()).thenReturn(metadataState)
+
+        val state = createUseCase().invoke().first()
+
+        assertNotNull(state.selectedFrame)
+        assertEquals(0L, state.selectedFrame?.frameTimeEpochSec)
     }
 
     @Test
@@ -390,9 +406,19 @@ class ObserveWeatherOverlayStateUseCaseTest {
         )
         val thirtyMinuteState = createUseCase().invoke().first()
 
+        whenever(preferencesRepository.preferencesFlow).thenReturn(
+            flowOf(
+                basePreferences.copy(
+                    animationWindow = WeatherRainAnimationWindow.ONE_HUNDRED_TWENTY_MINUTES
+                )
+            )
+        )
+        val oneHundredTwentyMinuteState = createUseCase().invoke().first()
+
         assertEquals(280L, tenMinuteState.transitionDurationMs)
         assertEquals(238L, twentyMinuteState.transitionDurationMs)
         assertEquals(196L, thirtyMinuteState.transitionDurationMs)
+        assertEquals(196L, oneHundredTwentyMinuteState.transitionDurationMs)
     }
 
     @Test

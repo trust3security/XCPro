@@ -6,6 +6,18 @@ plus how replay and parallel pipelines attach. Update this file whenever the wir
 
 Diagram: `PIPELINE.svg`.
 
+## Automated Quality Gates
+
+These artifacts block architecture/timebase regressions:
+- Local gate script: `scripts/arch_gate.py`
+- CI workflow: `.github/workflows/quality-gates.yml`
+- Gradle rule gate: `./gradlew enforceRules`
+
+Gate intent:
+- Block direct production calls to forbidden wall/system time APIs outside approved adapter files.
+- Block known architecture drift patterns enforced by `enforceRules`.
+- Require unit-test and assemble baselines for PR readiness.
+
 ## Quick Map (Live)
 
 Sensors
@@ -82,9 +94,17 @@ Metrics use case:
 - `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt`
   - TE/netto, display smoothing, circling detection, LD, thermal metrics.
   - airspeed selection priority is now:
-    `EXTERNAL/REPLAY (fresh+valid) -> WIND_VECTOR (quality-gated) -> GPS_GROUND fallback`.
+    `EXTERNAL/REPLAY (fresh+valid) -> stabilized WIND/GPS decision -> GPS_GROUND fallback`.
+  - Live WIND vs GPS choice is stabilized by domain policy/controller:
+    confidence hysteresis (enter/exit), minimum dwell, and transient grace.
+  - WIND transient-grace hold is only allowed while a current wind candidate still exists;
+    missing current wind candidate forces immediate fallback to GPS.
+  - `tasValid`, source label, and TE gating are all derived from the same stabilized source output.
+  - Source-transition telemetry includes decisions + transitions, with grace/dwell block events
+    counted once per contiguous episode (not once per frame).
   - Replay requests explicitly disable online terrain fetch updates to keep replay deterministic
     and avoid network-driven memory pressure.
+  - Metrics execution is synchronized to serialize stateful domain windows/decisions across live emit paths.
   - Owns deterministic windows and is testable without Android.
 
 Mapping to SSOT model:
@@ -115,6 +135,12 @@ Live forwarder:
     - auto-MC flag
     - TE compensation enabled flag
 
+Flight-state detector feed:
+- `feature/map/src/main/java/com/example/xcpro/sensors/FlightStateRepository.kt`
+  - Live mode consumes stabilized airspeed fields from `CompleteFlightData` (`trueAirspeed`, `airspeedSource`, `tasValid`).
+  - "Real airspeed" classification is fail-safe and trust-list based:
+    only `WIND` and `SENSOR` source labels are treated as non-GPS real-airspeed inputs.
+
 ## 4) Use Case -> ViewModel
 
 Use case:
@@ -125,6 +151,11 @@ ViewModel:
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
   - `mapLocation` = `flightData.gps` (SSOT for map location).
   - Instantiates `FlightDataUiAdapter` (wraps `MapScreenObservers`) for data fan-out.
+  - Binds live thermalling runtime automation through
+    `bindThermallingRuntimeWiring(...)`:
+    `flightData.isCircling` + thermalling settings repository flow +
+    thermal-mode visibility -> `ThermallingModeCoordinator` ->
+    existing `setFlightMode(...)` and map zoom target actions.
 
 ## 5) ViewModel -> UI (Map + Cards)
 
@@ -168,6 +199,8 @@ OGN settings path:
     (`ownFlarmHex`, `ownIcaoHex`) preferences.
 - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrailSelectionPreferencesRepository.kt`
   - SSOT for selected OGN aircraft keys used by trail display filtering.
+- `app/src/main/java/com/example/xcpro/XCProApplication.kt`
+  - On fresh app process start, resets SCIA startup state to disabled (`showSciaEnabled = false`, selected trail aircraft = empty) so SCIA choices are session-local and must be re-enabled by user after restart.
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt`
   - `OgnTrafficUseCase` combines trail segments with selected OGN aircraft keys
     from trail-selection SSOT before ViewModel/UI collection.
@@ -250,6 +283,7 @@ OGN lifecycle/position semantics:
 ADS-b settings path:
 - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficPreferencesRepository.kt`
   - SSOT for ADS-b overlay enabled + icon size + max distance + vertical above/below preferences.
+  - SSOT for ADS-B EMERGENCY audio policy preferences (`emergencyAudioEnabled`, `emergencyAudioCooldownMs`).
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt`
   - `AdsbTrafficUseCase` exposes ADS-b settings flows (`iconSizePx`, `maxDistanceKm`, `verticalAboveMeters`, `verticalBelowMeters`).
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
@@ -273,6 +307,12 @@ ADS-b lifecycle/visibility semantics:
 - `feature/map/src/main/java/com/example/xcpro/adsb/metadata/domain/AdsbMetadataEnrichmentUseCase.kt`
   - Target/icon enrichment and selected-target details recompute when metadata revision changes,
     so icon/category overrides refresh immediately after metadata persistence (no extra poll wait).
+- `feature/map/src/main/java/com/example/xcpro/di/AdsbNetworkModule.kt`
+  - ADS-B live polling HTTP client and ADS-B metadata HTTP client are split:
+    polling stays low-latency cadence-focused, metadata uses longer download-safe timeouts.
+- `feature/map/src/main/java/com/example/xcpro/adsb/metadata/data/OpenSkyMetadataClient.kt`
+  - Metadata CSV downloads are staged to a temp file first; importer callback runs after HTTP response closure
+    to reduce socket-timeout pressure during long Room import work.
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenTrafficCoordinator.kt`
   - Streaming enable is driven by `allowSensorStart && mapVisible && adsbOverlayEnabled`.
   - When streaming turns on, center is seeded from current GPS position (camera fallback when GPS is unavailable).
@@ -282,17 +322,23 @@ ADS-b lifecycle/visibility semantics:
 - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt`
   - Disabling streaming pauses polling without clearing last-known targets.
   - Polling is connectivity-aware via `AdsbNetworkAvailabilityPort`; retries pause while offline and resume on network restoration.
+  - While waiting offline, repository housekeeping ticks keep stale/expiry progression active (targets dim/expire on monotonic time even without new fetches).
   - Poll retry + circuit-breaker state transitions are owned by `AdsbPollingHealthPolicy`.
   - Explicit clear path removes cached targets and resets displayed list.
   - Query center is used for fetch/radius filtering (configurable `1..100 km`, default `10 km`).
   - Ownship origin is used for displayed distance/bearing when available.
   - Ownship altitude is used for vertical above/below filtering with fail-open when altitude is unavailable.
+  - Evaluates EMERGENCY-only audio policy FSM in repository SSOT path (feature-flag + setting-gated),
+    including cooldown anti-nuisance telemetry publication in `AdsbTrafficSnapshot`.
+  - Emits one-shot EMERGENCY alert side effects only on FSM trigger transitions through
+    `AdsbEmergencyAudioOutputPort` (master-flag gated; shadow mode never plays audio).
 - `feature/map/src/main/java/com/example/xcpro/adsb/data/AndroidAdsbNetworkAvailabilityAdapter.kt`
   - Android connectivity callback adapter bound to the ADS-B network-availability port.
   - Callback events are normalized by `AdsbNetworkAvailabilityTracker` (including fail-open registration fallback).
 - `feature/map/src/main/java/com/example/xcpro/map/AdsbTrafficOverlay.kt`
   - Per-aircraft runtime interpolation smooths marker motion between provider samples.
-  - Proximity color expression is distance-tiered (`green`/`amber`/`red`) with neutral fallback when ownship reference is unavailable and emergency override priority.
+  - Proximity color expression consumes repository-authored `proximity_tier` (tier mapping only in map layer).
+  - Tier policy is store-side and trend-aware: non-closing traffic de-escalates to `green` after recovery dwell.
   - Interpolation is visual-only and does not mutate repository SSOT.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
   - ADS-b overlay renders `emptyList()` when overlay preference is disabled.
@@ -300,7 +346,6 @@ ADS-b lifecycle/visibility semantics:
 Forecast overlay (SkySight-backed) path:
 - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastPreferencesRepository.kt`
   - SSOT for forecast overlay preferences (`enabled`, `opacity`, `autoTimeEnabled`, `selectedPrimaryParameterId`, `selectedTimeUtcMs`, `selectedRegion`).
-  - Optional secondary primary overlay prefs (`secondaryPrimaryOverlayEnabled`, `selectedSecondaryPrimaryParameterId`).
   - Wind-overlay prefs are separate (`windOverlayEnabled`, `selectedWindParameterId`, `windOverlayScale`, `windDisplayMode`).
   - SkySight satellite prefs are SSOT-managed (`skySightSatelliteOverlayEnabled`, imagery/radar/lightning toggles, animation, history-frame count).
 - `feature/map/src/main/java/com/example/xcpro/di/ForecastModule.kt`
@@ -312,21 +357,25 @@ Forecast overlay (SkySight-backed) path:
   - Test utility adapter for unit tests and local contract validation only.
 - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayRepository.kt`
   - Composes prefs + provider ports into overlay-ready state and point-query results.
-  - Emits primary layer state, optional secondary-primary layer state, and optional wind-layer state independently.
+  - Emits one active non-wind layer state plus optional wind-layer state.
+  - Satellite-only time-reference contract:
+    - when forecast/wind overlays are off and SkySight satellite overlay is on,
+      `selectedTimeUtcMs` is sourced from current wall time (injected clock),
+      without forcing forecast catalog/time-slot resolution.
+    - satellite renderer applies two-sided freshness clamp (near-live upper bound and history-window lower bound).
   - Maintains last-good tile/legend with fatal-vs-warning error separation
-    (primary tile failure is fatal; secondary-primary and wind-layer failures are warning-only).
+    (non-wind and wind tile hard-failures are fatal when no renderable tile is available).
 - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayViewModel.kt`
   - ViewModel-intent boundary for enable/time/opacity and long-press point query.
-  - SkySight-tab non-wind parameter selection is single-select (primary only) and
-    clears legacy secondary-primary enable state for SkySight parity.
+  - SkySight-tab non-wind parameter selection is single-select (primary only).
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
   - Collects forecast state, opens forecast sheet, dispatches long-press point queries
     (disabled during AAT edit mode), and renders callout/status.
-  - Forecast sheet exposes one non-wind primary selector plus separate wind overlay controls.
+  - Forecast sheet exposes one active non-wind selector plus separate wind overlay controls.
   - Also forwards SkySight satellite runtime intent/state (`enabled`, layer toggles, animation, frame count, selected time) to map overlay runtime owner.
 - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
   - Runtime owner for forecast raster overlay lifecycle and style-reload reapplication.
-  - Hosts three runtime overlay instances: primary forecast layer + optional secondary-primary layer + optional wind overlay layer.
+  - Hosts forecast runtime overlay instances for one non-wind layer and optional wind layer.
   - Owns SkySight satellite runtime config and style-reload reapply path.
 - `feature/map/src/main/java/com/example/xcpro/map/ForecastRasterOverlay.kt`
   - MapLibre runtime controller for forecast vector layers.
@@ -335,7 +384,7 @@ Forecast overlay (SkySight-backed) path:
   - Wind-point rendering supports `ARROW` and `BARB` display modes from forecast preferences SSOT.
 - `feature/map/src/main/java/com/example/xcpro/map/SkySightSatelliteOverlay.kt`
   - MapLibre runtime controller for SkySight satellite imagery/radar/lightning layers.
-  - Uses `satellite.skysight.io` tile templates with `date=YYYY/MM/DD/HHmm` contract and bounded history-frame loop (1-3, 10-minute steps).
+  - Uses `satellite.skysight.io` tile templates with `date=YYYY/MM/DD/HHmm` contract and bounded history-frame loop (1-6, 10-minute steps).
 
 Weather rain overlay path:
 - `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherOverlayPreferencesRepository.kt`

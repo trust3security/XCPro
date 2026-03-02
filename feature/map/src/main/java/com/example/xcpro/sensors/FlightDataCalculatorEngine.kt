@@ -78,10 +78,10 @@ internal class FlightDataCalculatorEngine(
         sinkProvider = sinkProvider,
         windEstimator = WindEstimator()
     )
-    internal var latestWindState: WindState? = null
-    internal var latestFlightState: FlyingState? = null
-    internal var latestAirspeedSample: AirspeedSample? = null
-    internal var lastGpsFixTimestampForGpsVario: Long = 0L
+    @Volatile internal var latestWindState: WindState? = null
+    @Volatile internal var latestFlightState: FlyingState? = null
+    @Volatile internal var latestAirspeedSample: AirspeedSample? = null
+    @Volatile internal var lastGpsFixTimestampForGpsVario: Long = 0L
     internal val varioSuite = VarioSuite()
     internal val audioController = VarioAudioController(context, audioFocusManager, scope, enableAudio)
     val audioEngine get() = audioController.engine
@@ -111,31 +111,31 @@ internal class FlightDataCalculatorEngine(
     @Volatile internal var hawkAudioEnabled: Boolean = false
     @Volatile internal var hawkAudioVarioMps: Double? = null
     // Tracking for delta-time calculations
-    internal var lastVarioUpdateTime = 0L
-    internal var lastBaroSampleTime = 0L
+    @Volatile internal var lastVarioUpdateTime = 0L
+    @Volatile internal var lastBaroSampleTime = 0L
     // Cached GPS data for the high-speed vario loop (GPS updates slower than baro/IMU).
-    internal var cachedGPSSpeed = 0.0
+    @Volatile internal var cachedGPSSpeed = 0.0
     // Use NaN as a sentinel until we have a real GPS altitude (prevents false calibration)
-    internal var cachedGPSAltitude = Double.NaN
-    internal var cachedGPSAccuracy = 15.0
-    internal var cachedIsGPSFixed = false
-    internal var cachedGPSLat = 0.0  // Reserved for terrain-aware metrics
-    internal var cachedGPSLon = 0.0  // Reserved for terrain-aware metrics
-    internal var cachedGPS: GPSData? = null  // Full GPS data for calculations
+    @Volatile internal var cachedGPSAltitude = Double.NaN
+    @Volatile internal var cachedGPSAccuracy = 15.0
+    @Volatile internal var cachedIsGPSFixed = false
+    @Volatile internal var cachedGPSLat = 0.0  // Reserved for terrain-aware metrics
+    @Volatile internal var cachedGPSLon = 0.0  // Reserved for terrain-aware metrics
+    @Volatile internal var cachedGPS: GPSData? = null  // Full GPS data for calculations
     // Cached results from vario loop for GPS loop to use
-    internal var cachedVarioResult: com.example.dfcards.filters.ModernVarioResult? = null
-     internal var cachedBaroResult: com.example.dfcards.calculations.BarometricAltitudeData? = null
-    internal var cachedBaroData: BaroData? = null
-    internal var cachedCompassData: CompassData? = null
-    internal var lastDiagnosticsEmitTime: Long = 0L
+    @Volatile internal var cachedVarioResult: com.example.dfcards.filters.ModernVarioResult? = null
+    @Volatile internal var cachedBaroResult: com.example.dfcards.calculations.BarometricAltitudeData? = null
+    @Volatile internal var cachedBaroData: BaroData? = null
+    @Volatile internal var cachedCompassData: CompassData? = null
+    @Volatile internal var lastDiagnosticsEmitTime: Long = 0L
      // IMU vertical acceleration smoothing for 3-state Kalman / complementary fusion.
-     internal var lastAccelTimestamp: Long = 0L
-     internal var smoothedVerticalAccel: Double? = null
-    internal var macCreadySetting = DEFAULT_MACCREADY
-    internal var macCreadyRisk = DEFAULT_MACCREADY
-    internal var autoMcEnabled: Boolean = true
-    internal var totalEnergyCompensationEnabled: Boolean = true
-    internal var flightMode: FlightMode = FlightMode.CRUISE
+    @Volatile internal var lastAccelTimestamp: Long = 0L
+    @Volatile internal var smoothedVerticalAccel: Double? = null
+    @Volatile internal var macCreadySetting = DEFAULT_MACCREADY
+    @Volatile internal var macCreadyRisk = DEFAULT_MACCREADY
+    @Volatile internal var autoMcEnabled: Boolean = true
+    @Volatile internal var totalEnergyCompensationEnabled: Boolean = true
+    @Volatile internal var flightMode: FlightMode = FlightMode.CRUISE
     init {
         scope.launch { windStateFlow.collect { latestWindState = it } }
         scope.launch { flightStateSource.flightState.collect { latestFlightState = it } }
@@ -221,6 +221,8 @@ internal class FlightDataCalculatorEngine(
         cachedBaroResult = null
         cachedBaroData = null
         cachedCompassData = null
+        latestWindState = null
+        latestFlightState = null
         latestAirspeedSample = null
         lastGpsFixTimestampForGpsVario = 0L
         smoothedVerticalAccel = null

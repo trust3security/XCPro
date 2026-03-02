@@ -1,7 +1,6 @@
 package com.example.xcpro.sensors.domain
 import com.example.xcpro.sensors.DisplayVarioSmoother
 import com.example.xcpro.sensors.NeedleVarioDynamics
-import com.example.xcpro.sensors.domain.FusionBlackboard
 import com.example.dfcards.calculations.BarometricAltitudeData
 import com.example.dfcards.calculations.ConfidenceLevel
 import com.example.dfcards.filters.ModernVarioResult
@@ -11,18 +10,16 @@ import com.example.xcpro.sensors.FlightCalculationHelpers
 import com.example.xcpro.sensors.GPSData
 import com.example.xcpro.weather.wind.model.AirspeedSample
 import com.example.xcpro.weather.wind.model.WindState
-import com.example.xcpro.sensors.domain.AirspeedEstimate
-import com.example.xcpro.sensors.domain.AirspeedSource
+import com.example.xcpro.common.flight.FlightMode
+import com.example.xcpro.sensors.domain.FlightMetricsConstants.DEFAULT_QNH_HPA
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.DISPLAY_DECAY_FACTOR
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.DISPLAY_SMOOTH_TIME_S
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.DISPLAY_VAR_CLAMP
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.FAST_NEEDLE_T95_SECONDS
+import com.example.xcpro.sensors.domain.FlightMetricsConstants.GPS_AIRSPEED_FALLBACK_MIN_SPEED_MS
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.NEEDLE_VAR_CLAMP
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.NEEDLE_T95_SECONDS
-import com.example.xcpro.sensors.domain.FlightMetricsConstants.DEFAULT_QNH_HPA
-import com.example.xcpro.sensors.domain.WindEstimator
 import com.example.xcpro.sensors.domain.SensorFrontEnd.SensorSnapshot
-import com.example.xcpro.common.flight.FlightMode
 import kotlin.math.abs
 
 
@@ -44,6 +41,8 @@ internal class CalculateFlightMetricsUseCase(
     private val levoNettoCalculator = LevoNettoCalculator(sinkProvider)
     private val autoMcCalculator = AutoMcCalculator()
     private val speedToFlyCalculator = SpeedToFlyCalculator(sinkProvider)
+    private val windAirspeedEligibilityPolicy = WindAirspeedEligibilityPolicy()
+    private val airspeedSourceStabilityController = AirspeedSourceStabilityController()
 
     private val displaySmoother = DisplayVarioSmoother(
         smoothTimeSeconds = DISPLAY_SMOOTH_TIME_S,
@@ -65,7 +64,10 @@ internal class CalculateFlightMetricsUseCase(
     )
     private var prevTeSpeed: Double = 0.0
     private var groundZeroAccumulatedSeconds: Double = 0.0
+    private val windDecisionCounters = mutableMapOf<WindAirspeedDecisionCode, Long>()
+    private val windTransitionCounters = mutableMapOf<AirspeedSourceTransitionEvent, Long>()
 
+    @Synchronized
     fun execute(request: FlightMetricsRequest): FlightMetricsResult {
         val gps = request.gps
         val currentTime = request.currentTimeMillis
@@ -90,31 +92,34 @@ internal class CalculateFlightMetricsUseCase(
         }
 
         val windState = request.windState
-        val windConfidence = windState?.confidence ?: 0.0
-        val windEligibleForTe = windState?.isAvailable == true && windConfidence >= LEVO_WIND_CONF_MIN
-        val windVectorForTe = if (windEligibleForTe) windState?.vector else null
+        val windConfidence = (windState?.confidence ?: 0.0).coerceIn(0.0, 1.0)
+        val windSourceAlreadySelected = airspeedSourceStabilityController.isWindSelected()
+        val windDecision = windAirspeedEligibilityPolicy.evaluate(
+            windState = windState,
+            gpsSpeedMs = gps.speed.value,
+            windSourceAlreadySelected = windSourceAlreadySelected
+        )
+        recordWindDecision(windDecision.code)
 
         val externalAirspeed = resolveExternalAirspeed(
             sample = request.externalAirspeedSample,
             currentTimeMillis = currentTime
         )
-        val airspeedFromWind = windEstimator.fromWind(
+        val windAirspeedCandidate = windEstimator.fromWind(
             gpsSpeed = gps.speed.value,
             gpsBearingDeg = gps.bearing,
             altitudeMeters = altitudeForAirspeed(baroAltitude, gps.altitude.value),
             qnhHpa = qnh,
-            windVector = windVectorForTe
+            windVector = windState?.vector
         )
-        val fallbackAirspeed = gps.speed.value
-            .takeIf { it.isFinite() && it > MIN_FALLBACK_GPS_SPEED_MS }
-            ?.let { speed ->
-                AirspeedEstimate(
-                    indicatedMs = speed,
-                    trueMs = speed,
-                    source = AirspeedSource.GPS_GROUND
-                )
-            }
-        val chosenAirspeed = externalAirspeed ?: airspeedFromWind ?: fallbackAirspeed
+        val gpsFallbackAirspeed = resolveGpsFallbackAirspeed(gps.speed.value)
+        val chosenAirspeed = externalAirspeed ?: airspeedSourceStabilityController.select(
+            currentTimeMillis = currentTime,
+            windDecision = windDecision,
+            windCandidate = windAirspeedCandidate,
+            gpsCandidate = gpsFallbackAirspeed
+        )
+        recordWindTransitions(airspeedSourceStabilityController.drainTransitionEvents())
 
         val teSpeed = chosenAirspeed?.trueMs
         val teVario = if (
@@ -264,7 +269,9 @@ internal class CalculateFlightMetricsUseCase(
         val currentThermalLift = flightHelpers.currentThermalLiftRate
         val currentThermalValid = flightHelpers.currentThermalValid
 
-        val hasWindForLevo = windEligibleForTe
+        val selectedWindAirspeed = chosenAirspeed?.source == AirspeedSource.WIND_VECTOR
+        val effectiveWindConfidence = if (selectedWindAirspeed) windConfidence else 0.0
+        val hasWindForLevo = selectedWindAirspeed
         val iasBounds = sinkProvider.iasBoundsMs()
         val hasPolar = iasBounds != null
 
@@ -278,7 +285,7 @@ internal class CalculateFlightMetricsUseCase(
                 isCircling = isCircling,
                 isTurning = isTurning,
                 hasWind = hasWindForLevo,
-                windConfidence = windConfidence,
+                windConfidence = effectiveWindConfidence,
                 hasPolar = hasPolar,
                 iasBounds = iasBounds
             )
@@ -307,7 +314,7 @@ internal class CalculateFlightMetricsUseCase(
                 mcSourceAuto = mcSourceAuto,
                 glideNettoMs = levoNettoResult.valueMs,
                 glideNettoValid = levoNettoResult.valid,
-                windConfidence = windConfidence,
+                windConfidence = effectiveWindConfidence,
                 flightMode = request.flightMode,
                 iasBounds = iasBounds
             )
@@ -369,6 +376,7 @@ internal class CalculateFlightMetricsUseCase(
         )
     }
 
+    @Synchronized
     fun reset() {
         fusionBlackboard.resetAll()
         displaySmoother.reset()
@@ -380,14 +388,46 @@ internal class CalculateFlightMetricsUseCase(
         levoNettoCalculator.reset()
         autoMcCalculator.reset()
         speedToFlyCalculator.reset()
+        airspeedSourceStabilityController.reset()
         prevTeSpeed = 0.0
         groundZeroAccumulatedSeconds = 0.0
+        windDecisionCounters.clear()
+        windTransitionCounters.clear()
+    }
+
+    @Synchronized
+    internal fun windAirspeedDecisionCounts(): Map<WindAirspeedDecisionCode, Long> =
+        windDecisionCounters.toMap()
+
+    @Synchronized
+    internal fun windAirspeedTransitionCounts(): Map<AirspeedSourceTransitionEvent, Long> =
+        windTransitionCounters.toMap()
+
+    private fun recordWindDecision(code: WindAirspeedDecisionCode) {
+        val current = windDecisionCounters[code] ?: 0L
+        windDecisionCounters[code] = current + 1L
+    }
+
+    private fun recordWindTransitions(events: List<AirspeedSourceTransitionEvent>) {
+        events.forEach { event ->
+            val current = windTransitionCounters[event] ?: 0L
+            windTransitionCounters[event] = current + 1L
+        }
     }
 
     private fun altitudeForAirspeed(baroAltitude: Double, gpsAltitude: Double): Double = when {
         baroAltitude.isFinite() && baroAltitude != 0.0 -> baroAltitude
         gpsAltitude.isFinite() -> gpsAltitude
         else -> 0.0
+    }
+
+    private fun resolveGpsFallbackAirspeed(gpsSpeedMs: Double): AirspeedEstimate? {
+        val speed = gpsSpeedMs.takeIf { it.isFinite() && it > GPS_AIRSPEED_FALLBACK_MIN_SPEED_MS } ?: return null
+        return AirspeedEstimate(
+            indicatedMs = speed,
+            trueMs = speed,
+            source = AirspeedSource.GPS_GROUND
+        )
     }
 
     private fun resolveExternalAirspeed(
@@ -448,13 +488,11 @@ internal class CalculateFlightMetricsUseCase(
     }
 
     companion object {
-        private const val MIN_FALLBACK_GPS_SPEED_MS = 0.5
         private const val TE_MIN_SPEED_MS = 5.0
         private const val TE_MIN_DT_SECONDS = 0.05
         private const val GROUND_ZERO_THRESHOLD_MS = 0.05
         private const val GROUND_ZERO_SPEED_MS = 0.5
         private const val GROUND_ZERO_SETTLE_SECONDS = 3.0
-        private const val LEVO_WIND_CONF_MIN = 0.1
         private const val MIN_VALID_AIRSPEED_MS = 0.1
         private const val EXTERNAL_AIRSPEED_MAX_AGE_MS = 3_000L
     }

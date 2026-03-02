@@ -40,7 +40,9 @@ class HeadingResolver @Inject constructor() {
         val trackAboveThreshold = input.groundSpeedMs >= input.minTrackSpeedMs
 
         if (trackAvailable) {
-            val hasWindSolution = input.windFromDeg != null && input.windSpeedMs > 0.1
+            val hasWindSolution = input.windFromDeg != null &&
+                input.windSpeedMs.isFinite() &&
+                input.windSpeedMs > 0.0
             if (input.isFlying && trackAboveThreshold && hasWindSolution) {
                 val heading = resolveFromWind(
                     trackDeg = track!!,

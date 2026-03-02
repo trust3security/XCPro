@@ -30,7 +30,7 @@ class WeatherSettingsUseCaseTest {
             enabled = true,
             opacity = 0.62f,
             animatePastWindow = true,
-            animationWindow = WeatherRainAnimationWindow.TWENTY_MINUTES,
+            animationWindow = WeatherRainAnimationWindow.SIXTY_MINUTES,
             animationSpeed = WeatherRainAnimationSpeed.FAST,
             transitionQuality = WeatherRainTransitionQuality.SMOOTH,
             frameMode = WeatherRadarFrameMode.MANUAL,
@@ -49,7 +49,7 @@ class WeatherSettingsUseCaseTest {
         assertEquals(0.62f, useCase.rainOpacityFlow.first(), 0f)
         assertTrue(useCase.rainAnimatePastWindowFlow.first())
         assertEquals(
-            WeatherRainAnimationWindow.TWENTY_MINUTES,
+            WeatherRainAnimationWindow.SIXTY_MINUTES,
             useCase.rainAnimationWindowFlow.first()
         )
         assertEquals(WeatherRainAnimationSpeed.FAST, useCase.rainAnimationSpeedFlow.first())
@@ -73,7 +73,7 @@ class WeatherSettingsUseCaseTest {
         useCase.setOverlayEnabled(true)
         useCase.setOpacity(0.5f)
         useCase.setAnimatePastWindow(true)
-        useCase.setAnimationWindow(WeatherRainAnimationWindow.THIRTY_MINUTES)
+        useCase.setAnimationWindow(WeatherRainAnimationWindow.SIXTY_MINUTES)
         useCase.setAnimationSpeed(WeatherRainAnimationSpeed.SLOW)
         useCase.setTransitionQuality(WeatherRainTransitionQuality.CRISP)
         useCase.setFrameMode(WeatherRadarFrameMode.MANUAL)
@@ -84,7 +84,7 @@ class WeatherSettingsUseCaseTest {
         verify(repository).setEnabled(true)
         verify(repository).setOpacity(0.5f)
         verify(repository).setAnimatePastWindow(true)
-        verify(repository).setAnimationWindow(WeatherRainAnimationWindow.THIRTY_MINUTES)
+        verify(repository).setAnimationWindow(WeatherRainAnimationWindow.SIXTY_MINUTES)
         verify(repository).setAnimationSpeed(WeatherRainAnimationSpeed.SLOW)
         verify(repository).setTransitionQuality(WeatherRainTransitionQuality.CRISP)
         verify(repository).setFrameMode(WeatherRadarFrameMode.MANUAL)

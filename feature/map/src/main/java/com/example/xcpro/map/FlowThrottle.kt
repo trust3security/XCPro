@@ -1,6 +1,6 @@
 package com.example.xcpro.map
 
-import android.os.SystemClock
+import com.example.xcpro.core.time.TimeBridge
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -10,7 +10,7 @@ import kotlin.math.roundToInt
  * Throttle a hot flow to at most one emission per [frameMs]. Uses elapsedRealtime to
  * avoid wall-clock jumps. Intended for UI-facing telemetry (vario, altitude, charts).
  */
-fun <T> Flow<T>.throttleFrame(frameMs: Long, clock: () -> Long = { SystemClock.elapsedRealtime() }): Flow<T> =
+fun <T> Flow<T>.throttleFrame(frameMs: Long, clock: () -> Long = { TimeBridge.nowMonoMs() }): Flow<T> =
     callbackFlow {
         var last = 0L
         collect { value ->

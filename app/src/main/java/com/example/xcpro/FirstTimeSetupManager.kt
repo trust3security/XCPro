@@ -12,6 +12,8 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
+import java.time.Instant
+import java.time.ZoneId
 
 @Singleton
 class FirstTimeSetupManager @Inject constructor(
@@ -143,6 +145,11 @@ class FirstTimeSetupManager @Inject constructor(
         val isFirst = isFirstLaunch()
         val version = prefs.getInt(KEY_SETUP_VERSION, 0)
         val timestamp = prefs.getLong("setup_timestamp", 0)
-        "First Launch: $isFirst, Setup Version: $version, Last Setup: ${if (timestamp > 0) java.util.Date(timestamp) else "Never"}"
+        val lastSetup = if (timestamp > 0) {
+            Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()).toString()
+        } else {
+            "Never"
+        }
+        "First Launch: $isFirst, Setup Version: $version, Last Setup: $lastSetup"
     }
 }

@@ -175,11 +175,11 @@ internal class FlightDataEmitter(
 }
 
 internal class FlightDataEmissionState {
-    var lastUpdateTime: Long = 0L
-    var lastThermalLogTime: Long = 0L
-    var latestTeVario: Double? = null
-    var latestAudioVario: Double = 0.0
-    var varioValidUntil: Long = 0L
+    @Volatile var lastUpdateTime: Long = 0L
+    @Volatile var lastThermalLogTime: Long = 0L
+    @Volatile var latestTeVario: Double? = null
+    @Volatile var latestAudioVario: Double = 0.0
+    @Volatile var varioValidUntil: Long = 0L
 
     fun reset() {
         lastUpdateTime = 0L

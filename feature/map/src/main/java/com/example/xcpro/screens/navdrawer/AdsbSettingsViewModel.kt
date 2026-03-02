@@ -6,6 +6,7 @@ import com.example.xcpro.adsb.ADSB_MAX_DISTANCE_DEFAULT_KM
 import com.example.xcpro.adsb.ADSB_ICON_SIZE_DEFAULT_PX
 import com.example.xcpro.adsb.ADSB_VERTICAL_FILTER_ABOVE_DEFAULT_METERS
 import com.example.xcpro.adsb.ADSB_VERTICAL_FILTER_BELOW_DEFAULT_METERS
+import com.example.xcpro.adsb.ADSB_EMERGENCY_AUDIO_DEFAULT_COOLDOWN_MS
 import com.example.xcpro.adsb.OpenSkyClientCredentials
 import com.example.xcpro.common.units.UnitsPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -43,6 +44,18 @@ class AdsbSettingsViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = ADSB_VERTICAL_FILTER_BELOW_DEFAULT_METERS
         )
+    val emergencyAudioEnabled: StateFlow<Boolean> = useCase.emergencyAudioEnabledFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = false
+        )
+    val emergencyAudioCooldownMs: StateFlow<Long> = useCase.emergencyAudioCooldownMsFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = ADSB_EMERGENCY_AUDIO_DEFAULT_COOLDOWN_MS
+        )
     val units: StateFlow<UnitsPreferences> = useCase.unitsFlow
         .stateIn(
             scope = viewModelScope,
@@ -71,6 +84,18 @@ class AdsbSettingsViewModel @Inject constructor(
     fun setVerticalBelowMeters(belowMeters: Double) {
         viewModelScope.launch {
             useCase.setVerticalBelowMeters(belowMeters)
+        }
+    }
+
+    fun setEmergencyAudioEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            useCase.setEmergencyAudioEnabled(enabled)
+        }
+    }
+
+    fun setEmergencyAudioCooldownMs(cooldownMs: Long) {
+        viewModelScope.launch {
+            useCase.setEmergencyAudioCooldownMs(cooldownMs)
         }
     }
 

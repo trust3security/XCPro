@@ -57,7 +57,10 @@ Center source:
 - Keepalive every `60_000 ms`
 - Read timeout: `20_000 ms`
 - Stall timeout: `120_000 ms`
-- Successful keepalive writes count as stream activity; low/no-traffic periods do not force false stall reconnects.
+- Inbound-only liveness authority:
+  - inbound APRS/server lines update stream activity
+  - outbound keepalive writes do not reset stream stall timer
+- DDB refresh due-check also runs during active connected sessions (not reconnect-only).
 - Reconnect backoff: `1_000 -> 2_000 -> ... -> 60_000 ms` max
 
 ## Target Lifecycle And Display
@@ -98,7 +101,11 @@ Extracted fields:
 - timing behavior:
   - parser extracts source-time candidates from `/hhmmssh` and `@ddhhmmz` timestamp forms.
   - repository applies source-time anti-rewind policy before committing target position.
+  - repository enforces timed-source lock for untimed frames and permits untimed
+    fallback only after timed-source silence window (`30_000 ms`).
   - repository applies motion plausibility validation (distance/time speed gate).
+    - source-time delta preferred; monotonic delta fallback used when source-time
+      is missing.
   - dropped-frame diagnostics are published via OGN snapshot counters.
 
 Drop conditions:
@@ -169,3 +176,7 @@ Behavior:
 - Preferences and VM center wiring:
   - `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepositoryTest.kt`
   - `feature/map/src/test/java/com/example/xcpro/map/MapScreenViewModelTest.kt`
+
+## Reliability Hardening Plan (Implemented)
+
+- `docs/OGN/CHANGE_PLAN_OGN_CONNECTIVITY_RELIABILITY_2026-03-01.md`

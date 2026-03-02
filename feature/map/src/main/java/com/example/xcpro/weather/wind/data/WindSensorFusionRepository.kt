@@ -61,6 +61,11 @@ class WindSensorFusionRepository @Inject constructor(
         val externalWind: WindOverride?
     )
 
+    private data class OverrideRevision(
+        val manual: WindOverride?,
+        val external: WindOverride?
+    )
+
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
 
     private val circlingDetector = CirclingDetector()
@@ -73,6 +78,7 @@ class WindSensorFusionRepository @Inject constructor(
     private var lastCirclingClockMillis = Long.MIN_VALUE
     private var lastGpsClockMillis = Long.MIN_VALUE
     private var lastUpdatedClockMillis = Long.MIN_VALUE
+    private var lastProcessedOverrideRevision = OverrideRevision(null, null)
     private var lastActiveSource: FlightDataRepository.Source? = null
     private var pendingResetJob: Job? = null
     private var windHoldUntilElapsedMs: Long = 0L
@@ -132,6 +138,7 @@ class WindSensorFusionRepository @Inject constructor(
         lastCirclingClockMillis = Long.MIN_VALUE
         lastGpsClockMillis = Long.MIN_VALUE
         lastUpdatedClockMillis = Long.MIN_VALUE
+        lastProcessedOverrideRevision = OverrideRevision(null, null)
         _windState.value = WindState()
         windHoldUntilElapsedMs = 0L
         pendingResetJob?.cancel()
@@ -169,15 +176,27 @@ class WindSensorFusionRepository @Inject constructor(
 
     private fun processSample(input: WindFusionInput) {
         val gps = input.gps ?: return
-        if (!gps.trackRad.isFinite() || !gps.groundSpeedMs.isFinite()) {
-            return
-        }
         val gpsClockMillis = gps.clockMillis
-        if (gpsClockMillis <= lastGpsClockMillis) {
+        val gpsWallMillis = gps.timestampMillis
+        val headingDeg = headingFromSample(gps, input.heading)
+        if (!gps.trackRad.isFinite() || !gps.groundSpeedMs.isFinite()) {
+            refreshExistingWindState(
+                gpsClockMillis = gpsClockMillis,
+                gpsWallMillis = gpsWallMillis,
+                headingDeg = headingDeg
+            )
             return
         }
-        lastGpsClockMillis = gpsClockMillis
-        val gpsWallMillis = gps.timestampMillis
+        val overrideRevision = OverrideRevision(input.manualWind, input.externalWind)
+        val gpsAdvanced = gpsClockMillis > lastGpsClockMillis
+        val overrideChanged = overrideRevision != lastProcessedOverrideRevision
+        if (!gpsAdvanced && !overrideChanged) {
+            return
+        }
+        if (gpsAdvanced) {
+            lastGpsClockMillis = gpsClockMillis
+        }
+        lastProcessedOverrideRevision = overrideRevision
         val trackRad = gps.trackRad
         val isFlying = flightStateSource.flightState.value.isFlying
         val circlingDecision = circlingDetector.update(
@@ -196,7 +215,6 @@ class WindSensorFusionRepository @Inject constructor(
         )
 
         val altitudeMeters = altitudeFromSample(gps, input.pressure)
-        val headingDeg = headingFromSample(gps, input.heading)
 
         if (result != null) {
             lastCirclingClockMillis = result.clockMillis
@@ -254,41 +272,11 @@ class WindSensorFusionRepository @Inject constructor(
             return
         }
 
-        val existing = _windState.value
-        val age = if (existing.vector != null) {
-            if (isAutoSource(existing.source)) {
-                if (lastUpdatedClockMillis != Long.MIN_VALUE && gpsClockMillis >= lastUpdatedClockMillis) {
-                    gpsClockMillis - lastUpdatedClockMillis
-                } else {
-                    Long.MAX_VALUE
-                }
-            } else if (existing.lastUpdatedMillis > 0) {
-                (gpsWallMillis - existing.lastUpdatedMillis).coerceAtLeast(0L)
-            } else {
-                Long.MAX_VALUE
-            }
-        } else {
-            Long.MAX_VALUE
-        }
-        if (age > STALE_MS) {
-            _windState.value = WindState(stale = true)
-            return
-        }
-
-        if (existing.vector != null) {
-            val (head, cross) = computeHeadAndCross(existing.vector, headingDeg)
-            val confidence = computeWindConfidence(
-                quality = existing.quality,
-                source = existing.source,
-                nowMonoMs = gpsClockMillis
-            )
-            _windState.value = existing.copy(
-                headwind = head,
-                crosswind = cross,
-                confidence = confidence,
-                stale = false
-            )
-        }
+        refreshExistingWindState(
+            gpsClockMillis = gpsClockMillis,
+            gpsWallMillis = gpsWallMillis,
+            headingDeg = headingDeg
+        )
     }
 
     private fun altitudeFromSample(gps: GpsSample, pressure: PressureSample?): Double {
@@ -303,6 +291,54 @@ class WindSensorFusionRepository @Inject constructor(
         return heading?.headingDeg
             ?: Math.toDegrees(gps.trackRad).takeIf { it.isFinite() }
             ?: 0.0
+    }
+
+    private fun refreshExistingWindState(
+        gpsClockMillis: Long,
+        gpsWallMillis: Long,
+        headingDeg: Double
+    ) {
+        val existing = _windState.value
+        val age = windAgeMillis(existing, gpsClockMillis, gpsWallMillis)
+        if (age > STALE_MS) {
+            _windState.value = WindState(stale = true)
+            return
+        }
+
+        val vector = existing.vector ?: return
+        val (head, cross) = computeHeadAndCross(vector, headingDeg)
+        val normalizedQuality = normalizePublishedQuality(existing.quality)
+        val confidence = computeWindConfidence(
+            quality = normalizedQuality,
+            source = existing.source,
+            nowMonoMs = gpsClockMillis
+        )
+        _windState.value = existing.copy(
+            quality = normalizedQuality,
+            headwind = head,
+            crosswind = cross,
+            confidence = confidence,
+            stale = false
+        )
+    }
+
+    private fun windAgeMillis(
+        existing: WindState,
+        gpsClockMillis: Long,
+        gpsWallMillis: Long
+    ): Long {
+        if (existing.vector == null) return Long.MAX_VALUE
+        return if (isAutoSource(existing.source)) {
+            if (lastUpdatedClockMillis != Long.MIN_VALUE && gpsClockMillis >= lastUpdatedClockMillis) {
+                gpsClockMillis - lastUpdatedClockMillis
+            } else {
+                Long.MAX_VALUE
+            }
+        } else if (existing.lastUpdatedMillis > 0) {
+            (gpsWallMillis - existing.lastUpdatedMillis).coerceAtLeast(0L)
+        } else {
+            Long.MAX_VALUE
+        }
     }
 
     private fun computeHeadAndCross(wind: WindVector, headingDeg: Double): Pair<Double, Double> {
@@ -327,16 +363,17 @@ class WindSensorFusionRepository @Inject constructor(
         clockMillis: Long,
         stale: Boolean
     ) {
+        val normalizedQuality = normalizePublishedQuality(quality)
         val (head, cross) = computeHeadAndCross(vector, headingDeg)
         val confidence = computeWindConfidence(
-            quality = quality,
+            quality = normalizedQuality,
             source = source,
             nowMonoMs = clockMillis
         )
         _windState.value = WindState(
             vector = vector,
             source = source,
-            quality = quality,
+            quality = normalizedQuality,
             headwind = head,
             crosswind = cross,
             lastUpdatedMillis = timestamp,
@@ -371,6 +408,9 @@ class WindSensorFusionRepository @Inject constructor(
         val decay = 0.5.pow(ageMs.toDouble() / CONF_HALF_LIFE_MS.toDouble())
         return (baseQuality * decay).coerceIn(0.0, 1.0)
     }
+
+    private fun normalizePublishedQuality(quality: Int): Int =
+        quality.coerceIn(0, MAX_MEASUREMENT_QUALITY)
 
     companion object {
         private const val MAX_MEASUREMENT_QUALITY = 5

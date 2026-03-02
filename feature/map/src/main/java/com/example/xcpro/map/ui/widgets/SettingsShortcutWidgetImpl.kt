@@ -1,12 +1,14 @@
 package com.example.xcpro.map.ui.widgets
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Settings
@@ -19,16 +21,22 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.input.pointer.consumePositionChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.example.xcpro.core.common.geometry.DensityScale
 import com.example.xcpro.map.MapOverlayGestureTarget
+import com.example.xcpro.map.widgets.MapWidgetId
+import com.example.xcpro.map.widgets.MapWidgetSizePolicy
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -37,16 +45,18 @@ internal fun SettingsShortcutWidgetImpl(
     settingsOffset: Offset,
     screenWidthPx: Float,
     screenHeightPx: Float,
+    sizePx: Float,
     onSettingsTap: () -> Unit,
     onOffsetChange: (Offset) -> Unit,
+    onSizeChange: (Float) -> Unit,
     isEditMode: Boolean,
     modifier: Modifier = Modifier,
-    sizeDp: Float = 56f,
     shape: Shape = CircleShape
 ) {
     val density = LocalDensity.current
-    val sizePx = with(density) { sizeDp.dp.toPx() }
-    val iconSizeDp = sizeDp * 0.46f
+    val densityScale = remember(density.density, density.fontScale) {
+        DensityScale(density = density.density, fontScale = density.fontScale)
+    }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -55,18 +65,29 @@ internal fun SettingsShortcutWidgetImpl(
     }
 
     val displayOffset = remember(isEditMode) { mutableStateOf(settingsOffset) }
+    val displaySizePx = remember { mutableStateOf(sizePx) }
+
     LaunchedEffect(settingsOffset, isEditMode) {
         if (!isEditMode) {
             displayOffset.value = settingsOffset
         }
     }
+    LaunchedEffect(sizePx, isEditMode) {
+        if (!isEditMode) {
+            displaySizePx.value = sizePx
+        }
+    }
+
+    val containerSizePx = displaySizePx.value
+    val containerSizeDp = with(density) { containerSizePx.toDp() }
+    val iconSizeDp = with(density) { (containerSizePx * 0.46f).toDp() }
+    val surfaceShape = if (isEditMode) RectangleShape else shape
 
     Surface(
         modifier = modifier
             .offset { displayOffset.value.toIntOffset() }
-            .size(sizeDp.dp)
-            .clip(shape)
-            .editModeBorder(isEditMode, shape)
+            .size(containerSizeDp)
+            .editModeBorder(isEditMode, surfaceShape)
             .onGloballyPositioned { coordinates ->
                 widgetManager.updateGestureRegion(
                     target = MapOverlayGestureTarget.SETTINGS_SHORTCUT,
@@ -75,30 +96,12 @@ internal fun SettingsShortcutWidgetImpl(
             }
             .then(
                 if (isEditMode) {
-                    Modifier.pointerInput(Unit) {
-                        detectTapGestures(onLongPress = {})
-                    }
+                    Modifier
                 } else {
                     Modifier.combinedClickable(onClick = onSettingsTap)
                 }
-            )
-            .draggableWidget(
-                enabled = isEditMode,
-                key1 = screenWidthPx,
-                key2 = screenHeightPx,
-                onDrag = { dragAmount ->
-                    displayOffset.value = MapWidgetMath.boundedOffset(
-                        current = displayOffset.value,
-                        drag = dragAmount,
-                        maxX = screenWidthPx - sizePx,
-                        maxY = screenHeightPx - sizePx
-                    )
-                },
-                onDragEnd = {
-                    onOffsetChange(displayOffset.value)
-                }
             ),
-        shape = shape,
+        shape = surfaceShape,
         color = Color.Transparent,
         contentColor = Color.Black,
         tonalElevation = 0.dp,
@@ -108,11 +111,97 @@ internal fun SettingsShortcutWidgetImpl(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
+            if (isEditMode) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .pointerInput(screenWidthPx, screenHeightPx, displaySizePx.value) {
+                            detectDragGestures(
+                                onDrag = { change, dragAmount ->
+                                    val currentSize = displaySizePx.value
+                                    displayOffset.value = MapWidgetMath.boundedOffset(
+                                        current = displayOffset.value,
+                                        drag = dragAmount,
+                                        maxX = screenWidthPx - currentSize,
+                                        maxY = screenHeightPx - currentSize
+                                    )
+                                    change.consumePositionChange()
+                                },
+                                onDragEnd = {
+                                    onOffsetChange(displayOffset.value)
+                                }
+                            )
+                        }
+                )
+            }
+
             Icon(
                 imageVector = Icons.Outlined.Settings,
                 contentDescription = "Settings",
                 tint = Color.Black,
-                modifier = Modifier.size(iconSizeDp.dp)
+                modifier = Modifier.size(iconSizeDp)
+            )
+
+            if (isEditMode) {
+                SettingsResizeHandle(
+                    onResize = { dragAmount ->
+                        val requested = displaySizePx.value + ((dragAmount.x + dragAmount.y) / 2f)
+                        val clamped = MapWidgetSizePolicy.clampSizePx(
+                            widgetId = MapWidgetId.SETTINGS_SHORTCUT,
+                            requestedSizePx = requested,
+                            screenWidthPx = screenWidthPx,
+                            screenHeightPx = screenHeightPx,
+                            density = densityScale
+                        )
+                        if (clamped != displaySizePx.value) {
+                            displaySizePx.value = clamped
+                            displayOffset.value = MapWidgetMath.boundedOffset(
+                                current = displayOffset.value,
+                                drag = Offset.Zero,
+                                maxX = screenWidthPx - clamped,
+                                maxY = screenHeightPx - clamped
+                            )
+                        }
+                    },
+                    onResizeEnd = {
+                        onSizeChange(displaySizePx.value)
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsResizeHandle(
+    onResize: (Offset) -> Unit,
+    onResizeEnd: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .wrapContentSize(Alignment.BottomEnd)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(24.dp)
+                .pointerInput(Unit) {
+                    detectDragGestures(
+                        onDrag = { change, dragAmount ->
+                            onResize(dragAmount)
+                            change.consumePositionChange()
+                        },
+                        onDragEnd = { onResizeEnd() },
+                        onDragCancel = { onResizeEnd() }
+                    )
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(12.dp)
+                    .background(MapWidgetTheme.editAccentColor, CircleShape)
+                    .semantics { contentDescription = "Settings resize handle" }
             )
         }
     }

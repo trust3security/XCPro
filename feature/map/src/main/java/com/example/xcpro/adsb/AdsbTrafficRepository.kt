@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -52,7 +53,13 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
     private val tokenRepository: OpenSkyTokenRepository,
     private val clock: Clock,
     @IoDispatcher dispatcher: CoroutineDispatcher,
-    private val networkAvailabilityPort: AdsbNetworkAvailabilityPort
+    private val networkAvailabilityPort: AdsbNetworkAvailabilityPort,
+    private val emergencyAudioSettingsPort: AdsbEmergencyAudioSettingsPort =
+        DisabledEmergencyAudioSettingsPort(),
+    private val emergencyAudioOutputPort: AdsbEmergencyAudioOutputPort =
+        NoOpAdsbEmergencyAudioOutputPort,
+    private val emergencyAudioFeatureFlags: AdsbEmergencyAudioFeatureFlags =
+        AdsbEmergencyAudioFeatureFlags()
 ) : AdsbTrafficRepository {
 
     internal constructor(
@@ -65,11 +72,15 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
         tokenRepository = tokenRepository,
         clock = clock,
         dispatcher = dispatcher,
-        networkAvailabilityPort = AlwaysOnlineNetworkAvailabilityPort
+        networkAvailabilityPort = AlwaysOnlineNetworkAvailabilityPort,
+        emergencyAudioSettingsPort = DisabledEmergencyAudioSettingsPort(),
+        emergencyAudioOutputPort = NoOpAdsbEmergencyAudioOutputPort,
+        emergencyAudioFeatureFlags = AdsbEmergencyAudioFeatureFlags()
     )
 
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
     private val store = AdsbTrafficStore()
+    private val emergencyAudioAlertFsm = AdsbEmergencyAudioAlertFsm()
 
     private val _targets = MutableStateFlow<List<AdsbTrafficUiModel>>(emptyList())
     override val targets: StateFlow<List<AdsbTrafficUiModel>> = _targets.asStateFlow()
@@ -172,6 +183,16 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
     )
     private var lastPolledCenter: Center? = null
     private val requestTimesMonoMs = ArrayDeque<Long>()
+    private var networkOnline: Boolean = true
+    private var networkOfflineTransitionCount: Int = 0
+    private var networkOnlineTransitionCount: Int = 0
+    private var lastNetworkTransitionMonoMs: Long? = null
+    @Volatile
+    private var emergencyAudioSettings = AdsbEmergencyAudioSettings()
+
+    init {
+        observeEmergencyAudioSettings()
+    }
 
     override fun start() {
         setEnabled(true)
@@ -343,6 +364,23 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
         lastOwnshipAltitudeReselectMeters = ownshipAltitudeMeters
     }
 
+    private fun observeEmergencyAudioSettings() {
+        scope.launch {
+            combine(
+                emergencyAudioSettingsPort.emergencyAudioEnabledFlow,
+                emergencyAudioSettingsPort.emergencyAudioCooldownMsFlow
+            ) { enabled, cooldownMs ->
+                AdsbEmergencyAudioSettings(
+                    enabled = enabled,
+                    cooldownMs = cooldownMs
+                )
+            }.collect { settings ->
+                emergencyAudioSettings = settings
+                publishSnapshot()
+            }
+        }
+    }
+
     private suspend fun runLoop() {
         val thisJob = currentCoroutineContext()[Job]
         var backoffMs = RECONNECT_BACKOFF_START_MS
@@ -350,12 +388,11 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
             while (_isEnabled.value) {
                 try {
                     val centerAtPoll = waitForCenter() ?: break
-                    val nowMonoMs = clock.nowMonoMs()
-                    lastPollMonoMs = nowMonoMs
-                    store.purgeExpired(nowMonoMs = nowMonoMs, expiryAfterSec = EXPIRY_AFTER_SEC)
-                    publishFromStore(centerAtPoll)
+                    val loopMonoMs = clock.nowMonoMs()
+                    publishFromStore(centerAtPoll, loopMonoMs)
                     if (!awaitNetworkOnline()) break
                     if (!awaitCircuitBreakerReady()) break
+                    lastPollMonoMs = clock.nowMonoMs()
 
                     val bbox = AdsbGeoMath.computeBbox(
                         centerLat = centerAtPoll.latitude,
@@ -364,14 +401,15 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
                     )
                     when (val result = fetchWithAuthRetry(bbox)) {
                         is ProviderResult.Success -> {
-                            handleSuccess(result, centerAtPoll, nowMonoMs)
+                            val nowSuccessMonoMs = clock.nowMonoMs()
+                            handleSuccess(result, centerAtPoll, nowSuccessMonoMs)
                             pollingHealthPolicy.resetAfterSuccessfulRequest()
                             connectionState = AdsbConnectionState.Active
                             lastError = null
                             lastNetworkFailureKind = null
                             publishSnapshot()
                             backoffMs = RECONNECT_BACKOFF_START_MS
-                            if (!delayForNextAttempt(computeNextPollDelayMs(centerAtPoll, nowMonoMs))) {
+                            if (!delayForNextAttempt(computeNextPollDelayMs(centerAtPoll, nowSuccessMonoMs))) {
                                 break
                             }
                         }
@@ -559,6 +597,7 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
     }
 
     private fun publishFromStore(centerAtPoll: Center, nowMonoMs: Long = clock.nowMonoMs()) {
+        store.purgeExpired(nowMonoMs = nowMonoMs, expiryAfterSec = EXPIRY_AFTER_SEC)
         val ownshipReference = ownshipReference(centerAtPoll)
         val selection = store.select(
             nowMonoMs = nowMonoMs,
@@ -704,6 +743,27 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
     private fun publishSnapshot() {
         val activeCenter = center
         val pollingHealthSnapshot = pollingHealthPolicy.snapshotTelemetry()
+        val nowMonoMs = clock.nowMonoMs()
+        updateNetworkTransitionTelemetry(nowMonoMs)
+        val emergencyAudioFeatureGateOn = isEmergencyAudioFeatureGateOn()
+        val emergencyTargetId = _targets.value.firstOrNull { target ->
+            target.isEmergencyCollisionRisk
+        }?.id
+        val emergencyAudioDecision = emergencyAudioAlertFsm.evaluate(
+            nowMonoMs = nowMonoMs,
+            emergencyTargetId = emergencyTargetId,
+            hasOwnshipReference = ownshipOrigin != null,
+            settings = emergencyAudioSettings,
+            featureFlagEnabled = emergencyAudioFeatureGateOn && _isEnabled.value
+        )
+        maybePlayEmergencyAudioOutput(nowMonoMs, emergencyAudioDecision)
+        val emergencyAudioTelemetry = emergencyAudioAlertFsm.snapshotTelemetry(nowMonoMs)
+        val offlineDwellMs = if (!networkOnline) {
+            val transitionMonoMs = lastNetworkTransitionMonoMs ?: nowMonoMs
+            (nowMonoMs - transitionMonoMs).coerceAtLeast(0L)
+        } else {
+            0L
+        }
         _snapshot.value = AdsbTrafficSnapshot(
             targets = _targets.value,
             connectionState = connectionState,
@@ -726,8 +786,65 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
             lastNetworkFailureKind = lastNetworkFailureKind,
             consecutiveFailureCount = pollingHealthSnapshot.consecutiveFailureCount,
             nextRetryMonoMs = pollingHealthSnapshot.nextRetryMonoMs,
-            lastFailureMonoMs = pollingHealthSnapshot.lastFailureMonoMs
+            lastFailureMonoMs = pollingHealthSnapshot.lastFailureMonoMs,
+            networkOnline = networkOnline,
+            networkOfflineTransitionCount = networkOfflineTransitionCount,
+            networkOnlineTransitionCount = networkOnlineTransitionCount,
+            lastNetworkTransitionMonoMs = lastNetworkTransitionMonoMs,
+            currentOfflineDwellMs = offlineDwellMs,
+            emergencyAudioState = emergencyAudioTelemetry.state,
+            emergencyAudioEnabledBySetting = emergencyAudioSettings.enabled,
+            emergencyAudioFeatureGateOn = emergencyAudioFeatureGateOn,
+            emergencyAudioCooldownMs = emergencyAudioSettings.normalizedCooldownMs,
+            emergencyAudioAlertTriggerCount = emergencyAudioTelemetry.alertTriggerCount,
+            emergencyAudioCooldownBlockEpisodeCount =
+                emergencyAudioTelemetry.cooldownBlockEpisodeCount,
+            emergencyAudioTransitionEventCount = emergencyAudioTelemetry.transitionEventCount,
+            emergencyAudioLastAlertMonoMs = emergencyAudioTelemetry.lastAlertMonoMs,
+            emergencyAudioCooldownRemainingMs = emergencyAudioTelemetry.cooldownRemainingMs,
+            emergencyAudioActiveTargetId = emergencyAudioTelemetry.activeEmergencyTargetId?.raw
         )
+    }
+
+    private fun isEmergencyAudioFeatureGateOn(): Boolean =
+        emergencyAudioFeatureFlags.emergencyAudioEnabled ||
+            emergencyAudioFeatureFlags.emergencyAudioShadowMode
+
+    private fun isEmergencyAudioMasterOutputEnabled(): Boolean =
+        emergencyAudioFeatureFlags.emergencyAudioEnabled
+
+    private fun maybePlayEmergencyAudioOutput(
+        nowMonoMs: Long,
+        decision: AdsbEmergencyAudioDecision
+    ) {
+        if (!decision.shouldPlayAlert) return
+        if (!isEmergencyAudioMasterOutputEnabled()) return
+        runCatching {
+            emergencyAudioOutputPort.playEmergencyAlert(
+                triggerMonoMs = nowMonoMs,
+                emergencyTargetId = decision.activeEmergencyTargetId?.raw
+            )
+        }.onFailure { throwable ->
+            AppLogger.w(
+                TAG,
+                "ADS-B emergency audio output failed: ${throwable::class.java.simpleName}"
+            )
+        }
+    }
+
+    private fun updateNetworkTransitionTelemetry(nowMonoMs: Long) {
+        // Avoid probing the network-availability port while disabled so startup/shutdown
+        // snapshot publications do not consume transient adapter faults before loop recovery.
+        if (connectionState is AdsbConnectionState.Disabled) return
+        val currentOnline = runCatching { networkAvailabilityPort.isOnline.value }.getOrDefault(networkOnline)
+        if (currentOnline == networkOnline) return
+        networkOnline = currentOnline
+        lastNetworkTransitionMonoMs = nowMonoMs
+        if (currentOnline) {
+            networkOnlineTransitionCount += 1
+        } else {
+            networkOfflineTransitionCount += 1
+        }
     }
 
     private suspend fun waitForCenter(): Center? {
@@ -756,14 +873,35 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
         pollingHealthPolicy.markFailureEvent(clock.nowMonoMs())
         pollingHealthPolicy.clearNextRetry()
         publishSnapshot()
-        val waitResult = combine(_isEnabled, networkAvailabilityPort.isOnline) { enabled, isOnline ->
-            when {
-                !enabled -> NetworkWaitState.Disabled
-                isOnline -> NetworkWaitState.Online
-                else -> NetworkWaitState.Offline
+        while (_isEnabled.value) {
+            val waitResult = withTimeoutOrNull(NETWORK_WAIT_HOUSEKEEPING_TICK_MS) {
+                combine(_isEnabled, networkAvailabilityPort.isOnline) { enabled, isOnline ->
+                    when {
+                        !enabled -> NetworkWaitState.Disabled
+                        isOnline -> NetworkWaitState.Online
+                        else -> NetworkWaitState.Offline
+                    }
+                }.first { it != NetworkWaitState.Offline }
             }
-        }.first { it != NetworkWaitState.Offline }
-        return waitResult is NetworkWaitState.Online
+            when (waitResult) {
+                NetworkWaitState.Disabled -> return false
+                NetworkWaitState.Online -> return true
+                NetworkWaitState.Offline,
+                null -> {
+                    runHousekeepingTick()
+                }
+            }
+        }
+        return false
+    }
+
+    private fun runHousekeepingTick(nowMonoMs: Long = clock.nowMonoMs()) {
+        val activeCenter = center
+        if (activeCenter != null) {
+            publishFromStore(centerAtPoll = activeCenter, nowMonoMs = nowMonoMs)
+        } else {
+            publishSnapshot()
+        }
     }
 
     private suspend fun delayForNextAttempt(waitMs: Long): Boolean {
@@ -892,6 +1030,13 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
         data object Online : NetworkWaitState
     }
 
+    private class DisabledEmergencyAudioSettingsPort : AdsbEmergencyAudioSettingsPort {
+        override val emergencyAudioEnabledFlow: StateFlow<Boolean> =
+            MutableStateFlow(false).asStateFlow()
+        override val emergencyAudioCooldownMsFlow: StateFlow<Long> =
+            MutableStateFlow(ADSB_EMERGENCY_AUDIO_DEFAULT_COOLDOWN_MS).asStateFlow()
+    }
+
     private companion object {
         private val AlwaysOnlineNetworkAvailabilityPort = object : AdsbNetworkAvailabilityPort {
             override val isOnline: StateFlow<Boolean> =
@@ -936,6 +1081,7 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
         private const val RETRY_FLOOR_PROTOCOL_MS = 20_000L
         private const val CIRCUIT_BREAKER_FAILURE_THRESHOLD = 3
         private const val CIRCUIT_BREAKER_OPEN_WINDOW_MS = 30_000L
+        private const val NETWORK_WAIT_HOUSEKEEPING_TICK_MS = 1_000L
         private const val OWN_ALTITUDE_RESELECT_MIN_INTERVAL_MS = 1_000L
         private const val OWN_ALTITUDE_RESELECT_MAX_INTERVAL_MS = 10_000L
         private const val OWN_ALTITUDE_RESELECT_MIN_DELTA_METERS = 1.0

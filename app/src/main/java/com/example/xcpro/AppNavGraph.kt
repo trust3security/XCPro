@@ -31,6 +31,7 @@ import com.example.xcpro.screens.navdrawer.ColorsScreen
 import com.example.xcpro.screens.navdrawer.LevoVarioSettingsScreen
 import com.example.xcpro.screens.navdrawer.HawkVarioSettingsScreen
 import com.example.xcpro.screens.navdrawer.PolarSettingsScreen
+import com.example.xcpro.screens.navdrawer.ThermallingSettingsScreen
 import com.example.xcpro.screens.navdrawer.UnitsSettingsScreen
 import com.example.xcpro.screens.navdrawer.OrientationSettingsScreen
 import com.example.xcpro.screens.navdrawer.AdsbSettingsScreen
@@ -147,6 +148,9 @@ fun AppNavGraph(
         composable("forecast_settings") { ForecastSettingsScreen(navController, drawerState) }
         composable(SettingsRoutes.WEATHER_SETTINGS) { WeatherSettingsScreen(navController, drawerState) }
         composable(SettingsRoutes.HOTSPOTS_SETTINGS) { HotspotsSettingsScreen(navController, drawerState) }
+        composable(SettingsRoutes.THERMALLING_SETTINGS) {
+            ThermallingSettingsScreen(navController, drawerState)
+        }
         composable("dfnavboxes") { DFNavboxes(navController, drawerState) }
         composable("orientation_settings") { backStackEntry ->
             OrientationSettingsScreen(

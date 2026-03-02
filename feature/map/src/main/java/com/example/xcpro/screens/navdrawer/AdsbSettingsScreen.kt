@@ -22,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -44,6 +45,8 @@ import com.example.xcpro.adsb.ADSB_MAX_DISTANCE_MAX_KM
 import com.example.xcpro.adsb.ADSB_MAX_DISTANCE_MIN_KM
 import com.example.xcpro.adsb.ADSB_VERTICAL_FILTER_MAX_METERS
 import com.example.xcpro.adsb.ADSB_VERTICAL_FILTER_MIN_METERS
+import com.example.xcpro.adsb.ADSB_EMERGENCY_AUDIO_MAX_COOLDOWN_MS
+import com.example.xcpro.adsb.ADSB_EMERGENCY_AUDIO_MIN_COOLDOWN_MS
 import com.example.xcpro.adsb.clampAdsbVerticalFilterMeters
 import com.example.xcpro.common.units.AltitudeUnit
 import com.example.xcpro.common.units.UnitsConverter
@@ -53,6 +56,7 @@ import kotlin.math.roundToInt
 
 private const val VERTICAL_STEP_FEET = 100f
 private const val VERTICAL_STEP_METERS = 50f
+private const val EMERGENCY_COOLDOWN_STEP_SECONDS = 5f
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,6 +70,8 @@ fun AdsbSettingsScreen(
     val maxDistanceKm by viewModel.maxDistanceKm.collectAsStateWithLifecycle()
     val verticalAboveMeters by viewModel.verticalAboveMeters.collectAsStateWithLifecycle()
     val verticalBelowMeters by viewModel.verticalBelowMeters.collectAsStateWithLifecycle()
+    val emergencyAudioEnabled by viewModel.emergencyAudioEnabled.collectAsStateWithLifecycle()
+    val emergencyAudioCooldownMs by viewModel.emergencyAudioCooldownMs.collectAsStateWithLifecycle()
     val units by viewModel.units.collectAsStateWithLifecycle()
     val altitudeUnit = units.altitude
 
@@ -76,6 +82,9 @@ fun AdsbSettingsScreen(
     }
     var belowSliderDisplayValue by remember {
         mutableStateOf(verticalDisplayValue(verticalBelowMeters, altitudeUnit))
+    }
+    var emergencyCooldownSliderSeconds by remember {
+        mutableStateOf(emergencyCooldownSeconds(emergencyAudioCooldownMs))
     }
 
     var clientId by remember { mutableStateOf("") }
@@ -93,6 +102,9 @@ fun AdsbSettingsScreen(
     }
     LaunchedEffect(verticalBelowMeters, altitudeUnit) {
         belowSliderDisplayValue = verticalDisplayValue(verticalBelowMeters, altitudeUnit)
+    }
+    LaunchedEffect(emergencyAudioCooldownMs) {
+        emergencyCooldownSliderSeconds = emergencyCooldownSeconds(emergencyAudioCooldownMs)
     }
 
     LaunchedEffect(Unit) {
@@ -267,6 +279,67 @@ fun AdsbSettingsScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Text("Emergency audio", style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            text = "Optional one-shot alert for EMERGENCY risk only.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Emergency audio alerts",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    text = "Plays only for EMERGENCY risk (never RED).",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = emergencyAudioEnabled,
+                                onCheckedChange = { enabled ->
+                                    viewModel.setEmergencyAudioEnabled(enabled)
+                                }
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Text(
+                            text = "Emergency cooldown: ${emergencyCooldownSliderSeconds.roundToInt()} s",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Slider(
+                            value = emergencyCooldownSliderSeconds,
+                            onValueChange = { value ->
+                                emergencyCooldownSliderSeconds = snapEmergencyCooldownSeconds(value)
+                            },
+                            onValueChangeFinished = {
+                                val cooldownMs =
+                                    emergencyCooldownMillisFromSeconds(emergencyCooldownSliderSeconds)
+                                if (cooldownMs != emergencyAudioCooldownMs) {
+                                    viewModel.setEmergencyAudioCooldownMs(cooldownMs)
+                                }
+                            },
+                            valueRange = emergencyCooldownSliderRange(),
+                            steps = emergencyCooldownSliderSteps()
+                        )
+                        Text(
+                            text = "Set how long re-alerts are suppressed after an emergency clears.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
 
@@ -390,3 +463,31 @@ private fun verticalLabel(displayValue: Float, unit: AltitudeUnit): String = whe
     AltitudeUnit.FEET -> "${displayValue.roundToInt()} ft"
     AltitudeUnit.METERS -> "${displayValue.roundToInt()} m"
 }
+
+private fun emergencyCooldownSliderRange(): ClosedFloatingPointRange<Float> =
+    (ADSB_EMERGENCY_AUDIO_MIN_COOLDOWN_MS / 1_000f)..
+        (ADSB_EMERGENCY_AUDIO_MAX_COOLDOWN_MS / 1_000f)
+
+private fun emergencyCooldownSliderSteps(): Int {
+    val range = emergencyCooldownSliderRange()
+    return (((range.endInclusive - range.start) / EMERGENCY_COOLDOWN_STEP_SECONDS).roundToInt() - 1)
+        .coerceAtLeast(0)
+}
+
+private fun snapEmergencyCooldownSeconds(value: Float): Float {
+    val range = emergencyCooldownSliderRange()
+    val snapped = (value / EMERGENCY_COOLDOWN_STEP_SECONDS).roundToInt() * EMERGENCY_COOLDOWN_STEP_SECONDS
+    return snapped.coerceIn(range.start, range.endInclusive)
+}
+
+private fun emergencyCooldownMillisFromSeconds(seconds: Float): Long =
+    (snapEmergencyCooldownSeconds(seconds).roundToInt() * 1_000L).coerceIn(
+        ADSB_EMERGENCY_AUDIO_MIN_COOLDOWN_MS,
+        ADSB_EMERGENCY_AUDIO_MAX_COOLDOWN_MS
+    )
+
+private fun emergencyCooldownSeconds(cooldownMs: Long): Float =
+    (cooldownMs.coerceIn(
+        ADSB_EMERGENCY_AUDIO_MIN_COOLDOWN_MS,
+        ADSB_EMERGENCY_AUDIO_MAX_COOLDOWN_MS
+    ) / 1_000L).toFloat()

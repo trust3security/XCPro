@@ -15,10 +15,7 @@ import kotlinx.coroutines.launch
 class ForecastOverlayViewModel @Inject constructor(
     observeForecastOverlayStateUseCase: ObserveForecastOverlayStateUseCase,
     private val setForecastEnabledUseCase: SetForecastEnabledUseCase,
-    private val selectForecastParameterUseCase: SelectForecastParameterUseCase,
-    private val toggleForecastPrimaryOverlaySelectionUseCase: ToggleForecastPrimaryOverlaySelectionUseCase,
-    private val setForecastSecondaryPrimaryOverlayEnabledUseCase: SetForecastSecondaryPrimaryOverlayEnabledUseCase,
-    private val selectForecastSecondaryPrimaryParameterUseCase: SelectForecastSecondaryPrimaryParameterUseCase,
+    private val toggleSkySightPrimaryOverlaySelectionUseCase: ToggleSkySightPrimaryOverlaySelectionUseCase,
     private val setForecastWindOverlayEnabledUseCase: SetForecastWindOverlayEnabledUseCase,
     private val selectForecastWindParameterUseCase: SelectForecastWindParameterUseCase,
     private val setForecastAutoTimeEnabledUseCase: SetForecastAutoTimeEnabledUseCase,
@@ -55,27 +52,9 @@ class ForecastOverlayViewModel @Inject constructor(
         }
     }
 
-    fun selectParameter(parameterId: ForecastParameterId) {
-        viewModelScope.launch {
-            selectForecastParameterUseCase(parameterId)
-        }
-    }
-
     fun selectSkySightPrimaryParameter(parameterId: ForecastParameterId) {
         viewModelScope.launch {
-            toggleForecastPrimaryOverlaySelectionUseCase(parameterId)
-        }
-    }
-
-    fun setSecondaryPrimaryOverlayEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            setForecastSecondaryPrimaryOverlayEnabledUseCase(enabled)
-        }
-    }
-
-    fun selectSecondaryPrimaryParameter(parameterId: ForecastParameterId) {
-        viewModelScope.launch {
-            selectForecastSecondaryPrimaryParameterUseCase(parameterId)
+            toggleSkySightPrimaryOverlaySelectionUseCase(parameterId)
         }
     }
 

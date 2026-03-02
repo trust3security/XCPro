@@ -19,6 +19,9 @@ Read first:
 - Date: 2026-02-27
 - Issue/PR: TBD
 - Status: Implemented (Phase 1/2/3/4 core scope)
+- Follow-on hardening plan:
+  - `docs/OGN/CHANGE_PLAN_OGN_CONNECTIVITY_RELIABILITY_2026-03-01.md`
+  - Covers untimed-frame ordering, inbound-liveness authority, and connected-session DDB refresh cadence (implemented 2026-03-01).
 
 ## 0A) Implementation Update (2026-02-27)
 

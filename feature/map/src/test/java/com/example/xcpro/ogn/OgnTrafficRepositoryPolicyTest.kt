@@ -251,14 +251,52 @@ class OgnTrafficRepositoryPolicyTest {
     }
 
     @Test
+    fun shouldAcceptUntimedAfterTimedSourceLock_rejectsUntimedBeforeFallbackWindow() {
+        val accepted = shouldAcceptUntimedAfterTimedSourceLock(
+            lastTimedSourceSeenMonoMs = 50_000L,
+            incomingSourceTimestampWallMs = null,
+            nowMonoMs = 60_000L,
+            fallbackAfterMs = 30_000L
+        )
+
+        assertFalse(accepted)
+    }
+
+    @Test
+    fun shouldAcceptUntimedAfterTimedSourceLock_acceptsUntimedAfterFallbackWindow() {
+        val accepted = shouldAcceptUntimedAfterTimedSourceLock(
+            lastTimedSourceSeenMonoMs = 50_000L,
+            incomingSourceTimestampWallMs = null,
+            nowMonoMs = 90_000L,
+            fallbackAfterMs = 30_000L
+        )
+
+        assertTrue(accepted)
+    }
+
+    @Test
+    fun shouldAcceptUntimedAfterTimedSourceLock_acceptsTimedFramesImmediately() {
+        val accepted = shouldAcceptUntimedAfterTimedSourceLock(
+            lastTimedSourceSeenMonoMs = 50_000L,
+            incomingSourceTimestampWallMs = 1_000L,
+            nowMonoMs = 60_000L,
+            fallbackAfterMs = 30_000L
+        )
+
+        assertTrue(accepted)
+    }
+
+    @Test
     fun isPlausibleOgnMotion_rejectsTeleportLikeSpeed() {
         val plausible = isPlausibleOgnMotion(
             previousLatitude = 0.0,
             previousLongitude = 0.0,
             previousSourceTimestampWallMs = 1_000L,
+            previousSeenMonoMs = 10_000L,
             incomingLatitude = 1.0,
             incomingLongitude = 0.0,
             incomingSourceTimestampWallMs = 2_000L,
+            incomingSeenMonoMs = 11_000L,
             maxPlausibleSpeedMps = 250.0
         )
 
@@ -271,13 +309,32 @@ class OgnTrafficRepositoryPolicyTest {
             previousLatitude = 0.0,
             previousLongitude = 0.0,
             previousSourceTimestampWallMs = 1_000L,
+            previousSeenMonoMs = 10_000L,
             incomingLatitude = 0.001,
             incomingLongitude = 0.0,
             incomingSourceTimestampWallMs = 2_000L,
+            incomingSeenMonoMs = 11_000L,
             maxPlausibleSpeedMps = 250.0
         )
 
         assertTrue(plausible)
+    }
+
+    @Test
+    fun isPlausibleOgnMotion_usesMonotonicFallbackWhenSourceTimestampMissing() {
+        val plausible = isPlausibleOgnMotion(
+            previousLatitude = 0.0,
+            previousLongitude = 0.0,
+            previousSourceTimestampWallMs = 1_000L,
+            previousSeenMonoMs = 10_000L,
+            incomingLatitude = 1.0,
+            incomingLongitude = 0.0,
+            incomingSourceTimestampWallMs = null,
+            incomingSeenMonoMs = 11_000L,
+            maxPlausibleSpeedMps = 250.0
+        )
+
+        assertFalse(plausible)
     }
 
     @Test

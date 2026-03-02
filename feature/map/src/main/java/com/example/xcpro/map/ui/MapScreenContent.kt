@@ -59,7 +59,6 @@ import com.example.xcpro.map.MapModalManager
 import com.example.xcpro.map.MapOverlayManager
 import com.example.xcpro.map.ui.MapOverlayStack
 import com.example.xcpro.map.MapScreenState
-import com.example.xcpro.map.MapTaskIntegration
 import com.example.xcpro.map.MapTaskScreenManager
 import com.example.xcpro.map.ui.task.MapTaskScreenUi
 import com.example.xcpro.map.ui.widgets.MapUIWidgetManager
@@ -74,6 +73,7 @@ import com.example.xcpro.map.WindArrowUiState
 import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.ogn.OgnConnectionState
 import com.example.xcpro.ogn.OgnMarkerDetailsSheet
+import com.example.xcpro.ogn.OgnSubscriptionPolicy
 import com.example.xcpro.ogn.OgnTrafficSnapshot
 import com.example.xcpro.ogn.OgnTrafficTarget
 import com.example.xcpro.ogn.OgnTrailSelectionViewModel
@@ -84,7 +84,6 @@ import com.example.xcpro.ogn.normalizeOgnAircraftKey
 import com.example.xcpro.ogn.selectionLookupContainsOgnKey
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import android.util.Log
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.example.xcpro.seedQnhInputValue
@@ -159,10 +158,14 @@ internal fun MapScreenContent(
     flightModeOffset: MutableState<Offset>,
     settingsOffset: MutableState<Offset>,
     ballastOffset: MutableState<Offset>,
+    hamburgerSizePx: MutableState<Float>,
+    settingsSizePx: MutableState<Float>,
     onHamburgerOffsetChange: (Offset) -> Unit,
     onFlightModeOffsetChange: (Offset) -> Unit,
     onSettingsOffsetChange: (Offset) -> Unit,
     onBallastOffsetChange: (Offset) -> Unit,
+    onHamburgerSizeChange: (Float) -> Unit,
+    onSettingsSizeChange: (Float) -> Unit,
     taskScreenManager: MapTaskScreenManager,
     waypointData: List<WaypointData>,
     unitsPreferences: UnitsPreferences,
@@ -205,6 +208,10 @@ internal fun MapScreenContent(
     val weatherOverlayViewModel: WeatherOverlayViewModel = hiltViewModel()
     val weatherOverlayState by weatherOverlayViewModel.overlayState.collectAsStateWithLifecycle()
     val ognTrailSelectionViewModel: OgnTrailSelectionViewModel = hiltViewModel()
+    val forecastRuntimeWarning by overlayManager.forecastRuntimeWarningMessage.collectAsStateWithLifecycle()
+    val skySightSatelliteRuntimeError by overlayManager
+        .skySightSatelliteRuntimeErrorMessage
+        .collectAsStateWithLifecycle()
     val selectedOgnTrailAircraftKeys by ognTrailSelectionViewModel.selectedTrailAircraftKeys
         .collectAsStateWithLifecycle()
     val trailSelectionLookup = remember(selectedOgnTrailAircraftKeys) {
@@ -224,7 +231,7 @@ internal fun MapScreenContent(
     var showQnhDialog by remember { mutableStateOf(false) }
     var qnhInput by remember { mutableStateOf("") }
     var qnhError by remember { mutableStateOf<String?>(null) }
-    var selectedBottomTabName by rememberSaveable { mutableStateOf(MapBottomTab.WEATHER.name) }
+    var selectedBottomTabName by rememberSaveable { mutableStateOf(MapBottomTab.SKYSIGHT.name) }
     var isBottomTabsSheetVisible by rememberSaveable { mutableStateOf(false) }
     var lastNonSatelliteMapStyleName by rememberSaveable { mutableStateOf<String?>(null) }
     var tappedWindArrowCallout by remember { mutableStateOf<WindArrowTapCallout?>(null) }
@@ -232,16 +239,10 @@ internal fun MapScreenContent(
     var overlayViewportSize by remember { mutableStateOf(IntSize.Zero) }
     val selectedBottomTab = remember(selectedBottomTabName) {
         runCatching { MapBottomTab.valueOf(selectedBottomTabName) }
-            .getOrDefault(MapBottomTab.WEATHER)
+            .getOrDefault(MapBottomTab.SKYSIGHT)
     }
     val taskPanelState by taskScreenManager.taskPanelState.collectAsStateWithLifecycle()
     val isTaskPanelVisible = taskPanelState != MapTaskScreenManager.TaskPanelState.HIDDEN
-    val isDrawerBlocked = remember(taskType, isAATEditMode) {
-        MapTaskIntegration.shouldBlockDrawerGestures(
-            taskType = taskType,
-            isAATEditMode = isAATEditMode
-        )
-    }
     val mapCenterLatitude = mapState.mapLibreMap?.cameraPosition?.target?.latitude
         ?: currentLocation?.latitude
     val mapCenterLongitude = mapState.mapLibreMap?.cameraPosition?.target?.longitude
@@ -259,10 +260,15 @@ internal fun MapScreenContent(
     } else {
         null
     }
-    val skySightWarningMessage = joinNonBlankMessages(
-        forecastOverlayState.warningMessage,
-        skySightRegionCoverageWarning
+    val skySightUiMessages = resolveSkySightUiMessages(
+        repositoryWarningMessage = forecastOverlayState.warningMessage,
+        regionCoverageWarningMessage = skySightRegionCoverageWarning,
+        runtimeWarningMessage = forecastRuntimeWarning,
+        repositoryErrorMessage = forecastOverlayState.errorMessage,
+        runtimeErrorMessage = skySightSatelliteRuntimeError
     )
+    val skySightWarningMessage = skySightUiMessages.warningMessage
+    val skySightErrorMessage = skySightUiMessages.errorMessage
     // Temporarily suppress replay/debug FABs on MapScreen (REF/SIM/SIM2/SIM3/TASK).
     val hideReplayDebugFabs = true
     val isForecastWindArrowOverlayActive = forecastOverlayState.windOverlayEnabled &&
@@ -290,9 +296,6 @@ internal fun MapScreenContent(
         forecastOverlayState.enabled,
         forecastOverlayState.primaryTileSpec,
         forecastOverlayState.primaryLegend,
-        forecastOverlayState.secondaryPrimaryOverlayEnabled,
-        forecastOverlayState.secondaryPrimaryTileSpec,
-        forecastOverlayState.secondaryPrimaryLegend,
         forecastOverlayState.windOverlayEnabled,
         forecastOverlayState.windTileSpec,
         forecastOverlayState.windLegend,
@@ -312,9 +315,6 @@ internal fun MapScreenContent(
             enabled = forecastOverlayState.enabled,
             primaryTileSpec = forecastOverlayState.primaryTileSpec,
             primaryLegendSpec = forecastOverlayState.primaryLegend,
-            secondaryPrimaryOverlayEnabled = forecastOverlayState.secondaryPrimaryOverlayEnabled,
-            secondaryPrimaryTileSpec = forecastOverlayState.secondaryPrimaryTileSpec,
-            secondaryPrimaryLegendSpec = forecastOverlayState.secondaryPrimaryLegend,
             windOverlayEnabled = forecastOverlayState.windOverlayEnabled,
             windTileSpec = forecastOverlayState.windTileSpec,
             windLegendSpec = forecastOverlayState.windLegend,
@@ -377,19 +377,32 @@ internal fun MapScreenContent(
         }
     }
 
-    val showOgnDebugPanel = rememberTrafficDebugPanelVisibility(
+    val showOgnDebugPanel = rememberTimedVisibility(
         enabled = BuildConfig.DEBUG &&
             ognOverlayEnabled &&
             shouldSurfaceOgnDebugPanel(ognSnapshot),
         readyForAutoDismiss = isOgnReadyForAutoDismiss(ognSnapshot),
         autoDismissDelayMs = TRAFFIC_DEBUG_PANEL_AUTO_DISMISS_MS
     )
-    val showAdsbDebugPanel = rememberTrafficDebugPanelVisibility(
+    val showAdsbDebugPanel = rememberTimedVisibility(
         enabled = BuildConfig.DEBUG &&
             adsbOverlayEnabled &&
             shouldSurfaceAdsbDebugPanel(adsbSnapshot),
-        readyForAutoDismiss = isAdsbReadyForAutoDismiss(adsbSnapshot),
-        autoDismissDelayMs = TRAFFIC_DEBUG_PANEL_AUTO_DISMISS_MS
+        readyForAutoDismiss = isAdsbReadyForAutoDismiss(adsbSnapshot) ||
+            shouldFlashAdsbIssue(adsbSnapshot),
+        autoDismissDelayMs = ADSB_ISSUE_FLASH_AUTO_DISMISS_MS
+    )
+    val showAdsbIssueFlash = rememberTimedVisibility(
+        enabled = adsbOverlayEnabled &&
+            shouldFlashAdsbIssue(adsbSnapshot),
+        readyForAutoDismiss = true,
+        autoDismissDelayMs = ADSB_ISSUE_FLASH_AUTO_DISMISS_MS
+    )
+    val showAdsbPersistentStatus = rememberPersistentIssueVisibility(
+        enabled = adsbOverlayEnabled,
+        issueActive = shouldSurfacePersistentAdsbStatus(adsbSnapshot),
+        healthy = isAdsbReadyForAutoDismiss(adsbSnapshot),
+        recoveryDwellMs = ADSB_PERSISTENT_STATUS_RECOVERY_DISMISS_MS
     )
 
     Box(
@@ -475,10 +488,14 @@ internal fun MapScreenContent(
                         flightModeOffset = flightModeOffset,
                         settingsOffset = settingsOffset,
                         ballastOffset = ballastOffset,
+                        hamburgerSizePx = hamburgerSizePx,
+                        settingsSizePx = settingsSizePx,
                         onHamburgerOffsetChange = onHamburgerOffsetChange,
                         onFlightModeOffsetChange = onFlightModeOffsetChange,
                         onSettingsOffsetChange = onSettingsOffsetChange,
                         onBallastOffsetChange = onBallastOffsetChange,
+                        onHamburgerSizeChange = onHamburgerSizeChange,
+                        onSettingsSizeChange = onSettingsSizeChange,
                         widgetManager = widgetManager,
                         screenWidthPx = screenWidthPx,
                         screenHeightPx = screenHeightPx,
@@ -537,14 +554,16 @@ internal fun MapScreenContent(
                 }
             },
             onDismissSheet = { isBottomTabsSheetVisible = false },
+            onRainViewerSelected = {
+                if (hasTrafficDetailsOpen) {
+                    onDismissOgnTargetDetails()
+                    onDismissOgnThermalDetails()
+                    onDismissAdsbTargetDetails()
+                }
+                isBottomTabsSheetVisible = false
+                onOpenWeatherSettingsFromTab()
+            },
             weatherEnabled = weatherOverlayState.enabled,
-            weatherOpacity = weatherOverlayState.opacity,
-            weatherCyclePastWindow = weatherOverlayState.animatePastWindow,
-            onWeatherEnabledChanged = weatherOverlayViewModel::setEnabled,
-            onWeatherOpacityChanged = weatherOverlayViewModel::setOpacity,
-            onWeatherCyclePastWindowChanged = weatherOverlayViewModel::setAnimatePastWindow,
-            isDrawerBlocked = isDrawerBlocked,
-            onOpenWeatherSettingsFromTab = onOpenWeatherSettingsFromTab,
             ognEnabled = ognOverlayEnabled,
             showSciaEnabled = showOgnSciaEnabled,
             onOgnEnabledChanged = { enabled ->
@@ -576,10 +595,6 @@ internal fun MapScreenContent(
             skySightUiState = forecastOverlayState,
             onSkySightEnabledChanged = forecastViewModel::setEnabled,
             onSkySightPrimaryParameterToggled = forecastViewModel::selectSkySightPrimaryParameter,
-            onSkySightSecondaryPrimaryOverlayEnabledChanged =
-                forecastViewModel::setSecondaryPrimaryOverlayEnabled,
-            onSkySightSecondaryPrimaryParameterSelected =
-                forecastViewModel::selectSecondaryPrimaryParameter,
             onSkySightWindOverlayEnabledChanged = forecastViewModel::setWindOverlayEnabled,
             onSkySightWindParameterSelected = forecastViewModel::selectWindParameter,
             onSkySightAutoTimeEnabledChanged = forecastViewModel::setAutoTimeEnabled,
@@ -593,7 +608,7 @@ internal fun MapScreenContent(
             onSkySightSatelliteAnimateEnabledChanged = forecastViewModel::setSkySightSatelliteAnimateEnabled,
             onSkySightSatelliteHistoryFramesChanged = forecastViewModel::setSkySightSatelliteHistoryFrames,
             skySightWarningMessage = skySightWarningMessage,
-            skySightErrorMessage = forecastOverlayState.errorMessage,
+            skySightErrorMessage = skySightErrorMessage,
             skySightSatViewEnabled = skySightSatViewEnabled,
             onSkySightSatViewEnabledChanged = { enabled ->
                 if (enabled) {
@@ -618,6 +633,16 @@ internal fun MapScreenContent(
                 .padding(start = 16.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            AdsbPersistentStatusBadge(
+                visible = showAdsbPersistentStatus,
+                snapshot = adsbSnapshot
+            )
+
+            AdsbIssueFlashBadge(
+                visible = showAdsbIssueFlash,
+                snapshot = adsbSnapshot
+            )
+
             OgnDebugPanel(
                 visible = showOgnDebugPanel,
                 snapshot = ognSnapshot
@@ -696,13 +721,6 @@ internal fun MapScreenContent(
             )
         }
 
-        WeatherMapConfidenceChip(
-            runtimeState = weatherOverlayState,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 28.dp, end = 16.dp)
-        )
-
         QnhDialogHost(
             visible = showQnhDialog,
             qnhInput = qnhInput,
@@ -760,6 +778,10 @@ internal fun MapScreenContent(
             selectedOgnThermal != null -> {
                 OgnThermalDetailsSheet(
                     hotspot = selectedOgnThermal,
+                    distanceMeters = computeOwnshipDistanceToHotspotMeters(
+                        currentLocation = currentLocation,
+                        hotspot = selectedOgnThermal
+                    ),
                     unitsPreferences = unitsPreferences,
                     onDismiss = onDismissOgnThermalDetails
                 )
@@ -780,6 +802,28 @@ internal fun MapScreenContent(
         replayState = replayState,
         flightDataManager = flightDataManager,
         unitsPreferences = unitsPreferences
+    )
+}
+
+private fun computeOwnshipDistanceToHotspotMeters(
+    currentLocation: MapLocationUiModel?,
+    hotspot: OgnThermalHotspot
+): Double? {
+    val ownshipLat = currentLocation?.latitude ?: return null
+    val ownshipLon = currentLocation.longitude
+    val hotspotLat = hotspot.latitude
+    val hotspotLon = hotspot.longitude
+
+    if (!ownshipLat.isFinite() || !ownshipLon.isFinite()) return null
+    if (!hotspotLat.isFinite() || !hotspotLon.isFinite()) return null
+    if (ownshipLat !in -90.0..90.0 || hotspotLat !in -90.0..90.0) return null
+    if (ownshipLon !in -180.0..180.0 || hotspotLon !in -180.0..180.0) return null
+
+    return OgnSubscriptionPolicy.haversineMeters(
+        lat1 = ownshipLat,
+        lon1 = ownshipLon,
+        lat2 = hotspotLat,
+        lon2 = hotspotLon
     )
 }
 
@@ -844,30 +888,10 @@ private data class WindArrowTapCallout(
     val speedKt: Double
 )
 
-@Composable
-private fun rememberTrafficDebugPanelVisibility(
-    enabled: Boolean,
-    readyForAutoDismiss: Boolean,
-    autoDismissDelayMs: Long
-): Boolean {
-    var visible by remember(enabled) { mutableStateOf(enabled) }
-    LaunchedEffect(enabled, readyForAutoDismiss, autoDismissDelayMs) {
-        if (!enabled) {
-            visible = false
-            return@LaunchedEffect
-        }
-        visible = true
-        if (!readyForAutoDismiss) return@LaunchedEffect
-        delay(autoDismissDelayMs)
-        if (isActive) {
-            visible = false
-        }
-    }
-    return visible
-}
-
 private const val WIND_ARROW_SPEED_TAP_DISPLAY_MS = 4_000L
 private const val TRAFFIC_DEBUG_PANEL_AUTO_DISMISS_MS = 3_000L
+private const val ADSB_ISSUE_FLASH_AUTO_DISMISS_MS = 2_000L
+private const val ADSB_PERSISTENT_STATUS_RECOVERY_DISMISS_MS = 10_000L
 private const val DEFAULT_WIND_SPEED_UNIT_LABEL = "kt"
 private const val SATELLITE_MAP_STYLE_NAME = "Satellite"
 private const val DEFAULT_NON_SATELLITE_MAP_STYLE_NAME = "Topo"
@@ -875,11 +899,3 @@ private const val WIND_TAP_LABEL_EDGE_PADDING_DP = 8
 private const val WIND_TAP_LABEL_ANCHOR_GAP_DP = 10
 private const val WIND_TAP_LABEL_ESTIMATED_WIDTH_DP = 136
 private const val WIND_TAP_LABEL_ESTIMATED_HEIGHT_DP = 42
-
-private fun joinNonBlankMessages(vararg messages: String?): String? {
-    val resolved = messages
-        .mapNotNull { message -> message?.trim()?.takeIf { it.isNotEmpty() } }
-        .distinct()
-    if (resolved.isEmpty()) return null
-    return resolved.joinToString(separator = " | ")
-}

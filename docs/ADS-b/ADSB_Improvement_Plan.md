@@ -1,8 +1,13 @@
 # ADSB Improvement Plan (2026-02-20)
 
-Status: Completed
+Status: Completed (superseded for active execution)
 
-This plan supersedes the completed dated hardening plan and captures only active, high-value ADS-B improvements from the latest deep code pass.
+Superseded by:
+- `docs/ADS-b/CHANGE_PLAN_ADSB_SOCKET_ERROR_HARDENING_2026-03-01.md`
+
+Use this document as historical record only. For current implementation work, follow the superseding change plan.
+
+This plan captured the 2026-02-20 deep-pass hardening scope and is retained as historical context.
 
 ## 0) Delta from genius re-pass (2026-02-20, second pass)
 
@@ -206,4 +211,4 @@ Run additionally when relevant:
 
 - Keep `docs/ADS-b/ADSB.md` as runtime contract.
 - Keep `docs/ADS-b/ADSB_AircraftMetadata.md` and `docs/ADS-b/ADSB_CategoryIconMapping.md` for specialized subcontracts.
-- Keep this file as the single active ADS-B improvement plan.
+- Use `docs/ADS-b/CHANGE_PLAN_ADSB_SOCKET_ERROR_HARDENING_2026-03-01.md` as the active execution plan.

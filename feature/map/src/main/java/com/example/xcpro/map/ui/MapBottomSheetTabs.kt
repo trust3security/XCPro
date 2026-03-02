@@ -1,5 +1,6 @@
 package com.example.xcpro.map.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,14 +20,13 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -34,12 +34,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.example.xcpro.forecast.ForecastOverlayUiState
 import com.example.xcpro.forecast.ForecastParameterId
-import com.example.xcpro.weather.rain.WEATHER_RAIN_OPACITY_MAX
-import com.example.xcpro.weather.rain.WEATHER_RAIN_OPACITY_MIN
-import kotlinx.coroutines.launch
 
 internal enum class MapBottomTab(val label: String) {
-    WEATHER("Weather"),
     SKYSIGHT("SkySight"),
     OGN("Scia"),
     TAB_4("Tab 4")
@@ -59,14 +55,8 @@ internal fun MapBottomTabsLayer(
     isTaskPanelVisible: Boolean,
     onTabSelected: (MapBottomTab) -> Unit,
     onDismissSheet: () -> Unit,
+    onRainViewerSelected: () -> Unit,
     weatherEnabled: Boolean,
-    weatherOpacity: Float,
-    weatherCyclePastWindow: Boolean,
-    onWeatherEnabledChanged: (Boolean) -> Unit,
-    onWeatherOpacityChanged: (Float) -> Unit,
-    onWeatherCyclePastWindowChanged: (Boolean) -> Unit,
-    isDrawerBlocked: Boolean,
-    onOpenWeatherSettingsFromTab: () -> Unit,
     ognEnabled: Boolean,
     showSciaEnabled: Boolean,
     onOgnEnabledChanged: (Boolean) -> Unit,
@@ -84,8 +74,6 @@ internal fun MapBottomTabsLayer(
     skySightUiState: ForecastOverlayUiState,
     onSkySightEnabledChanged: (Boolean) -> Unit,
     onSkySightPrimaryParameterToggled: (ForecastParameterId) -> Unit,
-    onSkySightSecondaryPrimaryOverlayEnabledChanged: (Boolean) -> Unit,
-    onSkySightSecondaryPrimaryParameterSelected: (ForecastParameterId) -> Unit,
     onSkySightWindOverlayEnabledChanged: (Boolean) -> Unit,
     onSkySightWindParameterSelected: (ForecastParameterId) -> Unit,
     onSkySightAutoTimeEnabledChanged: (Boolean) -> Unit,
@@ -109,9 +97,10 @@ internal fun MapBottomTabsLayer(
                 .fillMaxSize()
                 .zIndex(65f)
         ) {
-            BottomTabStrip(
-                selectedTab = selectedTab,
+            BottomFloatingStrip(
                 onTabSelected = onTabSelected,
+                onRainViewerSelected = onRainViewerSelected,
+                weatherEnabled = weatherEnabled,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .navigationBarsPadding()
@@ -122,7 +111,6 @@ internal fun MapBottomTabsLayer(
 
     if (isSheetVisible) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        val scope = rememberCoroutineScope()
 
         ModalBottomSheet(
             onDismissRequest = onDismissSheet,
@@ -147,35 +135,11 @@ internal fun MapBottomTabsLayer(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     when (selectedTab) {
-                        MapBottomTab.WEATHER -> {
-                            WeatherTabContent(
-                                enabled = weatherEnabled,
-                                opacity = weatherOpacity,
-                                cyclePastWindow = weatherCyclePastWindow,
-                                onEnabledChanged = onWeatherEnabledChanged,
-                                onOpacityChanged = onWeatherOpacityChanged,
-                                onCyclePastWindowChanged = onWeatherCyclePastWindowChanged,
-                                isDrawerBlocked = isDrawerBlocked,
-                                onMoreWeatherSettings = {
-                                    if (isDrawerBlocked) return@WeatherTabContent
-                                    scope.launch {
-                                        sheetState.hide()
-                                        onDismissSheet()
-                                        onOpenWeatherSettingsFromTab()
-                                    }
-                                }
-                            )
-                        }
-
                         MapBottomTab.SKYSIGHT -> {
                             ForecastOverlayControlsContent(
                                 uiState = skySightUiState,
                                 onEnabledChanged = onSkySightEnabledChanged,
                                 onPrimaryParameterToggled = onSkySightPrimaryParameterToggled,
-                                onSecondaryPrimaryOverlayEnabledChanged =
-                                    onSkySightSecondaryPrimaryOverlayEnabledChanged,
-                                onSecondaryPrimaryParameterSelected =
-                                    onSkySightSecondaryPrimaryParameterSelected,
                                 onWindOverlayEnabledChanged = onSkySightWindOverlayEnabledChanged,
                                 onWindParameterSelected = onSkySightWindParameterSelected,
                                 onAutoTimeEnabledChanged = onSkySightAutoTimeEnabledChanged,
@@ -230,7 +194,6 @@ internal fun MapBottomTabsLayer(
                 )
 
                 BottomTabStrip(
-                    selectedTab = selectedTab,
                     onTabSelected = onTabSelected,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -242,8 +205,40 @@ internal fun MapBottomTabsLayer(
 }
 
 @Composable
+private fun BottomFloatingStrip(
+    onTabSelected: (MapBottomTab) -> Unit,
+    onRainViewerSelected: () -> Unit,
+    weatherEnabled: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.widthIn(max = 420.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)
+    ) {
+        val defaultBorderColor = MaterialTheme.colorScheme.outlineVariant
+        val rainViewerBorderColor = resolveRainViewerBorderColor(
+            weatherEnabled = weatherEnabled,
+            defaultBorderColor = defaultBorderColor
+        )
+        AssistChip(
+            onClick = onRainViewerSelected,
+            border = BorderStroke(TAB_CHIP_BORDER_WIDTH, rainViewerBorderColor),
+            label = {
+                Text(
+                    text = "RainViewer",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        )
+        BottomTabStrip(
+            onTabSelected = onTabSelected
+        )
+    }
+}
+
+@Composable
 private fun BottomTabStrip(
-    selectedTab: MapBottomTab,
     onTabSelected: (MapBottomTab) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -251,9 +246,11 @@ private fun BottomTabStrip(
         modifier = modifier.widthIn(max = 420.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)
     ) {
+        val borderColor = MaterialTheme.colorScheme.outlineVariant
         MapBottomTab.entries.forEach { tab ->
             AssistChip(
                 onClick = { onTabSelected(tab) },
+                border = BorderStroke(TAB_CHIP_BORDER_WIDTH, borderColor),
                 label = {
                     Text(
                         text = tab.label,
@@ -263,67 +260,6 @@ private fun BottomTabStrip(
                 }
             )
         }
-    }
-}
-
-@Composable
-private fun WeatherTabContent(
-    enabled: Boolean,
-    opacity: Float,
-    cyclePastWindow: Boolean,
-    onEnabledChanged: (Boolean) -> Unit,
-    onOpacityChanged: (Float) -> Unit,
-    onCyclePastWindowChanged: (Boolean) -> Unit,
-    isDrawerBlocked: Boolean,
-    onMoreWeatherSettings: () -> Unit
-) {
-    Text(
-        text = "Weather",
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.SemiBold
-    )
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(text = "Show rain overlay")
-        Switch(checked = enabled, onCheckedChange = onEnabledChanged)
-    }
-    Text(text = "Opacity ${(opacity * 100f).toInt()}%")
-    Slider(
-        value = opacity,
-        onValueChange = onOpacityChanged,
-        valueRange = WEATHER_RAIN_OPACITY_MIN..WEATHER_RAIN_OPACITY_MAX
-    )
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(text = "Cycle past radar window")
-        Switch(checked = cyclePastWindow, onCheckedChange = onCyclePastWindowChanged)
-    }
-    Text(
-        text = "Animates recent radar frames to show rain movement speed.",
-        style = MaterialTheme.typography.bodySmall
-    )
-    Text(
-        text = "Opens General -> RainViewer settings.",
-        style = MaterialTheme.typography.bodySmall
-    )
-    Button(
-        onClick = onMoreWeatherSettings,
-        enabled = !isDrawerBlocked
-    ) {
-        Text("More settings")
-    }
-    if (isDrawerBlocked) {
-        Text(
-            text = "Unavailable while task edit mode is active.",
-            color = MaterialTheme.colorScheme.error,
-            style = MaterialTheme.typography.bodySmall
-        )
     }
 }
 
@@ -499,7 +435,20 @@ private val SHEET_CONTENT_BOTTOM_PADDING = 0.dp
 private val SHEET_DIVIDER_TOP_PADDING = 4.dp
 private val SHEET_DIVIDER_BOTTOM_PADDING = 1.dp
 private val SHEET_TAB_STRIP_BOTTOM_PADDING = 0.dp
+private val TAB_CHIP_BORDER_WIDTH = 1.dp
+internal val RAINVIEWER_TAB_ENABLED_BORDER_COLOR = Color(0xFF16A34A)
 internal const val TAB4_ADSB_SWITCH_TAG = "tab4_adsb_switch"
 internal const val TAB4_THERMALS_SWITCH_TAG = "tab4_thermals_switch"
 internal const val TAB4_DISTANCE_SWITCH_TAG = "tab4_distance_switch"
 internal const val TAB4_QNH_BUTTON_TAG = "tab4_qnh_button"
+
+internal fun resolveRainViewerBorderColor(
+    weatherEnabled: Boolean,
+    defaultBorderColor: Color
+): Color {
+    return if (weatherEnabled) {
+        RAINVIEWER_TAB_ENABLED_BORDER_COLOR
+    } else {
+        defaultBorderColor
+    }
+}

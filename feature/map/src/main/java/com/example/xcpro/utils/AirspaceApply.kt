@@ -2,6 +2,7 @@ package com.example.xcpro
 
 import android.util.Log
 import com.example.xcpro.airspace.AirspaceUseCase
+import com.example.xcpro.common.documents.DocumentRef
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.maplibre.android.maps.MapLibreMap
@@ -22,23 +23,21 @@ suspend fun loadAndApplyAirspace(
         checks[fileName] == true
     }
 
-    // Load selected classes, or create defaults if none exist
-    var selectedClasses = useCase.loadSelectedClasses()
-        ?.filter { it.value }
-        ?.keys
-        ?.toSet()
-        ?: emptySet()
+    val selectedClassStates = useCase.loadSelectedClasses()
+    val selectedClasses = resolveSelectedClasses(
+        useCase = useCase,
+        enabledFiles = enabledFiles,
+        selectedClassStates = selectedClassStates
+    )
 
-    // Auto-enable default classes if none are selected and we have airspace files
-    if (selectedClasses.isEmpty() && enabledFiles.isNotEmpty()) {
-        val availableClasses = useCase.parseClasses(enabledFiles)
-        val defaultClasses = availableClasses.associateWith(::defaultClassEnabled)
-        useCase.saveSelectedClasses(defaultClasses)
-        selectedClasses = defaultClasses.filter { it.value }.keys.toSet()
-        Log.d(AIRSPACE_APPLY_TAG, "Auto-enabled default airspace classes: $selectedClasses")
-    }
     if (enabledFiles.isEmpty()) {
         Log.d(AIRSPACE_APPLY_TAG, "No airspace files selected")
+        clearAirspaceOverlay(map)
+        return
+    }
+    if (selectedClasses.isEmpty()) {
+        Log.d(AIRSPACE_APPLY_TAG, "No airspace classes selected; clearing overlay")
+        clearAirspaceOverlay(map)
         return
     }
 
@@ -74,6 +73,28 @@ suspend fun loadAndApplyAirspace(
             Log.e(AIRSPACE_APPLY_TAG, "Error loading airspace files: ${e.message}", e)
         }
     } ?: Log.e(AIRSPACE_APPLY_TAG, "Map instance not available")
+}
+
+private suspend fun clearAirspaceOverlay(map: MapLibreMap?) {
+    map ?: return
+    withContext(Dispatchers.Main.immediate) {
+        map.getStyle()?.let { style ->
+            style.removeLayer("airspace-layer")
+            style.removeSource("airspace-source")
+        }
+    }
+}
+
+private suspend fun resolveSelectedClasses(
+    useCase: AirspaceUseCase,
+    enabledFiles: List<DocumentRef>,
+    selectedClassStates: Map<String, Boolean>?
+): Set<String> {
+    if (selectedClassStates == null || selectedClassStates.isEmpty()) {
+        val availableClasses = useCase.parseClasses(enabledFiles)
+        return availableClasses.filter(::defaultClassEnabled).toSet()
+    }
+    return selectedClassStates.filter { it.value }.keys.toSet()
 }
 
 private fun defaultClassEnabled(className: String): Boolean = when (className.uppercase()) {

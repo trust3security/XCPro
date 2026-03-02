@@ -29,15 +29,9 @@ class ForecastPreferencesRepositoryTest {
         repository.setOverlayEnabled(false)
         repository.setOpacity(FORECAST_OPACITY_DEFAULT)
         repository.setWindOverlayScale(FORECAST_WIND_OVERLAY_SCALE_DEFAULT)
-        repository.setSecondaryPrimaryOverlayEnabled(
-            FORECAST_SECONDARY_PRIMARY_OVERLAY_ENABLED_DEFAULT
-        )
         repository.setWindOverlayEnabled(FORECAST_WIND_OVERLAY_ENABLED_DEFAULT)
         repository.setWindDisplayMode(FORECAST_WIND_DISPLAY_MODE_DEFAULT)
         repository.setSelectedPrimaryParameterId(DEFAULT_FORECAST_PARAMETER_ID)
-        repository.setSelectedSecondaryPrimaryParameterId(
-            DEFAULT_FORECAST_SECONDARY_PRIMARY_PARAMETER_ID
-        )
         repository.setSelectedWindParameterId(DEFAULT_FORECAST_WIND_PARAMETER_ID)
         repository.setSelectedTimeUtcMs(null)
         repository.setSelectedRegion(DEFAULT_FORECAST_REGION_CODE)
@@ -122,15 +116,6 @@ class ForecastPreferencesRepositoryTest {
     }
 
     @Test
-    fun secondaryPrimaryOverlayEnabled_defaultsToFalse() = runTest {
-        val repository = ForecastPreferencesRepository(context)
-
-        val current = repository.secondaryPrimaryOverlayEnabledFlow.first()
-
-        assertFalse(current)
-    }
-
-    @Test
     fun windOverlayEnabled_defaultsToFalse() = runTest {
         val repository = ForecastPreferencesRepository(context)
 
@@ -146,8 +131,6 @@ class ForecastPreferencesRepositoryTest {
         repository.setOverlayEnabled(true)
         repository.setOpacity(0.4f)
         repository.setWindOverlayScale(1.5f)
-        repository.setSecondaryPrimaryOverlayEnabled(true)
-        repository.setSelectedSecondaryPrimaryParameterId(ForecastParameterId("wblmaxmin"))
         repository.setWindOverlayEnabled(true)
         repository.setWindDisplayMode(ForecastWindDisplayMode.BARB)
         repository.setSelectedWindParameterId(ForecastParameterId("bltopwind"))
@@ -156,8 +139,6 @@ class ForecastPreferencesRepositoryTest {
         val enabled = repository.overlayEnabledFlow.first()
         val opacity = repository.opacityFlow.first()
         val windOverlayScale = repository.windOverlayScaleFlow.first()
-        val secondaryPrimaryOverlayEnabled = repository.secondaryPrimaryOverlayEnabledFlow.first()
-        val selectedSecondaryPrimaryParameter = repository.selectedSecondaryPrimaryParameterIdFlow.first()
         val windOverlayEnabled = repository.windOverlayEnabledFlow.first()
         val windDisplayMode = repository.windDisplayModeFlow.first()
         val selectedWindParameter = repository.selectedWindParameterIdFlow.first()
@@ -166,8 +147,6 @@ class ForecastPreferencesRepositoryTest {
         assertTrue(enabled)
         assertEquals(0.4f, opacity)
         assertEquals(1.5f, windOverlayScale)
-        assertTrue(secondaryPrimaryOverlayEnabled)
-        assertEquals("wblmaxmin", selectedSecondaryPrimaryParameter.value)
         assertTrue(windOverlayEnabled)
         assertEquals(ForecastWindDisplayMode.BARB, windDisplayMode)
         assertEquals("bltopwind", selectedWindParameter.value)

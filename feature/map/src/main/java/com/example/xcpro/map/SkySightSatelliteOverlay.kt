@@ -6,6 +6,7 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.os.Handler
 import android.os.Looper
+import com.example.xcpro.core.time.TimeBridge
 import com.example.xcpro.forecast.FORECAST_SKYSIGHT_SATELLITE_FRAME_STEP_MINUTES
 import com.example.xcpro.forecast.FORECAST_SKYSIGHT_SATELLITE_HISTORY_FRAMES_MAX
 import com.example.xcpro.forecast.clampSkySightSatelliteHistoryFrames
@@ -30,7 +31,7 @@ import org.maplibre.android.style.sources.VectorSource
 
 class SkySightSatelliteOverlay(
     private val map: MapLibreMap,
-    private val nowUtcMsProvider: () -> Long = { System.currentTimeMillis() }
+    private val nowUtcMsProvider: () -> Long = { TimeBridge.nowWallMs() }
 ) {
     private val animationHandler = Handler(Looper.getMainLooper())
     private var animationRunnable: Runnable? = null
@@ -51,7 +52,10 @@ class SkySightSatelliteOverlay(
         }
 
         val frameCount = clampSkySightSatelliteHistoryFrames(config.historyFrameCount)
-        val baseFrameEpochSec = resolveBaseFrameEpochSec(config.referenceTimeUtcMs)
+        val baseFrameEpochSec = resolveBaseFrameEpochSec(
+            referenceTimeUtcMs = config.referenceTimeUtcMs,
+            frameCount = frameCount
+        )
         val frameEpochs = buildFrameEpochs(
             baseFrameEpochSec = baseFrameEpochSec,
             frameCount = frameCount
@@ -61,15 +65,16 @@ class SkySightSatelliteOverlay(
         rebuildSourcesAndLayers(style, frameEpochs, config)
 
         activeFrameCount = frameCount
-        activeFrameIndex = activeFrameIndex.coerceIn(0, frameCount - 1)
+        activeFrameIndex = resolveInitialFrameIndex(
+            animate = config.animate,
+            frameCount = frameCount
+        )
         activeSatellite = config.showSatelliteImagery
         activeRadar = config.showRadar
         activeLightning = config.showLightning
 
         if (config.animate && frameCount > 1) {
             startAnimation()
-        } else {
-            activeFrameIndex = 0
         }
         applyFrameOpacities(style)
     }
@@ -99,7 +104,10 @@ class SkySightSatelliteOverlay(
                     stopAnimation()
                     return
                 }
-                activeFrameIndex = (activeFrameIndex + 1) % activeFrameCount
+                activeFrameIndex = nextFrameIndex(
+                    currentFrameIndex = activeFrameIndex,
+                    frameCount = activeFrameCount
+                )
                 applyFrameOpacities(style)
                 animationHandler.postDelayed(this, SKY_SIGHT_ANIMATION_INTERVAL_MS)
             }
@@ -274,21 +282,52 @@ class SkySightSatelliteOverlay(
         }
     }
 
-    private fun resolveBaseFrameEpochSec(referenceTimeUtcMs: Long?): Long {
+    private fun resolveBaseFrameEpochSec(referenceTimeUtcMs: Long?, frameCount: Int): Long {
+        val safeFrameCount = clampSkySightSatelliteHistoryFrames(frameCount)
+            .coerceAtLeast(1)
         val nowUtcMs = nowUtcMsProvider()
-        val latestAvailableUtcMs = nowUtcMs - SKY_SIGHT_SOURCE_DELAY_MS
-        val candidateUtcMs = referenceTimeUtcMs ?: latestAvailableUtcMs
-        val clampedUtcMs = minOf(candidateUtcMs, latestAvailableUtcMs)
+        val latestAvailableUtcMs = (nowUtcMs - SKY_SIGHT_SOURCE_DELAY_MS).coerceAtLeast(0L)
         val frameStepMs = FORECAST_SKYSIGHT_SATELLITE_FRAME_STEP_MINUTES * 60_000L
+        val latestSteppedUtcMs = (latestAvailableUtcMs / frameStepMs) * frameStepMs
+        val maxHistorySpanMs = (FORECAST_SKYSIGHT_SATELLITE_HISTORY_FRAMES_MAX - 1) * frameStepMs
+        val renderedHistorySpanMs = (safeFrameCount - 1) * frameStepMs
+        val earliestRenderableReferenceUtcMs = (
+            latestSteppedUtcMs - maxHistorySpanMs + renderedHistorySpanMs
+            ).coerceAtLeast(0L)
+        val candidateUtcMs = referenceTimeUtcMs ?: latestAvailableUtcMs
+        val clampedUtcMs = candidateUtcMs.coerceIn(
+            minimumValue = earliestRenderableReferenceUtcMs,
+            maximumValue = latestSteppedUtcMs
+        )
         val steppedUtcMs = (clampedUtcMs / frameStepMs) * frameStepMs
         return (steppedUtcMs / 1_000L).coerceAtLeast(0L)
     }
 
     private fun buildFrameEpochs(baseFrameEpochSec: Long, frameCount: Int): List<Long> {
+        val safeFrameCount = clampSkySightSatelliteHistoryFrames(frameCount)
+            .coerceAtLeast(1)
         val frameStepSec = FORECAST_SKYSIGHT_SATELLITE_FRAME_STEP_MINUTES * 60L
-        return (0 until frameCount).map { index ->
-            (baseFrameEpochSec - (index * frameStepSec)).coerceAtLeast(0L)
+        return (0 until safeFrameCount).map { index ->
+            val offset = (safeFrameCount - 1 - index) * frameStepSec
+            (baseFrameEpochSec - offset).coerceAtLeast(0L)
         }
+    }
+
+    private fun resolveInitialFrameIndex(animate: Boolean, frameCount: Int): Int {
+        val safeFrameCount = clampSkySightSatelliteHistoryFrames(frameCount)
+            .coerceAtLeast(1)
+        return if (animate && safeFrameCount > 1) {
+            0
+        } else {
+            safeFrameCount - 1
+        }
+    }
+
+    private fun nextFrameIndex(currentFrameIndex: Int, frameCount: Int): Int {
+        val safeFrameCount = clampSkySightSatelliteHistoryFrames(frameCount)
+            .coerceAtLeast(1)
+        val safeCurrent = currentFrameIndex.coerceIn(0, safeFrameCount - 1)
+        return (safeCurrent + 1) % safeFrameCount
     }
 
     private fun buildSatelliteTileTemplate(epochSec: Long): String {
@@ -307,6 +346,14 @@ class SkySightSatelliteOverlay(
     }
 
     private fun addLayerBelowAnchors(style: Style, layer: Layer) {
+        val weatherRainFrameAnchor = lowestLayerIdWithPrefix(
+            style = style,
+            prefix = WEATHER_RAIN_FRAME_LAYER_PREFIX
+        )
+        if (weatherRainFrameAnchor != null) {
+            style.addLayerBelow(layer, weatherRainFrameAnchor)
+            return
+        }
         for (anchor in SKY_SIGHT_ANCHOR_LAYER_IDS) {
             if (style.getLayer(anchor) != null) {
                 style.addLayerBelow(layer, anchor)
@@ -314,6 +361,11 @@ class SkySightSatelliteOverlay(
             }
         }
         style.addLayer(layer)
+    }
+
+    private fun lowestLayerIdWithPrefix(style: Style, prefix: String): String? {
+        val layers = runCatching { style.layers.toList() }.getOrElse { emptyList() }
+        return layers.firstOrNull { layer -> layer.id.startsWith(prefix) }?.id
     }
 
     private fun satelliteSourceId(index: Int): String = "skysight-sat-source-$index"
@@ -342,6 +394,7 @@ class SkySightSatelliteOverlay(
         private const val SKY_SIGHT_LIGHTNING_STROKE_COLOR = -16777216
         private const val SKY_SIGHT_LIGHTNING_STROKE_WIDTH_PX = 3f
         private const val SKY_SIGHT_ATTRIBUTION = "SkySight satellite"
+        private const val WEATHER_RAIN_FRAME_LAYER_PREFIX = "weather-rain-layer-"
 
         private val SKY_SIGHT_TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter
             .ofPattern("yyyy/MM/dd/HHmm", Locale.US)
@@ -350,8 +403,6 @@ class SkySightSatelliteOverlay(
         private val SKY_SIGHT_ANCHOR_LAYER_IDS: List<String> = listOf(
             "forecast-primary-raster-layer",
             "forecast-primary-vector-fill-layer",
-            "forecast-secondary-raster-layer",
-            "forecast-secondary-vector-fill-layer",
             "forecast-wind-raster-layer",
             "forecast-wind-symbol-layer",
             "weather-rain-layer",

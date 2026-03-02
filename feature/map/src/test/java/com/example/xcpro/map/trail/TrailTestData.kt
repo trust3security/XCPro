@@ -42,6 +42,7 @@ internal fun buildCompleteFlightData(
     isCircling: Boolean = false,
     currentThermalValid: Boolean = false,
     thermalAverageValid: Boolean = false,
+    airspeedSource: String = "UNKNOWN",
     timestampMillis: Long = 1000L
 ): CompleteFlightData {
     return CompleteFlightData(
@@ -83,7 +84,7 @@ internal fun buildCompleteFlightData(
         nettoValid = nettoValid,
         trueAirspeed = SpeedMs(0.0),
         indicatedAirspeed = SpeedMs(0.0),
-        airspeedSource = "UNKNOWN",
+        airspeedSource = airspeedSource,
         tasValid = true,
         varioOptimized = VerticalSpeedMs(0.0),
         varioLegacy = VerticalSpeedMs(0.0),

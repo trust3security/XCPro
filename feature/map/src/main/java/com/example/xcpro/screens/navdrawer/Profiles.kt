@@ -25,6 +25,7 @@ import com.example.xcpro.profiles.ProfileImportDialog
 import com.example.xcpro.screens.navdrawer.SettingsTopAppBar
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.xcpro.profiles.formatProfileImportFeedback
 import com.example.xcpro.profiles.ProfilesConfigViewModel
 import com.example.xcpro.profiles.ui.icon
 
@@ -51,6 +52,12 @@ fun ProfilesScreen(
 
     LaunchedEffect(Unit) {
         configViewModel.loadConfig()
+    }
+
+    LaunchedEffect(uiState.importResult) {
+        val result = uiState.importResult ?: return@LaunchedEffect
+        exportMessage = formatProfileImportFeedback(result)
+        profileViewModel.clearImportResult()
     }
 
     Scaffold(
@@ -305,6 +312,7 @@ fun ProfilesScreen(
     if (showExportDialog) {
         ProfileExportDialog(
             profile = null, // Export all profiles
+            allProfiles = uiState.profiles,
             onDismiss = { showExportDialog = false },
             onExport = { message ->
                 exportMessage = message
@@ -316,20 +324,12 @@ fun ProfilesScreen(
     if (showImportDialog) {
         ProfileImportDialog(
             onDismiss = { showImportDialog = false },
-            onImport = { importedProfiles ->
-                // Import all profiles (they get new IDs to avoid conflicts)
-                importedProfiles.forEach { profile ->
-                    profileViewModel.createProfile(
-                        com.example.xcpro.profiles.ProfileCreationRequest(
-                            name = "${profile.name} (Imported)",
-                            aircraftType = profile.aircraftType,
-                            aircraftModel = profile.aircraftModel,
-                            description = profile.description
-                        )
-                    )
-                }
+            onImport = { importedProfiles, keepCurrentActive ->
+                profileViewModel.importProfiles(
+                    profiles = importedProfiles,
+                    keepCurrentActive = keepCurrentActive
+                )
                 showImportDialog = false
-                exportMessage = "Successfully imported ${importedProfiles.size} profiles"
             },
             onError = { error ->
                 exportMessage = error

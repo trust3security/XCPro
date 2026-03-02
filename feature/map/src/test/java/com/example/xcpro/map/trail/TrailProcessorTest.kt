@@ -3,9 +3,12 @@ package com.example.xcpro.map.trail
 import com.example.xcpro.map.trail.domain.TrailProcessor
 import com.example.xcpro.map.trail.domain.TrailTimeBase
 import com.example.xcpro.map.trail.domain.TrailUpdateInput
+import com.example.xcpro.weather.wind.model.WindSource
+import com.example.xcpro.weather.wind.model.WindState
+import com.example.xcpro.weather.wind.model.WindVector
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TrailProcessorTest {
@@ -157,6 +160,62 @@ class TrailProcessorTest {
         assertTrue(switchedBackToMonotonic.storeReset)
         assertTrue(switchedBackToMonotonic.sampleAdded)
         assertEquals(1, switchedBackToMonotonic.renderState.points.size)
+    }
+
+    @Test
+    fun live_wind_is_zero_when_airspeed_source_is_not_wind() {
+        val processor = TrailProcessor()
+        val wind = WindState(
+            vector = WindVector(east = 4.0, north = 3.0),
+            source = WindSource.MANUAL,
+            quality = 5,
+            stale = false,
+            confidence = 1.0
+        )
+
+        val result = processor.update(
+            TrailUpdateInput(
+                data = buildCompleteFlightData(
+                    gps = defaultGps(monotonicTimestampMillis = 5_000L, timestampMillis = 5_000L),
+                    airspeedSource = "GPS",
+                    timestampMillis = 5_000L
+                ),
+                windState = wind,
+                isFlying = true,
+                isReplay = false
+            )
+        )
+
+        assertNotNull(result)
+        assertEquals(0.0, result!!.renderState.windSpeedMs, 1e-6)
+    }
+
+    @Test
+    fun live_wind_is_used_when_airspeed_source_is_wind() {
+        val processor = TrailProcessor()
+        val wind = WindState(
+            vector = WindVector(east = 4.0, north = 3.0),
+            source = WindSource.MANUAL,
+            quality = 5,
+            stale = false,
+            confidence = 1.0
+        )
+
+        val result = processor.update(
+            TrailUpdateInput(
+                data = buildCompleteFlightData(
+                    gps = defaultGps(monotonicTimestampMillis = 6_000L, timestampMillis = 6_000L),
+                    airspeedSource = "WIND",
+                    timestampMillis = 6_000L
+                ),
+                windState = wind,
+                isFlying = true,
+                isReplay = false
+            )
+        )
+
+        assertNotNull(result)
+        assertTrue(result!!.renderState.windSpeedMs > 0.0)
     }
 }
 

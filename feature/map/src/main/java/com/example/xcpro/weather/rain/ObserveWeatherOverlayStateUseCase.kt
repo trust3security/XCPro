@@ -85,7 +85,7 @@ class ObserveWeatherOverlayStateUseCase @Inject constructor(
         val frameSelection = selectFrameSelection(
             metadata = metadata,
             animatePastWindow = preferences.animatePastWindow,
-            animationWindowSeconds = preferences.animationWindow.windowSeconds,
+            animationWindow = preferences.animationWindow,
             frameMode = preferences.frameMode,
             manualFrameIndex = preferences.manualFrameIndex,
             renderOptions = preferences.renderOptions,
@@ -139,7 +139,7 @@ class ObserveWeatherOverlayStateUseCase @Inject constructor(
     private fun selectFrameSelection(
         metadata: WeatherRadarMetadata?,
         animatePastWindow: Boolean,
-        animationWindowSeconds: Long,
+        animationWindow: WeatherRainAnimationWindow,
         frameMode: WeatherRadarFrameMode,
         manualFrameIndex: Int,
         renderOptions: WeatherRadarRenderOptions,
@@ -151,7 +151,7 @@ class ObserveWeatherOverlayStateUseCase @Inject constructor(
         val selectedFrame = if (animatePastWindow) {
             selectAnimatedFrame(
                 frames = frames,
-                animationWindowSeconds = animationWindowSeconds,
+                animationWindow = animationWindow,
                 animationTick = animationTick
             )
         } else {
@@ -171,35 +171,20 @@ class ObserveWeatherOverlayStateUseCase @Inject constructor(
 
     private fun selectAnimatedFrame(
         frames: List<WeatherRadarFrame>,
-        animationWindowSeconds: Long,
+        animationWindow: WeatherRainAnimationWindow,
         animationTick: Long
     ): WeatherRadarFrame {
         val latestTimeEpochSec = frames.last().timeEpochSec
-        val animationWindowStartSec = latestTimeEpochSec - animationWindowSeconds
-        val eligibleFrames = frames.filter { frame ->
+        val animationWindowStartSec = latestTimeEpochSec - animationWindow.windowSeconds
+        val animationFrames = frames.filter { frame ->
             frame.timeEpochSec >= animationWindowStartSec
         }
-        val candidateFrames = if (eligibleFrames.isNotEmpty()) eligibleFrames else frames
-        val animationFrames = applyAnimationFrameQualityPolicy(
-            frames = candidateFrames,
-            animationWindowSeconds = animationWindowSeconds
-        )
+            .ifEmpty { frames }
         val boundedIndex = resolveWeatherRainPlaybackFrameIndex(
             animationTick = animationTick,
             frameCount = animationFrames.size
         )
         return animationFrames[boundedIndex]
-    }
-
-    private fun applyAnimationFrameQualityPolicy(
-        frames: List<WeatherRadarFrame>,
-        animationWindowSeconds: Long
-    ): List<WeatherRadarFrame> {
-        if (animationWindowSeconds < WEATHER_RAIN_ANIMATION_WINDOW_30_MIN_SECONDS) return frames
-        if (frames.size < MIN_FRAMES_FOR_QUALITY_FILTER) return frames
-        val windowSpanSeconds = frames.last().timeEpochSec - frames.first().timeEpochSec
-        if (windowSpanSeconds < animationWindowSeconds) return frames
-        return frames.drop(1)
     }
 
     private data class AnimationTickerConfig(
@@ -208,8 +193,4 @@ class ObserveWeatherOverlayStateUseCase @Inject constructor(
         val frameIntervalMs: Long,
         val animationWindow: WeatherRainAnimationWindow
     )
-
-    private companion object {
-        private const val MIN_FRAMES_FOR_QUALITY_FILTER = 4
-    }
 }

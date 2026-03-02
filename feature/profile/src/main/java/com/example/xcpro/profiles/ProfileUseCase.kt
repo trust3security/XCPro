@@ -17,6 +17,9 @@ class ProfileUseCase @Inject constructor(
     suspend fun createProfile(request: ProfileCreationRequest): Result<UserProfile> =
         repository.createProfile(request)
 
+    suspend fun importProfiles(request: ProfileImportRequest): Result<ProfileImportResult> =
+        repository.importProfiles(request)
+
     suspend fun updateProfile(profile: UserProfile): Result<Unit> =
         repository.updateProfile(profile)
 

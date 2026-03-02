@@ -2,6 +2,7 @@ package com.example.xcpro.common.waypoint
 
 import android.content.Context
 import android.util.Log
+import com.example.xcpro.core.time.TimeBridge
 import java.io.File
 import org.json.JSONObject
 
@@ -117,7 +118,7 @@ private fun broadcastHomeWaypointChange(context: Context, waypointName: String?)
     val sharedPrefs = context.getSharedPreferences("HomeWaypointPrefs", Context.MODE_PRIVATE)
     sharedPrefs.edit()
         .putString("current_home_waypoint", waypointName)
-        .putLong("last_updated", System.currentTimeMillis())
+        .putLong("last_updated", TimeBridge.nowWallMs())
         .apply()
 }
 

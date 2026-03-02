@@ -41,6 +41,10 @@ class ForecastRasterOverlay(
 ) {
     private var lastTileSpec: ForecastTileSpec? = null
     private var lastLegendSpec: ForecastLegendSpec? = null
+    private var activeSourceLayerCandidates: List<String> = emptyList()
+    private var activeSourceLayerIndex: Int = 0
+    private var sourceLayerConsecutiveMisses: Int = 0
+    private var runtimeWarningMessage: String? = null
 
     fun render(
         tileSpec: ForecastTileSpec,
@@ -54,6 +58,7 @@ class ForecastRasterOverlay(
         val resolvedWindOverlayScale = clampForecastWindOverlayScale(windOverlayScale)
         when (tileSpec.format) {
             ForecastTileFormat.RASTER -> {
+                resetSourceLayerFallbackState()
                 removeVectorLayersAndSource(style)
                 ensureRasterSource(style, tileSpec)
                 ensureRasterLayer(style, resolvedOpacity)
@@ -64,9 +69,13 @@ class ForecastRasterOverlay(
                 ensureVectorSource(style, tileSpec)
                 removeWindLayers(style)
                 ensureVectorFillLayer(style, tileSpec, legendSpec, resolvedOpacity)
+                if (maybeAdvanceSourceLayerFallback(tileSpec)) {
+                    ensureVectorFillLayer(style, tileSpec, legendSpec, resolvedOpacity)
+                }
             }
 
             ForecastTileFormat.VECTOR_WIND_POINTS -> {
+                resetSourceLayerFallbackState()
                 removeRasterLayerAndSource(style)
                 ensureVectorSource(style, tileSpec)
                 removeVectorFillLayer(style)
@@ -92,9 +101,12 @@ class ForecastRasterOverlay(
         removeVectorLayersAndSource(style)
         lastTileSpec = null
         lastLegendSpec = null
+        resetSourceLayerFallbackState()
     }
 
     fun cleanup() = clear()
+
+    fun runtimeWarningMessage(): String? = runtimeWarningMessage
 
     fun findWindArrowSpeedAt(tap: LatLng): Double? {
         val style = map.style ?: return null
@@ -166,9 +178,10 @@ class ForecastRasterOverlay(
         legendSpec: ForecastLegendSpec?,
         opacity: Float
     ) {
-        val sourceLayer = resolveSourceLayer(tileSpec) ?: return
+        val sourceLayer = resolveSourceLayerForRender(tileSpec) ?: return
         val existingLayer = style.getLayer(vectorFillLayerId()) as? FillLayer
         if (existingLayer != null) {
+            existingLayer.setSourceLayer(sourceLayer)
             if (legendSpec != null && legendSpec != lastLegendSpec) {
                 existingLayer.setProperties(
                     fillColor(buildIndexedColorExpression(legendSpec, tileSpec.valueProperty))
@@ -216,7 +229,7 @@ class ForecastRasterOverlay(
         windDisplayMode: ForecastWindDisplayMode,
         legendSpec: ForecastLegendSpec?
     ) {
-        val sourceLayer = resolveSourceLayer(tileSpec) ?: return
+        val sourceLayer = resolveSourceLayerForRender(tileSpec) ?: return
         val speedProperty = tileSpec.speedProperty ?: DEFAULT_WIND_SPEED_PROPERTY
         val directionProperty = tileSpec.directionProperty ?: DEFAULT_WIND_DIRECTION_PROPERTY
 
@@ -265,11 +278,10 @@ class ForecastRasterOverlay(
             speedProperty = speedProperty,
             legendSpec = legendSpec
         )
-        val symbolLayer = style.getLayer(windSymbolLayerId()) as? SymbolLayer
-        if (symbolLayer == null) {
-            val layer = SymbolLayer(windSymbolLayerId(), vectorSourceId()).apply {
-                setSourceLayer(sourceLayer)
-            }.withProperties(
+        val existingLayer = style.getLayer(windSymbolLayerId()) as? SymbolLayer
+        if (existingLayer != null) {
+            existingLayer.setSourceLayer(sourceLayer)
+            existingLayer.setProperties(
                 iconImage(iconImageExpression),
                 iconSize(
                     buildWindArrowIconSizeExpression(
@@ -290,10 +302,15 @@ class ForecastRasterOverlay(
                 iconAnchor("center"),
                 iconOpacity(opacity)
             )
-            addLayerBelowAnchor(style, layer)
+            // Keep wind arrows above any freshly recreated primary forecast layers.
+            runCatching { style.removeLayer(windSymbolLayerId()) }
+            addLayerBelowAnchor(style, existingLayer)
             return
         }
-        symbolLayer.setProperties(
+
+        val newLayer = SymbolLayer(windSymbolLayerId(), vectorSourceId()).apply {
+            setSourceLayer(sourceLayer)
+        }.withProperties(
             iconImage(iconImageExpression),
             iconSize(
                 buildWindArrowIconSizeExpression(
@@ -308,8 +325,13 @@ class ForecastRasterOverlay(
                 )
             ),
             iconRotationAlignment("map"),
+            iconKeepUpright(false),
+            iconAllowOverlap(true),
+            iconIgnorePlacement(true),
+            iconAnchor("center"),
             iconOpacity(opacity)
         )
+        addLayerBelowAnchor(style, newLayer)
     }
 
     private fun buildWindArrowIconImageExpression(
@@ -407,12 +429,11 @@ class ForecastRasterOverlay(
             minKt = minKt,
             maxExclusiveKt = maxExclusiveKt
         )
-        val symbolLayer = style.getLayer(layerId) as? SymbolLayer
-        if (symbolLayer == null) {
-            val layer = SymbolLayer(layerId, vectorSourceId()).apply {
-                setSourceLayer(sourceLayer)
-                setFilter(filterExpression)
-            }.withProperties(
+        val existingLayer = style.getLayer(layerId) as? SymbolLayer
+        if (existingLayer != null) {
+            existingLayer.setSourceLayer(sourceLayer)
+            existingLayer.setFilter(filterExpression)
+            existingLayer.setProperties(
                 iconImage(windBarbIconId(minKt)),
                 iconSize(BARB_ICON_SIZE_BASE * windOverlayScale),
                 iconRotate(
@@ -428,11 +449,16 @@ class ForecastRasterOverlay(
                 iconAnchor("center"),
                 iconOpacity(opacity)
             )
-            addLayerBelowAnchor(style, layer)
+            // Keep wind barbs above any freshly recreated primary forecast layers.
+            runCatching { style.removeLayer(layerId) }
+            addLayerBelowAnchor(style, existingLayer)
             return
         }
-        symbolLayer.setFilter(filterExpression)
-        symbolLayer.setProperties(
+
+        val newLayer = SymbolLayer(layerId, vectorSourceId()).apply {
+            setSourceLayer(sourceLayer)
+            setFilter(filterExpression)
+        }.withProperties(
             iconImage(windBarbIconId(minKt)),
             iconSize(BARB_ICON_SIZE_BASE * windOverlayScale),
             iconRotate(
@@ -442,8 +468,13 @@ class ForecastRasterOverlay(
                 )
             ),
             iconRotationAlignment("map"),
+            iconKeepUpright(false),
+            iconAllowOverlap(true),
+            iconIgnorePlacement(true),
+            iconAnchor("center"),
             iconOpacity(opacity)
         )
+        addLayerBelowAnchor(style, newLayer)
     }
 
     private fun buildWindDirectionExpression(
@@ -491,10 +522,85 @@ class ForecastRasterOverlay(
         }
     }
 
-    private fun resolveSourceLayer(tileSpec: ForecastTileSpec): String? {
-        val primary = tileSpec.sourceLayer?.takeIf { it.isNotBlank() }
-        if (primary != null) return primary
-        return tileSpec.sourceLayerCandidates.firstOrNull { it.isNotBlank() }
+    private fun resolveSourceLayerForRender(tileSpec: ForecastTileSpec): String? {
+        val candidates = buildOrderedSourceLayerCandidates(tileSpec)
+        if (candidates.isEmpty()) {
+            resetSourceLayerFallbackState()
+            return null
+        }
+        if (candidates != activeSourceLayerCandidates) {
+            activeSourceLayerCandidates = candidates
+            activeSourceLayerIndex = 0
+            sourceLayerConsecutiveMisses = 0
+            runtimeWarningMessage = null
+        } else if (activeSourceLayerIndex !in candidates.indices) {
+            activeSourceLayerIndex = 0
+            sourceLayerConsecutiveMisses = 0
+            runtimeWarningMessage = null
+        }
+        return candidates[activeSourceLayerIndex]
+    }
+
+    private fun buildOrderedSourceLayerCandidates(tileSpec: ForecastTileSpec): List<String> {
+        val ordered = mutableListOf<String>()
+        val seen = HashSet<String>()
+
+        fun addCandidate(raw: String?) {
+            val normalized = raw?.trim()?.takeIf { it.isNotEmpty() } ?: return
+            val dedupeKey = normalized.lowercase(Locale.US)
+            if (seen.add(dedupeKey)) {
+                ordered.add(normalized)
+            }
+        }
+
+        addCandidate(tileSpec.sourceLayer)
+        tileSpec.sourceLayerCandidates.forEach(::addCandidate)
+        return ordered
+    }
+
+    private fun maybeAdvanceSourceLayerFallback(tileSpec: ForecastTileSpec): Boolean {
+        if (tileSpec.format != ForecastTileFormat.VECTOR_INDEXED_FILL) return false
+        if (activeSourceLayerCandidates.size < 2) return false
+        val hasFeatures = layerHasRenderedFeatures(vectorFillLayerId())
+        if (hasFeatures) {
+            sourceLayerConsecutiveMisses = 0
+            runtimeWarningMessage = if (activeSourceLayerIndex > 0) {
+                "Forecast $idNamespace overlay using fallback source-layer '${activeSourceLayerCandidates[activeSourceLayerIndex]}'."
+            } else {
+                null
+            }
+            return false
+        }
+        sourceLayerConsecutiveMisses += 1
+        if (sourceLayerConsecutiveMisses < SOURCE_LAYER_FALLBACK_MISS_THRESHOLD) {
+            return false
+        }
+        if (activeSourceLayerIndex >= activeSourceLayerCandidates.lastIndex) {
+            runtimeWarningMessage = "Forecast $idNamespace overlay source-layer fallback exhausted (${activeSourceLayerCandidates.joinToString(", ")})."
+            return false
+        }
+        activeSourceLayerIndex += 1
+        sourceLayerConsecutiveMisses = 0
+        runtimeWarningMessage = "Forecast $idNamespace overlay source-layer fallback engaged ('${activeSourceLayerCandidates[activeSourceLayerIndex]}')."
+        return true
+    }
+
+    private fun layerHasRenderedFeatures(layerId: String): Boolean {
+        val cameraTarget = runCatching { map.cameraPosition.target }.getOrNull() ?: return false
+        val screenPoint = runCatching {
+            map.projection.toScreenLocation(cameraTarget)
+        }.getOrNull() ?: return false
+        val features = runCatching {
+            map.queryRenderedFeatures(screenPoint, layerId)
+        }.getOrNull().orEmpty()
+        return features.isNotEmpty()
+    }
+
+    private fun resetSourceLayerFallbackState() {
+        activeSourceLayerCandidates = emptyList()
+        activeSourceLayerIndex = 0
+        sourceLayerConsecutiveMisses = 0
+        runtimeWarningMessage = null
     }
 
     private fun buildIndexedColorExpression(
@@ -755,6 +861,7 @@ class ForecastRasterOverlay(
         private const val ARROW_DIRECTION_OFFSET_DEG = 180.0
         private const val BARB_ICON_SIZE_BASE = 1.05f
         private const val BARB_DIRECTION_OFFSET_DEG = 0.0
+        private const val SOURCE_LAYER_FALLBACK_MISS_THRESHOLD = 2
         private val WIND_GLYPH_COLOR_BLACK = 0xFF000000.toInt()
         private val WIND_GLYPH_OUTLINE_COLOR_BLACK = WIND_GLYPH_COLOR_BLACK
         private val BARB_FILL_COLOR = WIND_GLYPH_COLOR_BLACK

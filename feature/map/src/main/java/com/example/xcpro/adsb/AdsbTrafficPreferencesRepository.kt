@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -24,11 +25,13 @@ private val KEY_ADSB_ICON_SIZE_PX = intPreferencesKey("adsb_icon_size_px")
 private val KEY_ADSB_MAX_DISTANCE_KM = intPreferencesKey("adsb_max_distance_km")
 private val KEY_ADSB_VERTICAL_ABOVE_M = doublePreferencesKey("adsb_vertical_above_m")
 private val KEY_ADSB_VERTICAL_BELOW_M = doublePreferencesKey("adsb_vertical_below_m")
+private val KEY_ADSB_EMERGENCY_AUDIO_ENABLED = booleanPreferencesKey("adsb_emergency_audio_enabled")
+private val KEY_ADSB_EMERGENCY_AUDIO_COOLDOWN_MS = longPreferencesKey("adsb_emergency_audio_cooldown_ms")
 
 @Singleton
 class AdsbTrafficPreferencesRepository internal constructor(
     private val dataStore: DataStore<Preferences>
-) {
+) : AdsbEmergencyAudioSettingsPort {
     @Inject
     constructor(
         @ApplicationContext context: Context
@@ -70,6 +73,21 @@ class AdsbTrafficPreferencesRepository internal constructor(
         }
         .distinctUntilChanged()
 
+    override val emergencyAudioEnabledFlow: Flow<Boolean> = dataStore.data
+        .map { preferences -> preferences[KEY_ADSB_EMERGENCY_AUDIO_ENABLED] ?: false }
+        .distinctUntilChanged()
+
+    override val emergencyAudioCooldownMsFlow: Flow<Long> = dataStore.data
+        .map { preferences ->
+            val stored = preferences[KEY_ADSB_EMERGENCY_AUDIO_COOLDOWN_MS]
+                ?: ADSB_EMERGENCY_AUDIO_DEFAULT_COOLDOWN_MS
+            stored.coerceIn(
+                ADSB_EMERGENCY_AUDIO_MIN_COOLDOWN_MS,
+                ADSB_EMERGENCY_AUDIO_MAX_COOLDOWN_MS
+            )
+        }
+        .distinctUntilChanged()
+
     suspend fun setEnabled(enabled: Boolean) {
         dataStore.edit { preferences ->
             preferences[KEY_ADSB_TRAFFIC_ENABLED] = enabled
@@ -101,6 +119,22 @@ class AdsbTrafficPreferencesRepository internal constructor(
         val clamped = clampAdsbVerticalFilterMeters(belowMeters)
         dataStore.edit { preferences ->
             preferences[KEY_ADSB_VERTICAL_BELOW_M] = clamped
+        }
+    }
+
+    suspend fun setEmergencyAudioEnabled(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[KEY_ADSB_EMERGENCY_AUDIO_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setEmergencyAudioCooldownMs(cooldownMs: Long) {
+        val normalized = cooldownMs.coerceIn(
+            ADSB_EMERGENCY_AUDIO_MIN_COOLDOWN_MS,
+            ADSB_EMERGENCY_AUDIO_MAX_COOLDOWN_MS
+        )
+        dataStore.edit { preferences ->
+            preferences[KEY_ADSB_EMERGENCY_AUDIO_COOLDOWN_MS] = normalized
         }
     }
 }

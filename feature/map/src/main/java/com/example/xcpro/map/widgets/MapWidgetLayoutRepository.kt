@@ -31,6 +31,20 @@ class MapWidgetLayoutRepository @Inject constructor(
             .apply()
     }
 
+    fun readSizePx(widgetId: MapWidgetId): Float? {
+        val key = keyPrefix(widgetId)
+        val sizeKey = "${key}_size"
+        if (!prefs.contains(sizeKey)) return null
+        return prefs.getFloat(sizeKey, 0f)
+    }
+
+    fun saveSizePx(widgetId: MapWidgetId, sizePx: Float) {
+        val key = keyPrefix(widgetId)
+        prefs.edit()
+            .putFloat("${key}_size", sizePx)
+            .apply()
+    }
+
     private fun keyPrefix(widgetId: MapWidgetId): String = when (widgetId) {
         MapWidgetId.SIDE_HAMBURGER -> KEY_SIDE_HAMBURGER
         MapWidgetId.FLIGHT_MODE -> KEY_FLIGHT_MODE

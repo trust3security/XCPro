@@ -93,10 +93,14 @@ internal fun MapOverlayStack(
     flightModeOffset: MutableState<Offset>,
     settingsOffset: MutableState<Offset>,
     ballastOffset: MutableState<Offset>,
+    hamburgerSizePx: MutableState<Float>,
+    settingsSizePx: MutableState<Float>,
     onHamburgerOffsetChange: (Offset) -> Unit,
     onFlightModeOffsetChange: (Offset) -> Unit,
     onSettingsOffsetChange: (Offset) -> Unit,
     onBallastOffsetChange: (Offset) -> Unit,
+    onHamburgerSizeChange: (Float) -> Unit,
+    onSettingsSizeChange: (Float) -> Unit,
     widgetManager: MapUIWidgetManager,
     screenWidthPx: Float,
     screenHeightPx: Float,
@@ -284,9 +288,11 @@ internal fun MapOverlayStack(
             hamburgerOffset = hamburgerOffset,
             screenWidthPx = screenWidthPx,
             screenHeightPx = screenHeightPx,
+            hamburgerSizePx = hamburgerSizePx,
             onHamburgerTap = onHamburgerTap,
             onHamburgerLongPress = onHamburgerLongPress,
             onOffsetChange = onHamburgerOffsetChange,
+            onSizeChange = onHamburgerSizeChange,
             isUiEditMode = isUiEditMode
         )
 
@@ -295,8 +301,10 @@ internal fun MapOverlayStack(
             settingsOffset = settingsOffset,
             screenWidthPx = screenWidthPx,
             screenHeightPx = screenHeightPx,
+            settingsSizePx = settingsSizePx,
             onSettingsTap = onSettingsTap,
             onOffsetChange = onSettingsOffsetChange,
+            onSizeChange = onSettingsSizeChange,
             isUiEditMode = isUiEditMode
         )
 

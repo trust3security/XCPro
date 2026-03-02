@@ -39,9 +39,11 @@ internal fun BoxScope.HamburgerMenu(
     hamburgerOffset: MutableState<Offset>,
     screenWidthPx: Float,
     screenHeightPx: Float,
+    hamburgerSizePx: MutableState<Float>,
     onHamburgerTap: () -> Unit,
     onHamburgerLongPress: () -> Unit,
     onOffsetChange: (Offset) -> Unit,
+    onSizeChange: (Float) -> Unit,
     isUiEditMode: Boolean
 ) {
     MapUIWidgets.SideHamburgerMenu(
@@ -49,9 +51,11 @@ internal fun BoxScope.HamburgerMenu(
         hamburgerOffset = hamburgerOffset.value,
         screenWidthPx = screenWidthPx,
         screenHeightPx = screenHeightPx,
+        sizePx = hamburgerSizePx.value,
         onHamburgerTap = onHamburgerTap,
         onHamburgerLongPress = onHamburgerLongPress,
         onOffsetChange = onOffsetChange,
+        onSizeChange = onSizeChange,
         isEditMode = isUiEditMode,
         modifier = Modifier
             .align(Alignment.TopStart)
@@ -65,8 +69,10 @@ internal fun BoxScope.SettingsShortcut(
     settingsOffset: MutableState<Offset>,
     screenWidthPx: Float,
     screenHeightPx: Float,
+    settingsSizePx: MutableState<Float>,
     onSettingsTap: () -> Unit,
     onOffsetChange: (Offset) -> Unit,
+    onSizeChange: (Float) -> Unit,
     isUiEditMode: Boolean
 ) {
     MapUIWidgets.SettingsShortcut(
@@ -74,8 +80,10 @@ internal fun BoxScope.SettingsShortcut(
         settingsOffset = settingsOffset.value,
         screenWidthPx = screenWidthPx,
         screenHeightPx = screenHeightPx,
+        sizePx = settingsSizePx.value,
         onSettingsTap = onSettingsTap,
         onOffsetChange = onOffsetChange,
+        onSizeChange = onSizeChange,
         isEditMode = isUiEditMode,
         modifier = Modifier
             .align(Alignment.TopStart)

@@ -1,7 +1,9 @@
 package com.example.xcpro.adsb.metadata.data
 
+import android.content.Context
 import com.example.xcpro.adsb.awaitResponse
 import com.example.xcpro.common.di.IoDispatcher
+import com.example.xcpro.di.AdsbMetadataHttpClient
 import java.io.IOException
 import java.io.InputStream
 import javax.inject.Inject
@@ -9,6 +11,8 @@ import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withContext
+import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -21,7 +25,8 @@ internal data class MetadataListingPage(
 
 @Singleton
 class OpenSkyMetadataClient @Inject constructor(
-    private val httpClient: OkHttpClient,
+    @ApplicationContext private val context: Context,
+    @AdsbMetadataHttpClient private val httpClient: OkHttpClient,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) {
 
@@ -83,6 +88,7 @@ class OpenSkyMetadataClient @Inject constructor(
         url: String,
         block: suspend (InputStream, String?) -> T
     ): Result<T> = withContext(ioDispatcher) {
+        var tempFile: File? = null
         try {
             val request = Request.Builder()
                 .url(url)
@@ -90,23 +96,42 @@ class OpenSkyMetadataClient @Inject constructor(
                 .get()
                 .build()
 
-            val value = httpClient.newCall(request).awaitResponse().use { response ->
+            var etag: String? = null
+            tempFile = createTempCsvFile()
+            httpClient.newCall(request).awaitResponse().use { response ->
                 if (!response.isSuccessful) {
                     throw IOException("Download failed with HTTP ${response.code}: $url")
                 }
                 val responseBody = response.body
                     ?: throw IOException("Download response body missing: $url")
-                val etag = response.header("ETag")?.trim()?.trim('"')
+                etag = response.header("ETag")?.trim()?.trim('"')
                 responseBody.byteStream().use { input ->
-                    block(input, etag)
+                    tempFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
                 }
+            }
+            val value = tempFile.inputStream().use { input ->
+                block(input, etag)
             }
             Result.success(value)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             Result.failure(e)
+        } finally {
+            runCatching {
+                tempFile?.delete()
+            }
         }
+    }
+
+    private fun createTempCsvFile(): File {
+        val cacheDir = context.cacheDir
+        if (!cacheDir.exists()) {
+            cacheDir.mkdirs()
+        }
+        return File.createTempFile(TEMP_FILE_PREFIX, TEMP_FILE_SUFFIX, cacheDir)
     }
 
     private fun parseListingPage(xml: String): MetadataListingPage {
@@ -155,6 +180,8 @@ class OpenSkyMetadataClient @Inject constructor(
             setOf(RegexOption.IGNORE_CASE, RegexOption.MULTILINE)
         )
         const val MAX_LISTING_PAGES = 200
+        const val TEMP_FILE_PREFIX = "adsb_metadata_"
+        const val TEMP_FILE_SUFFIX = ".csv"
     }
 }
 

@@ -76,6 +76,8 @@ data class RealTimeFlightData(
     val trueAirspeed: Double = 0.0,
     val indicatedAirspeed: Double = 0.0,
     val windQuality: Int = 0,
+    val windConfidence: Double = 0.0,
+    val windValid: Boolean = false,
     val windSource: String = "",
     val windHeadwind: Double = 0.0,
     val windCrosswind: Double = 0.0,

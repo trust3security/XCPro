@@ -84,4 +84,14 @@ class FusionBlackboardTest {
         val expired = bb.resolveAirspeedHold(airspeedEstimate = null, now = FlightMetricsConstants.SPEED_HOLD_MS + 1_000)
         assertNull(expired)
     }
+
+    @Test
+    fun airspeed_hold_rejects_negative_age_when_time_goes_backwards() {
+        val bb = FusionBlackboard()
+        val estimate = AirspeedEstimate(indicatedMs = 12.0, trueMs = 20.0, source = AirspeedSource.WIND_VECTOR)
+        bb.resolveAirspeedHold(estimate, now = 5_000L)
+
+        val backwards = bb.resolveAirspeedHold(airspeedEstimate = null, now = 4_000L)
+        assertNull(backwards)
+    }
 }

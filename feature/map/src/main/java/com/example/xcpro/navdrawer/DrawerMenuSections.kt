@@ -267,7 +267,9 @@ fun SettingsSection(
             onClick = {
                 scope.launch {
                     drawerState.close()
-                    navController.navigate(SettingsRoutes.GENERAL)
+                    navController.navigate(SettingsRoutes.GENERAL) {
+                        launchSingleTop = true
+                    }
                 }
             }
         )

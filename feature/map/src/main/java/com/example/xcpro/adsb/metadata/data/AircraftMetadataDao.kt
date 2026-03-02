@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 
 @Dao
 interface AircraftMetadataDao {
@@ -110,6 +111,25 @@ interface AircraftMetadataDao {
         qualityScore: Int,
         sourceRowOrder: Long
     )
+
+    @Transaction
+    suspend fun upsertStagingBatch(rows: List<AircraftMetadataStagingEntity>) {
+        rows.forEach { row ->
+            upsertStagingRow(
+                icao24 = row.icao24,
+                registration = row.registration,
+                typecode = row.typecode,
+                model = row.model,
+                manufacturerName = row.manufacturerName,
+                owner = row.owner,
+                operator = row.operator,
+                operatorCallsign = row.operatorCallsign,
+                icaoAircraftType = row.icaoAircraftType,
+                qualityScore = row.qualityScore,
+                sourceRowOrder = row.sourceRowOrder
+            )
+        }
+    }
 
     @Query("SELECT COUNT(*) FROM adsb_aircraft_metadata_staging")
     suspend fun countStaging(): Int

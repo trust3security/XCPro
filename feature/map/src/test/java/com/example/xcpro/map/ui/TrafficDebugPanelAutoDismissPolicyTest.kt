@@ -2,9 +2,11 @@ package com.example.xcpro.map.ui
 
 import com.example.xcpro.adsb.AdsbAuthMode
 import com.example.xcpro.adsb.AdsbConnectionState
+import com.example.xcpro.adsb.AdsbNetworkFailureKind
 import com.example.xcpro.adsb.AdsbTrafficSnapshot
 import com.example.xcpro.ogn.OgnConnectionState
 import com.example.xcpro.ogn.OgnTrafficSnapshot
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -68,7 +70,7 @@ class TrafficDebugPanelAutoDismissPolicyTest {
     }
 
     @Test
-    fun adsb_surfaceOnlyOnError() {
+    fun adsb_surfaceOnErrorOrBackingOff() {
         assertFalse(
             shouldSurfaceAdsbDebugPanel(
                 adsbSnapshot(
@@ -85,7 +87,7 @@ class TrafficDebugPanelAutoDismissPolicyTest {
                 )
             )
         )
-        assertFalse(
+        assertTrue(
             shouldSurfaceAdsbDebugPanel(
                 adsbSnapshot(
                     connectionState = AdsbConnectionState.BackingOff(retryAfterSec = 5),
@@ -101,6 +103,109 @@ class TrafficDebugPanelAutoDismissPolicyTest {
                 )
             )
         )
+    }
+
+    @Test
+    fun adsb_issueFlashOnErrorOrBackingOff() {
+        assertFalse(
+            shouldFlashAdsbIssue(
+                adsbSnapshot(
+                    connectionState = AdsbConnectionState.Disabled,
+                    authMode = AdsbAuthMode.Anonymous
+                )
+            )
+        )
+        assertFalse(
+            shouldFlashAdsbIssue(
+                adsbSnapshot(
+                    connectionState = AdsbConnectionState.Active,
+                    authMode = AdsbAuthMode.Authenticated
+                )
+            )
+        )
+        assertTrue(
+            shouldFlashAdsbIssue(
+                adsbSnapshot(
+                    connectionState = AdsbConnectionState.BackingOff(retryAfterSec = 5),
+                    authMode = AdsbAuthMode.Authenticated
+                )
+            )
+        )
+        assertTrue(
+            shouldFlashAdsbIssue(
+                adsbSnapshot(
+                    connectionState = AdsbConnectionState.Error("Network unavailable"),
+                    authMode = AdsbAuthMode.Authenticated
+                )
+            )
+        )
+    }
+
+    @Test
+    fun adsb_persistentStatusSurfacedForDegradedStates() {
+        assertTrue(
+            shouldSurfacePersistentAdsbStatus(
+                adsbSnapshot(
+                    connectionState = AdsbConnectionState.Error("Network unavailable"),
+                    authMode = AdsbAuthMode.Authenticated
+                )
+            )
+        )
+        assertTrue(
+            shouldSurfacePersistentAdsbStatus(
+                adsbSnapshot(
+                    connectionState = AdsbConnectionState.BackingOff(retryAfterSec = 5),
+                    authMode = AdsbAuthMode.Authenticated
+                )
+            )
+        )
+        assertTrue(
+            shouldSurfacePersistentAdsbStatus(
+                adsbSnapshot(
+                    connectionState = AdsbConnectionState.Active,
+                    authMode = AdsbAuthMode.AuthFailed
+                )
+            )
+        )
+        assertFalse(
+            shouldSurfacePersistentAdsbStatus(
+                adsbSnapshot(
+                    connectionState = AdsbConnectionState.Active,
+                    authMode = AdsbAuthMode.Authenticated
+                )
+            )
+        )
+    }
+
+    @Test
+    fun adsb_persistentStatusPresentation_mapsTitleAndReason() {
+        val offline = persistentAdsbStatusPresentation(
+            adsbSnapshot(
+                connectionState = AdsbConnectionState.Error("Socket timeout"),
+                authMode = AdsbAuthMode.Authenticated,
+                lastNetworkFailureKind = AdsbNetworkFailureKind.TIMEOUT
+            )
+        )
+        assertEquals("ADS-B Offline", offline.first)
+        assertEquals("Network: Socket timeout", offline.second)
+
+        val backoff = persistentAdsbStatusPresentation(
+            adsbSnapshot(
+                connectionState = AdsbConnectionState.BackingOff(retryAfterSec = 5),
+                authMode = AdsbAuthMode.Authenticated
+            )
+        )
+        assertEquals("ADS-B Backoff", backoff.first)
+        assertEquals("Waiting before next retry", backoff.second)
+
+        val authFailed = persistentAdsbStatusPresentation(
+            adsbSnapshot(
+                connectionState = AdsbConnectionState.Active,
+                authMode = AdsbAuthMode.AuthFailed
+            )
+        )
+        assertEquals("ADS-B Credential Issue", authFailed.first)
+        assertEquals("Credential auth failed; using anonymous fallback", authFailed.second)
     }
 
     @Test
@@ -132,7 +237,7 @@ class TrafficDebugPanelAutoDismissPolicyTest {
                 )
             )
         )
-        assertTrue(
+        assertFalse(
             shouldHideAdsbDebugPanelWhileConnecting(
                 adsbSnapshot(
                     connectionState = AdsbConnectionState.BackingOff(retryAfterSec = 5),
@@ -167,7 +272,10 @@ class TrafficDebugPanelAutoDismissPolicyTest {
 
     private fun adsbSnapshot(
         connectionState: AdsbConnectionState,
-        authMode: AdsbAuthMode
+        authMode: AdsbAuthMode,
+        lastError: String? = null,
+        lastHttpStatus: Int? = null,
+        lastNetworkFailureKind: AdsbNetworkFailureKind? = null
     ): AdsbTrafficSnapshot =
         AdsbTrafficSnapshot(
             targets = emptyList(),
@@ -182,10 +290,11 @@ class TrafficDebugPanelAutoDismissPolicyTest {
             filteredByVerticalCount = 0,
             cappedCount = 0,
             displayedCount = 0,
-            lastHttpStatus = null,
+            lastHttpStatus = lastHttpStatus,
             remainingCredits = null,
             lastPollMonoMs = null,
             lastSuccessMonoMs = null,
-            lastError = null
+            lastError = lastError,
+            lastNetworkFailureKind = lastNetworkFailureKind
         )
 }

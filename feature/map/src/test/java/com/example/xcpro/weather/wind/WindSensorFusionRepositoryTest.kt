@@ -221,6 +221,86 @@ class WindSensorFusionRepositoryTest {
         assertTrue(repo.windState.value.vector == null)
     }
 
+    @Test
+    fun `manual override applies without newer gps clock sample`() = runTest {
+        val inputs = TestWindInputs()
+        val flightRepo = FlightDataRepository()
+        val dispatcher = UnconfinedTestDispatcher(testScheduler)
+        val overrides = FakeWindOverrideSource()
+        val repo = WindSensorFusionRepository(
+            liveInputs = inputs.inputs,
+            replayInputs = inputs.inputs,
+            flightDataRepository = flightRepo,
+            flightStateSource = FakeFlightStateSource(),
+            windOverrideSource = overrides,
+            windSelectionUseCase = WindSelectionUseCase(),
+            clock = FakeClock(),
+            dispatcher = dispatcher
+        )
+        flightRepo.setActiveSource(FlightDataRepository.Source.LIVE)
+
+        val gps = gpsSample(timestamp = 1_000L, trackRad = 0.0, groundSpeed = 22.0)
+        inputs.gps.value = gps
+        inputs.heading.value = HeadingSample(
+            headingDeg = 0.0,
+            timestampMillis = gps.timestampMillis,
+            clockMillis = gps.clockMillis
+        )
+        runCurrent()
+        assertTrue(repo.windState.value.vector == null)
+
+        overrides.manualWind.value = WindOverride(
+            vector = WindVector(east = 4.0, north = 1.0),
+            timestampMillis = 2_000L,
+            source = WindSource.MANUAL
+        )
+        runCurrent()
+
+        val state = repo.windState.value
+        assertEquals(WindSource.MANUAL, state.source)
+        assertNotNull(state.vector)
+    }
+
+    @Test
+    fun `published wind quality clamps to max measurement scale`() = runTest {
+        val inputs = TestWindInputs()
+        val flightRepo = FlightDataRepository()
+        val dispatcher = UnconfinedTestDispatcher(testScheduler)
+        val overrides = FakeWindOverrideSource()
+        val repo = WindSensorFusionRepository(
+            liveInputs = inputs.inputs,
+            replayInputs = inputs.inputs,
+            flightDataRepository = flightRepo,
+            flightStateSource = FakeFlightStateSource(),
+            windOverrideSource = overrides,
+            windSelectionUseCase = WindSelectionUseCase(),
+            clock = FakeClock(),
+            dispatcher = dispatcher
+        )
+        flightRepo.setActiveSource(FlightDataRepository.Source.LIVE)
+
+        val gps = gpsSample(timestamp = 3_000L, trackRad = 0.0, groundSpeed = 24.0)
+        inputs.gps.value = gps
+        inputs.heading.value = HeadingSample(
+            headingDeg = 0.0,
+            timestampMillis = gps.timestampMillis,
+            clockMillis = gps.clockMillis
+        )
+        runCurrent()
+
+        overrides.manualWind.value = WindOverride(
+            vector = WindVector(east = 5.0, north = 0.0),
+            timestampMillis = 3_500L,
+            source = WindSource.MANUAL,
+            quality = 9
+        )
+        runCurrent()
+
+        val state = repo.windState.value
+        assertEquals(5, state.quality)
+        assertEquals(1.0, state.confidence, 1e-9)
+    }
+
     private fun generateCirclingSamples(
         windEast: Double = TEST_WIND_EAST,
         windNorth: Double = TEST_WIND_NORTH,

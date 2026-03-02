@@ -14,6 +14,8 @@ import com.example.dfcards.FlightModeSelection
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.airspace.AirspaceUiState
 import com.example.xcpro.common.flight.FlightMode
+import com.example.xcpro.common.units.AltitudeUnit
+import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.map.LocationManager
@@ -70,6 +72,9 @@ internal fun MapScreenOverlayEffects(
     showOgnThermalsEnabled: Boolean,
     ognDisplayUpdateMode: OgnDisplayUpdateMode,
     ognGliderTrailSegments: List<OgnGliderTrailSegment>,
+    ownshipAltitudeMeters: Double?,
+    ognAltitudeUnit: AltitudeUnit,
+    unitsPreferences: UnitsPreferences,
     ognIconSizePx: Int,
     adsbTargets: List<AdsbTrafficUiModel>,
     adsbOverlayEnabled: Boolean,
@@ -94,8 +99,13 @@ internal fun MapScreenOverlayEffects(
     LaunchedEffect(ognDisplayUpdateMode) {
         overlayManager.setOgnDisplayUpdateMode(ognDisplayUpdateMode)
     }
-    LaunchedEffect(renderedOgnTargets) {
-        overlayManager.updateOgnTrafficTargets(renderedOgnTargets)
+    LaunchedEffect(renderedOgnTargets, ownshipAltitudeMeters, ognAltitudeUnit, unitsPreferences) {
+        overlayManager.updateOgnTrafficTargets(
+            targets = renderedOgnTargets,
+            ownshipAltitudeMeters = ownshipAltitudeMeters,
+            altitudeUnit = ognAltitudeUnit,
+            unitsPreferences = unitsPreferences
+        )
     }
     LaunchedEffect(renderedOgnThermals) {
         overlayManager.updateOgnThermalHotspots(renderedOgnThermals)
@@ -106,8 +116,12 @@ internal fun MapScreenOverlayEffects(
     LaunchedEffect(ognIconSizePx) {
         overlayManager.setOgnIconSizePx(ognIconSizePx)
     }
-    LaunchedEffect(renderedAdsbTargets) {
-        overlayManager.updateAdsbTrafficTargets(renderedAdsbTargets)
+    LaunchedEffect(renderedAdsbTargets, ownshipAltitudeMeters, unitsPreferences) {
+        overlayManager.updateAdsbTrafficTargets(
+            targets = renderedAdsbTargets,
+            ownshipAltitudeMeters = ownshipAltitudeMeters,
+            unitsPreferences = unitsPreferences
+        )
     }
     LaunchedEffect(adsbIconSizePx) {
         overlayManager.setAdsbIconSizePx(adsbIconSizePx)

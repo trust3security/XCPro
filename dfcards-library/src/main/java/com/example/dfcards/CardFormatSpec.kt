@@ -412,7 +412,7 @@ internal fun formatWindSpeed(
     strings: CardStrings,
     placeholder: String
 ): Pair<String, String?> {
-    val hasWind = liveData.windQuality > 0 && liveData.windSpeed > 0.5f
+    val hasWind = liveData.windValid
     if (!hasWind) {
         return Pair(placeholder, strings.noWind)
     }
@@ -427,7 +427,7 @@ internal fun formatWindDirection(
     strings: CardStrings,
     placeholder: String
 ): Pair<String, String?> {
-    val hasWind = liveData.windQuality > 0 && liveData.windSpeed > 0.5f
+    val hasWind = liveData.windValid
     if (!hasWind) {
         return Pair(placeholder, strings.noWind)
     }
@@ -442,7 +442,7 @@ internal fun formatWindArrow(
     strings: CardStrings,
     placeholder: String
 ): Pair<String, String?> {
-    val hasWind = liveData.windQuality > 0 && liveData.windSpeed > 0.5f
+    val hasWind = liveData.windValid
     if (!hasWind) {
         return Pair(placeholder, strings.noWind)
     }

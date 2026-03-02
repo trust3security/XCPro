@@ -43,6 +43,12 @@ class OpenSkyTokenRepositoryImpl @Inject constructor(
     @Volatile
     private var expiryMonoMs: Long = 0L
 
+    @Volatile
+    private var transientFailureUntilMonoMs: Long = 0L
+
+    @Volatile
+    private var transientFailureReason: String? = null
+
     private val lock = Any()
     private val tokenFetchMutex = Mutex()
 
@@ -62,9 +68,26 @@ class OpenSkyTokenRepositoryImpl @Inject constructor(
         val credentials = credentialsRepository.loadCredentials()
             ?: return@withContext OpenSkyTokenAccessState.NoCredentials
 
+        synchronized(lock) {
+            val nowMonoMs = clock.nowMonoMs()
+            if (nowMonoMs < transientFailureUntilMonoMs) {
+                return@withContext OpenSkyTokenAccessState.TransientFailure(
+                    transientFailureReason ?: "TransientFailureCooldown"
+                )
+            }
+        }
+
         return@withContext tokenFetchMutex.withLock {
             cachedTokenIfFresh(clock.nowMonoMs())?.let { refreshedByAnotherRequest ->
                 return@withLock OpenSkyTokenAccessState.Available(refreshedByAnotherRequest)
+            }
+            synchronized(lock) {
+                val nowMonoMs = clock.nowMonoMs()
+                if (nowMonoMs < transientFailureUntilMonoMs) {
+                    return@withLock OpenSkyTokenAccessState.TransientFailure(
+                        transientFailureReason ?: "TransientFailureCooldown"
+                    )
+                }
             }
 
             when (val result = fetchToken(credentials)) {
@@ -73,6 +96,8 @@ class OpenSkyTokenRepositoryImpl @Inject constructor(
                         cachedToken = result.token.accessToken
                         val expirySec = result.token.expiresInSec ?: DEFAULT_TOKEN_EXPIRY_SEC
                         expiryMonoMs = clock.nowMonoMs() + expirySec * 1_000L
+                        transientFailureUntilMonoMs = 0L
+                        transientFailureReason = null
                     }
                     OpenSkyTokenAccessState.Available(result.token.accessToken)
                 }
@@ -81,11 +106,18 @@ class OpenSkyTokenRepositoryImpl @Inject constructor(
                     synchronized(lock) {
                         cachedToken = null
                         expiryMonoMs = 0L
+                        transientFailureUntilMonoMs = 0L
+                        transientFailureReason = null
                     }
                     OpenSkyTokenAccessState.CredentialsRejected(result.reason)
                 }
 
                 is TokenFetchResult.TransientFailure -> {
+                    synchronized(lock) {
+                        transientFailureUntilMonoMs =
+                            clock.nowMonoMs() + TRANSIENT_FAILURE_COOLDOWN_MS
+                        transientFailureReason = result.reason
+                    }
                     OpenSkyTokenAccessState.TransientFailure(result.reason)
                 }
             }
@@ -101,6 +133,8 @@ class OpenSkyTokenRepositoryImpl @Inject constructor(
         synchronized(lock) {
             cachedToken = null
             expiryMonoMs = 0L
+            transientFailureUntilMonoMs = 0L
+            transientFailureReason = null
         }
     }
 
@@ -168,6 +202,7 @@ class OpenSkyTokenRepositoryImpl @Inject constructor(
             "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
         private const val DEFAULT_TOKEN_EXPIRY_SEC = 1_800L
         private const val TOKEN_REFRESH_BUFFER_MS = 5L * 60L * 1_000L
+        private const val TRANSIENT_FAILURE_COOLDOWN_MS = 30_000L
         private val CREDENTIALS_REJECTED_CODES = setOf(400, 401, 403)
     }
 }

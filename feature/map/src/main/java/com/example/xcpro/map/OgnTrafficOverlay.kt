@@ -4,10 +4,12 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
-import android.os.SystemClock
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
+import com.example.xcpro.common.units.AltitudeUnit
+import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.core.common.logging.AppLogger
+import com.example.xcpro.core.time.TimeBridge
 import com.example.xcpro.ogn.OGN_ICON_SIZE_DEFAULT_PX
 import com.example.xcpro.ogn.OgnAircraftIcon
 import com.example.xcpro.ogn.OgnSubscriptionPolicy
@@ -15,6 +17,7 @@ import com.example.xcpro.ogn.OgnTrafficTarget
 import com.example.xcpro.ogn.OgnViewportBounds
 import com.example.xcpro.ogn.clampOgnIconSizePx
 import com.example.xcpro.ogn.iconForOgnAircraftIdentity
+import kotlin.math.abs
 import org.maplibre.android.geometry.LatLngBounds
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.Style
@@ -32,17 +35,16 @@ import org.maplibre.android.style.layers.PropertyFactory.textAllowOverlap
 import org.maplibre.android.style.layers.PropertyFactory.textAnchor
 import org.maplibre.android.style.layers.PropertyFactory.textColor
 import org.maplibre.android.style.layers.PropertyFactory.textField
-import org.maplibre.android.style.layers.PropertyFactory.textHaloColor
-import org.maplibre.android.style.layers.PropertyFactory.textHaloWidth
+import org.maplibre.android.style.layers.PropertyFactory.textFont
 import org.maplibre.android.style.layers.PropertyFactory.textIgnorePlacement
 import org.maplibre.android.style.layers.PropertyFactory.textOffset
+import org.maplibre.android.style.layers.PropertyFactory.textOpacity
 import org.maplibre.android.style.layers.PropertyFactory.textSize
 import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.Point
-import kotlin.math.abs
 
 /**
  * Runtime map overlay for OGN traffic targets.
@@ -73,12 +75,22 @@ class OgnTrafficOverlay(
                     style.addLayer(iconLayer)
                 }
             }
-            if (style.getLayer(LABEL_LAYER_ID) == null) {
-                val labelLayer = createLabelLayer()
+            if (style.getLayer(TOP_LABEL_LAYER_ID) == null) {
+                val topLayer = createTopLabelLayer()
                 if (style.getLayer(ICON_LAYER_ID) != null) {
-                    style.addLayerAbove(labelLayer, ICON_LAYER_ID)
+                    style.addLayerAbove(topLayer, ICON_LAYER_ID)
                 } else {
-                    style.addLayer(labelLayer)
+                    style.addLayer(topLayer)
+                }
+            }
+            if (style.getLayer(BOTTOM_LABEL_LAYER_ID) == null) {
+                val bottomLayer = createBottomLabelLayer()
+                if (style.getLayer(TOP_LABEL_LAYER_ID) != null) {
+                    style.addLayerAbove(bottomLayer, TOP_LABEL_LAYER_ID)
+                } else if (style.getLayer(ICON_LAYER_ID) != null) {
+                    style.addLayerAbove(bottomLayer, ICON_LAYER_ID)
+                } else {
+                    style.addLayer(bottomLayer)
                 }
             }
             ensureLayerOrder(style)
@@ -99,11 +111,15 @@ class OgnTrafficOverlay(
         useSatelliteContrastIcons = enabled
     }
 
-    fun render(targets: List<OgnTrafficTarget>) {
-        initialize()
+    fun render(
+        targets: List<OgnTrafficTarget>,
+        ownshipAltitudeMeters: Double?,
+        altitudeUnit: AltitudeUnit = AltitudeUnit.METERS,
+        unitsPreferences: UnitsPreferences = UnitsPreferences()
+    ) {
         val style = map.style ?: return
         val source = style.getSourceAs<GeoJsonSource>(SOURCE_ID) ?: return
-        val nowMonoMs = SystemClock.elapsedRealtime()
+        val nowMonoMs = TimeBridge.nowMonoMs()
         val visibleBounds = map.projection.visibleRegion?.latLngBounds
         val features = ArrayList<Feature>(targets.size.coerceAtMost(MAX_TARGETS))
 
@@ -116,12 +132,33 @@ class OgnTrafficOverlay(
             )
             feature.addStringProperty(PROP_TARGET_KEY, target.canonicalKey)
             feature.addStringProperty(PROP_TARGET_ID, target.id)
-            feature.addStringProperty(PROP_LABEL, target.displayLabel)
+
             val icon = iconForOgnAircraftIdentity(
                 aircraftTypeCode = target.identity?.aircraftTypeCode,
                 competitionNumber = target.identity?.competitionNumber
             )
-            feature.addStringProperty(PROP_ICON_ID, resolveStyleImageId(icon))
+            val secondaryLabel = OgnIdentifierDistanceLabelMapper.map(
+                competitionId = target.identity?.competitionNumber,
+                registration = target.identity?.registration,
+                distanceMeters = target.distanceMeters,
+                unitsPreferences = unitsPreferences
+            )
+            val mapping = OgnRelativeAltitudeFeatureMapper.map(
+                OgnRelativeAltitudeFeatureMapperInput(
+                    targetAltitudeMeters = target.altitudeMeters,
+                    ownshipAltitudeMeters = ownshipAltitudeMeters,
+                    altitudeUnit = altitudeUnit,
+                    icon = icon,
+                    defaultIconStyleImageId = resolveStyleImageId(icon),
+                    gliderAboveIconStyleImageId = RELATIVE_GLIDER_ABOVE_ICON_IMAGE_ID,
+                    gliderBelowIconStyleImageId = RELATIVE_GLIDER_BELOW_ICON_IMAGE_ID,
+                    gliderNearIconStyleImageId = RELATIVE_GLIDER_NEAR_ICON_IMAGE_ID,
+                    secondaryLabelText = secondaryLabel.text
+                )
+            )
+            feature.addStringProperty(PROP_ICON_ID, mapping.iconStyleImageId)
+            feature.addStringProperty(PROP_TOP_LABEL, mapping.topLabel)
+            feature.addStringProperty(PROP_BOTTOM_LABEL, mapping.bottomLabel)
             feature.addNumberProperty(
                 PROP_ALPHA,
                 if (target.isStale(nowMonoMs, STALE_VISUAL_AFTER_MS)) STALE_ALPHA else LIVE_ALPHA
@@ -143,7 +180,8 @@ class OgnTrafficOverlay(
             map.queryRenderedFeatures(
                 screenPoint,
                 ICON_LAYER_ID,
-                LABEL_LAYER_ID
+                TOP_LABEL_LAYER_ID,
+                BOTTOM_LABEL_LAYER_ID
             )
         }.getOrNull().orEmpty()
 
@@ -170,15 +208,42 @@ class OgnTrafficOverlay(
     fun cleanup() {
         val style = map.style ?: return
         try {
-            style.removeLayer(LABEL_LAYER_ID)
+            style.removeLayer(BOTTOM_LABEL_LAYER_ID)
+            style.removeLayer(TOP_LABEL_LAYER_ID)
             style.removeLayer(ICON_LAYER_ID)
             style.removeSource(SOURCE_ID)
             OgnAircraftIcon.values().forEach { icon ->
                 style.removeImage(icon.styleImageId)
             }
             style.removeImage(SATELLITE_GLIDER_ICON_IMAGE_ID)
+            style.removeImage(RELATIVE_GLIDER_ABOVE_ICON_IMAGE_ID)
+            style.removeImage(RELATIVE_GLIDER_BELOW_ICON_IMAGE_ID)
+            style.removeImage(RELATIVE_GLIDER_NEAR_ICON_IMAGE_ID)
         } catch (t: Throwable) {
             AppLogger.w(TAG, "Failed to cleanup OGN overlay: ${t.message}")
+        }
+    }
+
+    fun bringToFront() {
+        val style = map.style ?: return
+        if (style.getLayer(ICON_LAYER_ID) == null ||
+            style.getLayer(TOP_LABEL_LAYER_ID) == null ||
+            style.getLayer(BOTTOM_LABEL_LAYER_ID) == null
+        ) {
+            return
+        }
+        try {
+            val topLayerId = style.layers.lastOrNull()?.id
+            if (topLayerId == BOTTOM_LABEL_LAYER_ID) return
+
+            style.removeLayer(BOTTOM_LABEL_LAYER_ID)
+            style.removeLayer(TOP_LABEL_LAYER_ID)
+            style.removeLayer(ICON_LAYER_ID)
+            style.addLayer(createIconLayer())
+            style.addLayer(createTopLabelLayer())
+            style.addLayer(createBottomLabelLayer())
+        } catch (t: Throwable) {
+            AppLogger.w(TAG, "Failed to bring OGN overlay to front: ${t.message}")
         }
     }
 
@@ -190,6 +255,43 @@ class OgnTrafficOverlay(
             style.addImage(icon.styleImageId, bitmap)
         }
         ensureSatelliteGliderStyleImage(style)
+        ensureRelativeGliderStyleImages(style)
+    }
+
+    private fun ensureRelativeGliderStyleImages(style: Style) {
+        ensureTintedStyleImage(
+            style = style,
+            imageId = RELATIVE_GLIDER_ABOVE_ICON_IMAGE_ID,
+            drawableId = OgnAircraftIcon.Glider.resId,
+            tintColor = RELATIVE_GLIDER_ABOVE_TINT
+        )
+        ensureTintedStyleImage(
+            style = style,
+            imageId = RELATIVE_GLIDER_BELOW_ICON_IMAGE_ID,
+            drawableId = OgnAircraftIcon.Glider.resId,
+            tintColor = RELATIVE_GLIDER_BELOW_TINT
+        )
+        ensureTintedStyleImage(
+            style = style,
+            imageId = RELATIVE_GLIDER_NEAR_ICON_IMAGE_ID,
+            drawableId = OgnAircraftIcon.Glider.resId,
+            tintColor = RELATIVE_GLIDER_NEAR_TINT
+        )
+    }
+
+    private fun ensureTintedStyleImage(
+        style: Style,
+        imageId: String,
+        drawableId: Int,
+        tintColor: Int
+    ) {
+        val existing = runCatching { style.getImage(imageId) }.getOrNull()
+        if (existing != null) return
+        val bitmap = drawableToBitmap(
+            drawableId = drawableId,
+            tintColor = tintColor
+        ) ?: return
+        style.addImage(imageId, bitmap)
     }
 
     private fun createIconLayer(): SymbolLayer =
@@ -216,39 +318,62 @@ class OgnTrafficOverlay(
                 iconOpacity(Expression.get(PROP_ALPHA))
             )
 
-    private fun createLabelLayer(): SymbolLayer =
-        SymbolLayer(LABEL_LAYER_ID, SOURCE_ID)
+    private fun createTopLabelLayer(): SymbolLayer =
+        SymbolLayer(TOP_LABEL_LAYER_ID, SOURCE_ID)
             .withProperties(
-                textField(Expression.get(PROP_LABEL)),
-                textSize(LABEL_TEXT_SIZE_SP),
+                textField(Expression.get(PROP_TOP_LABEL)),
+                textFont(LABEL_FONT_STACK),
+                textSize(labelTextSizeForPx(currentIconSizePx)),
                 textColor(LABEL_TEXT_COLOR),
-                textHaloColor(LABEL_HALO_COLOR),
-                textHaloWidth(LABEL_HALO_WIDTH_DP),
-                textOffset(arrayOf(0f, labelOffsetYForPx(currentIconSizePx))),
-                textAnchor("top"),
+                textOffset(arrayOf(0f, topLabelOffsetYForPx(currentIconSizePx))),
+                textAnchor("center"),
                 textAllowOverlap(true),
-                textIgnorePlacement(true)
+                textIgnorePlacement(true),
+                textOpacity(Expression.get(PROP_ALPHA))
+            )
+
+    private fun createBottomLabelLayer(): SymbolLayer =
+        SymbolLayer(BOTTOM_LABEL_LAYER_ID, SOURCE_ID)
+            .withProperties(
+                textField(Expression.get(PROP_BOTTOM_LABEL)),
+                textFont(LABEL_FONT_STACK),
+                textSize(labelTextSizeForPx(currentIconSizePx)),
+                textColor(LABEL_TEXT_COLOR),
+                textOffset(arrayOf(0f, bottomLabelOffsetYForPx(currentIconSizePx))),
+                textAnchor("center"),
+                textAllowOverlap(true),
+                textIgnorePlacement(true),
+                textOpacity(Expression.get(PROP_ALPHA))
             )
 
     private fun ensureLayerOrder(style: Style) {
         val anchorId = BlueLocationOverlay.LAYER_ID
         if (style.getLayer(anchorId) == null) return
-        if (style.getLayer(ICON_LAYER_ID) == null || style.getLayer(LABEL_LAYER_ID) == null) return
+        if (style.getLayer(ICON_LAYER_ID) == null ||
+            style.getLayer(TOP_LABEL_LAYER_ID) == null ||
+            style.getLayer(BOTTOM_LABEL_LAYER_ID) == null
+        ) {
+            return
+        }
 
         val layerIds = style.layers.map { it.id }
         val anchorIndex = layerIds.indexOf(anchorId)
         val iconIndex = layerIds.indexOf(ICON_LAYER_ID)
-        val labelIndex = layerIds.indexOf(LABEL_LAYER_ID)
-        if (anchorIndex < 0 || iconIndex < 0 || labelIndex < 0) return
+        val topIndex = layerIds.indexOf(TOP_LABEL_LAYER_ID)
+        val bottomIndex = layerIds.indexOf(BOTTOM_LABEL_LAYER_ID)
+        if (anchorIndex < 0 || iconIndex < 0 || topIndex < 0 || bottomIndex < 0) return
 
         val iconNeedsMove = iconIndex <= anchorIndex
-        val labelNeedsMove = labelIndex <= iconIndex
-        if (!iconNeedsMove && !labelNeedsMove) return
+        val topNeedsMove = topIndex <= iconIndex
+        val bottomNeedsMove = bottomIndex <= topIndex
+        if (!iconNeedsMove && !topNeedsMove && !bottomNeedsMove) return
 
-        style.removeLayer(LABEL_LAYER_ID)
+        style.removeLayer(BOTTOM_LABEL_LAYER_ID)
+        style.removeLayer(TOP_LABEL_LAYER_ID)
         style.removeLayer(ICON_LAYER_ID)
         style.addLayerAbove(createIconLayer(), anchorId)
-        style.addLayerAbove(createLabelLayer(), ICON_LAYER_ID)
+        style.addLayerAbove(createTopLabelLayer(), ICON_LAYER_ID)
+        style.addLayerAbove(createBottomLabelLayer(), TOP_LABEL_LAYER_ID)
     }
 
     private fun ensureSatelliteGliderStyleImage(style: Style) {
@@ -290,14 +415,32 @@ class OgnTrafficOverlay(
         val iconLayer = style.getLayer(ICON_LAYER_ID) as? SymbolLayer
         iconLayer?.setProperties(iconSize(iconScaleForPx(currentIconSizePx)))
 
-        val labelLayer = style.getLayer(LABEL_LAYER_ID) as? SymbolLayer
-        labelLayer?.setProperties(textOffset(arrayOf(0f, labelOffsetYForPx(currentIconSizePx))))
+        val labelSize = labelTextSizeForPx(currentIconSizePx)
+        val topLabelLayer = style.getLayer(TOP_LABEL_LAYER_ID) as? SymbolLayer
+        topLabelLayer?.setProperties(
+            textSize(labelSize),
+            textOffset(arrayOf(0f, topLabelOffsetYForPx(currentIconSizePx)))
+        )
+
+        val bottomLabelLayer = style.getLayer(BOTTOM_LABEL_LAYER_ID) as? SymbolLayer
+        bottomLabelLayer?.setProperties(
+            textSize(labelSize),
+            textOffset(arrayOf(0f, bottomLabelOffsetYForPx(currentIconSizePx)))
+        )
     }
 
     private fun iconScaleForPx(iconSizePx: Int): Float =
         iconSizePx.toFloat() / ICON_BITMAP_BASE_SIZE_PX.toFloat()
 
-    private fun labelOffsetYForPx(iconSizePx: Int): Float =
+    private fun labelTextSizeForPx(iconSizePx: Int): Float {
+        val scaled = LABEL_TEXT_SIZE_BASE_SP * iconScaleForPx(iconSizePx)
+        return scaled.coerceIn(MIN_LABEL_TEXT_SIZE_SP, MAX_LABEL_TEXT_SIZE_SP)
+    }
+
+    private fun topLabelOffsetYForPx(iconSizePx: Int): Float =
+        -LABEL_TEXT_OFFSET_BASE_Y * iconScaleForPx(iconSizePx)
+
+    private fun bottomLabelOffsetYForPx(iconSizePx: Int): Float =
         LABEL_TEXT_OFFSET_BASE_Y * iconScaleForPx(iconSizePx)
 
     private fun isValidCoordinate(latitude: Double, longitude: Double): Boolean {
@@ -330,11 +473,16 @@ class OgnTrafficOverlay(
 
         private const val SOURCE_ID = "ogn-traffic-source"
         private const val ICON_LAYER_ID = "ogn-traffic-icon-layer"
-        private const val LABEL_LAYER_ID = "ogn-traffic-label-layer"
+        private const val TOP_LABEL_LAYER_ID = "ogn-traffic-label-top-layer"
+        private const val BOTTOM_LABEL_LAYER_ID = "ogn-traffic-label-bottom-layer"
         private const val DEFAULT_ICON_IMAGE_ID = "ogn_icon_unknown"
         private const val SATELLITE_GLIDER_ICON_IMAGE_ID = "ogn_icon_glider_satellite"
+        private const val RELATIVE_GLIDER_ABOVE_ICON_IMAGE_ID = "ogn_icon_glider_rel_above"
+        private const val RELATIVE_GLIDER_BELOW_ICON_IMAGE_ID = "ogn_icon_glider_rel_below"
+        private const val RELATIVE_GLIDER_NEAR_ICON_IMAGE_ID = "ogn_icon_glider_rel_near"
 
-        private const val PROP_LABEL = "label"
+        private const val PROP_TOP_LABEL = "label_top"
+        private const val PROP_BOTTOM_LABEL = "label_bottom"
         private const val PROP_ALPHA = "alpha"
         private const val PROP_TRACK_DEG = "track_deg"
         private const val PROP_TARGET_ID = "target_id"
@@ -349,10 +497,19 @@ class OgnTrafficOverlay(
 
         private const val ICON_BITMAP_BASE_SIZE_PX = OGN_ICON_SIZE_DEFAULT_PX
 
-        private const val LABEL_TEXT_SIZE_SP = 11f
-        private const val LABEL_HALO_WIDTH_DP = 1.1f
-        private const val LABEL_TEXT_OFFSET_BASE_Y = 1.1f
-        private const val LABEL_TEXT_COLOR = "#EAF4FF"
-        private const val LABEL_HALO_COLOR = "#0B1E2D"
+        private const val LABEL_TEXT_SIZE_BASE_SP = 13f
+        private const val MIN_LABEL_TEXT_SIZE_SP = 12f
+        private const val MAX_LABEL_TEXT_SIZE_SP = 17f
+        private const val LABEL_TEXT_OFFSET_BASE_Y = 1.6f
+        private const val LABEL_TEXT_COLOR = "#000000"
+        private val LABEL_FONT_STACK = arrayOf(
+            "Open Sans Semibold",
+            "Noto Sans Medium",
+            "Open Sans Regular",
+            "Arial Unicode MS Regular"
+        )
+        private val RELATIVE_GLIDER_ABOVE_TINT = Color.parseColor("#1B5E20")
+        private val RELATIVE_GLIDER_BELOW_TINT = Color.parseColor("#0D47A1")
+        private val RELATIVE_GLIDER_NEAR_TINT = Color.parseColor("#101010")
     }
 }

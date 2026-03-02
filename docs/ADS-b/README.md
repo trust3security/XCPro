@@ -6,14 +6,26 @@ This folder was reduced to a minimal, current set so future agents have one clea
 
 1. `docs/ADS-b/ADSB.md`
    - Runtime contract for ADS-B behavior.
-2. `docs/ADS-b/ADSB_Improvement_Plan.md`
-   - Active implementation and hardening plan from the latest deep code pass.
-3. `docs/ADS-b/ADSB_AircraftMetadata.md`
+2. `docs/ADS-b/CHANGE_PLAN_ADSB_CONNECTIVITY_SCORE_LIFT_2026-03-01.md`
+   - Active detailed phased plan to raise ADS-B connectivity from `88/100` to release-grade `96/100` (current working score: `95/100`).
+3. `docs/ADS-b/CHANGE_PLAN_ADSB_CONNECTIVITY_UX_STALE_HOUSEKEEPING_OBSERVABILITY_2026-03-01.md`
+   - Supporting closure plan for UX, stale-housekeeping, and observability workstream details.
+4. `docs/ADS-b/CHANGE_PLAN_ADSB_NETWORK_TRANSITION_E2E_COVERAGE_2026-03-01.md`
+   - Detailed phased execution plan for the remaining release/e2e network-transition coverage deduction (`95 -> 96`).
+5. `docs/ADS-b/CHANGE_PLAN_ADSB_SOCKET_ERROR_HARDENING_2026-03-01.md`
+   - Completed phased execution plan for recurring ADS-B socket-error hardening baseline.
+6. `docs/ADS-b/ADSB_AircraftMetadata.md`
    - Metadata source/import contract.
-4. `docs/ADS-b/ADSB_CategoryIconMapping.md`
+7. `docs/ADS-b/ADSB_CategoryIconMapping.md`
    - Category/typecode/icon mapping contract.
+8. `docs/ADS-b/ADSB_Improvement_Plan.md`
+   - Historical completed plan retained for audit trail; superseded for current execution.
 
 ## Notes
 
 - Completed dated hardening plans were removed on 2026-02-20 to reduce drift and duplicate guidance.
+- For current ADS-B connectivity score-lift work, follow `CHANGE_PLAN_ADSB_CONNECTIVITY_SCORE_LIFT_2026-03-01.md` first.
+- Use `CHANGE_PLAN_ADSB_CONNECTIVITY_UX_STALE_HOUSEKEEPING_OBSERVABILITY_2026-03-01.md` as the supporting technical workstream plan.
+- Use `CHANGE_PLAN_ADSB_NETWORK_TRANSITION_E2E_COVERAGE_2026-03-01.md` for the remaining release/e2e transition-coverage closure work.
+- The socket hardening baseline remains recorded in `CHANGE_PLAN_ADSB_SOCKET_ERROR_HARDENING_2026-03-01.md`.
 - If ADS-B runtime wiring changes, update `docs/ARCHITECTURE/PIPELINE.md` in the same change.

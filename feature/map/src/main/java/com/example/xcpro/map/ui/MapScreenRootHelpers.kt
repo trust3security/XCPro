@@ -3,7 +3,6 @@ package com.example.xcpro.map.ui
 import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,36 +23,9 @@ import com.example.xcpro.map.MapScreenViewModel
 import com.example.xcpro.map.widgets.MapWidgetId
 import com.example.xcpro.map.widgets.MapWidgetLayoutViewModel
 import com.example.xcpro.map.widgets.MapWidgetOffsets
-import com.example.xcpro.variometer.layout.VariometerUiState
+import com.example.xcpro.map.widgets.MapWidgetSizePolicy
 import kotlinx.coroutines.flow.collect
 import kotlin.math.min
-import kotlin.math.roundToInt
-
-internal data class MapWidgetOffsetStates(
-    val hamburgerOffset: MutableState<Offset>,
-    val flightModeOffset: MutableState<Offset>,
-    val settingsOffset: MutableState<Offset>,
-    val ballastOffset: MutableState<Offset>
-)
-
-internal data class VariometerLayoutState(
-    val uiState: VariometerUiState,
-    val minSizePx: Float,
-    val maxSizePx: Float
-)
-
-internal data class MapScreenWidgetLayoutBinding(
-    val screenWidthPx: Float,
-    val screenHeightPx: Float,
-    val hamburgerOffsetState: MutableState<Offset>,
-    val flightModeOffsetState: MutableState<Offset>,
-    val settingsOffsetState: MutableState<Offset>,
-    val ballastOffsetState: MutableState<Offset>,
-    val onHamburgerOffsetChange: (Offset) -> Unit,
-    val onFlightModeOffsetChange: (Offset) -> Unit,
-    val onSettingsOffsetChange: (Offset) -> Unit,
-    val onBallastOffsetChange: (Offset) -> Unit
-)
 
 @Composable
 internal fun rememberMapScreenWidgetLayoutBinding(
@@ -71,24 +43,72 @@ internal fun rememberMapScreenWidgetLayoutBinding(
         sideHamburger = OffsetPx.Zero,
         flightMode = OffsetPx.Zero,
         settingsShortcut = OffsetPx.Zero,
-        ballast = OffsetPx.Zero
+        ballast = OffsetPx.Zero,
+        sideHamburgerSizePx = MapWidgetSizePolicy.defaultSizePx(
+            widgetId = MapWidgetId.SIDE_HAMBURGER,
+            density = densityScale
+        ),
+        settingsShortcutSizePx = MapWidgetSizePolicy.defaultSizePx(
+            widgetId = MapWidgetId.SETTINGS_SHORTCUT,
+            density = densityScale
+        )
     )
     val offsetStates = rememberMapWidgetOffsets(resolvedWidgetOffsets)
     val onHamburgerOffsetChange: (Offset) -> Unit = { offset ->
         offsetStates.hamburgerOffset.value = offset
-        widgetLayoutViewModel.updateOffset(MapWidgetId.SIDE_HAMBURGER, offset.toOffsetPx())
+        widgetLayoutViewModel.updateOffset(
+            widgetId = MapWidgetId.SIDE_HAMBURGER,
+            offset = offset.toOffsetPx(),
+            screenWidthPx = screenWidthPx,
+            screenHeightPx = screenHeightPx
+        )
     }
     val onFlightModeOffsetChange: (Offset) -> Unit = { offset ->
         offsetStates.flightModeOffset.value = offset
-        widgetLayoutViewModel.updateOffset(MapWidgetId.FLIGHT_MODE, offset.toOffsetPx())
+        widgetLayoutViewModel.updateOffset(
+            widgetId = MapWidgetId.FLIGHT_MODE,
+            offset = offset.toOffsetPx(),
+            screenWidthPx = screenWidthPx,
+            screenHeightPx = screenHeightPx
+        )
     }
     val onSettingsOffsetChange: (Offset) -> Unit = { offset ->
         offsetStates.settingsOffset.value = offset
-        widgetLayoutViewModel.updateOffset(MapWidgetId.SETTINGS_SHORTCUT, offset.toOffsetPx())
+        widgetLayoutViewModel.updateOffset(
+            widgetId = MapWidgetId.SETTINGS_SHORTCUT,
+            offset = offset.toOffsetPx(),
+            screenWidthPx = screenWidthPx,
+            screenHeightPx = screenHeightPx
+        )
     }
     val onBallastOffsetChange: (Offset) -> Unit = { offset ->
         offsetStates.ballastOffset.value = offset
-        widgetLayoutViewModel.updateOffset(MapWidgetId.BALLAST, offset.toOffsetPx())
+        widgetLayoutViewModel.updateOffset(
+            widgetId = MapWidgetId.BALLAST,
+            offset = offset.toOffsetPx(),
+            screenWidthPx = screenWidthPx,
+            screenHeightPx = screenHeightPx
+        )
+    }
+    val onHamburgerSizeChange: (Float) -> Unit = { sizePx ->
+        offsetStates.hamburgerSizePx.value = sizePx
+        widgetLayoutViewModel.updateSize(
+            widgetId = MapWidgetId.SIDE_HAMBURGER,
+            sizePx = sizePx,
+            screenWidthPx = screenWidthPx,
+            screenHeightPx = screenHeightPx,
+            density = densityScale
+        )
+    }
+    val onSettingsSizeChange: (Float) -> Unit = { sizePx ->
+        offsetStates.settingsSizePx.value = sizePx
+        widgetLayoutViewModel.updateSize(
+            widgetId = MapWidgetId.SETTINGS_SHORTCUT,
+            sizePx = sizePx,
+            screenWidthPx = screenWidthPx,
+            screenHeightPx = screenHeightPx,
+            density = densityScale
+        )
     }
     return MapScreenWidgetLayoutBinding(
         screenWidthPx = screenWidthPx,
@@ -97,10 +117,14 @@ internal fun rememberMapScreenWidgetLayoutBinding(
         flightModeOffsetState = offsetStates.flightModeOffset,
         settingsOffsetState = offsetStates.settingsOffset,
         ballastOffsetState = offsetStates.ballastOffset,
+        hamburgerSizePxState = offsetStates.hamburgerSizePx,
+        settingsSizePxState = offsetStates.settingsSizePx,
         onHamburgerOffsetChange = onHamburgerOffsetChange,
         onFlightModeOffsetChange = onFlightModeOffsetChange,
         onSettingsOffsetChange = onSettingsOffsetChange,
-        onBallastOffsetChange = onBallastOffsetChange
+        onBallastOffsetChange = onBallastOffsetChange,
+        onHamburgerSizeChange = onHamburgerSizeChange,
+        onSettingsSizeChange = onSettingsSizeChange
     )
 }
 
@@ -112,6 +136,8 @@ internal fun rememberMapWidgetOffsets(
     val flightModeOffsetState = remember { mutableStateOf(widgetOffsets.flightMode.toComposeOffset()) }
     val settingsOffsetState = remember { mutableStateOf(widgetOffsets.settingsShortcut.toComposeOffset()) }
     val ballastOffsetState = remember { mutableStateOf(widgetOffsets.ballast.toComposeOffset()) }
+    val hamburgerSizeState = remember { mutableStateOf(widgetOffsets.sideHamburgerSizePx) }
+    val settingsSizeState = remember { mutableStateOf(widgetOffsets.settingsShortcutSizePx) }
 
     LaunchedEffect(widgetOffsets.sideHamburger) {
         hamburgerOffsetState.value = widgetOffsets.sideHamburger.toComposeOffset()
@@ -125,30 +151,21 @@ internal fun rememberMapWidgetOffsets(
     LaunchedEffect(widgetOffsets.ballast) {
         ballastOffsetState.value = widgetOffsets.ballast.toComposeOffset()
     }
+    LaunchedEffect(widgetOffsets.sideHamburgerSizePx) {
+        hamburgerSizeState.value = widgetOffsets.sideHamburgerSizePx
+    }
+    LaunchedEffect(widgetOffsets.settingsShortcutSizePx) {
+        settingsSizeState.value = widgetOffsets.settingsShortcutSizePx
+    }
 
     return MapWidgetOffsetStates(
         hamburgerOffset = hamburgerOffsetState,
         flightModeOffset = flightModeOffsetState,
         settingsOffset = settingsOffsetState,
-        ballastOffset = ballastOffsetState
+        ballastOffset = ballastOffsetState,
+        hamburgerSizePx = hamburgerSizeState,
+        settingsSizePx = settingsSizeState
     )
-}
-
-@Composable
-internal fun ensureSafeContainerFallback(
-    safeContainerSizeState: MutableState<IntSize>,
-    screenWidthPx: Float,
-    screenHeightPx: Float
-) {
-    LaunchedEffect(screenWidthPx, screenHeightPx) {
-        if (safeContainerSizeState.value == IntSize.Zero) {
-            val fallbackWidth = screenWidthPx.roundToInt().coerceAtLeast(1)
-            val fallbackHeight = screenHeightPx.roundToInt().coerceAtLeast(1)
-            if (fallbackWidth > 0 && fallbackHeight > 0) {
-                safeContainerSizeState.value = IntSize(fallbackWidth, fallbackHeight)
-            }
-        }
-    }
 }
 
 @Composable

@@ -1,6 +1,6 @@
 package com.example.xcpro.map
 
-import android.os.SystemClock
+import com.example.xcpro.core.time.TimeBridge
 
 class DisplayClock {
     enum class TimeBase { MONOTONIC, WALL, REPLAY }
@@ -13,19 +13,18 @@ class DisplayClock {
     fun updateFromFix(timestampMs: Long, base: TimeBase) {
         timeBase = base
         lastFixTimestampMs = timestampMs
-        lastFixWallMs = SystemClock.elapsedRealtime()
+        lastFixWallMs = TimeBridge.nowMonoMs()
     }
 
     fun nowMs(): Long {
         return when (timeBase) {
-            TimeBase.MONOTONIC -> SystemClock.elapsedRealtime()
-            TimeBase.WALL -> System.currentTimeMillis()
+            TimeBase.MONOTONIC -> TimeBridge.nowMonoMs()
+            TimeBase.WALL -> TimeBridge.nowWallMs()
             TimeBase.REPLAY -> {
                 // Replay timestamps advance by wall-time elapsed (scaled) for smooth interpolation.
-                val elapsedWall = (SystemClock.elapsedRealtime() - lastFixWallMs).coerceAtLeast(0L)
+                val elapsedWall = (TimeBridge.nowMonoMs() - lastFixWallMs).coerceAtLeast(0L)
                 lastFixTimestampMs + (elapsedWall * replaySpeedMultiplier).toLong()
             }
         }
     }
 }
-

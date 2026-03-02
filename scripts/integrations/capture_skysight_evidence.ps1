@@ -95,6 +95,27 @@ function Parse-AuthBody {
     }
 }
 
+function Get-CapturedHttpStatusCode {
+    param([string]$Path)
+
+    if (-not (Test-Path $Path)) {
+        throw "HTTP capture file missing: $Path"
+    }
+
+    $statusLines = Get-Content -Path $Path | Where-Object {
+        $_ -match '^HTTP/\d+(\.\d+)?\s+(\d{3})\b'
+    }
+    if (-not $statusLines -or $statusLines.Count -eq 0) {
+        throw "Could not parse HTTP status from $Path"
+    }
+    $lastStatusLine = $statusLines[-1]
+    $match = [regex]::Match($lastStatusLine, '^HTTP/\d+(\.\d+)?\s+(\d{3})\b')
+    if (-not $match.Success) {
+        throw "Could not parse HTTP status from $Path"
+    }
+    return [int]$match.Groups[2].Value
+}
+
 function Get-RegionContext {
     param([string]$Region)
 
@@ -150,12 +171,13 @@ function Find-WorkingTileSlot {
     foreach ($dayOffset in -1..2) {
         $date = $localNow.Date.AddDays($dayOffset)
         foreach ($hour in 6..20) {
-            foreach ($minute in @(0, 30)) {
+            $minutes = if ($hour -eq 20) { @(0) } else { @(0, 30) }
+            foreach ($minute in $minutes) {
                 $datePart = $date.ToString("yyyyMMdd")
                 $timePart = ("{0:D2}{1:D2}" -f $hour, $minute)
                 $url = "https://edge.skysight.io/$Region/$datePart/$timePart/$Param/$Zoom/$x/$y"
                 $code = & curl.exe -sS -o NUL -w "%{http_code}" $url -H "Origin: $Origin"
-                if ($code -eq "200") {
+                if ($code -eq "200" -or $code -eq "204") {
                     return @{
                         Region = $Region
                         DatePart = $datePart
@@ -285,6 +307,10 @@ Invoke-Curl -CaptureHeaders -Args @(
     "--data-binary", "@$authPayloadPath",
     "-c", $cookies
 ) -OutFile $authSuccess
+$authStatus = Get-CapturedHttpStatusCode -Path $authSuccess
+if ($authStatus -lt 200 -or $authStatus -ge 300) {
+    throw "SkySight auth failed with HTTP $authStatus"
+}
 Redact-SecretsInFile -Path $authSuccess
 Remove-Item -Path $authPayloadPath -Force -ErrorAction SilentlyContinue
 

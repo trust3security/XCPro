@@ -11,7 +11,6 @@ plugins {
 
 import org.gradle.api.tasks.testing.Test
 import org.gradle.testretry.TestRetryTaskExtension
-import java.time.Duration
 
 val isWindows = System.getProperty("os.name").lowercase().contains("windows")
 val configuredMaxParallelForks = providers.gradleProperty("xcpro.test.maxParallelForks")
@@ -40,7 +39,8 @@ val flakyRobolectricAllowlist = rootProject
 subprojects {
     tasks.withType<Test>().configureEach {
         maxParallelForks = configuredMaxParallelForks
-        timeout.set(Duration.ofSeconds(configuredTestTimeoutSeconds))
+        // Keep timeout policy as a per-test signal consumed by test infrastructure.
+        // Task-level Gradle timeouts can terminate healthy full-suite runs.
         systemProperty("xcpro.test.timeout.seconds", configuredTestTimeoutSeconds.toString())
         if (perfEvidenceEnabled != null) {
             systemProperty("xcpro.enablePerfEvidence", perfEvidenceEnabled)

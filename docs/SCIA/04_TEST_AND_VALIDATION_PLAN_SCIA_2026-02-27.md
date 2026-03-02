@@ -94,10 +94,13 @@ Scenario E: Rapid repeated taps on SCIA switch
   - final state is deterministic.
   - no prolonged oscillation/pause from queued duplicate writes.
 
-Scenario F: App start with persisted selected aircraft keys
-- Initial state: persisted SCIA ON and non-empty selected keys.
+Scenario F: App restart resets SCIA state
+- Initial state before restart: SCIA ON and non-empty selected keys.
+- Action: restart app process.
 - Expected:
-  - trails appear without prolonged empty transient after startup.
+  - SCIA toggle is OFF after restart.
+  - selected trail-aircraft set is empty after restart.
+  - no trails render until user explicitly re-enables SCIA and selects aircraft.
 
 ## 4) Performance Checks
 

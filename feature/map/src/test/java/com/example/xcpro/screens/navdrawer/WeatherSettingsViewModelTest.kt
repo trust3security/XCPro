@@ -39,7 +39,7 @@ class WeatherSettingsViewModelTest {
                 enabled = true,
                 opacity = 0.61f,
                 animatePastWindow = true,
-                animationWindow = WeatherRainAnimationWindow.TWENTY_MINUTES,
+                animationWindow = WeatherRainAnimationWindow.SIXTY_MINUTES,
                 animationSpeed = WeatherRainAnimationSpeed.FAST,
                 transitionQuality = WeatherRainTransitionQuality.SMOOTH,
                 frameMode = WeatherRadarFrameMode.MANUAL,
@@ -72,7 +72,7 @@ class WeatherSettingsViewModelTest {
         assertTrue(viewModel.overlayEnabled.value)
         assertEquals(0.61f, viewModel.opacity.value, 0f)
         assertTrue(viewModel.animatePastWindow.value)
-        assertEquals(WeatherRainAnimationWindow.TWENTY_MINUTES, viewModel.animationWindow.value)
+        assertEquals(WeatherRainAnimationWindow.SIXTY_MINUTES, viewModel.animationWindow.value)
         assertEquals(WeatherRainAnimationSpeed.FAST, viewModel.animationSpeed.value)
         assertEquals(WeatherRainTransitionQuality.SMOOTH, viewModel.transitionQuality.value)
         assertEquals(WeatherRadarFrameMode.MANUAL, viewModel.frameMode.value)
@@ -84,7 +84,7 @@ class WeatherSettingsViewModelTest {
         opacityFlow.value = 0.44f
         preferencesFlow.value = preferencesFlow.value.copy(
             animatePastWindow = false,
-            animationWindow = WeatherRainAnimationWindow.THIRTY_MINUTES,
+            animationWindow = WeatherRainAnimationWindow.ONE_HUNDRED_TWENTY_MINUTES,
             animationSpeed = WeatherRainAnimationSpeed.SLOW,
             transitionQuality = WeatherRainTransitionQuality.CRISP,
             frameMode = WeatherRadarFrameMode.LATEST,
@@ -99,7 +99,10 @@ class WeatherSettingsViewModelTest {
         assertFalse(viewModel.overlayEnabled.value)
         assertEquals(0.44f, viewModel.opacity.value, 0f)
         assertFalse(viewModel.animatePastWindow.value)
-        assertEquals(WeatherRainAnimationWindow.THIRTY_MINUTES, viewModel.animationWindow.value)
+        assertEquals(
+            WeatherRainAnimationWindow.ONE_HUNDRED_TWENTY_MINUTES,
+            viewModel.animationWindow.value
+        )
         assertEquals(WeatherRainAnimationSpeed.SLOW, viewModel.animationSpeed.value)
         assertEquals(WeatherRainTransitionQuality.CRISP, viewModel.transitionQuality.value)
         assertEquals(WeatherRadarFrameMode.LATEST, viewModel.frameMode.value)
@@ -119,7 +122,7 @@ class WeatherSettingsViewModelTest {
         viewModel.setOverlayEnabled(true)
         viewModel.setOpacity(0.7f)
         viewModel.setAnimatePastWindow(true)
-        viewModel.setAnimationWindow(WeatherRainAnimationWindow.THIRTY_MINUTES)
+        viewModel.setAnimationWindow(WeatherRainAnimationWindow.SIXTY_MINUTES)
         viewModel.setAnimationSpeed(WeatherRainAnimationSpeed.FAST)
         viewModel.setTransitionQuality(WeatherRainTransitionQuality.SMOOTH)
         viewModel.setFrameMode(WeatherRadarFrameMode.MANUAL)
@@ -131,7 +134,7 @@ class WeatherSettingsViewModelTest {
         verify(repository).setEnabled(true)
         verify(repository).setOpacity(0.7f)
         verify(repository).setAnimatePastWindow(true)
-        verify(repository).setAnimationWindow(WeatherRainAnimationWindow.THIRTY_MINUTES)
+        verify(repository).setAnimationWindow(WeatherRainAnimationWindow.SIXTY_MINUTES)
         verify(repository).setAnimationSpeed(WeatherRainAnimationSpeed.FAST)
         verify(repository).setTransitionQuality(WeatherRainTransitionQuality.SMOOTH)
         verify(repository).setFrameMode(WeatherRadarFrameMode.MANUAL)

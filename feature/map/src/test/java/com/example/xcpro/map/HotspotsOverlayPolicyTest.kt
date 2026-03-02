@@ -28,6 +28,7 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
@@ -146,6 +147,8 @@ class HotspotsOverlayPolicyTest {
                 )
 
                 verify(style, atLeastOnce()).addLayerBelow(any(), eq("ogn-thermal-label-layer"))
+                verify(style, never()).getLayer("forecast-secondary-raster-layer")
+                verify(style, never()).getLayer("forecast-secondary-vector-fill-layer")
             }
         }
     }
@@ -184,6 +187,44 @@ class HotspotsOverlayPolicyTest {
                     )
 
                     verify(style, atLeastOnce()).addLayerBelow(any(), eq("ogn-thermal-label-layer"))
+                    verify(style, never()).getLayer("forecast-secondary-raster-layer")
+                    verify(style, never()).getLayer("forecast-secondary-vector-fill-layer")
+                }
+            }
+        }
+    }
+
+    @Test
+    fun skySightAnchors_placeSatelliteBelowDynamicRainFrames() {
+        val map: MapLibreMap = mock()
+        val style: Style = mock()
+        whenever(map.style).thenReturn(style)
+
+        mockConstruction(RasterSource::class.java).use {
+            mockConstruction(
+                RasterLayer::class.java,
+                withSettings().defaultAnswer(Answers.RETURNS_SELF)
+            ).use {
+                mockConstruction(VectorSource::class.java).use {
+                    val rainLayer: org.maplibre.android.style.layers.Layer = mock()
+                    whenever(rainLayer.id).thenReturn("weather-rain-layer-1000")
+                    whenever(style.layers).thenReturn(mutableListOf(rainLayer))
+                    whenever(style.getLayer(any())).thenReturn(null)
+
+                    val overlay = SkySightSatelliteOverlay(map)
+                    overlay.render(
+                        config = SkySightSatelliteRenderConfig(
+                            enabled = true,
+                            showSatelliteImagery = true,
+                            showRadar = false,
+                            showLightning = false,
+                            animate = false,
+                            historyFrameCount = 1,
+                            referenceTimeUtcMs = 0L
+                        )
+                    )
+
+                    verify(style, atLeastOnce()).addLayerBelow(any(), eq("weather-rain-layer-1000"))
                 }
             }
         }

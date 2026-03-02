@@ -1,5 +1,6 @@
 package com.example.xcpro.tasks.aat
 
+import com.example.xcpro.core.time.TimeBridge
 import com.example.xcpro.tasks.aat.areas.AreaBoundaryCalculator
 import com.example.xcpro.tasks.aat.calculations.AATSpeedCalculator
 import com.example.xcpro.tasks.aat.models.AATFlightStatus
@@ -11,7 +12,9 @@ import com.example.xcpro.tasks.aat.models.AreaGeometry
 import java.time.Duration
 import java.time.LocalDateTime
 
-class AATTaskCalculator {
+class AATTaskCalculator(
+    private val nowProvider: () -> LocalDateTime = TimeBridge::nowLocalDateTime
+) {
     private val areaBoundaryCalculator = AreaBoundaryCalculator()
     private val speedCalculator = AATSpeedCalculator()
     private val pathOptimizer = AATPathOptimizer()
@@ -26,7 +29,7 @@ class AATTaskCalculator {
             task = task,
             validation = validation,
             distances = distances,
-            calculatedAt = LocalDateTime.now()
+            calculatedAt = nowProvider()
         )
     }
 

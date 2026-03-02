@@ -16,4 +16,11 @@ class XCProApplicationTest {
         val configuration = application.workManagerConfiguration
         assertNotNull(configuration)
     }
+
+    @Test
+    fun `onCreate does not crash when SCIA startup resetter is not injected yet`() {
+        val application = XCProApplication()
+
+        application.onCreate()
+    }
 }

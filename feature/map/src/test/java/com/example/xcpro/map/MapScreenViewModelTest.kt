@@ -76,6 +76,7 @@ import com.example.xcpro.variometer.layout.VariometerWidgetRepository
 import com.example.xcpro.map.ballast.BallastControllerFactory
 import com.example.xcpro.core.time.FakeClock
 import com.example.xcpro.ConfigurationRepository
+import com.example.xcpro.adsb.AdsbProximityTier
 import com.example.xcpro.hawk.HawkVarioUiState
 import com.example.xcpro.hawk.HawkVarioUseCase
 import com.example.xcpro.adsb.AdsbConnectionState
@@ -110,6 +111,8 @@ import com.example.xcpro.ogn.OgnThermalRepository
 import com.example.xcpro.ogn.OgnGliderTrailRepository
 import com.example.xcpro.ogn.OgnGliderTrailSegment
 import com.example.xcpro.ogn.OgnTrailSelectionPreferencesRepository
+import com.example.xcpro.thermalling.ThermallingModeCoordinator
+import com.example.xcpro.thermalling.ThermallingModePreferencesRepository
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -406,6 +409,36 @@ class MapScreenViewModelTest {
 
         assertEquals(4_321.0, viewModel.selectedAdsbTarget.value?.distanceMeters ?: Double.NaN, 1e-6)
         assertEquals(220.0, viewModel.selectedAdsbTarget.value?.bearingDegFromUser ?: Double.NaN, 1e-6)
+    }
+
+    @Test
+    fun selectedAdsbDetails_carriesProximityTierTrendAndOwnshipReferenceSemantics() = runBlocking {
+        val adsbRepository = FakeAdsbTrafficRepository()
+        val viewModel = createViewModel(adsbRepositoryOverride = adsbRepository)
+        val id = Icao24.from("abc123") ?: error("invalid test id")
+
+        adsbRepository.targets.value = listOf(
+            sampleAdsbTarget(
+                id = id,
+                distanceMeters = 1_750.0,
+                usesOwnshipReference = false,
+                proximityTier = AdsbProximityTier.NEUTRAL,
+                isClosing = false,
+                closingRateMps = -0.4,
+                isEmergencyCollisionRisk = false
+            )
+        )
+        drainMain()
+
+        viewModel.onAdsbTargetSelected(id)
+        drainMain()
+
+        val selected = viewModel.selectedAdsbTarget.value ?: error("selected details missing")
+        assertEquals(false, selected.usesOwnshipReference)
+        assertEquals(AdsbProximityTier.NEUTRAL, selected.proximityTier)
+        assertEquals(false, selected.isClosing)
+        assertEquals(-0.4, selected.closingRateMps ?: Double.NaN, 1e-6)
+        assertEquals(false, selected.isEmergencyCollisionRisk)
     }
 
     @Test
@@ -894,6 +927,13 @@ class MapScreenViewModelTest {
         val mapFeatureFlagsUseCase = MapFeatureFlagsUseCase(mapFeatureFlags)
         val mapCardPreferencesUseCase = MapCardPreferencesUseCase(cardPreferences)
         val mapVarioPreferencesUseCase = MapVarioPreferencesUseCase(levoVarioPreferencesRepository)
+        val thermallingPreferencesRepository = ThermallingModePreferencesRepository(
+            newTestPreferencesDataStore("thermalling_mode")
+        )
+        val thermallingModeUseCase = ThermallingModeRuntimeUseCase(
+            preferencesRepository = thermallingPreferencesRepository,
+            coordinator = ThermallingModeCoordinator(testClock)
+        )
         val ognTrafficRepository = ognRepositoryOverride ?: FakeOgnTrafficRepository()
         val ognThermalRepository = ognThermalRepositoryOverride ?: FakeOgnThermalRepository()
         val ognGliderTrailRepository = FakeOgnGliderTrailRepository()
@@ -1018,7 +1058,8 @@ class MapScreenViewModelTest {
             hawkVarioUseCase = hawkVarioUseCase,
             ognTrafficUseCase = ognTrafficUseCase,
             adsbTrafficUseCase = adsbTrafficUseCase,
-            adsbMetadataEnrichmentUseCase = adsbMetadataEnrichmentUseCase
+            adsbMetadataEnrichmentUseCase = adsbMetadataEnrichmentUseCase,
+            thermallingModeUseCase = thermallingModeUseCase
         )
     }
 
@@ -1116,7 +1157,12 @@ class MapScreenViewModelTest {
 
     private fun sampleAdsbTarget(
         id: Icao24,
-        distanceMeters: Double = 1500.0
+        distanceMeters: Double = 1500.0,
+        usesOwnshipReference: Boolean = true,
+        proximityTier: AdsbProximityTier = AdsbProximityTier.AMBER,
+        isClosing: Boolean = true,
+        closingRateMps: Double? = 0.7,
+        isEmergencyCollisionRisk: Boolean = false
     ): AdsbTrafficUiModel = AdsbTrafficUiModel(
         id = id,
         callsign = "TEST01",
@@ -1130,9 +1176,14 @@ class MapScreenViewModelTest {
         isStale = false,
         distanceMeters = distanceMeters,
         bearingDegFromUser = 220.0,
+        usesOwnshipReference = usesOwnshipReference,
         positionSource = 0,
         category = 3,
-        lastContactEpochSec = null
+        lastContactEpochSec = null,
+        proximityTier = proximityTier,
+        isClosing = isClosing,
+        closingRateMps = closingRateMps,
+        isEmergencyCollisionRisk = isEmergencyCollisionRisk
     )
 
     private fun sampleOgnTarget(id: String): OgnTrafficTarget = OgnTrafficTarget(

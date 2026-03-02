@@ -2,6 +2,7 @@ package com.example.xcpro.adsb.metadata.data
 
 import com.example.xcpro.adsb.awaitResponse
 import com.example.xcpro.common.di.IoDispatcher
+import com.example.xcpro.di.AdsbMetadataHttpClient
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -14,7 +15,7 @@ import org.json.JSONObject
 
 @Singleton
 class OpenSkyIcaoMetadataClient @Inject constructor(
-    private val httpClient: OkHttpClient,
+    @AdsbMetadataHttpClient private val httpClient: OkHttpClient,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) {
 

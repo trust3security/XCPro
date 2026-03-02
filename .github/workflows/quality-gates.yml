@@ -1,0 +1,36 @@
+name: Quality Gates
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Architecture timebase gate
+        run: python scripts/arch_gate.py
+
+      - name: Enforce repository architecture rules
+        run: ./gradlew enforceRules
+
+      - name: Run unit tests
+        run: ./gradlew testDebugUnitTest
+
+      - name: Assemble debug
+        run: ./gradlew assembleDebug

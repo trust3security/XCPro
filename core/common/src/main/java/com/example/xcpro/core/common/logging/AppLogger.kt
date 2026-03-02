@@ -1,8 +1,8 @@
 package com.example.xcpro.core.common.logging
 
-import android.os.SystemClock
 import android.util.Log
 import com.example.xcpro.core.common.BuildConfig
+import com.example.xcpro.core.time.TimeBridge
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.random.Random
 
@@ -64,7 +64,7 @@ object AppLogger {
      * Returns true when the log should be emitted for the given key.
      */
     fun rateLimit(tag: String, key: String, intervalMs: Long): Boolean {
-        val now = SystemClock.elapsedRealtime()
+        val now = TimeBridge.nowMonoMs()
         val token = "$tag:$key"
         val last = lastLogMs[token]
         if (last != null && now - last < intervalMs) return false

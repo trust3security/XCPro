@@ -61,8 +61,6 @@ internal fun ForecastOverlayBottomSheet(
     onDismiss: () -> Unit,
     onEnabledChanged: (Boolean) -> Unit,
     onPrimaryParameterToggled: (ForecastParameterId) -> Unit,
-    onSecondaryPrimaryOverlayEnabledChanged: (Boolean) -> Unit,
-    onSecondaryPrimaryParameterSelected: (ForecastParameterId) -> Unit,
     onWindOverlayEnabledChanged: (Boolean) -> Unit,
     onWindParameterSelected: (ForecastParameterId) -> Unit,
     onAutoTimeEnabledChanged: (Boolean) -> Unit,
@@ -86,8 +84,6 @@ internal fun ForecastOverlayBottomSheet(
             uiState = uiState,
             onEnabledChanged = onEnabledChanged,
             onPrimaryParameterToggled = onPrimaryParameterToggled,
-            onSecondaryPrimaryOverlayEnabledChanged = onSecondaryPrimaryOverlayEnabledChanged,
-            onSecondaryPrimaryParameterSelected = onSecondaryPrimaryParameterSelected,
             onWindOverlayEnabledChanged = onWindOverlayEnabledChanged,
             onWindParameterSelected = onWindParameterSelected,
             onAutoTimeEnabledChanged = onAutoTimeEnabledChanged,
@@ -114,8 +110,6 @@ internal fun ForecastOverlayControlsContent(
     uiState: ForecastOverlayUiState,
     onEnabledChanged: (Boolean) -> Unit,
     onPrimaryParameterToggled: (ForecastParameterId) -> Unit,
-    onSecondaryPrimaryOverlayEnabledChanged: (Boolean) -> Unit,
-    onSecondaryPrimaryParameterSelected: (ForecastParameterId) -> Unit,
     onWindOverlayEnabledChanged: (Boolean) -> Unit,
     onWindParameterSelected: (ForecastParameterId) -> Unit,
     onAutoTimeEnabledChanged: (Boolean) -> Unit,
@@ -188,19 +182,6 @@ internal fun ForecastOverlayControlsContent(
     LaunchedEffect(clampedHistoryFrames) {
         satelliteHistoryFramesSlider = clampedHistoryFrames.toFloat()
     }
-    val secondaryPrimaryParameters = remember(
-        uiState.primaryParameters,
-        uiState.selectedPrimaryParameterId
-    ) {
-        uiState.primaryParameters.filterNot { parameter ->
-            parameter.id.value.equals(
-                uiState.selectedPrimaryParameterId.value,
-                ignoreCase = true
-            )
-        }
-    }
-    val canShowSecondaryPrimaryOverlay = uiState.enabled &&
-        secondaryPrimaryParameters.isNotEmpty()
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -210,49 +191,6 @@ internal fun ForecastOverlayControlsContent(
                 text = title,
                 style = MaterialTheme.typography.titleLarge
             )
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Show second non-wind overlay",
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.weight(1f)
-            )
-            Switch(
-                checked = uiState.secondaryPrimaryOverlayEnabled,
-                onCheckedChange = onSecondaryPrimaryOverlayEnabledChanged,
-                enabled = canShowSecondaryPrimaryOverlay
-            )
-        }
-        if (uiState.secondaryPrimaryOverlayEnabled) {
-            if (secondaryPrimaryParameters.isEmpty()) {
-                Text(
-                    text = "No second overlay options available",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            } else {
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    secondaryPrimaryParameters.forEach { parameter ->
-                        FilterChip(
-                            selected = uiState.selectedSecondaryPrimaryParameterId.value.equals(
-                                parameter.id.value,
-                                ignoreCase = true
-                            ),
-                            onClick = { onSecondaryPrimaryParameterSelected(parameter.id) },
-                            label = { Text(parameter.name) },
-                            enabled = canShowSecondaryPrimaryOverlay
-                        )
-                    }
-                }
-            }
         }
 
         Row(
@@ -592,39 +530,6 @@ internal fun ForecastOverlayControlsContent(
                 }
             }
         }
-        if (uiState.secondaryPrimaryOverlayEnabled) {
-            uiState.secondaryPrimaryLegend?.let { legend ->
-                Text(
-                    text = "Second overlay legend (${legend.unitLabel})",
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    legend.stops.forEach { stop ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(width = 20.dp, height = 12.dp)
-                                    .background(
-                                        color = Color(stop.argb),
-                                        shape = RoundedCornerShape(2.dp)
-                                    )
-                            )
-                            Text(
-                                text = "${stop.value}",
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
         if (uiState.isLoading) {
             Text(
                 text = "Loading overlay data...",

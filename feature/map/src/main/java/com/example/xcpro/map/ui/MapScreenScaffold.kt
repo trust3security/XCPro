@@ -101,10 +101,14 @@ internal fun MapScreenScaffold(inputs: MapScreenScaffoldInputs) {
                     flightModeOffset = inputs.flightModeOffset,
                     settingsOffset = inputs.settingsOffset,
                     ballastOffset = inputs.ballastOffset,
+                    hamburgerSizePx = inputs.hamburgerSizePx,
+                    settingsSizePx = inputs.settingsSizePx,
                     onHamburgerOffsetChange = inputs.onHamburgerOffsetChange,
                     onFlightModeOffsetChange = inputs.onFlightModeOffsetChange,
                     onSettingsOffsetChange = inputs.onSettingsOffsetChange,
                     onBallastOffsetChange = inputs.onBallastOffsetChange,
+                    onHamburgerSizeChange = inputs.onHamburgerSizeChange,
+                    onSettingsSizeChange = inputs.onSettingsSizeChange,
                     taskScreenManager = inputs.taskScreenManager,
                     waypointData = inputs.waypointData,
                     unitsPreferences = inputs.unitsPreferences,
@@ -133,8 +137,10 @@ internal fun MapScreenScaffold(inputs: MapScreenScaffoldInputs) {
                             if (inputs.drawerState.isOpen) {
                                 inputs.drawerState.close()
                             }
-                            if (inputs.navController.currentDestination?.route != SettingsRoutes.WEATHER_SETTINGS) {
-                                inputs.navController.navigate(SettingsRoutes.WEATHER_SETTINGS)
+                            if (shouldNavigateToWeatherSettings(inputs.navController.currentDestination?.route)) {
+                                inputs.navController.navigate(SettingsRoutes.WEATHER_SETTINGS) {
+                                    launchSingleTop = true
+                                }
                             }
                         }
                     },
@@ -164,6 +170,9 @@ internal fun MapScreenScaffold(inputs: MapScreenScaffoldInputs) {
         }
     )
 }
+
+internal fun shouldNavigateToWeatherSettings(currentRoute: String?): Boolean =
+    currentRoute != SettingsRoutes.WEATHER_SETTINGS
 
 @Composable
 private fun GpsStatusBanner(status: GpsStatusUiModel, modifier: Modifier = Modifier) {

@@ -1,7 +1,9 @@
 package com.example.xcpro.screens.navdrawer
 
+import com.example.xcpro.common.di.IoDispatcher
 import com.example.xcpro.forecast.ForecastAuthCheckResult
 import com.example.xcpro.forecast.ForecastAuthRepository
+import com.example.xcpro.forecast.ForecastCredentialStorageMode
 import com.example.xcpro.forecast.ForecastCredentialsRepository
 import com.example.xcpro.forecast.ForecastRegionOption
 import com.example.xcpro.forecast.ForecastWindDisplayMode
@@ -9,12 +11,15 @@ import com.example.xcpro.forecast.ForecastPreferencesRepository
 import com.example.xcpro.forecast.FORECAST_REGION_OPTIONS
 import com.example.xcpro.forecast.ForecastProviderCredentials
 import javax.inject.Inject
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 
 class ForecastSettingsUseCase @Inject constructor(
     private val preferencesRepository: ForecastPreferencesRepository,
     private val credentialsRepository: ForecastCredentialsRepository,
-    private val authRepository: ForecastAuthRepository
+    private val authRepository: ForecastAuthRepository,
+    @IoDispatcher private val dispatcher: CoroutineDispatcher
 ) {
     val overlayEnabledFlow: Flow<Boolean> = preferencesRepository.overlayEnabledFlow
     val opacityFlow: Flow<Float> = preferencesRepository.opacityFlow
@@ -44,15 +49,20 @@ class ForecastSettingsUseCase @Inject constructor(
         preferencesRepository.setSelectedRegion(regionCode)
     }
 
-    fun loadCredentials(): ForecastProviderCredentials? =
+    suspend fun loadCredentials(): ForecastProviderCredentials? = withContext(dispatcher) {
         credentialsRepository.loadCredentials()
+    }
 
-    fun saveCredentials(username: String, password: String) {
+    suspend fun saveCredentials(username: String, password: String) = withContext(dispatcher) {
         credentialsRepository.saveCredentials(username = username, password = password)
     }
 
-    fun clearCredentials() {
+    suspend fun clearCredentials() = withContext(dispatcher) {
         credentialsRepository.clearCredentials()
+    }
+
+    suspend fun credentialStorageMode(): ForecastCredentialStorageMode = withContext(dispatcher) {
+        credentialsRepository.credentialStorageMode()
     }
 
     suspend fun verifyCredentials(): ForecastAuthCheckResult =

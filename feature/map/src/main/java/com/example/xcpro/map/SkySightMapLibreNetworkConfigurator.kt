@@ -3,6 +3,7 @@ package com.example.xcpro.map
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 import okhttp3.OkHttpClient
+import okhttp3.Request
 import org.maplibre.android.module.http.HttpRequestUtil
 
 object SkySightMapLibreNetworkConfigurator {
@@ -21,19 +22,28 @@ object SkySightMapLibreNetworkConfigurator {
         val client = OkHttpClient.Builder()
             .addInterceptor { chain ->
                 val request = chain.request()
-                val host = request.url.host.lowercase(Locale.US)
-                val requestWithHeaders = if (host in skySightHosts) {
-                    request.newBuilder()
-                        .header("Origin", REQUIRED_ORIGIN)
-                        .build()
-                } else {
-                    request
-                }
+                val requestWithHeaders = applySkySightHeaders(request)
                 chain.proceed(requestWithHeaders)
             }
             .build()
 
         HttpRequestUtil.setOkHttpClient(client)
+    }
+
+    internal fun applySkySightHeaders(request: Request): Request {
+        val host = request.url.host.lowercase(Locale.US)
+        return if (isSkySightHost(host)) {
+            request.newBuilder()
+                .header("Origin", REQUIRED_ORIGIN)
+                .build()
+        } else {
+            request
+        }
+    }
+
+    internal fun isSkySightHost(host: String): Boolean {
+        val normalized = host.lowercase(Locale.US)
+        return normalized in skySightHosts
     }
 }
 

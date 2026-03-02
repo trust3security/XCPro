@@ -20,7 +20,6 @@ class MapScreenState {
     var ognGliderTrailOverlay: OgnGliderTrailOverlay? = null
     var adsbTrafficOverlay: AdsbTrafficOverlay? = null
     var forecastOverlay: ForecastRasterOverlay? = null
-    var forecastSecondaryOverlay: ForecastRasterOverlay? = null
     var forecastWindOverlay: ForecastRasterOverlay? = null
     var skySightSatelliteOverlay: SkySightSatelliteOverlay? = null
     var weatherRainOverlay: WeatherRainOverlay? = null

@@ -1,7 +1,7 @@
 package com.example.xcpro.map
 
-import android.os.SystemClock
 import android.util.Log
+import com.example.xcpro.core.time.TimeBridge
 import org.maplibre.android.geometry.LatLng
 import kotlin.math.abs
 import kotlin.math.sign
@@ -73,7 +73,7 @@ class MapPositionController(
             headingDeg
         }
         if (verboseLogging) {
-            val now = SystemClock.elapsedRealtime()
+            val now = TimeBridge.nowMonoMs()
             if (now - lastOverlayLogMs >= OVERLAY_LOG_INTERVAL_MS) {
                 lastOverlayLogMs = now
                 Log.d(

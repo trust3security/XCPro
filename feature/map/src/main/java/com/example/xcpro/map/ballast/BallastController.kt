@@ -2,6 +2,7 @@ package com.example.xcpro.map.ballast
 
 import androidx.compose.animation.core.CubicBezierEasing
 import com.example.xcpro.common.glider.GliderConfig
+import com.example.xcpro.core.time.TimeBridge
 import com.example.xcpro.glider.GliderRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -28,7 +29,7 @@ class BallastController(
     private val scope: CoroutineScope,
     private val dispatcher: CoroutineDispatcher,
     private val adapter: BallastRepositoryAdapter = BallastRepositoryAdapter(repository),
-    private val timeSource: () -> Long = { android.os.SystemClock.uptimeMillis() }
+    private val timeSource: () -> Long = { TimeBridge.nowUptimeMs() }
 ) {
     private val _state = MutableStateFlow(
         BallastUiState(snapshot = initialSnapshot(repository))

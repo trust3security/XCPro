@@ -41,6 +41,12 @@ fun ProfileSettingsScreen(
     var showExportDialog by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
     var exportMessage by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(uiState.importResult) {
+        val result = uiState.importResult ?: return@LaunchedEffect
+        exportMessage = formatProfileImportFeedback(result)
+        viewModel.clearImportResult()
+    }
     
     if (profile == null) {
         LaunchedEffect(Unit) {
@@ -125,8 +131,11 @@ fun ProfileSettingsScreen(
     if (showImportDialog) {
         ProfileImportDialog(
             onDismiss = { showImportDialog = false },
-            onImport = { importedProfiles ->
-                // Handle imported profiles - could show selection dialog
+            onImport = { importedProfiles, keepCurrentActive ->
+                viewModel.importProfiles(
+                    profiles = importedProfiles,
+                    keepCurrentActive = keepCurrentActive
+                )
                 showImportDialog = false
             },
             onError = { error ->

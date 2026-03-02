@@ -11,17 +11,97 @@ import com.example.xcpro.weather.wind.model.GpsSample
 import com.example.xcpro.weather.wind.model.HeadingSample
 import com.example.xcpro.weather.wind.model.PressureSample
 import com.example.xcpro.weather.wind.model.WindOverride
+import com.example.xcpro.weather.wind.model.WindSource
+import com.example.xcpro.weather.wind.model.WindVector
 import kotlin.math.abs
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WindSensorFusionRepositoryTest {
+
+    @Test
+    fun nonFiniteGpsSample_advances_existingWindToStaleState() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val gpsFlow = MutableStateFlow<GpsSample?>(null)
+        val pressureFlow = MutableStateFlow<PressureSample?>(null)
+        val airspeedFlow = MutableStateFlow<AirspeedSample?>(null)
+        val headingFlow = MutableStateFlow<HeadingSample?>(null)
+        val gLoadFlow = MutableStateFlow<GLoadSample?>(null)
+        val inputs = WindSensorInputs(
+            gps = gpsFlow,
+            pressure = pressureFlow,
+            airspeed = airspeedFlow,
+            heading = headingFlow,
+            gLoad = gLoadFlow
+        )
+
+        val flightDataRepository = FlightDataRepository()
+        val flightStateSource = object : FlightStateSource {
+            override val flightState = MutableStateFlow(FlyingState(isFlying = true))
+        }
+        val windOverrideSource = object : WindOverrideSource {
+            override val manualWind = MutableStateFlow<WindOverride?>(null)
+            override val externalWind = MutableStateFlow<WindOverride?>(null)
+        }
+
+        val repository = WindSensorFusionRepository(
+            liveInputs = inputs,
+            replayInputs = inputs,
+            flightDataRepository = flightDataRepository,
+            flightStateSource = flightStateSource,
+            windOverrideSource = windOverrideSource,
+            windSelectionUseCase = WindSelectionUseCase(),
+            clock = FakeClock(),
+            dispatcher = dispatcher
+        )
+
+        val startTime = 1_000L
+        gpsFlow.value = GpsSample(
+            latitude = 0.0,
+            longitude = 0.0,
+            altitudeMeters = 1000.0,
+            groundSpeedMs = 22.0,
+            trackRad = 0.0,
+            timestampMillis = startTime,
+            clockMillis = startTime
+        )
+        windOverrideSource.manualWind.value = WindOverride(
+            vector = WindVector(east = 4.0, north = 1.0),
+            timestampMillis = startTime,
+            source = WindSource.MANUAL
+        )
+        advanceUntilIdle()
+
+        val seeded = repository.windState.value
+        assertTrue(seeded.isAvailable)
+        assertNotNull(seeded.vector)
+
+        // One hour + a little later, but with an invalid track; stale handling must still progress.
+        val staleTime = startTime + 3_600_000L + 1_000L
+        gpsFlow.value = GpsSample(
+            latitude = 0.0,
+            longitude = 0.0,
+            altitudeMeters = 1000.0,
+            groundSpeedMs = 22.0,
+            trackRad = Double.NaN,
+            timestampMillis = staleTime,
+            clockMillis = staleTime
+        )
+        advanceUntilIdle()
+
+        val updated = repository.windState.value
+        assertTrue(updated.stale)
+        assertFalse(updated.isAvailable)
+        assertTrue(updated.vector == null)
+    }
 
     @Test
     fun confidence_decays_with_time_since_last_circle() = runTest {

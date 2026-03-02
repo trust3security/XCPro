@@ -53,7 +53,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.collectLatest
 import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 
 private const val IMPORT_HELP_MESSAGE = """
@@ -260,7 +259,7 @@ private fun CupTaskFileCard(
 
                     val modifiedLabel = if (entry.lastModifiedEpochMillis > 0) {
                         SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-                            .format(Date(entry.lastModifiedEpochMillis))
+                            .format(entry.lastModifiedEpochMillis)
                     } else {
                         "Unknown"
                     }

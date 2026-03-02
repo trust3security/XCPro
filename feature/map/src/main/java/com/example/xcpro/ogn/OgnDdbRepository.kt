@@ -15,6 +15,11 @@ import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 
+sealed interface OgnDdbRefreshResult {
+    data object Updated : OgnDdbRefreshResult
+    data object NotDue : OgnDdbRefreshResult
+}
+
 @Singleton
 class OgnDdbRepository @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -33,20 +38,29 @@ class OgnDdbRepository @Inject constructor(
     @Volatile
     private var lastUpdateWallMs: Long = 0L
 
-    suspend fun refreshIfNeeded(force: Boolean = false) {
-        withContext(ioDispatcher) {
-            loadFromDiskIfNeeded()
-            if (!force && !isRefreshDue()) return@withContext
-            val json = downloadDdbJson() ?: return@withContext
-            val parsed = runCatching { OgnDdbJsonParser.parse(json) }
-                .onFailure { AppLogger.w(TAG, "Failed to parse OGN DDB JSON: ${it.message}") }
-                .getOrNull()
-                ?: return@withContext
+    internal var connectionFactory: () -> HttpURLConnection = {
+        URL(DDB_URL).openConnection() as HttpURLConnection
+    }
 
-            if (parsed.isEmpty()) return@withContext
+    suspend fun refreshIfNeeded(force: Boolean = false): OgnDdbRefreshResult {
+        return withContext(ioDispatcher) {
+            loadFromDiskIfNeeded()
+            if (!force && !isRefreshDue()) return@withContext OgnDdbRefreshResult.NotDue
+
+            val json = downloadDdbJsonOrThrow()
+            val parsed = try {
+                OgnDdbJsonParser.parse(json)
+            } catch (throwable: Throwable) {
+                AppLogger.w(TAG, "Failed to parse OGN DDB JSON: ${throwable.message}")
+                throw IllegalStateException("OGN DDB parse failure", throwable)
+            }
+            if (parsed.isEmpty()) {
+                throw IllegalStateException("OGN DDB parse returned empty payload")
+            }
             applyParsedEntries(parsed)
             lastUpdateWallMs = clock.nowWallMs()
             writeCache(json, lastUpdateWallMs)
+            OgnDdbRefreshResult.Updated
         }
     }
 
@@ -126,24 +140,28 @@ class OgnDdbRepository @Inject constructor(
         return nowWall - lastUpdateWallMs >= DDB_REFRESH_INTERVAL_MS
     }
 
-    private fun downloadDdbJson(): String? {
-        return runCatching {
-            val connection = (URL(DDB_URL).openConnection() as HttpURLConnection).apply {
-                connectTimeout = HTTP_TIMEOUT_MS
-                readTimeout = HTTP_TIMEOUT_MS
-                requestMethod = "GET"
-                setRequestProperty("User-Agent", USER_AGENT)
+    private fun downloadDdbJsonOrThrow(): String {
+        val connection = connectionFactory().apply {
+            connectTimeout = HTTP_TIMEOUT_MS
+            readTimeout = HTTP_TIMEOUT_MS
+            requestMethod = "GET"
+            setRequestProperty("User-Agent", USER_AGENT)
+        }
+        try {
+            val responseCode = connection.responseCode
+            if (responseCode !in 200..299) {
+                AppLogger.w(TAG, "OGN DDB HTTP $responseCode")
+                throw IllegalStateException("OGN DDB HTTP $responseCode")
             }
-            try {
-                connection.inputStream.bufferedReader(StandardCharsets.UTF_8).use { reader ->
-                    reader.readText()
-                }
-            } finally {
-                connection.disconnect()
+            return connection.inputStream.bufferedReader(StandardCharsets.UTF_8).use { reader ->
+                reader.readText()
             }
-        }.onFailure {
-            AppLogger.w(TAG, "Failed to download OGN DDB: ${it.message}")
-        }.getOrNull()
+        } catch (throwable: Throwable) {
+            AppLogger.w(TAG, "Failed to download OGN DDB: ${throwable.message}")
+            throw throwable
+        } finally {
+            connection.disconnect()
+        }
     }
 
     private fun writeCache(json: String, timestampMs: Long) {

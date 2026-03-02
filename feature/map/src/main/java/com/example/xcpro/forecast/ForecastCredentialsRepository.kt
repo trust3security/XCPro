@@ -12,11 +12,14 @@ import javax.inject.Singleton
 class ForecastCredentialsRepository @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
+    @Volatile
+    private var storageMode: ForecastCredentialStorageMode = ForecastCredentialStorageMode.ENCRYPTED
+
     private val prefs: SharedPreferences by lazy {
         createEncryptedPrefsOrFallback()
     }
 
-    fun loadCredentials(): ForecastProviderCredentials? {
+    suspend fun loadCredentials(): ForecastProviderCredentials? {
         val savedUsername = prefs.getString(KEY_USERNAME, null)?.trim().orEmpty()
         val savedPassword = prefs.getString(KEY_PASSWORD, null)?.trim().orEmpty()
         if (savedUsername.isBlank() || savedPassword.isBlank()) {
@@ -28,18 +31,24 @@ class ForecastCredentialsRepository @Inject constructor(
         )
     }
 
-    fun saveCredentials(username: String, password: String) {
+    suspend fun saveCredentials(username: String, password: String) {
         prefs.edit()
             .putString(KEY_USERNAME, username.trim())
             .putString(KEY_PASSWORD, password.trim())
             .apply()
     }
 
-    fun clearCredentials() {
+    suspend fun clearCredentials() {
         prefs.edit()
             .remove(KEY_USERNAME)
             .remove(KEY_PASSWORD)
             .apply()
+    }
+
+    suspend fun credentialStorageMode(): ForecastCredentialStorageMode {
+        // Touch prefs to force lazy initialization before reporting mode.
+        prefs
+        return storageMode
     }
 
     private fun createEncryptedPrefsOrFallback(): SharedPreferences {
@@ -54,7 +63,10 @@ class ForecastCredentialsRepository @Inject constructor(
                 EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             )
+        }.onSuccess {
+            storageMode = ForecastCredentialStorageMode.ENCRYPTED
         }.getOrElse {
+            storageMode = ForecastCredentialStorageMode.PLAINTEXT_FALLBACK
             context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         }
     }

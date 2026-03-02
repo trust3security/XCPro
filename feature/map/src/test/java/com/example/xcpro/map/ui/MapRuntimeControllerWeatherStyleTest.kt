@@ -17,6 +17,29 @@ import org.mockito.kotlin.verify
 class MapRuntimeControllerWeatherStyleTest {
 
     @Test
+    fun applyStyle_beforeMapReady_replaysWhenMapBecomesReady() {
+        val overlayManager: MapOverlayManager = mock()
+        val map: MapLibreMap = mock()
+        val callbacks = mutableListOf<Style.OnStyleLoaded>()
+        val controller = MapRuntimeController(overlayManager)
+
+        doAnswer { invocation ->
+            callbacks += invocation.getArgument<Style.OnStyleLoaded>(1)
+            null
+        }.`when`(map).setStyle(any<String>(), any<Style.OnStyleLoaded>())
+
+        controller.apply(MapCommand.SetStyle("Terrain"))
+        verify(map, never()).setStyle(any<String>(), any<Style.OnStyleLoaded>())
+
+        controller.onMapReady(map)
+        verify(map, times(1)).setStyle(any<String>(), any<Style.OnStyleLoaded>())
+        assertEquals(1, callbacks.size)
+
+        callbacks.single().onStyleLoaded(mock())
+        verify(overlayManager, times(1)).onMapStyleChanged(map)
+    }
+
+    @Test
     fun applyStyle_ignoresStaleCallback_andAppliesLatestOnly() {
         val overlayManager: MapOverlayManager = mock()
         val map: MapLibreMap = mock()

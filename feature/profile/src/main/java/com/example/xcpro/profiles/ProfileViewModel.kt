@@ -17,7 +17,8 @@ data class ProfileUiState(
     val bootstrapError: String? = null,
     val isLoading: Boolean = false,
     val error: String? = null,
-    val showCreateDialog: Boolean = false
+    val showCreateDialog: Boolean = false,
+    val importResult: ProfileImportResult? = null
 )
 
 @HiltViewModel
@@ -71,7 +72,11 @@ class ProfileViewModel @Inject constructor(
 
     fun createProfile(request: ProfileCreationRequest) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                error = null,
+                importResult = null
+            )
             useCase.createProfile(request)
                 .onSuccess { newProfile ->
                     _uiState.value = _uiState.value.copy(
@@ -86,6 +91,37 @@ class ProfileViewModel @Inject constructor(
                         error = "Failed to create profile: ${error.message}"
                     )
                 }
+        }
+    }
+
+    fun importProfiles(
+        profiles: List<UserProfile>,
+        keepCurrentActive: Boolean = true,
+        nameCollisionPolicy: ProfileNameCollisionPolicy = ProfileNameCollisionPolicy.KEEP_BOTH_SUFFIX
+    ) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                error = null,
+                importResult = null
+            )
+            useCase.importProfiles(
+                ProfileImportRequest(
+                    profiles = profiles,
+                    keepCurrentActive = keepCurrentActive,
+                    nameCollisionPolicy = nameCollisionPolicy
+                )
+            ).onSuccess { result ->
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    importResult = result
+                )
+            }.onFailure { error ->
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = "Failed to import profiles: ${error.message}"
+                )
+            }
         }
     }
 
@@ -131,6 +167,10 @@ class ProfileViewModel @Inject constructor(
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
+    }
+
+    fun clearImportResult() {
+        _uiState.value = _uiState.value.copy(importResult = null)
     }
 
     fun needsProfileSelection(): Boolean =

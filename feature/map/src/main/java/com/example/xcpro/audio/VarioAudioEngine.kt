@@ -1,8 +1,8 @@
 package com.example.xcpro.audio
 
 import android.content.Context
-import android.os.SystemClock
 import android.util.Log
+import com.example.xcpro.core.time.TimeBridge
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -177,7 +177,7 @@ class VarioAudioEngine(
     }
 
     private fun shouldAttemptEnsure(): Boolean {
-        val now = SystemClock.elapsedRealtime()
+        val now = TimeBridge.nowMonoMs()
         if (now - lastEnsureAttemptElapsedMs < ENSURE_BACKOFF_MS) {
             return false
         }
@@ -375,7 +375,7 @@ class VarioAudioEngine(
      * Log statistics periodically (every 10 seconds)
      */
     private fun logStatistics(vs: Double, params: AudioParams) {
-        val currentTime = System.currentTimeMillis()
+        val currentTime = TimeBridge.nowWallMs()
 
         if (currentTime - lastLogTime > 10000) {
             Log.d(TAG, "Audio stats: V/S=${String.format("%.2f", vs)}m/s, " +

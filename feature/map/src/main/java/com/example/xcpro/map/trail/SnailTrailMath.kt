@@ -47,7 +47,7 @@ internal object SnailTrailMath {
                     0.0
                 }
                 val windValid = applyDrift &&
-                    point.windSpeedMs > 0.5 &&
+                    point.windSpeedMs > 0.0 &&
                     point.windDirectionFromDeg.isFinite()
                 val (driftLat, driftLon) = if (windValid) {
                     val windToDeg = (point.windDirectionFromDeg + 180.0) % 360.0
