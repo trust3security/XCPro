@@ -1,0 +1,500 @@
+package com.example.xcpro.map
+
+import android.util.Log
+import com.example.xcpro.forecast.FORECAST_OPACITY_DEFAULT
+import com.example.xcpro.forecast.FORECAST_SKYSIGHT_SATELLITE_ANIMATE_ENABLED_DEFAULT
+import com.example.xcpro.forecast.FORECAST_SKYSIGHT_SATELLITE_HISTORY_FRAMES_DEFAULT
+import com.example.xcpro.forecast.FORECAST_SKYSIGHT_SATELLITE_IMAGERY_ENABLED_DEFAULT
+import com.example.xcpro.forecast.FORECAST_SKYSIGHT_SATELLITE_LIGHTNING_ENABLED_DEFAULT
+import com.example.xcpro.forecast.FORECAST_SKYSIGHT_SATELLITE_OVERLAY_ENABLED_DEFAULT
+import com.example.xcpro.forecast.FORECAST_SKYSIGHT_SATELLITE_RADAR_ENABLED_DEFAULT
+import com.example.xcpro.forecast.FORECAST_WIND_DISPLAY_MODE_DEFAULT
+import com.example.xcpro.forecast.FORECAST_WIND_OVERLAY_SCALE_DEFAULT
+import com.example.xcpro.forecast.ForecastLegendSpec
+import com.example.xcpro.forecast.ForecastTileFormat
+import com.example.xcpro.forecast.ForecastTileSpec
+import com.example.xcpro.forecast.ForecastWindDisplayMode
+import com.example.xcpro.forecast.clampForecastOpacity
+import com.example.xcpro.forecast.clampForecastWindOverlayScale
+import com.example.xcpro.forecast.clampSkySightSatelliteHistoryFrames
+import com.example.xcpro.weather.rain.WEATHER_RAIN_OPACITY_DEFAULT
+import com.example.xcpro.weather.rain.WEATHER_RAIN_STALE_DIMMED_OPACITY_MAX
+import com.example.xcpro.weather.rain.WEATHER_RAIN_TRANSITION_DURATION_BALANCED_MS
+import com.example.xcpro.weather.rain.WeatherRainFrameSelection
+import com.example.xcpro.weather.rain.WeatherRadarStatusCode
+import com.example.xcpro.weather.rain.clampWeatherRainOpacity
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.maps.MapLibreMap
+internal class MapOverlayManagerRuntimeForecastWeatherDelegate(
+    private val mapState: MapScreenState,
+    private val bringTrafficOverlaysToFront: () -> Unit,
+    private val onSatelliteContrastIconsChanged: (Boolean) -> Unit
+) {
+    private var forecastOverlayEnabled: Boolean = false
+    private var forecastWindOverlayEnabled: Boolean = false
+    private var latestForecastPrimaryTileSpec: ForecastTileSpec? = null
+    private var latestForecastPrimaryLegend: ForecastLegendSpec? = null
+    private var latestForecastWindTileSpec: ForecastTileSpec? = null
+    private var latestForecastWindLegend: ForecastLegendSpec? = null
+    private var forecastOpacity: Float = FORECAST_OPACITY_DEFAULT
+    private var forecastWindOverlayScale: Float = FORECAST_WIND_OVERLAY_SCALE_DEFAULT
+    private var forecastWindDisplayMode: ForecastWindDisplayMode = FORECAST_WIND_DISPLAY_MODE_DEFAULT
+    private var skySightSatelliteEnabled: Boolean = FORECAST_SKYSIGHT_SATELLITE_OVERLAY_ENABLED_DEFAULT
+    private var skySightSatelliteImageryEnabled: Boolean = FORECAST_SKYSIGHT_SATELLITE_IMAGERY_ENABLED_DEFAULT
+    private var skySightSatelliteRadarEnabled: Boolean = FORECAST_SKYSIGHT_SATELLITE_RADAR_ENABLED_DEFAULT
+    private var skySightSatelliteLightningEnabled: Boolean = FORECAST_SKYSIGHT_SATELLITE_LIGHTNING_ENABLED_DEFAULT
+    private var skySightSatelliteAnimateEnabled: Boolean = FORECAST_SKYSIGHT_SATELLITE_ANIMATE_ENABLED_DEFAULT
+    private var skySightSatelliteHistoryFrames: Int = FORECAST_SKYSIGHT_SATELLITE_HISTORY_FRAMES_DEFAULT
+    private var skySightSatelliteReferenceTimeUtcMs: Long? = null
+    private var satelliteContrastIconsEnabled: Boolean = false
+    private var lastSkySightSatelliteConfig: SkySightSatelliteRuntimeConfig? = null
+    private var weatherRainEnabled: Boolean = false
+    private var weatherRainOpacity: Float = WEATHER_RAIN_OPACITY_DEFAULT
+    private var weatherRainTransitionDurationMs: Long = WEATHER_RAIN_TRANSITION_DURATION_BALANCED_MS
+    private var weatherRainFrameSelection: WeatherRainFrameSelection? = null
+    private var weatherRainStatusCode: WeatherRadarStatusCode = WeatherRadarStatusCode.NO_METADATA
+    private var weatherRainStale: Boolean = true
+    private var lastWeatherRainConfig: WeatherRainRuntimeConfig? = null
+
+    private val _forecastRuntimeWarningMessage = MutableStateFlow<String?>(null)
+    val forecastRuntimeWarningMessage: StateFlow<String?> = _forecastRuntimeWarningMessage.asStateFlow()
+    private val _skySightSatelliteRuntimeErrorMessage = MutableStateFlow<String?>(null)
+    val skySightSatelliteRuntimeErrorMessage: StateFlow<String?> =
+        _skySightSatelliteRuntimeErrorMessage.asStateFlow()
+    fun satelliteContrastIconsEnabled(): Boolean = satelliteContrastIconsEnabled
+
+    fun onMapStyleChanged(map: MapLibreMap?) {
+        if (map == null) return
+        applyForecastWeatherStyleChange(
+            mapState = mapState,
+            map = map,
+            reapplyForecastOverlay = ::reapplyForecastOverlay,
+            reapplySkySightSatelliteOverlay = ::reapplySkySightSatelliteOverlay,
+            reapplyWeatherRainOverlay = ::reapplyWeatherRainOverlay
+        )
+    }
+
+    fun onInitialize(map: MapLibreMap?) {
+        if (map == null) return
+        initializeForecastWeatherOverlays(
+            mapState = mapState,
+            map = map,
+            reapplyForecastOverlay = ::reapplyForecastOverlay,
+            reapplySkySightSatelliteOverlay = ::reapplySkySightSatelliteOverlay,
+            reapplyWeatherRainOverlay = ::reapplyWeatherRainOverlay
+        )
+    }
+
+    fun onMapDetached() {
+        _forecastRuntimeWarningMessage.value = null
+        _skySightSatelliteRuntimeErrorMessage.value = null
+    }
+
+    fun setForecastOverlay(
+        enabled: Boolean,
+        primaryTileSpec: ForecastTileSpec?,
+        primaryLegendSpec: ForecastLegendSpec?,
+        windOverlayEnabled: Boolean,
+        windTileSpec: ForecastTileSpec?,
+        windLegendSpec: ForecastLegendSpec?,
+        opacity: Float,
+        windOverlayScale: Float,
+        windDisplayMode: ForecastWindDisplayMode
+    ) {
+        val primaryOverlayEnabled = enabled
+        forecastOverlayEnabled = primaryOverlayEnabled || windOverlayEnabled
+        forecastWindOverlayEnabled = windOverlayEnabled
+        latestForecastPrimaryTileSpec = primaryTileSpec
+        latestForecastPrimaryLegend = primaryLegendSpec
+        latestForecastWindTileSpec = windTileSpec
+        latestForecastWindLegend = windLegendSpec
+        forecastOpacity = clampForecastOpacity(opacity)
+        forecastWindOverlayScale = clampForecastWindOverlayScale(windOverlayScale)
+        forecastWindDisplayMode = windDisplayMode
+        if (!forecastOverlayEnabled) {
+            mapState.forecastOverlay?.clear()
+            mapState.forecastWindOverlay?.clear()
+            _forecastRuntimeWarningMessage.value = null
+            return
+        }
+        val map = mapState.mapLibreMap ?: run {
+            _forecastRuntimeWarningMessage.value = null
+            return
+        }
+        if (mapState.forecastOverlay == null) {
+            mapState.forecastOverlay = ForecastRasterOverlay(
+                map = map,
+                idNamespace = "primary"
+            )
+        }
+        if (mapState.forecastWindOverlay == null) {
+            mapState.forecastWindOverlay = ForecastRasterOverlay(
+                map = map,
+                idNamespace = "wind"
+            )
+        }
+        if (primaryOverlayEnabled && primaryTileSpec != null) {
+            mapState.forecastOverlay?.render(
+                tileSpec = primaryTileSpec,
+                opacity = forecastOpacity,
+                windOverlayScale = forecastWindOverlayScale,
+                windDisplayMode = forecastWindDisplayMode,
+                legendSpec = primaryLegendSpec
+            )
+        } else {
+            mapState.forecastOverlay?.clear()
+        }
+        if (windOverlayEnabled && windTileSpec != null) {
+            mapState.forecastWindOverlay?.render(
+                tileSpec = windTileSpec,
+                opacity = forecastOpacity,
+                windOverlayScale = forecastWindOverlayScale,
+                windDisplayMode = forecastWindDisplayMode,
+                legendSpec = windLegendSpec
+            )
+        } else {
+            mapState.forecastWindOverlay?.clear()
+        }
+        refreshForecastRuntimeWarningMessage()
+        mapState.blueLocationOverlay?.bringToFront()
+        bringTrafficOverlaysToFront()
+    }
+
+    fun clearForecastOverlay() {
+        forecastOverlayEnabled = false
+        forecastWindOverlayEnabled = false
+        latestForecastPrimaryTileSpec = null
+        latestForecastPrimaryLegend = null
+        latestForecastWindTileSpec = null
+        latestForecastWindLegend = null
+        mapState.forecastOverlay?.clear()
+        mapState.forecastWindOverlay?.clear()
+        _forecastRuntimeWarningMessage.value = null
+    }
+
+    fun setSkySightSatelliteOverlay(
+        enabled: Boolean,
+        showSatelliteImagery: Boolean,
+        showRadar: Boolean,
+        showLightning: Boolean,
+        animate: Boolean,
+        historyFrameCount: Int,
+        referenceTimeUtcMs: Long?
+    ) {
+        val hasAnySatelliteLayer = showSatelliteImagery || showRadar || showLightning
+        val previousContrastIconsEnabled = satelliteContrastIconsEnabled
+        satelliteContrastIconsEnabled = enabled && hasAnySatelliteLayer
+        if (previousContrastIconsEnabled != satelliteContrastIconsEnabled) {
+            onSatelliteContrastIconsChanged(satelliteContrastIconsEnabled)
+        }
+
+        val resolvedHistoryFrames = clampSkySightSatelliteHistoryFrames(historyFrameCount)
+        skySightSatelliteEnabled = enabled
+        skySightSatelliteImageryEnabled = showSatelliteImagery
+        skySightSatelliteRadarEnabled = showRadar
+        skySightSatelliteLightningEnabled = showLightning
+        skySightSatelliteAnimateEnabled = animate
+        skySightSatelliteHistoryFrames = resolvedHistoryFrames
+        skySightSatelliteReferenceTimeUtcMs = referenceTimeUtcMs
+
+        val nextConfig = SkySightSatelliteRuntimeConfig(
+            enabled = enabled,
+            showSatelliteImagery = showSatelliteImagery,
+            showRadar = showRadar,
+            showLightning = showLightning,
+            animate = animate,
+            historyFrameCount = resolvedHistoryFrames,
+            referenceTimeUtcMs = referenceTimeUtcMs
+        )
+        if (!enabled || !hasAnySatelliteLayer) {
+            mapState.skySightSatelliteOverlay?.clear()
+            _skySightSatelliteRuntimeErrorMessage.value = null
+            lastSkySightSatelliteConfig = nextConfig
+            return
+        }
+        if (nextConfig == lastSkySightSatelliteConfig) return
+
+        val map = mapState.mapLibreMap ?: run {
+            _skySightSatelliteRuntimeErrorMessage.value = null
+            return
+        }
+        if (applySkySightSatelliteOverlay(map, nextConfig)) {
+            lastSkySightSatelliteConfig = nextConfig
+        }
+    }
+
+    fun clearSkySightSatelliteOverlay() {
+        val previousContrastIconsEnabled = satelliteContrastIconsEnabled
+        skySightSatelliteEnabled = FORECAST_SKYSIGHT_SATELLITE_OVERLAY_ENABLED_DEFAULT
+        skySightSatelliteImageryEnabled = FORECAST_SKYSIGHT_SATELLITE_IMAGERY_ENABLED_DEFAULT
+        skySightSatelliteRadarEnabled = FORECAST_SKYSIGHT_SATELLITE_RADAR_ENABLED_DEFAULT
+        skySightSatelliteLightningEnabled = FORECAST_SKYSIGHT_SATELLITE_LIGHTNING_ENABLED_DEFAULT
+        skySightSatelliteAnimateEnabled = FORECAST_SKYSIGHT_SATELLITE_ANIMATE_ENABLED_DEFAULT
+        skySightSatelliteHistoryFrames = FORECAST_SKYSIGHT_SATELLITE_HISTORY_FRAMES_DEFAULT
+        skySightSatelliteReferenceTimeUtcMs = null
+        lastSkySightSatelliteConfig = null
+        satelliteContrastIconsEnabled = false
+        if (previousContrastIconsEnabled) {
+            onSatelliteContrastIconsChanged(false)
+        }
+        mapState.skySightSatelliteOverlay?.clear()
+        _skySightSatelliteRuntimeErrorMessage.value = null
+    }
+
+    fun setWeatherRainOverlay(
+        enabled: Boolean,
+        frameSelection: WeatherRainFrameSelection?,
+        opacity: Float,
+        transitionDurationMs: Long,
+        statusCode: WeatherRadarStatusCode,
+        stale: Boolean
+    ) {
+        val resolvedOpacity = clampWeatherRainOpacity(opacity)
+        val resolvedTransitionDurationMs = transitionDurationMs.coerceAtLeast(0L)
+
+        weatherRainEnabled = enabled
+        weatherRainFrameSelection = frameSelection
+        weatherRainOpacity = resolvedOpacity
+        weatherRainTransitionDurationMs = resolvedTransitionDurationMs
+        weatherRainStatusCode = statusCode
+        weatherRainStale = stale
+
+        val nextConfig = WeatherRainRuntimeConfig(
+            enabled = enabled,
+            frameSelection = frameSelection,
+            opacity = resolvedOpacity,
+            transitionDurationMs = resolvedTransitionDurationMs,
+            stale = stale
+        )
+        if (nextConfig == lastWeatherRainConfig) return
+        lastWeatherRainConfig = nextConfig
+
+        val map = mapState.mapLibreMap ?: return
+        applyWeatherRainOverlay(map, nextConfig)
+    }
+
+    fun clearWeatherRainOverlay() {
+        weatherRainEnabled = false
+        weatherRainFrameSelection = null
+        weatherRainOpacity = WEATHER_RAIN_OPACITY_DEFAULT
+        weatherRainTransitionDurationMs = WEATHER_RAIN_TRANSITION_DURATION_BALANCED_MS
+        weatherRainStatusCode = WeatherRadarStatusCode.NO_METADATA
+        weatherRainStale = true
+        lastWeatherRainConfig = null
+        mapState.weatherRainOverlay?.clear()
+    }
+
+    fun reapplyWeatherRainOverlay() {
+        val map = mapState.mapLibreMap ?: return
+        reapplyWeatherRainOverlay(map)
+    }
+
+    fun reapplySkySightSatelliteOverlay() {
+        val map = mapState.mapLibreMap ?: return
+        reapplySkySightSatelliteOverlay(map)
+    }
+
+    fun reapplyForecastOverlay() {
+        val map = mapState.mapLibreMap ?: return
+        reapplyForecastOverlay(map)
+    }
+
+    fun findForecastWindArrowSpeedAt(tap: LatLng): Double? {
+        if (!forecastOverlayEnabled) return null
+        if (!forecastWindOverlayEnabled) return null
+        val tileSpec = latestForecastWindTileSpec ?: return null
+        if (tileSpec.format != ForecastTileFormat.VECTOR_WIND_POINTS) return null
+        if (forecastWindDisplayMode != ForecastWindDisplayMode.ARROW) return null
+        return mapState.forecastWindOverlay?.findWindArrowSpeedAt(tap)
+    }
+
+    fun statusSnapshot(): MapOverlayForecastWeatherStatus = MapOverlayForecastWeatherStatus(
+        forecastOverlayEnabled,
+        forecastWindOverlayEnabled,
+        satelliteContrastIconsEnabled,
+        skySightSatelliteEnabled,
+        skySightSatelliteImageryEnabled,
+        skySightSatelliteRadarEnabled,
+        skySightSatelliteLightningEnabled,
+        skySightSatelliteAnimateEnabled,
+        skySightSatelliteHistoryFrames,
+        weatherRainEnabled,
+        weatherRainStatusCode,
+        weatherRainStale,
+        weatherRainFrameSelection != null,
+        weatherRainTransitionDurationMs
+    )
+
+    private fun reapplyForecastOverlay(map: MapLibreMap) {
+        if (!forecastOverlayEnabled) {
+            mapState.forecastOverlay?.clear()
+            mapState.forecastWindOverlay?.clear()
+            _forecastRuntimeWarningMessage.value = null
+            return
+        }
+        if (mapState.forecastOverlay == null) {
+            mapState.forecastOverlay = ForecastRasterOverlay(
+                map = map,
+                idNamespace = "primary"
+            )
+        }
+        if (mapState.forecastWindOverlay == null) {
+            mapState.forecastWindOverlay = ForecastRasterOverlay(
+                map = map,
+                idNamespace = "wind"
+            )
+        }
+        val primaryTileSpec = latestForecastPrimaryTileSpec
+        if (primaryTileSpec != null) {
+            mapState.forecastOverlay?.render(
+                tileSpec = primaryTileSpec,
+                opacity = forecastOpacity,
+                windOverlayScale = forecastWindOverlayScale,
+                windDisplayMode = forecastWindDisplayMode,
+                legendSpec = latestForecastPrimaryLegend
+            )
+        } else {
+            mapState.forecastOverlay?.clear()
+        }
+        val windTileSpec = latestForecastWindTileSpec
+        if (forecastWindOverlayEnabled && windTileSpec != null) {
+            mapState.forecastWindOverlay?.render(
+                tileSpec = windTileSpec,
+                opacity = forecastOpacity,
+                windOverlayScale = forecastWindOverlayScale,
+                windDisplayMode = forecastWindDisplayMode,
+                legendSpec = latestForecastWindLegend
+            )
+        } else {
+            mapState.forecastWindOverlay?.clear()
+        }
+        refreshForecastRuntimeWarningMessage()
+        mapState.blueLocationOverlay?.bringToFront()
+        bringTrafficOverlaysToFront()
+    }
+
+    private fun refreshForecastRuntimeWarningMessage() {
+        _forecastRuntimeWarningMessage.value = joinNonBlankRuntimeMessages(
+            mapState.forecastOverlay?.runtimeWarningMessage(),
+            mapState.forecastWindOverlay?.runtimeWarningMessage()
+        )
+    }
+
+    private fun reapplySkySightSatelliteOverlay(map: MapLibreMap) {
+        val config = SkySightSatelliteRuntimeConfig(
+            enabled = skySightSatelliteEnabled,
+            showSatelliteImagery = skySightSatelliteImageryEnabled,
+            showRadar = skySightSatelliteRadarEnabled,
+            showLightning = skySightSatelliteLightningEnabled,
+            animate = skySightSatelliteAnimateEnabled,
+            historyFrameCount = skySightSatelliteHistoryFrames,
+            referenceTimeUtcMs = skySightSatelliteReferenceTimeUtcMs
+        )
+        if (applySkySightSatelliteOverlay(map, config)) {
+            lastSkySightSatelliteConfig = config
+        }
+    }
+
+    private fun reapplyWeatherRainOverlay(map: MapLibreMap) {
+        val config = WeatherRainRuntimeConfig(
+            enabled = weatherRainEnabled,
+            frameSelection = weatherRainFrameSelection,
+            opacity = weatherRainOpacity,
+            transitionDurationMs = weatherRainTransitionDurationMs,
+            stale = weatherRainStale
+        )
+        applyWeatherRainOverlay(map, config)
+    }
+
+    private fun applySkySightSatelliteOverlay(
+        map: MapLibreMap,
+        config: SkySightSatelliteRuntimeConfig
+    ): Boolean {
+        val hasAnySatelliteLayer = config.showSatelliteImagery || config.showRadar || config.showLightning
+        if (!config.enabled || !hasAnySatelliteLayer) {
+            mapState.skySightSatelliteOverlay?.clear()
+            _skySightSatelliteRuntimeErrorMessage.value = null
+            return true
+        }
+        if (mapState.skySightSatelliteOverlay == null) {
+            mapState.skySightSatelliteOverlay = SkySightSatelliteOverlay(map)
+        }
+        return runCatching {
+            mapState.skySightSatelliteOverlay?.render(
+                SkySightSatelliteRenderConfig(
+                    enabled = config.enabled,
+                    showSatelliteImagery = config.showSatelliteImagery,
+                    showRadar = config.showRadar,
+                    showLightning = config.showLightning,
+                    animate = config.animate,
+                    historyFrameCount = config.historyFrameCount,
+                    referenceTimeUtcMs = config.referenceTimeUtcMs
+                )
+            )
+            _skySightSatelliteRuntimeErrorMessage.value = null
+            mapState.blueLocationOverlay?.bringToFront()
+            bringTrafficOverlaysToFront()
+            true
+        }.getOrElse { throwable ->
+            _skySightSatelliteRuntimeErrorMessage.value =
+                throwable.message?.trim()?.takeIf { it.isNotEmpty() }
+                    ?: "SkySight satellite overlay failed to apply"
+            Log.e(TAG, "SkySight satellite overlay apply failed: ${throwable.message}", throwable)
+            false
+        }
+    }
+
+    private fun applyWeatherRainOverlay(
+        map: MapLibreMap,
+        config: WeatherRainRuntimeConfig
+    ) {
+        val frameSelection = config.frameSelection
+        if (!config.enabled || frameSelection == null) {
+            mapState.weatherRainOverlay?.clear()
+            return
+        }
+        if (mapState.weatherRainOverlay == null) {
+            mapState.weatherRainOverlay = WeatherRainOverlay(map)
+        }
+        val effectiveOpacity = if (config.stale) {
+            minOf(config.opacity, WEATHER_RAIN_STALE_DIMMED_OPACITY_MAX)
+        } else {
+            config.opacity
+        }
+        runCatching {
+            mapState.weatherRainOverlay?.render(
+                frameSelection = frameSelection,
+                opacity = effectiveOpacity,
+                transitionDurationMs = config.transitionDurationMs
+            )
+            mapState.blueLocationOverlay?.bringToFront()
+            bringTrafficOverlaysToFront()
+        }.onFailure { throwable ->
+            Log.e(TAG, "Weather rain overlay apply failed: ${throwable.message}", throwable)
+        }
+    }
+
+    private companion object {
+        private const val TAG = "MapOverlayManager"
+    }
+}
+
+internal data class MapOverlayForecastWeatherStatus(
+    val forecastOverlayEnabled: Boolean,
+    val forecastWindOverlayEnabled: Boolean,
+    val satelliteContrastIconsEnabled: Boolean,
+    val skySightSatelliteEnabled: Boolean,
+    val skySightSatelliteImageryEnabled: Boolean,
+    val skySightSatelliteRadarEnabled: Boolean,
+    val skySightSatelliteLightningEnabled: Boolean,
+    val skySightSatelliteAnimateEnabled: Boolean,
+    val skySightSatelliteHistoryFrames: Int,
+    val weatherRainEnabled: Boolean,
+    val weatherRainStatusCode: WeatherRadarStatusCode,
+    val weatherRainStale: Boolean,
+    val weatherRainFrameSelected: Boolean,
+    val weatherRainTransitionDurationMs: Long
+)

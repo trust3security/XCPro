@@ -155,7 +155,7 @@ internal class OgnThermalRepositoryRuntime(
         if (!streamingEnabled) {
             finalizeAllTrackers(nowMonoMs, nowWallMs)
             pruneHotspotsForRetention(nowWallMs, retentionHours)
-            pruneSegmentIndexCache()
+            pruneThermalSegmentIndexCache(segmentIndexByTargetId, trackerByTargetId, hotspotById)
             publishHotspots(
                 displayPercent = displayPercent,
                 nowMonoMs = nowMonoMs
@@ -170,7 +170,7 @@ internal class OgnThermalRepositoryRuntime(
         finalizeInactiveTrackers(nowMonoMs, nowWallMs)
         pruneProcessedSourceSeenCache(targets, nowMonoMs)
         pruneHotspotsForRetention(nowWallMs, retentionHours)
-        pruneSegmentIndexCache()
+        pruneThermalSegmentIndexCache(segmentIndexByTargetId, trackerByTargetId, hotspotById)
         publishHotspots(
             displayPercent = displayPercent,
             nowMonoMs = nowMonoMs
@@ -193,7 +193,7 @@ internal class OgnThermalRepositoryRuntime(
         var tracker = trackerByTargetId[targetKey]
         if (tracker == null) {
             if (!hasFreshSourceSample) return false
-            if (!isEntrySample(climbRateMps)) return false
+            if (!isThermalEntrySample(climbRateMps, ENTRY_CLIMB_THRESHOLD_MPS)) return false
             val entryClimbRateMps = climbRateMps ?: return false
             tracker = ThermalTracker.create(
                 sourceTargetId = targetKey,
@@ -250,13 +250,13 @@ internal class OgnThermalRepositoryRuntime(
 
         if (!tracker.confirmed && qualifiesAsThermal(tracker, nowMonoMs)) {
             tracker.confirmed = true
-            tracker.hotspotId = nextHotspotId(targetKey)
+            tracker.hotspotId = nextThermalHotspotId(targetKey, segmentIndexByTargetId)
         }
 
         if (!tracker.confirmed) return false
 
         val hotspot = tracker.toHotspot(
-            stableId = ensureTrackerHotspotId(tracker),
+            stableId = ensureThermalTrackerHotspotId(tracker, segmentIndexByTargetId),
             nowMonoMs = nowMonoMs,
             nowWallMs = nowWallMs,
             state = OgnThermalHotspotState.ACTIVE
@@ -281,7 +281,7 @@ internal class OgnThermalRepositoryRuntime(
             iterator.remove()
             if (!tracker.confirmed) continue
             val hotspot = tracker.toHotspot(
-                stableId = ensureTrackerHotspotId(tracker),
+                stableId = ensureThermalTrackerHotspotId(tracker, segmentIndexByTargetId),
                 nowMonoMs = nowMonoMs,
                 nowWallMs = nowWallMs,
                 state = OgnThermalHotspotState.FINALIZED
@@ -328,7 +328,7 @@ internal class OgnThermalRepositoryRuntime(
         for ((_, tracker) in trackerByTargetId) {
             if (!tracker.confirmed) continue
             val hotspot = tracker.toHotspot(
-                stableId = ensureTrackerHotspotId(tracker),
+                stableId = ensureThermalTrackerHotspotId(tracker, segmentIndexByTargetId),
                 nowMonoMs = nowMonoMs,
                 nowWallMs = nowWallMs,
                 state = OgnThermalHotspotState.FINALIZED
@@ -349,7 +349,7 @@ internal class OgnThermalRepositoryRuntime(
         if (!tracker.confirmed) return false
 
         val hotspot = tracker.toHotspot(
-            stableId = ensureTrackerHotspotId(tracker),
+            stableId = ensureThermalTrackerHotspotId(tracker, segmentIndexByTargetId),
             nowMonoMs = nowMonoMs,
             nowWallMs = nowWallMs,
             state = OgnThermalHotspotState.FINALIZED
@@ -402,14 +402,24 @@ internal class OgnThermalRepositoryRuntime(
     private fun retentionCutoffWallMs(nowWallMs: Long, retentionHours: Int): Long {
         val clamped = clampOgnThermalRetentionHours(retentionHours)
         return if (isOgnThermalRetentionAllDay(clamped)) {
-            startOfLocalDayWallMs(nowWallMs)
+            startOfLocalDayWallMsForZone(nowWallMs, localZoneId)
         } else {
             nowWallMs - clamped.toLong() * MILLIS_PER_HOUR
         }
     }
 
     private fun scheduleHousekeepingLocked(nowMonoMs: Long, nowWallMs: Long) {
-        val delayMs = nextHousekeepingDelayMs(nowMonoMs, nowWallMs, latestRetentionHours)
+        val delayMs = computeNextThermalHousekeepingDelayMs(
+            nowMonoMs = nowMonoMs,
+            nowWallMs = nowWallMs,
+            retentionHours = latestRetentionHours,
+            trackers = trackerByTargetId.values,
+            hotspots = hotspotById.values,
+            localZoneId = localZoneId,
+            thermalContinuityGraceMs = THERMAL_CONTINUITY_GRACE_MS,
+            targetMissingTimeoutMs = TARGET_MISSING_TIMEOUT_MS,
+            millisPerHour = MILLIS_PER_HOUR
+        )
         if (delayMs == null) {
             housekeepingJob?.cancel()
             housekeepingJob = null
@@ -449,54 +459,6 @@ internal class OgnThermalRepositoryRuntime(
         }
     }
 
-    private fun nextHousekeepingDelayMs(
-        nowMonoMs: Long,
-        nowWallMs: Long,
-        retentionHours: Int
-    ): Long? {
-        val trackerDelayMs = nextTrackerHousekeepingDelayMs(nowMonoMs)
-        val retentionDelayMs = nextRetentionHousekeepingDelayMs(nowWallMs, retentionHours)
-        return when {
-            trackerDelayMs == null -> retentionDelayMs
-            retentionDelayMs == null -> trackerDelayMs
-            else -> min(trackerDelayMs, retentionDelayMs)
-        }
-    }
-
-    private fun nextTrackerHousekeepingDelayMs(nowMonoMs: Long): Long? {
-        if (trackerByTargetId.isEmpty()) return null
-        var nextDeadlineMonoMs = Long.MAX_VALUE
-        for (tracker in trackerByTargetId.values) {
-            val continuityDeadlineMonoMs = tracker.lastStrongClimbMonoMs + THERMAL_CONTINUITY_GRACE_MS
-            val missingDeadlineMonoMs = tracker.lastSeenMonoMs + TARGET_MISSING_TIMEOUT_MS
-            val trackerDeadlineMonoMs = min(continuityDeadlineMonoMs, missingDeadlineMonoMs)
-            if (trackerDeadlineMonoMs < nextDeadlineMonoMs) {
-                nextDeadlineMonoMs = trackerDeadlineMonoMs
-            }
-        }
-        if (nextDeadlineMonoMs == Long.MAX_VALUE) return null
-        return (nextDeadlineMonoMs - nowMonoMs).coerceAtLeast(0L)
-    }
-
-    private fun nextRetentionHousekeepingDelayMs(nowWallMs: Long, retentionHours: Int): Long? {
-        if (hotspotById.isEmpty()) return null
-        val clamped = clampOgnThermalRetentionHours(retentionHours)
-        if (isOgnThermalRetentionAllDay(clamped)) {
-            val nextMidnightWallMs = startOfNextLocalDayWallMs(nowWallMs)
-            return (nextMidnightWallMs - nowWallMs).coerceAtLeast(0L)
-        }
-        val retentionWindowMs = clamped.toLong() * MILLIS_PER_HOUR
-        var nextExpiryWallMs = Long.MAX_VALUE
-        for (hotspot in hotspotById.values) {
-            val expiryWallMs = hotspot.updatedAtWallMs + retentionWindowMs + 1L
-            if (expiryWallMs < nextExpiryWallMs) {
-                nextExpiryWallMs = expiryWallMs
-            }
-        }
-        if (nextExpiryWallMs == Long.MAX_VALUE) return null
-        return (nextExpiryWallMs - nowWallMs).coerceAtLeast(0L)
-    }
-
     private fun qualifiesAsThermal(tracker: ThermalTracker, nowMonoMs: Long): Boolean = qualifiesThermalTracker(
         tracker, nowMonoMs, MIN_CONFIRM_DURATION_MS, MIN_CONFIRM_PEAK_CLIMB_MPS,
         MIN_CONFIRM_CUMULATIVE_TURN_DEGREES, MIN_CONFIRM_ALTITUDE_GAIN_METERS, MIN_CONFIRM_SAMPLE_COUNT
@@ -509,18 +471,6 @@ internal class OgnThermalRepositoryRuntime(
         )
         if (_hotspots.value != nextHotspots) _hotspots.value = nextHotspots
     }
-
-    private fun isEntrySample(climbRateMps: Double?): Boolean = isThermalEntrySample(climbRateMps, ENTRY_CLIMB_THRESHOLD_MPS)
-
-    private fun nextHotspotId(targetId: String): String = nextThermalHotspotId(targetId, segmentIndexByTargetId)
-
-    private fun ensureTrackerHotspotId(tracker: ThermalTracker): String = ensureThermalTrackerHotspotId(tracker, segmentIndexByTargetId)
-
-    private fun startOfLocalDayWallMs(nowWallMs: Long): Long = startOfLocalDayWallMsForZone(nowWallMs, localZoneId)
-
-    private fun startOfNextLocalDayWallMs(nowWallMs: Long): Long = startOfNextLocalDayWallMsForZone(nowWallMs, localZoneId)
-
-    private fun pruneSegmentIndexCache() = pruneThermalSegmentIndexCache(segmentIndexByTargetId, trackerByTargetId, hotspotById)
 
     private companion object {
         private const val ENTRY_CLIMB_THRESHOLD_MPS = 0.3
