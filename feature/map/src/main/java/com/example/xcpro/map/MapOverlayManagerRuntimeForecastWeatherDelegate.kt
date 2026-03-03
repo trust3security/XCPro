@@ -87,7 +87,6 @@ internal class MapOverlayManagerRuntimeForecastWeatherDelegate(
             reapplyWeatherRainOverlay = ::reapplyWeatherRainOverlay
         )
     }
-
     fun onMapDetached() {
         _forecastRuntimeWarningMessage.value = null
         _skySightSatelliteRuntimeErrorMessage.value = null

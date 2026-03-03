@@ -9,8 +9,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
-@OptIn(ExperimentalCoroutinesApi::class)
-internal class ForecastOverlayRuntime(
+@OptIn(ExperimentalCoroutinesApi::class) internal class ForecastOverlayRuntime(
     private val preferencesRepository: ForecastPreferencesRepository,
     private val catalogPort: ForecastCatalogPort,
     private val tilesPort: ForecastTilesPort,
