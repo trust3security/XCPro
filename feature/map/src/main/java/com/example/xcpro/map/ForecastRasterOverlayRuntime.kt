@@ -1,9 +1,5 @@
 package com.example.xcpro.map
 
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Paint
-import android.graphics.Path
 import com.example.xcpro.forecast.ForecastLegendSpec
 import com.example.xcpro.forecast.ForecastTileFormat
 import com.example.xcpro.forecast.ForecastTileSpec
@@ -18,18 +14,8 @@ import org.maplibre.android.style.expressions.Expression
 import org.maplibre.android.style.layers.FillLayer
 import org.maplibre.android.style.layers.PropertyFactory.fillColor
 import org.maplibre.android.style.layers.PropertyFactory.fillOpacity
-import org.maplibre.android.style.layers.PropertyFactory.iconAllowOverlap
-import org.maplibre.android.style.layers.PropertyFactory.iconAnchor
-import org.maplibre.android.style.layers.PropertyFactory.iconIgnorePlacement
-import org.maplibre.android.style.layers.PropertyFactory.iconImage
-import org.maplibre.android.style.layers.PropertyFactory.iconKeepUpright
-import org.maplibre.android.style.layers.PropertyFactory.iconOpacity
-import org.maplibre.android.style.layers.PropertyFactory.iconRotate
-import org.maplibre.android.style.layers.PropertyFactory.iconRotationAlignment
-import org.maplibre.android.style.layers.PropertyFactory.iconSize
 import org.maplibre.android.style.layers.PropertyFactory.rasterOpacity
 import org.maplibre.android.style.layers.RasterLayer
-import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.layers.Layer
 import org.maplibre.android.style.sources.RasterSource
 import org.maplibre.android.style.sources.TileSet
@@ -46,6 +32,17 @@ open class ForecastRasterOverlayRuntime(
     private var activeSourceLayerIndex: Int = 0
     private var sourceLayerConsecutiveMisses: Int = 0
     private var runtimeWarningMessage: String? = null
+    private val windRenderer = ForecastRasterOverlayRuntimeWindRenderer(
+        resolveSourceLayerForRender = ::resolveSourceLayerForRender,
+        removeWindCircleLayer = ::removeWindCircleLayer,
+        addLayerBelowAnchor = ::addLayerBelowAnchor,
+        vectorSourceId = ::vectorSourceId,
+        windSymbolLayerId = ::windSymbolLayerId,
+        windArrowIconId = ::windArrowIconId,
+        windArrowIconIdForColor = ::windArrowIconIdForColor,
+        windBarbIconId = ::windBarbIconId,
+        windBarbLayerId = ::windBarbLayerId
+    )
 
     fun render(
         tileSpec: ForecastTileSpec,
@@ -205,23 +202,6 @@ open class ForecastRasterOverlayRuntime(
         addLayerBelowAnchor(style, layer)
     }
 
-    private fun ensureWindArrowImage(style: Style) {
-        val image = runCatching { style.getImage(windArrowIconId()) }.getOrNull()
-        if (image == null) {
-            style.addImage(windArrowIconId(), createWindArrowBitmap())
-        }
-    }
-
-    private fun ensureWindBarbImages(style: Style) {
-        WIND_BARB_BUCKETS_KT.forEach { bucketKt ->
-            val id = windBarbIconId(bucketKt)
-            val existing = runCatching { style.getImage(id) }.getOrNull()
-            if (existing == null) {
-                style.addImage(id, createWindBarbBitmap(bucketKt))
-            }
-        }
-    }
-
     private fun ensureWindLayers(
         style: Style,
         tileSpec: ForecastTileSpec,
@@ -230,297 +210,14 @@ open class ForecastRasterOverlayRuntime(
         windDisplayMode: ForecastWindDisplayMode,
         legendSpec: ForecastLegendSpec?
     ) {
-        val sourceLayer = resolveSourceLayerForRender(tileSpec) ?: return
-        val speedProperty = tileSpec.speedProperty ?: DEFAULT_WIND_SPEED_PROPERTY
-        val directionProperty = tileSpec.directionProperty ?: DEFAULT_WIND_DIRECTION_PROPERTY
-
-        when (windDisplayMode) {
-            ForecastWindDisplayMode.ARROW -> {
-                removeWindCircleLayer(style)
-                ensureWindArrowImage(style)
-                removeWindBarbLayers(style)
-                ensureWindArrowLayer(
-                    style = style,
-                    sourceLayer = sourceLayer,
-                    speedProperty = speedProperty,
-                    directionProperty = directionProperty,
-                    opacity = opacity,
-                    windOverlayScale = windOverlayScale,
-                    legendSpec = legendSpec
-                )
-            }
-            ForecastWindDisplayMode.BARB -> {
-                removeWindCircleLayer(style)
-                runCatching { style.removeLayer(windSymbolLayerId()) }
-                ensureWindBarbImages(style)
-                ensureWindBarbLayers(
-                    style = style,
-                    sourceLayer = sourceLayer,
-                    speedProperty = speedProperty,
-                    directionProperty = directionProperty,
-                    opacity = opacity,
-                    windOverlayScale = windOverlayScale
-                )
-            }
-        }
-    }
-
-    private fun ensureWindArrowLayer(
-        style: Style,
-        sourceLayer: String,
-        speedProperty: String,
-        directionProperty: String,
-        opacity: Float,
-        windOverlayScale: Float,
-        legendSpec: ForecastLegendSpec?
-    ) {
-        val iconImageExpression = buildWindArrowIconImageExpression(
+        windRenderer.ensureWindLayers(
             style = style,
-            speedProperty = speedProperty,
+            tileSpec = tileSpec,
+            opacity = opacity,
+            windOverlayScale = windOverlayScale,
+            windDisplayMode = windDisplayMode,
             legendSpec = legendSpec
         )
-        val existingLayer = style.getLayer(windSymbolLayerId()) as? SymbolLayer
-        if (existingLayer != null) {
-            existingLayer.setSourceLayer(sourceLayer)
-            existingLayer.setProperties(
-                iconImage(iconImageExpression),
-                iconSize(
-                    buildWindArrowIconSizeExpression(
-                        speedProperty = speedProperty,
-                        windOverlayScale = windOverlayScale
-                    )
-                ),
-                iconRotate(
-                    buildWindDirectionExpression(
-                        directionProperty = directionProperty,
-                        directionOffsetDeg = ARROW_DIRECTION_OFFSET_DEG
-                    )
-                ),
-                iconRotationAlignment("map"),
-                iconKeepUpright(false),
-                iconAllowOverlap(true),
-                iconIgnorePlacement(true),
-                iconAnchor("center"),
-                iconOpacity(opacity)
-            )
-            // Keep wind arrows above any freshly recreated primary forecast layers.
-            runCatching { style.removeLayer(windSymbolLayerId()) }
-            addLayerBelowAnchor(style, existingLayer)
-            return
-        }
-
-        val newLayer = SymbolLayer(windSymbolLayerId(), vectorSourceId()).apply {
-            setSourceLayer(sourceLayer)
-        }.withProperties(
-            iconImage(iconImageExpression),
-            iconSize(
-                buildWindArrowIconSizeExpression(
-                    speedProperty = speedProperty,
-                    windOverlayScale = windOverlayScale
-                )
-            ),
-            iconRotate(
-                buildWindDirectionExpression(
-                    directionProperty = directionProperty,
-                    directionOffsetDeg = ARROW_DIRECTION_OFFSET_DEG
-                )
-            ),
-            iconRotationAlignment("map"),
-            iconKeepUpright(false),
-            iconAllowOverlap(true),
-            iconIgnorePlacement(true),
-            iconAnchor("center"),
-            iconOpacity(opacity)
-        )
-        addLayerBelowAnchor(style, newLayer)
-    }
-
-    private fun buildWindArrowIconImageExpression(
-        style: Style,
-        speedProperty: String,
-        legendSpec: ForecastLegendSpec?
-    ): Expression {
-        val colorStops = resolveWindArrowColorStops(legendSpec)
-        if (colorStops.isEmpty()) {
-            ensureWindArrowImage(style)
-            return Expression.literal(windArrowIconId())
-        }
-
-        colorStops.forEach { stop ->
-            val existing = runCatching { style.getImage(stop.iconId) }.getOrNull()
-            if (existing == null) {
-                style.addImage(stop.iconId, createWindArrowBitmap(stop.argb))
-            }
-        }
-
-        val speedExpression = Expression.coalesce(
-            Expression.toNumber(Expression.get(speedProperty)),
-            Expression.literal(colorStops.first().value - 1.0)
-        )
-        if (colorStops.size == 1) {
-            return Expression.literal(colorStops.first().iconId)
-        }
-
-        val stepStops = ArrayList<Expression>((colorStops.size - 1) * 2)
-        for (index in 1 until colorStops.size) {
-            val stop = colorStops[index]
-            stepStops.add(Expression.literal(stop.value))
-            stepStops.add(Expression.literal(stop.iconId))
-        }
-
-        return Expression.step(
-            speedExpression,
-            Expression.literal(colorStops.first().iconId),
-            *stepStops.toTypedArray()
-        )
-    }
-
-    private fun resolveWindArrowColorStops(legendSpec: ForecastLegendSpec?): List<WindArrowColorStop> {
-        if (legendSpec == null) return emptyList()
-        return legendSpec.stops
-            .asSequence()
-            .map { stop ->
-                WindArrowColorStop(
-                    value = stop.value,
-                    argb = stop.argb,
-                    iconId = windArrowIconIdForColor(stop.argb)
-                )
-            }
-            .filter { stop -> stop.value.isFinite() }
-            .sortedBy { stop -> stop.value }
-            .distinctBy { stop -> stop.value }
-            .toList()
-    }
-
-    private fun ensureWindBarbLayers(
-        style: Style,
-        sourceLayer: String,
-        speedProperty: String,
-        directionProperty: String,
-        opacity: Float,
-        windOverlayScale: Float
-    ) {
-        WIND_BARB_BUCKET_RANGES.forEach { range ->
-            ensureWindBarbLayer(
-                style = style,
-                sourceLayer = sourceLayer,
-                speedProperty = speedProperty,
-                directionProperty = directionProperty,
-                opacity = opacity,
-                windOverlayScale = windOverlayScale,
-                minKt = range.minKt,
-                maxExclusiveKt = range.maxExclusiveKt
-            )
-        }
-    }
-
-    private fun ensureWindBarbLayer(
-        style: Style,
-        sourceLayer: String,
-        speedProperty: String,
-        directionProperty: String,
-        opacity: Float,
-        windOverlayScale: Float,
-        minKt: Int,
-        maxExclusiveKt: Int?
-    ) {
-        val layerId = windBarbLayerId(minKt)
-        val filterExpression = buildWindBarbFilterExpression(
-            speedProperty = speedProperty,
-            minKt = minKt,
-            maxExclusiveKt = maxExclusiveKt
-        )
-        val existingLayer = style.getLayer(layerId) as? SymbolLayer
-        if (existingLayer != null) {
-            existingLayer.setSourceLayer(sourceLayer)
-            existingLayer.setFilter(filterExpression)
-            existingLayer.setProperties(
-                iconImage(windBarbIconId(minKt)),
-                iconSize(BARB_ICON_SIZE_BASE * windOverlayScale),
-                iconRotate(
-                    buildWindDirectionExpression(
-                        directionProperty = directionProperty,
-                        directionOffsetDeg = BARB_DIRECTION_OFFSET_DEG
-                    )
-                ),
-                iconRotationAlignment("map"),
-                iconKeepUpright(false),
-                iconAllowOverlap(true),
-                iconIgnorePlacement(true),
-                iconAnchor("center"),
-                iconOpacity(opacity)
-            )
-            // Keep wind barbs above any freshly recreated primary forecast layers.
-            runCatching { style.removeLayer(layerId) }
-            addLayerBelowAnchor(style, existingLayer)
-            return
-        }
-
-        val newLayer = SymbolLayer(layerId, vectorSourceId()).apply {
-            setSourceLayer(sourceLayer)
-            setFilter(filterExpression)
-        }.withProperties(
-            iconImage(windBarbIconId(minKt)),
-            iconSize(BARB_ICON_SIZE_BASE * windOverlayScale),
-            iconRotate(
-                buildWindDirectionExpression(
-                    directionProperty = directionProperty,
-                    directionOffsetDeg = BARB_DIRECTION_OFFSET_DEG
-                )
-            ),
-            iconRotationAlignment("map"),
-            iconKeepUpright(false),
-            iconAllowOverlap(true),
-            iconIgnorePlacement(true),
-            iconAnchor("center"),
-            iconOpacity(opacity)
-        )
-        addLayerBelowAnchor(style, newLayer)
-    }
-
-    private fun buildWindDirectionExpression(
-        directionProperty: String,
-        directionOffsetDeg: Double = 0.0
-    ): Expression {
-        val baseDirection = Expression.coalesce(
-            Expression.toNumber(Expression.get(directionProperty)),
-            Expression.literal(0.0)
-        )
-        if (directionOffsetDeg == 0.0) return baseDirection
-        return Expression.mod(
-            Expression.sum(baseDirection, Expression.literal(directionOffsetDeg)),
-            Expression.literal(360.0)
-        )
-    }
-
-    private fun buildWindBarbFilterExpression(
-        speedProperty: String,
-        minKt: Int,
-        maxExclusiveKt: Int?
-    ): Expression {
-        val speedExpression = Expression.coalesce(
-            Expression.toNumber(Expression.get(speedProperty)),
-            Expression.literal(-1.0)
-        )
-        return if (maxExclusiveKt == null) {
-            Expression.gte(speedExpression, Expression.literal(minKt.toDouble()))
-        } else {
-            Expression.all(
-                Expression.gte(speedExpression, Expression.literal(minKt.toDouble())),
-                Expression.lt(speedExpression, Expression.literal(maxExclusiveKt.toDouble()))
-            )
-        }
-    }
-
-    private fun removeWindSymbolLayer(style: Style) {
-        runCatching { style.removeLayer(windSymbolLayerId()) }
-        removeWindBarbLayers(style)
-    }
-
-    private fun removeWindBarbLayers(style: Style) {
-        WIND_BARB_BUCKET_RANGES.forEach { range ->
-            runCatching { style.removeLayer(windBarbLayerId(range.minKt)) }
-        }
     }
 
     private fun resolveSourceLayerForRender(tileSpec: ForecastTileSpec): String? {
@@ -620,159 +317,6 @@ open class ForecastRasterOverlayRuntime(
         )
     }
 
-    private fun buildWindArrowIconSizeExpression(
-        speedProperty: String,
-        windOverlayScale: Float
-    ): Expression {
-        return Expression.interpolate(
-            Expression.linear(),
-            Expression.toNumber(Expression.get(speedProperty)),
-            Expression.literal(0.0),
-            Expression.literal(0.95f * windOverlayScale * ARROW_ICON_SIZE_FACTOR),
-            Expression.literal(15.0),
-            Expression.literal(1.08f * windOverlayScale * ARROW_ICON_SIZE_FACTOR),
-            Expression.literal(30.0),
-            Expression.literal(1.22f * windOverlayScale * ARROW_ICON_SIZE_FACTOR),
-            Expression.literal(50.0),
-            Expression.literal(1.36f * windOverlayScale * ARROW_ICON_SIZE_FACTOR)
-        )
-    }
-
-    private fun createWindArrowBitmap(
-        colorArgb: Int = WIND_GLYPH_COLOR_BLACK
-    ): Bitmap {
-        val bitmap = Bitmap.createBitmap(
-            WIND_ARROW_ICON_BITMAP_SIZE_PX,
-            WIND_ARROW_ICON_BITMAP_SIZE_PX,
-            Bitmap.Config.ARGB_8888
-        )
-        val canvas = Canvas(bitmap)
-        val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = colorArgb
-            style = Paint.Style.FILL
-        }
-        val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = WIND_GLYPH_OUTLINE_COLOR_BLACK
-            style = Paint.Style.STROKE
-            strokeWidth = WIND_ARROW_STROKE_WIDTH_PX
-            strokeJoin = Paint.Join.ROUND
-            strokeCap = Paint.Cap.ROUND
-        }
-        val center = WIND_ARROW_ICON_BITMAP_SIZE_PX / 2f
-        val tipY = WIND_ARROW_PADDING_PX
-        val tailY = WIND_ARROW_ICON_BITMAP_SIZE_PX - WIND_ARROW_PADDING_PX
-        val wingHalf = WIND_ARROW_ICON_BITMAP_SIZE_PX * 0.24f
-        val shaftHalf = WIND_ARROW_ICON_BITMAP_SIZE_PX * 0.09f
-
-        val path = Path().apply {
-            moveTo(center, tipY)
-            lineTo(center + wingHalf, center + WIND_ARROW_ICON_BITMAP_SIZE_PX * 0.08f)
-            lineTo(center + shaftHalf, center + WIND_ARROW_ICON_BITMAP_SIZE_PX * 0.08f)
-            lineTo(center + shaftHalf, tailY)
-            lineTo(center - shaftHalf, tailY)
-            lineTo(center - shaftHalf, center + WIND_ARROW_ICON_BITMAP_SIZE_PX * 0.08f)
-            lineTo(center - wingHalf, center + WIND_ARROW_ICON_BITMAP_SIZE_PX * 0.08f)
-            close()
-        }
-        canvas.drawPath(path, fillPaint)
-        canvas.drawPath(path, strokePaint)
-        return bitmap
-    }
-
-    private fun createWindBarbBitmap(speedKtBucket: Int): Bitmap {
-        val bitmap = Bitmap.createBitmap(
-            WIND_BARB_ICON_BITMAP_SIZE_PX,
-            WIND_BARB_ICON_BITMAP_SIZE_PX,
-            Bitmap.Config.ARGB_8888
-        )
-        val canvas = Canvas(bitmap)
-        val outlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = BARB_OUTLINE_COLOR
-            style = Paint.Style.STROKE
-            strokeWidth = WIND_BARB_STROKE_WIDTH_PX + 2f
-            strokeCap = Paint.Cap.ROUND
-            strokeJoin = Paint.Join.ROUND
-        }
-        val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = BARB_FILL_COLOR
-            style = Paint.Style.STROKE
-            strokeWidth = WIND_BARB_STROKE_WIDTH_PX
-            strokeCap = Paint.Cap.ROUND
-            strokeJoin = Paint.Join.ROUND
-        }
-        val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = BARB_FILL_COLOR
-            style = Paint.Style.FILL
-        }
-        val fillOutlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = BARB_OUTLINE_COLOR
-            style = Paint.Style.STROKE
-            strokeWidth = 2f
-            strokeJoin = Paint.Join.ROUND
-        }
-
-        val centerX = WIND_BARB_ICON_BITMAP_SIZE_PX / 2f
-        val topY = WIND_BARB_PADDING_PX
-        val bottomY = WIND_BARB_ICON_BITMAP_SIZE_PX - WIND_BARB_PADDING_PX
-        canvas.drawLine(centerX, bottomY, centerX, topY, outlinePaint)
-        canvas.drawLine(centerX, bottomY, centerX, topY, strokePaint)
-
-        var remainingKt = speedKtBucket.coerceAtLeast(0)
-        var markY = topY + WIND_BARB_MARK_SPACING_PX
-        val maxFlagY = bottomY - WIND_BARB_MARK_SPACING_PX
-
-        while (remainingKt >= 50 && markY <= maxFlagY) {
-            val triangle = Path().apply {
-                moveTo(centerX, markY)
-                lineTo(centerX + WIND_BARB_MARK_LENGTH_PX, markY + WIND_BARB_MARK_SPACING_PX)
-                lineTo(centerX, markY + WIND_BARB_MARK_SPACING_PX * 2f)
-                close()
-            }
-            canvas.drawPath(triangle, fillPaint)
-            canvas.drawPath(triangle, fillOutlinePaint)
-            remainingKt -= 50
-            markY += WIND_BARB_MARK_SPACING_PX * 2f
-        }
-
-        while (remainingKt >= 10 && markY <= maxFlagY) {
-            canvas.drawLine(
-                centerX,
-                markY,
-                centerX + WIND_BARB_MARK_LENGTH_PX,
-                markY + WIND_BARB_MARK_SPACING_PX,
-                outlinePaint
-            )
-            canvas.drawLine(
-                centerX,
-                markY,
-                centerX + WIND_BARB_MARK_LENGTH_PX,
-                markY + WIND_BARB_MARK_SPACING_PX,
-                strokePaint
-            )
-            remainingKt -= 10
-            markY += WIND_BARB_MARK_SPACING_PX
-        }
-
-        if (remainingKt >= 5 && markY <= maxFlagY) {
-            canvas.drawLine(
-                centerX,
-                markY,
-                centerX + WIND_BARB_MARK_LENGTH_PX * 0.55f,
-                markY + WIND_BARB_MARK_SPACING_PX * 0.55f,
-                outlinePaint
-            )
-            canvas.drawLine(
-                centerX,
-                markY,
-                centerX + WIND_BARB_MARK_LENGTH_PX * 0.55f,
-                markY + WIND_BARB_MARK_SPACING_PX * 0.55f,
-                strokePaint
-            )
-        }
-
-        return bitmap
-    }
-
     private fun windBarbIconId(speedKtBucket: Int): String =
         "${windBarbIconPrefix()}$speedKtBucket"
 
@@ -820,8 +364,7 @@ open class ForecastRasterOverlayRuntime(
     }
 
     private fun removeWindLayers(style: Style) {
-        removeWindSymbolLayer(style)
-        removeWindCircleLayer(style)
+        windRenderer.removeWindLayers(style)
     }
 
     private fun overlayPrefix(): String = "forecast-$idNamespace"
@@ -848,39 +391,7 @@ open class ForecastRasterOverlayRuntime(
 
     private companion object {
         private const val DEFAULT_WIND_SPEED_PROPERTY = "spd"
-        private const val DEFAULT_WIND_DIRECTION_PROPERTY = "dir"
-        private const val WIND_ARROW_ICON_BITMAP_SIZE_PX = 96
-        private const val WIND_ARROW_PADDING_PX = 8f
-        private const val WIND_ARROW_STROKE_WIDTH_PX = 3f
-        private const val WIND_BARB_ICON_BITMAP_SIZE_PX = 96
-        private const val WIND_BARB_PADDING_PX = 10f
-        private const val WIND_BARB_STROKE_WIDTH_PX = 4f
-        private const val WIND_BARB_MARK_SPACING_PX = 10f
-        private const val WIND_BARB_MARK_LENGTH_PX = 28f
-        private const val ARROW_ICON_SIZE_FACTOR = 0.4f
-        // Arrow and barb must represent the same wind direction value.
-        private const val ARROW_DIRECTION_OFFSET_DEG = 180.0
-        private const val BARB_ICON_SIZE_BASE = 1.05f
-        private const val BARB_DIRECTION_OFFSET_DEG = 0.0
         private const val SOURCE_LAYER_FALLBACK_MISS_THRESHOLD = 2
-        private val WIND_GLYPH_COLOR_BLACK = 0xFF000000.toInt()
-        private val WIND_GLYPH_OUTLINE_COLOR_BLACK = WIND_GLYPH_COLOR_BLACK
-        private val BARB_FILL_COLOR = WIND_GLYPH_COLOR_BLACK
-        private val BARB_OUTLINE_COLOR = WIND_GLYPH_COLOR_BLACK
-        private val WIND_BARB_BUCKETS_KT = listOf(0, 5, 10, 15, 20, 25, 30, 35, 40, 50, 60)
-        private val WIND_BARB_BUCKET_RANGES = listOf(
-            WindBarbBucketRange(0, 5),
-            WindBarbBucketRange(5, 10),
-            WindBarbBucketRange(10, 15),
-            WindBarbBucketRange(15, 20),
-            WindBarbBucketRange(20, 25),
-            WindBarbBucketRange(25, 30),
-            WindBarbBucketRange(30, 35),
-            WindBarbBucketRange(35, 40),
-            WindBarbBucketRange(40, 50),
-            WindBarbBucketRange(50, 60),
-            WindBarbBucketRange(60, null)
-        )
 
         val ANCHOR_LAYER_IDS = listOf(
             "airspace-layer",
@@ -895,17 +406,6 @@ open class ForecastRasterOverlayRuntime(
             "ogn-thermal-circle-layer",
             "ogn-traffic-icon-layer",
             BlueLocationOverlay.LAYER_ID
-        )
-
-        private data class WindBarbBucketRange(
-            val minKt: Int,
-            val maxExclusiveKt: Int?
-        )
-
-        private data class WindArrowColorStop(
-            val value: Double,
-            val argb: Int,
-            val iconId: String
         )
     }
 }

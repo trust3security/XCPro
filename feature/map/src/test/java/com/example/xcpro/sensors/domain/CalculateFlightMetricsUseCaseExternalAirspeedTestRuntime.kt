@@ -1,0 +1,89 @@
+package com.example.xcpro.sensors.domain
+
+import com.example.xcpro.common.flight.FlightMode
+import com.example.xcpro.weather.wind.model.WindSource
+import com.example.xcpro.weather.wind.model.WindState
+import com.example.xcpro.weather.wind.model.WindVector
+import org.junit.Assert.assertEquals
+import org.junit.Test
+
+class CalculateFlightMetricsUseCaseExternalAirspeedTest {
+
+    @Test
+    fun fresh_external_airspeed_takes_priority_over_wind_and_gps() {
+        val useCase = newUseCase()
+        val wind = WindState(
+            vector = WindVector(east = 2.0, north = 1.0),
+            source = WindSource.MANUAL,
+            quality = 5,
+            stale = false,
+            confidence = 1.0
+        )
+
+        val result = useCase.execute(
+            FlightMetricsRequest(
+                gps = gpsSample(10_000L),
+                currentTimeMillis = 10_000L,
+                wallTimeMillis = 10_000L,
+                gpsTimestampMillis = 10_000L,
+                deltaTimeSeconds = 0.2,
+                varioResult = varioSample(0.4, 600.0),
+                varioGpsValue = 0.4,
+                baroResult = null,
+                windState = wind,
+                externalAirspeedSample = airspeedSample(
+                    trueMs = 26.0,
+                    indicatedMs = 24.0,
+                    clockMillis = 9_800L
+                ),
+                varioValidUntil = 12_000L,
+                isFlying = true,
+                macCreadySetting = 0.0,
+                autoMcEnabled = false,
+                flightMode = FlightMode.CRUISE
+            )
+        )
+
+        assertEquals("SENSOR", result.airspeedSourceLabel)
+        assertEquals(24.0, result.indicatedAirspeedMs, 1e-6)
+        assertEquals(26.0, result.trueAirspeedMs, 1e-6)
+    }
+
+    @Test
+    fun stale_external_airspeed_falls_back_to_wind_solution() {
+        val useCase = newUseCase()
+        val wind = WindState(
+            vector = WindVector(east = 2.0, north = 1.0),
+            source = WindSource.MANUAL,
+            quality = 5,
+            stale = false,
+            confidence = 1.0
+        )
+
+        val result = useCase.execute(
+            FlightMetricsRequest(
+                gps = gpsSample(10_000L),
+                currentTimeMillis = 10_000L,
+                wallTimeMillis = 10_000L,
+                gpsTimestampMillis = 10_000L,
+                deltaTimeSeconds = 0.2,
+                varioResult = varioSample(0.4, 600.0),
+                varioGpsValue = 0.4,
+                baroResult = null,
+                windState = wind,
+                externalAirspeedSample = airspeedSample(
+                    trueMs = 30.0,
+                    indicatedMs = 28.0,
+                    clockMillis = 6_000L
+                ),
+                varioValidUntil = 12_000L,
+                isFlying = true,
+                macCreadySetting = 0.0,
+                autoMcEnabled = false,
+                flightMode = FlightMode.CRUISE
+            )
+        )
+
+        assertEquals("WIND", result.airspeedSourceLabel)
+    }
+}
