@@ -468,48 +468,4 @@ class OgnTrafficOverlay(
         )
     }
 
-    private companion object {
-        private const val TAG = "OgnTrafficOverlay"
-
-        private const val SOURCE_ID = "ogn-traffic-source"
-        private const val ICON_LAYER_ID = "ogn-traffic-icon-layer"
-        private const val TOP_LABEL_LAYER_ID = "ogn-traffic-label-top-layer"
-        private const val BOTTOM_LABEL_LAYER_ID = "ogn-traffic-label-bottom-layer"
-        private const val DEFAULT_ICON_IMAGE_ID = "ogn_icon_unknown"
-        private const val SATELLITE_GLIDER_ICON_IMAGE_ID = "ogn_icon_glider_satellite"
-        private const val RELATIVE_GLIDER_ABOVE_ICON_IMAGE_ID = "ogn_icon_glider_rel_above"
-        private const val RELATIVE_GLIDER_BELOW_ICON_IMAGE_ID = "ogn_icon_glider_rel_below"
-        private const val RELATIVE_GLIDER_NEAR_ICON_IMAGE_ID = "ogn_icon_glider_rel_near"
-
-        private const val PROP_TOP_LABEL = "label_top"
-        private const val PROP_BOTTOM_LABEL = "label_bottom"
-        private const val PROP_ALPHA = "alpha"
-        private const val PROP_TRACK_DEG = "track_deg"
-        private const val PROP_TARGET_ID = "target_id"
-        private const val PROP_TARGET_KEY = "target_key"
-        private const val PROP_ICON_ID = "icon_id"
-
-        private const val MAX_TARGETS = 500
-        private const val STALE_VISUAL_AFTER_MS = 60_000L
-
-        private const val LIVE_ALPHA = 0.90
-        private const val STALE_ALPHA = 0.45
-
-        private const val ICON_BITMAP_BASE_SIZE_PX = OGN_ICON_SIZE_DEFAULT_PX
-
-        private const val LABEL_TEXT_SIZE_BASE_SP = 13f
-        private const val MIN_LABEL_TEXT_SIZE_SP = 12f
-        private const val MAX_LABEL_TEXT_SIZE_SP = 17f
-        private const val LABEL_TEXT_OFFSET_BASE_Y = 1.6f
-        private const val LABEL_TEXT_COLOR = "#000000"
-        private val LABEL_FONT_STACK = arrayOf(
-            "Open Sans Semibold",
-            "Noto Sans Medium",
-            "Open Sans Regular",
-            "Arial Unicode MS Regular"
-        )
-        private val RELATIVE_GLIDER_ABOVE_TINT = Color.parseColor("#1B5E20")
-        private val RELATIVE_GLIDER_BELOW_TINT = Color.parseColor("#0D47A1")
-        private val RELATIVE_GLIDER_NEAR_TINT = Color.parseColor("#101010")
-    }
 }

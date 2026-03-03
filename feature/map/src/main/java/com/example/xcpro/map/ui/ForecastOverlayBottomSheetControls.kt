@@ -44,7 +44,6 @@ import kotlin.math.roundToInt
 /**
  * Forecast overlay controls content extracted for global file-size compliance.
  */
-
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
 internal fun ForecastOverlayControlsContent(
@@ -498,4 +497,3 @@ internal fun ForecastOverlayControlsContent(
         Spacer(modifier = Modifier.height(8.dp))
     }
 }
-

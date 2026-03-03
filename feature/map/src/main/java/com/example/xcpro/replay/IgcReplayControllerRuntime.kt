@@ -29,21 +29,21 @@ import kotlin.coroutines.coroutineContext
 
 open class IgcReplayControllerRuntime(
     @ApplicationContext internal val appContext: Context,
-    private val flightDataRepository: FlightDataRepository,
+    internal val flightDataRepository: FlightDataRepository,
     internal val replaySensorSource: ReplaySensorSource,
     internal val replayAirspeedRepository: ReplayAirspeedRepository,
     private val replayPipelineFactory: ReplayPipelineFactory,
     internal val igcParser: IgcParser
 ) {
-    private var replayJob: Job? = null
-    private var seekJob: Job? = null
-    private var points: List<IgcPoint> = emptyList()
-    private var currentIndex = 0
+    internal var replayJob: Job? = null
+    internal var seekJob: Job? = null
+    internal var points: List<IgcPoint> = emptyList()
+    internal var currentIndex = 0
     internal var simConfig = DEFAULT_SIM_CONFIG
     internal var sampleEmitter = ReplaySampleEmitter(replaySensorSource, replayAirspeedRepository, simConfig)
-    private var runtimeInterpolator: ReplayRuntimeInterpolator? = null
+    internal var runtimeInterpolator: ReplayRuntimeInterpolator? = null
     internal var uiRuntimeInterpolator: ReplayRuntimeInterpolator? = null
-    private var runtimeTimestampMs: Long = 0L
+    internal var runtimeTimestampMs: Long = 0L
     internal var resetModeAfterSession = false
     internal var autoStopAfterFinish = false
     internal val uiInterpolatorLock = Any()
@@ -55,7 +55,7 @@ open class IgcReplayControllerRuntime(
     internal val _events = MutableSharedFlow<ReplayEvent>(extraBufferCapacity = 1)
     val events: SharedFlow<ReplayEvent> = _events.asSharedFlow()
 
-    private val pipeline = replayPipelineFactory.create(
+    internal val pipeline = replayPipelineFactory.create(
         sessionState = _session.asStateFlow(),
         tag = TAG
     )
@@ -336,107 +336,6 @@ open class IgcReplayControllerRuntime(
             }
         }
     }
-
-
-    private fun updateProgress(timestamp: Long) {
-        _session.update { state ->
-            if (state.selection == null) state else
-                state.copy(currentTimestampMillis = timestamp)
-        }
-        val s = _session.value
-        val elapsed = s.currentTimestampMillis - s.startTimestampMillis
-        val frac = s.progressFraction
-        if (AppLogger.rateLimit(TAG, "replay_progress", 1_000L)) {
-            AppLogger.i(TAG, "REPLY_PROGRESS elapsed=${elapsed}ms progress=${"%.3f".format(frac)} status=${s.status}")
-        }
-    }
-
-    private suspend fun finishReplay() {
-        points.lastOrNull()?.let { lastPoint ->
-            emitFinishRampIfNeeded(
-                lastPoint = lastPoint,
-                session = _session.value,
-                simConfig = simConfig,
-                sampleEmitter = sampleEmitter,
-                replayFusionRepository = pipeline.replayFusionRepository
-            )
-        }
-        silenceReplayAudio("finish")
-        // Clear replay sample before handing control back to live sensors; order matters because
-        // FlightDataRepository gates by active source.
-        flightDataRepository.clear()
-        // Fully reset the replay fusion pipeline so averages/filters don't carry into the next run.
-        pipeline.replayFusionRepository?.stop()
-        _session.update { it.copy(status = SessionStatus.PAUSED) }
-        flightDataRepository.setActiveSource(FlightDataRepository.Source.LIVE)
-        // Push a null LIVE sample so UI/audio immediately drop to zero instead of waiting for the
-        // next live sensor tick.
-        flightDataRepository.update(null, FlightDataRepository.Source.LIVE)
-        resumeSensors()
-        // Mark the session as finished so the next play restarts from the beginning.
-        currentIndex = points.size
-        _events.emit(ReplayEvent.Completed(points.size))
-        if (autoStopAfterFinish) {
-            autoStopAfterFinish = false
-            resetReplayAfterFinish()
-        } else {
-            resetReplayModeIfNeeded()
-        }
-    }
-
-    private fun resetReplayAfterFinish() {
-        // Clear replay selection + state so the app returns to live mode automatically.
-        replaySensorSource.reset()
-        replayAirspeedRepository.reset()
-        flightDataRepository.clear()
-        flightDataRepository.setActiveSource(FlightDataRepository.Source.LIVE)
-        flightDataRepository.update(null, FlightDataRepository.Source.LIVE)
-        pipeline.replayFusionRepository?.resetQnhToStandard()
-        points = emptyList()
-        currentIndex = 0
-        _session.value = SessionState(speedMultiplier = _session.value.speedMultiplier)
-        resetReplayModeIfNeeded()
-    }
-
-    private fun cancelReplayJob() {
-        replayJob?.cancel()
-        replayJob = null
-    }
-
-    private fun suspendSensors() {
-        pipeline.suspendSensors()
-    }
-
-    private suspend fun resumeSensors() {
-        pipeline.resumeSensors()
-    }
-
-    private fun silenceReplayAudio(reason: String) {
-        val repo = pipeline.replayFusionRepository ?: return
-        AppLogger.i(TAG, "REPLAY_AUDIO silence reason=$reason")
-        repo.stop()
-    }
-
-    private fun resetReplayModeIfNeeded() {
-        if (!resetModeAfterSession) return
-        resetModeAfterSession = false
-        val defaultMode = DEFAULT_SIM_CONFIG.mode
-        if (simConfig.mode != defaultMode) {
-            simConfig = simConfig.copy(mode = defaultMode)
-            sampleEmitter = ReplaySampleEmitter(replaySensorSource, replayAirspeedRepository, simConfig)
-            AppLogger.i(TAG, "Replay mode reset to ${defaultMode.name}")
-        }
-    }
-
-    private fun resetReplayEmitterState(reason: String) {
-        AppLogger.d(TAG, "REPLAY_RESET reason=$reason")
-        sampleEmitter.reset()
-        replaySensorSource.reset()
-        runtimeInterpolator?.reset()
-        runtimeTimestampMs = _session.value.startTimestampMillis
-    }
-
-
     companion object {
         internal const val TAG = "IgcReplayController"
         private const val MIN_FRAME_INTERVAL_MS = 1L  // allow sub-second replay cadence
@@ -447,101 +346,4 @@ open class IgcReplayControllerRuntime(
         internal val DEFAULT_SIM_CONFIG = ReplaySimConfig()
     }
 
-    internal fun prepareSession(log: IgcLog, selection: Selection) {
-        val prepared = prepareReplaySession(
-            log = log,
-            selection = selection,
-            simConfig = simConfig,
-            sampleEmitter = sampleEmitter,
-            tag = TAG
-        )
-        cancelReplayJob()
-        seekJob?.cancel()
-        seekJob = null
-        points = prepared.points
-        currentIndex = 0
-        runtimeInterpolator = if (simConfig.interpolation == ReplayInterpolation.CATMULL_ROM_RUNTIME) {
-            ReplayRuntimeInterpolator(points)
-        } else {
-            null
-        }
-        uiRuntimeInterpolator = if (simConfig.interpolation == ReplayInterpolation.CATMULL_ROM_RUNTIME) {
-            ReplayRuntimeInterpolator(points)
-        } else {
-            null
-        }
-        runtimeTimestampMs = prepared.startMillis
-        suspendSensors()
-        replaySensorSource.reset()
-
-        flightDataRepository.setActiveSource(FlightDataRepository.Source.REPLAY)
-        val repo = checkNotNull(pipeline.replayFusionRepository) { "Replay fusion pipeline not initialized" }
-        repo.stop() // reset all smoothing/thermal state
-        repo.setManualQnh(prepared.qnhHpa)
-        _session.value = SessionState(
-            selection = selection,
-            status = SessionStatus.PAUSED,
-            speedMultiplier = _session.value.speedMultiplier,
-            startTimestampMillis = prepared.startMillis,
-            currentTimestampMillis = prepared.startMillis,
-            durationMillis = prepared.durationMillis,
-            qnhHpa = prepared.qnhHpa
-        )
-        if (simConfig.interpolation == ReplayInterpolation.CATMULL_ROM_RUNTIME) {
-            val interpolated = runtimeInterpolator?.interpolate(prepared.startMillis)
-            val initialPoint = interpolated?.point ?: points.first()
-            sampleEmitter.emitSample(
-                initialPoint,
-                null,
-                prepared.qnhHpa,
-                prepared.startMillis,
-                pipeline.replayFusionRepository,
-                interpolated?.movement
-            )
-        } else {
-            sampleEmitter.emitSample(
-                points.first(),
-                null,
-                prepared.qnhHpa,
-                prepared.startMillis,
-                pipeline.replayFusionRepository
-            )
-        }
-    }
-
-    private suspend fun playRuntimeInterpolation() {
-        val interpolator = runtimeInterpolator ?: return
-        val stepMs = simConfig.gpsStepMs.coerceAtLeast(1L)
-        val sessionStart = _session.value.startTimestampMillis
-        val sessionEnd = sessionStart + _session.value.durationMillis
-        var previousPoint: IgcPoint? = null
-        while (runtimeTimestampMs <= sessionEnd && coroutineContext.isActive) {
-            val fix = interpolator.interpolate(runtimeTimestampMs) ?: break
-            sampleEmitter.emitSample(
-                fix.point,
-                previousPoint,
-                _session.value.qnhHpa,
-                _session.value.startTimestampMillis,
-                pipeline.replayFusionRepository,
-                fix.movement
-            )
-            previousPoint = fix.point
-            updateProgress(runtimeTimestampMs)
-            if (AppLogger.rateLimit(TAG, "replay_frame", 1_000L)) {
-                AppLogger.d(
-                    TAG,
-                    "REPLY_FRAME runtime ts=${runtimeTimestampMs} " +
-                        "alt=${fix.point.pressureAltitude ?: fix.point.gpsAltitude} speed=${_session.value.speedMultiplier}"
-                )
-            }
-            if (runtimeTimestampMs >= sessionEnd) {
-                finishReplay()
-                break
-            }
-            val speed = _session.value.speedMultiplier
-            val delayMillis = (stepMs / speed).toLong().coerceAtLeast(1L)
-            runtimeTimestampMs += stepMs
-            delay(delayMillis)
-        }
-    }
 }

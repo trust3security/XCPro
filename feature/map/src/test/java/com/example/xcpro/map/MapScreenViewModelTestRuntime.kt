@@ -128,42 +128,40 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 
-@RunWith(RobolectricTestRunner::class)
-@Config(sdk = [33])
 @OptIn(ExperimentalCoroutinesApi::class)
-class MapScreenViewModelTest {
+abstract class MapScreenViewModelTestBase {
 
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
-    private val context: Context = ApplicationProvider.getApplicationContext()
-    private val testClock = FakeClock(monoMs = 0L, wallMs = 0L)
-    private val orientationClock = object : OrientationClock {
+    protected val context: Context = ApplicationProvider.getApplicationContext()
+    protected val testClock = FakeClock(monoMs = 0L, wallMs = 0L)
+    protected val orientationClock = object : OrientationClock {
         override fun nowMonoMs(): Long = testClock.nowMonoMs()
         override fun nowWallMs(): Long = testClock.nowWallMs()
     }
-    private val cardPreferences = CardPreferences(context, testClock)
-    private val flightDataManagerFactory = FlightDataManagerFactory(context, cardPreferences)
-    private val configurationRepository = ConfigurationRepository(context)
-    private val mapStyleRepository = MapStyleRepository(configurationRepository)
-    private val mapStyleUseCase = MapStyleUseCase(mapStyleRepository)
-    private val unitsRepository = UnitsRepository(context)
-    private val unitsUseCase = UnitsPreferencesUseCase(unitsRepository)
-    private val qnhRepository = FakeQnhRepository()
-    private val qnhUseCase = QnhUseCase(qnhRepository)
-    private val calibrateQnhUseCase = Mockito.mock(CalibrateQnhUseCase::class.java)
-    private val trailSettingsUseCase = MapTrailSettingsUseCase(MapTrailPreferences(context))
-    private val variometerLayoutUseCase =
+    protected val cardPreferences = CardPreferences(context, testClock)
+    protected val flightDataManagerFactory = FlightDataManagerFactory(context, cardPreferences)
+    protected val configurationRepository = ConfigurationRepository(context)
+    protected val mapStyleRepository = MapStyleRepository(configurationRepository)
+    protected val mapStyleUseCase = MapStyleUseCase(mapStyleRepository)
+    protected val unitsRepository = UnitsRepository(context)
+    protected val unitsUseCase = UnitsPreferencesUseCase(unitsRepository)
+    protected val qnhRepository = FakeQnhRepository()
+    protected val qnhUseCase = QnhUseCase(qnhRepository)
+    protected val calibrateQnhUseCase = Mockito.mock(CalibrateQnhUseCase::class.java)
+    protected val trailSettingsUseCase = MapTrailSettingsUseCase(MapTrailPreferences(context))
+    protected val variometerLayoutUseCase =
         VariometerLayoutUseCase(VariometerWidgetRepository(context))
-    private val varioServiceManager = Mockito.mock(VarioServiceManager::class.java)
-    private val unifiedSensorManager = Mockito.mock(UnifiedSensorManager::class.java)
-    private val flightStateFlow = MutableStateFlow(FlyingState())
-    private val flightStateSource = object : FlightStateSource {
+    protected val varioServiceManager = Mockito.mock(VarioServiceManager::class.java)
+    protected val unifiedSensorManager = Mockito.mock(UnifiedSensorManager::class.java)
+    protected val flightStateFlow = MutableStateFlow(FlyingState())
+    protected val flightStateSource = object : FlightStateSource {
         override val flightState = flightStateFlow
     }
-    private val orientationSettingsRepository = MapOrientationSettingsRepository(context)
-    private val mapFeatureFlags = MapFeatureFlags()
-    private val orientationManagerFactory = MapOrientationManagerFactory(
+    protected val orientationSettingsRepository = MapOrientationSettingsRepository(context)
+    protected val mapFeatureFlags = MapFeatureFlags()
+    protected val orientationManagerFactory = MapOrientationManagerFactory(
         orientationDataSourceFactory = OrientationDataSourceFactory(
             unifiedSensorManager = unifiedSensorManager,
             headingResolver = HeadingResolver(),
@@ -174,22 +172,22 @@ class MapScreenViewModelTest {
         settingsRepository = orientationSettingsRepository,
         clock = orientationClock
     )
-    private val flightDataRepository = FlightDataRepository()
-    private val flightDataUseCase = FlightDataUseCase(flightDataRepository)
-    private val windRepository = Mockito.mock(WindSensorFusionRepository::class.java)
-    private lateinit var windStateUseCase: WindStateUseCase
-    private val windStateFlow = MutableStateFlow(com.example.xcpro.weather.wind.model.WindState())
-    private val replayController = Mockito.mock(IgcReplayController::class.java)
-    private val replaySessionFlow = MutableStateFlow(SessionState())
-    private val replayEventsFlow = MutableSharedFlow<ReplayEvent>()
-    private val gliderRepository = Mockito.mock(GliderRepository::class.java)
-    private lateinit var gliderConfigUseCase: GliderConfigUseCase
-    private val gliderConfigFlow = MutableStateFlow(GliderConfig())
-    private val gliderModelFlow = MutableStateFlow<GliderModel?>(null)
-    private val gpsStatusFlow = MutableStateFlow<GpsStatus>(GpsStatus.Searching)
-    private val compassFlow = MutableStateFlow<CompassData?>(null)
-    private val attitudeFlow = MutableStateFlow<AttitudeData?>(null)
-    private val sensorStatus = SensorStatus(
+    protected val flightDataRepository = FlightDataRepository()
+    protected val flightDataUseCase = FlightDataUseCase(flightDataRepository)
+    protected val windRepository = Mockito.mock(WindSensorFusionRepository::class.java)
+    protected lateinit var windStateUseCase: WindStateUseCase
+    protected val windStateFlow = MutableStateFlow(com.example.xcpro.weather.wind.model.WindState())
+    protected val replayController = Mockito.mock(IgcReplayController::class.java)
+    protected val replaySessionFlow = MutableStateFlow(SessionState())
+    protected val replayEventsFlow = MutableSharedFlow<ReplayEvent>()
+    protected val gliderRepository = Mockito.mock(GliderRepository::class.java)
+    protected lateinit var gliderConfigUseCase: GliderConfigUseCase
+    protected val gliderConfigFlow = MutableStateFlow(GliderConfig())
+    protected val gliderModelFlow = MutableStateFlow<GliderModel?>(null)
+    protected val gpsStatusFlow = MutableStateFlow<GpsStatus>(GpsStatus.Searching)
+    protected val compassFlow = MutableStateFlow<CompassData?>(null)
+    protected val attitudeFlow = MutableStateFlow<AttitudeData?>(null)
+    protected val sensorStatus = SensorStatus(
         gpsAvailable = false,
         gpsStarted = false,
         baroAvailable = false,
@@ -202,12 +200,12 @@ class MapScreenViewModelTest {
         rotationStarted = false,
         hasLocationPermissions = false
     )
-    private val ballastControllerFactory =
+    protected val ballastControllerFactory =
         BallastControllerFactory(gliderRepository, mainDispatcherRule.dispatcher)
-    private val levoVarioPreferencesRepository = LevoVarioPreferencesRepository(context)
-    private val hawkVarioUseCase = Mockito.mock(HawkVarioUseCase::class.java)
-    private val hawkVarioUiStateFlow = MutableStateFlow(HawkVarioUiState())
-    private val testPrefsCounter = AtomicInteger(0)
+    protected val levoVarioPreferencesRepository = LevoVarioPreferencesRepository(context)
+    protected val hawkVarioUseCase = Mockito.mock(HawkVarioUseCase::class.java)
+    protected val hawkVarioUiStateFlow = MutableStateFlow(HawkVarioUiState())
+    protected val testPrefsCounter = AtomicInteger(0)
 
     init {
         Mockito.`when`(replayController.session).thenReturn(replaySessionFlow)
@@ -232,614 +230,30 @@ class MapScreenViewModelTest {
         // Avoid per-test DataStore writes here because they can stall Robolectric workers on Windows.
     }
 
-    @Test
-    fun refreshWaypoints_success_updatesState() = runBlocking {
-        val expected = listOf(
-            WaypointData(
-                name = "Test Field",
-                code = "TEST",
-                country = "NZ",
-                latitude = -45.0,
-                longitude = 170.0,
-                elevation = "500m",
-                style = 4,
-                runwayDirection = "09/27",
-                runwayLength = "1200m",
-                frequency = "118.700",
-                description = "Glider base"
-            )
-        )
-        val loader = SuccessfulWaypointLoader(expected)
 
-        val viewModel = createViewModel(waypointLoader = loader)
-
-        drainMain()
-
-        val state = viewModel.uiState.value
-        assertEquals(expected, state.waypoints)
-        assertTrue(state.isLoadingWaypoints.not())
-        assertNull(state.waypointError)
-    }
-
-    @Test
-    fun refreshWaypoints_failure_setsError() = runBlocking {
-        val loader = FailingWaypointLoader(IllegalStateException("Failed to read waypoints"))
-
-        val viewModel = createViewModel(waypointLoader = loader)
-
-        drainMain()
-
-        val state = viewModel.uiState.value
-        assertTrue(state.waypoints.isEmpty())
-        assertTrue(state.isLoadingWaypoints.not())
-        val error = state.waypointError
-        assertTrue(error is MapWaypointError.LoadFailed)
-        assertEquals("Failed to read waypoints", (error as MapWaypointError.LoadFailed).recoveryHint)
-    }
-
-    @Test
-    fun setMapStyle_emitsCommandAndUpdatesStore() = runBlocking {
-        val viewModel = createViewModel()
-
-        val nextStyle = if (viewModel.mapState.mapStyleName.value == "Satellite") "Topo" else "Satellite"
-        val commandDeferred = async(start = CoroutineStart.UNDISPATCHED) { viewModel.mapCommands.first() }
-        viewModel.setMapStyle(nextStyle)
-
-        assertEquals(MapCommand.SetStyle(nextStyle), commandDeferred.await())
-        assertEquals(nextStyle, viewModel.mapState.mapStyleName.value)
-    }
-
-    @Test
-    fun setFlightMode_updatesStore() {
-        val viewModel = createViewModel()
-
-        viewModel.setFlightMode(com.example.xcpro.common.flight.FlightMode.THERMAL)
-
-        assertEquals(com.example.xcpro.common.flight.FlightMode.THERMAL, viewModel.mapState.currentMode.value)
-        assertEquals(FlightModeSelection.THERMAL, viewModel.mapState.currentFlightMode.value)
-    }
-
-    @Test
-    fun toggleDistanceCircles_updatesStore() {
-        val viewModel = createViewModel()
-
-        assertTrue(viewModel.mapState.showDistanceCircles.value.not())
-
-        viewModel.mapStateActions.toggleDistanceCircles()
-
-        assertTrue(viewModel.mapState.showDistanceCircles.value)
-    }
-
-    @Test
-    fun updateCurrentZoom_updatesStore() {
-        val viewModel = createViewModel()
-
-        viewModel.mapStateActions.updateCurrentZoom(14.5f)
-
-        assertEquals(14.5f, viewModel.mapState.currentZoom.value)
-    }
-
-    @Test
-    fun setTarget_updatesStore() {
-        val viewModel = createViewModel()
-
-        val target = MapStateStore.MapPoint(1.23, 4.56)
-
-        viewModel.mapStateActions.setTarget(target, 12.0f)
-
-        assertEquals(target, viewModel.mapState.targetLatLng.value)
-        assertEquals(12.0f, viewModel.mapState.targetZoom.value)
-    }
-
-    @Test
-    fun saveLocation_updatesStore() {
-        val viewModel = createViewModel()
-
-        val location = MapStateStore.MapPoint(10.0, -20.0)
-
-        viewModel.mapStateActions.saveLocation(location, 9.0, 180.0)
-
-        assertEquals(location, viewModel.mapState.savedLocation.value)
-        assertEquals(9.0, viewModel.mapState.savedZoom.value)
-        assertEquals(180.0, viewModel.mapState.savedBearing.value)
-    }
-
-    @Test
-    fun adsbSelection_tracksSelectedIdFromCurrentTargetList() = runBlocking {
-        val adsbRepository = FakeAdsbTrafficRepository()
-        val viewModel = createViewModel(adsbRepositoryOverride = adsbRepository)
-        val id = Icao24.from("abc123") ?: error("invalid test id")
-
-        adsbRepository.targets.value = listOf(sampleAdsbTarget(id))
-        drainMain()
-
-        viewModel.onAdsbTargetSelected(id)
-        drainMain()
-
-        assertEquals(id, viewModel.selectedAdsbId.value)
-        assertEquals(id, viewModel.selectedAdsbTarget.value?.id)
-    }
-
-    @Test
-    fun adsbSelection_clearsWhenSelectedTargetDisappears() = runBlocking {
-        val adsbRepository = FakeAdsbTrafficRepository()
-        val viewModel = createViewModel(adsbRepositoryOverride = adsbRepository)
-        val id = Icao24.from("abc123") ?: error("invalid test id")
-
-        adsbRepository.targets.value = listOf(sampleAdsbTarget(id))
-        drainMain()
-        viewModel.onAdsbTargetSelected(id)
-        drainMain()
-        assertEquals(id, viewModel.selectedAdsbTarget.value?.id)
-
-        adsbRepository.targets.value = emptyList()
-        drainMain()
-
-        assertNull(viewModel.selectedAdsbId.value)
-        assertNull(viewModel.selectedAdsbTarget.value)
-    }
-
-    @Test
-    fun selectedAdsbDetails_distanceRemainsOwnshipRelativeAndIndependentOfOgnTargets() = runBlocking {
-        val adsbRepository = FakeAdsbTrafficRepository()
-        val ognRepository = FakeOgnTrafficRepository()
-        val viewModel = createViewModel(
-            adsbRepositoryOverride = adsbRepository,
-            ognRepositoryOverride = ognRepository
-        )
-        val id = Icao24.from("abc123") ?: error("invalid test id")
-
-        adsbRepository.targets.value = listOf(sampleAdsbTarget(id, distanceMeters = 4_321.0))
-        ognRepository.targets.value = listOf(sampleOgnTarget("OGN123"))
-        drainMain()
-
-        viewModel.onAdsbTargetSelected(id)
-        drainMain()
-        assertEquals(4_321.0, viewModel.selectedAdsbTarget.value?.distanceMeters ?: Double.NaN, 1e-6)
-        assertEquals(220.0, viewModel.selectedAdsbTarget.value?.bearingDegFromUser ?: Double.NaN, 1e-6)
-
-        ognRepository.targets.value = listOf(
-            sampleOgnTarget("OGN999").copy(
-                latitude = -34.0,
-                longitude = 151.0,
-                altitudeMeters = 2_600.0
-            )
-        )
-        drainMain()
-
-        assertEquals(4_321.0, viewModel.selectedAdsbTarget.value?.distanceMeters ?: Double.NaN, 1e-6)
-        assertEquals(220.0, viewModel.selectedAdsbTarget.value?.bearingDegFromUser ?: Double.NaN, 1e-6)
-    }
-
-    @Test
-    fun selectedAdsbDetails_carriesProximityTierTrendAndOwnshipReferenceSemantics() = runBlocking {
-        val adsbRepository = FakeAdsbTrafficRepository()
-        val viewModel = createViewModel(adsbRepositoryOverride = adsbRepository)
-        val id = Icao24.from("abc123") ?: error("invalid test id")
-
-        adsbRepository.targets.value = listOf(
-            sampleAdsbTarget(
-                id = id,
-                distanceMeters = 1_750.0,
-                usesOwnshipReference = false,
-                proximityTier = AdsbProximityTier.NEUTRAL,
-                isClosing = false,
-                closingRateMps = -0.4,
-                isEmergencyCollisionRisk = false
-            )
-        )
-        drainMain()
-
-        viewModel.onAdsbTargetSelected(id)
-        drainMain()
-
-        val selected = viewModel.selectedAdsbTarget.value ?: error("selected details missing")
-        assertEquals(false, selected.usesOwnshipReference)
-        assertEquals(AdsbProximityTier.NEUTRAL, selected.proximityTier)
-        assertEquals(false, selected.isClosing)
-        assertEquals(-0.4, selected.closingRateMps ?: Double.NaN, 1e-6)
-        assertEquals(false, selected.isEmergencyCollisionRisk)
-    }
-
-    @Test
-    fun onToggleAdsbTraffic_seedsCenterFromCameraSnapshotWhenGpsUnavailable() {
-        val adsbRepository = FakeAdsbTrafficRepository()
-        val viewModel = createViewModel(adsbRepositoryOverride = adsbRepository)
-        ensureAdsbOverlayDisabled(viewModel)
-        awaitCondition { viewModel.adsbOverlayEnabled.value.not() }
-
-        viewModel.mapStateActions.updateCameraSnapshot(
-            target = MapStateStore.MapPoint(latitude = -35.1234, longitude = 149.1234),
-            zoom = 11.0,
-            bearing = 0.0
-        )
-        drainMain()
-
-        viewModel.onToggleAdsbTraffic()
-        drainMain()
-
-        assertEquals(-35.1234, adsbRepository.lastCenterLat ?: Double.NaN, 1e-6)
-        assertEquals(149.1234, adsbRepository.lastCenterLon ?: Double.NaN, 1e-6)
-    }
-
-    @Test
-    fun adsbCenter_updatesFromOwnshipGpsLocation() {
-        val adsbRepository = FakeAdsbTrafficRepository()
-        val viewModel = createViewModel(adsbRepositoryOverride = adsbRepository)
-        ensureAdsbOverlayEnabled(viewModel)
-        drainMain()
-
-        flightDataRepository.update(
-            buildCompleteFlightData(
-                gps = defaultGps(latitude = -34.5000, longitude = 150.5000)
-            )
-        )
-        drainMain()
-
-        assertEquals(-34.5000, adsbRepository.lastCenterLat ?: Double.NaN, 1e-6)
-        assertEquals(150.5000, adsbRepository.lastCenterLon ?: Double.NaN, 1e-6)
-        assertEquals(-34.5000, adsbRepository.lastOwnshipLat ?: Double.NaN, 1e-6)
-        assertEquals(150.5000, adsbRepository.lastOwnshipLon ?: Double.NaN, 1e-6)
-    }
-
-    @Test
-    fun adsbOwnshipReference_clearsWhenGpsBecomesUnavailable() {
-        val adsbRepository = FakeAdsbTrafficRepository()
-        val viewModel = createViewModel(adsbRepositoryOverride = adsbRepository)
-        ensureAdsbOverlayEnabled(viewModel)
-        drainMain()
-        val initialClearCalls = adsbRepository.clearOwnshipOriginCalls
-
-        flightDataRepository.update(
-            buildCompleteFlightData(
-                gps = defaultGps(latitude = -34.5000, longitude = 150.5000)
-            )
-        )
-        drainMain()
-        assertEquals(-34.5000, adsbRepository.lastOwnshipLat ?: Double.NaN, 1e-6)
-        assertEquals(150.5000, adsbRepository.lastOwnshipLon ?: Double.NaN, 1e-6)
-
-        flightDataRepository.update(buildCompleteFlightData(gps = null))
-        drainMain()
-
-        assertEquals(initialClearCalls + 1, adsbRepository.clearOwnshipOriginCalls)
-        assertNull(adsbRepository.lastOwnshipLat)
-        assertNull(adsbRepository.lastOwnshipLon)
-    }
-
-    @Test
-    fun ognCenter_updatesFromOwnshipGpsLocation() {
-        val ognRepository = FakeOgnTrafficRepository()
-        createViewModel(ognRepositoryOverride = ognRepository)
-        drainMain()
-
-        flightDataRepository.update(
-            buildCompleteFlightData(
-                gps = defaultGps(latitude = -34.5000, longitude = 150.5000)
-            )
-        )
-        drainMain()
-
-        assertEquals(-34.5000, ognRepository.lastCenterLat ?: Double.NaN, 1e-6)
-        assertEquals(150.5000, ognRepository.lastCenterLon ?: Double.NaN, 1e-6)
-    }
-
-    @Test
-    fun ognCenter_doesNotUpdateFromCameraSnapshotWithoutGps() {
-        val ognRepository = FakeOgnTrafficRepository()
-        val viewModel = createViewModel(ognRepositoryOverride = ognRepository)
-
-        viewModel.mapStateActions.updateCameraSnapshot(
-            target = MapStateStore.MapPoint(latitude = -35.1234, longitude = 149.1234),
-            zoom = 11.0,
-            bearing = 0.0
-        )
-        drainMain()
-
-        assertNull(ognRepository.lastCenterLat)
-        assertNull(ognRepository.lastCenterLon)
-    }
-
-    @Test
-    fun ognSelection_tracksSelectedTargetFromCurrentTargetList() = runBlocking {
-        val ognRepository = FakeOgnTrafficRepository()
-        val viewModel = createViewModel(ognRepositoryOverride = ognRepository)
-        val id = "OGN123"
-
-        ognRepository.targets.value = listOf(sampleOgnTarget(id))
-        drainMain()
-
-        viewModel.onOgnTargetSelected(id)
-        drainMain()
-
-        assertEquals(id, viewModel.selectedOgnTarget.value?.id)
-    }
-
-    @Test
-    fun ognSelection_clearsWhenSelectedTargetDisappears() = runBlocking {
-        val ognRepository = FakeOgnTrafficRepository()
-        val viewModel = createViewModel(ognRepositoryOverride = ognRepository)
-        val id = "OGN123"
-
-        ognRepository.targets.value = listOf(sampleOgnTarget(id))
-        drainMain()
-        viewModel.onOgnTargetSelected(id)
-        drainMain()
-        assertEquals(id, viewModel.selectedOgnTarget.value?.id)
-
-        ognRepository.targets.value = emptyList()
-        drainMain()
-
-        assertNull(viewModel.selectedOgnTarget.value)
-    }
-
-    @Test
-    fun selectingOgnTarget_clearsSelectedAdsbTarget() = runBlocking {
-        val adsbRepository = FakeAdsbTrafficRepository()
-        val ognRepository = FakeOgnTrafficRepository()
-        val viewModel = createViewModel(
-            adsbRepositoryOverride = adsbRepository,
-            ognRepositoryOverride = ognRepository
-        )
-        val adsbId = Icao24.from("abc123") ?: error("invalid adsb id")
-        val ognId = "OGN123"
-
-        adsbRepository.targets.value = listOf(sampleAdsbTarget(adsbId))
-        ognRepository.targets.value = listOf(sampleOgnTarget(ognId))
-        drainMain()
-        viewModel.onAdsbTargetSelected(adsbId)
-        drainMain()
-        assertEquals(adsbId, viewModel.selectedAdsbTarget.value?.id)
-
-        viewModel.onOgnTargetSelected(ognId)
-        drainMain()
-
-        assertEquals(ognId, viewModel.selectedOgnTarget.value?.id)
-        assertNull(viewModel.selectedAdsbTarget.value)
-    }
-
-    @Test
-    fun selectingAdsbTarget_clearsSelectedOgnTarget() = runBlocking {
-        val adsbRepository = FakeAdsbTrafficRepository()
-        val ognRepository = FakeOgnTrafficRepository()
-        val viewModel = createViewModel(
-            adsbRepositoryOverride = adsbRepository,
-            ognRepositoryOverride = ognRepository
-        )
-        val adsbId = Icao24.from("abc123") ?: error("invalid adsb id")
-        val ognId = "OGN123"
-
-        adsbRepository.targets.value = listOf(sampleAdsbTarget(adsbId))
-        ognRepository.targets.value = listOf(sampleOgnTarget(ognId))
-        drainMain()
-        viewModel.onOgnTargetSelected(ognId)
-        drainMain()
-        assertEquals(ognId, viewModel.selectedOgnTarget.value?.id)
-
-        viewModel.onAdsbTargetSelected(adsbId)
-        drainMain()
-
-        assertEquals(adsbId, viewModel.selectedAdsbTarget.value?.id)
-        assertNull(viewModel.selectedOgnTarget.value)
-    }
-
-    @Test
-    fun dismissSelectedOgnTarget_clearsSelectionState() = runBlocking {
-        val ognRepository = FakeOgnTrafficRepository()
-        val viewModel = createViewModel(ognRepositoryOverride = ognRepository)
-        val id = "OGN123"
-
-        ognRepository.targets.value = listOf(sampleOgnTarget(id))
-        drainMain()
-        viewModel.onOgnTargetSelected(id)
-        drainMain()
-        assertEquals(id, viewModel.selectedOgnTarget.value?.id)
-
-        viewModel.dismissSelectedOgnTarget()
-        drainMain()
-
-        assertNull(viewModel.selectedOgnTarget.value)
-    }
-
-    @Test
-    fun selectingThermal_clearsSelectedOgnAndAdsbTargets() = runBlocking {
-        val adsbRepository = FakeAdsbTrafficRepository()
-        val ognRepository = FakeOgnTrafficRepository()
-        val thermalRepository = FakeOgnThermalRepository()
-        val viewModel = createViewModel(
-            adsbRepositoryOverride = adsbRepository,
-            ognRepositoryOverride = ognRepository,
-            ognThermalRepositoryOverride = thermalRepository
-        )
-        val adsbId = Icao24.from("abc123") ?: error("invalid adsb id")
-        val ognId = "OGN123"
-        val thermalId = "OGN123-thermal-1"
-
-        adsbRepository.targets.value = listOf(sampleAdsbTarget(adsbId))
-        ognRepository.targets.value = listOf(sampleOgnTarget(ognId))
-        thermalRepository.hotspots.value = listOf(sampleThermalHotspot(thermalId, ognId))
-        drainMain()
-
-        viewModel.onAdsbTargetSelected(adsbId)
-        drainMain()
-        assertEquals(adsbId, viewModel.selectedAdsbTarget.value?.id)
-
-        viewModel.onOgnTargetSelected(ognId)
-        drainMain()
-        assertEquals(ognId, viewModel.selectedOgnTarget.value?.id)
-        assertNull(viewModel.selectedAdsbTarget.value)
-
-        viewModel.onOgnThermalSelected(thermalId)
-        drainMain()
-
-        assertEquals(thermalId, viewModel.selectedOgnThermal.value?.id)
-        assertNull(viewModel.selectedOgnTarget.value)
-        assertNull(viewModel.selectedAdsbTarget.value)
-    }
-
-    @Test
-    fun thermalSelection_clearsWhenHotspotDisappears() = runBlocking {
-        val thermalRepository = FakeOgnThermalRepository()
-        val viewModel = createViewModel(ognThermalRepositoryOverride = thermalRepository)
-        val thermalId = "OGN123-thermal-1"
-
-        thermalRepository.hotspots.value = listOf(sampleThermalHotspot(thermalId, "OGN123"))
-        drainMain()
-        viewModel.onOgnThermalSelected(thermalId)
-        drainMain()
-        assertEquals(thermalId, viewModel.selectedOgnThermal.value?.id)
-
-        thermalRepository.hotspots.value = emptyList()
-        drainMain()
-
-        assertNull(viewModel.selectedOgnThermal.value)
-    }
-
-    @Test
-    fun ognIconSize_defaultsToConfiguredDefaultPx() {
-        val viewModel = createViewModel()
-
-        assertEquals(OGN_ICON_SIZE_DEFAULT_PX, viewModel.ognIconSizePx.value)
-    }
-
-    @Test
-    fun ognDisplayUpdateMode_defaultsToRealTime() {
-        val viewModel = createViewModel()
-
-        assertEquals(OgnDisplayUpdateMode.REAL_TIME, viewModel.ognDisplayUpdateMode.value)
-    }
-
-    @Test
-    fun showOgnScia_defaultsToDisabled() {
-        val viewModel = createViewModel()
-
-        assertTrue(viewModel.showOgnSciaEnabled.value.not())
-    }
-
-    @Test
-    fun onToggleOgnScia_enablingForcesOgnTrafficOn() = runBlocking {
-        resetOgnTrafficTogglePreferences()
-        val viewModel = createViewModel()
-        awaitCondition { viewModel.showOgnSciaEnabled.value.not() }
-        awaitCondition { viewModel.ognOverlayEnabled.value.not() }
-
-        viewModel.onToggleOgnScia()
-        awaitCondition { viewModel.showOgnSciaEnabled.value }
-        awaitCondition { viewModel.ognOverlayEnabled.value }
-
-        assertTrue(viewModel.showOgnSciaEnabled.value)
-        assertTrue(viewModel.ognOverlayEnabled.value)
-    }
-
-    @Test
-    fun onToggleOgnThermals_enablingForcesOgnTrafficOn() = runBlocking {
-        resetOgnTrafficTogglePreferences()
-        val viewModel = createViewModel()
-        awaitCondition { viewModel.showOgnThermalsEnabled.value.not() }
-        awaitCondition { viewModel.ognOverlayEnabled.value.not() }
-
-        viewModel.onToggleOgnThermals()
-        awaitCondition { viewModel.showOgnThermalsEnabled.value }
-        awaitCondition { viewModel.ognOverlayEnabled.value }
-
-        assertTrue(viewModel.showOgnThermalsEnabled.value)
-        assertTrue(viewModel.ognOverlayEnabled.value)
-    }
-
-    @Test
-    fun onToggleOgnTraffic_ignoredWhileSciaIsEnabled() = runBlocking {
-        resetOgnTrafficTogglePreferences()
-        val viewModel = createViewModel()
-        awaitCondition { viewModel.showOgnSciaEnabled.value.not() }
-        awaitCondition { viewModel.ognOverlayEnabled.value.not() }
-
-        viewModel.onToggleOgnScia()
-        awaitCondition { viewModel.showOgnSciaEnabled.value }
-        awaitCondition { viewModel.ognOverlayEnabled.value }
-        assertTrue(viewModel.showOgnSciaEnabled.value)
-        assertTrue(viewModel.ognOverlayEnabled.value)
-
-        viewModel.onToggleOgnTraffic()
-        drainMain()
-
-        assertTrue(viewModel.ognOverlayEnabled.value)
-    }
-
-    @Test
-    fun ognIconSize_readsPersistedPreferenceOnInit() = runBlocking {
-        val preferencesRepository = OgnTrafficPreferencesRepository(
-            newTestPreferencesDataStore("ogn_traffic_seed")
-        )
-        preferencesRepository.setIconSizePx(OGN_ICON_SIZE_MAX_PX)
-
-        val viewModel = createViewModel(
-            ognPreferencesRepositoryOverride = preferencesRepository
-        )
-        drainMain()
-
-        assertEquals(OGN_ICON_SIZE_MAX_PX, viewModel.ognIconSizePx.value)
-    }
-
-    @Test
-    fun ognDisplayUpdateMode_readsPersistedPreferenceOnInit() = runBlocking {
-        val preferencesRepository = OgnTrafficPreferencesRepository(
-            newTestPreferencesDataStore("ogn_traffic_seed")
-        )
-        preferencesRepository.setDisplayUpdateMode(OgnDisplayUpdateMode.BATTERY)
-
-        val viewModel = createViewModel(
-            ognPreferencesRepositoryOverride = preferencesRepository
-        )
-        drainMain()
-
-        assertEquals(OgnDisplayUpdateMode.BATTERY, viewModel.ognDisplayUpdateMode.value)
-    }
-
-    @Test
-    fun adsbIconSize_defaultsToConfiguredDefaultPx() {
-        val viewModel = createViewModel()
-
-        assertEquals(ADSB_ICON_SIZE_DEFAULT_PX, viewModel.adsbIconSizePx.value)
-    }
-
-    @Test
-    fun adsbIconSize_readsPersistedPreferenceOnInit() = runBlocking {
-        val preferencesRepository = AdsbTrafficPreferencesRepository(
-            newTestPreferencesDataStore("adsb_traffic_seed")
-        )
-        preferencesRepository.setIconSizePx(ADSB_ICON_SIZE_MAX_PX)
-
-        val viewModel = createViewModel(
-            adsbPreferencesRepositoryOverride = preferencesRepository
-        )
-        drainMain()
-
-        assertEquals(ADSB_ICON_SIZE_MAX_PX, viewModel.adsbIconSizePx.value)
-    }
-
-    private class SuccessfulWaypointLoader(
+    protected class SuccessfulWaypointLoader(
         private val waypoints: List<WaypointData>
     ) : WaypointLoader {
         override suspend fun load(): List<WaypointData> = waypoints
     }
 
-    private class FailingWaypointLoader(
+    protected class FailingWaypointLoader(
         private val throwable: Throwable
     ) : WaypointLoader {
         override suspend fun load(): List<WaypointData> = throw throwable
     }
 
 
-    private fun drainMain() {
+    protected fun drainMain() {
         mainDispatcherRule.dispatcher.scheduler.runCurrent()
         shadowOf(Looper.getMainLooper()).idle()
     }
 
-    private suspend fun resetOgnTrafficTogglePreferences() {
+    protected suspend fun resetOgnTrafficTogglePreferences() {
         // No-op: tests now use isolated per-view-model DataStores.
     }
 
-    private fun ensureAdsbOverlayDisabled(viewModel: MapScreenViewModel) {
+    protected fun ensureAdsbOverlayDisabled(viewModel: MapScreenViewModel) {
         drainMain()
         if (viewModel.adsbOverlayEnabled.value) {
             viewModel.setMapVisible(true)
@@ -850,7 +264,7 @@ class MapScreenViewModelTest {
         }
     }
 
-    private fun ensureAdsbOverlayEnabled(viewModel: MapScreenViewModel) {
+    protected fun ensureAdsbOverlayEnabled(viewModel: MapScreenViewModel) {
         viewModel.setMapVisible(true)
         drainMain()
         if (viewModel.adsbOverlayEnabled.value.not()) {
@@ -860,7 +274,7 @@ class MapScreenViewModelTest {
         drainMain()
     }
 
-    private fun awaitCondition(
+    protected fun awaitCondition(
         maxIterations: Int = 500,
         condition: () -> Boolean
     ) {
@@ -872,7 +286,7 @@ class MapScreenViewModelTest {
         throw AssertionError("Timed out waiting for condition")
     }
 
-    private fun newTestPreferencesDataStore(prefix: String): DataStore<Preferences> {
+    protected fun newTestPreferencesDataStore(prefix: String): DataStore<Preferences> {
         val uniqueId = testPrefsCounter.incrementAndGet()
         val backingFile = File(context.cacheDir, "${prefix}_${uniqueId}.preferences_pb")
         if (backingFile.exists()) {
@@ -884,7 +298,7 @@ class MapScreenViewModelTest {
         )
     }
 
-    private fun createViewModel(
+    protected fun createViewModel(
         waypointLoader: WaypointLoader = SuccessfulWaypointLoader(emptyList()),
         ognRepositoryOverride: OgnTrafficRepository? = null,
         ognThermalRepositoryOverride: OgnThermalRepository? = null,
@@ -1063,317 +477,4 @@ class MapScreenViewModelTest {
         )
     }
 
-    private fun defaultGps(
-        latitude: Double = 46.0,
-        longitude: Double = 7.0,
-        altitudeMeters: Double = 1000.0,
-        speedMs: Double = 0.0,
-        bearingDeg: Double = 0.0,
-        accuracyMeters: Float = 5f,
-        timestampMillis: Long = 1_000L,
-        monotonicTimestampMillis: Long = 0L
-    ): GPSData = GPSData(
-        position = GeoPoint(latitude, longitude),
-        altitude = AltitudeM(altitudeMeters),
-        speed = SpeedMs(speedMs),
-        bearing = bearingDeg,
-        accuracy = accuracyMeters,
-        timestamp = timestampMillis,
-        monotonicTimestampMillis = monotonicTimestampMillis
-    )
-
-    private fun buildCompleteFlightData(
-        gps: GPSData? = defaultGps(),
-        baroAltitudeMeters: Double = 1_000.0,
-        verticalSpeedMs: Double = 0.0,
-        displayVarioMs: Double = 0.0,
-        nettoMs: Double = 0.0,
-        displayNettoMs: Double = 0.0,
-        nettoValid: Boolean = false,
-        baselineDisplayVarioMs: Double = 0.0,
-        baselineVarioValid: Boolean = false,
-        realIgcVarioMs: Double? = null,
-        isCircling: Boolean = false,
-        currentThermalValid: Boolean = false,
-        thermalAverageValid: Boolean = false,
-        timestampMillis: Long = 1_000L
-    ): CompleteFlightData {
-        return CompleteFlightData(
-            gps = gps,
-            baro = null,
-            compass = null,
-            baroAltitude = AltitudeM(baroAltitudeMeters),
-            qnh = PressureHpa(1_013.25),
-            isQNHCalibrated = false,
-            verticalSpeed = VerticalSpeedMs(verticalSpeedMs),
-            displayVario = VerticalSpeedMs(displayVarioMs),
-            displayNeedleVario = VerticalSpeedMs(0.0),
-            displayNeedleVarioFast = VerticalSpeedMs(0.0),
-            audioVario = VerticalSpeedMs(0.0),
-            baselineVario = VerticalSpeedMs(0.0),
-            baselineDisplayVario = VerticalSpeedMs(baselineDisplayVarioMs),
-            baselineVarioValid = baselineVarioValid,
-            bruttoVario = VerticalSpeedMs(0.0),
-            bruttoAverage30s = VerticalSpeedMs(0.0),
-            bruttoAverage30sValid = false,
-            nettoAverage30s = VerticalSpeedMs(0.0),
-            varioSource = "TEST",
-            varioValid = true,
-            pressureAltitude = AltitudeM(0.0),
-            baroGpsDelta = null,
-            baroConfidence = ConfidenceLevel.LOW,
-            qnhCalibrationAgeSeconds = -1,
-            agl = AltitudeM(0.0),
-            thermalAverage = VerticalSpeedMs(0.0),
-            thermalAverageCircle = VerticalSpeedMs(0.0),
-            thermalAverageTotal = VerticalSpeedMs(0.0),
-            thermalGain = AltitudeM(0.0),
-            thermalGainValid = false,
-            currentThermalLiftRate = VerticalSpeedMs(0.0),
-            currentThermalValid = currentThermalValid,
-            currentLD = 0f,
-            netto = VerticalSpeedMs(nettoMs),
-            displayNetto = VerticalSpeedMs(displayNettoMs),
-            nettoValid = nettoValid,
-            trueAirspeed = SpeedMs(0.0),
-            indicatedAirspeed = SpeedMs(0.0),
-            airspeedSource = "UNKNOWN",
-            tasValid = true,
-            varioOptimized = VerticalSpeedMs(0.0),
-            varioLegacy = VerticalSpeedMs(0.0),
-            varioRaw = VerticalSpeedMs(0.0),
-            varioGPS = VerticalSpeedMs(0.0),
-            varioComplementary = VerticalSpeedMs(0.0),
-            realIgcVario = realIgcVarioMs?.let { VerticalSpeedMs(it) },
-            teAltitude = AltitudeM(0.0),
-            macCready = 0.0,
-            macCreadyRisk = 0.0,
-            isCircling = isCircling,
-            thermalAverageValid = thermalAverageValid,
-            timestamp = timestampMillis,
-            dataQuality = "TEST"
-        )
-    }
-
-    private fun sampleAdsbTarget(
-        id: Icao24,
-        distanceMeters: Double = 1500.0,
-        usesOwnshipReference: Boolean = true,
-        proximityTier: AdsbProximityTier = AdsbProximityTier.AMBER,
-        isClosing: Boolean = true,
-        closingRateMps: Double? = 0.7,
-        isEmergencyCollisionRisk: Boolean = false
-    ): AdsbTrafficUiModel = AdsbTrafficUiModel(
-        id = id,
-        callsign = "TEST01",
-        lat = -35.0,
-        lon = 149.0,
-        altitudeM = 1000.0,
-        speedMps = 70.0,
-        trackDeg = 180.0,
-        climbMps = 0.5,
-        ageSec = 2,
-        isStale = false,
-        distanceMeters = distanceMeters,
-        bearingDegFromUser = 220.0,
-        usesOwnshipReference = usesOwnshipReference,
-        positionSource = 0,
-        category = 3,
-        lastContactEpochSec = null,
-        proximityTier = proximityTier,
-        isClosing = isClosing,
-        closingRateMps = closingRateMps,
-        isEmergencyCollisionRisk = isEmergencyCollisionRisk
-    )
-
-    private fun sampleOgnTarget(id: String): OgnTrafficTarget = OgnTrafficTarget(
-        id = id,
-        callsign = "OGNTEST",
-        destination = "APRS",
-        latitude = -35.0,
-        longitude = 149.0,
-        altitudeMeters = 1200.0,
-        trackDegrees = 180.0,
-        groundSpeedMps = 40.0,
-        verticalSpeedMps = 1.1,
-        deviceIdHex = "ABC123",
-        signalDb = 12.0,
-        displayLabel = id,
-        identity = null,
-        rawComment = "sample",
-        rawLine = "sample line",
-        timestampMillis = 1_000L,
-        lastSeenMillis = 1_000L
-    )
-
-    private fun sampleThermalHotspot(
-        id: String,
-        sourceTargetId: String
-    ): OgnThermalHotspot = OgnThermalHotspot(
-        id = id,
-        sourceTargetId = sourceTargetId,
-        sourceLabel = sourceTargetId,
-        latitude = -35.0,
-        longitude = 149.0,
-        startedAtMonoMs = 1_000L,
-        startedAtWallMs = 1_000L,
-        updatedAtMonoMs = 2_000L,
-        updatedAtWallMs = 2_000L,
-        startAltitudeMeters = 900.0,
-        maxAltitudeMeters = 1200.0,
-        maxAltitudeAtMonoMs = 2_000L,
-        maxClimbRateMps = 2.3,
-        averageClimbRateMps = 1.6,
-        averageBottomToTopClimbRateMps = 1.2,
-        snailColorIndex = 15,
-        state = OgnThermalHotspotState.ACTIVE
-    )
-
-    private class FakeOgnTrafficRepository : OgnTrafficRepository {
-        override val targets = MutableStateFlow<List<OgnTrafficTarget>>(emptyList())
-        override val suppressedTargetIds = MutableStateFlow<Set<String>>(emptySet())
-        override val snapshot = MutableStateFlow(
-            OgnTrafficSnapshot(
-                targets = emptyList(),
-                connectionState = OgnConnectionState.DISCONNECTED,
-                lastError = null,
-                subscriptionCenterLat = null,
-                subscriptionCenterLon = null,
-                receiveRadiusKm = 150,
-                ddbCacheAgeMs = null,
-                reconnectBackoffMs = null,
-                lastReconnectWallMs = null
-            )
-        )
-        override val isEnabled = MutableStateFlow(false)
-        var lastCenterLat: Double? = null
-        var lastCenterLon: Double? = null
-
-        override fun setEnabled(enabled: Boolean) {
-            isEnabled.value = enabled
-        }
-
-        override fun updateCenter(latitude: Double, longitude: Double) {
-            lastCenterLat = latitude
-            lastCenterLon = longitude
-        }
-
-        override fun start() {
-            setEnabled(true)
-        }
-
-        override fun stop() {
-            setEnabled(false)
-        }
-    }
-
-    private class FakeOgnThermalRepository : OgnThermalRepository {
-        override val hotspots = MutableStateFlow<List<OgnThermalHotspot>>(emptyList())
-    }
-
-    private class FakeOgnGliderTrailRepository : OgnGliderTrailRepository {
-        override val segments = MutableStateFlow<List<OgnGliderTrailSegment>>(emptyList())
-    }
-
-    private class FakeAdsbTrafficRepository : AdsbTrafficRepository {
-        override val targets = MutableStateFlow<List<AdsbTrafficUiModel>>(emptyList())
-        override val snapshot = MutableStateFlow(
-            AdsbTrafficSnapshot(
-                targets = emptyList(),
-                connectionState = AdsbConnectionState.Disabled,
-                centerLat = null,
-                centerLon = null,
-                receiveRadiusKm = 20,
-                fetchedCount = 0,
-                withinRadiusCount = 0,
-                displayedCount = 0,
-                lastHttpStatus = null,
-                remainingCredits = null,
-                lastPollMonoMs = null,
-                lastSuccessMonoMs = null,
-                lastError = null
-            )
-        )
-        override val isEnabled = MutableStateFlow(false)
-        var lastCenterLat: Double? = null
-        var lastCenterLon: Double? = null
-        var lastOwnshipLat: Double? = null
-        var lastOwnshipLon: Double? = null
-        var clearOwnshipOriginCalls: Int = 0
-        var clearTargetsCalls: Int = 0
-
-        override fun setEnabled(enabled: Boolean) {
-            isEnabled.value = enabled
-        }
-
-        override fun clearTargets() {
-            clearTargetsCalls += 1
-            targets.value = emptyList()
-        }
-
-        override fun updateCenter(latitude: Double, longitude: Double) {
-            lastCenterLat = latitude
-            lastCenterLon = longitude
-        }
-
-        override fun updateOwnshipOrigin(latitude: Double, longitude: Double) {
-            lastOwnshipLat = latitude
-            lastOwnshipLon = longitude
-        }
-
-        override fun clearOwnshipOrigin() {
-            clearOwnshipOriginCalls += 1
-            lastOwnshipLat = null
-            lastOwnshipLon = null
-        }
-
-        override fun updateOwnshipAltitudeMeters(altitudeMeters: Double?) = Unit
-
-        override fun updateDisplayFilters(
-            maxDistanceKm: Int,
-            verticalAboveMeters: Double,
-            verticalBelowMeters: Double
-        ) = Unit
-
-        override fun reconnectNow() = Unit
-
-        override fun start() {
-            setEnabled(true)
-        }
-
-        override fun stop() {
-            setEnabled(false)
-        }
-    }
-
-    private class FakeQnhRepository : QnhRepository {
-        private val initialValue = QnhValue(
-            hpa = 1013.25,
-            source = QnhSource.STANDARD,
-            calibratedAtMillis = 0L,
-            confidence = QnhConfidence.LOW
-        )
-        private val qnhFlow = MutableStateFlow(initialValue)
-        private val calibrationFlow = MutableStateFlow<QnhCalibrationState>(QnhCalibrationState.Idle)
-        override val qnhState = qnhFlow
-        override val calibrationState = calibrationFlow
-
-        override suspend fun setManualQnh(hpa: Double) {
-            qnhFlow.value = initialValue.copy(hpa = hpa, source = QnhSource.MANUAL)
-        }
-
-        override suspend fun resetToStandard() {
-            qnhFlow.value = initialValue
-        }
-
-        override suspend fun applyAutoQnh(value: QnhValue) {
-            qnhFlow.value = value
-        }
-
-        override fun updateCalibrationState(state: QnhCalibrationState) {
-            calibrationFlow.value = state
-        }
-    }
 }
-
-

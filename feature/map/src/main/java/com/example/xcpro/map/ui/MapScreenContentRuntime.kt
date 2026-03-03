@@ -3,8 +3,6 @@ package com.example.xcpro.map.ui
  * Map screen body content used inside MapScreenScaffold.
  * Invariants: UI renders state only and routes mutations through the ViewModel.
  */
-
-
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
@@ -47,7 +45,6 @@ import com.example.xcpro.map.MapOverlayManager
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapTaskScreenManager
 import com.example.xcpro.map.WindArrowUiState
-import com.example.xcpro.map.ui.MapOverlayStack
 import com.example.xcpro.map.ui.widgets.MapUIWidgetManager
 import com.example.xcpro.map.ballast.BallastCommand
 import com.example.xcpro.map.ballast.BallastUiState
@@ -240,13 +237,11 @@ internal fun MapScreenContent(
         qnhError = null
         showQnhDialog = true
     }
-
     LaunchedEffect(currentMapStyleName) {
         if (!currentMapStyleName.equals(SATELLITE_MAP_STYLE_NAME, ignoreCase = true)) {
             lastNonSatelliteMapStyleName = currentMapStyleName
         }
     }
-
     ForecastOverlayRuntimeEffects(
         mapLibreMap = mapState.mapLibreMap,
         forecastOverlayState = forecastOverlayState,
@@ -258,7 +253,6 @@ internal fun MapScreenContent(
         onClearTapCallout = { tappedWindArrowCallout = null },
         onResetWindTapLabelSize = { windTapLabelSize = IntSize.Zero }
     )
-
     val hasTrafficDetailsOpen = selectedOgnTarget != null ||
         selectedOgnThermal != null ||
         selectedAdsbTarget != null
@@ -270,13 +264,11 @@ internal fun MapScreenContent(
             )
         } ?: false
     }
-
     LaunchedEffect(isTaskPanelVisible, hasTrafficDetailsOpen) {
         if (isTaskPanelVisible || hasTrafficDetailsOpen) {
             isBottomTabsSheetVisible = false
         }
     }
-
     val trafficPanelVisibility = rememberTrafficDebugPanelVisibility(
         adsbOverlayEnabled = adsbOverlayEnabled,
         adsbSnapshot = adsbSnapshot,
@@ -295,9 +287,7 @@ internal fun MapScreenContent(
                 overlayViewportSize = size
             }
     ) {
-        Scaffold(
-            modifier = Modifier
-        ) { padding ->
+        Scaffold(modifier = Modifier) { padding ->
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxSize()
@@ -393,10 +383,9 @@ internal fun MapScreenContent(
                         hiddenCardIds = hiddenCardIds,
                         replayState = replayState
                     )
+        }
             }
         }
-        }
-
         MapTaskManagerLayer(
             taskScreenManager = taskScreenManager,
             waypointData = waypointData,
@@ -500,13 +489,10 @@ internal fun MapScreenContent(
             selectedAdsbTarget = selectedAdsbTarget,
             onDismissAdsbTargetDetails = onDismissAdsbTargetDetails
         )
-
     }
-
     ReplayDiagnosticsLogger(
         replayState = replayState,
         flightDataManager = flightDataManager,
         unitsPreferences = unitsPreferences
     )
 }
-
