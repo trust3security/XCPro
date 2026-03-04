@@ -98,6 +98,37 @@ class ProfileRepositoryTest {
     }
 
     @Test
+    fun updateProfile_persistsPolarSettingsPerProfile() = runTest {
+        val created = repository.createProfile(
+            ProfileCreationRequest(
+                name = "Polar Pilot",
+                aircraftType = AircraftType.SAILPLANE
+            )
+        ).getOrThrow()
+
+        val updated = created.copy(
+            polar = ProfilePolarSettings(
+                lowSpeedKmh = 85.0,
+                lowSinkMs = 0.55,
+                midSpeedKmh = 115.0,
+                midSinkMs = 0.78,
+                highSpeedKmh = 175.0,
+                highSinkMs = 1.95
+            )
+        )
+
+        repository.updateProfile(updated).getOrThrow()
+
+        val stored = repository.profiles.value.first { it.id == created.id }
+        assertEquals(85.0, stored.polar.lowSpeedKmh, 0.0)
+        assertEquals(0.55, stored.polar.lowSinkMs, 0.0)
+        assertEquals(115.0, stored.polar.midSpeedKmh, 0.0)
+        assertEquals(0.78, stored.polar.midSinkMs, 0.0)
+        assertEquals(175.0, stored.polar.highSpeedKmh, 0.0)
+        assertEquals(1.95, stored.polar.highSinkMs, 0.0)
+    }
+
+    @Test
     fun setActiveProfile_mergesProfileIfMissing() = runTest {
         val orphan = UserProfile(
             name = "Imported",

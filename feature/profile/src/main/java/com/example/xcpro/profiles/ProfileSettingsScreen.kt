@@ -215,9 +215,121 @@ fun ProfileBasicSettings(
                     )
                 }
             }
+
+            PolarSettingsSection(
+                profile = profile,
+                onProfileChanged = onProfileChanged
+            )
         }
     }
 }
+
+@Composable
+private fun PolarSettingsSection(
+    profile: UserProfile,
+    onProfileChanged: (UserProfile) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = "Polar (General)",
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Medium
+        )
+        PolarInputRow(
+            speedLabel = "Low speed (km/h)",
+            speedValue = profile.polar.lowSpeedKmh,
+            sinkLabel = "Low sink (m/s)",
+            sinkValue = profile.polar.lowSinkMs,
+            onValueChanged = { speed, sink ->
+                onProfileChanged(
+                    profile.copy(
+                        polar = profile.polar.copy(
+                            lowSpeedKmh = speed,
+                            lowSinkMs = sink
+                        )
+                    )
+                )
+            }
+        )
+        PolarInputRow(
+            speedLabel = "Mid speed (km/h)",
+            speedValue = profile.polar.midSpeedKmh,
+            sinkLabel = "Mid sink (m/s)",
+            sinkValue = profile.polar.midSinkMs,
+            onValueChanged = { speed, sink ->
+                onProfileChanged(
+                    profile.copy(
+                        polar = profile.polar.copy(
+                            midSpeedKmh = speed,
+                            midSinkMs = sink
+                        )
+                    )
+                )
+            }
+        )
+        PolarInputRow(
+            speedLabel = "High speed (km/h)",
+            speedValue = profile.polar.highSpeedKmh,
+            sinkLabel = "High sink (m/s)",
+            sinkValue = profile.polar.highSinkMs,
+            onValueChanged = { speed, sink ->
+                onProfileChanged(
+                    profile.copy(
+                        polar = profile.polar.copy(
+                            highSpeedKmh = speed,
+                            highSinkMs = sink
+                        )
+                    )
+                )
+            }
+        )
+    }
+}
+
+@Composable
+private fun PolarInputRow(
+    speedLabel: String,
+    speedValue: Double,
+    sinkLabel: String,
+    sinkValue: Double,
+    onValueChanged: (Double, Double) -> Unit
+) {
+    var speedText by remember(speedValue) { mutableStateOf(speedValue.toString()) }
+    var sinkText by remember(sinkValue) { mutableStateOf(sinkValue.toString()) }
+
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedTextField(
+            value = speedText,
+            onValueChange = { input ->
+                speedText = input
+                input.toDoubleOrNull()?.let { parsedSpeed ->
+                    onValueChanged(parsedSpeed, sinkValueFromText(sinkText, sinkValue))
+                }
+            },
+            label = { Text(speedLabel) },
+            modifier = Modifier.weight(1f),
+            singleLine = true
+        )
+        OutlinedTextField(
+            value = sinkText,
+            onValueChange = { input ->
+                sinkText = input
+                input.toDoubleOrNull()?.let { parsedSink ->
+                    onValueChanged(speedValueFromText(speedText, speedValue), parsedSink)
+                }
+            },
+            label = { Text(sinkLabel) },
+            modifier = Modifier.weight(1f),
+            singleLine = true
+        )
+    }
+}
+
+private fun speedValueFromText(text: String, fallback: Double): Double =
+    text.toDoubleOrNull() ?: fallback
+
+private fun sinkValueFromText(text: String, fallback: Double): Double =
+    text.toDoubleOrNull() ?: fallback
 
 @Composable
 fun ProfilePreferencesSettings(
