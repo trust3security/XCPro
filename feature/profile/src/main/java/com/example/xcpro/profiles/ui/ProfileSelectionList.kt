@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.xcpro.profiles.AircraftType
 import com.example.xcpro.profiles.UserProfile
 
 @Composable
@@ -40,24 +41,52 @@ internal fun ProfileListSection(
     onEditProfile: (UserProfile) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val groupedProfiles = profiles.groupBy { it.aircraftType }
+    val orderedAircraftTypes = AircraftType.entries.filter { groupedProfiles.containsKey(it) }
+
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(12.dp),
         modifier = modifier.fillMaxWidth()
     ) {
-        items(profiles) { profile ->
-            ProfileListItem(
-                profile = profile,
-                isActive = profile.id == activeProfileId,
-                onSelect = { onSelectProfile(profile) },
-                onDelete = { onDeleteProfile(profile.id) },
-                onEdit = { onEditProfile(profile) }
-            )
+        orderedAircraftTypes.forEach { aircraftType ->
+            val sectionProfiles = groupedProfiles[aircraftType].orEmpty()
+
+            item {
+                AircraftTypeSectionHeader(
+                    title = aircraftType.displayName,
+                    profileCount = sectionProfiles.size
+                )
+            }
+
+            items(sectionProfiles, key = { it.id }) { profile ->
+                ProfileListItem(
+                    profile = profile,
+                    isActive = profile.id == activeProfileId,
+                    onSelect = { onSelectProfile(profile) },
+                    onDelete = { onDeleteProfile(profile.id) },
+                    onEdit = { onEditProfile(profile) }
+                )
+            }
         }
 
         item {
             CreateProfileCallout(onClick = onShowCreateDialog)
         }
     }
+}
+
+@Composable
+private fun AircraftTypeSectionHeader(
+    title: String,
+    profileCount: Int
+) {
+    Text(
+        text = "$title ($profileCount)",
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        fontWeight = FontWeight.Medium,
+        modifier = Modifier.padding(top = 4.dp, start = 4.dp)
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

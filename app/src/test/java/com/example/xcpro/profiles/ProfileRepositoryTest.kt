@@ -74,6 +74,30 @@ class ProfileRepositoryTest {
     }
 
     @Test
+    fun createProfile_allowsMultipleProfilesForSameAircraftType() = runTest {
+        repository.createProfile(
+            ProfileCreationRequest(
+                name = "Club Ship",
+                aircraftType = AircraftType.SAILPLANE,
+                aircraftModel = "LS4"
+            )
+        ).getOrThrow()
+
+        repository.createProfile(
+            ProfileCreationRequest(
+                name = "Competition Ship",
+                aircraftType = AircraftType.SAILPLANE,
+                aircraftModel = "Ventus 3"
+            )
+        ).getOrThrow()
+
+        val sailplanes = repository.profiles.value.filter { it.aircraftType == AircraftType.SAILPLANE }
+        assertEquals(2, sailplanes.size)
+        assertTrue(sailplanes.any { it.aircraftModel == "LS4" })
+        assertTrue(sailplanes.any { it.aircraftModel == "Ventus 3" })
+    }
+
+    @Test
     fun setActiveProfile_mergesProfileIfMissing() = runTest {
         val orphan = UserProfile(
             name = "Imported",
