@@ -6,6 +6,7 @@ import com.example.xcpro.core.time.TimeBridge
 import com.example.xcpro.adsb.Icao24
 import com.example.xcpro.common.units.AltitudeUnit
 import com.example.xcpro.common.units.UnitsPreferences
+import com.example.xcpro.adsb.ADSB_EMERGENCY_FLASH_ENABLED_DEFAULT
 import com.example.xcpro.adsb.ADSB_ICON_SIZE_DEFAULT_PX
 import com.example.xcpro.adsb.clampAdsbIconSizePx
 import com.example.xcpro.airspace.AirspaceUseCase
@@ -97,6 +98,7 @@ open class MapOverlayManagerRuntime(
     private var latestAdsbOwnshipAltitudeMeters: Double? = null
     private var latestAdsbUnitsPreferences: UnitsPreferences = UnitsPreferences()
     private var adsbIconSizePx: Int = ADSB_ICON_SIZE_DEFAULT_PX
+    private var adsbEmergencyFlashEnabled: Boolean = ADSB_EMERGENCY_FLASH_ENABLED_DEFAULT
     private val baseOpsDelegate = MapOverlayManagerRuntimeBaseOpsDelegate(
         context = context,
         mapStateReader = mapStateReader,
@@ -379,12 +381,19 @@ open class MapOverlayManagerRuntime(
         mapState.adsbTrafficOverlay?.setIconSizePx(clamped)
     }
 
+    fun setAdsbEmergencyFlashEnabled(enabled: Boolean) {
+        adsbEmergencyFlashEnabled = enabled
+        mapState.adsbTrafficOverlay?.setEmergencyFlashEnabled(enabled)
+    }
+
     fun setOgnIconSizePx(iconSizePx: Int) {
         ognDelegate.setIconSizePx(iconSizePx)
     }
 
     private fun createAdsbTrafficOverlay(map: MapLibreMap): AdsbTrafficOverlay =
-        adsbTrafficOverlayFactory(map, adsbIconSizePx)
+        adsbTrafficOverlayFactory(map, adsbIconSizePx).also { overlay ->
+            overlay.setEmergencyFlashEnabled(adsbEmergencyFlashEnabled)
+        }
 
     fun findAdsbTargetAt(tap: LatLng): Icao24? {
         return mapState.adsbTrafficOverlay?.findTargetAt(tap)

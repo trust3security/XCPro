@@ -65,6 +65,14 @@ class ForecastSettingsUseCase @Inject constructor(
         credentialsRepository.credentialStorageMode()
     }
 
+    suspend fun volatileFallbackAllowed(): Boolean = withContext(dispatcher) {
+        credentialsRepository.volatileFallbackAllowed()
+    }
+
+    suspend fun setVolatileFallbackAllowed(allowed: Boolean) = withContext(dispatcher) {
+        credentialsRepository.setVolatileFallbackAllowed(allowed)
+    }
+
     suspend fun verifyCredentials(): ForecastAuthCheckResult =
         authRepository.verifySavedCredentials()
 }

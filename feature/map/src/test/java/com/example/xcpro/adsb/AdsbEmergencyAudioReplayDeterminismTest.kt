@@ -157,11 +157,31 @@ class AdsbEmergencyAudioReplayDeterminismTest {
         assertTrue(first.isNotBlank())
     }
 
+    @Test
+    fun replayMatrix_r9_nominalScenario_hasNoKpiViolationAndNoThresholdAlert() {
+        val result = runScenario(
+            listOf(
+                step(nowMonoMs = 0L, emergencyPresent = false),
+                step(nowMonoMs = 10_000L, emergencyPresent = true),
+                step(nowMonoMs = 20_000L, emergencyPresent = false),
+                step(nowMonoMs = 40_000L, emergencyPresent = false),
+                step(nowMonoMs = 70_000L, emergencyPresent = true)
+            )
+        )
+
+        assertEquals(0, result.finalKpis.retriggerWithinCooldownCount)
+        assertEquals(0, result.finalKpis.determinismMismatchCount)
+        assertEquals(null, AdsbEmergencyAudioKpiPolicy.firstViolationCode(result.finalKpis))
+    }
+
     private fun runScenario(steps: List<ReplayStep>): ReplayResult {
         val fsm = AdsbEmergencyAudioAlertFsm()
+        val kpiAccumulator = AdsbEmergencyAudioKpiAccumulator()
         val alerts = mutableListOf<AlertTrace>()
         val transitions = mutableListOf<TransitionTrace>()
+        val kpiTimeline = mutableListOf<KpiTrace>()
         var telemetry: AdsbEmergencyAudioTelemetry? = null
+        var kpis: AdsbEmergencyAudioKpiSnapshot? = null
 
         steps.forEach { step ->
             val decision = fsm.evaluate(
@@ -179,6 +199,17 @@ class AdsbEmergencyAudioReplayDeterminismTest {
                 transitions += TransitionTrace(step.nowMonoMs, event)
             }
             telemetry = fsm.snapshotTelemetry(step.nowMonoMs)
+            kpis = kpiAccumulator.updateAndSnapshot(
+                nowMonoMs = step.nowMonoMs,
+                observationActive = step.hasOwnshipReference && step.featureFlagEnabled,
+                policyEnabled = step.settingsEnabled && step.featureFlagEnabled,
+                cooldownMs = step.cooldownMs,
+                telemetry = telemetry ?: error("Missing telemetry at t=${step.nowMonoMs}")
+            )
+            kpiTimeline += KpiTrace(
+                atMonoMs = step.nowMonoMs,
+                snapshot = kpis ?: AdsbEmergencyAudioKpiSnapshot()
+            )
 
             if (decision.shouldPlayAlert) {
                 val activationEvent = events.lastOrNull { event ->
@@ -196,7 +227,9 @@ class AdsbEmergencyAudioReplayDeterminismTest {
         return ReplayResult(
             alerts = alerts,
             transitions = transitions,
-            finalTelemetry = telemetry ?: fsm.snapshotTelemetry(0L)
+            finalTelemetry = telemetry ?: fsm.snapshotTelemetry(0L),
+            finalKpis = kpis ?: AdsbEmergencyAudioKpiSnapshot(),
+            kpiTimeline = kpiTimeline
         )
     }
 
@@ -239,7 +272,9 @@ class AdsbEmergencyAudioReplayDeterminismTest {
     private data class ReplayResult(
         val alerts: List<AlertTrace>,
         val transitions: List<TransitionTrace>,
-        val finalTelemetry: AdsbEmergencyAudioTelemetry
+        val finalTelemetry: AdsbEmergencyAudioTelemetry,
+        val finalKpis: AdsbEmergencyAudioKpiSnapshot,
+        val kpiTimeline: List<KpiTrace>
     ) {
         fun serialize(): String = buildString {
             append(
@@ -261,6 +296,24 @@ class AdsbEmergencyAudioReplayDeterminismTest {
             append("lastAlert=${finalTelemetry.lastAlertMonoMs};")
             append("cooldownRemaining=${finalTelemetry.cooldownRemainingMs};")
             append("target=${finalTelemetry.activeEmergencyTargetId?.raw}")
+            append("||")
+            append(
+                kpiTimeline.joinToString(separator = "|") { trace ->
+                    "${trace.atMonoMs}:${trace.snapshot.alertTriggerCount}:${trace.snapshot.cooldownBlockEpisodeCount}:${trace.snapshot.disableWithin5MinCount}:${trace.snapshot.disableEventCount}:${trace.snapshot.retriggerWithinCooldownCount}:${trace.snapshot.determinismMismatchCount}"
+                }
+            )
+            append("||")
+            append("alertsPerHour=${finalKpis.alertsPerFlightHour};")
+            append("blocksPerHour=${finalKpis.cooldownBlockEpisodesPerFlightHour};")
+            append("disableRate=${finalKpis.disableWithin5MinRate};")
+            append("retrigger=${finalKpis.retriggerWithinCooldownCount};")
+            append("mismatch=${finalKpis.determinismMismatchCount};")
+            append("activeMs=${finalKpis.activeObservationMs}")
         }
     }
+
+    private data class KpiTrace(
+        val atMonoMs: Long,
+        val snapshot: AdsbEmergencyAudioKpiSnapshot
+    )
 }

@@ -1,6 +1,12 @@
 
 # SkySight Enhanced UI Integration Guide
 
+> Deprecated reference (2026-03-04): this document reflects an older integration flow and is no longer the canonical SkySight contract.
+> Use these sources as authoritative instead:
+> - `docs/ARCHITECTURE/PIPELINE.md` (runtime/data flow contract)
+> - `docs/TABS/2Tab.md` (bottom-sheet/tab control surface and current product behavior)
+> - `docs/refactor/SkySight_94plus_Phased_IP_2026-03-02.md` (active hardening/rescore plan and evidence)
+
 This guide explains how to integrate the new comprehensive SkySight UI components with your existing MapScreen.
 
 ## ... What We've Built

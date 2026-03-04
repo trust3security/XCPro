@@ -41,6 +41,11 @@ class SkySightSatelliteOverlay(
     private var activeSatellite: Boolean = false
     private var activeRadar: Boolean = false
     private var activeLightning: Boolean = false
+    private var lastRenderedFrameEpochs: List<Long> = emptyList()
+    private var lastRenderedSatellite: Boolean = false
+    private var lastRenderedRadar: Boolean = false
+    private var lastRenderedLightning: Boolean = false
+    private var lastStyleIdentity: Int? = null
 
     fun render(config: SkySightSatelliteRenderConfig) {
         val style = map.style ?: return
@@ -60,9 +65,26 @@ class SkySightSatelliteOverlay(
             baseFrameEpochSec = baseFrameEpochSec,
             frameCount = frameCount
         )
+        val styleIdentity = System.identityHashCode(style)
 
         stopAnimation()
-        rebuildSourcesAndLayers(style, frameEpochs, config)
+        if (
+            shouldRebuildSourcesAndLayers(
+                style = style,
+                frameEpochs = frameEpochs,
+                showSatelliteImagery = config.showSatelliteImagery,
+                showRadar = config.showRadar,
+                showLightning = config.showLightning,
+                styleIdentity = styleIdentity
+            )
+        ) {
+            rebuildSourcesAndLayers(style, frameEpochs, config)
+            lastRenderedFrameEpochs = frameEpochs
+            lastRenderedSatellite = config.showSatelliteImagery
+            lastRenderedRadar = config.showRadar
+            lastRenderedLightning = config.showLightning
+            lastStyleIdentity = styleIdentity
+        }
 
         activeFrameCount = frameCount
         activeFrameIndex = resolveInitialFrameIndex(
@@ -86,6 +108,11 @@ class SkySightSatelliteOverlay(
         activeSatellite = false
         activeRadar = false
         activeLightning = false
+        lastRenderedFrameEpochs = emptyList()
+        lastRenderedSatellite = false
+        lastRenderedRadar = false
+        lastRenderedLightning = false
+        lastStyleIdentity = null
         val style = map.style ?: return
         removeAllKnownSourcesAndLayers(style)
     }
@@ -208,6 +235,25 @@ class SkySightSatelliteOverlay(
                 addLayerBelowAnchors(style, layer)
             }
         }
+    }
+
+    private fun shouldRebuildSourcesAndLayers(
+        style: Style,
+        frameEpochs: List<Long>,
+        showSatelliteImagery: Boolean,
+        showRadar: Boolean,
+        showLightning: Boolean,
+        styleIdentity: Int
+    ): Boolean {
+        if (lastStyleIdentity != styleIdentity) return true
+        if (lastRenderedFrameEpochs != frameEpochs) return true
+        if (lastRenderedSatellite != showSatelliteImagery) return true
+        if (lastRenderedRadar != showRadar) return true
+        if (lastRenderedLightning != showLightning) return true
+        if (showSatelliteImagery && style.getLayer(satelliteLayerId(0)) == null) return true
+        if (showRadar && style.getLayer(radarLayerId(0)) == null) return true
+        if (showLightning && style.getLayer(lightningLayerId(0)) == null) return true
+        return false
     }
 
     private fun applyFrameOpacities(style: Style) {
@@ -346,6 +392,14 @@ class SkySightSatelliteOverlay(
     }
 
     private fun addLayerBelowAnchors(style: Style, layer: Layer) {
+        val forecastWindBarbAnchor = lowestLayerIdWithPrefix(
+            style = style,
+            prefix = FORECAST_WIND_BARB_LAYER_PREFIX
+        )
+        if (forecastWindBarbAnchor != null) {
+            style.addLayerBelow(layer, forecastWindBarbAnchor)
+            return
+        }
         val weatherRainFrameAnchor = lowestLayerIdWithPrefix(
             style = style,
             prefix = WEATHER_RAIN_FRAME_LAYER_PREFIX
@@ -394,6 +448,7 @@ class SkySightSatelliteOverlay(
         private const val SKY_SIGHT_LIGHTNING_STROKE_COLOR = -16777216
         private const val SKY_SIGHT_LIGHTNING_STROKE_WIDTH_PX = 3f
         private const val SKY_SIGHT_ATTRIBUTION = "SkySight satellite"
+        private const val FORECAST_WIND_BARB_LAYER_PREFIX = "forecast-wind-wind-barb-layer-"
         private const val WEATHER_RAIN_FRAME_LAYER_PREFIX = "weather-rain-layer-"
 
         private val SKY_SIGHT_TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter

@@ -30,6 +30,8 @@ internal class MapScreenTrafficCoordinator(
     private val mapLocation: StateFlow<MapLocationUiModel?>,
     private val isFlying: StateFlow<Boolean>,
     private val ownshipAltitudeMeters: StateFlow<Double?>,
+    private val ownshipIsCircling: StateFlow<Boolean>,
+    private val circlingFeatureEnabled: StateFlow<Boolean>,
     private val adsbMaxDistanceKm: StateFlow<Int>,
     private val adsbVerticalAboveMeters: StateFlow<Double>,
     private val adsbVerticalBelowMeters: StateFlow<Double>,
@@ -85,9 +87,6 @@ internal class MapScreenTrafficCoordinator(
             .distinctUntilChanged()
             .onEach { gpsPosition ->
                 if (gpsPosition == null) {
-                    if (adsbTrafficUseCase.isStreamingEnabled.value) {
-                        adsbTrafficUseCase.clearOwnshipOrigin()
-                    }
                     return@onEach
                 }
                 val (latitude, longitude) = gpsPosition
@@ -102,9 +101,24 @@ internal class MapScreenTrafficCoordinator(
                     latitude = latitude,
                     longitude = longitude
                 )
+            }
+            .launchIn(scope)
+
+        mapLocation
+            .onEach { location ->
+                if (location == null) {
+                    if (adsbTrafficUseCase.isStreamingEnabled.value) {
+                        adsbTrafficUseCase.clearOwnshipOrigin()
+                    }
+                    return@onEach
+                }
+                if (!adsbTrafficUseCase.isStreamingEnabled.value) {
+                    return@onEach
+                }
+                // Keep ownship reference fresh even when lat/lon are unchanged while stationary.
                 adsbTrafficUseCase.updateOwnshipOrigin(
-                    latitude = latitude,
-                    longitude = longitude
+                    latitude = location.latitude,
+                    longitude = location.longitude
                 )
             }
             .launchIn(scope)
@@ -133,6 +147,18 @@ internal class MapScreenTrafficCoordinator(
         ownshipAltitudeMeters
             .onEach { altitudeMeters ->
                 adsbTrafficUseCase.updateOwnshipAltitudeMeters(altitudeMeters)
+            }
+            .launchIn(scope)
+
+        combine(ownshipIsCircling, circlingFeatureEnabled) { isCircling, featureEnabled ->
+            isCircling to featureEnabled
+        }
+            .distinctUntilChanged()
+            .onEach { (isCircling, featureEnabled) ->
+                adsbTrafficUseCase.updateOwnshipCirclingContext(
+                    isCircling = isCircling,
+                    circlingFeatureEnabled = featureEnabled
+                )
             }
             .launchIn(scope)
 

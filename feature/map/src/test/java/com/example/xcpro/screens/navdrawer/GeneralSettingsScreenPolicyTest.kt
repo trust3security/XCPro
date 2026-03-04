@@ -7,6 +7,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.navigation.NavHostController
 import com.example.ui1.screens.SettingsScreen
 import com.example.ui1.screens.closeGeneralToDrawer
@@ -36,6 +37,16 @@ class GeneralSettingsScreenPolicyTest {
     }
 
     @Test
+    fun adsbRouteConstant_matchesContract() {
+        assertEquals("adsb_settings", SettingsRoutes.ADSB_SETTINGS)
+    }
+
+    @Test
+    fun orientationRouteConstant_matchesContract() {
+        assertEquals("orientation_settings", SettingsRoutes.ORIENTATION_SETTINGS)
+    }
+
+    @Test
     fun settingsScreen_hidesDiagnosticsAndKeepsHawkOrientationPairing() {
         val navController: NavHostController = mock()
         val drawerState: DrawerState = mock()
@@ -53,6 +64,89 @@ class GeneralSettingsScreenPolicyTest {
         composeTestRule.onNodeWithText("HAWK Vario").assertIsDisplayed()
         composeTestRule.onNodeWithText("Orientation").assertIsDisplayed()
         composeTestRule.onAllNodesWithText("Vario Diagnostics").assertCountEquals(0)
+    }
+
+    @Test
+    fun settingsScreen_doesNotExposeLegacyAdsbTrafficLabel() {
+        val navController: NavHostController = mock()
+        val drawerState: DrawerState = mock()
+
+        composeTestRule.setContent {
+            MaterialTheme {
+                SettingsScreen(
+                    navController = navController,
+                    drawerState = drawerState,
+                    onShowAirspaceOverlay = {}
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("Proximity").assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("ADS-b Traffic").assertCountEquals(0)
+    }
+
+    @Test
+    fun settingsScreen_orientationTile_opensLocalOrientationSubSheet() {
+        val navController: NavHostController = mock()
+        val drawerState: DrawerState = mock()
+
+        composeTestRule.setContent {
+            MaterialTheme {
+                SettingsScreen(
+                    navController = navController,
+                    drawerState = drawerState,
+                    onShowAirspaceOverlay = {}
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("Orientation").performClick()
+        verify(navController, never()).navigate(SettingsRoutes.ORIENTATION_SETTINGS)
+    }
+
+    @Test
+    fun settingsScreen_filesTile_opensLocalSubSheet() {
+        assertTileDoesNotNavigateToRoute("Files", SettingsRoutes.FILES)
+    }
+
+    @Test
+    fun settingsScreen_profilesTile_opensLocalSubSheet() {
+        assertTileDoesNotNavigateToRoute("Profiles", SettingsRoutes.PROFILES)
+    }
+
+    @Test
+    fun settingsScreen_lookAndFeelTile_opensLocalSubSheet() {
+        assertTileDoesNotNavigateToRoute("Look & Feel", "look_and_feel")
+    }
+
+    @Test
+    fun settingsScreen_unitsTile_opensLocalSubSheet() {
+        assertTileDoesNotNavigateToRoute("Units", "units_settings")
+    }
+
+    @Test
+    fun settingsScreen_polarTile_opensLocalSubSheet() {
+        assertTileDoesNotNavigateToRoute("Polar", "polar_settings")
+    }
+
+    @Test
+    fun settingsScreen_levoVarioTile_opensLocalSubSheet() {
+        assertTileDoesNotNavigateToRoute("Levo Vario", "levo_vario_settings")
+    }
+
+    @Test
+    fun settingsScreen_hawkVarioTile_opensLocalSubSheet() {
+        assertTileDoesNotNavigateToRoute("HAWK Vario", "hawk_vario_settings")
+    }
+
+    @Test
+    fun settingsScreen_layoutsTile_opensLocalSubSheet() {
+        assertTileDoesNotNavigateToRoute("Layouts", "layouts")
+    }
+
+    @Test
+    fun settingsScreen_skysightTile_opensLocalSubSheet() {
+        assertTileDoesNotNavigateToRoute("SkySight", "forecast_settings")
     }
 
     @Test
@@ -129,5 +223,23 @@ class GeneralSettingsScreenPolicyTest {
             }
 
         assertFalse(routeValues.contains("thermals_settings"))
+    }
+
+    private fun assertTileDoesNotNavigateToRoute(tileLabel: String, route: String) {
+        val navController: NavHostController = mock()
+        val drawerState: DrawerState = mock()
+
+        composeTestRule.setContent {
+            MaterialTheme {
+                SettingsScreen(
+                    navController = navController,
+                    drawerState = drawerState,
+                    onShowAirspaceOverlay = {}
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText(tileLabel).performClick()
+        verify(navController, never()).navigate(route)
     }
 }

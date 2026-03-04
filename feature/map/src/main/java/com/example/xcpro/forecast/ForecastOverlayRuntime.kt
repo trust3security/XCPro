@@ -60,7 +60,9 @@ import kotlinx.coroutines.withContext
                 selection?.windParameters?.isNotEmpty() == true
             val anyOverlayEnabled = primaryEnabled || windEnabled
             val selectedTimeForState = selection?.selectedTimeSlot?.validTimeUtcMs
-                ?: if (preferences.skySightSatelliteOverlayEnabled) nowUtcMs else null
+                ?: if (preferences.skySightSatelliteOverlayEnabled) {
+                    (nowUtcMs / (FORECAST_SKYSIGHT_SATELLITE_FRAME_STEP_MINUTES * 60_000L)) * (FORECAST_SKYSIGHT_SATELLITE_FRAME_STEP_MINUTES * 60_000L)
+                } else null
             val baseState = ForecastOverlayUiState(
                 enabled = primaryEnabled,
                 opacity = preferences.opacity,
@@ -91,7 +93,6 @@ import kotlinx.coroutines.withContext
                 primaryTileErrorKey = null
                 primaryTileErrorMessage = null
                 lastPrimaryTileAttemptMs = 0L
-
                 cachedPrimaryLegendKey = null
                 cachedPrimaryLegend = null
                 primaryLegendErrorKey = null

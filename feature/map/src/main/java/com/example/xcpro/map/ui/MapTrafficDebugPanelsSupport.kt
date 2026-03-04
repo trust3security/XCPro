@@ -94,3 +94,13 @@ internal fun formatMonoMs(monoMs: Long?): String {
     if (monoMs == null || monoMs < 0L) return "--"
     return "$monoMs"
 }
+
+internal fun formatRatePerHour(rate: Double): String {
+    if (!rate.isFinite() || rate < 0.0) return "--"
+    return String.format(Locale.US, "%.2f/h", rate)
+}
+
+internal fun formatPercent(rate: Double): String {
+    if (!rate.isFinite() || rate < 0.0) return "--"
+    return String.format(Locale.US, "%.1f%%", rate * 100.0)
+}

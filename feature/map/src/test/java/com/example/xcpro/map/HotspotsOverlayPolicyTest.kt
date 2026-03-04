@@ -54,6 +54,8 @@ class HotspotsOverlayPolicyTest {
             mapLocation = MutableStateFlow<MapLocationUiModel?>(null),
             isFlying = MutableStateFlow(false),
             ownshipAltitudeMeters = MutableStateFlow<Double?>(null),
+            ownshipIsCircling = MutableStateFlow(false),
+            circlingFeatureEnabled = MutableStateFlow(false),
             adsbMaxDistanceKm = MutableStateFlow(10),
             adsbVerticalAboveMeters = MutableStateFlow(500.0),
             adsbVerticalBelowMeters = MutableStateFlow(500.0),

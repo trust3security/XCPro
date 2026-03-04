@@ -1,6 +1,8 @@
 package com.example.xcpro.forecast
 
 import com.example.xcpro.common.di.IoDispatcher
+import com.example.xcpro.di.ForecastHttpClient
+import com.example.xcpro.di.SkySightApiKey
 import java.io.IOException
 import java.time.Instant
 import java.time.LocalDate
@@ -15,16 +17,21 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
-import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 
 @Singleton
 class SkySightForecastProviderAdapter @Inject constructor(
-    private val httpClient: OkHttpClient,
+    @ForecastHttpClient private val httpClient: OkHttpClient,
+    @SkySightApiKey private val skySightApiKey: String,
     @IoDispatcher private val dispatcher: CoroutineDispatcher
 ) : ForecastCatalogPort, ForecastTilesPort, ForecastLegendPort, ForecastValuePort {
+    private val requestExecutor = SkySightRequestExecutor(
+        httpClient = httpClient,
+        skySightApiKey = skySightApiKey,
+        dispatcher = dispatcher
+    )
 
     override suspend fun getParameters(): List<ForecastParameterMeta> = PARAMETER_META
 
@@ -102,7 +109,7 @@ class SkySightForecastProviderAdapter @Inject constructor(
         ).datePart
         val tileParameter = resolveTileParameter(parameterId)
         val url = "https://static2.skysight.io/$target/$datePart/legend/$tileParameter/1800.legend.json"
-        val rawBody = executeGet(url)
+        val rawBody = executeGet(url = url, requestLabel = "legend request")
         return parseLegendSpec(
             rawBody = rawBody,
             unitLabel = unitLabelFor(parameterId)
@@ -116,6 +123,7 @@ class SkySightForecastProviderAdapter @Inject constructor(
         timeSlot: ForecastTimeSlot,
         regionCode: String
     ): ForecastPointValue = withContext(dispatcher) {
+        requireLatitudeLongitude(latitude = latitude, longitude = longitude)
         val selectedRegion = normalizeForecastRegionCode(regionCode)
         val target = resolveRegionTarget(selectedRegion)
         val regionDateTime = formatRegionDateTime(
@@ -128,7 +136,11 @@ class SkySightForecastProviderAdapter @Inject constructor(
             .toString()
             .toRequestBody(JSON_MEDIA_TYPE)
         val url = "https://cf.skysight.io/point/$latitude/$longitude?region=$target"
-        val rawBody = executePost(url = url, body = payload)
+        val rawBody = executePost(
+            url = url,
+            body = payload,
+            requestLabel = "point-value request"
+        )
         val jsonBody = JSONObject(rawBody)
         val value = parsePointValue(
             jsonBody = jsonBody,
@@ -148,35 +160,20 @@ class SkySightForecastProviderAdapter @Inject constructor(
         )
     }
 
-    private suspend fun executeGet(url: String): String = withContext(dispatcher) {
-        val request = Request.Builder()
-            .url(url)
-            .get()
-            .build()
-        httpClient.newCall(request).execute().use { response ->
-            val body = response.body?.string().orEmpty()
-            if (!response.isSuccessful) {
-                throw IOException("SkySight GET $url failed with ${response.code}")
-            }
-            body
-        }
+    private suspend fun executeGet(url: String, requestLabel: String): String = withContext(dispatcher) {
+        requestExecutor.executeGet(url = url, requestLabel = requestLabel)
     }
 
     private suspend fun executePost(
         url: String,
-        body: okhttp3.RequestBody
+        body: okhttp3.RequestBody,
+        requestLabel: String
     ): String = withContext(dispatcher) {
-        val request = Request.Builder()
-            .url(url)
-            .post(body)
-            .build()
-        httpClient.newCall(request).execute().use { response ->
-            val responseBody = response.body?.string().orEmpty()
-            if (!response.isSuccessful) {
-                throw IOException("SkySight POST $url failed with ${response.code}")
-            }
-            responseBody
-        }
+        requestExecutor.executePost(
+            url = url,
+            body = body,
+            requestLabel = requestLabel
+        )
     }
 
     private fun parseLegendSpec(
@@ -239,12 +236,21 @@ class SkySightForecastProviderAdapter @Inject constructor(
     }
 
     private fun resolveTileParameter(parameterId: ForecastParameterId): String {
-        return when (parameterId.value.trim().uppercase(Locale.US)) {
+        val normalized = parameterId.value.trim().uppercase(Locale.US)
+        return when (normalized) {
             "THERMAL" -> "wstar_bsratio"
             "CLOUDBASE" -> "zsfclcl"
             "RAIN" -> "accrain"
-            else -> parameterId.value.trim()
+            else -> sanitizeTileParameter(parameterId.value.trim())
         }
+    }
+
+    private fun sanitizeTileParameter(rawParameter: String): String {
+        if (rawParameter.isEmpty()) return DEFAULT_FORECAST_PARAMETER_ID.value
+        if (!SAFE_PARAMETER_PATTERN.matches(rawParameter)) {
+            return DEFAULT_FORECAST_PARAMETER_ID.value
+        }
+        return rawParameter
     }
 
     private fun resolveSourceLayer(tileParameter: String, timePart: String): String =
@@ -328,6 +334,15 @@ class SkySightForecastProviderAdapter @Inject constructor(
         return slots
     }
 
+    private fun requireLatitudeLongitude(latitude: Double, longitude: Double) {
+        require(latitude.isFinite() && latitude in -90.0..90.0) {
+            "SkySight latitude is out of range"
+        }
+        require(longitude.isFinite() && longitude in -180.0..180.0) {
+            "SkySight longitude is out of range"
+        }
+    }
+
     private fun resolveRegionTarget(regionCode: String): String =
         normalizeForecastRegionCode(regionCode)
 
@@ -341,6 +356,7 @@ class SkySightForecastProviderAdapter @Inject constructor(
 
     private companion object {
         private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
+        private val SAFE_PARAMETER_PATTERN = Regex("^[A-Za-z0-9_]+$")
         private val DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd")
         private val TIME_FORMATTER = DateTimeFormatter.ofPattern("HHmm")
         private const val SLOT_START_HOUR = 6

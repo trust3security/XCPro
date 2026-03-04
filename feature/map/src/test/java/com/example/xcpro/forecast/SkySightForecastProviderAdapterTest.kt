@@ -29,6 +29,7 @@ class SkySightForecastProviderAdapterTest {
     private fun createAdapter(): SkySightForecastProviderAdapter {
         return SkySightForecastProviderAdapter(
             httpClient = okHttpClients.register(OkHttpClient()),
+            skySightApiKey = "test-key",
             dispatcher = Dispatchers.IO
         )
     }

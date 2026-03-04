@@ -35,6 +35,7 @@ fun NavigationDrawer(
     initialMapStyle: String,
     onItemSelected: (String) -> Unit = {},
     onMapStyleSelected: (String) -> Unit = {},
+    onOpenGeneralSettings: (() -> Unit)? = null,
     content: @Composable () -> Unit
 ) {
     Log.d(TAG, " NavigationDrawer composable started")
@@ -134,7 +135,8 @@ fun NavigationDrawer(
                         },
                         navController = navController,
                         drawerState = drawerState,
-                        scope = scope
+                        scope = scope,
+                        onOpenGeneralSettings = onOpenGeneralSettings
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))

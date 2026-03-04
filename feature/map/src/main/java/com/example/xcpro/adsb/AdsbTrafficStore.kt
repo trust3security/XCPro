@@ -1,18 +1,19 @@
 package com.example.xcpro.adsb
 
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.math.abs
 
 internal data class AdsbStoreSelection(
     val withinRadiusCount: Int,
     val withinVerticalCount: Int,
     val filteredByVerticalCount: Int,
     val cappedCount: Int,
-    val displayed: List<AdsbTrafficUiModel>
+    val displayed: List<AdsbTrafficUiModel>,
+    val emergencyAudioCandidateId: Icao24?
 )
 
 internal class AdsbTrafficStore(
-    private val proximityTrendEvaluator: AdsbProximityTrendEvaluator = AdsbProximityTrendEvaluator()
+    private val proximityTrendEvaluator: AdsbProximityTrendEvaluator = AdsbProximityTrendEvaluator(),
+    private val collisionRiskEvaluator: AdsbCollisionRiskEvaluator = AdsbCollisionRiskEvaluator()
 ) {
     private val targetsById = ConcurrentHashMap<Icao24, AdsbTarget>()
 
@@ -44,6 +45,7 @@ internal class AdsbTrafficStore(
 
     fun select(
         nowMonoMs: Long,
+        nowWallEpochSec: Long? = null,
         queryCenterLat: Double,
         queryCenterLon: Double,
         referenceLat: Double,
@@ -53,6 +55,8 @@ internal class AdsbTrafficStore(
         radiusMeters: Double,
         verticalAboveMeters: Double,
         verticalBelowMeters: Double,
+        ownshipIsCircling: Boolean = false,
+        circlingFeatureEnabled: Boolean = false,
         maxDisplayed: Int,
         staleAfterSec: Int
     ): AdsbStoreSelection {
@@ -82,7 +86,13 @@ internal class AdsbTrafficStore(
                     }
                 }
 
-                val ageSec = ((nowMonoMs - target.receivedMonoMs) / 1_000L).toInt().coerceAtLeast(0)
+                val receivedAgeSec =
+                    ((nowMonoMs - target.receivedMonoMs) / 1_000L).toInt().coerceAtLeast(0)
+                val contactAgeSec = contactAgeSec(
+                    nowWallEpochSec = nowWallEpochSec,
+                    lastContactEpochSec = target.lastContactEpochSec
+                )
+                val ageSec = maxOf(receivedAgeSec, contactAgeSec ?: 0)
                 val distanceMeters = AdsbGeoMath.haversineMeters(
                     lat1 = referenceLat,
                     lon1 = referenceLon,
@@ -98,22 +108,58 @@ internal class AdsbTrafficStore(
                 val trendAssessment = proximityTrendEvaluator.evaluate(
                     id = target.id,
                     distanceMeters = distanceMeters,
+                    sampleMonoMs = target.receivedMonoMs,
                     nowMonoMs = nowMonoMs,
                     hasOwnshipReference = usesOwnshipReference
                 )
-                val isEmergencyCollisionRisk = isEmergencyCollisionRisk(
+                val geometryEmergencyCollisionRisk = collisionRiskEvaluator.evaluate(
                     distanceMeters = distanceMeters,
                     trackDeg = target.trackDeg,
                     bearingDegFromUser = bearingDegFromUser,
-                    enabled = usesOwnshipReference &&
-                        trendAssessment.isClosing &&
-                        ageSec <= EMERGENCY_MAX_AGE_SEC
+                    altitudeDeltaMeters = altitudeDeltaMeters,
+                    verticalAboveMeters = verticalAboveMeters,
+                    verticalBelowMeters = verticalBelowMeters,
+                    hasOwnshipReference = usesOwnshipReference,
+                    isClosing = trendAssessment.isClosing,
+                    ageSec = ageSec
                 )
+                val circlingEmergencyContextEnabled =
+                    usesOwnshipReference && ownshipIsCircling && circlingFeatureEnabled
+                val circlingEmergencyVerticalAboveMeters = minOf(
+                    verticalAboveMeters,
+                    CIRCLING_EMERGENCY_VERTICAL_CAP_METERS
+                )
+                val circlingEmergencyVerticalBelowMeters = minOf(
+                    verticalBelowMeters,
+                    CIRCLING_EMERGENCY_VERTICAL_CAP_METERS
+                )
+                val isCirclingEmergencyRedRule = isCirclingEmergencyRedRule(
+                    distanceMeters = distanceMeters,
+                    altitudeDeltaMeters = altitudeDeltaMeters,
+                    enabled = circlingEmergencyContextEnabled &&
+                        trendAssessment.isClosing &&
+                        ageSec <= EMERGENCY_MAX_AGE_SEC,
+                    verticalAboveMeters = circlingEmergencyVerticalAboveMeters,
+                    verticalBelowMeters = circlingEmergencyVerticalBelowMeters
+                )
+                val isEmergencyCollisionRisk = geometryEmergencyCollisionRisk &&
+                    !isCirclingEmergencyRedRule
+                val isEmergencyAudioEligible = isEmergencyCollisionRisk || isCirclingEmergencyRedRule
                 val proximityTier = proximityTier(
                     distanceMeters = distanceMeters,
                     hasOwnshipReference = usesOwnshipReference,
+                    hasFreshTrendSample = trendAssessment.hasFreshTrendSample,
                     showClosingAlert = trendAssessment.showClosingAlert,
+                    isCirclingEmergencyRedRule = isCirclingEmergencyRedRule,
                     isEmergencyCollisionRisk = isEmergencyCollisionRisk
+                )
+                val proximityReason = proximityReason(
+                    hasOwnshipReference = usesOwnshipReference,
+                    isCirclingEmergencyRedRule = isCirclingEmergencyRedRule,
+                    isEmergencyCollisionRisk = isEmergencyCollisionRisk,
+                    hasTrendSample = trendAssessment.hasTrendSample,
+                    isClosing = trendAssessment.isClosing,
+                    showClosingAlert = trendAssessment.showClosingAlert
                 )
                 add(
                     AdsbTrafficUiModel(
@@ -134,13 +180,29 @@ internal class AdsbTrafficStore(
                         category = target.category,
                         lastContactEpochSec = target.lastContactEpochSec,
                         proximityTier = proximityTier,
+                        proximityReason = proximityReason,
                         isClosing = trendAssessment.isClosing,
                         closingRateMps = trendAssessment.closingRateMps,
-                        isEmergencyCollisionRisk = isEmergencyCollisionRisk
+                        isEmergencyCollisionRisk = isEmergencyCollisionRisk,
+                        isEmergencyAudioEligible = isEmergencyAudioEligible,
+                        isCirclingEmergencyRedRule = isCirclingEmergencyRedRule
                     )
                 )
             }
         }
+
+        val emergencyAudioCandidateId = withinVertical
+            .asSequence()
+            .filter { it.isEmergencyAudioEligible }
+            .sortedWith(
+                compareByDescending<AdsbTrafficUiModel> { it.isEmergencyCollisionRisk }
+                    .thenByDescending { it.isCirclingEmergencyRedRule }
+                    .thenBy { it.distanceMeters }
+                    .thenBy { it.ageSec }
+                    .thenBy { it.id.raw }
+            )
+            .map { it.id }
+            .firstOrNull()
 
         val displayed = withinVertical
             .sortedWith(
@@ -157,56 +219,80 @@ internal class AdsbTrafficStore(
             withinVerticalCount = withinVertical.size,
             filteredByVerticalCount = filteredByVerticalCount,
             cappedCount = cappedCount,
-            displayed = displayed
+            displayed = displayed,
+            emergencyAudioCandidateId = emergencyAudioCandidateId
         )
-    }
-
-    private fun isEmergencyCollisionRisk(
-        distanceMeters: Double,
-        trackDeg: Double?,
-        bearingDegFromUser: Double,
-        enabled: Boolean
-    ): Boolean {
-        if (!enabled) return false
-        if (!distanceMeters.isFinite() || distanceMeters > EMERGENCY_DISTANCE_METERS) return false
-        val track = trackDeg ?: return false
-        if (!track.isFinite()) return false
-        val bearingFromTargetToUser = normalizeDegrees(bearingDegFromUser + 180.0)
-        val headingError = minHeadingDiffDeg(track, bearingFromTargetToUser)
-        return headingError <= COLLISION_HEADING_TOLERANCE_DEG
     }
 
     private fun proximityTier(
         distanceMeters: Double,
         hasOwnshipReference: Boolean,
+        hasFreshTrendSample: Boolean,
         showClosingAlert: Boolean,
+        isCirclingEmergencyRedRule: Boolean,
         isEmergencyCollisionRisk: Boolean
     ): AdsbProximityTier {
         if (!hasOwnshipReference) return AdsbProximityTier.NEUTRAL
+        if (isCirclingEmergencyRedRule) return AdsbProximityTier.RED
         if (isEmergencyCollisionRisk) return AdsbProximityTier.EMERGENCY
-        if (!showClosingAlert) return AdsbProximityTier.GREEN
         if (!distanceMeters.isFinite()) return AdsbProximityTier.GREEN
-        return when {
+        val distanceTier = when {
             distanceMeters <= RED_DISTANCE_METERS -> AdsbProximityTier.RED
             distanceMeters <= AMBER_DISTANCE_METERS -> AdsbProximityTier.AMBER
             else -> AdsbProximityTier.GREEN
         }
+        if (showClosingAlert) return distanceTier
+        if (!hasFreshTrendSample) return distanceTier
+        return when (distanceTier) {
+            // Avoid close-range red/amber -> green oscillation on short trend recoveries.
+            AdsbProximityTier.RED -> AdsbProximityTier.AMBER
+            AdsbProximityTier.AMBER -> AdsbProximityTier.GREEN
+            AdsbProximityTier.GREEN -> AdsbProximityTier.GREEN
+            else -> AdsbProximityTier.GREEN
+        }
     }
 
-    private fun normalizeDegrees(value: Double): Double {
-        val normalized = value % 360.0
-        return if (normalized < 0.0) normalized + 360.0 else normalized
+    private fun proximityReason(
+        hasOwnshipReference: Boolean,
+        isCirclingEmergencyRedRule: Boolean,
+        isEmergencyCollisionRisk: Boolean,
+        hasTrendSample: Boolean,
+        isClosing: Boolean,
+        showClosingAlert: Boolean
+    ): AdsbProximityReason {
+        if (!hasOwnshipReference) return AdsbProximityReason.NO_OWNSHIP_REFERENCE
+        if (isCirclingEmergencyRedRule) return AdsbProximityReason.CIRCLING_RULE_APPLIED
+        if (isEmergencyCollisionRisk) return AdsbProximityReason.GEOMETRY_EMERGENCY_APPLIED
+        if (isClosing) return AdsbProximityReason.APPROACH_CLOSING
+        if (hasTrendSample && showClosingAlert) return AdsbProximityReason.RECOVERY_DWELL
+        return AdsbProximityReason.DIVERGING_OR_STEADY
     }
 
-    private fun minHeadingDiffDeg(a: Double, b: Double): Double {
-        val diff = abs(normalizeDegrees(a) - normalizeDegrees(b))
-        return if (diff > 180.0) 360.0 - diff else diff
+    private fun isCirclingEmergencyRedRule(
+        distanceMeters: Double,
+        altitudeDeltaMeters: Double?,
+        enabled: Boolean,
+        verticalAboveMeters: Double,
+        verticalBelowMeters: Double
+    ): Boolean {
+        if (!enabled) return false
+        if (!distanceMeters.isFinite() || distanceMeters > CIRCLING_RED_DISTANCE_METERS) return false
+        val altitudeDelta = altitudeDeltaMeters ?: return false
+        val above = altitudeDelta
+        val below = -altitudeDelta
+        return above <= verticalAboveMeters && below <= verticalBelowMeters
+    }
+
+    private fun contactAgeSec(nowWallEpochSec: Long?, lastContactEpochSec: Long?): Int? {
+        if (nowWallEpochSec == null || lastContactEpochSec == null) return null
+        if (nowWallEpochSec < lastContactEpochSec) return null
+        return (nowWallEpochSec - lastContactEpochSec).toInt().coerceAtLeast(0)
     }
 
     private companion object {
-        private const val EMERGENCY_DISTANCE_METERS = 1_000.0
-        private const val COLLISION_HEADING_TOLERANCE_DEG = 20.0
         private const val EMERGENCY_MAX_AGE_SEC = 20
+        private const val CIRCLING_RED_DISTANCE_METERS = 1_000.0
+        private const val CIRCLING_EMERGENCY_VERTICAL_CAP_METERS = 304.8
         private const val RED_DISTANCE_METERS = 2_000.0
         private const val AMBER_DISTANCE_METERS = 5_000.0
     }

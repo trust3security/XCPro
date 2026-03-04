@@ -1,7 +1,13 @@
 package com.example.xcpro.map
 
 import com.example.xcpro.MapOrientationManager
+import com.example.xcpro.adsb.ADSB_MAX_DISTANCE_DEFAULT_KM
+import com.example.xcpro.adsb.ADSB_VERTICAL_FILTER_ABOVE_DEFAULT_METERS
+import com.example.xcpro.adsb.ADSB_VERTICAL_FILTER_BELOW_DEFAULT_METERS
+import com.example.xcpro.adsb.AdsbSelectedTargetDetails
 import com.example.xcpro.adsb.AdsbTrafficUiModel
+import com.example.xcpro.adsb.Icao24
+import com.example.xcpro.adsb.metadata.domain.AdsbMetadataEnrichmentUseCase
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.map.model.GpsStatusUiModel
 import com.example.xcpro.map.model.MapLocationUiModel
@@ -73,6 +79,15 @@ internal fun createMergedAdsbTargetsState(
         }
     }.stateIn(scope = scope, started = SharingStarted.Eagerly, initialValue = emptyList())
 
+internal fun createSelectedAdsbTargetState(
+    scope: CoroutineScope,
+    adsbMetadataEnrichmentUseCase: AdsbMetadataEnrichmentUseCase,
+    selectedAdsbId: StateFlow<Icao24?>,
+    rawAdsbTargets: StateFlow<List<AdsbTrafficUiModel>>
+): StateFlow<AdsbSelectedTargetDetails?> = adsbMetadataEnrichmentUseCase
+    .selectedTargetDetails(selectedIcao24 = selectedAdsbId, adsbTargets = rawAdsbTargets)
+    .eagerState(scope = scope, initial = null)
+
 internal data class MapReplaySensorGateStates(
     val suppressLiveGps: StateFlow<Boolean>,
     val allowSensorStart: StateFlow<Boolean>
@@ -124,6 +139,46 @@ internal fun createOwnshipAltitudeState(
             gpsAltitude ?: sample?.baroAltitude?.value?.takeIf { it.isFinite() }
         }
         .stateIn(scope, SharingStarted.Eagerly, null)
+
+internal fun createOwnshipCirclingState(
+    scope: CoroutineScope,
+    flightDataUseCase: FlightDataUseCase
+): StateFlow<Boolean> =
+    flightDataUseCase.flightData
+        .map { sample -> sample?.isCircling == true }
+        .stateIn(scope, SharingStarted.Eagerly, false)
+
+internal fun createCirclingFeatureEnabledState(
+    scope: CoroutineScope,
+    thermallingModeUseCase: ThermallingModeRuntimeUseCase
+): StateFlow<Boolean> =
+    thermallingModeUseCase.settingsFlow
+        .map { settings -> settings.enabled }
+        .eagerState(scope = scope, initial = false)
+
+internal data class AdsbFilterStateFlows(
+    val maxDistanceKm: StateFlow<Int>,
+    val verticalAboveMeters: StateFlow<Double>,
+    val verticalBelowMeters: StateFlow<Double>
+)
+
+internal fun createAdsbFilterStateFlows(
+    scope: CoroutineScope,
+    adsbTrafficUseCase: AdsbTrafficUseCase
+): AdsbFilterStateFlows = AdsbFilterStateFlows(
+    maxDistanceKm = adsbTrafficUseCase.maxDistanceKm.eagerState(
+        scope = scope,
+        initial = ADSB_MAX_DISTANCE_DEFAULT_KM
+    ),
+    verticalAboveMeters = adsbTrafficUseCase.verticalAboveMeters.eagerState(
+        scope = scope,
+        initial = ADSB_VERTICAL_FILTER_ABOVE_DEFAULT_METERS
+    ),
+    verticalBelowMeters = adsbTrafficUseCase.verticalBelowMeters.eagerState(
+        scope = scope,
+        initial = ADSB_VERTICAL_FILTER_BELOW_DEFAULT_METERS
+    )
+)
 
 internal fun createCardHydrationReadyState(
     scope: CoroutineScope,

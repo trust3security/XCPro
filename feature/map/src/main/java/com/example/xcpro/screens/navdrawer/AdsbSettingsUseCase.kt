@@ -21,8 +21,14 @@ class AdsbSettingsUseCase @Inject constructor(
     val maxDistanceKmFlow: Flow<Int> = repository.maxDistanceKmFlow
     val verticalAboveMetersFlow: Flow<Double> = repository.verticalAboveMetersFlow
     val verticalBelowMetersFlow: Flow<Double> = repository.verticalBelowMetersFlow
+    val emergencyFlashEnabledFlow: Flow<Boolean> = repository.emergencyFlashEnabledFlow
     val emergencyAudioEnabledFlow: Flow<Boolean> = repository.emergencyAudioEnabledFlow
     val emergencyAudioCooldownMsFlow: Flow<Long> = repository.emergencyAudioCooldownMsFlow
+    val emergencyAudioMasterEnabledFlow: Flow<Boolean> = repository.emergencyAudioMasterEnabledFlow
+    val emergencyAudioShadowModeFlow: Flow<Boolean> = repository.emergencyAudioShadowModeFlow
+    val emergencyAudioCohortPercentFlow: Flow<Int> = repository.emergencyAudioCohortPercentFlow
+    val emergencyAudioRollbackLatchedFlow: Flow<Boolean> = repository.emergencyAudioRollbackLatchedFlow
+    val emergencyAudioRollbackReasonFlow: Flow<String?> = repository.emergencyAudioRollbackReasonFlow
     val unitsFlow: Flow<UnitsPreferences> = unitsRepository.unitsFlow
 
     suspend fun setIconSizePx(iconSizePx: Int) {
@@ -43,12 +49,32 @@ class AdsbSettingsUseCase @Inject constructor(
         repository.setVerticalBelowMeters(belowMeters)
     }
 
+    suspend fun setEmergencyFlashEnabled(enabled: Boolean) {
+        repository.setEmergencyFlashEnabled(enabled)
+    }
+
     suspend fun setEmergencyAudioEnabled(enabled: Boolean) {
         repository.setEmergencyAudioEnabled(enabled)
     }
 
     suspend fun setEmergencyAudioCooldownMs(cooldownMs: Long) {
         repository.setEmergencyAudioCooldownMs(cooldownMs)
+    }
+
+    suspend fun setEmergencyAudioMasterEnabled(enabled: Boolean) {
+        repository.setEmergencyAudioMasterEnabled(enabled)
+    }
+
+    suspend fun setEmergencyAudioShadowMode(enabled: Boolean) {
+        repository.setEmergencyAudioShadowMode(enabled)
+    }
+
+    suspend fun setEmergencyAudioCohortPercent(percent: Int) {
+        repository.setEmergencyAudioCohortPercent(percent)
+    }
+
+    suspend fun clearEmergencyAudioRollback() {
+        repository.clearEmergencyAudioRollback()
     }
 
     fun loadOpenSkyCredentials(): OpenSkyClientCredentials? =

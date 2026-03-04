@@ -62,11 +62,7 @@ class ForecastRasterOverlaySourceLayerFallbackTest {
                 any<PointF>(),
                 eq("forecast-primary-vector-fill-layer")
             )
-        ).thenReturn(
-            emptyList(),
-            emptyList(),
-            listOf(Feature.fromGeometry(Point.fromLngLat(0.0, 0.0)))
-        )
+        ).thenReturn(emptyList())
 
         val overlay = ForecastRasterOverlay(map = map, idNamespace = "primary")
         val tileSpec = ForecastTileSpec(
@@ -132,15 +128,20 @@ class ForecastRasterOverlaySourceLayerFallbackTest {
                 else -> null
             }
         }
+        var probeCalls = 0
         whenever(
             map.queryRenderedFeatures(
                 any<PointF>(),
                 eq("forecast-primary-vector-fill-layer")
             )
-        ).thenReturn(
-            emptyList(),
-            listOf(Feature.fromGeometry(Point.fromLngLat(0.0, 0.0)))
-        )
+        ).thenAnswer {
+            probeCalls += 1
+            if (probeCalls <= 5) {
+                emptyList<Feature>()
+            } else {
+                listOf(Feature.fromGeometry(Point.fromLngLat(0.0, 0.0)))
+            }
+        }
 
         val overlay = ForecastRasterOverlay(map = map, idNamespace = "primary")
         val tileSpec = ForecastTileSpec(
@@ -208,12 +209,7 @@ class ForecastRasterOverlaySourceLayerFallbackTest {
                 any<PointF>(),
                 eq("forecast-primary-vector-fill-layer")
             )
-        ).thenReturn(
-            emptyList(),
-            emptyList(),
-            emptyList(),
-            emptyList()
-        )
+        ).thenReturn(emptyList())
 
         val overlay = ForecastRasterOverlay(map = map, idNamespace = "primary")
         val tileSpec = ForecastTileSpec(

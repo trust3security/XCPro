@@ -4,6 +4,7 @@ import com.example.xcpro.common.waypoint.WaypointLoader
 import com.example.xcpro.common.glider.GliderConfigRepository
 import com.example.xcpro.adsb.AdsbProviderClient
 import com.example.xcpro.adsb.AdsbEmergencyAudioOutputPort
+import com.example.xcpro.adsb.AdsbEmergencyAudioRolloutPort
 import com.example.xcpro.adsb.AdsbEmergencyAudioSettingsPort
 import com.example.xcpro.adsb.AdsbTrafficPreferencesRepository
 import com.example.xcpro.adsb.AdsbTrafficRepository
@@ -76,6 +77,11 @@ abstract class AdsbBindingsModule {
     abstract fun bindAdsbEmergencyAudioSettingsPort(
         impl: AdsbTrafficPreferencesRepository
     ): AdsbEmergencyAudioSettingsPort
+
+    @Binds
+    abstract fun bindAdsbEmergencyAudioRolloutPort(
+        impl: AdsbTrafficPreferencesRepository
+    ): AdsbEmergencyAudioRolloutPort
 
     @Binds
     abstract fun bindAdsbEmergencyAudioOutputPort(

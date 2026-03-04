@@ -7,10 +7,26 @@ Purpose: single entry point for ADS-B smart proximity behavior, ownership, and t
 - Proximity is ownship-relative only (current glider/phone position).
 - Trend-aware policy is authoritative in repository/store domain path.
 - UI maps `proximity_tier` to colors only; UI does not re-evaluate business thresholds.
+- Proximity reason is SSOT-authored in domain/store (`proximityReason`) and surfaced in details/debug:
+  - `no_ownship_reference`
+  - `circling_rule_applied`
+  - `geometry_emergency_applied`
+  - `approach_closing`
+  - `recovery_dwell`
+  - `diverging_or_steady`
 - ADS-B snapshot now includes EMERGENCY-audio FSM telemetry (state, cooldown, trigger counters).
+- ADS-B snapshot includes Phase-5 KPI telemetry and reason-segmented counters:
+  - `emergencyAudioKpis` (per-hour rates, disable-within-5min rate, retrigger/mismatch guards)
+  - `proximityReasonCounts` (no-ref/circling/geometry/closing/dwell/steady)
+- ADS-B rollout path now includes Phase-6 runtime gates:
+  - master configured gate
+  - shadow mode
+  - cohort percent + deterministic bucket eligibility
+  - rollback latch (auto kill-switch on KPI breach)
+- Emergency marker flashing is runtime-configurable in ADS-B settings (`enabled` by default).
 - Smart rule:
   - closing traffic can escalate to alert colors,
-  - non-closing traffic de-escalates to green after recovery dwell.
+  - non-closing traffic de-escalates by one tier after recovery dwell (`red -> amber`, `amber -> green`) only on a fresh trend sample (no stale de-escalation).
 
 ## Tier and Trend Rules
 
@@ -32,9 +48,10 @@ Emergency is highest priority but only when all are true:
 - distance `<= 1 km`
 - inbound collision geometry match
 - actively closing
-- sample fresh (`ageSec <= 20`)
+- relative altitude is available and inside configured above/below vertical gate
+- sample fresh (`ageSec <= 20`, using max(received age, provider last-contact age when available))
 
-If stale or not closing, emergency is disabled.
+If stale, not closing, or relative altitude is unavailable, emergency is disabled.
 
 ## Ownship and Fallback Semantics
 
@@ -53,9 +70,46 @@ If stale or not closing, emergency is disabled.
   - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbProximityTrendEvaluator.kt`
 - Repository wiring and publish cadence:
   - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt`
+  - emergency-audio rollout master/shadow gates are sourced from ADS-B preferences SSOT.
+- KPI accumulation (monotonic denominator, anti-nuisance counters, determinism guard):
+  - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbEmergencyAudioKpiAccumulator.kt`
+- Rollout + rollback controls SSOT:
+  - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficPreferencesRepository.kt`
+  - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbEmergencyAudioRolloutPort.kt`
+- Runtime rollout + rollback gating:
+  - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepositoryRuntimeSnapshot.kt`
 - Map tier->color mapping:
   - `feature/map/src/main/java/com/example/xcpro/map/AdsbProximityColorPolicy.kt`
   - `feature/map/src/main/java/com/example/xcpro/map/AdsbGeoJsonMapper.kt`
+
+## KPI Contract
+
+- `alertsPerFlightHour`
+  - numerator: `alertTriggerCount` from EMERGENCY FSM.
+  - denominator: monotonic `activeObservationMs` while ADS-B is enabled with fresh ownship reference.
+- `cooldownBlockEpisodesPerFlightHour`
+  - numerator: `cooldownBlockEpisodeCount` from EMERGENCY FSM.
+  - denominator: same monotonic `activeObservationMs`.
+- `disableWithin5MinRate`
+  - disable event: transition of effective EMERGENCY policy `enabled -> disabled`.
+  - within-5min: disable event occurs <= 5 minutes after last alert trigger.
+  - rate: `disableWithin5MinCount / disableEventCount`.
+- `retriggerWithinCooldownCount`
+  - invariant guard counter; increments if alert-trigger counter increases inside cooldown window.
+- `determinismMismatchCount`
+  - invariant guard counter; increments on monotonic time regressions or counter regressions in KPI path.
+
+## Phase-6 Rollback Trigger Contract
+
+Rollback latch triggers when any condition becomes true:
+- `retriggerWithinCooldownCount > 0`
+- `determinismMismatchCount > 0`
+- `disableWithin5MinRate > 0.20` with `disableEventCount >= 2`
+
+When latched:
+- effective master rollout is forced off
+- shadow mode telemetry can continue
+- latch reason is surfaced in snapshot/debug and can be manually cleared from ADS-B settings
 
 ## Test Map
 
@@ -65,6 +119,9 @@ If stale or not closing, emergency is disabled.
   - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficStoreTest.kt`
 - Repository deterministic transitions:
   - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficRepositoryTest.kt`
+- KPI math + replay KPI parity:
+  - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbEmergencyAudioKpiAccumulatorTest.kt`
+  - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbEmergencyAudioReplayDeterminismTest.kt`
 
 ## Required Verification
 
@@ -77,8 +134,17 @@ python scripts/arch_gate.py
 ./gradlew assembleDebug
 ```
 
+Automated phase runner (fast per phase, full at end):
+
+```bat
+scripts\qa\run_proximity_phase_gates.bat
+```
+
 ## Related Docs
 
 - `docs/ADS-b/ADSB.md`
 - `docs/PROXIMITY/CHANGE_PLAN_ADSB_SMART_PROXIMITY_TREND_2026-03-01.md`
 - `docs/PROXIMITY/CHANGE_PLAN_ADSB_EMERGENCY_AUDIO_ALERTS_2026-03-02.md`
+- `docs/PROXIMITY/CHANGE_PLAN_ADSB_PROXIMITY_PRODUCTION_GRADE_2026-03-03.md`
+- `docs/PROXIMITY/CHANGE_PLAN_ADSB_CIRCLING_1KM_RED_EMERGENCY_AUDIO_2026-03-04.md`
+- `docs/PROXIMITY/AGENT_EXECUTION_CONTRACT_PROXIMITY_PHASED_FAST_THEN_FULL_2026-03-04.md`

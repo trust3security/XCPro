@@ -53,14 +53,13 @@ android {
         release {
             val openSkyClientId = readSecretProperty("OPENSKY_CLIENT_ID")
             val openSkyClientSecret = readSecretProperty("OPENSKY_CLIENT_SECRET")
-            val skySightApiKey = readSecretProperty("SKYSIGHT_API_KEY")
             buildConfigField("String", "OPENSKY_CLIENT_ID", openSkyClientId.asBuildConfigString())
             buildConfigField(
                 "String",
                 "OPENSKY_CLIENT_SECRET",
                 openSkyClientSecret.asBuildConfigString()
             )
-            buildConfigField("String", "SKYSIGHT_API_KEY", skySightApiKey.asBuildConfigString())
+            buildConfigField("String", "SKYSIGHT_API_KEY", "\"\"")
         }
     }
 

@@ -35,7 +35,11 @@ fun ProfilesScreen(
     navController: NavHostController,
     drawerState: DrawerState,
     onLoadConfig: () -> Unit = {},
-    onSaveConfig: () -> Unit = {}
+    onSaveConfig: () -> Unit = {},
+    onNavigateUp: (() -> Unit)? = null,
+    onSecondaryNavigate: (() -> Unit)? = null,
+    onNavigateToMap: (() -> Unit)? = null,
+    onClose: (() -> Unit)? = null
 ) {
     val scope = rememberCoroutineScope()
     val profileViewModel: ProfileViewModel = hiltViewModel()
@@ -46,6 +50,25 @@ fun ProfilesScreen(
     var showExportDialog by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
     var exportMessage by remember { mutableStateOf<String?>(null) }
+    val navigateUpAction: () -> Unit = onNavigateUp ?: {
+        navController.navigateUp()
+        Unit
+    }
+    val secondaryNavigateAction: () -> Unit = onSecondaryNavigate ?: {
+        navController.popBackStack()
+        Unit
+    }
+    val navigateToMapAction: () -> Unit = onNavigateToMap ?: {
+        scope.launch {
+            drawerState.close()
+            navController.popBackStack("map", inclusive = false)
+        }
+        Unit
+    }
+    val closeAction: () -> Unit = onClose ?: {
+        navController.popBackStack("map", inclusive = false)
+        Unit
+    }
     
     val navBarInsets = WindowInsets.navigationBars.asPaddingValues()
     val hasNavBar = navBarInsets.calculateBottomPadding() > 0.dp
@@ -66,14 +89,9 @@ fun ProfilesScreen(
         topBar = {
             SettingsTopAppBar(
                 title = "Profiles",
-                onNavigateUp = { navController.navigateUp() },
-                onSecondaryNavigate = { navController.popBackStack() },
-                onNavigateToMap = {
-                    scope.launch {
-                        drawerState.close()
-                        navController.popBackStack("map", inclusive = false)
-                    }
-                }
+                onNavigateUp = navigateUpAction,
+                onSecondaryNavigate = secondaryNavigateAction,
+                onNavigateToMap = navigateToMapAction
             )
         },
         bottomBar = {
@@ -96,9 +114,7 @@ fun ProfilesScreen(
                     }) {
                         Text("Save")
                     }
-                    Button(onClick = {
-                        navController.popBackStack("map", inclusive = false)
-                    }) {
+                    Button(onClick = closeAction) {
                         Text("Close")
                     }
                 }
@@ -296,9 +312,7 @@ fun ProfilesScreen(
                             }) {
                                 Text("Save")
                             }
-                            Button(onClick = {
-                                navController.popBackStack("map", inclusive = false)
-                            }) {
+                            Button(onClick = closeAction) {
                                 Text("Close")
                             }
                         }

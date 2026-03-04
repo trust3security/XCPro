@@ -23,11 +23,13 @@ class ForecastCredentialsRepositoryTest {
     @Before
     fun setUp() = runBlocking {
         repository = ForecastCredentialsRepository(context)
+        repository.setVolatileFallbackAllowed(false)
         repository.clearCredentials()
     }
 
     @Test
-    fun saveThenLoadCredentials_trimsAndReturnsValues() = runBlocking {
+    fun saveThenLoadCredentials_preservesExactValues() = runBlocking {
+        enableFallbackWhenRequired()
         repository.saveCredentials(
             username = "  pilot@example.com  ",
             password = "  secret123  "
@@ -36,8 +38,8 @@ class ForecastCredentialsRepositoryTest {
         val credentials = repository.loadCredentials()
 
         assertNotNull(credentials)
-        assertEquals("pilot@example.com", credentials?.username)
-        assertEquals("secret123", credentials?.password)
+        assertEquals("  pilot@example.com  ", credentials?.username)
+        assertEquals("  secret123  ", credentials?.password)
     }
 
     @Test
@@ -48,6 +50,7 @@ class ForecastCredentialsRepositoryTest {
 
     @Test
     fun clearCredentials_removesSavedValues() = runBlocking {
+        enableFallbackWhenRequired()
         repository.saveCredentials(
             username = "pilot@example.com",
             password = "secret123"
@@ -60,12 +63,33 @@ class ForecastCredentialsRepositoryTest {
     }
 
     @Test
+    fun volatileFallbackAllowed_defaultsToFalse() = runBlocking {
+        assertEquals(false, repository.volatileFallbackAllowed())
+    }
+
+    @Test
+    fun setVolatileFallbackAllowed_updatesPolicy() = runBlocking {
+        repository.setVolatileFallbackAllowed(true)
+        assertEquals(true, repository.volatileFallbackAllowed())
+
+        repository.setVolatileFallbackAllowed(false)
+        assertEquals(false, repository.volatileFallbackAllowed())
+    }
+
+    @Test
     fun credentialStorageMode_returnsKnownMode() = runBlocking {
         val mode = repository.credentialStorageMode()
 
         assertTrue(
             mode == ForecastCredentialStorageMode.ENCRYPTED ||
-                mode == ForecastCredentialStorageMode.PLAINTEXT_FALLBACK
+                mode == ForecastCredentialStorageMode.VOLATILE_MEMORY ||
+                mode == ForecastCredentialStorageMode.ENCRYPTION_UNAVAILABLE
         )
+    }
+
+    private suspend fun enableFallbackWhenRequired() {
+        if (repository.credentialStorageMode() == ForecastCredentialStorageMode.ENCRYPTION_UNAVAILABLE) {
+            repository.setVolatileFallbackAllowed(true)
+        }
     }
 }

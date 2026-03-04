@@ -56,29 +56,40 @@ import kotlin.math.exp
 fun HawkVarioSettingsScreen(
     navController: NavHostController,
     drawerState: DrawerState,
-    viewModel: HawkVarioSettingsViewModel = hiltViewModel()
+    viewModel: HawkVarioSettingsViewModel = hiltViewModel(),
+    onNavigateUp: (() -> Unit)? = null,
+    onSecondaryNavigate: (() -> Unit)? = null,
+    onNavigateToMap: (() -> Unit)? = null
 ) {
     val scroll = rememberScrollState()
     val scope = rememberCoroutineScope()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val navigateUpAction: () -> Unit = onNavigateUp ?: {
+        navController.navigateUp()
+        Unit
+    }
+    val secondaryNavigateAction: () -> Unit = onSecondaryNavigate ?: {
+        scope.launch {
+            navController.popBackStack("map", inclusive = false)
+            drawerState.open()
+        }
+        Unit
+    }
+    val navigateToMapAction: () -> Unit = onNavigateToMap ?: {
+        scope.launch {
+            drawerState.close()
+            navController.popBackStack("map", inclusive = false)
+        }
+        Unit
+    }
 
     Scaffold(
         topBar = {
             SettingsTopAppBar(
                 title = "HAWK Vario",
-                onNavigateUp = { navController.navigateUp() },
-                onSecondaryNavigate = {
-                    scope.launch {
-                        navController.popBackStack("map", inclusive = false)
-                        drawerState.open()
-                    }
-                },
-                onNavigateToMap = {
-                    scope.launch {
-                        drawerState.close()
-                        navController.popBackStack("map", inclusive = false)
-                    }
-                }
+                onNavigateUp = navigateUpAction,
+                onSecondaryNavigate = secondaryNavigateAction,
+                onNavigateToMap = navigateToMapAction
             )
         }
     ) { padding ->

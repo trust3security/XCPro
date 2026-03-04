@@ -61,6 +61,9 @@ import com.example.xcpro.screens.navdrawer.HotspotsSettingsContent
 import com.example.xcpro.screens.navdrawer.HotspotsSettingsViewModel
 import com.example.xcpro.screens.navdrawer.OgnSettingsContent
 import com.example.xcpro.screens.navdrawer.OgnSettingsViewModel
+import com.example.xcpro.screens.navdrawer.OrientationSettingsContent
+import com.example.xcpro.screens.navdrawer.OrientationSettingsSheet
+import com.example.xcpro.screens.navdrawer.OrientationSettingsViewModel
 import com.example.xcpro.screens.navdrawer.SettingsTopAppBar
 import com.example.xcpro.screens.navdrawer.ThermallingSettingsContent
 import com.example.xcpro.screens.navdrawer.ThermallingSettingsViewModel
@@ -76,60 +79,67 @@ import kotlinx.coroutines.launch
 @Composable
 internal fun ProximitySettingsSheet(
     onDismiss: () -> Unit,
-    onOpenAdsb: () -> Unit,
+    onNavigateToDrawer: () -> Unit,
+    onNavigateToMap: () -> Unit,
     onOpenOgn: () -> Unit,
     onOpenHotspots: () -> Unit,
     onOpenLookAndFeel: () -> Unit,
     onOpenColors: () -> Unit
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = "Proximity Settings",
-                style = MaterialTheme.typography.headlineSmall
-            )
-            Text(
-                text = "Manage traffic behavior, icon style, and color visibility.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            SettingsTopAppBar(
+                title = "Proximity",
+                onNavigateUp = onDismiss,
+                onSecondaryNavigate = onNavigateToDrawer,
+                onNavigateToMap = onNavigateToMap
             )
 
-            ProximitySheetAction(
-                title = "ADS-b Traffic",
-                description = "Range, vertical limits, and icon size.",
-                icon = Icons.Default.AirplanemodeActive,
-                onClick = onOpenAdsb
-            )
-            ProximitySheetAction(
-                title = "OGN Traffic",
-                description = "OGN overlay, size, and receive controls.",
-                icon = Icons.Default.Flight,
-                onClick = onOpenOgn
-            )
-            ProximitySheetAction(
-                title = "Hotspots",
-                description = "Thermal hotspot visibility and retention.",
-                icon = Icons.Default.Speed,
-                onClick = onOpenHotspots
-            )
-            ProximitySheetAction(
-                title = "Look & Feel",
-                description = "Global style for map and cards.",
-                icon = Icons.Outlined.Style,
-                onClick = onOpenLookAndFeel
-            )
-            ProximitySheetAction(
-                title = "Colors",
-                description = "Fine tune color themes and contrast.",
-                icon = Icons.Default.GridView,
-                onClick = onOpenColors
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Proximity Settings",
+                    style = MaterialTheme.typography.headlineSmall
+                )
+                Text(
+                    text = "Manage traffic behavior, icon style, and color visibility.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                ProximitySheetAction(
+                    title = "OGN Traffic",
+                    description = "OGN overlay, size, and receive controls.",
+                    icon = Icons.Default.Flight,
+                    onClick = onOpenOgn
+                )
+                ProximitySheetAction(
+                    title = "Hotspots",
+                    description = "Thermal hotspot visibility and retention.",
+                    icon = Icons.Default.Speed,
+                    onClick = onOpenHotspots
+                )
+                ProximitySheetAction(
+                    title = "Look & Feel",
+                    description = "Global style for map and cards.",
+                    icon = Icons.Outlined.Style,
+                    onClick = onOpenLookAndFeel
+                )
+                ProximitySheetAction(
+                    title = "Colors",
+                    description = "Fine tune color themes and contrast.",
+                    icon = Icons.Default.GridView,
+                    onClick = onOpenColors
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
         }
     }
 }
@@ -152,6 +162,7 @@ internal fun WeatherSettingsSubSheet(
 @Composable
 internal fun OgnSettingsSubSheet(
     onDismiss: () -> Unit,
+    onNavigateToDrawer: () -> Unit,
     onNavigateToMap: () -> Unit
 ) {
     val viewModel: OgnSettingsViewModel = hiltViewModel()
@@ -162,7 +173,7 @@ internal fun OgnSettingsSubSheet(
             SettingsTopAppBar(
                 title = "OGN",
                 onNavigateUp = onDismiss,
-                onSecondaryNavigate = null,
+                onSecondaryNavigate = onNavigateToDrawer,
                 onNavigateToMap = onNavigateToMap
             )
             Box(
@@ -191,6 +202,7 @@ internal fun OgnSettingsSubSheet(
 @Composable
 internal fun HotspotsSettingsSubSheet(
     onDismiss: () -> Unit,
+    onNavigateToDrawer: () -> Unit,
     onNavigateToMap: () -> Unit
 ) {
     val viewModel: HotspotsSettingsViewModel = hiltViewModel()
@@ -210,7 +222,7 @@ internal fun HotspotsSettingsSubSheet(
             SettingsTopAppBar(
                 title = "Hotspots",
                 onNavigateUp = onDismiss,
-                onSecondaryNavigate = null,
+                onSecondaryNavigate = onNavigateToDrawer,
                 onNavigateToMap = onNavigateToMap
             )
             Box(
@@ -234,6 +246,7 @@ internal fun HotspotsSettingsSubSheet(
 @Composable
 internal fun ThermallingSettingsSubSheet(
     onDismiss: () -> Unit,
+    onNavigateToDrawer: () -> Unit,
     onNavigateToMap: () -> Unit
 ) {
     val viewModel: ThermallingSettingsViewModel = hiltViewModel()
@@ -253,7 +266,7 @@ internal fun ThermallingSettingsSubSheet(
             SettingsTopAppBar(
                 title = stringResource(R.string.thermalling_title),
                 onNavigateUp = onDismiss,
-                onSecondaryNavigate = null,
+                onSecondaryNavigate = onNavigateToDrawer,
                 onNavigateToMap = onNavigateToMap
             )
             Box(
@@ -278,6 +291,33 @@ internal fun ThermallingSettingsSubSheet(
                 )
             }
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun OrientationSettingsSubSheet(
+    onDismiss: () -> Unit,
+    onNavigateToDrawer: () -> Unit,
+    onNavigateToMap: () -> Unit
+) {
+    val viewModel: OrientationSettingsViewModel = hiltViewModel()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    OrientationSettingsSheet(
+        onDismissRequest = onDismiss,
+        onNavigateUp = onDismiss,
+        onSecondaryNavigate = onNavigateToDrawer,
+        onNavigateToMap = onNavigateToMap
+    ) {
+        OrientationSettingsContent(
+            uiState = uiState,
+            onSetCruiseMode = viewModel::setCruiseMode,
+            onSetCirclingMode = viewModel::setCirclingMode,
+            onSetGliderScreenPercent = viewModel::setGliderScreenPercent,
+            onSetMapShiftBiasMode = viewModel::setMapShiftBiasMode,
+            onSetMapShiftBiasStrength = viewModel::setMapShiftBiasStrength
+        )
     }
 }
 

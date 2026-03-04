@@ -11,6 +11,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 import org.maplibre.android.maps.MapLibreMap
+import org.mockito.kotlin.doAnswer
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
@@ -43,6 +45,73 @@ class MapOverlayManagerForecastWarningTest {
         )
 
         assertEquals(warning, fixture.manager.forecastRuntimeWarningMessage.value)
+    }
+
+    @Test
+    fun setForecastOverlay_combinesPrimaryAndWindWarnings_withPipeDelimiter() {
+        val fixture = createFixture()
+        val map: MapLibreMap = mock()
+        val primaryOverlay: ForecastRasterOverlay = mock()
+        val windOverlay: ForecastRasterOverlay = mock()
+
+        fixture.mapState.mapLibreMap = map
+        fixture.mapState.forecastOverlay = primaryOverlay
+        fixture.mapState.forecastWindOverlay = windOverlay
+        whenever(primaryOverlay.runtimeWarningMessage()).thenReturn("primary fallback warning")
+        whenever(windOverlay.runtimeWarningMessage()).thenReturn("wind fallback warning")
+
+        fixture.manager.setForecastOverlay(
+            enabled = true,
+            primaryTileSpec = tileSpec(),
+            primaryLegendSpec = null,
+            windOverlayEnabled = true,
+            windTileSpec = tileSpec(),
+            windLegendSpec = null,
+            opacity = 0.7f,
+            windOverlayScale = 1.0f,
+            windDisplayMode = ForecastWindDisplayMode.ARROW
+        )
+
+        assertEquals(
+            "primary fallback warning | wind fallback warning",
+            fixture.manager.forecastRuntimeWarningMessage.value
+        )
+    }
+
+    @Test
+    fun setForecastOverlay_renderFailure_surfacesRuntimeWarningWithoutThrowing() {
+        val fixture = createFixture()
+        val map: MapLibreMap = mock()
+        val primaryOverlay: ForecastRasterOverlay = mock()
+        val windOverlay: ForecastRasterOverlay = mock()
+        val primaryTile = tileSpec()
+
+        fixture.mapState.mapLibreMap = map
+        fixture.mapState.forecastOverlay = primaryOverlay
+        fixture.mapState.forecastWindOverlay = windOverlay
+        doAnswer {
+            throw IllegalStateException("primary render failed")
+        }.whenever(primaryOverlay).render(
+            tileSpec = eq(primaryTile),
+            opacity = eq(0.7f),
+            windOverlayScale = eq(1.0f),
+            windDisplayMode = eq(ForecastWindDisplayMode.ARROW),
+            legendSpec = eq(null)
+        )
+
+        fixture.manager.setForecastOverlay(
+            enabled = true,
+            primaryTileSpec = primaryTile,
+            primaryLegendSpec = null,
+            windOverlayEnabled = false,
+            windTileSpec = null,
+            windLegendSpec = null,
+            opacity = 0.7f,
+            windOverlayScale = 1.0f,
+            windDisplayMode = ForecastWindDisplayMode.ARROW
+        )
+
+        assertEquals("primary render failed", fixture.manager.forecastRuntimeWarningMessage.value)
     }
 
     @Test

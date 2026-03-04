@@ -92,10 +92,28 @@ fun SettingsScreen(
             )
         }
     }
+    GeneralSettingsSheetHost(
+        navController = navController,
+        drawerState = drawerState,
+        onDismissRequest = closeToMap,
+        onNavigateUp = closeToDrawer,
+        onNavigateToMap = closeToMap
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun GeneralSettingsSheetHost(
+    navController: NavHostController,
+    drawerState: DrawerState,
+    onDismissRequest: () -> Unit,
+    onNavigateUp: () -> Unit,
+    onNavigateToMap: () -> Unit
+) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
-        onDismissRequest = closeToMap,
+        onDismissRequest = onDismissRequest,
         sheetState = sheetState,
         dragHandle = null,
         containerColor = MaterialTheme.colorScheme.surface
@@ -107,13 +125,15 @@ fun SettingsScreen(
         ) {
             SettingsTopAppBar(
                 title = "General",
-                onNavigateUp = closeToDrawer,
+                onNavigateUp = onNavigateUp,
                 onSecondaryNavigate = null,
-                onNavigateToMap = closeToMap
+                onNavigateToMap = onNavigateToMap
             )
             GeneralSettingsContent(
                 navController = navController,
-                onNavigateToMap = closeToMap
+                drawerState = drawerState,
+                onNavigateToMap = onNavigateToMap,
+                onNavigateToDrawer = onNavigateUp
             )
         }
     }
@@ -144,7 +164,9 @@ internal suspend fun closeGeneralToDrawer(
 @Composable
 private fun GeneralSettingsContent(
     navController: NavHostController,
-    onNavigateToMap: () -> Unit
+    drawerState: DrawerState,
+    onNavigateToMap: () -> Unit,
+    onNavigateToDrawer: () -> Unit
 ) {
     val listState = rememberLazyListState()
     var activeSubSheet by remember { mutableStateOf(GeneralSubSheet.NONE) }
@@ -172,13 +194,13 @@ private fun GeneralSettingsContent(
                         CategoryItem(
                             title = "Files",
                             icon = Icons.Default.Folder,
-                            onClick = { navController.navigate(SettingsRoutes.FILES) },
+                            onClick = { activeSubSheet = GeneralSubSheet.FILES },
                             modifier = Modifier.weight(1f)
                         )
                         CategoryItem(
                             title = "Profiles",
                             icon = Icons.Default.Map,
-                            onClick = { navController.navigate(SettingsRoutes.PROFILES) },
+                            onClick = { activeSubSheet = GeneralSubSheet.PROFILES },
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -194,13 +216,13 @@ private fun GeneralSettingsContent(
                         CategoryItem(
                             title = "Look & Feel",
                             icon = Icons.Outlined.Style,
-                            onClick = { navController.navigate("look_and_feel") },
+                            onClick = { activeSubSheet = GeneralSubSheet.LOOK_AND_FEEL },
                             modifier = Modifier.weight(1f)
                         )
                         CategoryItem(
                             title = "Units",
                             icon = Icons.Default.Straighten,
-                            onClick = { navController.navigate("units_settings") },
+                            onClick = { activeSubSheet = GeneralSubSheet.UNITS },
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -216,13 +238,13 @@ private fun GeneralSettingsContent(
                         CategoryItem(
                             title = "Polar",
                             icon = Icons.Default.Flight,
-                            onClick = { navController.navigate("polar_settings") },
+                            onClick = { activeSubSheet = GeneralSubSheet.POLAR },
                             modifier = Modifier.weight(1f)
                         )
                         CategoryItem(
                             title = "Levo Vario",
                             icon = Icons.Default.Speed,
-                            onClick = { navController.navigate("levo_vario_settings") },
+                            onClick = { activeSubSheet = GeneralSubSheet.LEVO_VARIO },
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -238,13 +260,13 @@ private fun GeneralSettingsContent(
                         CategoryItem(
                             title = "HAWK Vario",
                             icon = Icons.Default.Speed,
-                            onClick = { navController.navigate("hawk_vario_settings") },
+                            onClick = { activeSubSheet = GeneralSubSheet.HAWK_VARIO },
                             modifier = Modifier.weight(1f)
                         )
                         CategoryItem(
                             title = "Orientation",
                             icon = Icons.Default.Explore,
-                            onClick = { navController.navigate("orientation_settings") },
+                            onClick = { activeSubSheet = GeneralSubSheet.ORIENTATION },
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -260,7 +282,7 @@ private fun GeneralSettingsContent(
                         CategoryItem(
                             title = "Layouts",
                             icon = Icons.Default.GridView,
-                            onClick = { navController.navigate("layouts") },
+                            onClick = { activeSubSheet = GeneralSubSheet.LAYOUTS },
                             modifier = Modifier.weight(1f)
                         )
                         CategoryItem(
@@ -283,7 +305,7 @@ private fun GeneralSettingsContent(
                             title = "SkySight",
                             iconResId = R.drawable.ic_skysight,
                             iconSize = 26.4.dp,
-                            onClick = { navController.navigate("forecast_settings") },
+                            onClick = { activeSubSheet = GeneralSubSheet.SKYSIGHT },
                             modifier = Modifier.weight(1f)
                         )
                         CategoryItem(
@@ -322,13 +344,20 @@ private fun GeneralSettingsContent(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 8.dp)
+                            .padding(horizontal = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         CategoryItem(
                             title = stringResource(R.string.thermalling_title),
                             icon = Icons.Default.Explore,
                             onClick = { activeSubSheet = GeneralSubSheet.THERMALLING },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.weight(1f)
+                        )
+                        CategoryItem(
+                            title = "ADS-b",
+                            icon = Icons.Default.AirplanemodeActive,
+                            onClick = { activeSubSheet = GeneralSubSheet.ADSB },
+                            modifier = Modifier.weight(1f)
                         )
                     }
                 }
@@ -343,13 +372,13 @@ private fun GeneralSettingsContent(
                         CategoryItem(
                             title = "Navboxes",
                             icon = Icons.Default.Dashboard,
-                            onClick = { navController.navigate("dfnavboxes") },
+                            onClick = { activeSubSheet = GeneralSubSheet.NAVBOXES },
                             modifier = Modifier.weight(1f)
                         )
                         CategoryItem(
                             title = "IGC Replay",
                             icon = Icons.Default.PlayArrow,
-                            onClick = { navController.navigate("igcReplay") },
+                            onClick = { activeSubSheet = GeneralSubSheet.IGC_REPLAY },
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -363,10 +392,8 @@ private fun GeneralSettingsContent(
         GeneralSubSheet.PROXIMITY -> {
             ProximitySettingsSheet(
                 onDismiss = { activeSubSheet = GeneralSubSheet.NONE },
-                onOpenAdsb = {
-                    activeSubSheet = GeneralSubSheet.NONE
-                    navController.navigate("adsb_settings")
-                },
+                onNavigateToDrawer = onNavigateToDrawer,
+                onNavigateToMap = onNavigateToMap,
                 onOpenOgn = {
                     activeSubSheet = GeneralSubSheet.OGN
                 },
@@ -389,21 +416,136 @@ private fun GeneralSettingsContent(
                 onNavigateToMap = onNavigateToMap
             )
         }
+        GeneralSubSheet.FILES -> {
+            FilesSettingsSubSheet(
+                navController = navController,
+                drawerState = drawerState,
+                onDismiss = { activeSubSheet = GeneralSubSheet.NONE },
+                onNavigateToDrawer = onNavigateToDrawer,
+                onNavigateToMap = onNavigateToMap
+            )
+        }
+        GeneralSubSheet.PROFILES -> {
+            ProfilesSettingsSubSheet(
+                navController = navController,
+                drawerState = drawerState,
+                onDismiss = { activeSubSheet = GeneralSubSheet.NONE },
+                onNavigateToDrawer = onNavigateToDrawer,
+                onNavigateToMap = onNavigateToMap
+            )
+        }
+        GeneralSubSheet.LOOK_AND_FEEL -> {
+            LookAndFeelSettingsSubSheet(
+                navController = navController,
+                drawerState = drawerState,
+                onDismiss = { activeSubSheet = GeneralSubSheet.NONE },
+                onNavigateToDrawer = onNavigateToDrawer,
+                onNavigateToMap = onNavigateToMap
+            )
+        }
+        GeneralSubSheet.UNITS -> {
+            UnitsSettingsSubSheet(
+                navController = navController,
+                drawerState = drawerState,
+                onDismiss = { activeSubSheet = GeneralSubSheet.NONE },
+                onNavigateToDrawer = onNavigateToDrawer,
+                onNavigateToMap = onNavigateToMap
+            )
+        }
+        GeneralSubSheet.POLAR -> {
+            PolarSettingsSubSheet(
+                navController = navController,
+                drawerState = drawerState,
+                onDismiss = { activeSubSheet = GeneralSubSheet.NONE },
+                onNavigateToDrawer = onNavigateToDrawer,
+                onNavigateToMap = onNavigateToMap
+            )
+        }
+        GeneralSubSheet.LEVO_VARIO -> {
+            LevoVarioSettingsSubSheet(
+                navController = navController,
+                drawerState = drawerState,
+                onDismiss = { activeSubSheet = GeneralSubSheet.NONE },
+                onNavigateToDrawer = onNavigateToDrawer,
+                onNavigateToMap = onNavigateToMap
+            )
+        }
+        GeneralSubSheet.HAWK_VARIO -> {
+            HawkVarioSettingsSubSheet(
+                navController = navController,
+                drawerState = drawerState,
+                onDismiss = { activeSubSheet = GeneralSubSheet.NONE },
+                onNavigateToDrawer = onNavigateToDrawer,
+                onNavigateToMap = onNavigateToMap
+            )
+        }
+        GeneralSubSheet.LAYOUTS -> {
+            LayoutSettingsSubSheet(
+                navController = navController,
+                drawerState = drawerState,
+                onDismiss = { activeSubSheet = GeneralSubSheet.NONE },
+                onNavigateToDrawer = onNavigateToDrawer,
+                onNavigateToMap = onNavigateToMap
+            )
+        }
+        GeneralSubSheet.SKYSIGHT -> {
+            ForecastSettingsSubSheet(
+                navController = navController,
+                drawerState = drawerState,
+                onDismiss = { activeSubSheet = GeneralSubSheet.NONE },
+                onNavigateToDrawer = onNavigateToDrawer,
+                onNavigateToMap = onNavigateToMap
+            )
+        }
         GeneralSubSheet.OGN -> {
             OgnSettingsSubSheet(
                 onDismiss = { activeSubSheet = GeneralSubSheet.NONE },
+                onNavigateToDrawer = onNavigateToDrawer,
+                onNavigateToMap = onNavigateToMap
+            )
+        }
+        GeneralSubSheet.ADSB -> {
+            AdsbSettingsSubSheet(
+                navController = navController,
+                drawerState = drawerState,
+                onDismiss = { activeSubSheet = GeneralSubSheet.NONE },
+                onNavigateToDrawer = onNavigateToDrawer,
                 onNavigateToMap = onNavigateToMap
             )
         }
         GeneralSubSheet.HOTSPOTS -> {
             HotspotsSettingsSubSheet(
                 onDismiss = { activeSubSheet = GeneralSubSheet.NONE },
+                onNavigateToDrawer = onNavigateToDrawer,
+                onNavigateToMap = onNavigateToMap
+            )
+        }
+        GeneralSubSheet.NAVBOXES -> {
+            NavboxesSettingsSubSheet(
+                navController = navController,
+                drawerState = drawerState,
+                onDismiss = { activeSubSheet = GeneralSubSheet.NONE },
+                onNavigateToDrawer = onNavigateToDrawer,
+                onNavigateToMap = onNavigateToMap
+            )
+        }
+        GeneralSubSheet.IGC_REPLAY -> {
+            IgcReplaySettingsSubSheet(
+                navController = navController,
+                onDismiss = { activeSubSheet = GeneralSubSheet.NONE }
+            )
+        }
+        GeneralSubSheet.ORIENTATION -> {
+            OrientationSettingsSubSheet(
+                onDismiss = { activeSubSheet = GeneralSubSheet.NONE },
+                onNavigateToDrawer = onNavigateToDrawer,
                 onNavigateToMap = onNavigateToMap
             )
         }
         GeneralSubSheet.THERMALLING -> {
             ThermallingSettingsSubSheet(
                 onDismiss = { activeSubSheet = GeneralSubSheet.NONE },
+                onNavigateToDrawer = onNavigateToDrawer,
                 onNavigateToMap = onNavigateToMap
             )
         }
@@ -414,8 +556,21 @@ private enum class GeneralSubSheet {
     NONE,
     PROXIMITY,
     WEATHER,
+    FILES,
+    PROFILES,
+    LOOK_AND_FEEL,
+    UNITS,
+    POLAR,
+    LEVO_VARIO,
+    HAWK_VARIO,
+    LAYOUTS,
+    SKYSIGHT,
     OGN,
+    ADSB,
     HOTSPOTS,
+    NAVBOXES,
+    IGC_REPLAY,
+    ORIENTATION,
     THERMALLING
 }
 

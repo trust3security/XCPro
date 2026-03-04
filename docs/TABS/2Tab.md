@@ -48,6 +48,12 @@ Status: Implemented (tab-hosted controls)
    (`MapOverlayManager` -> `SkySightSatelliteOverlay`) and can run in parallel with forecast/wind overlays.
 6. When SkySight satellite overlays are active, OGN glider markers use a white-contrast icon mode
    for map readability. This switch is applied lazily on each target's next normal OGN update.
+7. Dual-rain arbitration is active:
+   - when RainViewer is enabled and SkySight non-wind parameter is `Rain` (`accrain`),
+     SkySight primary rain rendering is suppressed to avoid dual rain layers,
+     while SkySight wind overlay remains available.
+8. Satellite animation frame order is oldest -> newest and loops predictably (`1,2,3,4,5,6,1,2,...`)
+   so cloud/radar/lightning movement direction remains visually coherent.
 
 ## Architecture and SSOT
 

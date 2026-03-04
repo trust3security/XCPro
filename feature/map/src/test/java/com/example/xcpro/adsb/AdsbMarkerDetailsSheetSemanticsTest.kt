@@ -12,6 +12,7 @@ class AdsbMarkerDetailsSheetSemanticsTest {
         val details = sampleDetails(
             usesOwnshipReference = false,
             proximityTier = AdsbProximityTier.NEUTRAL,
+            proximityReason = AdsbProximityReason.NO_OWNSHIP_REFERENCE,
             isClosing = false,
             closingRateMps = null
         )
@@ -30,6 +31,7 @@ class AdsbMarkerDetailsSheetSemanticsTest {
         val details = sampleDetails(
             usesOwnshipReference = true,
             proximityTier = AdsbProximityTier.AMBER,
+            proximityReason = AdsbProximityReason.RECOVERY_DWELL,
             isClosing = false,
             closingRateMps = -0.6
         )
@@ -45,23 +47,50 @@ class AdsbMarkerDetailsSheetSemanticsTest {
         val details = sampleDetails(
             usesOwnshipReference = true,
             proximityTier = AdsbProximityTier.EMERGENCY,
+            proximityReason = AdsbProximityReason.GEOMETRY_EMERGENCY_APPLIED,
             isClosing = true,
             closingRateMps = 2.4,
-            isEmergencyCollisionRisk = true
+            isEmergencyCollisionRisk = true,
+            isEmergencyAudioEligible = true
         )
 
         assertEquals("Emergency", proximityTierText(details.proximityTier))
         assertEquals("Closing", proximityTrendText(details))
         assertEquals("Emergency geometry and active closing", proximityReasonText(details))
+        assertEquals("Geometry emergency rule", emergencyRuleSourceText(details))
+        assertEquals("Eligible", emergencyAudioEligibilityText(details))
         assertEquals("+2.4 m/s", closingRateText(details.closingRateMps))
+    }
+
+    @Test
+    fun semantics_circlingRuleReason_isExplicit() {
+        val details = sampleDetails(
+            usesOwnshipReference = true,
+            proximityTier = AdsbProximityTier.RED,
+            proximityReason = AdsbProximityReason.CIRCLING_RULE_APPLIED,
+            isClosing = true,
+            closingRateMps = 1.8,
+            isCirclingEmergencyRedRule = true,
+            isEmergencyAudioEligible = true
+        )
+
+        assertEquals(
+            "Circling emergency rule applied (1 km + vertical cap + closing)",
+            proximityReasonText(details)
+        )
+        assertEquals("Circling emergency RED rule", emergencyRuleSourceText(details))
+        assertEquals("Eligible", emergencyAudioEligibilityText(details))
     }
 
     private fun sampleDetails(
         usesOwnshipReference: Boolean,
         proximityTier: AdsbProximityTier,
+        proximityReason: AdsbProximityReason,
         isClosing: Boolean,
         closingRateMps: Double?,
-        isEmergencyCollisionRisk: Boolean = false
+        isEmergencyCollisionRisk: Boolean = false,
+        isEmergencyAudioEligible: Boolean = false,
+        isCirclingEmergencyRedRule: Boolean = false
     ): AdsbSelectedTargetDetails {
         val id = Icao24.from("abc123") ?: error("invalid test id")
         return AdsbSelectedTargetDetails(
@@ -79,9 +108,12 @@ class AdsbMarkerDetailsSheetSemanticsTest {
             bearingDegFromUser = 220.0,
             usesOwnshipReference = usesOwnshipReference,
             proximityTier = proximityTier,
+            proximityReason = proximityReason,
             isClosing = isClosing,
             closingRateMps = closingRateMps,
             isEmergencyCollisionRisk = isEmergencyCollisionRisk,
+            isEmergencyAudioEligible = isEmergencyAudioEligible,
+            isCirclingEmergencyRedRule = isCirclingEmergencyRedRule,
             positionSource = 0,
             category = 3,
             lastContactEpochSec = null,

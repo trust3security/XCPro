@@ -35,30 +35,41 @@ import kotlinx.coroutines.launch
 fun LevoVarioSettingsScreen(
     navController: NavHostController,
     drawerState: DrawerState,
-    viewModel: LevoVarioSettingsViewModel = hiltViewModel()
+    viewModel: LevoVarioSettingsViewModel = hiltViewModel(),
+    onNavigateUp: (() -> Unit)? = null,
+    onSecondaryNavigate: (() -> Unit)? = null,
+    onNavigateToMap: (() -> Unit)? = null
 ) {
     val scroll = rememberScrollState()
     val scope = rememberCoroutineScope()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val audioSettings = uiState.audioSettings
+    val navigateUpAction: () -> Unit = onNavigateUp ?: {
+        navController.navigateUp()
+        Unit
+    }
+    val secondaryNavigateAction: () -> Unit = onSecondaryNavigate ?: {
+        scope.launch {
+            navController.popBackStack("map", inclusive = false)
+            drawerState.open()
+        }
+        Unit
+    }
+    val navigateToMapAction: () -> Unit = onNavigateToMap ?: {
+        scope.launch {
+            drawerState.close()
+            navController.popBackStack("map", inclusive = false)
+        }
+        Unit
+    }
 
     Scaffold(
         topBar = {
             SettingsTopAppBar(
                 title = "Levo Vario",
-                onNavigateUp = { navController.navigateUp() },
-                onSecondaryNavigate = {
-                    scope.launch {
-                        navController.popBackStack("map", inclusive = false)
-                        drawerState.open()
-                    }
-                },
-                onNavigateToMap = {
-                    scope.launch {
-                        drawerState.close()
-                        navController.popBackStack("map", inclusive = false)
-                    }
-                }
+                onNavigateUp = navigateUpAction,
+                onSecondaryNavigate = secondaryNavigateAction,
+                onNavigateToMap = navigateToMapAction
             )
         }
     ) { padding ->

@@ -8,6 +8,11 @@
 - Issue/PR: TBD
 - Status: Draft (comprehensive code pass applied)
 
+Follow-up (2026-03-03):
+- Requested next step is map-hosted General sheet (no route transition on open/close).
+- Tracked in: `docs/ARCHITECTURE/CHANGE_PLAN_GENERAL_MAP_HOSTED_SHEET_2026-03-03.md`.
+- Re-pass status: route-hosted General remains active in code; migration is not yet applied.
+
 ## 1) Scope
 
 - Problem statement:

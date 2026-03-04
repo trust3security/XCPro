@@ -135,6 +135,7 @@ internal data class MapScreenScaffoldInputs(
     val onBallastCommand: (BallastCommand) -> Unit,
     val onHamburgerTap: () -> Unit,
     val onHamburgerLongPress: () -> Unit,
+    val onOpenGeneralSettingsFromDrawer: () -> Unit,
     val onSettingsTap: () -> Unit,
     val cardStyle: CardStyle,
     val hiddenCardIds: Set<String>,

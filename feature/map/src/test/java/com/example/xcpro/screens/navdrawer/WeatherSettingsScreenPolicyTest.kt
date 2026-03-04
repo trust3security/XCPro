@@ -5,6 +5,13 @@ import com.example.xcpro.weather.rain.WeatherRadarStatusCode
 import com.example.xcpro.weather.rain.WeatherOverlayRuntimeState
 import com.example.xcpro.weather.rain.WEATHER_RAIN_ATTRIBUTION_LINK_URL
 import com.example.xcpro.weather.rain.WeatherRainAnimationWindow
+import com.example.xcpro.weather.ui.isFrameSourceControlEnabled
+import com.example.xcpro.weather.ui.shouldShowManualFrameControls
+import com.example.xcpro.weather.ui.weatherAnimationWindowSummaryLabel
+import com.example.xcpro.weather.ui.weatherContentAgeLine
+import com.example.xcpro.weather.ui.weatherFreshnessLine
+import com.example.xcpro.weather.ui.weatherMetadataStatusLine
+import com.example.xcpro.weather.ui.weatherVisibleFrameAgeLine
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

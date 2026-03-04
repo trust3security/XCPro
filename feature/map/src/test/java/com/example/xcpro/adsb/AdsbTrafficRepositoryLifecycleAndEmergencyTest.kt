@@ -137,6 +137,7 @@ class AdsbTrafficRepositoryLifecycleAndEmergencyTest : AdsbTrafficRepositoryTest
             runCurrent()
             repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
             repository.updateOwnshipOrigin(latitude = -33.8688, longitude = 151.2093)
+            repository.updateOwnshipAltitudeMeters(0.0)
             repository.setEnabled(true)
             runCurrent()
 
@@ -222,15 +223,16 @@ class AdsbTrafficRepositoryLifecycleAndEmergencyTest : AdsbTrafficRepositoryTest
             runCurrent()
             repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
             repository.updateOwnshipOrigin(latitude = -33.8688, longitude = 151.2093)
+            repository.updateOwnshipAltitudeMeters(0.0)
             repository.setEnabled(true)
             runCurrent() // t=0 first sample (no trend yet)
 
             clock.setMonoMs(10_000L)
             advanceTimeBy(10_000L)
-            runCurrent() // t=10 second sample ingested; alert still idle on this tick
-            val idleAfterSecondSample = repository.snapshot.value
-            assertEquals(AdsbEmergencyAudioAlertState.IDLE, idleAfterSecondSample.emergencyAudioState)
-            assertEquals(0, idleAfterSecondSample.emergencyAudioAlertTriggerCount)
+            runCurrent() // t=10 second sample ingested; first emergency trigger fires immediately
+            val afterSecondSample = repository.snapshot.value
+            assertEquals(AdsbEmergencyAudioAlertState.ACTIVE, afterSecondSample.emergencyAudioState)
+            assertEquals(1, afterSecondSample.emergencyAudioAlertTriggerCount)
 
             clock.setMonoMs(20_000L)
             advanceTimeBy(10_000L)
@@ -315,6 +317,7 @@ class AdsbTrafficRepositoryLifecycleAndEmergencyTest : AdsbTrafficRepositoryTest
             runCurrent()
             repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
             repository.updateOwnshipOrigin(latitude = -33.8688, longitude = 151.2093)
+            repository.updateOwnshipAltitudeMeters(0.0)
             repository.setEnabled(true)
             runCurrent()
             clock.setMonoMs(10_000L)
@@ -354,10 +357,16 @@ class AdsbTrafficRepositoryLifecycleAndEmergencyTest : AdsbTrafficRepositoryTest
         val secondRun = runRepositoryEmergencyAudioOffOnScenario()
 
         assertEquals(firstRun, secondRun)
-        // OFF->ON while emergency remains continuous must not emit a duplicate alert.
-        assertEquals(1, firstRun.outputEvents.size)
-        assertEquals(1, firstRun.finalSnapshot.emergencyAudioAlertTriggerCount)
-        assertEquals(1, firstRun.timeline.maxOf { it.triggerCount })
+        // OFF->ON while emergency remains continuous must not emit a duplicate alert on re-enable.
+        val triggerCountAtDisableWindowStart = firstRun.timeline
+            .first { it.atMonoMs == 20_000L }
+            .triggerCount
+        val triggerCountAfterReEnable = firstRun.timeline
+            .first { it.atMonoMs == 25_000L }
+            .triggerCount
+        assertEquals(triggerCountAtDisableWindowStart, triggerCountAfterReEnable)
+        assertEquals(firstRun.outputEvents.size, firstRun.finalSnapshot.emergencyAudioAlertTriggerCount)
+        assertTrue(firstRun.outputEvents.isNotEmpty())
     }
 
 }

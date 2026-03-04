@@ -62,6 +62,8 @@ fun AdsbMarkerDetailsSheet(
             DetailRow("Trend", proximityTrendText(target))
             DetailRow("Range rate (+ closing)", closingRateText(target.closingRateMps))
             DetailRow("Proximity reason", proximityReasonText(target))
+            DetailRow("Emergency rule source", emergencyRuleSourceText(target))
+            DetailRow("Emergency audio eligible", emergencyAudioEligibilityText(target))
             DetailRow("Speed", target.speedMps?.let { UnitsFormatter.speed(SpeedMs(it), unitsPreferences).text } ?: "--")
             DetailRow("Track", target.trackDeg?.let { "${it.roundToOneDecimal()}\u00B0" } ?: "--")
             DetailRow(
@@ -155,7 +157,7 @@ internal fun proximityTierText(tier: AdsbProximityTier): String = when (tier) {
 internal fun proximityTrendText(target: AdsbSelectedTargetDetails): String = when {
     !target.usesOwnshipReference -> "Unknown (no ownship reference)"
     target.isClosing -> "Closing"
-    target.proximityTier == AdsbProximityTier.RED || target.proximityTier == AdsbProximityTier.AMBER ->
+    target.proximityReason == AdsbProximityReason.RECOVERY_DWELL ->
         "Recovery dwell active"
 
     else -> "Not closing"
@@ -167,14 +169,27 @@ internal fun closingRateText(closingRateMps: Double?): String {
 }
 
 internal fun proximityReasonText(target: AdsbSelectedTargetDetails): String = when {
-    !target.usesOwnshipReference -> "Neutral fallback while ownship reference is unavailable"
-    target.isEmergencyCollisionRisk -> "Emergency geometry and active closing"
-    target.isClosing -> "Approaching ownship"
-    target.proximityTier == AdsbProximityTier.RED || target.proximityTier == AdsbProximityTier.AMBER ->
+    target.proximityReason == AdsbProximityReason.NO_OWNSHIP_REFERENCE ->
+        "Neutral fallback while ownship reference is unavailable"
+    target.proximityReason == AdsbProximityReason.CIRCLING_RULE_APPLIED ->
+        "Circling emergency rule applied (1 km + vertical cap + closing)"
+    target.proximityReason == AdsbProximityReason.GEOMETRY_EMERGENCY_APPLIED ->
+        "Emergency geometry and active closing"
+    target.proximityReason == AdsbProximityReason.APPROACH_CLOSING ->
+        "Approaching ownship"
+    target.proximityReason == AdsbProximityReason.RECOVERY_DWELL ->
         "Holding alert during recovery dwell"
-
     else -> "Steady or diverging"
 }
+
+internal fun emergencyRuleSourceText(target: AdsbSelectedTargetDetails): String = when {
+    target.isCirclingEmergencyRedRule -> "Circling emergency RED rule"
+    target.isEmergencyCollisionRisk -> "Geometry emergency rule"
+    else -> "No emergency rule active"
+}
+
+internal fun emergencyAudioEligibilityText(target: AdsbSelectedTargetDetails): String =
+    if (target.isEmergencyAudioEligible) "Eligible" else "Not eligible"
 
 private fun metadataStatusText(
     availability: MetadataAvailability,

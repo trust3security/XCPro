@@ -7,6 +7,8 @@ import com.example.xcpro.adsb.ADSB_ICON_SIZE_DEFAULT_PX
 import com.example.xcpro.adsb.ADSB_VERTICAL_FILTER_ABOVE_DEFAULT_METERS
 import com.example.xcpro.adsb.ADSB_VERTICAL_FILTER_BELOW_DEFAULT_METERS
 import com.example.xcpro.adsb.ADSB_EMERGENCY_AUDIO_DEFAULT_COOLDOWN_MS
+import com.example.xcpro.adsb.ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_DEFAULT
+import com.example.xcpro.adsb.ADSB_EMERGENCY_FLASH_ENABLED_DEFAULT
 import com.example.xcpro.adsb.OpenSkyClientCredentials
 import com.example.xcpro.common.units.UnitsPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -44,6 +46,12 @@ class AdsbSettingsViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = ADSB_VERTICAL_FILTER_BELOW_DEFAULT_METERS
         )
+    val emergencyFlashEnabled: StateFlow<Boolean> = useCase.emergencyFlashEnabledFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = ADSB_EMERGENCY_FLASH_ENABLED_DEFAULT
+        )
     val emergencyAudioEnabled: StateFlow<Boolean> = useCase.emergencyAudioEnabledFlow
         .stateIn(
             scope = viewModelScope,
@@ -55,6 +63,36 @@ class AdsbSettingsViewModel @Inject constructor(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = ADSB_EMERGENCY_AUDIO_DEFAULT_COOLDOWN_MS
+        )
+    val emergencyAudioMasterEnabled: StateFlow<Boolean> = useCase.emergencyAudioMasterEnabledFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = true
+        )
+    val emergencyAudioShadowMode: StateFlow<Boolean> = useCase.emergencyAudioShadowModeFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = false
+        )
+    val emergencyAudioCohortPercent: StateFlow<Int> = useCase.emergencyAudioCohortPercentFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_DEFAULT
+        )
+    val emergencyAudioRollbackLatched: StateFlow<Boolean> = useCase.emergencyAudioRollbackLatchedFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = false
+        )
+    val emergencyAudioRollbackReason: StateFlow<String?> = useCase.emergencyAudioRollbackReasonFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = null
         )
     val units: StateFlow<UnitsPreferences> = useCase.unitsFlow
         .stateIn(
@@ -87,6 +125,12 @@ class AdsbSettingsViewModel @Inject constructor(
         }
     }
 
+    fun setEmergencyFlashEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            useCase.setEmergencyFlashEnabled(enabled)
+        }
+    }
+
     fun setEmergencyAudioEnabled(enabled: Boolean) {
         viewModelScope.launch {
             useCase.setEmergencyAudioEnabled(enabled)
@@ -96,6 +140,30 @@ class AdsbSettingsViewModel @Inject constructor(
     fun setEmergencyAudioCooldownMs(cooldownMs: Long) {
         viewModelScope.launch {
             useCase.setEmergencyAudioCooldownMs(cooldownMs)
+        }
+    }
+
+    fun setEmergencyAudioMasterEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            useCase.setEmergencyAudioMasterEnabled(enabled)
+        }
+    }
+
+    fun setEmergencyAudioShadowMode(enabled: Boolean) {
+        viewModelScope.launch {
+            useCase.setEmergencyAudioShadowMode(enabled)
+        }
+    }
+
+    fun setEmergencyAudioCohortPercent(percent: Int) {
+        viewModelScope.launch {
+            useCase.setEmergencyAudioCohortPercent(percent)
+        }
+    }
+
+    fun clearEmergencyAudioRollback() {
+        viewModelScope.launch {
+            useCase.clearEmergencyAudioRollback()
         }
     }
 

@@ -28,8 +28,14 @@ class AdsbTrafficPreferencesRepositoryTest {
         repository.setMaxDistanceKm(ADSB_MAX_DISTANCE_DEFAULT_KM)
         repository.setVerticalAboveMeters(ADSB_VERTICAL_FILTER_ABOVE_DEFAULT_METERS)
         repository.setVerticalBelowMeters(ADSB_VERTICAL_FILTER_BELOW_DEFAULT_METERS)
+        repository.setEmergencyFlashEnabled(ADSB_EMERGENCY_FLASH_ENABLED_DEFAULT)
         repository.setEmergencyAudioEnabled(false)
         repository.setEmergencyAudioCooldownMs(ADSB_EMERGENCY_AUDIO_DEFAULT_COOLDOWN_MS)
+        repository.setEmergencyAudioMasterEnabled(true)
+        repository.setEmergencyAudioShadowMode(false)
+        repository.setEmergencyAudioCohortPercent(ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_DEFAULT)
+        repository.setEmergencyAudioCohortBucket(ADSB_EMERGENCY_AUDIO_COHORT_BUCKET_MIN)
+        repository.clearEmergencyAudioRollback()
     }
 
     @Test
@@ -153,6 +159,22 @@ class AdsbTrafficPreferencesRepositoryTest {
     }
 
     @Test
+    fun emergencyFlash_defaultsEnabled() = runTest {
+        val repository = AdsbTrafficPreferencesRepository(context)
+
+        assertEquals(true, repository.emergencyFlashEnabledFlow.first())
+    }
+
+    @Test
+    fun emergencyFlash_persists() = runTest {
+        val repository = AdsbTrafficPreferencesRepository(context)
+
+        repository.setEmergencyFlashEnabled(false)
+
+        assertEquals(false, repository.emergencyFlashEnabledFlow.first())
+    }
+
+    @Test
     fun emergencyAudioCooldown_clampsAndPersists() = runTest {
         val repository = AdsbTrafficPreferencesRepository(context)
 
@@ -178,5 +200,80 @@ class AdsbTrafficPreferencesRepositoryTest {
 
         repository.setEmergencyAudioEnabled(true)
         assertEquals(true, repository.emergencyAudioEnabledFlow.first())
+    }
+
+    @Test
+    fun emergencyAudioRollout_defaultsMasterOnShadowOff() = runTest {
+        val repository = AdsbTrafficPreferencesRepository(context)
+
+        assertEquals(true, repository.emergencyAudioMasterEnabledFlow.first())
+        assertEquals(false, repository.emergencyAudioShadowModeFlow.first())
+        assertEquals(
+            ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_DEFAULT,
+            repository.emergencyAudioCohortPercentFlow.first()
+        )
+        assertEquals(false, repository.emergencyAudioRollbackLatchedFlow.first())
+        assertEquals(null, repository.emergencyAudioRollbackReasonFlow.first())
+    }
+
+    @Test
+    fun emergencyAudioRollout_persistsMasterAndShadowFlags() = runTest {
+        val repository = AdsbTrafficPreferencesRepository(context)
+
+        repository.setEmergencyAudioMasterEnabled(false)
+        repository.setEmergencyAudioShadowMode(true)
+
+        assertEquals(false, repository.emergencyAudioMasterEnabledFlow.first())
+        assertEquals(true, repository.emergencyAudioShadowModeFlow.first())
+    }
+
+    @Test
+    fun emergencyAudioRollout_cohortPercentAndBucket_clampAndPersist() = runTest {
+        val repository = AdsbTrafficPreferencesRepository(context)
+
+        repository.setEmergencyAudioCohortPercent(-1)
+        assertEquals(
+            ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_MIN,
+            repository.emergencyAudioCohortPercentFlow.first()
+        )
+
+        repository.setEmergencyAudioCohortPercent(101)
+        assertEquals(
+            ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_MAX,
+            repository.emergencyAudioCohortPercentFlow.first()
+        )
+
+        repository.setEmergencyAudioCohortBucket(-5)
+        assertEquals(
+            ADSB_EMERGENCY_AUDIO_COHORT_BUCKET_MIN,
+            repository.emergencyAudioCohortBucketFlow.first()
+        )
+
+        repository.setEmergencyAudioCohortBucket(999)
+        assertEquals(
+            ADSB_EMERGENCY_AUDIO_COHORT_BUCKET_MAX,
+            repository.emergencyAudioCohortBucketFlow.first()
+        )
+
+        repository.setEmergencyAudioCohortPercent(25)
+        repository.setEmergencyAudioCohortBucket(17)
+        assertEquals(25, repository.emergencyAudioCohortPercentFlow.first())
+        assertEquals(17, repository.emergencyAudioCohortBucketFlow.first())
+    }
+
+    @Test
+    fun emergencyAudioRollout_rollbackLatch_persistsAndClearsReason() = runTest {
+        val repository = AdsbTrafficPreferencesRepository(context)
+
+        repository.latchEmergencyAudioRollback("determinism_mismatch_count")
+        assertEquals(true, repository.emergencyAudioRollbackLatchedFlow.first())
+        assertEquals(
+            "determinism_mismatch_count",
+            repository.emergencyAudioRollbackReasonFlow.first()
+        )
+
+        repository.clearEmergencyAudioRollback()
+        assertEquals(false, repository.emergencyAudioRollbackLatchedFlow.first())
+        assertEquals(null, repository.emergencyAudioRollbackReasonFlow.first())
     }
 }

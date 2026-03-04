@@ -47,4 +47,18 @@ class SkySightUiMessagePolicyTest {
         assertNull(resolved.warningMessage)
         assertNull(resolved.errorMessage)
     }
+
+    @Test
+    fun resolveSkySightUiMessages_includesArbitrationWarningAndDeduplicates() {
+        val resolved = resolveSkySightUiMessages(
+            repositoryWarningMessage = null,
+            regionCoverageWarningMessage = null,
+            runtimeWarningMessage = "fallback engaged",
+            runtimeArbitrationWarningMessage = "Fallback engaged | Rain arbitration active",
+            repositoryErrorMessage = null,
+            runtimeErrorMessage = null
+        )
+
+        assertEquals("fallback engaged | Rain arbitration active", resolved.warningMessage)
+    }
 }

@@ -17,7 +17,6 @@ import com.example.xcpro.map.MapTaskIntegration
 import com.example.xcpro.map.MapUiEvent
 import com.example.xcpro.map.MapUiState
 import com.example.xcpro.map.WindArrowUiState
-import com.example.xcpro.navigation.SettingsRoutes
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
 import com.example.xcpro.variometer.layout.VariometerUiState
 import kotlinx.coroutines.CoroutineScope
@@ -90,6 +89,7 @@ internal fun rememberMapScreenScaffoldInputs(
         managers.overlayManager.setOgnDisplayUpdateMode(bindings.ognDisplayUpdateMode)
         managers.overlayManager.setOgnIconSizePx(bindings.ognIconSizePx)
         managers.overlayManager.setAdsbIconSizePx(bindings.adsbIconSizePx)
+        managers.overlayManager.setAdsbEmergencyFlashEnabled(bindings.adsbEmergencyFlashEnabled)
         managers.overlayManager.reapplyForecastOverlay()
         managers.overlayManager.reapplySkySightSatelliteOverlay()
         managers.overlayManager.reapplyWeatherRainOverlay()
@@ -101,18 +101,14 @@ internal fun rememberMapScreenScaffoldInputs(
         taskType = bindings.taskType,
         isAATEditMode = bindings.isAATEditMode
     )
-    val onSettingsTap: () -> Unit = {
+    val openGeneralSettingsFromMap: () -> Unit = {
         if (!shouldBlockDrawerOpen) {
             settingsExpanded.value = true
             coroutineScope.launch {
                 if (drawerState.isOpen) {
                     drawerState.close()
                 }
-                if (navController.currentDestination?.route != SettingsRoutes.GENERAL) {
-                    navController.navigate(SettingsRoutes.GENERAL) {
-                        launchSingleTop = true
-                    }
-                }
+                managers.modalManager.showGeneralSettingsModal()
             }
         }
     }
@@ -231,7 +227,8 @@ internal fun rememberMapScreenScaffoldInputs(
             }
         },
         onHamburgerLongPress = { mapViewModel.onEvent(MapUiEvent.ToggleUiEditMode) },
-        onSettingsTap = onSettingsTap,
+        onOpenGeneralSettingsFromDrawer = openGeneralSettingsFromMap,
+        onSettingsTap = openGeneralSettingsFromMap,
         cardStyle = cardStyle,
         hiddenCardIds = hiddenCardIds,
         replayState = mapViewModel.replaySessionState,

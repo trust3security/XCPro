@@ -190,7 +190,11 @@ Map bindings:
     (`SIDE_HAMBURGER`, `FLIGHT_MODE`, `SETTINGS_SHORTCUT`, `BALLAST`).
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt`
   - Renders `SettingsShortcut` with existing widget gesture registry; drag is edit-mode
-    only, tap delegates to `SettingsRoutes.GENERAL` through scaffold callback wiring.
+    only, tap delegates to `MapModalManager.showGeneralSettingsModal()` through
+    scaffold callback wiring.
+- `feature/map/src/main/java/com/example/xcpro/navdrawer/DrawerMenuSections.kt`
+  - Map drawer `Settings -> General` uses the same map-owned General modal callback
+    when provided by `NavigationDrawer`; route navigation remains as compatibility fallback.
 
 OGN settings path:
 - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
@@ -327,9 +331,11 @@ ADS-b lifecycle/visibility semantics:
   - Explicit clear path removes cached targets and resets displayed list.
   - Query center is used for fetch/radius filtering (configurable `1..100 km`, default `10 km`).
   - Ownship origin is used for displayed distance/bearing when available.
+  - Ownship reference is freshness-gated in runtime (stale ownship falls back to query-center reference).
   - Ownship altitude is used for vertical above/below filtering with fail-open when altitude is unavailable.
   - Evaluates EMERGENCY-only audio policy FSM in repository SSOT path (feature-flag + setting-gated),
     including cooldown anti-nuisance telemetry publication in `AdsbTrafficSnapshot`.
+  - EMERGENCY audio rollout master/shadow gates are sourced from ADS-B preferences SSOT via rollout port wiring.
   - Emits one-shot EMERGENCY alert side effects only on FSM trigger transitions through
     `AdsbEmergencyAudioOutputPort` (master-flag gated; shadow mode never plays audio).
 - `feature/map/src/main/java/com/example/xcpro/adsb/data/AndroidAdsbNetworkAvailabilityAdapter.kt`
@@ -338,7 +344,7 @@ ADS-b lifecycle/visibility semantics:
 - `feature/map/src/main/java/com/example/xcpro/map/AdsbTrafficOverlay.kt`
   - Per-aircraft runtime interpolation smooths marker motion between provider samples.
   - Proximity color expression consumes repository-authored `proximity_tier` (tier mapping only in map layer).
-  - Tier policy is store-side and trend-aware: non-closing traffic de-escalates to `green` after recovery dwell.
+  - Tier policy is store-side and trend-aware: non-closing traffic de-escalates by at most one tier after recovery dwell (`red -> amber`, `amber -> green`), preventing close-range `red -> green` oscillation.
   - Interpolation is visual-only and does not mutate repository SSOT.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
   - ADS-b overlay renders `emptyList()` when overlay preference is disabled.
@@ -368,15 +374,18 @@ Forecast overlay (SkySight-backed) path:
 - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayViewModel.kt`
   - ViewModel-intent boundary for enable/time/opacity and long-press point query.
   - SkySight-tab non-wind parameter selection is single-select (primary only).
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
-  - Collects forecast state, opens forecast sheet, dispatches long-press point queries
-    (disabled during AAT edit mode), and renders callout/status.
-  - Forecast sheet exposes one active non-wind selector plus separate wind overlay controls.
-  - Also forwards SkySight satellite runtime intent/state (`enabled`, layer toggles, animation, frame count, selected time) to map overlay runtime owner.
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
+- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt`
+  - Collects forecast and weather state, composes SkySight warning/error channels, and renders point-query callout/status.
+  - Applies RainViewer-vs-SkySight dual-rain arbitration: when RainViewer is enabled and SkySight non-wind parameter is `accrain`,
+    SkySight primary rain rendering is suppressed while wind overlay remains independent.
+- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntimeEffects.kt`
+  - Forwards forecast/wind/satellite runtime intent (`enabled`, tile/legend specs, display mode, animation, frame count, selected time)
+    to map overlay runtime owner with loading-vs-clear transition policy.
+- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeForecastWeatherDelegate.kt`
   - Runtime owner for forecast raster overlay lifecycle and style-reload reapplication.
   - Hosts forecast runtime overlay instances for one non-wind layer and optional wind layer.
   - Owns SkySight satellite runtime config and style-reload reapply path.
+  - Forecast apply/reapply paths are failure-isolated and surfaced via runtime warning channel.
 - `feature/map/src/main/java/com/example/xcpro/map/ForecastRasterOverlay.kt`
   - MapLibre runtime controller for forecast vector layers.
   - Uses namespace-scoped layer/source IDs so multiple forecast overlays can render together.
@@ -395,8 +404,14 @@ Weather rain overlay path:
   - Combines preferences + metadata into frame-based runtime state (`selectedFrame`, status, effective transition duration).
 - `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherOverlayViewModel.kt`
   - Map-side weather overlay state for runtime binding.
+- `feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabs.kt`
+  - Map bottom tab host includes `RainViewer` as an in-map tab in the same `ModalBottomSheet` host used by SkySight/Scia/Map4.
+  - Rain tab content reuses the shared weather settings content path; map remains visible behind the sheet.
+- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreenRuntime.kt`
+  - Drawer weather route remains available and hosts the same shared weather controls content for compatibility entry.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapWeatherOverlayEffects.kt`
   - Collects weather overlay state and forwards frame-based runtime updates (including transition duration) to overlay manager.
+  - RainViewer enable state participates in SkySight non-wind rain arbitration through map runtime composition.
 - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
   - Owns weather overlay runtime config/status and reapply behavior on map-ready/style change.
 - `feature/map/src/main/java/com/example/xcpro/map/WeatherRainOverlay.kt`
@@ -526,12 +541,12 @@ Non-negotiable boundaries:
 ## 6) Audio Pipeline
 
 Audio control:
-- `feature/map/src/main/java/com/example/xcpro/audio/VarioAudioController.kt`
+- `feature/variometer/src/main/java/com/example/xcpro/audio/VarioAudioController.kt`
   - Selects TE vario if valid, otherwise raw vario.
   - Silences audio when data is stale.
 
 Engine:
-- `feature/map/src/main/java/com/example/xcpro/audio/VarioAudioEngine.kt`
+- `feature/variometer/src/main/java/com/example/xcpro/audio/VarioAudioEngine.kt`
   - Tone generation + beep controller, responds to vertical speed updates.
 
 Settings:
@@ -599,8 +614,8 @@ Core pipeline:
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt`
 
 Audio:
-- `feature/map/src/main/java/com/example/xcpro/audio/VarioAudioController.kt`
-- `feature/map/src/main/java/com/example/xcpro/audio/VarioAudioEngine.kt`
+- `feature/variometer/src/main/java/com/example/xcpro/audio/VarioAudioController.kt`
+- `feature/variometer/src/main/java/com/example/xcpro/audio/VarioAudioEngine.kt`
 
 Replay:
 - `feature/map/src/main/java/com/example/xcpro/replay/IgcReplayController.kt`

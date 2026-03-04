@@ -15,10 +15,13 @@ import org.junit.Test
 import org.maplibre.android.maps.MapLibreMap
 import org.mockito.Mockito.clearInvocations
 import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 
 class MapOverlayManagerWeatherRainTest {
 
@@ -174,6 +177,49 @@ class MapOverlayManagerWeatherRainTest {
             frameSelection = eq(frame),
             opacity = eq(0.62f),
             transitionDurationMs = eq(160L)
+        )
+    }
+
+    @Test
+    fun setWeatherRainOverlay_renderFailure_allowsSameConfigRetry() {
+        val fixture = createFixture()
+        val map: MapLibreMap = mock()
+        val weatherOverlay: WeatherRainOverlay = mock()
+        val frame = frameSelection(5_000L)
+
+        fixture.mapState.mapLibreMap = map
+        fixture.mapState.weatherRainOverlay = weatherOverlay
+
+        var calls = 0
+        doAnswer {
+            calls += 1
+            if (calls == 1) {
+                throw IllegalStateException("rain render failed")
+            }
+            Unit
+        }.whenever(weatherOverlay).render(any(), any(), any())
+
+        fixture.manager.setWeatherRainOverlay(
+            enabled = true,
+            frameSelection = frame,
+            opacity = 0.58f,
+            transitionDurationMs = 190L,
+            statusCode = WeatherRadarStatusCode.OK,
+            stale = false
+        )
+        fixture.manager.setWeatherRainOverlay(
+            enabled = true,
+            frameSelection = frame,
+            opacity = 0.58f,
+            transitionDurationMs = 190L,
+            statusCode = WeatherRadarStatusCode.OK,
+            stale = false
+        )
+
+        verify(weatherOverlay, times(2)).render(
+            frameSelection = eq(frame),
+            opacity = eq(0.58f),
+            transitionDurationMs = eq(190L)
         )
     }
 

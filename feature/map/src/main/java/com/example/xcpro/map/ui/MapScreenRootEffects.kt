@@ -78,7 +78,8 @@ internal fun MapScreenOverlayEffects(
     ognIconSizePx: Int,
     adsbTargets: List<AdsbTrafficUiModel>,
     adsbOverlayEnabled: Boolean,
-    adsbIconSizePx: Int
+    adsbIconSizePx: Int,
+    adsbEmergencyFlashEnabled: Boolean
 ) {
     val renderedOgnTargets = if (ognOverlayEnabled) ognTargets else emptyList()
     val renderedOgnThermals = if (ognOverlayEnabled && showOgnThermalsEnabled) {
@@ -125,6 +126,9 @@ internal fun MapScreenOverlayEffects(
     }
     LaunchedEffect(adsbIconSizePx) {
         overlayManager.setAdsbIconSizePx(adsbIconSizePx)
+    }
+    LaunchedEffect(adsbEmergencyFlashEnabled) {
+        overlayManager.setAdsbEmergencyFlashEnabled(adsbEmergencyFlashEnabled)
     }
 }
 

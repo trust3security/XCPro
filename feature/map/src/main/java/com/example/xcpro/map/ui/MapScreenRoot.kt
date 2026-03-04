@@ -29,12 +29,6 @@ import com.example.xcpro.map.MapStateStore
 import com.example.xcpro.map.MapTaskScreenManager
 import com.example.xcpro.replay.SessionStatus
 
-/**
- * G PHASE 2: Convert CompleteFlightData (from FlightDataCalculator) to RealTimeFlightData (for cards)
- *
- * This adapter function maintains backward compatibility with existing card system
- * while migrating to the new unified sensor architecture.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 @SuppressLint("UnusedBoxWithConstraintsScope")
@@ -46,6 +40,8 @@ internal fun MapScreenRoot(
     settingsExpanded: MutableState<Boolean>,
     initialMapStyle: String,
     onMapStyleSelected: (String) -> Unit = {},
+    openGeneralSettingsOnStart: Boolean,
+    onGeneralSettingsLaunchConsumed: () -> Unit,
     mapViewModel: MapScreenViewModel
 ) {
     val context = LocalContext.current
@@ -111,6 +107,12 @@ internal fun MapScreenRoot(
         airspaceUseCase = runtimeDependencies.airspaceUseCase,
         waypointFilesUseCase = runtimeDependencies.waypointFilesUseCase
     )
+    LaunchedEffect(openGeneralSettingsOnStart) {
+        if (openGeneralSettingsOnStart) {
+            managers.modalManager.showGeneralSettingsModal()
+            onGeneralSettingsLaunchConsumed()
+        }
+    }
 
     val panelState by managers.taskScreenManager.taskPanelState.collectAsStateWithLifecycle()
     val isTaskPanelVisible = panelState != MapTaskScreenManager.TaskPanelState.HIDDEN
@@ -145,11 +147,10 @@ internal fun MapScreenRoot(
         ognIconSizePx = bindings.ognIconSizePx,
         adsbTargets = bindings.adsbTargets,
         adsbOverlayEnabled = bindings.adsbOverlayEnabled,
-        adsbIconSizePx = bindings.adsbIconSizePx
+        adsbIconSizePx = bindings.adsbIconSizePx,
+        adsbEmergencyFlashEnabled = bindings.adsbEmergencyFlashEnabled
     )
-    MapWeatherOverlayEffects(
-        overlayManager = managers.overlayManager
-    )
+    MapWeatherOverlayEffects(overlayManager = managers.overlayManager)
 
     val currentFlightModeSelection by flightDataManager.currentFlightModeFlow.collectAsStateWithLifecycle()
     LaunchedEffect(profileLookAndFeelBinding.activeProfileId, currentFlightModeSelection) {

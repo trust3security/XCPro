@@ -167,8 +167,39 @@ class AdsbTrafficRepositoryFilterAndAuthTest : AdsbTrafficRepositoryTestBase() {
         assertEquals(AdsbProximityTier.RED.code, firstRun[0].proximityTierCode)
         assertEquals(AdsbProximityTier.RED.code, firstRun[1].proximityTierCode)
         assertEquals(AdsbProximityTier.RED.code, firstRun[2].proximityTierCode)
-        assertEquals(AdsbProximityTier.GREEN.code, firstRun[3].proximityTierCode)
-        assertEquals(false, firstRun.last().isClosing)
+        assertTrue(
+            firstRun[3].proximityTierCode == AdsbProximityTier.RED.code ||
+                firstRun[3].proximityTierCode == AdsbProximityTier.AMBER.code
+        )
+        assertTrue(firstRun.any { it.isClosing == true })
+        firstRun.zipWithNext().forEach { (previous, current) ->
+            assertFalse(
+                "Detected direct red->green transition: $firstRun",
+                previous.proximityTierCode == AdsbProximityTier.RED.code &&
+                    current.proximityTierCode == AdsbProximityTier.GREEN.code
+            )
+        }
+    }
+
+    @Test
+    fun proximityTierDeEscalation_neverJumpsDirectlyFromRedToGreen() = runTest {
+        val firstRun = runRepositoryProximityDeEscalationScenario()
+        val secondRun = runRepositoryProximityDeEscalationScenario()
+
+        assertEquals(firstRun, secondRun)
+        val tiers = firstRun.map { it.proximityTierCode }
+        assertEquals(AdsbProximityTier.RED.code, tiers.firstOrNull())
+        assertTrue(firstRun.any { it.isClosing == false })
+        firstRun.zipWithNext().forEach { (previous, current) ->
+            assertFalse(
+                "Detected direct red->green transition: $firstRun",
+                previous.proximityTierCode == AdsbProximityTier.RED.code &&
+                    current.proximityTierCode == AdsbProximityTier.GREEN.code
+            )
+        }
+        if (tiers.lastOrNull() == AdsbProximityTier.GREEN.code) {
+            assertTrue(tiers.contains(AdsbProximityTier.AMBER.code))
+        }
     }
 
     @Test

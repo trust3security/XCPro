@@ -1,6 +1,7 @@
 package com.example.xcpro.map
 
-import java.util.Locale
+import com.example.xcpro.forecast.SkySightHttpContract
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -8,18 +9,15 @@ import org.maplibre.android.module.http.HttpRequestUtil
 
 object SkySightMapLibreNetworkConfigurator {
     private val isConfigured = AtomicBoolean(false)
-    private const val REQUIRED_ORIGIN = "https://xalps.skysight.io"
-
-    private val skySightHosts: Set<String> = setOf(
-        "edge.skysight.io",
-        "apig2.skysight.io",
-        "satellite.skysight.io"
-    )
 
     fun ensureConfigured() {
         if (!isConfigured.compareAndSet(false, true)) return
 
         val client = OkHttpClient.Builder()
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(15, TimeUnit.SECONDS)
+            .writeTimeout(15, TimeUnit.SECONDS)
+            .callTimeout(25, TimeUnit.SECONDS)
             .addInterceptor { chain ->
                 val request = chain.request()
                 val requestWithHeaders = applySkySightHeaders(request)
@@ -31,10 +29,10 @@ object SkySightMapLibreNetworkConfigurator {
     }
 
     internal fun applySkySightHeaders(request: Request): Request {
-        val host = request.url.host.lowercase(Locale.US)
+        val host = request.url.host
         return if (isSkySightHost(host)) {
             request.newBuilder()
-                .header("Origin", REQUIRED_ORIGIN)
+                .header("Origin", SkySightHttpContract.requiredOriginHeaderValue())
                 .build()
         } else {
             request
@@ -42,8 +40,7 @@ object SkySightMapLibreNetworkConfigurator {
     }
 
     internal fun isSkySightHost(host: String): Boolean {
-        val normalized = host.lowercase(Locale.US)
-        return normalized in skySightHosts
+        return SkySightHttpContract.isMapLibreOriginHost(host)
     }
 }
 

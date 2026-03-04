@@ -44,21 +44,23 @@ import com.example.xcpro.replay.IgcReplayViewModel
 @Composable
 fun IgcReplayScreen(
     navController: NavHostController,
-    viewModel: IgcReplayViewModel = hiltViewModel()
+    viewModel: IgcReplayViewModel = hiltViewModel(),
+    onNavigateBack: (() -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val navigateBackAction = onNavigateBack ?: {
+        val popped = navController.popBackStack(route = "map", inclusive = false)
+        if (!popped) {
+            navController.navigate("map") {
+                launchSingleTop = true
+            }
+        }
+    }
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
-                IgcReplayViewModel.IgcReplayUiEvent.NavigateBackToMap -> {
-                    val popped = navController.popBackStack(route = "map", inclusive = false)
-                    if (!popped) {
-                        navController.navigate("map") {
-                            launchSingleTop = true
-                        }
-                    }
-                }
+                IgcReplayViewModel.IgcReplayUiEvent.NavigateBackToMap -> navigateBackAction()
             }
         }
     }
@@ -77,7 +79,7 @@ fun IgcReplayScreen(
             CenterAlignedTopAppBar(
                 title = { Text("IGC Replay") },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = navigateBackAction) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },

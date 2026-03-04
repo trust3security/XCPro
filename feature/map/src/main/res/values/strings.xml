@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="map_bottom_tab_rainviewer">RainViewer</string>
+    <string name="map_bottom_tab_skysight">SkySight</string>
+    <string name="map_bottom_tab_scia">Scia</string>
+    <string name="map_bottom_tab_map4">Map4</string>
+
     <string name="thermalling_title">Thermalling</string>
 
     <string name="thermalling_card_automation_title">Thermalling automation</string>

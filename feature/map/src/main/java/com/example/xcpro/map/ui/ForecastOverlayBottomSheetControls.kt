@@ -308,7 +308,7 @@ internal fun ForecastOverlayControlsContent(
                         selected = isSelected,
                         onClick = { onPrimaryParameterToggled(parameter.id) },
                         label = { Text(parameter.name) },
-                        enabled = uiState.enabled
+                        enabled = true
                     )
                 }
             }

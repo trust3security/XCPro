@@ -15,6 +15,8 @@ fun MapScreen(
     settingsExpanded: MutableState<Boolean>,
     initialMapStyle: String,
     onMapStyleSelected: (String) -> Unit = {},
+    openGeneralSettingsOnStart: Boolean = false,
+    onGeneralSettingsLaunchConsumed: () -> Unit = {},
     mapViewModel: MapScreenViewModel
 ) {
     MapScreenRoot(
@@ -25,6 +27,8 @@ fun MapScreen(
         settingsExpanded = settingsExpanded,
         initialMapStyle = initialMapStyle,
         onMapStyleSelected = onMapStyleSelected,
+        openGeneralSettingsOnStart = openGeneralSettingsOnStart,
+        onGeneralSettingsLaunchConsumed = onGeneralSettingsLaunchConsumed,
         mapViewModel = mapViewModel
     )
 }

@@ -42,9 +42,23 @@ class AdsbGeoJsonMapperTest {
             1e-6
         )
         assertEquals(
+            0.0,
+            feature.getNumberProperty(AdsbGeoJsonMapper.PROP_IS_CIRCLING_RULE).toDouble(),
+            1e-6
+        )
+        assertEquals(
+            0.0,
+            feature.getNumberProperty(AdsbGeoJsonMapper.PROP_IS_EMERGENCY_AUDIO_ELIGIBLE).toDouble(),
+            1e-6
+        )
+        assertEquals(
             AdsbProximityTier.AMBER.code.toDouble(),
             feature.getNumberProperty(AdsbGeoJsonMapper.PROP_PROXIMITY_TIER).toDouble(),
             1e-6
+        )
+        assertEquals(
+            "approach_closing",
+            feature.getStringProperty(AdsbGeoJsonMapper.PROP_PROXIMITY_REASON)
         )
         assertEquals(
             273.5,
@@ -114,6 +128,43 @@ class AdsbGeoJsonMapperTest {
             feature.getNumberProperty(AdsbGeoJsonMapper.PROP_PROXIMITY_TIER).toDouble(),
             1e-6
         )
+        assertEquals(
+            "geometry_emergency_applied",
+            feature.getStringProperty(AdsbGeoJsonMapper.PROP_PROXIMITY_REASON)
+        )
+    }
+
+    @Test
+    fun toFeature_includesCirclingRuleAndAudioEligibilityFlags() {
+        val target = sampleTarget(
+            category = 1,
+            trackDeg = 180.0,
+            isCirclingEmergencyRedRule = true,
+            isEmergencyAudioEligible = true
+        )
+
+        val feature = AdsbGeoJsonMapper.toFeature(
+            target = target,
+            ownshipAltitudeMeters = 900.0,
+            unitsPreferences = UnitsPreferences()
+        )
+
+        assertNotNull(feature)
+        feature ?: return
+        assertEquals(
+            1.0,
+            feature.getNumberProperty(AdsbGeoJsonMapper.PROP_IS_CIRCLING_RULE).toDouble(),
+            1e-6
+        )
+        assertEquals(
+            1.0,
+            feature.getNumberProperty(AdsbGeoJsonMapper.PROP_IS_EMERGENCY_AUDIO_ELIGIBLE).toDouble(),
+            1e-6
+        )
+        assertEquals(
+            "circling_rule_applied",
+            feature.getStringProperty(AdsbGeoJsonMapper.PROP_PROXIMITY_REASON)
+        )
     }
 
     @Test
@@ -174,6 +225,8 @@ class AdsbGeoJsonMapperTest {
         category: Int?,
         trackDeg: Double?,
         isEmergencyCollisionRisk: Boolean = false,
+        isCirclingEmergencyRedRule: Boolean = false,
+        isEmergencyAudioEligible: Boolean = false,
         usesOwnshipReference: Boolean = true,
         distanceMeters: Double = 1500.0
     ): AdsbTrafficUiModel {
@@ -181,7 +234,14 @@ class AdsbGeoJsonMapperTest {
         val tier = when {
             !usesOwnshipReference -> AdsbProximityTier.NEUTRAL
             isEmergencyCollisionRisk -> AdsbProximityTier.EMERGENCY
+            isCirclingEmergencyRedRule -> AdsbProximityTier.RED
             else -> AdsbProximityTier.AMBER
+        }
+        val reason = when {
+            !usesOwnshipReference -> com.example.xcpro.adsb.AdsbProximityReason.NO_OWNSHIP_REFERENCE
+            isEmergencyCollisionRisk -> com.example.xcpro.adsb.AdsbProximityReason.GEOMETRY_EMERGENCY_APPLIED
+            isCirclingEmergencyRedRule -> com.example.xcpro.adsb.AdsbProximityReason.CIRCLING_RULE_APPLIED
+            else -> com.example.xcpro.adsb.AdsbProximityReason.APPROACH_CLOSING
         }
         return AdsbTrafficUiModel(
             id = id,
@@ -201,7 +261,11 @@ class AdsbGeoJsonMapperTest {
             category = category,
             lastContactEpochSec = null,
             proximityTier = tier,
-            isEmergencyCollisionRisk = isEmergencyCollisionRisk
+            proximityReason = reason,
+            isEmergencyCollisionRisk = isEmergencyCollisionRisk,
+            isEmergencyAudioEligible = isEmergencyAudioEligible,
+            isCirclingEmergencyRedRule = isCirclingEmergencyRedRule,
+            isClosing = usesOwnshipReference
         )
     }
 }

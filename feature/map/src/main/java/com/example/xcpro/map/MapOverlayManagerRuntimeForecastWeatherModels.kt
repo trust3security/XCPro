@@ -26,6 +26,6 @@ internal fun joinNonBlankRuntimeMessages(vararg messages: String?): String? {
         .map { it.trim() }
         .filter { it.isNotEmpty() }
         .distinct()
-        .joinToString(" ")
+        .joinToString(" | ")
     return joined.takeIf { it.isNotBlank() }
 }

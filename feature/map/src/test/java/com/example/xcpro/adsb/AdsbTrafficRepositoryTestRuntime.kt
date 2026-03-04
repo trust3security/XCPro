@@ -119,6 +119,87 @@ abstract class AdsbTrafficRepositoryTestBase {
         return timeline
     }
 
+    protected fun runRepositoryProximityDeEscalationScenario(): List<RepositoryTransitionSnapshot> {
+        val scheduler = TestCoroutineScheduler()
+        val dispatcher = StandardTestDispatcher(scheduler)
+        val clock = FakeClock(monoMs = 0L, wallMs = 0L)
+        val provider = SequenceProvider(
+            listOf(
+                successState(
+                    timeSec = 1_710_000_000L,
+                    latitude = -33.8688,
+                    longitude = 151.2200
+                ),
+                successState(
+                    timeSec = 1_710_000_010L,
+                    latitude = -33.8688,
+                    longitude = 151.2140
+                ),
+                successState(
+                    timeSec = 1_710_000_020L,
+                    latitude = -33.8688,
+                    longitude = 151.2145
+                ),
+                successState(
+                    timeSec = 1_710_000_030L,
+                    latitude = -33.8688,
+                    longitude = 151.2145
+                ),
+                successState(
+                    timeSec = 1_710_000_040L,
+                    latitude = -33.8688,
+                    longitude = 151.2420
+                ),
+                successState(
+                    timeSec = 1_710_000_050L,
+                    latitude = -33.8688,
+                    longitude = 151.2420
+                )
+            )
+        )
+        val repository = AdsbTrafficRepositoryImpl(
+            providerClient = provider,
+            tokenRepository = FakeTokenRepository(),
+            clock = clock,
+            dispatcher = dispatcher
+        )
+
+        repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
+        repository.updateOwnshipOrigin(latitude = -33.8688, longitude = 151.2093)
+        repository.setEnabled(true)
+        scheduler.runCurrent()
+        val timeline = mutableListOf(snapshotOf(repository))
+
+        clock.setMonoMs(10_000L)
+        scheduler.advanceTimeBy(10_000L)
+        scheduler.runCurrent()
+        timeline += snapshotOf(repository)
+
+        clock.setMonoMs(20_000L)
+        scheduler.advanceTimeBy(10_000L)
+        scheduler.runCurrent()
+        timeline += snapshotOf(repository)
+
+        clock.setMonoMs(30_000L)
+        scheduler.advanceTimeBy(10_000L)
+        scheduler.runCurrent()
+        timeline += snapshotOf(repository)
+
+        clock.setMonoMs(40_000L)
+        scheduler.advanceTimeBy(10_000L)
+        scheduler.runCurrent()
+        timeline += snapshotOf(repository)
+
+        clock.setMonoMs(50_000L)
+        scheduler.advanceTimeBy(10_000L)
+        scheduler.runCurrent()
+        timeline += snapshotOf(repository)
+
+        repository.stop()
+        scheduler.runCurrent()
+        return timeline
+    }
+
     protected fun runRepositoryEmergencyAudioOffOnScenario(): RepositoryEmergencyAudioRun {
         val scheduler = TestCoroutineScheduler()
         val dispatcher = StandardTestDispatcher(scheduler)
@@ -187,6 +268,7 @@ abstract class AdsbTrafficRepositoryTestBase {
             scheduler.runCurrent()
             repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
             repository.updateOwnshipOrigin(latitude = -33.8688, longitude = 151.2093)
+            repository.updateOwnshipAltitudeMeters(0.0)
             repository.setEnabled(true)
             scheduler.runCurrent()
             timeline += emergencyTracePoint(0L, repository, outputPort.events.size)
@@ -400,6 +482,48 @@ abstract class AdsbTrafficRepositoryTestBase {
 
         fun setEnabled(enabled: Boolean) {
             _enabled.value = enabled
+        }
+    }
+
+    protected class FakeEmergencyAudioRolloutPort(
+        masterEnabled: Boolean,
+        shadowModeEnabled: Boolean,
+        cohortPercent: Int = ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_DEFAULT,
+        cohortBucket: Int = ADSB_EMERGENCY_AUDIO_COHORT_BUCKET_MIN
+    ) : AdsbEmergencyAudioRolloutPort {
+        private val _masterEnabled = MutableStateFlow(masterEnabled)
+        private val _shadowModeEnabled = MutableStateFlow(shadowModeEnabled)
+        private val _cohortPercent = MutableStateFlow(cohortPercent)
+        private val _cohortBucket = MutableStateFlow(cohortBucket)
+        private val _rollbackLatched = MutableStateFlow(false)
+        private val _rollbackReason = MutableStateFlow<String?>(null)
+        override val emergencyAudioMasterEnabledFlow: StateFlow<Boolean> = _masterEnabled
+        override val emergencyAudioShadowModeFlow: StateFlow<Boolean> = _shadowModeEnabled
+        override val emergencyAudioCohortPercentFlow: StateFlow<Int> = _cohortPercent
+        override val emergencyAudioCohortBucketFlow: StateFlow<Int> = _cohortBucket
+        override val emergencyAudioRollbackLatchedFlow: StateFlow<Boolean> = _rollbackLatched
+        override val emergencyAudioRollbackReasonFlow: StateFlow<String?> = _rollbackReason
+
+        fun setMasterEnabled(enabled: Boolean) {
+            _masterEnabled.value = enabled
+        }
+
+        fun setShadowModeEnabled(enabled: Boolean) {
+            _shadowModeEnabled.value = enabled
+        }
+
+        fun setCohortPercent(percent: Int) {
+            _cohortPercent.value = percent
+        }
+
+        override suspend fun latchEmergencyAudioRollback(reason: String) {
+            _rollbackLatched.value = true
+            _rollbackReason.value = reason
+        }
+
+        override suspend fun clearEmergencyAudioRollback() {
+            _rollbackLatched.value = false
+            _rollbackReason.value = null
         }
     }
 

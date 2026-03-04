@@ -42,6 +42,9 @@ class ForecastSettingsViewModel @Inject constructor(
     private val _credentialStorageMode = MutableStateFlow(ForecastCredentialStorageMode.ENCRYPTED)
     val credentialStorageMode: StateFlow<ForecastCredentialStorageMode> = _credentialStorageMode
 
+    private val _volatileFallbackAllowed = MutableStateFlow(false)
+    val volatileFallbackAllowed: StateFlow<Boolean> = _volatileFallbackAllowed
+
     val regionOptions: List<ForecastRegionOption> = useCase.availableRegions
     val windDisplayModes: List<ForecastWindDisplayMode> = useCase.windDisplayModes
 
@@ -116,9 +119,15 @@ class ForecastSettingsViewModel @Inject constructor(
 
     fun saveCredentials(username: String, password: String) {
         viewModelScope.launch {
-            useCase.saveCredentials(username = username, password = password)
-            refreshCredentialsSnapshot()
-            verifyCredentials()
+            try {
+                useCase.saveCredentials(username = username, password = password)
+                refreshCredentialsSnapshot()
+                verifyCredentials()
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                _credentialsStatus.value = t.message?.takeIf { it.isNotBlank() }
+                    ?: "Failed to save credentials"
+            }
         }
     }
 
@@ -141,12 +150,27 @@ class ForecastSettingsViewModel @Inject constructor(
                         _authConfirmation.value = "Authentication succeeded"
                         _authReturnCode.value = result.code
                     }
+                    is ForecastAuthCheckResult.InvalidCredentials -> {
+                        _authConfirmation.value = "Authentication failed: invalid credentials (${result.message})"
+                        _authReturnCode.value = result.code
+                    }
+                    is ForecastAuthCheckResult.RateLimited -> {
+                        val retryAfter = result.retryAfterSec?.let { seconds ->
+                            " retry in ${seconds}s"
+                        }.orEmpty()
+                        _authConfirmation.value = "Authentication rate-limited (${result.message})$retryAfter"
+                        _authReturnCode.value = result.code
+                    }
+                    is ForecastAuthCheckResult.ServerError -> {
+                        _authConfirmation.value = "Authentication service error (${result.message})"
+                        _authReturnCode.value = result.code
+                    }
                     is ForecastAuthCheckResult.HttpError -> {
                         _authConfirmation.value = "Authentication failed (${result.message})"
                         _authReturnCode.value = result.code
                     }
                     is ForecastAuthCheckResult.NetworkError -> {
-                        _authConfirmation.value = "Network error (${result.message})"
+                        _authConfirmation.value = "Network error (${result.kind}: ${result.message})"
                         _authReturnCode.value = null
                     }
                     ForecastAuthCheckResult.MissingCredentials -> {
@@ -168,6 +192,22 @@ class ForecastSettingsViewModel @Inject constructor(
         }
     }
 
+    fun setVolatileFallbackAllowed(enabled: Boolean) {
+        viewModelScope.launch {
+            try {
+                useCase.setVolatileFallbackAllowed(enabled)
+                refreshCredentialsSnapshot()
+                if (!enabled) {
+                    resetAuthStatus()
+                }
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                _credentialsStatus.value = t.message?.takeIf { it.isNotBlank() }
+                    ?: "Failed to update fallback policy"
+            }
+        }
+    }
+
     fun resetAuthStatus() {
         _authConfirmation.value = "Not verified"
         _authReturnCode.value = null
@@ -181,13 +221,42 @@ class ForecastSettingsViewModel @Inject constructor(
     }
 
     private suspend fun refreshCredentialsSnapshot() {
-        _credentialStorageMode.value = useCase.credentialStorageMode()
+        val storageMode = useCase.credentialStorageMode()
+        val fallbackAllowed = useCase.volatileFallbackAllowed()
+        _credentialStorageMode.value = storageMode
+        _volatileFallbackAllowed.value = fallbackAllowed
         val credentials = useCase.loadCredentials()
         _savedCredentials.value = credentials
-        _credentialsStatus.value = if (credentials == null) {
-            "Credentials not set"
-        } else {
-            "Credentials saved"
+        _credentialsStatus.value = statusMessage(
+            storageMode = storageMode,
+            fallbackAllowed = fallbackAllowed,
+            hasCredentials = credentials != null
+        )
+    }
+
+    private fun statusMessage(
+        storageMode: ForecastCredentialStorageMode,
+        fallbackAllowed: Boolean,
+        hasCredentials: Boolean
+    ): String {
+        return when (storageMode) {
+            ForecastCredentialStorageMode.ENCRYPTED -> {
+                if (hasCredentials) "Credentials saved securely" else "Credentials not set"
+            }
+            ForecastCredentialStorageMode.VOLATILE_MEMORY -> {
+                if (hasCredentials) {
+                    "Credentials saved in memory only (cleared on app restart)"
+                } else {
+                    "Memory-only credential mode enabled"
+                }
+            }
+            ForecastCredentialStorageMode.ENCRYPTION_UNAVAILABLE -> {
+                if (fallbackAllowed) {
+                    "Secure storage unavailable; memory-only fallback is enabled"
+                } else {
+                    "Secure storage unavailable; enable memory-only fallback to use credentials"
+                }
+            }
         }
     }
 }

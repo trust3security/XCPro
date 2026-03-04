@@ -40,6 +40,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.xcpro.navigation.MapNavigationSignals
 import com.example.xcpro.profiles.ProfileSelectionScreen
 import com.example.xcpro.profiles.ProfileViewModel
 import kotlinx.coroutines.launch
@@ -245,9 +246,18 @@ fun MainActivityScreen(
                                 if (currentRoute?.destination?.route == "support") {
                                     isBottomSheetVisible = true
                                 } else {
-                                    navController.navigate("settings") {
-                                        popUpTo(navController.graph.startDestinationId) { inclusive = false }
+                                    val requestOpenGeneralOnMap = {
+                                        runCatching {
+                                            navController.getBackStackEntry("map")
+                                                .savedStateHandle[MapNavigationSignals.OPEN_GENERAL_SETTINGS_ON_MAP] = true
+                                        }
                                     }
+                                    requestOpenGeneralOnMap()
+                                    navController.navigate("map") {
+                                        popUpTo(navController.graph.startDestinationId) { inclusive = false }
+                                        launchSingleTop = true
+                                    }
+                                    requestOpenGeneralOnMap()
                                 }
                             }
                         },

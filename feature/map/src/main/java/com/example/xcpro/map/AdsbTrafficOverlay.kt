@@ -9,8 +9,10 @@ import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import android.view.Choreographer
 import androidx.core.content.ContextCompat
+import com.example.xcpro.adsb.ADSB_EMERGENCY_FLASH_ENABLED_DEFAULT
 import com.example.xcpro.adsb.ADSB_ICON_SIZE_DEFAULT_PX
 import com.example.xcpro.adsb.AdsbTrafficUiModel
+import com.example.xcpro.adsb.AdsbProximityTier
 import com.example.xcpro.adsb.Icao24
 import com.example.xcpro.adsb.clampAdsbIconSizePx
 import com.example.xcpro.adsb.ui.AdsbAircraftIcon
@@ -52,6 +54,7 @@ class AdsbTrafficOverlay(
     initialIconSizePx: Int = ADSB_ICON_SIZE_DEFAULT_PX
 ) {
     private var currentIconSizePx: Int = clampAdsbIconSizePx(initialIconSizePx)
+    private var emergencyFlashEnabled: Boolean = ADSB_EMERGENCY_FLASH_ENABLED_DEFAULT
     private var currentOwnshipAltitudeMeters: Double? = null
     private var currentUnitsPreferences: UnitsPreferences = UnitsPreferences()
     private val motionSmoother = AdsbDisplayMotionSmoother()
@@ -61,8 +64,7 @@ class AdsbTrafficOverlay(
         frameScheduled = false
         // Use one monotonic clock source for both immediate and choreographer frames.
         val nowMonoMs = nowMonoMs()
-        val hasActiveAnimations = motionSmoother.hasActiveAnimations(nowMonoMs)
-        if (!hasActiveAnimations) {
+        if (!hasActiveVisualAnimation(nowMonoMs)) {
             return@frame
         }
         if (!shouldRenderAnimationFrame(nowMonoMs)) {
@@ -73,7 +75,7 @@ class AdsbTrafficOverlay(
         }
         renderFrame(nowMonoMs)
         lastRenderedFrameMonoMs = nowMonoMs
-        if (map.style != null && motionSmoother.hasActiveAnimations(nowMonoMs)) {
+        if (map.style != null && hasActiveVisualAnimation(nowMonoMs)) {
             scheduleFrameLoop()
         }
     }
@@ -143,6 +145,21 @@ class AdsbTrafficOverlay(
         applyIconSizeToStyle()
     }
 
+    fun setEmergencyFlashEnabled(enabled: Boolean) {
+        if (emergencyFlashEnabled == enabled) return
+        emergencyFlashEnabled = enabled
+        val style = map.style ?: return
+        val source = style.getSourceAs<GeoJsonSource>(SOURCE_ID) ?: return
+        val nowMonoMs = nowMonoMs()
+        source.setGeoJson(FeatureCollection.fromFeatures(buildFeatures(nowMonoMs)))
+        lastRenderedFrameMonoMs = nowMonoMs
+        if (hasActiveVisualAnimation(nowMonoMs)) {
+            scheduleFrameLoop()
+        } else {
+            stopFrameLoop()
+        }
+    }
+
     fun render(
         targets: List<AdsbTrafficUiModel>,
         ownshipAltitudeMeters: Double?,
@@ -157,13 +174,13 @@ class AdsbTrafficOverlay(
         currentUnitsPreferences = unitsPreferences
         val nowMonoMs = nowMonoMs()
         val changed = motionSmoother.onTargets(targets, nowMonoMs)
-        val hasAnimation = motionSmoother.hasActiveAnimations(nowMonoMs)
-        if (!changed && !hasAnimation && !contextChanged) {
+        val hasVisualAnimation = hasActiveVisualAnimation(nowMonoMs)
+        if (!changed && !hasVisualAnimation && !contextChanged) {
             return
         }
         renderFrame(nowMonoMs)
         lastRenderedFrameMonoMs = nowMonoMs
-        if (hasAnimation) {
+        if (hasVisualAnimation) {
             scheduleFrameLoop()
         } else {
             stopFrameLoop()
@@ -370,7 +387,13 @@ class AdsbTrafficOverlay(
             ) ?: continue
             feature.addNumberProperty(
                 AdsbGeoJsonMapper.PROP_ALPHA,
-                if (target.isStale) STALE_ALPHA else LIVE_ALPHA
+                AdsbEmergencyFlashPolicy.alphaForTarget(
+                    target = target,
+                    nowMonoMs = nowMonoMs,
+                    liveAlpha = LIVE_ALPHA,
+                    staleAlpha = STALE_ALPHA,
+                    emergencyFlashEnabled = emergencyFlashEnabled
+                )
             )
             features.add(feature)
         }
@@ -397,6 +420,16 @@ class AdsbTrafficOverlay(
         return nowMonoMs - lastRendered >= ANIMATION_FRAME_INTERVAL_MS
     }
 
+    private fun hasActiveVisualAnimation(nowMonoMs: Long): Boolean =
+        motionSmoother.hasActiveAnimations(nowMonoMs) || hasActiveEmergencyFlash(nowMonoMs)
+
+    private fun hasActiveEmergencyFlash(nowMonoMs: Long): Boolean {
+        if (!emergencyFlashEnabled) return false
+        return motionSmoother.frame(nowMonoMs).any { target ->
+            !target.isStale && target.proximityTier == AdsbProximityTier.EMERGENCY
+        }
+    }
+
     private fun iconScaleForPx(iconSizePx: Int): Float =
         iconSizePx.toFloat() / ICON_BITMAP_BASE_SIZE_PX.toFloat()
 
@@ -421,7 +454,7 @@ class AdsbTrafficOverlay(
         private const val ICON_BITMAP_BASE_SIZE_PX = ADSB_ICON_SIZE_DEFAULT_PX
 
         private const val LABEL_TEXT_SIZE_SP = 13f
-        private const val LABEL_TEXT_OFFSET_BASE_Y = 1.35f
+        private const val LABEL_TEXT_OFFSET_BASE_Y = 1.7f
         private const val LABEL_TEXT_COLOR = "#000000"
         private val LABEL_FONT_STACK = arrayOf(
             "Open Sans Semibold",

@@ -10,15 +10,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.xcpro.map.model.GpsStatusUiModel
 import com.example.xcpro.navdrawer.NavigationDrawer
-import com.example.xcpro.navigation.SettingsRoutes
+import com.example.ui1.screens.GeneralSettingsSheetHost
 import kotlinx.coroutines.launch
 
 /**
@@ -26,7 +28,8 @@ import kotlinx.coroutines.launch
  */
 @Composable
 internal fun MapScreenScaffold(inputs: MapScreenScaffoldInputs) {
-    val scope = rememberCoroutineScope()
+    val coroutineScope = rememberCoroutineScope()
+    val showGeneralSettings by inputs.modalManager.showGeneralSettings.collectAsStateWithLifecycle()
     NavigationDrawer(
         drawerState = inputs.drawerState,
         navController = inputs.navController,
@@ -36,6 +39,7 @@ internal fun MapScreenScaffold(inputs: MapScreenScaffoldInputs) {
         initialMapStyle = inputs.initialMapStyle,
         onItemSelected = inputs.onDrawerItemSelected,
         onMapStyleSelected = inputs.onMapStyleSelected,
+        onOpenGeneralSettings = inputs.onOpenGeneralSettingsFromDrawer,
         content = {
             Box(modifier = Modifier.fillMaxSize()) {
                 GpsStatusBanner(
@@ -131,19 +135,6 @@ internal fun MapScreenScaffold(inputs: MapScreenScaffoldInputs) {
                     onHamburgerTap = inputs.onHamburgerTap,
                     onHamburgerLongPress = inputs.onHamburgerLongPress,
                     onSettingsTap = inputs.onSettingsTap,
-                    onOpenWeatherSettingsFromTab = {
-                        inputs.settingsExpanded.value = true
-                        scope.launch {
-                            if (inputs.drawerState.isOpen) {
-                                inputs.drawerState.close()
-                            }
-                            if (shouldNavigateToWeatherSettings(inputs.navController.currentDestination?.route)) {
-                                inputs.navController.navigate(SettingsRoutes.WEATHER_SETTINGS) {
-                                    launchSingleTop = true
-                                }
-                            }
-                        }
-                    },
                     cardStyle = inputs.cardStyle,
                     hiddenCardIds = inputs.hiddenCardIds,
                     replayState = inputs.replayState,
@@ -169,10 +160,32 @@ internal fun MapScreenScaffold(inputs: MapScreenScaffoldInputs) {
             }
         }
     )
+    if (showGeneralSettings) {
+        GeneralSettingsSheetHost(
+            navController = inputs.navController,
+            drawerState = inputs.drawerState,
+            onDismissRequest = {
+                inputs.modalManager.hideGeneralSettingsModal()
+            },
+            onNavigateUp = {
+                coroutineScope.launch {
+                    inputs.modalManager.hideGeneralSettingsModal()
+                    if (!inputs.drawerState.isOpen) {
+                        inputs.drawerState.open()
+                    }
+                }
+            },
+            onNavigateToMap = {
+                coroutineScope.launch {
+                    inputs.modalManager.hideGeneralSettingsModal()
+                    if (inputs.drawerState.isOpen) {
+                        inputs.drawerState.close()
+                    }
+                }
+            }
+        )
+    }
 }
-
-internal fun shouldNavigateToWeatherSettings(currentRoute: String?): Boolean =
-    currentRoute != SettingsRoutes.WEATHER_SETTINGS
 
 @Composable
 private fun GpsStatusBanner(status: GpsStatusUiModel, modifier: Modifier = Modifier) {

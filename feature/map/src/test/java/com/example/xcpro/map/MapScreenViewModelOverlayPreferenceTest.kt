@@ -80,6 +80,7 @@ import com.example.xcpro.adsb.AdsbProximityTier
 import com.example.xcpro.hawk.HawkVarioUiState
 import com.example.xcpro.hawk.HawkVarioUseCase
 import com.example.xcpro.adsb.AdsbConnectionState
+import com.example.xcpro.adsb.ADSB_EMERGENCY_FLASH_ENABLED_DEFAULT
 import com.example.xcpro.adsb.ADSB_ICON_SIZE_DEFAULT_PX
 import com.example.xcpro.adsb.ADSB_ICON_SIZE_MAX_PX
 import com.example.xcpro.adsb.ADSB_MAX_DISTANCE_DEFAULT_KM
@@ -271,6 +272,28 @@ class MapScreenViewModelOverlayPreferenceTest : MapScreenViewModelTestBase() {
         drainMain()
 
         assertEquals(ADSB_ICON_SIZE_MAX_PX, viewModel.adsbIconSizePx.value)
+    }
+
+    @Test
+    fun adsbEmergencyFlash_defaultsToEnabled() {
+        val viewModel = createViewModel()
+
+        assertEquals(ADSB_EMERGENCY_FLASH_ENABLED_DEFAULT, viewModel.adsbEmergencyFlashEnabled.value)
+    }
+
+    @Test
+    fun adsbEmergencyFlash_readsPersistedPreferenceOnInit() = runBlocking {
+        val preferencesRepository = AdsbTrafficPreferencesRepository(
+            newTestPreferencesDataStore("adsb_traffic_seed_flash")
+        )
+        preferencesRepository.setEmergencyFlashEnabled(false)
+
+        val viewModel = createViewModel(
+            adsbPreferencesRepositoryOverride = preferencesRepository
+        )
+        drainMain()
+
+        assertEquals(false, viewModel.adsbEmergencyFlashEnabled.value)
     }
 
 }

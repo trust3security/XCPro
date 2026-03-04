@@ -1,8 +1,10 @@
 package com.example.xcpro.screens.navdrawer
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -13,22 +15,23 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.xcpro.common.orientation.MapOrientationMode
 import com.example.xcpro.map.domain.MapShiftBiasMode
-import com.example.xcpro.screens.navdrawer.SettingsTopAppBar
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -36,6 +39,8 @@ import kotlin.math.roundToInt
  * Dedicated Orientation settings screen accessed from General settings.
  * Mirrors the Navboxes top bar (back arrow, drawer shortcut, map icon) per UX request.
  */
+internal const val ORIENTATION_SETTINGS_SHEET_TAG = "orientation_settings_sheet"
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OrientationSettingsScreen(
@@ -46,63 +51,121 @@ fun OrientationSettingsScreen(
     val scope = rememberCoroutineScope()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Scaffold(
+    OrientationSettingsSheet(
+        onDismissRequest = { navController.navigateUp() },
+        onNavigateUp = { navController.navigateUp() },
+        onSecondaryNavigate = {
+            scope.launch {
+                navController.popBackStack("map", inclusive = false)
+                drawerState.open()
+            }
+        },
+        onNavigateToMap = {
+            scope.launch {
+                drawerState.close()
+                navController.popBackStack("map", inclusive = false)
+            }
+        }
+    ) {
+        OrientationSettingsContent(
+            uiState = uiState,
+            onSetCruiseMode = viewModel::setCruiseMode,
+            onSetCirclingMode = viewModel::setCirclingMode,
+            onSetGliderScreenPercent = viewModel::setGliderScreenPercent,
+            onSetMapShiftBiasMode = viewModel::setMapShiftBiasMode,
+            onSetMapShiftBiasStrength = viewModel::setMapShiftBiasStrength
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun OrientationSettingsSheet(
+    onDismissRequest: () -> Unit,
+    onNavigateUp: (() -> Unit)?,
+    onSecondaryNavigate: (() -> Unit)?,
+    onNavigateToMap: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        sheetState = sheetState,
+        dragHandle = null,
         containerColor = MaterialTheme.colorScheme.surface,
-        topBar = {
+        modifier = modifier.testTag(ORIENTATION_SETTINGS_SHEET_TAG)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight()
+        ) {
             SettingsTopAppBar(
                 title = "Orientation",
-                onNavigateUp = { navController.navigateUp() },
-                onSecondaryNavigate = {
-                    scope.launch {
-                        navController.popBackStack("map", inclusive = false)
-                        drawerState.open()
-                    }
-                },
-                onNavigateToMap = {
-                    scope.launch {
-                        drawerState.close()
-                        navController.popBackStack("map", inclusive = false)
-                    }
-                }
+                onNavigateUp = onNavigateUp,
+                onSecondaryNavigate = onSecondaryNavigate,
+                onNavigateToMap = onNavigateToMap
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                content()
+            }
+        }
+    }
+}
+
+@Composable
+internal fun OrientationSettingsContent(
+    uiState: OrientationSettingsUiState,
+    onSetCruiseMode: (MapOrientationMode) -> Unit,
+    onSetCirclingMode: (MapOrientationMode) -> Unit,
+    onSetGliderScreenPercent: (Int) -> Unit,
+    onSetMapShiftBiasMode: (MapShiftBiasMode) -> Unit,
+    onSetMapShiftBiasStrength: (Double) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    LazyColumn(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item {
+            OrientationModeCard(
+                title = "Cruise / Final Glide",
+                description = "Applies when flying straight, final glide, or navigating menus.",
+                selectedMode = uiState.cruiseMode,
+                onModeSelected = onSetCruiseMode
             )
         }
-    ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .padding(innerPadding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            item {
-                OrientationModeCard(
-                    title = "Cruise / Final Glide",
-                    description = "Applies when flying straight, final glide, or navigating menus.",
-                    selectedMode = uiState.cruiseMode,
-                    onModeSelected = viewModel::setCruiseMode
-                )
-            }
-            item {
-                OrientationModeCard(
-                    title = "Thermal / Circling",
-                    description = "Used while thermalling or whenever flight mode switches to Thermal.",
-                    selectedMode = uiState.circlingMode,
-                    onModeSelected = viewModel::setCirclingMode
-                )
-            }
-            item {
-                GliderPositionCard(
-                    percentFromBottom = uiState.gliderScreenPercent,
-                    onPercentChanged = viewModel::setGliderScreenPercent
-                )
-            }
-            item {
-                MapShiftBiasCard(
-                    mode = uiState.mapShiftBiasMode,
-                    strength = uiState.mapShiftBiasStrength,
-                    onModeChanged = viewModel::setMapShiftBiasMode,
-                    onStrengthChanged = viewModel::setMapShiftBiasStrength
-                )
-            }
+        item {
+            OrientationModeCard(
+                title = "Thermal / Circling",
+                description = "Used while thermalling or whenever flight mode switches to Thermal.",
+                selectedMode = uiState.circlingMode,
+                onModeSelected = onSetCirclingMode
+            )
+        }
+        item {
+            GliderPositionCard(
+                percentFromBottom = uiState.gliderScreenPercent,
+                onPercentChanged = onSetGliderScreenPercent
+            )
+        }
+        item {
+            MapShiftBiasCard(
+                mode = uiState.mapShiftBiasMode,
+                strength = uiState.mapShiftBiasStrength,
+                onModeChanged = onSetMapShiftBiasMode,
+                onStrengthChanged = onSetMapShiftBiasStrength
+            )
         }
     }
 }

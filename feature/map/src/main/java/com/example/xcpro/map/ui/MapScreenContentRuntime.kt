@@ -153,7 +153,6 @@ internal fun MapScreenContent(
     onHamburgerTap: () -> Unit,
     onHamburgerLongPress: () -> Unit,
     onSettingsTap: () -> Unit,
-    onOpenWeatherSettingsFromTab: () -> Unit,
     cardStyle: CardStyle,
     hiddenCardIds: Set<String>,
     replayState: StateFlow<SessionState>,
@@ -213,10 +212,15 @@ internal fun MapScreenContent(
         fallbackLocation = currentLocation,
         regionCode = forecastOverlayState.selectedRegionCode
     )
+    val skySightRainArbitrationWarning = computeSkySightRainSuppressionWarning(
+        forecastOverlayState = forecastOverlayState,
+        rainViewerEnabled = weatherOverlayState.enabled
+    )
     val skySightUiMessages = resolveSkySightUiMessages(
         repositoryWarningMessage = forecastOverlayState.warningMessage,
         regionCoverageWarningMessage = skySightRegionCoverageWarning,
         runtimeWarningMessage = forecastRuntimeWarning,
+        runtimeArbitrationWarningMessage = skySightRainArbitrationWarning,
         repositoryErrorMessage = forecastOverlayState.errorMessage,
         runtimeErrorMessage = skySightSatelliteRuntimeError
     )
@@ -245,6 +249,7 @@ internal fun MapScreenContent(
     ForecastOverlayRuntimeEffects(
         mapLibreMap = mapState.mapLibreMap,
         forecastOverlayState = forecastOverlayState,
+        rainViewerEnabled = weatherOverlayState.enabled,
         overlayManager = overlayManager
     )
     WindArrowTapRuntimeEffects(
@@ -420,7 +425,6 @@ internal fun MapScreenContent(
             onDismissOgnTargetDetails = onDismissOgnTargetDetails,
             onDismissOgnThermalDetails = onDismissOgnThermalDetails,
             onDismissAdsbTargetDetails = onDismissAdsbTargetDetails,
-            onOpenWeatherSettingsFromTab = onOpenWeatherSettingsFromTab,
             weatherEnabled = weatherOverlayState.enabled,
             ognOverlayEnabled = ognOverlayEnabled,
             showOgnSciaEnabled = showOgnSciaEnabled,

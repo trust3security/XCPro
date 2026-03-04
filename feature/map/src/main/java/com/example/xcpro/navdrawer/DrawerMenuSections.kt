@@ -241,7 +241,8 @@ fun SettingsSection(
     onToggle: () -> Unit,
     navController: NavHostController,
     drawerState: DrawerState,
-    scope: CoroutineScope
+    scope: CoroutineScope,
+    onOpenGeneralSettings: (() -> Unit)? = null
 ) {
     ModernExpandableSection(
         title = "Settings",
@@ -267,8 +268,12 @@ fun SettingsSection(
             onClick = {
                 scope.launch {
                     drawerState.close()
-                    navController.navigate(SettingsRoutes.GENERAL) {
-                        launchSingleTop = true
+                    if (onOpenGeneralSettings != null) {
+                        onOpenGeneralSettings()
+                    } else {
+                        navController.navigate(SettingsRoutes.GENERAL) {
+                            launchSingleTop = true
+                        }
                     }
                 }
             }

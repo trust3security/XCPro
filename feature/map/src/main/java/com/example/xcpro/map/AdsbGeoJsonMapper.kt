@@ -18,7 +18,10 @@ internal object AdsbGeoJsonMapper {
     const val PROP_DISTANCE_M = "distance_m"
     const val PROP_HAS_OWNSHIP_REF = "has_ownship_ref"
     const val PROP_IS_EMERGENCY = "is_emergency"
+    const val PROP_IS_CIRCLING_RULE = "is_circling_rule"
+    const val PROP_IS_EMERGENCY_AUDIO_ELIGIBLE = "is_emergency_audio_eligible"
     const val PROP_PROXIMITY_TIER = "proximity_tier"
+    const val PROP_PROXIMITY_REASON = "proximity_reason"
     const val PROP_ALT_M = "alt_m"
     const val PROP_SPEED_MPS = "speed_mps"
     const val PROP_VS_MPS = "vs_mps"
@@ -64,7 +67,13 @@ internal object AdsbGeoJsonMapper {
         }
         feature.addNumberProperty(PROP_HAS_OWNSHIP_REF, if (target.usesOwnshipReference) 1 else 0)
         feature.addNumberProperty(PROP_IS_EMERGENCY, if (target.isEmergencyCollisionRisk) 1 else 0)
+        feature.addNumberProperty(PROP_IS_CIRCLING_RULE, if (target.isCirclingEmergencyRedRule) 1 else 0)
+        feature.addNumberProperty(
+            PROP_IS_EMERGENCY_AUDIO_ELIGIBLE,
+            if (target.isEmergencyAudioEligible) 1 else 0
+        )
         feature.addNumberProperty(PROP_PROXIMITY_TIER, target.proximityTier.code)
+        feature.addStringProperty(PROP_PROXIMITY_REASON, target.proximityReason.code)
         target.trackDeg
             ?.takeIf { it.isFinite() }
             ?.let { feature.addNumberProperty(PROP_TRACK_DEG, normalizeTrackDegrees(it)) }

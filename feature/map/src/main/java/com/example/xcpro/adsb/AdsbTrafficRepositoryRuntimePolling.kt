@@ -39,13 +39,12 @@ private const val REQUEST_HISTORY_WINDOW_MS = 60L * 60L * 1_000L
 private const val REQUESTS_PER_HOUR_GUARDED = 120
 private const val REQUESTS_PER_HOUR_LOW = 180
 private const val REQUESTS_PER_HOUR_CRITICAL = 300
-private const val RECONNECT_BACKOFF_START_MS = 2_000L
-private const val RECONNECT_BACKOFF_MAX_MS = 60_000L
 private const val NETWORK_WAIT_HOUSEKEEPING_TICK_MS = 1_000L
 private const val OWN_ALTITUDE_RESELECT_MIN_INTERVAL_MS = 1_000L
 private const val OWN_ALTITUDE_RESELECT_MAX_INTERVAL_MS = 10_000L
 private const val OWN_ALTITUDE_RESELECT_MIN_DELTA_METERS = 1.0
 private const val OWN_ALTITUDE_RESELECT_FORCE_DELTA_METERS = 25.0
+private const val OWNSHIP_REFERENCE_STALE_AFTER_MS = 120_000L
 
 private sealed interface LoopCenterWaitState {
     data object Waiting : LoopCenterWaitState
@@ -76,9 +75,11 @@ internal fun AdsbTrafficRepositoryRuntime.handleSuccess(
     }
     store.upsertAll(mappedTargets)
     store.purgeExpired(nowMonoMs = nowMonoMs, expiryAfterSec = EXPIRY_AFTER_SEC)
-    val ownshipReference = ownshipReference(centerAtPoll)
+    val ownshipReference = ownshipReference(centerAtPoll, nowMonoMs = nowMonoMs)
+    val nowWallEpochSec = clock.nowWallMs() / 1_000L
     val selection = store.select(
         nowMonoMs = nowMonoMs,
+        nowWallEpochSec = nowWallEpochSec,
         queryCenterLat = centerAtPoll.latitude,
         queryCenterLon = centerAtPoll.longitude,
         referenceLat = ownshipReference.latitude,
@@ -88,6 +89,8 @@ internal fun AdsbTrafficRepositoryRuntime.handleSuccess(
         radiusMeters = receiveRadiusKm * 1_000.0,
         verticalAboveMeters = verticalFilterAboveMeters,
         verticalBelowMeters = verticalFilterBelowMeters,
+        ownshipIsCircling = ownshipCircling,
+        circlingFeatureEnabled = ownshipCirclingFeatureEnabled,
         maxDisplayed = MAX_DISPLAYED_TARGETS,
         staleAfterSec = STALE_AFTER_SEC
     )
@@ -95,6 +98,7 @@ internal fun AdsbTrafficRepositoryRuntime.handleSuccess(
     withinVerticalCount = selection.withinVerticalCount
     filteredByVerticalCount = selection.filteredByVerticalCount
     cappedCount = selection.cappedCount
+    emergencyAudioCandidateId = selection.emergencyAudioCandidateId
     consecutiveEmptyPolls = if (selection.withinRadiusCount == 0) {
         consecutiveEmptyPolls + 1
     } else {
@@ -112,9 +116,11 @@ internal fun AdsbTrafficRepositoryRuntime.publishFromStore(
     nowMonoMs: Long = clock.nowMonoMs()
 ) {
     store.purgeExpired(nowMonoMs = nowMonoMs, expiryAfterSec = EXPIRY_AFTER_SEC)
-    val ownshipReference = ownshipReference(centerAtPoll)
+    val ownshipReference = ownshipReference(centerAtPoll, nowMonoMs = nowMonoMs)
+    val nowWallEpochSec = clock.nowWallMs() / 1_000L
     val selection = store.select(
         nowMonoMs = nowMonoMs,
+        nowWallEpochSec = nowWallEpochSec,
         queryCenterLat = centerAtPoll.latitude,
         queryCenterLon = centerAtPoll.longitude,
         referenceLat = ownshipReference.latitude,
@@ -124,6 +130,8 @@ internal fun AdsbTrafficRepositoryRuntime.publishFromStore(
         radiusMeters = receiveRadiusKm * 1_000.0,
         verticalAboveMeters = verticalFilterAboveMeters,
         verticalBelowMeters = verticalFilterBelowMeters,
+        ownshipIsCircling = ownshipCircling,
+        circlingFeatureEnabled = ownshipCirclingFeatureEnabled,
         maxDisplayed = MAX_DISPLAYED_TARGETS,
         staleAfterSec = STALE_AFTER_SEC
     )
@@ -131,6 +139,7 @@ internal fun AdsbTrafficRepositoryRuntime.publishFromStore(
     withinVerticalCount = selection.withinVerticalCount
     filteredByVerticalCount = selection.filteredByVerticalCount
     cappedCount = selection.cappedCount
+    emergencyAudioCandidateId = selection.emergencyAudioCandidateId
     _targets.value = selection.displayed
     publishSnapshot()
 }
@@ -164,10 +173,20 @@ internal fun AdsbTrafficRepositoryRuntime.ownshipAltitudeDeltaMeters(
     return abs(nextAltitudeMeters - previousAltitudeMeters)
 }
 
-internal fun AdsbTrafficRepositoryRuntime.ownshipReference(fallbackCenter: Center): ReferencePoint {
+internal fun AdsbTrafficRepositoryRuntime.hasFreshOwnshipReference(nowMonoMs: Long): Boolean {
+    if (ownshipOrigin == null) return false
+    val lastUpdateMonoMs = ownshipReferenceLastUpdateMonoMs ?: return false
+    val ageMs = (nowMonoMs - lastUpdateMonoMs).coerceAtLeast(0L)
+    return ageMs <= OWNSHIP_REFERENCE_STALE_AFTER_MS
+}
+
+internal fun AdsbTrafficRepositoryRuntime.ownshipReference(
+    fallbackCenter: Center,
+    nowMonoMs: Long
+): ReferencePoint {
     val ownship = ownshipOrigin
     val altitude = ownshipAltitudeMeters?.takeIf { it.isFinite() }
-    return if (ownship != null) {
+    return if (ownship != null && hasFreshOwnshipReference(nowMonoMs = nowMonoMs)) {
         ReferencePoint(
             latitude = ownship.latitude,
             longitude = ownship.longitude,
@@ -251,111 +270,6 @@ internal fun AdsbTrafficRepositoryRuntime.pruneRequestHistory(nowMonoMs: Long) {
     val cutoff = nowMonoMs - REQUEST_HISTORY_WINDOW_MS
     while (requestTimesMonoMs.isNotEmpty() && requestTimesMonoMs.first() < cutoff) {
         requestTimesMonoMs.removeFirst()
-    }
-}
-
-internal fun AdsbTrafficRepositoryRuntime.publishSnapshot() {
-    val activeCenter = center
-    val pollingHealthSnapshot = pollingHealthPolicy.snapshotTelemetry()
-    val nowMonoMs = clock.nowMonoMs()
-    updateNetworkTransitionTelemetry(nowMonoMs)
-    val emergencyAudioFeatureGateOn = isEmergencyAudioFeatureGateOn()
-    val emergencyTargetId = _targets.value.firstOrNull { target ->
-        target.isEmergencyCollisionRisk
-    }?.id
-    val emergencyAudioDecision = emergencyAudioAlertFsm.evaluate(
-        nowMonoMs = nowMonoMs,
-        emergencyTargetId = emergencyTargetId,
-        hasOwnshipReference = ownshipOrigin != null,
-        settings = emergencyAudioSettings,
-        featureFlagEnabled = emergencyAudioFeatureGateOn && _isEnabled.value
-    )
-    maybePlayEmergencyAudioOutput(nowMonoMs, emergencyAudioDecision)
-    val emergencyAudioTelemetry = emergencyAudioAlertFsm.snapshotTelemetry(nowMonoMs)
-    val offlineDwellMs = if (!networkOnline) {
-        val transitionMonoMs = lastNetworkTransitionMonoMs ?: nowMonoMs
-        (nowMonoMs - transitionMonoMs).coerceAtLeast(0L)
-    } else {
-        0L
-    }
-    _snapshot.value = AdsbTrafficSnapshot(
-        targets = _targets.value,
-        connectionState = connectionState,
-        authMode = authMode,
-        centerLat = activeCenter?.latitude,
-        centerLon = activeCenter?.longitude,
-        usesOwnshipReference = ownshipOrigin != null,
-        receiveRadiusKm = receiveRadiusKm,
-        fetchedCount = fetchedCount,
-        withinRadiusCount = withinRadiusCount,
-        withinVerticalCount = withinVerticalCount,
-        filteredByVerticalCount = filteredByVerticalCount,
-        cappedCount = cappedCount,
-        displayedCount = _targets.value.size,
-        lastHttpStatus = lastHttpStatus,
-        remainingCredits = remainingCredits,
-        lastPollMonoMs = lastPollMonoMs,
-        lastSuccessMonoMs = lastSuccessMonoMs,
-        lastError = lastError,
-        lastNetworkFailureKind = lastNetworkFailureKind,
-        consecutiveFailureCount = pollingHealthSnapshot.consecutiveFailureCount,
-        nextRetryMonoMs = pollingHealthSnapshot.nextRetryMonoMs,
-        lastFailureMonoMs = pollingHealthSnapshot.lastFailureMonoMs,
-        networkOnline = networkOnline,
-        networkOfflineTransitionCount = networkOfflineTransitionCount,
-        networkOnlineTransitionCount = networkOnlineTransitionCount,
-        lastNetworkTransitionMonoMs = lastNetworkTransitionMonoMs,
-        currentOfflineDwellMs = offlineDwellMs,
-        emergencyAudioState = emergencyAudioTelemetry.state,
-        emergencyAudioEnabledBySetting = emergencyAudioSettings.enabled,
-        emergencyAudioFeatureGateOn = emergencyAudioFeatureGateOn,
-        emergencyAudioCooldownMs = emergencyAudioSettings.normalizedCooldownMs,
-        emergencyAudioAlertTriggerCount = emergencyAudioTelemetry.alertTriggerCount,
-        emergencyAudioCooldownBlockEpisodeCount =
-            emergencyAudioTelemetry.cooldownBlockEpisodeCount,
-        emergencyAudioTransitionEventCount = emergencyAudioTelemetry.transitionEventCount,
-        emergencyAudioLastAlertMonoMs = emergencyAudioTelemetry.lastAlertMonoMs,
-        emergencyAudioCooldownRemainingMs = emergencyAudioTelemetry.cooldownRemainingMs,
-        emergencyAudioActiveTargetId = emergencyAudioTelemetry.activeEmergencyTargetId?.raw
-    )
-}
-
-internal fun AdsbTrafficRepositoryRuntime.isEmergencyAudioFeatureGateOn(): Boolean =
-    emergencyAudioFeatureFlags.emergencyAudioEnabled ||
-        emergencyAudioFeatureFlags.emergencyAudioShadowMode
-
-internal fun AdsbTrafficRepositoryRuntime.isEmergencyAudioMasterOutputEnabled(): Boolean =
-    emergencyAudioFeatureFlags.emergencyAudioEnabled
-
-internal fun AdsbTrafficRepositoryRuntime.maybePlayEmergencyAudioOutput(
-    nowMonoMs: Long,
-    decision: AdsbEmergencyAudioDecision
-) {
-    if (!decision.shouldPlayAlert) return
-    if (!isEmergencyAudioMasterOutputEnabled()) return
-    runCatching {
-        emergencyAudioOutputPort.playEmergencyAlert(
-            triggerMonoMs = nowMonoMs,
-            emergencyTargetId = decision.activeEmergencyTargetId?.raw
-        )
-    }.onFailure { throwable ->
-        AppLogger.w(
-            TAG,
-            "ADS-B emergency audio output failed: ${throwable::class.java.simpleName}"
-        )
-    }
-}
-
-internal fun AdsbTrafficRepositoryRuntime.updateNetworkTransitionTelemetry(nowMonoMs: Long) {
-    if (connectionState is AdsbConnectionState.Disabled) return
-    val currentOnline = runCatching { networkAvailabilityPort.isOnline.value }.getOrDefault(networkOnline)
-    if (currentOnline == networkOnline) return
-    networkOnline = currentOnline
-    lastNetworkTransitionMonoMs = nowMonoMs
-    if (currentOnline) {
-        networkOnlineTransitionCount += 1
-    } else {
-        networkOfflineTransitionCount += 1
     }
 }
 

@@ -32,8 +32,14 @@ class AdsbSettingsUseCaseTest {
         whenever(repository.maxDistanceKmFlow).thenReturn(flowOf(22))
         whenever(repository.verticalAboveMetersFlow).thenReturn(flowOf(1200.0))
         whenever(repository.verticalBelowMetersFlow).thenReturn(flowOf(900.0))
+        whenever(repository.emergencyFlashEnabledFlow).thenReturn(flowOf(true))
         whenever(repository.emergencyAudioEnabledFlow).thenReturn(flowOf(true))
         whenever(repository.emergencyAudioCooldownMsFlow).thenReturn(flowOf(60_000L))
+        whenever(repository.emergencyAudioMasterEnabledFlow).thenReturn(flowOf(true))
+        whenever(repository.emergencyAudioShadowModeFlow).thenReturn(flowOf(false))
+        whenever(repository.emergencyAudioCohortPercentFlow).thenReturn(flowOf(25))
+        whenever(repository.emergencyAudioRollbackLatchedFlow).thenReturn(flowOf(false))
+        whenever(repository.emergencyAudioRollbackReasonFlow).thenReturn(flowOf(null))
         whenever(unitsRepository.unitsFlow).thenReturn(flowOf(UnitsPreferences()))
 
         val useCase = AdsbSettingsUseCase(
@@ -48,8 +54,14 @@ class AdsbSettingsUseCaseTest {
         assertEquals(22, useCase.maxDistanceKmFlow.first())
         assertEquals(1200.0, useCase.verticalAboveMetersFlow.first(), 0.0)
         assertEquals(900.0, useCase.verticalBelowMetersFlow.first(), 0.0)
+        assertTrue(useCase.emergencyFlashEnabledFlow.first())
         assertTrue(useCase.emergencyAudioEnabledFlow.first())
         assertEquals(60_000L, useCase.emergencyAudioCooldownMsFlow.first())
+        assertTrue(useCase.emergencyAudioMasterEnabledFlow.first())
+        assertEquals(false, useCase.emergencyAudioShadowModeFlow.first())
+        assertEquals(25, useCase.emergencyAudioCohortPercentFlow.first())
+        assertEquals(false, useCase.emergencyAudioRollbackLatchedFlow.first())
+        assertEquals(null, useCase.emergencyAudioRollbackReasonFlow.first())
     }
 
     @Test
@@ -58,8 +70,14 @@ class AdsbSettingsUseCaseTest {
         whenever(repository.maxDistanceKmFlow).thenReturn(flowOf(10))
         whenever(repository.verticalAboveMetersFlow).thenReturn(flowOf(2000.0))
         whenever(repository.verticalBelowMetersFlow).thenReturn(flowOf(1000.0))
+        whenever(repository.emergencyFlashEnabledFlow).thenReturn(flowOf(true))
         whenever(repository.emergencyAudioEnabledFlow).thenReturn(flowOf(false))
         whenever(repository.emergencyAudioCooldownMsFlow).thenReturn(flowOf(45_000L))
+        whenever(repository.emergencyAudioMasterEnabledFlow).thenReturn(flowOf(true))
+        whenever(repository.emergencyAudioShadowModeFlow).thenReturn(flowOf(false))
+        whenever(repository.emergencyAudioCohortPercentFlow).thenReturn(flowOf(100))
+        whenever(repository.emergencyAudioRollbackLatchedFlow).thenReturn(flowOf(false))
+        whenever(repository.emergencyAudioRollbackReasonFlow).thenReturn(flowOf(null))
         whenever(unitsRepository.unitsFlow).thenReturn(flowOf(UnitsPreferences()))
         val useCase = AdsbSettingsUseCase(
             repository = repository,
@@ -69,11 +87,20 @@ class AdsbSettingsUseCaseTest {
             unitsRepository = unitsRepository
         )
 
+        useCase.setEmergencyFlashEnabled(false)
         useCase.setEmergencyAudioEnabled(true)
         useCase.setEmergencyAudioCooldownMs(90_000L)
+        useCase.setEmergencyAudioMasterEnabled(false)
+        useCase.setEmergencyAudioShadowMode(true)
+        useCase.setEmergencyAudioCohortPercent(50)
+        useCase.clearEmergencyAudioRollback()
 
+        verify(repository).setEmergencyFlashEnabled(false)
         verify(repository).setEmergencyAudioEnabled(true)
         verify(repository).setEmergencyAudioCooldownMs(90_000L)
+        verify(repository).setEmergencyAudioMasterEnabled(false)
+        verify(repository).setEmergencyAudioShadowMode(true)
+        verify(repository).setEmergencyAudioCohortPercent(50)
+        verify(repository).clearEmergencyAudioRollback()
     }
 }
-

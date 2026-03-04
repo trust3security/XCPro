@@ -39,30 +39,41 @@ import kotlinx.coroutines.launch
 @Composable
 fun UnitsSettingsScreen(
     navController: NavHostController,
-    drawerState: DrawerState
+    drawerState: DrawerState,
+    onNavigateUp: (() -> Unit)? = null,
+    onSecondaryNavigate: (() -> Unit)? = null,
+    onNavigateToMap: (() -> Unit)? = null
 ) {
     val viewModel: UnitsSettingsViewModel = hiltViewModel()
     val units by viewModel.units.collectAsStateWithLifecycle(initialValue = UnitsPreferences())
     val scrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
+    val navigateUpAction: () -> Unit = onNavigateUp ?: {
+        navController.navigateUp()
+        Unit
+    }
+    val secondaryNavigateAction: () -> Unit = onSecondaryNavigate ?: {
+        scope.launch {
+            navController.popBackStack("map", inclusive = false)
+            drawerState.open()
+        }
+        Unit
+    }
+    val navigateToMapAction: () -> Unit = onNavigateToMap ?: {
+        scope.launch {
+            drawerState.close()
+            navController.popBackStack("map", inclusive = false)
+        }
+        Unit
+    }
 
     Scaffold(
         topBar = {
             SettingsTopAppBar(
                 title = "Units",
-                onNavigateUp = { navController.navigateUp() },
-                onSecondaryNavigate = {
-                    scope.launch {
-                        navController.popBackStack("map", inclusive = false)
-                        drawerState.open()
-                    }
-                },
-                onNavigateToMap = {
-                    scope.launch {
-                        drawerState.close()
-                        navController.popBackStack("map", inclusive = false)
-                    }
-                }
+                onNavigateUp = navigateUpAction,
+                onSecondaryNavigate = secondaryNavigateAction,
+                onNavigateToMap = navigateToMapAction
             )
         }
     ) { padding ->

@@ -50,12 +50,29 @@ data class AdsbTrafficUiModel(
     val category: Int?,
     val lastContactEpochSec: Long?,
     val proximityTier: AdsbProximityTier = AdsbProximityTier.NEUTRAL,
+    val proximityReason: AdsbProximityReason = AdsbProximityReason.DIVERGING_OR_STEADY,
     val isClosing: Boolean = false,
     val closingRateMps: Double? = null,
     val isEmergencyCollisionRisk: Boolean = false,
+    val isEmergencyAudioEligible: Boolean = false,
+    val isCirclingEmergencyRedRule: Boolean = false,
     val metadataTypecode: String? = null,
     val metadataIcaoAircraftType: String? = null
 )
+
+enum class AdsbProximityReason(val code: String) {
+    NO_OWNSHIP_REFERENCE("no_ownship_reference"),
+    CIRCLING_RULE_APPLIED("circling_rule_applied"),
+    GEOMETRY_EMERGENCY_APPLIED("geometry_emergency_applied"),
+    APPROACH_CLOSING("approach_closing"),
+    RECOVERY_DWELL("recovery_dwell"),
+    DIVERGING_OR_STEADY("diverging_or_steady");
+
+    companion object {
+        fun fromCode(code: String?): AdsbProximityReason =
+            values().firstOrNull { reason -> reason.code == code } ?: DIVERGING_OR_STEADY
+    }
+}
 
 enum class AdsbProximityTier(val code: Int) {
     NEUTRAL(0),
@@ -114,13 +131,75 @@ data class AdsbTrafficSnapshot(
     val emergencyAudioState: AdsbEmergencyAudioAlertState = AdsbEmergencyAudioAlertState.DISABLED,
     val emergencyAudioEnabledBySetting: Boolean = false,
     val emergencyAudioFeatureGateOn: Boolean = false,
+    val emergencyAudioMasterRolloutEnabled: Boolean = false,
+    val emergencyAudioMasterRolloutConfigured: Boolean = false,
+    val emergencyAudioShadowModeEnabled: Boolean = false,
+    val emergencyAudioRolloutCohortPercent: Int = ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_DEFAULT,
+    val emergencyAudioRolloutCohortBucket: Int = ADSB_EMERGENCY_AUDIO_COHORT_BUCKET_MIN,
+    val emergencyAudioRolloutCohortEligible: Boolean = false,
+    val emergencyAudioRollbackLatched: Boolean = false,
+    val emergencyAudioRollbackReason: String? = null,
     val emergencyAudioCooldownMs: Long = ADSB_EMERGENCY_AUDIO_DEFAULT_COOLDOWN_MS,
     val emergencyAudioAlertTriggerCount: Int = 0,
     val emergencyAudioCooldownBlockEpisodeCount: Int = 0,
     val emergencyAudioTransitionEventCount: Int = 0,
     val emergencyAudioLastAlertMonoMs: Long? = null,
     val emergencyAudioCooldownRemainingMs: Long = 0L,
-    val emergencyAudioActiveTargetId: String? = null
+    val emergencyAudioActiveTargetId: String? = null,
+    val proximityReasonCounts: AdsbProximityReasonCounts = AdsbProximityReasonCounts(),
+    val emergencyAudioKpis: AdsbEmergencyAudioKpiSnapshot = AdsbEmergencyAudioKpiSnapshot()
+)
+
+data class AdsbProximityReasonCounts(
+    val noOwnshipReferenceCount: Int = 0,
+    val circlingRuleAppliedCount: Int = 0,
+    val geometryEmergencyAppliedCount: Int = 0,
+    val approachClosingCount: Int = 0,
+    val recoveryDwellCount: Int = 0,
+    val divergingOrSteadyCount: Int = 0
+) {
+    companion object {
+        fun fromTargets(targets: List<AdsbTrafficUiModel>): AdsbProximityReasonCounts {
+            var noOwnshipReferenceCount = 0
+            var circlingRuleAppliedCount = 0
+            var geometryEmergencyAppliedCount = 0
+            var approachClosingCount = 0
+            var recoveryDwellCount = 0
+            var divergingOrSteadyCount = 0
+            targets.forEach { target ->
+                when (target.proximityReason) {
+                    AdsbProximityReason.NO_OWNSHIP_REFERENCE -> noOwnshipReferenceCount += 1
+                    AdsbProximityReason.CIRCLING_RULE_APPLIED -> circlingRuleAppliedCount += 1
+                    AdsbProximityReason.GEOMETRY_EMERGENCY_APPLIED ->
+                        geometryEmergencyAppliedCount += 1
+                    AdsbProximityReason.APPROACH_CLOSING -> approachClosingCount += 1
+                    AdsbProximityReason.RECOVERY_DWELL -> recoveryDwellCount += 1
+                    AdsbProximityReason.DIVERGING_OR_STEADY -> divergingOrSteadyCount += 1
+                }
+            }
+            return AdsbProximityReasonCounts(
+                noOwnshipReferenceCount = noOwnshipReferenceCount,
+                circlingRuleAppliedCount = circlingRuleAppliedCount,
+                geometryEmergencyAppliedCount = geometryEmergencyAppliedCount,
+                approachClosingCount = approachClosingCount,
+                recoveryDwellCount = recoveryDwellCount,
+                divergingOrSteadyCount = divergingOrSteadyCount
+            )
+        }
+    }
+}
+
+data class AdsbEmergencyAudioKpiSnapshot(
+    val alertTriggerCount: Int = 0,
+    val cooldownBlockEpisodeCount: Int = 0,
+    val activeObservationMs: Long = 0L,
+    val alertsPerFlightHour: Double = 0.0,
+    val cooldownBlockEpisodesPerFlightHour: Double = 0.0,
+    val disableWithin5MinCount: Int = 0,
+    val disableEventCount: Int = 0,
+    val disableWithin5MinRate: Double = 0.0,
+    val retriggerWithinCooldownCount: Int = 0,
+    val determinismMismatchCount: Int = 0
 )
 
 data class AdsbAuth(

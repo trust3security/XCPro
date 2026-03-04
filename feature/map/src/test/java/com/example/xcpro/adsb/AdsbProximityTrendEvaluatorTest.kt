@@ -21,8 +21,34 @@ class AdsbProximityTrendEvaluatorTest {
         )
 
         assertFalse(first.hasTrendSample)
+        assertFalse(first.hasFreshTrendSample)
         assertFalse(first.isClosing)
         assertTrue(first.showClosingAlert)
+    }
+
+    @Test
+    fun evaluate_withoutFreshSample_doesNotPromoteToTrendSample() {
+        val evaluator = AdsbProximityTrendEvaluator()
+
+        evaluator.evaluate(
+            id = id,
+            distanceMeters = 1_500.0,
+            nowMonoMs = 1_000L,
+            hasOwnshipReference = true,
+            sampleMonoMs = 1_000L
+        )
+        val noFreshSample = evaluator.evaluate(
+            id = id,
+            distanceMeters = 1_500.0,
+            nowMonoMs = 6_000L,
+            hasOwnshipReference = true,
+            sampleMonoMs = 1_000L
+        )
+
+        assertFalse(noFreshSample.hasTrendSample)
+        assertFalse(noFreshSample.hasFreshTrendSample)
+        assertFalse(noFreshSample.isClosing)
+        assertTrue(noFreshSample.showClosingAlert)
     }
 
     @Test
@@ -61,13 +87,17 @@ class AdsbProximityTrendEvaluatorTest {
         )
 
         assertTrue(closing.hasTrendSample)
+        assertTrue(closing.hasFreshTrendSample)
         assertTrue(closing.isClosing)
         assertTrue(closing.showClosingAlert)
         assertFalse(divergingStart.isClosing)
+        assertTrue(divergingStart.hasFreshTrendSample)
         assertTrue(divergingStart.showClosingAlert)
         assertFalse(stillRecovering.isClosing)
+        assertTrue(stillRecovering.hasFreshTrendSample)
         assertTrue(stillRecovering.showClosingAlert)
         assertFalse(recovered.isClosing)
+        assertTrue(recovered.hasFreshTrendSample)
         assertFalse(recovered.showClosingAlert)
     }
 
@@ -95,8 +125,10 @@ class AdsbProximityTrendEvaluatorTest {
         )
 
         assertFalse(shortDt.hasTrendSample)
+        assertFalse(shortDt.hasFreshTrendSample)
         assertTrue(shortDt.showClosingAlert)
         assertTrue(longDt.hasTrendSample)
+        assertTrue(longDt.hasFreshTrendSample)
         assertTrue(longDt.isClosing)
     }
 
@@ -130,9 +162,11 @@ class AdsbProximityTrendEvaluatorTest {
         )
 
         assertFalse(neutral.hasTrendSample)
+        assertFalse(neutral.hasFreshTrendSample)
         assertFalse(neutral.isClosing)
         assertFalse(neutral.showClosingAlert)
         assertFalse(afterReset.hasTrendSample)
+        assertFalse(afterReset.hasFreshTrendSample)
         assertTrue(afterReset.showClosingAlert)
     }
 

@@ -27,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -56,7 +57,10 @@ import kotlin.math.roundToInt
 @Composable
 fun ForecastSettingsScreen(
     navController: NavHostController,
-    drawerState: DrawerState
+    drawerState: DrawerState,
+    onNavigateUp: (() -> Unit)? = null,
+    onSecondaryNavigate: (() -> Unit)? = null,
+    onNavigateToMap: (() -> Unit)? = null
 ) {
     val viewModel: ForecastSettingsViewModel = hiltViewModel()
     val scope = rememberCoroutineScope()
@@ -70,6 +74,25 @@ fun ForecastSettingsScreen(
     val savedCredentials by viewModel.savedCredentials.collectAsStateWithLifecycle()
     val credentialsStatus by viewModel.credentialsStatus.collectAsStateWithLifecycle()
     val credentialStorageMode by viewModel.credentialStorageMode.collectAsStateWithLifecycle()
+    val volatileFallbackAllowed by viewModel.volatileFallbackAllowed.collectAsStateWithLifecycle()
+    val navigateUpAction: () -> Unit = onNavigateUp ?: {
+        navController.navigateUp()
+        Unit
+    }
+    val secondaryNavigateAction: () -> Unit = onSecondaryNavigate ?: {
+        scope.launch {
+            navController.popBackStack("map", inclusive = false)
+            drawerState.open()
+        }
+        Unit
+    }
+    val navigateToMapAction: () -> Unit = onNavigateToMap ?: {
+        scope.launch {
+            drawerState.close()
+            navController.popBackStack("map", inclusive = false)
+        }
+        Unit
+    }
     var sliderValue by remember { mutableStateOf(opacity) }
     var windOverlayScaleSlider by remember { mutableStateOf(windOverlayScale) }
     var username by remember { mutableStateOf("") }
@@ -92,19 +115,9 @@ fun ForecastSettingsScreen(
         topBar = {
             SettingsTopAppBar(
                 title = "SkySight",
-                onNavigateUp = { navController.navigateUp() },
-                onSecondaryNavigate = {
-                    scope.launch {
-                        navController.popBackStack("map", inclusive = false)
-                        drawerState.open()
-                    }
-                },
-                onNavigateToMap = {
-                    scope.launch {
-                        drawerState.close()
-                        navController.popBackStack("map", inclusive = false)
-                    }
-                }
+                onNavigateUp = navigateUpAction,
+                onSecondaryNavigate = secondaryNavigateAction,
+                onNavigateToMap = navigateToMapAction
             )
         }
     ) { paddingValues ->
@@ -263,12 +276,40 @@ fun ForecastSettingsScreen(
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        if (credentialStorageMode == ForecastCredentialStorageMode.PLAINTEXT_FALLBACK) {
+                        if (credentialStorageMode == ForecastCredentialStorageMode.VOLATILE_MEMORY) {
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Secure encrypted storage unavailable on this device; using fallback storage.",
+                                text = "Secure encrypted storage unavailable on this device; credentials are held in memory only and cleared on app restart.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                        val shouldShowFallbackToggle =
+                            credentialStorageMode != ForecastCredentialStorageMode.ENCRYPTED ||
+                                volatileFallbackAllowed
+                        if (shouldShowFallbackToggle) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Allow memory-only fallback",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Switch(
+                                    checked = volatileFallbackAllowed,
+                                    onCheckedChange = { enabled ->
+                                        credentialValidationMessage = null
+                                        viewModel.setVolatileFallbackAllowed(enabled)
+                                    }
+                                )
+                            }
+                            Text(
+                                text = "When enabled, credentials are stored in app memory and cleared on restart.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         Spacer(modifier = Modifier.height(12.dp))
@@ -299,21 +340,23 @@ fun ForecastSettingsScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
+                            val canPersistCredentials =
+                                credentialStorageMode != ForecastCredentialStorageMode.ENCRYPTION_UNAVAILABLE ||
+                                    volatileFallbackAllowed
                             Button(
                                 onClick = {
-                                    val trimmedUsername = username.trim()
-                                    val trimmedPassword = password.trim()
-                                    if (trimmedUsername.isBlank() || trimmedPassword.isBlank()) {
+                                    if (username.isBlank() || password.isBlank()) {
                                         credentialValidationMessage = "Username and password are required"
                                     } else {
                                         credentialValidationMessage = null
                                         viewModel.saveCredentials(
-                                            username = trimmedUsername,
-                                            password = trimmedPassword
+                                            username = username,
+                                            password = password
                                         )
                                     }
                                 },
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
+                                enabled = canPersistCredentials
                             ) {
                                 Text("Save")
                             }
@@ -332,7 +375,8 @@ fun ForecastSettingsScreen(
                         Spacer(modifier = Modifier.height(8.dp))
                         TextButton(
                             onClick = viewModel::verifyCredentials,
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = credentialStorageMode != ForecastCredentialStorageMode.ENCRYPTION_UNAVAILABLE
                         ) {
                             Text(if (authChecking) "Verifying..." else "Test Login")
                         }

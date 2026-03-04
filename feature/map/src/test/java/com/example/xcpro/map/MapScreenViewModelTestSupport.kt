@@ -266,6 +266,7 @@ class FakeAdsbTrafficRepository : AdsbTrafficRepository {
     var lastCenterLon: Double? = null
     var lastOwnshipLat: Double? = null
     var lastOwnshipLon: Double? = null
+    var updateOwnshipOriginCalls: Int = 0
     var clearOwnshipOriginCalls: Int = 0
     var clearTargetsCalls: Int = 0
 
@@ -284,6 +285,7 @@ class FakeAdsbTrafficRepository : AdsbTrafficRepository {
     }
 
     override fun updateOwnshipOrigin(latitude: Double, longitude: Double) {
+        updateOwnshipOriginCalls += 1
         lastOwnshipLat = latitude
         lastOwnshipLon = longitude
     }
@@ -295,6 +297,11 @@ class FakeAdsbTrafficRepository : AdsbTrafficRepository {
     }
 
     override fun updateOwnshipAltitudeMeters(altitudeMeters: Double?) = Unit
+
+    override fun updateOwnshipCirclingContext(
+        isCircling: Boolean,
+        circlingFeatureEnabled: Boolean
+    ) = Unit
 
     override fun updateDisplayFilters(
         maxDistanceKm: Int,

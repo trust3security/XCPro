@@ -118,6 +118,15 @@ internal fun AdsbDebugPanel(
                 color = Color(0xFFE5E7EB),
                 style = MaterialTheme.typography.bodySmall
             )
+            val circlingRuleCount = snapshot.targets.count { it.isCirclingEmergencyRedRule }
+            val geometryEmergencyCount = snapshot.targets.count { it.isEmergencyCollisionRisk }
+            val emergencyAudioEligibleCount = snapshot.targets.count { it.isEmergencyAudioEligible }
+            Text(
+                text = "Rule hits (circling/geometry/audio): $circlingRuleCount/$geometryEmergencyCount/$emergencyAudioEligibleCount",
+                color = Color(0xFFE5E7EB),
+                style = MaterialTheme.typography.bodySmall
+            )
+            AdsbDebugPolicyAndKpiRows(snapshot = snapshot)
             Text(
                 text = "Filtered (vertical/capped): ${snapshot.filteredByVerticalCount}/${snapshot.cappedCount}",
                 color = Color(0xFFE5E7EB),
@@ -146,6 +155,11 @@ internal fun AdsbDebugPanel(
             Text(
                 text = "Auth: ${snapshot.authMode.toDebugLabel()}",
                 color = if (snapshot.authMode == AdsbAuthMode.AuthFailed) Color(0xFFFCA5A5) else Color(0xFFE5E7EB),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = "Emergency audio gate (master/shadow): ${snapshot.emergencyAudioMasterRolloutEnabled}/${snapshot.emergencyAudioShadowModeEnabled}",
+                color = Color(0xFFE5E7EB),
                 style = MaterialTheme.typography.bodySmall
             )
             Text(

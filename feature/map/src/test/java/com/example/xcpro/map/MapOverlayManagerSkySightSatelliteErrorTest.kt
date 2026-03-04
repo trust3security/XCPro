@@ -7,6 +7,7 @@ import com.example.xcpro.map.trail.SnailTrailManager
 import kotlinx.coroutines.test.TestScope
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.maplibre.android.maps.MapLibreMap
 import org.mockito.kotlin.any
@@ -48,6 +49,34 @@ class MapOverlayManagerSkySightSatelliteErrorTest {
         verify(satelliteOverlay, times(2)).render(any())
         verify(blueOverlay, times(1)).bringToFront()
         assertNull(fixture.manager.skySightSatelliteRuntimeErrorMessage.value)
+    }
+
+    @Test
+    fun setSkySightSatelliteOverlay_commitsContrastIconsOnlyAfterSuccessfulApply() {
+        val fixture = createFixture()
+        val map: MapLibreMap = mock()
+        val satelliteOverlay: SkySightSatelliteOverlay = mock()
+        fixture.mapState.mapLibreMap = map
+        fixture.mapState.skySightSatelliteOverlay = satelliteOverlay
+
+        var renderCalls = 0
+        doAnswer {
+            renderCalls += 1
+            if (renderCalls == 1) {
+                throw IllegalStateException("satellite render failed")
+            }
+            Unit
+        }.whenever(satelliteOverlay).render(any())
+
+        applyEnabledSatelliteConfig(fixture.manager)
+        assertTrue(
+            fixture.manager.getOverlayStatus().contains("OGN Satellite Contrast Icons Enabled: false")
+        )
+
+        applyEnabledSatelliteConfig(fixture.manager)
+        assertTrue(
+            fixture.manager.getOverlayStatus().contains("OGN Satellite Contrast Icons Enabled: true")
+        )
     }
 
     @Test

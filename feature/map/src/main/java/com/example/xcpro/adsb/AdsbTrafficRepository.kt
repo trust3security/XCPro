@@ -38,6 +38,10 @@ interface AdsbTrafficRepository {
     fun updateOwnshipOrigin(latitude: Double, longitude: Double)
     fun clearOwnshipOrigin()
     fun updateOwnshipAltitudeMeters(altitudeMeters: Double?)
+    fun updateOwnshipCirclingContext(
+        isCircling: Boolean,
+        circlingFeatureEnabled: Boolean
+    )
     fun updateDisplayFilters(
         maxDistanceKm: Int,
         verticalAboveMeters: Double,
@@ -57,6 +61,7 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
     networkAvailabilityPort: AdsbNetworkAvailabilityPort,
     emergencyAudioSettingsPort: AdsbEmergencyAudioSettingsPort =
         DisabledEmergencyAudioSettingsPort(),
+    emergencyAudioRolloutPort: AdsbEmergencyAudioRolloutPort? = null,
     emergencyAudioOutputPort: AdsbEmergencyAudioOutputPort =
         NoOpAdsbEmergencyAudioOutputPort,
     emergencyAudioFeatureFlags: AdsbEmergencyAudioFeatureFlags =
@@ -75,6 +80,7 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
         dispatcher = dispatcher,
         networkAvailabilityPort = AlwaysOnlineNetworkAvailabilityPort,
         emergencyAudioSettingsPort = DisabledEmergencyAudioSettingsPort(),
+        emergencyAudioRolloutPort = null,
         emergencyAudioOutputPort = NoOpAdsbEmergencyAudioOutputPort,
         emergencyAudioFeatureFlags = AdsbEmergencyAudioFeatureFlags()
     )
@@ -86,6 +92,7 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
         dispatcher = dispatcher,
         networkAvailabilityPort = networkAvailabilityPort,
         emergencyAudioSettingsPort = emergencyAudioSettingsPort,
+        emergencyAudioRolloutPort = emergencyAudioRolloutPort,
         emergencyAudioOutputPort = emergencyAudioOutputPort,
         emergencyAudioFeatureFlags = emergencyAudioFeatureFlags
     )
@@ -111,6 +118,14 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
 
     override fun updateOwnshipAltitudeMeters(altitudeMeters: Double?) =
         runtime.updateOwnshipAltitudeMeters(altitudeMeters)
+
+    override fun updateOwnshipCirclingContext(
+        isCircling: Boolean,
+        circlingFeatureEnabled: Boolean
+    ) = runtime.updateOwnshipCirclingContext(
+        isCircling = isCircling,
+        circlingFeatureEnabled = circlingFeatureEnabled
+    )
 
     override fun updateDisplayFilters(
         maxDistanceKm: Int,

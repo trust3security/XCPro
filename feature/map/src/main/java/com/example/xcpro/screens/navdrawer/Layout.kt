@@ -41,13 +41,34 @@ import kotlin.math.roundToInt
 @Composable
 fun LayoutScreen(
     navController: NavHostController,
-    drawerState: DrawerState
+    drawerState: DrawerState,
+    onNavigateUp: (() -> Unit)? = null,
+    onSecondaryNavigate: (() -> Unit)? = null,
+    onNavigateToMap: (() -> Unit)? = null
 ) {
     val viewModel: LayoutViewModel = hiltViewModel()
     val scope = rememberCoroutineScope()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var sliderValue by remember { mutableStateOf(uiState.cardsAcrossPortrait.toFloat()) }
     var anchor by remember { mutableStateOf(uiState.anchorPortrait) }
+    val navigateUpAction: () -> Unit = onNavigateUp ?: {
+        navController.navigateUp()
+        Unit
+    }
+    val secondaryNavigateAction: () -> Unit = onSecondaryNavigate ?: {
+        scope.launch {
+            navController.popBackStack("map", inclusive = false)
+            drawerState.open()
+        }
+        Unit
+    }
+    val navigateToMapAction: () -> Unit = onNavigateToMap ?: {
+        scope.launch {
+            drawerState.close()
+            navController.popBackStack("map", inclusive = false)
+        }
+        Unit
+    }
 
     LaunchedEffect(uiState.cardsAcrossPortrait) {
         sliderValue = uiState.cardsAcrossPortrait.toFloat()
@@ -60,19 +81,9 @@ fun LayoutScreen(
         topBar = {
             SettingsTopAppBar(
                 title = "Layouts",
-                onNavigateUp = { navController.navigateUp() },
-                onSecondaryNavigate = {
-                    scope.launch {
-                        navController.popBackStack("map", inclusive = false)
-                        drawerState.open()
-                    }
-                },
-                onNavigateToMap = {
-                    scope.launch {
-                        drawerState.close()
-                        navController.popBackStack("map", inclusive = false)
-                    }
-                }
+                onNavigateUp = navigateUpAction,
+                onSecondaryNavigate = secondaryNavigateAction,
+                onNavigateToMap = navigateToMapAction
             )
         }
     ) { paddingValues ->

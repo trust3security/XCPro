@@ -16,9 +16,35 @@ fun DFNavboxes(
     navController: NavHostController,
     drawerState: DrawerState,
     onLoadConfig: () -> Unit = {},
-    onSaveConfig: () -> Unit = {}
+    onSaveConfig: () -> Unit = {},
+    onNavigateUp: (() -> Unit)? = null,
+    onSecondaryNavigate: (() -> Unit)? = null,
+    onNavigateToMap: (() -> Unit)? = null,
+    onClose: (() -> Unit)? = null
 ) {
     val scope = rememberCoroutineScope()
+    val navigateUpAction: () -> Unit = onNavigateUp ?: {
+        navController.navigateUp()
+        Unit
+    }
+    val secondaryNavigateAction: () -> Unit = onSecondaryNavigate ?: {
+        scope.launch {
+            navController.popBackStack("map", inclusive = false)
+            drawerState.open()
+        }
+        Unit
+    }
+    val navigateToMapAction: () -> Unit = onNavigateToMap ?: {
+        scope.launch {
+            drawerState.close()
+            navController.popBackStack("map", inclusive = false)
+        }
+        Unit
+    }
+    val closeAction: () -> Unit = onClose ?: {
+        navController.popBackStack("map", inclusive = false)
+        Unit
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
@@ -26,19 +52,9 @@ fun DFNavboxes(
         topBar = {
             SettingsTopAppBar(
                 title = "Navboxes",
-                onNavigateUp = { navController.navigateUp() },
-                onSecondaryNavigate = {
-                    scope.launch {
-                        navController.popBackStack("map", inclusive = false)
-                        drawerState.open()
-                    }
-                },
-                onNavigateToMap = {
-                    scope.launch {
-                        drawerState.close()
-                        navController.popBackStack("map", inclusive = false)
-                    }
-                }
+                onNavigateUp = navigateUpAction,
+                onSecondaryNavigate = secondaryNavigateAction,
+                onNavigateToMap = navigateToMapAction
             )
         },
         bottomBar = {
@@ -59,9 +75,7 @@ fun DFNavboxes(
                 }) {
                     Text("Save")
                 }
-                Button(onClick = {
-                    navController.popBackStack("map", inclusive = false)
-                }) {
+                Button(onClick = closeAction) {
                     Text("Close")
                 }
             }

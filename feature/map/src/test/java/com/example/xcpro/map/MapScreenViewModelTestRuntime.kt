@@ -396,6 +396,10 @@ abstract class MapScreenViewModelTestBase {
             override fun updateOwnshipOrigin(latitude: Double, longitude: Double) = Unit
             override fun clearOwnshipOrigin() = Unit
             override fun updateOwnshipAltitudeMeters(altitudeMeters: Double?) = Unit
+            override fun updateOwnshipCirclingContext(
+                isCircling: Boolean,
+                circlingFeatureEnabled: Boolean
+            ) = Unit
             override fun updateDisplayFilters(
                 maxDistanceKm: Int,
                 verticalAboveMeters: Double,

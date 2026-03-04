@@ -11,6 +11,7 @@ import com.example.xcpro.adsb.AdsbTrafficSnapshot
 import com.example.xcpro.adsb.AdsbTrafficUiModel
 import com.example.xcpro.adsb.AdsbSelectedTargetDetails
 import com.example.xcpro.adsb.Icao24
+import com.example.xcpro.adsb.ADSB_EMERGENCY_FLASH_ENABLED_DEFAULT
 import com.example.xcpro.adsb.ADSB_ICON_SIZE_DEFAULT_PX
 import com.example.xcpro.adsb.metadata.domain.AdsbMetadataEnrichmentUseCase
 import com.example.xcpro.weather.wind.model.WindState
@@ -111,6 +112,10 @@ class MapScreenViewModel @Inject constructor(
         .map { state -> state.isFlying }
         .eagerState(scope = viewModelScope, initial = false)
     val ownshipAltitudeMeters: StateFlow<Double?> = createOwnshipAltitudeState(viewModelScope, flightDataUseCase)
+    private val ownshipIsCircling: StateFlow<Boolean> =
+        createOwnshipCirclingState(viewModelScope, flightDataUseCase)
+    private val circlingFeatureEnabledForAdsb: StateFlow<Boolean> =
+        createCirclingFeatureEnabledState(viewModelScope, thermallingModeUseCase)
     val ognTargets: StateFlow<List<OgnTrafficTarget>> = ognTrafficUseCase.targets
     val ognSnapshot: StateFlow<OgnTrafficSnapshot> = ognTrafficUseCase.snapshot
     val ognOverlayEnabled: StateFlow<Boolean> = ognTrafficUseCase.overlayEnabled
@@ -140,6 +145,8 @@ class MapScreenViewModel @Inject constructor(
         .eagerState(scope = viewModelScope, initial = false)
     val adsbIconSizePx: StateFlow<Int> = adsbTrafficUseCase.iconSizePx
         .eagerState(scope = viewModelScope, initial = ADSB_ICON_SIZE_DEFAULT_PX)
+    val adsbEmergencyFlashEnabled: StateFlow<Boolean> = adsbTrafficUseCase.emergencyFlashEnabled
+        .eagerState(scope = viewModelScope, initial = ADSB_EMERGENCY_FLASH_ENABLED_DEFAULT)
     val variometerUiState: StateFlow<VariometerUiState> = variometerLayoutUseCase.state
     private val _uiState = MutableStateFlow(MapUiState())
     val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
@@ -149,32 +156,27 @@ class MapScreenViewModel @Inject constructor(
     val uiEffects: SharedFlow<MapUiEffect> = _uiEffects.asSharedFlow()
     private val _mapCommands = MutableSharedFlow<MapCommand>(extraBufferCapacity = 1)
     val mapCommands: SharedFlow<MapCommand> = _mapCommands.asSharedFlow()
-    private val _selectedAdsbId = MutableStateFlow<Icao24?>(null)
-    val selectedAdsbId: StateFlow<Icao24?> = _selectedAdsbId.asStateFlow()
-    // AI-NOTE: Keep selected ADS-B details on the raw ADS-B stream so distance/bearing
-    // remain ownship-relative and are not coupled to OGN overlay behavior.
-    val selectedAdsbTarget: StateFlow<AdsbSelectedTargetDetails?> = adsbMetadataEnrichmentUseCase
-        .selectedTargetDetails(selectedIcao24 = _selectedAdsbId, adsbTargets = rawAdsbTargets)
-        .eagerState(scope = viewModelScope, initial = null)
-    private val _selectedOgnId = MutableStateFlow<String?>(null)
-    val selectedOgnTarget: StateFlow<OgnTrafficTarget?> = createSelectedOgnTargetState(
+    private val trafficSelectionState: MapTrafficSelectionState = createTrafficSelectionState(
         scope = viewModelScope,
-        selectedOgnId = _selectedOgnId,
-        ognTargets = ognTargets
-    )
-    private val _selectedOgnThermalId = MutableStateFlow<String?>(null)
-    val selectedOgnThermal: StateFlow<OgnThermalHotspot?> = createSelectedOgnThermalState(
-        scope = viewModelScope,
-        selectedThermalId = _selectedOgnThermalId,
+        adsbMetadataEnrichmentUseCase = adsbMetadataEnrichmentUseCase,
+        rawAdsbTargets = rawAdsbTargets,
+        ognTargets = ognTargets,
         thermalHotspots = ognThermalHotspots
     )
+    val selectedAdsbId: StateFlow<Icao24?> = trafficSelectionState.selectedAdsbId.asStateFlow()
+    val selectedAdsbTarget: StateFlow<AdsbSelectedTargetDetails?> = trafficSelectionState.selectedAdsbTarget
+    val selectedOgnTarget: StateFlow<OgnTrafficTarget?> = trafficSelectionState.selectedOgnTarget
+    val selectedOgnThermal: StateFlow<OgnThermalHotspot?> = trafficSelectionState.selectedOgnThermal
     private val _containerReady = MutableStateFlow(false)
     private val _liveDataReady = MutableStateFlow(false)
     private val _isMapVisible = MutableStateFlow(false)
     private val _isAATEditMode = MutableStateFlow(false)
+    private val adsbFilterStates: AdsbFilterStateFlows =
+        createAdsbFilterStateFlows(viewModelScope, adsbTrafficUseCase)
     val cardHydrationReady: StateFlow<Boolean> =
         createCardHydrationReadyState(viewModelScope, _containerReady, _liveDataReady)
-    private val flightDataUiAdapter = mapReplayUseCase.createFlightDataUiAdapter(
+    private val flightDataUiAdapter = createFlightDataUiAdapterForViewModel(
+        mapReplayUseCase = mapReplayUseCase,
         scope = viewModelScope,
         flightDataFlow = flightDataUseCase.flightData,
         windStateFlow = windStateUseCase.windState,
@@ -187,7 +189,8 @@ class MapScreenViewModel @Inject constructor(
         uiEffects = _uiEffects,
         trailUpdates = _trailUpdates
     )
-    private val replayCoordinator = mapReplayUseCase.createReplayCoordinator(
+    private val replayCoordinator = createReplayCoordinatorForViewModel(
+        mapReplayUseCase = mapReplayUseCase,
         flightDataFlow = flightDataUseCase.flightData,
         featureFlags = runtimeDependencies.featureFlags,
         mapStateStore = mapStateStore,
@@ -209,7 +212,7 @@ class MapScreenViewModel @Inject constructor(
         qnhUseCase = qnhUseCase,
         calibrateQnhUseCase = calibrateQnhUseCase
     )
-    private val trafficCoordinator = MapScreenTrafficCoordinator(
+    private val trafficCoordinator = createTrafficCoordinatorForViewModel(
         scope = viewModelScope,
         allowSensorStart = allowSensorStart,
         isMapVisible = _isMapVisible,
@@ -219,50 +222,27 @@ class MapScreenViewModel @Inject constructor(
         mapLocation = mapLocation,
         isFlying = isFlying,
         ownshipAltitudeMeters = ownshipAltitudeMeters,
-        adsbMaxDistanceKm = adsbTrafficUseCase.maxDistanceKm.eagerState(
-            scope = viewModelScope,
-            initial = com.example.xcpro.adsb.ADSB_MAX_DISTANCE_DEFAULT_KM
-        ),
-        adsbVerticalAboveMeters = adsbTrafficUseCase.verticalAboveMeters.eagerState(
-            scope = viewModelScope,
-            initial = com.example.xcpro.adsb.ADSB_VERTICAL_FILTER_ABOVE_DEFAULT_METERS
-        ),
-        adsbVerticalBelowMeters = adsbTrafficUseCase.verticalBelowMeters.eagerState(
-            scope = viewModelScope,
-            initial = com.example.xcpro.adsb.ADSB_VERTICAL_FILTER_BELOW_DEFAULT_METERS
-        ),
+        ownshipIsCircling = ownshipIsCircling,
+        circlingFeatureEnabled = circlingFeatureEnabledForAdsb,
+        adsbFilterStates = adsbFilterStates,
         rawOgnTargets = ognTargets,
-        selectedOgnId = _selectedOgnId,
+        selectedOgnId = trafficSelectionState.selectedOgnId,
         showSciaEnabled = showOgnSciaEnabled,
         showThermalsEnabled = showOgnThermalsEnabled,
         thermalHotspots = ognThermalHotspots,
-        selectedThermalId = _selectedOgnThermalId,
+        selectedThermalId = trafficSelectionState.selectedOgnThermalId,
         rawAdsbTargets = rawAdsbTargets,
-        selectedAdsbId = _selectedAdsbId,
+        selectedAdsbId = trafficSelectionState.selectedAdsbId,
         ognTrafficUseCase = ognTrafficUseCase,
         adsbTrafficUseCase = adsbTrafficUseCase,
-        emitUiEffect = { effect -> _uiEffects.emit(effect) }
+        uiEffects = _uiEffects
     )
     val isAATEditMode: StateFlow<Boolean> = _isAATEditMode.asStateFlow()
     val taskType: StateFlow<TaskType> = mapTasksUseCase.taskTypeFlow
     private val unitsState = unitsUseCase.unitsFlow.inVm(scope = viewModelScope, initial = UnitsPreferences())
     val unitsPreferencesFlow: StateFlow<UnitsPreferences> = unitsState
     val ognAltitudeUnit: StateFlow<AltitudeUnit> = unitsState.map { it.altitude }.eagerState(scope = viewModelScope, initial = unitsState.value.altitude)
-    val cardIngestionCoordinator: CardIngestionCoordinator by lazy {
-        CardIngestionCoordinator(
-            scope = viewModelScope,
-            cardHydrationReady = cardHydrationReady,
-            cardFlightDataFlow = flightDataManager.cardFlightDataFlow,
-            consumeBufferedCardSample = { flightDataManager.consumeBufferedCardSample() },
-            unitsPreferencesFlow = unitsPreferencesFlow,
-            initializeCardPreferences = { flightViewModel ->
-                flightViewModel.initializeCardPreferences(cardPreferences)
-            },
-            startIndependentClock = { flightViewModel ->
-                flightViewModel.startIndependentClockTimer()
-            }
-        )
-    }
+    val cardIngestionCoordinator: CardIngestionCoordinator by lazy { createCardIngestionCoordinator(scope = viewModelScope, cardHydrationReady = cardHydrationReady, flightDataManager = flightDataManager, unitsPreferencesFlow = unitsPreferencesFlow, cardPreferences = cardPreferences) }
     init {
         mapStateStore.setTrailSettings(trailSettingsUseCase.getSettings())
         mapStateStore.setDisplaySmoothingProfile(featureFlags.defaultDisplaySmoothingProfile)
@@ -297,16 +277,9 @@ class MapScreenViewModel @Inject constructor(
     fun onVarioDemoReplaySimLive() = replayCoordinator.onVarioDemoReplaySimLive()
     fun onVarioDemoReplaySim3() = replayCoordinator.onVarioDemoReplaySim3()
     fun updateSafeContainerSize(size: MapStateStore.MapSize) = mapStateStore.updateSafeContainerSize(size)
-    fun setMapStyle(styleName: String) {
-        if (mapStateStore.updateMapStyleName(styleName)) emitMapCommand(MapCommand.SetStyle(styleName))
-    }
+    fun setMapStyle(styleName: String) { if (mapStateStore.updateMapStyleName(styleName)) emitMapCommand(MapCommand.SetStyle(styleName)) }
     fun persistMapStyle(styleName: String) = viewModelScope.launch { mapStyleUseCase.saveStyle(styleName) }
-    fun setFlightMode(newMode: FlightMode) {
-        mapStateStore.setCurrentMode(newMode)
-        mapStateStore.setCurrentFlightMode(newMode.toCardFlightModeSelection())
-        flightDataManager.updateFlightModeFromEnum(newMode)
-        sensorsUseCase.setFlightMode(newMode)
-    }
+    fun setFlightMode(newMode: FlightMode) { mapStateStore.setCurrentMode(newMode); mapStateStore.setCurrentFlightMode(newMode.toCardFlightModeSelection()); flightDataManager.updateFlightModeFromEnum(newMode); sensorsUseCase.setFlightMode(newMode) }
     fun onEvent(event: MapUiEvent) = uiEventHandler.onEvent(event)
     fun setMapVisible(isVisible: Boolean) = trafficCoordinator.setMapVisible(isVisible)
     fun onToggleOgnTraffic() = trafficCoordinator.onToggleOgnTraffic()
@@ -340,11 +313,5 @@ class MapScreenViewModel @Inject constructor(
     fun submitBallastCommand(command: BallastCommand) = ballastController.submit(command)
     fun onAutoCalibrateQnh() = waypointQnhCoordinator.onAutoCalibrateQnh()
     fun onSetManualQnh(hpa: Double) = waypointQnhCoordinator.onSetManualQnh(hpa)
-    override fun onCleared() {
-        ognTrafficUseCase.stop()
-        adsbTrafficUseCase.stop()
-        thermallingModeUseCase.reset()
-        ballastController.dispose()
-        super.onCleared()
-    }
+    override fun onCleared() { ognTrafficUseCase.stop(); adsbTrafficUseCase.stop(); thermallingModeUseCase.reset(); ballastController.dispose(); super.onCleared() }
 }

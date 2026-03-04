@@ -175,6 +175,39 @@ class MapScreenViewModelTrafficSelectionTest : MapScreenViewModelTestBase() {
     }
 
     @Test
+    fun adsbOwnshipReference_refreshesWhenStationaryFixRepeatsSameCoordinates() {
+        val adsbRepository = FakeAdsbTrafficRepository()
+        val viewModel = createViewModel(adsbRepositoryOverride = adsbRepository)
+        ensureAdsbOverlayEnabled(viewModel)
+        drainMain()
+
+        flightDataRepository.update(
+            buildCompleteFlightData(
+                gps = defaultGps(
+                    latitude = -34.5000,
+                    longitude = 150.5000,
+                    timestampMillis = 1_000L
+                )
+            )
+        )
+        drainMain()
+        val callsAfterFirstFix = adsbRepository.updateOwnshipOriginCalls
+
+        flightDataRepository.update(
+            buildCompleteFlightData(
+                gps = defaultGps(
+                    latitude = -34.5000,
+                    longitude = 150.5000,
+                    timestampMillis = 2_000L
+                )
+            )
+        )
+        drainMain()
+
+        assertEquals(callsAfterFirstFix + 1, adsbRepository.updateOwnshipOriginCalls)
+    }
+
+    @Test
     fun adsbOwnshipReference_clearsWhenGpsBecomesUnavailable() {
         val adsbRepository = FakeAdsbTrafficRepository()
         val viewModel = createViewModel(adsbRepositoryOverride = adsbRepository)

@@ -97,7 +97,8 @@ class ForecastOverlayRepositoryTest {
         assertEquals(0, catalogPort.parametersCalls)
         assertEquals(0, catalogPort.timeSlotsCalls)
         assertEquals(0, state.primaryParameters.size)
-        assertEquals(clock.nowWallMs(), state.selectedTimeUtcMs)
+        val stepMs = FORECAST_SKYSIGHT_SATELLITE_FRAME_STEP_MINUTES * 60_000L
+        assertEquals((clock.nowWallMs() / stepMs) * stepMs, state.selectedTimeUtcMs)
     }
 
     @Test

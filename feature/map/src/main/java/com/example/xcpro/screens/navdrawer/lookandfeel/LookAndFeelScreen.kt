@@ -29,7 +29,10 @@ import com.example.xcpro.screens.navdrawer.SettingsTopAppBar
 @Composable
 fun LookAndFeelScreen(
     navController: NavHostController,
-    drawerState: DrawerState
+    drawerState: DrawerState,
+    onNavigateUp: (() -> Unit)? = null,
+    onSecondaryNavigate: (() -> Unit)? = null,
+    onNavigateToMap: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -63,6 +66,24 @@ fun LookAndFeelScreen(
     val showCardSheet = remember { mutableStateOf(false) }
     val showColorSheet = remember { mutableStateOf(false) }
     val showSnailTrailSheet = remember { mutableStateOf(false) }
+    val navigateUpAction: () -> Unit = onNavigateUp ?: {
+        navController.navigateUp()
+        Unit
+    }
+    val secondaryNavigateAction: () -> Unit = onSecondaryNavigate ?: {
+        scope.launch {
+            navController.popBackStack("map", inclusive = false)
+            drawerState.open()
+        }
+        Unit
+    }
+    val navigateToMapAction: () -> Unit = onNavigateToMap ?: {
+        scope.launch {
+            drawerState.close()
+            navController.popBackStack("map", inclusive = false)
+        }
+        Unit
+    }
 
     val menuOptions = remember(statusBarStyle, cardStyle, trailSettings) {
         LookAndFeelMenuDefaults.defaultMenuOptions(
@@ -76,19 +97,9 @@ fun LookAndFeelScreen(
         topBar = {
             SettingsTopAppBar(
                 title = "Look & Feel",
-                onNavigateUp = { navController.navigateUp() },
-                onSecondaryNavigate = {
-                    scope.launch {
-                        navController.popBackStack("map", inclusive = false)
-                        drawerState.open()
-                    }
-                },
-                onNavigateToMap = {
-                    scope.launch {
-                        drawerState.close()
-                        navController.popBackStack("map", inclusive = false)
-                    }
-                }
+                onNavigateUp = navigateUpAction,
+                onSecondaryNavigate = secondaryNavigateAction,
+                onNavigateToMap = navigateToMapAction
             )
         }
     ) { padding ->

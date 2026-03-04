@@ -2,6 +2,7 @@ package com.example.xcpro.adsb
 
 internal data class AdsbProximityTrendAssessment(
     val hasTrendSample: Boolean,
+    val hasFreshTrendSample: Boolean,
     val isClosing: Boolean,
     val closingRateMps: Double?,
     val showClosingAlert: Boolean
@@ -28,12 +29,14 @@ internal class AdsbProximityTrendEvaluator(
         id: Icao24,
         distanceMeters: Double,
         nowMonoMs: Long,
-        hasOwnshipReference: Boolean
+        hasOwnshipReference: Boolean,
+        sampleMonoMs: Long = nowMonoMs
     ): AdsbProximityTrendAssessment {
         if (!hasOwnshipReference || !distanceMeters.isFinite()) {
             stateByTargetId.remove(id)
             return AdsbProximityTrendAssessment(
                 hasTrendSample = false,
+                hasFreshTrendSample = false,
                 isClosing = false,
                 closingRateMps = null,
                 showClosingAlert = false
@@ -44,7 +47,7 @@ internal class AdsbProximityTrendEvaluator(
         if (existing == null) {
             stateByTargetId[id] = TrendState(
                 previousDistanceMeters = distanceMeters,
-                previousMonoMs = nowMonoMs,
+                previousSampleMonoMs = sampleMonoMs,
                 hasTrendSample = false,
                 isClosing = false,
                 closingRateMps = null,
@@ -52,17 +55,19 @@ internal class AdsbProximityTrendEvaluator(
             )
             return AdsbProximityTrendAssessment(
                 hasTrendSample = false,
+                hasFreshTrendSample = false,
                 isClosing = false,
                 closingRateMps = null,
                 showClosingAlert = true
             )
         }
 
-        val dtMs = nowMonoMs - existing.previousMonoMs
-        if (dtMs < minTrendSampleDtMs || dtMs <= 0L) {
+        val sampleDtMs = sampleMonoMs - existing.previousSampleMonoMs
+        if (sampleDtMs <= 0L || sampleDtMs < minTrendSampleDtMs) {
             val recoveryActive = isRecoveryActive(existing.recoveryUntilMonoMs, nowMonoMs)
             return AdsbProximityTrendAssessment(
                 hasTrendSample = existing.hasTrendSample,
+                hasFreshTrendSample = false,
                 isClosing = existing.isClosing,
                 closingRateMps = existing.closingRateMps,
                 showClosingAlert = !existing.hasTrendSample || existing.isClosing || recoveryActive
@@ -70,7 +75,7 @@ internal class AdsbProximityTrendEvaluator(
         }
 
         val closingRateMps =
-            (existing.previousDistanceMeters - distanceMeters) / (dtMs.toDouble() / 1_000.0)
+            (existing.previousDistanceMeters - distanceMeters) / (sampleDtMs.toDouble() / 1_000.0)
         val nextIsClosing = when {
             !existing.hasTrendSample -> closingRateMps >= closingEnterMs
             existing.isClosing -> closingRateMps > closingExitMs
@@ -84,7 +89,7 @@ internal class AdsbProximityTrendEvaluator(
         }
         val nextState = TrendState(
             previousDistanceMeters = distanceMeters,
-            previousMonoMs = nowMonoMs,
+            previousSampleMonoMs = sampleMonoMs,
             hasTrendSample = true,
             isClosing = nextIsClosing,
             closingRateMps = closingRateMps,
@@ -94,6 +99,7 @@ internal class AdsbProximityTrendEvaluator(
         val recoveryActive = isRecoveryActive(nextState.recoveryUntilMonoMs, nowMonoMs)
         return AdsbProximityTrendAssessment(
             hasTrendSample = nextState.hasTrendSample,
+            hasFreshTrendSample = true,
             isClosing = nextState.isClosing,
             closingRateMps = nextState.closingRateMps,
             showClosingAlert = nextState.isClosing || recoveryActive
@@ -105,7 +111,7 @@ internal class AdsbProximityTrendEvaluator(
 
     private data class TrendState(
         val previousDistanceMeters: Double,
-        val previousMonoMs: Long,
+        val previousSampleMonoMs: Long,
         val hasTrendSample: Boolean,
         val isClosing: Boolean,
         val closingRateMps: Double?,

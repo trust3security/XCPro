@@ -90,7 +90,7 @@ Sensors + fusion (feature/map):
 - feature/map/src/main/java/com/example/xcpro/sensors/NeedleVarioDynamics.kt (pneumatic needle response)
 
 Audio:
-- feature/map/src/main/java/com/example/xcpro/audio/*
+- feature/variometer/src/main/java/com/example/xcpro/audio/*
 
 UI (map overlay and variometer):
 - feature/map/src/main/java/com/example/xcpro/map/*
@@ -387,11 +387,11 @@ Audio is driven directly from the fusion engine:
 - FlightDataCalculatorEngine -> VarioAudioController -> VarioAudioEngine
 
 File references:
-- feature/map/src/main/java/com/example/xcpro/audio/VarioAudioController.kt
-- feature/map/src/main/java/com/example/xcpro/audio/VarioAudioEngine.kt
-- feature/map/src/main/java/com/example/xcpro/audio/VarioFrequencyMapper.kt
-- feature/map/src/main/java/com/example/xcpro/audio/VarioBeepController.kt
-- feature/map/src/main/java/com/example/xcpro/audio/VarioToneGenerator.kt
+- feature/variometer/src/main/java/com/example/xcpro/audio/VarioAudioController.kt
+- feature/variometer/src/main/java/com/example/xcpro/audio/VarioAudioEngine.kt
+- feature/variometer/src/main/java/com/example/xcpro/audio/VarioFrequencyMapper.kt
+- feature/variometer/src/main/java/com/example/xcpro/audio/VarioBeepController.kt
+- feature/variometer/src/main/java/com/example/xcpro/audio/VarioToneGenerator.kt
 
 Behavior:
 - TE vario is preferred when valid; otherwise raw vario.

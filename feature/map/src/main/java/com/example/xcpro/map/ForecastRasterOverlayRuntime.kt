@@ -1,5 +1,6 @@
 package com.example.xcpro.map
 
+import android.graphics.PointF
 import com.example.xcpro.forecast.ForecastLegendSpec
 import com.example.xcpro.forecast.ForecastTileFormat
 import com.example.xcpro.forecast.ForecastTileSpec
@@ -285,13 +286,18 @@ open class ForecastRasterOverlayRuntime(
 
     private fun layerHasRenderedFeatures(layerId: String): Boolean {
         val cameraTarget = runCatching { map.cameraPosition.target }.getOrNull() ?: return false
-        val screenPoint = runCatching {
+        val centerPoint = runCatching {
             map.projection.toScreenLocation(cameraTarget)
         }.getOrNull() ?: return false
-        val features = runCatching {
-            map.queryRenderedFeatures(screenPoint, layerId)
-        }.getOrNull().orEmpty()
-        return features.isNotEmpty()
+        val probePoints = SOURCE_LAYER_PROBE_OFFSETS.map { (xOffset, yOffset) ->
+            PointF(centerPoint.x + xOffset, centerPoint.y + yOffset)
+        }
+        return probePoints.any { probePoint ->
+            val features = runCatching {
+                map.queryRenderedFeatures(probePoint, layerId)
+            }.getOrNull().orEmpty()
+            features.isNotEmpty()
+        }
     }
 
     private fun resetSourceLayerFallbackState() {
@@ -392,6 +398,13 @@ open class ForecastRasterOverlayRuntime(
     private companion object {
         private const val DEFAULT_WIND_SPEED_PROPERTY = "spd"
         private const val SOURCE_LAYER_FALLBACK_MISS_THRESHOLD = 2
+        private val SOURCE_LAYER_PROBE_OFFSETS: List<Pair<Float, Float>> = listOf(
+            0f to 0f,
+            -72f to 0f,
+            72f to 0f,
+            0f to -72f,
+            0f to 72f
+        )
 
         val ANCHOR_LAYER_IDS = listOf(
             "airspace-layer",

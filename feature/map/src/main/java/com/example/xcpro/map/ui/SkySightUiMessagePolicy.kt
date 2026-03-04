@@ -9,6 +9,7 @@ internal fun resolveSkySightUiMessages(
     repositoryWarningMessage: String?,
     regionCoverageWarningMessage: String?,
     runtimeWarningMessage: String?,
+    runtimeArbitrationWarningMessage: String? = null,
     repositoryErrorMessage: String?,
     runtimeErrorMessage: String?
 ): SkySightUiMessages {
@@ -19,7 +20,8 @@ internal fun resolveSkySightUiMessages(
     val warningMessages = normalizeMessages(
         repositoryWarningMessage,
         regionCoverageWarningMessage,
-        runtimeWarningMessage
+        runtimeWarningMessage,
+        runtimeArbitrationWarningMessage
     ).filter { warning ->
         errorMessages.none { error -> warning.equals(error, ignoreCase = true) }
     }

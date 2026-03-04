@@ -46,7 +46,6 @@ internal fun MapBottomTabsSection(
     onDismissOgnTargetDetails: () -> Unit,
     onDismissOgnThermalDetails: () -> Unit,
     onDismissAdsbTargetDetails: () -> Unit,
-    onOpenWeatherSettingsFromTab: () -> Unit,
     weatherEnabled: Boolean,
     ognOverlayEnabled: Boolean,
     showOgnSciaEnabled: Boolean,
@@ -88,15 +87,6 @@ internal fun MapBottomTabsSection(
             }
         },
         onDismissSheet = { setBottomTabsSheetVisible(false) },
-        onRainViewerSelected = {
-            if (hasTrafficDetailsOpen) {
-                onDismissOgnTargetDetails()
-                onDismissOgnThermalDetails()
-                onDismissAdsbTargetDetails()
-            }
-            setBottomTabsSheetVisible(false)
-            onOpenWeatherSettingsFromTab()
-        },
         weatherEnabled = weatherEnabled,
         ognEnabled = ognOverlayEnabled,
         showSciaEnabled = showOgnSciaEnabled,

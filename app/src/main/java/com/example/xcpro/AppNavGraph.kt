@@ -8,6 +8,8 @@ import androidx.compose.material3.DrawerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -15,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -41,6 +44,7 @@ import com.example.xcpro.screens.navdrawer.OgnSettingsScreen
 import com.example.xcpro.screens.navdrawer.WeatherSettingsScreen
 import com.example.xcpro.screens.diagnostics.VarioDiagnosticsScreen
 import com.example.xcpro.screens.replay.IgcReplayScreen
+import com.example.xcpro.navigation.MapNavigationSignals
 import com.example.xcpro.navigation.SettingsRoutes
 
 @Composable
@@ -62,6 +66,9 @@ fun AppNavGraph(
     ) {
         composable("map") { backStackEntry ->
             val mapViewModel: MapScreenViewModel = hiltViewModel(backStackEntry)
+            val openGeneralSettingsOnMap by backStackEntry.savedStateHandle
+                .getStateFlow(MapNavigationSignals.OPEN_GENERAL_SETTINGS_ON_MAP, false)
+                .collectAsStateWithLifecycle()
             MapScreen(
                 navController = navController,
                 drawerState = drawerState,
@@ -75,17 +82,32 @@ fun AppNavGraph(
                     mutableStateOf(config?.optJSONObject("navDrawer")?.optBoolean("settingsExpanded", true) ?: true)
                 },
                 initialMapStyle = initialMapStyle,
+                openGeneralSettingsOnStart = openGeneralSettingsOnMap,
+                onGeneralSettingsLaunchConsumed = {
+                    backStackEntry.savedStateHandle[MapNavigationSignals.OPEN_GENERAL_SETTINGS_ON_MAP] = false
+                },
                 mapViewModel = mapViewModel
             )
         }
-        composable(SettingsRoutes.GENERAL) { backStackEntry ->
-            val mapEntry = remember(backStackEntry) { navController.getBackStackEntry("map") }
-            val mapViewModel: MapScreenViewModel = hiltViewModel(mapEntry)
-            SettingsScreen(
-                navController = navController,
-                drawerState = drawerState,
-                onShowAirspaceOverlay = { }
-            )
+        composable(SettingsRoutes.GENERAL) {
+            // Compatibility shim for legacy callers still navigating to "settings".
+            LaunchedEffect(Unit) {
+                val requestOpenGeneralOnMap = {
+                    runCatching { navController.getBackStackEntry("map") }
+                        .getOrNull()
+                        ?.savedStateHandle
+                        ?.set(MapNavigationSignals.OPEN_GENERAL_SETTINGS_ON_MAP, true)
+                }
+                requestOpenGeneralOnMap()
+                val poppedToMap = navController.popBackStack("map", inclusive = false)
+                if (!poppedToMap) {
+                    navController.navigate("map") {
+                        popUpTo(navController.graph.startDestinationId) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                    requestOpenGeneralOnMap()
+                }
+            }
         }
         composable("look_and_feel") { LookAndFeelScreen(navController = navController, drawerState = drawerState) }
         composable("units_settings") { UnitsSettingsScreen(navController = navController, drawerState = drawerState) }
@@ -143,7 +165,7 @@ fun AppNavGraph(
         composable("manage_account") { ManageAccount(navController, drawerState) }
         composable("logbook") { Logbook(navController, drawerState) }
         composable("layouts") { LayoutScreen(navController, drawerState) }
-        composable("adsb_settings") { AdsbSettingsScreen(navController, drawerState) }
+        composable(SettingsRoutes.ADSB_SETTINGS) { AdsbSettingsScreen(navController, drawerState) }
         composable("ogn_settings") { OgnSettingsScreen(navController, drawerState) }
         composable("forecast_settings") { ForecastSettingsScreen(navController, drawerState) }
         composable(SettingsRoutes.WEATHER_SETTINGS) { WeatherSettingsScreen(navController, drawerState) }
@@ -152,7 +174,7 @@ fun AppNavGraph(
             ThermallingSettingsScreen(navController, drawerState)
         }
         composable("dfnavboxes") { DFNavboxes(navController, drawerState) }
-        composable("orientation_settings") { backStackEntry ->
+        composable(SettingsRoutes.ORIENTATION_SETTINGS) {
             OrientationSettingsScreen(
                 navController = navController,
                 drawerState = drawerState

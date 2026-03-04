@@ -77,21 +77,22 @@ class ForecastSettingsViewModelTest {
     }
 
     @Test
-    fun init_plaintextFallbackMode_exposesFallbackStorageMode() = runTest {
+    fun init_volatileMemoryMode_exposesFallbackStorageMode() = runTest {
         whenever(credentialsRepository.credentialStorageMode()).thenReturn(
-            ForecastCredentialStorageMode.PLAINTEXT_FALLBACK
+            ForecastCredentialStorageMode.VOLATILE_MEMORY
         )
         whenever(credentialsRepository.loadCredentials()).thenReturn(null)
         val viewModel = ForecastSettingsViewModel(createUseCase())
         runCurrent()
 
         assertEquals(
-            ForecastCredentialStorageMode.PLAINTEXT_FALLBACK,
+            ForecastCredentialStorageMode.VOLATILE_MEMORY,
             viewModel.credentialStorageMode.value
         )
     }
 
     private suspend fun createUseCase(): ForecastSettingsUseCase {
+        whenever(credentialsRepository.volatileFallbackAllowed()).thenReturn(false)
         whenever(preferencesRepository.overlayEnabledFlow).thenReturn(MutableStateFlow(false))
         whenever(preferencesRepository.opacityFlow).thenReturn(
             MutableStateFlow(FORECAST_OPACITY_DEFAULT)

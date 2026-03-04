@@ -35,6 +35,7 @@ internal class AdsbTrafficRepositoryRuntime(
     internal val networkAvailabilityPort: AdsbNetworkAvailabilityPort,
     internal val emergencyAudioSettingsPort: AdsbEmergencyAudioSettingsPort =
         DisabledEmergencyAudioSettingsPort(),
+    internal val emergencyAudioRolloutPort: AdsbEmergencyAudioRolloutPort? = null,
     internal val emergencyAudioOutputPort: AdsbEmergencyAudioOutputPort =
         NoOpAdsbEmergencyAudioOutputPort,
     internal val emergencyAudioFeatureFlags: AdsbEmergencyAudioFeatureFlags =
@@ -53,6 +54,7 @@ internal class AdsbTrafficRepositoryRuntime(
         dispatcher = dispatcher,
         networkAvailabilityPort = AlwaysOnlineNetworkAvailabilityPort,
         emergencyAudioSettingsPort = DisabledEmergencyAudioSettingsPort(),
+        emergencyAudioRolloutPort = null,
         emergencyAudioOutputPort = NoOpAdsbEmergencyAudioOutputPort,
         emergencyAudioFeatureFlags = AdsbEmergencyAudioFeatureFlags()
     )
@@ -60,6 +62,7 @@ internal class AdsbTrafficRepositoryRuntime(
     internal val scope = CoroutineScope(SupervisorJob() + dispatcher)
     internal val store = AdsbTrafficStore()
     internal val emergencyAudioAlertFsm = AdsbEmergencyAudioAlertFsm()
+    internal val emergencyAudioKpiAccumulator = AdsbEmergencyAudioKpiAccumulator()
 
     internal val _targets = MutableStateFlow<List<AdsbTrafficUiModel>>(emptyList())
     override val targets: StateFlow<List<AdsbTrafficUiModel>> = _targets.asStateFlow()
@@ -145,6 +148,10 @@ internal class AdsbTrafficRepositoryRuntime(
     @Volatile
     internal var ownshipAltitudeMeters: Double? = null
     @Volatile
+    internal var ownshipCircling: Boolean = false
+    @Volatile
+    internal var ownshipCirclingFeatureEnabled: Boolean = false
+    @Volatile
     internal var lastOwnshipAltitudeReselectMonoMs: Long = Long.MIN_VALUE
     @Volatile
     internal var lastOwnshipAltitudeReselectMeters: Double? = null
@@ -168,9 +175,26 @@ internal class AdsbTrafficRepositoryRuntime(
     internal var lastNetworkTransitionMonoMs: Long? = null
     @Volatile
     internal var emergencyAudioSettings = AdsbEmergencyAudioSettings()
+    @Volatile
+    internal var emergencyAudioMasterEnabled: Boolean = emergencyAudioFeatureFlags.emergencyAudioEnabled
+    @Volatile
+    internal var emergencyAudioShadowMode: Boolean = emergencyAudioFeatureFlags.emergencyAudioShadowMode
+    @Volatile
+    internal var emergencyAudioCohortPercent: Int = ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_DEFAULT
+    @Volatile
+    internal var emergencyAudioCohortBucket: Int = ADSB_EMERGENCY_AUDIO_COHORT_BUCKET_MIN
+    @Volatile
+    internal var emergencyAudioRollbackLatched: Boolean = false
+    @Volatile
+    internal var emergencyAudioRollbackReason: String? = null
+    @Volatile
+    internal var ownshipReferenceLastUpdateMonoMs: Long? = null
+    @Volatile
+    internal var emergencyAudioCandidateId: Icao24? = null
 
     init {
         observeEmergencyAudioSettings()
+        observeEmergencyAudioRollout()
     }
 
     override fun start() {
@@ -230,8 +254,12 @@ internal class AdsbTrafficRepositoryRuntime(
         if (!latitude.isFinite() || !longitude.isFinite()) return
         if (abs(latitude) > 90.0 || abs(longitude) > 180.0) return
         val updatedOrigin = Center(latitude = latitude, longitude = longitude)
-        if (ownshipOrigin == updatedOrigin) return
+        if (ownshipOrigin == updatedOrigin) {
+            ownshipReferenceLastUpdateMonoMs = clock.nowMonoMs()
+            return
+        }
         ownshipOrigin = updatedOrigin
+        ownshipReferenceLastUpdateMonoMs = clock.nowMonoMs()
         if (!_isEnabled.value) return
         center?.let { activeCenter -> publishFromStore(activeCenter) }
     }
@@ -239,6 +267,7 @@ internal class AdsbTrafficRepositoryRuntime(
     override fun clearOwnshipOrigin() {
         if (ownshipOrigin == null) return
         ownshipOrigin = null
+        ownshipReferenceLastUpdateMonoMs = null
         if (!_isEnabled.value) return
         center?.let { activeCenter -> publishFromStore(activeCenter) }
     }
@@ -260,6 +289,19 @@ internal class AdsbTrafficRepositoryRuntime(
         publishFromStore(activeCenter, nowMonoMs)
         lastOwnshipAltitudeReselectMonoMs = nowMonoMs
         lastOwnshipAltitudeReselectMeters = normalizedAltitude
+    }
+
+    override fun updateOwnshipCirclingContext(
+        isCircling: Boolean,
+        circlingFeatureEnabled: Boolean
+    ) {
+        val changed =
+            ownshipCircling != isCircling ||
+                ownshipCirclingFeatureEnabled != circlingFeatureEnabled
+        ownshipCircling = isCircling
+        ownshipCirclingFeatureEnabled = circlingFeatureEnabled
+        if (!changed || !_isEnabled.value) return
+        center?.let { activeCenter -> publishFromStore(activeCenter) }
     }
 
     override fun updateDisplayFilters(
@@ -425,36 +467,9 @@ internal class AdsbTrafficRepositoryRuntime(
         }
 
         internal const val TAG = "AdsbTrafficRepository"
-        internal const val MAX_DISPLAYED_TARGETS = 30
-        internal const val STALE_AFTER_SEC = 60
-        internal const val EXPIRY_AFTER_SEC = 120
         internal const val POSITION_SOURCE_FLARM = 3
         internal const val MIN_AIRBORNE_ALTITUDE_M = 30.48 // 100 ft
         internal const val MIN_AIRBORNE_SPEED_MPS = 20.5778 // 40 kt
-
-        internal const val POLL_INTERVAL_HOT_MS = 10_000L
-        internal const val POLL_INTERVAL_WARM_MS = 20_000L
-        internal const val POLL_INTERVAL_COLD_MS = 30_000L
-        internal const val POLL_INTERVAL_QUIET_MS = 40_000L
-        internal const val POLL_INTERVAL_MAX_MS = 60_000L
-        internal const val MOVEMENT_FAST_POLL_THRESHOLD_METERS = 500.0
-        internal const val EMPTY_STREAK_WARM_POLLS = 1
-        internal const val EMPTY_STREAK_COLD_POLLS = 3
-        internal const val EMPTY_STREAK_QUIET_POLLS = 6
-        internal const val CREDIT_FLOOR_GUARDED = 500
-        internal const val CREDIT_FLOOR_LOW = 200
-        internal const val CREDIT_FLOOR_CRITICAL = 50
-        internal const val BUDGET_FLOOR_GUARDED_MS = 20_000L
-        internal const val BUDGET_FLOOR_LOW_MS = 30_000L
-        internal const val BUDGET_FLOOR_CRITICAL_MS = 60_000L
-        internal const val ANONYMOUS_POLL_FLOOR_MS = 30_000L
-        internal const val AUTH_FAILED_POLL_FLOOR_MS = 45_000L
-        internal const val REQUEST_HISTORY_WINDOW_MS = 60L * 60L * 1_000L
-        internal const val REQUESTS_PER_HOUR_GUARDED = 120
-        internal const val REQUESTS_PER_HOUR_LOW = 180
-        internal const val REQUESTS_PER_HOUR_CRITICAL = 300
-        internal const val RECONNECT_BACKOFF_START_MS = 2_000L
-        internal const val RECONNECT_BACKOFF_MAX_MS = 60_000L
         internal const val RETRY_FLOOR_UNKNOWN_MS = 2_000L
         internal const val RETRY_FLOOR_TIMEOUT_MS = 8_000L
         internal const val RETRY_FLOOR_CONNECT_MS = 10_000L
@@ -462,10 +477,5 @@ internal class AdsbTrafficRepositoryRuntime(
         internal const val RETRY_FLOOR_PROTOCOL_MS = 20_000L
         internal const val CIRCUIT_BREAKER_FAILURE_THRESHOLD = 3
         internal const val CIRCUIT_BREAKER_OPEN_WINDOW_MS = 30_000L
-        internal const val NETWORK_WAIT_HOUSEKEEPING_TICK_MS = 1_000L
-        internal const val OWN_ALTITUDE_RESELECT_MIN_INTERVAL_MS = 1_000L
-        internal const val OWN_ALTITUDE_RESELECT_MAX_INTERVAL_MS = 10_000L
-        internal const val OWN_ALTITUDE_RESELECT_MIN_DELTA_METERS = 1.0
-        internal const val OWN_ALTITUDE_RESELECT_FORCE_DELTA_METERS = 25.0
     }
 }
