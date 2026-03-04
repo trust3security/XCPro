@@ -27,6 +27,8 @@ import org.maplibre.android.style.expressions.Expression
 import org.maplibre.android.style.layers.PropertyFactory.iconAllowOverlap
 import org.maplibre.android.style.layers.PropertyFactory.iconAnchor
 import org.maplibre.android.style.layers.PropertyFactory.iconColor
+import org.maplibre.android.style.layers.PropertyFactory.iconHaloColor
+import org.maplibre.android.style.layers.PropertyFactory.iconHaloWidth
 import org.maplibre.android.style.layers.PropertyFactory.iconIgnorePlacement
 import org.maplibre.android.style.layers.PropertyFactory.iconImage
 import org.maplibre.android.style.layers.PropertyFactory.iconKeepUpright
@@ -104,6 +106,8 @@ class AdsbTrafficOverlay(
                         iconIgnorePlacement(true),
                         iconAnchor("center"),
                         iconColor(AdsbProximityColorPolicy.expression()),
+                        iconHaloColor(Color.BLACK),
+                        iconHaloWidth(AdsbProximityIconOutlinePolicy.haloWidthExpression()),
                         iconOpacity(Expression.get(AdsbGeoJsonMapper.PROP_ALPHA))
                     )
                 val anchorId = BlueLocationOverlay.LAYER_ID
@@ -275,6 +279,8 @@ class AdsbTrafficOverlay(
                         iconIgnorePlacement(true),
                         iconAnchor("center"),
                         iconColor(AdsbProximityColorPolicy.expression()),
+                        iconHaloColor(Color.BLACK),
+                        iconHaloWidth(AdsbProximityIconOutlinePolicy.haloWidthExpression()),
                         iconOpacity(Expression.get(AdsbGeoJsonMapper.PROP_ALPHA))
                     )
             )
