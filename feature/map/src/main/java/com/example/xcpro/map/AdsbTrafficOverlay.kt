@@ -27,8 +27,6 @@ import org.maplibre.android.style.expressions.Expression
 import org.maplibre.android.style.layers.PropertyFactory.iconAllowOverlap
 import org.maplibre.android.style.layers.PropertyFactory.iconAnchor
 import org.maplibre.android.style.layers.PropertyFactory.iconColor
-import org.maplibre.android.style.layers.PropertyFactory.iconHaloColor
-import org.maplibre.android.style.layers.PropertyFactory.iconHaloWidth
 import org.maplibre.android.style.layers.PropertyFactory.iconIgnorePlacement
 import org.maplibre.android.style.layers.PropertyFactory.iconImage
 import org.maplibre.android.style.layers.PropertyFactory.iconKeepUpright
@@ -89,32 +87,26 @@ class AdsbTrafficOverlay(
                 style.addSource(GeoJsonSource(SOURCE_ID))
             }
             ensureStyleImages(style)
-            if (style.getLayer(ICON_LAYER_ID) == null) {
-                val iconLayer = SymbolLayer(ICON_LAYER_ID, SOURCE_ID)
-                    .withProperties(
-                        iconImage(Expression.get(AdsbGeoJsonMapper.PROP_ICON_ID)),
-                        iconSize(iconScaleForPx(currentIconSizePx)),
-                        iconRotate(
-                            Expression.coalesce(
-                                Expression.get(AdsbGeoJsonMapper.PROP_TRACK_DEG),
-                                Expression.literal(0.0)
-                            )
-                        ),
-                        iconRotationAlignment("map"),
-                        iconKeepUpright(false),
-                        iconAllowOverlap(true),
-                        iconIgnorePlacement(true),
-                        iconAnchor("center"),
-                        iconColor(AdsbProximityColorPolicy.expression()),
-                        iconHaloColor(Color.BLACK),
-                        iconHaloWidth(AdsbProximityIconOutlinePolicy.haloWidthExpression()),
-                        iconOpacity(Expression.get(AdsbGeoJsonMapper.PROP_ALPHA))
-                    )
+            if (style.getLayer(ICON_OUTLINE_LAYER_ID) == null) {
+                val outlineLayer = createIconOutlineLayer()
                 val anchorId = BlueLocationOverlay.LAYER_ID
                 if (style.getLayer(anchorId) != null) {
-                    style.addLayerBelow(iconLayer, anchorId)
+                    style.addLayerBelow(outlineLayer, anchorId)
                 } else {
-                    style.addLayer(iconLayer)
+                    style.addLayer(outlineLayer)
+                }
+            }
+            if (style.getLayer(ICON_LAYER_ID) == null) {
+                val iconLayer = createIconLayer()
+                if (style.getLayer(ICON_OUTLINE_LAYER_ID) != null) {
+                    style.addLayerAbove(iconLayer, ICON_OUTLINE_LAYER_ID)
+                } else {
+                    val anchorId = BlueLocationOverlay.LAYER_ID
+                    if (style.getLayer(anchorId) != null) {
+                        style.addLayerBelow(iconLayer, anchorId)
+                    } else {
+                        style.addLayer(iconLayer)
+                    }
                 }
             }
 
@@ -237,6 +229,7 @@ class AdsbTrafficOverlay(
             style.removeLayer(BOTTOM_LABEL_LAYER_ID)
             style.removeLayer(TOP_LABEL_LAYER_ID)
             style.removeLayer(ICON_LAYER_ID)
+            style.removeLayer(ICON_OUTLINE_LAYER_ID)
             style.removeSource(SOURCE_ID)
             AdsbAircraftIcon.values().forEach { icon ->
                 style.removeImage(icon.styleImageId)
@@ -262,28 +255,9 @@ class AdsbTrafficOverlay(
             style.removeLayer(BOTTOM_LABEL_LAYER_ID)
             style.removeLayer(TOP_LABEL_LAYER_ID)
             style.removeLayer(ICON_LAYER_ID)
-            style.addLayer(
-                SymbolLayer(ICON_LAYER_ID, SOURCE_ID)
-                    .withProperties(
-                        iconImage(Expression.get(AdsbGeoJsonMapper.PROP_ICON_ID)),
-                        iconSize(iconScaleForPx(currentIconSizePx)),
-                        iconRotate(
-                            Expression.coalesce(
-                                Expression.get(AdsbGeoJsonMapper.PROP_TRACK_DEG),
-                                Expression.literal(0.0)
-                            )
-                        ),
-                        iconRotationAlignment("map"),
-                        iconKeepUpright(false),
-                        iconAllowOverlap(true),
-                        iconIgnorePlacement(true),
-                        iconAnchor("center"),
-                        iconColor(AdsbProximityColorPolicy.expression()),
-                        iconHaloColor(Color.BLACK),
-                        iconHaloWidth(AdsbProximityIconOutlinePolicy.haloWidthExpression()),
-                        iconOpacity(Expression.get(AdsbGeoJsonMapper.PROP_ALPHA))
-                    )
-            )
+            style.removeLayer(ICON_OUTLINE_LAYER_ID)
+            style.addLayer(createIconOutlineLayer())
+            style.addLayer(createIconLayer())
             style.addLayer(createTopLabelLayer())
             style.addLayer(createBottomLabelLayer())
         } catch (t: Throwable) {
@@ -308,6 +282,46 @@ class AdsbTrafficOverlay(
             }
         }
     }
+
+    private fun createIconOutlineLayer(): SymbolLayer =
+        SymbolLayer(ICON_OUTLINE_LAYER_ID, SOURCE_ID)
+            .withProperties(
+                iconImage(Expression.get(AdsbGeoJsonMapper.PROP_ICON_ID)),
+                iconSize(iconScaleForPx(currentIconSizePx) * OUTLINE_ICON_SCALE_MULTIPLIER),
+                iconRotate(
+                    Expression.coalesce(
+                        Expression.get(AdsbGeoJsonMapper.PROP_TRACK_DEG),
+                        Expression.literal(0.0)
+                    )
+                ),
+                iconRotationAlignment("map"),
+                iconKeepUpright(false),
+                iconAllowOverlap(true),
+                iconIgnorePlacement(true),
+                iconAnchor("center"),
+                iconColor(Color.BLACK),
+                iconOpacity(Expression.get(AdsbGeoJsonMapper.PROP_ALPHA))
+            )
+
+    private fun createIconLayer(): SymbolLayer =
+        SymbolLayer(ICON_LAYER_ID, SOURCE_ID)
+            .withProperties(
+                iconImage(Expression.get(AdsbGeoJsonMapper.PROP_ICON_ID)),
+                iconSize(iconScaleForPx(currentIconSizePx)),
+                iconRotate(
+                    Expression.coalesce(
+                        Expression.get(AdsbGeoJsonMapper.PROP_TRACK_DEG),
+                        Expression.literal(0.0)
+                    )
+                ),
+                iconRotationAlignment("map"),
+                iconKeepUpright(false),
+                iconAllowOverlap(true),
+                iconIgnorePlacement(true),
+                iconAnchor("center"),
+                iconColor(AdsbProximityColorPolicy.expression()),
+                iconOpacity(Expression.get(AdsbGeoJsonMapper.PROP_ALPHA))
+            )
 
     private fun createTopLabelLayer(): SymbolLayer =
         SymbolLayer(TOP_LABEL_LAYER_ID, SOURCE_ID)
@@ -366,6 +380,11 @@ class AdsbTrafficOverlay(
 
     private fun applyIconSizeToStyle() {
         val style = map.style ?: return
+        val outlineLayer = style.getLayer(ICON_OUTLINE_LAYER_ID) as? SymbolLayer
+        outlineLayer?.setProperties(
+            iconSize(iconScaleForPx(currentIconSizePx) * OUTLINE_ICON_SCALE_MULTIPLIER)
+        )
+
         val iconLayer = style.getLayer(ICON_LAYER_ID) as? SymbolLayer
         iconLayer?.setProperties(iconSize(iconScaleForPx(currentIconSizePx)))
 
@@ -449,6 +468,7 @@ class AdsbTrafficOverlay(
         private const val TAG = "AdsbTrafficOverlay"
 
         private const val SOURCE_ID = "adsb-traffic-source"
+        private const val ICON_OUTLINE_LAYER_ID = "adsb-traffic-icon-outline-layer"
         private const val ICON_LAYER_ID = "adsb-traffic-icon-layer"
         private const val TOP_LABEL_LAYER_ID = "adsb-traffic-top-label-layer"
         private const val BOTTOM_LABEL_LAYER_ID = "adsb-traffic-bottom-label-layer"
@@ -462,6 +482,7 @@ class AdsbTrafficOverlay(
         private const val LABEL_TEXT_SIZE_SP = 13f
         private const val LABEL_TEXT_OFFSET_BASE_Y = 1.7f
         private const val LABEL_TEXT_COLOR = "#000000"
+        private const val OUTLINE_ICON_SCALE_MULTIPLIER = 1.14f
         private val LABEL_FONT_STACK = arrayOf(
             "Open Sans Semibold",
             "Noto Sans Medium",
