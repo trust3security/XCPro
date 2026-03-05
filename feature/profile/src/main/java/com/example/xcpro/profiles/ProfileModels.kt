@@ -44,6 +44,15 @@ data class ProfilePreferences(
     val uiLayout: UILayout = UILayout()
 )
 
+data class ProfilePolarSettings(
+    val lowSpeedKmh: Double = 80.0,
+    val lowSinkMs: Double = 0.5,
+    val midSpeedKmh: Double = 120.0,
+    val midSinkMs: Double = 0.8,
+    val highSpeedKmh: Double = 180.0,
+    val highSinkMs: Double = 2.0
+)
+
 enum class UnitSystem(val displayName: String) {
     METRIC("Metric (m/s, m)"),
     IMPERIAL("Imperial (ft/min, ft)"),
@@ -59,7 +68,8 @@ data class UserProfile(
     val preferences: ProfilePreferences = ProfilePreferences(),
     val isActive: Boolean = false,
     val createdAt: Long = TimeBridge.nowWallMs(),
-    val lastUsed: Long = TimeBridge.nowWallMs()
+    val lastUsed: Long = TimeBridge.nowWallMs(),
+    val polar: ProfilePolarSettings = ProfilePolarSettings()
 ) {
     fun getDisplayName(): String {
         return if (aircraftModel != null) {
