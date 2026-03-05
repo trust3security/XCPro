@@ -39,6 +39,7 @@ class MapInitializer(
     }
 
     private var styleLoadToken: Long = 0L
+    private var interactionGestureDepth: Int = 0
 
     private val scaleBarController = MapScaleBarController(mapState).also {
         mapState.scaleBarController = it
@@ -196,6 +197,7 @@ class MapInitializer(
         map.addOnMoveListener(object : MapLibreMap.OnMoveListener {
             override fun onMoveBegin(detector: MoveGestureDetector) {
                 Log.d(TAG, " Map movement detected - fingers: ${detector.pointersCount}")
+                onUserMapInteractionBegan()
                 handleMapMovement(map)
             }
 
@@ -207,6 +209,7 @@ class MapInitializer(
 
             override fun onMoveEnd(detector: MoveGestureDetector) {
                 Log.d(TAG, "Pan ended")
+                onUserMapInteractionEnded()
                 dataLoader.refreshWaypoints(map)
             }
         })
@@ -215,6 +218,7 @@ class MapInitializer(
         map.addOnRotateListener(object : MapLibreMap.OnRotateListener {
             override fun onRotateBegin(detector: org.maplibre.android.gestures.RotateGestureDetector) {
                 Log.d(TAG, " Map rotation started")
+                onUserMapInteractionBegan()
                 orientationManager.onUserInteraction()
             }
 
@@ -224,12 +228,15 @@ class MapInitializer(
 
             override fun onRotateEnd(detector: org.maplibre.android.gestures.RotateGestureDetector) {
                 Log.d(TAG, " Map rotation ended")
+                onUserMapInteractionEnded()
             }
         })
 
         // Camera change listener for zoom-adaptive distance circles
         map.addOnCameraIdleListener {
             try {
+                interactionGestureDepth = 0
+                overlayManager.setMapInteractionActive(false)
                 val cameraPosition = map.cameraPosition
                 val currentZoom = cameraPosition.zoom
                 stateActions.updateCurrentZoom(currentZoom.toFloat())
@@ -272,6 +279,25 @@ class MapInitializer(
         stateActions.setShowReturnButton(true)
         stateActions.updateLastUserPanTime(TimeBridge.nowWallMs())
         Log.d(TAG, "User interaction detected - return button shown")
+    }
+
+    private fun onUserMapInteractionBegan() {
+        interactionGestureDepth += 1
+        if (interactionGestureDepth == 1) {
+            overlayManager.setMapInteractionActive(true)
+        }
+    }
+
+    private fun onUserMapInteractionEnded() {
+        if (interactionGestureDepth <= 0) {
+            interactionGestureDepth = 0
+            overlayManager.setMapInteractionActive(false)
+            return
+        }
+        interactionGestureDepth -= 1
+        if (interactionGestureDepth == 0) {
+            overlayManager.setMapInteractionActive(false)
+        }
     }
 
 }

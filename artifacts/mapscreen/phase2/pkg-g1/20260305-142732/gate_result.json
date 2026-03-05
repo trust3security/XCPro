@@ -1,0 +1,43 @@
+﻿{
+    "package_id":  "pkg-g1",
+    "phase":  "phase2",
+    "generated_at":  "2026-03-05T14:27:32+11:00",
+    "command_gates":  [
+                          {
+                              "detail":  "ARCH GATE PASSED",
+                              "status":  "pass",
+                              "command":  "python scripts/arch_gate.py"
+                          },
+                          {
+                              "detail":  "Rule enforcement passed.",
+                              "status":  "pass",
+                              "command":  "./gradlew enforceRules"
+                          },
+                          {
+                              "detail":  "Known intermittent app-level flake (ProfileRepositoryTest.ioReadError_preservesLastKnownGoodState) observed on first run; rerun passed.",
+                              "status":  "pass_after_rerun",
+                              "command":  "./gradlew testDebugUnitTest"
+                          },
+                          {
+                              "detail":  "Debug assemble succeeded.",
+                              "status":  "pass",
+                              "command":  "./gradlew assembleDebug"
+                          }
+                      ],
+    "slo_gates":  [
+                      {
+                          "slo_id":  "MS-UX-05",
+                          "status":  "not_evaluated",
+                          "reason":  "missing_replay_scrub_perf_capture"
+                      }
+                  ],
+    "determinism_gates":  [
+                              {
+                                  "det_id":  "DET-03",
+                                  "status":  "pass",
+                                  "evidence":  "MapReplaySelectionFlowTest"
+                              }
+                          ],
+    "promotion_decision":  "blocked_pending_perf_evidence",
+    "rollback_recommendation":  "Do not promote until replay scrub latency/no-op recompute evidence is captured; revert replay observer/logging package if regressions appear."
+}

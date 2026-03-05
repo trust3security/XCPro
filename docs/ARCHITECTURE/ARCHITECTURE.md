@@ -283,6 +283,27 @@ write back smoothed values.
   - Replay: IGC timestamps as the simulation clock.
 - Camera updates are gated and short-animated to avoid jumps.
 
+### MapScreen Visual Runtime Contract (Mandatory)
+
+Any change that affects map interaction or map-rendered overlays
+(pan/zoom/rotate, task drag, traffic/weather overlays, replay scrubbing,
+startup map readiness) must:
+
+- Declare impacted visual SLO IDs from
+  `docs/MAPSCREEN/02_BASELINE_PROFILING_AND_SLO_MATRIX_2026-03-05.md`.
+- Use test/validation paths from
+  `docs/MAPSCREEN/04_TEST_VALIDATION_AND_ROLLBACK_2026-03-05.md`.
+- Attach baseline + post-change evidence in PR/change notes.
+- Meet all impacted mandatory SLO thresholds before merge.
+
+If a mandatory SLO is missed:
+- either fix before merge, or
+- add a time-boxed deviation in `docs/ARCHITECTURE/KNOWN_DEVIATIONS.md`
+  with issue ID, owner, expiry, and rollback plan.
+
+Forbidden:
+- Subjective-only acceptance ("looks smooth") without measured SLO evidence.
+
 See `../../mapposition.md` for the concrete flow and component list.
 
 ---

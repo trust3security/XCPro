@@ -80,7 +80,6 @@ internal fun MapBottomTabsLayer(
     weatherEnabled: Boolean,
     ognEnabled: Boolean,
     showSciaEnabled: Boolean,
-    onOgnEnabledChanged: (Boolean) -> Unit,
     onShowSciaEnabledChanged: (Boolean) -> Unit,
     adsbTrafficEnabled: Boolean,
     showOgnThermalsEnabled: Boolean,
@@ -190,7 +189,6 @@ internal fun MapBottomTabsLayer(
                             OgnTabContent(
                                 ognEnabled = ognEnabled,
                                 showSciaEnabled = showSciaEnabled,
-                                onOgnEnabledChanged = onOgnEnabledChanged,
                                 onShowSciaEnabledChanged = onShowSciaEnabledChanged,
                                 aircraftRows = ognTrailAircraftRows,
                                 onAircraftTrailToggled = onOgnTrailAircraftToggled

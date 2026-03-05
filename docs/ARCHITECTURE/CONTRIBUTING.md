@@ -19,6 +19,10 @@ Read these in order before making changes:
 - `ARCHITECTURE.md` - system invariants (data flow, SSOT, threading, DI, lifecycle rules)
 - `CODING_RULES.md` - day-to-day coding constraints that enforce the architecture
 - `PIPELINE.md` - end-to-end data flow (see `PIPELINE.svg`)
+- If touching map interaction or overlay runtime behavior, also read:
+  - `../MAPSCREEN/01_MAPSCREEN_PRODUCTION_GRADE_PHASED_IP_2026-03-05.md`
+  - `../MAPSCREEN/02_BASELINE_PROFILING_AND_SLO_MATRIX_2026-03-05.md`
+  - `../MAPSCREEN/04_TEST_VALIDATION_AND_ROLLBACK_2026-03-05.md`
 - If touching Levo vario or replay, also read `../LevoVario/levo.md`
 - `CONTRIBUTING.md` - workflow, branching, PR rules, testing expectations, and AI usage
 AI/agents: read the first three files in order before edits; include Levo docs when applicable.
@@ -49,6 +53,8 @@ A change is ready when:
 - [ ] **Lint/detekt** pass; **Compose previews** compile.
 - [ ] No deprecated APIs; no global mutable state.
 - [ ] Performance budget respected in hot paths (TE->audio <= 50 ms typical).
+- [ ] For map/overlay/replay interaction changes, impacted MapScreen SLOs
+      (`MS-UX-*`, `MS-ENG-*`) pass with attached evidence.
 
 ---
 
@@ -64,6 +70,8 @@ Use this checklist for any task/map refactor before opening a PR.
 - [ ] Non-UI managers/domain classes do not use Compose runtime state (`mutableStateOf`, `derivedStateOf`, `remember`).
 - [ ] Core collaborators are injected; no manager/persistence construction inside coordinators.
 - [ ] If pipeline wiring changed, `PIPELINE.md` is updated in the same PR.
+- [ ] If map interaction/overlay behavior changed, SLO evidence from
+      `docs/MAPSCREEN/02...` + `docs/MAPSCREEN/04...` is attached.
 - [ ] If any rule is knowingly violated, add an entry in `KNOWN_DEVIATIONS.md` with issue ID, owner, and expiry.
 
 ---

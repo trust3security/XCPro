@@ -428,7 +428,6 @@ internal fun MapScreenContent(
             weatherEnabled = weatherOverlayState.enabled,
             ognOverlayEnabled = ognOverlayEnabled,
             showOgnSciaEnabled = showOgnSciaEnabled,
-            onToggleOgnTraffic = onToggleOgnTraffic,
             onToggleOgnScia = onToggleOgnScia,
             adsbOverlayEnabled = adsbOverlayEnabled,
             showOgnThermalsEnabled = showOgnThermalsEnabled,

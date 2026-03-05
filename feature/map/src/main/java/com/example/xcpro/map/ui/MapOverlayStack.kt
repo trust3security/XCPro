@@ -1,11 +1,9 @@
 package com.example.xcpro.map.ui
 
-import android.util.Log
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -21,7 +19,6 @@ import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.gestures.TaskGestureCallbacks
 import com.example.xcpro.gestures.TaskGestureHandler
-import com.example.xcpro.map.BuildConfig
 import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.map.LocationManager
 import com.example.xcpro.map.MapCameraManager
@@ -118,12 +115,6 @@ internal fun MapOverlayStack(
     val gestureRegions by widgetManager.gestureRegions.collectAsStateWithLifecycle()
     val visibleModes by flightDataManager.visibleModesFlow.collectAsStateWithLifecycle()
 
-    LaunchedEffect(gestureRegions) {
-        if (BuildConfig.DEBUG) Log.d("GESTURE_REGIONS", gestureRegions.joinToString(prefix = "[", postfix = "]") { region ->
-            "${region.target}:${region.bounds}"
-        })
-    }
-
     DisposableEffect(Unit) {
         onDispose {
             widgetManager.clearGestureRegion(MapOverlayGestureTarget.CARD_GRID)
@@ -182,6 +173,9 @@ internal fun MapOverlayStack(
                 createTaskGestureHandler = createTaskGestureHandler,
                 onEnterAATEditMode = onEnterAATEditMode,
                 onExitAATEditMode = onExitAATEditMode,
+                onPreviewAATTargetPoint = { waypointIndex, lat, lon ->
+                    overlayManager.previewAatTargetPoint(waypointIndex, lat, lon)
+                },
                 onUpdateAATTargetPoint = onUpdateAATTargetPoint,
                 onSyncTaskVisuals = { overlayManager.requestTaskRenderSync() },
                 onMapTap = { tap ->

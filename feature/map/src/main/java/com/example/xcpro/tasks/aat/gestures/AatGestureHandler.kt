@@ -9,6 +9,7 @@ import com.example.xcpro.tasks.aat.calculations.AATMathUtils
 import com.example.xcpro.tasks.aat.map.AATMapCoordinateConverter
 import com.example.xcpro.tasks.aat.map.AATMapCoordinateConverterFactory
 import com.example.xcpro.tasks.core.TaskWaypoint
+import com.example.xcpro.tasks.core.TaskWaypointParamKeys
 import com.example.xcpro.tasks.core.WaypointRole
 import kotlin.math.sqrt
 import org.maplibre.android.maps.MapLibreMap
@@ -43,7 +44,9 @@ fun findAatWaypointHitForMapPoint(
 
 class AatGestureHandler(
     private val waypointsProvider: () -> List<TaskWaypoint>,
-    private val callbacks: TaskGestureCallbacks
+    private val callbacks: TaskGestureCallbacks,
+    private val converterFactory: (MapLibreMap?) -> AATMapCoordinateConverter =
+        AATMapCoordinateConverterFactory::create
 ) : TaskGestureHandler {
 
     private var editModeIndex: Int = -1
@@ -55,11 +58,17 @@ class AatGestureHandler(
     private var gestureStartPosition: Offset = Offset.Zero
     private var converter: AATMapCoordinateConverter? = null
     private var mapRef: MapLibreMap? = null
+    private var hasDragPreview = false
+    private var lastDragLatitude: Double? = null
+    private var lastDragLongitude: Double? = null
+    private var dragStartTargetLatitude: Double? = null
+    private var dragStartTargetLongitude: Double? = null
 
     override fun onExternalEditModeChanged(isEditMode: Boolean) {
         if (!isEditMode) {
             editModeIndex = -1
             isDragging = false
+            resetDragTracking()
         }
     }
 
@@ -67,6 +76,9 @@ class AatGestureHandler(
         gestureStartPosition = context.gestureStartPosition
         updateConverter(context.mapLibreMap)
         pendingTapWaypointIndex = findWaypointHit(gestureStartPosition)
+        if (editModeIndex != -1) {
+            captureDragStartTarget()
+        }
         return if (editModeIndex != -1) TaskGestureConsume.Consume else TaskGestureConsume.PassThrough
     }
 
@@ -84,7 +96,10 @@ class AatGestureHandler(
         if (isDragging) {
             val mapPoint = converter?.screenToMap(currentPos.x, currentPos.y)
             if (mapPoint != null) {
-                callbacks.onDragTarget(editModeIndex, mapPoint.latitude, mapPoint.longitude)
+                hasDragPreview = true
+                lastDragLatitude = mapPoint.latitude
+                lastDragLongitude = mapPoint.longitude
+                callbacks.onDragTargetPreview(editModeIndex, mapPoint.latitude, mapPoint.longitude)
             }
         }
 
@@ -96,10 +111,21 @@ class AatGestureHandler(
         val isQuickTap = gestureDuration < QUICK_TAP_MAX_MS
 
         if (editModeIndex != -1) {
+            if (isDragging && hasDragPreview) {
+                val committedLat = lastDragLatitude
+                val committedLon = lastDragLongitude
+                if (committedLat != null &&
+                    committedLon != null &&
+                    shouldCommitDrag(committedLat, committedLon)
+                ) {
+                    callbacks.onDragTargetCommit(editModeIndex, committedLat, committedLon)
+                }
+            }
             if (!isDragging && !isQuickTap && gestureDuration >= LONG_PRESS_MIN_MS) {
                 exitEditMode()
             }
             isDragging = false
+            resetDragTracking()
             return TaskGestureConsume.Consume
         }
 
@@ -108,6 +134,7 @@ class AatGestureHandler(
         }
 
         isDragging = false
+        resetDragTracking()
         return TaskGestureConsume.PassThrough
     }
 
@@ -147,8 +174,38 @@ class AatGestureHandler(
         if (map == null) return
         if (mapRef !== map) {
             mapRef = map
-            converter = AATMapCoordinateConverterFactory.create(map)
+            converter = converterFactory(map)
         }
+    }
+
+    private fun resetDragTracking() {
+        hasDragPreview = false
+        lastDragLatitude = null
+        lastDragLongitude = null
+        dragStartTargetLatitude = null
+        dragStartTargetLongitude = null
+    }
+
+    private fun captureDragStartTarget() {
+        val waypoint = waypointsProvider().getOrNull(editModeIndex) ?: return
+        dragStartTargetLatitude =
+            (waypoint.customParameters[TaskWaypointParamKeys.TARGET_LAT] as? Number)?.toDouble()
+                ?: waypoint.lat
+        dragStartTargetLongitude =
+            (waypoint.customParameters[TaskWaypointParamKeys.TARGET_LON] as? Number)?.toDouble()
+                ?: waypoint.lon
+    }
+
+    private fun shouldCommitDrag(latitude: Double, longitude: Double): Boolean {
+        val startLat = dragStartTargetLatitude ?: return true
+        val startLon = dragStartTargetLongitude ?: return true
+        val movementMeters = AATMathUtils.calculateDistanceMeters(
+            startLat,
+            startLon,
+            latitude,
+            longitude
+        )
+        return movementMeters >= MIN_COMMIT_DISTANCE_METERS
     }
 
     private fun findWaypointHit(screenPosition: Offset): Int? {
@@ -172,5 +229,6 @@ class AatGestureHandler(
         private const val DOUBLE_TAP_MAX_DISTANCE_PX = 50f
         private const val LONG_PRESS_MIN_MS = 350L
         private const val DRAG_THRESHOLD_PX = 10f
+        private const val MIN_COMMIT_DISTANCE_METERS = 1.0
     }
 }

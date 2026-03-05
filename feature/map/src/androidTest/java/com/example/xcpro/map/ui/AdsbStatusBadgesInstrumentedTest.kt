@@ -1,6 +1,5 @@
 package com.example.xcpro.map.ui
 
-import androidx.activity.ComponentActivity
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -24,7 +23,7 @@ import org.junit.runner.RunWith
 class AdsbStatusBadgesInstrumentedTest {
 
     @get:Rule
-    val composeTestRule = createAndroidComposeRule<ComponentActivity>()
+    val composeTestRule = createAndroidComposeRule<MapComposeTestActivity>()
 
     @Test
     fun persistentStatusBadge_rendersOfflineReason() {

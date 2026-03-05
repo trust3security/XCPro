@@ -1,6 +1,5 @@
 package com.example.xcpro.screens.navdrawer
 
-import androidx.activity.ComponentActivity
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
@@ -17,6 +16,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.example.xcpro.map.ui.MapComposeTestActivity
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -26,7 +26,7 @@ import org.junit.runner.RunWith
 class OrientationSettingsSheetBehaviorInstrumentedTest {
 
     @get:Rule
-    val composeTestRule = createAndroidComposeRule<ComponentActivity>()
+    val composeTestRule = createAndroidComposeRule<MapComposeTestActivity>()
 
     @Test
     fun swipeDown_closesInOneGesture() {
@@ -100,4 +100,3 @@ class OrientationSettingsSheetBehaviorInstrumentedTest {
         }
     }
 }
-

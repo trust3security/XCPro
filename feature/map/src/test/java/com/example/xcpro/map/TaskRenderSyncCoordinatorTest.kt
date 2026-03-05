@@ -163,6 +163,98 @@ class TaskRenderSyncCoordinatorTest {
         assertEquals(listOf("clear", "sync"), events)
     }
 
+    @Test
+    fun previewAatTargetPoint_withReadyMap_usesPreviewRendererOnly() {
+        val map: MapLibreMap = mock()
+        var syncCount = 0
+        var previewCount = 0
+        val coordinator = TaskRenderSyncCoordinator(
+            snapshotProvider = ::sampleSnapshot,
+            mapProvider = { map },
+            renderSync = { _, _ -> syncCount += 1 },
+            renderClear = { _ -> },
+            renderAatPreview = { _, _, _, _, _ -> previewCount += 1 }
+        )
+
+        coordinator.previewAatTargetPoint(
+            waypointIndex = 2,
+            latitude = -34.5,
+            longitude = 138.6
+        )
+
+        assertEquals(0, syncCount)
+        assertEquals(1, previewCount)
+    }
+
+    @Test
+    fun previewAatTargetPoint_withoutMap_skipsPreviewRenderer() {
+        var previewCount = 0
+        val coordinator = TaskRenderSyncCoordinator(
+            snapshotProvider = ::sampleSnapshot,
+            mapProvider = { null },
+            renderSync = { _, _ -> },
+            renderClear = { _ -> },
+            renderAatPreview = { _, _, _, _, _ -> previewCount += 1 }
+        )
+
+        coordinator.previewAatTargetPoint(
+            waypointIndex = 0,
+            latitude = 1.0,
+            longitude = 2.0
+        )
+
+        assertEquals(0, previewCount)
+    }
+
+    @Test
+    fun previewAatTargetPoint_repeatedMoves_neverTriggersFullSync() {
+        val map: MapLibreMap = mock()
+        var syncCount = 0
+        var previewCount = 0
+        val coordinator = TaskRenderSyncCoordinator(
+            snapshotProvider = ::sampleSnapshot,
+            mapProvider = { map },
+            renderSync = { _, _ -> syncCount += 1 },
+            renderClear = { _ -> },
+            renderAatPreview = { _, _, _, _, _ -> previewCount += 1 }
+        )
+
+        repeat(5) { step ->
+            coordinator.previewAatTargetPoint(
+                waypointIndex = 1,
+                latitude = -34.0 + step * 0.0001,
+                longitude = 138.0 + step * 0.0001
+            )
+        }
+
+        val counters = coordinator.runtimeCounters()
+        assertEquals(0, syncCount)
+        assertEquals(5, previewCount)
+        assertEquals(5L, counters.previewInvocations)
+        assertEquals(0L, counters.fullSyncInvocations)
+    }
+
+    @Test
+    fun previewThenMutation_tracksSingleDragCommitSync() {
+        val map: MapLibreMap = mock()
+        val coordinator = TaskRenderSyncCoordinator(
+            snapshotProvider = ::sampleSnapshot,
+            mapProvider = { map },
+            renderSync = { _, _ -> },
+            renderClear = { _ -> },
+            renderAatPreview = { _, _, _, _, _ -> }
+        )
+
+        coordinator.previewAatTargetPoint(waypointIndex = 1, latitude = -34.0, longitude = 138.0)
+        coordinator.previewAatTargetPoint(waypointIndex = 1, latitude = -34.1, longitude = 138.1)
+        coordinator.onTaskMutation()
+
+        val counters = coordinator.runtimeCounters()
+        assertEquals(2L, counters.previewInvocations)
+        assertEquals(1L, counters.dragCommitSyncInvocations)
+        assertEquals(1L, counters.fullSyncInvocations)
+    }
+
     private fun signature(
         taskId: String = "task-1",
         taskHash: Int = 1,

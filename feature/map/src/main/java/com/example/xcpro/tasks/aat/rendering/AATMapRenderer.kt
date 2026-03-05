@@ -254,11 +254,18 @@ internal class AATMapRenderer {
      * Plot AAT task line connecting target points
      */
     fun plotTaskLine(style: Style, geometryGenerator: AATGeometryGenerator, waypoints: List<AATWaypoint>) {
+        if (waypoints.size < 2) return
+        val coordinates = geometryGenerator.calculateOptimalAATPath(waypoints)
+        upsertTaskLine(style, coordinates)
+    }
+
+    /**
+     * Upsert-only task-line update used by drag preview.
+     * Avoids full layer/source teardown while target points move.
+     */
+    fun upsertTaskLine(style: Style, coordinates: List<List<Double>>) {
+        if (coordinates.size < 2) return
         try {
-            if (waypoints.size < 2) return
-
-            val coordinates = geometryGenerator.calculateOptimalAATPath(waypoints)
-
             val geoJsonString = """
             {
                 "type": "FeatureCollection",
@@ -275,21 +282,24 @@ internal class AATMapRenderer {
             }
             """.trimIndent()
 
-            if (geoJsonString.contains("\"coordinates\"") && coordinates.isNotEmpty()) {
-                style.addSource(GeoJsonSource("aat-task-line", geoJsonString))
+            val taskLineSourceId = "aat-task-line"
+            if (style.getSource(taskLineSourceId) == null) {
+                style.addSource(GeoJsonSource(taskLineSourceId, geoJsonString))
             } else {
-                return
+                style.getSourceAs<GeoJsonSource>(taskLineSourceId)?.setGeoJson(geoJsonString)
             }
 
-            val layer = LineLayer("aat-task-line", "aat-task-line")
-            layer.withProperties(
-                PropertyFactory.lineColor(0xFF388E3C.toInt()),
-                PropertyFactory.lineWidth(1.5f),
-                PropertyFactory.lineOpacity(0.8f)
-            )
-            style.addLayer(layer)
-
-        } catch (e: Exception) {
+            val taskLineLayerId = "aat-task-line"
+            if (style.getLayer(taskLineLayerId) == null) {
+                style.addLayer(
+                    LineLayer(taskLineLayerId, taskLineSourceId).withProperties(
+                        PropertyFactory.lineColor(0xFF388E3C.toInt()),
+                        PropertyFactory.lineWidth(1.5f),
+                        PropertyFactory.lineOpacity(0.8f)
+                    )
+                )
+            }
+        } catch (_: Exception) {
         }
     }
 

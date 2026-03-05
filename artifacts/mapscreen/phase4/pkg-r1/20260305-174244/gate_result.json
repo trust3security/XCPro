@@ -1,0 +1,37 @@
+﻿{
+    "package_id":  "pkg-r1",
+    "phase":  "phase4",
+    "generated_at":  "2026-03-05T17:52:29.1018310+11:00",
+    "upstream_package_gates":  [
+                                   {
+                                       "package_id":  "pkg-d1",
+                                       "run_id":  "20260305-170139",
+                                       "status":  "ready_for_promotion",
+                                       "failed_slo_count":  0,
+                                       "pending_slo_count":  0
+                                   },
+                                   {
+                                       "package_id":  "pkg-g1",
+                                       "run_id":  "20260305-170311",
+                                       "status":  "ready_for_promotion",
+                                       "failed_slo_count":  0,
+                                       "pending_slo_count":  0
+                                   },
+                                   {
+                                       "package_id":  "pkg-w1",
+                                       "run_id":  "20260305-170441",
+                                       "status":  "ready_for_promotion",
+                                       "failed_slo_count":  0,
+                                       "pending_slo_count":  0
+                                   },
+                                   {
+                                       "package_id":  "pkg-e1",
+                                       "run_id":  "20260305-174244",
+                                       "status":  "blocked_failed_thresholds",
+                                       "failed_slo_count":  1,
+                                       "pending_slo_count":  0
+                                   }
+                               ],
+    "promotion_decision":  "blocked_failed_thresholds",
+    "rollback_recommendation":  "Do not promote; resolve non-green upstream package gates and rerun release finalize."
+}

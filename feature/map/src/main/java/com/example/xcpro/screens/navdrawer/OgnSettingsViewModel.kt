@@ -43,17 +43,32 @@ class OgnSettingsViewModel @Inject constructor(
             ) { ownFlarmHex, ownIcaoHex ->
                 ownFlarmHex to ownIcaoHex
             }
-            combine(
+            val baseSettingsFlow = combine(
+                useCase.overlayEnabledFlow,
+                useCase.showSciaEnabledFlow,
                 useCase.iconSizePxFlow,
                 useCase.receiveRadiusKmFlow,
-                useCase.autoReceiveRadiusEnabledFlow,
-                useCase.displayUpdateModeFlow,
-                ownshipFlow
-            ) { iconSizePx, receiveRadiusKm, autoReceiveRadiusEnabled, displayUpdateMode, ownship ->
-                OgnSettingsPreferencesSnapshot(
+                useCase.autoReceiveRadiusEnabledFlow
+            ) { overlayEnabled, showSciaEnabled, iconSizePx, receiveRadiusKm, autoReceiveRadiusEnabled ->
+                OgnBaseSettingsSnapshot(
+                    overlayEnabled = overlayEnabled,
+                    showSciaEnabled = showSciaEnabled,
                     iconSizePx = iconSizePx,
                     receiveRadiusKm = receiveRadiusKm,
-                    autoReceiveRadiusEnabled = autoReceiveRadiusEnabled,
+                    autoReceiveRadiusEnabled = autoReceiveRadiusEnabled
+                )
+            }
+            combine(
+                baseSettingsFlow,
+                useCase.displayUpdateModeFlow,
+                ownshipFlow
+            ) { baseSettings, displayUpdateMode, ownship ->
+                OgnSettingsPreferencesSnapshot(
+                    overlayEnabled = baseSettings.overlayEnabled,
+                    showSciaEnabled = baseSettings.showSciaEnabled,
+                    iconSizePx = baseSettings.iconSizePx,
+                    receiveRadiusKm = baseSettings.receiveRadiusKm,
+                    autoReceiveRadiusEnabled = baseSettings.autoReceiveRadiusEnabled,
                     displayUpdateMode = displayUpdateMode,
                     ownFlarmHex = ownship.first,
                     ownIcaoHex = ownship.second
@@ -61,6 +76,8 @@ class OgnSettingsViewModel @Inject constructor(
             }.collect { snapshot ->
                 _uiState.update { state ->
                     state.copy(
+                        ognOverlayEnabled = snapshot.overlayEnabled,
+                        showSciaEnabled = snapshot.showSciaEnabled,
                         iconSizePx = snapshot.iconSizePx,
                         receiveRadiusKm = snapshot.receiveRadiusKm,
                         autoReceiveRadiusEnabled = snapshot.autoReceiveRadiusEnabled,
@@ -96,6 +113,16 @@ class OgnSettingsViewModel @Inject constructor(
     fun setDisplayUpdateMode(mode: OgnDisplayUpdateMode) {
         viewModelScope.launch {
             useCase.setDisplayUpdateMode(mode)
+        }
+    }
+
+    fun setOgnOverlayEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            val state = _uiState.value
+            if (!enabled && state.showSciaEnabled) {
+                return@launch
+            }
+            useCase.setOverlayEnabled(enabled)
         }
     }
 
@@ -194,7 +221,17 @@ class OgnSettingsViewModel @Inject constructor(
         private const val OWN_HEX_VALIDATION_ERROR = "Enter exactly 6 hex characters (0-9, A-F)."
     }
 
+    private data class OgnBaseSettingsSnapshot(
+        val overlayEnabled: Boolean,
+        val showSciaEnabled: Boolean,
+        val iconSizePx: Int,
+        val receiveRadiusKm: Int,
+        val autoReceiveRadiusEnabled: Boolean
+    )
+
     private data class OgnSettingsPreferencesSnapshot(
+        val overlayEnabled: Boolean,
+        val showSciaEnabled: Boolean,
         val iconSizePx: Int,
         val receiveRadiusKm: Int,
         val autoReceiveRadiusEnabled: Boolean,

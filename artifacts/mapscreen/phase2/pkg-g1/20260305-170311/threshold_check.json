@@ -1,0 +1,113 @@
+﻿{
+    "checked_at":  "2026-03-05T19:52:16.4380217+11:00",
+    "artifact_root":  "C:\\Users\\Asus\\AndroidStudioProjects\\XCPro\\artifacts\\mapscreen\\phase2\\pkg-g1\\20260305-170311",
+    "package_id":  "pkg-g1",
+    "phase":  "phase2",
+    "command_gates_pass":  true,
+    "determinism_gates_pass":  true,
+    "failed_slo_count":  0,
+    "pending_slo_count":  0,
+    "promotion_decision":  "ready_for_promotion",
+    "command_gate_failures":  [
+
+                              ],
+    "determinism_failures":  [
+
+                             ],
+    "slo_evaluations":  [
+                            {
+                                "slo_id":  "MS-UX-05",
+                                "status":  "pass",
+                                "reason":  "all threshold checks passed on tier_a and tier_b",
+                                "tier_results":  [
+                                                     {
+                                                         "tier":  "tier_a",
+                                                         "status":  "pass",
+                                                         "checks":  [
+                                                                        {
+                                                                            "status":  "pass",
+                                                                            "pass":  true,
+                                                                            "metric":  "scrub_latency_p95_ms",
+                                                                            "metricPath":  "scrub_latency_p95_ms",
+                                                                            "detail":  "actual=0.104501 op=le expected=120"
+                                                                        },
+                                                                        {
+                                                                            "status":  "pass",
+                                                                            "pass":  true,
+                                                                            "metric":  "scrub_latency_p99_ms",
+                                                                            "metricPath":  "scrub_latency_p99_ms",
+                                                                            "detail":  "actual=1.799599 op=le expected=180"
+                                                                        },
+                                                                        {
+                                                                            "status":  "pass",
+                                                                            "pass":  true,
+                                                                            "metric":  "noop_recompute_count",
+                                                                            "metricPath":  "noop_recompute_count",
+                                                                            "detail":  "actual=0 op=eq expected=0"
+                                                                        }
+                                                                    ]
+                                                     },
+                                                     {
+                                                         "tier":  "tier_b",
+                                                         "status":  "pass",
+                                                         "checks":  [
+                                                                        {
+                                                                            "status":  "pass",
+                                                                            "pass":  true,
+                                                                            "metric":  "scrub_latency_p95_ms",
+                                                                            "metricPath":  "scrub_latency_p95_ms",
+                                                                            "detail":  "actual=0.104501 op=le expected=120"
+                                                                        },
+                                                                        {
+                                                                            "status":  "pass",
+                                                                            "pass":  true,
+                                                                            "metric":  "scrub_latency_p99_ms",
+                                                                            "metricPath":  "scrub_latency_p99_ms",
+                                                                            "detail":  "actual=1.799599 op=le expected=180"
+                                                                        },
+                                                                        {
+                                                                            "status":  "pass",
+                                                                            "pass":  true,
+                                                                            "metric":  "noop_recompute_count",
+                                                                            "metricPath":  "noop_recompute_count",
+                                                                            "detail":  "actual=0 op=eq expected=0"
+                                                                        }
+                                                                    ]
+                                                     }
+                                                 ]
+                            },
+                            {
+                                "slo_id":  "MS-ENG-05",
+                                "status":  "pass",
+                                "reason":  "all threshold checks passed on tier_a and tier_b",
+                                "tier_results":  [
+                                                     {
+                                                         "tier":  "tier_a",
+                                                         "status":  "pass",
+                                                         "checks":  [
+                                                                        {
+                                                                            "status":  "pass",
+                                                                            "pass":  true,
+                                                                            "metric":  "scia_dense_trail_render_p95_ms",
+                                                                            "metricPath":  "scia_dense_trail_render_p95_ms",
+                                                                            "detail":  "actual=0.0009 op=le expected=20"
+                                                                        }
+                                                                    ]
+                                                     },
+                                                     {
+                                                         "tier":  "tier_b",
+                                                         "status":  "pass",
+                                                         "checks":  [
+                                                                        {
+                                                                            "status":  "pass",
+                                                                            "pass":  true,
+                                                                            "metric":  "scia_dense_trail_render_p95_ms",
+                                                                            "metricPath":  "scia_dense_trail_render_p95_ms",
+                                                                            "detail":  "actual=0.0009 op=le expected=20"
+                                                                        }
+                                                                    ]
+                                                     }
+                                                 ]
+                            }
+                        ]
+}

@@ -1,0 +1,52 @@
+﻿{
+    "checked_at":  "2026-03-05T19:52:21.1580315+11:00",
+    "artifact_root":  "C:\\Users\\Asus\\AndroidStudioProjects\\XCPro\\artifacts\\mapscreen\\phase2\\pkg-w1\\20260305-170441",
+    "package_id":  "pkg-w1",
+    "phase":  "phase2",
+    "command_gates_pass":  true,
+    "determinism_gates_pass":  true,
+    "failed_slo_count":  0,
+    "pending_slo_count":  0,
+    "promotion_decision":  "ready_for_promotion",
+    "command_gate_failures":  [
+
+                              ],
+    "determinism_failures":  [
+
+                             ],
+    "slo_evaluations":  [
+                            {
+                                "slo_id":  "MS-ENG-08",
+                                "status":  "pass",
+                                "reason":  "all threshold checks passed on tier_a and tier_b",
+                                "tier_results":  [
+                                                     {
+                                                         "tier":  "tier_a",
+                                                         "status":  "pass",
+                                                         "checks":  [
+                                                                        {
+                                                                            "status":  "pass",
+                                                                            "pass":  true,
+                                                                            "metric":  "tile_size_mismatch_rebuild_miss_count",
+                                                                            "metricPath":  "tile_size_mismatch_rebuild_miss_count",
+                                                                            "detail":  "actual=0 op=eq expected=0"
+                                                                        }
+                                                                    ]
+                                                     },
+                                                     {
+                                                         "tier":  "tier_b",
+                                                         "status":  "pass",
+                                                         "checks":  [
+                                                                        {
+                                                                            "status":  "pass",
+                                                                            "pass":  true,
+                                                                            "metric":  "tile_size_mismatch_rebuild_miss_count",
+                                                                            "metricPath":  "tile_size_mismatch_rebuild_miss_count",
+                                                                            "detail":  "actual=0 op=eq expected=0"
+                                                                        }
+                                                                    ]
+                                                     }
+                                                 ]
+                            }
+                        ]
+}

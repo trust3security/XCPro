@@ -54,6 +54,61 @@ class MapBottomSheetTabsTest {
     }
 
     @Test
+    fun ognTab_ognToggleMovedToGeneralSettings() {
+        composeTestRule.setContent {
+            MaterialTheme {
+                MapBottomTabsLayer(
+                    selectedTab = MapBottomTab.OGN,
+                    isSheetVisible = true,
+                    isTaskPanelVisible = false,
+                    onTabSelected = {},
+                    onDismissSheet = {},
+                    weatherEnabled = false,
+                    ognEnabled = true,
+                    showSciaEnabled = false,
+                    onShowSciaEnabledChanged = {},
+                    adsbTrafficEnabled = false,
+                    showOgnThermalsEnabled = false,
+                    showDistanceCircles = false,
+                    currentQnhLabel = "1013.3 hPa",
+                    onAdsbTrafficEnabledChanged = {},
+                    onShowOgnThermalsEnabledChanged = {},
+                    onShowDistanceCirclesChanged = {},
+                    onOpenQnhDialogFromTab = {},
+                    ognTrailAircraftRows = emptyList(),
+                    onOgnTrailAircraftToggled = { _, _ -> },
+                    skySightUiState = ForecastOverlayUiState(),
+                    onSkySightEnabledChanged = {},
+                    onSkySightPrimaryParameterToggled = {},
+                    onSkySightWindOverlayEnabledChanged = {},
+                    onSkySightWindParameterSelected = {},
+                    onSkySightAutoTimeEnabledChanged = {},
+                    onSkySightFollowTimeOffsetChanged = {},
+                    onSkySightJumpToNow = {},
+                    onSkySightTimeSelected = {},
+                    onSkySightSatelliteOverlayEnabledChanged = {},
+                    onSkySightSatelliteImageryEnabledChanged = {},
+                    onSkySightSatelliteRadarEnabledChanged = {},
+                    onSkySightSatelliteLightningEnabledChanged = {},
+                    onSkySightSatelliteAnimateEnabledChanged = {},
+                    onSkySightSatelliteHistoryFramesChanged = {},
+                    skySightWarningMessage = null,
+                    skySightErrorMessage = null,
+                    skySightSatViewEnabled = false,
+                    onSkySightSatViewEnabledChanged = {},
+                    rainTabContent = {}
+                )
+            }
+        }
+
+        composeTestRule.onAllNodesWithText("OGN Traffic").assertCountEquals(0)
+        composeTestRule.onNodeWithText("Show Scia").assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText("Enable Show Scia to display OGN trails/wake.")
+            .assertIsDisplayed()
+    }
+
+    @Test
     fun floatingStrip_showsRainViewerWithoutLegacyWeatherSheetControls() {
         setBottomTabsContent(
             selectedTab = MapBottomTab.SKYSIGHT,
@@ -171,7 +226,6 @@ class MapBottomSheetTabsTest {
                         weatherEnabled = true,
                         ognEnabled = false,
                         showSciaEnabled = false,
-                        onOgnEnabledChanged = {},
                         onShowSciaEnabledChanged = {},
                         adsbTrafficEnabled = false,
                         showOgnThermalsEnabled = false,
@@ -270,7 +324,6 @@ class MapBottomSheetTabsTest {
                     weatherEnabled = true,
                     ognEnabled = false,
                     showSciaEnabled = false,
-                    onOgnEnabledChanged = {},
                     onShowSciaEnabledChanged = {},
                     adsbTrafficEnabled = false,
                     showOgnThermalsEnabled = false,
@@ -330,7 +383,6 @@ class MapBottomSheetTabsTest {
                     weatherEnabled = weatherEnabled,
                     ognEnabled = false,
                     showSciaEnabled = false,
-                    onOgnEnabledChanged = {},
                     onShowSciaEnabledChanged = {},
                     adsbTrafficEnabled = false,
                     showOgnThermalsEnabled = false,

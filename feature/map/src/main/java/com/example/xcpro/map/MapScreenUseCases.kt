@@ -336,14 +336,16 @@ class OgnTrafficUseCase @Inject constructor(
         if (lookup.normalizedSelectedKeys.isEmpty()) {
             emptyList()
         } else {
-            segments.filter { segment ->
-                selectionLookupContainsOgnKey(
-                    lookup = lookup,
-                    candidateKey = segment.sourceTargetId
-                )
+            val filtered = ArrayList<OgnGliderTrailSegment>(segments.size)
+            for (segment in segments) {
+                if (!selectionLookupContainsOgnKey(lookup = lookup, candidateKey = segment.sourceTargetId)) {
+                    continue
+                }
+                filtered += segment
             }
+            filtered
         }
-    }.distinctUntilChanged()
+    }.distinctUntilChanged(::sameOgnGliderTrailSegmentsByIdentity)
 
     fun setStreamingEnabled(enabled: Boolean) {
         repository.setEnabled(enabled)
@@ -398,6 +400,20 @@ class OgnTrafficUseCase @Inject constructor(
     fun stop() {
         repository.stop()
     }
+}
+
+private fun sameOgnGliderTrailSegmentsByIdentity(
+    previous: List<OgnGliderTrailSegment>,
+    current: List<OgnGliderTrailSegment>
+): Boolean {
+    if (previous === current) return true
+    if (previous.size != current.size) return false
+    for (index in previous.indices) {
+        if (previous[index].id != current[index].id) {
+            return false
+        }
+    }
+    return true
 }
 
 class AdsbTrafficUseCase @Inject constructor(

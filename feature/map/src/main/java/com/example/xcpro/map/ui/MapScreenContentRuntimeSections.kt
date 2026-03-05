@@ -49,7 +49,6 @@ internal fun MapBottomTabsSection(
     weatherEnabled: Boolean,
     ognOverlayEnabled: Boolean,
     showOgnSciaEnabled: Boolean,
-    onToggleOgnTraffic: () -> Unit,
     onToggleOgnScia: () -> Unit,
     adsbOverlayEnabled: Boolean,
     showOgnThermalsEnabled: Boolean,
@@ -90,9 +89,6 @@ internal fun MapBottomTabsSection(
         weatherEnabled = weatherEnabled,
         ognEnabled = ognOverlayEnabled,
         showSciaEnabled = showOgnSciaEnabled,
-        onOgnEnabledChanged = { enabled ->
-            if (enabled != ognOverlayEnabled) onToggleOgnTraffic()
-        },
         onShowSciaEnabledChanged = { enabled ->
             if (enabled != showOgnSciaEnabled) onToggleOgnScia()
         },

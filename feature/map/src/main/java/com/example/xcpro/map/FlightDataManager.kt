@@ -31,8 +31,8 @@ class FlightDataManager(
 ) {
     companion object {
         private const val TAG = "FlightDataManager"
-        private const val UI_NUMERIC_FRAME_MS = 1000L / 12  // ~12 Hz for numbers
-        private const val UI_NEEDLE_FRAME_MS = 1000L / 30   // smoother needle motion
+        private const val UI_NUMERIC_FRAME_MS = 1000L / 10  // ~10 Hz for numeric readouts
+        private const val UI_NEEDLE_FRAME_MS = 1000L / 20   // prioritize map interaction smoothness
         private const val ALTITUDE_BUCKET_M = 0.5
         private const val VARIO_BUCKET_MS = 0.1f
         private const val VARIO_NOISE_FLOOR = 1e-3

@@ -90,9 +90,6 @@ internal fun rememberMapScreenScaffoldInputs(
         managers.overlayManager.setOgnIconSizePx(bindings.ognIconSizePx)
         managers.overlayManager.setAdsbIconSizePx(bindings.adsbIconSizePx)
         managers.overlayManager.setAdsbEmergencyFlashEnabled(bindings.adsbEmergencyFlashEnabled)
-        managers.overlayManager.reapplyForecastOverlay()
-        managers.overlayManager.reapplySkySightSatelliteOverlay()
-        managers.overlayManager.reapplyWeatherRainOverlay()
     }
     val onMapViewBound: () -> Unit = {
         managers.lifecycleManager.syncCurrentOwnerState(lifecycleOwner.lifecycle.currentState)

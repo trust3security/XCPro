@@ -41,7 +41,7 @@ class OgnTrailSelectionPreferencesRepository internal constructor(
 
     suspend fun setAircraftSelected(aircraftKey: String, selected: Boolean) {
         val normalizedKey = normalizeOgnAircraftKeyOrNull(aircraftKey) ?: return
-        val keyAliases = expandOgnSelectionAliases(normalizedKey)
+        val keyLookup = buildOgnSelectionLookup(setOf(normalizedKey))
 
         dataStore.edit { preferences ->
             val updated = preferences[KEY_OGN_TRAIL_SELECTED_AIRCRAFT_KEYS]
@@ -49,8 +49,10 @@ class OgnTrailSelectionPreferencesRepository internal constructor(
                 ?: mutableSetOf()
             updated.removeAll { stored ->
                 val normalizedStored = normalizeOgnAircraftKeyOrNull(stored) ?: return@removeAll false
-                keyAliases.contains(normalizedStored) ||
-                    expandOgnSelectionAliases(normalizedStored).contains(normalizedKey)
+                selectionLookupContainsOgnKey(
+                    lookup = keyLookup,
+                    candidateKey = normalizedStored
+                )
             }
             if (selected) {
                 updated.add(normalizedKey)
@@ -63,6 +65,7 @@ class OgnTrailSelectionPreferencesRepository internal constructor(
         if (aircraftKeys.isEmpty()) return
         val normalizedKeys = aircraftKeys.mapNotNull(::normalizeOgnAircraftKeyOrNull).toSet()
         if (normalizedKeys.isEmpty()) return
+        val removalLookup = buildOgnSelectionLookup(normalizedKeys)
 
         dataStore.edit { preferences ->
             val updated = preferences[KEY_OGN_TRAIL_SELECTED_AIRCRAFT_KEYS]
@@ -70,15 +73,10 @@ class OgnTrailSelectionPreferencesRepository internal constructor(
                 ?: mutableSetOf()
             updated.removeAll { stored ->
                 val normalizedStored = normalizeOgnAircraftKeyOrNull(stored) ?: return@removeAll false
-                normalizedKeys.any { key ->
-                    selectionSetContainsOgnKey(
-                        selectedKeys = setOf(normalizedStored),
-                        candidateKey = key
-                    ) || selectionSetContainsOgnKey(
-                        selectedKeys = setOf(key),
-                        candidateKey = normalizedStored
-                    )
-                }
+                selectionLookupContainsOgnKey(
+                    lookup = removalLookup,
+                    candidateKey = normalizedStored
+                )
             }
             preferences[KEY_OGN_TRAIL_SELECTED_AIRCRAFT_KEYS] = updated
         }

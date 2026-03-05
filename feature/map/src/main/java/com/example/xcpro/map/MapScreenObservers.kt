@@ -50,7 +50,9 @@ internal class MapScreenObservers(
         observeFlightDataRepository()
         observeSafeContainerSize()
         observeReplayEvents()
-        observeReplaySessionDebug()
+        if (BuildConfig.DEBUG) {
+            observeReplaySessionDebug()
+        }
     }
 
     private fun observeFlightDataRepository() {
@@ -59,7 +61,7 @@ internal class MapScreenObservers(
             windStateFlow,
             flightStateFlow,
             hawkVarioUiStateFlow,
-            igcReplayController.session.map { it.selection != null }
+            igcReplayController.session.mapReplaySelectionActive()
         ) { data, wind, flightState, hawkState, isReplay ->
             Quintuple(data, wind, flightState, hawkState, isReplay)
         }.combine(mapStateStore.trailSettings.map { it.length != TrailLength.OFF }) { tuple, trailEnabled ->

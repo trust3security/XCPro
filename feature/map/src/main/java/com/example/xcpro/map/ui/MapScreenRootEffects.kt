@@ -5,6 +5,7 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -81,6 +82,9 @@ internal fun MapScreenOverlayEffects(
     adsbIconSizePx: Int,
     adsbEmergencyFlashEnabled: Boolean
 ) {
+    val overlayOwnshipAltitudeMeters = remember(ownshipAltitudeMeters) {
+        quantizeOverlayOwnshipAltitudeMeters(ownshipAltitudeMeters)
+    }
     val renderedOgnTargets = if (ognOverlayEnabled) ognTargets else emptyList()
     val renderedOgnThermals = if (ognOverlayEnabled && showOgnThermalsEnabled) {
         ognThermalHotspots
@@ -100,10 +104,10 @@ internal fun MapScreenOverlayEffects(
     LaunchedEffect(ognDisplayUpdateMode) {
         overlayManager.setOgnDisplayUpdateMode(ognDisplayUpdateMode)
     }
-    LaunchedEffect(renderedOgnTargets, ownshipAltitudeMeters, ognAltitudeUnit, unitsPreferences) {
+    LaunchedEffect(renderedOgnTargets, overlayOwnshipAltitudeMeters, ognAltitudeUnit, unitsPreferences) {
         overlayManager.updateOgnTrafficTargets(
             targets = renderedOgnTargets,
-            ownshipAltitudeMeters = ownshipAltitudeMeters,
+            ownshipAltitudeMeters = overlayOwnshipAltitudeMeters,
             altitudeUnit = ognAltitudeUnit,
             unitsPreferences = unitsPreferences
         )
@@ -117,10 +121,10 @@ internal fun MapScreenOverlayEffects(
     LaunchedEffect(ognIconSizePx) {
         overlayManager.setOgnIconSizePx(ognIconSizePx)
     }
-    LaunchedEffect(renderedAdsbTargets, ownshipAltitudeMeters, unitsPreferences) {
+    LaunchedEffect(renderedAdsbTargets, overlayOwnshipAltitudeMeters, unitsPreferences) {
         overlayManager.updateAdsbTrafficTargets(
             targets = renderedAdsbTargets,
-            ownshipAltitudeMeters = ownshipAltitudeMeters,
+            ownshipAltitudeMeters = overlayOwnshipAltitudeMeters,
             unitsPreferences = unitsPreferences
         )
     }

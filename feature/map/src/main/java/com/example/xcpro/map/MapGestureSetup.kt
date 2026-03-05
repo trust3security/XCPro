@@ -52,6 +52,7 @@ object MapGestureSetup {
         createTaskGestureHandler: (TaskGestureCallbacks) -> TaskGestureHandler,
         onEnterAATEditMode: (Int) -> Unit,
         onExitAATEditMode: () -> Unit,
+        onPreviewAATTargetPoint: (Int, Double, Double) -> Unit,
         onUpdateAATTargetPoint: (Int, Double, Double) -> Unit,
         onSyncTaskVisuals: () -> Unit,
         onMapTap: (LatLng) -> Unit = {},
@@ -68,6 +69,7 @@ object MapGestureSetup {
             cameraManager,
             onEnterAATEditMode,
             onExitAATEditMode,
+            onPreviewAATTargetPoint,
             onUpdateAATTargetPoint,
             onSyncTaskVisuals
         ) {
@@ -84,7 +86,10 @@ object MapGestureSetup {
                     onSyncTaskVisuals()
                     Log.d(TAG, "Exited AAT edit mode")
                 },
-                onDragTarget = { waypointIndex, lat, lon ->
+                onDragTargetPreview = { waypointIndex, lat, lon ->
+                    onPreviewAATTargetPoint(waypointIndex, lat, lon)
+                },
+                onDragTargetCommit = { waypointIndex, lat, lon ->
                     onUpdateAATTargetPoint(waypointIndex, lat, lon)
                     onSyncTaskVisuals()
                 }

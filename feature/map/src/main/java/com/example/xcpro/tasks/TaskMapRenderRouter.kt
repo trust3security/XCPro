@@ -100,6 +100,26 @@ object TaskMapRenderRouter {
         }
     }
 
+    fun previewAatTargetPoint(
+        snapshot: TaskRenderSnapshot,
+        waypointIndex: Int,
+        latitude: Double,
+        longitude: Double,
+        map: MapLibreMap?
+    ) {
+        val currentMap = map ?: return
+        if (snapshot.taskType != TaskType.AAT) return
+        val currentTask = snapshot.task.toSimpleAATTask()
+        aatTaskRenderer.previewTargetPointAndTaskLine(
+            map = currentMap,
+            task = currentTask,
+            waypointIndex = waypointIndex,
+            latitude = latitude,
+            longitude = longitude,
+            editModeWaypointIndex = snapshot.aatEditWaypointIndex
+        )
+    }
+
     private fun removeOrphanedTaskStyleArtifacts(map: MapLibreMap) {
         map.getStyle { style ->
             allTaskLayers.forEach { layerId ->

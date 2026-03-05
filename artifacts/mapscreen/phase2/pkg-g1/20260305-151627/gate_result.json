@@ -1,0 +1,45 @@
+﻿{
+    "package_id":  "pkg-g1",
+    "phase":  "phase2",
+    "generated_at":  "2026-03-05T15:50:34.3506476+11:00",
+    "command_gates":  [
+                          {
+                              "label":  "arch_gate",
+                              "command":  "python scripts/arch_gate.py",
+                              "status":  "pass",
+                              "exit_code":  0
+                          },
+                          {
+                              "label":  "enforceRules",
+                              "command":  ".\\gradlew.bat enforceRules",
+                              "status":  "pass",
+                              "exit_code":  0
+                          },
+                          {
+                              "label":  "testDebugUnitTest",
+                              "command":  ".\\gradlew.bat testDebugUnitTest",
+                              "status":  "pass",
+                              "exit_code":  0
+                          },
+                          {
+                              "label":  "assembleDebug",
+                              "command":  ".\\gradlew.bat assembleDebug",
+                              "status":  "pass",
+                              "exit_code":  0
+                          }
+                      ],
+    "slo_gates":  [
+                      {
+                          "slo_id":  "MS-UX-05",
+                          "status":  "not_evaluated",
+                          "reason":  "status is pending_perf_capture"
+                      }
+                  ],
+    "promotion_decision":  "blocked_pending_perf_evidence",
+    "rollback_recommendation":  "Complete tier_a/tier_b perf evidence and rerun threshold verification.",
+    "determinism_gates":  {
+                              "det_id":  "DET-03",
+                              "status":  "pass",
+                              "evidence":  "MapReplaySelectionFlowTest"
+                          }
+}

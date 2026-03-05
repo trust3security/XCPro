@@ -5,6 +5,8 @@ import com.example.xcpro.ogn.OGN_RECEIVE_RADIUS_DEFAULT_KM
 import com.example.xcpro.ogn.OgnDisplayUpdateMode
 
 data class OgnSettingsUiState(
+    val ognOverlayEnabled: Boolean = false,
+    val showSciaEnabled: Boolean = false,
     val iconSizePx: Int = OGN_ICON_SIZE_DEFAULT_PX,
     val receiveRadiusKm: Int = OGN_RECEIVE_RADIUS_DEFAULT_KM,
     val autoReceiveRadiusEnabled: Boolean = false,

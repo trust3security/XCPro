@@ -1,0 +1,5 @@
+﻿command: python scripts/arch_gate.py
+result: PASS
+captured_at: 2026-03-05T16:05:26.2029865+11:00
+commit_sha: 556bacf483fa20a073c90221801b03e6041820c6
+branch: Profiles

@@ -30,7 +30,8 @@ import org.maplibre.android.maps.MapLibreMap
 internal class MapOverlayManagerRuntimeForecastWeatherDelegate(
     private val mapState: MapScreenState,
     private val bringTrafficOverlaysToFront: () -> Unit,
-    private val onSatelliteContrastIconsChanged: (Boolean) -> Unit
+    private val onSatelliteContrastIconsChanged: (Boolean) -> Unit,
+    private val nowMonoMs: () -> Long
 ) {
     private var forecastOverlayEnabled: Boolean = false
     private var forecastWindOverlayEnabled: Boolean = false
@@ -57,11 +58,24 @@ internal class MapOverlayManagerRuntimeForecastWeatherDelegate(
     private var weatherRainStatusCode: WeatherRadarStatusCode = WeatherRadarStatusCode.NO_METADATA
     private var weatherRainStale: Boolean = true
     private var lastWeatherRainConfig: WeatherRainRuntimeConfig? = null
+    private var deferredWeatherRainConfig: WeatherRainRuntimeConfig? = null
+    private var lastWeatherRainApplyMonoMs: Long = 0L
+    private var mapInteractionActive: Boolean = false
     private val _forecastRuntimeWarningMessage = MutableStateFlow<String?>(null)
     val forecastRuntimeWarningMessage: StateFlow<String?> = _forecastRuntimeWarningMessage.asStateFlow()
     private val _skySightSatelliteRuntimeErrorMessage = MutableStateFlow<String?>(null)
     val skySightSatelliteRuntimeErrorMessage: StateFlow<String?> =
         _skySightSatelliteRuntimeErrorMessage.asStateFlow()
+
+    fun setMapInteractionActive(active: Boolean) {
+        if (mapInteractionActive == active) return
+        mapInteractionActive = active
+        if (!active) {
+            flushDeferredWeatherRainConfig()
+            mapState.mapLibreMap?.let(::reapplySkySightSatelliteOverlay)
+        }
+    }
+
     fun satelliteContrastIconsEnabled(): Boolean = satelliteContrastIconsEnabled
     fun onMapStyleChanged(map: MapLibreMap?) {
         if (map == null) return
@@ -170,7 +184,6 @@ internal class MapOverlayManagerRuntimeForecastWeatherDelegate(
             mapState.forecastWindOverlay?.clear()
         }
         refreshForecastRuntimeWarningMessage(applyFailureMessage)
-        mapState.blueLocationOverlay?.bringToFront()
         bringTrafficOverlaysToFront()
     }
     fun clearForecastOverlay() {
@@ -203,12 +216,13 @@ internal class MapOverlayManagerRuntimeForecastWeatherDelegate(
         skySightSatelliteAnimateEnabled = animate
         skySightSatelliteHistoryFrames = resolvedHistoryFrames
         skySightSatelliteReferenceTimeUtcMs = referenceTimeUtcMs
+        val runtimeAnimate = if (mapInteractionActive) false else animate
         val nextConfig = SkySightSatelliteRuntimeConfig(
             enabled = enabled,
             showSatelliteImagery = showSatelliteImagery,
             showRadar = showRadar,
             showLightning = showLightning,
-            animate = animate,
+            animate = runtimeAnimate,
             historyFrameCount = resolvedHistoryFrames,
             referenceTimeUtcMs = referenceTimeUtcMs
         )
@@ -267,8 +281,29 @@ internal class MapOverlayManagerRuntimeForecastWeatherDelegate(
         )
         if (nextConfig == lastWeatherRainConfig) return
         val map = mapState.mapLibreMap ?: return
-        if (applyWeatherRainOverlay(map, nextConfig)) {
-            lastWeatherRainConfig = nextConfig
+        if (shouldSkipWeatherRainApplyDuringInteraction(
+                interactionActive = mapInteractionActive,
+                enabled = nextConfig.enabled,
+                hasFrameSelection = nextConfig.frameSelection != null,
+                lastAppliedMonoMs = lastWeatherRainApplyMonoMs,
+                nowMonoMs = nowMonoMs()
+            )
+        ) {
+            deferredWeatherRainConfig = nextConfig
+            return
+        }
+        val runtimeConfig = nextConfig.copy(
+            transitionDurationMs = effectiveWeatherRainTransitionDurationMs(
+                interactionActive = mapInteractionActive,
+                requestedDurationMs = nextConfig.transitionDurationMs
+            )
+        )
+        if (applyWeatherRainOverlay(map, runtimeConfig)) {
+            lastWeatherRainConfig = runtimeConfig
+            lastWeatherRainApplyMonoMs = nowMonoMs()
+            if (!mapInteractionActive) {
+                deferredWeatherRainConfig = null
+            }
         } else {
             lastWeatherRainConfig = null
         }
@@ -281,6 +316,8 @@ internal class MapOverlayManagerRuntimeForecastWeatherDelegate(
         weatherRainStatusCode = WeatherRadarStatusCode.NO_METADATA
         weatherRainStale = true
         lastWeatherRainConfig = null
+        deferredWeatherRainConfig = null
+        lastWeatherRainApplyMonoMs = 0L
         mapState.weatherRainOverlay?.clear()
     }
     fun reapplyWeatherRainOverlay() { mapState.mapLibreMap?.let(::reapplyWeatherRainOverlay) }
@@ -371,7 +408,6 @@ internal class MapOverlayManagerRuntimeForecastWeatherDelegate(
             mapState.forecastWindOverlay?.clear()
         }
         refreshForecastRuntimeWarningMessage(applyFailureMessage)
-        mapState.blueLocationOverlay?.bringToFront()
         bringTrafficOverlaysToFront()
     }
     private fun refreshForecastRuntimeWarningMessage(applyFailureMessage: String? = null) {
@@ -387,7 +423,7 @@ internal class MapOverlayManagerRuntimeForecastWeatherDelegate(
             showSatelliteImagery = skySightSatelliteImageryEnabled,
             showRadar = skySightSatelliteRadarEnabled,
             showLightning = skySightSatelliteLightningEnabled,
-            animate = skySightSatelliteAnimateEnabled,
+            animate = if (mapInteractionActive) false else skySightSatelliteAnimateEnabled,
             historyFrameCount = skySightSatelliteHistoryFrames,
             referenceTimeUtcMs = skySightSatelliteReferenceTimeUtcMs
         )
@@ -399,15 +435,36 @@ internal class MapOverlayManagerRuntimeForecastWeatherDelegate(
         }
     }
     private fun reapplyWeatherRainOverlay(map: MapLibreMap) {
-        val config = WeatherRainRuntimeConfig(
+        val requestedConfig = WeatherRainRuntimeConfig(
             enabled = weatherRainEnabled,
             frameSelection = weatherRainFrameSelection,
             opacity = weatherRainOpacity,
             transitionDurationMs = weatherRainTransitionDurationMs,
             stale = weatherRainStale
         )
-        if (applyWeatherRainOverlay(map, config)) {
-            lastWeatherRainConfig = config
+        if (shouldSkipWeatherRainApplyDuringInteraction(
+                interactionActive = mapInteractionActive,
+                enabled = requestedConfig.enabled,
+                hasFrameSelection = requestedConfig.frameSelection != null,
+                lastAppliedMonoMs = lastWeatherRainApplyMonoMs,
+                nowMonoMs = nowMonoMs()
+            )
+        ) {
+            deferredWeatherRainConfig = requestedConfig
+            return
+        }
+        val runtimeConfig = requestedConfig.copy(
+            transitionDurationMs = effectiveWeatherRainTransitionDurationMs(
+                interactionActive = mapInteractionActive,
+                requestedDurationMs = requestedConfig.transitionDurationMs
+            )
+        )
+        if (applyWeatherRainOverlay(map, runtimeConfig)) {
+            lastWeatherRainConfig = runtimeConfig
+            lastWeatherRainApplyMonoMs = nowMonoMs()
+            if (!mapInteractionActive) {
+                deferredWeatherRainConfig = null
+            }
         } else {
             lastWeatherRainConfig = null
         }
@@ -438,7 +495,6 @@ internal class MapOverlayManagerRuntimeForecastWeatherDelegate(
                 )
             )
             _skySightSatelliteRuntimeErrorMessage.value = null
-            mapState.blueLocationOverlay?.bringToFront()
             bringTrafficOverlaysToFront()
             true
         }.getOrElse { throwable ->
@@ -472,7 +528,6 @@ internal class MapOverlayManagerRuntimeForecastWeatherDelegate(
                 opacity = effectiveOpacity,
                 transitionDurationMs = config.transitionDurationMs
             )
-            mapState.blueLocationOverlay?.bringToFront()
             bringTrafficOverlaysToFront()
             true
         }.getOrElse { throwable ->
@@ -485,6 +540,17 @@ internal class MapOverlayManagerRuntimeForecastWeatherDelegate(
         satelliteContrastIconsEnabled = enabled
         onSatelliteContrastIconsChanged(enabled)
     }
+
+    private fun flushDeferredWeatherRainConfig() {
+        val deferred = deferredWeatherRainConfig ?: return
+        val map = mapState.mapLibreMap ?: return
+        deferredWeatherRainConfig = null
+        if (applyWeatherRainOverlay(map, deferred)) {
+            lastWeatherRainConfig = deferred
+            lastWeatherRainApplyMonoMs = nowMonoMs()
+        }
+    }
+
     private companion object {
         private const val TAG = "MapOverlayManager"
     }

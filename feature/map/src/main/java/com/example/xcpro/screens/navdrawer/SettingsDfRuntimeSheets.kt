@@ -167,9 +167,18 @@ internal fun OgnSettingsSubSheet(
 ) {
     val viewModel: OgnSettingsViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        dragHandle = null
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight()
+        ) {
             SettingsTopAppBar(
                 title = "OGN",
                 onNavigateUp = onDismiss,
@@ -179,11 +188,13 @@ internal fun OgnSettingsSubSheet(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .weight(1f)
                     .padding(horizontal = 8.dp, vertical = 8.dp),
                 contentAlignment = Alignment.TopCenter
             ) {
                 OgnSettingsContent(
                     uiState = uiState,
+                    onSetOgnOverlayEnabled = viewModel::setOgnOverlayEnabled,
                     onSetIconSizePx = viewModel::setIconSizePx,
                     onSetReceiveRadiusKm = viewModel::setReceiveRadiusKm,
                     onSetAutoReceiveRadiusEnabled = viewModel::setAutoReceiveRadiusEnabled,

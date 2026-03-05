@@ -53,12 +53,38 @@ Compliance note (2026-02-20):
 - Deep-pass findings and closure steps are tracked in
   `docs/RAINVIEWER/01_RAINVIEWER_INDUSTRY_HARDENING_PLAN_2026-02-20.md`.
 
+2) MAPSCREEN `pkg-e1` fails `MS-UX-01` threshold gate in strict completion contract runs
+- Rule: Map visual SLO gate (`CODING_RULES.md` section `1A Enforcement`; `docs/MAPSCREEN/02_BASELINE_PROFILING_AND_SLO_MATRIX_2026-03-05.md`).
+- Issue: RULES-20260305-12
+- Owner: XCPro Team
+- Expiry: 2026-04-15
+- Scope:
+  - `artifacts/mapscreen/phase3/pkg-e1/20260305-193049/`
+  - `artifacts/mapscreen/phase3/pkg-e1/20260305-195205/`
+  - `scripts/qa/run_mapscreen_completion_contract.ps1` (phase-5 gate evidence)
+- Risk:
+  - Map interaction smoothness does not meet required `MS-UX-01` p95/p99/jank thresholds under automated gesture capture.
+- Mitigation:
+  - Keep phase-2 package lanes (`pkg-d1`, `pkg-g1`, `pkg-w1`) green and isolated.
+  - Continue targeted `pkg-e1` runtime work with strict Tier A/B evidence capture before release promotion.
+  - Do not mark `pkg-r1` green unless this deviation is removed or an approved release exception is explicitly documented.
+  - Defer final `MS-UX-01` closure to next focused optimization cycle (tracked in `docs/MAPSCREEN` execution backlog/contract docs).
+- Removal steps:
+  - Deliver additional `MS-UX-01` runtime optimizations and re-run strict contract without allow-failure flags.
+  - Produce a `pkg-e1` artifact where phase-5 verification reports `ready_for_promotion`.
+  - Remove this entry after successful strict completion contract run (phases `0..8`) for the same code line.
+- Exit criteria:
+  - `verify_mapscreen_package_evidence.ps1 -PackageId pkg-e1` passes with no failed SLOs.
+  - `run_mapscreen_completion_contract.ps1` reaches phase 8 with no allow-failure flags.
+
 ## Verification
 
-Last verified: 2026-02-18
+Last verified: 2026-03-05
 - Commands:
+  - python scripts/arch_gate.py
   - ./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.*" --tests "com.example.xcpro.tasks.domain.*" --tests "com.example.xcpro.tasks.aat.*"
   - ./gradlew enforceRules
+  - ./gradlew testDebugUnitTest
   - ./gradlew assembleDebug
 
 ## Resolved deviations

@@ -1,0 +1,47 @@
+﻿{
+    "package_id":  "pkg-r1",
+    "generated_at":  "2026-03-05T18:38:33.5954554+11:00",
+    "quality_summary":  {
+                            "total_packages":  4,
+                            "ready_for_promotion_count":  3,
+                            "blocked_count":  1
+                        },
+    "package_decisions":  [
+                              {
+                                  "package_id":  "pkg-d1",
+                                  "phase":  "phase2",
+                                  "run_id":  "20260305-170139",
+                                  "artifact_root":  "C:\\Users\\Asus\\AndroidStudioProjects\\XCPro\\artifacts\\mapscreen\\phase2\\pkg-d1\\20260305-170139",
+                                  "promotion_decision":  "ready_for_promotion",
+                                  "failed_slo_count":  0,
+                                  "pending_slo_count":  0
+                              },
+                              {
+                                  "package_id":  "pkg-g1",
+                                  "phase":  "phase2",
+                                  "run_id":  "20260305-170311",
+                                  "artifact_root":  "C:\\Users\\Asus\\AndroidStudioProjects\\XCPro\\artifacts\\mapscreen\\phase2\\pkg-g1\\20260305-170311",
+                                  "promotion_decision":  "ready_for_promotion",
+                                  "failed_slo_count":  0,
+                                  "pending_slo_count":  0
+                              },
+                              {
+                                  "package_id":  "pkg-w1",
+                                  "phase":  "phase2",
+                                  "run_id":  "20260305-170441",
+                                  "artifact_root":  "C:\\Users\\Asus\\AndroidStudioProjects\\XCPro\\artifacts\\mapscreen\\phase2\\pkg-w1\\20260305-170441",
+                                  "promotion_decision":  "ready_for_promotion",
+                                  "failed_slo_count":  0,
+                                  "pending_slo_count":  0
+                              },
+                              {
+                                  "package_id":  "pkg-e1",
+                                  "phase":  "phase3",
+                                  "run_id":  "20260305-183205",
+                                  "artifact_root":  "C:\\Users\\Asus\\AndroidStudioProjects\\XCPro\\artifacts\\mapscreen\\phase3\\pkg-e1\\20260305-183205",
+                                  "promotion_decision":  "blocked_failed_thresholds",
+                                  "failed_slo_count":  1,
+                                  "pending_slo_count":  0
+                              }
+                          ]
+}

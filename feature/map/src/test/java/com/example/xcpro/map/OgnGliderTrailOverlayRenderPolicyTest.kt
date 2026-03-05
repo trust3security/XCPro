@@ -2,6 +2,7 @@ package com.example.xcpro.map
 
 import com.example.xcpro.ogn.OgnGliderTrailSegment
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -44,6 +45,29 @@ class OgnGliderTrailOverlayRenderPolicyTest {
         )
 
         assertTrue(result.isEmpty())
+    }
+
+    @Test
+    fun sameSegmentsByIdentity_returnsTrue_whenIdsMatch() {
+        val previous = listOf(segment(0), segment(1))
+        val current = listOf(
+            segment(0).copy(colorIndex = 99, widthPx = 4.0f),
+            segment(1).copy(sourceLabel = "updated")
+        )
+
+        val same = OgnGliderTrailOverlay.sameSegmentsByIdentity(previous, current)
+
+        assertTrue(same)
+    }
+
+    @Test
+    fun sameSegmentsByIdentity_returnsFalse_whenIdsDiffer() {
+        val previous = listOf(segment(0), segment(1))
+        val current = listOf(segment(0), segment(2))
+
+        val same = OgnGliderTrailOverlay.sameSegmentsByIdentity(previous, current)
+
+        assertFalse(same)
     }
 
     private fun segment(index: Int): OgnGliderTrailSegment = OgnGliderTrailSegment(

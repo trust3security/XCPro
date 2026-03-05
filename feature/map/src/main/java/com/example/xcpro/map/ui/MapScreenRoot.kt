@@ -5,7 +5,6 @@ package com.example.xcpro.map.ui
  * Invariants: UI renders state only; mutations are routed through MapScreenViewModel.
  */
 import android.annotation.SuppressLint
-import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -153,12 +152,6 @@ internal fun MapScreenRoot(
     MapWeatherOverlayEffects(overlayManager = managers.overlayManager)
 
     val currentFlightModeSelection by flightDataManager.currentFlightModeFlow.collectAsStateWithLifecycle()
-    LaunchedEffect(profileLookAndFeelBinding.activeProfileId, currentFlightModeSelection) {
-        Log.d(
-            "MapScreenRoot",
-            "activeProfile=${profileLookAndFeelBinding.activeProfileId} mode=$currentFlightModeSelection"
-        )
-    }
 
     MapScreenRuntimeEffects(
         taskType = bindings.taskType,

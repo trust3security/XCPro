@@ -30,7 +30,7 @@ class MapLifecycleManagerResumeSyncTest {
     }
 
     @Test
-    fun syncCurrentOwnerState_resumed_forcesImmediateDisplayFrameSync() {
+    fun syncCurrentOwnerState_resumed_restartsSensors_withoutDisplayFrameSideEffect() {
         val locationManager: LocationManager = mock()
         val manager = createLifecycleManager(
             locationManager = locationManager,
@@ -40,7 +40,22 @@ class MapLifecycleManagerResumeSyncTest {
         manager.syncCurrentOwnerState(Lifecycle.State.RESUMED)
 
         verify(locationManager, times(1)).restartSensorsIfNeeded()
-        verify(locationManager, times(1)).onDisplayFrame()
+        verify(locationManager, never()).onDisplayFrame()
+    }
+
+    @Test
+    fun syncCurrentOwnerState_sameState_isIdempotent() {
+        val locationManager: LocationManager = mock()
+        val manager = createLifecycleManager(
+            locationManager = locationManager,
+            replayState = SessionState()
+        )
+
+        manager.syncCurrentOwnerState(Lifecycle.State.RESUMED)
+        manager.syncCurrentOwnerState(Lifecycle.State.RESUMED)
+
+        verify(locationManager, times(1)).restartSensorsIfNeeded()
+        verify(locationManager, never()).onDisplayFrame()
     }
 
     @Test
@@ -76,4 +91,3 @@ class MapLifecycleManagerResumeSyncTest {
         )
     }
 }
-

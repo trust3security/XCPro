@@ -10,6 +10,11 @@ import kotlin.math.abs
  */
 internal class AdsbDisplayMotionSmoother {
 
+    data class FrameSnapshot(
+        val targets: List<AdsbTrafficUiModel>,
+        val hasActiveAnimations: Boolean
+    )
+
     private val entries = LinkedHashMap<Icao24, Entry>()
 
     fun onTargets(targets: List<AdsbTrafficUiModel>, nowMonoMs: Long): Boolean {
@@ -19,7 +24,10 @@ internal class AdsbDisplayMotionSmoother {
             incomingIds.add(target.id)
             val existing = entries[target.id]
             if (existing == null) {
-                entries[target.id] = Entry.stationary(target)
+                entries[target.id] = Entry.stationary(
+                    target = target,
+                    sampleMonoMs = nowMonoMs
+                )
                 changed = true
                 continue
             }
@@ -27,7 +35,10 @@ internal class AdsbDisplayMotionSmoother {
             val from = existing.frameAt(nowMonoMs)
             val to = mergeVisualValues(from = from, update = target)
             if (from == to) {
-                existing.replaceWithoutAnimation(to)
+                existing.replaceWithoutAnimation(
+                    target = to,
+                    sampleMonoMs = nowMonoMs
+                )
                 continue
             }
 
@@ -62,6 +73,23 @@ internal class AdsbDisplayMotionSmoother {
     fun frame(nowMonoMs: Long): List<AdsbTrafficUiModel> =
         entries.values.map { it.frameAt(nowMonoMs) }
 
+    fun snapshot(nowMonoMs: Long): FrameSnapshot {
+        if (entries.isEmpty()) return FrameSnapshot(targets = emptyList(), hasActiveAnimations = false)
+
+        var hasActiveAnimations = false
+        val targets = ArrayList<AdsbTrafficUiModel>(entries.size)
+        for (entry in entries.values) {
+            if (!hasActiveAnimations && entry.isAnimating(nowMonoMs)) {
+                hasActiveAnimations = true
+            }
+            targets.add(entry.frameAt(nowMonoMs))
+        }
+        return FrameSnapshot(
+            targets = targets,
+            hasActiveAnimations = hasActiveAnimations
+        )
+    }
+
     fun clear() {
         entries.clear()
     }
@@ -86,6 +114,9 @@ internal class AdsbDisplayMotionSmoother {
         previousSampleMonoMs: Long,
         nowMonoMs: Long
     ): Long {
+        if (previousSampleMonoMs <= 0L || nowMonoMs <= previousSampleMonoMs) {
+            return MIN_DURATION_MS
+        }
         val delta = (nowMonoMs - previousSampleMonoMs).coerceAtLeast(MIN_DURATION_MS)
         return delta.coerceAtMost(MAX_DURATION_MS)
     }
@@ -99,10 +130,11 @@ internal class AdsbDisplayMotionSmoother {
     ) {
         fun isAnimating(nowMonoMs: Long): Boolean = nowMonoMs < endMonoMs
 
-        fun replaceWithoutAnimation(target: AdsbTrafficUiModel) {
+        fun replaceWithoutAnimation(target: AdsbTrafficUiModel, sampleMonoMs: Long) {
             from = target
             to = target
             startMonoMs = endMonoMs
+            lastSampleMonoMs = sampleMonoMs
         }
 
         fun retarget(
@@ -127,12 +159,12 @@ internal class AdsbDisplayMotionSmoother {
         }
 
         companion object {
-            fun stationary(target: AdsbTrafficUiModel): Entry = Entry(
+            fun stationary(target: AdsbTrafficUiModel, sampleMonoMs: Long): Entry = Entry(
                 from = target,
                 to = target,
                 startMonoMs = 0L,
                 endMonoMs = 0L,
-                lastSampleMonoMs = 0L
+                lastSampleMonoMs = sampleMonoMs
             )
         }
     }

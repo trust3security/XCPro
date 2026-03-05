@@ -1,0 +1,27 @@
+﻿{
+    "checked_at":  "2026-03-05T15:50:34.4959014+11:00",
+    "artifact_root":  "C:\\Users\\Asus\\AndroidStudioProjects\\XCPro\\artifacts\\mapscreen\\phase3\\pkg-e1\\20260305-153337",
+    "package_id":  "pkg-e1",
+    "phase":  "phase3",
+    "command_gates_pass":  true,
+    "determinism_gates_pass":  true,
+    "failed_slo_count":  0,
+    "pending_slo_count":  1,
+    "promotion_decision":  "blocked_pending_perf_evidence",
+    "command_gate_failures":  [
+
+                              ],
+    "determinism_failures":  [
+
+                             ],
+    "slo_evaluations":  [
+                            {
+                                "slo_id":  "MS-UX-01",
+                                "status":  "pending",
+                                "reason":  "status is pending_perf_capture",
+                                "tier_results":  [
+
+                                                 ]
+                            }
+                        ]
+}

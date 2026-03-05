@@ -1,0 +1,27 @@
+﻿{
+    "package_id":  "pkg-w1",
+    "generated_at":  "2026-03-05T16:05:26.2029865+11:00",
+    "status":  "pending",
+    "tier_a":  {
+                   "perfetto":  [
+                                    "tier_a/traces/perfetto/"
+                                ],
+                   "macrobenchmark":  [
+                                          "tier_a/traces/macrobenchmark/"
+                                      ],
+                   "profiler":  [
+                                    "tier_a/traces/profiler/"
+                                ]
+               },
+    "tier_b":  {
+                   "perfetto":  [
+                                    "tier_b/traces/perfetto/"
+                                ],
+                   "macrobenchmark":  [
+                                          "tier_b/traces/macrobenchmark/"
+                                      ],
+                   "profiler":  [
+                                    "tier_b/traces/profiler/"
+                                ]
+               }
+}

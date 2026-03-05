@@ -1,0 +1,1 @@
+﻿Drop perfetto traces for this tier in this folder.

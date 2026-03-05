@@ -191,26 +191,10 @@ internal class AdsbTrafficStore(
             }
         }
 
-        val emergencyAudioCandidateId = withinVertical
-            .asSequence()
-            .filter { it.isEmergencyAudioEligible }
-            .sortedWith(
-                compareByDescending<AdsbTrafficUiModel> { it.isEmergencyCollisionRisk }
-                    .thenByDescending { it.isCirclingEmergencyRedRule }
-                    .thenBy { it.distanceMeters }
-                    .thenBy { it.ageSec }
-                    .thenBy { it.id.raw }
-            )
-            .map { it.id }
-            .firstOrNull()
+        val emergencyAudioCandidateId = selectEmergencyAudioCandidate(withinVertical)?.id
 
         val displayed = withinVertical
-            .sortedWith(
-                compareByDescending<AdsbTrafficUiModel> { it.isEmergencyCollisionRisk }
-                    .thenBy { it.distanceMeters }
-                    .thenBy { it.ageSec }
-                    .thenBy { it.id.raw }
-            )
+            .sortedWith(DISPLAY_PRIORITY_COMPARATOR)
             .take(maxDisplayed)
 
         val cappedCount = (withinVertical.size - displayed.size).coerceAtLeast(0)
@@ -222,6 +206,37 @@ internal class AdsbTrafficStore(
             displayed = displayed,
             emergencyAudioCandidateId = emergencyAudioCandidateId
         )
+    }
+
+    private fun selectEmergencyAudioCandidate(
+        targets: List<AdsbTrafficUiModel>
+    ): AdsbTrafficUiModel? {
+        var best: AdsbTrafficUiModel? = null
+        for (target in targets) {
+            if (!target.isEmergencyAudioEligible) continue
+            val currentBest = best
+            if (currentBest == null || compareEmergencyCandidate(target, currentBest) < 0) {
+                best = target
+            }
+        }
+        return best
+    }
+
+    private fun compareEmergencyCandidate(
+        candidate: AdsbTrafficUiModel,
+        incumbent: AdsbTrafficUiModel
+    ): Int {
+        if (candidate.isEmergencyCollisionRisk != incumbent.isEmergencyCollisionRisk) {
+            return if (candidate.isEmergencyCollisionRisk) -1 else 1
+        }
+        if (candidate.isCirclingEmergencyRedRule != incumbent.isCirclingEmergencyRedRule) {
+            return if (candidate.isCirclingEmergencyRedRule) -1 else 1
+        }
+        val distanceCompare = candidate.distanceMeters.compareTo(incumbent.distanceMeters)
+        if (distanceCompare != 0) return distanceCompare
+        val ageCompare = candidate.ageSec.compareTo(incumbent.ageSec)
+        if (ageCompare != 0) return ageCompare
+        return candidate.id.raw.compareTo(incumbent.id.raw)
     }
 
     private fun proximityTier(
@@ -295,5 +310,10 @@ internal class AdsbTrafficStore(
         private const val CIRCLING_EMERGENCY_VERTICAL_CAP_METERS = 304.8
         private const val RED_DISTANCE_METERS = 2_000.0
         private const val AMBER_DISTANCE_METERS = 5_000.0
+        private val DISPLAY_PRIORITY_COMPARATOR =
+            compareByDescending<AdsbTrafficUiModel> { it.isEmergencyCollisionRisk }
+                .thenBy { it.distanceMeters }
+                .thenBy { it.ageSec }
+                .thenBy { it.id.raw }
     }
 }

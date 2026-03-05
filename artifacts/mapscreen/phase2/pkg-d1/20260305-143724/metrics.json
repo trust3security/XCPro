@@ -1,0 +1,40 @@
+﻿{
+    "package_id":  "pkg-d1",
+    "generated_at":  "2026-03-05T14:37:24.2992490+11:00",
+    "slo_targets":  [
+                        {
+                            "slo_id":  "MS-ENG-03",
+                            "status":  "pending_perf_capture",
+                            "baseline":  null,
+                            "post_change":  null,
+                            "note":  "Attach tier_a/tier_b measured values after device capture."
+                        },
+                        {
+                            "slo_id":  "MS-ENG-07",
+                            "status":  "pending_perf_capture",
+                            "baseline":  null,
+                            "post_change":  null,
+                            "note":  "Attach tier_a/tier_b measured values after device capture."
+                        }
+                    ],
+    "unit_evidence":  {
+                          "focused_tests":  [
+                                                "com.example.xcpro.map.AdsbDisplayMotionSmootherTest",
+                                                "com.example.xcpro.adsb.AdsbTrafficStoreTest"
+                                            ],
+                          "status":  "not_run"
+                      },
+    "command_gates":  [
+                          {
+                              "command":  "required_gates",
+                              "label":  "required_gates",
+                              "startedAt":  "2026-03-05T14:37:24.3502785+11:00",
+                              "finishedAt":  "2026-03-05T14:37:24.3502785+11:00",
+                              "status":  "skipped",
+                              "exitCode":  0,
+                              "output":  [
+                                             "Required gates skipped by -SkipRequiredGates."
+                                         ]
+                          }
+                      ]
+}

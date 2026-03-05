@@ -19,7 +19,6 @@ import androidx.compose.ui.text.font.FontWeight
 internal fun OgnTabContent(
     ognEnabled: Boolean,
     showSciaEnabled: Boolean,
-    onOgnEnabledChanged: (Boolean) -> Unit,
     onShowSciaEnabledChanged: (Boolean) -> Unit,
     aircraftRows: List<OgnTrailAircraftRowUi>,
     onAircraftTrailToggled: (String, Boolean) -> Unit
@@ -34,18 +33,6 @@ internal fun OgnTabContent(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = "OGN Traffic")
-        Switch(
-            checked = ognEnabled,
-            onCheckedChange = onOgnEnabledChanged,
-            enabled = !showSciaEnabled
-        )
-    }
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
         Text(text = "Show Scia")
         Switch(
             checked = showSciaEnabled,
@@ -54,7 +41,7 @@ internal fun OgnTabContent(
     }
     if (!ognEnabled) {
         Text(
-            text = "Enable OGN traffic to manage aircraft trail visibility.",
+            text = "Enable OGN traffic in General - OGN to manage aircraft trail visibility.",
             style = MaterialTheme.typography.bodySmall
         )
     } else if (!showSciaEnabled) {

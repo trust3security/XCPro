@@ -4,10 +4,11 @@ import com.example.xcpro.adsb.AdsbTrafficUiModel
 import com.example.xcpro.adsb.Icao24
 import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.map.model.MapLocationUiModel
+import com.example.xcpro.ogn.buildOgnSelectionLookup
 import com.example.xcpro.ogn.normalizeOgnAircraftKey
 import com.example.xcpro.ogn.OgnTrafficTarget
 import com.example.xcpro.ogn.OgnThermalHotspot
-import com.example.xcpro.ogn.selectionSetContainsOgnKey
+import com.example.xcpro.ogn.selectionLookupContainsOgnKey
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -192,9 +193,10 @@ internal class MapScreenTrafficCoordinator(
             .onEach { targets ->
                 val selectedId = selectedOgnId.value ?: return@onEach
                 val normalizedSelectedId = normalizeOgnAircraftKey(selectedId)
+                val selectedLookup = buildOgnSelectionLookup(setOf(normalizedSelectedId))
                 if (targets.none { target ->
-                        selectionSetContainsOgnKey(
-                            selectedKeys = setOf(normalizedSelectedId),
+                        selectionLookupContainsOgnKey(
+                            lookup = selectedLookup,
                             candidateKey = target.canonicalKey
                         ) || normalizeOgnAircraftKey(target.id) == normalizedSelectedId
                     }

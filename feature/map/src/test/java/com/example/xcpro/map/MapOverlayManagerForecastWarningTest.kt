@@ -243,7 +243,8 @@ class MapOverlayManagerForecastWarningTest {
             snailTrailManager = mock<SnailTrailManager>(),
             coroutineScope = TestScope(),
             airspaceUseCase = mock<AirspaceUseCase>(),
-            waypointFilesUseCase = mock<WaypointFilesUseCase>()
+            waypointFilesUseCase = mock<WaypointFilesUseCase>(),
+            monoTimeMs = { 1_000L }
         )
         return Fixture(manager = manager, mapState = mapState)
     }

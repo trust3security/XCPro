@@ -14,14 +14,28 @@ import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.map.LocationManager
 import com.example.xcpro.map.FlightDataManager
+import com.example.xcpro.core.time.TimeBridge
 import com.example.xcpro.profiles.ProfileUiState
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.map.model.MapLocationUiModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.delay
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.withFrameNanos
-import android.util.Log
+
+internal const val DISPLAY_POSE_MIN_FRAME_INTERVAL_LIVE_NS = 25_000_000L
+internal const val DISPLAY_POSE_MIN_FRAME_INTERVAL_REPLAY_NS = 16_666_667L
+internal const val PROFILE_CARD_PREPARE_MIN_INTERVAL_MS = 500L
+
+internal fun shouldDispatchDisplayPoseFrame(
+    frameNanos: Long,
+    lastDispatchNanos: Long,
+    minIntervalNanos: Long
+): Boolean {
+    if (lastDispatchNanos <= 0L) return true
+    return frameNanos - lastDispatchNanos >= minIntervalNanos
+}
 
 object MapComposeEffects {
 
@@ -66,6 +80,8 @@ object MapComposeEffects {
         profileModeTemplates: Map<String, Map<FlightModeSelection, String>>,
         activeTemplateId: String?
     ) {
+        val lastCardPrepareMonoMs = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0L) }
+
         LaunchedEffect(uiState.activeProfile?.id) {
             flightDataManager.loadVisibleModes(uiState.activeProfile?.id, uiState.activeProfile?.name)
 
@@ -86,12 +102,14 @@ object MapComposeEffects {
             if (safeContainerSize == IntSize.Zero) {
                 return@LaunchedEffect
             }
+            val nowMonoMs = TimeBridge.nowMonoMs()
+            val nextAllowedMonoMs =
+                lastCardPrepareMonoMs.value + PROFILE_CARD_PREPARE_MIN_INTERVAL_MS
+            if (nowMonoMs < nextAllowedMonoMs) {
+                delay(nextAllowedMonoMs - nowMonoMs)
+            }
+            lastCardPrepareMonoMs.value = TimeBridge.nowMonoMs()
 
-            Log.d(
-                "MapComposeEffects",
-                "prepareCards profile=${uiState.activeProfile?.id} mode=$currentFlightModeSelection " +
-                    "size=${safeContainerSize.width}x${safeContainerSize.height}"
-            )
             flightDataManager.updateFlightMode(currentFlightModeSelection)
             flightViewModel.prepareCardsForProfile(
                 profileId = uiState.activeProfile?.id,
@@ -138,14 +156,30 @@ object MapComposeEffects {
         replaySessionState: SessionState
     ) {
         val orientationState = rememberUpdatedState(orientationData)
+        val replayState = rememberUpdatedState(replaySessionState)
 
         LaunchedEffect(replaySessionState.speedMultiplier) {
             locationManager.setReplaySpeedMultiplier(replaySessionState.speedMultiplier)
         }
 
         LaunchedEffect(locationManager) {
+            var lastDispatchNanos = 0L
             while (isActive) {
-                withFrameNanos { }
+                val frameNanos = withFrameNanos { it }
+                val minFrameIntervalNanos = if (replayState.value.selection != null) {
+                    DISPLAY_POSE_MIN_FRAME_INTERVAL_REPLAY_NS
+                } else {
+                    DISPLAY_POSE_MIN_FRAME_INTERVAL_LIVE_NS
+                }
+                if (!shouldDispatchDisplayPoseFrame(
+                        frameNanos = frameNanos,
+                        lastDispatchNanos = lastDispatchNanos,
+                        minIntervalNanos = minFrameIntervalNanos
+                    )
+                ) {
+                    continue
+                }
+                lastDispatchNanos = frameNanos
                 locationManager.updateOrientation(orientationState.value)
                 locationManager.onDisplayFrame()
             }

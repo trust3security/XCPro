@@ -23,6 +23,7 @@ import org.maplibre.geojson.Point
 class OgnGliderTrailOverlay(
     private val map: MapLibreMap
 ) {
+    private var latestRenderedSegments: List<OgnGliderTrailSegment> = emptyList()
 
     fun initialize() {
         val style = map.style ?: return
@@ -61,6 +62,10 @@ class OgnGliderTrailOverlay(
 
         try {
             val renderSegments = trimSegmentsForRender(segments)
+            if (sameSegmentsByIdentity(latestRenderedSegments, renderSegments)) {
+                return
+            }
+            latestRenderedSegments = renderSegments
             val features = ArrayList<Feature>(renderSegments.size)
             for (segment in renderSegments) {
                 if (
@@ -85,6 +90,7 @@ class OgnGliderTrailOverlay(
             source.setGeoJson(FeatureCollection.fromFeatures(features))
         } catch (t: Throwable) {
             AppLogger.e(TAG, "Failed to render OGN glider trail overlay: ${t.message}", t)
+            latestRenderedSegments = emptyList()
             runCatching {
                 source.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
             }.onFailure { clearFailure ->
@@ -96,11 +102,13 @@ class OgnGliderTrailOverlay(
     fun clear() {
         val style = map.style ?: return
         val source = style.getSourceAs<GeoJsonSource>(SOURCE_ID) ?: return
+        latestRenderedSegments = emptyList()
         source.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
     }
 
     fun cleanup() {
         val style = map.style ?: return
+        latestRenderedSegments = emptyList()
         try {
             style.removeLayer(LAYER_ID)
             style.removeSource(SOURCE_ID)
@@ -157,6 +165,20 @@ class OgnGliderTrailOverlay(
             } else {
                 segments.takeLast(maxSegments)
             }
+        }
+
+        internal fun sameSegmentsByIdentity(
+            previous: List<OgnGliderTrailSegment>,
+            current: List<OgnGliderTrailSegment>
+        ): Boolean {
+            if (previous === current) return true
+            if (previous.size != current.size) return false
+            for (index in previous.indices) {
+                if (previous[index].id != current[index].id) {
+                    return false
+                }
+            }
+            return true
         }
     }
 }

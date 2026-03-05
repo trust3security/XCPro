@@ -13,8 +13,9 @@ import com.example.xcpro.map.model.GpsStatusUiModel
 import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.ogn.OgnTrafficTarget
 import com.example.xcpro.ogn.OgnThermalHotspot
+import com.example.xcpro.ogn.buildOgnSelectionLookup
 import com.example.xcpro.ogn.normalizeOgnAircraftKey
-import com.example.xcpro.ogn.selectionSetContainsOgnKey
+import com.example.xcpro.ogn.selectionLookupContainsOgnKey
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.replay.SessionStatus
 import kotlinx.coroutines.CoroutineScope
@@ -196,9 +197,10 @@ internal fun createSelectedOgnTargetState(
     combine(selectedOgnId, ognTargets) { selectedId, targets ->
         selectedId?.let { key ->
             val normalizedKey = normalizeOgnAircraftKey(key)
+            val selectedLookup = buildOgnSelectionLookup(setOf(normalizedKey))
             targets.firstOrNull { target ->
-                selectionSetContainsOgnKey(
-                    selectedKeys = setOf(normalizedKey),
+                selectionLookupContainsOgnKey(
+                    lookup = selectedLookup,
                     candidateKey = target.canonicalKey
                 ) || normalizeOgnAircraftKey(target.id) == normalizedKey
             }

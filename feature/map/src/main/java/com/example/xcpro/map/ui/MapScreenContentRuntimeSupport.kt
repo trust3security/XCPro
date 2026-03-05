@@ -161,10 +161,11 @@ internal fun buildOgnTrailAircraftRows(
     targets: List<OgnTrafficTarget>,
     selectionLookup: com.example.xcpro.ogn.OgnSelectionLookup
 ): List<OgnTrailAircraftRowUi> {
-    val seenKeys = HashSet<String>()
-    return targets.mapNotNull { target ->
+    val seenKeys = HashSet<String>(targets.size)
+    val rows = ArrayList<OgnTrailAircraftRowSortModel>(targets.size)
+    for (target in targets) {
         val key = normalizeOgnAircraftKey(target.canonicalKey)
-        if (!seenKeys.add(key)) return@mapNotNull null
+        if (!seenKeys.add(key)) continue
 
         val label = target.identity?.competitionNumber
             ?.takeIf { it.isNotBlank() }
@@ -173,16 +174,26 @@ internal fun buildOgnTrailAircraftRows(
             ?: target.displayLabel.takeIf { it.isNotBlank() }
             ?: key
 
-        OgnTrailAircraftRowUi(
-            key = key,
-            label = label,
-            trailsEnabled = selectionLookupContainsOgnKey(
-                lookup = selectionLookup,
-                candidateKey = key
-            )
+        rows += OgnTrailAircraftRowSortModel(
+            row = OgnTrailAircraftRowUi(
+                key = key,
+                label = label,
+                trailsEnabled = selectionLookupContainsOgnKey(
+                    lookup = selectionLookup,
+                    candidateKey = key
+                )
+            ),
+            normalizedSortKey = label.lowercase(Locale.US)
         )
-    }.sortedBy { row -> row.label.lowercase(Locale.US) }
+    }
+    rows.sortBy { model -> model.normalizedSortKey }
+    return rows.map { model -> model.row }
 }
+
+private data class OgnTrailAircraftRowSortModel(
+    val row: OgnTrailAircraftRowUi,
+    val normalizedSortKey: String
+)
 
 internal data class WindArrowTapCallout(
     val tapLatLng: LatLng,

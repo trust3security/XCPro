@@ -64,4 +64,14 @@ class OgnTrailSelectionPreferencesRepositoryTest {
 
         assertEquals(emptySet<String>(), keys)
     }
+
+    @Test
+    fun removeAircraftKeys_removesLegacyWhenCanonicalAliasProvided() = runTest {
+        repository.setAircraftSelected("AB12CD", selected = true)
+
+        repository.removeAircraftKeys(setOf("FLARM:AB12CD"))
+        val keys = repository.selectedAircraftKeysFlow.first()
+
+        assertEquals(emptySet<String>(), keys)
+    }
 }

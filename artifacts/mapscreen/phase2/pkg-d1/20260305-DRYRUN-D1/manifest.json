@@ -1,0 +1,35 @@
+﻿{
+    "package_id":  "pkg-d1",
+    "phase":  "phase2",
+    "work_package":  "WP-04+WP-07",
+    "mapscreen_items":  [
+                            "MAPSCREEN-004",
+                            "MAPSCREEN-005",
+                            "MAPSCREEN-013"
+                        ],
+    "generated_at":  "2026-03-05T16:59:46.5845963+11:00",
+    "commit_sha":  "556bacf483fa20a073c90221801b03e6041820c6",
+    "branch":  "Profiles",
+    "dirty_worktree":  true,
+    "build_variant":  "debug",
+    "scenario_ids":  [
+                         "scenario-3-panzoom-ogn-adsb-rain",
+                         "scenario-7-dense-traffic-scia",
+                         "scenario-8-mixed-load-stress"
+                     ],
+    "device_tiers":  [
+                         "tier_a",
+                         "tier_b"
+                     ],
+    "run_count":  {
+                      "unit":  1,
+                      "integration":  0,
+                      "perf":  0
+                  },
+    "focused_tests":  [
+                          "com.example.xcpro.map.AdsbDisplayMotionSmootherTest",
+                          "com.example.xcpro.adsb.AdsbTrafficStoreTest",
+                          "com.example.xcpro.ogn.OgnAddressingTest",
+                          "com.example.xcpro.ogn.OgnTrailSelectionPreferencesRepositoryTest"
+                      ]
+}

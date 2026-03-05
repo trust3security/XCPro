@@ -1,0 +1,19 @@
+﻿{
+    "generated_at":  "2026-03-05T14:27:32+11:00",
+    "status":  "pending",
+    "perfetto_traces":  [
+
+                        ],
+    "macrobenchmark_traces":  [
+
+                              ],
+    "profiler_captures":  [
+
+                          ],
+    "note":  "No device/emulator perf capture was executed for this checkpoint bundle.",
+    "expected_capture_layout":  {
+                                    "perfetto":  "traces/perfetto/*.perfetto-trace",
+                                    "macrobenchmark":  "traces/macrobenchmark/*.json",
+                                    "profiler":  "traces/profiler/*"
+                                }
+}

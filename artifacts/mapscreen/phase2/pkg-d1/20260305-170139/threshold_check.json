@@ -1,0 +1,179 @@
+﻿{
+    "checked_at":  "2026-03-05T19:52:12.7572276+11:00",
+    "artifact_root":  "C:\\Users\\Asus\\AndroidStudioProjects\\XCPro\\artifacts\\mapscreen\\phase2\\pkg-d1\\20260305-170139",
+    "package_id":  "pkg-d1",
+    "phase":  "phase2",
+    "command_gates_pass":  true,
+    "determinism_gates_pass":  true,
+    "failed_slo_count":  0,
+    "pending_slo_count":  0,
+    "promotion_decision":  "ready_for_promotion",
+    "command_gate_failures":  [
+
+                              ],
+    "determinism_failures":  [
+
+                             ],
+    "slo_evaluations":  [
+                            {
+                                "slo_id":  "MS-ENG-03",
+                                "status":  "pass",
+                                "reason":  "all threshold checks passed on tier_a and tier_b",
+                                "tier_results":  [
+                                                     {
+                                                         "tier":  "tier_a",
+                                                         "status":  "pass",
+                                                         "checks":  [
+                                                                        {
+                                                                            "status":  "pass",
+                                                                            "pass":  true,
+                                                                            "metric":  "adsb_feature_build_p95_ms",
+                                                                            "metricPath":  "adsb_feature_build_p95_ms",
+                                                                            "detail":  "actual=0.576 op=le expected=8"
+                                                                        }
+                                                                    ]
+                                                     },
+                                                     {
+                                                         "tier":  "tier_b",
+                                                         "status":  "pass",
+                                                         "checks":  [
+                                                                        {
+                                                                            "status":  "pass",
+                                                                            "pass":  true,
+                                                                            "metric":  "adsb_feature_build_p95_ms",
+                                                                            "metricPath":  "adsb_feature_build_p95_ms",
+                                                                            "detail":  "actual=0.576 op=le expected=8"
+                                                                        }
+                                                                    ]
+                                                     }
+                                                 ]
+                            },
+                            {
+                                "slo_id":  "MS-ENG-04",
+                                "status":  "pass",
+                                "reason":  "all threshold checks passed on tier_a and tier_b",
+                                "tier_results":  [
+                                                     {
+                                                         "tier":  "tier_a",
+                                                         "status":  "pass",
+                                                         "checks":  [
+                                                                        {
+                                                                            "status":  "pass",
+                                                                            "pass":  true,
+                                                                            "metric":  "unconditional_full_sort_on_unchanged_keys",
+                                                                            "metricPath":  "unconditional_full_sort_on_unchanged_keys",
+                                                                            "detail":  "actual=0 op=eq expected=0"
+                                                                        }
+                                                                    ]
+                                                     },
+                                                     {
+                                                         "tier":  "tier_b",
+                                                         "status":  "pass",
+                                                         "checks":  [
+                                                                        {
+                                                                            "status":  "pass",
+                                                                            "pass":  true,
+                                                                            "metric":  "unconditional_full_sort_on_unchanged_keys",
+                                                                            "metricPath":  "unconditional_full_sort_on_unchanged_keys",
+                                                                            "detail":  "actual=0 op=eq expected=0"
+                                                                        }
+                                                                    ]
+                                                     }
+                                                 ]
+                            },
+                            {
+                                "slo_id":  "MS-ENG-07",
+                                "status":  "pass",
+                                "reason":  "all threshold checks passed on tier_a and tier_b",
+                                "tier_results":  [
+                                                     {
+                                                         "tier":  "tier_a",
+                                                         "status":  "pass",
+                                                         "checks":  [
+                                                                        {
+                                                                            "status":  "pass",
+                                                                            "pass":  true,
+                                                                            "metric":  "adsb_retarget_window_p95_ms",
+                                                                            "metricPath":  "adsb_retarget_window_p95_ms",
+                                                                            "detail":  "actual=1300 op=le expected=2000"
+                                                                        },
+                                                                        {
+                                                                            "status":  "pass",
+                                                                            "pass":  true,
+                                                                            "metric":  "zero_seeded_window_count",
+                                                                            "metricPath":  "zero_seeded_window_count",
+                                                                            "detail":  "actual=0 op=eq expected=0"
+                                                                        }
+                                                                    ]
+                                                     },
+                                                     {
+                                                         "tier":  "tier_b",
+                                                         "status":  "pass",
+                                                         "checks":  [
+                                                                        {
+                                                                            "status":  "pass",
+                                                                            "pass":  true,
+                                                                            "metric":  "adsb_retarget_window_p95_ms",
+                                                                            "metricPath":  "adsb_retarget_window_p95_ms",
+                                                                            "detail":  "actual=1300 op=le expected=2000"
+                                                                        },
+                                                                        {
+                                                                            "status":  "pass",
+                                                                            "pass":  true,
+                                                                            "metric":  "zero_seeded_window_count",
+                                                                            "metricPath":  "zero_seeded_window_count",
+                                                                            "detail":  "actual=0 op=eq expected=0"
+                                                                        }
+                                                                    ]
+                                                     }
+                                                 ]
+                            },
+                            {
+                                "slo_id":  "MS-ENG-11",
+                                "status":  "pass",
+                                "reason":  "all threshold checks passed on tier_a and tier_b",
+                                "tier_results":  [
+                                                     {
+                                                         "tier":  "tier_a",
+                                                         "status":  "pass",
+                                                         "checks":  [
+                                                                        {
+                                                                            "status":  "pass",
+                                                                            "pass":  true,
+                                                                            "metric":  "ogn_selection_alloc_bytes_ratio_vs_baseline",
+                                                                            "metricPath":  "ogn_selection_alloc_bytes_ratio_vs_baseline",
+                                                                            "detail":  "actual=0 op=le expected=0.5"
+                                                                        },
+                                                                        {
+                                                                            "status":  "pass",
+                                                                            "pass":  true,
+                                                                            "metric":  "ogn_selection_alloc_count_ratio_vs_baseline",
+                                                                            "metricPath":  "ogn_selection_alloc_count_ratio_vs_baseline",
+                                                                            "detail":  "actual=0 op=le expected=0.5"
+                                                                        }
+                                                                    ]
+                                                     },
+                                                     {
+                                                         "tier":  "tier_b",
+                                                         "status":  "pass",
+                                                         "checks":  [
+                                                                        {
+                                                                            "status":  "pass",
+                                                                            "pass":  true,
+                                                                            "metric":  "ogn_selection_alloc_bytes_ratio_vs_baseline",
+                                                                            "metricPath":  "ogn_selection_alloc_bytes_ratio_vs_baseline",
+                                                                            "detail":  "actual=0 op=le expected=0.5"
+                                                                        },
+                                                                        {
+                                                                            "status":  "pass",
+                                                                            "pass":  true,
+                                                                            "metric":  "ogn_selection_alloc_count_ratio_vs_baseline",
+                                                                            "metricPath":  "ogn_selection_alloc_count_ratio_vs_baseline",
+                                                                            "detail":  "actual=0 op=le expected=0.5"
+                                                                        }
+                                                                    ]
+                                                     }
+                                                 ]
+                            }
+                        ]
+}

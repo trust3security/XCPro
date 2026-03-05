@@ -29,6 +29,8 @@ class MapLifecycleManager(
     private var mapViewCreated = false
     private var mapViewStarted = false
     private var mapViewResumed = false
+    private var lastSyncedOwnerState: Lifecycle.State? = null
+    private var lastSyncedOwnerMapView: org.maplibre.android.maps.MapView? = null
 
     /**
      * Handle map view lifecycle events
@@ -85,6 +87,10 @@ class MapLifecycleManager(
      */
     fun syncCurrentOwnerState(state: Lifecycle.State) {
         resetLifecycleTrackingIfMapViewChanged()
+        val currentMapView = mapState.mapView
+        if (lastSyncedOwnerState == state && lastSyncedOwnerMapView === currentMapView) {
+            return
+        }
         if (state.isAtLeast(Lifecycle.State.CREATED)) {
             dispatchMapViewCreateIfNeeded()
         }
@@ -99,8 +105,9 @@ class MapLifecycleManager(
         }
         if (state.isAtLeast(Lifecycle.State.RESUMED)) {
             restartSensorsIfAllowed()
-            locationManager.onDisplayFrame()
         }
+        lastSyncedOwnerState = state
+        lastSyncedOwnerMapView = currentMapView
     }
 
     /**
@@ -180,6 +187,8 @@ class MapLifecycleManager(
             mapViewCreated = false
             mapViewStarted = false
             mapViewResumed = false
+            lastSyncedOwnerState = null
+            lastSyncedOwnerMapView = null
         }
     }
 
@@ -211,6 +220,8 @@ class MapLifecycleManager(
         mapViewCreated = false
         mapViewStarted = false
         mapViewResumed = false
+        lastSyncedOwnerState = null
+        lastSyncedOwnerMapView = null
     }
 
     private fun clearRuntimeOverlays() {

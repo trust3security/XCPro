@@ -86,7 +86,8 @@ class MapOverlayManager(
                 map = map,
                 initialIconSizePx = iconSizePx
             )
-        }
+        },
+    monoTimeMs: () -> Long = TimeBridge::nowMonoMs
 ) : MapOverlayManagerRuntime(
     context = context,
     mapState = mapState,
@@ -101,5 +102,6 @@ class MapOverlayManager(
     ognTrafficOverlayFactory = ognTrafficOverlayFactory,
     ognThermalOverlayFactory = ognThermalOverlayFactory,
     ognGliderTrailOverlayFactory = ognGliderTrailOverlayFactory,
-    adsbTrafficOverlayFactory = adsbTrafficOverlayFactory
+    adsbTrafficOverlayFactory = adsbTrafficOverlayFactory,
+    nowMonoMs = monoTimeMs
 )

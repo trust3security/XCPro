@@ -51,39 +51,34 @@ internal object AATTargetPointPinRenderer {
                 existingSource?.setGeoJson(geoJson)
             }
 
-            try {
-                if (style.getLayer("aat-target-points-layer") != null) {
-                    style.removeLayer("aat-target-points-layer")
-                }
-            } catch (_: Exception) {
+            if (style.getLayer("aat-target-points-layer") == null) {
+                val colorExpression = Expression.switchCase(
+                    Expression.eq(Expression.get("role"), Expression.literal("START")),
+                    Expression.color("#388E3C".toColorInt()),
+                    Expression.eq(Expression.get("editMode"), Expression.literal(true)),
+                    Expression.color("#FF0000".toColorInt()),
+                    Expression.eq(Expression.get("role"), Expression.literal("FINISH")),
+                    Expression.color("#F44336".toColorInt()),
+                    Expression.color("#2196F3".toColorInt())
+                )
+
+                val radiusExpression = Expression.switchCase(
+                    Expression.eq(Expression.get("editMode"), Expression.literal(true)),
+                    Expression.literal(4f),
+                    Expression.literal(2f)
+                )
+
+                style.addLayer(
+                    CircleLayer("aat-target-points-layer", "aat-target-points")
+                        .withProperties(
+                            PropertyFactory.circleRadius(radiusExpression),
+                            PropertyFactory.circleColor(colorExpression),
+                            PropertyFactory.circleStrokeWidth(1f),
+                            PropertyFactory.circleStrokeColor("#FFFFFF"),
+                            PropertyFactory.circleOpacity(0.9f)
+                        )
+                )
             }
-
-            val colorExpression = Expression.switchCase(
-                Expression.eq(Expression.get("role"), Expression.literal("START")),
-                Expression.color("#388E3C".toColorInt()),
-                Expression.eq(Expression.get("editMode"), Expression.literal(true)),
-                Expression.color("#FF0000".toColorInt()),
-                Expression.eq(Expression.get("role"), Expression.literal("FINISH")),
-                Expression.color("#F44336".toColorInt()),
-                Expression.color("#2196F3".toColorInt())
-            )
-
-            val radiusExpression = Expression.switchCase(
-                Expression.eq(Expression.get("editMode"), Expression.literal(true)),
-                Expression.literal(4f),
-                Expression.literal(2f)
-            )
-
-            style.addLayer(
-                CircleLayer("aat-target-points-layer", "aat-target-points")
-                    .withProperties(
-                        PropertyFactory.circleRadius(radiusExpression),
-                        PropertyFactory.circleColor(colorExpression),
-                        PropertyFactory.circleStrokeWidth(1f),
-                        PropertyFactory.circleStrokeColor("#FFFFFF"),
-                        PropertyFactory.circleOpacity(0.9f)
-                    )
-            )
         } catch (_: Exception) {
         }
     }

@@ -8,13 +8,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
 import android.util.Log
-import android.view.MotionEvent
-import com.example.xcpro.map.BuildConfig
 import com.example.dfcards.RealTimeFlightData
 import com.example.dfcards.dfcards.CardContainer
 import com.example.dfcards.dfcards.FlightDataViewModel
@@ -242,9 +239,12 @@ private fun MapViewHost(
             }
         },
         update = { view ->
+            val mapViewChanged = mapState.mapView !== view
             mapState.mapView = view
             locationManager.bindRenderFrameListener(view)
-            onMapViewBound()
+            if (mapViewChanged) {
+                onMapViewBound()
+            }
         },
         modifier = modifier.fillMaxSize()
     )
@@ -267,33 +267,6 @@ private fun CardGridLayer(
         modifier = Modifier
             .fillMaxSize()
             .zIndex(if (isUiEditMode) 11f else 2f)
-            .pointerInteropFilter { motionEvent ->
-                val action = when (motionEvent.actionMasked) {
-                    MotionEvent.ACTION_DOWN -> "DOWN"
-                    MotionEvent.ACTION_POINTER_DOWN -> "POINTER_DOWN"
-                    MotionEvent.ACTION_MOVE -> "MOVE"
-                    MotionEvent.ACTION_POINTER_UP -> "POINTER_UP"
-                    MotionEvent.ACTION_UP -> "UP"
-                    MotionEvent.ACTION_CANCEL -> "CANCEL"
-                    else -> motionEvent.actionMasked.toString()
-                }
-                if (BuildConfig.DEBUG) {
-                    val pointerSummary = buildString {
-                        for (i in 0 until motionEvent.pointerCount) {
-                            if (i > 0) append("; ")
-                            append("#")
-                            append(motionEvent.getPointerId(i))
-                            append("@")
-                            append(String.format("%.1f,%.1f", motionEvent.getX(i), motionEvent.getY(i)))
-                        }
-                    }
-                    Log.d(
-                        "GESTURE_CARD_BOX",
-                        "action=$action edit=$isUiEditMode pointers=[$pointerSummary] consumed=false"
-                    )
-                }
-                false
-            }
     ) {
         DisposableEffect(Unit) {
             onDispose { onCardLayerPositioned(Rect.Zero) }

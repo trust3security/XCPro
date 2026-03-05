@@ -64,18 +64,20 @@ class AdsbTrafficOverlay(
         frameScheduled = false
         // Use one monotonic clock source for both immediate and choreographer frames.
         val nowMonoMs = nowMonoMs()
-        if (!hasActiveVisualAnimation(nowMonoMs)) {
+        val frameSnapshot = motionSmoother.snapshot(nowMonoMs)
+        val hasVisualAnimation = hasActiveVisualAnimation(frameSnapshot)
+        if (!hasVisualAnimation) {
             return@frame
         }
         if (!shouldRenderAnimationFrame(nowMonoMs)) {
-            if (map.style != null) {
+            if (map.style != null && hasVisualAnimation) {
                 scheduleFrameLoop()
             }
             return@frame
         }
-        renderFrame(nowMonoMs)
+        renderFrame(nowMonoMs, frameSnapshot)
         lastRenderedFrameMonoMs = nowMonoMs
-        if (map.style != null && hasActiveVisualAnimation(nowMonoMs)) {
+        if (map.style != null && hasVisualAnimation) {
             scheduleFrameLoop()
         }
     }
@@ -144,12 +146,11 @@ class AdsbTrafficOverlay(
     fun setEmergencyFlashEnabled(enabled: Boolean) {
         if (emergencyFlashEnabled == enabled) return
         emergencyFlashEnabled = enabled
-        val style = map.style ?: return
-        val source = style.getSourceAs<GeoJsonSource>(SOURCE_ID) ?: return
         val nowMonoMs = nowMonoMs()
-        source.setGeoJson(FeatureCollection.fromFeatures(buildFeatures(nowMonoMs)))
+        val frameSnapshot = motionSmoother.snapshot(nowMonoMs)
+        renderFrame(nowMonoMs, frameSnapshot)
         lastRenderedFrameMonoMs = nowMonoMs
-        if (hasActiveVisualAnimation(nowMonoMs)) {
+        if (hasActiveVisualAnimation(frameSnapshot)) {
             scheduleFrameLoop()
         } else {
             stopFrameLoop()
@@ -170,11 +171,12 @@ class AdsbTrafficOverlay(
         currentUnitsPreferences = unitsPreferences
         val nowMonoMs = nowMonoMs()
         val changed = motionSmoother.onTargets(targets, nowMonoMs)
-        val hasVisualAnimation = hasActiveVisualAnimation(nowMonoMs)
+        val frameSnapshot = motionSmoother.snapshot(nowMonoMs)
+        val hasVisualAnimation = hasActiveVisualAnimation(frameSnapshot)
         if (!changed && !hasVisualAnimation && !contextChanged) {
             return
         }
-        renderFrame(nowMonoMs)
+        renderFrame(nowMonoMs, frameSnapshot)
         lastRenderedFrameMonoMs = nowMonoMs
         if (hasVisualAnimation) {
             scheduleFrameLoop()
@@ -395,15 +397,28 @@ class AdsbTrafficOverlay(
         bottomLabelLayer?.setProperties(textOffset(arrayOf(0f, bottomLabelOffsetYForPx(currentIconSizePx))))
     }
 
-    private fun renderFrame(nowMonoMs: Long) {
+    private fun renderFrame(
+        nowMonoMs: Long,
+        frameSnapshot: AdsbDisplayMotionSmoother.FrameSnapshot
+    ) {
         val style = map.style ?: return
         val source = style.getSourceAs<GeoJsonSource>(SOURCE_ID) ?: return
-        source.setGeoJson(FeatureCollection.fromFeatures(buildFeatures(nowMonoMs)))
+        source.setGeoJson(
+            FeatureCollection.fromFeatures(
+                buildFeatures(
+                    nowMonoMs = nowMonoMs,
+                    targets = frameSnapshot.targets
+                )
+            )
+        )
     }
 
-    private fun buildFeatures(nowMonoMs: Long): Array<Feature> {
+    private fun buildFeatures(
+        nowMonoMs: Long,
+        targets: List<AdsbTrafficUiModel>
+    ): Array<Feature> {
         val features = ArrayList<Feature>(MAX_TARGETS)
-        for (target in motionSmoother.frame(nowMonoMs)) {
+        for (target in targets) {
             if (features.size >= MAX_TARGETS) break
             val feature = AdsbGeoJsonMapper.toFeature(
                 target = target,
@@ -445,15 +460,16 @@ class AdsbTrafficOverlay(
         return nowMonoMs - lastRendered >= ANIMATION_FRAME_INTERVAL_MS
     }
 
-    private fun hasActiveVisualAnimation(nowMonoMs: Long): Boolean =
-        motionSmoother.hasActiveAnimations(nowMonoMs) || hasActiveEmergencyFlash(nowMonoMs)
-
-    private fun hasActiveEmergencyFlash(nowMonoMs: Long): Boolean {
-        if (!emergencyFlashEnabled) return false
-        return motionSmoother.frame(nowMonoMs).any { target ->
-            !target.isStale && target.proximityTier == AdsbProximityTier.EMERGENCY
-        }
-    }
+    private fun hasActiveVisualAnimation(
+        frameSnapshot: AdsbDisplayMotionSmoother.FrameSnapshot
+    ): Boolean =
+        frameSnapshot.hasActiveAnimations ||
+            (
+                emergencyFlashEnabled &&
+                    frameSnapshot.targets.any { target ->
+                        !target.isStale && target.proximityTier == AdsbProximityTier.EMERGENCY
+                    }
+                )
 
     private fun iconScaleForPx(iconSizePx: Int): Float =
         iconSizePx.toFloat() / ICON_BITMAP_BASE_SIZE_PX.toFloat()

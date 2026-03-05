@@ -1,7 +1,6 @@
 package com.example.xcpro.map
 
 import android.util.Log
-import com.example.xcpro.core.time.TimeBridge
 import com.example.xcpro.common.units.AltitudeUnit
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.ogn.OGN_ICON_SIZE_DEFAULT_PX
@@ -25,7 +24,8 @@ internal class MapOverlayManagerRuntimeOgnDelegate(
     private val ognGliderTrailOverlayFactory: (MapLibreMap) -> OgnGliderTrailOverlay,
     private val bringTrafficOverlaysToFront: () -> Unit,
     private val satelliteContrastIconsEnabled: () -> Boolean,
-    private val normalizeOwnshipAltitudeForRender: (Double?) -> Double?
+    private val normalizeOwnshipAltitudeForRender: (Double?) -> Double?,
+    private val nowMonoMs: () -> Long
 ) {
     private var latestOgnTargets: List<OgnTrafficTarget> = emptyList()
     private var latestOgnOwnshipAltitudeMeters: Double? = null
@@ -33,11 +33,13 @@ internal class MapOverlayManagerRuntimeOgnDelegate(
     private var latestOgnUnitsPreferences: UnitsPreferences = UnitsPreferences()
     private var latestOgnThermalHotspots: List<OgnThermalHotspot> = emptyList()
     private var latestOgnGliderTrailSegments: List<OgnGliderTrailSegment> = emptyList()
+    private var latestOgnGliderTrailSignature: Int = gliderTrailSegmentIdentitySignature(emptyList())
     private var ognIconSizePx: Int = OGN_ICON_SIZE_DEFAULT_PX
     private var ognDisplayUpdateMode: OgnDisplayUpdateMode = OgnDisplayUpdateMode.DEFAULT
     private val ognTrafficRenderState = OgnRenderThrottleState()
     private val ognThermalRenderState = OgnRenderThrottleState()
     private val ognTrailRenderState = OgnRenderThrottleState()
+    private var mapInteractionActive: Boolean = false
 
     fun initializeTrafficOverlays(map: MapLibreMap?) {
         if (map == null) return
@@ -63,7 +65,7 @@ internal class MapOverlayManagerRuntimeOgnDelegate(
         mapState.ognGliderTrailOverlay?.render(latestOgnGliderTrailSegments)
 
         bringTrafficOverlaysToFront()
-        val nowMonoMs = TimeBridge.nowMonoMs()
+        val nowMonoMs = nowMonoMs()
         ognTrafficRenderState.lastRenderMonoMs = nowMonoMs
         ognThermalRenderState.lastRenderMonoMs = nowMonoMs
         ognTrailRenderState.lastRenderMonoMs = nowMonoMs
@@ -76,10 +78,18 @@ internal class MapOverlayManagerRuntimeOgnDelegate(
         renderTargetsNow()
         renderThermalsNow()
         renderTrailsNow()
-        val nowMonoMs = TimeBridge.nowMonoMs()
+        val nowMonoMs = nowMonoMs()
         ognTrafficRenderState.lastRenderMonoMs = nowMonoMs
         ognThermalRenderState.lastRenderMonoMs = nowMonoMs
         ognTrailRenderState.lastRenderMonoMs = nowMonoMs
+    }
+
+    fun setMapInteractionActive(active: Boolean) {
+        if (mapInteractionActive == active) return
+        mapInteractionActive = active
+        if (!active) {
+            flushDeferredRenders()
+        }
     }
 
     fun updateTrafficTargets(
@@ -128,9 +138,13 @@ internal class MapOverlayManagerRuntimeOgnDelegate(
     }
 
     fun updateGliderTrailSegments(segments: List<OgnGliderTrailSegment>, forceImmediate: Boolean = false) {
-        val sameSegments = latestOgnGliderTrailSegments == segments
+        val incomingSignature = gliderTrailSegmentIdentitySignature(segments)
+        val sameSegments = latestOgnGliderTrailSegments.size == segments.size &&
+            latestOgnGliderTrailSignature == incomingSignature &&
+            sameGliderTrailSegmentsByIdentity(latestOgnGliderTrailSegments, segments)
         if (sameSegments && !forceImmediate && mapState.ognGliderTrailOverlay != null) return
         latestOgnGliderTrailSegments = segments
+        latestOgnGliderTrailSignature = incomingSignature
         scheduleRender(
             state = ognTrailRenderState,
             forceImmediate = forceImmediate || segments.isEmpty()
@@ -226,17 +240,21 @@ internal class MapOverlayManagerRuntimeOgnDelegate(
         renderNow: () -> Unit
     ) {
         val map = mapState.mapLibreMap ?: return
-        val intervalMs = ognDisplayUpdateMode.renderIntervalMs
+        val intervalMs = resolveInteractionAwareIntervalMs(
+            baseIntervalMs = ognDisplayUpdateMode.renderIntervalMs,
+            interactionActive = mapInteractionActive,
+            interactionFloorMs = OGN_INTERACTION_MIN_RENDER_INTERVAL_MS
+        )
 
         if (forceImmediate || intervalMs <= 0L) {
             state.pendingJob?.cancel()
             state.pendingJob = null
             renderNow()
-            state.lastRenderMonoMs = TimeBridge.nowMonoMs()
+            state.lastRenderMonoMs = nowMonoMs()
             return
         }
 
-        val nowMonoMs = TimeBridge.nowMonoMs()
+        val nowMonoMs = nowMonoMs()
         val elapsedMs = nowMonoMs - state.lastRenderMonoMs
         if (elapsedMs >= intervalMs && state.pendingJob == null) {
             renderNow()
@@ -252,7 +270,23 @@ internal class MapOverlayManagerRuntimeOgnDelegate(
             state.pendingJob = null
             if (mapState.mapLibreMap != map || mapState.mapLibreMap == null) return@launch
             renderNow()
-            state.lastRenderMonoMs = TimeBridge.nowMonoMs()
+            state.lastRenderMonoMs = nowMonoMs()
+        }
+    }
+
+    private fun flushDeferredRenders() {
+        val nowMonoMs = nowMonoMs()
+        val states = listOf(
+            ognTrafficRenderState to ::renderTargetsNow,
+            ognThermalRenderState to ::renderThermalsNow,
+            ognTrailRenderState to ::renderTrailsNow
+        )
+        states.forEach { (state, renderNow) ->
+            val pending = state.pendingJob ?: return@forEach
+            pending.cancel()
+            state.pendingJob = null
+            renderNow()
+            state.lastRenderMonoMs = nowMonoMs
         }
     }
 
@@ -263,6 +297,28 @@ internal class MapOverlayManagerRuntimeOgnDelegate(
         ognThermalRenderState.pendingJob = null
         ognTrailRenderState.pendingJob?.cancel()
         ognTrailRenderState.pendingJob = null
+    }
+
+    private fun gliderTrailSegmentIdentitySignature(segments: List<OgnGliderTrailSegment>): Int {
+        var hash = 1
+        for (segment in segments) {
+            hash = 31 * hash + segment.id.hashCode()
+        }
+        return hash
+    }
+
+    private fun sameGliderTrailSegmentsByIdentity(
+        previous: List<OgnGliderTrailSegment>,
+        current: List<OgnGliderTrailSegment>
+    ): Boolean {
+        if (previous === current) return true
+        if (previous.size != current.size) return false
+        for (index in previous.indices) {
+            if (previous[index].id != current[index].id) {
+                return false
+            }
+        }
+        return true
     }
 
     private data class OgnRenderThrottleState(

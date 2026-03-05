@@ -1,0 +1,41 @@
+﻿{
+    "package_id":  "pkg-d1",
+    "phase":  "phase2",
+    "generated_at":  "2026-03-05T14:27:32+11:00",
+    "command_gates":  [
+                          {
+                              "detail":  "ARCH GATE PASSED",
+                              "status":  "pass",
+                              "command":  "python scripts/arch_gate.py"
+                          },
+                          {
+                              "detail":  "Rule enforcement passed.",
+                              "status":  "pass",
+                              "command":  "./gradlew enforceRules"
+                          },
+                          {
+                              "detail":  "Known intermittent app-level flake (ProfileRepositoryTest.ioReadError_preservesLastKnownGoodState) observed on first run; rerun passed.",
+                              "status":  "pass_after_rerun",
+                              "command":  "./gradlew testDebugUnitTest"
+                          },
+                          {
+                              "detail":  "Debug assemble succeeded.",
+                              "status":  "pass",
+                              "command":  "./gradlew assembleDebug"
+                          }
+                      ],
+    "slo_gates":  [
+                      {
+                          "slo_id":  "MS-ENG-03",
+                          "status":  "not_evaluated",
+                          "reason":  "missing_device_perf_capture"
+                      },
+                      {
+                          "slo_id":  "MS-ENG-07",
+                          "status":  "not_evaluated",
+                          "reason":  "missing_device_perf_capture"
+                      }
+                  ],
+    "promotion_decision":  "blocked_pending_perf_evidence",
+    "rollback_recommendation":  "Do not promote until SLO evidence is captured; if regressions appear, revert ADS-B overlay/store/smoother changes as one package."
+}

@@ -1,6 +1,5 @@
 package com.example.xcpro.map.ui.widgets
 
-import android.util.Log
 import androidx.compose.ui.geometry.Rect
 import com.example.xcpro.map.MapGestureRegion
 import com.example.xcpro.map.MapOverlayGestureTarget
@@ -15,10 +14,6 @@ import kotlinx.coroutines.flow.StateFlow
 class MapUIWidgetManager(
     internal val mapState: MapScreenState
 ) {
-    companion object {
-        private const val TAG = "MapUIWidgetManager"
-    }
-
     private val gestureRegistry = MapGestureRegistry()
     val gestureRegions: StateFlow<List<MapGestureRegion>> = gestureRegistry.regions
 
@@ -34,7 +29,6 @@ class MapUIWidgetManager(
         consumeGestures: Boolean = true
     ) {
         gestureRegistry.update(target, bounds, consumeGestures)
-        Log.d(TAG, "Updated gesture region for $target: $bounds (consume=$consumeGestures)")
     }
 
     /**
@@ -42,6 +36,5 @@ class MapUIWidgetManager(
      */
     fun clearGestureRegion(target: MapOverlayGestureTarget) {
         gestureRegistry.clear(target)
-        Log.d(TAG, "Cleared gesture region for $target")
     }
 }

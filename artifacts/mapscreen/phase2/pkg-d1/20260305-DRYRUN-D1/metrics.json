@@ -1,0 +1,89 @@
+﻿{
+    "package_id":  "pkg-d1",
+    "generated_at":  "2026-03-05T16:59:46.5845963+11:00",
+    "slo_targets":  [
+                        {
+                            "slo_id":  "MS-ENG-03",
+                            "status":  "pending_perf_capture",
+                            "baseline":  null,
+                            "post_change":  null,
+                            "note":  "Attach tier_a/tier_b measured values after device capture."
+                        },
+                        {
+                            "slo_id":  "MS-ENG-04",
+                            "status":  "pending_perf_capture",
+                            "baseline":  null,
+                            "post_change":  null,
+                            "note":  "Attach tier_a/tier_b measured values after device capture."
+                        },
+                        {
+                            "slo_id":  "MS-ENG-07",
+                            "status":  "pending_perf_capture",
+                            "baseline":  null,
+                            "post_change":  null,
+                            "note":  "Attach tier_a/tier_b measured values after device capture."
+                        },
+                        {
+                            "slo_id":  "MS-ENG-11",
+                            "status":  "pending_perf_capture",
+                            "baseline":  null,
+                            "post_change":  null,
+                            "note":  "Attach tier_a/tier_b measured values after device capture."
+                        }
+                    ],
+    "unit_evidence":  {
+                          "focused_tests":  [
+                                                "com.example.xcpro.map.AdsbDisplayMotionSmootherTest",
+                                                "com.example.xcpro.adsb.AdsbTrafficStoreTest",
+                                                "com.example.xcpro.ogn.OgnAddressingTest",
+                                                "com.example.xcpro.ogn.OgnTrailSelectionPreferencesRepositoryTest"
+                                            ],
+                          "status":  "pass"
+                      },
+    "command_gates":  [
+                          {
+                              "command":  "python scripts/arch_gate.py",
+                              "label":  "arch_gate",
+                              "startedAt":  "2026-03-05T16:59:46.7080308+11:00",
+                              "finishedAt":  "2026-03-05T16:59:46.7236871+11:00",
+                              "status":  "dry_run",
+                              "exitCode":  0,
+                              "output":  [
+                                             "DRY_RUN"
+                                         ]
+                          },
+                          {
+                              "command":  ".\\gradlew.bat enforceRules",
+                              "label":  "enforceRules",
+                              "startedAt":  "2026-03-05T16:59:46.7442737+11:00",
+                              "finishedAt":  "2026-03-05T16:59:46.7442737+11:00",
+                              "status":  "dry_run",
+                              "exitCode":  0,
+                              "output":  [
+                                             "DRY_RUN"
+                                         ]
+                          },
+                          {
+                              "command":  ".\\gradlew.bat testDebugUnitTest",
+                              "label":  "testDebugUnitTest",
+                              "startedAt":  "2026-03-05T16:59:46.7442737+11:00",
+                              "finishedAt":  "2026-03-05T16:59:46.7442737+11:00",
+                              "status":  "dry_run",
+                              "exitCode":  0,
+                              "output":  [
+                                             "DRY_RUN"
+                                         ]
+                          },
+                          {
+                              "command":  ".\\gradlew.bat assembleDebug",
+                              "label":  "assembleDebug",
+                              "startedAt":  "2026-03-05T16:59:46.7518063+11:00",
+                              "finishedAt":  "2026-03-05T16:59:46.7518063+11:00",
+                              "status":  "dry_run",
+                              "exitCode":  0,
+                              "output":  [
+                                             "DRY_RUN"
+                                         ]
+                          }
+                      ]
+}

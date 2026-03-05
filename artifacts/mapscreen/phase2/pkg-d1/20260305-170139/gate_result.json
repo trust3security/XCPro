@@ -1,0 +1,61 @@
+﻿{
+    "package_id":  "pkg-d1",
+    "phase":  "phase2",
+    "generated_at":  "2026-03-05T19:52:12.7642269+11:00",
+    "command_gates":  [
+                          {
+                              "label":  "arch_gate",
+                              "command":  "python scripts/arch_gate.py",
+                              "status":  "pass",
+                              "exit_code":  0
+                          },
+                          {
+                              "label":  "enforceRules",
+                              "command":  ".\\gradlew.bat enforceRules",
+                              "status":  "pass",
+                              "exit_code":  0
+                          },
+                          {
+                              "label":  "testDebugUnitTest",
+                              "command":  ".\\gradlew.bat testDebugUnitTest",
+                              "status":  "pass",
+                              "exit_code":  0
+                          },
+                          {
+                              "label":  "assembleDebug",
+                              "command":  ".\\gradlew.bat assembleDebug",
+                              "status":  "pass",
+                              "exit_code":  0
+                          },
+                          {
+                              "label":  "connected_app_tests",
+                              "command":  ".\\gradlew.bat :app:connectedDebugAndroidTest --no-parallel -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true",
+                              "status":  "pass",
+                              "exit_code":  0
+                          }
+                      ],
+    "slo_gates":  [
+                      {
+                          "slo_id":  "MS-ENG-03",
+                          "status":  "pass",
+                          "reason":  "all threshold checks passed on tier_a and tier_b"
+                      },
+                      {
+                          "slo_id":  "MS-ENG-04",
+                          "status":  "pass",
+                          "reason":  "all threshold checks passed on tier_a and tier_b"
+                      },
+                      {
+                          "slo_id":  "MS-ENG-07",
+                          "status":  "pass",
+                          "reason":  "all threshold checks passed on tier_a and tier_b"
+                      },
+                      {
+                          "slo_id":  "MS-ENG-11",
+                          "status":  "pass",
+                          "reason":  "all threshold checks passed on tier_a and tier_b"
+                      }
+                  ],
+    "promotion_decision":  "ready_for_promotion",
+    "rollback_recommendation":  "No rollback action needed; package is promotion-ready."
+}

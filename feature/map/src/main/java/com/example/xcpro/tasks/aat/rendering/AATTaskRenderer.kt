@@ -73,6 +73,35 @@ class AATTaskRenderer(private val geometryGenerator: AATGeometryGenerator = AATG
     }
 
     /**
+     * Preview-only update for AAT drag sessions.
+     * Updates target pin + task line without clearing/rebuilding all AAT layers.
+     */
+    fun previewTargetPointAndTaskLine(
+        map: MapLibreMap?,
+        task: SimpleAATTask,
+        waypointIndex: Int,
+        latitude: Double,
+        longitude: Double,
+        editModeWaypointIndex: Int? = null
+    ) {
+        if (waypointIndex !in task.waypoints.indices) return
+        map?.getStyle { style ->
+            val previewWaypoints = task.waypoints.toMutableList()
+            val waypoint = previewWaypoints[waypointIndex]
+            previewWaypoints[waypointIndex] = waypoint.copy(
+                targetPoint = waypoint.targetPoint.copy(
+                    latitude = latitude,
+                    longitude = longitude
+                ),
+                isTargetPointCustomized = true
+            )
+            val previewPath = geometryGenerator.calculateOptimalAATPath(previewWaypoints)
+            mapRenderer.upsertTaskLine(style, previewPath)
+            mapRenderer.plotTargetPointPins(style, previewWaypoints, editModeWaypointIndex)
+        }
+    }
+
+    /**
      * Clear AAT task visuals from map
      *
      * Removes all AAT-specific layers and sources from the map.

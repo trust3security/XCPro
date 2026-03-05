@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -21,12 +21,13 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -59,10 +60,20 @@ fun OgnSettingsScreen(
 ) {
     val viewModel: OgnSettingsViewModel = hiltViewModel()
     val scope = rememberCoroutineScope()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Scaffold(
-        topBar = {
+    ModalBottomSheet(
+        onDismissRequest = { navController.navigateUp() },
+        sheetState = sheetState,
+        dragHandle = null,
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight()
+        ) {
             SettingsTopAppBar(
                 title = "OGN",
                 onNavigateUp = { navController.navigateUp() },
@@ -79,28 +90,26 @@ fun OgnSettingsScreen(
                     }
                 }
             )
-        }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            contentAlignment = Alignment.TopCenter
-        ) {
-            OgnSettingsContent(
-                uiState = uiState,
-                onSetIconSizePx = viewModel::setIconSizePx,
-                onSetReceiveRadiusKm = viewModel::setReceiveRadiusKm,
-                onSetAutoReceiveRadiusEnabled = viewModel::setAutoReceiveRadiusEnabled,
-                onSetDisplayUpdateMode = viewModel::setDisplayUpdateMode,
-                onOwnFlarmDraftChanged = viewModel::onOwnFlarmDraftChanged,
-                onCommitOwnFlarmDraft = viewModel::commitOwnFlarmDraft,
-                onOwnIcaoDraftChanged = viewModel::onOwnIcaoDraftChanged,
-                onCommitOwnIcaoDraft = viewModel::commitOwnIcaoDraft,
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 8.dp)
-            )
+                    .weight(1f)
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                OgnSettingsContent(
+                    uiState = uiState,
+                    onSetOgnOverlayEnabled = viewModel::setOgnOverlayEnabled,
+                    onSetIconSizePx = viewModel::setIconSizePx,
+                    onSetReceiveRadiusKm = viewModel::setReceiveRadiusKm,
+                    onSetAutoReceiveRadiusEnabled = viewModel::setAutoReceiveRadiusEnabled,
+                    onSetDisplayUpdateMode = viewModel::setDisplayUpdateMode,
+                    onOwnFlarmDraftChanged = viewModel::onOwnFlarmDraftChanged,
+                    onCommitOwnFlarmDraft = viewModel::commitOwnFlarmDraft,
+                    onOwnIcaoDraftChanged = viewModel::onOwnIcaoDraftChanged,
+                    onCommitOwnIcaoDraft = viewModel::commitOwnIcaoDraft
+                )
+            }
         }
     }
 }
@@ -108,6 +117,7 @@ fun OgnSettingsScreen(
 @Composable
 internal fun OgnSettingsContent(
     uiState: OgnSettingsUiState,
+    onSetOgnOverlayEnabled: (Boolean) -> Unit,
     onSetIconSizePx: (Int) -> Unit,
     onSetReceiveRadiusKm: (Int) -> Unit,
     onSetAutoReceiveRadiusEnabled: (Boolean) -> Unit,
@@ -118,6 +128,8 @@ internal fun OgnSettingsContent(
     onCommitOwnIcaoDraft: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val ognOverlayEnabled = uiState.ognOverlayEnabled
+    val showSciaEnabled = uiState.showSciaEnabled
     val iconSizePx = uiState.iconSizePx
     val receiveRadiusKm = uiState.receiveRadiusKm
     val autoReceiveRadiusEnabled = uiState.autoReceiveRadiusEnabled
@@ -146,6 +158,50 @@ internal fun OgnSettingsContent(
         modifier = modifier.verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface
+            ),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("OGN traffic", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Enable OGN traffic overlays on the map.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Enable OGN traffic", style = MaterialTheme.typography.bodyMedium)
+                    Switch(
+                        checked = ognOverlayEnabled,
+                        onCheckedChange = onSetOgnOverlayEnabled,
+                        enabled = !showSciaEnabled
+                    )
+                }
+                val helperText = if (showSciaEnabled && ognOverlayEnabled) {
+                    "Show Scia is enabled in the Scia tab. Disable it there before turning OGN traffic off."
+                } else if (ognOverlayEnabled) {
+                    "OGN traffic is currently enabled."
+                } else {
+                    "OGN traffic is currently disabled."
+                }
+                Text(
+                    text = helperText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),

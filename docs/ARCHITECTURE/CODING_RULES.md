@@ -41,6 +41,10 @@ The following checks must fail the build when violated:
   `applicationId` and debug `applicationIdSuffix` unless an explicit migration
   plan is documented and approved.
 - File size budget: Kotlin source files must be `<= 500` lines by default, with stricter hotspot caps enforced in `scripts/ci/enforce_rules.ps1`.
+- Map visual SLO gate: map/overlay/replay/task-gesture runtime changes must pass
+  impacted SLOs from `docs/MAPSCREEN/02_BASELINE_PROFILING_AND_SLO_MATRIX_2026-03-05.md`
+  with evidence defined in
+  `docs/MAPSCREEN/04_TEST_VALIDATION_AND_ROLLBACK_2026-03-05.md`.
 
 ---
 
@@ -99,6 +103,22 @@ CI should include static checks that fail when Kotlin files exceed allowed line 
 
 Exception rule:
 - If a file must temporarily exceed budget, record a time-boxed exception in `KNOWN_DEVIATIONS.md` (issue ID, owner, expiry, removal plan).
+
+### 1A.5 Map Visual SLO Enforcement
+
+When a change touches map interaction or map-rendered overlay behavior
+in `feature/map` (including replay, weather, traffic, task-drag, or startup paths):
+
+Required evidence:
+- Impacted SLO IDs are explicitly listed (`MS-UX-*`, `MS-ENG-*`).
+- Baseline + post-change metrics are attached for each impacted SLO.
+- Validation follows the matrix in
+  `docs/MAPSCREEN/04_TEST_VALIDATION_AND_ROLLBACK_2026-03-05.md`.
+
+Merge rule:
+- Block merge on any impacted mandatory SLO miss.
+- Exception only via time-boxed `KNOWN_DEVIATIONS.md` entry
+  (issue ID, owner, expiry, mitigation, rollback plan).
 
 ## 1B. Exception Process
 

@@ -2,6 +2,7 @@ package com.example.xcpro.map
 
 import com.example.xcpro.weather.rain.WeatherRadarRenderOptions
 import com.example.xcpro.weather.rain.WeatherRainFrameSelection
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.Style
@@ -105,6 +106,53 @@ class WeatherRainOverlayPolicyTest {
     }
 
     @Test
+    fun render_sameFrameTileSizeChange_rebuildsRasterSourceWithUpdatedTileSize() {
+        val map: MapLibreMap = mock()
+        val style: Style = mock()
+        whenever(map.style).thenReturn(style)
+        val createdTileSizes = mutableListOf<Int>()
+
+        mockConstruction(
+            RasterSource::class.java
+        ) { _, context ->
+            createdTileSizes += context.arguments()[2] as Int
+        }.use {
+            mockConstruction(
+                RasterLayer::class.java,
+                withSettings().defaultAnswer(Answers.RETURNS_SELF)
+            ).use { layerConstruction ->
+                whenever(style.getLayer(any())).thenAnswer {
+                    layerConstruction.constructed().lastOrNull()
+                }
+
+                val overlay = WeatherRainOverlay(map)
+                val frameEpochSec = 9_500L
+
+                overlay.render(
+                    frameSelection = frameSelection(
+                        epochSec = frameEpochSec,
+                        tileSizePx = 256
+                    ),
+                    opacity = 0.60f,
+                    transitionDurationMs = 0L
+                )
+                overlay.render(
+                    frameSelection = frameSelection(
+                        epochSec = frameEpochSec,
+                        tileSizePx = 512
+                    ),
+                    opacity = 0.60f,
+                    transitionDurationMs = 0L
+                )
+
+                assertEquals(listOf(256, 512), createdTileSizes)
+                verify(style, atLeastOnce()).removeSource("weather-rain-source-$frameEpochSec")
+                verify(style, atLeastOnce()).removeLayer("weather-rain-layer-$frameEpochSec")
+            }
+        }
+    }
+
+    @Test
     fun render_whenOnlySkySightLayersExist_placesRainAboveSkySight() {
         val map: MapLibreMap = mock()
         val style: Style = mock()
@@ -127,13 +175,16 @@ class WeatherRainOverlayPolicyTest {
         }
     }
 
-    private fun frameSelection(epochSec: Long): WeatherRainFrameSelection {
+    private fun frameSelection(
+        epochSec: Long,
+        tileSizePx: Int = 256
+    ): WeatherRainFrameSelection {
         val framePath = "/v2/radar/$epochSec"
         return WeatherRainFrameSelection(
             hostUrl = "https://tilecache.rainviewer.com",
             framePath = framePath,
             frameTimeEpochSec = epochSec,
-            renderOptions = WeatherRadarRenderOptions()
+            renderOptions = WeatherRadarRenderOptions(tileSizePx = tileSizePx)
         )
     }
 

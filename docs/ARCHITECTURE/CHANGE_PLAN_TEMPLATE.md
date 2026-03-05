@@ -96,6 +96,14 @@ Map each architecture rule risk to an automated guard.
 |---|---|---|---|
 | | | | |
 
+### 2.7 Visual UX SLO Contract (Mandatory for map/overlay/replay interaction changes)
+
+Map user-visible outcomes to measurable SLOs.
+
+| Outcome | SLO ID | Baseline | Target | Validation/Test | Phase Gate |
+|---|---|---|---|---|---|
+| | | | | | |
+
 ## 3) Data Flow (Before -> After)
 
 Describe end-to-end flow as text:
@@ -147,6 +155,8 @@ Optional when relevant:
 - No duplicate SSOT ownership introduced
 - Time base handling is explicit in code and tests
 - Replay behavior remains deterministic
+- For map/overlay/replay interaction changes: impacted visual SLOs pass
+  (or approved deviation is recorded with issue/owner/expiry)
 - `KNOWN_DEVIATIONS.md` updated only if explicitly approved (issue, owner, expiry)
 
 ## 8) Rollback Plan

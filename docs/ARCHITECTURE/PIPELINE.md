@@ -12,11 +12,15 @@ These artifacts block architecture/timebase regressions:
 - Local gate script: `scripts/arch_gate.py`
 - CI workflow: `.github/workflows/quality-gates.yml`
 - Gradle rule gate: `./gradlew enforceRules`
+- Map visual SLO contract:
+  - `docs/MAPSCREEN/02_BASELINE_PROFILING_AND_SLO_MATRIX_2026-03-05.md`
+  - `docs/MAPSCREEN/04_TEST_VALIDATION_AND_ROLLBACK_2026-03-05.md`
 
 Gate intent:
 - Block direct production calls to forbidden wall/system time APIs outside approved adapter files.
 - Block known architecture drift patterns enforced by `enforceRules`.
 - Require unit-test and assemble baselines for PR readiness.
+- Require measurable SLO evidence for map interaction/overlay behavior changes.
 
 ## Quick Map (Live)
 
@@ -162,6 +166,9 @@ ViewModel:
 Observers:
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt` (wrapped by `FlightDataUiAdapter`)
   - Combines flight data + wind + flying state.
+  - Projects replay session state through a semantic selection-presence gate
+    (`mapReplaySelectionActive()` -> `distinctUntilChanged`) before joining
+    the main observer combine path.
   - Converts `CompleteFlightData` to `RealTimeFlightData`.
   - Pushes to `FlightDataManager` and trail processor.
   - Gates trail processing by trail settings (`TrailLength.OFF` resets trail processor and clears trail updates).
@@ -294,6 +301,10 @@ ADS-b settings path:
   - Converts ADS-b settings flows and ownship altitude into lifecycle-aware state for UI/runtime wiring.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
   - Pushes icon-size changes into overlay runtime controller.
+- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootEffects.kt`
+  - Applies visual-only ownship-altitude quantization (`2 m` default) before
+    OGN/ADS-b runtime overlay updates to reduce high-frequency side-effect churn
+    without mutating repository SSOT values.
 - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
   - Applies and re-applies icon size for existing and recreated overlays.
   - Is the single runtime owner for ADS-b/OGN traffic overlay recreation so persisted icon size is applied consistently on cold start.
@@ -502,10 +513,18 @@ Task map rendering bridge (2026-02-12):
     - `feature/map/src/main/java/com/example/xcpro/tasks/TaskMapOverlay.kt` (task state changes)
     - `feature/map/src/main/java/com/example/xcpro/map/MapInitializer.kt` (map ready)
     - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt` (style/overlay refresh)
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt` (AAT edit + gesture mutations)
+    - `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt` (AAT edit + gesture commit mutations)
 - Coordinator owns the only runtime call path to:
   - `TaskMapRenderRouter.syncTaskVisuals(...)`
   - This API owns clear + orphan cleanup + conditional replot sequencing.
+- AAT drag split (2026-03-05):
+  - gesture move path publishes preview-only target updates through
+    `TaskRenderSyncCoordinator.previewAatTargetPoint(...)` ->
+    `TaskMapRenderRouter.previewAatTargetPoint(...)` ->
+    `AATTaskRenderer.previewTargetPointAndTaskLine(...)` upsert-only target-pin + task-line updates
+    (no full task clear/replot per move).
+  - gesture end commits canonical target mutation and triggers one full
+    `TaskMapRenderRouter.syncTaskVisuals(...)` pass.
 - Rendering is selected by current task type (RACING/AAT) in the UI runtime layer.
 - `TaskMapRenderRouter` consumes `TaskRenderSnapshot` from `MapTasksUseCase`
   (`taskRenderSnapshot()`) and shared core->task mappers (Racing/AAT) instead

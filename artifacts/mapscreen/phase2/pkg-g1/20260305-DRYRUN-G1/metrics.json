@@ -1,0 +1,80 @@
+﻿{
+    "package_id":  "pkg-g1",
+    "generated_at":  "2026-03-05T17:00:00.2202150+11:00",
+    "slo_targets":  [
+                        {
+                            "slo_id":  "MS-UX-05",
+                            "status":  "pending_perf_capture",
+                            "baseline":  null,
+                            "post_change":  null,
+                            "note":  "Attach tier_a/tier_b measured values after device capture."
+                        },
+                        {
+                            "slo_id":  "MS-ENG-05",
+                            "status":  "pending_perf_capture",
+                            "baseline":  null,
+                            "post_change":  null,
+                            "note":  "Attach tier_a/tier_b measured values after device capture."
+                        }
+                    ],
+    "unit_evidence":  {
+                          "focused_tests":  [
+                                                "com.example.xcpro.map.MapReplaySelectionFlowTest",
+                                                "com.example.xcpro.map.OgnGliderTrailOverlayRenderPolicyTest"
+                                            ],
+                          "status":  "pass"
+                      },
+    "command_gates":  [
+                          {
+                              "command":  "python scripts/arch_gate.py",
+                              "label":  "arch_gate",
+                              "startedAt":  "2026-03-05T17:00:00.2997655+11:00",
+                              "finishedAt":  "2026-03-05T17:00:00.3157165+11:00",
+                              "status":  "dry_run",
+                              "exitCode":  0,
+                              "output":  [
+                                             "DRY_RUN"
+                                         ]
+                          },
+                          {
+                              "command":  ".\\gradlew.bat enforceRules",
+                              "label":  "enforceRules",
+                              "startedAt":  "2026-03-05T17:00:00.3253069+11:00",
+                              "finishedAt":  "2026-03-05T17:00:00.3253069+11:00",
+                              "status":  "dry_run",
+                              "exitCode":  0,
+                              "output":  [
+                                             "DRY_RUN"
+                                         ]
+                          },
+                          {
+                              "command":  ".\\gradlew.bat testDebugUnitTest",
+                              "label":  "testDebugUnitTest",
+                              "startedAt":  "2026-03-05T17:00:00.3314994+11:00",
+                              "finishedAt":  "2026-03-05T17:00:00.3314994+11:00",
+                              "status":  "dry_run",
+                              "exitCode":  0,
+                              "output":  [
+                                             "DRY_RUN"
+                                         ]
+                          },
+                          {
+                              "command":  ".\\gradlew.bat assembleDebug",
+                              "label":  "assembleDebug",
+                              "startedAt":  "2026-03-05T17:00:00.3360509+11:00",
+                              "finishedAt":  "2026-03-05T17:00:00.3360509+11:00",
+                              "status":  "dry_run",
+                              "exitCode":  0,
+                              "output":  [
+                                             "DRY_RUN"
+                                         ]
+                          }
+                      ],
+    "determinism_targets":  [
+                                {
+                                    "det_id":  "DET-03",
+                                    "status":  "unit_validated",
+                                    "evidence":  "MapReplaySelectionFlowTest"
+                                }
+                            ]
+}
