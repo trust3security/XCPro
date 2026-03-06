@@ -1,10 +1,10 @@
 package com.example.xcpro.profiles
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -13,6 +13,48 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProfileRepositoryTest {
+
+    private class RepositoryHarness(scope: CoroutineScope) {
+        val snapshotState = MutableStateFlow(
+            ProfileStorageSnapshot(
+                profilesJson = null,
+                activeProfileId = null,
+                readStatus = ProfileStorageReadStatus.OK
+            )
+        )
+        var writeActiveCalls = 0
+
+        val storage = object : ProfileStorage {
+            override val snapshotFlow = snapshotState
+
+            override suspend fun writeProfilesJson(json: String?) {
+                snapshotState.value = snapshotState.value.copy(
+                    profilesJson = json,
+                    readStatus = ProfileStorageReadStatus.OK
+                )
+            }
+
+            override suspend fun writeActiveProfileId(id: String?) {
+                writeActiveCalls++
+                snapshotState.value = snapshotState.value.copy(
+                    activeProfileId = id,
+                    readStatus = ProfileStorageReadStatus.OK
+                )
+            }
+
+            override suspend fun writeState(profilesJson: String?, activeProfileId: String?) {
+                snapshotState.value = snapshotState.value.copy(
+                    profilesJson = profilesJson,
+                    activeProfileId = activeProfileId,
+                    readStatus = ProfileStorageReadStatus.OK
+                )
+            }
+        }
+
+        val repository = ProfileRepository(storage, scope)
+    }
+
+    private fun createHarness(scope: CoroutineScope): RepositoryHarness = RepositoryHarness(scope)
 
     private val snapshotState = MutableStateFlow(
         ProfileStorageSnapshot(
@@ -145,58 +187,59 @@ class ProfileRepositoryTest {
 
     @Test
     fun bootstrap_marksRepositoryHydrated() = runTest {
-        assertTrue(repository.bootstrapComplete.first { it })
+        val harness = createHarness(backgroundScope)
+        assertTrue(harness.repository.bootstrapComplete.first { it })
     }
 
     @Test
     fun parseFailure_preservesLastKnownGoodProfiles() = runTest {
-        val created = repository.createProfile(
+        val harness = createHarness(backgroundScope)
+        val created = harness.repository.createProfile(
             ProfileCreationRequest(
                 name = "Pilot A",
                 aircraftType = AircraftType.SAILPLANE
             )
         ).getOrThrow()
-        repository.setActiveProfile(created).getOrThrow()
+        harness.repository.setActiveProfile(created).getOrThrow()
 
-        val beforeProfiles = repository.profiles.value
-        val beforeActiveId = repository.activeProfile.value?.id
-        val baselineActiveWrites = writeActiveCalls
-        snapshotState.value = snapshotState.value.copy(
+        val beforeProfiles = harness.repository.profiles.value
+        val beforeActiveId = harness.repository.activeProfile.value?.id
+        val baselineActiveWrites = harness.writeActiveCalls
+        harness.snapshotState.value = harness.snapshotState.value.copy(
             profilesJson = "{invalid-json",
             readStatus = ProfileStorageReadStatus.OK
         )
 
-        val error = repository.bootstrapError.first { it != null }
+        val error = harness.repository.bootstrapError.first { it != null }
         assertNotNull(error)
-        assertEquals(beforeProfiles, repository.profiles.value)
-        assertEquals(beforeActiveId, repository.activeProfile.value?.id)
-        assertEquals(baselineActiveWrites, writeActiveCalls)
+        assertEquals(beforeProfiles, harness.repository.profiles.value)
+        assertEquals(beforeActiveId, harness.repository.activeProfile.value?.id)
+        assertEquals(baselineActiveWrites, harness.writeActiveCalls)
     }
 
     @Test
     fun missingActiveProfileId_fallsBackToFirstProfile() = runTest {
-        val created = repository.createProfile(
+        val harness = createHarness(backgroundScope)
+        val created = harness.repository.createProfile(
             ProfileCreationRequest(
                 name = "Pilot B",
                 aircraftType = AircraftType.GLIDER
             )
         ).getOrThrow()
-        repository.setActiveProfile(created).getOrThrow()
-        val baselineActiveWrites = writeActiveCalls
+        harness.repository.setActiveProfile(created).getOrThrow()
+        val baselineActiveWrites = harness.writeActiveCalls
 
-        snapshotState.value = snapshotState.value.copy(
+        harness.snapshotState.value = harness.snapshotState.value.copy(
             activeProfileId = null,
             readStatus = ProfileStorageReadStatus.OK
         )
 
-        val repairedSnapshot = withTimeout(5_000) {
-            snapshotState.first { !it.activeProfileId.isNullOrBlank() }
-        }
+        val repairedSnapshot = harness.snapshotState.first { !it.activeProfileId.isNullOrBlank() }
         assertEquals(created.id, repairedSnapshot.activeProfileId)
-        assertTrue(writeActiveCalls > baselineActiveWrites)
-        val active = repository.activeProfile.first()
+        assertTrue(harness.writeActiveCalls > baselineActiveWrites)
+        val active = harness.repository.activeProfile.first()
         assertEquals(created.id, active?.id)
-        assertEquals(created.id, snapshotState.value.activeProfileId)
+        assertEquals(created.id, harness.snapshotState.value.activeProfileId)
     }
 
     @Test
@@ -438,28 +481,29 @@ class ProfileRepositoryTest {
 
     @Test
     fun ioReadError_preservesLastKnownGoodState() = runTest {
-        val created = repository.createProfile(
+        val harness = createHarness(backgroundScope)
+        val created = harness.repository.createProfile(
             ProfileCreationRequest(
                 name = "Pilot C",
                 aircraftType = AircraftType.SAILPLANE
             )
         ).getOrThrow()
-        repository.setActiveProfile(created).getOrThrow()
+        harness.repository.setActiveProfile(created).getOrThrow()
 
-        val beforeProfiles = repository.profiles.value
-        val beforeActiveId = repository.activeProfile.value?.id
-        val baselineActiveWrites = writeActiveCalls
-        snapshotState.value = ProfileStorageSnapshot(
+        val beforeProfiles = harness.repository.profiles.value
+        val beforeActiveId = harness.repository.activeProfile.value?.id
+        val baselineActiveWrites = harness.writeActiveCalls
+        harness.snapshotState.value = ProfileStorageSnapshot(
             profilesJson = null,
             activeProfileId = null,
             readStatus = ProfileStorageReadStatus.IO_ERROR
         )
 
-        val error = repository.bootstrapError.first { it?.contains("I/O") == true }
+        val error = harness.repository.bootstrapError.first { it?.contains("I/O") == true }
         assertNotNull(error)
-        assertEquals(beforeProfiles, repository.profiles.value)
-        assertEquals(beforeActiveId, repository.activeProfile.value?.id)
-        assertEquals(baselineActiveWrites, writeActiveCalls)
+        assertEquals(beforeProfiles, harness.repository.profiles.value)
+        assertEquals(beforeActiveId, harness.repository.activeProfile.value?.id)
+        assertEquals(baselineActiveWrites, harness.writeActiveCalls)
     }
 
     @Test
@@ -478,13 +522,14 @@ class ProfileRepositoryTest {
             override suspend fun writeState(profilesJson: String?, activeProfileId: String?) = Unit
         }
 
-        val localRepository = ProfileRepository(failingStorage)
+        val localRepository = ProfileRepository(failingStorage, backgroundScope)
         assertTrue(localRepository.bootstrapComplete.first { it })
         assertNotNull(localRepository.bootstrapError.first { it != null })
     }
 
     @Test
     fun invalidEntriesAreIgnoredDuringHydration() = runTest {
+        val harness = createHarness(backgroundScope)
         val jsonWithInvalidEntries = """
             [
               {"id":"p1","name":"","aircraftType":"SAILPLANE"},
@@ -493,23 +538,22 @@ class ProfileRepositoryTest {
             ]
         """.trimIndent()
 
-        snapshotState.value = snapshotState.value.copy(
+        harness.snapshotState.value = harness.snapshotState.value.copy(
             profilesJson = jsonWithInvalidEntries,
             activeProfileId = "p2",
             readStatus = ProfileStorageReadStatus.OK
         )
 
-        val hydrated = withTimeout(5_000) {
-            repository.profiles.first { profiles -> profiles.any { it.id == "p2" } }
-        }
+        val hydrated = harness.repository.profiles.first { profiles -> profiles.any { it.id == "p2" } }
         assertEquals(1, hydrated.size)
         assertEquals("p2", hydrated.first().id)
-        val warning = repository.bootstrapError.first { it != null }
+        val warning = harness.repository.bootstrapError.first { it != null }
         assertNotNull(warning)
     }
 
     @Test
     fun nullEntriesAreIgnoredDuringHydration() = runTest {
+        val harness = createHarness(backgroundScope)
         val jsonWithNullEntry = """
             [
               null,
@@ -517,15 +561,13 @@ class ProfileRepositoryTest {
             ]
         """.trimIndent()
 
-        snapshotState.value = snapshotState.value.copy(
+        harness.snapshotState.value = harness.snapshotState.value.copy(
             profilesJson = jsonWithNullEntry,
             activeProfileId = "p3",
             readStatus = ProfileStorageReadStatus.OK
         )
 
-        val hydrated = withTimeout(5_000) {
-            repository.profiles.first { profiles -> profiles.any { it.id == "p3" } }
-        }
+        val hydrated = harness.repository.profiles.first { profiles -> profiles.any { it.id == "p3" } }
         assertEquals(1, hydrated.size)
         assertEquals("p3", hydrated.first().id)
     }

@@ -20,9 +20,16 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class ProfileRepository @Inject constructor(
-    private val storage: ProfileStorage
+class ProfileRepository(
+    private val storage: ProfileStorage,
+    private val internalScope: CoroutineScope
 ) {
+
+    @Inject
+    constructor(storage: ProfileStorage) : this(
+        storage = storage,
+        internalScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    )
 
     private val gson = GsonBuilder().create()
 
@@ -30,7 +37,6 @@ class ProfileRepository @Inject constructor(
         private const val TAG = "ProfileRepository"
     }
 
-    private val internalScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val mutationMutex = Mutex()
 
     private val _profiles = MutableStateFlow<List<UserProfile>>(emptyList())
