@@ -5,6 +5,11 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
 
+internal data class AdsbCollisionRiskAssessment(
+    val isEmergencyCollisionRisk: Boolean,
+    val ineligibilityReason: AdsbEmergencyAudioIneligibilityReason? = null
+)
+
 internal class AdsbCollisionRiskEvaluator(
     private val emergencyDistanceMeters: Double = EMERGENCY_DISTANCE_METERS,
     private val collisionHeadingToleranceDeg: Double = COLLISION_HEADING_TOLERANCE_DEG,
@@ -28,43 +33,101 @@ internal class AdsbCollisionRiskEvaluator(
         hasOwnshipReference: Boolean,
         isClosing: Boolean,
         ageSec: Int
-    ): Boolean {
-        if (!hasOwnshipReference) return false
-        if (!isClosing) return false
-        if (ageSec > emergencyMaxAgeSec) return false
-        if (!distanceMeters.isFinite() || distanceMeters > emergencyDistanceMeters) return false
-
-        val altitudeDelta = altitudeDeltaMeters ?: return false
-        val above = altitudeDelta
-        val below = -altitudeDelta
-        if (above > verticalAboveMeters || below > verticalBelowMeters) return false
-        if (isExplicitlyLowMotionSpeed(targetSpeedMps = targetSpeedMps, ownshipSpeedMps = ownshipSpeedMps)) {
-            return false
+    ): AdsbCollisionRiskAssessment {
+        if (!hasOwnshipReference) {
+            return AdsbCollisionRiskAssessment(
+                isEmergencyCollisionRisk = false,
+                ineligibilityReason = AdsbEmergencyAudioIneligibilityReason.NO_OWNSHIP_REFERENCE
+            )
+        }
+        if (!isClosing) {
+            return AdsbCollisionRiskAssessment(
+                isEmergencyCollisionRisk = false,
+                ineligibilityReason = AdsbEmergencyAudioIneligibilityReason.NOT_CLOSING
+            )
+        }
+        if (ageSec > emergencyMaxAgeSec) {
+            return AdsbCollisionRiskAssessment(
+                isEmergencyCollisionRisk = false,
+                ineligibilityReason = AdsbEmergencyAudioIneligibilityReason.STALE_TARGET_SAMPLE
+            )
+        }
+        if (!distanceMeters.isFinite() || distanceMeters > emergencyDistanceMeters) {
+            return AdsbCollisionRiskAssessment(
+                isEmergencyCollisionRisk = false,
+                ineligibilityReason =
+                    AdsbEmergencyAudioIneligibilityReason.DISTANCE_OUTSIDE_EMERGENCY_RANGE
+            )
         }
 
-        val track = trackDeg ?: return false
-        if (!track.isFinite() || !bearingDegFromUser.isFinite()) return false
+        val altitudeDelta = altitudeDeltaMeters ?: return AdsbCollisionRiskAssessment(
+            isEmergencyCollisionRisk = false,
+            ineligibilityReason =
+                AdsbEmergencyAudioIneligibilityReason.RELATIVE_ALTITUDE_UNAVAILABLE
+        )
+        val above = altitudeDelta
+        val below = -altitudeDelta
+        if (above > verticalAboveMeters || below > verticalBelowMeters) {
+            return AdsbCollisionRiskAssessment(
+                isEmergencyCollisionRisk = false,
+                ineligibilityReason = AdsbEmergencyAudioIneligibilityReason.OUTSIDE_VERTICAL_GATE
+            )
+        }
+        if (isExplicitlyLowMotionSpeed(targetSpeedMps = targetSpeedMps, ownshipSpeedMps = ownshipSpeedMps)) {
+            return AdsbCollisionRiskAssessment(
+                isEmergencyCollisionRisk = false,
+                ineligibilityReason = AdsbEmergencyAudioIneligibilityReason.LOW_MOTION_SPEED
+            )
+        }
+
+        val track = trackDeg ?: return AdsbCollisionRiskAssessment(
+            isEmergencyCollisionRisk = false,
+            ineligibilityReason = AdsbEmergencyAudioIneligibilityReason.TARGET_TRACK_UNAVAILABLE
+        )
+        if (!track.isFinite() || !bearingDegFromUser.isFinite()) {
+            return AdsbCollisionRiskAssessment(
+                isEmergencyCollisionRisk = false,
+                ineligibilityReason = AdsbEmergencyAudioIneligibilityReason.HEADING_GATE_FAILED
+            )
+        }
         val bearingFromTargetToUser = normalizeDegrees(bearingDegFromUser + 180.0)
         val headingError = minHeadingDiffDeg(track, bearingFromTargetToUser)
-        if (headingError > collisionHeadingToleranceDeg) return false
+        if (headingError > collisionHeadingToleranceDeg) {
+            return AdsbCollisionRiskAssessment(
+                isEmergencyCollisionRisk = false,
+                ineligibilityReason = AdsbEmergencyAudioIneligibilityReason.HEADING_GATE_FAILED
+            )
+        }
 
-        return if (hasMotionContext(
+        if (!hasMotionContext(
                 targetTrackDeg = track,
                 targetSpeedMps = targetSpeedMps,
                 ownshipTrackDeg = ownshipTrackDeg,
                 ownshipSpeedMps = ownshipSpeedMps
             )
         ) {
-            isProjectedConflictLikely(
-                distanceMeters = distanceMeters,
-                bearingDegFromUser = bearingDegFromUser,
-                targetTrackDeg = track,
-                targetSpeedMps = targetSpeedMps ?: 0.0,
-                ownshipTrackDeg = ownshipTrackDeg ?: 0.0,
-                ownshipSpeedMps = ownshipSpeedMps ?: 0.0
+            return AdsbCollisionRiskAssessment(
+                isEmergencyCollisionRisk = false,
+                ineligibilityReason = AdsbEmergencyAudioIneligibilityReason.MOTION_CONFIDENCE_LOW
             )
+        }
+
+        val projectedConflictLikely = isProjectedConflictLikely(
+            distanceMeters = distanceMeters,
+            bearingDegFromUser = bearingDegFromUser,
+            targetTrackDeg = track,
+            targetSpeedMps = targetSpeedMps ?: 0.0,
+            ownshipTrackDeg = ownshipTrackDeg ?: 0.0,
+            ownshipSpeedMps = ownshipSpeedMps ?: 0.0
+        )
+        return if (projectedConflictLikely) {
+            AdsbCollisionRiskAssessment(isEmergencyCollisionRisk = true)
         } else {
-            true
+            AdsbCollisionRiskAssessment(
+                isEmergencyCollisionRisk = false,
+                ineligibilityReason =
+                    AdsbEmergencyAudioIneligibilityReason.PROJECTED_CONFLICT_NOT_LIKELY
+            )
         }
     }
 

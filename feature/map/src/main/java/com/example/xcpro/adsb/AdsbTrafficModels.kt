@@ -55,6 +55,7 @@ data class AdsbTrafficUiModel(
     val closingRateMps: Double? = null,
     val isEmergencyCollisionRisk: Boolean = false,
     val isEmergencyAudioEligible: Boolean = false,
+    val emergencyAudioIneligibilityReason: AdsbEmergencyAudioIneligibilityReason? = null,
     val isCirclingEmergencyRedRule: Boolean = false,
     val metadataTypecode: String? = null,
     val metadataIcaoAircraftType: String? = null
@@ -71,6 +72,27 @@ enum class AdsbProximityReason(val code: String) {
     companion object {
         fun fromCode(code: String?): AdsbProximityReason =
             values().firstOrNull { reason -> reason.code == code } ?: DIVERGING_OR_STEADY
+    }
+}
+
+enum class AdsbEmergencyAudioIneligibilityReason(val code: String) {
+    NO_OWNSHIP_REFERENCE("no_ownship_reference"),
+    NOT_CLOSING("not_closing"),
+    TREND_STALE_WAITING_FOR_FRESH_SAMPLE("trend_stale_waiting_for_fresh_sample"),
+    STALE_TARGET_SAMPLE("stale_target_sample"),
+    DISTANCE_OUTSIDE_EMERGENCY_RANGE("distance_outside_emergency_range"),
+    RELATIVE_ALTITUDE_UNAVAILABLE("relative_altitude_unavailable"),
+    OUTSIDE_VERTICAL_GATE("outside_vertical_gate"),
+    TARGET_TRACK_UNAVAILABLE("target_track_unavailable"),
+    HEADING_GATE_FAILED("heading_gate_failed"),
+    MOTION_CONFIDENCE_LOW("motion_confidence_low"),
+    PROJECTED_CONFLICT_NOT_LIKELY("projected_conflict_not_likely"),
+    LOW_MOTION_SPEED("low_motion_speed"),
+    VERTICAL_NON_THREAT("vertical_non_threat");
+
+    companion object {
+        fun fromCode(code: String?): AdsbEmergencyAudioIneligibilityReason? =
+            values().firstOrNull { reason -> reason.code == code }
     }
 }
 

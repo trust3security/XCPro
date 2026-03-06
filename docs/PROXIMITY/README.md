@@ -33,10 +33,17 @@ Purpose: single entry point for ADS-B smart proximity behavior, ownership, and t
   - closest-approach pass detection is also used for smart amber de-escalation:
     - when distance grows by at least `120 m` from the closest tracked sample (fresh trend sample, not in recovery dwell), amber can de-escalate to green even if closing-enter threshold was never crossed.
   - emergency geometry uses heading gate plus projected closest-approach (CPA/TCPA) when ownship and target motion vectors are available (thermal turns included through ownship motion updates).
+  - target track fallback supports missing provider track values by deriving short-window course from target position deltas when movement is sufficient.
+  - emergency escalation requires motion-confidence context for projected conflict checks; low-confidence/missing motion context does not escalate to EMERGENCY.
+  - emergency anti-flicker hysteresis holds EMERGENCY across one fresh non-emergency sample and clears on sustained evidence.
   - ownship motion ingestion is confidence-aware:
     - low ground speed keeps speed but suppresses heading track for projection,
     - poor speed accuracy suppresses motion context for emergency projection.
   - trend freshness can use ownship-reference sample time (not only target packet time) so post-pass state can update while ownship moves between provider polls.
+  - distance-tier anti-flicker hysteresis is applied so boundary jitter does not cause rapid amber/green or red/amber flashing.
+  - large relative vertical separation is non-threat-clamped:
+    - when `|relative altitude| >= 1200 m` (about 3900 ft), tier is forced to green and emergency audio is suppressed.
+  - marker details expose explicit EMERGENCY/audio ineligibility reason (not just "Not eligible").
 
 ## Tier and Trend Rules
 
@@ -44,6 +51,11 @@ Purpose: single entry point for ADS-B smart proximity behavior, ownership, and t
   - `> 5 km` -> green
   - `2..5 km` -> amber
   - `<= 2 km` -> red
+- Distance hysteresis exits (anti-flicker):
+  - red holds until `> 2.2 km` before distance-tier exits to amber,
+  - amber holds until `> 5.3 km` before distance-tier exits to green.
+- Vertical non-threat clamp:
+  - if relative altitude is known and `|delta| >= 1200 m`, tier is green regardless of horizontal band.
 - Closing hysteresis:
   - enter closing: `>= 1.0 m/s`
   - exit closing: `<= 0.3 m/s`
@@ -67,6 +79,22 @@ Emergency is highest priority but only when all are true:
 - sample fresh (`ageSec <= 20`, using max(received age, provider last-contact age when available))
 
 If stale, not closing, or relative altitude is unavailable, emergency is disabled.
+
+Emergency ineligibility reason contract:
+
+- `no_ownship_reference`
+- `not_closing`
+- `trend_stale_waiting_for_fresh_sample`
+- `stale_target_sample`
+- `distance_outside_emergency_range`
+- `relative_altitude_unavailable`
+- `outside_vertical_gate`
+- `target_track_unavailable`
+- `heading_gate_failed`
+- `motion_confidence_low`
+- `projected_conflict_not_likely`
+- `low_motion_speed`
+- `vertical_non_threat`
 
 ## Ownship and Fallback Semantics
 
@@ -135,6 +163,7 @@ When latched:
   - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficStoreTrendTransitionsTest.kt`
   - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficStoreEmergencyGeometryTest.kt`
   - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficStoreCirclingEmergencyTest.kt`
+  - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficStoreTierHysteresisTest.kt`
 - Repository deterministic transitions:
   - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficRepositoryTest.kt`
 - KPI math + replay KPI parity:

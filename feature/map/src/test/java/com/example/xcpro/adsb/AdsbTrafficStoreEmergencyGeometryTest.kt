@@ -37,6 +37,8 @@ class AdsbTrafficStoreEmergencyGeometryTest {
             referenceLat = -33.8688,
             referenceLon = 151.2093,
             ownshipAltitudeMeters = 1000.0,
+            ownshipTrackDeg = 90.0,
+            ownshipSpeedMps = 20.0,
             usesOwnshipReference = true,
             radiusMeters = 20_000.0,
             verticalAboveMeters = 5_000.0,
@@ -52,6 +54,8 @@ class AdsbTrafficStoreEmergencyGeometryTest {
             referenceLat = -33.8688,
             referenceLon = 151.2093,
             ownshipAltitudeMeters = 1000.0,
+            ownshipTrackDeg = 90.0,
+            ownshipSpeedMps = 20.0,
             usesOwnshipReference = true,
             radiusMeters = 20_000.0,
             verticalAboveMeters = 5_000.0,
@@ -233,13 +237,28 @@ class AdsbTrafficStoreEmergencyGeometryTest {
         )
 
         store.upsertAll(listOf(inboundFar))
-        selectAt(store = store, nowMonoMs = now)
+        selectAt(
+            store = store,
+            nowMonoMs = now,
+            ownshipTrackDeg = 90.0,
+            ownshipSpeedMps = 20.0
+        )
 
         store.upsertAll(listOf(inboundFreshClose))
-        val freshUi = selectAt(store = store, nowMonoMs = now + 2_000L).displayed.first()
+        val freshUi = selectAt(
+            store = store,
+            nowMonoMs = now + 2_000L,
+            ownshipTrackDeg = 90.0,
+            ownshipSpeedMps = 20.0
+        ).displayed.first()
 
         store.upsertAll(listOf(inboundStaleClose))
-        val staleUi = selectAt(store = store, nowMonoMs = now + 3_000L).displayed.first()
+        val staleUi = selectAt(
+            store = store,
+            nowMonoMs = now + 3_000L,
+            ownshipTrackDeg = 90.0,
+            ownshipSpeedMps = 20.0
+        ).displayed.first()
 
         assertTrue(freshUi.isEmergencyCollisionRisk)
         assertEquals(AdsbProximityTier.EMERGENCY, freshUi.proximityTier)
@@ -303,6 +322,206 @@ class AdsbTrafficStoreEmergencyGeometryTest {
         assertTrue(ui.isClosing)
         assertTrue(ui.ageSec >= 60)
         assertFalse(ui.isEmergencyCollisionRisk)
+    }
+
+    @Test
+    fun select_forcesGreenWhenVerticalSeparationIsLargeEvenAtCloseRange() {
+        val store = AdsbTrafficStore()
+        val now = 810_000L
+        val closeHigh = target(
+            index = 60,
+            lat = -33.8688,
+            lon = 151.2140,
+            receivedMonoMs = now
+        ).copy(
+            trackDeg = 270.0,
+            altitudeM = 2_900.0
+        )
+        store.upsertAll(listOf(closeHigh))
+
+        val selection = store.select(
+            nowMonoMs = now,
+            queryCenterLat = -33.8688,
+            queryCenterLon = 151.2093,
+            referenceLat = -33.8688,
+            referenceLon = 151.2093,
+            ownshipAltitudeMeters = 1_000.0,
+            usesOwnshipReference = true,
+            radiusMeters = 20_000.0,
+            verticalAboveMeters = 3_000.0,
+            verticalBelowMeters = 3_000.0,
+            maxDisplayed = 30,
+            staleAfterSec = 60
+        )
+
+        val ui = selection.displayed.first()
+        assertEquals(AdsbProximityTier.GREEN, ui.proximityTier)
+        assertEquals(AdsbProximityReason.DIVERGING_OR_STEADY, ui.proximityReason)
+        assertFalse(ui.isEmergencyCollisionRisk)
+        assertFalse(ui.isEmergencyAudioEligible)
+        assertFalse(ui.isClosing)
+    }
+
+    @Test
+    fun select_holdsEmergencyAcrossSingleSafeFreshSample_thenClearsOnSecond() {
+        val store = AdsbTrafficStore()
+        val now = 820_000L
+        val far = target(
+            index = 61,
+            lat = -33.8688,
+            lon = 151.2200,
+            receivedMonoMs = now
+        ).copy(trackDeg = 270.0, speedMps = 35.0)
+        val closeEmergency = far.copy(
+            lon = 151.2140,
+            receivedMonoMs = now + 2_000L
+        )
+        val safeSampleOne = closeEmergency.copy(
+            lon = 151.2138,
+            receivedMonoMs = now + 3_200L,
+            trackDeg = 180.0
+        )
+        val safeSampleTwo = safeSampleOne.copy(
+            lon = 151.2136,
+            receivedMonoMs = now + 4_400L
+        )
+
+        store.upsertAll(listOf(far))
+        store.select(
+            nowMonoMs = now,
+            queryCenterLat = -33.8688,
+            queryCenterLon = 151.2093,
+            referenceLat = -33.8688,
+            referenceLon = 151.2093,
+            ownshipAltitudeMeters = 1_000.0,
+            ownshipTrackDeg = 90.0,
+            ownshipSpeedMps = 20.0,
+            usesOwnshipReference = true,
+            radiusMeters = 20_000.0,
+            verticalAboveMeters = 5_000.0,
+            verticalBelowMeters = 5_000.0,
+            maxDisplayed = 30,
+            staleAfterSec = 60
+        )
+
+        store.upsertAll(listOf(closeEmergency))
+        val emergencyUi = store.select(
+            nowMonoMs = now + 2_000L,
+            queryCenterLat = -33.8688,
+            queryCenterLon = 151.2093,
+            referenceLat = -33.8688,
+            referenceLon = 151.2093,
+            ownshipAltitudeMeters = 1_000.0,
+            ownshipTrackDeg = 90.0,
+            ownshipSpeedMps = 20.0,
+            usesOwnshipReference = true,
+            radiusMeters = 20_000.0,
+            verticalAboveMeters = 5_000.0,
+            verticalBelowMeters = 5_000.0,
+            maxDisplayed = 30,
+            staleAfterSec = 60
+        ).displayed.first()
+
+        store.upsertAll(listOf(safeSampleOne))
+        val heldUi = store.select(
+            nowMonoMs = now + 3_200L,
+            queryCenterLat = -33.8688,
+            queryCenterLon = 151.2093,
+            referenceLat = -33.8688,
+            referenceLon = 151.2093,
+            ownshipAltitudeMeters = 1_000.0,
+            ownshipTrackDeg = 90.0,
+            ownshipSpeedMps = 20.0,
+            usesOwnshipReference = true,
+            radiusMeters = 20_000.0,
+            verticalAboveMeters = 5_000.0,
+            verticalBelowMeters = 5_000.0,
+            maxDisplayed = 30,
+            staleAfterSec = 60
+        ).displayed.first()
+
+        store.upsertAll(listOf(safeSampleTwo))
+        val clearedUi = store.select(
+            nowMonoMs = now + 4_400L,
+            queryCenterLat = -33.8688,
+            queryCenterLon = 151.2093,
+            referenceLat = -33.8688,
+            referenceLon = 151.2093,
+            ownshipAltitudeMeters = 1_000.0,
+            ownshipTrackDeg = 90.0,
+            ownshipSpeedMps = 20.0,
+            usesOwnshipReference = true,
+            radiusMeters = 20_000.0,
+            verticalAboveMeters = 5_000.0,
+            verticalBelowMeters = 5_000.0,
+            maxDisplayed = 30,
+            staleAfterSec = 60
+        ).displayed.first()
+
+        assertTrue(emergencyUi.isEmergencyCollisionRisk)
+        assertEquals(AdsbProximityTier.EMERGENCY, emergencyUi.proximityTier)
+        assertTrue(heldUi.isEmergencyCollisionRisk)
+        assertEquals(AdsbProximityTier.EMERGENCY, heldUi.proximityTier)
+        assertFalse(clearedUi.isEmergencyCollisionRisk)
+        assertEquals(AdsbProximityTier.RED, clearedUi.proximityTier)
+    }
+
+    @Test
+    fun select_usesDerivedTrackWhenProviderTrackIsMissing() {
+        val store = AdsbTrafficStore()
+        val now = 830_000L
+        val far = target(
+            index = 62,
+            lat = -33.8688,
+            lon = 151.2200,
+            receivedMonoMs = now
+        ).copy(trackDeg = null, speedMps = 35.0)
+        val close = far.copy(
+            lon = 151.2140,
+            receivedMonoMs = now + 2_000L
+        )
+
+        store.upsertAll(listOf(far))
+        store.select(
+            nowMonoMs = now,
+            queryCenterLat = -33.8688,
+            queryCenterLon = 151.2093,
+            referenceLat = -33.8688,
+            referenceLon = 151.2093,
+            ownshipAltitudeMeters = 1_000.0,
+            ownshipTrackDeg = 90.0,
+            ownshipSpeedMps = 20.0,
+            usesOwnshipReference = true,
+            radiusMeters = 20_000.0,
+            verticalAboveMeters = 5_000.0,
+            verticalBelowMeters = 5_000.0,
+            maxDisplayed = 30,
+            staleAfterSec = 60
+        )
+
+        store.upsertAll(listOf(close))
+        val ui = store.select(
+            nowMonoMs = now + 2_000L,
+            queryCenterLat = -33.8688,
+            queryCenterLon = 151.2093,
+            referenceLat = -33.8688,
+            referenceLon = 151.2093,
+            ownshipAltitudeMeters = 1_000.0,
+            ownshipTrackDeg = 90.0,
+            ownshipSpeedMps = 20.0,
+            usesOwnshipReference = true,
+            radiusMeters = 20_000.0,
+            verticalAboveMeters = 5_000.0,
+            verticalBelowMeters = 5_000.0,
+            maxDisplayed = 30,
+            staleAfterSec = 60
+        ).displayed.first()
+
+        assertTrue(ui.trackDeg != null)
+        assertTrue(ui.isEmergencyCollisionRisk)
+        assertEquals(AdsbProximityTier.EMERGENCY, ui.proximityTier)
+        assertEquals(AdsbProximityReason.GEOMETRY_EMERGENCY_APPLIED, ui.proximityReason)
+        assertTrue(ui.emergencyAudioIneligibilityReason == null)
     }
 
 }

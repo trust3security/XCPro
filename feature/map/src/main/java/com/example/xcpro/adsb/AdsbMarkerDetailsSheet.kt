@@ -64,6 +64,7 @@ fun AdsbMarkerDetailsSheet(
             DetailRow("Proximity reason", proximityReasonText(target))
             DetailRow("Emergency rule source", emergencyRuleSourceText(target))
             DetailRow("Emergency audio eligible", emergencyAudioEligibilityText(target))
+            DetailRow("Emergency audio reason", emergencyAudioIneligibilityText(target))
             DetailRow("Speed", target.speedMps?.let { UnitsFormatter.speed(SpeedMs(it), unitsPreferences).text } ?: "--")
             DetailRow("Track", target.trackDeg?.let { "${it.roundToOneDecimal()}\u00B0" } ?: "--")
             DetailRow(
@@ -192,13 +193,41 @@ internal fun emergencyAudioEligibilityText(target: AdsbSelectedTargetDetails): S
     if (target.isEmergencyAudioEligible) {
         "Eligible"
     } else {
-        when {
-            !target.usesOwnshipReference -> "Not eligible (no ownship reference)"
-            !target.isClosing -> "Not eligible (not closing)"
-            target.trackDeg == null -> "Not eligible (target track unavailable)"
-            else -> "Not eligible (geometry or motion confidence gate)"
-        }
+        "Not eligible"
     }
+
+internal fun emergencyAudioIneligibilityText(target: AdsbSelectedTargetDetails): String {
+    if (target.isEmergencyAudioEligible) return "Eligible"
+    return when (target.emergencyAudioIneligibilityReason) {
+        AdsbEmergencyAudioIneligibilityReason.NO_OWNSHIP_REFERENCE ->
+            "No ownship reference"
+        AdsbEmergencyAudioIneligibilityReason.NOT_CLOSING ->
+            "Not closing"
+        AdsbEmergencyAudioIneligibilityReason.TREND_STALE_WAITING_FOR_FRESH_SAMPLE ->
+            "Trend stale, waiting for fresh sample"
+        AdsbEmergencyAudioIneligibilityReason.STALE_TARGET_SAMPLE ->
+            "Target sample stale"
+        AdsbEmergencyAudioIneligibilityReason.DISTANCE_OUTSIDE_EMERGENCY_RANGE ->
+            "Outside emergency range"
+        AdsbEmergencyAudioIneligibilityReason.RELATIVE_ALTITUDE_UNAVAILABLE ->
+            "Relative altitude unavailable"
+        AdsbEmergencyAudioIneligibilityReason.OUTSIDE_VERTICAL_GATE ->
+            "Outside vertical gate"
+        AdsbEmergencyAudioIneligibilityReason.TARGET_TRACK_UNAVAILABLE ->
+            "Target track unavailable"
+        AdsbEmergencyAudioIneligibilityReason.HEADING_GATE_FAILED ->
+            "Heading gate failed"
+        AdsbEmergencyAudioIneligibilityReason.MOTION_CONFIDENCE_LOW ->
+            "Motion confidence low"
+        AdsbEmergencyAudioIneligibilityReason.PROJECTED_CONFLICT_NOT_LIKELY ->
+            "Projected conflict not likely"
+        AdsbEmergencyAudioIneligibilityReason.LOW_MOTION_SPEED ->
+            "Low motion speed"
+        AdsbEmergencyAudioIneligibilityReason.VERTICAL_NON_THREAT ->
+            "Large vertical separation (non-threat)"
+        null -> "Unknown"
+    }
+}
 
 private fun metadataStatusText(
     availability: MetadataAvailability,

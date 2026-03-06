@@ -117,6 +117,7 @@ class AdsbMetadataEnrichmentUseCase @Inject constructor(
                 closingRateMps = target.closingRateMps,
                 isEmergencyCollisionRisk = target.isEmergencyCollisionRisk,
                 isEmergencyAudioEligible = target.isEmergencyAudioEligible,
+                emergencyAudioIneligibilityReason = target.emergencyAudioIneligibilityReason,
                 isCirclingEmergencyRedRule = target.isCirclingEmergencyRedRule,
                 positionSource = target.positionSource,
                 category = target.category,

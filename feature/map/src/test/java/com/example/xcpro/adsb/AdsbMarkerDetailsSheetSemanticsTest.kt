@@ -91,10 +91,13 @@ class AdsbMarkerDetailsSheetSemanticsTest {
             isClosing = true,
             closingRateMps = 0.1,
             isEmergencyAudioEligible = false,
+            emergencyAudioIneligibilityReason =
+                AdsbEmergencyAudioIneligibilityReason.TARGET_TRACK_UNAVAILABLE,
             trackDeg = null
         )
 
-        assertEquals("Not eligible (target track unavailable)", emergencyAudioEligibilityText(details))
+        assertEquals("Not eligible", emergencyAudioEligibilityText(details))
+        assertEquals("Target track unavailable", emergencyAudioIneligibilityText(details))
     }
 
     @Test
@@ -105,10 +108,13 @@ class AdsbMarkerDetailsSheetSemanticsTest {
             proximityReason = AdsbProximityReason.NO_OWNSHIP_REFERENCE,
             isClosing = false,
             closingRateMps = null,
-            isEmergencyAudioEligible = false
+            isEmergencyAudioEligible = false,
+            emergencyAudioIneligibilityReason =
+                AdsbEmergencyAudioIneligibilityReason.NO_OWNSHIP_REFERENCE
         )
 
-        assertEquals("Not eligible (no ownship reference)", emergencyAudioEligibilityText(details))
+        assertEquals("Not eligible", emergencyAudioEligibilityText(details))
+        assertEquals("No ownship reference", emergencyAudioIneligibilityText(details))
     }
 
     private fun sampleDetails(
@@ -119,6 +125,7 @@ class AdsbMarkerDetailsSheetSemanticsTest {
         closingRateMps: Double?,
         isEmergencyCollisionRisk: Boolean = false,
         isEmergencyAudioEligible: Boolean = false,
+        emergencyAudioIneligibilityReason: AdsbEmergencyAudioIneligibilityReason? = null,
         isCirclingEmergencyRedRule: Boolean = false,
         trackDeg: Double? = 180.0
     ): AdsbSelectedTargetDetails {
@@ -143,6 +150,7 @@ class AdsbMarkerDetailsSheetSemanticsTest {
             closingRateMps = closingRateMps,
             isEmergencyCollisionRisk = isEmergencyCollisionRisk,
             isEmergencyAudioEligible = isEmergencyAudioEligible,
+            emergencyAudioIneligibilityReason = emergencyAudioIneligibilityReason,
             isCirclingEmergencyRedRule = isCirclingEmergencyRedRule,
             positionSource = 0,
             category = 3,

@@ -45,7 +45,9 @@ internal fun selectAt(
     nowMonoMs: Long,
     usesOwnshipReference: Boolean = true,
     ownshipAltitudeMeters: Double? = 1_000.0,
-    referenceSampleMonoMs: Long? = null
+    referenceSampleMonoMs: Long? = null,
+    ownshipTrackDeg: Double? = null,
+    ownshipSpeedMps: Double? = null
 ): AdsbStoreSelection = store.select(
     nowMonoMs = nowMonoMs,
     queryCenterLat = -33.8688,
@@ -54,6 +56,8 @@ internal fun selectAt(
     referenceLon = 151.2093,
     ownshipAltitudeMeters = ownshipAltitudeMeters,
     referenceSampleMonoMs = referenceSampleMonoMs,
+    ownshipTrackDeg = ownshipTrackDeg,
+    ownshipSpeedMps = ownshipSpeedMps,
     usesOwnshipReference = usesOwnshipReference,
     radiusMeters = 20_000.0,
     verticalAboveMeters = 5_000.0,

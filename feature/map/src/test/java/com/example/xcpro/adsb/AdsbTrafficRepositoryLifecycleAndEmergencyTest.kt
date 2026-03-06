@@ -137,6 +137,7 @@ class AdsbTrafficRepositoryLifecycleAndEmergencyTest : AdsbTrafficRepositoryTest
             runCurrent()
             repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
             repository.updateOwnshipOrigin(latitude = -33.8688, longitude = 151.2093)
+            repository.updateOwnshipMotion(trackDeg = 90.0, speedMps = 20.0)
             repository.updateOwnshipAltitudeMeters(0.0)
             repository.setEnabled(true)
             runCurrent()
@@ -158,7 +159,7 @@ class AdsbTrafficRepositoryLifecycleAndEmergencyTest : AdsbTrafficRepositoryTest
     }
 
     @Test
-    fun emergencyAudio_emergencyOnlyCooldownAndRetriggerBehavior() = runTest {
+    fun emergencyAudio_emergencyOnly_staysActiveWithoutDuplicateTriggers() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val clock = FakeClock(monoMs = 0L, wallMs = 0L)
         val provider = SequenceProvider(
@@ -223,6 +224,7 @@ class AdsbTrafficRepositoryLifecycleAndEmergencyTest : AdsbTrafficRepositoryTest
             runCurrent()
             repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
             repository.updateOwnshipOrigin(latitude = -33.8688, longitude = 151.2093)
+            repository.updateOwnshipMotion(trackDeg = 90.0, speedMps = 20.0)
             repository.updateOwnshipAltitudeMeters(0.0)
             repository.setEnabled(true)
             runCurrent() // t=0 first sample (no trend yet)
@@ -236,34 +238,33 @@ class AdsbTrafficRepositoryLifecycleAndEmergencyTest : AdsbTrafficRepositoryTest
 
             clock.setMonoMs(20_000L)
             advanceTimeBy(10_000L)
-            runCurrent() // t=20 active then cooldown within same poll cycle
-            val cooldownStart = repository.snapshot.value
-            assertEquals(AdsbEmergencyAudioAlertState.COOLDOWN, cooldownStart.emergencyAudioState)
-            assertEquals(1, cooldownStart.emergencyAudioAlertTriggerCount)
-            assertTrue(cooldownStart.emergencyAudioCooldownRemainingMs > 0L)
+            runCurrent() // t=20 emergency remains continuous
+            val activeContinue = repository.snapshot.value
+            assertEquals(AdsbEmergencyAudioAlertState.ACTIVE, activeContinue.emergencyAudioState)
+            assertEquals(1, activeContinue.emergencyAudioAlertTriggerCount)
 
             clock.setMonoMs(30_000L)
             advanceTimeBy(10_000L)
-            runCurrent() // t=30 cooldown continues
-            val cooldownContinue = repository.snapshot.value
-            assertEquals(AdsbEmergencyAudioAlertState.COOLDOWN, cooldownContinue.emergencyAudioState)
-            assertEquals(1, cooldownContinue.emergencyAudioAlertTriggerCount)
+            runCurrent() // t=30 still continuous emergency
+            val activeAt30 = repository.snapshot.value
+            assertEquals(AdsbEmergencyAudioAlertState.ACTIVE, activeAt30.emergencyAudioState)
+            assertEquals(1, activeAt30.emergencyAudioAlertTriggerCount)
 
             clock.setMonoMs(40_000L)
             advanceTimeBy(10_000L)
-            runCurrent() // t=40 emergency present but blocked by cooldown
-            val blocked = repository.snapshot.value
-            assertEquals(AdsbEmergencyAudioAlertState.COOLDOWN, blocked.emergencyAudioState)
-            assertEquals(1, blocked.emergencyAudioAlertTriggerCount)
-            assertEquals(1, blocked.emergencyAudioCooldownBlockEpisodeCount)
+            runCurrent() // t=40 still continuous emergency
+            val activeAt40 = repository.snapshot.value
+            assertEquals(AdsbEmergencyAudioAlertState.ACTIVE, activeAt40.emergencyAudioState)
+            assertEquals(1, activeAt40.emergencyAudioAlertTriggerCount)
+            assertEquals(0, activeAt40.emergencyAudioCooldownBlockEpisodeCount)
 
             clock.setMonoMs(50_000L)
             advanceTimeBy(10_000L)
-            runCurrent() // t=50 cooldown elapsed, emergency still present -> re-alert
-            val reAlert = repository.snapshot.value
-            assertEquals(AdsbEmergencyAudioAlertState.ACTIVE, reAlert.emergencyAudioState)
-            assertEquals(2, reAlert.emergencyAudioAlertTriggerCount)
-            assertEquals(1, reAlert.emergencyAudioCooldownBlockEpisodeCount)
+            runCurrent() // t=50 still continuous emergency, no duplicate trigger
+            val activeAt50 = repository.snapshot.value
+            assertEquals(AdsbEmergencyAudioAlertState.ACTIVE, activeAt50.emergencyAudioState)
+            assertEquals(1, activeAt50.emergencyAudioAlertTriggerCount)
+            assertEquals(0, activeAt50.emergencyAudioCooldownBlockEpisodeCount)
         } finally {
             repository.stop()
             runCurrent()
@@ -317,6 +318,7 @@ class AdsbTrafficRepositoryLifecycleAndEmergencyTest : AdsbTrafficRepositoryTest
             runCurrent()
             repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
             repository.updateOwnshipOrigin(latitude = -33.8688, longitude = 151.2093)
+            repository.updateOwnshipMotion(trackDeg = 90.0, speedMps = 20.0)
             repository.updateOwnshipAltitudeMeters(0.0)
             repository.setEnabled(true)
             runCurrent()

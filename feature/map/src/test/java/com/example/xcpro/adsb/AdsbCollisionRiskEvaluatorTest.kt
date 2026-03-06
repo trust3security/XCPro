@@ -1,6 +1,7 @@
 package com.example.xcpro.adsb
 
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -13,7 +14,10 @@ class AdsbCollisionRiskEvaluatorTest {
         val risk = evaluator.evaluate(
             distanceMeters = 900.0,
             trackDeg = 270.0,
+            targetSpeedMps = 35.0,
             bearingDegFromUser = 90.0,
+            ownshipTrackDeg = 90.0,
+            ownshipSpeedMps = 20.0,
             altitudeDeltaMeters = 50.0,
             verticalAboveMeters = 500.0,
             verticalBelowMeters = 500.0,
@@ -22,7 +26,8 @@ class AdsbCollisionRiskEvaluatorTest {
             ageSec = 10
         )
 
-        assertTrue(risk)
+        assertTrue(risk.isEmergencyCollisionRisk)
+        assertNull(risk.ineligibilityReason)
     }
 
     @Test
@@ -39,7 +44,11 @@ class AdsbCollisionRiskEvaluatorTest {
             ageSec = 10
         )
 
-        assertFalse(risk)
+        assertFalse(risk.isEmergencyCollisionRisk)
+        assertTrue(
+            risk.ineligibilityReason ==
+                AdsbEmergencyAudioIneligibilityReason.HEADING_GATE_FAILED
+        )
     }
 
     @Test
@@ -56,7 +65,11 @@ class AdsbCollisionRiskEvaluatorTest {
             ageSec = 10
         )
 
-        assertFalse(risk)
+        assertFalse(risk.isEmergencyCollisionRisk)
+        assertTrue(
+            risk.ineligibilityReason ==
+                AdsbEmergencyAudioIneligibilityReason.RELATIVE_ALTITUDE_UNAVAILABLE
+        )
     }
 
     @Test
@@ -73,7 +86,11 @@ class AdsbCollisionRiskEvaluatorTest {
             ageSec = 10
         )
 
-        assertFalse(risk)
+        assertFalse(risk.isEmergencyCollisionRisk)
+        assertTrue(
+            risk.ineligibilityReason ==
+                AdsbEmergencyAudioIneligibilityReason.OUTSIDE_VERTICAL_GATE
+        )
     }
 
     @Test
@@ -90,7 +107,11 @@ class AdsbCollisionRiskEvaluatorTest {
             ageSec = 21
         )
 
-        assertFalse(risk)
+        assertFalse(risk.isEmergencyCollisionRisk)
+        assertTrue(
+            risk.ineligibilityReason ==
+                AdsbEmergencyAudioIneligibilityReason.STALE_TARGET_SAMPLE
+        )
     }
 
     @Test
@@ -110,7 +131,8 @@ class AdsbCollisionRiskEvaluatorTest {
             ageSec = 10
         )
 
-        assertTrue(risk)
+        assertTrue(risk.isEmergencyCollisionRisk)
+        assertNull(risk.ineligibilityReason)
     }
 
     @Test
@@ -130,7 +152,11 @@ class AdsbCollisionRiskEvaluatorTest {
             ageSec = 10
         )
 
-        assertFalse(risk)
+        assertFalse(risk.isEmergencyCollisionRisk)
+        assertTrue(
+            risk.ineligibilityReason ==
+                AdsbEmergencyAudioIneligibilityReason.PROJECTED_CONFLICT_NOT_LIKELY
+        )
     }
 
     @Test
@@ -150,6 +176,10 @@ class AdsbCollisionRiskEvaluatorTest {
             ageSec = 10
         )
 
-        assertFalse(risk)
+        assertFalse(risk.isEmergencyCollisionRisk)
+        assertTrue(
+            risk.ineligibilityReason ==
+                AdsbEmergencyAudioIneligibilityReason.LOW_MOTION_SPEED
+        )
     }
 }

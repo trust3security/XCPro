@@ -23,6 +23,7 @@ data class AdsbSelectedTargetDetails(
     val closingRateMps: Double?,
     val isEmergencyCollisionRisk: Boolean,
     val isEmergencyAudioEligible: Boolean,
+    val emergencyAudioIneligibilityReason: AdsbEmergencyAudioIneligibilityReason? = null,
     val isCirclingEmergencyRedRule: Boolean,
     val positionSource: Int?,
     val category: Int?,
