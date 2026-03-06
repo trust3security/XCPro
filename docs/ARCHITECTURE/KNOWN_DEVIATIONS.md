@@ -77,6 +77,63 @@ Compliance note (2026-02-20):
   - `verify_mapscreen_package_evidence.ps1 -PackageId pkg-e1` passes with no failed SLOs.
   - `run_mapscreen_completion_contract.ps1` reaches phase 8 with no allow-failure flags.
 
+3) Rain overlay deferred-config replay can apply stale frame order after interaction release
+- Rule:
+  - Deterministic/replay-safe behavior and explicit state-machine safety (`ARCHITECTURE.md` section `14`).
+  - Regression-resistance requirement for state transitions and mandatory regression tests (`CODING_RULES.md` section `15A`).
+- Issue: RULES-20260306-13
+- Owner: XCPro Team
+- Expiry: 2026-04-30
+- Scope:
+  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeForecastWeatherDelegate.kt`
+  - `feature/map/src/test/java/com/example/xcpro/map/MapOverlayManagerWeatherRainTest.kt`
+- Risk:
+  - During map interaction throttling, a deferred older weather-rain config can be flushed after a newer frame already rendered, causing backward frame jumps.
+  - While interaction is active, disabling the rain overlay can still leave a previously deferred enabled config queued; that deferred config can be flushed at interaction end and re-enable stale rain unexpectedly.
+  - Deferred weather-rain config can survive detach/null-map transitions and be replayed later.
+- Mitigation:
+  - Treat rain-frame selection as latest-wins while interaction is active.
+  - Clear deferred rain config on any successful newer apply and on map detach/clear paths.
+  - Block behavior regressions with interaction-aware integration tests in weather-rain runtime manager tests.
+- Removal steps:
+  - Update `MapOverlayManagerRuntimeForecastWeatherDelegate` deferred logic so stale frame replay cannot occur after newer applies.
+  - Clear deferred rain config immediately on successful non-deferred applies and on disabled/clear applies, including when interaction is active.
+  - Ensure deferred rain config is cleared on detach/null-map paths.
+  - Add regression tests covering:
+    - defer(old) -> apply(new) -> interaction end (must not replay old),
+    - defer -> disable while interaction active -> interaction end (must remain disabled),
+    - defer -> map detach/null -> reattach (must not replay stale deferred config).
+- Exit criteria:
+  - New interaction/deferred replay regression tests pass in `:feature:map:testDebugUnitTest`.
+  - Manual verification confirms no weather-rain frame rewind on pan/rotate release in cycle mode.
+  - Manual verification confirms rain overlay disable action remains sticky through pan/rotate interaction release.
+
+4) Kotlin default line-budget rule drift in active map/weather runtime files
+- Rule:
+  - Kotlin source files must be `<= 500` lines by default unless explicitly excepted (`ARCHITECTURE.md` section "File Size and Modularization Policy"; `CODING_RULES.md` sections `1A` and `1A.4`).
+- Issue: RULES-20260306-14
+- Owner: XCPro Team
+- Expiry: 2026-04-30
+- Execution plan:
+  - `docs/refactor/Kotlin_Line_Budget_Compliance_Phased_IP_2026-03-06.md`
+- Scope:
+  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt`
+  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeForecastWeatherDelegate.kt`
+  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/SettingsDfRuntime.kt`
+- Risk:
+  - Oversized files increase review blind spots and make state-machine regressions (including replay/defer edge cases) easier to miss.
+  - The current `enforceRules` script does not fail on all global `>500` Kotlin files, so policy drift can continue silently.
+- Mitigation:
+  - Split oversized files into focused delegates/helpers with clear responsibility boundaries.
+  - Add explicit static gate coverage for default `<=500` Kotlin file budget (or explicit per-file caps) so violations fail CI.
+- Removal steps:
+  - Refactor each scoped file to `<=500` lines or register temporary per-file exception gates with tighter expiry.
+  - Update `scripts/ci/enforce_rules.ps1` to enforce the documented default budget (not hotspot-only checks).
+  - Re-run architecture checks and remove this deviation once all scoped files are compliant.
+- Exit criteria:
+  - No production Kotlin file exceeds 500 lines without an active, time-boxed deviation entry.
+  - `./gradlew enforceRules` fails when a new non-exempt Kotlin file exceeds 500 lines.
+
 ## Verification
 
 Last verified: 2026-03-05
