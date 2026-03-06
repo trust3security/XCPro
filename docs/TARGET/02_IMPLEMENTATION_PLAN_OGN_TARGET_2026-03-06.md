@@ -43,6 +43,15 @@ This plan supersedes the initial TARGET draft by closing lifecycle, SSOT, suppre
 - OGN render cadence is controlled by `MapOverlayManagerRuntimeOgnDelegate` display mode.
 - Target line/ring updates must follow the same throttle semantics to avoid jitter/perf regression.
 
+7. Target-toggle render propagation gap
+- `MapScreenOverlayEffects` currently updates OGN traffic render only from target list/altitude/unit dependencies.
+- `MapOverlayManagerRuntimeOgnDelegate.updateTrafficTargets(...)` exits early when those inputs are unchanged.
+- If target selection changes while traffic list is unchanged, ring visuals can fail to update unless target state is a first-class overlay input.
+
+8. Overlay front-order signature gap
+- `MapOverlayManagerRuntime.captureOverlayFrontOrderSignature()` currently tracks blue + OGN traffic + ADS-B overlays only.
+- New target overlays must be included in signature accounting or front-order throttling can skip required reorder work.
+
 ## 2) Architecture contract before implementation
 
 ### 2.1 SSOT ownership
@@ -63,6 +72,19 @@ Rules:
 - ViewModel uses use-cases only.
 - Repository remains owner of persisted target state.
 - Map runtime classes own MapLibre layers/sources only.
+
+### 2.2A Boundary moves
+
+| Responsibility | Old owner | New owner | Why | Validation |
+|---|---|---|---|---|
+| Target selection persistence | none | `OgnTrafficPreferencesRepository` | single SSOT + process-safe state | repository tests |
+| Target ring/line map rendering | none | `MapOverlayManagerRuntimeOgnDelegate` + dedicated overlays | keep MapLibre ownership in UI runtime | overlay lifecycle tests |
+
+### 2.2B Bypass removal plan
+
+| Bypass callsite | Current bypass | Planned replacement | Phase |
+|---|---|---|---|
+| Details-sheet target toggle wiring | risk of direct repository/UI mutation | route only via `MapScreenViewModel` -> `MapScreenTrafficCoordinator` -> use-case | Phase 3 |
 
 ### 2.3 Time base
 
@@ -112,6 +134,10 @@ Add APIs:
 - `setTargetSelection(enabled, aircraftKey)`
 - `clearTargetSelection()`
 
+Rules:
+- persist target enabled+key atomically in one datastore edit per mutation.
+- normalize and dedupe keys using existing OGN key normalization helpers.
+
 Expose in `OgnTrafficUseCase`:
 - flows + suspend mutation methods
 
@@ -121,11 +147,13 @@ Expose in `OgnTrafficUseCase`:
 - `ognTargetEnabled: StateFlow<Boolean>`
 - `ognTargetAircraftKey: StateFlow<String?>`
 - `ognResolvedTarget: StateFlow<OgnTrafficTarget?>`
+- `ognTargetSelectionLookup: StateFlow<OgnSelectionLookup>` (or equivalent derived helper)
 
 `MapScreenTrafficCoordinator`:
 - `onSetOgnTarget(aircraftKey, enabled)` mutation path with existing error-to-toast contract
 - mutation coalescing key (for rapid toggles)
 - auto-clear targeted key when suppressed by ownship filter stream
+- resolve target key via alias-aware lookup (`buildOgnSelectionLookup`) rather than raw string equality
 
 ### 4.3 Details sheet wiring
 
@@ -140,19 +168,19 @@ Expose in `OgnTrafficUseCase`:
 - compute current marker target-selected state from target key lookup
 - dispatch toggle intent through ViewModel/coordinator only
 
-### 4.4 Marker ring rendering
+### 4.4 Target ring overlay
 
 Preferred implementation:
-- add `CircleLayer` target ring in `OgnTrafficOverlay` (no new bitmap resource required)
-- feature property: `is_target` (0/1)
-- ring layer filtered to `is_target == 1`
-- ring radius derives from current icon size to keep visual proportion
+- add dedicated `OgnTargetRingOverlay` (new) using a single-point `GeoJsonSource` + `CircleLayer`.
+- avoid embedding ring state inside `OgnTrafficOverlay` to keep file budget safe and decouple from traffic list rerenders.
+- ring radius derives from current icon size to keep visual proportion.
+- ring input is explicit: `enabled + resolvedTarget + iconSizePx`.
 
 Required lifecycle updates:
-- `initialize()` creates ring layer
-- `cleanup()` removes ring layer
-- `bringToFront()` re-adds ring layer in correct order
-- `findTargetAt(...)` queries ring layer too
+- `initialize()` creates ring source/layer.
+- `cleanup()` removes ring source/layer.
+- `bringToFront()` reorders ring layer relative to OGN icons/labels.
+- tap resolution path includes ring layer so tapping the ring still selects the aircraft.
 
 ### 4.5 Direct line overlay
 
@@ -165,6 +193,7 @@ Wire via `MapOverlayManagerRuntimeOgnDelegate`:
 - cache latest ownship + resolved target + enabled
 - render under OGN display-mode throttle
 - style-reload recreation and map-detach cleanup
+- update both ring+line when target selection changes even if OGN traffic list is unchanged
 
 Pass new inputs from UI runtime:
 - ownship location (`MapLocationUiModel`) from existing bindings
@@ -214,6 +243,7 @@ Files
 Tests
 - `MapScreenViewModelTrafficSelectionTest` target state + cross-selection behavior
 - coordinator policy tests for suppression clear + mutation coalescing
+- add alias-resolution tests for persisted target keys vs canonical live keys
 
 Exit gate
 - target state is VM-observable and suppression-safe.
@@ -235,18 +265,20 @@ Exit gate
 ### Phase 4: OGN ring and target line overlays
 
 Files
-- `feature/map/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
+- `feature/map/src/main/java/com/example/xcpro/map/OgnTargetRingOverlay.kt` (new)
 - `feature/map/src/main/java/com/example/xcpro/map/OgnTargetLineOverlay.kt` (new)
 - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenState.kt`
-- minimal facade updates in `MapOverlayManagerRuntime.kt`
+- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt` (front-order signature + lifecycle wiring)
+- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeStatus.kt` (target overlay status)
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootEffects.kt`
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
 
 Tests
 - extend `MapOverlayManagerOgnLifecycleTest`
 - add `OgnTargetLineOverlay` policy tests
-- add OGN ring layer/hit-test tests
+- add `OgnTargetRingOverlay` lifecycle/hit-test tests
+- add test proving target toggle redraw works when traffic list is unchanged
 
 Exit gate
 - ring + line render correctly across style reload and map detach.
@@ -286,6 +318,8 @@ Exit gate
 - No stale ring/line layers after style change.
 - Ring layer included in hit-testing query path.
 - Target clears on ownship suppression updates.
+- Target toggle redraw works even when OGN target list is unchanged.
+- Front-order signature accounts for target overlays.
 - File-size caps remain compliant (`MapScreenViewModel <= 350`).
 
 ## 7) Release acceptance criteria

@@ -44,10 +44,12 @@ Connected tests when available
 | Suppression hygiene | unit | target key clears when selected target becomes suppressed ownship |
 | Coordinator mutation policy | unit | coalesced writes, overlay auto-enable behavior, error-to-toast path |
 | OGN details sheet | unit/compose | target toggle emits intent and glider-only visibility rule |
-| OGN ring layer | unit | `is_target` mapping, ring layer lifecycle, bring-to-front ordering |
+| OGN ring layer | unit | single-point ring render, lifecycle, bring-to-front ordering |
 | Ring hit-testing | unit/integration | taps on ring still resolve aircraft selection |
 | Target line overlay | unit | valid endpoint render and invalid/stale clear behavior |
 | OGN delegate throttle | unit | target line/ring obey display-update mode cadence |
+| Target-toggle redraw path | unit/integration | target toggle updates ring/line when traffic list is unchanged |
+| Overlay front-order signature | unit | target overlays are included in front-order throttle signature |
 | Style reload lifecycle | integration-like unit | ring + line reinit after style change, no orphan layers |
 | Map detach lifecycle | integration-like unit | pending jobs canceled, no stale renders after detach |
 
@@ -78,11 +80,13 @@ Overlay runtime
 - add:
   - target line overlay lifecycle
   - ring layer lifecycle
+  - target-toggle redraw with unchanged traffic list
+  - front-order signature coverage for new target overlays
   - style reload and detach coverage
 
 - add new tests:
   - `feature/map/src/test/java/com/example/xcpro/map/OgnTargetLineOverlayTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/OgnTrafficOverlayTargetRingTest.kt`
+  - `feature/map/src/test/java/com/example/xcpro/map/OgnTargetRingOverlayTest.kt`
 
 ## 5) Manual scenarios
 

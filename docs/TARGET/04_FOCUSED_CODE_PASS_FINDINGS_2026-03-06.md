@@ -46,6 +46,22 @@ Purpose
 - Risk: target toggle appears on non-glider traffic.
 - Correction: show/enable target toggle only for glider-class markers.
 
+8. Target-toggle redraw propagation
+- Missed: target-selection changes were not wired as explicit render inputs in the current OGN render path.
+- Evidence: `MapScreenOverlayEffects` updates OGN render from target list/altitude/unit inputs, while `MapOverlayManagerRuntimeOgnDelegate.updateTrafficTargets(...)` short-circuits when those inputs are unchanged.
+- Risk: target ring state can fail to update when user toggles target but traffic list has not changed.
+- Correction: make target state (`enabled + resolvedTarget`) a first-class overlay input and redraw ring/line on target-state change even when traffic list is identical.
+
+9. Overlay front-order signature coverage
+- Missed: front-order throttle signature currently tracks only blue + OGN traffic + ADS-B overlay identities.
+- Risk: with new target overlays, reorder throttling can skip necessary bring-to-front operations.
+- Correction: include target ring/line overlays in front-order signature and lifecycle tests.
+
+10. Ring implementation placement
+- Missed: first draft kept ring implementation in `OgnTrafficOverlay`, which is already near file-size budget.
+- Risk: growth of a hotspot file and coupling ring redraw to full traffic feature regeneration.
+- Correction: move ring to dedicated `OgnTargetRingOverlay` with a single-point source/layer and runtime delegate ownership.
+
 ## 2) Code evidence reviewed in focused pass
 
 Primary evidence files
@@ -54,6 +70,8 @@ Primary evidence files
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt`
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootEffects.kt`
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenTrafficCoordinator.kt`
+- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt`
+- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeStatus.kt`
 - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntime.kt`
 - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntimeDomainPolicies.kt`
 - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
@@ -69,6 +87,9 @@ Primary evidence files
 - Session policy decision and startup reset integration are explicit tasks.
 - File-budget constraints are explicitly called out in phase planning.
 - SLO validation and rollback triggers are defined per impacted behavior.
+- Target-toggle redraw propagation is now an explicit phase gate.
+- Front-order signature coverage is now an explicit hardening task.
+- Ring implementation is moved to dedicated overlay ownership to reduce hotspot/file-budget risk.
 
 ## 4) Final output of this focused pass
 
