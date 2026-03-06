@@ -124,6 +124,9 @@ internal fun MapBottomTabsLayer(
                 onTabSelected = onTabSelected,
                 selectedTab = selectedTab,
                 weatherEnabled = weatherEnabled,
+                skySightEnabled = skySightUiState.enabled,
+                map4Enabled = adsbTrafficEnabled || showOgnThermalsEnabled || showDistanceCircles,
+                satelliteViewEnabled = skySightSatViewEnabled,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .navigationBarsPadding()
@@ -221,6 +224,9 @@ internal fun MapBottomTabsLayer(
                     onTabSelected = onTabSelected,
                     selectedTab = selectedTab,
                     weatherEnabled = weatherEnabled,
+                    skySightEnabled = skySightUiState.enabled,
+                    map4Enabled = adsbTrafficEnabled || showOgnThermalsEnabled || showDistanceCircles,
+                    satelliteViewEnabled = skySightSatViewEnabled,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = SHEET_TAB_STRIP_BOTTOM_PADDING)
@@ -253,12 +259,18 @@ private fun BottomFloatingStrip(
     onTabSelected: (MapBottomTab) -> Unit,
     selectedTab: MapBottomTab,
     weatherEnabled: Boolean,
+    skySightEnabled: Boolean,
+    map4Enabled: Boolean,
+    satelliteViewEnabled: Boolean,
     modifier: Modifier = Modifier
 ) {
     BottomTabStrip(
         onTabSelected = onTabSelected,
         selectedTab = selectedTab,
         weatherEnabled = weatherEnabled,
+        skySightEnabled = skySightEnabled,
+        map4Enabled = map4Enabled,
+        satelliteViewEnabled = satelliteViewEnabled,
         modifier = modifier
     )
 }
@@ -268,6 +280,9 @@ private fun BottomTabStrip(
     onTabSelected: (MapBottomTab) -> Unit,
     selectedTab: MapBottomTab,
     weatherEnabled: Boolean,
+    skySightEnabled: Boolean,
+    map4Enabled: Boolean,
+    satelliteViewEnabled: Boolean,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -282,12 +297,18 @@ private fun BottomTabStrip(
         val selectedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = SELECTED_TAB_BORDER_ALPHA)
         MapBottomTab.entries.forEach { tab ->
             val isSelected = tab == selectedTab
-            val borderColor = resolveTabBorderColor(
+            val isFeatureEnabled = isTabFeatureEnabled(
                 tab = tab,
-                isSelected = isSelected,
                 weatherEnabled = weatherEnabled,
+                skySightEnabled = skySightEnabled,
+                map4Enabled = map4Enabled
+            )
+            val borderColor = resolveTabBorderColor(
+                isSelected = isSelected,
+                isFeatureEnabled = isFeatureEnabled,
                 defaultBorderColor = defaultBorderColor,
-                selectedBorderColor = selectedBorderColor
+                selectedBorderColor = selectedBorderColor,
+                enabledBorderColor = TAB_ENABLED_BORDER_COLOR
             )
             AssistChip(
                 modifier = Modifier
@@ -301,11 +322,11 @@ private fun BottomTabStrip(
                 colors = AssistChipDefaults.assistChipColors(
                     containerColor = resolveTabContainerColor(
                         isSelected = isSelected,
-                        primaryColor = MaterialTheme.colorScheme.primary,
-                        surfaceColor = MaterialTheme.colorScheme.surface
+                        primaryColor = MaterialTheme.colorScheme.primary
                     ),
                     labelColor = resolveTabLabelColor(
                         isSelected = isSelected,
+                        satelliteViewEnabled = satelliteViewEnabled,
                         primaryColor = MaterialTheme.colorScheme.primary,
                         onSurfaceColor = MaterialTheme.colorScheme.onSurface
                     )
@@ -330,56 +351,58 @@ private val SHEET_DIVIDER_TOP_PADDING = 4.dp
 private val SHEET_DIVIDER_BOTTOM_PADDING = 1.dp
 private val SHEET_TAB_STRIP_BOTTOM_PADDING = 0.dp
 private val TAB_CHIP_BORDER_WIDTH = 1.dp
-private const val SELECTED_TAB_FILL_ALPHA = 0.16f
+private const val SELECTED_TAB_FILL_ALPHA = 0.28f
+private const val UNSELECTED_TAB_FILL_ALPHA = 0.14f
 private const val SELECTED_TAB_BORDER_ALPHA = 0.55f
-internal val RAINVIEWER_TAB_ENABLED_BORDER_COLOR = Color(0xFF16A34A)
+internal val TAB_ENABLED_BORDER_COLOR = Color(0xFF16A34A)
 internal const val MAP_BOTTOM_TAB_STRIP_TAG = "map_bottom_tab_strip"
 
-internal fun resolveRainViewerBorderColor(
+internal fun isTabFeatureEnabled(
+    tab: MapBottomTab,
     weatherEnabled: Boolean,
-    defaultBorderColor: Color
-): Color {
-    return if (weatherEnabled) {
-        RAINVIEWER_TAB_ENABLED_BORDER_COLOR
-    } else {
-        defaultBorderColor
+    skySightEnabled: Boolean,
+    map4Enabled: Boolean
+): Boolean {
+    return when (tab) {
+        MapBottomTab.RAIN -> weatherEnabled
+        MapBottomTab.SKYSIGHT -> skySightEnabled
+        MapBottomTab.MAP4 -> map4Enabled
+        MapBottomTab.OGN -> false
     }
 }
 
 internal fun resolveTabBorderColor(
-    tab: MapBottomTab,
     isSelected: Boolean,
-    weatherEnabled: Boolean,
+    isFeatureEnabled: Boolean,
     defaultBorderColor: Color,
-    selectedBorderColor: Color
+    selectedBorderColor: Color,
+    enabledBorderColor: Color
 ): Color {
     return when {
+        isFeatureEnabled -> enabledBorderColor
         isSelected -> selectedBorderColor
-        tab == MapBottomTab.RAIN -> resolveRainViewerBorderColor(
-            weatherEnabled = weatherEnabled,
-            defaultBorderColor = defaultBorderColor
-        )
         else -> defaultBorderColor
     }
 }
 
 internal fun resolveTabContainerColor(
     isSelected: Boolean,
-    primaryColor: Color,
-    surfaceColor: Color
+    primaryColor: Color
 ): Color {
     return if (isSelected) {
         primaryColor.copy(alpha = SELECTED_TAB_FILL_ALPHA)
     } else {
-        surfaceColor
+        primaryColor.copy(alpha = UNSELECTED_TAB_FILL_ALPHA)
     }
 }
 
 internal fun resolveTabLabelColor(
     isSelected: Boolean,
+    satelliteViewEnabled: Boolean,
     primaryColor: Color,
     onSurfaceColor: Color
 ): Color {
+    if (satelliteViewEnabled) return Color.White
     return if (isSelected) {
         primaryColor
     } else {

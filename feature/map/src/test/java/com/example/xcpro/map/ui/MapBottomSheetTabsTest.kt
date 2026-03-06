@@ -146,59 +146,77 @@ class MapBottomSheetTabsTest {
     }
 
     @Test
-    fun resolveRainViewerBorderColor_weatherEnabled_usesGreenBorder() {
-        val defaultBorder = Color.Gray
-
-        assertEquals(
-            RAINVIEWER_TAB_ENABLED_BORDER_COLOR,
-            resolveRainViewerBorderColor(
+    fun isTabFeatureEnabled_reportsExpectedEnabledStatePerTab() {
+        assertTrue(
+            isTabFeatureEnabled(
+                tab = MapBottomTab.RAIN,
                 weatherEnabled = true,
-                defaultBorderColor = defaultBorder
+                skySightEnabled = false,
+                map4Enabled = false
             )
         )
-        assertEquals(
-            defaultBorder,
-            resolveRainViewerBorderColor(
+        assertTrue(
+            isTabFeatureEnabled(
+                tab = MapBottomTab.SKYSIGHT,
                 weatherEnabled = false,
-                defaultBorderColor = defaultBorder
+                skySightEnabled = true,
+                map4Enabled = false
+            )
+        )
+        assertTrue(
+            isTabFeatureEnabled(
+                tab = MapBottomTab.MAP4,
+                weatherEnabled = false,
+                skySightEnabled = false,
+                map4Enabled = true
             )
         )
     }
 
     @Test
-    fun resolveTabBorderColor_selectedRain_usesSelectedBorderColor() {
+    fun resolveTabBorderColor_featureEnabled_usesEnabledBorderColor() {
         val defaultBorder = Color.Gray
         val selectedBorder = Color.Red
+        val enabledBorder = Color.Green
 
         val resolved = resolveTabBorderColor(
-            tab = MapBottomTab.RAIN,
             isSelected = true,
-            weatherEnabled = true,
+            isFeatureEnabled = true,
             defaultBorderColor = defaultBorder,
-            selectedBorderColor = selectedBorder
+            selectedBorderColor = selectedBorder,
+            enabledBorderColor = enabledBorder
         )
 
-        assertEquals(selectedBorder, resolved)
+        assertEquals(enabledBorder, resolved)
     }
 
     @Test
-    fun resolveTabContainerColor_selected_usesPrimaryAlphaTint() {
+    fun resolveTabContainerColor_usesPrimaryAlphaTintForSelectedAndUnselected() {
         val primary = Color(0xFF112233)
-        val surface = Color(0xFFEEEEEE)
 
         val selected = resolveTabContainerColor(
             isSelected = true,
-            primaryColor = primary,
-            surfaceColor = surface
+            primaryColor = primary
         )
         val unselected = resolveTabContainerColor(
             isSelected = false,
-            primaryColor = primary,
-            surfaceColor = surface
+            primaryColor = primary
         )
 
-        assertEquals(primary.copy(alpha = 0.16f), selected)
-        assertEquals(surface, unselected)
+        assertEquals(primary.copy(alpha = 0.28f), selected)
+        assertEquals(primary.copy(alpha = 0.14f), unselected)
+    }
+
+    @Test
+    fun resolveTabLabelColor_satelliteView_usesWhiteText() {
+        val resolved = resolveTabLabelColor(
+            isSelected = false,
+            satelliteViewEnabled = true,
+            primaryColor = Color(0xFF112233),
+            onSurfaceColor = Color(0xFFEEEEEE)
+        )
+
+        assertEquals(Color.White, resolved)
     }
 
     @Test
