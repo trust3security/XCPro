@@ -9,7 +9,8 @@ Purpose
 Status
 - Focused code pass complete as of 2026-03-06.
 - Production-grade phased IP and validation plan are documented.
-- No production code changes are included in this docs-only change set.
+- Production implementation is now in progress in the map/OGN runtime and UI stacks.
+- Validation checks currently passing: `arch_gate`, `enforceRules`, `testDebugUnitTest`, `assembleDebug`.
 
 Read order
 1. `01_SYSTEM_MAP_AND_CURRENT_BEHAVIOR.md`

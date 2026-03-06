@@ -75,6 +75,15 @@ class MapOverlayManager(
                 initialUseSatelliteContrastIcons = useSatelliteContrastIcons
             )
         },
+    ognTargetRingOverlayFactory: (MapLibreMap, Int) -> OgnTargetRingOverlay =
+        { map, iconSizePx ->
+            OgnTargetRingOverlay(
+                map = map,
+                initialIconSizePx = iconSizePx
+            )
+        },
+    ognTargetLineOverlayFactory: (MapLibreMap) -> OgnTargetLineOverlay =
+        { map -> OgnTargetLineOverlay(map = map) },
     ognThermalOverlayFactory: (MapLibreMap) -> OgnThermalOverlay =
         { map -> OgnThermalOverlay(map = map) },
     ognGliderTrailOverlayFactory: (MapLibreMap) -> OgnGliderTrailOverlay =
@@ -100,6 +109,8 @@ class MapOverlayManager(
     airspaceUseCase = airspaceUseCase,
     waypointFilesUseCase = waypointFilesUseCase,
     ognTrafficOverlayFactory = ognTrafficOverlayFactory,
+    ognTargetRingOverlayFactory = ognTargetRingOverlayFactory,
+    ognTargetLineOverlayFactory = ognTargetLineOverlayFactory,
     ognThermalOverlayFactory = ognThermalOverlayFactory,
     ognGliderTrailOverlayFactory = ognGliderTrailOverlayFactory,
     adsbTrafficOverlayFactory = adsbTrafficOverlayFactory,

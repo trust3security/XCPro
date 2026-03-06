@@ -320,12 +320,15 @@ class OgnTrafficUseCase @Inject constructor(
     private val trailSelectionRepository: OgnTrailSelectionPreferencesRepository
 ) {
     val targets: StateFlow<List<OgnTrafficTarget>> = repository.targets
+    val suppressedTargetIds: StateFlow<Set<String>> = repository.suppressedTargetIds
     val snapshot: StateFlow<OgnTrafficSnapshot> = repository.snapshot
     val isStreamingEnabled: StateFlow<Boolean> = repository.isEnabled
     val overlayEnabled: Flow<Boolean> = preferencesRepository.enabledFlow
     val iconSizePx: Flow<Int> = preferencesRepository.iconSizePxFlow
     val displayUpdateMode: Flow<OgnDisplayUpdateMode> = preferencesRepository.displayUpdateModeFlow
     val showSciaEnabled: Flow<Boolean> = preferencesRepository.showSciaEnabledFlow
+    val targetEnabled: Flow<Boolean> = preferencesRepository.targetEnabledFlow
+    val targetAircraftKey: Flow<String?> = preferencesRepository.targetAircraftKeyFlow
     val thermalHotspots: StateFlow<List<OgnThermalHotspot>> = thermalRepository.hotspots
     val showThermalsEnabled: Flow<Boolean> = preferencesRepository.showThermalsEnabledFlow
     val gliderTrailSegments: Flow<List<OgnGliderTrailSegment>> = combine(
@@ -395,6 +398,14 @@ class OgnTrafficUseCase @Inject constructor(
 
     suspend fun setShowThermalsEnabled(enabled: Boolean) {
         preferencesRepository.setShowThermalsEnabled(enabled)
+    }
+
+    suspend fun setTargetSelection(enabled: Boolean, aircraftKey: String?) {
+        preferencesRepository.setTargetSelection(enabled = enabled, aircraftKey = aircraftKey)
+    }
+
+    suspend fun clearTargetSelection() {
+        preferencesRepository.clearTargetSelection()
     }
 
     fun stop() {

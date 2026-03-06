@@ -92,6 +92,8 @@ internal fun MapScreenContent(
     showDistanceCircles: Boolean,
     ognSnapshot: OgnTrafficSnapshot,
     ognOverlayEnabled: Boolean,
+    ognTargetEnabled: Boolean,
+    ognTargetAircraftKey: String?,
     ognThermalHotspots: List<OgnThermalHotspot>,
     showOgnSciaEnabled: Boolean,
     showOgnThermalsEnabled: Boolean,
@@ -140,6 +142,7 @@ internal fun MapScreenContent(
     onToggleOgnTraffic: () -> Unit,
     onToggleOgnScia: () -> Unit,
     onToggleOgnThermals: () -> Unit,
+    onSetOgnTarget: (String, Boolean) -> Unit,
     onToggleAdsbTraffic: () -> Unit,
     onOgnTargetSelected: (String) -> Unit,
     onOgnThermalSelected: (String) -> Unit,
@@ -268,6 +271,25 @@ internal fun MapScreenContent(
                 candidateKey = target.canonicalKey
             )
         } ?: false
+    }
+    val targetSelectionLookup = remember(ognTargetAircraftKey) {
+        val selectedKeys = ognTargetAircraftKey?.let(::setOf) ?: emptySet()
+        buildOgnSelectionLookup(selectedKeys)
+    }
+    val selectedOgnTargetTargetEnabled = remember(
+        selectedOgnTarget,
+        ognTargetEnabled,
+        targetSelectionLookup
+    ) {
+        if (!ognTargetEnabled) return@remember false
+        val target = selectedOgnTarget ?: return@remember false
+        selectionLookupContainsOgnKey(
+            lookup = targetSelectionLookup,
+            candidateKey = target.canonicalKey
+        )
+    }
+    val selectedOgnTargetIsGlider = remember(selectedOgnTarget) {
+        selectedOgnTarget?.identity?.aircraftTypeCode == OGN_GLIDER_AIRCRAFT_TYPE_CODE
     }
     LaunchedEffect(isTaskPanelVisible, hasTrafficDetailsOpen) {
         if (isTaskPanelVisible || hasTrafficDetailsOpen) {
@@ -480,11 +502,14 @@ internal fun MapScreenContent(
             onAutoCalibrateQnh = onAutoCalibrateQnh,
             selectedOgnTarget = selectedOgnTarget,
             selectedOgnTargetSciaEnabled = selectedOgnTargetSciaEnabled,
+            selectedOgnTargetTargetEnabled = selectedOgnTargetTargetEnabled,
+            selectedOgnTargetTargetToggleEnabled = selectedOgnTargetIsGlider,
             ognTrailSelectionViewModel = ognTrailSelectionViewModel,
             showOgnSciaEnabled = showOgnSciaEnabled,
             ognOverlayEnabled = ognOverlayEnabled,
             onToggleOgnScia = onToggleOgnScia,
             onToggleOgnTraffic = onToggleOgnTraffic,
+            onSetOgnTarget = onSetOgnTarget,
             onDismissOgnTargetDetails = onDismissOgnTargetDetails,
             selectedOgnThermal = selectedOgnThermal,
             currentLocation = currentLocation,
@@ -499,3 +524,5 @@ internal fun MapScreenContent(
         unitsPreferences = unitsPreferences
     )
 }
+
+private const val OGN_GLIDER_AIRCRAFT_TYPE_CODE = 1

@@ -179,11 +179,14 @@ internal fun BoxScope.MapOverlayPanelsAndSheetsSection(
     onAutoCalibrateQnh: () -> Unit,
     selectedOgnTarget: OgnTrafficTarget?,
     selectedOgnTargetSciaEnabled: Boolean,
+    selectedOgnTargetTargetEnabled: Boolean,
+    selectedOgnTargetTargetToggleEnabled: Boolean,
     ognTrailSelectionViewModel: OgnTrailSelectionViewModel,
     showOgnSciaEnabled: Boolean,
     ognOverlayEnabled: Boolean,
     onToggleOgnScia: () -> Unit,
     onToggleOgnTraffic: () -> Unit,
+    onSetOgnTarget: (String, Boolean) -> Unit,
     onDismissOgnTargetDetails: () -> Unit,
     selectedOgnThermal: OgnThermalHotspot?,
     currentLocation: MapLocationUiModel?,
@@ -334,6 +337,11 @@ internal fun BoxScope.MapOverlayPanelsAndSheetsSection(
                         }
                     }
                 },
+                targetEnabledForAircraft = selectedOgnTargetTargetEnabled,
+                onTargetEnabledForAircraftChanged = { enabled ->
+                    onSetOgnTarget(selectedOgnTarget.canonicalKey, enabled)
+                },
+                targetToggleEnabled = selectedOgnTargetTargetToggleEnabled,
                 unitsPreferences = unitsPreferences,
                 onDismiss = onDismissOgnTargetDetails
             )

@@ -30,6 +30,9 @@ fun OgnMarkerDetailsSheet(
     target: OgnTrafficTarget,
     sciaEnabledForAircraft: Boolean,
     onSciaEnabledForAircraftChanged: (Boolean) -> Unit,
+    targetEnabledForAircraft: Boolean,
+    onTargetEnabledForAircraftChanged: (Boolean) -> Unit,
+    targetToggleEnabled: Boolean = true,
     unitsPreferences: UnitsPreferences,
     onDismiss: () -> Unit
 ) {
@@ -57,6 +60,22 @@ fun OgnMarkerDetailsSheet(
                 Switch(
                     checked = sciaEnabledForAircraft,
                     onCheckedChange = onSciaEnabledForAircraftChanged
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Target this aircraft",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Switch(
+                    checked = targetEnabledForAircraft,
+                    onCheckedChange = onTargetEnabledForAircraftChanged,
+                    enabled = targetToggleEnabled
                 )
             }
 

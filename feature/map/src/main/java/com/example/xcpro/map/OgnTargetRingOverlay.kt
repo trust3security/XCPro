@@ -1,0 +1,164 @@
+package com.example.xcpro.map
+
+import com.example.xcpro.core.common.logging.AppLogger
+import com.example.xcpro.ogn.OGN_ICON_SIZE_DEFAULT_PX
+import com.example.xcpro.ogn.OgnTrafficTarget
+import com.example.xcpro.ogn.clampOgnIconSizePx
+import kotlin.math.abs
+import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.maps.MapLibreMap
+import org.maplibre.android.maps.Style
+import org.maplibre.android.style.layers.CircleLayer
+import org.maplibre.android.style.layers.PropertyFactory.circleColor
+import org.maplibre.android.style.layers.PropertyFactory.circleOpacity
+import org.maplibre.android.style.layers.PropertyFactory.circleRadius
+import org.maplibre.android.style.layers.PropertyFactory.circleStrokeColor
+import org.maplibre.android.style.layers.PropertyFactory.circleStrokeWidth
+import org.maplibre.android.style.sources.GeoJsonSource
+import org.maplibre.geojson.Feature
+import org.maplibre.geojson.FeatureCollection
+import org.maplibre.geojson.Point
+
+class OgnTargetRingOverlay(
+    private val map: MapLibreMap,
+    initialIconSizePx: Int = OGN_ICON_SIZE_DEFAULT_PX
+) {
+    private var currentIconSizePx: Int = clampOgnIconSizePx(initialIconSizePx)
+
+    fun initialize() {
+        val style = map.style ?: return
+        try {
+            if (style.getSource(SOURCE_ID) == null) {
+                style.addSource(GeoJsonSource(SOURCE_ID))
+            }
+            if (style.getLayer(LAYER_ID) == null) {
+                addLayer(style)
+            }
+            applyRingSizeToStyle()
+        } catch (t: Throwable) {
+            AppLogger.e(TAG, "Failed to initialize OGN target ring overlay: ${t.message}", t)
+        }
+    }
+
+    fun setIconSizePx(iconSizePx: Int) {
+        val clamped = clampOgnIconSizePx(iconSizePx)
+        if (currentIconSizePx == clamped) return
+        currentIconSizePx = clamped
+        applyRingSizeToStyle()
+    }
+
+    fun render(enabled: Boolean, target: OgnTrafficTarget?) {
+        if (!enabled || target == null || !isValidCoordinate(target.latitude, target.longitude)) {
+            clear()
+            return
+        }
+        val style = map.style ?: return
+        val source = style.getSourceAs<GeoJsonSource>(SOURCE_ID) ?: return
+        val feature = Feature.fromGeometry(
+            Point.fromLngLat(target.longitude, target.latitude)
+        )
+        feature.addStringProperty(PROP_TARGET_KEY, target.canonicalKey)
+        feature.addStringProperty(PROP_TARGET_ID, target.id)
+        source.setGeoJson(FeatureCollection.fromFeatures(arrayOf(feature)))
+    }
+
+    fun findTargetAt(tap: LatLng): String? {
+        val style = map.style ?: return null
+        if (style.getSource(SOURCE_ID) == null || style.getLayer(LAYER_ID) == null) return null
+        val screenPoint = map.projection.toScreenLocation(tap)
+        val features = runCatching {
+            map.queryRenderedFeatures(screenPoint, LAYER_ID)
+        }.getOrNull().orEmpty()
+        for (feature in features) {
+            val key = when {
+                feature.hasProperty(PROP_TARGET_KEY) ->
+                    runCatching { feature.getStringProperty(PROP_TARGET_KEY) }.getOrNull()
+
+                feature.hasProperty(PROP_TARGET_ID) ->
+                    runCatching { feature.getStringProperty(PROP_TARGET_ID) }.getOrNull()
+
+                else -> null
+            }
+            val normalized = key?.trim().orEmpty()
+            if (normalized.isNotEmpty()) return normalized
+        }
+        return null
+    }
+
+    fun clear() {
+        val style = map.style ?: return
+        val source = style.getSourceAs<GeoJsonSource>(SOURCE_ID) ?: return
+        source.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
+    }
+
+    fun cleanup() {
+        val style = map.style ?: return
+        try {
+            style.removeLayer(LAYER_ID)
+            style.removeSource(SOURCE_ID)
+        } catch (t: Throwable) {
+            AppLogger.w(TAG, "Failed to cleanup OGN target ring overlay: ${t.message}")
+        }
+    }
+
+    fun bringToFront() {
+        val style = map.style ?: return
+        if (style.getLayer(LAYER_ID) == null) return
+        try {
+            style.removeLayer(LAYER_ID)
+            addLayer(style)
+            applyRingSizeToStyle()
+        } catch (t: Throwable) {
+            AppLogger.w(TAG, "Failed to bring OGN target ring overlay to front: ${t.message}")
+        }
+    }
+
+    private fun addLayer(style: Style) {
+        val layer = createLayer()
+        when {
+            style.getLayer(TOP_LABEL_LAYER_ID) != null -> style.addLayerAbove(layer, ICON_LAYER_ID)
+            style.getLayer(ICON_LAYER_ID) != null -> style.addLayerAbove(layer, ICON_LAYER_ID)
+            style.getLayer(BlueLocationOverlay.LAYER_ID) != null ->
+                style.addLayerAbove(layer, BlueLocationOverlay.LAYER_ID)
+
+            else -> style.addLayer(layer)
+        }
+    }
+
+    private fun createLayer(): CircleLayer =
+        CircleLayer(LAYER_ID, SOURCE_ID).withProperties(
+            circleColor("rgba(0,0,0,0)"),
+            circleStrokeColor(RING_STROKE_COLOR),
+            circleStrokeWidth(ringStrokeWidthPx(currentIconSizePx)),
+            circleOpacity(RING_OPACITY),
+            circleRadius(ringRadiusPx(currentIconSizePx))
+        )
+
+    private fun applyRingSizeToStyle() {
+        val style = map.style ?: return
+        val layer = style.getLayer(LAYER_ID) as? CircleLayer ?: return
+        layer.setProperties(
+            circleStrokeWidth(ringStrokeWidthPx(currentIconSizePx)),
+            circleRadius(ringRadiusPx(currentIconSizePx))
+        )
+    }
+
+    private fun ringRadiusPx(iconSizePx: Int): Float = (iconSizePx * 0.56f).coerceIn(18f, 150f)
+
+    private fun ringStrokeWidthPx(iconSizePx: Int): Float = (iconSizePx / 22f).coerceIn(2f, 8f)
+
+    private fun isValidCoordinate(latitude: Double, longitude: Double): Boolean {
+        if (!latitude.isFinite() || !longitude.isFinite()) return false
+        if (abs(latitude) > 90.0) return false
+        if (abs(longitude) > 180.0) return false
+        return true
+    }
+
+    private companion object {
+        private const val TAG = "OgnTargetRingOverlay"
+        private const val SOURCE_ID = "ogn-target-ring-source"
+        private const val LAYER_ID = "ogn-target-ring-layer"
+        private const val RING_OPACITY = 0.95f
+        private const val RING_STROKE_COLOR = "#F5C842"
+    }
+}

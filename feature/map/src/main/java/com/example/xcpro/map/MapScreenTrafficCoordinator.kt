@@ -6,6 +6,7 @@ import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.ogn.buildOgnSelectionLookup
 import com.example.xcpro.ogn.normalizeOgnAircraftKey
+import com.example.xcpro.ogn.normalizeOgnAircraftKeyOrNull
 import com.example.xcpro.ogn.OgnTrafficTarget
 import com.example.xcpro.ogn.OgnThermalHotspot
 import com.example.xcpro.ogn.selectionLookupContainsOgnKey
@@ -38,6 +39,9 @@ internal class MapScreenTrafficCoordinator(
     private val adsbVerticalBelowMeters: StateFlow<Double>,
     private val rawOgnTargets: StateFlow<List<OgnTrafficTarget>>,
     private val selectedOgnId: MutableStateFlow<String?>,
+    private val ognTargetEnabled: StateFlow<Boolean>,
+    private val ognTargetAircraftKey: StateFlow<String?>,
+    private val ognSuppressedTargetIds: StateFlow<Set<String>>,
     private val showSciaEnabled: StateFlow<Boolean>,
     private val showThermalsEnabled: StateFlow<Boolean>,
     private val thermalHotspots: StateFlow<List<OgnThermalHotspot>>,
@@ -212,6 +216,31 @@ internal class MapScreenTrafficCoordinator(
             }
             .launchIn(scope)
 
+        combine(ognTargetEnabled, ognTargetAircraftKey, ognSuppressedTargetIds) { enabled, aircraftKey, suppressedIds ->
+            Triple(enabled, aircraftKey, suppressedIds)
+        }
+            .distinctUntilChanged()
+            .onEach { (enabled, aircraftKey, suppressedIds) ->
+                if (!enabled || suppressedIds.isEmpty()) return@onEach
+                val normalizedAircraftKey = normalizeOgnAircraftKeyOrNull(aircraftKey) ?: return@onEach
+                val selectedLookup = buildOgnSelectionLookup(setOf(normalizedAircraftKey))
+                val isSuppressed = suppressedIds.any { suppressedKey ->
+                    selectionLookupContainsOgnKey(
+                        lookup = selectedLookup,
+                        candidateKey = suppressedKey
+                    )
+                }
+                if (!isSuppressed) return@onEach
+                runPreferenceMutation(
+                    actionLabel = "clear OGN target due to ownship suppression",
+                    userMessage = OGN_SETTINGS_FAILURE_MESSAGE,
+                    coalesceKey = MUTATION_KEY_CLEAR_SUPPRESSED_TARGET
+                ) {
+                    ognTrafficUseCase.clearTargetSelection()
+                }
+            }
+            .launchIn(scope)
+
         thermalHotspots
             .onEach { hotspots ->
                 val selectedId = selectedThermalId.value ?: return@onEach
@@ -302,6 +331,24 @@ internal class MapScreenTrafficCoordinator(
             } else {
                 ognTrafficUseCase.setShowSciaEnabled(next)
             }
+        }
+    }
+
+    fun onSetOgnTarget(aircraftKey: String, enabled: Boolean) {
+        launchPreferenceMutation(
+            actionLabel = "set OGN target",
+            userMessage = OGN_SETTINGS_FAILURE_MESSAGE,
+            coalesceKey = MUTATION_KEY_TARGET_SELECTION
+        ) {
+            if (!enabled) {
+                ognTrafficUseCase.clearTargetSelection()
+                return@launchPreferenceMutation
+            }
+            val normalizedAircraftKey = normalizeOgnAircraftKeyOrNull(aircraftKey) ?: return@launchPreferenceMutation
+            if (!ognOverlayEnabled.value) {
+                ognTrafficUseCase.setOverlayEnabled(true)
+            }
+            ognTrafficUseCase.setTargetSelection(enabled = true, aircraftKey = normalizedAircraftKey)
         }
     }
 
@@ -478,6 +525,8 @@ internal class MapScreenTrafficCoordinator(
         private const val MUTATION_KEY_TOGGLE_THERMALS = "toggle_thermals"
         private const val MUTATION_KEY_TOGGLE_ADSB = "toggle_adsb"
         private const val MUTATION_KEY_SCIA_OVERLAY_SYNC = "scia_overlay_sync"
+        private const val MUTATION_KEY_TARGET_SELECTION = "ogn_target_selection"
+        private const val MUTATION_KEY_CLEAR_SUPPRESSED_TARGET = "ogn_target_suppression_clear"
         private const val MIN_VALID_TRACK_SPEED_MPS = 2.0
         private const val MAX_ACCEPTABLE_BEARING_ACCURACY_DEG = 60.0
         private const val MAX_ACCEPTABLE_SPEED_ACCURACY_MPS = 12.0

@@ -3,12 +3,15 @@ package com.example.xcpro.ogn
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import java.io.File
 import java.nio.file.Files
+import java.util.concurrent.Executors
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExecutorCoroutineDispatcher
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.job
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.asCoroutineDispatcher
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -18,11 +21,13 @@ import org.junit.Test
 class OgnTrafficPreferencesRepositoryTest {
 
     private lateinit var storeScope: CoroutineScope
+    private lateinit var storeDispatcher: ExecutorCoroutineDispatcher
     private lateinit var repository: OgnTrafficPreferencesRepository
 
     @Before
     fun setUp() {
-        storeScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        storeDispatcher = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
+        storeScope = CoroutineScope(SupervisorJob() + storeDispatcher)
         val storeFile = File(
             Files.createTempDirectory("ogn-traffic-prefs-test-").toFile(),
             "ogn_traffic_preferences.preferences_pb"
@@ -36,7 +41,10 @@ class OgnTrafficPreferencesRepositoryTest {
 
     @After
     fun tearDown() {
-        storeScope.cancel()
+        runBlocking {
+            storeScope.coroutineContext.job.cancelAndJoin()
+        }
+        storeDispatcher.close()
     }
 
     @Test
@@ -212,6 +220,37 @@ class OgnTrafficPreferencesRepositoryTest {
     fun setHotspotsDisplayPercent_persistsValue() = runBlocking {
         repository.setHotspotsDisplayPercent(35)
         assertEquals(35, repository.hotspotsDisplayPercentFlow.first())
+    }
+
+    @Test
+    fun targetSelection_defaultsToDisabledAndNoAircraft() = runBlocking {
+        assertEquals(false, repository.targetEnabledFlow.first())
+        assertNull(repository.targetAircraftKeyFlow.first())
+    }
+
+    @Test
+    fun setTargetSelection_enablesAndNormalizesAircraftKey() = runBlocking {
+        repository.setTargetSelection(enabled = true, aircraftKey = " flarm:ab12cd ")
+
+        assertEquals(true, repository.targetEnabledFlow.first())
+        assertEquals("FLARM:AB12CD", repository.targetAircraftKeyFlow.first())
+    }
+
+    @Test
+    fun clearTargetSelection_disablesAndClearsAircraftKey() = runBlocking {
+        repository.clearTargetSelection()
+
+        assertEquals(false, repository.targetEnabledFlow.first())
+        assertNull(repository.targetAircraftKeyFlow.first())
+    }
+
+    @Test
+    fun setTargetSelection_enableWithoutValidKey_preservesPreviousState() = runBlocking {
+        repository.setTargetSelection(enabled = true, aircraftKey = "FLARM:DDA85C")
+        repository.setTargetSelection(enabled = true, aircraftKey = "   ")
+
+        assertEquals(true, repository.targetEnabledFlow.first())
+        assertEquals("FLARM:DDA85C", repository.targetAircraftKeyFlow.first())
     }
 
     @Test

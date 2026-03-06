@@ -225,6 +225,10 @@ class MapLifecycleManager(
     }
 
     private fun clearRuntimeOverlays() {
+        mapState.ognTargetRingOverlay?.cleanup()
+        mapState.ognTargetRingOverlay = null
+        mapState.ognTargetLineOverlay?.cleanup()
+        mapState.ognTargetLineOverlay = null
         mapState.ognTrafficOverlay?.cleanup()
         mapState.ognTrafficOverlay = null
         mapState.ognThermalOverlay?.cleanup()

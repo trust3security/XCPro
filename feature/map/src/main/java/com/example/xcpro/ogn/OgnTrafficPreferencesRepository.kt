@@ -27,6 +27,8 @@ private val KEY_OGN_SHOW_SCIA_ENABLED = booleanPreferencesKey("ogn_show_scia_ena
 private val KEY_OGN_SHOW_THERMALS_ENABLED = booleanPreferencesKey("ogn_show_thermals_enabled")
 private val KEY_OGN_THERMAL_RETENTION_HOURS = intPreferencesKey("ogn_thermal_retention_hours")
 private val KEY_OGN_HOTSPOTS_DISPLAY_PERCENT = intPreferencesKey("ogn_hotspots_display_percent")
+private val KEY_OGN_TARGET_ENABLED = booleanPreferencesKey("ogn_target_enabled")
+private val KEY_OGN_TARGET_AIRCRAFT_KEY = stringPreferencesKey("ogn_target_aircraft_key")
 private val KEY_OGN_OWN_FLARM_HEX = stringPreferencesKey("ogn_own_flarm_hex")
 private val KEY_OGN_OWN_ICAO_HEX = stringPreferencesKey("ogn_own_icao_hex")
 private val KEY_OGN_CLIENT_CALLSIGN = stringPreferencesKey("ogn_client_callsign")
@@ -91,6 +93,16 @@ class OgnTrafficPreferencesRepository internal constructor(
             clampOgnHotspotsDisplayPercent(
                 preferences[KEY_OGN_HOTSPOTS_DISPLAY_PERCENT] ?: OGN_HOTSPOTS_DISPLAY_PERCENT_DEFAULT
             )
+        }
+        .distinctUntilChanged()
+
+    val targetEnabledFlow: Flow<Boolean> = dataStore.data
+        .map { preferences -> preferences[KEY_OGN_TARGET_ENABLED] ?: false }
+        .distinctUntilChanged()
+
+    val targetAircraftKeyFlow: Flow<String?> = dataStore.data
+        .map { preferences ->
+            normalizeOgnAircraftKeyOrNull(preferences[KEY_OGN_TARGET_AIRCRAFT_KEY])
         }
         .distinctUntilChanged()
 
@@ -177,6 +189,30 @@ class OgnTrafficPreferencesRepository internal constructor(
         val clamped = clampOgnHotspotsDisplayPercent(percent)
         dataStore.edit { preferences ->
             preferences[KEY_OGN_HOTSPOTS_DISPLAY_PERCENT] = clamped
+        }
+    }
+
+    suspend fun setTargetSelection(enabled: Boolean, aircraftKey: String?) {
+        val normalizedAircraftKey = normalizeOgnAircraftKeyOrNull(aircraftKey)
+        if (enabled && normalizedAircraftKey == null) {
+            // Preserve current state if the caller requests enabling without a valid key.
+            return
+        }
+        dataStore.edit { preferences ->
+            if (!enabled || normalizedAircraftKey == null) {
+                preferences[KEY_OGN_TARGET_ENABLED] = false
+                preferences.remove(KEY_OGN_TARGET_AIRCRAFT_KEY)
+            } else {
+                preferences[KEY_OGN_TARGET_ENABLED] = true
+                preferences[KEY_OGN_TARGET_AIRCRAFT_KEY] = normalizedAircraftKey
+            }
+        }
+    }
+
+    suspend fun clearTargetSelection() {
+        dataStore.edit { preferences ->
+            preferences[KEY_OGN_TARGET_ENABLED] = false
+            preferences.remove(KEY_OGN_TARGET_AIRCRAFT_KEY)
         }
     }
 

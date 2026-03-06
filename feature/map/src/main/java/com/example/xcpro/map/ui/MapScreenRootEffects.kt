@@ -53,7 +53,6 @@ internal fun MapScreenBackHandler(
             drawerState.isOpen -> {
                 coroutineScope.launch { drawerState.close() }
             }
-
             modalManager.handleBackGesture() -> Unit
             taskScreenManager.handleBackGesture() -> Unit
             else -> navController.popBackStack()
@@ -70,6 +69,9 @@ internal fun MapScreenOverlayEffects(
     ognOverlayEnabled: Boolean,
     ognThermalHotspots: List<OgnThermalHotspot>,
     showOgnSciaEnabled: Boolean,
+    ognTargetEnabled: Boolean,
+    ognResolvedTarget: OgnTrafficTarget?,
+    ownshipLocation: MapLocationUiModel?,
     showOgnThermalsEnabled: Boolean,
     ognDisplayUpdateMode: OgnDisplayUpdateMode,
     ognGliderTrailSegments: List<OgnGliderTrailSegment>,
@@ -88,14 +90,12 @@ internal fun MapScreenOverlayEffects(
     val renderedOgnTargets = if (ognOverlayEnabled) ognTargets else emptyList()
     val renderedOgnThermals = if (ognOverlayEnabled && showOgnThermalsEnabled) {
         ognThermalHotspots
-    } else {
-        emptyList()
-    }
+    } else emptyList()
     val renderedOgnTrails = if (ognOverlayEnabled && showOgnSciaEnabled) {
         ognGliderTrailSegments
-    } else {
-        emptyList()
-    }
+    } else emptyList()
+    val renderOgnTargetEnabled = ognOverlayEnabled && ognTargetEnabled
+    val renderedOgnTarget = if (renderOgnTargetEnabled) ognResolvedTarget else null
     val renderedAdsbTargets = if (adsbOverlayEnabled) adsbTargets else emptyList()
 
     LaunchedEffect(mapState.mapLibreMap, airspaceState.enabledFiles, airspaceState.classStates) {
@@ -117,6 +117,13 @@ internal fun MapScreenOverlayEffects(
     }
     LaunchedEffect(renderedOgnTrails) {
         overlayManager.updateOgnGliderTrailSegments(renderedOgnTrails)
+    }
+    LaunchedEffect(renderOgnTargetEnabled, renderedOgnTarget, ownshipLocation) {
+        overlayManager.updateOgnTargetVisuals(
+            enabled = renderOgnTargetEnabled,
+            resolvedTarget = renderedOgnTarget,
+            ownshipLocation = ownshipLocation
+        )
     }
     LaunchedEffect(ognIconSizePx) {
         overlayManager.setOgnIconSizePx(ognIconSizePx)
@@ -147,9 +154,7 @@ internal fun MapVisibilityLifecycleEffect(mapViewModel: MapScreenViewModel) {
             when (event) {
                 Lifecycle.Event.ON_START,
                 Lifecycle.Event.ON_RESUME -> mapViewModel.setMapVisible(true)
-
                 Lifecycle.Event.ON_STOP -> mapViewModel.setMapVisible(false)
-
                 else -> Unit
             }
         }

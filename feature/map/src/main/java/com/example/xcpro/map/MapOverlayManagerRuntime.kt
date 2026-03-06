@@ -43,6 +43,7 @@ import com.example.xcpro.weather.rain.WeatherRadarStatusCode
 import com.example.xcpro.weather.rain.clampWeatherRainOpacity
 import com.example.xcpro.loadAndApplyAirspace
 import com.example.xcpro.loadAndApplyWaypoints
+import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.map.trail.SnailTrailManager
 import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.CoroutineScope
@@ -76,6 +77,15 @@ open class MapOverlayManagerRuntime(
                 initialUseSatelliteContrastIcons = useSatelliteContrastIcons
             )
         },
+    private val ognTargetRingOverlayFactory: (MapLibreMap, Int) -> OgnTargetRingOverlay =
+        { map, iconSizePx ->
+            OgnTargetRingOverlay(
+                map = map,
+                initialIconSizePx = iconSizePx
+            )
+        },
+    private val ognTargetLineOverlayFactory: (MapLibreMap) -> OgnTargetLineOverlay =
+        { map -> OgnTargetLineOverlay(map = map) },
     private val ognThermalOverlayFactory: (MapLibreMap) -> OgnThermalOverlay =
         { map -> OgnThermalOverlay(map = map) },
     private val ognGliderTrailOverlayFactory: (MapLibreMap) -> OgnGliderTrailOverlay =
@@ -129,6 +139,8 @@ open class MapOverlayManagerRuntime(
         mapState = mapState,
         coroutineScope = coroutineScope,
         ognTrafficOverlayFactory = ognTrafficOverlayFactory,
+        ognTargetRingOverlayFactory = ognTargetRingOverlayFactory,
+        ognTargetLineOverlayFactory = ognTargetLineOverlayFactory,
         ognThermalOverlayFactory = ognThermalOverlayFactory,
         ognGliderTrailOverlayFactory = ognGliderTrailOverlayFactory,
         bringTrafficOverlaysToFront = ::bringTrafficOverlaysToFront,
@@ -318,6 +330,20 @@ open class MapOverlayManagerRuntime(
         ognDelegate.updateGliderTrailSegments(segments, forceImmediate)
     }
 
+    fun updateOgnTargetVisuals(
+        enabled: Boolean,
+        resolvedTarget: OgnTrafficTarget?,
+        ownshipLocation: MapLocationUiModel?,
+        forceImmediate: Boolean = false
+    ) {
+        ognDelegate.updateTargetVisuals(
+            enabled = enabled,
+            resolvedTarget = resolvedTarget,
+            ownshipLocation = ownshipLocation,
+            forceImmediate = forceImmediate
+        )
+    }
+
     fun updateAdsbTrafficTargets(
         targets: List<AdsbTrafficUiModel>,
         ownshipAltitudeMeters: Double?,
@@ -478,6 +504,8 @@ open class MapOverlayManagerRuntime(
             latestOgnTargetsCount = ognStatus.targetsCount,
             latestOgnThermalHotspotsCount = ognStatus.thermalHotspotsCount,
             latestOgnGliderTrailSegmentsCount = ognStatus.gliderTrailSegmentsCount,
+            ognTargetEnabled = ognStatus.targetEnabled,
+            ognTargetResolved = ognStatus.targetResolved,
             latestAdsbTargetsCount = latestAdsbTargets.size,
             taskWaypointCount = taskWaypointCountProvider(),
             forecastWeatherStatus = forecastWeatherDelegate.statusSnapshot()
@@ -505,7 +533,7 @@ open class MapOverlayManagerRuntime(
             return
         }
         mapState.blueLocationOverlay?.bringToFront()
-        mapState.ognTrafficOverlay?.bringToFront()
+        ognDelegate.bringOverlaysToFront()
         mapState.adsbTrafficOverlay?.bringToFront()
         overlayFrontOrderApplyCount += 1
         lastOverlayFrontOrderApplyMonoMs = nowMonoMs
@@ -578,6 +606,8 @@ open class MapOverlayManagerRuntime(
             topLayerId = style.layers.lastOrNull()?.id,
             blueOverlayId = mapState.blueLocationOverlay?.let { System.identityHashCode(it) } ?: 0,
             ognOverlayId = mapState.ognTrafficOverlay?.let { System.identityHashCode(it) } ?: 0,
+            ognTargetRingOverlayId = mapState.ognTargetRingOverlay?.let { System.identityHashCode(it) } ?: 0,
+            ognTargetLineOverlayId = mapState.ognTargetLineOverlay?.let { System.identityHashCode(it) } ?: 0,
             adsbOverlayId = mapState.adsbTrafficOverlay?.let { System.identityHashCode(it) } ?: 0
         )
     }
@@ -605,6 +635,8 @@ open class MapOverlayManagerRuntime(
         val topLayerId: String?,
         val blueOverlayId: Int,
         val ognOverlayId: Int,
+        val ognTargetRingOverlayId: Int,
+        val ognTargetLineOverlayId: Int,
         val adsbOverlayId: Int
     )
 

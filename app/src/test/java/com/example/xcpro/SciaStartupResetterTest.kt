@@ -10,7 +10,7 @@ import org.mockito.kotlin.verifyBlocking
 class SciaStartupResetterTest {
 
     @Test
-    fun `resetForFreshProcessStart disables SCIA and clears selected aircraft`() = runTest {
+    fun `resetForFreshProcessStart disables SCIA clears target and clears selected aircraft`() = runTest {
         val trafficPreferencesRepository = mock<OgnTrafficPreferencesRepository>()
         val trailSelectionPreferencesRepository = mock<OgnTrailSelectionPreferencesRepository>()
         val resetter = SciaStartupResetter(
@@ -21,6 +21,7 @@ class SciaStartupResetterTest {
         resetter.resetForFreshProcessStart()
 
         verifyBlocking(trafficPreferencesRepository) { setShowSciaEnabled(false) }
+        verifyBlocking(trafficPreferencesRepository) { clearTargetSelection() }
         verifyBlocking(trailSelectionPreferencesRepository) { clearSelectedAircraft() }
     }
 }

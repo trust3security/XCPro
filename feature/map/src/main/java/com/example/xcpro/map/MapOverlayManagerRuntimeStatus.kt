@@ -9,6 +9,8 @@ internal fun buildMapOverlayManagerStatus(
     latestOgnTargetsCount: Int,
     latestOgnThermalHotspotsCount: Int,
     latestOgnGliderTrailSegmentsCount: Int,
+    ognTargetEnabled: Boolean,
+    ognTargetResolved: Boolean,
     latestAdsbTargetsCount: Int,
     taskWaypointCount: Int,
     forecastWeatherStatus: MapOverlayForecastWeatherStatus
@@ -34,6 +36,18 @@ internal fun buildMapOverlayManagerStatus(
         append("- OGN Display Update Mode: ${ognDisplayUpdateMode.displayLabel}\n")
         append("- OGN Satellite Contrast Icons Enabled: ${forecastWeatherStatus.satelliteContrastIconsEnabled}\n")
         append("- OGN Targets: $latestOgnTargetsCount\n")
+        append("- OGN Target Enabled: $ognTargetEnabled\n")
+        append("- OGN Target Resolved: $ognTargetResolved\n")
+        append(
+            "- OGN Target Ring Overlay: ${
+                if (mapState.ognTargetRingOverlay != null) "Initialized" else "Not Initialized"
+            }\n"
+        )
+        append(
+            "- OGN Target Line Overlay: ${
+                if (mapState.ognTargetLineOverlay != null) "Initialized" else "Not Initialized"
+            }\n"
+        )
         append(
             "- OGN Thermal Overlay: ${
                 if (mapState.ognThermalOverlay != null) "Initialized" else "Not Initialized"

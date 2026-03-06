@@ -10,6 +10,7 @@ class SciaStartupResetter @Inject constructor(
 ) {
     suspend fun resetForFreshProcessStart() {
         ognTrafficPreferencesRepository.setShowSciaEnabled(false)
+        ognTrafficPreferencesRepository.clearTargetSelection()
         ognTrailSelectionPreferencesRepository.clearSelectedAircraft()
     }
 }

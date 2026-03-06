@@ -43,6 +43,9 @@ internal data class MapScreenBindings(
     val ognDisplayUpdateMode: OgnDisplayUpdateMode,
     val ognThermalHotspots: List<OgnThermalHotspot>,
     val showOgnSciaEnabled: Boolean,
+    val ognTargetEnabled: Boolean,
+    val ognTargetAircraftKey: String?,
+    val ognResolvedTarget: OgnTrafficTarget?,
     val showOgnThermalsEnabled: Boolean,
     val ognGliderTrailSegments: List<OgnGliderTrailSegment>,
     val ownshipAltitudeMetersForOgn: Double?,
@@ -88,6 +91,9 @@ internal fun rememberMapScreenBindings(
     val ognDisplayUpdateMode by mapViewModel.ognDisplayUpdateMode.collectAsStateWithLifecycle()
     val ognThermalHotspots by mapViewModel.ognThermalHotspots.collectAsStateWithLifecycle()
     val showOgnSciaEnabled by mapViewModel.showOgnSciaEnabled.collectAsStateWithLifecycle()
+    val ognTargetEnabled by mapViewModel.ognTargetEnabled.collectAsStateWithLifecycle()
+    val ognTargetAircraftKey by mapViewModel.ognTargetAircraftKey.collectAsStateWithLifecycle()
+    val ognResolvedTarget by mapViewModel.ognResolvedTarget.collectAsStateWithLifecycle()
     val showOgnThermalsEnabled by mapViewModel.showOgnThermalsEnabled.collectAsStateWithLifecycle()
     val ognGliderTrailSegments by mapViewModel.ognGliderTrailSegments.collectAsStateWithLifecycle()
     val ownshipAltitudeMetersForOgn by mapViewModel.ownshipAltitudeMeters.collectAsStateWithLifecycle()
@@ -128,6 +134,9 @@ internal fun rememberMapScreenBindings(
         ognDisplayUpdateMode = ognDisplayUpdateMode,
         ognThermalHotspots = ognThermalHotspots,
         showOgnSciaEnabled = showOgnSciaEnabled,
+        ognTargetEnabled = ognTargetEnabled,
+        ognTargetAircraftKey = ognTargetAircraftKey,
+        ognResolvedTarget = ognResolvedTarget,
         showOgnThermalsEnabled = showOgnThermalsEnabled,
         ognGliderTrailSegments = ognGliderTrailSegments,
         ownshipAltitudeMetersForOgn = ownshipAltitudeMetersForOgn,

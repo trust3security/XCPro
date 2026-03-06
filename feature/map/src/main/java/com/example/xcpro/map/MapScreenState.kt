@@ -16,6 +16,8 @@ class MapScreenState {
     var blueLocationOverlay: BlueLocationOverlay? = null
     var distanceCirclesOverlay: DistanceCirclesOverlay? = null
     var ognTrafficOverlay: OgnTrafficOverlay? = null
+    var ognTargetRingOverlay: OgnTargetRingOverlay? = null
+    var ognTargetLineOverlay: OgnTargetLineOverlay? = null
     var ognThermalOverlay: OgnThermalOverlay? = null
     var ognGliderTrailOverlay: OgnGliderTrailOverlay? = null
     var adsbTrafficOverlay: AdsbTrafficOverlay? = null

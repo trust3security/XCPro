@@ -5,6 +5,7 @@ import com.example.xcpro.airspace.AirspaceUseCase
 import com.example.xcpro.common.units.AltitudeUnit
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.flightdata.WaypointFilesUseCase
+import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.map.trail.SnailTrailManager
 import com.example.xcpro.ogn.OgnAddressType
 import com.example.xcpro.ogn.OgnDisplayUpdateMode
@@ -207,9 +208,56 @@ class MapOverlayManagerOgnLifecycleTest {
         verifyNoInteractions(trafficOverlay)
     }
 
+    @Test
+    fun updateOgnTargetVisuals_rendersRingAndLineWithoutTrafficRerender() = runTest {
+        val map: MapLibreMap = mock()
+        val trafficOverlay: OgnTrafficOverlay = mock()
+        val targetRingOverlay: OgnTargetRingOverlay = mock()
+        val targetLineOverlay: OgnTargetLineOverlay = mock()
+        val fixture = createFixture(
+            scope = this,
+            ognTrafficOverlayFactory = { _, _, _ -> trafficOverlay },
+            ognTargetRingOverlayFactory = { _, _ -> targetRingOverlay },
+            ognTargetLineOverlayFactory = { _ -> targetLineOverlay },
+            ognThermalOverlayFactory = { _ -> mock() },
+            ognGliderTrailOverlayFactory = { _ -> mock() },
+            adsbTrafficOverlayFactory = { _, _ -> mock() }
+        )
+        fixture.mapState.mapLibreMap = map
+        fixture.manager.initializeTrafficOverlays(map)
+        clearInvocations(trafficOverlay, targetRingOverlay, targetLineOverlay)
+
+        val ownship = MapLocationUiModel(
+            latitude = -35.2,
+            longitude = 149.2,
+            speedMs = 0.0,
+            bearingDeg = 0.0,
+            accuracyMeters = 5.0,
+            timestampMs = 1_000L
+        )
+        val target = target(id = "T7", lastSeenMillis = 7_000L)
+
+        fixture.manager.updateOgnTargetVisuals(
+            enabled = true,
+            resolvedTarget = target,
+            ownshipLocation = ownship,
+            forceImmediate = true
+        )
+
+        verify(targetRingOverlay, times(1)).render(enabled = eq(true), target = eq(target))
+        verify(targetLineOverlay, times(1)).render(
+            enabled = eq(true),
+            ownshipLocation = eq(ownship),
+            target = eq(target)
+        )
+        verifyNoInteractions(trafficOverlay)
+    }
+
     private fun createFixture(
         scope: TestScope,
         ognTrafficOverlayFactory: (MapLibreMap, Int, Boolean) -> OgnTrafficOverlay,
+        ognTargetRingOverlayFactory: (MapLibreMap, Int) -> OgnTargetRingOverlay = { _, _ -> mock() },
+        ognTargetLineOverlayFactory: (MapLibreMap) -> OgnTargetLineOverlay = { _ -> mock() },
         ognThermalOverlayFactory: (MapLibreMap) -> OgnThermalOverlay,
         ognGliderTrailOverlayFactory: (MapLibreMap) -> OgnGliderTrailOverlay,
         adsbTrafficOverlayFactory: (MapLibreMap, Int) -> AdsbTrafficOverlay
@@ -228,6 +276,8 @@ class MapOverlayManagerOgnLifecycleTest {
             airspaceUseCase = mock<AirspaceUseCase>(),
             waypointFilesUseCase = mock<WaypointFilesUseCase>(),
             ognTrafficOverlayFactory = ognTrafficOverlayFactory,
+            ognTargetRingOverlayFactory = ognTargetRingOverlayFactory,
+            ognTargetLineOverlayFactory = ognTargetLineOverlayFactory,
             ognThermalOverlayFactory = ognThermalOverlayFactory,
             ognGliderTrailOverlayFactory = ognGliderTrailOverlayFactory,
             adsbTrafficOverlayFactory = adsbTrafficOverlayFactory

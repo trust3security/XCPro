@@ -126,6 +126,15 @@ class MapScreenViewModel @Inject constructor(
         .eagerState(scope = viewModelScope, initial = OgnDisplayUpdateMode.DEFAULT)
     val showOgnSciaEnabled: StateFlow<Boolean> = ognTrafficUseCase.showSciaEnabled
         .eagerState(scope = viewModelScope, initial = false)
+    val ognTargetEnabled: StateFlow<Boolean> = ognTrafficUseCase.targetEnabled
+        .eagerState(scope = viewModelScope, initial = false)
+    val ognTargetAircraftKey: StateFlow<String?> = ognTrafficUseCase.targetAircraftKey
+        .eagerState(scope = viewModelScope, initial = null)
+    val ognResolvedTarget: StateFlow<OgnTrafficTarget?> = createSelectedOgnTargetState(
+        scope = viewModelScope,
+        selectedOgnId = ognTargetAircraftKey,
+        ognTargets = ognTargets
+    )
     val ognThermalHotspots: StateFlow<List<OgnThermalHotspot>> = ognTrafficUseCase.thermalHotspots
     val showOgnThermalsEnabled: StateFlow<Boolean> = ognTrafficUseCase.showThermalsEnabled
         .eagerState(scope = viewModelScope, initial = false)
@@ -227,6 +236,9 @@ class MapScreenViewModel @Inject constructor(
         adsbFilterStates = adsbFilterStates,
         rawOgnTargets = ognTargets,
         selectedOgnId = trafficSelectionState.selectedOgnId,
+        ognTargetEnabled = ognTargetEnabled,
+        ognTargetAircraftKey = ognTargetAircraftKey,
+        ognSuppressedTargetIds = ognTrafficUseCase.suppressedTargetIds,
         showSciaEnabled = showOgnSciaEnabled,
         showThermalsEnabled = showOgnThermalsEnabled,
         thermalHotspots = ognThermalHotspots,
@@ -285,6 +297,8 @@ class MapScreenViewModel @Inject constructor(
     fun onToggleOgnTraffic() = trafficCoordinator.onToggleOgnTraffic()
     fun onToggleOgnScia() = trafficCoordinator.onToggleOgnScia()
     fun onToggleOgnThermals() = trafficCoordinator.onToggleOgnThermals()
+    fun onSetOgnTarget(aircraftKey: String, enabled: Boolean) =
+        trafficCoordinator.onSetOgnTarget(aircraftKey = aircraftKey, enabled = enabled)
     fun onToggleAdsbTraffic() = trafficCoordinator.onToggleAdsbTraffic()
     fun onOgnTargetSelected(id: String) = trafficCoordinator.onOgnTargetSelected(id)
     fun onOgnThermalSelected(id: String) = trafficCoordinator.onOgnThermalSelected(id)

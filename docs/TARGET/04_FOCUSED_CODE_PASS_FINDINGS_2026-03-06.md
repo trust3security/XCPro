@@ -62,6 +62,11 @@ Purpose
 - Risk: growth of a hotspot file and coupling ring redraw to full traffic feature regeneration.
 - Correction: move ring to dedicated `OgnTargetRingOverlay` with a single-point source/layer and runtime delegate ownership.
 
+11. Map teardown cleanup for new target overlays
+- Missed: `MapLifecycleManager.clearRuntimeOverlays()` originally did not clean/null target ring and target line overlays.
+- Risk: style/map detach can leave stale overlay handles and layer/source leaks.
+- Correction: include `ognTargetRingOverlay` and `ognTargetLineOverlay` in lifecycle cleanup path and add dedicated unit coverage.
+
 ## 2) Code evidence reviewed in focused pass
 
 Primary evidence files
