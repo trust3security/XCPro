@@ -150,6 +150,62 @@ class AdsbTrafficStoreTest {
     }
 
     @Test
+    fun select_disablesEmergencyWhenOwnshipTurningProjectsLargeCpaMissDistance() {
+        val store = AdsbTrafficStore()
+        val now = 405_000L
+        val inboundFarther = target(
+            index = 3,
+            lat = -33.8688,
+            lon = 151.2200,
+            receivedMonoMs = now
+        ).copy(trackDeg = 270.0, speedMps = 35.0)
+        val inboundCloser = inboundFarther.copy(
+            lon = 151.2140,
+            receivedMonoMs = now + 2_000L
+        )
+        store.upsertAll(listOf(inboundFarther))
+
+        store.select(
+            nowMonoMs = now,
+            queryCenterLat = -33.8688,
+            queryCenterLon = 151.2093,
+            referenceLat = -33.8688,
+            referenceLon = 151.2093,
+            ownshipAltitudeMeters = 1000.0,
+            ownshipTrackDeg = 0.0,
+            ownshipSpeedMps = 45.0,
+            usesOwnshipReference = true,
+            radiusMeters = 20_000.0,
+            verticalAboveMeters = 5_000.0,
+            verticalBelowMeters = 5_000.0,
+            maxDisplayed = 30,
+            staleAfterSec = 60
+        )
+        store.upsertAll(listOf(inboundCloser))
+        val selection = store.select(
+            nowMonoMs = now + 2_000L,
+            queryCenterLat = -33.8688,
+            queryCenterLon = 151.2093,
+            referenceLat = -33.8688,
+            referenceLon = 151.2093,
+            ownshipAltitudeMeters = 1000.0,
+            ownshipTrackDeg = 0.0,
+            ownshipSpeedMps = 45.0,
+            usesOwnshipReference = true,
+            radiusMeters = 20_000.0,
+            verticalAboveMeters = 5_000.0,
+            verticalBelowMeters = 5_000.0,
+            maxDisplayed = 30,
+            staleAfterSec = 60
+        )
+
+        val inboundUi = selection.displayed.first()
+        assertTrue(inboundUi.isClosing)
+        assertFalse(inboundUi.isEmergencyCollisionRisk)
+        assertEquals(AdsbProximityTier.RED, inboundUi.proximityTier)
+    }
+
+    @Test
     fun select_deEscalatesRedToAmberWhenNoLongerClosingAfterRecoveryDwell() {
         val store = AdsbTrafficStore()
         val now = 410_000L
@@ -238,6 +294,81 @@ class AdsbTrafficStoreTest {
         assertEquals(AdsbProximityReason.RECOVERY_DWELL, recoveringUi.proximityReason)
         assertEquals(AdsbProximityTier.AMBER, deEscalatedUi.proximityTier)
         assertEquals(AdsbProximityReason.DIVERGING_OR_STEADY, deEscalatedUi.proximityReason)
+    }
+
+    @Test
+    fun select_deEscalatesRedToGreenOnSecondFreshPostPassSample() {
+        val store = AdsbTrafficStore()
+        val now = 412_000L
+        val far = target(
+            index = 6,
+            lat = -33.8688,
+            lon = 151.2200,
+            receivedMonoMs = now
+        ).copy(trackDeg = null)
+        val closing = far.copy(
+            lon = 151.2140,
+            receivedMonoMs = now + 2_000L
+        )
+        val sameDistance = closing.copy(receivedMonoMs = now + 5_000L)
+        val firstPostPass = sameDistance.copy(
+            lon = 151.2143,
+            receivedMonoMs = now + 9_200L
+        )
+        val secondPostPass = firstPostPass.copy(
+            lon = 151.2146,
+            receivedMonoMs = now + 10_400L
+        )
+
+        store.upsertAll(listOf(far))
+        selectAt(store = store, nowMonoMs = now)
+
+        store.upsertAll(listOf(closing))
+        val closingUi = selectAt(store = store, nowMonoMs = now + 2_000L).displayed.first()
+
+        store.upsertAll(listOf(sameDistance))
+        selectAt(store = store, nowMonoMs = now + 5_000L)
+
+        store.upsertAll(listOf(firstPostPass))
+        val firstPostPassUi = selectAt(store = store, nowMonoMs = now + 9_200L).displayed.first()
+
+        store.upsertAll(listOf(secondPostPass))
+        val secondPostPassUi = selectAt(store = store, nowMonoMs = now + 10_400L).displayed.first()
+
+        assertEquals(AdsbProximityTier.RED, closingUi.proximityTier)
+        assertTrue(closingUi.isClosing)
+        assertEquals(AdsbProximityTier.AMBER, firstPostPassUi.proximityTier)
+        assertFalse(firstPostPassUi.isClosing)
+        assertEquals(AdsbProximityTier.GREEN, secondPostPassUi.proximityTier)
+        assertFalse(secondPostPassUi.isClosing)
+    }
+
+    @Test
+    fun select_keepsAmberWhenNeverClosingEvenWithFreshSamples() {
+        val store = AdsbTrafficStore()
+        val now = 414_000L
+        val first = target(
+            index = 7,
+            lat = -33.8688,
+            lon = 151.2420,
+            receivedMonoMs = now
+        ).copy(trackDeg = null)
+        val second = first.copy(
+            lon = 151.2421,
+            receivedMonoMs = now + 2_000L
+        )
+
+        store.upsertAll(listOf(first))
+        val firstUi = selectAt(store = store, nowMonoMs = now).displayed.first()
+
+        store.upsertAll(listOf(second))
+        val secondUi = selectAt(store = store, nowMonoMs = now + 2_000L).displayed.first()
+
+        assertEquals(AdsbProximityTier.AMBER, firstUi.proximityTier)
+        assertFalse(firstUi.isClosing)
+        assertEquals(AdsbProximityTier.AMBER, secondUi.proximityTier)
+        assertFalse(secondUi.isClosing)
+        assertEquals(AdsbProximityReason.DIVERGING_OR_STEADY, secondUi.proximityReason)
     }
 
     @Test
@@ -598,6 +729,96 @@ class AdsbTrafficStoreTest {
         assertEquals(AdsbProximityTier.RED, noFreshSampleUi.proximityTier)
         assertFalse(noFreshSampleUi.isClosing)
         assertEquals(AdsbProximityReason.DIVERGING_OR_STEADY, noFreshSampleUi.proximityReason)
+    }
+
+    @Test
+    fun select_usesOwnshipReferenceSampleToRefreshTrendWhenTargetTimestampIsUnchanged() {
+        val store = AdsbTrafficStore()
+        val now = 650_000L
+        val far = target(
+            index = 46,
+            lat = -33.8688,
+            lon = 151.2200,
+            receivedMonoMs = now
+        ).copy(trackDeg = null)
+        val closing = far.copy(
+            lon = 151.2140,
+            receivedMonoMs = now + 2_000L
+        )
+
+        store.upsertAll(listOf(far))
+        store.select(
+            nowMonoMs = now,
+            queryCenterLat = -33.8688,
+            queryCenterLon = 151.2093,
+            referenceLat = -33.8688,
+            referenceLon = 151.2093,
+            ownshipAltitudeMeters = 1_000.0,
+            referenceSampleMonoMs = now,
+            usesOwnshipReference = true,
+            radiusMeters = 20_000.0,
+            verticalAboveMeters = 5_000.0,
+            verticalBelowMeters = 5_000.0,
+            maxDisplayed = 30,
+            staleAfterSec = 60
+        )
+
+        store.upsertAll(listOf(closing))
+        val closingUi = store.select(
+            nowMonoMs = now + 2_000L,
+            queryCenterLat = -33.8688,
+            queryCenterLon = 151.2093,
+            referenceLat = -33.8688,
+            referenceLon = 151.2093,
+            ownshipAltitudeMeters = 1_000.0,
+            referenceSampleMonoMs = now + 2_000L,
+            usesOwnshipReference = true,
+            radiusMeters = 20_000.0,
+            verticalAboveMeters = 5_000.0,
+            verticalBelowMeters = 5_000.0,
+            maxDisplayed = 30,
+            staleAfterSec = 60
+        ).displayed.first()
+
+        val recoveryUi = store.select(
+            nowMonoMs = now + 6_500L,
+            queryCenterLat = -33.8688,
+            queryCenterLon = 151.2093,
+            referenceLat = -33.8688,
+            referenceLon = 151.2085,
+            ownshipAltitudeMeters = 1_000.0,
+            referenceSampleMonoMs = now + 6_500L,
+            usesOwnshipReference = true,
+            radiusMeters = 20_000.0,
+            verticalAboveMeters = 5_000.0,
+            verticalBelowMeters = 5_000.0,
+            maxDisplayed = 30,
+            staleAfterSec = 60
+        ).displayed.first()
+
+        val deEscalatedUi = store.select(
+            nowMonoMs = now + 11_000L,
+            queryCenterLat = -33.8688,
+            queryCenterLon = 151.2093,
+            referenceLat = -33.8688,
+            referenceLon = 151.2075,
+            ownshipAltitudeMeters = 1_000.0,
+            referenceSampleMonoMs = now + 11_000L,
+            usesOwnshipReference = true,
+            radiusMeters = 20_000.0,
+            verticalAboveMeters = 5_000.0,
+            verticalBelowMeters = 5_000.0,
+            maxDisplayed = 30,
+            staleAfterSec = 60
+        ).displayed.first()
+
+        assertEquals(AdsbProximityTier.RED, closingUi.proximityTier)
+        assertTrue(closingUi.isClosing)
+        assertEquals(AdsbProximityTier.RED, recoveryUi.proximityTier)
+        assertFalse(recoveryUi.isClosing)
+        assertEquals(AdsbProximityReason.RECOVERY_DWELL, recoveryUi.proximityReason)
+        assertEquals(AdsbProximityTier.AMBER, deEscalatedUi.proximityTier)
+        assertFalse(deEscalatedUi.isClosing)
     }
 
     @Test

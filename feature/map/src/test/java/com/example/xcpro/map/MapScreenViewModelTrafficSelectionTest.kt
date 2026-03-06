@@ -163,7 +163,12 @@ class MapScreenViewModelTrafficSelectionTest : MapScreenViewModelTestBase() {
 
         flightDataRepository.update(
             buildCompleteFlightData(
-                gps = defaultGps(latitude = -34.5000, longitude = 150.5000)
+                gps = defaultGps(
+                    latitude = -34.5000,
+                    longitude = 150.5000,
+                    speedMs = 12.0,
+                    bearingDeg = 87.0
+                )
             )
         )
         drainMain()
@@ -172,6 +177,8 @@ class MapScreenViewModelTrafficSelectionTest : MapScreenViewModelTestBase() {
         assertEquals(150.5000, adsbRepository.lastCenterLon ?: Double.NaN, 1e-6)
         assertEquals(-34.5000, adsbRepository.lastOwnshipLat ?: Double.NaN, 1e-6)
         assertEquals(150.5000, adsbRepository.lastOwnshipLon ?: Double.NaN, 1e-6)
+        assertEquals(87.0, adsbRepository.lastOwnshipTrackDeg ?: Double.NaN, 1e-6)
+        assertEquals(12.0, adsbRepository.lastOwnshipSpeedMps ?: Double.NaN, 1e-6)
     }
 
     @Test
@@ -230,6 +237,54 @@ class MapScreenViewModelTrafficSelectionTest : MapScreenViewModelTestBase() {
         assertEquals(initialClearCalls + 1, adsbRepository.clearOwnshipOriginCalls)
         assertNull(adsbRepository.lastOwnshipLat)
         assertNull(adsbRepository.lastOwnshipLon)
+        assertNull(adsbRepository.lastOwnshipTrackDeg)
+        assertNull(adsbRepository.lastOwnshipSpeedMps)
+    }
+
+    @Test
+    fun adsbOwnshipMotion_dropsTrackWhenGroundSpeedBelowTrackThreshold() {
+        val adsbRepository = FakeAdsbTrafficRepository()
+        val viewModel = createViewModel(adsbRepositoryOverride = adsbRepository)
+        ensureAdsbOverlayEnabled(viewModel)
+        drainMain()
+
+        flightDataRepository.update(
+            buildCompleteFlightData(
+                gps = defaultGps(
+                    latitude = -34.5000,
+                    longitude = 150.5000,
+                    speedMs = 1.2,
+                    bearingDeg = 132.0
+                )
+            )
+        )
+        drainMain()
+
+        assertNull(adsbRepository.lastOwnshipTrackDeg)
+        assertEquals(1.2, adsbRepository.lastOwnshipSpeedMps ?: Double.NaN, 1e-6)
+    }
+
+    @Test
+    fun adsbOwnshipMotion_dropsMotionWhenSpeedAccuracyIsPoor() {
+        val adsbRepository = FakeAdsbTrafficRepository()
+        val viewModel = createViewModel(adsbRepositoryOverride = adsbRepository)
+        ensureAdsbOverlayEnabled(viewModel)
+        drainMain()
+
+        flightDataRepository.update(
+            buildCompleteFlightData(
+                gps = defaultGps(
+                    latitude = -34.5000,
+                    longitude = 150.5000,
+                    speedMs = 15.0,
+                    bearingDeg = 145.0
+                ).copy(speedAccuracyMs = 20.0)
+            )
+        )
+        drainMain()
+
+        assertNull(adsbRepository.lastOwnshipTrackDeg)
+        assertNull(adsbRepository.lastOwnshipSpeedMps)
     }
 
     @Test

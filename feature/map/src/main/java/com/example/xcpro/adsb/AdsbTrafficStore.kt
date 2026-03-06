@@ -51,6 +51,9 @@ internal class AdsbTrafficStore(
         referenceLat: Double,
         referenceLon: Double,
         ownshipAltitudeMeters: Double?,
+        referenceSampleMonoMs: Long? = null,
+        ownshipTrackDeg: Double? = null,
+        ownshipSpeedMps: Double? = null,
         usesOwnshipReference: Boolean,
         radiusMeters: Double,
         verticalAboveMeters: Double,
@@ -108,14 +111,21 @@ internal class AdsbTrafficStore(
                 val trendAssessment = proximityTrendEvaluator.evaluate(
                     id = target.id,
                     distanceMeters = distanceMeters,
-                    sampleMonoMs = target.receivedMonoMs,
+                    sampleMonoMs = trendSampleMonoMs(
+                        targetReceivedMonoMs = target.receivedMonoMs,
+                        ownshipReferenceSampleMonoMs = referenceSampleMonoMs,
+                        usesOwnshipReference = usesOwnshipReference
+                    ),
                     nowMonoMs = nowMonoMs,
                     hasOwnshipReference = usesOwnshipReference
                 )
                 val geometryEmergencyCollisionRisk = collisionRiskEvaluator.evaluate(
                     distanceMeters = distanceMeters,
                     trackDeg = target.trackDeg,
+                    targetSpeedMps = target.speedMps,
                     bearingDegFromUser = bearingDegFromUser,
+                    ownshipTrackDeg = ownshipTrackDeg,
+                    ownshipSpeedMps = ownshipSpeedMps,
                     altitudeDeltaMeters = altitudeDeltaMeters,
                     verticalAboveMeters = verticalAboveMeters,
                     verticalBelowMeters = verticalBelowMeters,
@@ -150,6 +160,7 @@ internal class AdsbTrafficStore(
                     hasOwnshipReference = usesOwnshipReference,
                     hasFreshTrendSample = trendAssessment.hasFreshTrendSample,
                     showClosingAlert = trendAssessment.showClosingAlert,
+                    postPassDivergingSampleCount = trendAssessment.postPassDivergingSampleCount,
                     isCirclingEmergencyRedRule = isCirclingEmergencyRedRule,
                     isEmergencyCollisionRisk = isEmergencyCollisionRisk
                 )
@@ -244,6 +255,7 @@ internal class AdsbTrafficStore(
         hasOwnshipReference: Boolean,
         hasFreshTrendSample: Boolean,
         showClosingAlert: Boolean,
+        postPassDivergingSampleCount: Int,
         isCirclingEmergencyRedRule: Boolean,
         isEmergencyCollisionRisk: Boolean
     ): AdsbProximityTier {
@@ -259,9 +271,18 @@ internal class AdsbTrafficStore(
         if (showClosingAlert) return distanceTier
         if (!hasFreshTrendSample) return distanceTier
         return when (distanceTier) {
-            // Avoid close-range red/amber -> green oscillation on short trend recoveries.
-            AdsbProximityTier.RED -> AdsbProximityTier.AMBER
-            AdsbProximityTier.AMBER -> AdsbProximityTier.GREEN
+            // RED traffic de-escalates in two fresh post-pass samples: RED -> AMBER -> GREEN.
+            AdsbProximityTier.RED -> when {
+                postPassDivergingSampleCount >= POST_PASS_RED_TO_GREEN_MIN_SAMPLES ->
+                    AdsbProximityTier.GREEN
+                else -> AdsbProximityTier.AMBER
+            }
+            // AMBER de-escalation to GREEN requires evidence of a prior closing episode.
+            AdsbProximityTier.AMBER -> when {
+                postPassDivergingSampleCount >= POST_PASS_AMBER_TO_GREEN_MIN_SAMPLES ->
+                    AdsbProximityTier.GREEN
+                else -> AdsbProximityTier.AMBER
+            }
             AdsbProximityTier.GREEN -> AdsbProximityTier.GREEN
             else -> AdsbProximityTier.GREEN
         }
@@ -304,12 +325,24 @@ internal class AdsbTrafficStore(
         return (nowWallEpochSec - lastContactEpochSec).toInt().coerceAtLeast(0)
     }
 
+    private fun trendSampleMonoMs(
+        targetReceivedMonoMs: Long,
+        ownshipReferenceSampleMonoMs: Long?,
+        usesOwnshipReference: Boolean
+    ): Long {
+        if (!usesOwnshipReference) return targetReceivedMonoMs
+        val ownshipSample = ownshipReferenceSampleMonoMs ?: return targetReceivedMonoMs
+        return maxOf(targetReceivedMonoMs, ownshipSample)
+    }
+
     private companion object {
         private const val EMERGENCY_MAX_AGE_SEC = 20
         private const val CIRCLING_RED_DISTANCE_METERS = 1_000.0
         private const val CIRCLING_EMERGENCY_VERTICAL_CAP_METERS = 304.8
         private const val RED_DISTANCE_METERS = 2_000.0
         private const val AMBER_DISTANCE_METERS = 5_000.0
+        private const val POST_PASS_AMBER_TO_GREEN_MIN_SAMPLES = 1
+        private const val POST_PASS_RED_TO_GREEN_MIN_SAMPLES = 2
         private val DISPLAY_PRIORITY_COMPARATOR =
             compareByDescending<AdsbTrafficUiModel> { it.isEmergencyCollisionRisk }
                 .thenBy { it.distanceMeters }

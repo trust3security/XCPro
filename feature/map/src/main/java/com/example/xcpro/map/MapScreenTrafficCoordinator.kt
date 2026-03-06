@@ -110,6 +110,7 @@ internal class MapScreenTrafficCoordinator(
                 if (location == null) {
                     if (adsbTrafficUseCase.isStreamingEnabled.value) {
                         adsbTrafficUseCase.clearOwnshipOrigin()
+                        adsbTrafficUseCase.updateOwnshipMotion(trackDeg = null, speedMps = null)
                     }
                     return@onEach
                 }
@@ -120,6 +121,11 @@ internal class MapScreenTrafficCoordinator(
                 adsbTrafficUseCase.updateOwnshipOrigin(
                     latitude = location.latitude,
                     longitude = location.longitude
+                )
+                val ownshipMotion = toOwnshipMotion(location)
+                adsbTrafficUseCase.updateOwnshipMotion(
+                    trackDeg = ownshipMotion.trackDeg,
+                    speedMps = ownshipMotion.speedMps
                 )
             }
             .launchIn(scope)
@@ -358,10 +364,16 @@ internal class MapScreenTrafficCoordinator(
                 latitude = gps.latitude,
                 longitude = gps.longitude
             )
+            val ownshipMotion = toOwnshipMotion(gps)
+            adsbTrafficUseCase.updateOwnshipMotion(
+                trackDeg = ownshipMotion.trackDeg,
+                speedMps = ownshipMotion.speedMps
+            )
             return
         }
 
         adsbTrafficUseCase.clearOwnshipOrigin()
+        adsbTrafficUseCase.updateOwnshipMotion(trackDeg = null, speedMps = null)
         val cameraTarget = mapState.lastCameraSnapshot.value?.target
         if (cameraTarget != null) {
             adsbTrafficUseCase.updateCenter(
@@ -431,6 +443,32 @@ internal class MapScreenTrafficCoordinator(
         val isFlying: Boolean
     )
 
+    private data class OwnshipMotion(
+        val trackDeg: Double?,
+        val speedMps: Double?
+    )
+
+    private fun toOwnshipMotion(location: MapLocationUiModel): OwnshipMotion {
+        val normalizedSpeedMps = location.speedMs
+            .takeIf { it.isFinite() && it >= 0.0 }
+            ?.takeUnless {
+                location.speedAccuracyMs?.let { accuracy -> accuracy.isFinite() && accuracy > MAX_ACCEPTABLE_SPEED_ACCURACY_MPS } == true
+            }
+        val speedForTrack = normalizedSpeedMps ?: return OwnshipMotion(trackDeg = null, speedMps = null)
+        if (speedForTrack < MIN_VALID_TRACK_SPEED_MPS) {
+            return OwnshipMotion(trackDeg = null, speedMps = speedForTrack)
+        }
+
+        val validTrack = location.bearingDeg
+            .takeIf { it.isFinite() }
+            ?.takeUnless {
+                location.bearingAccuracyDeg?.let { accuracy ->
+                    accuracy.isFinite() && accuracy > MAX_ACCEPTABLE_BEARING_ACCURACY_DEG
+                } == true
+            }
+        return OwnshipMotion(trackDeg = validTrack, speedMps = speedForTrack)
+    }
+
     private companion object {
         private const val TAG = "MapScreenTrafficCoordinator"
         private const val OGN_SETTINGS_FAILURE_MESSAGE = "Unable to update OGN settings."
@@ -440,5 +478,8 @@ internal class MapScreenTrafficCoordinator(
         private const val MUTATION_KEY_TOGGLE_THERMALS = "toggle_thermals"
         private const val MUTATION_KEY_TOGGLE_ADSB = "toggle_adsb"
         private const val MUTATION_KEY_SCIA_OVERLAY_SYNC = "scia_overlay_sync"
+        private const val MIN_VALID_TRACK_SPEED_MPS = 2.0
+        private const val MAX_ACCEPTABLE_BEARING_ACCURACY_DEG = 60.0
+        private const val MAX_ACCEPTABLE_SPEED_ACCURACY_MPS = 12.0
     }
 }

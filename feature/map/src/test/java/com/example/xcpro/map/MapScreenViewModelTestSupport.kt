@@ -266,7 +266,10 @@ class FakeAdsbTrafficRepository : AdsbTrafficRepository {
     var lastCenterLon: Double? = null
     var lastOwnshipLat: Double? = null
     var lastOwnshipLon: Double? = null
+    var lastOwnshipTrackDeg: Double? = null
+    var lastOwnshipSpeedMps: Double? = null
     var updateOwnshipOriginCalls: Int = 0
+    var updateOwnshipMotionCalls: Int = 0
     var clearOwnshipOriginCalls: Int = 0
     var clearTargetsCalls: Int = 0
 
@@ -290,10 +293,18 @@ class FakeAdsbTrafficRepository : AdsbTrafficRepository {
         lastOwnshipLon = longitude
     }
 
+    override fun updateOwnshipMotion(trackDeg: Double?, speedMps: Double?) {
+        updateOwnshipMotionCalls += 1
+        lastOwnshipTrackDeg = trackDeg
+        lastOwnshipSpeedMps = speedMps
+    }
+
     override fun clearOwnshipOrigin() {
         clearOwnshipOriginCalls += 1
         lastOwnshipLat = null
         lastOwnshipLon = null
+        lastOwnshipTrackDeg = null
+        lastOwnshipSpeedMps = null
     }
 
     override fun updateOwnshipAltitudeMeters(altitudeMeters: Double?) = Unit

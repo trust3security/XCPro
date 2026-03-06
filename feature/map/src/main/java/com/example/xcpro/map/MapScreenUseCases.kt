@@ -445,13 +445,13 @@ class AdsbTrafficUseCase @Inject constructor(
         repository.updateCenter(latitude, longitude)
     }
 
-    fun updateOwnshipOrigin(latitude: Double, longitude: Double) {
+    fun updateOwnshipOrigin(latitude: Double, longitude: Double) =
         repository.updateOwnshipOrigin(latitude, longitude)
-    }
 
-    fun clearOwnshipOrigin() {
-        repository.clearOwnshipOrigin()
-    }
+    fun updateOwnshipMotion(trackDeg: Double?, speedMps: Double?) =
+        repository.updateOwnshipMotion(trackDeg, speedMps)
+
+    fun clearOwnshipOrigin() = repository.clearOwnshipOrigin()
 
     fun updateOwnshipAltitudeMeters(altitudeMeters: Double?) {
         repository.updateOwnshipAltitudeMeters(altitudeMeters)

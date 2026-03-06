@@ -189,7 +189,16 @@ internal fun emergencyRuleSourceText(target: AdsbSelectedTargetDetails): String 
 }
 
 internal fun emergencyAudioEligibilityText(target: AdsbSelectedTargetDetails): String =
-    if (target.isEmergencyAudioEligible) "Eligible" else "Not eligible"
+    if (target.isEmergencyAudioEligible) {
+        "Eligible"
+    } else {
+        when {
+            !target.usesOwnshipReference -> "Not eligible (no ownship reference)"
+            !target.isClosing -> "Not eligible (not closing)"
+            target.trackDeg == null -> "Not eligible (target track unavailable)"
+            else -> "Not eligible (geometry or motion confidence gate)"
+        }
+    }
 
 private fun metadataStatusText(
     availability: MetadataAvailability,

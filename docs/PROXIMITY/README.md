@@ -26,7 +26,15 @@ Purpose: single entry point for ADS-B smart proximity behavior, ownership, and t
 - Emergency marker flashing is runtime-configurable in ADS-B settings (`enabled` by default).
 - Smart rule:
   - closing traffic can escalate to alert colors,
-  - non-closing traffic de-escalates by one tier after recovery dwell (`red -> amber`, `amber -> green`) only on a fresh trend sample (no stale de-escalation).
+  - non-closing traffic de-escalates only after a real closing episode and only on fresh trend samples:
+    - close red post-pass transitions use two fresh samples (`red -> amber -> green`),
+    - amber post-pass transitions use one fresh sample (`amber -> green`),
+    - stale/no-fresh samples never de-escalate.
+  - emergency geometry uses heading gate plus projected closest-approach (CPA/TCPA) when ownship and target motion vectors are available (thermal turns included through ownship motion updates).
+  - ownship motion ingestion is confidence-aware:
+    - low ground speed keeps speed but suppresses heading track for projection,
+    - poor speed accuracy suppresses motion context for emergency projection.
+  - trend freshness can use ownship-reference sample time (not only target packet time) so post-pass state can update while ownship moves between provider polls.
 
 ## Tier and Trend Rules
 
@@ -39,6 +47,9 @@ Purpose: single entry point for ADS-B smart proximity behavior, ownership, and t
   - exit closing: `<= 0.3 m/s`
 - Minimum trend sample delta: `800 ms`
 - Recovery dwell before de-escalation to green: `4 s`
+- Post-pass fresh sample thresholds:
+  - red-to-green requires `2` fresh post-pass samples (`red -> amber -> green`)
+  - amber-to-green requires `1` fresh post-pass sample
 - First valid sample is alert-eligible until trend is established.
 
 ## Emergency Rules
@@ -47,6 +58,8 @@ Emergency is highest priority but only when all are true:
 
 - distance `<= 1 km`
 - inbound collision geometry match
+- projected conflict remains likely within lookahead window when motion vectors are available
+- explicit low-speed motion context (`< 3 m/s`) disables geometry emergency to avoid stationary/noise-driven false alerts
 - actively closing
 - relative altitude is available and inside configured above/below vertical gate
 - sample fresh (`ageSec <= 20`, using max(received age, provider last-contact age when available))
@@ -147,4 +160,5 @@ scripts\qa\run_proximity_phase_gates.bat
 - `docs/PROXIMITY/CHANGE_PLAN_ADSB_EMERGENCY_AUDIO_ALERTS_2026-03-02.md`
 - `docs/PROXIMITY/CHANGE_PLAN_ADSB_PROXIMITY_PRODUCTION_GRADE_2026-03-03.md`
 - `docs/PROXIMITY/CHANGE_PLAN_ADSB_CIRCLING_1KM_RED_EMERGENCY_AUDIO_2026-03-04.md`
+- `docs/PROXIMITY/CHANGE_PLAN_ADSB_TURN_AWARE_EMERGENCY_HARDENING_2026-03-06.md`
 - `docs/PROXIMITY/AGENT_EXECUTION_CONTRACT_PROXIMITY_PHASED_FAST_THEN_FULL_2026-03-04.md`

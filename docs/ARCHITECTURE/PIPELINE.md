@@ -332,6 +332,10 @@ ADS-b lifecycle/visibility semantics:
   - Streaming enable is driven by `allowSensorStart && mapVisible && adsbOverlayEnabled`.
   - When streaming turns on, center is seeded from current GPS position (camera fallback when GPS is unavailable).
   - Query-center and ownship-origin updates are GPS-driven from `mapLocation`; ownship origin is cleared when GPS becomes unavailable.
+  - Ownship motion (`bearingDeg`/`speedMs`) is forwarded to ADS-B runtime so emergency geometry can use projected closest-approach checks.
+  - Ownship motion forwarding is confidence-aware:
+    - poor speed-accuracy suppresses motion input,
+    - low-speed fixes keep speed but suppress heading track.
   - Ownship altitude and ADS-b filter settings flows are forwarded to the ADS-b repository runtime.
   - Explicit ADS-b FAB off triggers immediate repository target clear.
 - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt`
@@ -343,7 +347,9 @@ ADS-b lifecycle/visibility semantics:
   - Query center is used for fetch/radius filtering (configurable `1..100 km`, default `10 km`).
   - Ownship origin is used for displayed distance/bearing when available.
   - Ownship reference is freshness-gated in runtime (stale ownship falls back to query-center reference).
+  - Ownship reference sample time is forwarded into trend selection so closing/post-pass state can update on ownship movement between provider packets.
   - Ownship altitude is used for vertical above/below filtering with fail-open when altitude is unavailable.
+  - Ownship motion vectors (track/speed) are used for projected CPA/TCPA emergency gating when available; explicit low-motion context disables geometry emergency escalation.
   - Evaluates EMERGENCY-only audio policy FSM in repository SSOT path (feature-flag + setting-gated),
     including cooldown anti-nuisance telemetry publication in `AdsbTrafficSnapshot`.
   - EMERGENCY audio rollout master/shadow gates are sourced from ADS-B preferences SSOT via rollout port wiring.
@@ -355,7 +361,7 @@ ADS-b lifecycle/visibility semantics:
 - `feature/map/src/main/java/com/example/xcpro/map/AdsbTrafficOverlay.kt`
   - Per-aircraft runtime interpolation smooths marker motion between provider samples.
   - Proximity color expression consumes repository-authored `proximity_tier` (tier mapping only in map layer).
-  - Tier policy is store-side and trend-aware: non-closing traffic de-escalates by at most one tier after recovery dwell (`red -> amber`, `amber -> green`), preventing close-range `red -> green` oscillation.
+  - Tier policy is store-side and trend-aware: post-pass de-escalation uses fresh-sample gating (`red -> amber -> green`, `amber -> green`) only after closing history.
   - Interpolation is visual-only and does not mutate repository SSOT.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
   - ADS-b overlay renders `emptyList()` when overlay preference is disabled.

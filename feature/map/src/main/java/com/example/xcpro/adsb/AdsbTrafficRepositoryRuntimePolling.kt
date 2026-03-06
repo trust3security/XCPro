@@ -85,6 +85,9 @@ internal fun AdsbTrafficRepositoryRuntime.handleSuccess(
         referenceLat = ownshipReference.latitude,
         referenceLon = ownshipReference.longitude,
         ownshipAltitudeMeters = ownshipReference.altitudeMeters,
+        referenceSampleMonoMs = ownshipReference.referenceSampleMonoMs,
+        ownshipTrackDeg = ownshipReference.ownshipTrackDeg,
+        ownshipSpeedMps = ownshipReference.ownshipSpeedMps,
         usesOwnshipReference = ownshipReference.usesOwnshipReference,
         radiusMeters = receiveRadiusKm * 1_000.0,
         verticalAboveMeters = verticalFilterAboveMeters,
@@ -126,6 +129,9 @@ internal fun AdsbTrafficRepositoryRuntime.publishFromStore(
         referenceLat = ownshipReference.latitude,
         referenceLon = ownshipReference.longitude,
         ownshipAltitudeMeters = ownshipReference.altitudeMeters,
+        referenceSampleMonoMs = ownshipReference.referenceSampleMonoMs,
+        ownshipTrackDeg = ownshipReference.ownshipTrackDeg,
+        ownshipSpeedMps = ownshipReference.ownshipSpeedMps,
         usesOwnshipReference = ownshipReference.usesOwnshipReference,
         radiusMeters = receiveRadiusKm * 1_000.0,
         verticalAboveMeters = verticalFilterAboveMeters,
@@ -191,14 +197,20 @@ internal fun AdsbTrafficRepositoryRuntime.ownshipReference(
             latitude = ownship.latitude,
             longitude = ownship.longitude,
             altitudeMeters = altitude,
-            usesOwnshipReference = true
+            usesOwnshipReference = true,
+            referenceSampleMonoMs = ownshipReferenceLastUpdateMonoMs ?: nowMonoMs,
+            ownshipTrackDeg = ownshipTrackDeg,
+            ownshipSpeedMps = ownshipSpeedMps
         )
     } else {
         ReferencePoint(
             latitude = fallbackCenter.latitude,
             longitude = fallbackCenter.longitude,
             altitudeMeters = altitude,
-            usesOwnshipReference = false
+            usesOwnshipReference = false,
+            referenceSampleMonoMs = null,
+            ownshipTrackDeg = null,
+            ownshipSpeedMps = null
         )
     }
 }

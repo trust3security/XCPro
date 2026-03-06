@@ -24,6 +24,7 @@ class AdsbProximityTrendEvaluatorTest {
         assertFalse(first.hasFreshTrendSample)
         assertFalse(first.isClosing)
         assertTrue(first.showClosingAlert)
+        assertEquals(0, first.postPassDivergingSampleCount)
     }
 
     @Test
@@ -49,6 +50,7 @@ class AdsbProximityTrendEvaluatorTest {
         assertFalse(noFreshSample.hasFreshTrendSample)
         assertFalse(noFreshSample.isClosing)
         assertTrue(noFreshSample.showClosingAlert)
+        assertEquals(0, noFreshSample.postPassDivergingSampleCount)
     }
 
     @Test
@@ -85,20 +87,33 @@ class AdsbProximityTrendEvaluatorTest {
             nowMonoMs = 7_100L,
             hasOwnshipReference = true
         )
+        val postPassSecond = evaluator.evaluate(
+            id = id,
+            distanceMeters = 1_984.0,
+            nowMonoMs = 8_300L,
+            hasOwnshipReference = true
+        )
 
         assertTrue(closing.hasTrendSample)
         assertTrue(closing.hasFreshTrendSample)
         assertTrue(closing.isClosing)
         assertTrue(closing.showClosingAlert)
+        assertEquals(0, closing.postPassDivergingSampleCount)
         assertFalse(divergingStart.isClosing)
         assertTrue(divergingStart.hasFreshTrendSample)
         assertTrue(divergingStart.showClosingAlert)
+        assertEquals(0, divergingStart.postPassDivergingSampleCount)
         assertFalse(stillRecovering.isClosing)
         assertTrue(stillRecovering.hasFreshTrendSample)
         assertTrue(stillRecovering.showClosingAlert)
+        assertEquals(0, stillRecovering.postPassDivergingSampleCount)
         assertFalse(recovered.isClosing)
         assertTrue(recovered.hasFreshTrendSample)
         assertFalse(recovered.showClosingAlert)
+        assertEquals(1, recovered.postPassDivergingSampleCount)
+        assertFalse(postPassSecond.isClosing)
+        assertFalse(postPassSecond.showClosingAlert)
+        assertEquals(2, postPassSecond.postPassDivergingSampleCount)
     }
 
     @Test
@@ -127,9 +142,11 @@ class AdsbProximityTrendEvaluatorTest {
         assertFalse(shortDt.hasTrendSample)
         assertFalse(shortDt.hasFreshTrendSample)
         assertTrue(shortDt.showClosingAlert)
+        assertEquals(0, shortDt.postPassDivergingSampleCount)
         assertTrue(longDt.hasTrendSample)
         assertTrue(longDt.hasFreshTrendSample)
         assertTrue(longDt.isClosing)
+        assertEquals(0, longDt.postPassDivergingSampleCount)
     }
 
     @Test
@@ -165,9 +182,11 @@ class AdsbProximityTrendEvaluatorTest {
         assertFalse(neutral.hasFreshTrendSample)
         assertFalse(neutral.isClosing)
         assertFalse(neutral.showClosingAlert)
+        assertEquals(0, neutral.postPassDivergingSampleCount)
         assertFalse(afterReset.hasTrendSample)
         assertFalse(afterReset.hasFreshTrendSample)
         assertTrue(afterReset.showClosingAlert)
+        assertEquals(0, afterReset.postPassDivergingSampleCount)
     }
 
     @Test
@@ -207,8 +226,10 @@ class AdsbProximityTrendEvaluatorTest {
 
         assertFalse(recovered.isClosing)
         assertFalse(recovered.showClosingAlert)
+        assertEquals(1, recovered.postPassDivergingSampleCount)
         assertTrue(reClosing.isClosing)
         assertTrue(reClosing.showClosingAlert)
+        assertEquals(0, reClosing.postPassDivergingSampleCount)
     }
 
     @Test
@@ -249,12 +270,16 @@ class AdsbProximityTrendEvaluatorTest {
         assertTrue(sample1.hasTrendSample)
         assertFalse(sample1.isClosing)
         assertFalse(sample1.showClosingAlert)
+        assertEquals(0, sample1.postPassDivergingSampleCount)
         assertFalse(sample2.isClosing)
         assertFalse(sample2.showClosingAlert)
+        assertEquals(0, sample2.postPassDivergingSampleCount)
         assertFalse(sample3.isClosing)
         assertFalse(sample3.showClosingAlert)
+        assertEquals(0, sample3.postPassDivergingSampleCount)
         assertFalse(sample4.isClosing)
         assertFalse(sample4.showClosingAlert)
+        assertEquals(0, sample4.postPassDivergingSampleCount)
     }
 
     @Test
@@ -280,6 +305,11 @@ class AdsbProximityTrendEvaluatorTest {
                 "showClosingAlert mismatch at index $index",
                 first.showClosingAlert,
                 second.showClosingAlert
+            )
+            assertEquals(
+                "postPassDivergingSampleCount mismatch at index $index",
+                first.postPassDivergingSampleCount,
+                second.postPassDivergingSampleCount
             )
             if (first.closingRateMps == null || second.closingRateMps == null) {
                 assertEquals(

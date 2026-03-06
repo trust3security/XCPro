@@ -148,6 +148,10 @@ internal class AdsbTrafficRepositoryRuntime(
     @Volatile
     internal var ownshipAltitudeMeters: Double? = null
     @Volatile
+    internal var ownshipTrackDeg: Double? = null
+    @Volatile
+    internal var ownshipSpeedMps: Double? = null
+    @Volatile
     internal var ownshipCircling: Boolean = false
     @Volatile
     internal var ownshipCirclingFeatureEnabled: Boolean = false
@@ -155,7 +159,6 @@ internal class AdsbTrafficRepositoryRuntime(
     internal var lastOwnshipAltitudeReselectMonoMs: Long = Long.MIN_VALUE
     @Volatile
     internal var lastOwnshipAltitudeReselectMeters: Double? = null
-
     @Volatile
     internal var receiveRadiusKm: Int = ADSB_MAX_DISTANCE_DEFAULT_KM
     @Volatile
@@ -197,13 +200,9 @@ internal class AdsbTrafficRepositoryRuntime(
         observeEmergencyAudioRollout()
     }
 
-    override fun start() {
-        setEnabled(true)
-    }
+    override fun start() { setEnabled(true) }
 
-    override fun stop() {
-        setEnabled(false)
-    }
+    override fun stop() { setEnabled(false) }
 
     override fun setEnabled(enabled: Boolean) {
         if (_isEnabled.value == enabled) {
@@ -264,9 +263,21 @@ internal class AdsbTrafficRepositoryRuntime(
         center?.let { activeCenter -> publishFromStore(activeCenter) }
     }
 
+    override fun updateOwnshipMotion(trackDeg: Double?, speedMps: Double?) {
+        val normalizedTrackDeg = trackDeg?.takeIf { it.isFinite() }?.let { ((it % 360.0) + 360.0) % 360.0 }
+        val normalizedSpeedMps = speedMps?.takeIf { it.isFinite() }?.coerceAtLeast(0.0)
+        val changed = ownshipTrackDeg != normalizedTrackDeg || ownshipSpeedMps != normalizedSpeedMps
+        ownshipTrackDeg = normalizedTrackDeg
+        ownshipSpeedMps = normalizedSpeedMps
+        if (!changed || !_isEnabled.value) return
+        center?.let { activeCenter -> publishFromStore(activeCenter) }
+    }
+
     override fun clearOwnshipOrigin() {
         if (ownshipOrigin == null) return
         ownshipOrigin = null
+        ownshipTrackDeg = null
+        ownshipSpeedMps = null
         ownshipReferenceLastUpdateMonoMs = null
         if (!_isEnabled.value) return
         center?.let { activeCenter -> publishFromStore(activeCenter) }
@@ -438,7 +449,10 @@ internal class AdsbTrafficRepositoryRuntime(
         val latitude: Double,
         val longitude: Double,
         val altitudeMeters: Double?,
-        val usesOwnshipReference: Boolean
+        val usesOwnshipReference: Boolean,
+        val referenceSampleMonoMs: Long?,
+        val ownshipTrackDeg: Double?,
+        val ownshipSpeedMps: Double?
     )
 
     internal sealed interface CenterWaitState {

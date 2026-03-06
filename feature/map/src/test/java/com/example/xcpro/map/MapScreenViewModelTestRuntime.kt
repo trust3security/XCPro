@@ -394,6 +394,7 @@ abstract class MapScreenViewModelTestBase {
 
             override fun updateCenter(latitude: Double, longitude: Double) = Unit
             override fun updateOwnshipOrigin(latitude: Double, longitude: Double) = Unit
+            override fun updateOwnshipMotion(trackDeg: Double?, speedMps: Double?) = Unit
             override fun clearOwnshipOrigin() = Unit
             override fun updateOwnshipAltitudeMeters(altitudeMeters: Double?) = Unit
             override fun updateOwnshipCirclingContext(

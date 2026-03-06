@@ -82,6 +82,35 @@ class AdsbMarkerDetailsSheetSemanticsTest {
         assertEquals("Eligible", emergencyAudioEligibilityText(details))
     }
 
+    @Test
+    fun semantics_audioIneligible_showsTrackUnavailableReason() {
+        val details = sampleDetails(
+            usesOwnshipReference = true,
+            proximityTier = AdsbProximityTier.RED,
+            proximityReason = AdsbProximityReason.DIVERGING_OR_STEADY,
+            isClosing = true,
+            closingRateMps = 0.1,
+            isEmergencyAudioEligible = false,
+            trackDeg = null
+        )
+
+        assertEquals("Not eligible (target track unavailable)", emergencyAudioEligibilityText(details))
+    }
+
+    @Test
+    fun semantics_audioIneligible_showsNoOwnshipReason() {
+        val details = sampleDetails(
+            usesOwnshipReference = false,
+            proximityTier = AdsbProximityTier.NEUTRAL,
+            proximityReason = AdsbProximityReason.NO_OWNSHIP_REFERENCE,
+            isClosing = false,
+            closingRateMps = null,
+            isEmergencyAudioEligible = false
+        )
+
+        assertEquals("Not eligible (no ownship reference)", emergencyAudioEligibilityText(details))
+    }
+
     private fun sampleDetails(
         usesOwnshipReference: Boolean,
         proximityTier: AdsbProximityTier,
@@ -90,7 +119,8 @@ class AdsbMarkerDetailsSheetSemanticsTest {
         closingRateMps: Double?,
         isEmergencyCollisionRisk: Boolean = false,
         isEmergencyAudioEligible: Boolean = false,
-        isCirclingEmergencyRedRule: Boolean = false
+        isCirclingEmergencyRedRule: Boolean = false,
+        trackDeg: Double? = 180.0
     ): AdsbSelectedTargetDetails {
         val id = Icao24.from("abc123") ?: error("invalid test id")
         return AdsbSelectedTargetDetails(
@@ -100,7 +130,7 @@ class AdsbMarkerDetailsSheetSemanticsTest {
             lon = 149.0,
             altitudeM = 1000.0,
             speedMps = 70.0,
-            trackDeg = 180.0,
+            trackDeg = trackDeg,
             climbMps = 0.5,
             ageSec = 2,
             isStale = false,

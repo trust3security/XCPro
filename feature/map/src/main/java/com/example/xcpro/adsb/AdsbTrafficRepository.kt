@@ -36,6 +36,7 @@ interface AdsbTrafficRepository {
     fun clearTargets()
     fun updateCenter(latitude: Double, longitude: Double)
     fun updateOwnshipOrigin(latitude: Double, longitude: Double)
+    fun updateOwnshipMotion(trackDeg: Double?, speedMps: Double?)
     fun clearOwnshipOrigin()
     fun updateOwnshipAltitudeMeters(altitudeMeters: Double?)
     fun updateOwnshipCirclingContext(
@@ -113,6 +114,9 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
 
     override fun updateOwnshipOrigin(latitude: Double, longitude: Double) =
         runtime.updateOwnshipOrigin(latitude = latitude, longitude = longitude)
+
+    override fun updateOwnshipMotion(trackDeg: Double?, speedMps: Double?) =
+        runtime.updateOwnshipMotion(trackDeg = trackDeg, speedMps = speedMps)
 
     override fun clearOwnshipOrigin() = runtime.clearOwnshipOrigin()
 
