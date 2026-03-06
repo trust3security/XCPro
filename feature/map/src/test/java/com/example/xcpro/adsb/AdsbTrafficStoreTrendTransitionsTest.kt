@@ -174,6 +174,42 @@ class AdsbTrafficStoreTrendTransitionsTest {
     }
 
     @Test
+    fun select_deEscalatesAmberToGreenAfterClosestApproachPassEvenWithoutClosingEpisode() {
+        val store = AdsbTrafficStore()
+        val now = 415_000L
+        val first = target(
+            index = 41,
+            lat = -33.8688,
+            lon = 151.24650,
+            receivedMonoMs = now
+        ).copy(trackDeg = null)
+        val slightApproach = first.copy(
+            lon = 151.24649,
+            receivedMonoMs = now + 2_000L
+        )
+        val divergingPastClosest = first.copy(
+            lon = 151.24799,
+            receivedMonoMs = now + 4_000L
+        )
+
+        store.upsertAll(listOf(first))
+        val firstUi = selectAt(store = store, nowMonoMs = now).displayed.first()
+
+        store.upsertAll(listOf(slightApproach))
+        val slightApproachUi = selectAt(store = store, nowMonoMs = now + 2_000L).displayed.first()
+
+        store.upsertAll(listOf(divergingPastClosest))
+        val passedUi = selectAt(store = store, nowMonoMs = now + 4_000L).displayed.first()
+
+        assertEquals(AdsbProximityTier.AMBER, firstUi.proximityTier)
+        assertEquals(AdsbProximityTier.AMBER, slightApproachUi.proximityTier)
+        assertFalse(slightApproachUi.isClosing)
+        assertEquals(AdsbProximityTier.GREEN, passedUi.proximityTier)
+        assertFalse(passedUi.isClosing)
+        assertEquals(AdsbProximityReason.DIVERGING_OR_STEADY, passedUi.proximityReason)
+    }
+
+    @Test
     fun select_reEntersRedWhenClosingResumesAfterAmberDeEscalation() {
         val store = AdsbTrafficStore()
         val now = 600_000L

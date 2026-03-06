@@ -30,6 +30,8 @@ Purpose: single entry point for ADS-B smart proximity behavior, ownership, and t
     - close red post-pass transitions use two fresh samples (`red -> amber -> green`),
     - amber post-pass transitions use one fresh sample (`amber -> green`),
     - stale/no-fresh samples never de-escalate.
+  - closest-approach pass detection is also used for smart amber de-escalation:
+    - when distance grows by at least `120 m` from the closest tracked sample (fresh trend sample, not in recovery dwell), amber can de-escalate to green even if closing-enter threshold was never crossed.
   - emergency geometry uses heading gate plus projected closest-approach (CPA/TCPA) when ownship and target motion vectors are available (thermal turns included through ownship motion updates).
   - ownship motion ingestion is confidence-aware:
     - low ground speed keeps speed but suppresses heading track for projection,
@@ -129,7 +131,10 @@ When latched:
 - Evaluator hardening:
   - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbProximityTrendEvaluatorTest.kt`
 - Store hardening:
-  - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficStoreTest.kt`
+  - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficStoreFilteringAndOrderingTest.kt`
+  - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficStoreTrendTransitionsTest.kt`
+  - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficStoreEmergencyGeometryTest.kt`
+  - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficStoreCirclingEmergencyTest.kt`
 - Repository deterministic transitions:
   - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficRepositoryTest.kt`
 - KPI math + replay KPI parity:

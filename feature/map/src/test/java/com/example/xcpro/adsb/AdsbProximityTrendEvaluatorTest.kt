@@ -233,6 +233,37 @@ class AdsbProximityTrendEvaluatorTest {
     }
 
     @Test
+    fun evaluate_marksPostPassDivergingWithoutPriorClosingWhenDistanceMovesPastClosestApproach() {
+        val evaluator = AdsbProximityTrendEvaluator()
+
+        evaluator.evaluate(
+            id = id,
+            distanceMeters = 3_400.0,
+            nowMonoMs = 1_000L,
+            hasOwnshipReference = true
+        )
+        val lowRateApproach = evaluator.evaluate(
+            id = id,
+            distanceMeters = 3_399.5,
+            nowMonoMs = 2_000L,
+            hasOwnshipReference = true
+        )
+        val divergingPastClosest = evaluator.evaluate(
+            id = id,
+            distanceMeters = 3_525.0,
+            nowMonoMs = 3_000L,
+            hasOwnshipReference = true
+        )
+
+        assertTrue(lowRateApproach.hasTrendSample)
+        assertFalse(lowRateApproach.isClosing)
+        assertEquals(0, lowRateApproach.postPassDivergingSampleCount)
+        assertFalse(divergingPastClosest.isClosing)
+        assertFalse(divergingPastClosest.showClosingAlert)
+        assertEquals(1, divergingPastClosest.postPassDivergingSampleCount)
+    }
+
+    @Test
     fun evaluate_constantDistanceJitterDoesNotOscillateIntoClosing() {
         val evaluator = AdsbProximityTrendEvaluator()
 
