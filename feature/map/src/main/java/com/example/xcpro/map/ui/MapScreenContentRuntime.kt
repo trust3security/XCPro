@@ -176,20 +176,11 @@ internal fun MapScreenContent(
     val weatherOverlayState by weatherOverlayViewModel.overlayState.collectAsStateWithLifecycle()
     val ognTrailSelectionViewModel: OgnTrailSelectionViewModel = hiltViewModel()
     val forecastRuntimeWarning by overlayManager.forecastRuntimeWarningMessage.collectAsStateWithLifecycle()
-    val skySightSatelliteRuntimeError by overlayManager
-        .skySightSatelliteRuntimeErrorMessage
-        .collectAsStateWithLifecycle()
+    val skySightSatelliteRuntimeError by overlayManager.skySightSatelliteRuntimeErrorMessage.collectAsStateWithLifecycle()
     val selectedOgnTrailAircraftKeys by ognTrailSelectionViewModel.selectedTrailAircraftKeys
         .collectAsStateWithLifecycle()
-    val trailSelectionLookup = remember(selectedOgnTrailAircraftKeys) {
-        buildOgnSelectionLookup(selectedOgnTrailAircraftKeys)
-    }
-    val ognTrailAircraftRows = remember(ognSnapshot.targets, trailSelectionLookup) {
-        buildOgnTrailAircraftRows(
-            targets = ognSnapshot.targets,
-            selectionLookup = trailSelectionLookup
-        )
-    }
+    val trailSelectionLookup = remember(selectedOgnTrailAircraftKeys) { buildOgnSelectionLookup(selectedOgnTrailAircraftKeys) }
+    val ognTrailAircraftRows = remember(ognSnapshot.targets, trailSelectionLookup) { buildOgnTrailAircraftRows(ognSnapshot.targets, trailSelectionLookup) }
     val currentQnhLabel = remember(liveFlightData?.qnh) {
         val qnh = liveFlightData?.qnh ?: 1013.25
         String.format(Locale.US, "%.1f hPa", qnh)
@@ -204,28 +195,15 @@ internal fun MapScreenContent(
     var tappedWindArrowCallout by remember { mutableStateOf<WindArrowTapCallout?>(null) }
     var windTapLabelSize by remember { mutableStateOf(IntSize.Zero) }
     var overlayViewportSize by remember { mutableStateOf(IntSize.Zero) }
-    val selectedBottomTab = remember(selectedBottomTabName) {
-        runCatching { MapBottomTab.valueOf(selectedBottomTabName) }
-            .getOrDefault(MapBottomTab.SKYSIGHT)
-    }
+    val selectedBottomTab = remember(selectedBottomTabName) { runCatching { MapBottomTab.valueOf(selectedBottomTabName) }.getOrDefault(MapBottomTab.SKYSIGHT) }
     val taskPanelState by taskScreenManager.taskPanelState.collectAsStateWithLifecycle()
     val isTaskPanelVisible = taskPanelState != MapTaskScreenManager.TaskPanelState.HIDDEN
-    val skySightRegionCoverageWarning = computeSkySightRegionCoverageWarning(
-        mapLibreMap = mapState.mapLibreMap,
-        fallbackLocation = currentLocation,
-        regionCode = forecastOverlayState.selectedRegionCode
-    )
-    val skySightRainArbitrationWarning = computeSkySightRainSuppressionWarning(
-        forecastOverlayState = forecastOverlayState,
-        rainViewerEnabled = weatherOverlayState.enabled
-    )
+    val skySightRegionCoverageWarning = computeSkySightRegionCoverageWarning(mapState.mapLibreMap, currentLocation, forecastOverlayState.selectedRegionCode)
+    val skySightRainArbitrationWarning = computeSkySightRainSuppressionWarning(forecastOverlayState, weatherOverlayState.enabled)
     val skySightUiMessages = resolveSkySightUiMessages(
-        repositoryWarningMessage = forecastOverlayState.warningMessage,
-        regionCoverageWarningMessage = skySightRegionCoverageWarning,
-        runtimeWarningMessage = forecastRuntimeWarning,
-        runtimeArbitrationWarningMessage = skySightRainArbitrationWarning,
-        repositoryErrorMessage = forecastOverlayState.errorMessage,
-        runtimeErrorMessage = skySightSatelliteRuntimeError
+        repositoryWarningMessage = forecastOverlayState.warningMessage, regionCoverageWarningMessage = skySightRegionCoverageWarning,
+        runtimeWarningMessage = forecastRuntimeWarning, runtimeArbitrationWarningMessage = skySightRainArbitrationWarning,
+        repositoryErrorMessage = forecastOverlayState.errorMessage, runtimeErrorMessage = skySightSatelliteRuntimeError
     )
     val skySightWarningMessage = skySightUiMessages.warningMessage
     val skySightErrorMessage = skySightUiMessages.errorMessage
@@ -234,10 +212,7 @@ internal fun MapScreenContent(
     val isForecastWindArrowOverlayActive = forecastOverlayState.windOverlayEnabled &&
         forecastOverlayState.windDisplayMode == ForecastWindDisplayMode.ARROW &&
         forecastOverlayState.windTileSpec?.format == ForecastTileFormat.VECTOR_WIND_POINTS
-    val skySightSatViewEnabled = currentMapStyleName.equals(
-        SATELLITE_MAP_STYLE_NAME,
-        ignoreCase = true
-    )
+    val skySightSatViewEnabled = currentMapStyleName.equals(SATELLITE_MAP_STYLE_NAME, ignoreCase = true)
     val openQnhDialog: () -> Unit = {
         val currentQnh = liveFlightData?.qnh ?: 1013.25
         qnhInput = seedQnhInputValue(currentQnh, unitsPreferences)
@@ -288,8 +263,8 @@ internal fun MapScreenContent(
             candidateKey = target.canonicalKey
         )
     }
-    val selectedOgnTargetIsGlider = remember(selectedOgnTarget) {
-        selectedOgnTarget?.identity?.aircraftTypeCode == OGN_GLIDER_AIRCRAFT_TYPE_CODE
+    val selectedOgnTargetIsGliderClass = remember(selectedOgnTarget) {
+        isTargetableOgnAircraftTypeCode(selectedOgnTarget?.identity?.aircraftTypeCode)
     }
     LaunchedEffect(isTaskPanelVisible, hasTrafficDetailsOpen) {
         if (isTaskPanelVisible || hasTrafficDetailsOpen) {
@@ -503,7 +478,7 @@ internal fun MapScreenContent(
             selectedOgnTarget = selectedOgnTarget,
             selectedOgnTargetSciaEnabled = selectedOgnTargetSciaEnabled,
             selectedOgnTargetTargetEnabled = selectedOgnTargetTargetEnabled,
-            selectedOgnTargetTargetToggleEnabled = selectedOgnTargetIsGlider,
+            selectedOgnTargetTargetToggleEnabled = selectedOgnTargetIsGliderClass,
             ognTrailSelectionViewModel = ognTrailSelectionViewModel,
             showOgnSciaEnabled = showOgnSciaEnabled,
             ognOverlayEnabled = ognOverlayEnabled,
@@ -524,5 +499,3 @@ internal fun MapScreenContent(
         unitsPreferences = unitsPreferences
     )
 }
-
-private const val OGN_GLIDER_AIRCRAFT_TYPE_CODE = 1

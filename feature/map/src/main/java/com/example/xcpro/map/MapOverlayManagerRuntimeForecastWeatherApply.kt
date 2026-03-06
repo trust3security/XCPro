@@ -1,0 +1,79 @@
+package com.example.xcpro.map
+
+import android.util.Log
+import com.example.xcpro.weather.rain.WEATHER_RAIN_STALE_DIMMED_OPACITY_MAX
+import org.maplibre.android.maps.MapLibreMap
+
+internal fun applySkySightSatelliteOverlayRuntime(
+    mapState: MapScreenState,
+    map: MapLibreMap,
+    config: SkySightSatelliteRuntimeConfig,
+    onRuntimeErrorChanged: (String?) -> Unit,
+    bringTrafficOverlaysToFront: () -> Unit
+): Boolean {
+    val hasAnySatelliteLayer = config.showSatelliteImagery || config.showRadar || config.showLightning
+    if (!config.enabled || !hasAnySatelliteLayer) {
+        mapState.skySightSatelliteOverlay?.clear()
+        onRuntimeErrorChanged(null)
+        return true
+    }
+    if (mapState.skySightSatelliteOverlay == null) {
+        mapState.skySightSatelliteOverlay = SkySightSatelliteOverlay(map)
+    }
+    return runCatching {
+        mapState.skySightSatelliteOverlay?.render(
+            SkySightSatelliteRenderConfig(
+                enabled = config.enabled,
+                showSatelliteImagery = config.showSatelliteImagery,
+                showRadar = config.showRadar,
+                showLightning = config.showLightning,
+                animate = config.animate,
+                historyFrameCount = config.historyFrameCount,
+                referenceTimeUtcMs = config.referenceTimeUtcMs
+            )
+        )
+        onRuntimeErrorChanged(null)
+        bringTrafficOverlaysToFront()
+        true
+    }.getOrElse { throwable ->
+        onRuntimeErrorChanged(
+            throwable.message?.trim()?.takeIf { it.isNotEmpty() }
+                ?: "SkySight satellite overlay failed to apply"
+        )
+        Log.e("MapOverlayManager", "SkySight satellite overlay apply failed: ${throwable.message}", throwable)
+        false
+    }
+}
+
+internal fun applyWeatherRainOverlayRuntime(
+    mapState: MapScreenState,
+    map: MapLibreMap,
+    config: WeatherRainRuntimeConfig,
+    bringTrafficOverlaysToFront: () -> Unit
+): Boolean {
+    val frameSelection = config.frameSelection
+    if (!config.enabled || frameSelection == null) {
+        mapState.weatherRainOverlay?.clear()
+        return true
+    }
+    if (mapState.weatherRainOverlay == null) {
+        mapState.weatherRainOverlay = WeatherRainOverlay(map)
+    }
+    val effectiveOpacity = if (config.stale) {
+        minOf(config.opacity, WEATHER_RAIN_STALE_DIMMED_OPACITY_MAX)
+    } else {
+        config.opacity
+    }
+    return runCatching {
+        mapState.weatherRainOverlay?.render(
+            frameSelection = frameSelection,
+            opacity = effectiveOpacity,
+            transitionDurationMs = config.transitionDurationMs
+        )
+        bringTrafficOverlaysToFront()
+        true
+    }.getOrElse { throwable ->
+        Log.e("MapOverlayManager", "Weather rain overlay apply failed: ${throwable.message}", throwable)
+        false
+    }
+}

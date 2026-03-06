@@ -40,9 +40,7 @@ abstract class AdsbTrafficRepositoryTestBase {
             (getTokenAccessState() as? OpenSkyTokenAccessState.Available)?.token
 
         override fun hasCredentials(): Boolean = hasCredentials || !token.isNullOrBlank()
-        override fun invalidate() {
-            token = null
-        }
+        override fun invalidate() { token = null }
     }
 
     protected class CapturingBboxProvider : AdsbProviderClient {
@@ -95,6 +93,7 @@ abstract class AdsbTrafficRepositoryTestBase {
 
         repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
         repository.updateOwnshipOrigin(latitude = -33.8688, longitude = 151.2093)
+        repository.updateOwnshipMotion(trackDeg = 90.0, speedMps = 20.0)
         repository.setEnabled(true)
         scheduler.runCurrent()
         val timeline = mutableListOf(snapshotOf(repository))
@@ -166,34 +165,22 @@ abstract class AdsbTrafficRepositoryTestBase {
 
         repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
         repository.updateOwnshipOrigin(latitude = -33.8688, longitude = 151.2093)
+        repository.updateOwnshipMotion(trackDeg = 90.0, speedMps = 20.0)
         repository.setEnabled(true)
         scheduler.runCurrent()
         val timeline = mutableListOf(snapshotOf(repository))
+        fun advanceAndSnapshot(monoMs: Long) {
+            clock.setMonoMs(monoMs)
+            scheduler.advanceTimeBy(10_000L)
+            scheduler.runCurrent()
+            timeline += snapshotOf(repository)
+        }
+        advanceAndSnapshot(10_000L)
+        advanceAndSnapshot(20_000L)
+        advanceAndSnapshot(30_000L)
 
-        clock.setMonoMs(10_000L)
-        scheduler.advanceTimeBy(10_000L)
-        scheduler.runCurrent()
-        timeline += snapshotOf(repository)
-
-        clock.setMonoMs(20_000L)
-        scheduler.advanceTimeBy(10_000L)
-        scheduler.runCurrent()
-        timeline += snapshotOf(repository)
-
-        clock.setMonoMs(30_000L)
-        scheduler.advanceTimeBy(10_000L)
-        scheduler.runCurrent()
-        timeline += snapshotOf(repository)
-
-        clock.setMonoMs(40_000L)
-        scheduler.advanceTimeBy(10_000L)
-        scheduler.runCurrent()
-        timeline += snapshotOf(repository)
-
-        clock.setMonoMs(50_000L)
-        scheduler.advanceTimeBy(10_000L)
-        scheduler.runCurrent()
-        timeline += snapshotOf(repository)
+        advanceAndSnapshot(40_000L)
+        advanceAndSnapshot(50_000L)
 
         repository.stop()
         scheduler.runCurrent()
@@ -268,6 +255,7 @@ abstract class AdsbTrafficRepositoryTestBase {
             scheduler.runCurrent()
             repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
             repository.updateOwnshipOrigin(latitude = -33.8688, longitude = 151.2093)
+            repository.updateOwnshipMotion(trackDeg = 90.0, speedMps = 20.0)
             repository.updateOwnshipAltitudeMeters(0.0)
             repository.setEnabled(true)
             scheduler.runCurrent()
@@ -398,9 +386,7 @@ abstract class AdsbTrafficRepositoryTestBase {
         private val _isOnline = MutableStateFlow(initialOnline)
         override val isOnline: StateFlow<Boolean> = _isOnline
 
-        fun setOnline(online: Boolean) {
-            _isOnline.value = online
-        }
+        fun setOnline(online: Boolean) { _isOnline.value = online }
     }
 
     protected class ThrowingOnceNetworkAvailabilityPort : AdsbNetworkAvailabilityPort {
@@ -480,9 +466,7 @@ abstract class AdsbTrafficRepositoryTestBase {
         override val emergencyAudioEnabledFlow: StateFlow<Boolean> = _enabled
         override val emergencyAudioCooldownMsFlow: StateFlow<Long> = _cooldownMs
 
-        fun setEnabled(enabled: Boolean) {
-            _enabled.value = enabled
-        }
+        fun setEnabled(enabled: Boolean) { _enabled.value = enabled }
     }
 
     protected class FakeEmergencyAudioRolloutPort(
@@ -504,17 +488,11 @@ abstract class AdsbTrafficRepositoryTestBase {
         override val emergencyAudioRollbackLatchedFlow: StateFlow<Boolean> = _rollbackLatched
         override val emergencyAudioRollbackReasonFlow: StateFlow<String?> = _rollbackReason
 
-        fun setMasterEnabled(enabled: Boolean) {
-            _masterEnabled.value = enabled
-        }
+        fun setMasterEnabled(enabled: Boolean) { _masterEnabled.value = enabled }
 
-        fun setShadowModeEnabled(enabled: Boolean) {
-            _shadowModeEnabled.value = enabled
-        }
+        fun setShadowModeEnabled(enabled: Boolean) { _shadowModeEnabled.value = enabled }
 
-        fun setCohortPercent(percent: Int) {
-            _cohortPercent.value = percent
-        }
+        fun setCohortPercent(percent: Int) { _cohortPercent.value = percent }
 
         override suspend fun latchEmergencyAudioRollback(reason: String) {
             _rollbackLatched.value = true
