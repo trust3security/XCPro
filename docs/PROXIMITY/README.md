@@ -29,7 +29,8 @@ Purpose: single entry point for ADS-B smart proximity behavior, ownership, and t
   - non-closing traffic de-escalates only after a real closing episode and only on fresh trend samples:
     - close red post-pass transitions use two fresh samples (`red -> amber -> green`),
     - amber post-pass transitions use one fresh sample (`amber -> green`),
-    - stale/no-fresh samples never de-escalate.
+    - stale/no-fresh samples never de-escalate,
+    - stale/no-fresh samples hold the last resolved non-emergency tier (no `green -> amber` rebound flicker); stale evaluations can still escalate directly to red for safety.
   - closest-approach pass detection is also used for smart amber de-escalation:
     - when distance grows by at least `120 m` from the closest tracked sample (fresh trend sample, not in recovery dwell), amber can de-escalate to green even if closing-enter threshold was never crossed.
   - emergency geometry uses heading gate plus projected closest-approach (CPA/TCPA) when ownship and target motion vectors are available (thermal turns included through ownship motion updates).
@@ -100,6 +101,7 @@ Emergency ineligibility reason contract:
 
 - With ownship reference:
   - full trend/tier/emergency policy applies.
+- Same-coordinate ownship updates refresh ownship-reference freshness and republish snapshot/store state immediately (no wait for next network poll).
 - Without ownship reference:
   - tier becomes `NEUTRAL`
   - emergency disabled
@@ -113,6 +115,9 @@ Emergency ineligibility reason contract:
   - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbProximityTrendEvaluator.kt`
 - Repository wiring and publish cadence:
   - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt`
+  - Runtime mutation ordering is single-writer and serialized on repository scope:
+    all external mutators (`setEnabled`, center/ownship/filter updates, reconnect)
+    are enqueued onto one runtime dispatcher lane before store/FSM mutation.
   - emergency-audio rollout master/shadow gates are sourced from ADS-B preferences SSOT.
 - KPI accumulation (monotonic denominator, anti-nuisance counters, determinism guard):
   - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbEmergencyAudioKpiAccumulator.kt`

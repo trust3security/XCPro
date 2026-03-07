@@ -72,6 +72,8 @@ Reference:
   - center fallback is used for geometry
   - marker urgency coloring uses neutral color
   - emergency collision-risk classification is disabled
+- Same-coordinate ownship-origin refresh updates republish snapshot/store state immediately,
+  restoring ownship-relative semantics without waiting for the next provider poll.
 
 ### 2.4 Proximity coloring
 - Policy is trend-aware, not distance-only.
@@ -82,6 +84,8 @@ Reference:
 - Alert colors (`amber`/`red`) are shown only while closing trend is active.
 - If a target is no longer closing (steady or diverging), color de-escalates to green
   after a short recovery dwell (`4 s`) to avoid flicker.
+- Non-fresh trend evaluations hold the last resolved non-emergency tier to prevent
+  `green <-> amber` rebound flicker between fresh and stale reevaluations.
 - First in-range sample is treated as alert-eligible until trend is established.
 - Emergency collision-risk styling has highest priority and requires:
   - emergency geometry match,
@@ -110,6 +114,10 @@ Reference:
   - if probe fails, cooldown reopens; if probe succeeds, normal cadence resumes
 - Retry/circuit policy ownership:
   - `AdsbPollingHealthPolicy` owns consecutive-failure counters, probe scheduling, and circuit state transitions
+- Runtime mutation serialization:
+  - repository runtime mutators are single-writer serialized on one dispatcher lane;
+    center/ownship/filter/reconnect/enable updates enqueue onto the runtime scope
+    before any store/FSM mutation.
 - Snapshot diagnostics (debug panel):
   - publishes `consecutiveFailureCount`, `nextRetryMonoMs`, and `lastFailureMonoMs`
   - reason labels include circuit-breaker and network-failure categories

@@ -210,6 +210,40 @@ class AdsbTrafficStoreTrendTransitionsTest {
     }
 
     @Test
+    fun select_staleSampleDoesNotReboundGreenBackToAmberAfterFreshPostPassDeEscalation() {
+        val store = AdsbTrafficStore()
+        val now = 418_000L
+        val first = target(
+            index = 47,
+            lat = -33.8688,
+            lon = 151.24650,
+            receivedMonoMs = now
+        ).copy(trackDeg = null)
+        val slightApproach = first.copy(
+            lon = 151.24649,
+            receivedMonoMs = now + 2_000L
+        )
+        val divergingPastClosest = first.copy(
+            lon = 151.24799,
+            receivedMonoMs = now + 4_000L
+        )
+
+        store.upsertAll(listOf(first))
+        selectAt(store = store, nowMonoMs = now)
+
+        store.upsertAll(listOf(slightApproach))
+        selectAt(store = store, nowMonoMs = now + 2_000L)
+
+        store.upsertAll(listOf(divergingPastClosest))
+        val freshGreenUi = selectAt(store = store, nowMonoMs = now + 4_000L).displayed.first()
+        val staleRecheckUi = selectAt(store = store, nowMonoMs = now + 4_500L).displayed.first()
+
+        assertEquals(AdsbProximityTier.GREEN, freshGreenUi.proximityTier)
+        assertEquals(AdsbProximityTier.GREEN, staleRecheckUi.proximityTier)
+        assertFalse(staleRecheckUi.isClosing)
+    }
+
+    @Test
     fun select_reEntersRedWhenClosingResumesAfterAmberDeEscalation() {
         val store = AdsbTrafficStore()
         val now = 600_000L

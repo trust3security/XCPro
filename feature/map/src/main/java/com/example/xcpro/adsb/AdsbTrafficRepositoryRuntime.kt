@@ -2,31 +2,22 @@ package com.example.xcpro.adsb
 
 import com.example.xcpro.adsb.domain.AdsbNetworkAvailabilityPort
 import com.example.xcpro.common.di.IoDispatcher
-import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.core.time.Clock
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancelAndJoin
-import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withTimeoutOrNull
-import kotlin.math.abs
 import kotlin.random.Random
 
 
+@OptIn(ExperimentalCoroutinesApi::class)
 internal class AdsbTrafficRepositoryRuntime(
     internal val providerClient: AdsbProviderClient,
     internal val tokenRepository: OpenSkyTokenRepository,
@@ -59,7 +50,8 @@ internal class AdsbTrafficRepositoryRuntime(
         emergencyAudioFeatureFlags = AdsbEmergencyAudioFeatureFlags()
     )
 
-    internal val scope = CoroutineScope(SupervisorJob() + dispatcher)
+    internal val singleWriterDispatcher: CoroutineDispatcher = dispatcher.limitedParallelism(1)
+    internal val scope = CoroutineScope(SupervisorJob() + singleWriterDispatcher)
     internal val store = AdsbTrafficStore()
     internal val emergencyAudioAlertFsm = AdsbEmergencyAudioAlertFsm()
     internal val emergencyAudioKpiAccumulator = AdsbEmergencyAudioKpiAccumulator()
@@ -205,114 +197,43 @@ internal class AdsbTrafficRepositoryRuntime(
     override fun stop() { setEnabled(false) }
 
     override fun setEnabled(enabled: Boolean) {
-        if (_isEnabled.value == enabled) {
-            if (enabled) {
-                scope.launch {
-                    stateTransitionMutex.withLock {
-                        ensureLoopRunning()
-                    }
-                }
-            }
-            return
-        }
-        _isEnabled.value = enabled
-        scope.launch {
-            stateTransitionMutex.withLock {
-                if (_isEnabled.value) {
-                    ensureLoopRunning()
-                } else {
-                    stopLoop(clearTargets = false)
-                }
-            }
-        }
+        scope.launch { applySetEnabled(enabled) }
     }
 
     override fun clearTargets() {
-        scope.launch {
-            clearCachedTargets()
-            publishSnapshot()
-        }
+        scope.launch { applyClearTargets() }
     }
 
     override fun updateCenter(latitude: Double, longitude: Double) {
-        if (!latitude.isFinite() || !longitude.isFinite()) return
-        if (abs(latitude) > 90.0 || abs(longitude) > 180.0) return
-        val updatedCenter = Center(latitude = latitude, longitude = longitude)
-        if (center == updatedCenter) return
-        center = updatedCenter
-        centerState.value = updatedCenter
-        if (_isEnabled.value) {
-            publishFromStore(updatedCenter)
-        } else {
-            publishSnapshot()
-        }
-        if (_isEnabled.value) ensureLoopRunning()
+        scope.launch { applyUpdateCenter(latitude = latitude, longitude = longitude) }
     }
 
     override fun updateOwnshipOrigin(latitude: Double, longitude: Double) {
-        if (!latitude.isFinite() || !longitude.isFinite()) return
-        if (abs(latitude) > 90.0 || abs(longitude) > 180.0) return
-        val updatedOrigin = Center(latitude = latitude, longitude = longitude)
-        if (ownshipOrigin == updatedOrigin) {
-            ownshipReferenceLastUpdateMonoMs = clock.nowMonoMs()
-            return
-        }
-        ownshipOrigin = updatedOrigin
-        ownshipReferenceLastUpdateMonoMs = clock.nowMonoMs()
-        if (!_isEnabled.value) return
-        center?.let { activeCenter -> publishFromStore(activeCenter) }
+        scope.launch { applyUpdateOwnshipOrigin(latitude = latitude, longitude = longitude) }
     }
 
     override fun updateOwnshipMotion(trackDeg: Double?, speedMps: Double?) {
-        val normalizedTrackDeg = trackDeg?.takeIf { it.isFinite() }?.let { ((it % 360.0) + 360.0) % 360.0 }
-        val normalizedSpeedMps = speedMps?.takeIf { it.isFinite() }?.coerceAtLeast(0.0)
-        val changed = ownshipTrackDeg != normalizedTrackDeg || ownshipSpeedMps != normalizedSpeedMps
-        ownshipTrackDeg = normalizedTrackDeg
-        ownshipSpeedMps = normalizedSpeedMps
-        if (!changed || !_isEnabled.value) return
-        center?.let { activeCenter -> publishFromStore(activeCenter) }
+        scope.launch { applyUpdateOwnshipMotion(trackDeg = trackDeg, speedMps = speedMps) }
     }
 
     override fun clearOwnshipOrigin() {
-        if (ownshipOrigin == null) return
-        ownshipOrigin = null
-        ownshipTrackDeg = null
-        ownshipSpeedMps = null
-        ownshipReferenceLastUpdateMonoMs = null
-        if (!_isEnabled.value) return
-        center?.let { activeCenter -> publishFromStore(activeCenter) }
+        scope.launch { applyClearOwnshipOrigin() }
     }
 
     override fun updateOwnshipAltitudeMeters(altitudeMeters: Double?) {
-        val normalizedAltitude = altitudeMeters?.takeIf { it.isFinite() }
-        if (ownshipAltitudeMeters == normalizedAltitude) return
-        ownshipAltitudeMeters = normalizedAltitude
-        if (!_isEnabled.value) return
-        val activeCenter = center ?: return
-        val nowMonoMs = clock.nowMonoMs()
-        if (!shouldReselectForOwnshipAltitude(
-                nowMonoMs = nowMonoMs,
-                nextOwnshipAltitudeMeters = normalizedAltitude
-            )
-        ) {
-            return
-        }
-        publishFromStore(activeCenter, nowMonoMs)
-        lastOwnshipAltitudeReselectMonoMs = nowMonoMs
-        lastOwnshipAltitudeReselectMeters = normalizedAltitude
+        scope.launch { applyUpdateOwnshipAltitudeMeters(altitudeMeters = altitudeMeters) }
     }
 
     override fun updateOwnshipCirclingContext(
         isCircling: Boolean,
         circlingFeatureEnabled: Boolean
     ) {
-        val changed =
-            ownshipCircling != isCircling ||
-                ownshipCirclingFeatureEnabled != circlingFeatureEnabled
-        ownshipCircling = isCircling
-        ownshipCirclingFeatureEnabled = circlingFeatureEnabled
-        if (!changed || !_isEnabled.value) return
-        center?.let { activeCenter -> publishFromStore(activeCenter) }
+        scope.launch {
+            applyUpdateOwnshipCirclingContext(
+                isCircling = isCircling,
+                circlingFeatureEnabled = circlingFeatureEnabled
+            )
+        }
     }
 
     override fun updateDisplayFilters(
@@ -320,39 +241,17 @@ internal class AdsbTrafficRepositoryRuntime(
         verticalAboveMeters: Double,
         verticalBelowMeters: Double
     ) {
-        val clampedDistanceKm = clampAdsbMaxDistanceKm(maxDistanceKm)
-        val clampedAboveMeters = clampAdsbVerticalFilterMeters(verticalAboveMeters)
-        val clampedBelowMeters = clampAdsbVerticalFilterMeters(verticalBelowMeters)
-        val changed =
-            receiveRadiusKm != clampedDistanceKm ||
-                this.verticalFilterAboveMeters != clampedAboveMeters ||
-                this.verticalFilterBelowMeters != clampedBelowMeters
-        if (!changed) return
-        receiveRadiusKm = clampedDistanceKm
-        this.verticalFilterAboveMeters = clampedAboveMeters
-        this.verticalFilterBelowMeters = clampedBelowMeters
-        center?.let { activeCenter ->
-            if (_isEnabled.value) {
-                publishFromStore(activeCenter)
-            } else {
-                publishSnapshot()
-            }
-        } ?: publishSnapshot()
+        scope.launch {
+            applyUpdateDisplayFilters(
+                maxDistanceKm = maxDistanceKm,
+                verticalAboveMeters = verticalAboveMeters,
+                verticalBelowMeters = verticalBelowMeters
+            )
+        }
     }
 
     override fun reconnectNow() {
-        if (!_isEnabled.value) return
-        scope.launch {
-            stateTransitionMutex.withLock {
-                stopLoop(clearTargets = false)
-                if (_isEnabled.value) {
-                    ensureLoopRunning()
-                } else {
-                    connectionState = AdsbConnectionState.Disabled
-                    publishSnapshot()
-                }
-            }
-        }
+        scope.launch { applyReconnectNow() }
     }
 
     internal suspend fun fetchWithAuthRetry(bbox: BBox): ProviderResult {

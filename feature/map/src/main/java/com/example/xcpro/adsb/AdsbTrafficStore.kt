@@ -20,6 +20,7 @@ internal class AdsbTrafficStore(
 ) {
     private val targetsById = ConcurrentHashMap<Icao24, AdsbTarget>()
     private val distanceTierStateByTargetId = ConcurrentHashMap<Icao24, AdsbProximityTier>()
+    private val resolvedTierStateByTargetId = ConcurrentHashMap<Icao24, AdsbProximityTier>()
 
     fun clear() {
         targetsById.clear()
@@ -27,6 +28,7 @@ internal class AdsbTrafficStore(
         emergencyRiskStabilizer.clear()
         targetTrackEstimator.clear()
         distanceTierStateByTargetId.clear()
+        resolvedTierStateByTargetId.clear()
     }
 
     fun upsertAll(targets: List<AdsbTarget>) {
@@ -47,6 +49,7 @@ internal class AdsbTrafficStore(
                 emergencyRiskStabilizer.removeTarget(entry.key)
                 targetTrackEstimator.removeTarget(entry.key)
                 distanceTierStateByTargetId.remove(entry.key)
+                resolvedTierStateByTargetId.remove(entry.key)
                 removed = true
             }
         }
@@ -194,6 +197,7 @@ internal class AdsbTrafficStore(
                     collisionRiskReason = collisionRiskAssessment.ineligibilityReason
                 )
                 val proximityTier = proximityTier(
+                    targetId = target.id,
                     distanceTier = distanceTierWithHysteresis(
                         targetId = target.id,
                         distanceMeters = distanceMeters,
@@ -248,11 +252,9 @@ internal class AdsbTrafficStore(
         }
 
         val emergencyAudioCandidateId = selectEmergencyAudioCandidate(withinVertical)?.id
-
         val displayed = withinVertical
             .sortedWith(DISPLAY_PRIORITY_COMPARATOR)
             .take(maxDisplayed)
-
         val cappedCount = (withinVertical.size - displayed.size).coerceAtLeast(0)
         return AdsbStoreSelection(
             withinRadiusCount = withinHorizontalCount,
@@ -296,6 +298,7 @@ internal class AdsbTrafficStore(
     }
 
     private fun proximityTier(
+        targetId: Icao24,
         distanceTier: AdsbProximityTier,
         hasOwnshipReference: Boolean,
         isVerticalNonThreat: Boolean,
@@ -305,13 +308,48 @@ internal class AdsbTrafficStore(
         isCirclingEmergencyRedRule: Boolean,
         isEmergencyCollisionRisk: Boolean
     ): AdsbProximityTier {
-        if (!hasOwnshipReference) return AdsbProximityTier.NEUTRAL
-        if (isVerticalNonThreat) return AdsbProximityTier.GREEN
-        if (isCirclingEmergencyRedRule) return AdsbProximityTier.RED
+        if (!hasOwnshipReference) {
+            resolvedTierStateByTargetId.remove(targetId)
+            return AdsbProximityTier.NEUTRAL
+        }
+        if (isVerticalNonThreat) {
+            resolvedTierStateByTargetId[targetId] = AdsbProximityTier.GREEN
+            return AdsbProximityTier.GREEN
+        }
+        if (isCirclingEmergencyRedRule) {
+            resolvedTierStateByTargetId[targetId] = AdsbProximityTier.RED
+            return AdsbProximityTier.RED
+        }
         if (isEmergencyCollisionRisk) return AdsbProximityTier.EMERGENCY
-        if (showClosingAlert) return distanceTier
-        if (!hasFreshTrendSample) return distanceTier
-        return when (distanceTier) {
+        val candidateTier = when {
+            showClosingAlert -> distanceTier
+            !hasFreshTrendSample -> staleTrendTierCandidate(
+                targetId = targetId,
+                distanceTier = distanceTier
+            )
+            else -> freshTrendTierCandidate(
+                distanceTier = distanceTier,
+                postPassDivergingSampleCount = postPassDivergingSampleCount
+            )
+        }
+        resolvedTierStateByTargetId[targetId] = candidateTier
+        return candidateTier
+    }
+    private fun staleTrendTierCandidate(
+        targetId: Icao24,
+        distanceTier: AdsbProximityTier
+    ): AdsbProximityTier {
+        val previousTier = resolvedTierStateByTargetId[targetId] ?: return distanceTier
+        return when {
+            distanceTier == AdsbProximityTier.RED && previousTier != AdsbProximityTier.RED ->
+                AdsbProximityTier.RED
+            else -> previousTier
+        }
+    }
+    private fun freshTrendTierCandidate(
+        distanceTier: AdsbProximityTier,
+        postPassDivergingSampleCount: Int
+    ): AdsbProximityTier = when (distanceTier) {
             // RED traffic de-escalates in two fresh post-pass samples: RED -> AMBER -> GREEN.
             AdsbProximityTier.RED -> when {
                 postPassDivergingSampleCount >= POST_PASS_RED_TO_GREEN_MIN_SAMPLES ->
@@ -328,7 +366,6 @@ internal class AdsbTrafficStore(
             }
             AdsbProximityTier.GREEN -> AdsbProximityTier.GREEN
             else -> AdsbProximityTier.GREEN
-        }
     }
 
     private fun distanceTierWithHysteresis(
