@@ -1,28 +1,19 @@
 package com.example.xcpro.map
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.Paint
-import android.graphics.PorterDuff
-import android.graphics.PorterDuffColorFilter
 import android.view.Choreographer
-import androidx.core.content.ContextCompat
 import com.example.xcpro.adsb.ADSB_EMERGENCY_FLASH_ENABLED_DEFAULT
 import com.example.xcpro.adsb.ADSB_ICON_SIZE_DEFAULT_PX
 import com.example.xcpro.adsb.AdsbTrafficUiModel
 import com.example.xcpro.adsb.AdsbProximityTier
 import com.example.xcpro.adsb.Icao24
 import com.example.xcpro.adsb.clampAdsbIconSizePx
-import com.example.xcpro.adsb.ui.AdsbAircraftIcon
-import com.example.xcpro.adsb.ui.emergencyStyleImageId
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.core.time.TimeBridge
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
-import org.maplibre.android.maps.Style
 import org.maplibre.android.style.expressions.Expression
 import org.maplibre.android.style.layers.PropertyFactory.iconAllowOverlap
 import org.maplibre.android.style.layers.PropertyFactory.iconAnchor
@@ -45,7 +36,6 @@ import org.maplibre.android.style.layers.PropertyFactory.textOpacity
 import org.maplibre.android.style.layers.PropertyFactory.textSize
 import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
-import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
 
 class AdsbTrafficOverlay(
@@ -59,10 +49,11 @@ class AdsbTrafficOverlay(
     private var currentUnitsPreferences: UnitsPreferences = UnitsPreferences()
     private var currentIconStyleIdOverrides: Map<String, String> = emptyMap()
     private val motionSmoother = AdsbDisplayMotionSmoother()
-    private var frameScheduled = false
-    private var lastRenderedFrameMonoMs: Long = Long.MIN_VALUE
+    private val frameLoopController = AdsbOverlayFrameLoopController(
+        minRenderIntervalMs = ANIMATION_FRAME_INTERVAL_MS
+    )
     private val frameCallback = Choreographer.FrameCallback frame@{ _ ->
-        frameScheduled = false
+        frameLoopController.onFrameDispatched()
         // Use one monotonic clock source for both immediate and choreographer frames.
         val nowMonoMs = nowMonoMs()
         val frameSnapshot = motionSmoother.snapshot(nowMonoMs)
@@ -70,14 +61,14 @@ class AdsbTrafficOverlay(
         if (!hasVisualAnimation) {
             return@frame
         }
-        if (!shouldRenderAnimationFrame(nowMonoMs)) {
+        if (!frameLoopController.shouldRenderFrame(nowMonoMs)) {
             if (map.style != null && hasVisualAnimation) {
                 scheduleFrameLoop()
             }
             return@frame
         }
         renderFrame(nowMonoMs, frameSnapshot)
-        lastRenderedFrameMonoMs = nowMonoMs
+        frameLoopController.markFrameRendered(nowMonoMs)
         if (map.style != null && hasVisualAnimation) {
             scheduleFrameLoop()
         }
@@ -89,7 +80,11 @@ class AdsbTrafficOverlay(
             if (style.getSource(SOURCE_ID) == null) {
                 style.addSource(GeoJsonSource(SOURCE_ID))
             }
-            ensureStyleImages(style)
+            ensureAdsbTrafficOverlayStyleImages(
+                context = context,
+                style = style,
+                emergencyIconColor = EMERGENCY_ICON_COLOR
+            )
             if (style.getLayer(ICON_OUTLINE_LAYER_ID) == null) {
                 val outlineLayer = createIconOutlineLayer()
                 val anchorId = BlueLocationOverlay.LAYER_ID
@@ -150,7 +145,7 @@ class AdsbTrafficOverlay(
         val nowMonoMs = nowMonoMs()
         val frameSnapshot = motionSmoother.snapshot(nowMonoMs)
         renderFrame(nowMonoMs, frameSnapshot)
-        lastRenderedFrameMonoMs = nowMonoMs
+        frameLoopController.markFrameRendered(nowMonoMs)
         if (hasActiveVisualAnimation(frameSnapshot)) {
             scheduleFrameLoop()
         } else {
@@ -181,7 +176,7 @@ class AdsbTrafficOverlay(
             return
         }
         renderFrame(nowMonoMs, frameSnapshot)
-        lastRenderedFrameMonoMs = nowMonoMs
+        frameLoopController.markFrameRendered(nowMonoMs)
         if (hasVisualAnimation) {
             scheduleFrameLoop()
         } else {
@@ -216,7 +211,7 @@ class AdsbTrafficOverlay(
     fun clear() {
         stopFrameLoop()
         motionSmoother.clear()
-        lastRenderedFrameMonoMs = Long.MIN_VALUE
+        frameLoopController.resetRenderClock()
         currentOwnshipAltitudeMeters = null
         currentUnitsPreferences = UnitsPreferences()
         currentIconStyleIdOverrides = emptyMap()
@@ -228,7 +223,7 @@ class AdsbTrafficOverlay(
     fun cleanup() {
         stopFrameLoop()
         motionSmoother.clear()
-        lastRenderedFrameMonoMs = Long.MIN_VALUE
+        frameLoopController.resetRenderClock()
         currentOwnshipAltitudeMeters = null
         currentUnitsPreferences = UnitsPreferences()
         currentIconStyleIdOverrides = emptyMap()
@@ -239,12 +234,7 @@ class AdsbTrafficOverlay(
             style.removeLayer(ICON_LAYER_ID)
             style.removeLayer(ICON_OUTLINE_LAYER_ID)
             style.removeSource(SOURCE_ID)
-            AdsbAircraftIcon.values().forEach { icon ->
-                style.removeImage(icon.styleImageId)
-                style.removeImage(icon.emergencyStyleImageId())
-            }
-            style.removeImage(ADSB_ICON_STYLE_UNKNOWN_LEGACY)
-            style.removeImage("${ADSB_ICON_STYLE_UNKNOWN_LEGACY}_emergency")
+            removeAdsbTrafficOverlayStyleImages(style)
         } catch (t: Throwable) {
             AppLogger.w(TAG, "Failed to cleanup ADS-B overlay: ${t.message}")
         }
@@ -272,41 +262,6 @@ class AdsbTrafficOverlay(
             style.addLayer(createBottomLabelLayer())
         } catch (t: Throwable) {
             AppLogger.w(TAG, "Failed to bring ADS-B overlay to front: ${t.message}")
-        }
-    }
-
-    private fun ensureStyleImages(style: Style) {
-        AdsbAircraftIcon.values().forEach { icon ->
-            val normalImage = runCatching { style.getImage(icon.styleImageId) }.getOrNull()
-            val emergencyId = icon.emergencyStyleImageId()
-            val emergencyImage = runCatching { style.getImage(emergencyId) }.getOrNull()
-            if (normalImage != null && emergencyImage != null) return@forEach
-
-            val baseBitmap = drawableToBitmap(icon.resId) ?: return@forEach
-            if (normalImage == null) {
-                style.addImage(icon.styleImageId, baseBitmap, true)
-            }
-            if (emergencyImage == null) {
-                val emergencyBitmap = tintBitmap(baseBitmap, EMERGENCY_ICON_COLOR)
-                style.addImage(emergencyId, emergencyBitmap, true)
-            }
-        }
-        ensureLegacyUnknownStyleImages(style)
-    }
-
-    private fun ensureLegacyUnknownStyleImages(style: Style) {
-        val emergencyId = "${ADSB_ICON_STYLE_UNKNOWN_LEGACY}_emergency"
-        val normalImage = runCatching { style.getImage(ADSB_ICON_STYLE_UNKNOWN_LEGACY) }.getOrNull()
-        val emergencyImage = runCatching { style.getImage(emergencyId) }.getOrNull()
-        if (normalImage != null && emergencyImage != null) return
-
-        val baseBitmap = drawableToBitmap(LEGACY_UNKNOWN_ICON_RES_ID) ?: return
-        if (normalImage == null) {
-            style.addImage(ADSB_ICON_STYLE_UNKNOWN_LEGACY, baseBitmap, true)
-        }
-        if (emergencyImage == null) {
-            val emergencyBitmap = tintBitmap(baseBitmap, EMERGENCY_ICON_COLOR)
-            style.addImage(emergencyId, emergencyBitmap, true)
         }
     }
 
@@ -378,33 +333,6 @@ class AdsbTrafficOverlay(
                 textOpacity(Expression.get(AdsbGeoJsonMapper.PROP_ALPHA))
             )
 
-    private fun tintBitmap(source: Bitmap, tintColor: Int): Bitmap {
-        val bitmap = Bitmap.createBitmap(
-            source.width,
-            source.height,
-            Bitmap.Config.ARGB_8888
-        )
-        val canvas = Canvas(bitmap)
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            colorFilter = PorterDuffColorFilter(tintColor, PorterDuff.Mode.SRC_IN)
-        }
-        canvas.drawBitmap(source, 0f, 0f, paint)
-        return bitmap
-    }
-
-    private fun drawableToBitmap(drawableId: Int): Bitmap? {
-        val drawable = ContextCompat.getDrawable(context, drawableId) ?: return null
-        val bitmap = Bitmap.createBitmap(
-            ICON_BITMAP_BASE_SIZE_PX,
-            ICON_BITMAP_BASE_SIZE_PX,
-            Bitmap.Config.ARGB_8888
-        )
-        val canvas = Canvas(bitmap)
-        drawable.setBounds(0, 0, ICON_BITMAP_BASE_SIZE_PX, ICON_BITMAP_BASE_SIZE_PX)
-        drawable.draw(canvas)
-        return bitmap
-    }
-
     private fun applyIconSizeToStyle() {
         val style = map.style ?: return
         val outlineLayer = style.getLayer(ICON_OUTLINE_LAYER_ID) as? SymbolLayer
@@ -430,60 +358,29 @@ class AdsbTrafficOverlay(
         val source = style.getSourceAs<GeoJsonSource>(SOURCE_ID) ?: return
         source.setGeoJson(
             FeatureCollection.fromFeatures(
-                buildFeatures(
+                buildAdsbTrafficOverlayFeatures(
                     nowMonoMs = nowMonoMs,
-                    targets = frameSnapshot.targets
+                    targets = frameSnapshot.targets,
+                    ownshipAltitudeMeters = currentOwnshipAltitudeMeters,
+                    unitsPreferences = currentUnitsPreferences,
+                    iconStyleIdOverrides = currentIconStyleIdOverrides,
+                    emergencyFlashEnabled = emergencyFlashEnabled,
+                    maxTargets = MAX_TARGETS,
+                    liveAlpha = LIVE_ALPHA,
+                    staleAlpha = STALE_ALPHA
                 )
             )
         )
     }
 
-    private fun buildFeatures(
-        nowMonoMs: Long,
-        targets: List<AdsbTrafficUiModel>
-    ): Array<Feature> {
-        val features = ArrayList<Feature>(MAX_TARGETS)
-        for (target in targets) {
-            if (features.size >= MAX_TARGETS) break
-            val feature = AdsbGeoJsonMapper.toFeature(
-                target = target,
-                ownshipAltitudeMeters = currentOwnshipAltitudeMeters,
-                unitsPreferences = currentUnitsPreferences,
-                iconStyleIdOverride = currentIconStyleIdOverrides[target.id.raw]
-            ) ?: continue
-            feature.addNumberProperty(
-                AdsbGeoJsonMapper.PROP_ALPHA,
-                AdsbEmergencyFlashPolicy.alphaForTarget(
-                    target = target,
-                    nowMonoMs = nowMonoMs,
-                    liveAlpha = LIVE_ALPHA,
-                    staleAlpha = STALE_ALPHA,
-                    emergencyFlashEnabled = emergencyFlashEnabled
-                )
-            )
-            features.add(feature)
-        }
-        return features.toTypedArray()
-    }
-
     private fun nowMonoMs(): Long = TimeBridge.nowMonoMs()
 
     private fun scheduleFrameLoop() {
-        if (frameScheduled) return
-        frameScheduled = true
-        Choreographer.getInstance().postFrameCallback(frameCallback)
+        frameLoopController.schedule(frameCallback)
     }
 
     private fun stopFrameLoop() {
-        if (!frameScheduled) return
-        Choreographer.getInstance().removeFrameCallback(frameCallback)
-        frameScheduled = false
-    }
-
-    private fun shouldRenderAnimationFrame(nowMonoMs: Long): Boolean {
-        val lastRendered = lastRenderedFrameMonoMs
-        if (lastRendered == Long.MIN_VALUE) return true
-        return nowMonoMs - lastRendered >= ANIMATION_FRAME_INTERVAL_MS
+        frameLoopController.stop(frameCallback)
     }
 
     private fun hasActiveVisualAnimation(
@@ -518,9 +415,6 @@ class AdsbTrafficOverlay(
         private const val MAX_TARGETS = 120
         private const val LIVE_ALPHA = 0.90
         private const val STALE_ALPHA = 0.45
-
-        private const val ICON_BITMAP_BASE_SIZE_PX = ADSB_ICON_SIZE_DEFAULT_PX
-        private val LEGACY_UNKNOWN_ICON_RES_ID = R.drawable.ic_adsb_unknown
 
         private const val LABEL_TEXT_SIZE_SP = 13f
         private const val LABEL_TEXT_OFFSET_BASE_Y = 1.7f

@@ -1,5 +1,5 @@
 # ADSB.md - Live ADS-B Internet Traffic in XCPro (OpenSky)
-**v7 (2026-02-20): runtime contract and deep code-pass findings**
+**v8 (2026-03-08): runtime contract, maintainability hardening, and deep code-pass findings**
 
 This document is the runtime contract for ADS-B behavior in XCPro.
 
@@ -149,6 +149,27 @@ Reference:
 - Both cases are treated as transient network failures, not fatal implementation bugs.
 - Correct runtime behavior is: classify -> bounded backoff -> circuit-breaker protection -> recover when network/provider stabilizes.
 
+### 2.7 Maintainability and observability hardening (2026-03-08)
+- Runtime policies are centralized in one contract file:
+  - `AdsbTrafficRepositoryRuntimePolicy.kt`
+- Runtime orchestration is split into focused helpers with unchanged behavior contract:
+  - `AdsbTrafficRepositoryRuntimeLoopTransitions.kt` (poll-cycle/error/backoff transitions)
+  - `AdsbTrafficRepositoryRuntimeNetworkWait.kt` (center/network wait + housekeeping driver)
+  - `AdsbTrafficRepositoryRuntimeSnapshot.kt` (snapshot projection decomposition)
+- ADS-B map overlay/runtime delegate internals are split for safer change boundaries:
+  - `AdsbOverlayFrameLoopController.kt` (frame scheduling + interval gating)
+  - `AdsbTrafficOverlayFeatureProjection.kt` (feature projection path)
+  - `MapOverlayManagerRuntimeTrafficDelegate.kt` projection helper reuse for init/render parity
+- Diagnostics surfaces now expose counters consistently:
+  - Repository snapshot transition telemetry:
+    `networkOnline`, `networkOfflineTransitionCount`, `networkOnlineTransitionCount`,
+    `lastNetworkTransitionMonoMs`, `currentOfflineDwellMs`,
+    `consecutiveFailureCount`, `nextRetryMonoMs`, `lastFailureMonoMs`
+  - Map overlay runtime counters:
+    unknown/legacy unknown icon render counts, icon resolve-latency stats,
+    default-medium-unknown rollout effective flag, overlay front-order apply/skip counts
+    (surfaced via `MapOverlayManagerRuntime.runtimeCounters()` and `getOverlayStatus()`).
+
 ## 3) Details sheet requirements
 
 Show sections:
@@ -204,7 +225,7 @@ private const val IDX_POSITION_SOURCE = 16
 private const val IDX_CATEGORY = 17 // when extended=1
 ```
 
-## 5) Deep-pass status (updated 2026-02-21 +11:45)
+## 5) Deep-pass status (updated 2026-03-08)
 
 Closed in current implementation:
 
@@ -225,6 +246,15 @@ Closed in current implementation:
    - success path now stamps `lastPollMonoMs`/`lastSuccessMonoMs` using current post-wait monotonic time.
    - fixes stale pre-wait timestamp carryover after long offline/circuit waits.
    - regression coverage added for offline-wait reconnect success timestamp correctness.
+12. Runtime policy and orchestration maintainability hardening:
+   - loop/poll/network-wait/snapshot responsibilities split into focused helper files.
+   - direct runtime transition tests added (offline->online, circuit probe transition, reconnect timestamp, degraded snapshot fields).
+13. ADS-B overlay/delegate maintainability hardening:
+   - overlay frame loop and feature projection split into dedicated helper units.
+   - traffic delegate style projection path unified for init/render parity.
+   - direct delegate tests added for throttling/deferred flush, sticky projection, rollout switch, runtime counters.
+14. Overlay status diagnostics consistency:
+   - ADS-B icon telemetry + overlay front-order counters are included in `MapOverlayManager` status output.
 
 Still open:
 
@@ -244,6 +274,7 @@ Still open:
 - `docs/ADS-b/CHANGE_PLAN_ADSB_NETWORK_TRANSITION_E2E_COVERAGE_2026-03-01.md`
 - `docs/ADS-b/CHANGE_PLAN_ADSB_CONNECTIVITY_UX_STALE_HOUSEKEEPING_OBSERVABILITY_2026-03-01.md`
 - `docs/ADS-b/CHANGE_PLAN_ADSB_SOCKET_ERROR_HARDENING_2026-03-01.md`
+- `docs/ADS-b/CHANGE_PLAN_ADSB_MAINTAINABILITY_SCORE_LIFT_2026-03-08.md`
 - `docs/ADS-b/ADSB_Improvement_Plan.md`
 - `docs/ADS-b/ADSB_AircraftMetadata.md`
 - `docs/ADS-b/ADSB_CategoryIconMapping.md`

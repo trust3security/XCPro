@@ -12,6 +12,7 @@ internal fun buildMapOverlayManagerStatus(
     ognTargetEnabled: Boolean,
     ognTargetResolved: Boolean,
     latestAdsbTargetsCount: Int,
+    runtimeCounters: MapOverlayManagerRuntime.RuntimeCounters,
     taskWaypointCount: Int,
     forecastWeatherStatus: MapOverlayForecastWeatherStatus
 ): String {
@@ -66,6 +67,15 @@ internal fun buildMapOverlayManagerStatus(
             }\n"
         )
         append("- ADS-B Targets: $latestAdsbTargetsCount\n")
+        append("- ADS-B Default Medium Unknown Icon Enabled: ${runtimeCounters.adsbDefaultMediumUnknownIconEnabled}\n")
+        append("- ADS-B Unknown Icon Render Count: ${runtimeCounters.adsbIconUnknownRenderCount}\n")
+        append("- ADS-B Legacy Unknown Icon Render Count: ${runtimeCounters.adsbIconLegacyUnknownRenderCount}\n")
+        append("- ADS-B Icon Resolve Latency Sample Count: ${runtimeCounters.adsbIconResolveLatencySampleCount}\n")
+        append("- ADS-B Icon Resolve Latency Last Ms: ${runtimeCounters.adsbIconResolveLatencyLastMs}\n")
+        append("- ADS-B Icon Resolve Latency Max Ms: ${runtimeCounters.adsbIconResolveLatencyMaxMs}\n")
+        append("- ADS-B Icon Resolve Latency Average Ms: ${runtimeCounters.adsbIconResolveLatencyAverageMs}\n")
+        append("- Overlay Front Order Apply Count: ${runtimeCounters.overlayFrontOrderApplyCount}\n")
+        append("- Overlay Front Order Skipped Count: ${runtimeCounters.overlayFrontOrderSkippedCount}\n")
         append("- Forecast Overlay Enabled: ${forecastWeatherStatus.forecastOverlayEnabled}\n")
         append("- Forecast Wind Overlay Enabled: ${forecastWeatherStatus.forecastWindOverlayEnabled}\n")
         append(

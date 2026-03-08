@@ -354,18 +354,6 @@ internal class AdsbTrafficRepositoryRuntime(
         val ownshipSpeedMps: Double?
     )
 
-    internal sealed interface CenterWaitState {
-        data object Waiting : CenterWaitState
-        data object Disabled : CenterWaitState
-        data class Ready(val center: Center) : CenterWaitState
-    }
-
-    internal sealed interface NetworkWaitState {
-        data object Offline : NetworkWaitState
-        data object Disabled : NetworkWaitState
-        data object Online : NetworkWaitState
-    }
-
     private class DisabledEmergencyAudioSettingsPort : AdsbEmergencyAudioSettingsPort {
         override val emergencyAudioEnabledFlow: StateFlow<Boolean> =
             MutableStateFlow(false).asStateFlow()

@@ -5,44 +5,34 @@ import kotlinx.coroutines.launch
 
 private const val TAG = "AdsbTrafficRepository"
 
+private data class EmergencyAudioSnapshotProjection(
+    val state: AdsbEmergencyAudioAlertState,
+    val featureGateOn: Boolean,
+    val masterRolloutEnabled: Boolean,
+    val masterRolloutConfigured: Boolean,
+    val shadowModeEnabled: Boolean,
+    val cohortEligible: Boolean,
+    val alertTriggerCount: Int,
+    val cooldownBlockEpisodeCount: Int,
+    val transitionEventCount: Int,
+    val lastAlertMonoMs: Long?,
+    val cooldownRemainingMs: Long,
+    val activeTargetId: String?,
+    val kpis: AdsbEmergencyAudioKpiSnapshot
+)
+
 internal fun AdsbTrafficRepositoryRuntime.publishSnapshot() {
     val activeCenter = center
-    val pollingHealthSnapshot = pollingHealthPolicy.snapshotTelemetry()
     val nowMonoMs = clock.nowMonoMs()
+    val pollingHealthSnapshot = pollingHealthPolicy.snapshotTelemetry()
     val hasFreshOwnshipReference = hasFreshOwnshipReference(nowMonoMs = nowMonoMs)
     updateNetworkTransitionTelemetry(nowMonoMs)
-    val emergencyAudioMasterRolloutConfigured = currentEmergencyAudioMasterConfigured()
-    val emergencyAudioCohortEligible = currentEmergencyAudioCohortEligible()
-    val emergencyAudioMasterRolloutEnabled = currentEmergencyAudioMasterEnabled()
-    val emergencyAudioShadowModeEnabled = currentEmergencyAudioShadowModeEnabled()
-    val emergencyAudioFeatureGateOn = emergencyAudioMasterRolloutEnabled || emergencyAudioShadowModeEnabled
-    val emergencyTargetId = emergencyAudioCandidateId ?: _targets.value.firstOrNull { target ->
-        target.isEmergencyAudioEligible
-    }?.id
-    val emergencyAudioDecision = emergencyAudioAlertFsm.evaluate(
+    val emergencyAudioProjection = projectEmergencyAudioSnapshot(
         nowMonoMs = nowMonoMs,
-        emergencyTargetId = emergencyTargetId,
-        hasOwnshipReference = hasFreshOwnshipReference,
-        settings = emergencyAudioSettings,
-        featureFlagEnabled = emergencyAudioFeatureGateOn && _isEnabled.value
+        hasFreshOwnshipReference = hasFreshOwnshipReference
     )
-    maybePlayEmergencyAudioOutput(nowMonoMs, emergencyAudioDecision)
-    val emergencyAudioTelemetry = emergencyAudioAlertFsm.snapshotTelemetry(nowMonoMs)
-    val emergencyAudioKpis = emergencyAudioKpiAccumulator.updateAndSnapshot(
-        nowMonoMs = nowMonoMs,
-        observationActive = _isEnabled.value && hasFreshOwnshipReference,
-        policyEnabled = emergencyAudioFeatureGateOn && emergencyAudioSettings.enabled,
-        cooldownMs = emergencyAudioSettings.normalizedCooldownMs,
-        telemetry = emergencyAudioTelemetry
-    )
-    applyEmergencyAudioRollbackLatchIfNeeded(emergencyAudioKpis)
     val proximityReasonCounts = AdsbProximityReasonCounts.fromTargets(_targets.value)
-    val offlineDwellMs = if (!networkOnline) {
-        val transitionMonoMs = lastNetworkTransitionMonoMs ?: nowMonoMs
-        (nowMonoMs - transitionMonoMs).coerceAtLeast(0L)
-    } else {
-        0L
-    }
+    val offlineDwellMs = currentOfflineDwellMs(nowMonoMs)
     _snapshot.value = AdsbTrafficSnapshot(
         targets = _targets.value,
         connectionState = connectionState,
@@ -71,28 +61,79 @@ internal fun AdsbTrafficRepositoryRuntime.publishSnapshot() {
         networkOnlineTransitionCount = networkOnlineTransitionCount,
         lastNetworkTransitionMonoMs = lastNetworkTransitionMonoMs,
         currentOfflineDwellMs = offlineDwellMs,
-        emergencyAudioState = emergencyAudioTelemetry.state,
+        emergencyAudioState = emergencyAudioProjection.state,
         emergencyAudioEnabledBySetting = emergencyAudioSettings.enabled,
-        emergencyAudioFeatureGateOn = emergencyAudioFeatureGateOn,
-        emergencyAudioMasterRolloutEnabled = emergencyAudioMasterRolloutEnabled,
-        emergencyAudioMasterRolloutConfigured = emergencyAudioMasterRolloutConfigured,
-        emergencyAudioShadowModeEnabled = emergencyAudioShadowModeEnabled,
+        emergencyAudioFeatureGateOn = emergencyAudioProjection.featureGateOn,
+        emergencyAudioMasterRolloutEnabled = emergencyAudioProjection.masterRolloutEnabled,
+        emergencyAudioMasterRolloutConfigured = emergencyAudioProjection.masterRolloutConfigured,
+        emergencyAudioShadowModeEnabled = emergencyAudioProjection.shadowModeEnabled,
         emergencyAudioRolloutCohortPercent = emergencyAudioCohortPercent,
         emergencyAudioRolloutCohortBucket = emergencyAudioCohortBucket,
-        emergencyAudioRolloutCohortEligible = emergencyAudioCohortEligible,
+        emergencyAudioRolloutCohortEligible = emergencyAudioProjection.cohortEligible,
         emergencyAudioRollbackLatched = emergencyAudioRollbackLatched,
         emergencyAudioRollbackReason = emergencyAudioRollbackReason,
         emergencyAudioCooldownMs = emergencyAudioSettings.normalizedCooldownMs,
-        emergencyAudioAlertTriggerCount = emergencyAudioTelemetry.alertTriggerCount,
-        emergencyAudioCooldownBlockEpisodeCount =
-            emergencyAudioTelemetry.cooldownBlockEpisodeCount,
-        emergencyAudioTransitionEventCount = emergencyAudioTelemetry.transitionEventCount,
-        emergencyAudioLastAlertMonoMs = emergencyAudioTelemetry.lastAlertMonoMs,
-        emergencyAudioCooldownRemainingMs = emergencyAudioTelemetry.cooldownRemainingMs,
-        emergencyAudioActiveTargetId = emergencyAudioTelemetry.activeEmergencyTargetId?.raw,
+        emergencyAudioAlertTriggerCount = emergencyAudioProjection.alertTriggerCount,
+        emergencyAudioCooldownBlockEpisodeCount = emergencyAudioProjection.cooldownBlockEpisodeCount,
+        emergencyAudioTransitionEventCount = emergencyAudioProjection.transitionEventCount,
+        emergencyAudioLastAlertMonoMs = emergencyAudioProjection.lastAlertMonoMs,
+        emergencyAudioCooldownRemainingMs = emergencyAudioProjection.cooldownRemainingMs,
+        emergencyAudioActiveTargetId = emergencyAudioProjection.activeTargetId,
         proximityReasonCounts = proximityReasonCounts,
-        emergencyAudioKpis = emergencyAudioKpis
+        emergencyAudioKpis = emergencyAudioProjection.kpis
     )
+}
+
+private fun AdsbTrafficRepositoryRuntime.projectEmergencyAudioSnapshot(
+    nowMonoMs: Long,
+    hasFreshOwnshipReference: Boolean
+): EmergencyAudioSnapshotProjection {
+    val emergencyAudioMasterRolloutConfigured = currentEmergencyAudioMasterConfigured()
+    val emergencyAudioCohortEligible = currentEmergencyAudioCohortEligible()
+    val emergencyAudioMasterRolloutEnabled = currentEmergencyAudioMasterEnabled()
+    val emergencyAudioShadowModeEnabled = currentEmergencyAudioShadowModeEnabled()
+    val emergencyAudioFeatureGateOn = emergencyAudioMasterRolloutEnabled || emergencyAudioShadowModeEnabled
+    val emergencyTargetId = emergencyAudioCandidateId ?: _targets.value.firstOrNull { target ->
+        target.isEmergencyAudioEligible
+    }?.id
+    val emergencyAudioDecision = emergencyAudioAlertFsm.evaluate(
+        nowMonoMs = nowMonoMs,
+        emergencyTargetId = emergencyTargetId,
+        hasOwnshipReference = hasFreshOwnshipReference,
+        settings = emergencyAudioSettings,
+        featureFlagEnabled = emergencyAudioFeatureGateOn && _isEnabled.value
+    )
+    maybePlayEmergencyAudioOutput(nowMonoMs, emergencyAudioDecision)
+    val emergencyAudioTelemetry = emergencyAudioAlertFsm.snapshotTelemetry(nowMonoMs)
+    val emergencyAudioKpis = emergencyAudioKpiAccumulator.updateAndSnapshot(
+        nowMonoMs = nowMonoMs,
+        observationActive = _isEnabled.value && hasFreshOwnshipReference,
+        policyEnabled = emergencyAudioFeatureGateOn && emergencyAudioSettings.enabled,
+        cooldownMs = emergencyAudioSettings.normalizedCooldownMs,
+        telemetry = emergencyAudioTelemetry
+    )
+    applyEmergencyAudioRollbackLatchIfNeeded(emergencyAudioKpis)
+    return EmergencyAudioSnapshotProjection(
+        state = emergencyAudioTelemetry.state,
+        featureGateOn = emergencyAudioFeatureGateOn,
+        masterRolloutEnabled = emergencyAudioMasterRolloutEnabled,
+        masterRolloutConfigured = emergencyAudioMasterRolloutConfigured,
+        shadowModeEnabled = emergencyAudioShadowModeEnabled,
+        cohortEligible = emergencyAudioCohortEligible,
+        alertTriggerCount = emergencyAudioTelemetry.alertTriggerCount,
+        cooldownBlockEpisodeCount = emergencyAudioTelemetry.cooldownBlockEpisodeCount,
+        transitionEventCount = emergencyAudioTelemetry.transitionEventCount,
+        lastAlertMonoMs = emergencyAudioTelemetry.lastAlertMonoMs,
+        cooldownRemainingMs = emergencyAudioTelemetry.cooldownRemainingMs,
+        activeTargetId = emergencyAudioTelemetry.activeEmergencyTargetId?.raw,
+        kpis = emergencyAudioKpis
+    )
+}
+
+private fun AdsbTrafficRepositoryRuntime.currentOfflineDwellMs(nowMonoMs: Long): Long {
+    if (networkOnline) return 0L
+    val transitionMonoMs = lastNetworkTransitionMonoMs ?: nowMonoMs
+    return (nowMonoMs - transitionMonoMs).coerceAtLeast(0L)
 }
 
 internal fun AdsbTrafficRepositoryRuntime.isEmergencyAudioFeatureGateOn(): Boolean =

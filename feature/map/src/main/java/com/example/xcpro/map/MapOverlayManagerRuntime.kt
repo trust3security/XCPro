@@ -451,6 +451,7 @@ open class MapOverlayManagerRuntime(
 
     fun getOverlayStatus(): String {
         val ognStatus = ognDelegate.statusSnapshot()
+        val runtimeCountersSnapshot = runtimeCounters()
         return buildMapOverlayManagerStatus(
             mapState = mapState,
             showDistanceCircles = mapStateReader.showDistanceCircles.value,
@@ -461,6 +462,7 @@ open class MapOverlayManagerRuntime(
             ognTargetEnabled = ognStatus.targetEnabled,
             ognTargetResolved = ognStatus.targetResolved,
             latestAdsbTargetsCount = trafficDelegate.latestAdsbTargetsCount(),
+            runtimeCounters = runtimeCountersSnapshot,
             taskWaypointCount = taskWaypointCountProvider(),
             forecastWeatherStatus = forecastWeatherDelegate.statusSnapshot()
         )

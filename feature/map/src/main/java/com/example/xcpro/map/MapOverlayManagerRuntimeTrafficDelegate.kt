@@ -54,11 +54,7 @@ internal class MapOverlayManagerRuntimeTrafficDelegate(
         if (map == null) return
         mapState.adsbTrafficOverlay = createAdsbTrafficOverlay(map)
         mapState.adsbTrafficOverlay?.initialize()
-        val projectedStyleIds = stickyIconProjectionCache.projectStyleImageIds(
-            targets = latestAdsbTargets,
-            nowMonoMs = nowMonoMs(),
-            defaultMediumUnknownIconEnabled = defaultMediumUnknownIconEnabled
-        )
+        val projectedStyleIds = projectedAdsbStyleIds(nowMonoMs())
         mapState.adsbTrafficOverlay?.render(
             targets = latestAdsbTargets,
             ownshipAltitudeMeters = latestAdsbOwnshipAltitudeMeters,
@@ -208,11 +204,7 @@ internal class MapOverlayManagerRuntimeTrafficDelegate(
 
     private fun renderAdsbNow(map: MapLibreMap) {
         val renderMonoMs = nowMonoMs()
-        val projectedStyleIds = stickyIconProjectionCache.projectStyleImageIds(
-            targets = latestAdsbTargets,
-            nowMonoMs = renderMonoMs,
-            defaultMediumUnknownIconEnabled = defaultMediumUnknownIconEnabled
-        )
+        val projectedStyleIds = projectedAdsbStyleIds(renderMonoMs)
         if (mapState.adsbTrafficOverlay == null) {
             mapState.adsbTrafficOverlay = createAdsbTrafficOverlay(map)
             mapState.adsbTrafficOverlay?.initialize()
@@ -236,6 +228,13 @@ internal class MapOverlayManagerRuntimeTrafficDelegate(
         adsbTrafficOverlayFactory(map, adsbIconSizePx).also { overlay ->
             overlay.setEmergencyFlashEnabled(adsbEmergencyFlashEnabled)
         }
+
+    private fun projectedAdsbStyleIds(renderMonoMs: Long): Map<String, String> =
+        stickyIconProjectionCache.projectStyleImageIds(
+            targets = latestAdsbTargets,
+            nowMonoMs = renderMonoMs,
+            defaultMediumUnknownIconEnabled = defaultMediumUnknownIconEnabled
+        )
 
     private fun captureOverlayFrontOrderSignature(): OverlayFrontOrderSignature? {
         val map = mapState.mapLibreMap ?: return null
