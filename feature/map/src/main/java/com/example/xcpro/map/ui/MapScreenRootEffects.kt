@@ -82,7 +82,8 @@ internal fun MapScreenOverlayEffects(
     adsbTargets: List<AdsbTrafficUiModel>,
     adsbOverlayEnabled: Boolean,
     adsbIconSizePx: Int,
-    adsbEmergencyFlashEnabled: Boolean
+    adsbEmergencyFlashEnabled: Boolean,
+    adsbDefaultMediumUnknownIconEnabled: Boolean
 ) {
     val overlayOwnshipAltitudeMeters = remember(ownshipAltitudeMeters) {
         quantizeOverlayOwnshipAltitudeMeters(ownshipAltitudeMeters)
@@ -140,6 +141,9 @@ internal fun MapScreenOverlayEffects(
     }
     LaunchedEffect(adsbEmergencyFlashEnabled) {
         overlayManager.setAdsbEmergencyFlashEnabled(adsbEmergencyFlashEnabled)
+    }
+    LaunchedEffect(adsbDefaultMediumUnknownIconEnabled) {
+        overlayManager.setAdsbDefaultMediumUnknownIconEnabled(adsbDefaultMediumUnknownIconEnabled)
     }
 }
 

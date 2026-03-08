@@ -247,7 +247,14 @@ open class MapOverlayManagerRuntime(
         return RuntimeCounters(
             overlayFrontOrderApplyCount = counters.overlayFrontOrderApplyCount,
             overlayFrontOrderSkippedCount = counters.overlayFrontOrderSkippedCount,
-            aatPreviewForwardCount = aatPreviewForwardCount
+            aatPreviewForwardCount = aatPreviewForwardCount,
+            adsbIconUnknownRenderCount = counters.adsbIconUnknownRenderCount,
+            adsbIconLegacyUnknownRenderCount = counters.adsbIconLegacyUnknownRenderCount,
+            adsbIconResolveLatencySampleCount = counters.adsbIconResolveLatencySampleCount,
+            adsbIconResolveLatencyLastMs = counters.adsbIconResolveLatencyLastMs,
+            adsbIconResolveLatencyMaxMs = counters.adsbIconResolveLatencyMaxMs,
+            adsbIconResolveLatencyAverageMs = counters.adsbIconResolveLatencyAverageMs,
+            adsbDefaultMediumUnknownIconEnabled = counters.adsbDefaultMediumUnknownIconEnabled
         )
     }
 
@@ -414,6 +421,10 @@ open class MapOverlayManagerRuntime(
         trafficDelegate.setAdsbEmergencyFlashEnabled(enabled)
     }
 
+    fun setAdsbDefaultMediumUnknownIconEnabled(enabled: Boolean) {
+        trafficDelegate.setAdsbDefaultMediumUnknownIconEnabled(enabled)
+    }
+
     fun setOgnIconSizePx(iconSizePx: Int) {
         ognDelegate.setIconSizePx(iconSizePx)
     }
@@ -478,6 +489,13 @@ open class MapOverlayManagerRuntime(
     data class RuntimeCounters(
         val overlayFrontOrderApplyCount: Long,
         val overlayFrontOrderSkippedCount: Long,
-        val aatPreviewForwardCount: Long
+        val aatPreviewForwardCount: Long,
+        val adsbIconUnknownRenderCount: Long,
+        val adsbIconLegacyUnknownRenderCount: Long,
+        val adsbIconResolveLatencySampleCount: Long,
+        val adsbIconResolveLatencyLastMs: Long?,
+        val adsbIconResolveLatencyMaxMs: Long?,
+        val adsbIconResolveLatencyAverageMs: Long?,
+        val adsbDefaultMediumUnknownIconEnabled: Boolean
     )
 }

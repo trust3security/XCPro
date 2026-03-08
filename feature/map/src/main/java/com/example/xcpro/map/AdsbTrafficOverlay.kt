@@ -57,6 +57,7 @@ class AdsbTrafficOverlay(
     private var emergencyFlashEnabled: Boolean = ADSB_EMERGENCY_FLASH_ENABLED_DEFAULT
     private var currentOwnshipAltitudeMeters: Double? = null
     private var currentUnitsPreferences: UnitsPreferences = UnitsPreferences()
+    private var currentIconStyleIdOverrides: Map<String, String> = emptyMap()
     private val motionSmoother = AdsbDisplayMotionSmoother()
     private var frameScheduled = false
     private var lastRenderedFrameMonoMs: Long = Long.MIN_VALUE
@@ -160,15 +161,18 @@ class AdsbTrafficOverlay(
     fun render(
         targets: List<AdsbTrafficUiModel>,
         ownshipAltitudeMeters: Double?,
-        unitsPreferences: UnitsPreferences
+        unitsPreferences: UnitsPreferences,
+        iconStyleIdOverrides: Map<String, String> = emptyMap()
     ) {
         initialize()
         val normalizedOwnshipAltitude = ownshipAltitudeMeters?.takeIf { it.isFinite() }
         val contextChanged =
             currentOwnshipAltitudeMeters != normalizedOwnshipAltitude ||
-                currentUnitsPreferences != unitsPreferences
+                currentUnitsPreferences != unitsPreferences ||
+                currentIconStyleIdOverrides != iconStyleIdOverrides
         currentOwnshipAltitudeMeters = normalizedOwnshipAltitude
         currentUnitsPreferences = unitsPreferences
+        currentIconStyleIdOverrides = iconStyleIdOverrides
         val nowMonoMs = nowMonoMs()
         val changed = motionSmoother.onTargets(targets, nowMonoMs)
         val frameSnapshot = motionSmoother.snapshot(nowMonoMs)
@@ -215,6 +219,7 @@ class AdsbTrafficOverlay(
         lastRenderedFrameMonoMs = Long.MIN_VALUE
         currentOwnshipAltitudeMeters = null
         currentUnitsPreferences = UnitsPreferences()
+        currentIconStyleIdOverrides = emptyMap()
         val style = map.style ?: return
         val source = style.getSourceAs<GeoJsonSource>(SOURCE_ID) ?: return
         source.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
@@ -226,6 +231,7 @@ class AdsbTrafficOverlay(
         lastRenderedFrameMonoMs = Long.MIN_VALUE
         currentOwnshipAltitudeMeters = null
         currentUnitsPreferences = UnitsPreferences()
+        currentIconStyleIdOverrides = emptyMap()
         val style = map.style ?: return
         try {
             style.removeLayer(BOTTOM_LABEL_LAYER_ID)
@@ -237,6 +243,8 @@ class AdsbTrafficOverlay(
                 style.removeImage(icon.styleImageId)
                 style.removeImage(icon.emergencyStyleImageId())
             }
+            style.removeImage(ADSB_ICON_STYLE_UNKNOWN_LEGACY)
+            style.removeImage("${ADSB_ICON_STYLE_UNKNOWN_LEGACY}_emergency")
         } catch (t: Throwable) {
             AppLogger.w(TAG, "Failed to cleanup ADS-B overlay: ${t.message}")
         }
@@ -282,6 +290,23 @@ class AdsbTrafficOverlay(
                 val emergencyBitmap = tintBitmap(baseBitmap, EMERGENCY_ICON_COLOR)
                 style.addImage(emergencyId, emergencyBitmap, true)
             }
+        }
+        ensureLegacyUnknownStyleImages(style)
+    }
+
+    private fun ensureLegacyUnknownStyleImages(style: Style) {
+        val emergencyId = "${ADSB_ICON_STYLE_UNKNOWN_LEGACY}_emergency"
+        val normalImage = runCatching { style.getImage(ADSB_ICON_STYLE_UNKNOWN_LEGACY) }.getOrNull()
+        val emergencyImage = runCatching { style.getImage(emergencyId) }.getOrNull()
+        if (normalImage != null && emergencyImage != null) return
+
+        val baseBitmap = drawableToBitmap(LEGACY_UNKNOWN_ICON_RES_ID) ?: return
+        if (normalImage == null) {
+            style.addImage(ADSB_ICON_STYLE_UNKNOWN_LEGACY, baseBitmap, true)
+        }
+        if (emergencyImage == null) {
+            val emergencyBitmap = tintBitmap(baseBitmap, EMERGENCY_ICON_COLOR)
+            style.addImage(emergencyId, emergencyBitmap, true)
         }
     }
 
@@ -423,7 +448,8 @@ class AdsbTrafficOverlay(
             val feature = AdsbGeoJsonMapper.toFeature(
                 target = target,
                 ownshipAltitudeMeters = currentOwnshipAltitudeMeters,
-                unitsPreferences = currentUnitsPreferences
+                unitsPreferences = currentUnitsPreferences,
+                iconStyleIdOverride = currentIconStyleIdOverrides[target.id.raw]
             ) ?: continue
             feature.addNumberProperty(
                 AdsbGeoJsonMapper.PROP_ALPHA,
@@ -494,6 +520,7 @@ class AdsbTrafficOverlay(
         private const val STALE_ALPHA = 0.45
 
         private const val ICON_BITMAP_BASE_SIZE_PX = ADSB_ICON_SIZE_DEFAULT_PX
+        private val LEGACY_UNKNOWN_ICON_RES_ID = R.drawable.ic_adsb_unknown
 
         private const val LABEL_TEXT_SIZE_SP = 13f
         private const val LABEL_TEXT_OFFSET_BASE_Y = 1.7f

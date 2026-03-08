@@ -29,6 +29,8 @@ private val KEY_ADSB_VERTICAL_ABOVE_M = doublePreferencesKey("adsb_vertical_abov
 private val KEY_ADSB_VERTICAL_BELOW_M = doublePreferencesKey("adsb_vertical_below_m")
 private val KEY_ADSB_EMERGENCY_FLASH_ENABLED =
     booleanPreferencesKey("adsb_emergency_flash_enabled")
+private val KEY_ADSB_DEFAULT_MEDIUM_UNKNOWN_ICON_ENABLED =
+    booleanPreferencesKey("adsb_default_medium_unknown_icon_enabled")
 private val KEY_ADSB_EMERGENCY_AUDIO_ENABLED = booleanPreferencesKey("adsb_emergency_audio_enabled")
 private val KEY_ADSB_EMERGENCY_AUDIO_COOLDOWN_MS = longPreferencesKey("adsb_emergency_audio_cooldown_ms")
 private val KEY_ADSB_EMERGENCY_AUDIO_MASTER_ENABLED =
@@ -43,6 +45,10 @@ private val KEY_ADSB_EMERGENCY_AUDIO_ROLLBACK_LATCHED =
     booleanPreferencesKey("adsb_emergency_audio_rollback_latched")
 private val KEY_ADSB_EMERGENCY_AUDIO_ROLLBACK_REASON =
     stringPreferencesKey("adsb_emergency_audio_rollback_reason")
+private val KEY_ADSB_DEFAULT_MEDIUM_UNKNOWN_ICON_ROLLBACK_LATCHED =
+    booleanPreferencesKey("adsb_default_medium_unknown_icon_rollback_latched")
+private val KEY_ADSB_DEFAULT_MEDIUM_UNKNOWN_ICON_ROLLBACK_REASON =
+    stringPreferencesKey("adsb_default_medium_unknown_icon_rollback_reason")
 
 internal const val ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_MIN = 0
 internal const val ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_MAX = 100
@@ -50,6 +56,7 @@ internal const val ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_DEFAULT = 100
 internal const val ADSB_EMERGENCY_AUDIO_COHORT_BUCKET_MIN = 0
 internal const val ADSB_EMERGENCY_AUDIO_COHORT_BUCKET_MAX = 99
 internal const val ADSB_EMERGENCY_FLASH_ENABLED_DEFAULT = true
+internal const val ADSB_DEFAULT_MEDIUM_UNKNOWN_ICON_ENABLED_DEFAULT = true
 
 @Singleton
 class AdsbTrafficPreferencesRepository internal constructor(
@@ -106,6 +113,13 @@ class AdsbTrafficPreferencesRepository internal constructor(
         }
         .distinctUntilChanged()
 
+    val defaultMediumUnknownIconEnabledFlow: Flow<Boolean> = dataStore.data
+        .map { preferences ->
+            preferences[KEY_ADSB_DEFAULT_MEDIUM_UNKNOWN_ICON_ENABLED]
+                ?: ADSB_DEFAULT_MEDIUM_UNKNOWN_ICON_ENABLED_DEFAULT
+        }
+        .distinctUntilChanged()
+
     override val emergencyAudioEnabledFlow: Flow<Boolean> = dataStore.data
         .map { preferences -> preferences[KEY_ADSB_EMERGENCY_AUDIO_ENABLED] ?: false }
         .distinctUntilChanged()
@@ -155,6 +169,16 @@ class AdsbTrafficPreferencesRepository internal constructor(
         .map { preferences -> preferences[KEY_ADSB_EMERGENCY_AUDIO_ROLLBACK_REASON] }
         .distinctUntilChanged()
 
+    val defaultMediumUnknownIconRollbackLatchedFlow: Flow<Boolean> = dataStore.data
+        .map { preferences ->
+            preferences[KEY_ADSB_DEFAULT_MEDIUM_UNKNOWN_ICON_ROLLBACK_LATCHED] ?: false
+        }
+        .distinctUntilChanged()
+
+    val defaultMediumUnknownIconRollbackReasonFlow: Flow<String?> = dataStore.data
+        .map { preferences -> preferences[KEY_ADSB_DEFAULT_MEDIUM_UNKNOWN_ICON_ROLLBACK_REASON] }
+        .distinctUntilChanged()
+
     suspend fun setEnabled(enabled: Boolean) {
         dataStore.edit { preferences ->
             preferences[KEY_ADSB_TRAFFIC_ENABLED] = enabled
@@ -192,6 +216,12 @@ class AdsbTrafficPreferencesRepository internal constructor(
     suspend fun setEmergencyFlashEnabled(enabled: Boolean) {
         dataStore.edit { preferences ->
             preferences[KEY_ADSB_EMERGENCY_FLASH_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setDefaultMediumUnknownIconEnabled(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[KEY_ADSB_DEFAULT_MEDIUM_UNKNOWN_ICON_ENABLED] = enabled
         }
     }
 
@@ -248,6 +278,20 @@ class AdsbTrafficPreferencesRepository internal constructor(
         dataStore.edit { preferences ->
             preferences[KEY_ADSB_EMERGENCY_AUDIO_ROLLBACK_LATCHED] = false
             preferences.remove(KEY_ADSB_EMERGENCY_AUDIO_ROLLBACK_REASON)
+        }
+    }
+
+    suspend fun latchDefaultMediumUnknownIconRollback(reason: String) {
+        dataStore.edit { preferences ->
+            preferences[KEY_ADSB_DEFAULT_MEDIUM_UNKNOWN_ICON_ROLLBACK_LATCHED] = true
+            preferences[KEY_ADSB_DEFAULT_MEDIUM_UNKNOWN_ICON_ROLLBACK_REASON] = reason
+        }
+    }
+
+    suspend fun clearDefaultMediumUnknownIconRollback() {
+        dataStore.edit { preferences ->
+            preferences[KEY_ADSB_DEFAULT_MEDIUM_UNKNOWN_ICON_ROLLBACK_LATCHED] = false
+            preferences.remove(KEY_ADSB_DEFAULT_MEDIUM_UNKNOWN_ICON_ROLLBACK_REASON)
         }
     }
 

@@ -81,12 +81,24 @@ class UnitsPreferencesUseCase @Inject constructor(
     private val repository: UnitsRepository
 ) {
     val unitsFlow: Flow<UnitsPreferences> = repository.unitsFlow
+
+    fun setActiveProfileId(profileId: String) {
+        repository.setActiveProfileId(profileId)
+    }
 }
 
 class GliderConfigUseCase @Inject constructor(
     private val repository: GliderConfigRepository
 ) {
     val config = repository.config
+
+    fun setActiveProfileId(profileId: String) {
+        repository.setActiveProfileId(profileId)
+    }
+
+    fun clearProfile(profileId: String) {
+        repository.clearProfile(profileId)
+    }
 }
 
 class FlightDataUseCase @Inject constructor(
@@ -439,6 +451,14 @@ class AdsbTrafficUseCase @Inject constructor(
     val overlayEnabled: Flow<Boolean> = preferencesRepository.enabledFlow
     val iconSizePx: Flow<Int> = preferencesRepository.iconSizePxFlow
     val emergencyFlashEnabled: Flow<Boolean> = preferencesRepository.emergencyFlashEnabledFlow
+    val defaultMediumUnknownIconEnabled: Flow<Boolean> = combine(
+        preferencesRepository.defaultMediumUnknownIconEnabledFlow,
+        preferencesRepository.defaultMediumUnknownIconRollbackLatchedFlow
+    ) { enabled, rollbackLatched ->
+        enabled && !rollbackLatched
+    }.distinctUntilChanged()
+    val defaultMediumUnknownIconRollbackReason: Flow<String?> =
+        preferencesRepository.defaultMediumUnknownIconRollbackReasonFlow
     val maxDistanceKm: Flow<Int> = preferencesRepository.maxDistanceKmFlow
     val verticalAboveMeters: Flow<Double> = preferencesRepository.verticalAboveMetersFlow
     val verticalBelowMeters: Flow<Double> = preferencesRepository.verticalBelowMetersFlow
@@ -497,6 +517,18 @@ class AdsbTrafficUseCase @Inject constructor(
 
     suspend fun setIconSizePx(iconSizePx: Int) {
         preferencesRepository.setIconSizePx(iconSizePx)
+    }
+
+    suspend fun setDefaultMediumUnknownIconEnabled(enabled: Boolean) {
+        preferencesRepository.setDefaultMediumUnknownIconEnabled(enabled)
+    }
+
+    suspend fun latchDefaultMediumUnknownIconRollback(reason: String) {
+        preferencesRepository.latchDefaultMediumUnknownIconRollback(reason)
+    }
+
+    suspend fun clearDefaultMediumUnknownIconRollback() {
+        preferencesRepository.clearDefaultMediumUnknownIconRollback()
     }
 
     suspend fun bootstrapMetadataSync() {

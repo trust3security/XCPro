@@ -60,6 +60,16 @@ Reference:
 - Position source filter:
   - FLARM source rows (`position_source=3`) are ignored
 
+### 2.2A Icon fallback semantics
+- Aircraft class `Unknown` remains an explicit semantic outcome in ADS-B state/details.
+- Map rendering rollout default uses a neutral fixed-wing fallback for unknown class:
+  - style image id: `adsb_icon_unknown`
+  - drawable asset: `ic_adsb_plane_medium.png`
+- Rollback path remains available via rollout flag:
+  - style image id: `adsb_icon_unknown_legacy`
+  - drawable asset: `ic_adsb_unknown.png`
+- Non-fixed-wing authoritative categories (`8`, `9`, `10`, `11`, `12`, `14`) are unchanged.
+
 ### 2.3 Ownship reference semantics
 - Query center is used for provider fetch and horizontal radius filtering.
 - Ownship origin is used for displayed distance and bearing when available.

@@ -15,7 +15,14 @@ import org.maplibre.android.maps.MapLibreMap
 
 internal data class MapOverlayRuntimeTrafficCounters(
     val overlayFrontOrderApplyCount: Long,
-    val overlayFrontOrderSkippedCount: Long
+    val overlayFrontOrderSkippedCount: Long,
+    val adsbIconUnknownRenderCount: Long,
+    val adsbIconLegacyUnknownRenderCount: Long,
+    val adsbIconResolveLatencySampleCount: Long,
+    val adsbIconResolveLatencyLastMs: Long?,
+    val adsbIconResolveLatencyMaxMs: Long?,
+    val adsbIconResolveLatencyAverageMs: Long?,
+    val adsbDefaultMediumUnknownIconEnabled: Boolean
 )
 
 internal class MapOverlayManagerRuntimeTrafficDelegate(
@@ -36,6 +43,9 @@ internal class MapOverlayManagerRuntimeTrafficDelegate(
     private var overlayFrontOrderApplyCount = 0L
     private var overlayFrontOrderSkippedCount = 0L
     private val adsbRenderState = AdsbRenderThrottleState()
+    private val adsbIconTelemetryTracker = AdsbIconTelemetryTracker()
+    private val stickyIconProjectionCache = AdsbStickyIconProjectionCache()
+    private var defaultMediumUnknownIconEnabled = true
 
     fun initializeAdsbTrafficOverlay(map: MapLibreMap?) {
         adsbRenderState.pendingJob?.cancel()
@@ -44,10 +54,16 @@ internal class MapOverlayManagerRuntimeTrafficDelegate(
         if (map == null) return
         mapState.adsbTrafficOverlay = createAdsbTrafficOverlay(map)
         mapState.adsbTrafficOverlay?.initialize()
+        val projectedStyleIds = stickyIconProjectionCache.projectStyleImageIds(
+            targets = latestAdsbTargets,
+            nowMonoMs = nowMonoMs(),
+            defaultMediumUnknownIconEnabled = defaultMediumUnknownIconEnabled
+        )
         mapState.adsbTrafficOverlay?.render(
             targets = latestAdsbTargets,
             ownshipAltitudeMeters = latestAdsbOwnshipAltitudeMeters,
-            unitsPreferences = latestAdsbUnitsPreferences
+            unitsPreferences = latestAdsbUnitsPreferences,
+            iconStyleIdOverrides = projectedStyleIds
         )
         adsbRenderState.lastRenderMonoMs = nowMonoMs()
         bringTrafficOverlaysToFront()
@@ -88,22 +104,40 @@ internal class MapOverlayManagerRuntimeTrafficDelegate(
         mapState.adsbTrafficOverlay?.setEmergencyFlashEnabled(enabled)
     }
 
+    fun setAdsbDefaultMediumUnknownIconEnabled(enabled: Boolean) {
+        if (defaultMediumUnknownIconEnabled == enabled) return
+        defaultMediumUnknownIconEnabled = enabled
+        scheduleAdsbRender(forceImmediate = true)
+    }
+
     fun findAdsbTargetAt(tap: LatLng): Icao24? {
         return mapState.adsbTrafficOverlay?.findTargetAt(tap)
     }
 
     fun latestAdsbTargetsCount(): Int = latestAdsbTargets.size
 
-    fun runtimeCounters(): MapOverlayRuntimeTrafficCounters = MapOverlayRuntimeTrafficCounters(
-        overlayFrontOrderApplyCount = overlayFrontOrderApplyCount,
-        overlayFrontOrderSkippedCount = overlayFrontOrderSkippedCount
-    )
+    fun runtimeCounters(): MapOverlayRuntimeTrafficCounters {
+        val iconTelemetry = adsbIconTelemetryTracker.snapshot()
+        return MapOverlayRuntimeTrafficCounters(
+            overlayFrontOrderApplyCount = overlayFrontOrderApplyCount,
+            overlayFrontOrderSkippedCount = overlayFrontOrderSkippedCount,
+            adsbIconUnknownRenderCount = iconTelemetry.unknownRenderCount,
+            adsbIconLegacyUnknownRenderCount = iconTelemetry.legacyUnknownRenderCount,
+            adsbIconResolveLatencySampleCount = iconTelemetry.resolveLatencySampleCount,
+            adsbIconResolveLatencyLastMs = iconTelemetry.resolveLatencyLastMs,
+            adsbIconResolveLatencyMaxMs = iconTelemetry.resolveLatencyMaxMs,
+            adsbIconResolveLatencyAverageMs = iconTelemetry.resolveLatencyAverageMs,
+            adsbDefaultMediumUnknownIconEnabled = defaultMediumUnknownIconEnabled
+        )
+    }
 
     fun onMapDetached() {
         adsbRenderState.pendingJob?.cancel()
         adsbRenderState.pendingJob = null
         lastOverlayFrontOrderSignature = null
         lastOverlayFrontOrderApplyMonoMs = 0L
+        adsbIconTelemetryTracker.onMapDetached()
+        stickyIconProjectionCache.clear()
     }
 
     fun bringTrafficOverlaysToFront() {
@@ -173,16 +207,28 @@ internal class MapOverlayManagerRuntimeTrafficDelegate(
     }
 
     private fun renderAdsbNow(map: MapLibreMap) {
+        val renderMonoMs = nowMonoMs()
+        val projectedStyleIds = stickyIconProjectionCache.projectStyleImageIds(
+            targets = latestAdsbTargets,
+            nowMonoMs = renderMonoMs,
+            defaultMediumUnknownIconEnabled = defaultMediumUnknownIconEnabled
+        )
         if (mapState.adsbTrafficOverlay == null) {
             mapState.adsbTrafficOverlay = createAdsbTrafficOverlay(map)
             mapState.adsbTrafficOverlay?.initialize()
         }
+        adsbIconTelemetryTracker.onRenderedTargets(
+            targets = latestAdsbTargets,
+            nowMonoMs = renderMonoMs,
+            iconStyleIdOverrides = projectedStyleIds
+        )
         mapState.adsbTrafficOverlay?.render(
             targets = latestAdsbTargets,
             ownshipAltitudeMeters = latestAdsbOwnshipAltitudeMeters,
-            unitsPreferences = latestAdsbUnitsPreferences
+            unitsPreferences = latestAdsbUnitsPreferences,
+            iconStyleIdOverrides = projectedStyleIds
         )
-        adsbRenderState.lastRenderMonoMs = nowMonoMs()
+        adsbRenderState.lastRenderMonoMs = renderMonoMs
         bringTrafficOverlaysToFront()
     }
 

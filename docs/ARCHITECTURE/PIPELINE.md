@@ -294,13 +294,14 @@ OGN lifecycle/position semantics:
 ADS-b settings path:
 - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficPreferencesRepository.kt`
   - SSOT for ADS-b overlay enabled + icon size + max distance + vertical above/below preferences.
+  - SSOT for default-unknown-icon rollout controls (`defaultMediumUnknownIconEnabled`, rollback latch/reason).
   - SSOT for ADS-B EMERGENCY audio policy preferences (`emergencyAudioEnabled`, `emergencyAudioCooldownMs`).
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt`
-  - `AdsbTrafficUseCase` exposes ADS-b settings flows (`iconSizePx`, `maxDistanceKm`, `verticalAboveMeters`, `verticalBelowMeters`).
+  - `AdsbTrafficUseCase` exposes ADS-b settings flows (`iconSizePx`, `maxDistanceKm`, `verticalAboveMeters`, `verticalBelowMeters`, default-unknown rollout effective enabled).
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
   - Converts ADS-b settings flows and ownship altitude into lifecycle-aware state for UI/runtime wiring.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
-  - Pushes icon-size changes into overlay runtime controller.
+  - Pushes icon-size and default-unknown rollout toggles into overlay runtime controller.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootEffects.kt`
   - Applies visual-only ownship-altitude quantization (`2 m` default) before
     OGN/ADS-b runtime overlay updates to reduce high-frequency side-effect churn

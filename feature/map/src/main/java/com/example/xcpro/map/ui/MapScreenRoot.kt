@@ -1,9 +1,5 @@
 package com.example.xcpro.map.ui
 
-/**
- * Root MapScreen composable wiring managers, state, and scaffold.
- * Invariants: UI renders state only; mutations are routed through MapScreenViewModel.
- */
 import android.annotation.SuppressLint
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -88,6 +84,9 @@ internal fun MapScreenRoot(
         mapViewModel = mapViewModel
     )
     val profileLookAndFeelBinding = rememberMapScreenProfileLookAndFeelBinding()
+    LaunchedEffect(profileLookAndFeelBinding.activeProfileId) {
+        mapViewModel.setActiveProfileId(profileLookAndFeelBinding.activeProfileId)
+    }
     val airspaceState = rememberMapScreenAirspaceState()
 
     val managers = rememberMapScreenManagers(
@@ -150,7 +149,8 @@ internal fun MapScreenRoot(
         adsbTargets = bindings.adsbTargets,
         adsbOverlayEnabled = bindings.adsbOverlayEnabled,
         adsbIconSizePx = bindings.adsbIconSizePx,
-        adsbEmergencyFlashEnabled = bindings.adsbEmergencyFlashEnabled
+        adsbEmergencyFlashEnabled = bindings.adsbEmergencyFlashEnabled,
+        adsbDefaultMediumUnknownIconEnabled = bindings.adsbDefaultMediumUnknownIconEnabled
     )
     MapWeatherOverlayEffects(overlayManager = managers.overlayManager)
 
@@ -203,7 +203,10 @@ internal fun MapScreenRoot(
         allowSensorStart = bindings.allowSensorStart
     )
 
-    val widgetLayout = rememberMapScreenWidgetLayoutBinding(density = density)
+    val widgetLayout = rememberMapScreenWidgetLayoutBinding(
+        activeProfileId = profileLookAndFeelBinding.activeProfileId,
+        density = density
+    )
     ensureSafeContainerFallback(
         safeContainerSizeState = safeContainerSizeState,
         screenWidthPx = widgetLayout.screenWidthPx,
@@ -212,6 +215,7 @@ internal fun MapScreenRoot(
 
     val variometerLayout = rememberVariometerLayout(
         mapViewModel = mapViewModel,
+        activeProfileId = profileLookAndFeelBinding.activeProfileId,
         screenWidthPx = widgetLayout.screenWidthPx,
         screenHeightPx = widgetLayout.screenHeightPx,
         density = density

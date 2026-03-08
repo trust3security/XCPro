@@ -55,6 +55,7 @@ internal data class MapScreenBindings(
     val adsbOverlayEnabled: Boolean,
     val adsbIconSizePx: Int,
     val adsbEmergencyFlashEnabled: Boolean,
+    val adsbDefaultMediumUnknownIconEnabled: Boolean,
     val selectedOgnTarget: OgnTrafficTarget?,
     val selectedOgnThermal: OgnThermalHotspot?,
     val selectedAdsbTarget: AdsbSelectedTargetDetails?,
@@ -103,6 +104,7 @@ internal fun rememberMapScreenBindings(
     val adsbOverlayEnabled by mapViewModel.adsbOverlayEnabled.collectAsStateWithLifecycle()
     val adsbIconSizePx by mapViewModel.adsbIconSizePx.collectAsStateWithLifecycle()
     val adsbEmergencyFlashEnabled by mapViewModel.adsbEmergencyFlashEnabled.collectAsStateWithLifecycle()
+    val adsbDefaultMediumUnknownIconEnabled by mapViewModel.adsbDefaultMediumUnknownIconEnabled.collectAsStateWithLifecycle()
     val selectedOgnTarget by mapViewModel.selectedOgnTarget.collectAsStateWithLifecycle()
     val selectedOgnThermal by mapViewModel.selectedOgnThermal.collectAsStateWithLifecycle()
     val selectedAdsbTarget by mapViewModel.selectedAdsbTarget.collectAsStateWithLifecycle()
@@ -146,6 +148,7 @@ internal fun rememberMapScreenBindings(
         adsbOverlayEnabled = adsbOverlayEnabled,
         adsbIconSizePx = adsbIconSizePx,
         adsbEmergencyFlashEnabled = adsbEmergencyFlashEnabled,
+        adsbDefaultMediumUnknownIconEnabled = adsbDefaultMediumUnknownIconEnabled,
         selectedOgnTarget = selectedOgnTarget,
         selectedOgnThermal = selectedOgnThermal,
         selectedAdsbTarget = selectedAdsbTarget,

@@ -29,6 +29,7 @@ class AdsbTrafficPreferencesRepositoryTest {
         repository.setVerticalAboveMeters(ADSB_VERTICAL_FILTER_ABOVE_DEFAULT_METERS)
         repository.setVerticalBelowMeters(ADSB_VERTICAL_FILTER_BELOW_DEFAULT_METERS)
         repository.setEmergencyFlashEnabled(ADSB_EMERGENCY_FLASH_ENABLED_DEFAULT)
+        repository.setDefaultMediumUnknownIconEnabled(ADSB_DEFAULT_MEDIUM_UNKNOWN_ICON_ENABLED_DEFAULT)
         repository.setEmergencyAudioEnabled(false)
         repository.setEmergencyAudioCooldownMs(ADSB_EMERGENCY_AUDIO_DEFAULT_COOLDOWN_MS)
         repository.setEmergencyAudioMasterEnabled(true)
@@ -36,6 +37,7 @@ class AdsbTrafficPreferencesRepositoryTest {
         repository.setEmergencyAudioCohortPercent(ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_DEFAULT)
         repository.setEmergencyAudioCohortBucket(ADSB_EMERGENCY_AUDIO_COHORT_BUCKET_MIN)
         repository.clearEmergencyAudioRollback()
+        repository.clearDefaultMediumUnknownIconRollback()
     }
 
     @Test
@@ -172,6 +174,31 @@ class AdsbTrafficPreferencesRepositoryTest {
         repository.setEmergencyFlashEnabled(false)
 
         assertEquals(false, repository.emergencyFlashEnabledFlow.first())
+    }
+
+    @Test
+    fun defaultMediumUnknownIcon_defaultsEnabled() = runTest {
+        val repository = AdsbTrafficPreferencesRepository(context)
+
+        assertEquals(true, repository.defaultMediumUnknownIconEnabledFlow.first())
+        assertEquals(false, repository.defaultMediumUnknownIconRollbackLatchedFlow.first())
+        assertEquals(null, repository.defaultMediumUnknownIconRollbackReasonFlow.first())
+    }
+
+    @Test
+    fun defaultMediumUnknownIcon_toggleAndRollbackLatch_persist() = runTest {
+        val repository = AdsbTrafficPreferencesRepository(context)
+
+        repository.setDefaultMediumUnknownIconEnabled(false)
+        assertEquals(false, repository.defaultMediumUnknownIconEnabledFlow.first())
+
+        repository.latchDefaultMediumUnknownIconRollback("manual_rollback")
+        assertEquals(true, repository.defaultMediumUnknownIconRollbackLatchedFlow.first())
+        assertEquals("manual_rollback", repository.defaultMediumUnknownIconRollbackReasonFlow.first())
+
+        repository.clearDefaultMediumUnknownIconRollback()
+        assertEquals(false, repository.defaultMediumUnknownIconRollbackLatchedFlow.first())
+        assertEquals(null, repository.defaultMediumUnknownIconRollbackReasonFlow.first())
     }
 
     @Test

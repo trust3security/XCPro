@@ -168,6 +168,56 @@ class AdsbGeoJsonMapperTest {
     }
 
     @Test
+    fun toFeature_unknownClassification_keepsUnknownSemanticIconId() {
+        val target = sampleTarget(
+            category = 0,
+            trackDeg = 180.0
+        ).copy(
+            metadataTypecode = null,
+            metadataIcaoAircraftType = null
+        )
+
+        val feature = AdsbGeoJsonMapper.toFeature(
+            target = target,
+            ownshipAltitudeMeters = 900.0,
+            unitsPreferences = UnitsPreferences()
+        )
+
+        assertNotNull(feature)
+        feature ?: return
+        assertEquals(
+            "adsb_icon_unknown",
+            feature.getStringProperty(AdsbGeoJsonMapper.PROP_ICON_ID)
+        )
+    }
+
+    @Test
+    fun toFeature_iconOverride_appliesOverrideAndEmergencySuffix() {
+        val target = sampleTarget(
+            category = 0,
+            trackDeg = 180.0,
+            isEmergencyCollisionRisk = true
+        ).copy(
+            metadataTypecode = null,
+            metadataIcaoAircraftType = null
+        )
+
+        val feature = AdsbGeoJsonMapper.toFeature(
+            target = target,
+            ownshipAltitudeMeters = 900.0,
+            unitsPreferences = UnitsPreferences(),
+            iconStyleIdOverride = "adsb_icon_jet_twin"
+        )
+
+        assertNotNull(feature)
+        feature ?: return
+        assertEquals(
+            "adsb_icon_jet_twin_emergency",
+            feature.getStringProperty(AdsbGeoJsonMapper.PROP_ICON_ID)
+        )
+    }
+
+    @Test
     fun toFeature_marksOwnshipReferenceAvailabilityFlag() {
         val target = sampleTarget(category = 2, trackDeg = 95.0, usesOwnshipReference = false)
 

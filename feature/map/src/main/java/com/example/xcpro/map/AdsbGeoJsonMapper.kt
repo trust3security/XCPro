@@ -2,7 +2,6 @@ package com.example.xcpro.map
 
 import com.example.xcpro.adsb.AdsbTrafficUiModel
 import com.example.xcpro.adsb.ui.aircraftIcon
-import com.example.xcpro.adsb.ui.emergencyStyleImageId
 import com.example.xcpro.common.units.UnitsPreferences
 import com.google.gson.JsonObject
 import org.maplibre.geojson.Feature
@@ -31,7 +30,8 @@ internal object AdsbGeoJsonMapper {
     fun toFeature(
         target: AdsbTrafficUiModel,
         ownshipAltitudeMeters: Double?,
-        unitsPreferences: UnitsPreferences
+        unitsPreferences: UnitsPreferences,
+        iconStyleIdOverride: String? = null
     ): Feature? {
         if (!target.lat.isFinite() || !target.lon.isFinite()) return null
         val feature = Feature.fromGeometry(
@@ -51,15 +51,16 @@ internal object AdsbGeoJsonMapper {
             unitsPreferences = unitsPreferences
         )
         val aircraftIcon = target.aircraftIcon()
+        val normalIconStyleId = iconStyleIdOverride ?: aircraftIcon.styleImageId
         feature.addStringProperty(PROP_ICAO24, target.id.raw)
         feature.addStringProperty(PROP_LABEL_TOP, labelMapping.topLabel)
         feature.addStringProperty(PROP_LABEL_BOTTOM, labelMapping.bottomLabel)
         feature.addStringProperty(
             PROP_ICON_ID,
             if (target.isEmergencyCollisionRisk) {
-                aircraftIcon.emergencyStyleImageId()
+                "${normalIconStyleId}_emergency"
             } else {
-                aircraftIcon.styleImageId
+                normalIconStyleId
             }
         )
         if (target.distanceMeters.isFinite()) {

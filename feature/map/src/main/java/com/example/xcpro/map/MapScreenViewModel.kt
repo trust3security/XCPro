@@ -13,6 +13,7 @@ import com.example.xcpro.adsb.AdsbSelectedTargetDetails
 import com.example.xcpro.adsb.Icao24
 import com.example.xcpro.adsb.ADSB_EMERGENCY_FLASH_ENABLED_DEFAULT
 import com.example.xcpro.adsb.ADSB_ICON_SIZE_DEFAULT_PX
+import com.example.xcpro.adsb.ADSB_DEFAULT_MEDIUM_UNKNOWN_ICON_ENABLED_DEFAULT
 import com.example.xcpro.adsb.metadata.domain.AdsbMetadataEnrichmentUseCase
 import com.example.xcpro.weather.wind.model.WindState
 import com.example.xcpro.gestures.TaskGestureCallbacks
@@ -67,6 +68,7 @@ class MapScreenViewModel @Inject constructor(
     private val adsbMetadataEnrichmentUseCase: AdsbMetadataEnrichmentUseCase,
     private val thermallingModeUseCase: ThermallingModeRuntimeUseCase
 ) : ViewModel() {
+    private var activeProfileId: String = DEFAULT_PROFILE_ID
     private val initialStyleName = mapStyleUseCase.initialStyle()
     private val mapStateStore: MapStateStore = MapStateStore(initialStyleName)
     val mapState: MapStateReader = mapStateStore
@@ -103,8 +105,7 @@ class MapScreenViewModel @Inject constructor(
     val showVarioDemoFab: Boolean = featureFlags.showVarioDemoFab
     val showRacingReplayFab: Boolean = featureFlags.showRacingReplayFab
     val gpsStatusFlow: StateFlow<GpsStatusUiModel> = createGpsStatusUiState(viewModelScope, sensorsUseCase)
-    private val replaySensorGates: MapReplaySensorGateStates =
-        createReplaySensorGateStates(viewModelScope, replaySessionState)
+    private val replaySensorGates: MapReplaySensorGateStates = createReplaySensorGateStates(viewModelScope, replaySessionState)
     val suppressLiveGps: StateFlow<Boolean> = replaySensorGates.suppressLiveGps
     val allowSensorStart: StateFlow<Boolean> = replaySensorGates.allowSensorStart
     val mapLocation: StateFlow<MapLocationUiModel?> = createMapLocationState(viewModelScope, flightDataUseCase)
@@ -112,10 +113,8 @@ class MapScreenViewModel @Inject constructor(
         .map { state -> state.isFlying }
         .eagerState(scope = viewModelScope, initial = false)
     val ownshipAltitudeMeters: StateFlow<Double?> = createOwnshipAltitudeState(viewModelScope, flightDataUseCase)
-    private val ownshipIsCircling: StateFlow<Boolean> =
-        createOwnshipCirclingState(viewModelScope, flightDataUseCase)
-    private val circlingFeatureEnabledForAdsb: StateFlow<Boolean> =
-        createCirclingFeatureEnabledState(viewModelScope, thermallingModeUseCase)
+    private val ownshipIsCircling: StateFlow<Boolean> = createOwnshipCirclingState(viewModelScope, flightDataUseCase)
+    private val circlingFeatureEnabledForAdsb: StateFlow<Boolean> = createCirclingFeatureEnabledState(viewModelScope, thermallingModeUseCase)
     val ognTargets: StateFlow<List<OgnTrafficTarget>> = ognTrafficUseCase.targets
     val ognSnapshot: StateFlow<OgnTrafficSnapshot> = ognTrafficUseCase.snapshot
     val ognOverlayEnabled: StateFlow<Boolean> = ognTrafficUseCase.overlayEnabled
@@ -130,11 +129,8 @@ class MapScreenViewModel @Inject constructor(
         .eagerState(scope = viewModelScope, initial = false)
     val ognTargetAircraftKey: StateFlow<String?> = ognTrafficUseCase.targetAircraftKey
         .eagerState(scope = viewModelScope, initial = null)
-    val ognResolvedTarget: StateFlow<OgnTrafficTarget?> = createSelectedOgnTargetState(
-        scope = viewModelScope,
-        selectedOgnId = ognTargetAircraftKey,
-        ognTargets = ognTargets
-    )
+    val ognResolvedTarget: StateFlow<OgnTrafficTarget?> =
+        createSelectedOgnTargetState(scope = viewModelScope, selectedOgnId = ognTargetAircraftKey, ognTargets = ognTargets)
     val ognThermalHotspots: StateFlow<List<OgnThermalHotspot>> = ognTrafficUseCase.thermalHotspots
     val showOgnThermalsEnabled: StateFlow<Boolean> = ognTrafficUseCase.showThermalsEnabled
         .eagerState(scope = viewModelScope, initial = false)
@@ -156,6 +152,8 @@ class MapScreenViewModel @Inject constructor(
         .eagerState(scope = viewModelScope, initial = ADSB_ICON_SIZE_DEFAULT_PX)
     val adsbEmergencyFlashEnabled: StateFlow<Boolean> = adsbTrafficUseCase.emergencyFlashEnabled
         .eagerState(scope = viewModelScope, initial = ADSB_EMERGENCY_FLASH_ENABLED_DEFAULT)
+    val adsbDefaultMediumUnknownIconEnabled: StateFlow<Boolean> = adsbTrafficUseCase.defaultMediumUnknownIconEnabled
+        .eagerState(scope = viewModelScope, initial = ADSB_DEFAULT_MEDIUM_UNKNOWN_ICON_ENABLED_DEFAULT)
     val variometerUiState: StateFlow<VariometerUiState> = variometerLayoutUseCase.state
     private val _uiState = MutableStateFlow(MapUiState())
     val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
@@ -180,10 +178,8 @@ class MapScreenViewModel @Inject constructor(
     private val _liveDataReady = MutableStateFlow(false)
     private val _isMapVisible = MutableStateFlow(false)
     private val _isAATEditMode = MutableStateFlow(false)
-    private val adsbFilterStates: AdsbFilterStateFlows =
-        createAdsbFilterStateFlows(viewModelScope, adsbTrafficUseCase)
-    val cardHydrationReady: StateFlow<Boolean> =
-        createCardHydrationReadyState(viewModelScope, _containerReady, _liveDataReady)
+    private val adsbFilterStates: AdsbFilterStateFlows = createAdsbFilterStateFlows(viewModelScope, adsbTrafficUseCase)
+    val cardHydrationReady: StateFlow<Boolean> = createCardHydrationReadyState(viewModelScope, _containerReady, _liveDataReady)
     private val flightDataUiAdapter = createFlightDataUiAdapterForViewModel(
         mapReplayUseCase = mapReplayUseCase,
         scope = viewModelScope,
@@ -272,14 +268,8 @@ class MapScreenViewModel @Inject constructor(
         bindThermallingRuntimeWiring(viewModelScope, thermallingModeUseCase, thermallingModeUseCase.settingsFlow, flightDataUseCase.flightData, flightDataManager.visibleModesFlow, mapStateStore, mapStateActions, ::setFlightMode)
         flightDataUiAdapter.start()
         replayCoordinator.start()
-        viewModelScope.launch {
-            adsbTrafficUseCase.bootstrapMetadataSync()
-        }
-        if (featureFlags.loadSavedTasksOnInit) {
-            viewModelScope.launch {
-                mapTasksUseCase.loadSavedTasks()
-            }
-        }
+        viewModelScope.launch { adsbTrafficUseCase.bootstrapMetadataSync() }
+        if (featureFlags.loadSavedTasksOnInit) viewModelScope.launch { mapTasksUseCase.loadSavedTasks() }
         onEvent(MapUiEvent.RefreshWaypoints)
     }
     fun emitMapCommand(command: MapCommand) = _mapCommands.tryEmit(command)
@@ -307,6 +297,19 @@ class MapScreenViewModel @Inject constructor(
     fun dismissSelectedOgnThermal() = trafficCoordinator.dismissSelectedOgnThermal()
     fun dismissSelectedAdsbTarget() = trafficCoordinator.dismissSelectedAdsbTarget()
     private fun loadWaypoints() = waypointQnhCoordinator.loadWaypoints()
+    fun setActiveProfileId(profileId: String) {
+        val resolved = profileId.trim().ifBlank { DEFAULT_PROFILE_ID }
+        if (activeProfileId == resolved) return
+        activeProfileId = resolved
+        unitsUseCase.setActiveProfileId(resolved)
+        gliderConfigUseCase.setActiveProfileId(resolved)
+        variometerLayoutUseCase.setActiveProfileId(resolved)
+    }
+    fun ensureVariometerLayout(profileId: String, screenWidthPx: Float, screenHeightPx: Float, defaultSizePx: Float, minSizePx: Float, maxSizePx: Float) {
+        val resolved = profileId.trim().ifBlank { DEFAULT_PROFILE_ID }
+        if (activeProfileId != resolved) setActiveProfileId(resolved)
+        variometerLayoutUseCase.ensureLayout(screenWidthPx, screenHeightPx, defaultSizePx, minSizePx, maxSizePx)
+    }
     fun ensureVariometerLayout(screenWidthPx: Float, screenHeightPx: Float, defaultSizePx: Float, minSizePx: Float, maxSizePx: Float) =
         variometerLayoutUseCase.ensureLayout(screenWidthPx, screenHeightPx, defaultSizePx, minSizePx, maxSizePx)
     fun onVariometerOffsetCommitted(offset: OffsetPx, screenWidthPx: Float, screenHeightPx: Float) =
@@ -328,4 +331,5 @@ class MapScreenViewModel @Inject constructor(
     fun onAutoCalibrateQnh() = waypointQnhCoordinator.onAutoCalibrateQnh()
     fun onSetManualQnh(hpa: Double) = waypointQnhCoordinator.onSetManualQnh(hpa)
     override fun onCleared() { ognTrafficUseCase.stop(); adsbTrafficUseCase.stop(); thermallingModeUseCase.reset(); ballastController.dispose(); super.onCleared() }
+    private companion object { private const val DEFAULT_PROFILE_ID = "default-profile" }
 }
