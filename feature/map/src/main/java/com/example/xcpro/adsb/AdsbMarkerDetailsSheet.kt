@@ -5,12 +5,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.xcpro.common.units.AltitudeM
@@ -37,6 +40,8 @@ fun AdsbMarkerDetailsSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .testTag(ADSB_DETAILS_SHEET_SCROLL_TAG)
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -154,6 +159,8 @@ internal fun proximityTierText(tier: AdsbProximityTier): String = when (tier) {
     AdsbProximityTier.RED -> "Red"
     AdsbProximityTier.EMERGENCY -> "Emergency"
 }
+
+internal const val ADSB_DETAILS_SHEET_SCROLL_TAG = "adsb_details_sheet_scroll"
 
 internal fun proximityTrendText(target: AdsbSelectedTargetDetails): String = when {
     !target.usesOwnshipReference -> "Unknown (no ownship reference)"
