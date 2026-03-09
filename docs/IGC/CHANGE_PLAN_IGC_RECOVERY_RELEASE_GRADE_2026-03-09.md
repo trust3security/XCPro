@@ -31,7 +31,7 @@ Read first:
 - Owner: XCPro Team
 - Date: 2026-03-09
 - Issue/PR: IGC-P6-RECOVERY-RELEASE-GRADE
-- Status: In Progress
+- Status: Signed Off
 - Depends on:
   - current recovery slice implementation in:
     - `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcFlightLogRepository.kt`
@@ -39,7 +39,7 @@ Read first:
   - Phase 6 recovery contract in:
     - `docs/IGC/CHANGE_PLAN_IGC_FLIGHT_LOGGING_PRODUCTION_GRADE_PHASED_IP_2026-03-08.md`
 
-Execution update (2026-03-10 / Phase 5 complete):
+Execution update (2026-03-10 / Recovery slice signed off):
 
 - Status:
   - Phase 0 complete
@@ -48,7 +48,7 @@ Execution update (2026-03-10 / Phase 5 complete):
   - Phase 3 complete
   - Phase 4 complete
   - Phase 5 complete
-  - Phase 6 not started
+  - Recovery slice sign-off recorded
 - Delivered in Phase 1:
   - dedicated `IgcRecoveryBootstrapUseCase`
   - explicit bootstrap outcome taxonomy
@@ -84,9 +84,13 @@ Execution update (2026-03-10 / Phase 5 complete):
   - Operational diagnostics and docs/evidence: `20/20`
   - Total: `98/100`
 - Remaining blockers to release-grade:
-  - branch diff hygiene is still open because unrelated Phase 6/profile WIP remains
-  - release-grade verification is green, but final signoff still requires
-    isolating unrelated dirty worktree state from the recovery slice
+  - none for the recovery release-grade slice
+- Sign-off note:
+  - user sign-off recorded on 2026-03-10 for the recovery release-grade
+    sub-slice only
+  - this sign-off does not apply to the broader
+    `CHANGE_PLAN_IGC_FLIGHT_LOGGING_PRODUCTION_GRADE_PHASED_IP_2026-03-08.md`
+    Phase 6 workstream
 
 Focused code pass update (2026-03-09):
 

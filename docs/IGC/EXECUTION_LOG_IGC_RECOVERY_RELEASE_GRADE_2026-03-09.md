@@ -21,6 +21,9 @@ Primary references:
   - retention
   - share redaction/privacy
   - unrelated IGC files UI work
+- Final status:
+  - recovery release-grade sub-slice signed off on 2026-03-10
+  - broader main IGC Phase 6 remains out of scope for this execution log
 
 ## Allowed Pre-Existing Dirty Worktree Set
 
